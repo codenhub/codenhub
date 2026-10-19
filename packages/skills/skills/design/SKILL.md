@@ -18,7 +18,7 @@ In a product with a design system, brand guide, or established screens, use its 
 1. **Context.** Establish the medium (screen UI, document, slide, social image, video, print), the viewing conditions (size, distance, seconds on screen, surroundings), the audience, and how often they see it. A tool used all day and a page seen once for ten seconds need opposite answers to most questions below. When the request leaves these open, infer them from the content and state the assumption.
 2. **Content.** Work with real or realistic content before styling it. Placeholder text hides length, wrapping, and hierarchy problems. Rank it: the one thing the viewer must get first, what supports it, and what is reference. Most surfaces need three levels of importance or fewer; past that, levels blur together.
 3. **Constraints.** Accessibility, platform conventions, languages and scripts, licenses, performance budgets, and brand.
-4. **Type.** Choose type before color, since most of any interface is text. Read [references/typography.md](references/typography.md) before choosing a typeface, pairing fonts, building a type scale, or setting text for video or social media.
+4. **Type.** Choose type before color, since most of any interface is text. Read [references/typography.md](references/typography.md) before choosing a typeface, pairing fonts, building a type scale, or setting text for video or social media. Before settling on a typeface, shortlist at least three from at least two different constructions, judge them against the reference's criteria, and say why the winner beat the others.
 5. **Space and layout.** Apply the next two sections.
 6. **Color.** Read [references/color.md](references/color.md) before building a palette, choosing an accent or working with a brand color, setting up dark mode, or choosing colors for status or data.
 7. **Check.** Follow Verification below before presenting the work.
@@ -30,6 +30,7 @@ Signal importance with the fewest and weakest means that work, in this order: po
 - Use one or two signals per level, and make the step between levels obvious. Two sizes 2px apart look like a mistake, not a hierarchy.
 - Demote as often as you promote. Making secondary text smaller or lighter often fixes a page better than making the headline bigger.
 - One primary action per view. When everything is emphasized, nothing is.
+- Restraint is not the goal. Removing default decoration leaves room for one deliberate focal element taken from the content, such as a large real number, a product view, a diagram of how it works, or a striking headline. Make it big and finished enough to carry the surface; a timid visual with tiny labels is as weak as a decorative one.
 
 ## Space And Layout
 
@@ -58,6 +59,7 @@ Generated design converges on the patterns below. Each is wrong as a default, an
 - **The reflex font.** Inter, Roboto, or a system stack because it came to mind first, or a fashionable display face picked to avoid them. Either can be right; neither is right by default.
 - **Large radius on everything.** Radius is a personality decision. Use one or two values, and nest them: an inner radius equals the outer radius minus the padding between them.
 - **Decorative noise.** Blobs, grain, mesh gradients, floating 3D shapes, and frosted glass layered behind content that has no image of its own. Use real content as the visual, such as product screenshots, photos, or data, or let type and space carry the page.
+- **Crude illustration.** A hand-drawn SVG of the subject, such as a loaf, a laptop, or a server, that reads as a blob or as a different object. A weak drawing costs more than no drawing. Keep one only when it reads as the thing at a glance at the viewing size; otherwise let type carry the piece, or use a simple, recognizable symbol.
 - **Filler content.** Lorem ipsum, "John Doe", suspiciously round metrics, and three identical feature columns of icon, heading, and sentence. Use realistic content in realistic, uneven amounts.
 - **Motion by default.** A fade-up on every section and a scale on every hover. Motion explains change: where something came from, what responded, what is loading. Use it there, keep it short, and respect the reduced-motion preference.
 
@@ -66,8 +68,10 @@ Generated design converges on the patterns below. Each is wrong as a default, an
 Look at the output before presenting it. Most design failures are obvious in a rendered image and invisible in code.
 
 - Render the work and view it at its real size. For UI, capture a narrow phone width and a common desktop width. For social images and video, view them at the size people meet them, such as a feed thumbnail on a phone.
+- For social images, thumbnails, and posters, also view a copy scaled to about a quarter of its width. The main message must still read.
 - Blur or squint at it. The order in which things stand out must match the ranking from the Content step.
 - Check contrast numerically: at least 4.5:1 for body text, and 3:1 for text at least 24px (or 18.66px bold) and for meaningful non-text UI such as input borders, icons, and focus rings.
+- Check the smallest text, including labels inside diagrams, charts, and illustrations. Keep it at 12px or larger on screen; text that only works at full zoom is not working.
 - Check every state and variant that exists: hover, focus, active, disabled, empty, loading, error, overflowing content, and both themes when there is a dark mode.
 - Compare the result against Default Failures and remove each one that has no reason to be there.
 - When the work cannot be rendered, say so and name what was not checked.

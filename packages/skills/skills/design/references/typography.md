@@ -36,28 +36,29 @@ The platform's system font stack is a legitimate choice for tools, admin panels,
 
 ## Voice By Construction
 
-Typefaces communicate through how their letters are built. Adjectives like "modern" or "elegant" do not pick a font; construction does.
+Typefaces communicate through how their letters are built. Adjectives like "modern" or "elegant" do not pick a font; construction does. Classify each candidate by its letters, then judge whether that construction fits.
 
-- **Neo-grotesque sans** (Helvetica, Inter, Roboto, SF Pro): neutral and everywhere. It disappears, which is right for dense tools and wrong when the work needs a recognizable identity.
-- **Humanist sans** (Frutiger, Source Sans 3, Fira Sans, Noto Sans): based on handwritten strokes, with open forms. Warmer and more readable at small sizes; suits approachable products, public services, and long interface text.
-- **Geometric sans** (Futura, Avenir, Poppins, Montserrat): built from circles and straight lines. Confident and brand-forward at display sizes; tiring in long text, where the round letters blur together.
-- **Grotesque and industrial sans** (Akzidenz-Grotesk, Franklin Gothic, Archivo): sturdier and more irregular than neo-grotesques. Suits editorial headlines, signage, and work that should feel direct.
-- **Serif, old-style and transitional** (Garamond, Source Serif 4, Charter, Literata): the strongest choice for long reading. Signals editorial weight, tradition, and authority.
-- **Slab serif** (Rockwell, Zilla Slab, Roboto Slab): heavy, even serifs. Sturdy and mechanical, sometimes friendly; survives low resolution and distance well.
-- **Monospace** (JetBrains Mono, IBM Plex Mono): for code and fixed-width data. As the main face of a whole interface it reads as a developer tool, which is right for developer tools and a costume elsewhere.
+- **Neo-grotesque sans**, such as Helvetica, Inter, Roboto, and the system UI fonts: closed apertures and uniform strokes. Neutral and everywhere. It disappears, which is right for dense tools and wrong when the work needs a recognizable identity.
+- **Humanist sans**: open apertures, some stroke modulation, and proportions from handwriting. Warmer and more readable at small sizes; suits approachable products, public services, and long interface text.
+- **Geometric sans**: near-circular bowls, single-story `a` in many, and straight, even strokes. Confident and brand-forward at display sizes; tiring in long text, where the round letters blur together.
+- **Grotesque and industrial sans**: older and more irregular than neo-grotesques, often in condensed widths. Suits editorial headlines, signage, and work that should feel direct.
+- **Serif, old-style and transitional**: bracketed serifs and moderate stroke contrast. The strongest choice for long reading. Signals editorial weight, tradition, and authority.
+- **Slab serif**: heavy, square serifs with little stroke contrast. Sturdy and mechanical, sometimes friendly; survives low resolution and distance well.
+- **Monospace**: every glyph the same width. For code and fixed-width data. As the main face of a whole interface it reads as a developer tool, which is right for developer tools and a costume elsewhere.
 - **Display, script, and novelty faces**: one role only, such as a headline or a title card. Never body text.
 
 ## Font Choice Failures
 
 - Choosing the font before knowing the roles, the content, and the audience.
 - A neutral neo-grotesque by reflex for work that needs an identity, or a fashionable display face by reflex to avoid looking generic. The same handful of trendy faces appears across generated work; a font picked to seem distinctive becomes the new default.
+- Shortlisting only the first faces that come to mind. Most generated work draws from the same few dozen families; when every candidate is one you have seen used everywhere, look further.
 - Pairing two fonts of the same classification, such as two geometric sans faces. They look almost the same, so the pair reads as a mistake.
 - More than two families. A third almost never earns its place outside a code face.
 - A display face at body size, or a thin weight (100–300) below about 24px.
 
 ## Pairing
 
-1. Try one family first, using weight, size, and color for contrast. A superfamily with matching sans and serif designs, such as IBM Plex or Source Sans and Source Serif, extends one family when you need a second voice.
+1. Try one family first, using weight, size, and color for contrast. A superfamily with matching sans and serif designs extends one family when you need a second voice.
 2. When two families are needed, contrast them on one axis and match them on others. A serif display over a sans body works when the two share similar proportions and x-height. Two fonts that differ on everything clash; two that differ on nothing look like an error.
 3. Give each family a fixed set of roles, and keep to them.
 
