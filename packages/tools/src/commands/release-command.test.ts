@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { parseArguments } from "../cli/parse-arguments.ts";
+import type { GitRunner } from "../release/published-tags.ts";
 import type { ReadinessOptions, ReleaseRunner } from "../release/readiness.ts";
 import { createReporter } from "../reporting/reporter.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
@@ -45,6 +46,7 @@ async function runRelease(
   packages: readonly WorkspacePackage[],
   argv: readonly string[],
   verifyExitCode = EXIT_SUCCESS,
+  git?: GitRunner,
 ): Promise<RunResult> {
   const lines: string[] = [];
   const errors: string[] = [];
@@ -78,7 +80,7 @@ async function runRelease(
 
   // The command has to finish before the captured output is read: an object
   // literal evaluates its properties in source order.
-  const exitCode = await createReleaseCommand(resolver, readiness).run(context);
+  const exitCode = await createReleaseCommand(resolver, readiness, git).run(context);
   return { errors: errors.join("\n"), exitCode, output: lines.join("\n"), verified };
 }
 
@@ -128,6 +130,77 @@ describe("hub release", () => {
     const result = await runRelease([blocked], ["--skip-verify"]);
 
     expect(result.output).toContain("is not newer than the published 0.9.0");
+    expect(result.exitCode).toBe(EXIT_FAILURE);
+  });
+});
+
+/** Answers `git fetch` with `fetched`, `git tag --list` with `tags`, and `git log` from `logs` by pathspec. */
+function fakeGit(tags: readonly string[], logs: Record<string, string>, fetched = true): GitRunner {
+  return vi.fn<GitRunner>(async (args) => {
+    if (args[0] === "fetch") {
+      return { isSuccess: fetched, stdout: "" };
+    }
+    if (args[0] === "tag") {
+      return { isSuccess: true, stdout: tags.join("\n") };
+    }
+    const log = logs[args.at(-1) ?? ""];
+    return log === undefined ? { isSuccess: false, stdout: "" } : { isSuccess: true, stdout: log };
+  });
+}
+
+describe("hub release --unreleased", () => {
+  it("lists each public package's commits since its last release tag, without verifying", async () => {
+    const git = fakeGit(["@codenhub/error@0.2.1"], { "packages/error": "abc1234\tfix(error): keep the cause\n" });
+    const packages = [createPackage("@codenhub/error"), createPackage("@codenhub/tools", true)];
+
+    const result = await runRelease(packages, ["--unreleased"], EXIT_SUCCESS, git);
+
+    expect(result.verified).toEqual([]);
+    expect(result.output).toContain("1 commit(s) since @codenhub/error@0.2.1");
+    expect(result.output).toContain("abc1234  fix(error): keep the cause");
+    expect(result.output).not.toContain("@codenhub/tools");
+    expect(result.exitCode).toBe(EXIT_SUCCESS);
+  });
+
+  it("says when a package was never released", async () => {
+    const git = fakeGit([], { "packages/kbd": "abc1234\tfeat(kbd): first\n" });
+
+    const result = await runRelease([createPackage("@codenhub/kbd")], ["--unreleased"], EXIT_SUCCESS, git);
+
+    expect(result.output).toContain("1 commit(s), never released");
+  });
+
+  it("says when nothing has landed since the last release", async () => {
+    const git = fakeGit(["@codenhub/error@0.2.1"], { "packages/error": "" });
+
+    const result = await runRelease([createPackage("@codenhub/error")], ["--unreleased"], EXIT_SUCCESS, git);
+
+    expect(result.output).toContain("nothing since @codenhub/error@0.2.1");
+  });
+
+  it("warns and uses local tags when fetching them fails", async () => {
+    const git = fakeGit(["@codenhub/error@0.2.1"], { "packages/error": "" }, false);
+
+    const result = await runRelease([createPackage("@codenhub/error")], ["--unreleased"], EXIT_SUCCESS, git);
+
+    expect(result.errors).toContain("Could not fetch release tags from origin");
+    expect(result.output).toContain("nothing since @codenhub/error@0.2.1");
+    expect(result.exitCode).toBe(EXIT_SUCCESS);
+  });
+
+  it("fails when git cannot read a package's history", async () => {
+    const git = fakeGit([], {});
+
+    const result = await runRelease([createPackage("@codenhub/error")], ["--unreleased"], EXIT_SUCCESS, git);
+
+    expect(result.errors).toContain("Could not read the history of packages/error");
+    expect(result.exitCode).toBe(EXIT_FAILURE);
+  });
+
+  it("refuses to run together with --cut", async () => {
+    const result = await runRelease([createPackage("@codenhub/error")], ["--unreleased", "--cut=minor"]);
+
+    expect(result.errors).toContain("--unreleased and --cut");
     expect(result.exitCode).toBe(EXIT_FAILURE);
   });
 });

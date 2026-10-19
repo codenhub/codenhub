@@ -307,6 +307,21 @@ It commits nothing and tags nothing, and the page it writes is deliberately unfi
 
 The `changelog` compliance rule below is the other half. `--cut` makes the entry easy to write; the rule makes it impossible to skip.
 
+### What the next release carries
+
+`hub release --unreleased` lists, for each selected public package, the commits that touched its directory since its newest release tag:
+
+```sh
+pnpm hub release --unreleased
+pnpm hub release error --unreleased
+```
+
+It answers "what is shipping next" from git, so there is no file to keep current and nothing for two pull requests to conflict over. That is why the repository keeps no running "Unreleased" changelog page (`docs/specs/packages-changelog.md`) and does not use Changesets (`docs/roadmap.md`, "Not Planned").
+
+The newest tag counts pre-releases, because a commit that went out in `0.3.0-beta.1` is not waiting for a release. A package with no tag is reported as never released, with its whole history. Merge commits are left out, since each one repeats the commits it merges. A change made outside the package's directory, such as a catalog bump in `pnpm-workspace.yaml`, is not listed even when it reaches the package.
+
+It fetches release tags from `origin` first, because a stale local tag list would report commits that already shipped; when the fetch fails it warns and reports against local tags. It reads tags and history only, so it skips `verify` and the preflight, and it cannot be combined with `--cut`. It reports from `HEAD`, so on a feature branch the list includes that branch's commits.
+
 ## Publishing
 
 `hub publish` is the only command in the repository that does something irreversible, and it is shaped around that. A version can be deprecated but never replaced, so the command refuses far more than it accepts.
