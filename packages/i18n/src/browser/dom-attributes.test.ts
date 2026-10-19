@@ -144,4 +144,68 @@ describe("initializeBrowserI18n attribute translation", () => {
     expect(added.getAttribute("placeholder")).toBe("Francais seulement");
     binding.disconnect();
   });
+
+  it("restores the fallback when an observed attribute key is removed", async () => {
+    document.body.innerHTML = [
+      '<input id="present" data-i18n-placeholder="greeting" placeholder="Original">',
+      '<input id="absent" data-i18n-title="greeting">',
+    ].join("");
+    const present = document.querySelector("#present")!;
+    const absent = document.querySelector("#absent")!;
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+
+    present.removeAttribute("data-i18n-placeholder");
+    absent.removeAttribute("data-i18n-title");
+    await flushMutations();
+
+    expect(present.getAttribute("placeholder")).toBe("Original");
+    expect(absent.hasAttribute("title")).toBe(false);
+    binding.disconnect();
+  });
+
+  it("restores a removed key on a descendant whose ancestor changed in the same batch", async () => {
+    document.body.innerHTML =
+      '<div data-i18n-title="greeting"><input data-i18n-placeholder="greeting" placeholder="Original"></div>';
+    const container = document.querySelector("div")!;
+    const input = document.querySelector("input")!;
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+
+    container.setAttribute("data-i18n-title", "frOnly");
+    input.removeAttribute("data-i18n-placeholder");
+    await flushMutations();
+
+    expect(container.getAttribute("title")).toBe("Francais seulement");
+    expect(input.getAttribute("placeholder")).toBe("Original");
+    binding.disconnect();
+  });
+
+  it("keeps a value the application set when it removes the key", async () => {
+    document.body.innerHTML = '<input data-i18n-placeholder="greeting" placeholder="Original">';
+    const input = document.querySelector("input")!;
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+
+    input.removeAttribute("data-i18n-placeholder");
+    input.setAttribute("placeholder", "Application value");
+    await flushMutations();
+
+    expect(input.getAttribute("placeholder")).toBe("Application value");
+    binding.disconnect();
+  });
+
+  it("restores the text fallback when an observed text key is removed", async () => {
+    document.body.innerHTML = '<p data-i18n="greeting">Original</p>';
+    const paragraph = document.querySelector("p")!;
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+
+    expect(paragraph.textContent).toBe("Bonjour");
+    paragraph.removeAttribute("data-i18n");
+    await flushMutations();
+
+    expect(paragraph.textContent).toBe("Original");
+    binding.disconnect();
+  });
 });

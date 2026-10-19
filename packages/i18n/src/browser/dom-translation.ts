@@ -46,7 +46,7 @@ interface TranslateRootOptions {
 
 /** @internal */
 export interface DomTranslator {
-  /** Translates safe leaves at and below the configured root. */
+  /** Translates safe leaves and attributes at and below the root, restoring the fallback where a key was removed. */
   translateRoot(options: TranslateRootOptions): void;
 }
 
@@ -66,9 +66,11 @@ const isInsideCustomElement = (element: Element, root: ParentNode): boolean => {
   return false;
 };
 
-const collectElements = (root: ParentNode): Element[] => {
+const collectElements = (root: ParentNode, isTracked: (element: Element) => boolean): Element[] => {
   const descendants = Array.from(root.querySelectorAll(TRANSLATION_KEY_SELECTOR));
-  return isElementNode(root) && root.matches(TRANSLATION_KEY_SELECTOR) ? [root, ...descendants] : descendants;
+  return isElementNode(root) && (root.matches(TRANSLATION_KEY_SELECTOR) || isTracked(root))
+    ? [root, ...descendants]
+    : descendants;
 };
 
 const isValidDomKey = (rawKey: string): boolean =>
@@ -135,6 +137,40 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     state.translated = nextValue;
   };
 
+  /** Restores the fallback of an attribute whose key was removed, unless the value changed since translation. */
+  const restoreAttribute = (element: Element, attribute: string): void => {
+    const states = attributeStates.get(element);
+    const state = states?.get(attribute);
+
+    if (states === undefined || state === undefined) {
+      return;
+    }
+
+    if (element.getAttribute(attribute) === state.translated) {
+      if (state.fallback === null) {
+        element.removeAttribute(attribute);
+      } else {
+        element.setAttribute(attribute, state.fallback);
+      }
+    }
+    states.delete(attribute);
+  };
+
+  /** Restores the fallback text of an element whose key was removed, unless the text changed since translation. */
+  const restoreText = (element: Element): void => {
+    const fallbackText = fallbackTexts.get(element);
+    const translatedText = translatedTexts.get(element);
+
+    if (fallbackText !== undefined && translatedText !== undefined && element.textContent === translatedText) {
+      element.textContent = fallbackText;
+    }
+    fallbackTexts.delete(element);
+    translatedTexts.delete(element);
+  };
+
+  const isTracked = (element: Element): boolean =>
+    translatedTexts.has(element) || (attributeStates.get(element)?.size ?? 0) > 0;
+
   const translateText = (element: Element, rawKey: string, translate: (key: string) => string | undefined): void => {
     if (element.childElementCount > 0) {
       if (!options.isSilent) {
@@ -173,6 +209,8 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
 
     if (rawKey !== null) {
       translateText(element, rawKey, translate);
+    } else {
+      restoreText(element);
     }
 
     for (const attribute of TRANSLATED_ATTRIBUTES) {
@@ -180,13 +218,15 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
 
       if (rawAttributeKey !== null) {
         translateAttribute(element, attribute, rawAttributeKey, translate);
+      } else {
+        restoreAttribute(element, attribute);
       }
     }
   };
 
   return {
     translateRoot({ root, boundary = root, translate }) {
-      for (const element of collectElements(root)) {
+      for (const element of collectElements(root, isTracked)) {
         if (!isInsideCustomElement(element, boundary)) {
           translateElement(element, translate);
         }
