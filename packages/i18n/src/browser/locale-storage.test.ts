@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { initializeBrowserI18n } from "../browser";
+import { createI18n } from "../index";
 import { createManager, type Locale, setNavigatorLocales, setupBrowserTestHooks } from "./test-helpers";
 
 setupBrowserTestHooks();
@@ -43,6 +44,25 @@ describe("initializeBrowserI18n locale resolution", () => {
     await initializeBrowserI18n({ i18n, persistLocale: false });
 
     expect(i18n.locale).toBe("pt-BR");
+  });
+
+  it.each([
+    [["zh-Hant-TW"], ["en", "zh-Hans", "zh-Hant"], "zh-Hant"],
+    [["pt-BR"], ["en", "pt-PT", "pt"], "pt"],
+    [["sr-Latn-RS"], ["en", "sr", "sr-Latn"], "sr-Latn"],
+    [["es-MX"], ["en", "es-ES", "es-419"], "es-ES"],
+  ])("matches navigator %j against %j as %s", async (languages, locales, expected) => {
+    setNavigatorLocales(languages);
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales,
+      loadLocale: () => ({ greeting: "Hello" }),
+      getLocaleDirection: () => "ltr",
+    });
+
+    await initializeBrowserI18n({ i18n, persistLocale: false });
+
+    expect(i18n.locale).toBe(expected);
   });
 
   it("uses navigator.language when the preference list is empty", async () => {

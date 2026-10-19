@@ -91,7 +91,19 @@ const resolveBrowserLocale = <TLocale extends string>(i18n: I18n<TLocale>): TLoc
       return exactLocale;
     }
 
-    const language = preference.trim().split("-")[0]?.toLowerCase();
+    const normalizedPreference = preference.trim().toLowerCase();
+    const prefixLocale = i18n.locales
+      .filter((locale) => normalizedPreference.startsWith(`${locale.toLowerCase()}-`))
+      .reduce<TLocale | undefined>(
+        (longest, locale) => (locale.length > (longest?.length ?? 0) ? locale : longest),
+        undefined,
+      );
+
+    if (prefixLocale !== undefined) {
+      return prefixLocale;
+    }
+
+    const language = normalizedPreference.split("-")[0];
     const subtagLocale = i18n.locales.find((locale) => locale.toLowerCase().split("-")[0] === language);
 
     if (subtagLocale !== undefined) {

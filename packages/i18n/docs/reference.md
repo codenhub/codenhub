@@ -9,7 +9,7 @@ The package has three public entrypoints. Locale identifiers use conservative AS
 
 ## `@codenhub/i18n`
 
-The root entrypoint is runtime-neutral. It exports `createI18n`, `I18nError`, and `i18nErrors`, plus the `I18n`, `I18nConfig`, `I18nErrorCode`, `I18nEventMap`, `I18nErrorOptions`, `I18nInitOptions`, `I18nLocaleChangeEventDetail`, `I18nReadyEventDetail`, `LocaleDictionary`, and `LocaleDirection` types.
+The root entrypoint is runtime-neutral. It exports `createI18n`, `I18nError`, and `i18nErrors`, plus the `I18n`, `I18nConfig`, `I18nErrorCode`, `I18nEventMap`, `I18nErrorOptions`, `I18nInitOptions`, `I18nLocaleChangeEventDetail`, `I18nReadyEventDetail`, `LocaleDictionary`, `LocaleDictionaryLimits`, and `LocaleDirection` types.
 
 ### Configuration
 
@@ -20,12 +20,21 @@ interface I18nConfig<TLocale extends string = string> {
   loadLocale(locale: TLocale): unknown | Promise<unknown>;
   getLocaleDirection(locale: TLocale): "ltr" | "rtl";
   isSilent?: boolean;
+  dictionaryLimits?: LocaleDictionaryLimits;
+}
+
+interface LocaleDictionaryLimits {
+  maxDepth?: number; // default 100
+  maxTranslations?: number; // default 10,000
+  maxProperties?: number; // default 20,000
+  maxValueLength?: number; // default 100,000
+  maxTotalLength?: number; // default 5,000,000
 }
 
 function createI18n<TLocale extends string>(config: I18nConfig<TLocale>): I18n<TLocale>;
 ```
 
-The configuration must be a plain object, such as an object literal, and only its own properties are read: a class instance or an object built with `Object.create(defaults)` throws `TypeError`. `locales` must be a non-empty array of conservative ASCII locale identifiers that remain unique case-insensitively after trimming. `defaultLocale` must match one of them. `loadLocale` and `getLocaleDirection` must be functions, and `isSilent`, when provided, must be boolean. Invalid configuration throws `TypeError` during `createI18n()`.
+The configuration must be a plain object, such as an object literal, and only its own properties are read: a class instance or an object built with `Object.create(defaults)` throws `TypeError`. `locales` must be a non-empty array of conservative ASCII locale identifiers that remain unique case-insensitively after trimming. `defaultLocale` must match one of them. `loadLocale` and `getLocaleDirection` must be functions, and `isSilent`, when provided, must be boolean. Each `dictionaryLimits` entry, when provided, must be a positive safe integer, and an unknown limit name is rejected. Invalid configuration throws `TypeError` during `createI18n()`.
 
 Configuration locale metadata is copied and frozen. Later caller mutations do not alter `defaultLocale`, `locales`, or locale matching. The loading and direction callbacks remain consumer-owned dependencies. Exceptions from `getLocaleDirection` propagate unchanged; the initial call occurs during `createI18n()`, and later calls occur before newly loaded state is applied.
 
@@ -79,14 +88,20 @@ const payload = {
 // becomes { "page.title": "Welcome" }
 ```
 
-The normalized `LocaleDictionary` has a null prototype, is frozen, and contains only string values. Dictionaries allow at most 100 levels of nesting, 10,000 translations, 20,000 traversed properties, 1,000 characters per flattened key, 100,000 characters per translation value, and 5,000,000 aggregate translation characters. A payload throws `TypeError` when it:
+The normalized `LocaleDictionary` has a null prototype, is frozen, and contains only string values.
+
+Dictionaries are checked against resource limits. By default they allow at most 100 levels of nesting, 10,000 translations, 20,000 traversed properties (translations and nested groups together), 100,000 characters per translation value, and 5,000,000 aggregate translation characters. `dictionaryLimits` raises or lowers any of these per manager; unset limits keep their defaults. Raising `maxTranslations` for a nested dictionary may also require raising `maxProperties`. Flattened keys are limited to 1,000 characters; that limit is fixed because `translate()` and DOM keys share it.
+
+A payload throws `TypeError` when it:
 
 - Is null, an array, a primitive, or empty.
 - Contains a non-string leaf, array, function, symbol key, accessor, cycle, or shared object reference.
-- Contains an empty dot-separated segment, an ASCII control character, a `__proto__`, `prototype`, or `constructor` segment, or a flat/nested key collision.
+- Contains an empty dot-separated segment, an ASCII control character, a `__proto__` segment, or a flat/nested key collision. `prototype` and `constructor` are ordinary keys.
 - Exceeds a dictionary depth, translation count, property count, flattened-key length, translation-value length, or aggregate translation-character limit.
 
 Validation failures are not wrapped and are retryable on the next load.
+
+Normalized dictionaries are shared across managers by payload identity: when a loader returns the same object again, even to another manager, the normalized dictionary is reused after it is checked against that manager's limits. A payload is therefore treated as immutable once loaded; mutating it afterwards does not change translations. A loader that returns a new object each time, such as one that parses JSON per call, gets no sharing.
 
 ### `setLocale(locale)`
 
@@ -212,7 +227,7 @@ The helper selects the initial locale in this order:
 3. `navigator.languages`, or `navigator.language` when that list is empty.
 4. The configured default locale.
 
-An explicit locale is authoritative. Browser preferences test an exact case-insensitive match first, then match the language subtag to the first configured locale with that language.
+An explicit locale is authoritative. Each browser preference, in order, tests an exact case-insensitive match first, then the longest configured locale that the preference starts with as whole subtags, such as `zh-Hant` for `zh-Hant-TW` or `pt` for `pt-BR`, then the first configured locale with the same language subtag.
 
 Defaults are `storageKey: "i18n"`, `persistLocale: true`, `syncDocument: true`, and `observe: false`. DOM translation is disabled unless `root` is provided. `observe: true` without a root rejects with `TypeError` before core initialization.
 

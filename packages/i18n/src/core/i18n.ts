@@ -73,7 +73,10 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     this.currentLocale = this.defaultLocale;
     this.currentDirection = this.resolveLocaleDirection(this.defaultLocale);
     this.localeLookup = new Map(this.locales.map((locale) => [locale.toLowerCase(), locale]));
-    this.loader = createLocaleLoader({ loadLocale: this.config.loadLocale });
+    this.loader = createLocaleLoader({
+      loadLocale: this.config.loadLocale,
+      dictionaryLimits: this.config.dictionaryLimits,
+    });
   }
 
   get locale(): TLocale {

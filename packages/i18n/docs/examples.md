@@ -98,6 +98,8 @@ export async function renderPage(requestLocale: string) {
 
 Do not share mutable manager state across concurrent requests. Immutable dictionary modules and runtime-level import caches may still be shared.
 
+Return the same payload object for a locale on every request, such as a module-level import, rather than parsing it per request: managers then share its normalized dictionary instead of validating it again. Missing-key warnings are deduplicated per manager, so a per-request manager warns for a missing key on every request; set `isSilent: true` in production SSR and catch missing keys in tests or builds instead.
+
 ## SSG
 
 Use routing output to drive the framework's static path API. Keep a separate manager for every concurrently rendered page.

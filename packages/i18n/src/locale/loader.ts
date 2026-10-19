@@ -1,11 +1,13 @@
 import { I18nError } from "../core/errors";
 import type { LocaleDictionary } from "../core/types";
-import { normalizeDictionary } from "./dictionary";
+import { normalizeDictionary, type DictionaryLimits } from "./dictionary";
 
 /** Injected runtime-specific locale payload loader. */
 export interface LocaleLoaderOptions<TLocale extends string> {
   /** Returns a flat or nested locale payload. */
   loadLocale(locale: TLocale): unknown | Promise<unknown>;
+  /** Resource limits applied to loaded payloads. Defaults to the package limits. */
+  dictionaryLimits?: DictionaryLimits;
 }
 
 /** Cache and normalization boundary used by an i18n manager. */
@@ -59,7 +61,7 @@ export function createLocaleLoader<TLocale extends string>(
             throw new I18nError({ locale, cause });
           }
 
-          const normalizedDictionary = normalizeDictionary(payload);
+          const normalizedDictionary = normalizeDictionary(payload, options.dictionaryLimits);
           dictionaries.set(locale, normalizedDictionary);
           resolveLoad(normalizedDictionary);
         } catch (error) {

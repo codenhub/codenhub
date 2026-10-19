@@ -9,5 +9,6 @@ export type {
   I18nLocaleChangeEventDetail,
   I18nReadyEventDetail,
   LocaleDictionary,
+  LocaleDictionaryLimits,
   LocaleDirection,
 } from "./core/types";
