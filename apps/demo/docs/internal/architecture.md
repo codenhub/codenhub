@@ -14,7 +14,7 @@ scope: apps/demo's own architecture — this app's implementation of the contrac
 
 The root `/` is not served by this app. `apps/demo/public/_redirects` sends it with a 301 to `https://codenhub.dev/packages/`, the package list on the main site, which Cloudflare Workers static assets apply to asset responses and which accepts an absolute external target. Each demo stays at `/<slug>/`.
 
-The header, footer, theme toggle, skip link, and `robots.txt` / `sitemap.xml` bodies come from `@codenhub/app-shell`, the private package the three deploy surfaces share so their chrome reads identically. `apps/demo/src/layouts/base-layout.astro` is a thin wrapper that supplies this surface's `SiteConfig` and adds the documentation link to the header's `actions` slot; everything else in `src/styles/global.css` is this app's own styling. `@codenhub/components` is still not stable enough to build the shell on; revisit that once the package settles.
+The header, footer, theme toggle, skip link, and `robots.txt` / `sitemap.xml` bodies come from `@codenhub/app-shell`, the private package the three deploy surfaces share so their chrome reads identically. `apps/demo/src/layouts/base-layout.astro` is a thin wrapper that supplies this surface's `SiteConfig` and passes its page through, adding nothing to the header: the demo site has no root of its own, so it sets no Documentation link; everything else in `src/styles/global.css` is this app's own styling. `@codenhub/components` is still not stable enough to build the shell on; revisit that once the package settles.
 
 ## Icons
 
