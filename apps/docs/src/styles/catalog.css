@@ -1,7 +1,3 @@
-.catalog {
-  @apply px-(--layout-gutter) py-10;
-}
-
 .not-found-status {
   @apply text-text-secondary text-label font-bold;
 }
@@ -14,85 +10,6 @@
   @apply cluster;
 }
 
-.packages-toolbar {
-  @apply mb-10 flex flex-wrap items-center justify-between gap-x-6 gap-y-4;
-}
-
-.packages-toolbar h1 {
-  @apply text-title-lg;
-}
-
-.packages-toolbar-controls {
-  @apply flex flex-shrink-0 flex-wrap items-center gap-3;
-}
-
-/* `.input-group` (from `@codenhub/styles`) draws the field boundary, the focus
-   ring, and mutes the leading icon; this sizes the wrapper and the icon only. */
-.package-search {
-  @apply w-64 max-w-full text-sm;
-}
-
-.package-search input::placeholder {
-  @apply text-text-secondary;
-}
-
-.package-search .ic-lucide-search {
-  --ic-size: 1rem;
-}
-
-.package-sort {
-  @apply border-border text-text-secondary hover:text-text hover:border-border-hover flex min-h-(--control-height) items-center gap-2 rounded-(--radius-control) border px-3 py-2 text-sm transition-colors;
-}
-
-.package-sort i {
-  --ic-size: 1rem;
-}
-
-/* The icons base stylesheet gives `i[class^="ic-"]` an explicit `display`, which
-   outranks the `[hidden]` user-agent rule; the sort button's inactive direction
-   needs this to disappear. */
-[data-sort-icon][hidden] {
-  display: none;
-}
-
-.packages-empty {
-  @apply text-text-secondary;
-}
-
-.package-grid {
-  --layout-grid-min: 20rem;
-}
-
-.package-card {
-  @apply border-border bg-background flex flex-1 flex-col rounded-(--radius-surface) border p-6 no-underline transition-[background-color,border-color] duration-(--motion-duration-fast) ease-(--motion-ease);
-}
-
-.package-card:hover {
-  @apply border-border-hover bg-foreground;
-}
-
-.package-card-heading {
-  @apply flex items-center justify-between gap-3;
-}
-
-.package-card h2 {
-  @apply text-title-sm break-words;
-}
-
-.package-card p {
-  @apply text-text-secondary mt-3 leading-7;
-}
-
-.package-card-arrow {
-  @apply text-text-secondary mt-4 self-end transition-transform duration-(--motion-duration-fast) ease-(--motion-ease);
-  --ic-size: 1rem;
-}
-
-.package-card:hover .package-card-arrow {
-  @apply text-text;
-  transform: translateX(0.25rem);
-}
-
 .status-badge {
   @apply shrink-0;
 }
@@ -102,13 +19,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .package-card,
-  .package-card-arrow,
   .nav-group-caret {
     transition: none;
-  }
-
-  .package-card:hover .package-card-arrow {
-    transform: none;
   }
 }

@@ -18,7 +18,6 @@
     "@astrojs/markdown-remark": "catalog:",
     "@codenhub/app-shell": "workspace:*",
     "@codenhub/icons": "workspace:*",
-    "@codenhub/kbd": "workspace:*",
     "@codenhub/styles": "workspace:*",
     "@codenhub/tools": "workspace:*",
     "@tailwindcss/vite": "catalog:",

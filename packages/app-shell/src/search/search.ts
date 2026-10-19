@@ -1,4 +1,4 @@
-import { matchFuzzy, type FuzzyMatch } from "./fuzzy";
+import { matchFuzzy, type FuzzyMatch } from "./fuzzy.ts";
 
 export interface SearchEntry {
   /** Package label the entry belongs to, such as `Styles`. */

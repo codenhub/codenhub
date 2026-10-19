@@ -91,6 +91,13 @@
   @apply size-3.5;
 }
 
+/* Identifiers such as `revocation_endpoint_auth_signing_alg_values_supported`
+   are one unbreakable word; without this, one in prose widens the page past a
+   phone's viewport. */
+.markdown-content :not(pre) > code {
+  overflow-wrap: anywhere;
+}
+
 .markdown-content .code-block {
   @apply border-border my-5 overflow-hidden rounded-(--radius-surface) border shadow-(--elevation-sm);
 }

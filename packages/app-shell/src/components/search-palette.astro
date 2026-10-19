@@ -1,24 +1,38 @@
-<button aria-keyshortcuts="Control+K" class="search-trigger" data-search-trigger type="button">
-  <svg aria-hidden="true" class="search-icon" viewBox="0 0 24 24">
+---
+interface Props {
+  /**
+   * Where the search index lives. `apps/docs` serves it and passes its own
+   * `/search-index.json`; another surface passes the documentation site's
+   * absolute URL, which that site allows cross-origin. Result routes in the
+   * index are relative to its own origin, so they resolve against this URL.
+   */
+  indexUrl: string;
+}
+
+const { indexUrl } = Astro.props;
+---
+
+<button aria-keyshortcuts="Control+K" class="shell-search-trigger" data-search-trigger type="button">
+  <svg aria-hidden="true" class="shell-search-icon" viewBox="0 0 24 24">
     <circle cx="11" cy="11" r="7"></circle>
     <path d="m20 20-3.5-3.5"></path>
   </svg>
-  <span class="search-trigger-label">Search</span>
-  <kbd class="search-trigger-shortcut" data-search-shortcut>Ctrl K</kbd>
+  <span class="shell-search-trigger-label">Search</span>
+  <kbd class="kbd shell-search-trigger-shortcut" data-search-shortcut>Ctrl + K</kbd>
 </button>
 
-<dialog aria-label="Search documentation" class="search-dialog" data-search-dialog>
-  <div class="search-field">
-    <svg aria-hidden="true" class="search-icon" viewBox="0 0 24 24">
+<dialog aria-label="Search documentation" class="shell-search-dialog" data-index-url={indexUrl} data-search-dialog>
+  <div class="shell-search-field">
+    <svg aria-hidden="true" class="shell-search-icon" viewBox="0 0 24 24">
       <circle cx="11" cy="11" r="7"></circle>
       <path d="m20 20-3.5-3.5"></path>
     </svg>
     <input
       aria-autocomplete="list"
-      aria-controls="search-results"
+      aria-controls="shell-search-results"
       aria-expanded="false"
       autocomplete="off"
-      class="search-input"
+      class="shell-search-input"
       data-search-input
       placeholder="Search documentation"
       role="combobox"
@@ -27,16 +41,16 @@
     />
   </div>
 
-  <ul aria-label="Search results" class="search-results" data-search-results id="search-results" role="listbox"></ul>
+  <ul aria-label="Search results" class="shell-search-results" data-search-results id="shell-search-results" role="listbox"></ul>
 
-  <p class="search-status" data-search-status role="status">Type to search every package document.</p>
+  <p class="shell-search-status" data-search-status role="status">Type to search every package document.</p>
 </dialog>
 
 <script>
   import { KEYS, keyboard } from "@codenhub/kbd";
 
-  import { toHighlightSegments } from "../lib/search/highlight";
-  import { searchDocumentation, type SearchEntry, type SearchResult } from "../lib/search/search";
+  import { toHighlightSegments } from "../search/highlight.ts";
+  import { searchDocumentation, type SearchEntry, type SearchResult } from "../search/search.ts";
 
   const trigger = document.querySelector<HTMLButtonElement>("[data-search-trigger]");
   const dialog = document.querySelector<HTMLDialogElement>("[data-search-dialog]");
@@ -49,9 +63,11 @@
     const isMac = navigator.platform.toUpperCase().includes("MAC");
 
     if (shortcut !== null) {
-      shortcut.textContent = isMac ? "⌘ K" : "Ctrl K";
+      shortcut.textContent = isMac ? "⌘ + K" : "Ctrl + K";
       trigger.setAttribute("aria-keyshortcuts", isMac ? "Meta+K" : "Control+K");
     }
+
+    const indexUrl = new URL(dialog.dataset.indexUrl ?? "/search-index.json", location.href);
 
     let entries: SearchEntry[] | undefined;
     let results: SearchResult[] = [];
@@ -59,10 +75,28 @@
     let latestQuery = 0;
 
     // Fetched on first open so a reader who never searches never downloads it.
-    const loadEntries = async () => {
-      entries ??= (await fetch("/search-index.json").then((response) => response.json())) as SearchEntry[];
+    // A failed load is not cached, so the next keystroke tries again.
+    const loadEntries = async (): Promise<SearchEntry[]> => {
+      if (entries === undefined) {
+        const response = await fetch(indexUrl);
+        if (!response.ok) {
+          throw new Error(`Search index responded ${response.status}`);
+        }
+
+        entries = (await response.json()) as SearchEntry[];
+      }
 
       return entries;
+    };
+
+    // Started on open so the index is usually ready by the first keystroke. A
+    // failure is not reported here: it surfaces, and retries, when the reader types.
+    const warmEntries = async () => {
+      try {
+        await loadEntries();
+      } catch {
+        // See above.
+      }
     };
 
     const renderLabel = (item: HTMLElement, label: string, positions: readonly number[]) => {
@@ -99,19 +133,19 @@
 
       for (const [order, result] of results.entries()) {
         const option = document.createElement("li");
-        option.className = "search-result";
-        option.id = `search-result-${order}`;
+        option.className = "shell-search-result";
+        option.id = `shell-search-result-${order}`;
         option.setAttribute("role", "option");
 
         const link = document.createElement("a");
-        link.href = result.entry.route;
+        link.href = new URL(result.entry.route, indexUrl).href;
 
         const label = document.createElement("span");
-        label.className = "search-result-label";
+        label.className = "shell-search-result-label";
         renderLabel(label, result.entry.section ?? result.entry.title, result.positions);
 
         const context = document.createElement("span");
-        context.className = "search-result-context";
+        context.className = "shell-search-result-context";
         context.textContent =
           result.entry.section === undefined
             ? result.entry.packageLabel
@@ -138,7 +172,18 @@
         return;
       }
 
-      const loaded = await loadEntries();
+      let loaded: SearchEntry[];
+      try {
+        loaded = await loadEntries();
+      } catch {
+        if (token === latestQuery) {
+          results = [];
+          render();
+          status.textContent = "Search is unavailable right now. Try again in a moment.";
+        }
+
+        return;
+      }
 
       // Every keystroke typed before the index arrives is still waiting here,
       // and they do not resolve in order. Without this the results a reader ends
@@ -162,7 +207,7 @@
 
       dialog.showModal();
       input.select();
-      void loadEntries();
+      void warmEntries();
     };
 
     const openActive = () => {

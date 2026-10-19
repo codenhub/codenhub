@@ -6,8 +6,9 @@
  * URLs are the shell header's standard links; each renders only when it is set,
  * so a surface opts a link in or out purely by whether it carries the URL — it
  * omits the one that points back at itself, and sets the rest. `wwwUrl`,
- * `docsUrl`, and `demoUrl` are the left-side "Hub", "Documentation", and "Demo"
- * links; `npmUrl` is the npm mark beside GitHub on the right.
+ * `docsUrl`, and `demoUrl` are the left-side "CodenHub", "Documentation", and
+ * "Demo" links; the last two point at the current package's docs or demo, so a
+ * page that belongs to no package leaves them unset; `npmUrl` is the npm mark beside GitHub on the right.
  */
 export interface SiteConfig {
   /** Canonical origin of this surface, without a trailing slash. */
@@ -22,7 +23,7 @@ export interface SiteConfig {
   docsUrl?: string;
   /** Demo site origin. Renders the header's "Demo" link. */
   demoUrl?: string;
-  /** Site index origin. Renders the header's "Hub" link. */
+  /** CodenHub site origin. Renders the header's "CodenHub" link. */
   wwwUrl?: string;
   /** npm organization page. Renders the header's npm mark. */
   npmUrl?: string;

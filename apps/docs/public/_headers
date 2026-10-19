@@ -1,0 +1,4 @@
+# codenhub.dev hosts the shared search palette and fetches this index from
+# here. The index is public documentation text, so any origin may read it.
+/search-index.json
+  Access-Control-Allow-Origin: *

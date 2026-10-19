@@ -1,5 +1,5 @@
 ---
-import BaseLayout from "@codenhub/app-shell/layouts/base-layout.astro";
+import BaseLayout from "../layouts/base-layout.astro";
 
 import { headerConfig } from "../site-config";
 import "../styles/global.css";
@@ -9,8 +9,8 @@ import "../styles/global.css";
   <main class="www-main" id="main-content">
     <div class="shell-content www-hero">
       <h1>Page not found</h1>
-      <p>This page moved or never existed. Head back to the index for the full list of packages and where each one lives.</p>
-      <p><a href="/">Back to the index</a></p>
+      <p>This page moved or never existed. Head back to the package list for every package and where each one lives.</p>
+      <p><a href="/packages/">Back to the package list</a></p>
     </div>
   </main>
 </BaseLayout>

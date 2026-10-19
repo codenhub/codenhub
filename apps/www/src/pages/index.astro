@@ -1,102 +1,223 @@
 ---
-import BaseLayout from "@codenhub/app-shell/layouts/base-layout.astro";
-
-import BrandIcon from "../components/brand-icon.astro";
-import PackageCard from "../components/package-card.astro";
+/**
+ * The landing page: what CodenHub is and why its packages hold up. The package
+ * groups and recent releases come from the catalog, so the page never names a
+ * package or version that has not been released.
+ */
+import AsciiField from "../components/ascii-field.astro";
+import BaseLayout from "../layouts/base-layout.astro";
 import { catalogPackages } from "../lib/catalog";
-import { headerConfig, siteConfig } from "../site-config";
+import { formatDate } from "../lib/format";
+import { headerConfig } from "../site-config";
 import "../styles/global.css";
+import "../styles/landing.css";
 
-interface Route {
-  href: string | undefined;
+interface Area {
   title: string;
   body: string;
-  external: boolean;
-  /** Leading lucide icon class for an internal surface. */
-  icon?: string;
-  /** Leading inline brand mark, for GitHub and npm. */
-  brand?: "github" | "npm";
+  /** Whether a package belongs here, by its slug. */
+  includes: (slug: string) => boolean;
 }
 
-const routes: Route[] = [
-  { href: siteConfig.docsUrl, title: "Documentation", body: "Guides, API reference, and changelogs for every package.", external: false, icon: "ic-lucide-book-open" },
-  { href: siteConfig.demoUrl, title: "Demos", body: "Live, deployed demos for the packages that ship one.", external: false, icon: "ic-lucide-play" },
-  { href: siteConfig.githubUrl, title: "GitHub", body: "Source, issues, and the monorepo itself.", external: true, brand: "github" },
-  { href: siteConfig.npmUrl, title: "npm", body: "The @codenhub organization and its published packages.", external: true, brand: "npm" },
+const named =
+  (...slugs: string[]) =>
+  (slug: string) =>
+    slugs.includes(slug);
+
+const areaCandidates: Area[] = [
+  {
+    title: "Interface",
+    body: "Design tokens, icons, themes, toasts, and shortcuts for browser UIs that load fast and stay accessible.",
+    includes: named("styles", "icons", "theme", "toaster", "kbd", "components", "ui-kit"),
+  },
+  {
+    title: "Application",
+    body: "Routing, state, and translations, without a framework to adopt first.",
+    includes: named("router", "store", "i18n"),
+  },
+  {
+    title: "Trust boundaries",
+    body: "Validate untrusted input, verify tokens, and speak OpenID Connect on Web Crypto and the Fetch API.",
+    includes: named("validation", "error", "jwt", "oidc"),
+  },
+  {
+    title: "Tooling",
+    body: "Vite and Tauri plugins, and the agent skills Coden works with every day.",
+    includes: (slug) => slug === "skills" || slug.startsWith("vite-plugin-") || slug.startsWith("tauri-plugin-"),
+  },
 ];
 
-const visibleRoutes = routes.filter((route): route is Route & { href: string } => route.href !== undefined);
+const ungrouped = catalogPackages.filter((entry) => !areaCandidates.some((area) => area.includes(entry.slug)));
+
+// An area shows only what has been released; a package no area names still
+// gets listed, under "More", rather than silently missing from the page.
+const areas = [
+  ...areaCandidates.map((area) => ({ ...area, packages: catalogPackages.filter((entry) => area.includes(entry.slug)) })),
+  { title: "More", body: "Everything else the workspace publishes.", packages: ungrouped },
+].filter((area) => area.packages.length > 0);
+
+const recentReleases = catalogPackages
+  .flatMap((entry) => (entry.releases.lastPublished === undefined ? [] : [{ entry, release: entry.releases.lastPublished }]))
+  .sort((left, right) => right.release.date.localeCompare(left.release.date))
+  .slice(0, 6);
+
+const principles = [
+  {
+    icon: "ic-lucide-globe",
+    title: "Built on the platform",
+    body: "Web Crypto, the Fetch API, native Web Components, and plain CSS. The packages lean on what browsers and runtimes already ship instead of reimplementing it.",
+  },
+  {
+    icon: "ic-lucide-gauge",
+    title: "Measured at every release",
+    body: "Each release records every entrypoint's minified, gzipped size, and publishing refuses a build that does not match it.",
+  },
+  {
+    icon: "ic-lucide-book-open",
+    title: "Documented for people and agents",
+    body: "Guides, API reference, and changelogs, searchable in one place, plus llms.txt files your coding agent can read.",
+  },
+  {
+    icon: "ic-lucide-tag",
+    title: "Exactly what is on npm",
+    body: "This site and the docs are built from release tags, not the main branch. What you read here is what the published version does.",
+  },
+];
 ---
 
 <BaseLayout siteConfig={headerConfig}>
-  <main class="www-main" id="main-content">
-    <div class="shell-content">
-      <section class="www-hero">
-        <h1>CodenHub</h1>
-        <p>
-          The shared packages, apps, and project standards behind <a href="https://coden.agency/">coden.agency</a>. This
-          is the index — every package, with its version, its bundle size once a release measures it, and links to its documentation, demo, source, and npm
-          release.
-        </p>
-      </section>
-
-      <nav aria-label="CodenHub surfaces" class="www-routes">
-        {
-          visibleRoutes.map((route) => (
-            <a
-              class="www-route"
-              href={route.href}
-              rel={route.external ? "noopener noreferrer" : undefined}
-              target={route.external ? "_blank" : undefined}
-            >
-              <span class="www-route-title">
-                {route.brand !== undefined && <BrandIcon brand={route.brand} class="www-route-icon www-route-brand" />}
-                {route.icon !== undefined && <i aria-hidden="true" class:list={["www-route-icon", route.icon]} />}
-                {route.title}
-                <i aria-hidden="true" class="www-route-arrow ic-lucide-arrow-up-right" />
-              </span>
-              <p>{route.body}</p>
+  <main class="landing" id="main-content">
+    <section aria-labelledby="landing-title" class="landing-hero">
+      <AsciiField class="landing-hero-field" />
+      <div class="shell-content landing-hero-content">
+        <div class="landing-hero-copy">
+          <h1 class="landing-display" id="landing-title">Foundations,<br />not frameworks.</h1>
+          <p class="landing-lede">
+            Small, focused packages for building on the web platform: styles, icons, validation, auth, routing, and more.
+            Take the one you need and skip the rest.
+          </p>
+          <div class="landing-actions">
+            <a class="btn primary landing-cta" href="/packages/">
+              Browse packages
+              <i aria-hidden="true" class="ic-lucide-arrow-right"></i>
             </a>
-          ))
-        }
-      </nav>
-
-      <section aria-labelledby="packages-title">
-        <div class="packages-toolbar">
-          <div>
-            <h2 id="packages-title">Packages</h2>
-          </div>
-          <div class="packages-toolbar-controls">
-            <div class="input-group package-search">
+            <button class="btn ghost edged landing-cta" data-open-search type="button">
               <i aria-hidden="true" class="ic-lucide-search"></i>
-              <input aria-label="Search packages" id="package-search" placeholder="Search packages…" type="search" />
-            </div>
-            <button
-              aria-label="Sort by name, ascending"
-              aria-pressed="false"
-              class="package-sort"
-              data-sort-direction="asc"
-              id="package-sort"
-              title="Sort by name, ascending"
-              type="button"
-            >
-              <i aria-hidden="true" class="ic-lucide-arrow-down-a-z" data-sort-icon="asc"></i>
-              <i aria-hidden="true" class="ic-lucide-arrow-down-z-a" data-sort-icon="desc" hidden></i>
+              Search the docs
             </button>
           </div>
         </div>
+      </div>
+    </section>
 
-        <div class="package-grid" id="package-grid" role="list">
-          {catalogPackages.map((entry) => <PackageCard entry={entry} />)}
+    <section aria-labelledby="principles-title" class="landing-section landing-band">
+      <div class="shell-content">
+        <h2 class="landing-heading" id="principles-title">Small on purpose.<br />Checked on every release.</h2>
+        <ul class="landing-principles">
+          {
+            principles.map((principle) => (
+              <li class="landing-principle">
+                <span aria-hidden="true" class="landing-principle-icon">
+                  <i class={principle.icon} />
+                </span>
+                <h3>{principle.title}</h3>
+                <p>{principle.body}</p>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </section>
+
+    <section aria-labelledby="areas-title" class="landing-section">
+      <div class="shell-content">
+        <h2 class="landing-heading" id="areas-title">One toolkit,<br />every layer of the app.</h2>
+        <div class="landing-areas">
+          {
+            areas.map((area) => (
+              <article class="landing-area">
+                <h3>{area.title}</h3>
+                <p>{area.body}</p>
+                <ul class="landing-area-packages">
+                  {area.packages.map((entry) => (
+                    <li>
+                      <a href={`/packages/${entry.slug}/`} title={entry.description}>
+                        {entry.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))
+          }
         </div>
-        <p class="packages-empty" data-empty-filtered hidden>No packages match your search.</p>
-      </section>
-    </div>
+      </div>
+    </section>
+
+    {
+      recentReleases.length > 0 && (
+        <section aria-labelledby="releases-title" class="landing-section landing-band">
+          <div class="shell-content landing-releases">
+            <div class="landing-releases-intro">
+              <h2 class="landing-heading" id="releases-title">
+                Recently
+                <br />
+                released.
+              </h2>
+              <a class="landing-link" href="/packages/">
+                All packages
+                <i aria-hidden="true" class="ic-lucide-arrow-right" />
+              </a>
+            </div>
+            <ol class="landing-release-list">
+              {recentReleases.map(({ entry, release }) => (
+                <li>
+                  <a class="landing-release" href={`/packages/${entry.slug}/`}>
+                    <span class="landing-release-label">{entry.label}</span>
+                    <span class="landing-release-name">{entry.name}</span>
+                    <span class="landing-release-version">v{release.version}</span>
+                    <time class="landing-release-date" datetime={release.date}>
+                      {formatDate(release.date)}
+                    </time>
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+      )
+    }
+
+    <section aria-labelledby="cta-title" class="landing-closing">
+      <div class="shell-content landing-closing-content">
+        <h2 class="landing-display" id="cta-title">Start with one package.</h2>
+        <p>Every package installs on its own, with its own docs and release history.</p>
+        <div class="landing-actions">
+          <a class="btn primary landing-cta" href="/packages/">
+            Browse packages
+            <i aria-hidden="true" class="ic-lucide-arrow-right"></i>
+          </a>
+          <button class="btn ghost edged landing-cta" data-open-search type="button">
+            <i aria-hidden="true" class="ic-lucide-search"></i>
+            Search the docs
+            <kbd class="kbd landing-cta-kbd" data-landing-shortcut>Ctrl + K</kbd>
+          </button>
+        </div>
+      </div>
+    </section>
   </main>
 </BaseLayout>
 
 <script>
-  import { initPackageGrid } from "@codenhub/app-shell/package-grid";
+  // The palette owns its own trigger in the header; these buttons open it the
+  // same way, so there is one dialog and one keyboard shortcut.
+  const trigger = document.querySelector<HTMLButtonElement>("[data-search-trigger]");
+  for (const button of document.querySelectorAll<HTMLButtonElement>("[data-open-search]")) {
+    button.addEventListener("click", () => trigger?.click());
+  }
 
-  initPackageGrid();
+  const shortcut = document.querySelector<HTMLElement>("[data-landing-shortcut]");
+  if (shortcut !== null && navigator.platform.toUpperCase().includes("MAC")) {
+    shortcut.textContent = "⌘ + K";
+  }
 </script>

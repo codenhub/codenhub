@@ -1,8 +1,8 @@
 ---
 import type { SiteConfig } from "@codenhub/app-shell/site-config";
 import ShellLayout from "@codenhub/app-shell/layouts/base-layout.astro";
+import SearchPalette from "@codenhub/app-shell/components/search-palette.astro";
 
-import SearchPalette from "../components/search-palette.astro";
 import type { PublicPackage } from "../lib/catalog";
 import { siteConfig } from "../site-config";
 import "../styles/global.css";
@@ -13,9 +13,10 @@ interface Props {
   title?: string;
   /**
    * The package this page belongs to, when it is package-scoped. Scopes the
-   * header's Demo, npm, and GitHub links to this package instead of the site
-   * root; "Documentation" is already omitted everywhere on this site, since
-   * every page here already is documentation.
+   * header's Demo, npm, and GitHub links to this package. A page outside any
+   * package shows no Demo link, since the demo site has no root of its own;
+   * "Documentation" is omitted everywhere on this site, since every page here
+   * already is documentation.
    */
   currentPackage?: Pick<PublicPackage, "demoUrl" | "githubLabel" | "githubUrl" | "npmLabel" | "npmUrl">;
 }
@@ -24,7 +25,7 @@ const { currentPackage, description, sectionTitle, title } = Astro.props;
 
 const scopedSiteConfig: SiteConfig =
   currentPackage === undefined
-    ? siteConfig
+    ? { ...siteConfig, demoUrl: undefined }
     : {
         ...siteConfig,
         demoUrl: currentPackage.demoUrl,
@@ -41,7 +42,7 @@ const scopedSiteConfig: SiteConfig =
   siteConfig={scopedSiteConfig}
   title={title}
 >
-  <SearchPalette slot="actions" />
+  <SearchPalette indexUrl="/search-index.json" slot="actions" />
   <slot />
   <script>
     import { createCopyController } from "@codenhub/app-shell/copy-feedback";

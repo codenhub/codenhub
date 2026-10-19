@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-17
+last_updated: 2026-10-18
 scope: Naming and branding decisions across Coden, CodenHub, and their packages.
 ---
 
@@ -16,7 +16,9 @@ Coden is the agency. It builds apps and websites for clients, and also builds OS
 - `coden.dev`: Coden's software specifically. The agency also does marketing, SEO, infrastructure, and cybersecurity work; `coden.dev` is scoped to software development and OSS, separate from that broader agency work.
 - `codenhub.dev`: CodenHub, this project. It centralizes the tools and packages that are the foundation of Coden's own work.
 
-CodenHub is not a consumer-facing brand. It is the workspace: the repository, the npm scope (`@codenhub/*`), and the domain that hosts these packages' documentation. It exists so Coden's internal tools have one home, not so "CodenHub" is recognized the way "Coden" is. Titles and prose should read "Coden [X]" or a neutral name, not "CodenHub [X]" — see the branding test below.
+CodenHub is the project: the repository, the npm scope (`@codenhub/*`), and `codenhub.dev`, whose landing page presents the packages as one toolkit, made by Coden, that people can choose to adopt. The site names it as such, in its titles and its landing page. It is still not a prefix for package titles: those read "Coden [X]" or a neutral name, never "CodenHub [X]" — see the branding test below. A package's title says who authored its content; CodenHub says where the package lives and the project behind it.
+
+This reverses an earlier record that CodenHub was not a consumer-facing brand, only the workspace that gave Coden's internal tools one home. That record did not weigh the packages being adopted outside Coden: once `codenhub.dev` is where a visitor lands and decides whether to use a package, the site has to make the case for the project behind it, and an unnamed workspace cannot. Package titling did not depend on that framing, since the branding test is about authorship, so it is unchanged.
 
 ## The branding test
 
@@ -56,7 +58,7 @@ Branded and neutral packages will use different words by design, but the resolve
 <Name>, <one-line functional description using the naming vocabulary>.
 ```
 
-This governs every site that presents the package: set `codenhub.label` in `package.json` to `<Name>` (e.g. `IconKit`, `Coden Skills`, `Kbd`) — it drives the docs site's navigation, catalog, and page title, and the site index and demo list it too. Pair it with `codenhub.description` when the plain functional description reads better with the name folded in, e.g. "IconKit, a kit for combining icon families and dropping icons into any app."
+This governs every site that presents the package: set `codenhub.label` in `package.json` to `<Name>` (e.g. `IconKit`, `Coden Skills`, `Kbd`) — it drives the docs site's navigation and page titles, and the package list and pages on `codenhub.dev`. Pair it with `codenhub.description` when the plain functional description reads better with the name folded in, e.g. "IconKit, a kit for combining icon families and dropping icons into any app."
 
 This does not govern the README title. `docs/specs/packages-readme.md` requires the README's first heading to be the package name exactly as published (e.g. `# @codenhub/icons`), and that rule is unaffected by this document — a resolved display name and a published npm name are allowed to differ, the same way they already differ for install commands (see the note in [Existing packages](#existing-packages)). The display name MAY still appear naturally in the README's opening description sentence as ordinary prose ("IconKit combines several icon families into one registry..."), but that is a writing choice, not a requirement.
 

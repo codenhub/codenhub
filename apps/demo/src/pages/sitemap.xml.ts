@@ -1,10 +1,10 @@
 import { buildSitemapXml } from "@codenhub/app-shell/seo";
 import type { APIRoute } from "astro";
 
-import { demoPackages } from "../lib/catalog";
+import { demoSlugs } from "../lib/catalog";
 import { siteConfig } from "../site-config";
 
-const routePaths = ["/", ...demoPackages.map((demoPackage) => `/${demoPackage.slug}/`)];
+const routePaths = demoSlugs.map((slug) => `/${slug}/`);
 
 export const GET: APIRoute = () =>
   new Response(buildSitemapXml(siteConfig.siteUrl, routePaths), {

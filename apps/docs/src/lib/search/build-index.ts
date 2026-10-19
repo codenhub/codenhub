@@ -1,4 +1,4 @@
-import type { SearchEntry } from "./search";
+import type { SearchEntry } from "@codenhub/app-shell/search";
 
 export interface IndexableHeading {
   depth: number;

@@ -2,7 +2,7 @@
   "name": "@codenhub/www",
   "version": "0.0.1",
   "private": true,
-  "description": "Site index for CodenHub: the package list and the entry point to docs, demos, and source.",
+  "description": "The CodenHub site: landing page, package list and package pages, and search across the docs.",
   "type": "module",
   "scripts": {
     "build": "astro build",
@@ -40,6 +40,14 @@
       {
         "from": "logo/logo-light.svg",
         "to": "public/assets/logo/logo-light.svg"
+      },
+      {
+        "from": "fonts/monomaniac-one/MonomaniacOne-Regular.woff2",
+        "to": "public/assets/fonts/monomaniac-one/MonomaniacOne-Regular.woff2"
+      },
+      {
+        "from": "fonts/monomaniac-one/MonomaniacOne-Regular.woff",
+        "to": "public/assets/fonts/monomaniac-one/MonomaniacOne-Regular.woff"
       }
     ]
   }

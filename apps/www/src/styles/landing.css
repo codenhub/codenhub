@@ -1,0 +1,445 @@
+/* The landing page at `/`. Monochrome like the rest of the system. Sections
+   are told apart by alternating grounds, not by rules between them. Monomaniac
+   One is the brand display face (docs/assets.md, "Fonts"), used only for
+   display text. */
+
+@font-face {
+  font-family: "Monomaniac One";
+  src:
+    url("/assets/fonts/monomaniac-one/MonomaniacOne-Regular.woff2") format("woff2"),
+    url("/assets/fonts/monomaniac-one/MonomaniacOne-Regular.woff") format("woff");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+.landing {
+  --landing-mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+
+  flex: 1 1 auto;
+  overflow-x: clip;
+}
+
+.landing-display {
+  margin: 0;
+  font-family: "Monomaniac One", var(--font-default, sans-serif);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 0.95;
+  text-wrap: balance;
+}
+
+.landing-heading {
+  margin: 0 0 clamp(2rem, 1.5rem + 2vw, 3.5rem);
+  font-size: clamp(1.75rem, 1.25rem + 2vw, 2.75rem);
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+.landing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.landing-cta {
+  gap: 0.5rem;
+  min-height: 48px;
+  padding-inline: 1.25rem;
+  font-size: 1rem;
+}
+
+.landing-cta-kbd {
+  margin-inline-start: 0.25rem;
+  font-size: 0.75rem;
+}
+
+/* Hero: one statement over a moving field of glyphs. */
+
+.landing-hero {
+  position: relative;
+  display: grid;
+  min-height: min(88svh, 56rem);
+  align-items: center;
+  isolation: isolate;
+  /* Ends on the next section's ground, so the hero hands off without a seam. */
+  background: linear-gradient(to bottom, var(--color-background) 55%, var(--color-foreground));
+}
+
+.landing-hero-field {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.55;
+  /* Two fades, intersected: one toward the sides, and one that is fully
+     transparent at the top and bottom edges, so the field melts into the header
+     and the next section's ground instead of stopping at a hard line. */
+  mask-image:
+    radial-gradient(ellipse 80% 120% at 50% 50%, black 40%, transparent 90%),
+    linear-gradient(to bottom, transparent 0%, black 22%, black 58%, transparent 100%);
+  mask-composite: intersect;
+}
+
+.landing-hero-content {
+  display: flex;
+  justify-content: center;
+  padding-block: clamp(4rem, 3rem + 6vw, 8rem);
+}
+
+.landing-hero-copy {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.75rem;
+  text-align: center;
+}
+
+/* A halo of the page ground, sized to the copy itself, so the text never sits
+   on glyphs at any width while the field still surrounds it. */
+.landing-hero-copy::before {
+  position: absolute;
+  inset: -18% -14%;
+  z-index: -1;
+  background: radial-gradient(closest-side, var(--color-background) 62%, transparent);
+  content: "";
+}
+
+.landing-hero .landing-display {
+  font-size: clamp(3rem, 1.4rem + 7vw, 7.5rem);
+}
+
+.landing-lede {
+  max-width: 36rem;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: clamp(1.0625rem, 1rem + 0.35vw, 1.25rem);
+  line-height: 1.6;
+}
+
+.landing-hero .landing-actions {
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.landing-hero .btn.ghost {
+  background: var(--color-background);
+}
+
+/* Sections */
+
+.landing-section {
+  padding-block: clamp(4rem, 3rem + 5vw, 8rem);
+}
+
+.landing-band {
+  background: var(--color-foreground);
+}
+
+.landing-principles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: clamp(2rem, 1.5rem + 2vw, 3rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-principle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.landing-principle-icon {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  margin-bottom: 0.5rem;
+  border-radius: var(--radius-control);
+  background: var(--color-background);
+}
+
+.landing-principle-icon i {
+  --ic-size: 1.25rem;
+}
+
+.landing-principle h3 {
+  margin: 0;
+  font-size: 1.0625rem;
+}
+
+.landing-principle p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
+.landing-areas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1rem;
+}
+
+.landing-area {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.75rem;
+  border-radius: var(--radius-surface);
+  background: var(--color-foreground);
+}
+
+.landing-area h3 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.landing-area p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.landing-area-packages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: auto 0 0;
+  padding: 1rem 0 0;
+  list-style: none;
+}
+
+.landing-area-packages a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-control);
+  background: var(--color-background);
+  color: var(--color-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color var(--motion-duration-fast, 120ms) var(--motion-ease);
+}
+
+.landing-area-packages a:hover {
+  background: var(--color-surface);
+}
+
+/* Recent releases */
+
+.landing-releases {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 2rem clamp(2rem, 1rem + 4vw, 5rem);
+  align-items: start;
+}
+
+.landing-releases-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.landing-releases-intro .landing-heading {
+  margin-bottom: 0;
+}
+
+.landing-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 44px;
+  color: var(--color-text);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.landing-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.landing-release-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-release {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "label version date"
+    "name version date";
+  align-items: center;
+  column-gap: 1.5rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-control);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color var(--motion-duration-fast, 120ms) var(--motion-ease);
+}
+
+.landing-release:hover {
+  background: var(--color-background);
+}
+
+.landing-release-label {
+  grid-area: label;
+  font-weight: 600;
+}
+
+.landing-release-name {
+  grid-area: name;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-family: var(--landing-mono);
+  font-size: 0.8125rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landing-release-version {
+  grid-area: version;
+  justify-self: end;
+  font-family: var(--landing-mono);
+  font-size: 0.875rem;
+}
+
+.landing-release-date {
+  grid-area: date;
+  justify-self: end;
+  min-width: 6.5rem;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  text-align: right;
+}
+
+/* Closing call to action, inverted against the page. */
+
+.landing-closing {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+}
+
+.landing-closing-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding-block: clamp(4.5rem, 3rem + 6vw, 9rem);
+  text-align: center;
+}
+
+.landing-closing .landing-display {
+  font-size: clamp(2.5rem, 1.25rem + 5vw, 5.5rem);
+}
+
+.landing-closing p {
+  max-width: 32rem;
+  margin: 0;
+  color: color-mix(in srgb, var(--color-primary-contrast) 72%, transparent);
+  font-size: 1.125rem;
+  line-height: 1.6;
+}
+
+.landing-closing .landing-actions {
+  justify-content: center;
+}
+
+/* On the inverted band the buttons swap roles: the primary is the page color. */
+.landing-closing .btn.primary {
+  border-color: var(--color-primary-contrast);
+  background: var(--color-primary-contrast);
+  color: var(--color-primary);
+}
+
+.landing-closing .btn.ghost {
+  border-color: color-mix(in srgb, var(--color-primary-contrast) 40%, transparent);
+  color: var(--color-primary-contrast);
+}
+
+.landing-closing .btn.ghost:hover {
+  background: color-mix(in srgb, var(--color-primary-contrast) 12%, transparent);
+}
+
+.landing-closing .landing-cta-kbd {
+  border-color: color-mix(in srgb, var(--color-primary-contrast) 30%, transparent);
+  background: transparent;
+  color: inherit;
+}
+
+/* Load-in: the hero statement rises in once. Never from fully transparent: a
+   background tab or a capture tool can hold the first frame, and the hero
+   must still read there. */
+@media (prefers-reduced-motion: no-preference) {
+  .landing-hero-copy > * {
+    animation: landing-rise 0.8s var(--motion-ease, ease-out) both;
+  }
+
+  .landing-hero-copy > :nth-child(2) {
+    animation-delay: 90ms;
+  }
+
+  .landing-hero-copy > :nth-child(3) {
+    animation-delay: 180ms;
+  }
+}
+
+@keyframes landing-rise {
+  from {
+    opacity: 0.35;
+    translate: 0 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-area-packages a,
+  .landing-release {
+    transition: none;
+  }
+}
+
+@media (max-width: 48rem) {
+  .landing-releases {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 40rem) {
+  .landing-hero {
+    min-height: min(80svh, 40rem);
+  }
+
+  .landing-actions {
+    width: 100%;
+  }
+
+  .landing-actions .landing-cta {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .landing-release {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "label version"
+      "name date";
+    padding-inline: 0.75rem;
+  }
+
+  .landing-release-date {
+    min-width: 0;
+    font-size: 0.8125rem;
+  }
+}

@@ -1,0 +1,18 @@
+---
+/**
+ * The shell layout with the documentation search in the header's actions.
+ * The index lives on the documentation site, which serves it cross-origin.
+ */
+import type { ComponentProps } from "astro/types";
+import SearchPalette from "@codenhub/app-shell/components/search-palette.astro";
+import ShellLayout from "@codenhub/app-shell/layouts/base-layout.astro";
+
+import { siteConfig } from "../site-config";
+
+type Props = ComponentProps<typeof ShellLayout>;
+---
+
+<ShellLayout {...Astro.props}>
+  <SearchPalette indexUrl={`${siteConfig.docsUrl}/search-index.json`} slot="actions" />
+  <slot />
+</ShellLayout>

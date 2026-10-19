@@ -1,0 +1,175 @@
+---
+/**
+ * An animated field of ASCII glyphs, drawn on a canvas behind the landing
+ * hero. The pointer stirs it like liquid, leaving a wake that spreads and
+ * settles, and a click sends a ripple out from where it landed. Decorative:
+ * hidden from assistive technology, paused while off screen, and drawn once,
+ * still, for a visitor who prefers reduced motion.
+ *
+ * @param class - Positions and masks the canvas; the host owns its box.
+ */
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+---
+
+<canvas aria-hidden="true" class:list={["ascii-field", className]} data-ascii-field></canvas>
+
+<style>
+  .ascii-field {
+    display: block;
+    width: 100%;
+    height: 100%;
+    /* The canvas reads its glyph color from here, so it follows the theme. */
+    color: var(--color-text);
+  }
+</style>
+
+<script>
+  import {
+    createWaves,
+    disturbWaves,
+    fieldValue,
+    glyphFor,
+    RIPPLE_LIFETIME,
+    rippleLift,
+    stepWaves,
+    waveLift,
+    type CellPoint,
+    type Ripple,
+  } from "../lib/ascii-field";
+
+  const FONT_SIZE = 13;
+  const LINE_HEIGHT = 16;
+  const FRAME_INTERVAL = 1000 / 24;
+  /** How hard each cell of pointer travel pushes the surface. */
+  const STIR = 0.1;
+
+  for (const canvas of document.querySelectorAll<HTMLCanvasElement>("[data-ascii-field]")) {
+    const context = canvas.getContext("2d");
+    if (context === null) {
+      continue;
+    }
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let columns = 0;
+    let rows = 0;
+    let cellWidth = 0;
+    let color = "";
+    let visible = true;
+    let lastFrame = 0;
+    const start = performance.now();
+    const now = () => (performance.now() - start) / 1000;
+
+    // The pointer is tracked over the hero that hosts the canvas, since the
+    // hero's copy sits on top of it.
+    const host = canvas.parentElement ?? canvas;
+    let pointer: CellPoint | undefined;
+    let ripples: Ripple[] = [];
+    let waves = createWaves(0, 0);
+
+    const toCell = (event: PointerEvent): CellPoint => {
+      const bounds = canvas.getBoundingClientRect();
+      return { x: (event.clientX - bounds.left) / cellWidth, y: (event.clientY - bounds.top) / LINE_HEIGHT };
+    };
+
+    // Pushes the surface along the whole path since the last event, one cell
+    // at a time, so a fast stroke leaves a continuous wake rather than dots.
+    host.addEventListener("pointermove", (event) => {
+      const next = toCell(event);
+      const from = pointer ?? next;
+      const steps = Math.min(Math.ceil(Math.hypot(next.x - from.x, (next.y - from.y) * 2)), 40);
+      for (let step = 1; step <= steps; step += 1) {
+        const along = step / steps;
+        disturbWaves(waves, { x: from.x + (next.x - from.x) * along, y: from.y + (next.y - from.y) * along }, STIR);
+      }
+      pointer = next;
+    });
+    host.addEventListener("pointerleave", () => {
+      pointer = undefined;
+    });
+    host.addEventListener("pointerdown", (event) => {
+      ripples.push({ ...toCell(event), start: now() });
+    });
+
+    const resize = () => {
+      const ratio = window.devicePixelRatio || 1;
+      const { width, height } = canvas.getBoundingClientRect();
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+      context.font = `${FONT_SIZE}px ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace`;
+      context.textBaseline = "top";
+      cellWidth = context.measureText("M").width;
+      columns = Math.ceil(width / cellWidth);
+      rows = Math.ceil(height / LINE_HEIGHT);
+      color = getComputedStyle(canvas).color;
+      if (waves.columns !== columns || waves.rows !== rows) {
+        waves = createWaves(columns, rows);
+      }
+    };
+
+    const draw = (time: number) => {
+      const { width, height } = canvas.getBoundingClientRect();
+      context.clearRect(0, 0, width, height);
+      context.fillStyle = color;
+      const origin = { x: columns * 0.5, y: rows * 0.45 };
+      ripples = ripples.filter((ripple) => time - ripple.start < RIPPLE_LIFETIME);
+
+      for (let y = 0; y < rows; y += 1) {
+        for (let x = 0; x < columns; x += 1) {
+          const base = fieldValue(x, y, time, origin);
+          const lift = Math.min(waveLift(waves, x, y) + (ripples.length > 0 ? rippleLift(x, y, time, ripples) : 0), 1);
+          const value = base + lift * (1 - base);
+          const glyph = glyphFor(value);
+          if (glyph === " ") {
+            continue;
+          }
+
+          // Squared, so the sparse glyphs recede and only the crests stand out.
+          context.globalAlpha = value * value;
+          context.fillText(glyph, x * cellWidth, y * LINE_HEIGHT);
+        }
+      }
+
+      context.globalAlpha = 1;
+    };
+
+    const frame = (timestamp: number) => {
+      if (reducedMotion.matches) {
+        return;
+      }
+
+      if (visible && timestamp - lastFrame >= FRAME_INTERVAL) {
+        lastFrame = timestamp;
+        stepWaves(waves);
+        draw(now());
+      }
+
+      requestAnimationFrame(frame);
+    };
+
+    const redraw = () => {
+      resize();
+      draw(now());
+    };
+
+    redraw();
+    requestAnimationFrame(frame);
+
+    new ResizeObserver(redraw).observe(canvas);
+    new IntersectionObserver(([entry]) => {
+      visible = entry?.isIntersecting ?? true;
+    }).observe(canvas);
+
+    // The theme switch flips `data-theme`; the glyph color follows it.
+    new MutationObserver(redraw).observe(document.documentElement, { attributeFilter: ["data-theme"] });
+
+    reducedMotion.addEventListener("change", () => {
+      redraw();
+      requestAnimationFrame(frame);
+    });
+  }
+</script>

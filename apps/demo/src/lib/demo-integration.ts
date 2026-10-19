@@ -16,7 +16,7 @@ interface IntegrationOptions {
 
 /**
  * Discovers every `packages/*\/demo/package.json`, the same directory role
- * `apps/demo/src/lib/catalog.ts` discovers for the shell's own pages. This
+ * `apps/demo/src/lib/catalog.ts` discovers for the sitemap. This
  * runs as plain Node during the `astro:build:done` hook rather than through
  * `import.meta.glob`, because `distPath` must stay an absolute filesystem
  * path that survives Vite bundling the rest of this module into `dist/`.

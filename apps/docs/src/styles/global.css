@@ -2,8 +2,10 @@
 @import "@codenhub/app-shell/styles.css";
 @import "./catalog.css";
 @import "./markdown.css";
-@import "./search.css";
 @source "../**/*.{astro,ts}";
+/* The shell's components use styles-package utilities (`badge`, `kbd`), which
+   the Tailwind build only emits for classes it finds in scanned sources. */
+@source "../../../../packages/app-shell/src/components";
 
 /* Header, footer, theme toggle, and skip link come from `@codenhub/app-shell`.
    The icon base rules and generated masks arrive through `virtual:icons.css`,
