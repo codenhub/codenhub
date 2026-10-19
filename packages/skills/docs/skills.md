@@ -61,6 +61,7 @@ The rest of the authoring guidance, such as how a description is phrased or whet
 | `brainstorming`           | Explores requirements and design before implementation.        |
 | `caveman`                 | Provides an ultra-compressed communication mode.               |
 | `caveman-commit`          | Generates terse Conventional Commit messages.                  |
+| `design`                  | Guides visual design through hierarchy, type, space, color.    |
 | `frontend-design`         | Guides distinctive production-grade frontend design.           |
 | `naming`                  | Finds meaningful, memorable, ownable names for anything.       |
 | `ponytail`                | Builds the simplest solution that works, nothing speculative.  |

@@ -13,6 +13,7 @@ This page records the origin and license context of skill assets shipped by `@co
 | `brainstorming`           | Adapted from [obra/superpowers]                            | MIT        |
 | `caveman`                 | Adapted from [JuliusBrussee/caveman]                       | MIT        |
 | `caveman-commit`          | Adapted from [JuliusBrussee/caveman]                       | MIT        |
+| `design`                  | Original Coden Agency work                                 | Apache-2.0 |
 | `frontend-design`         | Adapted from [Anthropic's official frontend-design plugin] | Apache-2.0 |
 | `naming`                  | Original Coden Agency work                                 | Apache-2.0 |
 | `ponytail`                | Adapted from [DietrichGebert/ponytail]                     | MIT        |
