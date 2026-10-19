@@ -1,6 +1,6 @@
 import { test as base, expect, type BrowserContext } from "@playwright/test";
 
-import { scenarios } from "../scenarios";
+import { scenarios, type ScenarioOptions } from "../scenarios";
 
 /*
  * Each scenario runs in the page against the built package, on the engine's own Web Crypto. A failure
@@ -27,7 +27,7 @@ const test = base.extend<Record<string, unknown>, { sharedContext: BrowserContex
 
 interface ScenarioWindow {
   scenarioNames: string[];
-  runScenario: (name: string) => Promise<string>;
+  runScenario: (name: string, options: ScenarioOptions) => Promise<string>;
 }
 
 test("the page offers every scenario", async ({ page }) => {
@@ -54,12 +54,23 @@ function expectedOutcome(name: string, browserName: string): string {
     : "NotSupportedError: The operation is not supported.";
 }
 
+/**
+ * Linux WebKit fails some Ed25519 generations (packages/jwt/AGENTS.md), so its scenarios retry them. The
+ * page cannot tell it runs there, since the `Desktop Safari` device gives it a macOS user agent.
+ */
+function optionsFor(browserName: string): ScenarioOptions {
+  return { retryEd25519Generation: browserName === "webkit" && process.platform === "linux" };
+}
+
 for (const name of Object.keys(scenarios)) {
   test(name, async ({ page, browserName }) => {
     await page.goto("/tests/browser/");
     await expect(page.locator("html")).toHaveAttribute("data-ready", "true");
     expect(
-      await page.evaluate((scenario) => (globalThis as unknown as ScenarioWindow).runScenario(scenario), name),
+      await page.evaluate(
+        ([scenario, options]) => (globalThis as unknown as ScenarioWindow).runScenario(scenario, options),
+        [name, optionsFor(browserName)] as const,
+      ),
     ).toBe(expectedOutcome(name, browserName));
   });
 }

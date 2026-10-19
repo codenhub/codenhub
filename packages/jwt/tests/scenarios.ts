@@ -11,7 +11,17 @@ import type * as jwt from "../dist/index.js";
 
 export type Jwt = typeof jwt;
 
-type Scenario = (module: Jwt) => Promise<void>;
+/** What the runner knows about its runtime that a scenario cannot find out from inside it. */
+export interface ScenarioOptions {
+  /**
+   * Retry Ed25519 generation that fails with `OperationError`, for Linux WebKit (see `generatePair`).
+   * The runner sets it because the page cannot tell: Playwright's `Desktop Safari` device gives every
+   * WebKit page a macOS user agent, whatever the host.
+   */
+  readonly retryEd25519Generation?: boolean;
+}
+
+type Scenario = (module: Jwt, options: ScenarioOptions) => Promise<void>;
 
 const ASYMMETRIC = ["ES256", "EdDSA", "Ed25519", "RS256", "PS256"] as const;
 const ALGORITHMS = [...ASYMMETRIC, "HS256"] as const;
@@ -60,8 +70,13 @@ async function expectRefused(
  * `OperationError` when the new key's `d` or `x` starts with a zero byte (about 1 call in 128). The
  * trap in packages/jwt/AGENTS.md has the evidence and says when this can go.
  */
-async function generatePair(module: Jwt, alg: (typeof ASYMMETRIC)[number], extractable = false): Promise<jwt.KeyPair> {
-  const retries = (alg === "EdDSA" || alg === "Ed25519") && isLinuxWebKit() ? 3 : 0;
+async function generatePair(
+  module: Jwt,
+  alg: (typeof ASYMMETRIC)[number],
+  options: ScenarioOptions,
+  extractable = false,
+): Promise<jwt.KeyPair> {
+  const retries = (alg === "EdDSA" || alg === "Ed25519") && options.retryEd25519Generation === true ? 3 : 0;
   for (let attempt = 0; ; attempt++) {
     try {
       // Each attempt runs only after the previous one failed.
@@ -75,22 +90,18 @@ async function generatePair(module: Jwt, alg: (typeof ASYMMETRIC)[number], extra
   }
 }
 
-function isLinuxWebKit(): boolean {
-  const agent = globalThis.navigator?.userAgent ?? "";
-  return agent.includes("Linux") && agent.includes("AppleWebKit") && !agent.includes("Chrome");
-}
-
 /** A signing key and the key that verifies it, for any algorithm. */
 async function keysFor(
   module: Jwt,
   alg: Algorithm,
+  options: ScenarioOptions,
   extractable = false,
 ): Promise<{ signing: jwt.SigningKey; verifying: jwt.VerificationKey }> {
   if (alg === "HS256") {
     const secret = await module.generateSecretKey({ alg, extractable });
     return { signing: secret, verifying: secret };
   }
-  const pair = await generatePair(module, alg, extractable);
+  const pair = await generatePair(module, alg, options, extractable);
   return { signing: pair.privateKey, verifying: pair.publicKey };
 }
 
@@ -100,8 +111,8 @@ const encodeSegment = (json: string): string =>
 const roundtrips = Object.fromEntries(
   ALGORITHMS.map((alg): [string, Scenario] => [
     `${alg} generate, sign and verify`,
-    async (module) => {
-      const { signing, verifying } = await keysFor(module, alg);
+    async (module, options) => {
+      const { signing, verifying } = await keysFor(module, alg, options);
       await expectVerified(module, await module.sign({ payload: PAYLOAD, key: signing }), verifying, alg);
     },
   ]),
@@ -110,7 +121,7 @@ const roundtrips = Object.fromEntries(
 const jwkRoundtrips = Object.fromEntries(
   ALGORITHMS.map((alg): [string, Scenario] => [
     `${alg} JWK export and import`,
-    async (module) => {
+    async (module, options) => {
       if (alg === "HS256") {
         const secret = await module.generateSecretKey({
           alg,
@@ -123,7 +134,7 @@ const jwkRoundtrips = Object.fromEntries(
         }
         return;
       }
-      const pair = await generatePair(module, alg, true);
+      const pair = await generatePair(module, alg, options, true);
       const privateKey = await module.importPrivateKey(await module.exportPrivateJwk(pair.privateKey), { alg });
       const publicKey = await module.importPublicKey(await module.exportPublicJwk(pair.publicKey), { alg });
       check(privateKey.ok, "private import failed", privateKey);
@@ -192,8 +203,8 @@ const leadingZeroImports = Object.fromEntries(
 const tamperedSignatures = Object.fromEntries(
   ALGORITHMS.map((alg): [string, Scenario] => [
     `${alg} tampered signature is refused`,
-    async (module) => {
-      const { signing, verifying } = await keysFor(module, alg);
+    async (module, options) => {
+      const { signing, verifying } = await keysFor(module, alg, options);
       const [header, payload, signature] = (await module.sign({ payload: PAYLOAD, key: signing })).split(".");
       // The first character carries six significant bits, so changing it always changes the signature.
       const tampered = `${signature?.startsWith("A") ? "B" : "A"}${signature?.slice(1)}`;
@@ -207,8 +218,8 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
   ...jwkRoundtrips,
   ...tamperedSignatures,
   ...leadingZeroImports,
-  "alg none is refused": async (module) => {
-    const { verifying } = await keysFor(module, "HS256");
+  "alg none is refused": async (module, options) => {
+    const { verifying } = await keysFor(module, "HS256", options);
     const token = `${encodeSegment('{"alg":"none"}')}.${encodeSegment('{"sub":"admin"}')}.AAAA`;
     await expectRefused(module, token, verifying, "unsupported_alg", ["header", "alg"]);
   },
@@ -234,13 +245,13 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
  * Runs one scenario and gives its outcome as text: `ok`, or the error's name and message, so a
  * runtime that lacks an algorithm reports the exact error it threw.
  */
-export async function runScenario(module: Jwt, name: string): Promise<string> {
+export async function runScenario(module: Jwt, name: string, options: ScenarioOptions = {}): Promise<string> {
   const scenario = Object.hasOwn(scenarios, name) ? scenarios[name] : undefined;
   if (scenario === undefined) {
     return `no scenario named ${name}`;
   }
   try {
-    await scenario(module);
+    await scenario(module, options);
     return "ok";
   } catch (error) {
     return error instanceof Error ? `${error.name}: ${error.message}` : `threw ${String(error)}`;
