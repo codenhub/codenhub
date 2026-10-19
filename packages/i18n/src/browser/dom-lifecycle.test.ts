@@ -198,6 +198,39 @@ describe("initializeBrowserI18n document integration", () => {
     binding.disconnect();
   });
 
+  it("translates an element added just before a locale change once", async () => {
+    const added = document.createElement("p");
+    added.dataset.i18n = "greeting";
+    const i18n = createManager();
+    // Registered before the binding, so the element is added just before the binding retranslates the root.
+    i18n.addEventListener("locale-change", () => document.body.append(added));
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+    const translate = vi.spyOn(i18n, "translate");
+
+    await i18n.setLocale("pt-BR");
+    await flushMutations();
+
+    expect(translate).toHaveBeenCalledTimes(1);
+    expect(added.textContent).toBe("Ola");
+    binding.disconnect();
+  });
+
+  it("translates an observed addition once", async () => {
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+    const translate = vi.spyOn(i18n, "translate");
+    const added = document.createElement("p");
+    added.dataset.i18n = "greeting";
+
+    document.body.append(added);
+    await flushMutations();
+    await flushMutations();
+
+    expect(translate).toHaveBeenCalledTimes(1);
+    expect(added.textContent).toBe("Bonjour");
+    binding.disconnect();
+  });
+
   it("skips malformed observed keys and continues with other added elements", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const i18n = createManager();

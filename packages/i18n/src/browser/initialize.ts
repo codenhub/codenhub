@@ -9,6 +9,8 @@ const BOUND_MANAGERS = new WeakSet<object>();
 const ELEMENT_NODE = 1;
 
 const isElement = (node: Node): node is Element => node.nodeType === ELEMENT_NODE;
+const hasTranslationKey = (element: Element): boolean =>
+  TRANSLATION_KEY_ATTRIBUTES.some((attribute) => element.hasAttribute(attribute));
 
 /**
  * Optional browser integrations applied around a consumer-owned i18n manager.
@@ -216,9 +218,19 @@ export async function initializeBrowserI18n<TLocale extends string>(
       syncDocumentLocale(i18n);
     }
     if (root !== undefined) {
-      // Pending application mutations, such as a removed key, are handled first; the full pass does not restore them.
+      // The full pass covers pending additions and key changes but does not find an element whose last key was removed,
+      // so only those are handled first; the other pending records are dropped with the pass's own writes below.
       if (observer !== undefined) {
-        handleMutations(observer.takeRecords());
+        const keyRemovedElements = new Set<Element>();
+
+        for (const mutation of observer.takeRecords()) {
+          if (mutation.type === "attributes" && !hasTranslationKey(mutation.target as Element)) {
+            keyRemovedElements.add(mutation.target as Element);
+          }
+        }
+        for (const element of keyRemovedElements) {
+          domTranslator.translateRoot({ root: element, boundary: root, translate: (key) => i18n.translate(key) });
+        }
       }
       domTranslator.translateRoot({ root, translate: (key) => i18n.translate(key) });
       // The records left are the full pass's own writes, which need no second pass.
@@ -240,7 +252,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
       if (mutation.type === "attributes") {
         const target = mutation.target as Element;
         changedRoots.add(target);
-        if (!TRANSLATION_KEY_ATTRIBUTES.some((attribute) => target.hasAttribute(attribute))) {
+        if (!hasTranslationKey(target)) {
           keyRemovedElements.add(target);
         }
         continue;
@@ -349,7 +361,11 @@ export async function initializeBrowserI18n<TLocale extends string>(
 
     if (observe && root !== undefined) {
       const observedRoot = root;
-      observer = new (getMutationObserver(observedRoot))(handleMutations);
+      observer = new (getMutationObserver(observedRoot))((mutations) => {
+        handleMutations(mutations);
+        // The records left are the handler's own writes, which need no second pass.
+        observer?.takeRecords();
+      });
       observer.observe(observedRoot, {
         attributes: true,
         attributeFilter: [...TRANSLATION_KEY_ATTRIBUTES],

@@ -129,7 +129,7 @@ Trims an untrusted string and returns the canonical case-insensitive exact confi
 translate(key: string): string | undefined;
 ```
 
-Trims a non-empty key, checks the active dictionary, then the default dictionary. A key found only in the default dictionary returns the default text without a warning; compare dictionaries from `loadLocale()` in a test to find untranslated keys, as in the key-parity example. A key missing from both returns `undefined`. Unless `isSilent` is true, the manager warns once for each of the 1,000 most recently missing active-locale/key pairs; an evicted pair can warn again. Blank, runtime non-string, longer than 1,000 characters, or ASCII-control-containing keys throw `TypeError`.
+Trims a non-empty key, checks the active dictionary, then the default dictionary. A key found only in the default dictionary returns the default text without a warning; compare dictionaries from `loadLocale()` in a test to find untranslated keys, as in the key-parity example. A key missing from both returns `undefined`. Unless `isSilent` is true, the manager warns for a key missing from both dictionaries, once for each of the 1,000 most recent active-locale/key pairs; an evicted pair can warn again. Blank, runtime non-string, longer than 1,000 characters, or ASCII-control-containing keys throw `TypeError`.
 
 The API does not provide interpolation, plural selection, rich messages, number/date formatting, or HTML rendering.
 
