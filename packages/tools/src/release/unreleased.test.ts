@@ -10,6 +10,12 @@ describe("resolveLatestReleaseTag", () => {
     expect(resolveLatestReleaseTag("@codenhub/error", tags)).toBe("@codenhub/error@0.3.0-beta.1");
   });
 
+  it("skips a tag whose version is not a semantic version", () => {
+    expect(resolveLatestReleaseTag("@codenhub/error", ["@codenhub/error@1.0.0", "@codenhub/error@junk"])).toBe(
+      "@codenhub/error@1.0.0",
+    );
+  });
+
   it("ignores other packages' tags", () => {
     expect(resolveLatestReleaseTag("@codenhub/error", ["@codenhub/errors@9.0.0"])).toBeUndefined();
   });

@@ -1,3 +1,4 @@
+import { SEMANTIC_VERSION } from "./cut.ts";
 import { parseReleaseTag } from "./publish.ts";
 import { listTags, runGit, type GitRunner } from "./published-tags.ts";
 import { compareVersions } from "./readiness.ts";
@@ -23,7 +24,9 @@ export interface UnreleasedChanges {
  *
  * Unlike {@link resolveLatestPublishedTag}, which answers what a consumer
  * installs by default, this answers what was released last: a commit that went
- * out in `0.3.0-beta.1` is not waiting for a release.
+ * out in `0.3.0-beta.1` is not waiting for a release. A tag whose version is
+ * not a semantic version is skipped, since `compareVersions` would rank it
+ * above every real one.
  * @param packageName Package name as it appears in a release tag, such as `@codenhub/error`.
  * @param tags Candidate tags.
  * @returns The newest matching tag, or `undefined` when the package has none.
@@ -32,7 +35,7 @@ export function resolveLatestReleaseTag(packageName: string, tags: readonly stri
   let latest: { tag: string; version: string } | undefined;
   for (const tag of tags) {
     const release = parseReleaseTag(tag);
-    if (release?.name !== packageName) {
+    if (release?.name !== packageName || !SEMANTIC_VERSION.test(release.version)) {
       continue;
     }
     if (latest === undefined || compareVersions(release.version, latest.version) > 0) {

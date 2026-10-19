@@ -114,7 +114,8 @@ async function runCut(context: CommandContext, requested: string): Promise<numbe
  * It answers "what would the next release carry" from git rather than from a
  * file someone has to keep current, so it reads nothing but tags and history
  * and skips verification. Tags are fetched first, because a stale local tag
- * list would report commits that already shipped.
+ * list would report commits that already shipped. A shallow clone is refused,
+ * because its history stops short without git saying so.
  * @param context Command context for this invocation.
  * @param packages Public packages to report on.
  * @param git Git runner, injected by tests.
@@ -126,6 +127,11 @@ async function runUnreleased(
   git: GitRunner,
 ): Promise<number> {
   const root = context.workspace.root;
+  const shallow = await git(["rev-parse", "--is-shallow-repository"], root);
+  if (!shallow.isSuccess || shallow.stdout.trim() !== "false") {
+    context.reporter.error("This clone has incomplete history; run `git fetch --unshallow` and try again.");
+    return EXIT_FAILURE;
+  }
   if (!(await fetchReleaseTags(root, git))) {
     context.reporter.warn("Could not fetch release tags from origin; reporting against local tags.");
   }

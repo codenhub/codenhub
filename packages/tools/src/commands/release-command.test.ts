@@ -135,8 +135,11 @@ describe("hub release", () => {
 });
 
 /** Answers `git fetch` with `fetched`, `git tag --list` with `tags`, and `git log` from `logs` by pathspec. */
-function fakeGit(tags: readonly string[], logs: Record<string, string>, fetched = true): GitRunner {
+function fakeGit(tags: readonly string[], logs: Record<string, string>, fetched = true, shallow = false): GitRunner {
   return vi.fn<GitRunner>(async (args) => {
+    if (args[0] === "rev-parse") {
+      return { isSuccess: true, stdout: `${shallow}\n` };
+    }
     if (args[0] === "fetch") {
       return { isSuccess: fetched, stdout: "" };
     }
@@ -194,6 +197,16 @@ describe("hub release --unreleased", () => {
     const result = await runRelease([createPackage("@codenhub/error")], ["--unreleased"], EXIT_SUCCESS, git);
 
     expect(result.errors).toContain("Could not read the history of packages/error");
+    expect(result.exitCode).toBe(EXIT_FAILURE);
+  });
+
+  it("refuses to report from a shallow clone, whose history stops short", async () => {
+    const git = fakeGit([], { "packages/error": "abc1234\tfeat(error): first\n" }, true, true);
+
+    const result = await runRelease([createPackage("@codenhub/error")], ["--unreleased"], EXIT_SUCCESS, git);
+
+    expect(result.errors).toContain("git fetch --unshallow");
+    expect(result.output).not.toContain("abc1234");
     expect(result.exitCode).toBe(EXIT_FAILURE);
   });
 

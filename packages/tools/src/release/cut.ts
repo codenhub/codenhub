@@ -13,7 +13,7 @@ const LINK_LINE = /^-\s+\[(?<label>[^\]]+)\]\((?<target>[^)]+)\)\s*$/u;
 // The semver.org grammar, except that a numeric pre-release identifier may carry
 // a leading zero. `compareVersions` orders anything, so this is what keeps a
 // typo out of the manifest.
-const SEMANTIC_VERSION =
+export const SEMANTIC_VERSION =
   /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/u;
 
 /** How a version may be raised. */

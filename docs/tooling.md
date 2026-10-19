@@ -320,7 +320,7 @@ It answers "what is shipping next" from git, so there is no file to keep current
 
 The newest tag counts pre-releases, because a commit that went out in `0.3.0-beta.1` is not waiting for a release. A package with no tag is reported as never released, with its whole history. Merge commits are left out, since each one repeats the commits it merges. A change made outside the package's directory, such as a catalog bump in `pnpm-workspace.yaml`, is not listed even when it reaches the package.
 
-It fetches release tags from `origin` first, because a stale local tag list would report commits that already shipped; when the fetch fails it warns and reports against local tags. It reads tags and history only, so it skips `verify` and the preflight, and it cannot be combined with `--cut`. It reports from `HEAD`, so on a feature branch the list includes that branch's commits.
+It fetches release tags from `origin` first, because a stale local tag list would report commits that already shipped; when the fetch fails it warns and reports against local tags. It refuses a shallow clone, whose history stops short without `git log` failing; `git fetch --unshallow` completes it. It reads tags and history only, so it skips `verify` and the preflight, and it cannot be combined with `--cut`. It reports from `HEAD`, so on a feature branch the list includes that branch's commits.
 
 ## Publishing
 
