@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { initializeBrowserI18n } from "../browser";
-import { createI18n } from "../index";
-import { createManager, type Locale, setNavigatorLocales, setupBrowserTestHooks } from "./test-helpers";
+import { createI18n, I18nError } from "../index";
+import { createManager, dictionaries, type Locale, setNavigatorLocales, setupBrowserTestHooks } from "./test-helpers";
 
 setupBrowserTestHooks();
 
@@ -72,6 +72,9 @@ describe("initializeBrowserI18n locale resolution", () => {
     [["zh-HK"], ["en", "zh-CN", "zh-TW"], "zh-TW"],
     [["zh-Hant-HK"], ["en", "zh-Hant-TW", "zh-Hant-HK"], "zh-Hant-HK"],
     [["sr"], ["en", "sr-Latn", "sr-Cyrl"], "sr-Cyrl"],
+    [["zh-TW"], ["en", "zh", "zh-Hant"], "zh-Hant"],
+    [["zh-HK"], ["en", "zh", "zh-TW"], "zh-TW"],
+    [["en-GB"], ["en", "en-US"], "en"],
   ])("matches navigator %j by likely script against %j as %s", async (languages, locales, expected) => {
     setNavigatorLocales(languages);
     const i18n = createI18n({
@@ -177,6 +180,52 @@ describe("initializeBrowserI18n storage integration", () => {
     await initializeBrowserI18n({ i18n: secondVisit });
 
     expect(secondVisit.locale).toBe("fr");
+  });
+
+  it("falls back to the default without persisting it when a detected locale fails to load", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    setNavigatorLocales(["fr-CA"]);
+    const i18n = createManager({
+      loadLocale: (locale) => (locale === "fr" ? Promise.reject(new Error("503")) : dictionaries[locale]),
+    });
+
+    await initializeBrowserI18n({ i18n });
+
+    expect(i18n.locale).toBe("en");
+    expect(i18n.isReady).toBe(true);
+    expect(localStorage.getItem("i18n")).toBeNull();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('"fr"'), expect.any(I18nError));
+  });
+
+  it("falls back to the default when a stored locale fails to load, keeping the stored choice", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    localStorage.setItem("i18n", JSON.stringify({ locale: "fr" }));
+    const i18n = createManager({
+      loadLocale: (locale) => (locale === "fr" ? Promise.reject(new Error("503")) : dictionaries[locale]),
+    });
+
+    await initializeBrowserI18n({ i18n });
+
+    expect(i18n.locale).toBe("en");
+    expect(localStorage.getItem("i18n")).toBe(JSON.stringify({ locale: "fr" }));
+  });
+
+  it("rejects when an explicit locale fails to load", async () => {
+    const i18n = createManager({
+      loadLocale: (locale) => (locale === "fr" ? Promise.reject(new Error("503")) : dictionaries[locale]),
+    });
+
+    await expect(initializeBrowserI18n({ i18n, locale: "fr" })).rejects.toBeInstanceOf(I18nError);
+    expect(i18n.isReady).toBe(false);
+  });
+
+  it("rejects when a detected locale returns an invalid dictionary", async () => {
+    setNavigatorLocales(["fr-CA"]);
+    const i18n = createManager({
+      loadLocale: (locale) => (locale === "fr" ? { greeting: 1 } : dictionaries[locale]),
+    });
+
+    await expect(initializeBrowserI18n({ i18n })).rejects.toBeInstanceOf(TypeError);
   });
 
   it("persists a locale chosen after detected initialization", async () => {

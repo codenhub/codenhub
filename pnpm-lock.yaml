@@ -27,9 +27,6 @@ catalogs:
     '@codenhub/theme':
       specifier: ^0.1.2
       version: 0.1.2
-    '@codenhub/validation':
-      specifier: ^0.3.0
-      version: 0.3.0
     '@playwright/test':
       specifier: ^1.61.1
       version: 1.61.1
@@ -358,9 +355,6 @@ importers:
       '@codenhub/error':
         specifier: 'catalog:'
         version: 0.2.1
-      '@codenhub/validation':
-        specifier: 'catalog:'
-        version: 0.3.0
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.61.1
@@ -1376,10 +1370,6 @@ packages:
 
   '@codenhub/theme@0.1.2':
     resolution: {integrity: sha512-IaRD4hKv7PVijJNj4mHLC1JkwJxtQtXbDioa3v+kmxFur9XqmiDiuvSXWiIKVvnwVMPhbl1VL22D2SSPvu+7Ng==}
-
-  '@codenhub/validation@0.3.0':
-    resolution: {integrity: sha512-4K6njhjxXEwMNgqHc6XbxYUxFgRUA7Syr98ml1Ag/hR/+33YZvUWyeUzUcEkkbHoLuhohper3fq8dIZTN5p/tQ==}
-    engines: {node: '>=24'}
 
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -5210,8 +5200,6 @@ snapshots:
       tailwindcss: 4.3.3
 
   '@codenhub/theme@0.1.2': {}
-
-  '@codenhub/validation@0.3.0': {}
 
   '@cspotcode/source-map-support@0.8.1':
     dependencies:

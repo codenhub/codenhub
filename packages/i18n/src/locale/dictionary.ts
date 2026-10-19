@@ -1,3 +1,4 @@
+import { isPlainObject } from "../core/plain-object";
 import { hasAsciiControlCharacter } from "../core/string-validation";
 import type { LocaleDictionary, LocaleDictionaryLimits } from "../core/types";
 
@@ -34,8 +35,8 @@ const fitsLimits = (usage: DictionaryUsage, limits: DictionaryLimits): boolean =
   usage.maxValueLength <= limits.maxValueLength &&
   usage.maxTotalLength <= limits.maxTotalLength;
 
-const isObject = (value: unknown): value is object =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
+/** A group or root must be a plain object, so a Date or Map is not taken for an empty group. */
+const isObject = isPlainObject;
 
 const isValidKey = (key: string): boolean => {
   if (hasAsciiControlCharacter(key)) {

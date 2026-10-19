@@ -1,124 +1,191 @@
-import {
-  array,
-  boolean,
-  check,
-  formatIssue,
-  formatPath,
-  func,
-  number,
-  object,
-  optional,
-  string,
-  unique,
-  type Messages,
-  type Validator,
-} from "@codenhub/validation";
-
+import { isPlainObject } from "../core/plain-object";
 import { resolveConfiguredLocale } from "./configured-locale";
 import { isValidLocaleIdentifier } from "./identifier";
 
 /**
- * The wording for the issues a locale configuration can produce that the validators do not word
- * themselves. It is written out here, and not taken from the package's English wording, so the build
- * carries only these few lines.
+ * Configuration is checked by hand rather than with `@codenhub/validation`: inlining that library cost about 5 kB
+ * minified and gzipped, most of the core and routing entrypoints, to check a few properties once.
  */
-const CONFIG_MESSAGES: Messages = {
-  invalid_type: (issue) => `Expected ${String(issue.params?.expected)}, received ${String(issue.params?.received)}`,
-  too_small: (issue) => (issue.params?.type === "array" ? "Must contain at least 1 item" : "Must not be empty"),
-  invalid_value: (issue) => (issue.params?.unique === true ? "Must be unique, ignoring letter case" : "Invalid value"),
-  unrecognized_key: () => "Is not a recognized limit",
+
+const DICTIONARY_LIMIT_NAMES = ["maxDepth", "maxTranslations", "maxProperties", "maxValueLength", "maxTotalLength"];
+
+/** A configuration problem, thrown with where it is so `assertConfig` can word it. */
+class ConfigIssue extends Error {
+  constructor(
+    readonly path: string,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+const describeType = (value: unknown): string => {
+  if (typeof value === "number" && !Number.isFinite(value)) {
+    return Number.isNaN(value) ? "nan" : "infinity";
+  }
+  if (value === null) {
+    return "null";
+  }
+  if (Array.isArray(value)) {
+    return "array";
+  }
+  return typeof value;
 };
 
-/** A locale identifier: a non-blank string that, trimmed, is a conservative ASCII identifier. Produces the trimmed one. */
-const localeIdentifier = string(
-  { trim: true, min: 1 },
-  check(isValidLocaleIdentifier, {
-    code: "invalid_format",
-    message: "Must be an ASCII locale identifier with alphanumeric, hyphen-separated subtags",
-  }),
-);
+const fail = (path: string, message: string): never => {
+  throw new ConfigIssue(path, message);
+};
+
+const expectType = (path: string, expected: string, value: unknown): never =>
+  fail(path, `Expected ${expected}, received ${describeType(value)}`);
+
+const readObject = (path: string, value: unknown): Record<string, unknown> => {
+  if (!isPlainObject(value)) {
+    return fail(
+      path,
+      `Expected object, received ${typeof value === "object" && value !== null && !Array.isArray(value) ? "non-plain object" : describeType(value)}`,
+    );
+  }
+  return value as Record<string, unknown>;
+};
+
+const readBoolean = (path: string, value: unknown): boolean =>
+  typeof value === "boolean" ? value : expectType(path, "boolean", value);
+
+const readFunction = (path: string, value: unknown): void => {
+  if (typeof value !== "function") {
+    fail(path, "Must be a function");
+  }
+};
 
 /** Trimmed, non-empty, case-insensitively unique locale identifiers. */
-const localeList = array(
-  localeIdentifier,
-  { min: 1 },
-  unique((locale) => locale.toLowerCase()),
-);
+const readLocales = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return expectType("locales", "array", value);
+  }
+  if (value.length === 0) {
+    fail("locales", "Must contain at least 1 item");
+  }
 
-/** A function-valued option. */
-const callback = func({ message: "Must be a function" });
+  const seen = new Set<string>();
+  return value.map((entry: unknown, index) => {
+    const path = `locales[${index}]`;
+    if (typeof entry !== "string") {
+      return expectType(path, "string", entry);
+    }
+    const locale = entry.trim();
+    if (locale.length === 0) {
+      fail(path, "Must not be empty");
+    }
+    if (!isValidLocaleIdentifier(locale)) {
+      fail(path, "Must be an ASCII locale identifier with alphanumeric, hyphen-separated subtags");
+    }
+    if (seen.has(locale.toLowerCase())) {
+      fail(path, "Must be unique, ignoring letter case");
+    }
+    seen.add(locale.toLowerCase());
+    return locale;
+  });
+};
 
-/** A dictionary resource limit. */
-const dictionaryLimit = optional(number({ min: 1, safeInt: true, message: "Must be a positive whole number" }));
+const readDefaultLocale = (value: unknown, locales: readonly string[]): string => {
+  if (typeof value !== "string") {
+    return expectType("defaultLocale", "string", value);
+  }
+  if (resolveConfiguredLocale(locales, value) === undefined) {
+    fail("defaultLocale", "Must match a configured locale");
+  }
+  return value;
+};
 
-/** Dictionary resource limits; an unknown name is rejected so a misspelled limit does not go unnoticed. */
-const dictionaryLimits = object(
-  {
-    maxDepth: dictionaryLimit,
-    maxTranslations: dictionaryLimit,
-    maxProperties: dictionaryLimit,
-    maxValueLength: dictionaryLimit,
-    maxTotalLength: dictionaryLimit,
-  },
-  { unknownKeys: "strict" },
-);
+const readDictionaryLimits = (value: unknown): Record<string, number> | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
 
-const defaultIsConfigured = (config: { locales: readonly string[]; defaultLocale: string }): boolean =>
-  resolveConfiguredLocale(config.locales, config.defaultLocale) !== undefined;
+  const limits = readObject("dictionaryLimits", value);
+  for (const name of Object.keys(limits)) {
+    if (!DICTIONARY_LIMIT_NAMES.includes(name)) {
+      fail(`dictionaryLimits.${name}`, "Is not a recognized limit");
+    }
+    const limit = limits[name];
+    if (limit !== undefined && !(Number.isSafeInteger(limit) && (limit as number) >= 1)) {
+      fail(`dictionaryLimits.${name}`, "Must be a positive whole number");
+    }
+  }
+  return limits as Record<string, number>;
+};
 
-const DEFAULT_LOCALE_ISSUE = {
-  code: "invalid_value",
-  message: "Must match a configured locale",
-  path: ["defaultLocale"],
+/** The checked configuration of an `I18n` manager, with locales trimmed. @internal */
+export interface CheckedI18nConfig {
+  readonly locales: string[];
+  readonly defaultLocale: string;
+  readonly isSilent?: boolean;
+  readonly dictionaryLimits?: Record<string, number>;
+}
+
+/** The checked configuration of locale routing, with locales trimmed. @internal */
+export interface CheckedLocaleRoutingConfig {
+  readonly locales: string[];
+  readonly defaultLocale: string;
+  readonly prefixDefaultLocale: boolean;
+}
+
+/**
+ * Checks the configuration of an `I18n` manager: the locales, the default locale, the loader and direction
+ * callbacks, the optional silent flag, and the optional dictionary limits. Only own properties are read.
+ *
+ * @internal
+ */
+export const i18nConfig = (input: unknown): CheckedI18nConfig => {
+  const config = readObject("", input);
+  const locales = readLocales(config.locales);
+  const defaultLocale = readDefaultLocale(config.defaultLocale, locales);
+  readFunction("loadLocale", config.loadLocale);
+  readFunction("getLocaleDirection", config.getLocaleDirection);
+
+  return {
+    locales,
+    defaultLocale,
+    isSilent: config.isSilent === undefined ? undefined : readBoolean("isSilent", config.isSilent),
+    dictionaryLimits: readDictionaryLimits(config.dictionaryLimits),
+  };
 };
 
 /**
- * Validates the configuration of an `I18n` manager: the locales, the default locale, the loader and
- * direction callbacks, the optional silent flag, and the optional dictionary limits. Properties it does not list are kept.
+ * Checks the configuration of locale routing: the locales, the default locale and the default-prefix policy.
  *
  * @internal
  */
-export const i18nConfig = object(
-  {
-    locales: localeList,
-    defaultLocale: string(),
-    loadLocale: callback,
-    getLocaleDirection: callback,
-    isSilent: optional(boolean()),
-    dictionaryLimits: optional(dictionaryLimits),
-  },
-  { unknownKeys: "passthrough" },
-  check(defaultIsConfigured, DEFAULT_LOCALE_ISSUE),
-);
+export const localeRoutingConfig = (input: unknown): CheckedLocaleRoutingConfig => {
+  const config = readObject("", input);
+  const locales = readLocales(config.locales);
+
+  return {
+    locales,
+    defaultLocale: readDefaultLocale(config.defaultLocale, locales),
+    prefixDefaultLocale: readBoolean("prefixDefaultLocale", config.prefixDefaultLocale),
+  };
+};
 
 /**
- * Validates the configuration of locale routing: the locales, the default locale and the
- * default-prefix policy. Properties it does not list are kept.
+ * Returns the checked value, or throws a `TypeError` that names the first problem and where it is.
  *
- * @internal
- */
-export const localeRoutingConfig = object(
-  { locales: localeList, defaultLocale: string(), prefixDefaultLocale: boolean() },
-  { unknownKeys: "passthrough" },
-  check(defaultIsConfigured, DEFAULT_LOCALE_ISSUE),
-);
-
-/**
- * Returns the validated value, or throws a `TypeError` that names the first problem and where it is.
- *
- * @param validator - What the configuration must satisfy.
+ * @param check - What the configuration must satisfy.
  * @param input - The consumer's configuration.
  * @param subject - What was being configured, for the start of the message.
- * @returns The validated configuration, with locales trimmed.
- * @throws {TypeError} When the configuration does not satisfy the validator.
+ * @returns The checked configuration, with locales trimmed.
+ * @throws {TypeError} When the configuration does not satisfy the check.
  * @internal
  */
-export function assertConfig<T>(validator: Validator<T>, input: unknown, subject: string): T {
-  const result = validator(input);
-  if (result.ok) {
-    return result.value;
+export function assertConfig<T>(check: (input: unknown) => T, input: unknown, subject: string): T {
+  try {
+    return check(input);
+  } catch (error) {
+    if (!(error instanceof ConfigIssue)) {
+      throw error;
+    }
+    const where = error.path.length > 0 ? `${error.path}: ` : "";
+    throw new TypeError(`${subject}: ${where}${error.message}`);
   }
-  const [issue] = result.error.issues;
-  const where = issue.path.length > 0 ? `${formatPath(issue.path)}: ` : "";
-  throw new TypeError(`${subject}: ${where}${formatIssue(issue, CONFIG_MESSAGES)}`);
 }

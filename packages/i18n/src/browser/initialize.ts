@@ -1,3 +1,4 @@
+import { I18nError } from "../core/errors";
 import type { I18n } from "../core/types";
 import { createDomTranslator, TRANSLATION_KEY_ATTRIBUTES } from "./dom-translation";
 
@@ -108,8 +109,17 @@ const resolveBrowserLocale = <TLocale extends string>(i18n: I18n<TLocale>): TLoc
     }
 
     const normalizedPreference = preference.trim().toLowerCase();
-    const prefixLocale = i18n.locales
-      .filter((locale) => normalizedPreference.startsWith(`${locale.toLowerCase()}-`))
+    const maximizedPreference = maximizeLocale(normalizedPreference);
+    // A prefix with another likely script, such as `zh` (Simplified) for `zh-TW`, is left to the script match below.
+    const prefixLocale = maximizedLocales
+      .filter(
+        ({ locale, maximized }) =>
+          normalizedPreference.startsWith(`${locale.toLowerCase()}-`) &&
+          (maximized === undefined ||
+            maximizedPreference === undefined ||
+            getLanguageAndScript(maximized) === getLanguageAndScript(maximizedPreference)),
+      )
+      .map(({ locale }) => locale)
       .reduce<TLocale | undefined>(
         (longest, locale) => (locale.length > (longest?.length ?? 0) ? locale : longest),
         undefined,
@@ -118,8 +128,6 @@ const resolveBrowserLocale = <TLocale extends string>(i18n: I18n<TLocale>): TLoc
     if (prefixLocale !== undefined) {
       return prefixLocale;
     }
-
-    const maximizedPreference = maximizeLocale(normalizedPreference);
 
     if (maximizedPreference !== undefined) {
       const likelyLocale =
@@ -162,7 +170,8 @@ const getMutationObserver = (root: ParentNode): typeof MutationObserver => {
  * the configured default. Storage failures are recoverable and warn unless the manager is
  * silent. Only one call may initialize or own a binding for a manager at a time. Setup is
  * transactional: failed initialization or browser setup releases all binding-owned resources.
- * Required dictionary loading and validation failures reject unchanged.
+ * When the loader rejects for a stored or detected locale, it warns unless silent and initializes the default locale
+ * without persisting it. Other required dictionary loading and validation failures reject unchanged.
  *
  * @typeParam TLocale - Union of supported canonical locale identifiers.
  * @param options - Core manager, locale inputs, persistence, document, and optional DOM behavior.
@@ -172,7 +181,7 @@ const getMutationObserver = (root: ParentNode): typeof MutationObserver => {
  * @throws {Error} When another core initialization supersedes this call before its locale becomes active.
  * @throws {TypeError} When a required dictionary is invalid.
  * @throws {TypeError} When direction resolution returns a value other than `ltr` or `rtl`.
- * @throws {I18nError} When a required locale loader rejects.
+ * @throws {I18nError} When the loader rejects for an explicit locale or the default locale.
  * Exceptions from the direction callback and required browser setup propagate unchanged.
  */
 export async function initializeBrowserI18n<TLocale extends string>(
@@ -250,7 +259,21 @@ export async function initializeBrowserI18n<TLocale extends string>(
         i18n.defaultLocale;
     }
 
-    const wasInitializationApplied = await i18n.init({ locale: initialLocale });
+    let wasInitializationApplied: boolean;
+
+    try {
+      wasInitializationApplied = await i18n.init({ locale: initialLocale });
+    } catch (error) {
+      // A stored or detected locale is a preference, not a requirement: when its loader fails, the default still serves
+      // the user, and it is not persisted, so a later visit tries the preference again.
+      if (locale !== undefined || !(error instanceof I18nError) || initialLocale === i18n.defaultLocale) {
+        throw error;
+      }
+
+      warn(i18n, `[I18n] Could not load locale "${initialLocale}"; using the default locale.`, error);
+      initialLocale = i18n.defaultLocale;
+      wasInitializationApplied = await i18n.init({ locale: initialLocale });
+    }
 
     if (!wasInitializationApplied || !i18n.isReady || i18n.locale !== i18n.resolveLocale(initialLocale)) {
       throw new Error("[I18n] Browser initialization was superseded before its locale became active.");

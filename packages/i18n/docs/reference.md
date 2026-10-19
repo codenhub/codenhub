@@ -94,8 +94,8 @@ Dictionaries are checked against resource limits. By default they allow at most 
 
 A payload throws `TypeError` when it:
 
-- Is null, an array, or a primitive.
-- Contains a non-string leaf, array, function, symbol key, accessor, cycle, or shared object reference.
+- Is null, an array, a primitive, or another non-plain object.
+- Contains a non-string leaf, array, function, non-plain object such as a `Date` or `Map`, symbol key, accessor, cycle, or shared object reference. A plain object is one whose prototype is null or an `Object.prototype` from any realm; any other object would read as an empty group and silently drop its translations.
 - Contains an empty dot-separated segment, an ASCII control character, a `__proto__` segment, or a flat/nested key collision. `prototype` and `constructor` are ordinary keys.
 - Exceeds a dictionary depth, translation count, property count, flattened-key length, translation-value length, or aggregate translation-character limit.
 
@@ -229,7 +229,7 @@ The helper selects the initial locale in this order:
 3. `navigator.languages`, or `navigator.language` when that list is empty.
 4. The configured default locale.
 
-An explicit locale is authoritative. Each browser preference, in order, tests an exact case-insensitive match first, then the longest configured locale that the preference starts with as whole subtags, such as `zh-Hant` for `zh-Hant-TW` or `pt` for `pt-BR`. It then adds likely subtags with `Intl.Locale.prototype.maximize()` to the preference and to each configured locale, and takes the first configured locale whose maximized form is equal, then the first with the same language and script, such as `zh-Hant` for `zh-TW` or `zh-HK`, `zh-TW` for `zh-HK` among `zh-CN` and `zh-TW`, or `sr-Cyrl` for `sr`. Last, it takes the first configured locale with the same language subtag.
+An explicit locale is authoritative. Each browser preference, in order, tests an exact case-insensitive match first, then the longest configured locale that the preference starts with as whole subtags and that has the same likely script, such as `zh-Hant` for `zh-Hant-TW` or `pt` for `pt-BR`. The script condition keeps `zh`, whose likely script is Simplified, from taking `zh-TW` when `zh-Hant` is configured. It then adds likely subtags with `Intl.Locale.prototype.maximize()` to the preference and to each configured locale, and takes the first configured locale whose maximized form is equal, then the first with the same language and script, such as `zh-Hant` for `zh-TW` or `zh-HK`, `zh-TW` for `zh-HK` among `zh-CN` and `zh-TW`, or `sr-Cyrl` for `sr`. Last, it takes the first configured locale with the same language subtag.
 
 Defaults are `storageKey: "i18n"`, `persistLocale: true`, `syncDocument: true`, and `observe: false`. DOM translation is disabled unless `root` is provided. `observe: true` without a root rejects with `TypeError` before core initialization.
 
@@ -252,7 +252,11 @@ If a concurrent direct core initialization supersedes the browser helper before 
 
 `disconnect()` is idempotent. It removes binding listeners, disconnects its observer, releases its root and manager ownership, and allows a new binding. It does not reset core readiness or locale, clear storage, revert DOM text, or revert document attributes.
 
-Storage read, parse, and write failures are recoverable: they warn unless the manager is silent and initialization continues. Explicit invalid locales, required loader rejection, invalid dictionaries, and observer setup failures still reject. Runtime non-string explicit locales reject with `RangeError` without falling through to storage or navigator input.
+Storage read, parse, and write failures are recoverable: they warn unless the manager is silent and initialization continues.
+
+When the loader rejects for a locale chosen from storage or navigator preferences, the helper warns unless silent and initializes the default locale instead. The default is not persisted and a stored preference is kept, so a later visit tries the preference again. A stored or detected locale is a preference the default can still serve; rejecting made a temporary failure of one dictionary stop the application from starting, and the only recovery, passing the default explicitly, persisted it and kept that user on the default for good.
+
+An explicit locale whose loader rejects, a rejected default locale, invalid dictionaries, explicit invalid locales, and observer setup failures still reject. Runtime non-string explicit locales reject with `RangeError` without falling through to storage or navigator input.
 
 ### DOM translation boundary
 
