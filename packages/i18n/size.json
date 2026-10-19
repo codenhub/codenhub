@@ -1,0 +1,20 @@
+{
+  "bundler": "rolldown@1.1.5",
+  "entrypoints": {
+    ".": {
+      "gzip": 3391,
+      "minified": 10112,
+      "sha256": "a9207a45242151e3467861ac075e5bada2fc93ef626cef683330f2ea802fed9d"
+    },
+    "./browser": {
+      "gzip": 2522,
+      "minified": 6078,
+      "sha256": "b324f2facd804d140b7692f4e432449c42e41f63446f8c253b2a326691f42add"
+    },
+    "./routing": {
+      "gzip": 1486,
+      "minified": 3201,
+      "sha256": "7f7d5a78959db6fa1f04581d67fcd06bdde6d8961e9cc2b9724b60c6b3c5d93c"
+    }
+  }
+}
