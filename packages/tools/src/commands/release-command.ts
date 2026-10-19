@@ -218,7 +218,7 @@ export function createReleaseCommand(
       const blocked = results.some(({ checks }) => checks.some(({ status }) => status === "blocked"));
       return blocked ? EXIT_FAILURE : EXIT_SUCCESS;
     },
-    summary: "Report whether the selected packages could be published.",
+    summary: "Report whether the selected packages could be published, or what each would release next.",
     usage: "hub release [targets...] [--cut=<version|major|minor|patch> | --unreleased] [--skip-verify]",
   };
 }
