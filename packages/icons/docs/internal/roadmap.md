@@ -1,6 +1,6 @@
 ---
 status: DRAFT
-last_updated: 2026-09-15
+last_updated: 2026-10-18
 scope: `@codenhub/icons` direction and open questions.
 ---
 
@@ -10,6 +10,10 @@ scope: `@codenhub/icons` direction and open questions.
 
 Durable direction for `@codenhub/icons` that does not yet belong in the root `docs/roadmap.md`. [Registry architecture](./registry-architecture.md) owns the current design.
 
+## Planned
+
+- **A first-party icon family** that owns the semantic names.
+
 ## Later / Possible
 
 - **CSS-mode unresolved-icon-class warning.** Worth doing; the open question is where it would be raised from, since the scan sees classes one module at a time and never knows the set is complete.
@@ -18,4 +22,4 @@ Durable direction for `@codenhub/icons` that does not yet belong in the root `do
 ## References
 
 - [Registry architecture](./registry-architecture.md)
-- `docs/roadmap.md` — repo-wide roadmap; per-package feature work for this package is tracked there.
+- `docs/roadmap.md` — repo-wide roadmap.
