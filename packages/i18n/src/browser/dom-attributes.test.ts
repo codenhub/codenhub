@@ -225,7 +225,7 @@ describe("initializeBrowserI18n attribute translation", () => {
     binding.disconnect();
   });
 
-  it("translates a key-changed descendant once when its ancestor changed in the same batch", async () => {
+  it("warns once for an invalid key on a descendant whose ancestor changed in the same batch", async () => {
     document.body.innerHTML = '<div data-i18n-title="greeting"><input data-i18n-placeholder="greeting"></div>';
     const container = document.querySelector("div")!;
     const input = document.querySelector("input")!;
