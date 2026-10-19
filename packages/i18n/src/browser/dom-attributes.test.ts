@@ -91,7 +91,7 @@ describe("initializeBrowserI18n attribute translation", () => {
   });
 
   it.each([" ", "key\nforged", "k".repeat(1_001)])(
-    "skips a malformed attribute key and continues with other attributes",
+    "skips a malformed attribute key %j and continues with other attributes",
     async (invalidKey) => {
       const element = document.createElement("input");
       element.setAttribute("data-i18n-placeholder", invalidKey);
