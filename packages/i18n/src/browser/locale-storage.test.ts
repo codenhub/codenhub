@@ -210,6 +210,17 @@ describe("initializeBrowserI18n storage integration", () => {
     expect(localStorage.getItem("i18n")).toBe(JSON.stringify({ locale: "fr" }));
   });
 
+  it("rejects without falling back when the default locale fails to load beside a detected locale", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    setNavigatorLocales(["fr-CA"]);
+    const i18n = createManager({
+      loadLocale: (locale) => (locale === "en" ? Promise.reject(new Error("503")) : dictionaries[locale]),
+    });
+
+    await expect(initializeBrowserI18n({ i18n })).rejects.toMatchObject({ name: "I18nError", locale: "en" });
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   it("rejects when an explicit locale fails to load", async () => {
     const i18n = createManager({
       loadLocale: (locale) => (locale === "fr" ? Promise.reject(new Error("503")) : dictionaries[locale]),

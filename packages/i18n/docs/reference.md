@@ -95,7 +95,7 @@ Dictionaries are checked against resource limits. By default they allow at most 
 A payload throws `TypeError` when it:
 
 - Is null, an array, a primitive, or another non-plain object.
-- Contains a non-string leaf, array, function, non-plain object such as a `Date` or `Map`, symbol key, accessor, cycle, or shared object reference. A plain object is one whose prototype is null or an `Object.prototype` from any realm; any other object would read as an empty group and silently drop its translations.
+- Contains a non-string leaf, array, function, non-plain object such as a `Date` or `Map`, symbol key, accessor, cycle, or shared object reference. A plain object is one whose prototype is null or an `Object.prototype` from any realm; other objects are rejected rather than treated as empty groups, which would silently drop their translations.
 - Contains an empty dot-separated segment, an ASCII control character, a `__proto__` segment, or a flat/nested key collision. `prototype` and `constructor` are ordinary keys.
 - Exceeds a dictionary depth, translation count, property count, flattened-key length, translation-value length, or aggregate translation-character limit.
 

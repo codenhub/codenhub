@@ -266,7 +266,13 @@ export async function initializeBrowserI18n<TLocale extends string>(
     } catch (error) {
       // A stored or detected locale is a preference, not a requirement: when its loader fails, the default still serves
       // the user, and it is not persisted, so a later visit tries the preference again.
-      if (locale !== undefined || !(error instanceof I18nError) || initialLocale === i18n.defaultLocale) {
+      // The default loads beside the preference, so a rejection of the default itself is not a preference failure.
+      if (
+        locale !== undefined ||
+        !(error instanceof I18nError) ||
+        initialLocale === i18n.defaultLocale ||
+        error.locale === i18n.defaultLocale
+      ) {
         throw error;
       }
 

@@ -49,6 +49,10 @@ const readObject = (path: string, value: unknown): Record<string, unknown> => {
   return value as Record<string, unknown>;
 };
 
+/** Reads an own property only, so a value inherited from a polluted `Object.prototype` is never taken. */
+const own = (object: Record<string, unknown>, name: string): unknown =>
+  Object.hasOwn(object, name) ? object[name] : undefined;
+
 const readBoolean = (path: string, value: unknown): boolean =>
   typeof value === "boolean" ? value : expectType(path, "boolean", value);
 
@@ -68,7 +72,10 @@ const readLocales = (value: unknown): string[] => {
   }
 
   const seen = new Set<string>();
-  return value.map((entry: unknown, index) => {
+  const locales: string[] = [];
+  // An index loop, unlike `map`, visits the holes of a sparse array.
+  for (let index = 0; index < value.length; index += 1) {
+    const entry: unknown = value[index];
     const path = `locales[${index}]`;
     if (typeof entry !== "string") {
       return expectType(path, "string", entry);
@@ -84,8 +91,9 @@ const readLocales = (value: unknown): string[] => {
       fail(path, "Must be unique, ignoring letter case");
     }
     seen.add(locale.toLowerCase());
-    return locale;
-  });
+    locales.push(locale);
+  }
+  return locales;
 };
 
 const readDefaultLocale = (value: unknown, locales: readonly string[]): string => {
@@ -104,21 +112,29 @@ const readDictionaryLimits = (value: unknown): Record<string, number> | undefine
   }
 
   const limits = readObject("dictionaryLimits", value);
-  for (const name of Object.keys(limits)) {
+  const checked: Record<string, number> = {};
+  // Own names, enumerable or not, and each value read once, so the value used is the value checked.
+  for (const name of Object.getOwnPropertyNames(limits)) {
     if (!DICTIONARY_LIMIT_NAMES.includes(name)) {
       fail(`dictionaryLimits.${name}`, "Is not a recognized limit");
     }
     const limit = limits[name];
-    if (limit !== undefined && !(Number.isSafeInteger(limit) && (limit as number) >= 1)) {
+    if (limit === undefined) {
+      continue;
+    }
+    if (!(Number.isSafeInteger(limit) && (limit as number) >= 1)) {
       fail(`dictionaryLimits.${name}`, "Must be a positive whole number");
     }
+    checked[name] = limit as number;
   }
-  return limits as Record<string, number>;
+  return checked;
 };
 
 /** The checked configuration of an `I18n` manager, with locales trimmed. @internal */
 export interface CheckedI18nConfig {
   readonly locales: string[];
+  readonly loadLocale: (locale: string) => unknown;
+  readonly getLocaleDirection: (locale: string) => unknown;
   readonly defaultLocale: string;
   readonly isSilent?: boolean;
   readonly dictionaryLimits?: Record<string, number>;
@@ -139,16 +155,21 @@ export interface CheckedLocaleRoutingConfig {
  */
 export const i18nConfig = (input: unknown): CheckedI18nConfig => {
   const config = readObject("", input);
-  const locales = readLocales(config.locales);
-  const defaultLocale = readDefaultLocale(config.defaultLocale, locales);
-  readFunction("loadLocale", config.loadLocale);
-  readFunction("getLocaleDirection", config.getLocaleDirection);
+  const locales = readLocales(own(config, "locales"));
+  const defaultLocale = readDefaultLocale(own(config, "defaultLocale"), locales);
+  const loadLocale = own(config, "loadLocale");
+  readFunction("loadLocale", loadLocale);
+  const getLocaleDirection = own(config, "getLocaleDirection");
+  readFunction("getLocaleDirection", getLocaleDirection);
+  const isSilent = own(config, "isSilent");
 
   return {
     locales,
     defaultLocale,
-    isSilent: config.isSilent === undefined ? undefined : readBoolean("isSilent", config.isSilent),
-    dictionaryLimits: readDictionaryLimits(config.dictionaryLimits),
+    loadLocale: loadLocale as CheckedI18nConfig["loadLocale"],
+    getLocaleDirection: getLocaleDirection as CheckedI18nConfig["getLocaleDirection"],
+    isSilent: isSilent === undefined ? undefined : readBoolean("isSilent", isSilent),
+    dictionaryLimits: readDictionaryLimits(own(config, "dictionaryLimits")),
   };
 };
 
@@ -159,12 +180,12 @@ export const i18nConfig = (input: unknown): CheckedI18nConfig => {
  */
 export const localeRoutingConfig = (input: unknown): CheckedLocaleRoutingConfig => {
   const config = readObject("", input);
-  const locales = readLocales(config.locales);
+  const locales = readLocales(own(config, "locales"));
 
   return {
     locales,
-    defaultLocale: readDefaultLocale(config.defaultLocale, locales),
-    prefixDefaultLocale: readBoolean("prefixDefaultLocale", config.prefixDefaultLocale),
+    defaultLocale: readDefaultLocale(own(config, "defaultLocale"), locales),
+    prefixDefaultLocale: readBoolean("prefixDefaultLocale", own(config, "prefixDefaultLocale")),
   };
 };
 

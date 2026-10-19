@@ -1,4 +1,6 @@
 // @vitest-environment node
+import { runInNewContext } from "node:vm";
+
 import { describe, expect, it, vi } from "vitest";
 
 import { DEFAULT_DICTIONARY_LIMITS, normalizeDictionary } from "./dictionary";
@@ -27,6 +29,7 @@ describe("normalizeDictionary", () => {
     ["Date leaf", { released: new Date(0) }],
     ["Map", new Map([["greeting", "Hello"]])],
     ["class instance group", { home: new (class Group {})() }],
+    ["group with a custom null-rooted prototype", { home: Object.create(Object.create(null) as object) as object }],
   ])("rejects an invalid %s dictionary", (_name, input) => {
     expect(() => normalizeDictionary(input)).toThrow(TypeError);
   });
@@ -45,6 +48,12 @@ describe("normalizeDictionary", () => {
     const home = Object.assign(Object.create(null) as object, { title: "Home" });
 
     expect(normalizeDictionary({ home })).toEqual({ "home.title": "Home" });
+  });
+
+  it("accepts a plain object from another realm", () => {
+    const payload: unknown = runInNewContext('({ home: { title: "Home" } })');
+
+    expect(normalizeDictionary(payload)).toEqual({ "home.title": "Home" });
   });
 
   it("rejects the __proto__ key", () => {
