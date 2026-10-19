@@ -67,14 +67,16 @@ const readLocales = (value: unknown): string[] => {
   if (!Array.isArray(value)) {
     return expectType("locales", "array", value);
   }
-  if (value.length === 0) {
+  // Read once, so an array whose length grows on every read cannot keep the loop going.
+  const length = value.length;
+  if (length === 0) {
     fail("locales", "Must contain at least 1 item");
   }
 
   const seen = new Set<string>();
   const locales: string[] = [];
   // An index loop, unlike `map`, visits the holes of a sparse array.
-  for (let index = 0; index < value.length; index += 1) {
+  for (let index = 0; index < length; index += 1) {
     const entry: unknown = value[index];
     const path = `locales[${index}]`;
     if (typeof entry !== "string") {

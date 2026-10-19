@@ -129,6 +129,24 @@ describe("validateI18nConfig own properties", () => {
     );
   });
 
+  it("checks the locales present when checking starts, even if the array grows", () => {
+    let lengthReads = 0;
+    const growing = new Proxy(["en-US", "pt-BR"], {
+      get(target, property, receiver) {
+        if (property === "length") {
+          lengthReads += 1;
+          return 2 + Math.min(lengthReads, 1_000);
+        }
+        if (typeof property === "string" && /^\d+$/.test(property) && Number(property) >= 2) {
+          return `x${property}`;
+        }
+        return Reflect.get(target, property, receiver) as unknown;
+      },
+    });
+
+    expect(validateI18nConfig(createConfig({ locales: growing })).locales).toHaveLength(3);
+  });
+
   it("ignores options inherited from a polluted Object.prototype", () => {
     Object.defineProperty(Object.prototype, "isSilent", { value: "yes", configurable: true });
 
