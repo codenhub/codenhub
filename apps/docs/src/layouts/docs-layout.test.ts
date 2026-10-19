@@ -234,7 +234,7 @@ describe("documentation chrome", () => {
   it("lets other origins read the search index", async () => {
     const headers = await readOutput("_headers");
 
-    expect(headers).toMatch(/^\/search-index\.json\n\s+Access-Control-Allow-Origin: \*$/m);
+    expect(headers).toMatch(/^\/search-index\.json\n[ \t]+Access-Control-Allow-Origin: \*$/m);
   });
 
   it("emits a search index covering package sections", async () => {

@@ -190,7 +190,10 @@ const { class: className } = Astro.props;
     // The theme switch flips `data-theme`; the glyph color follows it.
     new MutationObserver(redraw).observe(document.documentElement, { attributeFilter: ["data-theme"] });
 
+    // Pointer moves are ignored under reduced motion, so a position kept from
+    // before would draw one long wake from it on the next move.
     reducedMotion.addEventListener("change", () => {
+      pointer = undefined;
       ripples = [];
       redraw();
       startLoop();
