@@ -11,14 +11,14 @@ The usual failure is not missing knowledge. It is choosing before reasoning: pic
 
 ## Existing Systems First
 
-In a product with a design system, brand guide, or established screens, use its tokens, components, fonts, spacing, and motion. A screen that departs from the rest of the product reads as a bug, not as design. Apply this guidance to what the system leaves open, such as composition, hierarchy, density, and empty, loading, and error states. When the system itself breaks a principle here, such as text that fails contrast, follow the system and report the problem instead of quietly working around it.
+In a product with a design system, brand guide, or established screens, use its tokens, components, fonts, spacing, and motion. A screen that departs from the rest of the product reads as a bug, not as design. Apply this guidance to what the system leaves open, such as composition, hierarchy, density, and empty, loading, and error states. When following the system would ship an accessibility failure, such as text that fails contrast, use the nearest value from the system's own scale that passes, and report the problem so the system can be fixed for every screen. For other conflicts with this guidance, follow the system and report the problem instead of quietly working around it.
 
 ## Procedure
 
 1. **Context.** Establish the medium (screen UI, document, slide, social image, video, print), the viewing conditions (size, distance, seconds on screen, surroundings), the audience, and how often they see it. A tool used all day and a page seen once for ten seconds need opposite answers to most questions below. When the request leaves these open, infer them from the content and state the assumption.
 2. **Content.** Work with real or realistic content before styling it. Placeholder text hides length, wrapping, and hierarchy problems. Rank it: the one thing the viewer must get first, what supports it, and what is reference. Most surfaces need three levels of importance or fewer; past that, levels blur together.
 3. **Constraints.** Accessibility, platform conventions, languages and scripts, licenses, performance budgets, and brand.
-4. **Type.** Choose type before color, since most of any interface is text. Read [references/typography.md](references/typography.md) before choosing a typeface, pairing fonts, building a type scale, or setting text for video or social media. Before settling on a typeface, shortlist at least three from at least two different constructions, judge them against the reference's criteria, and say why the winner beat the others.
+4. **Type.** Choose type before color, since most of any interface is text. Read [references/typography.md](references/typography.md) before choosing a typeface, pairing fonts, building a type scale, or setting text for video or social media. When the typeface is not already set by the system or brand, shortlist at least three from at least two different constructions, judge them against the reference's criteria, and say why the winner beat the others.
 5. **Space and layout.** Apply the next two sections.
 6. **Color.** Read [references/color.md](references/color.md) before building a palette, choosing an accent or working with a brand color, setting up dark mode, or choosing colors for status or data.
 7. **Check.** Follow Verification below before presenting the work.
@@ -46,7 +46,7 @@ Signal importance with the fewest and weakest means that work, in this order: po
 - **Align to few edges.** Every distinct left edge is one more line the eye tracks. Left-align text people read. Center only short, standalone, symmetric content, such as a hero line, a slide title, or a button label.
 - **Keep reading text between 45 and 75 characters per line.** Wider lines lose the reader on the return sweep; narrower ones break phrases apart.
 - **Align optically.** Round shapes, icons, triangles, and punctuation need nudging to look aligned; trust the rendered result over equal numbers.
-- **Design for the extremes.** Long names, empty lists, one item, a thousand items, a narrow phone, a wide monitor, and translated text up to 30% longer than English.
+- **Design for the extremes.** Long names, empty lists, one item, a thousand items, a narrow phone, a wide monitor, and translated text. Translations often run about 30% longer than English, and short labels can double; when the target languages are known, test with them.
 
 ## Separation
 
