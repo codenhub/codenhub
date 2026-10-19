@@ -5,7 +5,8 @@ import { compareVersions } from "./readiness.ts";
 /** Runs a git command and returns its outcome. Injected by tests. */
 export type GitRunner = (args: readonly string[], cwd: string) => Promise<{ isSuccess: boolean; stdout: string }>;
 
-const runGit: GitRunner = async (args, cwd) => {
+/** Runs a real `git` child process. */
+export const runGit: GitRunner = async (args, cwd) => {
   const outcome = await execute({ args, command: "git", cwd }, { stdio: "pipe" });
   return { isSuccess: outcome.isSuccess, stdout: outcome.stdout ?? "" };
 };

@@ -1,12 +1,16 @@
 import { mapConcurrent } from "../process/concurrency.ts";
 import { cutRelease } from "../release/cut.ts";
+import { fetchReleaseTags, runGit, type GitRunner } from "../release/published-tags.ts";
 import { readPackageReadiness, type PackageReadiness, type ReadinessOptions } from "../release/readiness.ts";
+import { readUnreleasedChanges } from "../release/unreleased.ts";
 import type { SummaryRow } from "../reporting/reporter.ts";
+import type { WorkspacePackage } from "../workspace/discover.ts";
 import { EXIT_FAILURE, EXIT_SUCCESS, type CommandContext, type CommandDefinition } from "./definition.ts";
 import type { CommandResolver } from "./verify-command.ts";
 
 const SKIP_VERIFY_FLAG = "--skip-verify";
 const CUT_FLAG = "--cut";
+const UNRELEASED_FLAG = "--unreleased";
 
 function toSummaryRow(readiness: PackageReadiness): SummaryRow {
   const blocked = readiness.checks.filter(({ status }) => status === "blocked").length;
@@ -104,13 +108,79 @@ async function runCut(context: CommandContext, requested: string): Promise<numbe
   return EXIT_SUCCESS;
 }
 
-export function createReleaseCommand(resolver?: CommandResolver, readiness: ReadinessOptions = {}): CommandDefinition {
+/**
+ * Lists what each public package has gained since its last release tag.
+ *
+ * It answers "what would the next release carry" from git rather than from a
+ * file someone has to keep current, so it reads nothing but tags and history
+ * and skips verification. Tags are fetched first, because a stale local tag
+ * list would report commits that already shipped. A shallow clone is refused,
+ * because its history stops short without git saying so.
+ * @param context Command context for this invocation.
+ * @param packages Public packages to report on.
+ * @param git Git runner, injected by tests.
+ * @returns Process exit code.
+ */
+async function runUnreleased(
+  context: CommandContext,
+  packages: readonly WorkspacePackage[],
+  git: GitRunner,
+): Promise<number> {
+  const root = context.workspace.root;
+  const shallow = await git(["rev-parse", "--is-shallow-repository"], root);
+  if (!shallow.isSuccess || shallow.stdout.trim() !== "false") {
+    context.reporter.error("This clone has incomplete history; run `git fetch --unshallow` and try again.");
+    return EXIT_FAILURE;
+  }
+  if (!(await fetchReleaseTags(root, git))) {
+    context.reporter.warn("Could not fetch release tags from origin; reporting against local tags.");
+  }
+
+  const results = await mapConcurrent(packages, context.options.concurrency, async (workspacePackage) => {
+    try {
+      return await readUnreleasedChanges(workspacePackage.name, workspacePackage.location, root, git);
+    } catch (error) {
+      return error instanceof Error ? error : new Error(String(error));
+    }
+  });
+
+  packages.forEach((workspacePackage, index) => {
+    const result = results[index];
+    context.reporter.blank();
+    context.reporter.step(workspacePackage.name);
+    if (result === undefined || result instanceof Error) {
+      context.reporter.error(`  ${result?.message ?? "no result"}`);
+      return;
+    }
+    const since = result.tag === undefined ? ", never released" : ` since ${result.tag}`;
+    if (result.commits.length === 0) {
+      context.reporter.info(`  nothing${since}`);
+      return;
+    }
+    context.reporter.info(`  ${result.commits.length} commit(s)${since}`);
+    for (const { hash, subject } of result.commits) {
+      context.reporter.detail(`  ${hash}  ${subject}`);
+    }
+  });
+  return results.some((result) => result instanceof Error) ? EXIT_FAILURE : EXIT_SUCCESS;
+}
+
+export function createReleaseCommand(
+  resolver?: CommandResolver,
+  readiness: ReadinessOptions = {},
+  git: GitRunner = runGit,
+): CommandDefinition {
   return {
     name: "release",
     run: async (context) => {
       const cut = readCutFlag(context.passthrough);
       if (typeof cut === "object" && cut !== undefined) {
         context.reporter.error(cut.error);
+        return EXIT_FAILURE;
+      }
+      const unreleased = context.passthrough.includes(UNRELEASED_FLAG);
+      if (unreleased && cut !== undefined) {
+        context.reporter.error(`${UNRELEASED_FLAG} and ${CUT_FLAG} are separate modes; run one at a time.`);
         return EXIT_FAILURE;
       }
       if (cut !== undefined) {
@@ -124,6 +194,10 @@ export function createReleaseCommand(resolver?: CommandResolver, readiness: Read
       if (publishable.length === 0) {
         context.reporter.warn("No selected package is published.");
         return EXIT_SUCCESS;
+      }
+
+      if (unreleased) {
+        return runUnreleased(context, publishable, git);
       }
 
       if (!context.passthrough.includes(SKIP_VERIFY_FLAG)) {
@@ -144,7 +218,7 @@ export function createReleaseCommand(resolver?: CommandResolver, readiness: Read
       const blocked = results.some(({ checks }) => checks.some(({ status }) => status === "blocked"));
       return blocked ? EXIT_FAILURE : EXIT_SUCCESS;
     },
-    summary: "Report whether the selected packages could be published.",
-    usage: "hub release [targets...] [--cut=<version|major|minor|patch>] [--skip-verify]",
+    summary: "Report whether the selected packages could be published, or what each would release next.",
+    usage: "hub release [targets...] [--cut=<version|major|minor|patch> | --unreleased] [--skip-verify]",
   };
 }
