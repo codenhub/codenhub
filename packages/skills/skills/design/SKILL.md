@@ -27,7 +27,7 @@ In a product with a design system, brand guide, or established screens, use its 
 
 Signal importance with the fewest and weakest means that work, in this order: position and reading order, space, size, weight, color, and only then decoration such as borders, backgrounds, shadows, and icons. Reaching for decoration first causes most generated clutter: a card, a badge, and a gradient where an extra line of space and a heavier weight would do.
 
-- Use one or two signals per level, and make the step between levels obvious. Two sizes 2px apart look like a mistake, not a hierarchy.
+- Use one signal per distinction, and make it obvious. Two sizes 2px apart look like a mistake, not a hierarchy. Add a second signal only when the first cannot do the job alone. Meaning carried by color is the exception: it always needs a second, non-color signal, such as an icon or a word.
 - Demote as often as you promote. Making secondary text smaller or lighter often fixes a page better than making the headline bigger.
 - One primary action per view. When everything is emphasized, nothing is.
 - Restraint is not the goal. Removing default decoration leaves room for one deliberate focal element taken from the content, such as a large real number, a product view, a diagram of how it works, or a striking headline. Make it big and finished enough to carry the surface; a timid visual with tiny labels is as weak as a decorative one.
@@ -40,15 +40,28 @@ Signal importance with the fewest and weakest means that work, in this order: po
   - Generous for one-time, first-impression, or single-decision moments: landing pages, onboarding, empty states, checkout, a hero, a slide, a poster. Space isolates the one thing and slows the reader down.
   - Most products mix both: compact content inside a generous page structure.
 - **Use a spacing scale** such as 4, 8, 12, 16, 24, 32, 48, 64, 96, and choose a step by the relationship between elements, not by feel per element.
+- **Step the gaps by level.** Within an item, between items, between groups, and between sections each need a clearly larger gap than the level below, roughly 1.5 to 2 times. A gap between groups that nearly matches the gap between sections makes the groups read as sections, and the section loses its outline.
+- **Give parallel content parallel form.** Siblings at one level share a heading style, a heading position, and a layout pattern. When one group is two lists, the next a key-value table, and the next a block with its heading in a side column, each reads as a different kind of thing. Label every group at a level, or none of them.
+- **Share a grid.** Siblings align to the same column edges. Columns that change proportions from one group to the next leave the eye no axis to follow.
 - **Align to few edges.** Every distinct left edge is one more line the eye tracks. Left-align text people read. Center only short, standalone, symmetric content, such as a hero line, a slide title, or a button label.
 - **Keep reading text between 45 and 75 characters per line.** Wider lines lose the reader on the return sweep; narrower ones break phrases apart.
 - **Align optically.** Round shapes, icons, triangles, and punctuation need nudging to look aligned; trust the rendered result over equal numbers.
 - **Design for the extremes.** Long names, empty lists, one item, a thousand items, a narrow phone, a wide monitor, and translated text up to 30% longer than English.
 
+## Separation
+
+Every line, border, background change, and shadow claims that space alone could not separate or group what is around it. Generated layouts make that claim everywhere: a hairline between every metric, row, and section, and a card with a border, a tinted background, and a shadow at once. Each boundary ends up drawn two or three times, and the result reads as noise.
+
+- **Start with space, and make it carry the structure.** Removing a separator is right only when space, alignment, and headings still show what belongs together. If the structure disappears with the line, strengthen those first. Add a visible separator only where they cannot do the job: rows that must be tracked across a wide table, regions that meet edge to edge, such as a sidebar against content, layouts too dense to spare the space, and controls whose bounds people must see, such as inputs.
+- **One means per boundary.** A container is a border, a background change, or a shadow for elevation, not all three. A section break is space, a rule, or a background band, not a rule inside a band after a large gap. When choosing, prefer the weaker means: space, then a background change, then a line, then a shadow.
+- **Choose the vocabulary once.** Decide how the whole surface separates and groups, then apply that everywhere it applies and nowhere else. A design built on lines can be excellent, as on code hosts and documentation sites, when every line marks a real edge: a grid cell, a table axis, a panel boundary. The failure is a line placed wherever one could go.
+- **Draw complete, honest shapes.** Lines describe structure. A top border on each card with no other sides, dividers between some items but not their siblings, and a rule shorter than what it separates all suggest a structure that is not there. Close the shape, use one continuous rule, or use space.
+
 ## Default Failures
 
 Generated design converges on the patterns below. Each is wrong as a default, and some are right in a specific case. Use one only when that case applies, and be able to say why.
 
+- **Lines wherever one fits.** Hairlines between every metric, row, and section; top-only borders on cards; a divider, a gap, and a background change at the same boundary. See Separation.
 - **A card around everything.** A border, radius, and shadow around every section, metric, and paragraph. Cards are for discrete objects a person acts on or moves between, such as a product, a message, or a file. Separate sections with space and headings.
 - **Soft, tinted, or wide shadows everywhere.** A shadow means elevation: something sits above the page, like a menu, dialog, or dragged item. Keep shadows small, neutral, and on few elements. Separate flat surfaces with a slight change in lightness.
 - **Glow, neon, and gradients for energy.** Glow means emitted light, and gradient text and purple-to-blue backgrounds are the signature of generated UI. Use flat color. Use a gradient when it represents something, such as a range, light, or an existing brand asset.
@@ -69,10 +82,11 @@ Look at the output before presenting it. Most design failures are obvious in a r
 
 - Render the work and view it at its real size. For UI, capture a narrow phone width and a common desktop width. For social images and video, view them at the size people meet them, such as a feed thumbnail on a phone.
 - For social images, thumbnails, and posters, also view a copy scaled to about a quarter of its width. The main message must still read.
-- Blur or squint at it. The order in which things stand out must match the ranking from the Content step.
+- Blur or squint at it. You should see a few distinct blocks, with clearly larger gaps between groups than within them, and the order in which things stand out must match the ranking from the Content step. Without reading, count the sections and the groups in each; if you cannot, the structure is not visible yet.
 - Check contrast numerically: at least 4.5:1 for body text, and 3:1 for text at least 24px (or 18.66px bold) and for meaningful non-text UI such as input borders, icons, and focus rings.
 - Check the smallest text, including labels inside diagrams, charts, and illustrations. Keep it at 12px or larger on screen; text that only works at full zoom is not working.
 - Check every state and variant that exists: hover, focus, active, disabled, empty, loading, error, overflowing content, and both themes when there is a dark mode.
+- Remove each line, border, background change, and shadow in turn, in the render or in your head. Keep it only when grouping becomes unclear without it, then check that the ones that remain follow one consistent rule.
 - Compare the result against Default Failures and remove each one that has no reason to be there.
 - When the work cannot be rendered, say so and name what was not checked.
 
