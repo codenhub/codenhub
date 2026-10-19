@@ -68,7 +68,7 @@ Use color theory to predict what a combination will do, not as a recipe.
 
 ## Contrast And Accessibility
 
-- **WCAG 2 thresholds:** 4.5:1 for all text below the large-text size, including labels, buttons, and captions; 3:1 for text at least 24px or at least 18.66px bold; 3:1 for meaningful non-text UI, such as input borders, icons, and focus indicators, against what is next to them. For long reading, aim for 7:1.
+- **WCAG 2 thresholds:** 4.5:1 for all text below the large-text size, including labels, buttons, and captions; 3:1 for text at least 24px or at least 18.66px bold; 3:1 for meaningful non-text UI, such as input borders, icons, and focus indicators, against what is next to them. Logotypes, purely decorative text, and incidental text inside photos are exempt. For long reading, aim for 7:1.
 - **APCA as a second opinion.** The WCAG 2 formula misjudges some pairs, especially light text on dark backgrounds and mid-tone colors. Where it is available, check with APCA as well, aiming for about Lc 75 for body text, Lc 60 for other content text, and Lc 45 for large headings. Meet WCAG 2 wherever it is a legal or contractual requirement.
 - **Never color alone.** Pair color with text, an icon, a pattern, or position wherever it carries meaning. About 8% of men of Northern European descent have a color vision deficiency, most often red-green. Check the work with a color-blindness simulation.
 - **Disabled elements** are exempt from contrast requirements, but should still be visible enough that people can tell the element exists.
