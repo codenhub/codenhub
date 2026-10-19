@@ -9,6 +9,8 @@ const BOUND_MANAGERS = new WeakSet<object>();
 const ELEMENT_NODE = 1;
 
 const isElement = (node: Node): node is Element => node.nodeType === ELEMENT_NODE;
+const hasTranslationKey = (element: Element): boolean =>
+  TRANSLATION_KEY_ATTRIBUTES.some((attribute) => element.hasAttribute(attribute));
 
 /**
  * Optional browser integrations applied around a consumer-owned i18n manager.
@@ -216,7 +218,79 @@ export async function initializeBrowserI18n<TLocale extends string>(
       syncDocumentLocale(i18n);
     }
     if (root !== undefined) {
+      // The full pass covers pending additions and key changes but does not find an element whose last key was removed,
+      // so only those are handled first; the other pending records are dropped with the pass's own writes below.
+      if (observer !== undefined) {
+        const keyRemovedElements = new Set<Element>();
+
+        for (const mutation of observer.takeRecords()) {
+          if (mutation.type === "attributes" && !hasTranslationKey(mutation.target as Element)) {
+            keyRemovedElements.add(mutation.target as Element);
+          }
+        }
+        for (const element of keyRemovedElements) {
+          domTranslator.translateRoot({ root: element, boundary: root, translate: (key) => i18n.translate(key) });
+        }
+      }
       domTranslator.translateRoot({ root, translate: (key) => i18n.translate(key) });
+      // The records left are the full pass's own writes, which need no second pass.
+      observer?.takeRecords();
+    }
+  };
+  const handleMutations = (mutations: readonly MutationRecord[]): void => {
+    const observedRoot = root;
+
+    if (observedRoot === undefined) {
+      return;
+    }
+
+    const changedRoots = new Set<Element>();
+    // An element whose last key was removed is not found by an ancestor's scan, so it is translated directly.
+    const keyRemovedElements = new Set<Element>();
+
+    for (const mutation of mutations) {
+      if (mutation.type === "attributes") {
+        const target = mutation.target as Element;
+        changedRoots.add(target);
+        if (!hasTranslationKey(target)) {
+          keyRemovedElements.add(target);
+        }
+        continue;
+      }
+
+      if (isElement(mutation.target) && mutation.target.hasAttribute("data-i18n")) {
+        changedRoots.add(mutation.target);
+      }
+
+      for (const addedNode of mutation.addedNodes) {
+        if (isElement(addedNode)) {
+          changedRoots.add(addedNode);
+        }
+      }
+    }
+
+    for (const changedRoot of changedRoots) {
+      let ancestor = changedRoot.parentElement;
+      let hasChangedAncestor = false;
+
+      while (ancestor !== null) {
+        if (changedRoots.has(ancestor)) {
+          hasChangedAncestor = true;
+          break;
+        }
+
+        ancestor = ancestor.parentElement;
+      }
+
+      if (hasChangedAncestor && !keyRemovedElements.has(changedRoot)) {
+        continue;
+      }
+
+      domTranslator.translateRoot({
+        root: changedRoot,
+        boundary: observedRoot,
+        translate: (key) => i18n.translate(key),
+      });
     }
   };
   // Later core changes are choices the application made, so they persist when enabled.
@@ -288,54 +362,9 @@ export async function initializeBrowserI18n<TLocale extends string>(
     if (observe && root !== undefined) {
       const observedRoot = root;
       observer = new (getMutationObserver(observedRoot))((mutations) => {
-        const changedRoots = new Set<Element>();
-        // An element whose last key was removed is not found by an ancestor's scan, so it is translated directly.
-        const keyRemovedElements = new Set<Element>();
-
-        for (const mutation of mutations) {
-          if (mutation.type === "attributes") {
-            const target = mutation.target as Element;
-            changedRoots.add(target);
-            if (!TRANSLATION_KEY_ATTRIBUTES.some((attribute) => target.hasAttribute(attribute))) {
-              keyRemovedElements.add(target);
-            }
-            continue;
-          }
-
-          if (isElement(mutation.target) && mutation.target.hasAttribute("data-i18n")) {
-            changedRoots.add(mutation.target);
-          }
-
-          for (const addedNode of mutation.addedNodes) {
-            if (isElement(addedNode)) {
-              changedRoots.add(addedNode);
-            }
-          }
-        }
-
-        for (const changedRoot of changedRoots) {
-          let ancestor = changedRoot.parentElement;
-          let hasChangedAncestor = false;
-
-          while (ancestor !== null) {
-            if (changedRoots.has(ancestor)) {
-              hasChangedAncestor = true;
-              break;
-            }
-
-            ancestor = ancestor.parentElement;
-          }
-
-          if (hasChangedAncestor && !keyRemovedElements.has(changedRoot)) {
-            continue;
-          }
-
-          domTranslator.translateRoot({
-            root: changedRoot,
-            boundary: observedRoot,
-            translate: (key) => i18n.translate(key),
-          });
-        }
+        handleMutations(mutations);
+        // The records left are the handler's own writes, which need no second pass.
+        observer?.takeRecords();
       });
       observer.observe(observedRoot, {
         attributes: true,

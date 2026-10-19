@@ -55,6 +55,35 @@ describe("createI18n", () => {
     );
   });
 
+  it("calls the loading and direction callbacks with the configuration as this", async () => {
+    const config = {
+      ...createConfig(),
+      dictionaries,
+      loadLocale(this: { dictionaries: typeof dictionaries }, locale: Locale) {
+        return this.dictionaries[locale];
+      },
+      rtlLocales: ["ar"],
+      getLocaleDirection(this: { rtlLocales: string[] }, locale: Locale) {
+        return this.rtlLocales.includes(locale) ? ("rtl" as const) : ("ltr" as const);
+      },
+    };
+    const i18n = createI18n(config);
+
+    await i18n.init({ locale: "ar" });
+
+    expect(i18n.direction).toBe("rtl");
+    expect(i18n.translate("common.greeting")).toBe("مرحبا");
+  });
+
+  it("supports a key-parity check across locales through loadLocale", async () => {
+    const i18n = createI18n(createConfig());
+    const referenceKeys = Object.keys(await i18n.loadLocale(i18n.defaultLocale));
+    const dictionaries = await Promise.all(i18n.locales.map((locale) => i18n.loadLocale(locale)));
+    const missingKeys = dictionaries.map((dictionary) => referenceKeys.filter((key) => !(key in dictionary)));
+
+    expect(missingKeys).toEqual([[], ["common.farewell"], ["common.farewell"]]);
+  });
+
   it("exposes isolated readonly metadata and deterministic initial state", () => {
     const locales: Locale[] = ["en", "pt", "ar"];
     const i18n = createI18n(createConfig({ locales }));

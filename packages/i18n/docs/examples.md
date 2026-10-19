@@ -98,7 +98,7 @@ export async function renderPage(requestLocale: string) {
 
 Do not share mutable manager state across concurrent requests. In Node.js, an exception thrown by a `ready` or `locale-change` listener is reported as an uncaught exception and ends the process by default, as for any `EventTarget` listener, so keep server listeners from throwing. Immutable dictionary modules and runtime-level import caches may still be shared.
 
-Return the same payload object for a locale on every request, such as a module-level import, rather than parsing it per request: managers then share its normalized dictionary instead of validating it again. Missing-key warnings are deduplicated per manager, so a per-request manager warns for a missing key on every request; set `isSilent: true` in production SSR, and keep it `false` in tests and builds, where the warnings surface missing keys once per manager and a test can fail on them by spying on `console.warn`.
+Return the same payload object for a locale on every request, such as a module-level import, rather than parsing it per request: managers then share its normalized dictionary instead of validating it again. Missing-key warnings are deduplicated per manager, so a per-request manager warns for a missing key on every request; set `isSilent: true` in production SSR, and keep it `false` in tests and builds, where the warnings surface keys missing from both dictionaries once per manager and a test can fail on them by spying on `console.warn`. A key that only the default dictionary has does not warn; the key-parity check below finds it.
 
 ## SSG
 
@@ -131,7 +131,28 @@ await Promise.all(
 );
 ```
 
-Loader and dictionary failures reject, allowing the build to fail rather than publishing silently untranslated pages.
+Loader and dictionary failures reject, allowing the build to fail rather than publishing pages without translations. A key missing from a locale but present in the default dictionary does not fail or warn: it renders the default text. Add a key-parity check to catch those before publishing.
+
+## Key-parity check
+
+`translate()` falls back to the default dictionary without a warning, so a key added to the default locale but not yet translated renders default-locale text everywhere else. Compare dictionaries in a test or build step, since `loadLocale()` returns each normalized dictionary without changing manager state:
+
+```ts
+const i18n = createI18n(config);
+const referenceKeys = Object.keys(await i18n.loadLocale(i18n.defaultLocale));
+
+const dictionaries = await Promise.all(i18n.locales.map((locale) => i18n.loadLocale(locale)));
+
+dictionaries.forEach((dictionary, index) => {
+  const missingKeys = referenceKeys.filter((key) => !(key in dictionary));
+
+  if (missingKeys.length > 0) {
+    throw new Error(`${i18n.locales[index]} is missing ${missingKeys.join(", ")}`);
+  }
+});
+```
+
+Keys are flattened, so nested payloads compare as dot-separated keys such as `page.title`.
 
 ## Loader patterns
 
