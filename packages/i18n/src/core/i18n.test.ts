@@ -33,6 +33,19 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe("empty locale dictionaries", () => {
+  it("should initialize a locale without translations and fall back to the default dictionary", async () => {
+    const i18n = createI18n(
+      createConfig({ loadLocale: (locale) => (locale === "pt" ? {} : dictionaries[locale]), isSilent: true }),
+    );
+
+    await expect(i18n.init({ locale: "pt" })).resolves.toBe(true);
+
+    expect(i18n.locale).toBe("pt");
+    expect(i18n.translate("common.greeting")).toBe("Hello");
+  });
+});
+
 describe("createI18n", () => {
   it("should require a plain configuration object, reading only its own properties", () => {
     const inherited = Object.create(createConfig()) as I18nConfig<Locale>;

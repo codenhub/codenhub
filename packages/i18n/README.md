@@ -52,7 +52,7 @@ console.log(i18n.translate("home.title")); // "Bem-vindo"
 - Locale identifiers use conservative ASCII syntax: alphanumeric subtags joined by single hyphens.
 - Missing active-locale keys fall back to the default dictionary. A key missing from both returns `undefined`; diagnostics deduplicate the 1,000 most recent locale/key pairs unless silent.
 - Translation lookup and locale routing intentionally omit interpolation, plural selection, ICU messages, rich messages, HTML rendering, number/date formatting, navigation, and redirects.
-- Browser DOM translation skips `style`, `script`, `noscript`, and `template` elements. Invalid `data-i18n` keys are skipped without interrupting other translations.
+- Browser DOM translation sets text with `data-i18n` and allowlisted text attributes, such as `placeholder` or `aria-label`, with `data-i18n-<attribute>`. It skips `style`, `script`, `noscript`, and `template` elements. Invalid keys are skipped without interrupting other translations.
 - Locale routing rejects encoded percent signs so later decoding cannot expose separators, controls, or dot segments.
 - The package does not own fetch policy, request negotiation, route registration, redirects, navigation, rendering, or static page generation.
 

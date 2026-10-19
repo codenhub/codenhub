@@ -5,6 +5,35 @@ const ELEMENT_NODE = 1;
 const MAX_TRANSLATION_KEY_LENGTH = 1_000;
 const BLOCKED_ELEMENT_NAMES = new Set(["noscript", "script", "style", "template"]);
 
+/**
+ * Attributes that `data-i18n-<attribute>` may translate: text shown to people or assistive technology. URLs, styles,
+ * and event handlers stay out, so a translation can never set them.
+ */
+const TRANSLATED_ATTRIBUTES = [
+  "alt",
+  "aria-description",
+  "aria-label",
+  "aria-placeholder",
+  "aria-roledescription",
+  "aria-valuetext",
+  "label",
+  "placeholder",
+  "title",
+] as const;
+
+/** Every attribute that carries a translation key. @internal */
+export const TRANSLATION_KEY_ATTRIBUTES: readonly string[] = [
+  TRANSLATION_ATTRIBUTE,
+  ...TRANSLATED_ATTRIBUTES.map((attribute) => `${TRANSLATION_ATTRIBUTE}-${attribute}`),
+];
+
+const TRANSLATION_KEY_SELECTOR = TRANSLATION_KEY_ATTRIBUTES.map((attribute) => `[${attribute}]`).join(",");
+
+interface AttributeState {
+  fallback: string | null;
+  translated: string | null;
+}
+
 interface DomTranslatorOptions {
   readonly isSilent: boolean;
 }
@@ -38,14 +67,24 @@ const isInsideCustomElement = (element: Element, root: ParentNode): boolean => {
 };
 
 const collectElements = (root: ParentNode): Element[] => {
-  const descendants = Array.from(root.querySelectorAll(`[${TRANSLATION_ATTRIBUTE}]`));
-  return isElementNode(root) && root.hasAttribute(TRANSLATION_ATTRIBUTE) ? [root, ...descendants] : descendants;
+  const descendants = Array.from(root.querySelectorAll(TRANSLATION_KEY_SELECTOR));
+  return isElementNode(root) && root.matches(TRANSLATION_KEY_SELECTOR) ? [root, ...descendants] : descendants;
 };
+
+const isValidDomKey = (rawKey: string): boolean =>
+  rawKey.trim().length > 0 && rawKey.length <= MAX_TRANSLATION_KEY_LENGTH && !hasAsciiControlCharacter(rawKey);
 
 /** Creates isolated fallback-text tracking for one browser binding. @internal */
 export function createDomTranslator(options: DomTranslatorOptions): DomTranslator {
   const fallbackTexts = new WeakMap<Element, string>();
   const translatedTexts = new WeakMap<Element, string>();
+  const attributeStates = new WeakMap<Element, Map<string, AttributeState>>();
+
+  const warnInvalidKey = (keyAttribute: string): void => {
+    if (!options.isSilent) {
+      console.warn(`[I18n] Skipping translation because ${keyAttribute} contains an invalid key.`);
+    }
+  };
 
   const getFallbackText = (element: Element): string => {
     const fallbackText = fallbackTexts.get(element);
@@ -60,22 +99,43 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     return fallbackText;
   };
 
-  const translateElement = (element: Element, translate: (key: string) => string | undefined): void => {
-    const rawKey = element.getAttribute(TRANSLATION_ATTRIBUTE);
-
-    if (rawKey === null) {
+  const translateAttribute = (
+    element: Element,
+    attribute: string,
+    rawKey: string,
+    translate: (key: string) => string | undefined,
+  ): void => {
+    if (!isValidDomKey(rawKey)) {
+      warnInvalidKey(`${TRANSLATION_ATTRIBUTE}-${attribute}`);
       return;
     }
 
-    if (BLOCKED_ELEMENT_NAMES.has(element.localName)) {
-      if (!options.isSilent) {
-        console.warn(
-          `[I18n] Skipping translation on <${element.tagName.toLowerCase()}> because the element can activate or hide translated content.`,
-        );
-      }
-      return;
+    let states = attributeStates.get(element);
+
+    if (states === undefined) {
+      states = new Map();
+      attributeStates.set(element, states);
     }
 
+    const currentValue = element.getAttribute(attribute);
+    let state = states.get(attribute);
+
+    if (state === undefined || currentValue !== state.translated) {
+      state = { fallback: currentValue, translated: currentValue };
+      states.set(attribute, state);
+    }
+
+    const nextValue = translate(rawKey.trim()) ?? state.fallback;
+
+    if (nextValue === null) {
+      element.removeAttribute(attribute);
+    } else if (currentValue !== nextValue) {
+      element.setAttribute(attribute, nextValue);
+    }
+    state.translated = nextValue;
+  };
+
+  const translateText = (element: Element, rawKey: string, translate: (key: string) => string | undefined): void => {
     if (element.childElementCount > 0) {
       if (!options.isSilent) {
         console.warn(
@@ -85,22 +145,43 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
       return;
     }
 
-    const key = rawKey.trim();
-
-    if (key.length === 0 || rawKey.length > MAX_TRANSLATION_KEY_LENGTH || hasAsciiControlCharacter(rawKey)) {
-      if (!options.isSilent) {
-        console.warn("[I18n] Skipping translation because data-i18n contains an invalid key.");
-      }
+    if (!isValidDomKey(rawKey)) {
+      warnInvalidKey(TRANSLATION_ATTRIBUTE);
       return;
     }
 
     const fallbackText = getFallbackText(element);
-    const nextText = translate(key) ?? fallbackText;
+    const nextText = translate(rawKey.trim()) ?? fallbackText;
 
     if (element.textContent !== nextText) {
       element.textContent = nextText;
     }
     translatedTexts.set(element, nextText);
+  };
+
+  const translateElement = (element: Element, translate: (key: string) => string | undefined): void => {
+    if (BLOCKED_ELEMENT_NAMES.has(element.localName)) {
+      if (!options.isSilent) {
+        console.warn(
+          `[I18n] Skipping translation on <${element.tagName.toLowerCase()}> because the element can activate or hide translated content.`,
+        );
+      }
+      return;
+    }
+
+    const rawKey = element.getAttribute(TRANSLATION_ATTRIBUTE);
+
+    if (rawKey !== null) {
+      translateText(element, rawKey, translate);
+    }
+
+    for (const attribute of TRANSLATED_ATTRIBUTES) {
+      const rawAttributeKey = element.getAttribute(`${TRANSLATION_ATTRIBUTE}-${attribute}`);
+
+      if (rawAttributeKey !== null) {
+        translateAttribute(element, attribute, rawAttributeKey, translate);
+      }
+    }
   };
 
   return {

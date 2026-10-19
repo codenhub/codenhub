@@ -94,10 +94,12 @@ Dictionaries are checked against resource limits. By default they allow at most 
 
 A payload throws `TypeError` when it:
 
-- Is null, an array, a primitive, or empty.
+- Is null, an array, or a primitive.
 - Contains a non-string leaf, array, function, symbol key, accessor, cycle, or shared object reference.
 - Contains an empty dot-separated segment, an ASCII control character, a `__proto__` segment, or a flat/nested key collision. `prototype` and `constructor` are ordinary keys.
 - Exceeds a dictionary depth, translation count, property count, flattened-key length, translation-value length, or aggregate translation-character limit.
+
+A dictionary may be empty, or hold only empty groups: a locale that is added before it is translated then initializes and falls back to the default dictionary for every key. Rejecting empty dictionaries was dropped because it failed initialization, and in browsers application start, for exactly that partial locale.
 
 Validation failures are not wrapped and are retryable on the next load.
 
@@ -227,7 +229,7 @@ The helper selects the initial locale in this order:
 3. `navigator.languages`, or `navigator.language` when that list is empty.
 4. The configured default locale.
 
-An explicit locale is authoritative. Each browser preference, in order, tests an exact case-insensitive match first, then the longest configured locale that the preference starts with as whole subtags, such as `zh-Hant` for `zh-Hant-TW` or `pt` for `pt-BR`, then the first configured locale with the same language subtag.
+An explicit locale is authoritative. Each browser preference, in order, tests an exact case-insensitive match first, then the longest configured locale that the preference starts with as whole subtags, such as `zh-Hant` for `zh-Hant-TW` or `pt` for `pt-BR`. It then adds likely subtags with `Intl.Locale.prototype.maximize()` to the preference and to each configured locale, and takes the first configured locale whose maximized form is equal, then the first with the same language and script, such as `zh-Hant` for `zh-TW` or `zh-HK`, `zh-TW` for `zh-HK` among `zh-CN` and `zh-TW`, or `sr-Cyrl` for `sr`. Last, it takes the first configured locale with the same language subtag.
 
 Defaults are `storageKey: "i18n"`, `persistLocale: true`, `syncDocument: true`, and `observe: false`. DOM translation is disabled unless `root` is provided. `observe: true` without a root rejects with `TypeError` before core initialization.
 
@@ -235,11 +237,12 @@ Defaults are `storageKey: "i18n"`, `persistLocale: true`, `syncDocument: true`, 
 
 After core initialization succeeds, the binding:
 
-- Persists `{ locale: i18n.locale }` as JSON when enabled.
+- Persists `{ locale: i18n.locale }` as JSON when enabled and the initial locale was explicit. A locale chosen from storage or navigator preferences, or the default, is not written, so a later visit selects again from current preferences; persisting it made the first fallback permanent, so returning users never received a locale added later or a changed browser language.
+- Persists the active locale after every later successful `ready` or `locale-change`, when enabled, since those are changes the application made.
 - Sets `document.documentElement.lang` and `dir` when enabled.
-- Translates eligible `data-i18n` leaves under `root`, when supplied.
-- Reapplies enabled effects after successful `ready` and `locale-change` events.
-- Observes additions and `data-i18n` changes under `root` only when requested.
+- Translates eligible `data-i18n` leaves and `data-i18n-<attribute>` attributes under `root`, when supplied.
+- Reapplies the other enabled effects after successful `ready` and `locale-change` events.
+- Observes additions and changes to `data-i18n` and `data-i18n-<attribute>` keys under `root` only when requested.
 
 Mutation observation translates only affected elements and added subtrees; locale changes still retranslate the complete configured root.
 
@@ -253,7 +256,11 @@ Storage read, parse, and write failures are recoverable: they warn unless the ma
 
 ### DOM translation boundary
 
-Only elements carrying a valid, non-empty `data-i18n` key and no child elements are translated. `style`, `script`, `noscript`, and `template` elements are always skipped because their text can activate or hide content. Blank, longer than 1,000 characters, or ASCII-control-containing DOM keys are skipped. Skips warn without including key content unless the manager is silent, and one invalid element does not interrupt other initial or observed translations. Original text is retained as fallback and restored when a later locale lacks the key. Elements containing markup are skipped and warn unless silent. Traversal does not enter a custom element from an outer root; pass that custom element or its shadow root explicitly when it owns translation.
+Only elements carrying a valid, non-empty `data-i18n` key and no child elements are translated. `style`, `script`, `noscript`, and `template` elements are always skipped because their text can activate or hide content. Blank, longer than 1,000 characters, or ASCII-control-containing DOM keys are skipped. Skips warn without including key content unless the manager is silent, and one invalid element does not interrupt other initial or observed translations. Original text is retained as fallback and restored when a later locale lacks the key. Elements containing markup are skipped and warn unless silent.
+
+`data-i18n-<attribute>` translates one attribute of any element, including one that contains markup, such as `<input data-i18n-placeholder="search.hint">` or `<button data-i18n-aria-label="menu.open"><svg></svg></button>`. Only text read by people or assistive technology is allowed: `alt`, `title`, `placeholder`, `label`, `aria-label`, `aria-description`, `aria-placeholder`, `aria-roledescription`, and `aria-valuetext`. Other names, such as `data-i18n-href`, `data-i18n-style`, or `data-i18n-onclick`, are ignored, so a translation can never set a URL, a style, or an event handler. One data attribute per translated attribute was chosen over a single list attribute, such as `data-i18n-attrs="placeholder:search.hint"`, because it needs no parsing and the observer can watch exactly those names. Attribute keys follow the same validity, warning, element, and custom-element rules as text keys. The original value is retained as fallback and restored when a later locale lacks the key; an attribute that was absent is removed again. A value the application sets after translation becomes the new fallback.
+
+Traversal does not enter a custom element from an outer root; pass that custom element or its shadow root explicitly when it owns translation.
 
 ## `@codenhub/i18n/routing`
 

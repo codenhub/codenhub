@@ -19,7 +19,6 @@ describe("normalizeDictionary", () => {
   it.each([
     ["null", null],
     ["array", ["value"]],
-    ["empty object", {}],
     ["non-string leaf", { count: 1 }],
     ["function leaf", { callback: () => undefined }],
     ["array leaf", { values: ["value"] }],
@@ -27,6 +26,16 @@ describe("normalizeDictionary", () => {
     ["whitespace key", { "  ": "value" }],
   ])("rejects an invalid %s dictionary", (_name, input) => {
     expect(() => normalizeDictionary(input)).toThrow(TypeError);
+  });
+
+  it.each([
+    ["empty object", {}],
+    ["object with only empty groups", { home: {} }],
+  ])("accepts an %s as a dictionary without translations", (_name, input) => {
+    const dictionary = normalizeDictionary(input);
+
+    expect(Object.keys(dictionary)).toEqual([]);
+    expect(Object.isFrozen(dictionary)).toBe(true);
   });
 
   it("rejects the __proto__ key", () => {

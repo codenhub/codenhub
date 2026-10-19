@@ -167,10 +167,6 @@ export function normalizeDictionary(
 
   visit(input);
 
-  if (Object.keys(dictionary).length === 0) {
-    throw new TypeError("[I18n] A locale dictionary must contain at least one translation.");
-  }
-
   const frozenDictionary = Object.freeze(dictionary);
   normalizedPayloads.set(input, {
     dictionary: frozenDictionary,
