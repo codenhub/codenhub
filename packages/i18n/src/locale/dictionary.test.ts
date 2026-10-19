@@ -153,12 +153,14 @@ describe("normalizeDictionary", () => {
     expect(() => normalizeDictionary(total, { ...DEFAULT_DICTIONARY_LIMITS, maxTotalLength: 5_100_000 })).not.toThrow();
   });
 
-  it("lowers each limit when configured", () => {
-    const limits = { ...DEFAULT_DICTIONARY_LIMITS, maxTranslations: 1 };
-
-    expect(() => normalizeDictionary({ first: "value", second: "value" }, limits)).toThrow(
-      "must not exceed 1 translations",
-    );
+  it.each([
+    [{ maxDepth: 1 }, { a: { b: { c: "value" } } }, "must not exceed 1 levels of nesting"],
+    [{ maxTranslations: 1 }, { first: "value", second: "value" }, "must not exceed 1 translations"],
+    [{ maxProperties: 2 }, { a: { b: "value" }, c: "value" }, "must not exceed 2 properties"],
+    [{ maxValueLength: 3 }, { key: "four" }, "translation values must not exceed 3 characters"],
+    [{ maxTotalLength: 5 }, { first: "abc", second: "def" }, "must not exceed 5 aggregate translation characters"],
+  ])("lowers the limit %j when configured", (limit, input, message) => {
+    expect(() => normalizeDictionary(input, { ...DEFAULT_DICTIONARY_LIMITS, ...limit })).toThrow(message);
   });
 
   it("shares the normalized dictionary for the same payload", () => {

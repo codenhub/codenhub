@@ -50,7 +50,7 @@ console.log(i18n.translate("home.title")); // "Bem-vindo"
 
 ## Notes
 
-- Dictionaries may be flat or nested, but every leaf must be a string. Valid dictionaries are flattened, frozen, cached per manager, and shared across managers that load the same payload object. Repeated object references and payloads exceeding the resource limits, which `dictionaryLimits` can raise or lower, are rejected.
+- Dictionaries may be flat or nested, but every leaf must be a string. Valid dictionaries are flattened, frozen, cached per manager, and shared across managers that load the same payload object. Repeated object references and payloads exceeding the documented resource limits are rejected. `dictionaryLimits` raises or lowers the depth, translation, property, value-length, and aggregate-length limits; the 1,000-character flattened-key limit is fixed.
 - Locale identifiers use conservative ASCII syntax: alphanumeric subtags joined by single hyphens.
 - Missing active-locale keys fall back to the default dictionary. A key missing from both returns `undefined`; diagnostics deduplicate the 1,000 most recent locale/key pairs unless silent.
 - Translation lookup and locale routing intentionally omit interpolation, plural selection, ICU messages, rich messages, HTML rendering, number/date formatting, navigation, and redirects.
@@ -220,7 +220,7 @@ export async function renderPage(requestLocale: string) {
 
 Do not share mutable manager state across concurrent requests. Immutable dictionary modules and runtime-level import caches may still be shared.
 
-Return the same payload object for a locale on every request, such as a module-level import, rather than parsing it per request: managers then share its normalized dictionary instead of validating it again. Missing-key warnings are deduplicated per manager, so a per-request manager warns for a missing key on every request; set `isSilent: true` in production SSR and catch missing keys in tests or builds instead.
+Return the same payload object for a locale on every request, such as a module-level import, rather than parsing it per request: managers then share its normalized dictionary instead of validating it again. Missing-key warnings are deduplicated per manager, so a per-request manager warns for a missing key on every request; set `isSilent: true` in production SSR, and keep it `false` in tests and builds, where the warnings surface missing keys once per manager and a test can fail on them by spying on `console.warn`.
 
 ## SSG
 
