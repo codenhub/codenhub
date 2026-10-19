@@ -91,11 +91,50 @@ describe("validateI18nConfig", () => {
       createConfig({ isSilent: "yes" as unknown as boolean }),
       "isSilent: Expected boolean, received string",
     ],
+    [
+      "fractional dictionary limit",
+      createConfig({ dictionaryLimits: { maxTranslations: 1.5 } }),
+      "dictionaryLimits.maxTranslations: Must be a positive whole number",
+    ],
+    [
+      "non-positive dictionary limit",
+      createConfig({ dictionaryLimits: { maxDepth: 0 } }),
+      "dictionaryLimits.maxDepth: Must be a positive whole number",
+    ],
+    [
+      "non-finite dictionary limit",
+      createConfig({ dictionaryLimits: { maxProperties: Infinity } }),
+      "dictionaryLimits.maxProperties: Must be a positive whole number",
+    ],
+    [
+      "unknown dictionary limit",
+      createConfig({ dictionaryLimits: { maxTranslation: 1 } as unknown as I18nConfig<string>["dictionaryLimits"] }),
+      "dictionaryLimits.maxTranslation: Is not a recognized limit",
+    ],
   ])("rejects %s", (_name, input, message) => {
     const validate = () => validateI18nConfig(input as I18nConfig<string>);
 
     expect(validate).toThrow(TypeError);
     expect(validate).toThrow(message);
+  });
+});
+
+describe("validateI18nConfig dictionary limits", () => {
+  it("fills unset dictionary limits with the defaults", () => {
+    const config = validateI18nConfig(createConfig({ dictionaryLimits: { maxTranslations: 50_000 } }));
+
+    expect(config.dictionaryLimits).toEqual({
+      maxDepth: 100,
+      maxTranslations: 50_000,
+      maxProperties: 20_000,
+      maxValueLength: 100_000,
+      maxTotalLength: 5_000_000,
+    });
+    expect(Object.isFrozen(config.dictionaryLimits)).toBe(true);
+  });
+
+  it("uses the default dictionary limits when none are configured", () => {
+    expect(validateI18nConfig(createConfig()).dictionaryLimits.maxTranslations).toBe(10_000);
   });
 });
 

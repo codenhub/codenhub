@@ -7,6 +7,23 @@ export interface LocaleDictionary {
 }
 
 /**
+ * Resource limits checked when a loaded dictionary is validated. Each must be a positive safe integer.
+ * The 1,000-character flattened-key limit is fixed, because `translate()` and DOM keys share it.
+ */
+export interface LocaleDictionaryLimits {
+  /** Maximum nesting levels below the root object. Defaults to 100. */
+  maxDepth?: number;
+  /** Maximum string translations. Defaults to 10,000. */
+  maxTranslations?: number;
+  /** Maximum traversed properties, counting translations and nested groups. Defaults to 20,000. */
+  maxProperties?: number;
+  /** Maximum characters in one translation value. Defaults to 100,000. */
+  maxValueLength?: number;
+  /** Maximum characters across all translation values. Defaults to 5,000,000. */
+  maxTotalLength?: number;
+}
+
+/**
  * Runtime-neutral dependencies and supported locale metadata.
  *
  * @typeParam TLocale - Union of supported canonical locale identifiers.
@@ -22,6 +39,8 @@ export interface I18nConfig<TLocale extends string = string> {
   getLocaleDirection(locale: TLocale): LocaleDirection;
   /** Suppresses optional missing-key diagnostics without suppressing failures. Defaults to `false`. */
   isSilent?: boolean;
+  /** Raises or lowers the resource limits applied to loaded dictionaries; unset limits keep their defaults. */
+  dictionaryLimits?: LocaleDictionaryLimits;
 }
 
 /** Locale selected explicitly during initialization. */

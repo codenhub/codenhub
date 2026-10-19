@@ -5,6 +5,7 @@ import {
   formatIssue,
   formatPath,
   func,
+  number,
   object,
   optional,
   string,
@@ -25,6 +26,7 @@ const CONFIG_MESSAGES: Messages = {
   invalid_type: (issue) => `Expected ${String(issue.params?.expected)}, received ${String(issue.params?.received)}`,
   too_small: (issue) => (issue.params?.type === "array" ? "Must contain at least 1 item" : "Must not be empty"),
   invalid_value: (issue) => (issue.params?.unique === true ? "Must be unique, ignoring letter case" : "Invalid value"),
+  unrecognized_key: () => "Is not a recognized limit",
 };
 
 /** A locale identifier: a non-blank string that, trimmed, is a conservative ASCII identifier. Produces the trimmed one. */
@@ -46,6 +48,21 @@ const localeList = array(
 /** A function-valued option. */
 const callback = func({ message: "Must be a function" });
 
+/** A dictionary resource limit. */
+const dictionaryLimit = optional(number({ min: 1, safeInt: true, message: "Must be a positive whole number" }));
+
+/** Dictionary resource limits; an unknown name is rejected so a misspelled limit does not go unnoticed. */
+const dictionaryLimits = object(
+  {
+    maxDepth: dictionaryLimit,
+    maxTranslations: dictionaryLimit,
+    maxProperties: dictionaryLimit,
+    maxValueLength: dictionaryLimit,
+    maxTotalLength: dictionaryLimit,
+  },
+  { unknownKeys: "strict" },
+);
+
 const defaultIsConfigured = (config: { locales: readonly string[]; defaultLocale: string }): boolean =>
   resolveConfiguredLocale(config.locales, config.defaultLocale) !== undefined;
 
@@ -57,7 +74,7 @@ const DEFAULT_LOCALE_ISSUE = {
 
 /**
  * Validates the configuration of an `I18n` manager: the locales, the default locale, the loader and
- * direction callbacks, and the optional silent flag. Properties it does not list are kept.
+ * direction callbacks, the optional silent flag, and the optional dictionary limits. Properties it does not list are kept.
  *
  * @internal
  */
@@ -68,6 +85,7 @@ export const i18nConfig = object(
     loadLocale: callback,
     getLocaleDirection: callback,
     isSilent: optional(boolean()),
+    dictionaryLimits: optional(dictionaryLimits),
   },
   { unknownKeys: "passthrough" },
   check(defaultIsConfigured, DEFAULT_LOCALE_ISSUE),

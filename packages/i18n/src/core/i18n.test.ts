@@ -100,6 +100,23 @@ describe("createI18n", () => {
     expect(onLocaleChange).not.toHaveBeenCalled();
   });
 
+  it("applies configured dictionary limits to loaded dictionaries", async () => {
+    const large = Object.fromEntries(Array.from({ length: 10_001 }, (_, index) => [`key-${index}`, "value"]));
+    const limited = createI18n(createConfig({ loadLocale: () => large }));
+    const raised = createI18n(createConfig({ loadLocale: () => large, dictionaryLimits: { maxTranslations: 20_000 } }));
+
+    await expect(limited.init()).rejects.toThrow("must not exceed 10000 translations");
+    await expect(raised.init()).resolves.toBe(true);
+    expect(raised.translate("key-10000")).toBe("value");
+  });
+
+  it("shares normalized dictionaries across managers loading the same payload", async () => {
+    const first = createI18n(createConfig());
+    const second = createI18n(createConfig());
+
+    await expect(first.loadLocale("pt")).resolves.toBe(await second.loadLocale("pt"));
+  });
+
   it("does not emit when a public locale load fails", async () => {
     const i18n = createI18n(createConfig({ loadLocale: vi.fn().mockRejectedValue(new Error("offline")) }));
     const { onReady, onLocaleChange } = listenForLifecycleEvents(i18n);

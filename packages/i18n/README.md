@@ -48,7 +48,7 @@ console.log(i18n.translate("home.title")); // "Bem-vindo"
 
 ## Notes
 
-- Dictionaries may be flat or nested, but every leaf must be a string. Valid dictionaries are flattened, frozen, and cached per manager. Repeated object references and payloads exceeding the documented resource limits are rejected.
+- Dictionaries may be flat or nested, but every leaf must be a string. Valid dictionaries are flattened, frozen, cached per manager, and shared across managers that load the same payload object. Repeated object references and payloads exceeding the documented resource limits are rejected. `dictionaryLimits` raises or lowers the depth, translation, property, value-length, and aggregate-length limits; the 1,000-character flattened-key limit is fixed.
 - Locale identifiers use conservative ASCII syntax: alphanumeric subtags joined by single hyphens.
 - Missing active-locale keys fall back to the default dictionary. A key missing from both returns `undefined`; diagnostics deduplicate the 1,000 most recent locale/key pairs unless silent.
 - Translation lookup and locale routing intentionally omit interpolation, plural selection, ICU messages, rich messages, HTML rendering, number/date formatting, navigation, and redirects.

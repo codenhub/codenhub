@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 
-import { normalizeDictionary } from "./dictionary";
+import { DEFAULT_DICTIONARY_LIMITS, normalizeDictionary } from "./dictionary";
 
 describe("normalizeDictionary", () => {
   it("flattens and freezes a dictionary without inherited properties", () => {
@@ -29,20 +29,25 @@ describe("normalizeDictionary", () => {
     expect(() => normalizeDictionary(input)).toThrow(TypeError);
   });
 
-  it.each(["__proto__", "prototype", "constructor"])("rejects the dangerous key %s", (key) => {
+  it("rejects the __proto__ key", () => {
     const input = Object.create(null) as Record<string, unknown>;
     input.safe = "value";
-    input[key] = "danger";
+    input["__proto__"] = "danger";
 
     expect(() => normalizeDictionary(input)).toThrow(TypeError);
   });
 
-  it.each(["safe.__proto__.key", "safe.prototype.key", "safe.constructor.key", ".key", "key.", "key..part"])(
-    "rejects an invalid flattened key %s",
-    (key) => {
-      expect(() => normalizeDictionary({ [key]: "value" })).toThrow(TypeError);
-    },
-  );
+  it("accepts prototype and constructor as ordinary keys", () => {
+    const dictionary = normalizeDictionary({ editor: { prototype: "Prototype", constructor: "Builder" } });
+
+    expect(dictionary["editor.prototype"]).toBe("Prototype");
+    expect(dictionary["editor.constructor"]).toBe("Builder");
+    expect(Object.getPrototypeOf(dictionary)).toBeNull();
+  });
+
+  it.each(["safe.__proto__.key", ".key", "key.", "key..part"])("rejects an invalid flattened key %s", (key) => {
+    expect(() => normalizeDictionary({ [key]: "value" })).toThrow(TypeError);
+  });
 
   it.each([" key", "key ", "safe. child", "safe.child "])("rejects surrounding whitespace in flat key %s", (key) => {
     expect(() => normalizeDictionary({ [key]: "value" })).toThrow(TypeError);
@@ -126,5 +131,58 @@ describe("normalizeDictionary", () => {
     const input = Object.fromEntries(Array.from({ length: 51 }, (_, index) => [`key-${index}`, "v".repeat(100_000)]));
 
     expect(() => normalizeDictionary(input)).toThrow("must not exceed 5000000 aggregate translation characters");
+  });
+
+  it("raises each limit when configured", () => {
+    let deep: Record<string, unknown> = { value: "translation" };
+
+    for (let depth = 0; depth < 101; depth += 1) {
+      deep = { nested: deep };
+    }
+
+    const many = Object.fromEntries(Array.from({ length: 10_001 }, (_, index) => [`key-${index}`, "value"]));
+    const groups = Object.fromEntries(Array.from({ length: 20_001 }, (_, index) => [`key-${index}`, {}]));
+    groups.leaf = "value";
+    const long = { key: "v".repeat(100_001) };
+    const total = Object.fromEntries(Array.from({ length: 51 }, (_, index) => [`key-${index}`, "v".repeat(100_000)]));
+
+    expect(() => normalizeDictionary(deep, { ...DEFAULT_DICTIONARY_LIMITS, maxDepth: 101 })).not.toThrow();
+    expect(() => normalizeDictionary(many, { ...DEFAULT_DICTIONARY_LIMITS, maxTranslations: 10_001 })).not.toThrow();
+    expect(() => normalizeDictionary(groups, { ...DEFAULT_DICTIONARY_LIMITS, maxProperties: 20_002 })).not.toThrow();
+    expect(() => normalizeDictionary(long, { ...DEFAULT_DICTIONARY_LIMITS, maxValueLength: 100_001 })).not.toThrow();
+    expect(() => normalizeDictionary(total, { ...DEFAULT_DICTIONARY_LIMITS, maxTotalLength: 5_100_000 })).not.toThrow();
+  });
+
+  it.each([
+    [{ maxDepth: 1 }, { a: { b: { c: "value" } } }, "must not exceed 1 levels of nesting"],
+    [{ maxTranslations: 1 }, { first: "value", second: "value" }, "must not exceed 1 translations"],
+    [{ maxProperties: 2 }, { a: { b: "value" }, c: "value" }, "must not exceed 2 properties"],
+    [{ maxValueLength: 3 }, { key: "four" }, "translation values must not exceed 3 characters"],
+    [{ maxTotalLength: 5 }, { first: "abc", second: "def" }, "must not exceed 5 aggregate translation characters"],
+  ])("lowers the limit %j when configured", (limit, input, message) => {
+    expect(() => normalizeDictionary(input, { ...DEFAULT_DICTIONARY_LIMITS, ...limit })).toThrow(message);
+  });
+
+  it("shares the normalized dictionary for the same payload", () => {
+    const payload = { page: { title: "Welcome" } };
+
+    expect(normalizeDictionary(payload)).toBe(normalizeDictionary(payload));
+  });
+
+  it("checks a shared payload against stricter limits", () => {
+    const payload = { first: "value", second: "value" };
+    normalizeDictionary(payload);
+
+    expect(() => normalizeDictionary(payload, { ...DEFAULT_DICTIONARY_LIMITS, maxTranslations: 1 })).toThrow(
+      "must not exceed 1 translations",
+    );
+    expect(normalizeDictionary(payload, { ...DEFAULT_DICTIONARY_LIMITS, maxTranslations: 2 })).toEqual(payload);
+  });
+
+  it("does not share a rejected payload", () => {
+    const payload = { first: "value", second: "value" };
+
+    expect(() => normalizeDictionary(payload, { ...DEFAULT_DICTIONARY_LIMITS, maxTranslations: 1 })).toThrow(TypeError);
+    expect(normalizeDictionary(payload)).toEqual(payload);
   });
 });
