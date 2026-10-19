@@ -38,7 +38,7 @@ console.log(i18n.translate("home.title"));
 binding.disconnect();
 ```
 
-With a `root`, leaves such as `<h1 data-i18n="home.title">Fallback title</h1>` are translated. Frameworks that render translated values themselves should omit `root` and `observe`.
+With a `root`, leaves such as `<h1 data-i18n="home.title">Fallback title</h1>` are translated, and so are text attributes such as `<input data-i18n-placeholder="search.hint" placeholder="Search">`. Frameworks that render translated values themselves should omit `root` and `observe`.
 
 ## Routed hydration
 
@@ -96,7 +96,7 @@ export async function renderPage(requestLocale: string) {
 }
 ```
 
-Do not share mutable manager state across concurrent requests. Immutable dictionary modules and runtime-level import caches may still be shared.
+Do not share mutable manager state across concurrent requests. In Node.js, an exception thrown by a `ready` or `locale-change` listener is reported as an uncaught exception and ends the process by default, as for any `EventTarget` listener, so keep server listeners from throwing. Immutable dictionary modules and runtime-level import caches may still be shared.
 
 Return the same payload object for a locale on every request, such as a module-level import, rather than parsing it per request: managers then share its normalized dictionary instead of validating it again. Missing-key warnings are deduplicated per manager, so a per-request manager warns for a missing key on every request; set `isSilent: true` in production SSR, and keep it `false` in tests and builds, where the warnings surface missing keys once per manager and a test can fail on them by spying on `console.warn`.
 

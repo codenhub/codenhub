@@ -1,5 +1,5 @@
 import type { I18n } from "../core/types";
-import { createDomTranslator } from "./dom-translation";
+import { createDomTranslator, TRANSLATION_KEY_ATTRIBUTES } from "./dom-translation";
 
 const DEFAULT_STORAGE_KEY = "i18n";
 const LOCALE_CHANGE_EVENT = "locale-change";
@@ -24,13 +24,16 @@ export interface BrowserI18nOptions<TLocale extends string> {
   locale?: TLocale;
   /** Local storage key used for the JSON locale preference. Defaults to `"i18n"`. Requires storage when enabled. */
   storageKey?: string;
-  /** Whether successful active locales are read from and written to storage. Defaults to `true`. */
+  /**
+   * Whether a stored locale is read, and explicit or later application-made locales are written. A locale detected
+   * from navigator preferences or the default is not written. Defaults to `true`.
+   */
   persistLocale?: boolean;
   /** Whether the global document element's `lang` and `dir` stay synchronized. Defaults to `true`. */
   syncDocument?: boolean;
-  /** Optional DOM boundary whose safe `data-i18n` leaves are translated. */
+  /** Optional DOM boundary whose safe `data-i18n` leaves and allowlisted `data-i18n-<attribute>` attributes are translated. */
   root?: ParentNode;
-  /** Whether additions and `data-i18n` changes below `root` are incrementally observed. Defaults to `false`. */
+  /** Whether additions and translation-key attribute changes below `root` are incrementally observed. Defaults to `false`. */
   observe?: boolean;
 }
 
@@ -83,7 +86,20 @@ const getNavigatorPreferences = (): readonly string[] => {
   return navigator.languages.length > 0 ? navigator.languages : navigator.language ? [navigator.language] : [];
 };
 
+/** Adds likely subtags, such as `zh-TW` to `zh-Hant-TW`, or returns undefined for a tag `Intl.Locale` rejects. */
+const maximizeLocale = (value: string): string | undefined => {
+  try {
+    return new Intl.Locale(value).maximize().toString().toLowerCase();
+  } catch {
+    return undefined;
+  }
+};
+
+const getLanguageAndScript = (maximizedLocale: string): string => maximizedLocale.split("-").slice(0, 2).join("-");
+
 const resolveBrowserLocale = <TLocale extends string>(i18n: I18n<TLocale>): TLocale | undefined => {
+  const maximizedLocales = i18n.locales.map((locale) => ({ locale, maximized: maximizeLocale(locale) }));
+
   for (const preference of getNavigatorPreferences()) {
     const exactLocale = i18n.resolveLocale(preference);
 
@@ -101,6 +117,21 @@ const resolveBrowserLocale = <TLocale extends string>(i18n: I18n<TLocale>): TLoc
 
     if (prefixLocale !== undefined) {
       return prefixLocale;
+    }
+
+    const maximizedPreference = maximizeLocale(normalizedPreference);
+
+    if (maximizedPreference !== undefined) {
+      const likelyLocale =
+        maximizedLocales.find(({ maximized }) => maximized === maximizedPreference) ??
+        maximizedLocales.find(
+          ({ maximized }) =>
+            maximized !== undefined && getLanguageAndScript(maximized) === getLanguageAndScript(maximizedPreference),
+        );
+
+      if (likelyLocale !== undefined) {
+        return likelyLocale.locale;
+      }
     }
 
     const language = normalizedPreference.split("-")[0];
@@ -168,8 +199,8 @@ export async function initializeBrowserI18n<TLocale extends string>(
   BOUND_MANAGERS.add(i18n);
 
   const domTranslator = createDomTranslator({ isSilent: i18n.isSilent });
-  const applyBrowserEffects = (): void => {
-    if (shouldPersistLocale) {
+  const applyEffects = (shouldPersist: boolean): void => {
+    if (shouldPersist) {
       persistLocale(i18n, storageKey);
     }
     if (shouldSyncDocument) {
@@ -179,6 +210,8 @@ export async function initializeBrowserI18n<TLocale extends string>(
       domTranslator.translateRoot({ root, translate: (key) => i18n.translate(key) });
     }
   };
+  // Later core changes are choices the application made, so they persist when enabled.
+  const applyBrowserEffects = (): void => applyEffects(shouldPersistLocale);
   let observer: MutationObserver | undefined;
   let isReadyListenerAdded = false;
   let isLocaleChangeListenerAdded = false;
@@ -227,10 +260,16 @@ export async function initializeBrowserI18n<TLocale extends string>(
       const observedRoot = root;
       observer = new (getMutationObserver(observedRoot))((mutations) => {
         const changedRoots = new Set<Element>();
+        // An element whose last key was removed is not found by an ancestor's scan, so it is translated directly.
+        const keyRemovedElements = new Set<Element>();
 
         for (const mutation of mutations) {
           if (mutation.type === "attributes") {
-            changedRoots.add(mutation.target as Element);
+            const target = mutation.target as Element;
+            changedRoots.add(target);
+            if (!TRANSLATION_KEY_ATTRIBUTES.some((attribute) => target.hasAttribute(attribute))) {
+              keyRemovedElements.add(target);
+            }
             continue;
           }
 
@@ -258,7 +297,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
             ancestor = ancestor.parentElement;
           }
 
-          if (hasChangedAncestor) {
+          if (hasChangedAncestor && !keyRemovedElements.has(changedRoot)) {
             continue;
           }
 
@@ -271,13 +310,14 @@ export async function initializeBrowserI18n<TLocale extends string>(
       });
       observer.observe(observedRoot, {
         attributes: true,
-        attributeFilter: ["data-i18n"],
+        attributeFilter: [...TRANSLATION_KEY_ATTRIBUTES],
         childList: true,
         subtree: true,
       });
     }
 
-    applyBrowserEffects();
+    // A detected locale is not persisted, so a later visit detects again instead of keeping a stale fallback.
+    applyEffects(shouldPersistLocale && locale !== undefined);
     i18n.addEventListener(READY_EVENT, applyBrowserEffects);
     isReadyListenerAdded = true;
     i18n.addEventListener(LOCALE_CHANGE_EVENT, applyBrowserEffects);

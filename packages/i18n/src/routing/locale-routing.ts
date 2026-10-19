@@ -75,7 +75,7 @@ export interface LocaleRouting<TLocale extends string> {
 export const createLocaleRouting = <TLocale extends string>(
   config: LocaleRoutingConfig<TLocale>,
 ): LocaleRouting<TLocale> => {
-  const validated = assertConfig(localeRoutingConfig, config, "Invalid locale routing configuration");
+  const validated = assertConfig(localeRoutingConfig, config, "[I18n] Invalid locale routing configuration");
   const locales = Object.freeze(validated.locales as TLocale[]);
   const { prefixDefaultLocale } = validated;
   const localeLookup = new Map<string, TLocale>(locales.map((locale) => [locale.toLowerCase(), locale]));
@@ -100,13 +100,13 @@ export const createLocaleRouting = <TLocale extends string>(
       hasAsciiControlCharacter(pathname) ||
       /%(?![0-9a-f]{2})|%(?:0[0-9a-f]|1[0-9a-f]|25|2f|5c|7f)/i.test(pathname)
     ) {
-      throw new TypeError("pathname must be a valid absolute application pathname");
+      throw new TypeError("[I18n] pathname must be a valid absolute application pathname");
     }
 
     const hasDotSegment = pathname.split("/").some((segment) => [".", ".."].includes(segment.replaceAll(/%2e/gi, ".")));
 
     if (hasDotSegment) {
-      throw new TypeError("pathname must not contain dot segments");
+      throw new TypeError("[I18n] pathname must not contain dot segments");
     }
   };
 
@@ -125,7 +125,7 @@ export const createLocaleRouting = <TLocale extends string>(
     const canonicalLocale = typeof locale === "string" ? findLocale(locale, true) : undefined;
 
     if (canonicalLocale === undefined) {
-      throw new RangeError("locale must be a supported string");
+      throw new RangeError("[I18n] locale must be a supported string");
     }
 
     const unprefixedPathname = removeLocalePrefix(pathname);

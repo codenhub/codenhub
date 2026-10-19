@@ -47,7 +47,7 @@ describe("createLocaleRouting", () => {
       createLocaleRouting({ defaultLocale: "en", locales: ["en", "pt"], prefixDefaultLocale: true, ...overrides });
 
     expect(create({ locales: [] })).toThrow(
-      "Invalid locale routing configuration: locales: Must contain at least 1 item",
+      "[I18n] Invalid locale routing configuration: locales: Must contain at least 1 item",
     );
     expect(create({ locales: ["en", "EN"] })).toThrow("locales[1]: Must be unique, ignoring letter case");
     expect(create({ locales: ["en", "../admin"] })).toThrow("locales[1]: Must be an ASCII locale identifier");
@@ -64,7 +64,7 @@ describe("createLocaleRouting", () => {
     }
 
     expect(() => createLocaleRouting(inherited as Parameters<typeof createLocaleRouting>[0])).toThrow(
-      "Invalid locale routing configuration: Expected object, received non-plain object",
+      "[I18n] Invalid locale routing configuration: Expected object, received non-plain object",
     );
     expect(() => createLocaleRouting(new RoutingConfig())).toThrow("received non-plain object");
   });
@@ -148,6 +148,18 @@ describe("createLocaleRouting", () => {
 
     expect(() => routing.parse(`/${"a".repeat(8_191)}`)).not.toThrow();
     expect(() => routing.parse(`/${"a".repeat(8_192)}`)).toThrow(TypeError);
+  });
+
+  it("should prefix its errors with the package name", () => {
+    const routing = createLocaleRouting({
+      defaultLocale: "en-US",
+      locales: LOCALES,
+      prefixDefaultLocale: true,
+    });
+
+    expect(() => routing.parse("about")).toThrow(/^\[I18n\] /);
+    expect(() => routing.parse("/../admin")).toThrow(/^\[I18n\] /);
+    expect(() => routing.localize("/about", "fr" as (typeof LOCALES)[number])).toThrow(/^\[I18n\] /);
   });
 
   it("should generate canonical prefixed pathnames and preserve non-root trailing slashes", () => {

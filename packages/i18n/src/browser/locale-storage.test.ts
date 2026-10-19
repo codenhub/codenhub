@@ -65,6 +65,27 @@ describe("initializeBrowserI18n locale resolution", () => {
     expect(i18n.locale).toBe(expected);
   });
 
+  it.each([
+    [["zh-TW"], ["en", "zh-Hans", "zh-Hant"], "zh-Hant"],
+    [["zh-HK"], ["en", "zh-Hans", "zh-Hant"], "zh-Hant"],
+    [["zh-CN"], ["en", "zh-Hant", "zh-Hans"], "zh-Hans"],
+    [["zh-HK"], ["en", "zh-CN", "zh-TW"], "zh-TW"],
+    [["zh-Hant-HK"], ["en", "zh-Hant-TW", "zh-Hant-HK"], "zh-Hant-HK"],
+    [["sr"], ["en", "sr-Latn", "sr-Cyrl"], "sr-Cyrl"],
+  ])("matches navigator %j by likely script against %j as %s", async (languages, locales, expected) => {
+    setNavigatorLocales(languages);
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales,
+      loadLocale: () => ({ greeting: "Hello" }),
+      getLocaleDirection: () => "ltr",
+    });
+
+    await initializeBrowserI18n({ i18n, persistLocale: false });
+
+    expect(i18n.locale).toBe(expected);
+  });
+
   it("uses navigator.language when the preference list is empty", async () => {
     setNavigatorLocales([], "fr-CA");
     const i18n = createManager();
@@ -129,16 +150,44 @@ describe("initializeBrowserI18n storage integration", () => {
   });
 
   it("continues after a storage write failure and suppresses warnings when silent", async () => {
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new Error("storage full");
     });
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const i18n = createManager({ isSilent: true });
 
-    await expect(initializeBrowserI18n({ i18n })).resolves.toBeDefined();
+    await expect(initializeBrowserI18n({ i18n, locale: "fr" })).resolves.toBeDefined();
 
+    expect(setItem).toHaveBeenCalledTimes(1);
     expect(i18n.isReady).toBe(true);
     expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("does not persist a locale detected from navigator preferences", async () => {
+    setNavigatorLocales(["en-US"]);
+    const firstVisit = createManager();
+    const firstBinding = await initializeBrowserI18n({ i18n: firstVisit });
+
+    expect(firstVisit.locale).toBe("en");
+    expect(localStorage.getItem("i18n")).toBeNull();
+    firstBinding.disconnect();
+
+    setNavigatorLocales(["fr-CA"]);
+    const secondVisit = createManager();
+    await initializeBrowserI18n({ i18n: secondVisit });
+
+    expect(secondVisit.locale).toBe("fr");
+  });
+
+  it("persists a locale chosen after detected initialization", async () => {
+    setNavigatorLocales(["en-US"]);
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n });
+
+    await i18n.setLocale("fr");
+
+    expect(localStorage.getItem("i18n")).toBe(JSON.stringify({ locale: "fr" }));
+    binding.disconnect();
   });
 
   it("does not read or write storage when persistence is disabled", async () => {
