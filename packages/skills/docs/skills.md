@@ -69,6 +69,8 @@ The rest of the authoring guidance, such as how a description is phrased or whet
 | `test-driven-development` | Applies fail-first red-green-refactor development.             |
 | `writing-skills`          | Authors, reviews, and evaluates skills against the rules.      |
 
+`design` replaces the former `frontend-design` skill. Installing over an earlier version keeps `frontend-design` in place, because the installer does not remove stale directories. Delete the `frontend-design` directory from each skills destination by hand. Do not use `--cleanup` for this, since it removes the whole destination, including skills this package does not manage.
+
 Skill wording and support files may change while the package is experimental. Use the installed `SKILL.md` and accompanying assets as the authoritative skill content for the installed package version.
 
 ## Drafts
