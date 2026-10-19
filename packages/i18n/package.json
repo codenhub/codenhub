@@ -52,7 +52,6 @@
   },
   "devDependencies": {
     "@codenhub/error": "catalog:",
-    "@codenhub/validation": "catalog:",
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
@@ -68,9 +67,6 @@
   "codenhub": {
     "label": "i18n",
     "status": "active",
-    "docs": {},
-    "bundled": [
-      "@codenhub/validation"
-    ]
+    "docs": {}
   }
 }

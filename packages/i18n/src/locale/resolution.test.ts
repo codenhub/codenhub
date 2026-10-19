@@ -119,6 +119,61 @@ describe("validateI18nConfig", () => {
   });
 });
 
+describe("validateI18nConfig own properties", () => {
+  it("checks every slot of a sparse locales array", () => {
+    // eslint-disable-next-line no-sparse-arrays
+    const sparse = ["en-US", , "pt-BR"] as unknown as string[];
+
+    expect(() => validateI18nConfig(createConfig({ locales: sparse }))).toThrow(
+      "locales[1]: Expected string, received undefined",
+    );
+  });
+
+  it("checks the locales present when checking starts, even if the array grows", () => {
+    let lengthReads = 0;
+    const growing = new Proxy(["en-US", "pt-BR"], {
+      get(target, property, receiver) {
+        if (property === "length") {
+          lengthReads += 1;
+          return 2 + Math.min(lengthReads, 1_000);
+        }
+        if (typeof property === "string" && /^\d+$/.test(property) && Number(property) >= 2) {
+          return `x${property}`;
+        }
+        return Reflect.get(target, property, receiver) as unknown;
+      },
+    });
+
+    expect(validateI18nConfig(createConfig({ locales: growing })).locales).toHaveLength(3);
+  });
+
+  it("ignores options inherited from a polluted Object.prototype", () => {
+    Object.defineProperty(Object.prototype, "isSilent", { value: "yes", configurable: true });
+
+    try {
+      expect(validateI18nConfig(createConfig()).isSilent).toBe(false);
+    } finally {
+      delete (Object.prototype as { isSilent?: unknown }).isSilent;
+    }
+  });
+
+  it("honors a non-enumerable own dictionary limit", () => {
+    const dictionaryLimits = Object.defineProperty({}, "maxTranslations", { value: 50_000, enumerable: false });
+
+    expect(validateI18nConfig(createConfig({ dictionaryLimits })).dictionaryLimits.maxTranslations).toBe(50_000);
+  });
+
+  it("reads each dictionary limit once, using the value it checked", () => {
+    let reads = 0;
+    const dictionaryLimits = Object.defineProperty({}, "maxTranslations", {
+      enumerable: true,
+      get: () => (++reads === 1 ? 5 : 0),
+    });
+
+    expect(validateI18nConfig(createConfig({ dictionaryLimits })).dictionaryLimits.maxTranslations).toBe(5);
+  });
+});
+
 describe("validateI18nConfig dictionary limits", () => {
   it("fills unset dictionary limits with the defaults", () => {
     const config = validateI18nConfig(createConfig({ dictionaryLimits: { maxTranslations: 50_000 } }));

@@ -15,9 +15,6 @@ export interface ValidatedI18nConfig<TLocale extends string> {
 
 export { resolveConfiguredLocale } from "./configured-locale";
 
-const withoutUnset = <T extends object>(value: T | undefined): Partial<T> =>
-  Object.fromEntries(Object.entries(value ?? {}).filter(([, entry]) => entry !== undefined)) as Partial<T>;
-
 /**
  * Copies locale metadata before it enters a manager instance.
  *
@@ -32,9 +29,9 @@ export function validateI18nConfig<TLocale extends string>(config: I18nConfig<TL
   return {
     defaultLocale: resolveConfiguredLocale(locales, validated.defaultLocale) as TLocale,
     locales,
-    loadLocale: config.loadLocale,
-    getLocaleDirection: config.getLocaleDirection,
+    loadLocale: validated.loadLocale as I18nConfig<TLocale>["loadLocale"],
+    getLocaleDirection: validated.getLocaleDirection as I18nConfig<TLocale>["getLocaleDirection"],
     isSilent: validated.isSilent ?? false,
-    dictionaryLimits: Object.freeze({ ...DEFAULT_DICTIONARY_LIMITS, ...withoutUnset(validated.dictionaryLimits) }),
+    dictionaryLimits: Object.freeze({ ...DEFAULT_DICTIONARY_LIMITS, ...validated.dictionaryLimits }),
   };
 }
