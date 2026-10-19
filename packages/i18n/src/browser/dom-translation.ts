@@ -156,12 +156,20 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     states.delete(attribute);
   };
 
-  /** Restores the fallback text of an element whose key was removed, unless the text changed since translation. */
+  /**
+   * Restores the fallback text of an element whose key was removed, unless the text changed since translation or the
+   * element is no longer a leaf, since setting its text would remove the children the application added.
+   */
   const restoreText = (element: Element): void => {
     const fallbackText = fallbackTexts.get(element);
     const translatedText = translatedTexts.get(element);
 
-    if (fallbackText !== undefined && translatedText !== undefined && element.textContent === translatedText) {
+    if (
+      fallbackText !== undefined &&
+      translatedText !== undefined &&
+      element.childElementCount === 0 &&
+      element.textContent === translatedText
+    ) {
       element.textContent = fallbackText;
     }
     fallbackTexts.delete(element);

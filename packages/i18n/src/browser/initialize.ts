@@ -260,13 +260,16 @@ export async function initializeBrowserI18n<TLocale extends string>(
       const observedRoot = root;
       observer = new (getMutationObserver(observedRoot))((mutations) => {
         const changedRoots = new Set<Element>();
-        // A removed key no longer matches the key selector, so its element is translated directly, not through an ancestor.
-        const keyChangedElements = new Set<Element>();
+        // An element whose last key was removed is not found by an ancestor's scan, so it is translated directly.
+        const keyRemovedElements = new Set<Element>();
 
         for (const mutation of mutations) {
           if (mutation.type === "attributes") {
-            changedRoots.add(mutation.target as Element);
-            keyChangedElements.add(mutation.target as Element);
+            const target = mutation.target as Element;
+            changedRoots.add(target);
+            if (!TRANSLATION_KEY_ATTRIBUTES.some((attribute) => target.hasAttribute(attribute))) {
+              keyRemovedElements.add(target);
+            }
             continue;
           }
 
@@ -294,7 +297,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
             ancestor = ancestor.parentElement;
           }
 
-          if (hasChangedAncestor && !keyChangedElements.has(changedRoot)) {
+          if (hasChangedAncestor && !keyRemovedElements.has(changedRoot)) {
             continue;
           }
 

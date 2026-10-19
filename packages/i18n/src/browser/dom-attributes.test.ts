@@ -208,4 +208,36 @@ describe("initializeBrowserI18n attribute translation", () => {
     expect(paragraph.textContent).toBe("Original");
     binding.disconnect();
   });
+
+  it("does not restore text over a child the application added after translation", async () => {
+    document.body.innerHTML = '<p data-i18n="greeting">Original</p>';
+    const paragraph = document.querySelector("p")!;
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+
+    const icon = document.createElement("span");
+    paragraph.append(icon);
+    paragraph.removeAttribute("data-i18n");
+    await flushMutations();
+
+    expect(paragraph.contains(icon)).toBe(true);
+    expect(paragraph.textContent).toBe("Bonjour");
+    binding.disconnect();
+  });
+
+  it("translates a key-changed descendant once when its ancestor changed in the same batch", async () => {
+    document.body.innerHTML = '<div data-i18n-title="greeting"><input data-i18n-placeholder="greeting"></div>';
+    const container = document.querySelector("div")!;
+    const input = document.querySelector("input")!;
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    container.setAttribute("data-i18n-title", "frOnly");
+    input.setAttribute("data-i18n-placeholder", " ");
+    await flushMutations();
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    binding.disconnect();
+  });
 });
