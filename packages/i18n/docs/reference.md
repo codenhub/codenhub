@@ -14,10 +14,10 @@ The root entrypoint is runtime-neutral. It exports `createI18n`, `I18nError`, an
 ### Configuration
 
 ```ts
-interface I18nConfig<TLocale extends string = string> {
+interface I18nConfig<TLocale extends string = string, TMessages = unknown> {
   defaultLocale: TLocale;
   locales: readonly TLocale[];
-  loadLocale(locale: TLocale): unknown | Promise<unknown>;
+  loadLocale(locale: TLocale): TMessages | Promise<TMessages>;
   getLocaleDirection(locale: TLocale): "ltr" | "rtl";
   isSilent?: boolean;
   dictionaryLimits?: LocaleDictionaryLimits;
@@ -31,8 +31,10 @@ interface LocaleDictionaryLimits {
   maxTotalLength?: number; // default 5,000,000
 }
 
-function createI18n<TLocale extends string>(config: I18nConfig<TLocale>): I18n<TLocale>;
+function createI18n<TLocale extends string, TMessages = unknown>(config: I18nConfig<TLocale, TMessages>): I18n<TLocale, TranslationKey<TMessages>>;
 ```
+
+`TranslationKey<TMessages>` is the union of dot-separated paths to the string leaves of the loader's return type, such as `"page.title"` for `{ page: { title: "Welcome" } }`; groups such as `"page"` are not keys. When the loader returns a union, such as `dictionaries[locale]` over several `as const` dictionaries, keys from every member are accepted. A loader whose return type is `unknown` or `any`, such as one returning `response.json()`, accepts any string key; annotate its return type, for example with an imported JSON module type, to type keys. A typed manager rejects a key built at runtime, such as ``t(`errors.${code}`)``, at compile time even when the key exists; cast it to the key type to opt out deliberately. The type is not exported: name a manager's key type with `Parameters<typeof i18n.t>[0]`. TypeScript infers all type arguments or none, so `createI18n<Locale>(config)` sets `TMessages` to `unknown` and accepts any string key; omit the type arguments, or pass both, to keep typed keys. Key typing is compile-time only and does not change runtime validation.
 
 The configuration must be a plain object, such as an object literal, and only its own properties are read: a class instance or an object built with `Object.create(defaults)` throws `TypeError`. `locales` must be a non-empty array of conservative ASCII locale identifiers that remain unique case-insensitively after trimming. `defaultLocale` must match one of them. `loadLocale` and `getLocaleDirection` must be functions, and `isSilent`, when provided, must be boolean. Each `dictionaryLimits` entry, when provided, must be a positive safe integer, and an unknown limit name is rejected. Invalid configuration throws `TypeError` during `createI18n()`.
 
@@ -48,6 +50,8 @@ An `I18n<TLocale>` starts with:
 - `locale`: `defaultLocale`.
 - `direction`: `getLocaleDirection(defaultLocale)`.
 - `isReady`: `false`.
+
+Every method, including the listener methods, is bound to its manager, so a destructured method such as `const { t, setLocale } = i18n` keeps working. This makes the recommended pattern for single-locale-owner runtimes, such as a browser application, an application module that exports the manager and its `t`; servers and builds that render concurrently create a manager per request or page instead.
 
 The manager provides EventTarget-compatible `addEventListener()` and `removeEventListener()` methods. Only those listener methods are part of the supported public event API; `dispatchEvent()` and runtime inheritance details are not exposed by `I18n`. `translate()` and `setLocale()` throw `Error` before successful initialization. `loadLocale()` and `resolveLocale()` may be used before initialization.
 
@@ -123,11 +127,14 @@ resolveLocale(value: string): TLocale | undefined;
 
 Trims an untrusted string and returns the canonical case-insensitive exact configured match. It returns `undefined` for blank, unsupported, and runtime non-string values. It does not perform language-subtag matching.
 
-### `translate(key)`
+### `translate(key)` and `t(key)`
 
 ```ts
-translate(key: string): string | undefined;
+translate(key: TKey): string | undefined;
+t(key: TKey): string | undefined;
 ```
+
+`t` is the same bound function as `translate`. `TKey` is the second type parameter of `I18n<TLocale, TKey>`, which `createI18n()` sets to `TranslationKey<TMessages>` as described under configuration; it defaults to `string`.
 
 Trims a non-empty key, checks the active dictionary, then the default dictionary. A key found only in the default dictionary returns the default text without a warning; compare dictionaries from `loadLocale()` in a test to find untranslated keys, as in the key-parity example. A key missing from both returns `undefined`. Unless `isSilent` is true, the manager warns for a key missing from both dictionaries, once for each of the 1,000 most recent active-locale/key pairs; an evicted pair can warn again. Blank, runtime non-string, longer than 1,000 characters, or ASCII-control-containing keys throw `TypeError`.
 

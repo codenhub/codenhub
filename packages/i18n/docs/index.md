@@ -17,7 +17,10 @@ pnpm add @codenhub/i18n
 
 ### Quick start
 
+In a browser application, or any runtime with one active locale at a time, create the manager once in an application module and export it with its bound `t`:
+
 ```ts
+// src/i18n.ts
 import { createI18n } from "@codenhub/i18n";
 
 const dictionaries = {
@@ -25,20 +28,31 @@ const dictionaries = {
   pt: { page: { title: "Bem-vindo" } },
 } as const;
 
-const i18n = createI18n({
+export const i18n = createI18n({
   defaultLocale: "en",
   locales: ["en", "pt"] as const,
   loadLocale: (locale) => dictionaries[locale],
   getLocaleDirection: () => "ltr",
 });
 
+export const { t } = i18n;
+```
+
+Initialize it once at startup, then import `t` wherever text is needed:
+
+```ts
+import { i18n, t } from "./i18n";
+
 await i18n.init({ locale: "pt" });
 
-i18n.translate("page.title"); // "Bem-vindo"
-i18n.translate("page.description"); // "Learn more" from the default locale
+t("page.title"); // "Bem-vindo"
+t("page.description"); // "Learn more" from the default locale
+t("page.titel"); // compile error: keys are typed from the dictionaries
 ```
 
 Core performs no locale detection. Omitting `init({ locale })` selects the configured default. Selecting another locale loads both its dictionary and the default dictionary before applying state, so fallback is deterministic.
+
+Every manager method is bound, so destructured methods keep working, and `t` checks readiness when called rather than when exported. Servers and static builds that render concurrently create one manager per request or page instead of sharing a module.
 
 ### Configuration
 
