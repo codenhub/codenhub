@@ -1,4 +1,5 @@
 import { I18nError } from "../core/errors";
+import { getI18nInternals } from "../core/internals";
 import type { I18n } from "../core/types";
 import { createDomTranslator, TRANSLATION_KEY_ATTRIBUTES } from "./dom-translation";
 
@@ -89,72 +90,6 @@ const getNavigatorPreferences = (): readonly string[] => {
   return navigator.languages.length > 0 ? navigator.languages : navigator.language ? [navigator.language] : [];
 };
 
-/** Adds likely subtags, such as `zh-TW` to `zh-Hant-TW`, or returns undefined for a tag `Intl.Locale` rejects. */
-const maximizeLocale = (value: string): string | undefined => {
-  try {
-    return new Intl.Locale(value).maximize().toString().toLowerCase();
-  } catch {
-    return undefined;
-  }
-};
-
-const getLanguageAndScript = (maximizedLocale: string): string => maximizedLocale.split("-").slice(0, 2).join("-");
-
-const resolveBrowserLocale = <TLocale extends string>(i18n: I18n<TLocale>): TLocale | undefined => {
-  const maximizedLocales = i18n.locales.map((locale) => ({ locale, maximized: maximizeLocale(locale) }));
-
-  for (const preference of getNavigatorPreferences()) {
-    const exactLocale = i18n.resolveLocale(preference);
-
-    if (exactLocale !== undefined) {
-      return exactLocale;
-    }
-
-    const normalizedPreference = preference.trim().toLowerCase();
-    const maximizedPreference = maximizeLocale(normalizedPreference);
-    // A prefix with another likely script, such as `zh` (Simplified) for `zh-TW`, is left to the script match below.
-    const prefixLocale = maximizedLocales
-      .filter(
-        ({ locale, maximized }) =>
-          normalizedPreference.startsWith(`${locale.toLowerCase()}-`) &&
-          (maximized === undefined ||
-            maximizedPreference === undefined ||
-            getLanguageAndScript(maximized) === getLanguageAndScript(maximizedPreference)),
-      )
-      .map(({ locale }) => locale)
-      .reduce<TLocale | undefined>(
-        (longest, locale) => (locale.length > (longest?.length ?? 0) ? locale : longest),
-        undefined,
-      );
-
-    if (prefixLocale !== undefined) {
-      return prefixLocale;
-    }
-
-    if (maximizedPreference !== undefined) {
-      const likelyLocale =
-        maximizedLocales.find(({ maximized }) => maximized === maximizedPreference) ??
-        maximizedLocales.find(
-          ({ maximized }) =>
-            maximized !== undefined && getLanguageAndScript(maximized) === getLanguageAndScript(maximizedPreference),
-        );
-
-      if (likelyLocale !== undefined) {
-        return likelyLocale.locale;
-      }
-    }
-
-    const language = normalizedPreference.split("-")[0];
-    const subtagLocale = i18n.locales.find((locale) => locale.toLowerCase().split("-")[0] === language);
-
-    if (subtagLocale !== undefined) {
-      return subtagLocale;
-    }
-  }
-
-  return undefined;
-};
-
 const syncDocumentLocale = (i18n: I18n): void => {
   document.documentElement.lang = i18n.locale;
   document.documentElement.dir = i18n.direction;
@@ -178,7 +113,8 @@ const getMutationObserver = (root: ParentNode): typeof MutationObserver => {
  * @typeParam TLocale - Union of supported canonical locale identifiers.
  * @param options - Core manager, locale inputs, persistence, document, and optional DOM behavior.
  * @returns A binding that disconnects browser-owned listeners and observation.
- * @throws {TypeError} When observation lacks a root or the manager already has a browser binding.
+ * @throws {TypeError} When observation lacks a root, the manager was not created by `createI18n()`, or it already has a
+ * browser binding.
  * @throws {RangeError} When an explicit locale is unsupported or is not a string at runtime.
  * @throws {Error} When another core initialization supersedes this call before its locale becomes active.
  * @throws {TypeError} When a required dictionary is invalid.
@@ -207,6 +143,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
     throw new TypeError("[I18n] The manager already has a browser binding.");
   }
 
+  const internals = getI18nInternals(i18n);
   BOUND_MANAGERS.add(i18n);
 
   const domTranslator = createDomTranslator({ isSilent: i18n.isSilent });
@@ -229,10 +166,10 @@ export async function initializeBrowserI18n<TLocale extends string>(
           }
         }
         for (const element of keyRemovedElements) {
-          domTranslator.translateRoot({ root: element, boundary: root, translate: (key) => i18n.translate(key) });
+          domTranslator.translateRoot({ root: element, boundary: root, translate: (key) => internals.lookup(key) });
         }
       }
-      domTranslator.translateRoot({ root, translate: (key) => i18n.translate(key) });
+      domTranslator.translateRoot({ root, translate: (key) => internals.lookup(key) });
       // The records left are the full pass's own writes, which need no second pass.
       observer?.takeRecords();
     }
@@ -289,7 +226,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
       domTranslator.translateRoot({
         root: changedRoot,
         boundary: observedRoot,
-        translate: (key) => i18n.translate(key),
+        translate: (key) => internals.lookup(key),
       });
     }
   };
@@ -329,14 +266,14 @@ export async function initializeBrowserI18n<TLocale extends string>(
     } else {
       initialLocale =
         (shouldPersistLocale ? readPersistedLocale(i18n, storageKey) : undefined) ??
-        resolveBrowserLocale(i18n) ??
+        i18n.matchLocale(getNavigatorPreferences()) ??
         i18n.defaultLocale;
     }
 
     let wasInitializationApplied: boolean;
 
     try {
-      wasInitializationApplied = await i18n.init({ locale: initialLocale });
+      wasInitializationApplied = await internals.init({ locale: initialLocale });
     } catch (error) {
       // A stored or detected locale is a preference, not a requirement: when its loader fails, the default still serves
       // the user, and it is not persisted, so a later visit tries the preference again.
@@ -352,7 +289,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
 
       warn(i18n, `[I18n] Could not load locale "${initialLocale}"; using the default locale.`, error);
       initialLocale = i18n.defaultLocale;
-      wasInitializationApplied = await i18n.init({ locale: initialLocale });
+      wasInitializationApplied = await internals.init({ locale: initialLocale });
     }
 
     if (!wasInitializationApplied || !i18n.isReady || i18n.locale !== i18n.resolveLocale(initialLocale)) {

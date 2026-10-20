@@ -9,7 +9,7 @@ The package has three public entrypoints. Locale identifiers use conservative AS
 
 ## `@codenhub/i18n`
 
-The root entrypoint is runtime-neutral. It exports `createI18n`, `I18nError`, and `i18nErrors`, plus the `I18n`, `I18nConfig`, `I18nErrorCode`, `I18nEventMap`, `I18nErrorOptions`, `I18nInitOptions`, `I18nLocaleChangeEventDetail`, `I18nReadyEventDetail`, `LocaleDictionary`, `LocaleDictionaryLimits`, and `LocaleDirection` types.
+The root entrypoint is runtime-neutral. It exports `createI18n`, `I18nError`, and `i18nErrors`, plus the `I18n`, `I18nConfig`, `I18nErrorCode`, `I18nEventMap`, `I18nErrorOptions`, `I18nInitOptions`, `I18nLocaleChangeEventDetail`, `I18nReadyEventDetail`, `LocaleDictionary`, `LocaleDictionaryLimits`, `LocaleDirection`, and `TranslationKey` types.
 
 ### Configuration
 
@@ -18,7 +18,8 @@ interface I18nConfig<TLocale extends string = string, TMessages = unknown> {
   defaultLocale: TLocale;
   locales: readonly TLocale[];
   loadLocale(locale: TLocale): TMessages | Promise<TMessages>;
-  getLocaleDirection(locale: TLocale): "ltr" | "rtl";
+  getLocaleDirection?(locale: TLocale): "ltr" | "rtl";
+  onMissingKey?(key: string, locale: TLocale): void;
   isSilent?: boolean;
   dictionaryLimits?: LocaleDictionaryLimits;
 }
@@ -34,11 +35,13 @@ interface LocaleDictionaryLimits {
 function createI18n<TLocale extends string, TMessages = unknown>(config: I18nConfig<TLocale, TMessages>): I18n<TLocale, TranslationKey<TMessages>>;
 ```
 
-`TranslationKey<TMessages>` is the union of dot-separated paths to the string leaves of the loader's return type, such as `"page.title"` for `{ page: { title: "Welcome" } }`; groups such as `"page"` are not keys. When the loader returns a union, such as `dictionaries[locale]` over several `as const` dictionaries, keys from every member are accepted. A loader whose return type is `unknown` or `any`, such as one returning `response.json()`, accepts any string key; annotate its return type, for example with an imported JSON module type, to type keys. A typed manager rejects a key built at runtime, such as ``t(`errors.${code}`)``, at compile time even when the key exists; cast it to the key type to opt out deliberately. The type is not exported: name a manager's key type with `Parameters<typeof i18n.t>[0]`. TypeScript infers all type arguments or none, so `createI18n<Locale>(config)` sets `TMessages` to `unknown` and accepts any string key; omit the type arguments, or pass both, to keep typed keys. Key typing is compile-time only and does not change runtime validation.
+`TranslationKey<TMessages>` is the union of dot-separated paths to the string leaves of the loader's return type, such as `"page.title"` for `{ page: { title: "Welcome" } }`; groups such as `"page"` are not keys. When the loader returns a union, such as `dictionaries[locale]` over several `as const` dictionaries, keys from every member are accepted. A loader whose return type is `unknown` or `any`, such as one returning `response.json()`, accepts any string key; annotate its return type, for example with an imported JSON module type, to type keys. A typed manager rejects a key built at runtime, such as ``t(`errors.${code}`)``, at compile time even when the key exists; cast it to the key type to opt out deliberately. The type is exported, so a helper or component that takes a key can be typed `TranslationKey<typeof en>`. TypeScript infers all type arguments or none, so `createI18n<Locale>(config)` sets `TMessages` to `unknown` and accepts any string key; omit the type arguments, or pass both, to keep typed keys. Key typing is compile-time only and does not change runtime validation.
 
-The configuration must be a plain object, such as an object literal, and only its own properties are read: a class instance or an object built with `Object.create(defaults)` throws `TypeError`. `locales` must be a non-empty array of conservative ASCII locale identifiers that remain unique case-insensitively after trimming. `defaultLocale` must match one of them. `loadLocale` and `getLocaleDirection` must be functions, and `isSilent`, when provided, must be boolean. Each `dictionaryLimits` entry, when provided, must be a positive safe integer, and an unknown limit name is rejected. Invalid configuration throws `TypeError` during `createI18n()`.
+The configuration must be a plain object, such as an object literal, and only its own properties are read: a class instance or an object built with `Object.create(defaults)` throws `TypeError`. `locales` must be a non-empty array of conservative ASCII locale identifiers that remain unique case-insensitively after trimming. `defaultLocale` must match one of them. `loadLocale` must be a function; `getLocaleDirection` and `onMissingKey`, when provided, must be functions, and `isSilent` must be boolean. Each `dictionaryLimits` entry, when provided, must be a positive safe integer, and an unknown limit name is rejected. Invalid configuration throws `TypeError` during `createI18n()`.
 
-Configuration locale metadata is copied and frozen. Later caller mutations do not alter `defaultLocale`, `locales`, or locale matching. The loading and direction callbacks remain consumer-owned dependencies and are called with the configuration object as `this`, as `config.loadLocale(locale)` would be. Exceptions from `getLocaleDirection` propagate unchanged; the initial call occurs during `createI18n()`, and later calls occur before newly loaded state is applied.
+Configuration locale metadata is copied and frozen. Later caller mutations do not alter `defaultLocale`, `locales`, or locale matching. The callbacks remain consumer-owned dependencies and are called with the configuration object as `this`, as `config.loadLocale(locale)` would be. Exceptions from `getLocaleDirection` propagate unchanged; the initial call occurs during `createI18n()`, and later calls occur before newly loaded state is applied.
+
+Without `getLocaleDirection`, a locale's direction comes from its subtags. A script subtag before any extension or private-use singleton decides when present, so the `arab` in `en-u-nu-arab` is not read as a script: `Adlm`, `Arab`, `Hebr`, `Mand`, `Mend`, `Nkoo`, `Rohg`, `Samr`, `Syrc`, `Thaa`, and `Yezi` are `rtl` and other scripts `ltr`, so `uz-Arab` is `rtl` and `ar-Latn` is `ltr`. Otherwise the language decides: `ar`, `arc`, `ckb`, `dv`, `fa`, `he`, `iw`, `ks`, `lrc`, `mzn`, `nqo`, `pnb`, `ps`, `sd`, `syr`, `ug`, `ur`, and `yi` are `rtl` and other languages `ltr`. The callback used to be required, which made nearly every configuration repeat `getLocaleDirection: () => "ltr"`, and an application that later added Arabic kept that wrong answer. The default reads fixed lists rather than `Intl.Locale.prototype.getTextInfo()`, because not every supported engine provides it and the direction must be the same in every runtime.
 
 ### Initial state and properties
 
@@ -48,12 +51,12 @@ An `I18n<TLocale>` starts with:
 - `locales`: frozen canonical locale copy.
 - `isSilent`: `config.isSilent ?? false`.
 - `locale`: `defaultLocale`.
-- `direction`: `getLocaleDirection(defaultLocale)`.
+- `direction`: the direction of `defaultLocale`.
 - `isReady`: `false`.
 
 Every method, including the listener methods, is bound to its manager, so a destructured method such as `const { t, setLocale } = i18n` keeps working. This makes the recommended pattern for single-locale-owner runtimes, such as a browser application, an application module that exports the manager and its `t`; servers and builds that render concurrently create a manager per request or page instead.
 
-The manager provides EventTarget-compatible `addEventListener()` and `removeEventListener()` methods. Only those listener methods are part of the supported public event API; `dispatchEvent()` and runtime inheritance details are not exposed by `I18n`. `translate()` and `setLocale()` throw `Error` before successful initialization. `loadLocale()` and `resolveLocale()` may be used before initialization.
+The manager provides EventTarget-compatible `addEventListener()` and `removeEventListener()` methods. Only those listener methods are part of the supported public event API; `dispatchEvent()` and runtime inheritance details are not exposed by `I18n`. `translate()` and `setLocale()` throw `Error` before successful initialization. `loadLocale()`, `resolveLocale()`, `matchLocale()`, and `subscribe()` may be used before initialization.
 
 ### `init(options?)`
 
@@ -62,14 +65,14 @@ interface I18nInitOptions<TLocale extends string = string> {
   locale?: TLocale;
 }
 
-init(options?: I18nInitOptions<TLocale>): Promise<boolean>;
+init(options?: I18nInitOptions<TLocale>): Promise<void>;
 ```
 
 The explicit locale is trimmed and matched case-insensitively. Only `undefined` means omitted; omission selects `defaultLocale`. Core never inspects browser, route, request, or process state.
 
-Initialization of a non-default locale loads it and the default locale in parallel. State is applied only after both required dictionaries and the locale direction resolve successfully. An applied call returns `true`, sets `isReady`, and emits `ready`; repeated applied calls emit another `ready` event.
+Initialization of a non-default locale loads it and the default locale in parallel. State is applied only after both required dictionaries and the locale direction resolve successfully. An applied call sets `isReady` and emits `ready`; repeated applied calls emit another `ready` event.
 
-Overlapping initialization and locale-change operations use latest-request-wins application. A stale successful initialization returns `false` without applying state or emitting a success event. A failed initial call leaves the manager not ready; a failed reinitialization preserves prior ready state. A stale operation that fails before the application check still rejects with its normal error.
+Overlapping initialization and locale-change operations use latest-request-wins application. A stale successful initialization resolves without applying state or emitting a success event, as a stale `setLocale()` does. `init()` used to resolve `true` or `false` for whether it applied; that was dropped because `setLocale()` reports the same case with no value, and a caller that needs the outcome reads `locale` and `isReady`. A failed initial call leaves the manager not ready; a failed reinitialization preserves prior ready state. A stale operation that fails before the application check still rejects with its normal error.
 
 ### `loadLocale(locale)`
 
@@ -125,20 +128,58 @@ The method does not persist state, update a document, translate DOM, redirect, o
 resolveLocale(value: string): TLocale | undefined;
 ```
 
-Trims an untrusted string and returns the canonical case-insensitive exact configured match. It returns `undefined` for blank, unsupported, and runtime non-string values. It does not perform language-subtag matching.
+Trims an untrusted string and returns the canonical case-insensitive exact configured match. It returns `undefined` for blank, unsupported, and runtime non-string values. It does not perform language-subtag matching; `matchLocale()` does.
 
-### `translate(key)` and `t(key)`
+### `matchLocale(preferences)`
 
 ```ts
-translate(key: TKey): string | undefined;
-t(key: TKey): string | undefined;
+matchLocale(preferences: readonly string[]): TLocale | undefined;
+```
+
+Picks the configured locale that best serves ordered preferences, such as `navigator.languages` or the tags of an `Accept-Language` header sorted by quality. Each preference, in order, tests an exact case-insensitive match first, then the longest configured locale that the preference starts with as whole subtags and that has the same likely script, such as `zh-Hant` for `zh-Hant-TW` or `pt` for `pt-BR`. The script condition keeps `zh`, whose likely script is Simplified, from taking `zh-TW` when `zh-Hant` is configured. It then adds likely subtags with `Intl.Locale.prototype.maximize()` to the preference and to each configured locale, and takes the first configured locale whose maximized form is equal, then the first with the same language and script, such as `zh-Hant` for `zh-TW` or `zh-HK`, `zh-TW` for `zh-HK` among `zh-CN` and `zh-TW`, or `sr-Cyrl` for `sr`. Last, it takes the first configured locale with the same language subtag. The first preference that matches wins; blank, malformed, and runtime non-string entries are skipped, and no match returns `undefined`. A non-array input throws `TypeError`.
+
+The matching used to live only in the browser entrypoint, so a server resolving `Accept-Language: pt-BR` with `resolveLocale()` rendered the default locale for a user the browser would have served in `pt`. It takes a parsed list rather than a header string, because header parsing, quality sorting, and size limits belong to the server that receives the header:
+
+```ts
+const preferences = (request.headers.get("accept-language") ?? "")
+  .split(",")
+  .map((entry) => {
+    const [tag = "", ...parameters] = entry.split(";");
+    const quality = parameters.map((parameter) => parameter.trim()).find((parameter) => /^q=/i.test(parameter));
+    return { tag: tag.trim(), quality: quality === undefined ? 1 : Number(quality.slice(2)) };
+  })
+  // Drops refused tags (q=0) and malformed qualities, which RFC 9110 limits to 0 through 1.
+  .filter(({ quality }) => quality > 0 && quality <= 1)
+  .sort((left, right) => right.quality - left.quality)
+  .map(({ tag }) => tag);
+
+const locale = i18n.matchLocale(preferences) ?? i18n.defaultLocale;
+```
+
+### `translate(key, params?)` and `t(key, params?)`
+
+```ts
+translate(key: TKey, params?: Readonly<Record<string, string | number>>): string;
+t(key: TKey, params?: Readonly<Record<string, string | number>>): string;
 ```
 
 `t` is the same bound function as `translate`. `TKey` is the second type parameter of `I18n<TLocale, TKey>`, which `createI18n()` sets to `TranslationKey<TMessages>` as described under configuration; it defaults to `string`.
 
-Trims a non-empty key, checks the active dictionary, then the default dictionary. A key found only in the default dictionary returns the default text without a warning; compare dictionaries from `loadLocale()` in a test to find untranslated keys, as in the key-parity example. A key missing from both returns `undefined`. Unless `isSilent` is true, the manager warns for a key missing from both dictionaries, once for each of the 1,000 most recent active-locale/key pairs; an evicted pair can warn again. Blank, runtime non-string, longer than 1,000 characters, or ASCII-control-containing keys throw `TypeError`.
+Trims a non-empty key, checks the active dictionary, then the default dictionary. A key found only in the default dictionary returns the default text without a warning; compare dictionaries from `loadLocale()` in a test to find untranslated keys, as in the key-parity example. Blank, runtime non-string, longer than 1,000 characters, or ASCII-control-containing keys throw `TypeError`.
 
-The API does not provide interpolation, plural selection, rich messages, number/date formatting, or HTML rendering.
+A key missing from both dictionaries returns the trimmed key, and calls `onMissingKey(key, locale)` with the trimmed key and the active locale on every miss. Exceptions from `onMissingKey` propagate from `translate()`, so a test can throw there to fail on a missing key. Without `onMissingKey`, the manager warns unless `isSilent` is true, once for each of the 1,000 most recent active-locale/key pairs; an evicted pair can warn again. A miss used to return `undefined`, which typed every result `string | undefined`, so each call outside JSX needed `?? ""`, and a template literal rendered `undefined`. The key is returned instead because it renders a visible, searchable placeholder; an empty string was rejected because it hides the miss on screen.
+
+With `params`, each `{name}` placeholder whose name, made of ASCII letters, digits, and `_`, is an own property of `params` with a string or number value is replaced by that value. Other placeholders are left as written, and without `params` the text is returned unchanged, so a translation that contains literal braces is safe until it is called with a matching param. A missing key is returned without interpolation. Interpolation is offered before pluralization and ICU messages because without it a sentence with a value has to be concatenated from fragments, such as `t("cart.before") + count + t("cart.after")`, which fixes English word order into every translation. The `{name}` syntax is the ICU argument syntax, so ICU messages can extend it later without changing existing translations.
+
+The API does not provide plural selection, rich messages, number/date formatting, or HTML rendering.
+
+### `subscribe(listener)`
+
+```ts
+subscribe(listener: () => void): () => void;
+```
+
+Calls `listener` without arguments after every event that changes applied state: each applied `init()`, which emits `ready`, and each applied locale change, which emits `locale-change`. It returns a function that removes the listener; calling that function again does nothing. Listener exceptions are reported as for any `EventTarget` listener. It fits framework stores, such as `useSyncExternalStore(i18n.subscribe, () => i18n.locale)` in React, which previously had to register and remove two event listeners.
 
 ### Events
 
@@ -171,6 +212,7 @@ Native errors identify programmer or payload failures:
 | Unsupported locale or runtime non-string locale in locale operations        | `RangeError` |
 | `translate()` or `setLocale()` before successful initialization             | `Error`      |
 | Blank, oversized, control-containing, or runtime non-string translation key | `TypeError`  |
+| Non-array `matchLocale()` preferences                                       | `TypeError`  |
 
 A rejected injected loader is wrapped:
 
@@ -236,7 +278,7 @@ The helper selects the initial locale in this order:
 3. `navigator.languages`, or `navigator.language` when that list is empty.
 4. The configured default locale.
 
-An explicit locale is authoritative. Each browser preference, in order, tests an exact case-insensitive match first, then the longest configured locale that the preference starts with as whole subtags and that has the same likely script, such as `zh-Hant` for `zh-Hant-TW` or `pt` for `pt-BR`. The script condition keeps `zh`, whose likely script is Simplified, from taking `zh-TW` when `zh-Hant` is configured. It then adds likely subtags with `Intl.Locale.prototype.maximize()` to the preference and to each configured locale, and takes the first configured locale whose maximized form is equal, then the first with the same language and script, such as `zh-Hant` for `zh-TW` or `zh-HK`, `zh-TW` for `zh-HK` among `zh-CN` and `zh-TW`, or `sr-Cyrl` for `sr`. Last, it takes the first configured locale with the same language subtag.
+An explicit locale is authoritative. Navigator preferences are matched with `i18n.matchLocale()`, as described under the root entrypoint, so the browser and a server reading `Accept-Language` choose the same locale for the same preferences.
 
 Defaults are `storageKey: "i18n"`, `persistLocale: true`, `syncDocument: true`, and `observe: false`. DOM translation is disabled unless `root` is provided. `observe: true` without a root rejects with `TypeError` before core initialization.
 
@@ -253,7 +295,7 @@ After core initialization succeeds, the binding:
 
 Mutation observation translates only affected elements and added subtrees; locale changes still retranslate the complete configured root.
 
-Only one initializing or active browser binding may own a manager. A duplicate call rejects with `TypeError`. Failed setup releases listeners, observation, and ownership so initialization may be retried.
+The manager must come from `createI18n()`; another object, even one with the same methods, rejects with `TypeError`. Only one initializing or active browser binding may own a manager. A duplicate call rejects with `TypeError`. Failed setup releases listeners, observation, and ownership so initialization may be retried.
 
 If a concurrent direct core initialization supersedes the browser helper before its selected locale becomes active, the helper rejects with `Error` and releases its ownership. A later browser initialization may then retry.
 

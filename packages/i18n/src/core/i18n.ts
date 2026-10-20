@@ -1,5 +1,7 @@
 import { createLocaleLoader, type LocaleLoader } from "../locale/loader";
+import { matchConfiguredLocale } from "../locale/matching";
 import { validateI18nConfig, type ValidatedI18nConfig } from "../locale/resolution";
+import { registerI18nInternals } from "./internals";
 import { hasAsciiControlCharacter } from "./string-validation";
 import type {
   I18n,
@@ -20,6 +22,15 @@ interface RequiredDictionaries {
 
 const MAX_MISSING_KEY_DIAGNOSTICS = 1_000;
 const MAX_TRANSLATION_KEY_LENGTH = 1_000;
+const PLACEHOLDER_PATTERN = /{([A-Za-z0-9_]+)}/g;
+
+type TranslationParams = Readonly<Record<string, string | number>>;
+
+const interpolate = (text: string, params: TranslationParams): string =>
+  text.replace(PLACEHOLDER_PATTERN, (placeholder, name: string) => {
+    const value: unknown = Object.hasOwn(params, name) ? params[name] : undefined;
+    return typeof value === "string" || typeof value === "number" ? String(value) : placeholder;
+  });
 
 class CoreCustomEvent<TDetail> extends Event implements CustomEvent<TDetail> {
   private eventDetail: TDetail;
@@ -65,7 +76,7 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
   private readonly config: ValidatedI18nConfig<TLocale>;
   private readonly loader: LocaleLoader<TLocale>;
 
-  readonly t: (key: string) => string | undefined;
+  readonly t: (key: string, params?: TranslationParams) => string;
 
   constructor(config: I18nConfig<TLocale>) {
     super();
@@ -74,7 +85,9 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     this.loadLocale = this.loadLocale.bind(this);
     this.setLocale = this.setLocale.bind(this);
     this.resolveLocale = this.resolveLocale.bind(this);
+    this.matchLocale = this.matchLocale.bind(this);
     this.translate = this.translate.bind(this);
+    this.subscribe = this.subscribe.bind(this);
     this.addEventListener = this.addEventListener.bind(this) as I18nInstance<TLocale>["addEventListener"];
     this.removeEventListener = this.removeEventListener.bind(this) as I18nInstance<TLocale>["removeEventListener"];
     this.t = this.translate;
@@ -88,6 +101,10 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     this.loader = createLocaleLoader({
       loadLocale: this.config.loadLocale,
       dictionaryLimits: this.config.dictionaryLimits,
+    });
+    registerI18nInternals(this, {
+      init: (options) => this.applyInit(options as I18nInitOptions<TLocale>),
+      lookup: (key) => this.lookup(key),
     });
   }
 
@@ -111,11 +128,49 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     return this.localeLookup.get(value.trim().toLowerCase());
   }
 
+  matchLocale(preferences: readonly string[]): TLocale | undefined {
+    if (!Array.isArray(preferences)) {
+      throw new TypeError("[I18n] Locale preferences must be an array.");
+    }
+
+    return matchConfiguredLocale(this.locales, preferences);
+  }
+
   async loadLocale(locale: TLocale): Promise<LocaleDictionary> {
     return this.loader.loadLocale(this.requireLocale(locale));
   }
 
-  async init(options: I18nInitOptions<TLocale> = {}): Promise<boolean> {
+  async init(options?: I18nInitOptions<TLocale>): Promise<void> {
+    await this.applyInit(options);
+  }
+
+  translate(key: string, params?: TranslationParams): string {
+    const translation = this.lookup(key);
+
+    if (translation === undefined) {
+      return key.trim();
+    }
+
+    return params === undefined ? translation : interpolate(translation, params);
+  }
+
+  subscribe(listener: () => void): () => void {
+    const notify = (): void => listener();
+    let isSubscribed = true;
+
+    this.addEventListener("ready", notify);
+    this.addEventListener("locale-change", notify);
+
+    return () => {
+      if (isSubscribed) {
+        isSubscribed = false;
+        this.removeEventListener("ready", notify);
+        this.removeEventListener("locale-change", notify);
+      }
+    };
+  }
+
+  private async applyInit(options: I18nInitOptions<TLocale> = {}): Promise<boolean> {
     const requestedLocale = options.locale === undefined ? this.defaultLocale : options.locale;
     const locale = this.requireLocale(requestedLocale);
     const requestId = this.createRequest();
@@ -167,7 +222,7 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     );
   }
 
-  translate(key: string): string | undefined {
+  private lookup(key: string): string | undefined {
     if (!this.isReadyState || this.currentDictionary === undefined || this.defaultDictionary === undefined) {
       throw new Error("[I18n] translate() requires successful initialization.");
     }
@@ -194,12 +249,22 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
       return translation;
     }
 
-    const warningKey = `${this.currentLocale}\0${normalizedKey}`;
+    this.reportMissingKey(normalizedKey);
+    return undefined;
+  }
+
+  private reportMissingKey(key: string): void {
+    if (this.config.onMissingKey !== undefined) {
+      this.config.onMissingKey(key, this.currentLocale);
+      return;
+    }
+
+    const warningKey = `${this.currentLocale}\0${key}`;
 
     if (!this.isSilent) {
       if (this.warnedMissingKeys.delete(warningKey)) {
         this.warnedMissingKeys.set(warningKey, undefined);
-        return undefined;
+        return;
       }
 
       this.warnedMissingKeys.set(warningKey, undefined);
@@ -212,10 +277,8 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
         }
       }
 
-      console.warn(`[I18n] Missing key "${normalizedKey}" in locale "${this.currentLocale}".`);
+      console.warn(`[I18n] Missing key "${key}" in locale "${this.currentLocale}".`);
     }
-
-    return undefined;
   }
 
   addEventListener<K extends keyof I18nEventMap<TLocale>>(
@@ -308,7 +371,6 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
  *   defaultLocale: "en",
  *   locales: ["en", "pt"] as const,
  *   loadLocale: (locale) => dictionaries[locale],
- *   getLocaleDirection: () => "ltr",
  * });
  * export const { t } = i18n;
  * ```

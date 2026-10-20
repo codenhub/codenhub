@@ -11,7 +11,7 @@ const createConfig = (getLocaleDirection: (locale: "en" | "pt") => LocaleDirecti
 });
 
 const asDirectionCallback = (callback: (locale: "en" | "pt") => unknown) =>
-  callback as I18nConfig<"en" | "pt">["getLocaleDirection"];
+  callback as NonNullable<I18nConfig<"en" | "pt">["getLocaleDirection"]>;
 
 describe("I18n locale direction validation", () => {
   it("rejects an invalid initial direction when creating the manager", () => {

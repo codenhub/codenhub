@@ -24,15 +24,14 @@ In a browser application, or any runtime with one active locale at a time, creat
 import { createI18n } from "@codenhub/i18n";
 
 const dictionaries = {
-  en: { page: { title: "Welcome", description: "Learn more" } },
-  pt: { page: { title: "Bem-vindo" } },
+  en: { page: { title: "Welcome", description: "Learn more", greeting: "Hello, {name}!" } },
+  pt: { page: { title: "Bem-vindo", greeting: "Olá, {name}!" } },
 } as const;
 
 export const i18n = createI18n({
   defaultLocale: "en",
   locales: ["en", "pt"] as const,
   loadLocale: (locale) => dictionaries[locale],
-  getLocaleDirection: () => "ltr",
 });
 
 export const { t } = i18n;
@@ -47,16 +46,17 @@ await i18n.init({ locale: "pt" });
 
 t("page.title"); // "Bem-vindo"
 t("page.description"); // "Learn more" from the default locale
+t("page.greeting", { name: "Ana" }); // "Olá, Ana!"
 t("page.titel"); // compile error: keys are typed from the dictionaries
 ```
 
-Core performs no locale detection. Omitting `init({ locale })` selects the configured default. Selecting another locale loads both its dictionary and the default dictionary before applying state, so fallback is deterministic.
+Core never reads browser, request, or process state: pass the locale, or pick one from preferences with `i18n.matchLocale(["pt-BR"])`, which returns `"pt"` here. Omitting `init({ locale })` selects the configured default. Selecting another locale loads both its dictionary and the default dictionary before applying state, so fallback is deterministic.
 
-Every manager method is bound, so destructured methods keep working, and `t` checks readiness when called rather than when exported. Servers and static builds that render concurrently create one manager per request or page instead of sharing a module.
+`t` always returns a string: a key missing from both dictionaries returns the key and is reported to `onMissingKey`, or warned once by default. Every manager method is bound, so destructured methods keep working, and `t` checks readiness when called rather than when exported. `i18n.subscribe(listener)` calls `listener` after every applied initialization and locale change, for re-rendering a framework. Servers and static builds that render concurrently create one manager per request or page instead of sharing a module.
 
 ### Configuration
 
-Configure supported locales, a default locale, a dictionary loader, and text direction resolution. The loader may use imports, HTTP, files, or another runtime-specific source.
+Configure supported locales, a default locale, and a dictionary loader. Text direction defaults from each locale, such as `rtl` for `ar` or `he`, and `getLocaleDirection` overrides it. The loader may use imports, HTTP, files, or another runtime-specific source.
 
 Use `@codenhub/i18n/browser` for browser locale selection, persistence, document attributes, and optional DOM translation. Use `@codenhub/i18n/routing` for pure locale-prefixed pathname parsing and generation.
 
@@ -69,7 +69,7 @@ Use `@codenhub/i18n/browser` for browser locale selection, persistence, document
 - Browser initialization must not overlap direct core initialization on the same manager; a superseded browser call rejects and releases ownership.
 - Concurrent SSR requests and SSG renders require separate manager instances.
 
-The package intentionally focuses on deterministic string lookup and locale paths. It does not provide interpolation, plural selection, ICU or rich messages, HTML rendering, number/date formatting, navigation, or redirects.
+The package intentionally focuses on deterministic string lookup and locale paths. Interpolation fills `{name}` placeholders only; it does not provide plural selection, ICU or rich messages, HTML rendering, number/date formatting, navigation, or redirects.
 
 ## Next steps
 

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { initializeBrowserI18n } from "../browser";
+import { getI18nInternals } from "../core/internals";
 import { createDeferred, createManager, dictionaries, flushMutations, setupBrowserTestHooks } from "./test-helpers";
 
 setupBrowserTestHooks();
@@ -173,7 +174,7 @@ describe("initializeBrowserI18n document integration", () => {
     const i18n = createManager();
     const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
     await flushMutations();
-    const translate = vi.spyOn(i18n, "translate");
+    const translate = vi.spyOn(getI18nInternals(i18n), "lookup");
 
     await i18n.setLocale("pt-BR");
     await flushMutations();
@@ -205,7 +206,7 @@ describe("initializeBrowserI18n document integration", () => {
     // Registered before the binding, so the element is added just before the binding retranslates the root.
     i18n.addEventListener("locale-change", () => document.body.append(added));
     const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
-    const translate = vi.spyOn(i18n, "translate");
+    const translate = vi.spyOn(getI18nInternals(i18n), "lookup");
 
     await i18n.setLocale("pt-BR");
     await flushMutations();
@@ -218,7 +219,7 @@ describe("initializeBrowserI18n document integration", () => {
   it("translates an observed addition once", async () => {
     const i18n = createManager();
     const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
-    const translate = vi.spyOn(i18n, "translate");
+    const translate = vi.spyOn(getI18nInternals(i18n), "lookup");
     const added = document.createElement("p");
     added.dataset.i18n = "greeting";
 
@@ -406,6 +407,12 @@ describe("initializeBrowserI18n binding lifecycle", () => {
     await expect(browserInitialization).rejects.toThrow("Browser initialization was superseded");
     const binding = await initializeBrowserI18n({ i18n, locale: "en" });
     binding.disconnect();
+  });
+
+  it("rejects a manager not created by createI18n", async () => {
+    const i18n = { ...createManager() };
+
+    await expect(initializeBrowserI18n({ i18n })).rejects.toThrow("must be created by createI18n()");
   });
 
   it("rejects a duplicate binding while another binding is active", async () => {

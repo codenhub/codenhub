@@ -39,7 +39,7 @@ describe("empty locale dictionaries", () => {
       createConfig({ loadLocale: (locale) => (locale === "pt" ? {} : dictionaries[locale]), isSilent: true }),
     );
 
-    await expect(i18n.init({ locale: "pt" })).resolves.toBe(true);
+    await expect(i18n.init({ locale: "pt" })).resolves.toBeUndefined();
 
     expect(i18n.locale).toBe("pt");
     expect(i18n.translate("common.greeting")).toBe("Hello");
@@ -148,7 +148,7 @@ describe("createI18n", () => {
     const raised = createI18n(createConfig({ loadLocale: () => large, dictionaryLimits: { maxTranslations: 20_000 } }));
 
     await expect(limited.init()).rejects.toThrow("must not exceed 10000 translations");
-    await expect(raised.init()).resolves.toBe(true);
+    await expect(raised.init()).resolves.toBeUndefined();
     expect(raised.translate("key-10000")).toBe("value");
   });
 
@@ -178,7 +178,7 @@ describe("createI18n", () => {
   it("treats only undefined init locale as omitted", async () => {
     const i18n = createI18n(createConfig());
 
-    await expect(i18n.init({ locale: undefined })).resolves.toBe(true);
+    await expect(i18n.init({ locale: undefined })).resolves.toBeUndefined();
     expect(i18n.locale).toBe("en");
   });
 

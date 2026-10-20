@@ -82,8 +82,8 @@ describe("validateI18nConfig", () => {
       "loadLocale: Must be a function",
     ],
     [
-      "missing direction callback",
-      createConfig({ getLocaleDirection: undefined as unknown as I18nConfig<string>["getLocaleDirection"] }),
+      "non-function direction callback",
+      createConfig({ getLocaleDirection: "ltr" as unknown as I18nConfig<string>["getLocaleDirection"] }),
       "getLocaleDirection: Must be a function",
     ],
     [
