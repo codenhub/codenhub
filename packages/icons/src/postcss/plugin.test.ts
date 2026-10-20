@@ -1,3 +1,4 @@
+import postcss from "postcss";
 import { describe, expect, it, vi } from "vitest";
 
 import { IconRegistry } from "../core/registry.js";
@@ -72,6 +73,18 @@ describe("postcssIcons", () => {
     expect(appended.startsWith("/*!")).toBe(false);
     expect(warn.mock.calls[0]?.[0]).toContain("Test Family");
     warn.mockRestore();
+  });
+
+  it("attributes the appended nodes to the stylesheet being processed", async () => {
+    const plugin = postcssIcons({ defaultPrefix: "test", families: [createFamily()] });
+    const result = await postcss([plugin]).process("/* ic-search */", { from: "/app/src/style.css" });
+
+    const files = new Set<string | undefined>();
+    result.root.walk((node) => {
+      files.add(node.source?.input.file);
+    });
+    expect(result.root.nodes.length).toBeGreaterThan(1);
+    expect([...files]).toEqual([expect.stringMatching(/style\.css$/)]);
   });
 
   it("declares itself to postcss", () => {
