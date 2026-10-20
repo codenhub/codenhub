@@ -66,7 +66,7 @@ For full prompt templates, read [references/implementer-prompt.md](references/im
 
 - `DONE`: review it.
 - `DONE_WITH_CONCERNS`: read the concerns first, and resolve doubts about correctness or scope before review.
-- `NEEDS_CONTEXT`: answer the questions and send the worker on. Answering does not count as a retry.
+- `NEEDS_CONTEXT`: answer the questions and send the worker on. The first round of answers does not count as a retry; a second `NEEDS_CONTEXT` on the same task does, and usually means the task is not ready to delegate.
 - `BLOCKED`: change something real before retrying: add context, split the task, use a stronger model, or escalate to the user. A worker that says it is stuck is never ignored.
 
 ## Review

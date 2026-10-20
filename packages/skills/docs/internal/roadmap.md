@@ -19,5 +19,5 @@ Durable direction for `@codenhub/skills`. The repo-wide roadmap is `docs/roadmap
 
 - Validate `npx @codenhub/skills@latest` and `pnpm dlx @codenhub/skills@latest` on a clean machine.
 - Add more core skill templates.
-- Promote `delegate-work` scoped to external CLI workers only. Native subagent delegation belongs to `subagent-specialist`, which took over the draft's harness-independent guidance; two skills that both match "delegate this to subagents" would load unpredictably.
+- Promote `delegate-work` scoped to external CLI workers only, with its description narrowed to match. Native subagent delegation belongs to `subagent-specialist`, which took over the draft's harness-independent guidance; two skills that both match "delegate this to subagents" would load unpredictably.
 - Add a `writing-functions` skill for general-purpose function design in any language, written against observed failures and evaluated before release.

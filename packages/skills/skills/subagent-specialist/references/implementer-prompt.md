@@ -13,11 +13,13 @@ You are implementing Task [N]: [task name]
 
 ## Working Rules
 - Work in: [directory]
+- May edit: [the files or paths you may change]
+- Read only: [files to read but not change]
 - Use only the context provided here plus any local files you need to inspect.
 - Follow existing project patterns.
 - Implement exactly what was requested.
 - Do not broaden scope without asking.
-- Do not commit, push, install dependencies, or change configuration outside the files you may edit. If one is needed, report it.
+- Do not commit, push, install dependencies, or change configuration outside the files you may edit. If the task needs any of these, or a file outside that list, report it instead.
 - Report anything you notice outside the task instead of acting on it.
 
 ## Before You Begin
