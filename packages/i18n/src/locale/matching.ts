@@ -44,14 +44,18 @@ export function matchConfiguredLocale<TLocale extends string>(
     }
 
     const maximizedPreference = maximizeLocale(normalizedPreference);
+
+    // A tag `Intl.Locale` rejects, such as `en-`, is malformed and must not match through its prefix or language.
+    if (maximizedPreference === undefined) {
+      continue;
+    }
+
     // A prefix with another likely script, such as `zh` (Simplified) for `zh-TW`, is left to the script match below.
     const prefixLocale = maximizedLocales
       .filter(
         ({ locale, maximized }) =>
           normalizedPreference.startsWith(`${locale.toLowerCase()}-`) &&
-          (maximized === undefined ||
-            maximizedPreference === undefined ||
-            getLanguageAndScript(maximized) === getLanguageAndScript(maximizedPreference)),
+          (maximized === undefined || getLanguageAndScript(maximized) === getLanguageAndScript(maximizedPreference)),
       )
       .map(({ locale }) => locale)
       .reduce<TLocale | undefined>(
@@ -63,17 +67,15 @@ export function matchConfiguredLocale<TLocale extends string>(
       return prefixLocale;
     }
 
-    if (maximizedPreference !== undefined) {
-      const likelyLocale =
-        maximizedLocales.find(({ maximized }) => maximized === maximizedPreference) ??
-        maximizedLocales.find(
-          ({ maximized }) =>
-            maximized !== undefined && getLanguageAndScript(maximized) === getLanguageAndScript(maximizedPreference),
-        );
+    const likelyLocale =
+      maximizedLocales.find(({ maximized }) => maximized === maximizedPreference) ??
+      maximizedLocales.find(
+        ({ maximized }) =>
+          maximized !== undefined && getLanguageAndScript(maximized) === getLanguageAndScript(maximizedPreference),
+      );
 
-      if (likelyLocale !== undefined) {
-        return likelyLocale.locale;
-      }
+    if (likelyLocale !== undefined) {
+      return likelyLocale.locale;
     }
 
     const language = normalizedPreference.split("-")[0];

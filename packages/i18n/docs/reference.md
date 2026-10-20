@@ -41,7 +41,7 @@ The configuration must be a plain object, such as an object literal, and only it
 
 Configuration locale metadata is copied and frozen. Later caller mutations do not alter `defaultLocale`, `locales`, or locale matching. The callbacks remain consumer-owned dependencies and are called with the configuration object as `this`, as `config.loadLocale(locale)` would be. Exceptions from `getLocaleDirection` propagate unchanged; the initial call occurs during `createI18n()`, and later calls occur before newly loaded state is applied.
 
-Without `getLocaleDirection`, a locale's direction comes from its subtags. A script subtag decides when present: `Adlm`, `Arab`, `Hebr`, `Mand`, `Nkoo`, `Rohg`, `Samr`, `Syrc`, and `Thaa` are `rtl` and other scripts `ltr`, so `uz-Arab` is `rtl` and `ar-Latn` is `ltr`. Otherwise the language decides: `ar`, `arc`, `ckb`, `dv`, `fa`, `he`, `iw`, `ks`, `lrc`, `mzn`, `pnb`, `ps`, `sd`, `syr`, `ug`, `ur`, and `yi` are `rtl` and other languages `ltr`. The callback used to be required, which made nearly every configuration repeat `getLocaleDirection: () => "ltr"`, and an application that later added Arabic kept that wrong answer. The default reads fixed lists rather than `Intl.Locale.prototype.getTextInfo()`, because not every supported engine provides it and the direction must be the same in every runtime.
+Without `getLocaleDirection`, a locale's direction comes from its subtags. A script subtag before any extension or private-use singleton decides when present, so the `arab` in `en-u-nu-arab` is not read as a script: `Adlm`, `Arab`, `Hebr`, `Mand`, `Mend`, `Nkoo`, `Rohg`, `Samr`, `Syrc`, `Thaa`, and `Yezi` are `rtl` and other scripts `ltr`, so `uz-Arab` is `rtl` and `ar-Latn` is `ltr`. Otherwise the language decides: `ar`, `arc`, `ckb`, `dv`, `fa`, `he`, `iw`, `ks`, `lrc`, `mzn`, `nqo`, `pnb`, `ps`, `sd`, `syr`, `ug`, `ur`, and `yi` are `rtl` and other languages `ltr`. The callback used to be required, which made nearly every configuration repeat `getLocaleDirection: () => "ltr"`, and an application that later added Arabic kept that wrong answer. The default reads fixed lists rather than `Intl.Locale.prototype.getTextInfo()`, because not every supported engine provides it and the direction must be the same in every runtime.
 
 ### Initial state and properties
 
@@ -145,10 +145,11 @@ const preferences = (request.headers.get("accept-language") ?? "")
   .split(",")
   .map((entry) => {
     const [tag = "", ...parameters] = entry.split(";");
-    const quality = parameters.find((parameter) => parameter.trim().startsWith("q="));
-    return { tag: tag.trim(), quality: quality === undefined ? 1 : Number(quality.trim().slice(2)) };
+    const quality = parameters.map((parameter) => parameter.trim()).find((parameter) => /^q=/i.test(parameter));
+    return { tag: tag.trim(), quality: quality === undefined ? 1 : Number(quality.slice(2)) };
   })
-  .filter(({ quality }) => quality > 0)
+  // Drops refused tags (q=0) and malformed qualities, which RFC 9110 limits to 0 through 1.
+  .filter(({ quality }) => quality > 0 && quality <= 1)
   .sort((left, right) => right.quality - left.quality)
   .map(({ tag }) => tag);
 

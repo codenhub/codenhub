@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createI18n, type TranslationKey } from "../index";
 
@@ -16,6 +16,10 @@ const createTypedI18n = (overrides: { onMissingKey?: (key: string, locale: "en" 
     isSilent: true,
     ...overrides,
   });
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("interpolation", () => {
   it("should replace named placeholders with string and number params", async () => {
@@ -72,7 +76,6 @@ describe("missing keys", () => {
       ["missing", "pt"],
     ]);
     expect(warn).not.toHaveBeenCalled();
-    warn.mockRestore();
   });
 
   it("should let onMissingKey fail the lookup by throwing", async () => {
@@ -122,7 +125,7 @@ describe("matchLocale", () => {
   it("should skip malformed and non-string preferences", () => {
     const i18n = createManager(["en", "pt"]);
 
-    expect(i18n.matchLocale(["", "@@", 42 as unknown as string, "pt"])).toBe("pt");
+    expect(i18n.matchLocale(["", "@@", "en-", 42 as unknown as string, "pt"])).toBe("pt");
   });
 
   it("should reject a non-array input", () => {
@@ -134,12 +137,20 @@ describe("matchLocale", () => {
 
 describe("default direction", () => {
   it("should resolve rtl for right-to-left languages and scripts", () => {
-    const locales = ["en", "ar-EG", "he", "fa", "ur", "uz-Arab", "ar-Latn"];
+    const locales = ["en", "ar-EG", "he", "fa", "ur", "uz-Arab", "ar-Latn", "nqo", "ku-Yezi"];
     const directions = locales.map(
       (locale) => createI18n({ defaultLocale: locale, locales: [locale], loadLocale: () => ({}) }).direction,
     );
 
-    expect(directions).toEqual(["ltr", "rtl", "rtl", "rtl", "rtl", "rtl", "ltr"]);
+    expect(directions).toEqual(["ltr", "rtl", "rtl", "rtl", "rtl", "rtl", "ltr", "rtl", "rtl"]);
+  });
+
+  it("should not read an extension value as a script", () => {
+    const directions = ["en-u-nu-arab", "fa-u-nu-latn", "en-x-arab"].map(
+      (locale) => createI18n({ defaultLocale: locale, locales: [locale], loadLocale: () => ({}) }).direction,
+    );
+
+    expect(directions).toEqual(["ltr", "rtl", "ltr"]);
   });
 
   it("should apply the default direction when the locale changes", async () => {

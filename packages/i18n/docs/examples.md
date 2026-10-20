@@ -76,7 +76,7 @@ await frameworkNavigate(nextPathname);
 
 ## Framework rendering
 
-Frameworks that render translated values themselves re-render on `subscribe()`, which fires after every applied initialization and locale change. In React:
+Frameworks that render translated values themselves re-render on `subscribe()`, which fires after every applied initialization and locale change. This React example imports the shared module from the quick start, so it suits a browser application or another runtime with one active locale; server rendering creates a manager per request, as in the SSR example below, and passes it to components instead:
 
 ```tsx
 import { useSyncExternalStore } from "react";
