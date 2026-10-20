@@ -312,9 +312,10 @@ interface ReplaceIconTagsOptions {
 
 /**
  * Matches an `<i>` tag carrying a `class` or `className`, quoted plainly or with
- * escaped quotes inside a string literal.
+ * escaped quotes inside a string literal. The attribute name must follow
+ * whitespace, so the end of `data-class` is not taken for it.
  */
-const ICON_TAG = /<i\b([^>]*?)(class|className)=(\\?)(["'])([^"']*?)\3\4([^>]*?)(?:>\s*<\/i>|\s*\/?>)/gi;
+const ICON_TAG = /<i\b([^>]*?)(?<=\s)(class|className)=(\\?)(["'])([^"']*?)\3\4([^>]*?)(?:>\s*<\/i>|\s*\/?>)/gi;
 
 interface IconTagClasses {
   icon: NonNullable<ReturnType<typeof resolveIconClassName>>;

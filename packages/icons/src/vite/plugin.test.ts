@@ -276,6 +276,14 @@ describe("viteIcons in svg mode", () => {
     expect(classValue.startsWith("ic-") || classValue.includes(" ic-")).toBe(true);
   });
 
+  it("does not read an attribute that only ends in class as the class", () => {
+    const { transformIndexHtml } = createPlugin({ mode: "svg" });
+
+    const html = transformIndexHtml('<i data-class="ic-user"></i>', {}) as string;
+
+    expect(html).toBe('<i data-class="ic-user"></i>');
+  });
+
   it("drops the bare prefix class, whose mask rules would paint the svg box", () => {
     const { transformIndexHtml } = createPlugin({ mode: "svg" });
 
