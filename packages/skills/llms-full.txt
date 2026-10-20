@@ -391,24 +391,34 @@ The rest of the authoring guidance, such as how a description is phrased or whet
 
 ## Bundled Inventory
 
-| Skill ID                  | Purpose                                                        |
-| ------------------------- | -------------------------------------------------------------- |
-| `agents-md-improver`      | Audits and improves repository `AGENTS.md` guidance.           |
-| `audit`                   | Audits and reviews code, classifying findings consistently.    |
-| `brainstorming`           | Explores requirements and design before implementation.        |
-| `caveman`                 | Provides an ultra-compressed communication mode.               |
-| `caveman-commit`          | Generates terse Conventional Commit messages.                  |
-| `design`                  | Guides visual design through hierarchy, type, space, color.    |
-| `naming`                  | Finds meaningful, memorable, ownable names for anything.       |
-| `ponytail`                | Builds the simplest solution that works, nothing speculative.  |
-| `ponytail-review`         | Finds over-engineering and ledgers deferred work.              |
-| `subagent-specialist`     | Plans, delegates, reviews, and integrates parallel agent work. |
-| `test-driven-development` | Applies fail-first red-green-refactor development.             |
-| `writing-skills`          | Authors, reviews, and evaluates skills against the rules.      |
+| Skill ID                  | Purpose                                                                       |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| `agents-md-improver`      | Audits and improves repository `AGENTS.md` guidance.                          |
+| `audit`                   | Audits and reviews code, classifying findings consistently.                   |
+| `brainstorming`           | Explores requirements and design before implementation.                       |
+| `caveman`                 | Provides an ultra-compressed communication mode.                              |
+| `caveman-commit`          | Generates terse Conventional Commit messages.                                 |
+| `design`                  | Guides visual design through hierarchy, type, space, color.                   |
+| `naming`                  | Finds meaningful, memorable, ownable names for anything.                      |
+| `ponytail`                | Builds the simplest solution that works, nothing speculative.                 |
+| `ponytail-review`         | Finds over-engineering and ledgers deferred work.                             |
+| `subagent-specialist`     | Decides what to delegate, then briefs, reviews, and integrates subagent work. |
+| `test-driven-development` | Applies fail-first red-green-refactor development.                            |
+| `writing-skills`          | Authors, reviews, and evaluates skills against the rules.                     |
 
 `design` replaces the former `frontend-design` skill. Installing over an earlier version keeps `frontend-design` in place, because the installer does not remove stale directories. Delete the `frontend-design` directory from each skills destination by hand. Do not use `--cleanup` for this, since it removes the whole destination, including skills this package does not manage.
 
-Skill wording and support files may change while the package is experimental. Use the installed `SKILL.md` and accompanying assets as the authoritative skill content for the installed package version.
+## Versioning
+
+From 1.0, the version of a release says what changes for someone who has the skills installed:
+
+- **Major:** a skill is removed or renamed. A skill ID is the directory the installer writes, and the installer leaves an old directory in place, so a removed or renamed skill stays installed until someone deletes it.
+- **Minor:** a skill is added, or an existing skill's triggers, rules, or workflow change.
+- **Patch:** editorial changes to a skill, such as wording, formatting, or links, with no intended change in behavior.
+
+The CLI and the programmatic API follow SemVer as usual. Rejected: treating every change to a skill's behavior as breaking. Nearly every skill change alters what an agent does, so that rule would make almost every release a major one, and the version would no longer tell consumers which upgrades need their attention.
+
+Use the installed `SKILL.md` and accompanying assets as the authoritative skill content for the installed package version.
 
 ## Drafts
 

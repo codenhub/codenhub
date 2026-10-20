@@ -112,5 +112,5 @@ These effects are tendencies documented across languages, not laws. Use them to 
 
 ## Families And Renames
 
-- **Families.** When names will multiply, such as model sizes, product tiers, releases, or sibling packages, choose a system with an order built into it, such as scale (Haiku, Sonnet, Opus), the alphabet, or a scale. Then each new name explains itself. Members must be hard to confuse with one another in speech and in writing; Violin and Viola fail that test.
+- **Families.** When names will multiply, such as model sizes, product tiers, releases, or sibling packages, choose a system with an order built into it, such as size (Haiku, Sonnet, Opus), the alphabet, or a numbered sequence. Then each new name explains itself. Members must be hard to confuse with one another in speech and in writing; Violin and Viola fail that test.
 - **Renames.** Renaming something already published or depended on changes public surface: imports, URLs, package names, search results, and what people remember. Present the rename as a decision with its migration cost, and get approval before changing anything. In a codebase, record the decision where the project records decisions.

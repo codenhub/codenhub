@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: "Use when the work needs collaborative design before implementation, especially for new features, behavior changes, or unclear requirements. Explores user intent, requirements, and design before implementation."
+description: Explores user intent, requirements, and design through collaborative dialogue before implementation. Use when the work needs design before code, especially for new features, behavior changes, or unclear requirements.
 metadata:
   short-description: Brainstorm ideas into approved designs
 ---

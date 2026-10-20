@@ -1,158 +1,104 @@
 ---
 name: subagent-specialist
-description: Coordinates work delegated to subagents or other workers, from planning through integration. Use for parallelizable work, independent implementation tasks, several unrelated bug investigations, or delegated work that needs review before it is integrated.
+description: Coordinates work delegated to subagents, from deciding what to delegate through briefing, review, and integration. Use when a task splits into independent pieces, when several small fixes, type errors, or mechanical edits need doing, when a fully specified, isolated feature or module can be built separately, when exploring or gathering information across a large codebase, when a second review would help, or when the user mentions delegating, subagents, parallelizing, fanning out, or workers.
 ---
 
 # Subagent Specialist
 
-## Overview
+Split work so each agent holds only the context its task needs. The controller, the agent reading this, plans, briefs, reviews, and decides. Workers execute narrow, well-specified tasks and report back in a fixed format.
 
-Use fresh subagents as isolated workers while the main agent stays responsible for decomposition, context curation, coordination, and integration. Two patterns apply: structured per-task execution with review gates, and parallel dispatch for independent domains.
+## Principles
 
-## Core Principles
+- **The controller owns the whole.** Planning, sequencing, final decisions, and integration stay with you; preserve your context for them.
+- **One complete brief, one run.** A worker gets everything it needs up front, plus at most one retry (see Retries). Never an open-ended conversation.
+- **Review artifacts, not reports.** A worker's summary says what it believes it did; the diff says what it did.
+- **Use what the environment offers.** Use only the delegation features actually available, such as background workers, messaging, or context forking. When delegation needs the user's permission, ask; never work around it.
 
-- Default to isolated context. Give each subagent only the task-local context it needs.
-- Keep the controller responsible for planning, sequencing, tool strategy, and final integration.
-- Use one subagent per task or per independent problem domain.
-- Prefer explicit scope, constraints, and deliverables over open-ended prompts.
-- Review actual artifacts, not just the subagent's report.
-- Preserve the controller's context window for orchestration work.
+## Choose a Path
 
-## Delegation Lifecycle
+Take the first that fits:
 
-- Start a fresh worker when isolated execution helps, and give it task-local context rather than the full session unless the task depends on it.
-- Reuse a worker for follow-up work only when it already holds the right context.
-- Wait for worker results only when the next critical-path step depends on them.
-- Stop workers that are no longer useful.
-- When delegation needs the user's permission, ask; never work around it.
-- Use only the delegation features actually available, such as background workers, messaging, or context forking.
+1. **Inline.** The task is small, tightly coupled, or needs judgment at every step: do it yourself. Delegation has overhead; don't pay it for nothing.
+2. **Explore first.** The problem is still ambiguous, several failures probably share one root cause, or the work waits on a design decision nobody has made: investigate locally, or with one information worker, before splitting anything.
+3. **Delegate.** The work matches one of the kinds below.
 
-## Choose the Pattern
+## What to Delegate
 
-Use the structured per-task workflow when:
+Delegate work whose decisions are already made. Keep anything that needs design choices, cross-cutting understanding, taste, or negotiation with the user.
 
-- you already have a plan or a clearly bounded task list
-- tasks can be executed one at a time in the current session
-- you want strong quality gates after each implementation step
+- **Small, located work:** a specific bug or type error in named files, or a described mechanical change across a known set of files. You can state the done-criteria in one or two sentences. Do the locating yourself; the worker starts from "the problem is here", not "find the problem".
+- **Isolated implementation:** a larger feature, module, or endpoint, delegated only when all of these hold:
+  - **Decisions are made.** You have fixed the interfaces, file layout, names, and error behavior. The worker fills them in; it does not design.
+  - **It is isolated.** New files or its own module, so you can list the files it may edit up front.
+  - **Acceptance is concrete.** You give a list of cases the result must satisfy, and the worker implements them as tests.
 
-Use parallel dispatch when:
+  When a few small decisions are still open, close them and then delegate. Decide what is technical and local yourself; ask the user about anything that changes behavior they would care about. If closing them takes real design work or reaches into other code, the task is not isolated: keep it.
 
-- 2 or more tasks, failures, or investigations are truly independent
-- each workstream can be understood without hidden context from the others
-- the agents will not collide on the same files, resources, or unresolved design decisions
+- **Information:** find usages, map a module, summarize how something works, or answer a question about the codebase. The worker edits nothing.
+- **Review:** critique a diff or file against criteria you state. The worker edits nothing.
 
-Do local exploration first instead of dispatching immediately when:
+## Plan the Work
 
-- the problem is still ambiguous
-- failures are probably symptoms of the same root cause
-- the work depends on one shared architectural decision that has not been made yet
-- multiple agents would compete for the same write scope
+- List the tasks and mark which are independent and which depend on another's result.
+- Tasks that run at the same time never touch the same files, resources, or unresolved decision. Name new files explicitly, so two workers do not create the same one.
+- Run a task that depends on another's change after that change lands.
+- Track the tasks yourself, so no worker has to rediscover the plan.
 
-## Workflow A: Structured Task Execution
+Good candidates for parallel work are failing test files with unrelated causes, separate subsystems, and implementation slices with disjoint files. If the domains turn out not to be independent, stop treating them as parallel and recombine the work.
 
-### 1. Prepare Once
+## Write the Brief
 
-- Read the plan once.
-- Extract each task's full text, acceptance criteria, dependencies, and scene-setting context.
-- Track the tasks in the session plan tracker so the controller, not the subagents, owns the global picture.
-- Do not make each subagent rediscover the plan from scratch.
+A worker knows only what the brief says. Write it for a capable engineer who has never seen this codebase and cannot ask questions. Paste the task text and raw evidence, such as failing output or logs, instead of your diagnosis of them. Include only the sections that apply, and never leave a placeholder in:
 
-### 2. Dispatch One Implementer
+- **Goal:** one or two sentences on what must be true when the worker is done.
+- **Context:** what you already found: where the problem or feature lives, the cause if known, relevant functions and types by name. Mark any guess as one.
+- **Decisions:** for implementation, everything the worker must follow: signatures, names, file layout, error handling, and allowed dependencies, normally none new.
+- **Acceptance:** concrete, checkable cases. For implementation, each becomes a test.
+- **Files:** the files it may edit, and the files it should read but not edit.
+- **Question:** for information work, what to find out and the form of the answer.
+- **Review criteria:** for review work, what to judge against: the original acceptance list, conventions, specific risks. Do not leak the answer you expect.
+- **Out of scope:** nearby things the worker might be tempted to touch.
+- **Report:** the format to return. Implementation workers report one of `DONE`, `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, or `BLOCKED`.
 
-- Give the full task text directly.
-- Include architectural context, constraints, working directory, and expected report format.
-- Tell the implementer to report `NEEDS_CONTEXT` with its questions instead of guessing when anything is unclear.
-- Prefer reusing the same implementer for follow-up fixes if the review loop stays on the same task.
+For full prompt templates, read [references/implementer-prompt.md](references/implementer-prompt.md) for implementation and [references/parallel-investigator-prompt.md](references/parallel-investigator-prompt.md) for one domain worked in parallel with others.
 
-For the prompt structure, read [references/implementer-prompt.md](references/implementer-prompt.md).
+## Handle the Status
 
-### 3. Handle Implementer Status Correctly
+- `DONE`: review it.
+- `DONE_WITH_CONCERNS`: read the concerns first, and resolve doubts about correctness or scope before review.
+- `NEEDS_CONTEXT`: answer the questions and send the worker on. The first round of answers does not count as a retry; a second `NEEDS_CONTEXT` on the same task does, and usually means the task is not ready to delegate.
+- `BLOCKED`: change something real before retrying: add context, split the task, use a stronger model, or escalate to the user. A worker that says it is stuck is never ignored.
 
-Implementers should report one of four statuses:
+## Review
 
-- `DONE`: Proceed to spec compliance review.
-- `DONE_WITH_CONCERNS`: Read the concerns before review. Resolve correctness or scope doubts before moving on.
-- `NEEDS_CONTEXT`: Provide the missing information and re-dispatch.
-- `BLOCKED`: Change something real before retrying. Add context, break up the task, use a stronger model, or escalate to the user.
+Read the diff, not the summary. Passing checks is necessary, not sufficient. Reject or fix a result when any of these fail:
 
-Never ignore a subagent that says it is stuck. If it reported `BLOCKED`, the setup, context, or task shape needs to change.
+1. **It solves the stated goal**, not a neighbouring one. Compare it against the goal and acceptance, case by case.
+2. **Nothing is gamed:** no weakened types, ignore directives, disabled rules, skipped or loosened tests, special-casing of test inputs, or swallowed errors.
+3. **Tests test the behavior.** They would fail without the change and cover every acceptance case. A test that restates the implementation does not count.
+4. **It stays within the brief's decisions:** signatures, names, layout, and error behavior exactly as specified.
+5. **It reads like the codebase:** surrounding style and patterns, no leftover debugging, no dead code.
+6. **No unrequested changes** are hidden in the files it touched: renames, reformatting, reordered imports, or cleanups.
 
-### 4. Run Spec Compliance Review First
+Match the reviewers to the risk. Review a mechanical, fully specified change to one or two files that tests cover yourself, against the list above. For any other implementation, run a spec-compliance reviewer, then a code-quality reviewer once spec compliance is clear; each starts without context, so two reviewers on a trivial task cost more than the task did. When workers can run on other models, give the reviewers a model from a different family than the implementer's. Read [references/spec-reviewer-prompt.md](references/spec-reviewer-prompt.md) and [references/code-quality-reviewer-prompt.md](references/code-quality-reviewer-prompt.md) for their prompts.
 
-Match the reviewers to the risk. For a mechanical, fully specified task that touches one or two files and has tests covering it, review the diff yourself: spec compliance first, then the code quality points in step 5. Every other task gets both reviewer subagents; each starts without context, so two reviewers on a trivial task cost more than the task did.
+Small issues of naming or style are not a reason to reject: accept the result and fix them yourself if they matter. A reason to reject is anything you would not accept from a person in code review.
 
-- Verify what was requested against the actual code.
-- Check for missing requirements.
-- Check for over-building and extra features.
-- Check for misunderstandings of the requested behavior.
+## Retries
 
-Do not start code quality review until spec compliance is clear.
+One retry per task, in total: a follow-up or a rebrief.
 
-For the reviewer template, read [references/spec-reviewer-prompt.md](references/spec-reviewer-prompt.md).
+- **Follow-up:** send the findings to the same worker when the result is nearly right, the remaining issue is small and local, and its context makes that cheaper than a fresh run.
+- **Rebrief:** start a fresh worker with a better brief, on a stronger model when one is available.
 
-### 5. Run Code Quality Review Second
+After the retry, finish the remaining work yourself, drop the task, or ask the user. Re-run the review after every fix, whoever made it.
 
-- Review maintainability, decomposition, test quality, and fit with the codebase.
-- Check whether the change created unnecessarily large or tangled files.
-- Check whether the implementation followed the intended structure.
+## Integrate
 
-For the reviewer template, read [references/code-quality-reviewer-prompt.md](references/code-quality-reviewer-prompt.md).
-
-### 6. Fix and Re-Review in Loops
-
-- If a reviewer finds issues, send the findings back to the implementer.
-- Re-run the same review after the fixes land.
-- Do not move to the next task while review issues are still open.
-- Do not let implementer self-review replace an actual reviewer pass.
-
-### 7. Close the Task Only When Both Gates Pass
-
-- Mark the task complete only after spec compliance and code quality are both clear.
-- After all tasks are done, run one final holistic review or verification pass across the full change.
-
-## Workflow B: Parallel Dispatch for Independent Domains
-
-### 1. Group Work by Independent Domain
-
-Good candidates:
-
-- different failing test files with unrelated root causes
-- separate subsystems
-- bounded implementation slices with disjoint write scopes
-
-Bad candidates:
-
-- failures likely caused by one shared bug
-- tasks touching the same core files or the same unresolved design decision
-- work that depends on shared mutable state or one ordered sequence of changes
-
-### 2. Give Each Agent One Domain Only
-
-Each parallel prompt should include:
-
-- exact scope
-- raw failure evidence or task text
-- constraints on what not to change
-- expected output
-
-For a reusable template, read [references/parallel-investigator-prompt.md](references/parallel-investigator-prompt.md).
-
-### 3. Dispatch Concurrently
-
-- Run one subagent per independent domain.
-- Keep the scopes narrow.
-- While the subagents run, continue with non-overlapping controller work instead of waiting by reflex.
-
-### 4. Review and Integrate Carefully
-
-When results come back:
-
-- read each summary
-- inspect file overlap or conceptual conflicts
-- integrate the changes carefully
-- run the combined verification
-
-If the domains turn out not to be independent, stop treating them as parallel work and recombine the investigation.
+- Close a task only after its review passes.
+- After accepting more than one editing result, run the project's full checks once in the real working tree. Each worker's checks proved its change in isolation, not the combination.
+- When integration fails, back out results one at a time to find the conflict, or fix it yourself.
+- After all tasks are done, run one final review or verification pass across the whole change.
 
 ## Delegated Audits and Reviews
 
@@ -162,49 +108,37 @@ When the work is an audit or review the user asked for, split it by area, not by
 - Before reporting, merge duplicates and resolve every contradiction between workers: re-check the case and report one answer, or one question when it cannot be settled.
 - Report one verdict for the whole target, not one per worker.
 
-## Hybrid Pattern
-
-Use parallel dispatch at the top level and the structured review loop inside each workstream when the work is large enough to justify it. A typical example is three unrelated bug clusters investigated in parallel, where each accepted fix still goes through spec review and code quality review before final integration.
-
 ## Model Selection
 
 When workers can run on different models:
 
-- Use a fast, inexpensive model for mechanical, well-specified tasks touching 1 or 2 files.
-- Use a standard model for debugging, integration work, or multi-file implementation.
-- Use the strongest available model for architecture, task decomposition, and critical reviews.
+- Use a fast, inexpensive model for information work and for mechanical, located edits.
+- Use a standard model for isolated implementation, debugging, integration work, and reviews.
+- Use the strongest available model for architecture, task decomposition, critical reviews, and a rebrief after a failed attempt.
 
-Signals that a task needs a stronger model:
+Move a task up when its requirements are ambiguous, it spans many interacting files, it has cross-cutting impact, or an earlier attempt failed. Move it down only for purely mechanical work. When the user names a model for some work, use it for that work; reviews of that work still come from another family when one is available.
 
-- ambiguous requirements
-- many interacting files
-- cross-cutting architectural impact
-- repeated failures after a reasonable attempt
+## Context Discipline
 
-## Prompt Construction Rules
+- Keep your context for the plan and the results. Do not read worker transcripts or the files a worker changed unless you are reviewing them.
+- Keep from each result only what the next decision needs.
+- Wait for a worker only when the next step on the critical path needs its result; meanwhile, do controller work that does not overlap it. Stop workers that are no longer useful.
+- Do not launch more workers than you can review.
 
-- Be specific about scope.
-- Paste the relevant task text or failure evidence.
-- Provide enough context to avoid blind guessing.
-- State constraints explicitly.
-- Tell the subagent what to return.
-- Prefer raw artifacts over your diagnosis when asking for validation or review.
-- Do not leak the intended answer into reviewer prompts.
+## Hard Rules
+
+- **No traces in the repository.** No briefs, logs, agent notes, memory files, or markers. Workers add nothing that identifies agent work, such as comments, TODOs, or trailers about it, beyond what the project's conventions require. Changes read as if a person made them.
+- **The project's own docs, tests, and conventions are the source of truth.** A worker's claim never overrides them, and no worker creates documentation aimed at agents.
+- **Workers never commit, push, install dependencies, or change configuration** outside the files they may edit. When one of those is needed, do it yourself under the user's normal approval.
+- **No secrets in briefs.** Never paste keys, tokens, or environment files.
+- **Out-of-scope observations are reported, not acted on.** You decide whether they become new tasks or get mentioned to the user; they are never written into the repository as reminders.
 
 ## Red Flags
 
 Stop and correct course on any of these:
 
-- Skipping spec compliance review, or running code quality review before it passes.
-- Telling a subagent to "fix everything" instead of naming the scope.
-- Dispatching several coding subagents against the same write scope without an explicit integration plan.
-- Accepting an implementer or reviewer claim without checking the artifacts they produced.
-
-## Reference Templates
-
-Read these only when needed:
-
-- [references/implementer-prompt.md](references/implementer-prompt.md): implementation-worker prompt
-- [references/spec-reviewer-prompt.md](references/spec-reviewer-prompt.md): spec-compliance review prompt
-- [references/code-quality-reviewer-prompt.md](references/code-quality-reviewer-prompt.md): maintainability and quality review prompt
-- [references/parallel-investigator-prompt.md](references/parallel-investigator-prompt.md): focused prompt for independent parallel investigations
+- Delegating a task whose design is still open, or telling a worker to "fix everything" instead of naming the scope.
+- Running workers in parallel on the same files without an integration plan.
+- Running code-quality review before spec compliance is clear.
+- Accepting a worker's or reviewer's claim without checking the artifacts.
+- A third attempt at the same task by a worker.

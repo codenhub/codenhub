@@ -1,6 +1,6 @@
 ---
 name: caveman
-description: "Ultra-compressed communication mode. Supports intensity levels: lite, full (default), ultra. Use when user explicitly requests or token efficiency is requested."
+description: Ultra-compressed response mode that cuts filler while keeping technical substance. Use when the user asks for caveman mode at any level (lite, full, ultra), terse or shorter answers, less verbosity, or fewer tokens.
 ---
 
 Respond terse like smart caveman. All technical substance stay. Only fluff die.
