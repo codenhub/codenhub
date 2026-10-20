@@ -250,15 +250,46 @@ describe("viteIcons in svg mode", () => {
 
     expect(html).toContain("<svg");
     expect(html).toContain('viewBox="0 0 24 24"');
-    expect(html).not.toContain("ic-user");
+    expect(html).not.toContain("<i");
   });
 
-  it("keeps classes it does not own on the emitted element", () => {
+  it("keeps the icon class and the classes beside it on the emitted element", () => {
     const { transformIndexHtml } = createPlugin({ mode: "svg" });
 
     const html = transformIndexHtml('<i class="ic-user brand-mark"></i>', {}) as string;
 
-    expect(html).toContain('class="brand-mark"');
+    expect(html).toContain('class="ic-user brand-mark"');
+  });
+
+  it.each([
+    ['<i class="ic-user"></i>', "without a size class"],
+    ['<i class="brand-mark ic-user"></i>', "with the icon class written second"],
+    ['<i class="ic-user ic-xs"></i>', "with a size class"],
+  ])("emits an element the base svg rule matches: %s (%s)", (markup) => {
+    const { transformIndexHtml } = createPlugin({ mode: "svg" });
+
+    const html = transformIndexHtml(markup, {}) as string;
+    const classValue = /^<svg\b[^>]*\bclass="([^"]*)"/.exec(html)?.[1] ?? "";
+
+    // The base stylesheet reaches an inlined icon through `svg[class^="ic-"]`
+    // and `svg[class*=" ic-"]` only.
+    expect(classValue.startsWith("ic-") || classValue.includes(" ic-")).toBe(true);
+  });
+
+  it("does not read an attribute that only ends in class as the class", () => {
+    const { transformIndexHtml } = createPlugin({ mode: "svg" });
+
+    const html = transformIndexHtml('<i data-class="ic-user"></i>', {}) as string;
+
+    expect(html).toBe('<i data-class="ic-user"></i>');
+  });
+
+  it("drops the bare prefix class, whose mask rules would paint the svg box", () => {
+    const { transformIndexHtml } = createPlugin({ mode: "svg" });
+
+    const html = transformIndexHtml('<i class="ic ic-user"></i>', {}) as string;
+
+    expect(html).toContain('class="ic-user"');
   });
 
   it("applies the stroke width written as a modifier", () => {
@@ -282,7 +313,7 @@ describe("viteIcons in svg mode", () => {
 
     const result = transform(`const markup = "<i class=\\"ic-user\\"></i>";`, "app.ts");
 
-    expect(result?.code).toContain('<svg xmlns=\\"http://www.w3.org/2000/svg\\"');
+    expect(result?.code).toContain('<svg class=\\"ic-user\\" xmlns=\\"http://www.w3.org/2000/svg\\"');
   });
 
   it("keeps a double-quoted SVG intact inside a single-quoted string", () => {
@@ -290,7 +321,7 @@ describe("viteIcons in svg mode", () => {
 
     const result = transform(`const markup = '<i class="ic-user"></i>';`, "app.ts");
 
-    expect(result?.code).toContain(`'<svg xmlns="http://www.w3.org/2000/svg"`);
+    expect(result?.code).toContain(`'<svg class="ic-user" xmlns="http://www.w3.org/2000/svg"`);
   });
 
   it("replaces an icon tag written inside a template literal", () => {
@@ -299,7 +330,7 @@ describe("viteIcons in svg mode", () => {
     const result = transform('const markup = `<i class="ic-user"></i>`;', "app.tsx");
 
     expect(result?.code).toContain("<svg");
-    expect(result?.code).not.toContain("ic-user");
+    expect(result?.code).not.toContain("<i ");
   });
 
   it("still replaces an icon tag that sits after a line comment", () => {
@@ -333,8 +364,8 @@ describe("viteIcons in svg mode", () => {
       "index.astro",
     );
 
-    expect(result?.code).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
-    expect(result?.code).not.toContain("ic-user");
+    expect(result?.code).toContain('<svg class="ic-user" xmlns="http://www.w3.org/2000/svg"');
+    expect(result?.code).not.toContain("<i ");
   });
 
   it("escapes an icon tag written inside an .astro frontmatter string", () => {
@@ -345,7 +376,7 @@ describe("viteIcons in svg mode", () => {
       "index.astro",
     );
 
-    expect(result?.code).toContain('<svg xmlns=\\"http://www.w3.org/2000/svg\\"');
+    expect(result?.code).toContain('<svg class=\\"ic-user\\" xmlns=\\"http://www.w3.org/2000/svg\\"');
   });
 
   it("escapes each half of an .astro file for what that half is", () => {
@@ -358,8 +389,8 @@ describe("viteIcons in svg mode", () => {
 
     // The frontmatter copy is escaped for the string holding it; the template
     // copy is not, because escaping it would corrupt the rendered markup.
-    expect(result?.code).toContain('<svg xmlns=\\"http://www.w3.org/2000/svg\\"');
-    expect(result?.code).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
+    expect(result?.code).toContain('<svg class=\\"ic-user\\" xmlns=\\"http://www.w3.org/2000/svg\\"');
+    expect(result?.code).toContain('<svg class="ic-x" xmlns="http://www.w3.org/2000/svg"');
   });
 
   it("replaces an icon tag in an .astro file that opens with no frontmatter", () => {
@@ -367,7 +398,7 @@ describe("viteIcons in svg mode", () => {
 
     const result = transform('<i class="ic-user"></i>', "component.astro");
 
-    expect(result?.code).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
+    expect(result?.code).toContain('<svg class="ic-user" xmlns="http://www.w3.org/2000/svg"');
   });
 
   it("treats an empty frontmatter fence as frontmatter", () => {
@@ -375,7 +406,7 @@ describe("viteIcons in svg mode", () => {
 
     const result = transform(["---", "---", '<i class="ic-user"></i>'].join("\n"), "index.astro");
 
-    expect(result?.code).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
+    expect(result?.code).toContain('<svg class="ic-user" xmlns="http://www.w3.org/2000/svg"');
     expect(result?.code).not.toContain('\\"');
   });
 
@@ -387,7 +418,7 @@ describe("viteIcons in svg mode", () => {
     );
     const result = transform(source, "index.astro");
 
-    expect(result?.code).toContain('<svg xmlns=\\"http://www.w3.org/2000/svg\\"');
+    expect(result?.code).toContain('<svg class=\\"ic-user\\" xmlns=\\"http://www.w3.org/2000/svg\\"');
   });
 
   it("leaves template markup unescaped while escaping a script beside it", () => {
@@ -403,8 +434,8 @@ describe("viteIcons in svg mode", () => {
     ].join("\n");
     const result = transform(source, "index.astro");
 
-    expect(result?.code).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
-    expect(result?.code).toContain('<svg xmlns=\\"http://www.w3.org/2000/svg\\"');
+    expect(result?.code).toContain('<svg class="ic-x" xmlns="http://www.w3.org/2000/svg"');
+    expect(result?.code).toContain('<svg class=\\"ic-user\\" xmlns=\\"http://www.w3.org/2000/svg\\"');
   });
 
   it("keeps a script tag's own attributes out of the JavaScript it escapes", () => {
@@ -418,7 +449,7 @@ describe("viteIcons in svg mode", () => {
     const result = transform(source, "index.astro");
 
     expect(result?.code).toContain('<script type="module">');
-    expect(result?.code).toContain('<svg xmlns=\\"http://www.w3.org/2000/svg\\"');
+    expect(result?.code).toContain('<svg class=\\"ic-user\\" xmlns=\\"http://www.w3.org/2000/svg\\"');
   });
 
   it("warns about an icon class it does not rewrite in an .astro file", () => {
@@ -450,6 +481,16 @@ describe("viteIcons in svg mode", () => {
     generateBundle.call(context);
 
     expect(warnings.join("\n")).not.toContain("ic-absent");
+  });
+
+  it("does not warn about the icon class it keeps on a tag rewritten in a module", () => {
+    const { generateBundle, transform } = createPlugin({ mode: "svg" });
+    const { context, warnings } = createBundleContext();
+
+    transform('const markup = "<i class=\\"ic-user\\"></i>";', "app.ts");
+    generateBundle.call(context);
+
+    expect(warnings.join("\n")).not.toContain("does not rewrite");
   });
 
   it("does not warn when every icon class was rewritten", () => {
