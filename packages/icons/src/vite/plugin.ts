@@ -310,66 +310,100 @@ interface ReplaceIconTagsOptions {
   onFamilyUsed: (family: IconFamilyData) => void;
 }
 
+/**
+ * Matches an `<i>` tag carrying a `class` or `className`, quoted plainly or with
+ * escaped quotes inside a string literal.
+ */
+const ICON_TAG = /<i\b([^>]*?)(class|className)=(\\?)(["'])([^"']*?)\3\4([^>]*?)(?:>\s*<\/i>|\s*\/?>)/gi;
+
+interface IconTagClasses {
+  icon: NonNullable<ReturnType<typeof resolveIconClassName>>;
+  strokeWidth?: string;
+  /** The classes the emitted `<svg>` keeps, the icon class among them. */
+  classes: string[];
+}
+
+/**
+ * Resolves the icon an `<i>` tag's class list names, if any.
+ *
+ * The icon class stays in the list. The base stylesheet reaches an inlined
+ * `<svg>` only through `svg[class^="ic-"]` and `svg[class*=" ic-"]`, so the
+ * class is what carries `--ic-size`, `--ic-color`, and inline display onto it;
+ * the per-icon rules it could also match set custom properties the `<svg>`
+ * rule never reads. The bare prefix class is the one dropped, because `.ic`
+ * applies the mask rules, which would paint the `<svg>` box solid.
+ */
+function resolveIconTagClasses(classValue: string, registry: IconRegistry, prefix: string): IconTagClasses | undefined {
+  const prefixDash = `${prefix}-`;
+  let resolved: Omit<IconTagClasses, "classes"> | undefined;
+  const classes: string[] = [];
+
+  for (const cls of classValue.split(/\s+/).filter(Boolean)) {
+    if (cls === prefix) {
+      continue;
+    }
+    if (!resolved && cls.startsWith(prefixDash)) {
+      const parsed = parseIconClass(cls.slice(prefixDash.length));
+      const icon = resolveIconClassName(registry, parsed.name);
+      if (icon) {
+        resolved = { icon, strokeWidth: parsed.strokeWidth };
+      }
+    }
+    classes.push(cls);
+  }
+
+  return resolved && { ...resolved, classes };
+}
+
+/**
+ * Removes the `<i>` tags {@link replaceIconTagsWithSvg} would rewrite.
+ *
+ * What remains is the text in which an icon class is a class svg mode leaves
+ * behind, since a rewritten `<svg>` keeps its own.
+ */
+function removeIconTags(source: string, registry: IconRegistry, prefix: string): string {
+  return source.replace(ICON_TAG, (match: string, ...groups: string[]) =>
+    resolveIconTagClasses(groups[4] ?? "", registry, prefix) ? "" : match,
+  );
+}
+
 function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options: ReplaceIconTagsOptions): string {
   const { isJsContext = false, onFamilyUsed, prefix, strokeWidth } = options;
-  const prefixDash = `${prefix}-`;
 
-  const tagRegex = /<i\b([^>]*?)(class|className)=(\\?)(["'])([^"']*?)\3\4([^>]*?)(?:>\s*<\/i>|\s*\/?>)/gi;
   const cleanSource = isJsContext ? stripComments(source) : source;
 
   return source.replace(
-    tagRegex,
+    ICON_TAG,
     (
       match: string,
       before: string,
       attrName: string,
-      backslash: string,
+      _backslash: string,
       quote: string,
       classValue: string,
       after: string,
       offset: number,
     ) => {
-      const classes = classValue.split(/\s+/).filter(Boolean);
-      let icon: ReturnType<typeof resolveIconClassName>;
-      let strokeValFromClass: string | undefined;
-      const leftoverClasses: string[] = [];
-
-      for (const cls of classes) {
-        if (cls === prefix) {
-          continue;
-        }
-        if (!icon && cls.startsWith(prefixDash)) {
-          const parsed = parseIconClass(cls.slice(prefixDash.length));
-          const resolved = resolveIconClassName(registry, parsed.name);
-          if (resolved) {
-            icon = resolved;
-            strokeValFromClass = parsed.strokeWidth;
-            continue;
-          }
-        }
-        leftoverClasses.push(cls);
-      }
-
-      if (!icon) {
+      const resolved = resolveIconTagClasses(classValue, registry, prefix);
+      if (!resolved) {
         return match;
       }
+      const { icon } = resolved;
 
       const family = registry.getFamily(icon.prefix);
       if (family) {
         onFamilyUsed(family);
       }
 
-      const effectiveStrokeWidth = strokeValFromClass ?? strokeWidth;
+      const effectiveStrokeWidth = resolved.strokeWidth ?? strokeWidth;
       let svg = renderSvg(icon, { strokeWidth: effectiveStrokeWidth });
 
-      const extraClassesStr = leftoverClasses.join(" ");
       const passthroughAttrs = [before.trim(), after.trim()].filter(Boolean).join(" ");
       const passthroughStr = passthroughAttrs ? ` ${passthroughAttrs}` : "";
 
-      if (extraClassesStr) {
-        const fullQuote = backslash + quote;
-        svg = svg.replace(/^<svg\b/i, `<svg ${attrName}=${fullQuote}${extraClassesStr}${fullQuote}`);
-      }
+      // The bare quote, not the escaped one: in a string literal the escaping
+      // below adds the backslash, and adding it here too would double it.
+      svg = svg.replace(/^<svg\b/i, `<svg ${attrName}=${quote}${resolved.classes.join(" ")}${quote}`);
 
       if (passthroughStr) {
         svg = svg.replace(/^<svg\b/i, `<svg${passthroughStr}`);
@@ -639,7 +673,7 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
           prefix,
           strokeWidth: options.strokeWidth,
         });
-        collectUnreplacedClasses(replaced, ctx.filename ?? "index.html");
+        collectUnreplacedClasses(removeIconTags(html, registry, prefix), ctx.filename ?? "index.html");
         return replaced;
       }
 
@@ -696,7 +730,7 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
           const replaced = ASTRO_FILE.test(id)
             ? replaceIconTagsInAstro(code, registry, replaceOptions)
             : replaceIconTagsWithSvg(code, registry, { ...replaceOptions, isJsContext: true });
-          collectUnreplacedClasses(replaced, id);
+          collectUnreplacedClasses(removeIconTags(code, registry, prefix), id);
           if (replaced !== code) {
             return { code: replaced, map: null };
           }
