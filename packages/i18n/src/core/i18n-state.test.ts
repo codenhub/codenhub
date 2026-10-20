@@ -183,9 +183,9 @@ describe("I18n state", () => {
 
     const staleInit = i18n.init({ locale: "pt" });
     const latestInit = i18n.init({ locale: "en" });
-    await expect(latestInit).resolves.toBe(true);
+    await expect(latestInit).resolves.toBeUndefined();
     ptLoad.resolve(dictionaries.pt);
-    await expect(staleInit).resolves.toBe(false);
+    await expect(staleInit).resolves.toBeUndefined();
     expect(i18n.locale).toBe("en");
     expect(listener).toHaveBeenCalledTimes(1);
   });
@@ -194,8 +194,8 @@ describe("I18n state", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const i18n = createI18n(createConfig());
     await i18n.init();
-    expect(i18n.translate("missing")).toBeUndefined();
-    expect(i18n.translate(" missing ")).toBeUndefined();
+    expect(i18n.translate("missing")).toBe("missing");
+    expect(i18n.translate(" missing ")).toBe("missing");
     expect(warn).toHaveBeenCalledTimes(1);
 
     const silentI18n = createI18n(createConfig({ isSilent: true }));

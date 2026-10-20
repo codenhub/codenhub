@@ -62,6 +62,12 @@ const readFunction = (path: string, value: unknown): void => {
   }
 };
 
+const readOptionalFunction = (path: string, value: unknown): void => {
+  if (value !== undefined) {
+    readFunction(path, value);
+  }
+};
+
 /** Trimmed, non-empty, case-insensitively unique locale identifiers. */
 const readLocales = (value: unknown): string[] => {
   if (!Array.isArray(value)) {
@@ -136,7 +142,8 @@ const readDictionaryLimits = (value: unknown): Record<string, number> | undefine
 export interface CheckedI18nConfig {
   readonly locales: string[];
   readonly loadLocale: (locale: string) => unknown;
-  readonly getLocaleDirection: (locale: string) => unknown;
+  readonly getLocaleDirection?: (locale: string) => unknown;
+  readonly onMissingKey?: (key: string, locale: string) => unknown;
   readonly defaultLocale: string;
   readonly isSilent?: boolean;
   readonly dictionaryLimits?: Record<string, number>;
@@ -150,8 +157,8 @@ export interface CheckedLocaleRoutingConfig {
 }
 
 /**
- * Checks the configuration of an `I18n` manager: the locales, the default locale, the loader and direction
- * callbacks, the optional silent flag, and the optional dictionary limits. Only own properties are read.
+ * Checks the configuration of an `I18n` manager: the locales, the default locale, the loader, the optional direction
+ * and missing-key callbacks, the optional silent flag, and the optional dictionary limits. Only own properties are read.
  *
  * @internal
  */
@@ -162,7 +169,9 @@ export const i18nConfig = (input: unknown): CheckedI18nConfig => {
   const loadLocale = own(config, "loadLocale");
   readFunction("loadLocale", loadLocale);
   const getLocaleDirection = own(config, "getLocaleDirection");
-  readFunction("getLocaleDirection", getLocaleDirection);
+  readOptionalFunction("getLocaleDirection", getLocaleDirection);
+  const onMissingKey = own(config, "onMissingKey");
+  readOptionalFunction("onMissingKey", onMissingKey);
   const isSilent = own(config, "isSilent");
 
   return {
@@ -170,6 +179,7 @@ export const i18nConfig = (input: unknown): CheckedI18nConfig => {
     defaultLocale,
     loadLocale: loadLocale as CheckedI18nConfig["loadLocale"],
     getLocaleDirection: getLocaleDirection as CheckedI18nConfig["getLocaleDirection"],
+    onMissingKey: onMissingKey as CheckedI18nConfig["onMissingKey"],
     isSilent: isSilent === undefined ? undefined : readBoolean("isSilent", isSilent),
     dictionaryLimits: readDictionaryLimits(own(config, "dictionaryLimits")),
   };

@@ -11,7 +11,7 @@ identifiers use alphanumeric ASCII subtags joined by single hyphens.
 
 - [Documentation overview](docs/index.md): Entrypoint selection, core quick
   start, and failure model.
-- [Usage across runtimes](docs/examples.md): Browser, routed hydration, SSR,
+- [Usage across runtimes](docs/examples.md): Browser, framework rendering, routed hydration, SSR,
   SSG, and loader examples.
 - [API reference](docs/reference.md): Complete exports, defaults, behavior,
   events, routing constraints, and observable errors.

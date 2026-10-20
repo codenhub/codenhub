@@ -1,6 +1,6 @@
 ---
 title: Examples
-description: Browser, routed hydration, SSR, SSG, and locale loader patterns.
+description: Browser, framework rendering, routed hydration, SSR, SSG, and locale loader patterns.
 ---
 
 # Use i18n across runtimes
@@ -23,7 +23,6 @@ const i18n = createI18n({
     if (!response.ok) throw new Error(`Could not load ${locale}`);
     return response.json();
   },
-  getLocaleDirection: () => "ltr",
 });
 
 const binding = await initializeBrowserI18n({
@@ -75,16 +74,34 @@ await frameworkNavigate(nextPathname);
 
 `setLocale()` changes translation state but never changes the URL.
 
+## Framework rendering
+
+Frameworks that render translated values themselves re-render on `subscribe()`, which fires after every applied initialization and locale change. In React:
+
+```tsx
+import { useSyncExternalStore } from "react";
+import { i18n, t } from "./i18n";
+
+export function useLocale() {
+  return useSyncExternalStore(i18n.subscribe, () => i18n.locale);
+}
+
+export function Greeting({ name }: { name: string }) {
+  useLocale();
+  return <h1>{t("page.greeting", { name })}</h1>;
+}
+```
+
 ## SSR
 
-Resolve request input to a canonical locale and create one manager per request.
+Match the request's language preferences to a configured locale and create one manager per request. `preferences` is the request's `Accept-Language` tags sorted by quality; the [reference](reference.md#matchlocalepreferences) shows a parser.
 
 ```ts
 import { createI18n } from "@codenhub/i18n";
 
-export async function renderPage(requestLocale: string) {
+export async function renderPage(preferences: readonly string[]) {
   const i18n = createI18n(config);
-  const locale = i18n.resolveLocale(requestLocale) ?? i18n.defaultLocale;
+  const locale = i18n.matchLocale(preferences) ?? i18n.defaultLocale;
 
   await i18n.init({ locale });
   const { t } = i18n;
@@ -99,7 +116,7 @@ export async function renderPage(requestLocale: string) {
 
 Do not share mutable manager state across concurrent requests. In Node.js, an exception thrown by a `ready` or `locale-change` listener is reported as an uncaught exception and ends the process by default, as for any `EventTarget` listener, so keep server listeners from throwing. Immutable dictionary modules and runtime-level import caches may still be shared.
 
-Return the same payload object for a locale on every request, such as a module-level import, rather than parsing it per request: managers then share its normalized dictionary instead of validating it again. Missing-key warnings are deduplicated per manager, so a per-request manager warns for a missing key on every request; set `isSilent: true` in production SSR, and keep it `false` in tests and builds, where the warnings surface keys missing from both dictionaries once per manager and a test can fail on them by spying on `console.warn`. A key that only the default dictionary has does not warn; the key-parity check below finds it.
+Return the same payload object for a locale on every request, such as a module-level import, rather than parsing it per request: managers then share its normalized dictionary instead of validating it again. Missing-key warnings are deduplicated per manager, so a per-request manager warns for a missing key on every request; in production SSR, send misses to a logger with `onMissingKey`, or set `isSilent: true`. In tests and builds, `onMissingKey: (key) => { throw new Error(key); }` fails on a key missing from both dictionaries. A key that only the default dictionary has does not warn; the key-parity check below finds it.
 
 ## SSG
 
@@ -169,7 +186,6 @@ const config = {
   defaultLocale: "en",
   locales: ["en", "pt"] as const,
   loadLocale: (locale: keyof typeof dictionaries) => dictionaries[locale],
-  getLocaleDirection: () => "ltr" as const,
 };
 ```
 
@@ -185,7 +201,6 @@ const config = {
     const module = await import(`./locales/${locale}.json`);
     return module.default;
   },
-  getLocaleDirection: () => "ltr" as const,
 };
 ```
 

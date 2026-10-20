@@ -74,9 +74,9 @@ describe("typed translation keys", () => {
     await i18n.init();
 
     // @ts-expect-error - a misspelled key is not in the dictionary
-    expect(i18n.t("home.titel")).toBeUndefined();
+    expect(i18n.t("home.titel")).toBe("home.titel");
     // @ts-expect-error - a group is not a translation
-    expect(i18n.t("home")).toBeUndefined();
+    expect(i18n.t("home")).toBe("home");
   });
 
   it("should infer keys from an asynchronous loader", async () => {
@@ -91,7 +91,7 @@ describe("typed translation keys", () => {
 
     expect(i18n.t("home.title")).toBe("Welcome");
     // @ts-expect-error - keys come from the resolved dictionary type
-    expect(i18n.t("missing")).toBeUndefined();
+    expect(i18n.t("missing")).toBe("missing");
   });
 
   it("should accept any string key when the loader type is unknown", async () => {
@@ -142,12 +142,12 @@ describe("typed translation keys", () => {
 
     expect([i18n.t("greeting"), i18n.t("page.title")]).toEqual(["Hello", "Welcome"]);
     // @ts-expect-error - an optional group is still not a translation
-    expect(i18n.t("page")).toBeUndefined();
+    expect(i18n.t("page")).toBe("page");
   });
 
   it("should keep typed keys on the listener's this", async () => {
     const i18n = createTypedI18n();
-    const titles: (string | undefined)[] = [];
+    const titles: string[] = [];
 
     i18n.addEventListener("ready", function () {
       titles.push(this.t("home.title"));
@@ -156,6 +156,6 @@ describe("typed translation keys", () => {
     });
     await i18n.init();
 
-    expect(titles).toEqual(["Welcome", undefined]);
+    expect(titles).toEqual(["Welcome", "home.titel"]);
   });
 });

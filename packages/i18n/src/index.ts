@@ -11,4 +11,5 @@ export type {
   LocaleDictionary,
   LocaleDictionaryLimits,
   LocaleDirection,
+  TranslationKey,
 } from "./core/types";
