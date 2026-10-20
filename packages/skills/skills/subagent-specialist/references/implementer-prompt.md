@@ -17,7 +17,8 @@ You are implementing Task [N]: [task name]
 - Follow existing project patterns.
 - Implement exactly what was requested.
 - Do not broaden scope without asking.
-- If a commit is explicitly requested, make it. Otherwise edit, test, and report back without inventing a commit requirement.
+- Do not commit, push, install dependencies, or change configuration outside the files you may edit. If one is needed, report it.
+- Report anything you notice outside the task instead of acting on it.
 
 ## Before You Begin
 If anything is unclear, such as the requirements, acceptance criteria, approach, dependencies, or assumptions, stop before coding and report `NEEDS_CONTEXT` with your questions. Do not guess.
@@ -70,6 +71,7 @@ If you find issues during self-review, fix them before reporting.
 - Files changed
 - Self-review findings
 - Any issues, risks, or open questions
+- Out-of-scope observations
 
 Use `DONE_WITH_CONCERNS` if you completed the work but have doubts about correctness or fit.
 Use `BLOCKED` if you cannot complete the task.
