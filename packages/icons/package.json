@@ -181,6 +181,15 @@
     "label": "IconKit",
     "status": "active",
     "demoUrl": "https://icons.codenhub.dev",
-    "docs": {}
+    "docs": {
+      "reference": {
+        "entrypoints": [
+          ".",
+          "./postcss",
+          "./vite"
+        ],
+        "prose": true
+      }
+    }
   }
 }

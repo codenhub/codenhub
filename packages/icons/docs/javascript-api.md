@@ -24,7 +24,7 @@ getIconCssProps("lucide:x", registry);
 // { "--ic-uri": 'url("data:image/svg+xml;…")', "--ic-mask": "var(--ic-uri)" }
 ```
 
-`generateIconSetCss` returns the families it drew from alongside the CSS, which is what lets a caller emit the right license notice.
+`generateIconSetCss` returns the families it drew from alongside the CSS, which is what lets a caller emit the right license notice. Every export, with its options, is listed in the [API reference](reference/index.md).
 
 ## Generating CSS outside a bundler
 

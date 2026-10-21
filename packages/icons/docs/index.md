@@ -54,3 +54,4 @@ Four delivery methods understand the same classes — plain CSS, Tailwind CSS v4
 - [JavaScript API](javascript-api.md): the registry, renderers, and third-party set adapter.
 - [Licensing](licensing.md): attribution modes and what each build owes.
 - [Troubleshooting](troubleshooting.md): an icon that renders as nothing, as a solid square, or at the wrong width.
+- [API reference](reference/index.md): every export of `@codenhub/icons`, `/vite`, and `/postcss`.

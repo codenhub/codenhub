@@ -86,6 +86,7 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 - [JavaScript API](docs/javascript-api.md): the registry, renderers, and third-party set adapter.
 - [Licensing](docs/licensing.md): attribution modes and what each build owes.
 - [Troubleshooting](docs/troubleshooting.md): an icon that renders as nothing, as a solid square, or at the wrong width.
+- [API reference](docs/reference/index.md): every export, generated from the source.
 
 ## Requirements
 

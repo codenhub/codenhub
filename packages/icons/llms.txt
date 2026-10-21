@@ -23,6 +23,7 @@
 - [JavaScript API](docs/javascript-api.md): the registry, renderers, on-demand loading, and the third-party set adapter.
 - [Licensing](docs/licensing.md): attribution modes, per-method notice vehicles, and obligation levels.
 - [Troubleshooting](docs/troubleshooting.md): icons that render as nothing, as a solid square, or at the wrong width, and missing notices.
+- [API reference](docs/reference/index.md): every export of the root, `/vite`, and `/postcss` entry points, generated from source.
 
 ## Optional
 
