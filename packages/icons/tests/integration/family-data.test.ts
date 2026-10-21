@@ -10,6 +10,7 @@ import { renderSvg } from "../../src/core/render.js";
 import type { IconFamilyData } from "../../src/core/types.js";
 
 const dataDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "../../data");
+const PACK_TIMEOUT = 30_000;
 
 const ACCEPTED_LICENSES: Record<string, IconFamilyData["info"]["attribution"]> = {
   "Apache-2.0": "notice",
@@ -47,10 +48,16 @@ describe("generated family data", () => {
   });
 
   // Asks npm rather than reading `files`, so a glob or ignore rule that drops a
-  // notice fails here. Packing takes a few seconds, near the default timeout.
-  it("publishes each family's license material in the tarball", { timeout: 30_000 }, () => {
+  // notice fails here. Packing takes a few seconds, near the default timeout,
+  // and a test timeout cannot interrupt a synchronous child, so npm gets the
+  // limit too.
+  it("publishes each family's license material in the tarball", { timeout: PACK_TIMEOUT }, () => {
     const [pack] = JSON.parse(
-      execSync("npm pack --dry-run --json --ignore-scripts", { cwd: resolve(dataDirectory, ".."), encoding: "utf8" }),
+      execSync("npm pack --dry-run --json --ignore-scripts", {
+        cwd: resolve(dataDirectory, ".."),
+        encoding: "utf8",
+        timeout: PACK_TIMEOUT,
+      }),
     ) as [{ files: { path: string }[] }];
     const packed = pack.files.map((file) => file.path);
 
