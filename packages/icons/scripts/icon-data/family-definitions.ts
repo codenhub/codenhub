@@ -8,6 +8,13 @@ export interface IconFamilyDefinition {
   name: string;
   /** Upstream npm package the artwork is read from. */
   upstreamPackage: string;
+  /**
+   * GitHub repository, as `owner/name`, the artwork comes from when upstream
+   * publishes no npm package of its own. The repository is installed under
+   * `upstreamPackage` as a git dependency pinned to a commit, and that commit is
+   * the version the family records.
+   */
+  upstreamRepository?: string;
   /** Directory of SVG files inside the upstream package. */
   iconsDirectory: string;
   /** License file inside the upstream package, copied verbatim. */
@@ -42,8 +49,18 @@ export interface IconFamilyDefinition {
    * keeps its color, which renders by default.
    */
   iconColorsFile?: string;
-  /** Rewrites `_` in upstream file names to `-`, so icon names stay kebab-case. */
-  hyphenateNames?: boolean;
+  /**
+   * Lowercases upstream file names and rewrites `_` and `.` to `-`, so icon
+   * names stay kebab-case and need no escaping in a class name.
+   */
+  kebabCaseNames?: boolean;
+  /**
+   * Keeps the colors upstream artwork is drawn in, for full-color logos. Ids in
+   * each icon are namespaced by its name, so two inlined icons never draw with
+   * each other's gradients, and artwork the mask and inline paths cannot render
+   * faithfully is left out.
+   */
+  multicolor?: boolean;
 }
 
 /**
@@ -272,7 +289,7 @@ export const ICON_FAMILIES: readonly IconFamilyDefinition[] = [
   },
   {
     author: { name: "Simple Icons Collaborators", url: "https://simpleicons.org" },
-    hyphenateNames: true,
+    kebabCaseNames: true,
     iconColorsFile: "data/simple-icons.json",
     iconLicensesFile: "data/simple-icons.json",
     iconsDirectory: "icons",
@@ -287,5 +304,23 @@ export const ICON_FAMILIES: readonly IconFamilyDefinition[] = [
     style: "filled",
     tier: "brand",
     upstreamPackage: "simple-icons",
+  },
+  {
+    author: { name: "Gil Barbara", url: "https://svgporn.com" },
+    iconsDirectory: "logos",
+    kebabCaseNames: true,
+    license: {
+      spdx: "CC0-1.0",
+      title: "CC0 1.0 Universal",
+      url: "https://github.com/gilbarbara/logos/blob/main/LICENSE.txt",
+    },
+    licenseFile: "LICENSE.txt",
+    multicolor: true,
+    name: "Logos",
+    prefix: "logos",
+    style: "full-color",
+    tier: "brand",
+    upstreamPackage: "gilbarbara-logos",
+    upstreamRepository: "gilbarbara/logos",
   },
 ];

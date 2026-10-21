@@ -32,6 +32,13 @@ export interface GenerateIconCssOptions {
    * rules to paint with when `--<prefix>-color` is not set.
    */
   color?: string;
+
+  /**
+   * Whether the artwork carries its own colors. A multicolor icon paints its
+   * artwork, written as `--<prefix>-brand-paint`, when `--<prefix>-color` is not
+   * set, and a one-color silhouette when it is.
+   */
+  multicolor?: boolean;
 }
 
 /**
@@ -85,12 +92,24 @@ export function escapeSelectorClass(className: string): string {
  * Renders the artwork a mask carries.
  *
  * A mask takes only the shape, so an icon's own color is left out of it and
- * travels as `--ic-brand-color` on the rule instead.
+ * travels as `--ic-brand-color` on the rule instead. A multicolor icon's
+ * artwork is also the image its rule paints as a background, where `--ic-color`
+ * can never be set, so it is rendered without the declarations that let an
+ * inlined copy honor it.
  */
 function renderMaskSvg(icon: ResolvedIcon, strokeWidth?: number | string): string {
   const shape = { ...icon };
   delete shape.color;
+  delete shape.multicolor;
   return renderSvg(shape, { strokeWidth });
+}
+
+/**
+ * The background a multicolor icon paints: its own artwork, fitted to the
+ * element the same way the mask is, so the two line up exactly.
+ */
+function renderBrandPaint(prefix: string): string {
+  return `var(--${prefix}-uri) center / 100% 100% no-repeat`;
 }
 
 /**
@@ -112,8 +131,11 @@ function renderMaskSvg(icon: ResolvedIcon, strokeWidth?: number | string): strin
  * prefix by one.
  *
  * An icon paints in `--${p}-color` when one is set on it or an ancestor, else in
- * its own color when it has one (a brand mark's, which its icon rule sets as
- * `--${p}-brand-color`), else in `currentColor`.
+ * its own artwork when it is multicolor (which its icon rule sets as
+ * `--${p}-brand-paint`), else in its own color when it has one (a brand mark's,
+ * set as `--${p}-brand-color`), else in `currentColor`. The `background`
+ * shorthand carries all four, because the artwork is an image and the rest are
+ * colors.
  *
  * @param options - Class prefix.
  * @returns The base stylesheet.
@@ -127,7 +149,7 @@ i[class*=" ${p}-"],
   width: var(--${p}-size, 1em);
   height: var(--${p}-size, 1em);
   vertical-align: -0.125em;
-  background-color: var(--${p}-color, var(--${p}-brand-color, currentColor));
+  background: var(--${p}-color, var(--${p}-brand-paint, var(--${p}-brand-color, currentColor)));
   mask-image: var(--${p}-mask);
   -webkit-mask-image: var(--${p}-mask);
   mask-repeat: no-repeat;
@@ -173,16 +195,18 @@ svg[class*=" ${p}-"] {
  *
  * @param selectors - Selector or selectors the rule applies to.
  * @param svg - Complete SVG markup for the icon.
- * @param options - Class prefix and the icon's own color.
+ * @param options - Class prefix, the icon's own color, and whether its artwork
+ * is multicolor.
  * @returns The generated rule.
  */
 export function generateIconCss(selectors: string | string[], svg: string, options?: GenerateIconCssOptions): string {
   const selectorList = Array.isArray(selectors) ? selectors.join(",\n") : selectors;
   const prefix = options?.prefix ?? DEFAULT_PREFIX;
   const color = options?.color === undefined ? "" : `\n  --${prefix}-brand-color: ${options.color};`;
+  const paint = options?.multicolor ? `\n  --${prefix}-brand-paint: ${renderBrandPaint(prefix)};` : "";
   return `${selectorList} {
   --${prefix}-uri: url("${svgToDataUri(svg)}");
-  --${prefix}-mask: var(--${prefix}-uri);${color}
+  --${prefix}-mask: var(--${prefix}-uri);${color}${paint}
 }`;
 }
 
@@ -212,18 +236,23 @@ export function generateIconSetCss(
   const injectBase = options?.injectBase ?? true;
   const prefixDash = `${prefix}-`;
 
-  // Keyed by artwork and color together: two brand marks can share a shape.
-  const rules = new Map<string, { svg: string; color?: string; selectors: string[] }>();
+  // Keyed by artwork and paint together: two brand marks can share a shape.
+  const rules = new Map<string, { svg: string; color?: string; multicolor?: true; selectors: string[] }>();
   const usedPrefixes = new Set<string>();
 
-  function addRule(svg: string, color: string | undefined, selector: string): void {
-    const key = `${color ?? ""}\n${svg}`;
+  function addRule(svg: string, icon: ResolvedIcon, selector: string): void {
+    const key = `${icon.color ?? ""}\n${icon.multicolor ?? ""}\n${svg}`;
     const rule = rules.get(key);
     if (rule) {
       rule.selectors.push(selector);
       return;
     }
-    rules.set(key, { svg, selectors: [selector], ...(color === undefined ? {} : { color }) });
+    rules.set(key, {
+      svg,
+      selectors: [selector],
+      ...(icon.color === undefined ? {} : { color: icon.color }),
+      ...(icon.multicolor ? { multicolor: true } : {}),
+    });
   }
 
   for (const className of classes) {
@@ -238,12 +267,12 @@ export function generateIconSetCss(
     usedPrefixes.add(icon.prefix);
 
     const strokeWidth = parsed.strokeWidth ?? options?.strokeWidth;
-    addRule(renderMaskSvg(icon, strokeWidth), icon.color, `.${escapeSelectorClass(className)}`);
+    addRule(renderMaskSvg(icon, strokeWidth), icon, `.${escapeSelectorClass(className)}`);
   }
 
   const chunks = injectBase ? [generateBaseCss({ prefix })] : [];
-  for (const { svg, color, selectors } of rules.values()) {
-    chunks.push(generateIconCss(selectors, svg, { prefix, ...(color === undefined ? {} : { color }) }));
+  for (const { svg, selectors, ...paint } of rules.values()) {
+    chunks.push(generateIconCss(selectors, svg, { prefix, ...paint }));
   }
 
   return {
@@ -284,7 +313,8 @@ export function getIconMaskUrl(
 
 /**
  * Resolves an icon into the custom properties an inline `style` attribute or a
- * CSS-in-JS object needs to render it, its own color included when it has one.
+ * CSS-in-JS object needs to render it, its own color or multicolor artwork
+ * included when it has one.
  *
  * @param iconNameOrSvg - Icon name, class-style name, or complete SVG markup.
  * @param registry - Registry used when a name has to be resolved.
@@ -302,12 +332,13 @@ export function getIconCssProps(
   }
 
   const prefix = options?.prefix ?? DEFAULT_PREFIX;
-  const color =
-    registry && !iconNameOrSvg.startsWith("<svg") ? resolveIconClassName(registry, iconNameOrSvg)?.color : undefined;
+  const icon =
+    registry && !iconNameOrSvg.startsWith("<svg") ? resolveIconClassName(registry, iconNameOrSvg) : undefined;
   return {
     [`--${prefix}-mask`]: `var(--${prefix}-uri)`,
     [`--${prefix}-uri`]: maskUrl,
-    ...(color === undefined ? {} : { [`--${prefix}-brand-color`]: color }),
+    ...(icon?.color === undefined ? {} : { [`--${prefix}-brand-color`]: icon.color }),
+    ...(icon?.multicolor ? { [`--${prefix}-brand-paint`]: renderBrandPaint(prefix) } : {}),
   };
 }
 
@@ -370,6 +401,7 @@ export function generateFamilyCss(family: IconFamilyData, options?: GenerateFami
       generateIconCss(selectors, renderMaskSvg(icon), {
         prefix,
         ...(icon.color === undefined ? {} : { color: icon.color }),
+        ...(icon.multicolor ? { multicolor: true } : {}),
       }),
     );
   }

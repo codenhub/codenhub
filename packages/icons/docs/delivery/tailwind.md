@@ -11,7 +11,7 @@ order: 2
 @import "@codenhub/icons/tw";
 ```
 
-Every family the package ships is resolvable except the brand family `simple-icons`, which only a declared `@plugin` can resolve, by naming it in `families` (below), and Tailwind emits only the icons your markup used. Loading the families costs about 265 ms and 103 MB once per build, `simple-icons` included, against about 35 ms and 53 MB for a single family; a project using three icons ends up with about 10 KB of CSS.
+Every family the package ships is resolvable except the brand families `simple-icons` and `logos`, which only a declared `@plugin` can resolve, by naming them in `families` (below), and Tailwind emits only the icons your markup used. Loading the families costs about 150–190 ms and 112 MB once per build, both brand families included, against about 35 ms and 53 MB for a single family; a project using three icons ends up with about 10 KB of CSS.
 
 ## Configuring the plugin
 

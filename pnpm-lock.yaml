@@ -397,6 +397,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.12(vitest@4.1.12)
+      gilbarbara-logos:
+        specifier: github:gilbarbara/logos#dafdf2df1334b2327497bfff40111aff0713c992
+        version: https://codeload.github.com/gilbarbara/logos/tar.gz/dafdf2df1334b2327497bfff40111aff0713c992
       lucide-static:
         specifier: 1.33.0
         version: 1.33.0
@@ -406,6 +409,9 @@ importers:
       simple-icons:
         specifier: 16.35.0
         version: 16.35.0
+      svgo:
+        specifier: 4.1.0
+        version: 4.1.0
       tailwindcss:
         specifier: 'catalog:'
         version: 4.3.3
@@ -3310,6 +3316,10 @@ packages:
   get-tsconfig@5.0.0-beta.6:
     resolution: {integrity: sha512-X6fBC0pmImC70gvX2zm56go9hx0MyoGVdG0tUCkg/D+Xnh5TJsOZ7iDbOdI3PvmtrDxnu1YdDufpK2QJX1Meqw==}
     engines: {node: '>=20.20.0'}
+
+  gilbarbara-logos@https://codeload.github.com/gilbarbara/logos/tar.gz/dafdf2df1334b2327497bfff40111aff0713c992:
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/gilbarbara/logos/tar.gz/dafdf2df1334b2327497bfff40111aff0713c992}
+    version: 0.0.0
 
   github-slugger@2.0.0:
     resolution: {integrity: sha512-IaOQ9puYtjrkq7Y0Ygl9KDZnrf/aiUJYUpVf89y8kyaxbRG7Y1SrX/jaumrv81vc61+kiMempujsM3Yw7w5qcw==}
@@ -6744,6 +6754,8 @@ snapshots:
   get-tsconfig@5.0.0-beta.6:
     dependencies:
       resolve-pkg-maps: 1.0.0
+
+  gilbarbara-logos@https://codeload.github.com/gilbarbara/logos/tar.gz/dafdf2df1334b2327497bfff40111aff0713c992: {}
 
   github-slugger@2.0.0: {}
 

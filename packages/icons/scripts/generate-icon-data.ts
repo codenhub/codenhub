@@ -22,12 +22,40 @@ import { ICON_FAMILIES, type IconFamilyDefinition } from "./icon-data/family-def
 const DATA_DIRECTORY = "data";
 const NODE_MODULES = "node_modules";
 
-async function readUpstreamVersion(packageDirectory: string): Promise<string> {
+const PINNED_COMMIT = /#(?<commit>[0-9a-f]{40})$/;
+
+/**
+ * Reads the commit a git-sourced family is pinned to, from this package's own
+ * dependency on it: the installed repository carries no version, and the
+ * commit is what the lockfile pins.
+ */
+async function readPinnedCommit(definition: IconFamilyDefinition, packageDirectory: string): Promise<string> {
   const manifest = JSON.parse(await readFile(resolve(packageDirectory, "package.json"), "utf8")) as {
+    devDependencies?: Record<string, string>;
+  };
+  const specifier = manifest.devDependencies?.[definition.upstreamPackage] ?? "";
+  const commit = PINNED_COMMIT.exec(specifier)?.groups?.commit;
+  if (!commit) {
+    throw new Error(
+      `Icon family "${definition.prefix}" reads "${definition.upstreamRepository}", which must be pinned to a full commit hash, not "${specifier}".`,
+    );
+  }
+  return commit;
+}
+
+async function readUpstreamVersion(
+  definition: IconFamilyDefinition,
+  upstreamDirectory: string,
+  packageDirectory: string,
+): Promise<string> {
+  if (definition.upstreamRepository) {
+    return readPinnedCommit(definition, packageDirectory);
+  }
+  const manifest = JSON.parse(await readFile(resolve(upstreamDirectory, "package.json"), "utf8")) as {
     version?: string;
   };
   if (!manifest.version) {
-    throw new Error(`Upstream package at ${packageDirectory} declares no version.`);
+    throw new Error(`Upstream package at ${upstreamDirectory} declares no version.`);
   }
   return manifest.version;
 }
@@ -62,7 +90,7 @@ async function main(): Promise<void> {
   const families = await Promise.all(
     ICON_FAMILIES.map(async (definition) => {
       const upstreamDirectory = await locateUpstream(definition, packageDirectory);
-      const version = await readUpstreamVersion(upstreamDirectory);
+      const version = await readUpstreamVersion(definition, upstreamDirectory, packageDirectory);
       const { attributionText, document, licenseText } = await buildFamily(definition, upstreamDirectory, version);
       const familyDirectory = `${DATA_DIRECTORY}/${definition.prefix}`;
 

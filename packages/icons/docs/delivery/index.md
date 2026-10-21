@@ -31,6 +31,6 @@ order: 2
 | Runs a PostCSS pipeline but not Vite (Next.js, others)     | [PostCSS plugin](postcss.md) |
 | Has no build step, or you want the simplest possible setup | [Plain CSS](plain-css.md)    |
 
-The plugin methods keep output small without any manual curation: a project using three icons ships about 10 KB of CSS. The plain-CSS family stylesheets are complete by construction — Lucide is about 1.3 MB, all 14 families about 30 MB — so that method trades size for having no build integration at all.
+The plugin methods keep output small without any manual curation: a project using three icons ships about 10 KB of CSS. The plain-CSS family stylesheets are complete by construction — Lucide is about 1.3 MB, all 15 families about 36 MB — so that method trades size for having no build integration at all.
 
 The `ic-lucide-heart/1.5` stroke-width modifier needs one of the plugin methods; plain CSS renders stroke families at their authored width. See [Concepts](../concepts.md) for the shared model and [Frameworks](../frameworks/index.md) for framework-specific setup.

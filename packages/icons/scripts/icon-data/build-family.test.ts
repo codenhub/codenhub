@@ -12,7 +12,7 @@ const ICON =
 
 const BRAND: IconFamilyDefinition = {
   author: { name: "Logos", url: "https://logos.test" },
-  hyphenateNames: true,
+  kebabCaseNames: true,
   iconColorsFile: "data/icons.json",
   iconLicensesFile: "data/icons.json",
   iconsDirectory: "icons",
@@ -115,5 +115,75 @@ describe("buildFamily for an extended family", () => {
     const definition = { ...EXTENDED, license: { ...EXTENDED.license, spdx: "MIT" } };
 
     await expect(buildFamily(definition, upstream, "1.0.0")).rejects.toThrow("extended tier");
+  });
+});
+
+describe("buildFamily for a multicolor family", () => {
+  const MULTICOLOR: IconFamilyDefinition = {
+    ...BRAND,
+    iconColorsFile: undefined,
+    iconLicensesFile: undefined,
+    multicolor: true,
+    upstreamPackage: "multicolor-logos",
+    upstreamRepository: "owner/logos",
+  };
+  const GRADIENT =
+    '<svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid" xmlns="http://www.w3.org/2000/svg"><title>T</title><desc>D</desc><defs><linearGradient id="a"><stop stop-color="#f00" /></linearGradient></defs><path fill="url(#a)" d="M0 0L10.123456 0L10.123456 10Z"/><path fill="#00f" d="M12 12L20 12L20 20Z"/></svg>';
+
+  beforeEach(async () => {
+    await rm(join(upstream, "icons"), { force: true, recursive: true });
+    await mkdir(join(upstream, "icons"));
+    await writeFile(join(upstream, "icons", "socket.io.svg"), GRADIENT, "utf8");
+    await writeFile(join(upstream, "icons", "macOS.svg"), GRADIENT, "utf8");
+    await writeFile(
+      join(upstream, "icons", "styled.svg"),
+      '<svg viewBox="0 0 24 24"><style>.a{}</style><path d="M0 0"/></svg>',
+      "utf8",
+    );
+  });
+
+  it("keeps the artwork's own colors and namespaces its ids by icon", async () => {
+    const { document } = await buildFamily(MULTICOLOR, upstream, "abc");
+
+    const body = document.icons["socket-io"]?.body;
+
+    expect(body).toContain('id="logos-socket-io-a"');
+    expect(body).toContain('fill="url(#logos-socket-io-a)"');
+    expect(body).toContain('fill="#00f"');
+    expect(document.icons.macos?.body).toContain('id="logos-macos-a"');
+    expect(document.icons.macos?.body).toContain('fill="url(#logos-macos-a)"');
+  });
+
+  it("rewrites the artwork's paths with coordinates rounded to two decimals", async () => {
+    const { document } = await buildFamily(MULTICOLOR, upstream, "abc");
+
+    expect(document.icons["socket-io"]?.body).toContain("10.12");
+    expect(document.icons["socket-io"]?.body).not.toContain("10.123");
+  });
+
+  it("names icons in kebab case, lowercased", async () => {
+    const { document } = await buildFamily(MULTICOLOR, upstream, "abc");
+
+    expect(Object.keys(document.icons).toSorted()).toEqual(["macos", "socket-io"]);
+  });
+
+  it("leaves out artwork that cannot render self-contained, and says why", async () => {
+    const { attributionText, document } = await buildFamily(MULTICOLOR, upstream, "abc");
+
+    expect(document.icons.styled).toBeUndefined();
+    expect(attributionText).toContain("`styled` (a `<style>` element)");
+  });
+
+  it("marks the family multicolor and records the repository it came from", async () => {
+    const { document } = await buildFamily(MULTICOLOR, upstream, "abc");
+
+    expect(document.info.multicolor).toBe(true);
+    expect(document.info.upstream).toEqual({ package: "owner/logos", version: "abc" });
+  });
+
+  it("refuses two upstream files that map to one name", async () => {
+    await writeFile(join(upstream, "icons", "socket_io.svg"), GRADIENT, "utf8");
+
+    await expect(buildFamily(MULTICOLOR, upstream, "abc")).rejects.toThrow('"socket-io"');
   });
 });

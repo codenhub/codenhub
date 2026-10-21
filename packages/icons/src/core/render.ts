@@ -58,6 +58,62 @@ export function setStrokeWidth(body: string, strokeWidth: number | string): stri
   return body.replace(STROKE_WIDTH_ATTRIBUTE, `stroke-width="${value}"`);
 }
 
+const OPENING_OR_CLOSING_TAG = /<(\/?)([a-zA-Z][\w:-]*)([^>]*?)(\/?)>/g;
+const PAINT_ATTRIBUTE = /(?<=\s)(fill|stroke)="([^"]*)"/g;
+const STYLE_ATTRIBUTE = /(?<=\s)style="([^"]*)"/;
+// Content that paints into a mask, a clip, or a filter result rather than onto
+// the page; recoloring it would change what the logo shows, not its color.
+const UNPAINTED_CONTAINERS = new Set(["clipPath", "filter", "mask", "pattern"]);
+const DEFAULT_FILL = "#000";
+
+function overridePaintAttributes(attributes: string, prefix: string): string {
+  const declarations = [...attributes.matchAll(PAINT_ATTRIBUTE)]
+    .filter(([, , value]) => value !== "none")
+    .map(([, property, value]) => `${property}: var(--${prefix}-color, ${value})`);
+  if (declarations.length === 0) {
+    return attributes;
+  }
+  const existing = STYLE_ATTRIBUTE.exec(attributes);
+  if (!existing) {
+    const written = attributes.trimEnd();
+    return `${written} style="${declarations.join("; ")}"${attributes.slice(written.length)}`;
+  }
+  const merged = [existing[1].trim().replace(/;$/, ""), ...declarations].filter(Boolean).join("; ");
+  return attributes.replace(STYLE_ATTRIBUTE, `style="${merged}"`);
+}
+
+/**
+ * Lets `--<prefix>-color` repaint full-color artwork as a silhouette.
+ *
+ * A presentation attribute cannot read a custom property, so each `fill` and
+ * `stroke` gains a `style` declaration that falls back to its own value. The
+ * attribute stays: a Content Security Policy that blocks style attributes drops
+ * the declarations and the logo keeps its colors. The body is wrapped in a `<g>`
+ * that does the same for SVG's default black fill, which the `<svg>` element's
+ * `fill="currentColor"` would otherwise replace with the text color.
+ */
+function overridePaint(body: string, prefix: string): string {
+  let unpaintedDepth = 0;
+  const rewritten = body.replace(
+    OPENING_OR_CLOSING_TAG,
+    (tag, closing: string, name: string, attributes: string, selfClosing: string) => {
+      if (UNPAINTED_CONTAINERS.has(name)) {
+        if (closing) {
+          unpaintedDepth -= 1;
+        } else if (!selfClosing) {
+          unpaintedDepth += 1;
+        }
+        return tag;
+      }
+      if (closing || unpaintedDepth > 0) {
+        return tag;
+      }
+      return `<${name}${overridePaintAttributes(attributes, prefix)}${selfClosing}>`;
+    },
+  );
+  return `<g fill="${DEFAULT_FILL}" style="fill: var(--${prefix}-color, ${DEFAULT_FILL})">${rewritten}</g>`;
+}
+
 /**
  * Renders a resolved icon as a complete, self-contained SVG element.
  *
@@ -84,6 +140,11 @@ export function setStrokeWidth(body: string, strokeWidth: number | string): stri
  * blocks style attributes drops the `style`, and the icon keeps its own color,
  * though `--ic-color` no longer reaches it.
  *
+ * A multicolor icon keeps the colors its artwork is drawn in, and `--ic-color`
+ * repaints every fill and stroke as a one-color silhouette. Each painted element
+ * carries its own `style` declaration for this, beside the attribute it falls
+ * back to, so the same Content Security Policy leaves the logo in full color.
+ *
  * @param icon - Icon to render.
  * @param options - Stroke width, extra element attributes, and class prefix.
  * @returns SVG markup.
@@ -94,10 +155,11 @@ export function renderSvg(icon: ResolvedIcon, options?: RenderSvgOptions): strin
       ? setStrokeWidth(icon.body, options.strokeWidth)
       : icon.body;
   const prefix = options?.prefix ?? DEFAULT_PREFIX;
+  const painted = icon.multicolor ? overridePaint(stroked, escapeAttributeValue(prefix)) : stroked;
   const body =
     icon.color === undefined
-      ? stroked
-      : `<g color="${escapeAttributeValue(icon.color)}" style="color: var(--${escapeAttributeValue(prefix)}-color, ${escapeAttributeValue(icon.color)})">${stroked}</g>`;
+      ? painted
+      : `<g color="${escapeAttributeValue(icon.color)}" style="color: var(--${escapeAttributeValue(prefix)}-color, ${escapeAttributeValue(icon.color)})">${painted}</g>`;
   const extra = renderAttributes({ width: "1em", height: "1em", fill: "currentColor", ...options?.attributes });
 
   return `<svg xmlns="${SVG_NAMESPACE}" viewBox="${icon.left} ${icon.top} ${icon.width} ${icon.height}"${extra}>${body}</svg>`;

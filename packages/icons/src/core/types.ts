@@ -136,6 +136,15 @@ export interface IconFamilyInfo {
    * Catalog and documentation metadata only, like {@link IconFamilyInfo.style}.
    */
   weight?: string;
+
+  /**
+   * Whether the artwork carries its own colors, as full-color logos do.
+   *
+   * A multicolor icon paints its artwork rather than one color, until
+   * `--ic-color` (`--<prefix>-color` under a custom class prefix) is set, which
+   * turns it into a one-color silhouette. Absent for one-color families.
+   */
+  multicolor?: boolean;
 }
 
 /**
@@ -323,4 +332,10 @@ export interface ResolvedIcon {
    * valid one.
    */
   color?: string;
+
+  /**
+   * Present only when the icon's family is multicolor, so its artwork carries
+   * its own colors. See {@link IconFamilyInfo.multicolor}.
+   */
+  multicolor?: true;
 }

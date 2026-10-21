@@ -4,7 +4,7 @@ import { carriesNotice, describeFamilyNotice } from "../catalog/attribution.js";
 import { parseIconClass, resolveIconClassName } from "../core/class-names.js";
 import { IconRegistry } from "../core/registry.js";
 import type { IconFamilyData } from "../core/types.js";
-import { getIconMaskUrl } from "../generator/css-generator.js";
+import { getIconCssProps } from "../generator/css-generator.js";
 
 /**
  * How the Tailwind plugin emits the license notices of the families it used.
@@ -224,17 +224,13 @@ export function createIconsTailwindPlugin(availableFamilies: readonly IconFamily
           }
 
           const width = extra?.modifier ?? parsed.strokeWidth ?? strokeWidth;
-          const url = getIconMaskUrl(icon.name, registry, { strokeWidth: width });
-          if (!url) {
+          const properties = getIconCssProps(icon.name, registry, { prefix, strokeWidth: width });
+          if (!properties) {
             return null;
           }
 
           noticeFamily(icon.prefix);
-          return {
-            [`--${prefix}-uri`]: url,
-            [`--${prefix}-mask`]: `var(--${prefix}-uri)`,
-            ...(icon.color === undefined ? {} : { [`--${prefix}-brand-color`]: icon.color }),
-          };
+          return properties;
         },
       };
 

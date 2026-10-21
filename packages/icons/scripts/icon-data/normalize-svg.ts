@@ -16,6 +16,7 @@ const XML_COMMENT = /<!--[\s\S]*?-->/g;
 // A title names the upstream file, not the consumer's use of the icon; the
 // consumer supplies the accessible name, or hides the icon from assistive tech.
 const TITLE_ELEMENT = /<title\b[^>]*>[\s\S]*?<\/title>/gi;
+const DESC_ELEMENT = /<desc\b[^>]*>[\s\S]*?<\/desc>/gi;
 const SVG_ELEMENT = /<svg\b(?<attributes>[^>]*)>(?<body>[\s\S]*)<\/svg>/i;
 const ATTRIBUTE = /(?<name>[a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*"(?<value>[^"]*)"/g;
 const WHITESPACE_BETWEEN_TAGS = />\s+</g;
@@ -35,11 +36,15 @@ const DISCARDED_ATTRIBUTES = new Set([
   "focusable",
   "height",
   "id",
+  // The renderer always fits the viewBox to the element, so an authored
+  // preserveAspectRatio has nothing to apply to once moved onto a <g>.
+  "preserveaspectratio",
   "role",
   "version",
   "viewbox",
   "width",
   "xmlns",
+  "xmlns:svg",
   "xmlns:xlink",
 ]);
 
@@ -105,7 +110,7 @@ export function normalizeSvg(source: string, origin: string): NormalizedIcon {
     throw new Error(`No usable viewBox in ${origin}.`);
   }
 
-  const body = collapse(match.groups.body.replace(TITLE_ELEMENT, ""));
+  const body = collapse(match.groups.body.replace(TITLE_ELEMENT, "").replace(DESC_ELEMENT, ""));
   if (body === "") {
     throw new Error(`Empty icon body in ${origin}.`);
   }

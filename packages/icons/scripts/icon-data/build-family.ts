@@ -12,7 +12,8 @@ import {
   RESERVED_SIZE_TOKENS,
   type IconFamilyDefinition,
 } from "./family-definitions.ts";
-import { normalizeSvg } from "./normalize-svg.ts";
+import { findUnsupportedMarkup, namespaceIds, optimizeArtwork } from "./multicolor-svg.ts";
+import { normalizeSvg, type NormalizedIcon } from "./normalize-svg.ts";
 
 /** A generated family, with the license material that has to travel with it. */
 export interface BuiltFamily {
@@ -150,11 +151,16 @@ function readViewBoxKey(viewBox: ViewBox): string {
   return `${viewBox.left} ${viewBox.top} ${viewBox.width} ${viewBox.height}`;
 }
 
+/** An upstream file read, or the markup that keeps it out of a multicolor family. */
+type ReadIcon = { iconName: string } & ({ icon: NormalizedIcon } | { reason: string });
+
 interface Exclusions {
   /** Upstream icons left out because their own license could not be passed on. */
   licensed: number;
   /** Icon names left out because the utility classes reserve them. */
   reserved: string[];
+  /** Icons left out of a multicolor family, with the markup that kept each out. */
+  unsupported: { iconName: string; reason: string }[];
 }
 
 function renderExclusions(exclusions: Exclusions): string {
@@ -167,6 +173,13 @@ function renderExclusions(exclusions: Exclusions): string {
   if (exclusions.reserved.length > 0) {
     lines.push(
       `Not included because the ic-xs–ic-xl size axis reserves the name: ${exclusions.reserved.map((name) => `\`${name}\``).join(", ")}.`,
+    );
+  }
+  if (exclusions.unsupported.length > 0) {
+    lines.push(
+      `Not included because their markup cannot render as a self-contained icon: ${exclusions.unsupported
+        .map(({ iconName, reason }) => `\`${iconName}\` (${reason})`)
+        .join(", ")}.`,
     );
   }
   return lines.length === 0 ? "" : `\n${lines.join("\n\n")}\n`;
@@ -219,7 +232,7 @@ export async function buildFamily(
   const tags = await readTags(packageDirectory, definition);
   const incompatible = await readIncompatibleIcons(packageDirectory, definition);
   const colors = await readColors(packageDirectory, definition);
-  const exclusions: Exclusions = { licensed: 0, reserved: [] };
+  const exclusions: Exclusions = { licensed: 0, reserved: [], unsupported: [] };
 
   const iconFiles = fileNames.flatMap((fileName) => {
     const upstreamName = readUpstreamName(fileName, definition);
@@ -230,7 +243,7 @@ export async function buildFamily(
       exclusions.licensed += 1;
       return [];
     }
-    const iconName = definition.hyphenateNames ? upstreamName.replaceAll("_", "-") : upstreamName;
+    const iconName = definition.kebabCaseNames ? upstreamName.toLowerCase().replace(/[._]/g, "-") : upstreamName;
     // A brand family is opt-in and outside the core promise, so one reserved
     // name costs that icon rather than the whole family.
     if (definition.tier === "brand" && RESERVED_SIZE_TOKENS.includes(iconName)) {
@@ -256,11 +269,26 @@ export async function buildFamily(
     );
   }
 
+  const read = await mapConcurrent(iconFiles, READ_CONCURRENCY, async ({ fileName, iconName }): Promise<ReadIcon> => {
+    const source = await readFile(resolve(iconsDirectory, fileName), "utf8");
+    const origin = `${definition.upstreamPackage}/${definition.iconsDirectory}/${fileName}`;
+    if (!definition.multicolor) {
+      return { icon: normalizeSvg(source, origin), iconName };
+    }
+    const reason = findUnsupportedMarkup(source);
+    if (reason !== undefined) {
+      return { iconName, reason };
+    }
+    const icon = normalizeSvg(optimizeArtwork(source, origin), origin);
+    return { icon: { ...icon, body: namespaceIds(icon.body, `${definition.prefix}-${iconName}`) }, iconName };
+  });
   const normalized = new Map(
-    await mapConcurrent(iconFiles, READ_CONCURRENCY, async ({ fileName, iconName }) => {
-      const source = await readFile(resolve(iconsDirectory, fileName), "utf8");
-      const origin = `${definition.upstreamPackage}/${definition.iconsDirectory}/${fileName}`;
-      return [iconName, normalizeSvg(source, origin)] as const;
+    read.flatMap((entry) => {
+      if ("reason" in entry) {
+        exclusions.unsupported.push(entry);
+        return [];
+      }
+      return [[entry.iconName, entry.icon] as const];
     }),
   );
 
@@ -304,10 +332,11 @@ export async function buildFamily(
       name: definition.name,
       tier: definition.tier,
       total: normalized.size,
-      upstream: { package: definition.upstreamPackage, version },
+      upstream: { package: definition.upstreamRepository ?? definition.upstreamPackage, version },
       ...(definition.strokeWidth === undefined ? {} : { strokeWidth: definition.strokeWidth }),
       ...(definition.style === undefined ? {} : { style: definition.style }),
       ...(definition.weight === undefined ? {} : { weight: definition.weight }),
+      ...(definition.multicolor ? { multicolor: true } : {}),
     },
     left: familyViewBox.left,
     prefix: definition.prefix,

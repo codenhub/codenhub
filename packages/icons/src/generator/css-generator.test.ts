@@ -69,11 +69,21 @@ function createBrandFamily(): IconFamilyData {
   };
 }
 
+function createLogoFamily(): IconFamilyData {
+  return {
+    ...createBrandFamily(),
+    icons: { google: { body: '<path fill="#ea4335" d="g" />' } },
+    info: { ...createBrandFamily().info, multicolor: true, name: "Logo Family", total: 1 },
+    prefix: "logo",
+  };
+}
+
 function createRegistry(): IconRegistry {
   const registry = new IconRegistry({ defaultPrefix: "quill" });
   registry.registerFamily(createQuillFamily());
   registry.registerFamily(createFilledFamily());
   registry.registerFamily(createBrandFamily());
+  registry.registerFamily(createLogoFamily());
   return registry;
 }
 
@@ -125,8 +135,41 @@ describe("generateBaseCss", () => {
 });
 
 describe("generateBaseCss colors", () => {
-  it("paints with --ic-color first, then an icon's brand color, then currentColor", () => {
-    expect(generateBaseCss()).toContain("background-color: var(--ic-color, var(--ic-brand-color, currentColor));");
+  it("paints with --ic-color first, then multicolor artwork, then an icon's brand color, then currentColor", () => {
+    expect(generateBaseCss()).toContain(
+      "background: var(--ic-color, var(--ic-brand-paint, var(--ic-brand-color, currentColor)));",
+    );
+  });
+});
+
+describe("multicolor artwork in generated rules", () => {
+  it("paints a multicolor icon's own artwork as its background", () => {
+    const { css } = generateIconSetCss(["ic-logo-google"], createRegistry());
+
+    expect(css).toContain("--ic-brand-paint: var(--ic-uri) center / 100% 100% no-repeat;");
+  });
+
+  it("keeps the inline color override out of the image, where it could never apply", () => {
+    const { css } = generateIconSetCss(["ic-logo-google"], createRegistry(), { injectBase: false });
+
+    expect(css).toContain("ea4335");
+    expect(css).not.toContain("--ic-color");
+  });
+
+  it("gives a one-color icon no artwork paint", () => {
+    const { css } = generateIconSetCss(["ic-brand-mark"], createRegistry(), { injectBase: false });
+
+    expect(css).not.toContain("--ic-brand-paint");
+  });
+
+  it("writes the paint into a family stylesheet", () => {
+    expect(generateFamilyCss(createLogoFamily())).toContain("--ic-brand-paint:");
+  });
+
+  it("includes the paint in the inline-style properties, under the configured prefix", () => {
+    expect(getIconCssProps("logo:google", createRegistry(), { prefix: "icon" })?.["--icon-brand-paint"]).toBe(
+      "var(--icon-uri) center / 100% 100% no-repeat",
+    );
   });
 });
 
