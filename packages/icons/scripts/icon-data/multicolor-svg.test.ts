@@ -36,15 +36,20 @@ describe("findUnsupportedMarkup", () => {
   });
 
   it("names a stylesheet, which would restyle the page once inlined", () => {
-    expect(findUnsupportedMarkup("<svg><style>.a{fill:red}</style></svg>")).toBe("a <style> element");
+    expect(findUnsupportedMarkup("<svg><style>.a{fill:red}</style></svg>")).toBe("a `<style>` element");
   });
 
   it("names an embedded image", () => {
-    expect(findUnsupportedMarkup('<svg><image href="data:image/png;base64,AA" /></svg>')).toBe("an <image> element");
+    expect(findUnsupportedMarkup('<svg><image href="data:image/png;base64,AA" /></svg>')).toBe("an `<image>` element");
   });
 
   it("names an external reference", () => {
     expect(findUnsupportedMarkup('<svg><use href="other.svg#a" /></svg>')).toBe("an external reference");
+  });
+
+  it("names an external url() paint and a single-quoted external href", () => {
+    expect(findUnsupportedMarkup('<svg><path fill="url(other.svg#g)" /></svg>')).toBe("an external reference");
+    expect(findUnsupportedMarkup("<svg><use href='other.svg#a' /></svg>")).toBe("an external reference");
   });
 });
 
@@ -65,6 +70,13 @@ describe("optimizeArtwork", () => {
     expect(output).toContain('id="g"');
     expect(output).toContain('fill="url(#g)"');
     expect(output).toContain('stop-color="#FFFFFF"');
+  });
+
+  it("moves a stop color out of a style attribute, so a strict CSP keeps it", () => {
+    const output = optimizeArtwork(SOURCE.replace('stop-color="#FFFFFF"', 'style="stop-color: #FFFFFF"'), "test.svg");
+
+    expect(output).toMatch(/stop-color="#fff(?:fff)?"/i);
+    expect(output).not.toContain("style=");
   });
 
   it("names the file it cannot parse", () => {

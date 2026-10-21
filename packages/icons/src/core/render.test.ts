@@ -54,10 +54,16 @@ describe("renderSvg for a multicolor icon", () => {
   });
 
   it("leaves mask, clip, and filter content unpainted, since recoloring it changes the shape", () => {
-    const masked = { ...logo, body: '<mask id="m"><rect fill="#fff" /></mask><path fill="#f00" mask="url(#m)" />' };
+    const masked = {
+      ...logo,
+      body: '<mask id="m"><rect fill="#fff" /></mask><clipPath id="c"><rect fill="#fff" /></clipPath><filter id="f"><feFlood flood-color="#000" /></filter><path fill="#f00" mask="url(#m)" />',
+    };
+    const svg = renderSvg(masked);
 
-    expect(renderSvg(masked)).toContain('<mask id="m"><rect fill="#fff" /></mask>');
-    expect(renderSvg(masked)).toContain('style="fill: var(--ic-color, #f00)"');
+    expect(svg).toContain('<mask id="m"><rect fill="#fff" /></mask>');
+    expect(svg).toContain('<clipPath id="c"><rect fill="#fff" /></clipPath>');
+    expect(svg).toContain('<filter id="f"><feFlood flood-color="#000" /></filter>');
+    expect(svg).toContain('style="fill: var(--ic-color, #f00)"');
   });
 
   it("reads the override from the configured class prefix", () => {

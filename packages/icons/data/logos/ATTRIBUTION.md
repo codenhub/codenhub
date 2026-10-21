@@ -11,7 +11,7 @@ The icons depict brand marks. They are trademarks of their owners and subject to
 each owner's brand guidelines, which this license does not grant and no build
 setting satisfies.
 
-Not included because their markup cannot render as a self-contained icon: `sinatra` (a <style> element), `waffle-icon` (an <image> element).
+Not included because their markup cannot render as a self-contained icon: `sinatra` (a `<style>` element), `waffle-icon` (an `<image>` element).
 
 The full license text is in `LICENSE` beside this file. It is redistributed
 with the artwork and must stay with it.

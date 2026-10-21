@@ -9,13 +9,13 @@ const FLOAT_PRECISION = 2;
 // depends on the reader's fonts, and an external reference is not
 // self-contained.
 const UNSUPPORTED_MARKUP: readonly { pattern: RegExp; reason: string }[] = [
-  { pattern: /<style\b/i, reason: "a <style> element" },
+  { pattern: /<style\b/i, reason: "a `<style>` element" },
   { pattern: /\sclass="/i, reason: "class attributes" },
-  { pattern: /<script\b/i, reason: "a <script> element" },
-  { pattern: /<foreignObject\b/i, reason: "a <foreignObject> element" },
-  { pattern: /<text\b/i, reason: "a <text> element" },
-  { pattern: /<image\b/i, reason: "an <image> element" },
-  { pattern: /href="(?!#)/i, reason: "an external reference" },
+  { pattern: /<script\b/i, reason: "a `<script>` element" },
+  { pattern: /<foreignObject\b/i, reason: "a `<foreignObject>` element" },
+  { pattern: /<text\b/i, reason: "a `<text>` element" },
+  { pattern: /<image\b/i, reason: "an `<image>` element" },
+  { pattern: /href\s*=\s*["'](?!#)|url\(\s*["']?(?!#)/i, reason: "an external reference" },
 ];
 
 const ID_ATTRIBUTE = /(?<=\s)id="([^"]+)"/g;
@@ -50,7 +50,12 @@ export function optimizeArtwork(source: string, origin: string): string {
     return optimize(source, {
       floatPrecision: FLOAT_PRECISION,
       multipass: true,
-      plugins: [{ name: "preset-default", params: { overrides: { cleanupIds: false, convertColors: false } } }],
+      plugins: [
+        { name: "preset-default", params: { overrides: { cleanupIds: false, convertColors: false } } },
+        // A Content Security Policy that blocks style attributes would drop a
+        // gradient stop's `style="stop-color: …"` and leave the logo uncolored.
+        "convertStyleToAttrs",
+      ],
     }).data;
   } catch (error) {
     throw new Error(`Cannot optimize ${origin}.`, { cause: error });

@@ -150,6 +150,8 @@ describe("buildFamily for a multicolor family", () => {
     expect(body).toContain('id="logos-socket-io-a"');
     expect(body).toContain('fill="url(#logos-socket-io-a)"');
     expect(body).toContain('fill="#00f"');
+    expect(document.icons.macos?.body).toContain('id="logos-macos-a"');
+    expect(document.icons.macos?.body).toContain('fill="url(#logos-macos-a)"');
   });
 
   it("rewrites the artwork's paths with coordinates rounded to two decimals", async () => {
@@ -169,7 +171,7 @@ describe("buildFamily for a multicolor family", () => {
     const { attributionText, document } = await buildFamily(MULTICOLOR, upstream, "abc");
 
     expect(document.icons.styled).toBeUndefined();
-    expect(attributionText).toContain("`styled` (a <style> element)");
+    expect(attributionText).toContain("`styled` (a `<style>` element)");
   });
 
   it("marks the family multicolor and records the repository it came from", async () => {
