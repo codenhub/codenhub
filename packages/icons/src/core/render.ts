@@ -79,7 +79,10 @@ export function setStrokeWidth(body: string, strokeWidth: number | string): stri
  * An icon with a color of its own, such as a brand mark, is painted in it unless
  * `--ic-color` is set on the element or an ancestor. The color sits on a `<g>`
  * around the body rather than on the `<svg>`, so it never collides with a
- * `style` attribute a caller or the markup puts on the element.
+ * `style` attribute a caller or the markup puts on the element. The `<g>` also
+ * carries the color as a presentation attribute: a Content Security Policy that
+ * blocks style attributes drops the `style`, and the icon keeps its own color,
+ * though `--ic-color` no longer reaches it.
  *
  * @param icon - Icon to render.
  * @param options - Stroke width, extra element attributes, and class prefix.
@@ -94,7 +97,7 @@ export function renderSvg(icon: ResolvedIcon, options?: RenderSvgOptions): strin
   const body =
     icon.color === undefined
       ? stroked
-      : `<g style="color: var(--${escapeAttributeValue(prefix)}-color, ${escapeAttributeValue(icon.color)})">${stroked}</g>`;
+      : `<g color="${escapeAttributeValue(icon.color)}" style="color: var(--${escapeAttributeValue(prefix)}-color, ${escapeAttributeValue(icon.color)})">${stroked}</g>`;
   const extra = renderAttributes({ width: "1em", height: "1em", fill: "currentColor", ...options?.attributes });
 
   return `<svg xmlns="${SVG_NAMESPACE}" viewBox="${icon.left} ${icon.top} ${icon.width} ${icon.height}"${extra}>${body}</svg>`;

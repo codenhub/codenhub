@@ -36,7 +36,7 @@ The base rules sized and colored the element, but no rule gave it a mask, so the
 
 ## The color does not change
 
-Set `--ic-color` on the icon or an ancestor. `color` reaches only icons without a color of their own: a brand icon keeps its brand color until `--ic-color` is set. A `background-color` you set on the icon element itself replaces its color, because the mask paints with the background. See [Color](concepts.md#color).
+Set `--ic-color` on the icon or an ancestor. `color` reaches only icons without a color of their own: a brand icon keeps its brand color until `--ic-color` is set. A `background-color` you set on the icon element itself replaces its color, because the mask paints with the background. In inline SVG mode under a Content Security Policy that blocks `style` attributes, a brand icon keeps its brand color and ignores `--ic-color`. See [Color](concepts.md#color).
 
 ## A brand icon is invisible in dark mode
 

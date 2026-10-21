@@ -91,7 +91,7 @@ describe("renderSvg", () => {
 
   it("paints a colored icon in its own color unless --ic-color says otherwise", () => {
     expect(renderSvg({ ...offsetIcon, color: "#181717" })).toContain(
-      '<g style="color: var(--ic-color, #181717)"><path d="M0 0" /></g></svg>',
+      '<g color="#181717" style="color: var(--ic-color, #181717)"><path d="M0 0" /></g></svg>',
     );
   });
 

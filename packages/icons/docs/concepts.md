@@ -164,7 +164,7 @@ Some brand colors are near-black — GitHub, X, and Vercel among them — and di
 }
 ```
 
-`color` alone does not recolor a brand icon, because its own color comes before `currentColor`; set `--ic-color` instead. All of this works the same in every delivery method and in [inline SVG mode](delivery/vite.md#inline-svg-mode), where the brand color is carried by the `<svg>` itself and needs no stylesheet.
+`color` alone does not recolor a brand icon, because its own color comes before `currentColor`; set `--ic-color` instead. All of this works the same in every delivery method and in [inline SVG mode](delivery/vite.md#inline-svg-mode), where the brand color is carried by the `<svg>` itself and needs no stylesheet. One exception there: under a Content Security Policy that blocks `style` attributes, an inlined brand icon keeps its brand color but `--ic-color` no longer reaches it.
 
 ## Accessibility
 
