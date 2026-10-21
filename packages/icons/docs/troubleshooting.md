@@ -12,7 +12,7 @@ Most failures here are silent: the build stays green and the page is where the g
 
 No base rule matched the element, so it has no size.
 
-- **No base rules.** Plain CSS and a declared Tailwind `@plugin` need `@import "@codenhub/icons";` in a stylesheet. `@codenhub/icons/tw`, the Vite plugin's stylesheet, and the PostCSS plugin include the base rules already, the PostCSS plugin unless `injectBase` is `false`. When the Vite plugin's stylesheet never reaches the page, as in an Astro production build without the `virtual:icons.css` import, the base rules are missing with it. Inline SVG mode needs no base rules to render; they add `--ic-size` and the size classes.
+- **No base rules.** Plain CSS and a declared Tailwind `@plugin` need `@import "@codenhub/icons";` in a stylesheet. `@codenhub/icons/tw`, the Vite plugin's stylesheet, and the PostCSS plugin include the base rules already, the PostCSS plugin unless `injectBase` is `false`. When the Vite plugin's stylesheet never reaches the page, as in an Astro production build without the `virtual:icons.css` import, the base rules are missing with it. Inline SVG mode needs no base rules to render; they add `--ic-size`, the size classes, and `--ic-color` for icons without a color of their own.
 - **The element is not an `<i>` and has no `.ic`.** The base rules match `<i class="ic-…">`, or any element that also carries `.ic`. A `<span class="ic-lucide-heart">` matches neither.
 
 ## The icon renders as a solid square
@@ -36,7 +36,7 @@ The base rules sized and colored the element, but no rule gave it a mask, so the
 
 ## The color does not change
 
-Set `--ic-color` on the icon or an ancestor. `color` reaches only icons without a color of their own: a brand icon keeps its brand color until `--ic-color` is set. A `background-color` you set on the icon element itself replaces its color, because the mask paints with the background. In inline SVG mode under a Content Security Policy that blocks `style` attributes, a brand icon keeps its brand color and ignores `--ic-color`. See [Color](concepts.md#color).
+Set `--ic-color` on the icon or an ancestor, or `--<prefix>-color` under a custom class prefix. `color` reaches only icons without a color of their own: a brand icon keeps its brand color until `--ic-color` is set. A `background-color` you set on the icon element itself replaces its color, because the mask paints with the background. In inline SVG mode under a Content Security Policy that blocks `style` attributes, a brand icon keeps its brand color and ignores `--ic-color`. See [Color](concepts.md#color).
 
 ## A brand icon is invisible in dark mode
 

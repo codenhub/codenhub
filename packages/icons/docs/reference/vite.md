@@ -17,7 +17,7 @@ export declare function viteIcons(options?: ViteIconsOptions): Plugin;
 
 Vite plugin that turns icon utility classes into CSS mask rules, or into inline SVG when `mode` is `"svg"`.
 
-In CSS mode it serves the generated stylesheet, base rules included, as `virtual:icons.css` in dev and links it from every HTML entry point. A build with HTML entries emits it as a hashed CSS asset and links that instead; a build without HTML entries, such as a library build, emits no stylesheet. Svg mode emits none either. It leaves `@import "@codenhub/icons";` alone in both modes: that import is the base stylesheet and means the same thing whether or not this plugin is in the pipeline. In both modes it emits the license notices required by the families the build actually used.
+In CSS mode it serves the generated stylesheet, base rules included, as `virtual:icons.css` in dev and links it from every HTML entry point. A build with HTML entries emits it as a hashed CSS asset and links that instead; a build without HTML entries, such as a library build, emits no stylesheet. Svg mode emits none either. It leaves `@import "@codenhub/icons";` alone in both modes: that import is the base stylesheet and means the same thing whether or not this plugin is in the pipeline. The license notices for the families the build used travel as a banner on the generated stylesheet, wherever that stylesheet goes, or as `icons-attribution.txt` in svg mode and under `attribution: "file"`.
 
 **Parameters**
 
@@ -33,7 +33,7 @@ export declare function viteIcons(options?: ViteIconsOptions): Plugin;
 
 Vite plugin that turns icon utility classes into CSS mask rules, or into inline SVG when `mode` is `"svg"`.
 
-In CSS mode it serves the generated stylesheet, base rules included, as `virtual:icons.css` in dev and links it from every HTML entry point. A build with HTML entries emits it as a hashed CSS asset and links that instead; a build without HTML entries, such as a library build, emits no stylesheet. Svg mode emits none either. It leaves `@import "@codenhub/icons";` alone in both modes: that import is the base stylesheet and means the same thing whether or not this plugin is in the pipeline. In both modes it emits the license notices required by the families the build actually used.
+In CSS mode it serves the generated stylesheet, base rules included, as `virtual:icons.css` in dev and links it from every HTML entry point. A build with HTML entries emits it as a hashed CSS asset and links that instead; a build without HTML entries, such as a library build, emits no stylesheet. Svg mode emits none either. It leaves `@import "@codenhub/icons";` alone in both modes: that import is the base stylesheet and means the same thing whether or not this plugin is in the pipeline. The license notices for the families the build used travel as a banner on the generated stylesheet, wherever that stylesheet goes, or as `icons-attribution.txt` in svg mode and under `attribution: "file"`.
 
 **Parameters**
 

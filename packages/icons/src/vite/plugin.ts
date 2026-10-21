@@ -534,8 +534,9 @@ function replaceIconTagsInAstro(source: string, registry: IconRegistry, options:
  * Svg mode emits none either. It leaves
  * `@import "@codenhub/icons";` alone in both modes: that import is the base
  * stylesheet and means the same thing whether or not this plugin is in the
- * pipeline. In both modes it emits the license notices required by the families
- * the build actually used.
+ * pipeline. The license notices for the families the build used travel as a
+ * banner on the generated stylesheet, wherever that stylesheet goes, or as
+ * `icons-attribution.txt` in svg mode and under `attribution: "file"`.
  *
  * @param options - Families, scanning, class prefix, delivery mode, and attribution.
  * @returns The Vite plugin.
