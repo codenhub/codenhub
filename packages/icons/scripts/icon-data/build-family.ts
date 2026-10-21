@@ -6,6 +6,7 @@ import { mapConcurrent } from "./concurrency.ts";
 import {
   BRAND_TIER_OBLIGATIONS,
   CORE_TIER_OBLIGATIONS,
+  EXTENDED_TIER_OBLIGATIONS,
   LICENSE_OBLIGATIONS,
   RESERVED_PREFIXES,
   RESERVED_SIZE_TOKENS,
@@ -47,6 +48,11 @@ function readObligation(definition: IconFamilyDefinition): IconAttribution {
   if (definition.tier === "core" && !CORE_TIER_OBLIGATIONS.includes(obligation)) {
     throw new Error(
       `Family "${definition.prefix}" is core tier but its license "${definition.license.spdx}" requires crediting the author.`,
+    );
+  }
+  if (definition.tier === "extended" && !EXTENDED_TIER_OBLIGATIONS.includes(obligation)) {
+    throw new Error(
+      `Family "${definition.prefix}" is extended tier but its license "${definition.license.spdx}" requires no credit, so it belongs in the core tier.`,
     );
   }
   if (definition.tier === "brand" && !BRAND_TIER_OBLIGATIONS.includes(obligation)) {

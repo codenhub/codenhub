@@ -81,6 +81,9 @@ export const RESERVED_PREFIXES: readonly string[] = [...RESERVED_SIZE_TOKENS];
 /** Obligations a `core` family may place on a consumer. */
 export const CORE_TIER_OBLIGATIONS: readonly IconAttribution[] = ["none", "notice"];
 
+/** Obligations an `extended` family may place on a consumer. */
+export const EXTENDED_TIER_OBLIGATIONS: readonly IconAttribution[] = ["credit"];
+
 /** Obligations a `brand` family may place on a consumer. */
 export const BRAND_TIER_OBLIGATIONS: readonly IconAttribution[] = ["none"];
 

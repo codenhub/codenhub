@@ -14,6 +14,8 @@
     "dist",
     "docs",
     "!docs/internal",
+    "data/*/ATTRIBUTION.md",
+    "data/*/LICENSE",
     "llms.txt",
     "llms-full.txt",
     "NOTICE",
