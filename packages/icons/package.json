@@ -1,6 +1,6 @@
 {
   "name": "@codenhub/icons",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": false,
   "description": "Zero-runtime CSS icons from Lucide, Phosphor, Material Symbols, and Simple Icons, for Tailwind v4, Vite, PostCSS, or plain CSS.",
   "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/icons",
