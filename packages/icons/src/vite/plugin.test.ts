@@ -28,7 +28,10 @@ function createFamily(attribution: IconAttribution = "notice"): IconFamilyData {
 function createPlugin(options: Parameters<typeof viteIcons>[0] = {}) {
   const plugin = viteIcons({ defaultPrefix: "test", families: [createFamily()], ...options });
   return {
-    generateBundle: plugin.generateBundle as (this: unknown) => void,
+    // A bundle with no HTML entry, as a library build has.
+    generateBundle(this: unknown) {
+      (plugin.generateBundle as (this: unknown, options: object, bundle: object) => void).call(this, {}, {});
+    },
     load: plugin.load as (id: string) => string | null,
     plugin,
     resolveId: plugin.resolveId as (id: string) => string | null,
@@ -652,13 +655,48 @@ describe("viteIcons dev HTML injection", () => {
     expect(result[0].attrs.src).toBe("/icons/@id/virtual:icons.css");
   });
 
-  it("inlines the stylesheet instead of injecting a script outside a dev server", () => {
-    const { plugin, transformIndexHtml } = createPlugin();
-    (plugin.configResolved as (config: { base: string }) => void)({ base: "/icons/" });
+  /** Runs a build's hooks in Vite's order: transform, generateBundle, transformIndexHtml. */
+  function build(sources: string[], bundle: Record<string, object> = HTML_BUNDLE) {
+    const { plugin, transform } = createPlugin();
+    const emitted: { name?: string; source: string; type: string }[] = [];
+    const context = { emitFile: (file: (typeof emitted)[number]) => (emitted.push(file), "ref0"), warn: () => {} };
+    sources.forEach((source, index) => transform(source, `/app/page${index}.html`));
+    (plugin.generateBundle as (this: unknown, options: object, bundle: object) => void).call(context, {}, bundle);
+    // Vite 5 and 6 call this hook without a plugin context.
+    const tags = (plugin.transformIndexHtml as (html: string, ctx: object) => unknown)("<html></html>", {});
+    return { emitted, tags };
+  }
 
-    const result = transformIndexHtml("<html><head></head></html>", {}) as { tag: string }[];
+  const HTML_BUNDLE = { "index.js": { facadeModuleId: "/app/index.html", type: "chunk" } };
 
-    expect(result[0].tag).toBe("style");
+  it("links an emitted stylesheet in a build, so a strict CSP allows it", () => {
+    // An inline <style> is refused by `style-src 'self'` without a nonce or
+    // hash, which left every icon blank in production with no warning.
+    const { emitted, tags } = build(['<i class="ic-user"></i>']);
+
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0]).toMatchObject({ name: "codenhub-icons.css", type: "asset" });
+    expect(emitted[0].source).toContain(".ic-user {");
+    expect(tags).toEqual([
+      { attrs: { href: "__VITE_ASSET__ref0__", rel: "stylesheet" }, injectTo: "head", tag: "link" },
+    ]);
+  });
+
+  it("emits no stylesheet for a build without an HTML entry", () => {
+    const { emitted } = build(['<i class="ic-user"></i>'], {
+      "index.js": { facadeModuleId: "/app/src/index.ts", type: "chunk" },
+    });
+
+    expect(emitted).toEqual([]);
+  });
+
+  it("emits the same stylesheet whatever order the classes were found in", () => {
+    // The asset's file name hashes its content, and Vite processes pages in
+    // no fixed order, so an order-dependent stylesheet busted caches for nothing.
+    const first = build(['<i class="ic-x"></i>', '<i class="ic-user"></i>']).emitted[0].source;
+    const second = build(['<i class="ic-user"></i>', '<i class="ic-x"></i>']).emitted[0].source;
+
+    expect(first).toBe(second);
   });
 });
 
