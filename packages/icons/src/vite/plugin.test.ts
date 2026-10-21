@@ -343,6 +343,25 @@ describe("viteIcons in svg mode", () => {
       expect(code).not.toContain('style="');
     });
 
+    it("is a style object after JSX text with an apostrophe, which the quote scanner reads as a string", () => {
+      const { transform } = createPlugin({ families: [createFamily(), brand], mode: "svg" });
+
+      const code = transform(
+        'export const App = () => <p>Don\'t <i className="ic-brand-mark" /></p>;',
+        "app.tsx",
+      )?.code;
+
+      expect(code).toContain('style={{"color":"var(--ic-color, #181717)"}}');
+    });
+
+    it("is a style object for JSX in a .js file", () => {
+      const { transform } = createPlugin({ families: [createFamily(), brand], mode: "svg" });
+
+      const code = transform('export const App = () => <i className="ic-brand-mark" />;', "app.js")?.code;
+
+      expect(code).toContain('style={{"color":"var(--ic-color, #181717)"}}');
+    });
+
     it("stays a style string inside a string literal in a JSX file", () => {
       const { transform } = createPlugin({ families: [createFamily(), brand], mode: "svg" });
 

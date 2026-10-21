@@ -404,7 +404,7 @@ function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options:
       match: string,
       before: string,
       attrName: string,
-      _backslash: string,
+      backslash: string,
       quote: string,
       classValue: string,
       after: string,
@@ -435,7 +435,12 @@ function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options:
         svg = svg.replace(/^<svg\b/i, `<svg${passthroughStr}`);
       }
 
-      if (isJsContext) {
+      // `className` with plain quotes only appears on a JSX element, never in an
+      // HTML string, so it settles what the quote scanner cannot: JSX text such
+      // as "Don't" reads to the scanner as an open string literal.
+      if (isJsContext && attrName === "className" && !backslash) {
+        svg = toJsxStyle(svg);
+      } else if (isJsContext) {
         const enclosingQuote = getEnclosingQuote(cleanSource, offset);
         if (enclosingQuote === '"') {
           svg = svg.replace(/"/g, '\\"');
