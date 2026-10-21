@@ -42,6 +42,11 @@ The transform-time scan covers `.html`, `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.
 
 In dev, Vite serves the HTML before it transforms a single module, so a class the plugin has only ever seen inside a module is not yet known when the page is first served. The stylesheet is therefore served as a module rather than inlined, and the plugin invalidates it whenever a transform turns up something new, so the icon arrives without a reload. Listing your sources in `content` avoids the round trip entirely, because those files are read from disk up front.
 
+A build writes the stylesheet as a CSS asset named after its content hash, `assets/codenhub-icons-[hash].css` by default, and links it from every HTML entry. Modules are transformed before the HTML there, so the file already holds every class the build found. A linked file is what a Content Security Policy of `style-src 'self'` allows, with no nonce or hash to configure. Two alternatives were rejected:
+
+- **An inline `<style>`**, which builds wrote until 0.2.1. A policy without `'unsafe-inline'`, a nonce, or a hash refuses it, so every icon rendered blank in production while dev, which uses a same-origin module script, still worked.
+- **A `nonce` option on the plugin.** Vite's own [`html.cspNonce`](https://vite.dev/config/shared-options#html-cspnonce) already stamps a nonce on the tags in the built HTML, and a nonce needs a server that sends a fresh one per response, which a static host cannot do.
+
 ## Inline SVG mode
 
 `mode: "svg"` replaces `<i class="ic-...">` tags with inline SVG at build time and emits no stylesheet at all. It rewrites those tags and nothing else, so a class left on any other element — or `.ic` on a `<span>` — renders nothing in this mode: there is no stylesheet to carry its mask. The plugin warns at build time when it finds an icon class on an element it will not rewrite, naming the class and the file.

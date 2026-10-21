@@ -523,6 +523,8 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
   const usedFamilies = new Map<string, IconFamilyData>();
   const unreplacedClasses = new Map<string, string>();
   let devServer: ViteDevServer | undefined;
+  // Reference to the stylesheet asset of the build in progress.
+  let stylesheetRef: string | undefined;
   // Vite's own default; overwritten by `configResolved` before any hook that
   // reads it can run. Used to make the dev stylesheet's injected `<script>`
   // `src` respect a non-root `base` -- Vite does not rewrite a plugin's
@@ -599,7 +601,9 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
     scanFiles(contentPaths, { prefix }, foundClasses);
     scanFiles(scannedFiles, { prefix }, foundClasses);
 
-    const { css, families } = generateIconSetCss(foundClasses, registry, {
+    // Sorted so the same classes always give the same bytes: a build names the
+    // emitted stylesheet after its content hash.
+    const { css, families } = generateIconSetCss([...foundClasses].toSorted(), registry, {
       injectBase: true,
       prefix,
       strokeWidth: options.strokeWidth,
@@ -690,8 +694,8 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
       // module the server can invalidate. An inlined <style> is a snapshot
       // taken before Vite has transformed a single module, and nothing can
       // refresh it: a class written in a file this plugin has not seen yet
-      // would stay missing until the page was reloaded by hand. A build inlines
-      // it, because there the modules are transformed before the HTML is.
+      // would stay missing until the page was reloaded by hand. A build can
+      // snapshot it, because there the modules are transformed before the HTML is.
       if (ctx.server) {
         return [
           {
@@ -704,14 +708,16 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
         ];
       }
 
-      return [
-        {
-          tag: "style",
-          attrs: { id: "codenhub-icons" },
-          children: generateCssFromContent(),
-          injectTo: "head",
-        },
-      ];
+      // A build links the asset `generateBundle` emitted rather than inlining a
+      // <style>, which a CSP without 'unsafe-inline', a nonce or a hash refuses.
+      // Vite swaps the placeholder for the asset's URL under `base`.
+      if (stylesheetRef) {
+        return [
+          { tag: "link", attrs: { href: `__VITE_ASSET__${stylesheetRef}__`, rel: "stylesheet" }, injectTo: "head" },
+        ];
+      }
+      // Called outside a Vite build, there is no asset to link.
+      return [{ tag: "style", attrs: { id: "codenhub-icons" }, children: generateCssFromContent(), injectTo: "head" }];
     },
 
     transform(code, id) {
@@ -757,7 +763,18 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
       return null;
     },
 
-    generateBundle() {
+    generateBundle(_outputOptions, bundle) {
+      // Emitted here rather than from `transformIndexHtml`, which Vite 5 and 6
+      // call without a plugin context. Vite runs that hook after this one, and
+      // every HTML entry is a chunk by then, so a library build gets no file.
+      stylesheetRef = undefined;
+      const hasHtmlEntry = Object.values(bundle).some(
+        (file) => file.type === "chunk" && file.facadeModuleId?.endsWith(".html"),
+      );
+      if (mode === "css" && hasHtmlEntry) {
+        stylesheetRef = this.emitFile({ name: "codenhub-icons.css", source: generateCssFromContent(), type: "asset" });
+      }
+
       const unreplaced = renderUnreplacedWarning();
       if (unreplaced) {
         this.warn(unreplaced);
