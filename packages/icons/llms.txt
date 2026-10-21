@@ -7,8 +7,8 @@
 - Variants such as filled or duotone are separate families with their own prefixes, never options on one family.
 - Stroke width is a modifier on the class, `ic-lucide-heart/1.5`. It applies only to families drawn with strokes, and needs one of the plugin delivery methods.
 - `xs`, `sm`, `md`, `lg`, and `xl` are reserved for the `ic-xs`–`ic-xl` size classes: no family may use one as a prefix or icon name.
-- Icons paint in `--ic-color` if set on them or an ancestor, else in their own color (brand icons only), else in `currentColor`.
-- The brand family `simple-icons` is opt-in: `@codenhub/icons/tw` never resolves it, and the other methods resolve it only when named.
+- Icons paint in `--ic-color` if set on them or an ancestor, else in their own artwork (full-color `logos` icons), else in their own color (`simple-icons` icons), else in `currentColor`.
+- The brand families `simple-icons` and `logos` are opt-in: `@codenhub/icons/tw` never resolves them, and the other methods resolve them only when named.
 - The build emits the license notices required by the families it used, controlled by the `attribution` option.
 
 ## Documentation

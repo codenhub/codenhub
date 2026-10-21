@@ -2,7 +2,7 @@
 
 Zero-runtime icon system for the web. Write `ic-lucide-heart` in your markup and the icon arrives as a CSS mask — no imports, no components, no icon library in the bundle.
 
-`@codenhub/icons` ships 13 generated icon families totalling over 34,000 icons, each with the license notices its artwork requires, so a project can adopt icons without auditing licenses itself. An opt-in brand family, `simple-icons`, adds over 3,000 logos such as GitHub and npm, each in its brand color by default; brand marks stay subject to their owners' trademark guidelines.
+`@codenhub/icons` ships 13 generated icon families totalling over 34,000 icons, each with the license notices its artwork requires, so a project can adopt icons without auditing licenses itself. Two opt-in brand families add logos: `simple-icons`, over 3,000 in one brand color each, such as GitHub and npm, and `logos`, over 2,000 in full color, such as Google and Slack. Brand marks stay subject to their owners' trademark guidelines.
 
 ## Installation
 
@@ -19,7 +19,7 @@ Icons reach a project through CSS. Pick the entry point that matches your pipeli
 
 ### Tailwind CSS v4
 
-One line. Every family except the brand family `simple-icons` is resolvable, and Tailwind emits only the icons your markup used. To use `simple-icons`, declare the plugin yourself with `families`, as in [Tailwind](docs/delivery/tailwind.md).
+One line. Every family except the brand families `simple-icons` and `logos` is resolvable, and Tailwind emits only the icons your markup used. To use a brand family, declare the plugin yourself with `families`, as in [Tailwind](docs/delivery/tailwind.md).
 
 ```css
 @import "tailwindcss";
@@ -114,4 +114,4 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 
 This package is licensed under the [Apache-2.0](LICENSE) license.
 
-Its bundled, generated icon artwork comes from third parties, under ISC, MIT, Apache-2.0, and CC0 terms. See [NOTICE](NOTICE) for the full list. Each family stylesheet opens with its own notice, and the plugins emit the notices of the families a build actually used, so a consumer carries no separate obligation for them; see the documentation for the `attribution` options that control it. The brand family `simple-icons` owes no license notice, but its marks are trademarks of their owners: using one is subject to that owner's brand guidelines, which no build setting satisfies. A third-party set adopted through `adoptIconifySet` is not covered — a consumer remains responsible for its license terms and attribution material.
+Its bundled, generated icon artwork comes from third parties, under ISC, MIT, Apache-2.0, and CC0 terms. See [NOTICE](NOTICE) for the full list. Each family stylesheet opens with its own notice, and the plugins emit the notices of the families a build actually used, so a consumer carries no separate obligation for them; see the documentation for the `attribution` options that control it. The brand families `simple-icons` and `logos` owe no license notice, but their marks are trademarks of their owners: using one is subject to that owner's brand guidelines, which no build setting satisfies. A third-party set adopted through `adoptIconifySet` is not covered — a consumer remains responsible for its license terms and attribution material.

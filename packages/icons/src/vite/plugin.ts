@@ -334,24 +334,32 @@ function stringQuoteAt(code: string, offset: number, length: number): string | n
   const line = lineEnd === -1 ? rest : rest.slice(0, lineEnd);
   return new RegExp(`(?<!\\\\)${quote}`).test(line) ? quote : null;
 }
-const BRAND_COLOR_GROUP = /<g color="([^"]*)" style="([^"]*)">/g;
+const STYLE_STRING = /(?<=\s)style="([^"]*)"/g;
 
 /**
- * Rewrites a brand icon's style string as a JSX style object.
+ * Rewrites every style string in rendered icon markup as a JSX style object.
  *
  * React rejects a string `style` prop and fails the render, so markup inserted
- * as a JSX element carries the brand color as an object instead. Every other
- * host, and markup inside a string, keeps the string.
+ * as a JSX element carries a brand color, and each paint a multicolor logo
+ * lets `--ic-color` override, as an object instead. Every other host, and
+ * markup inside a string, keeps the string.
  */
 function toJsxStyle(svg: string): string {
-  return svg.replace(BRAND_COLOR_GROUP, (_match, color: string, style: string) => {
+  return svg.replace(STYLE_STRING, (_match, style: string) => {
     const declarations = Object.fromEntries(
       style
         .split(";")
         .map((declaration) => declaration.split(/:(.*)/s).map((part) => part.trim()))
-        .filter(([property]) => property),
+        .filter(([property]) => property)
+        // React reads style keys as DOM properties, camel-cased, as in `stopColor`.
+        .map(([property, value]) => [
+          property.startsWith("--")
+            ? property
+            : property.replace(/-([a-z])/g, (_dash, letter: string) => letter.toUpperCase()),
+          value,
+        ]),
     );
-    return `<g color="${color}" style={${JSON.stringify(declarations)}}>`;
+    return `style={${JSON.stringify(declarations)}}`;
   });
 }
 

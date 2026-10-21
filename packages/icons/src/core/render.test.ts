@@ -26,6 +26,49 @@ const filledIcon: ResolvedIcon = {
   width: 20,
 };
 
+const logo: ResolvedIcon = {
+  body: '<path fill="#ea4335" d="M0 0" /><path fill="none" stroke="#34a853" style="stroke-width: 2" d="M1 1" />',
+  height: 24,
+  iconName: "google",
+  left: 0,
+  multicolor: true,
+  name: "logos:google",
+  prefix: "logos",
+  top: 0,
+  width: 24,
+};
+
+describe("renderSvg for a multicolor icon", () => {
+  it("lets --ic-color override each fill, falling back to the artwork's own", () => {
+    expect(renderSvg(logo)).toContain('<path fill="#ea4335" d="M0 0" style="fill: var(--ic-color, #ea4335)" />');
+  });
+
+  it("merges the override into a style the element already has, and leaves fill none alone", () => {
+    expect(renderSvg(logo)).toContain(
+      '<path fill="none" stroke="#34a853" style="stroke-width: 2; stroke: var(--ic-color, #34a853)" d="M1 1" />',
+    );
+  });
+
+  it("keeps SVG's default black fill instead of the text color for unpainted shapes", () => {
+    expect(renderSvg(logo)).toContain('<g fill="#000" style="fill: var(--ic-color, #000)">');
+  });
+
+  it("leaves mask, clip, and filter content unpainted, since recoloring it changes the shape", () => {
+    const masked = { ...logo, body: '<mask id="m"><rect fill="#fff" /></mask><path fill="#f00" mask="url(#m)" />' };
+
+    expect(renderSvg(masked)).toContain('<mask id="m"><rect fill="#fff" /></mask>');
+    expect(renderSvg(masked)).toContain('style="fill: var(--ic-color, #f00)"');
+  });
+
+  it("reads the override from the configured class prefix", () => {
+    expect(renderSvg(logo, { prefix: "icon" })).toContain("var(--icon-color, #ea4335)");
+  });
+
+  it("leaves a one-color icon's paint as written", () => {
+    expect(renderSvg({ ...logo, multicolor: undefined })).not.toContain("var(--ic-color");
+  });
+});
+
 describe("setStrokeWidth", () => {
   it("replaces every stroke width in the markup", () => {
     expect(setStrokeWidth('<g stroke-width="2"><path stroke-width="2" /></g>', 1.5)).toBe(

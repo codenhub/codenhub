@@ -327,6 +327,33 @@ describe("viteIcons in svg mode", () => {
     expect(result?.code).toContain(`'<svg class="ic-user" xmlns="http://www.w3.org/2000/svg"`);
   });
 
+  describe("a multicolor icon's paint", () => {
+    const logos: IconFamilyData = {
+      ...createFamily(),
+      icons: { google: { body: '<stop style="stop-color: #fff" /><path fill="#ea4335" d="g" />' } },
+      info: { ...createFamily().info, multicolor: true },
+      prefix: "logos",
+    };
+
+    it("is a camel-cased style object on every element in bare JSX", () => {
+      const { transform } = createPlugin({ families: [createFamily(), logos], mode: "svg" });
+
+      const code = transform('export const App = () => <i className="ic-logos-google" />;', "app.tsx")?.code;
+
+      expect(code).toContain('style={{"fill":"var(--ic-color, #ea4335)"}}');
+      expect(code).toContain('<stop style={{"stopColor":"#fff"}} />');
+      expect(code).not.toContain('style="');
+    });
+
+    it("stays a style string in HTML", () => {
+      const { transformIndexHtml } = createPlugin({ families: [createFamily(), logos], mode: "svg" });
+
+      const html = transformIndexHtml('<i class="ic-logos-google"></i>', {}) as string;
+
+      expect(html).toContain('style="fill: var(--ic-color, #ea4335)"');
+    });
+  });
+
   describe("a brand icon's color", () => {
     const brand: IconFamilyData = {
       ...createFamily(),

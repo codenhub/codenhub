@@ -241,6 +241,7 @@ export class IconRegistry {
       top: icon.top ?? family.top ?? DEFAULT_VIEWBOX_ORIGIN,
       width: icon.width ?? family.width ?? DEFAULT_VIEWBOX_SIZE,
       ...(family.info.strokeWidth === undefined ? {} : { strokeWidth: family.info.strokeWidth }),
+      ...(family.info.multicolor === true ? { multicolor: true as const } : {}),
       // The color reaches CSS and a style attribute verbatim, so anything but a
       // hex value is dropped here rather than escaped at every output.
       ...(icon.color !== undefined && HEX_COLOR.test(icon.color) ? { color: icon.color } : {}),

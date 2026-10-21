@@ -29,10 +29,13 @@ Available families:
 | `material-symbols-outlined`, `-rounded`, `-sharp`                | 3899 each | outlined                    | Apache-2.0 |
 | `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3899 each | filled                      | Apache-2.0 |
 | `simple-icons` (brand)                                           | 3254      | filled logos, brand-colored | CC0-1.0    |
+| `logos` (brand)                                                  | 2016      | full-color logos            | CC0-1.0    |
 
 Variants such as filled or duotone are separate families rather than options on one, so resolution stays a prefix and a name.
 
-`simple-icons` is a brand family: logos such as `ic-simple-icons-github` and `ic-simple-icons-npm`. It is opt-in everywhere — `@codenhub/icons/tw` never resolves it, and a declared `@plugin` resolves it only when its `families` option names it — and its marks are trademarks of their owners. See [Licensing](licensing.md#brand-families).
+`simple-icons` and `logos` are brand families. `simple-icons` draws each logo in one brand color, as in `ic-simple-icons-github` and `ic-simple-icons-npm`. `logos` draws them in full color, as in `ic-logos-google-icon` and `ic-logos-slack-icon`, for brands that one color cannot show, such as Google's four-color G. The two complement each other: most brands are in only one of them.
+
+A full-color logo weighs more than a one-color icon. With the plugins, a project pays only for the logos it uses: about 2 KB of CSS for a typical one, and under 8 KB for 95% of them. A few traced, highly detailed logos are much heavier, from about 60 KB to 150 KB each: `lerna` (149 KB), `effector` (120 KB), `composer` (88 KB), `hugo` (85 KB), `tastejs` (69 KB), `matplotlib` (66 KB), `matplotlib-icon` (65 KB), and `chalk` (60 KB). A gzipped or Brotli-compressed stylesheet transfers several times smaller than these figures. Where weight matters, prefer a lighter mark, such as a brand's `-icon` variant, or the brand's `simple-icons` icon when it has one. Brand families are opt-in everywhere — `@codenhub/icons/tw` never resolves them, and a declared `@plugin` resolves them only when its `families` option names them — and their marks are trademarks of their owners. See [Licensing](licensing.md#brand-families).
 
 ## Names
 
@@ -79,8 +82,9 @@ An icon's name is the one its upstream project gives it, so browse the family's 
 | `phosphor`, variants   | [phosphoricons.com](https://phosphoricons.com)           | `ic-phosphor-fill-check-circle`                 |
 | `material-symbols-*`   | [fonts.google.com/icons](https://fonts.google.com/icons) | `ic-material-symbols-rounded-check_circle`      |
 | `simple-icons` (brand) | [simpleicons.org](https://simpleicons.org)               | `ic-simple-icons-github`, `ic-simple-icons-npm` |
+| `logos` (brand)        | [svgporn.com](https://svgporn.com)                       | `ic-logos-google`, `ic-logos-google-icon`       |
 
-Material Symbols names keep Google's underscores: `check_circle`, not `check-circle`. A Simple Icons name is the icon's slug, with any `_` written as `-`. A misspelled name is not an error: the class resolves to nothing, and the element renders as a solid square with the base rules loaded, or as nothing without them, so check the name against the family when an icon does not appear. Each family module also lists its names, as the keys of its `icons` object.
+Material Symbols names keep Google's underscores: `check_circle`, not `check-circle`. A Simple Icons name is the icon's slug, with any `_` written as `-`. A `logos` name is the upstream file name, lowercased, with any `_` or `.` written as `-`: `socket.io` is `ic-logos-socket-io`. Most brands come as a full logo, often a wordmark, and as a symbol with `-icon` appended; some add `-dark` or `-alt` variants. A misspelled name is not an error: the class resolves to nothing, and the element renders as a solid square with the base rules loaded, or as nothing without them, so check the name against the family when an icon does not appear. Each family module also lists its names, as the keys of its `icons` object.
 
 ## Reserved names
 
@@ -124,10 +128,11 @@ See [Size](#size) and [Color](#color).
 An icon paints in the first of these that applies:
 
 1. `--ic-color`, set on the icon itself or on any ancestor.
-2. The icon's own color. Only brand icons have one: `ic-simple-icons-github` is GitHub's `#181717`, `ic-simple-icons-npm` is npm's `#cb3837`.
-3. `currentColor`, the text color around it.
+2. The icon's own artwork, for a full-color `logos` icon: `ic-logos-google-icon` keeps all four of Google's colors and its gradients.
+3. The icon's own color. Only `simple-icons` icons have one: `ic-simple-icons-github` is GitHub's `#181717`, `ic-simple-icons-npm` is npm's `#cb3837`.
+4. `currentColor`, the text color around it.
 
-So every icon follows the text color by default, except brand icons, which arrive in their brand color. Setting `--ic-color` changes that, at whatever scope you set it:
+So every icon follows the text color by default, except brand icons, which arrive in their brand colors. A full-color logo under `--ic-color` becomes a one-color silhouette of its outline: detail drawn in a contrasting color inside the logo, such as the `31` on Google Calendar's page, fills in. Setting `--ic-color` changes that, at whatever scope you set it:
 
 ```css
 /* every icon on the page, brand icons included, in the text color */
@@ -141,7 +146,8 @@ So every icon follows the text color by default, except brand icons, which arriv
 }
 
 /* brand icons only, back to monochrome */
-[class*="ic-simple-icons-"] {
+[class*="ic-simple-icons-"],
+[class*="ic-logos-"] {
   --ic-color: currentColor;
 }
 ```
@@ -164,7 +170,7 @@ Some brand colors are near-black — GitHub, X, and Vercel among them — and di
 }
 ```
 
-With a custom class `prefix`, every property here is renamed to match: `--ux-color` under `prefix: "ux"`. `color` alone does not recolor a brand icon, because its own color comes before `currentColor`; set `--ic-color` instead. All of this works the same in every delivery method and in [inline SVG mode](delivery/vite.md#inline-svg-mode), where the brand color is carried by the `<svg>` itself and needs no stylesheet. One exception there: under a Content Security Policy that blocks `style` attributes, an inlined brand icon keeps its brand color but `--ic-color` no longer reaches it.
+With a custom class `prefix`, every property here is renamed to match: `--ux-color` under `prefix: "ux"`. `color` alone does not recolor a brand icon, because its own color comes before `currentColor`; set `--ic-color` instead. All of this works the same in every delivery method and in [inline SVG mode](delivery/vite.md#inline-svg-mode), where the brand colors are carried by the `<svg>` itself and need no stylesheet. One exception there: under a Content Security Policy that blocks `style` attributes, an inlined brand icon keeps its brand colors but `--ic-color` no longer reaches it.
 
 ## Accessibility
 
