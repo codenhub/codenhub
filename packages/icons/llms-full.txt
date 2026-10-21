@@ -363,7 +363,7 @@ Stroke width does not work here. It is baked into the artwork each rule carries,
 @import "@codenhub/icons/tw";
 ```
 
-Every family the package ships is resolvable except the brand family `simple-icons`, which only a declared `@plugin` can resolve, by naming it in `families` (below), and Tailwind emits only the icons your markup used. Loading the families costs about 130 ms and 100 MB once per build, measured with 13; a project using three icons ends up with about 10 KB of CSS.
+Every family the package ships is resolvable except the brand family `simple-icons`, which only a declared `@plugin` can resolve, by naming it in `families` (below), and Tailwind emits only the icons your markup used. Loading the families costs about 265 ms and 103 MB once per build, `simple-icons` included, against about 35 ms and 53 MB for a single family; a project using three icons ends up with about 10 KB of CSS.
 
 ## Configuring the plugin
 
