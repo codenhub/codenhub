@@ -45,6 +45,13 @@ describe("generated family data", () => {
     expect(files).toContain("ATTRIBUTION.md");
   });
 
+  it("publishes each family's license material in the tarball", () => {
+    const manifest = JSON.parse(readFileSync(resolve(dataDirectory, "../package.json"), "utf8")) as { files: string[] };
+
+    expect(manifest.files).toContain("data/*/LICENSE");
+    expect(manifest.files).toContain("data/*/ATTRIBUTION.md");
+  });
+
   it.each(families)("$prefix declares an accepted license and the obligation it implies", ({ family }) => {
     expect(ACCEPTED_LICENSES[family.info.license.spdx]).toBe(family.info.attribution);
   });
