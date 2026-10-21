@@ -71,7 +71,7 @@ How license notices reach the output. `"auto"` prepends a preserved CSS comment;
 content?: string[];
 ```
 
-File paths to scan for icon class names.
+File paths and glob patterns, such as `src/**/*.{html,tsx}`, to scan for icon class names.
 
 #### defaultPrefix
 

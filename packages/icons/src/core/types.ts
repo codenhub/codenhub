@@ -178,7 +178,8 @@ export interface IconData {
   /**
    * The icon's own color, as a hex value such as `#181717`. Brand families
    * carry their mark's color here; it is the icon's default paint, and
-   * `--ic-color` overrides it. A value that is not a hex color is ignored.
+   * `--ic-color` overrides it (`--<prefix>-color` under a custom class prefix).
+   * A value that is not a hex color is ignored.
    */
   color?: string;
 }

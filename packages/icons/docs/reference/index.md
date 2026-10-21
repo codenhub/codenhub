@@ -539,7 +539,7 @@ The wrapper is reconstructed at render time so size, color, and stroke width sta
 color?: string;
 ```
 
-The icon's own color, as a hex value such as `#181717`. Brand families carry their mark's color here; it is the icon's default paint, and `--ic-color` overrides it. A value that is not a hex color is ignored.
+The icon's own color, as a hex value such as `#181717`. Brand families carry their mark's color here; it is the icon's default paint, and `--ic-color` overrides it (`--<prefix>-color` under a custom class prefix). A value that is not a hex color is ignored.
 
 #### height
 
