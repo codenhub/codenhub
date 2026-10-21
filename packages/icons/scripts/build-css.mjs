@@ -30,7 +30,9 @@ const TW_DESCRIPTION = `/*!
  * @codenhub/icons Tailwind CSS v4 entry point.
  *
  * Base rules plus the plugin that generates icons on demand. Every family the
- * package ships is resolvable; only the icons your markup uses are emitted.
+ * package ships is resolvable except brand families such as simple-icons, which
+ * need the plugin declared with a families list; only the icons your markup
+ * uses are emitted.
  *
  * To configure the plugin -- a default family for unqualified names, a narrower
  * family list, a stroke width -- import "@codenhub/icons" for the base rules

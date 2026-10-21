@@ -48,7 +48,7 @@ A set adopted through `adoptIconifySet` is `extended` tier — you remain respon
 
 `simple-icons` is `brand` tier: logos from [Simple Icons](https://simpleicons.org), dedicated to the public domain under CC0. It owes no license notice, but a logo is a trademark, and the trademark is not the license: using one is subject to its owner's brand guidelines, which no build setting can satisfy and the package makes no promise about.
 
-- It is opt-in. Vite and PostCSS load only the families you pass; the Tailwind entries leave brand families out unless `families` names them.
+- It is opt-in. Vite and PostCSS load only the families you pass. `@codenhub/icons/tw` never resolves brand families; a declared `@plugin "@codenhub/icons/tailwind"` resolves them only when its `families` option names them.
 - Its notice line, wherever the build emits one, says that the marks are trademarks of their owners. `off` suppresses it without a warning, because no license requires it.
-- Simple Icons records a separate license for some icons. Those whose own license places any obligation are left out, so every icon in the family is CC0 as far as upstream records show.
+- Simple Icons records a separate license for some icons. Those whose own license places any obligation are left out, so no icon in the family carries a recorded license obligation: each is CC0, Unlicense, or has no license recorded upstream.
 - Simple Icons removes icons when brand owners ask. An upgrade of the family across an upstream major version can remove names, and its changelog lists them.

@@ -69,7 +69,7 @@ export function collectAttributedFamilies(families: Iterable<IconFamilyData>): I
  * Renders the plain-text license notice for the families a build used.
  *
  * @param families - Families the build resolved icons from.
- * @returns The notice text, or `undefined` when no family places an obligation.
+ * @returns The notice text, or `undefined` when no family carries a notice line.
  */
 export function renderAttributionNotice(families: Iterable<IconFamilyData>): string | undefined {
   const attributed = collectAttributedFamilies(families);
@@ -87,7 +87,7 @@ export function renderAttributionNotice(families: Iterable<IconFamilyData>): str
  * `legalComments` setting, so the notice survives minification.
  *
  * @param families - Families the build resolved icons from.
- * @returns The banner comment, or `undefined` when no family places an obligation.
+ * @returns The banner comment, or `undefined` when no family carries a notice line.
  */
 export function renderAttributionBanner(families: Iterable<IconFamilyData>): string | undefined {
   const notice = renderAttributionNotice(families);

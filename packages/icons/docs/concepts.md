@@ -32,7 +32,7 @@ Available families:
 
 Variants such as filled or duotone are separate families rather than options on one, so resolution stays a prefix and a name.
 
-`simple-icons` is a brand family: logos such as `ic-simple-icons-github` and `ic-simple-icons-npm`. It is opt-in everywhere — the Tailwind entries leave it out unless `families` names it — and its marks are trademarks of their owners. See [Licensing](licensing.md#brand-families).
+`simple-icons` is a brand family: logos such as `ic-simple-icons-github` and `ic-simple-icons-npm`. It is opt-in everywhere — `@codenhub/icons/tw` never resolves it, and a declared `@plugin` resolves it only when its `families` option names it — and its marks are trademarks of their owners. See [Licensing](licensing.md#brand-families).
 
 ## Names
 

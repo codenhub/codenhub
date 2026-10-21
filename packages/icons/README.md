@@ -19,7 +19,7 @@ Icons reach a project through CSS. Pick the entry point that matches your pipeli
 
 ### Tailwind CSS v4
 
-One line. Every family is resolvable, and Tailwind emits only the icons your markup used.
+One line. Every family except the brand family `simple-icons` is resolvable, and Tailwind emits only the icons your markup used. To use `simple-icons`, declare the plugin yourself with `families`, as in [Tailwind](docs/delivery/tailwind.md).
 
 ```css
 @import "tailwindcss";
