@@ -76,3 +76,29 @@ describe("buildFamily for a brand family", () => {
     await expect(buildFamily(definition, upstream, "1.0.0")).rejects.toThrow("brand tier");
   });
 });
+
+describe("buildFamily for an extended family", () => {
+  const EXTENDED: IconFamilyDefinition = {
+    ...BRAND,
+    iconLicensesFile: undefined,
+    license: { spdx: "CC-BY-4.0", title: "CC BY 4.0", url: "https://logos.test/license" },
+    tier: "extended",
+  };
+
+  // Only a brand family drops a reserved name; any other tier refuses it.
+  beforeEach(async () => {
+    await rm(join(upstream, "icons", "lg.svg"));
+  });
+
+  it("accepts a license that requires crediting the author", async () => {
+    const { document } = await buildFamily(EXTENDED, upstream, "1.0.0");
+
+    expect(document.info.attribution).toBe("credit");
+  });
+
+  it("refuses a license that owes no credit", async () => {
+    const definition = { ...EXTENDED, license: { ...EXTENDED.license, spdx: "MIT" } };
+
+    await expect(buildFamily(definition, upstream, "1.0.0")).rejects.toThrow("extended tier");
+  });
+});
