@@ -3,7 +3,7 @@ import { parseIconClass, resolveIconClassName } from "../core/class-names.js";
 import { IconRegistry as IconRegistryConstructor } from "../core/registry.js";
 import type { IconRegistry } from "../core/registry.js";
 import { renderSvg } from "../core/render.js";
-import type { IconFamilyData } from "../core/types.js";
+import type { IconFamilyData, ResolvedIcon } from "../core/types.js";
 import { svgToDataUri } from "./svg-encoder.js";
 
 const DEFAULT_PREFIX = "ic";
@@ -26,6 +26,12 @@ export interface GenerateIconCssOptions {
    * Class prefix for base icon styles. Defaults to `"ic"`.
    */
   prefix?: string;
+
+  /**
+   * The icon's own color, written as `--<prefix>-brand-color` for the base
+   * rules to paint with when `--<prefix>-color` is not set.
+   */
+  color?: string;
 }
 
 /**
@@ -76,6 +82,18 @@ export function escapeSelectorClass(className: string): string {
 }
 
 /**
+ * Renders the artwork a mask carries.
+ *
+ * A mask takes only the shape, so an icon's own color is left out of it and
+ * travels as `--ic-brand-color` on the rule instead.
+ */
+function renderMaskSvg(icon: ResolvedIcon, strokeWidth?: number | string): string {
+  const shape = { ...icon };
+  delete shape.color;
+  return renderSvg(shape, { strokeWidth });
+}
+
+/**
  * Generates the base rules every icon class builds on.
  *
  * An icon is an element that carries an icon class: an `<i>` (or `.${p}` on any
@@ -93,6 +111,10 @@ export function escapeSelectorClass(className: string): string {
  * `xl` are reserved names for this reason — no family may ship an icon or take a
  * prefix by one.
  *
+ * An icon paints in `--${p}-color` when one is set on it or an ancestor, else in
+ * its own color when it has one (a brand mark's, which its icon rule sets as
+ * `--${p}-brand-color`), else in `currentColor`.
+ *
  * @param options - Class prefix.
  * @returns The base stylesheet.
  */
@@ -105,7 +127,7 @@ i[class*=" ${p}-"],
   width: var(--${p}-size, 1em);
   height: var(--${p}-size, 1em);
   vertical-align: -0.125em;
-  background-color: var(--${p}-color, currentColor);
+  background-color: var(--${p}-color, var(--${p}-brand-color, currentColor));
   mask-image: var(--${p}-mask);
   -webkit-mask-image: var(--${p}-mask);
   mask-repeat: no-repeat;
@@ -151,15 +173,16 @@ svg[class*=" ${p}-"] {
  *
  * @param selectors - Selector or selectors the rule applies to.
  * @param svg - Complete SVG markup for the icon.
- * @param options - Class prefix.
+ * @param options - Class prefix and the icon's own color.
  * @returns The generated rule.
  */
 export function generateIconCss(selectors: string | string[], svg: string, options?: GenerateIconCssOptions): string {
   const selectorList = Array.isArray(selectors) ? selectors.join(",\n") : selectors;
   const prefix = options?.prefix ?? DEFAULT_PREFIX;
+  const color = options?.color === undefined ? "" : `\n  --${prefix}-brand-color: ${options.color};`;
   return `${selectorList} {
   --${prefix}-uri: url("${svgToDataUri(svg)}");
-  --${prefix}-mask: var(--${prefix}-uri);
+  --${prefix}-mask: var(--${prefix}-uri);${color}
 }`;
 }
 
@@ -189,16 +212,18 @@ export function generateIconSetCss(
   const injectBase = options?.injectBase ?? true;
   const prefixDash = `${prefix}-`;
 
-  const rulesBySvg = new Map<string, string[]>();
+  // Keyed by artwork and color together: two brand marks can share a shape.
+  const rules = new Map<string, { svg: string; color?: string; selectors: string[] }>();
   const usedPrefixes = new Set<string>();
 
-  function addRule(svg: string, selector: string): void {
-    const selectors = rulesBySvg.get(svg);
-    if (selectors) {
-      selectors.push(selector);
+  function addRule(svg: string, color: string | undefined, selector: string): void {
+    const key = `${color ?? ""}\n${svg}`;
+    const rule = rules.get(key);
+    if (rule) {
+      rule.selectors.push(selector);
       return;
     }
-    rulesBySvg.set(svg, [selector]);
+    rules.set(key, { svg, selectors: [selector], ...(color === undefined ? {} : { color }) });
   }
 
   for (const className of classes) {
@@ -213,12 +238,12 @@ export function generateIconSetCss(
     usedPrefixes.add(icon.prefix);
 
     const strokeWidth = parsed.strokeWidth ?? options?.strokeWidth;
-    addRule(renderSvg(icon, { strokeWidth }), `.${escapeSelectorClass(className)}`);
+    addRule(renderMaskSvg(icon, strokeWidth), icon.color, `.${escapeSelectorClass(className)}`);
   }
 
   const chunks = injectBase ? [generateBaseCss({ prefix })] : [];
-  for (const [svg, selectors] of rulesBySvg) {
-    chunks.push(generateIconCss(selectors, svg, { prefix }));
+  for (const { svg, color, selectors } of rules.values()) {
+    chunks.push(generateIconCss(selectors, svg, { prefix, ...(color === undefined ? {} : { color }) }));
   }
 
   return {
@@ -254,12 +279,12 @@ export function getIconMaskUrl(
     return undefined;
   }
 
-  return `url("${svgToDataUri(renderSvg(icon, { strokeWidth: options?.strokeWidth }))}")`;
+  return `url("${svgToDataUri(renderMaskSvg(icon, options?.strokeWidth))}")`;
 }
 
 /**
  * Resolves an icon into the custom properties an inline `style` attribute or a
- * CSS-in-JS object needs to render it.
+ * CSS-in-JS object needs to render it, its own color included when it has one.
  *
  * @param iconNameOrSvg - Icon name, class-style name, or complete SVG markup.
  * @param registry - Registry used when a name has to be resolved.
@@ -277,7 +302,13 @@ export function getIconCssProps(
   }
 
   const prefix = options?.prefix ?? DEFAULT_PREFIX;
-  return { [`--${prefix}-mask`]: `var(--${prefix}-uri)`, [`--${prefix}-uri`]: maskUrl };
+  const color =
+    registry && !iconNameOrSvg.startsWith("<svg") ? resolveIconClassName(registry, iconNameOrSvg)?.color : undefined;
+  return {
+    [`--${prefix}-mask`]: `var(--${prefix}-uri)`,
+    [`--${prefix}-uri`]: maskUrl,
+    ...(color === undefined ? {} : { [`--${prefix}-brand-color`]: color }),
+  };
 }
 
 /**
@@ -335,7 +366,12 @@ export function generateFamilyCss(family: IconFamilyData, options?: GenerateFami
     if (bareNames) {
       selectors.push(`.${escapeSelectorClass(`${prefix}-${name}`)}`);
     }
-    rules.push(generateIconCss(selectors, renderSvg(icon), { prefix }));
+    rules.push(
+      generateIconCss(selectors, renderMaskSvg(icon), {
+        prefix,
+        ...(icon.color === undefined ? {} : { color: icon.color }),
+      }),
+    );
   }
 
   const banner =

@@ -13,6 +13,7 @@ const ICON =
 const BRAND: IconFamilyDefinition = {
   author: { name: "Logos", url: "https://logos.test" },
   hyphenateNames: true,
+  iconColorsFile: "data/icons.json",
   iconLicensesFile: "data/icons.json",
   iconsDirectory: "icons",
   license: { spdx: "CC0-1.0", title: "CC0 1.0 Universal", url: "https://logos.test/license" },
@@ -36,11 +37,11 @@ beforeEach(async () => {
     ),
   );
   const licenses = [
-    { slug: "github" },
-    { slug: "hive_chain" },
-    { slug: "lg" },
-    { license: { type: "GPL-3.0-only" }, slug: "gnu" },
-    { license: { type: "CC0-1.0" }, slug: "dotnet" },
+    { hex: "181717", slug: "github" },
+    { hex: "FFDE00", slug: "hive_chain" },
+    { hex: "A50034", slug: "lg" },
+    { hex: "A42E2B", license: { type: "GPL-3.0-only" }, slug: "gnu" },
+    { hex: "512BD4", license: { type: "CC0-1.0" }, slug: "dotnet" },
   ];
   await writeFile(join(upstream, "data", "icons.json"), JSON.stringify(licenses), "utf8");
 });
@@ -70,6 +71,19 @@ describe("buildFamily for a brand family", () => {
     expect(attributionText).toContain("trademarks of their owners");
   });
 
+  it("keeps each icon's brand color under its own name, as a lowercase hex color", async () => {
+    const { document } = await buildFamily(BRAND, upstream, "1.0.0");
+
+    expect(document.icons.github?.color).toBe("#181717");
+    expect(document.icons["hive-chain"]?.color).toBe("#ffde00");
+  });
+
+  it("refuses a brand color that is not a six-digit hex value", async () => {
+    await writeFile(join(upstream, "data", "icons.json"), JSON.stringify([{ hex: "red", slug: "github" }]), "utf8");
+
+    await expect(buildFamily(BRAND, upstream, "1.0.0")).rejects.toThrow('"github"');
+  });
+
   it("refuses a family license that owes a notice", async () => {
     const definition = { ...BRAND, license: { ...BRAND.license, spdx: "MIT" } };
 
@@ -80,6 +94,7 @@ describe("buildFamily for a brand family", () => {
 describe("buildFamily for an extended family", () => {
   const EXTENDED: IconFamilyDefinition = {
     ...BRAND,
+    iconColorsFile: undefined,
     iconLicensesFile: undefined,
     license: { spdx: "CC-BY-4.0", title: "CC BY 4.0", url: "https://logos.test/license" },
     tier: "extended",

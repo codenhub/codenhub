@@ -29,6 +29,22 @@ function createFamily(overrides: Partial<IconFamilyData> = {}): IconFamilyData {
 }
 
 describe("IconRegistry", () => {
+  it("carries an icon's own color onto the resolved icon", () => {
+    const registry = new IconRegistry();
+    registry.registerFamily(createFamily({ icons: { mark: { body: "<path />", color: "#181717" } } }));
+
+    expect(registry.resolve("test:mark")?.color).toBe("#181717");
+  });
+
+  it("drops an icon color that is not a hex color, so it cannot reach CSS", () => {
+    const registry = new IconRegistry();
+    registry.registerFamily(
+      createFamily({ icons: { mark: { body: "<path />", color: "red; } body { display: none" } } }),
+    );
+
+    expect(registry.resolve("test:mark")?.color).toBeUndefined();
+  });
+
   it("resolves a qualified name against a registered family", () => {
     const registry = new IconRegistry();
     registry.registerFamily(createFamily());

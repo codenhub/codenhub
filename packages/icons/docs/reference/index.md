@@ -70,6 +70,8 @@ An icon is an element that carries an icon class: an `<i>` (or `.${p}` on any el
 
 The size axis is five one-line rules that each set `--${p}-size` to a rem value. Both forms above already read `var(--${p}-size, 1em)`, so a size class needs no knowledge of the element it lands on and the unclassed default stays `1em`. The classes are always emitted because they cost almost nothing and a scanner cannot know a project is about to use one. `xs`, `sm`, `md`, `lg`, and `xl` are reserved names for this reason — no family may ship an icon or take a prefix by one.
 
+An icon paints in `--${p}-color` when one is set on it or an ancestor, else in its own color when it has one (a brand mark's, which its icon rule sets as `--${p}-brand-color`), else in `currentColor`.
+
 **Parameters**
 
 - `options` — Class prefix.
@@ -124,7 +126,7 @@ export declare function getIconCssProps(iconNameOrSvg: string, registry?: IconRe
 }): Record<string, string> | undefined;
 ```
 
-Resolves an icon into the custom properties an inline `style` attribute or a CSS-in-JS object needs to render it.
+Resolves an icon into the custom properties an inline `style` attribute or a CSS-in-JS object needs to render it, its own color included when it has one.
 
 **Parameters**
 
@@ -192,10 +194,12 @@ Renders a resolved icon as a complete, self-contained SVG element.
 
 The element carries a namespace, a viewBox, a `1em` box, and `fill="currentColor"`, leaving color to CSS. The fill is for bodies that set none of their own, such as Material Symbols and Simple Icons paths, which SVG would otherwise paint black whatever `color` says; a body that sets its own fill, as Lucide's `fill="none"` does, still wins. The `1em` box is a floor for an icon inlined with no stylesheet behind it, which a bare `viewBox` renders at 0×0. It is a presentation attribute, so CSS `width`/`height` still wins — including the base stylesheet's `svg[class^="ic-"]` rule, which reads `--ic-size` and `--ic-color` and so carries the `ic-xs`–`ic-xl` size axis and the colour custom property onto an inlined icon the same as onto an `<i>`. Passing `width`, `height`, or `fill` in `RenderSvgOptions.attributes` replaces the default. The viewBox keeps the icon's own origin, because families such as Material Symbols draw above it. A stroke width is applied only when the icon's family is stroke-based.
 
+An icon with a color of its own, such as a brand mark, is painted in it unless `--ic-color` is set on the element or an ancestor. The color sits on a `<g>` around the body rather than on the `<svg>`, so it never collides with a `style` attribute a caller or the markup puts on the element.
+
 **Parameters**
 
 - `icon` — Icon to render.
-- `options` — Stroke width and extra element attributes.
+- `options` — Stroke width, extra element attributes, and class prefix.
 
 **Returns** — SVG markup.
 
@@ -528,6 +532,14 @@ body: string;
 Inner SVG markup, without the surrounding `<svg>` element.
 
 The wrapper is reconstructed at render time so size, color, and stroke width stay controllable by the consumer.
+
+#### color
+
+```ts
+color?: string;
+```
+
+The icon's own color, as a hex value such as `#181717`. Brand families carry their mark's color here; it is the icon's default paint, and `--ic-color` overrides it. A value that is not a hex color is ignored.
 
 #### height
 
@@ -959,6 +971,14 @@ attributes?: Record<string, string>;
 
 Extra attributes to place on the `<svg>` element, such as `aria-hidden`.
 
+#### prefix
+
+```ts
+prefix?: string;
+```
+
+Class prefix whose `--<prefix>-color` property overrides an icon's own color. Defaults to `"ic"`.
+
 #### strokeWidth
 
 ```ts
@@ -982,6 +1002,14 @@ body: string;
 ```
 
 Inner SVG markup, without the surrounding `<svg>` element.
+
+#### color
+
+```ts
+color?: string;
+```
+
+The icon's own color as a hex value, present only when its data declares a valid one.
 
 #### height
 

@@ -32,23 +32,23 @@ Icons reach a project through CSS. The shortest path with no build step is the b
 <button><i class="ic-lucide-check" aria-hidden="true"></i>Submit</button>
 ```
 
-An icon is an `<i>` carrying an icon class (or `.ic` on any element, in the CSS-based methods). Size and color follow custom properties: set `--ic-size` and `--ic-color` on the icon or any ancestor, or use the `ic-xs`–`ic-xl` size classes.
+An icon is an `<i>` carrying an icon class (or `.ic` on any element, in the CSS-based methods). Size and color follow custom properties: set `--ic-size` and `--ic-color` on the icon or any ancestor, or use the `ic-xs`–`ic-xl` size classes. Icons follow the text color, except brand icons, which arrive in their brand color; see [Color](concepts.md#color).
 
 Four delivery methods understand the same classes — plain CSS, Tailwind CSS v4, a Vite plugin, and a PostCSS plugin. The plugins scan your markup and emit only the rules you used; the plain-CSS family stylesheets are complete and large by construction. See [Delivery methods](delivery/index.md) to choose one, and [Frameworks](frameworks/index.md) for framework-specific setup.
 
 ## Requirements
 
-| Requirement  | Details                                                                               |
-| ------------ | ------------------------------------------------------------------------------------- |
-| Node.js      | 24 or newer, for the build-time plugins and helpers.                                  |
-| CSS imports  | Consumer tooling must resolve package CSS imports.                                    |
-| Browsers     | Must support CSS `mask-image`; icons render through masks tinted with `currentColor`. |
-| Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.              |
-| Optional     | `vite` >= 5.0.0 for the Vite plugin, `postcss` >= 8.0.0 for the PostCSS plugin.       |
+| Requirement  | Details                                                                           |
+| ------------ | --------------------------------------------------------------------------------- |
+| Node.js      | 24 or newer, for the build-time plugins and helpers.                              |
+| CSS imports  | Consumer tooling must resolve package CSS imports.                                |
+| Browsers     | Must support CSS `mask-image`; icons render as masks painted in the icon's color. |
+| Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.          |
+| Optional     | `vite` >= 5.0.0 for the Vite plugin, `postcss` >= 8.0.0 for the PostCSS plugin.   |
 
 ## Next steps
 
-- [Concepts](concepts.md): families, finding icon names, name resolution, stroke width, size, and accessibility.
+- [Concepts](concepts.md): families, finding icon names, name resolution, color, stroke width, size, and accessibility.
 - [Delivery methods](delivery/index.md): the four ways icons reach your CSS and how to choose.
 - [Frameworks](frameworks/index.md): setup for Astro, Next.js, and SvelteKit.
 - [JavaScript API](javascript-api.md): the registry, renderers, and third-party set adapter.

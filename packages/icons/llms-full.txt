@@ -4,7 +4,7 @@
 
 Zero-runtime icon system for the web. Write `ic-lucide-heart` in your markup and the icon arrives as a CSS mask — no imports, no components, no icon library in the bundle.
 
-`@codenhub/icons` ships 13 generated icon families totalling over 34,000 icons, each with the license notices its artwork requires, so a project can adopt icons without auditing licenses itself. An opt-in brand family, `simple-icons`, adds over 3,000 logos such as GitHub and npm; brand marks stay subject to their owners' trademark guidelines.
+`@codenhub/icons` ships 13 generated icon families totalling over 34,000 icons, each with the license notices its artwork requires, so a project can adopt icons without auditing licenses itself. An opt-in brand family, `simple-icons`, adds over 3,000 logos such as GitHub and npm, each in its brand color by default; brand marks stay subject to their owners' trademark guidelines.
 
 ## Installation
 
@@ -77,12 +77,12 @@ An icon is an element carrying an icon class — an `<i>`, or `.ic` on any eleme
 <i class="ic-lucide-search ic-lg" aria-hidden="true"></i>
 ```
 
-Size and color follow custom properties: set `--ic-size` and `--ic-color` on the icon or any ancestor. The `ic-xs`–`ic-xl` classes are shorthand that set `--ic-size` to a rem value; the default is `1em`. There is no `::before`, `::after`, or form-control form — for a `background-image` icon, resolve the `url()` with `getIconMaskUrl` / `getIconCssProps`.
+Size and color follow custom properties: set `--ic-size` and `--ic-color` on the icon or any ancestor. The `ic-xs`–`ic-xl` classes are shorthand that set `--ic-size` to a rem value; the default is `1em`. Icons paint in the text color, except brand icons, which arrive in their brand color until `--ic-color` says otherwise: `:root { --ic-color: currentColor; }` makes every icon monochrome. There is no `::before`, `::after`, or form-control form — for a `background-image` icon, resolve the `url()` with `getIconMaskUrl` / `getIconCssProps`.
 
 ## Documentation
 
 - [Documentation overview](docs/index.md): what the package is, installation, and the shortest working setup.
-- [Concepts](docs/concepts.md): families, finding icon names, name resolution, stroke width, size, and accessibility.
+- [Concepts](docs/concepts.md): families, finding icon names, name resolution, color, stroke width, size, and accessibility.
 - [Delivery methods](docs/delivery/index.md): plain CSS, Tailwind CSS v4, the Vite plugin, and the PostCSS plugin.
 - [Frameworks](docs/frameworks/index.md): setup for Astro, Next.js, and SvelteKit.
 - [JavaScript API](docs/javascript-api.md): the registry, renderers, and third-party set adapter.
@@ -92,13 +92,13 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 
 ## Requirements
 
-| Requirement  | Details                                                                               |
-| ------------ | ------------------------------------------------------------------------------------- |
-| Node.js      | 24 or newer, for the build-time plugins and helpers.                                  |
-| CSS imports  | Consumer tooling must resolve package CSS imports.                                    |
-| Browsers     | Must support CSS `mask-image`; icons render through masks tinted with `currentColor`. |
-| Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.              |
-| Optional     | `vite` >= 5.0.0 for the Vite plugin, `postcss` >= 8.0.0 for the PostCSS plugin.       |
+| Requirement  | Details                                                                           |
+| ------------ | --------------------------------------------------------------------------------- |
+| Node.js      | 24 or newer, for the build-time plugins and helpers.                              |
+| CSS imports  | Consumer tooling must resolve package CSS imports.                                |
+| Browsers     | Must support CSS `mask-image`; icons render as masks painted in the icon's color. |
+| Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.          |
+| Optional     | `vite` >= 5.0.0 for the Vite plugin, `postcss` >= 8.0.0 for the PostCSS plugin.   |
 
 ## Notes
 
@@ -149,23 +149,23 @@ Icons reach a project through CSS. The shortest path with no build step is the b
 <button><i class="ic-lucide-check" aria-hidden="true"></i>Submit</button>
 ```
 
-An icon is an `<i>` carrying an icon class (or `.ic` on any element, in the CSS-based methods). Size and color follow custom properties: set `--ic-size` and `--ic-color` on the icon or any ancestor, or use the `ic-xs`–`ic-xl` size classes.
+An icon is an `<i>` carrying an icon class (or `.ic` on any element, in the CSS-based methods). Size and color follow custom properties: set `--ic-size` and `--ic-color` on the icon or any ancestor, or use the `ic-xs`–`ic-xl` size classes. Icons follow the text color, except brand icons, which arrive in their brand color; see [Color](docs/concepts.md#color).
 
 Four delivery methods understand the same classes — plain CSS, Tailwind CSS v4, a Vite plugin, and a PostCSS plugin. The plugins scan your markup and emit only the rules you used; the plain-CSS family stylesheets are complete and large by construction. See [Delivery methods](docs/delivery/index.md) to choose one, and [Frameworks](docs/frameworks/index.md) for framework-specific setup.
 
 ## Requirements
 
-| Requirement  | Details                                                                               |
-| ------------ | ------------------------------------------------------------------------------------- |
-| Node.js      | 24 or newer, for the build-time plugins and helpers.                                  |
-| CSS imports  | Consumer tooling must resolve package CSS imports.                                    |
-| Browsers     | Must support CSS `mask-image`; icons render through masks tinted with `currentColor`. |
-| Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.              |
-| Optional     | `vite` >= 5.0.0 for the Vite plugin, `postcss` >= 8.0.0 for the PostCSS plugin.       |
+| Requirement  | Details                                                                           |
+| ------------ | --------------------------------------------------------------------------------- |
+| Node.js      | 24 or newer, for the build-time plugins and helpers.                              |
+| CSS imports  | Consumer tooling must resolve package CSS imports.                                |
+| Browsers     | Must support CSS `mask-image`; icons render as masks painted in the icon's color. |
+| Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.          |
+| Optional     | `vite` >= 5.0.0 for the Vite plugin, `postcss` >= 8.0.0 for the PostCSS plugin.   |
 
 ## Next steps
 
-- [Concepts](docs/concepts.md): families, finding icon names, name resolution, stroke width, size, and accessibility.
+- [Concepts](docs/concepts.md): families, finding icon names, name resolution, color, stroke width, size, and accessibility.
 - [Delivery methods](docs/delivery/index.md): the four ways icons reach your CSS and how to choose.
 - [Frameworks](docs/frameworks/index.md): setup for Astro, Next.js, and SvelteKit.
 - [JavaScript API](docs/javascript-api.md): the registry, renderers, and third-party set adapter.
@@ -190,16 +190,16 @@ import phosphorFill from "@codenhub/icons/data/phosphor-fill";
 
 Available families:
 
-| Prefix                                                           | Icons     | Style                   | License    |
-| ---------------------------------------------------------------- | --------- | ----------------------- | ---------- |
-| `lucide`                                                         | 2034      | outlined, stroke-based  | ISC        |
-| `phosphor`                                                       | 1512      | outlined                | MIT        |
-| `phosphor-thin`, `phosphor-light`, `phosphor-bold`               | 1512 each | outlined, other weights | MIT        |
-| `phosphor-fill`                                                  | 1512      | filled                  | MIT        |
-| `phosphor-duotone`                                               | 1512      | duotone                 | MIT        |
-| `material-symbols-outlined`, `-rounded`, `-sharp`                | 3899 each | outlined                | Apache-2.0 |
-| `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3899 each | filled                  | Apache-2.0 |
-| `simple-icons` (brand)                                           | 3254      | filled, one-color logos | CC0-1.0    |
+| Prefix                                                           | Icons     | Style                       | License    |
+| ---------------------------------------------------------------- | --------- | --------------------------- | ---------- |
+| `lucide`                                                         | 2034      | outlined, stroke-based      | ISC        |
+| `phosphor`                                                       | 1512      | outlined                    | MIT        |
+| `phosphor-thin`, `phosphor-light`, `phosphor-bold`               | 1512 each | outlined, other weights     | MIT        |
+| `phosphor-fill`                                                  | 1512      | filled                      | MIT        |
+| `phosphor-duotone`                                               | 1512      | duotone                     | MIT        |
+| `material-symbols-outlined`, `-rounded`, `-sharp`                | 3899 each | outlined                    | Apache-2.0 |
+| `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3899 each | filled                      | Apache-2.0 |
+| `simple-icons` (brand)                                           | 3254      | filled logos, brand-colored | CC0-1.0    |
 
 Variants such as filled or duotone are separate families rather than options on one, so resolution stays a prefix and a name.
 
@@ -287,6 +287,55 @@ Size and color follow CSS custom properties:
   --ic-color: var(--color-accent);
 }
 ```
+
+See [Size](#size) and [Color](#color).
+
+## Color
+
+An icon paints in the first of these that applies:
+
+1. `--ic-color`, set on the icon itself or on any ancestor.
+2. The icon's own color. Only brand icons have one: `ic-simple-icons-github` is GitHub's `#181717`, `ic-simple-icons-npm` is npm's `#cb3837`.
+3. `currentColor`, the text color around it.
+
+So every icon follows the text color by default, except brand icons, which arrive in their brand color. Setting `--ic-color` changes that, at whatever scope you set it:
+
+```css
+/* every icon on the page, brand icons included, in the text color */
+:root {
+  --ic-color: currentColor;
+}
+
+/* every icon in the toolbar */
+.toolbar {
+  --ic-color: var(--color-accent);
+}
+
+/* brand icons only, back to monochrome */
+[class*="ic-simple-icons-"] {
+  --ic-color: currentColor;
+}
+```
+
+```html
+<!-- one icon -->
+<i class="ic-simple-icons-npm" style="--ic-color: white" aria-hidden="true"></i>
+```
+
+To keep brand colors inside a scope that sets `--ic-color`, reset it on them with `--ic-color: initial`, which lets the brand color through again.
+
+Some brand colors are near-black — GitHub, X, and Vercel among them — and disappear on a dark background. Give those a light color in your dark theme:
+
+```css
+@media (prefers-color-scheme: dark) {
+  .ic-simple-icons-github,
+  .ic-simple-icons-x {
+    --ic-color: white;
+  }
+}
+```
+
+`color` alone does not recolor a brand icon, because its own color comes before `currentColor`; set `--ic-color` instead. All of this works the same in every delivery method and in [inline SVG mode](docs/delivery/vite.md#inline-svg-mode), where the brand color is carried by the `<svg>` itself and needs no stylesheet.
 
 ## Accessibility
 
@@ -900,6 +949,7 @@ A set adopted through `adoptIconifySet` is `extended` tier — you remain respon
 - It is opt-in. Vite and PostCSS load only the families you pass. `@codenhub/icons/tw` never resolves brand families; a declared `@plugin "@codenhub/icons/tailwind"` resolves them only when its `families` option names them.
 - Its notice line, wherever the build emits one, says that the marks are trademarks of their owners. `off` suppresses it without a warning, because no license requires it.
 - Simple Icons records a separate license for some icons. Those whose own license places any obligation are left out, so no icon in the family carries a recorded license obligation: each is CC0, Unlicense, or has no license recorded upstream.
+- Each icon renders in its brand color by default, and `--ic-color` can recolor it. Owners' guidelines commonly allow a mark in its official color or in plain monochrome and restrict other colors; which recoloring a mark allows is the owner's call. See [Color](docs/concepts.md#color).
 - Simple Icons removes icons when brand owners ask. An upgrade of the family across an upstream major version can remove names, and its changelog lists them.
 
 <!-- Source: docs/troubleshooting.md -->
@@ -936,7 +986,11 @@ The base rules sized and colored the element, but no rule gave it a mask, so the
 
 ## The color does not change
 
-Set `--ic-color` on the icon or an ancestor, or set `color`: an icon with no `--ic-color` paints in `currentColor`. A `background-color` you set on the icon element itself replaces its color, because the mask paints with the background.
+Set `--ic-color` on the icon or an ancestor. `color` reaches only icons without a color of their own: a brand icon keeps its brand color until `--ic-color` is set. A `background-color` you set on the icon element itself replaces its color, because the mask paints with the background. See [Color](docs/concepts.md#color).
+
+## A brand icon is invisible in dark mode
+
+Its brand color is near-black, as GitHub's, X's, and Vercel's are. Set `--ic-color` on it in your dark theme. See [Color](docs/concepts.md#color).
 
 ## The license notice is missing from the output
 

@@ -89,6 +89,16 @@ describe("renderSvg", () => {
     expect(renderSvg(offsetIcon)).toContain(' fill="currentColor">');
   });
 
+  it("paints a colored icon in its own color unless --ic-color says otherwise", () => {
+    expect(renderSvg({ ...offsetIcon, color: "#181717" })).toContain(
+      '<g style="color: var(--ic-color, #181717)"><path d="M0 0" /></g></svg>',
+    );
+  });
+
+  it("names the color property after a custom class prefix", () => {
+    expect(renderSvg({ ...offsetIcon, color: "#181717" }, { prefix: "ux" })).toContain("var(--ux-color, #181717)");
+  });
+
   it("keeps a viewBox that does not start at the origin", () => {
     expect(renderSvg(offsetIcon)).toContain('viewBox="0 -960 960 960"');
   });

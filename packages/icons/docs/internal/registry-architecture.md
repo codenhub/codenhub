@@ -70,6 +70,7 @@ interface IconData {
   width?: number; // per-icon override
   height?: number;
   tags?: string[];
+  color?: string; // the icon's own color, "#rrggbb"; brand families only
 }
 
 interface IconAlias {
@@ -80,7 +81,7 @@ interface IconAlias {
 Rules:
 
 - `body` holds inner markup only. The `<svg>` wrapper is reconstructed at render time from `width`/`height`, so size, color, and stroke stay controllable.
-- Every field Iconify defines and we do not use is simply absent; every field we add lives under `info`, which Iconify treats as opaque. A third-party IconifyJSON set therefore loads through `adapters/iconify` with no transformation of icon bodies.
+- Every field Iconify defines and we do not use is simply absent; every family-level field we add lives under `info`, which Iconify treats as opaque. The per-icon `tags` and `color` are additions Iconify readers ignore. A third-party IconifyJSON set therefore loads through `adapters/iconify` with no transformation of icon bodies.
 - Icon names are the upstream project's own, unique within a prefix. An alias never points at another alias.
 
 Names are not normalised to kebab-case. Material Symbols writes `check_circle`, the name a consumer finds on fonts.google.com, and those names shipped in 0.2.x; rewriting them to `check-circle` would break every published class for consistency alone, and send a reader looking the name up upstream to a form that is not there. Simple Icons is the exception, its `_` mapped to `-` (see [Brand families](#brand-families)), because its slugs are not the brand's displayed name either way. Rejected: hyphenating every family, for the break above.
@@ -202,7 +203,7 @@ A brand mark carries two obligations: the artwork's copyright license, which the
 - **Notice.** A brand family gets a notice line wherever the build emits one, although its license owes none, and that line adds that the marks are trademarks of their owners and subject to their guidelines. `attribution: "off"` drops it without a warning, since no license requires it.
 - **Names.** Icon names are upstream slugs, with `_` mapped to `-` (6 slugs at 16.35.0). The slug `lg` is a reserved size token. The adapter drops it and the generator reports it, rather than refusing the whole family as it does for a core family.
 - **Upgrades.** Simple Icons removes icons at brand owners' request, in major releases. Moving `simple-icons` across a major version is a breaking change for this family, and its changelog entry lists the removed names.
-- **Color.** Brand colors are not shipped. Icons render in `currentColor` like every other family, and the upstream `hex` values are not kept.
+- **Color.** Each icon keeps its upstream `hex` as `IconData.color` (`#rrggbb`), and renders in it by default. `--ic-color`, set on the icon or any ancestor, overrides it, so `:root { --ic-color: currentColor }` makes every brand icon monochrome and a per-icon value recolors one. In CSS the icon rule sets `--ic-brand-color` and the base rule paints `var(--ic-color, var(--ic-brand-color, currentColor))`; the mask artwork itself carries no color. An inlined `<svg>` wraps the body in `<g style="color: var(--ic-color, #hex)">`, which works with no stylesheet and never collides with a `style` attribute on the element. The registry drops a `color` that is not a hex value, because it reaches CSS and a `style` attribute verbatim. The cost: 753 of 3,466 Simple Icons colors at 16.35.0 are near-black (relative luminance below 0.05), GitHub's `#181717` and X's `#000000` among them, and vanish on a dark background until a consumer overrides them.
 
 Rejected alternatives:
 
@@ -210,6 +211,8 @@ Rejected alternatives:
 - **Keeping per-icon-licensed icons with per-icon notices.** This needs a license field on `IconData`, which the model does not have, for 211 icons. For some of them (NC, ND, GPL), no notice would make them safe in a consumer's build.
 - **Marking brand families `extended`.** `extended` means a credit obligation on the copyright side. Brand families owe none, and reusing the tier would blur what both tiers mean.
 - **A generic `brand` prefix.** Every other family is named for its source, which leaves room for a second brand set beside this one.
+- **Rendering brand icons in `currentColor`, dropping `hex`.** This was the previous decision, recorded with no reason. It did not weigh that a logo is recognised by its color as much as its shape, and that brand guidelines commonly allow a mark in its official color or in plain monochrome, which `--ic-color` still provides. A consumer who wanted the official color had to look up and hand-copy each hex value.
+- **Full-color, multi-color logos** from another source. A mask paints one color, so they need a second render path (`background-image`), a new source, and a new license review, and "set a color" would mean flattening the logo. Simple Icons' one color per mark fits the mask pipeline unchanged.
 
 A CSS comment is a defensible notice medium but a consumer minifying with `legalComments: "none"` strips it. That is why `"file"` exists, and the docs say so.
 

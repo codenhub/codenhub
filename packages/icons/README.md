@@ -2,7 +2,7 @@
 
 Zero-runtime icon system for the web. Write `ic-lucide-heart` in your markup and the icon arrives as a CSS mask — no imports, no components, no icon library in the bundle.
 
-`@codenhub/icons` ships 13 generated icon families totalling over 34,000 icons, each with the license notices its artwork requires, so a project can adopt icons without auditing licenses itself. An opt-in brand family, `simple-icons`, adds over 3,000 logos such as GitHub and npm; brand marks stay subject to their owners' trademark guidelines.
+`@codenhub/icons` ships 13 generated icon families totalling over 34,000 icons, each with the license notices its artwork requires, so a project can adopt icons without auditing licenses itself. An opt-in brand family, `simple-icons`, adds over 3,000 logos such as GitHub and npm, each in its brand color by default; brand marks stay subject to their owners' trademark guidelines.
 
 ## Installation
 
@@ -75,12 +75,12 @@ An icon is an element carrying an icon class — an `<i>`, or `.ic` on any eleme
 <i class="ic-lucide-search ic-lg" aria-hidden="true"></i>
 ```
 
-Size and color follow custom properties: set `--ic-size` and `--ic-color` on the icon or any ancestor. The `ic-xs`–`ic-xl` classes are shorthand that set `--ic-size` to a rem value; the default is `1em`. There is no `::before`, `::after`, or form-control form — for a `background-image` icon, resolve the `url()` with `getIconMaskUrl` / `getIconCssProps`.
+Size and color follow custom properties: set `--ic-size` and `--ic-color` on the icon or any ancestor. The `ic-xs`–`ic-xl` classes are shorthand that set `--ic-size` to a rem value; the default is `1em`. Icons paint in the text color, except brand icons, which arrive in their brand color until `--ic-color` says otherwise: `:root { --ic-color: currentColor; }` makes every icon monochrome. There is no `::before`, `::after`, or form-control form — for a `background-image` icon, resolve the `url()` with `getIconMaskUrl` / `getIconCssProps`.
 
 ## Documentation
 
 - [Documentation overview](docs/index.md): what the package is, installation, and the shortest working setup.
-- [Concepts](docs/concepts.md): families, finding icon names, name resolution, stroke width, size, and accessibility.
+- [Concepts](docs/concepts.md): families, finding icon names, name resolution, color, stroke width, size, and accessibility.
 - [Delivery methods](docs/delivery/index.md): plain CSS, Tailwind CSS v4, the Vite plugin, and the PostCSS plugin.
 - [Frameworks](docs/frameworks/index.md): setup for Astro, Next.js, and SvelteKit.
 - [JavaScript API](docs/javascript-api.md): the registry, renderers, and third-party set adapter.
@@ -90,13 +90,13 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 
 ## Requirements
 
-| Requirement  | Details                                                                               |
-| ------------ | ------------------------------------------------------------------------------------- |
-| Node.js      | 24 or newer, for the build-time plugins and helpers.                                  |
-| CSS imports  | Consumer tooling must resolve package CSS imports.                                    |
-| Browsers     | Must support CSS `mask-image`; icons render through masks tinted with `currentColor`. |
-| Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.              |
-| Optional     | `vite` >= 5.0.0 for the Vite plugin, `postcss` >= 8.0.0 for the PostCSS plugin.       |
+| Requirement  | Details                                                                           |
+| ------------ | --------------------------------------------------------------------------------- |
+| Node.js      | 24 or newer, for the build-time plugins and helpers.                              |
+| CSS imports  | Consumer tooling must resolve package CSS imports.                                |
+| Browsers     | Must support CSS `mask-image`; icons render as masks painted in the icon's color. |
+| Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.          |
+| Optional     | `vite` >= 5.0.0 for the Vite plugin, `postcss` >= 8.0.0 for the PostCSS plugin.   |
 
 ## Notes
 

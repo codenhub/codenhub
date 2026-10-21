@@ -3,6 +3,7 @@ import type { IconFamilyData, IconFamilyLoader, IconRegistryOptions, ResolvedIco
 const DEFAULT_VIEWBOX_SIZE = 24;
 const DEFAULT_VIEWBOX_ORIGIN = 0;
 const PREFIX_SEPARATOR = ":";
+const HEX_COLOR = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
 interface ParsedName {
   prefix?: string;
@@ -240,6 +241,9 @@ export class IconRegistry {
       top: icon.top ?? family.top ?? DEFAULT_VIEWBOX_ORIGIN,
       width: icon.width ?? family.width ?? DEFAULT_VIEWBOX_SIZE,
       ...(family.info.strokeWidth === undefined ? {} : { strokeWidth: family.info.strokeWidth }),
+      // The color reaches CSS and a style attribute verbatim, so anything but a
+      // hex value is dropped here rather than escaped at every output.
+      ...(icon.color !== undefined && HEX_COLOR.test(icon.color) ? { color: icon.color } : {}),
     };
   }
 }

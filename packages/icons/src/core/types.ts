@@ -171,6 +171,13 @@ export interface IconData {
    * Search keywords for catalog and documentation surfaces.
    */
   tags?: string[];
+
+  /**
+   * The icon's own color, as a hex value such as `#181717`. Brand families
+   * carry their mark's color here; it is the icon's default paint, and
+   * `--ic-color` overrides it. A value that is not a hex color is ignored.
+   */
+  color?: string;
 }
 
 /**
@@ -305,4 +312,10 @@ export interface ResolvedIcon {
    * and therefore accepts a different stroke width.
    */
   strokeWidth?: number;
+
+  /**
+   * The icon's own color as a hex value, present only when its data declares a
+   * valid one.
+   */
+  color?: string;
 }

@@ -111,6 +111,17 @@ describe("createIconsTailwindPlugin", () => {
     expect(Object.keys(base[0][":root"])).toEqual(["--ic-attribution-logos"]);
   });
 
+  it("carries an icon's brand color beside its mask", () => {
+    const brand = createFamily("brand", {
+      icons: { mark: { body: '<path d="mark" />', color: "#181717" } },
+      info: { ...createFamily("brand").info, tier: "brand" },
+    });
+    const { resolve } = runPlugin([brand], { families: ["brand"] });
+
+    expect(resolve("brand:mark")?.["--ic-brand-color"]).toBe("#181717");
+    expect(resolve("brand:mark")?.["--ic-uri"]).not.toContain("181717");
+  });
+
   it("reports a family it cannot provide", () => {
     expect(() => runPlugin([createFamily("alpha")], { families: ["absent"] })).toThrow('unknown icon family "absent"');
   });

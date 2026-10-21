@@ -95,8 +95,8 @@ function resolveIconModule(registry: IconRegistry, request: string): ResolvedIco
   return icon;
 }
 
-function renderIconModule(icon: ResolvedIcon, strokeWidth: number | string | undefined): string {
-  const svg = renderSvg(icon, { strokeWidth });
+function renderIconModule(icon: ResolvedIcon, strokeWidth: number | string | undefined, prefix: string): string {
+  const svg = renderSvg(icon, { prefix, strokeWidth });
   return `export const icon = ${JSON.stringify(icon)};
 export const svg = ${JSON.stringify(svg)};
 export default svg;
@@ -397,7 +397,7 @@ function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options:
       }
 
       const effectiveStrokeWidth = resolved.strokeWidth ?? strokeWidth;
-      let svg = renderSvg(icon, { strokeWidth: effectiveStrokeWidth });
+      let svg = renderSvg(icon, { prefix, strokeWidth: effectiveStrokeWidth });
 
       const passthroughAttrs = [before.trim(), after.trim()].filter(Boolean).join(" ");
       const passthroughStr = passthroughAttrs ? ` ${passthroughAttrs}` : "";
@@ -651,7 +651,7 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
         if (family) {
           rememberFamily(family);
         }
-        return renderIconModule(icon, options.strokeWidth);
+        return renderIconModule(icon, options.strokeWidth, prefix);
       }
       // Matched by the exact same fixed ids `resolveId` claims above, not by
       // the `\0virtual:` convention alone: that prefix is a generic Vite/Rollup

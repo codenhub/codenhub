@@ -51,4 +51,5 @@ A set adopted through `adoptIconifySet` is `extended` tier — you remain respon
 - It is opt-in. Vite and PostCSS load only the families you pass. `@codenhub/icons/tw` never resolves brand families; a declared `@plugin "@codenhub/icons/tailwind"` resolves them only when its `families` option names them.
 - Its notice line, wherever the build emits one, says that the marks are trademarks of their owners. `off` suppresses it without a warning, because no license requires it.
 - Simple Icons records a separate license for some icons. Those whose own license places any obligation are left out, so no icon in the family carries a recorded license obligation: each is CC0, Unlicense, or has no license recorded upstream.
+- Each icon renders in its brand color by default, and `--ic-color` can recolor it. Owners' guidelines commonly allow a mark in its official color or in plain monochrome and restrict other colors; which recoloring a mark allows is the owner's call. See [Color](concepts.md#color).
 - Simple Icons removes icons when brand owners ask. An upgrade of the family across an upstream major version can remove names, and its changelog lists them.

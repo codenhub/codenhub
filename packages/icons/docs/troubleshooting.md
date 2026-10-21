@@ -36,7 +36,11 @@ The base rules sized and colored the element, but no rule gave it a mask, so the
 
 ## The color does not change
 
-Set `--ic-color` on the icon or an ancestor, or set `color`: an icon with no `--ic-color` paints in `currentColor`. A `background-color` you set on the icon element itself replaces its color, because the mask paints with the background.
+Set `--ic-color` on the icon or an ancestor. `color` reaches only icons without a color of their own: a brand icon keeps its brand color until `--ic-color` is set. A `background-color` you set on the icon element itself replaces its color, because the mask paints with the background. See [Color](concepts.md#color).
+
+## A brand icon is invisible in dark mode
+
+Its brand color is near-black, as GitHub's, X's, and Vercel's are. Set `--ic-color` on it in your dark theme. See [Color](concepts.md#color).
 
 ## The license notice is missing from the output
 
