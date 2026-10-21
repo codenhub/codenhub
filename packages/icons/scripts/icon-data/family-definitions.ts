@@ -30,6 +30,14 @@ export interface IconFamilyDefinition {
   excludedFileSuffix?: string;
   /** JSON file inside the upstream package mapping icon names to keywords. */
   tagsFile?: string;
+  /**
+   * JSON file inside the upstream package listing a license per icon, as an
+   * array of `{ slug, license?: { type } }`. Icons whose own license places an
+   * obligation, or is not on the accepted list, are left out of the family.
+   */
+  iconLicensesFile?: string;
+  /** Rewrites `_` in upstream file names to `-`, so icon names stay kebab-case. */
+  hyphenateNames?: boolean;
 }
 
 /**
@@ -72,6 +80,9 @@ export const RESERVED_PREFIXES: readonly string[] = [...RESERVED_SIZE_TOKENS];
 
 /** Obligations a `core` family may place on a consumer. */
 export const CORE_TIER_OBLIGATIONS: readonly IconAttribution[] = ["none", "notice"];
+
+/** Obligations a `brand` family may place on a consumer. */
+export const BRAND_TIER_OBLIGATIONS: readonly IconAttribution[] = ["none"];
 
 /**
  * Every family the generator produces.
@@ -249,5 +260,22 @@ export const ICON_FAMILIES: readonly IconFamilyDefinition[] = [
     tier: "core",
     upstreamPackage: "@material-symbols/svg-400",
     weight: "400",
+  },
+  {
+    author: { name: "Simple Icons Collaborators", url: "https://simpleicons.org" },
+    hyphenateNames: true,
+    iconLicensesFile: "data/simple-icons.json",
+    iconsDirectory: "icons",
+    license: {
+      spdx: "CC0-1.0",
+      title: "CC0 1.0 Universal",
+      url: "https://github.com/simple-icons/simple-icons/blob/develop/LICENSE.md",
+    },
+    licenseFile: "LICENSE.md",
+    name: "Simple Icons",
+    prefix: "simple-icons",
+    style: "filled",
+    tier: "brand",
+    upstreamPackage: "simple-icons",
   },
 ];

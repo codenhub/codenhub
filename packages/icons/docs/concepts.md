@@ -28,8 +28,11 @@ Available families:
 | `phosphor-duotone`                                               | 1512      | duotone                 | MIT        |
 | `material-symbols-outlined`, `-rounded`, `-sharp`                | 3899 each | outlined                | Apache-2.0 |
 | `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3899 each | filled                  | Apache-2.0 |
+| `simple-icons` (brand)                                           | 3254      | filled, one-color logos | CC0-1.0    |
 
 Variants such as filled or duotone are separate families rather than options on one, so resolution stays a prefix and a name.
+
+`simple-icons` is a brand family: logos such as `ic-simple-icons-github` and `ic-simple-icons-npm`. It is opt-in everywhere — the Tailwind entries leave it out unless `families` names it — and its marks are trademarks of their owners. See [Licensing](licensing.md#brand-families).
 
 ## Names
 

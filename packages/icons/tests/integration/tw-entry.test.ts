@@ -35,9 +35,17 @@ describe.skipIf(!existsSync(twEntryPath))("dist/tw/index.css", () => {
     expect(banner).toBeLessThan(css.indexOf('@plugin "@codenhub/icons/tailwind";'));
   });
 
-  it.each(families)("names $prefix and its license in the banner", (family) => {
-    expect(css).toContain(family.info.name);
-    expect(css).toContain(family.info.license.spdx);
-    expect(css).toContain(family.info.upstream.version);
+  it.each(families.filter((family) => family.info.tier !== "brand"))(
+    "names $prefix and its license in the banner",
+    (family) => {
+      expect(css).toContain(family.info.name);
+      expect(css).toContain(family.info.license.spdx);
+      expect(css).toContain(family.info.upstream.version);
+    },
+  );
+
+  // `/tw` does not resolve brand families, so its banner must not claim their artwork.
+  it.each(families.filter((family) => family.info.tier === "brand"))("leaves brand family $prefix out", (family) => {
+    expect(css).not.toContain(`(${family.prefix})`);
   });
 });

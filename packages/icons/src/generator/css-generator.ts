@@ -1,4 +1,4 @@
-import { describeFamilyNotice } from "../catalog/attribution.js";
+import { carriesNotice, describeFamilyNotice } from "../catalog/attribution.js";
 import { parseIconClass, resolveIconClassName } from "../core/class-names.js";
 import { IconRegistry as IconRegistryConstructor } from "../core/registry.js";
 import type { IconRegistry } from "../core/registry.js";
@@ -339,7 +339,7 @@ export function generateFamilyCss(family: IconFamilyData, options?: GenerateFami
   }
 
   const banner =
-    withAttribution && family.info.attribution !== "none"
+    withAttribution && carriesNotice(family)
       ? `/*!\n * Icon artwork in this stylesheet:\n * ${describeFamilyNotice(family)}\n */\n`
       : "";
 

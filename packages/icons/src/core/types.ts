@@ -16,9 +16,11 @@ export type IconAttribution = "none" | "notice" | "credit";
  *
  * `"core"` families are public-domain or notice-only, and their obligations are
  * satisfied by the notice the build emits. `"extended"` families require
- * crediting the author and are opt-in.
+ * crediting the author and are opt-in. `"brand"` families hold logos and brand
+ * marks: they owe nothing on the copyright side, are opt-in, and remain subject
+ * to each brand owner's trademark guidelines, which no build setting satisfies.
  */
-export type IconFamilyTier = "core" | "extended";
+export type IconFamilyTier = "core" | "extended" | "brand";
 
 /**
  * Upstream project a family's artwork was generated from.

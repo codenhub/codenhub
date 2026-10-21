@@ -90,6 +90,27 @@ describe("createIconsTailwindPlugin", () => {
     expect(resolve("beta:heart")).toBeNull();
   });
 
+  it("leaves brand families out unless they are requested", () => {
+    const brand = createFamily("logos");
+    brand.info.tier = "brand";
+
+    expect(runPlugin([createFamily("alpha"), brand]).values["logos-heart"]).toBeUndefined();
+    expect(runPlugin([createFamily("alpha"), brand], { families: ["logos"] }).values["logos-heart"]).toBe(
+      "logos:heart",
+    );
+  });
+
+  it("emits a notice for a used brand family although its license asks for none", () => {
+    const brand = createFamily("logos");
+    brand.info.tier = "brand";
+    brand.info.attribution = "none";
+    const { base, resolve } = runPlugin([brand], { families: ["logos"] });
+
+    resolve("logos:heart");
+
+    expect(Object.keys(base[0][":root"])).toEqual(["--ic-attribution-logos"]);
+  });
+
   it("reports a family it cannot provide", () => {
     expect(() => runPlugin([createFamily("alpha")], { families: ["absent"] })).toThrow('unknown icon family "absent"');
   });

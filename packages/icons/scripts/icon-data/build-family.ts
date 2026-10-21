@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import type { IconAttribution, IconData, IconFamilyData } from "../../src/core/types.ts";
 import { mapConcurrent } from "./concurrency.ts";
 import {
+  BRAND_TIER_OBLIGATIONS,
   CORE_TIER_OBLIGATIONS,
   LICENSE_OBLIGATIONS,
   RESERVED_PREFIXES,
@@ -48,10 +49,15 @@ function readObligation(definition: IconFamilyDefinition): IconAttribution {
       `Family "${definition.prefix}" is core tier but its license "${definition.license.spdx}" requires crediting the author.`,
     );
   }
+  if (definition.tier === "brand" && !BRAND_TIER_OBLIGATIONS.includes(obligation)) {
+    throw new Error(
+      `Family "${definition.prefix}" is brand tier but its license "${definition.license.spdx}" places an obligation on the consumer.`,
+    );
+  }
   return obligation;
 }
 
-function readIconName(fileName: string, definition: IconFamilyDefinition): string | undefined {
+function readUpstreamName(fileName: string, definition: IconFamilyDefinition): string | undefined {
   if (!fileName.endsWith(SVG_EXTENSION)) {
     return undefined;
   }
@@ -62,6 +68,26 @@ function readIconName(fileName: string, definition: IconFamilyDefinition): strin
   // A directory can hold several variants, as Material Symbols does with its
   // filled icons, so the base variant has to skip what belongs to a sibling.
   return definition.excludedFileSuffix && base.endsWith(definition.excludedFileSuffix) ? undefined : base;
+}
+
+/**
+ * Reads which icons carry a license of their own that the family cannot pass on.
+ *
+ * A family has one license, so an icon whose own license places any obligation
+ * -- or one not on the accepted list at all -- has to be left out rather than
+ * shipped under the family's terms.
+ */
+async function readIncompatibleIcons(packageDirectory: string, definition: IconFamilyDefinition): Promise<Set<string>> {
+  if (!definition.iconLicensesFile) {
+    return new Set();
+  }
+  const source = await readFile(resolve(packageDirectory, definition.iconLicensesFile), "utf8");
+  const entries = JSON.parse(source) as { slug: string; license?: { type: string } }[];
+  return new Set(
+    entries
+      .filter(({ license }) => license !== undefined && LICENSE_OBLIGATIONS[license.type] !== "none")
+      .map(({ slug }) => slug),
+  );
 }
 
 async function readTags(packageDirectory: string, definition: IconFamilyDefinition): Promise<Record<string, string[]>> {
@@ -89,8 +115,38 @@ function readViewBoxKey(viewBox: ViewBox): string {
   return `${viewBox.left} ${viewBox.top} ${viewBox.width} ${viewBox.height}`;
 }
 
-function renderAttribution(document: IconFamilyData): string {
-  const { author, license, name, upstream } = document.info;
+interface Exclusions {
+  /** Upstream icons left out because their own license could not be passed on. */
+  licensed: number;
+  /** Icon names left out because the utility classes reserve them. */
+  reserved: string[];
+}
+
+function renderExclusions(exclusions: Exclusions): string {
+  const lines: string[] = [];
+  if (exclusions.licensed > 0) {
+    lines.push(
+      `${exclusions.licensed} upstream icon(s) carry a license of their own that places an obligation, or is not on the accepted list, and are not included.`,
+    );
+  }
+  if (exclusions.reserved.length > 0) {
+    lines.push(
+      `Not included because the ic-xs–ic-xl size axis reserves the name: ${exclusions.reserved.map((name) => `\`${name}\``).join(", ")}.`,
+    );
+  }
+  return lines.length === 0 ? "" : `\n${lines.join("\n\n")}\n`;
+}
+
+function renderAttribution(document: IconFamilyData, exclusions: Exclusions): string {
+  const { author, license, name, tier, upstream } = document.info;
+  const trademark =
+    tier === "brand"
+      ? `
+The icons depict brand marks. They are trademarks of their owners and subject to
+each owner's brand guidelines, which this license does not grant and no build
+setting satisfies.
+`
+      : "";
   return `# ${name}
 
 Icon artwork in \`${document.prefix}\` comes from ${name}, generated from
@@ -99,7 +155,7 @@ Icon artwork in \`${document.prefix}\` comes from ${name}, generated from
 - Author: [${author.name}](${author.url})
 - License: [${license.title} (${license.spdx})](${license.url})
 - Obligation: ${document.info.attribution}
-
+${trademark}${renderExclusions(exclusions)}
 The full license text is in \`LICENSE\` beside this file. It is redistributed
 with the artwork and must stay with it.
 `;
@@ -126,11 +182,36 @@ export async function buildFamily(
   const iconsDirectory = resolve(packageDirectory, definition.iconsDirectory);
   const fileNames = (await readdir(iconsDirectory)).toSorted((first, second) => first.localeCompare(second));
   const tags = await readTags(packageDirectory, definition);
+  const incompatible = await readIncompatibleIcons(packageDirectory, definition);
+  const exclusions: Exclusions = { licensed: 0, reserved: [] };
 
   const iconFiles = fileNames.flatMap((fileName) => {
-    const iconName = readIconName(fileName, definition);
-    return iconName === undefined ? [] : [{ fileName, iconName }];
+    const upstreamName = readUpstreamName(fileName, definition);
+    if (upstreamName === undefined) {
+      return [];
+    }
+    if (incompatible.has(upstreamName)) {
+      exclusions.licensed += 1;
+      return [];
+    }
+    const iconName = definition.hyphenateNames ? upstreamName.replaceAll("_", "-") : upstreamName;
+    // A brand family is opt-in and outside the core promise, so one reserved
+    // name costs that icon rather than the whole family.
+    if (definition.tier === "brand" && RESERVED_SIZE_TOKENS.includes(iconName)) {
+      exclusions.reserved.push(iconName);
+      return [];
+    }
+    return [{ fileName, iconName }];
   });
+
+  const duplicateNames = iconFiles
+    .map(({ iconName }) => iconName)
+    .filter((iconName, index, names) => names.indexOf(iconName) !== index);
+  if (duplicateNames.length > 0) {
+    throw new Error(
+      `Family "${definition.prefix}" maps several upstream files to ${duplicateNames.map((name) => `"${name}"`).join(", ")}.`,
+    );
+  }
 
   const normalized = new Map(
     await mapConcurrent(iconFiles, READ_CONCURRENCY, async ({ fileName, iconName }) => {
@@ -190,7 +271,7 @@ export async function buildFamily(
   };
 
   return {
-    attributionText: renderAttribution(document),
+    attributionText: renderAttribution(document, exclusions),
     document,
     licenseText: await readFile(resolve(packageDirectory, definition.licenseFile), "utf8"),
   };

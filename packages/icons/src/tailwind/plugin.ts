@@ -1,6 +1,6 @@
 import plugin from "tailwindcss/plugin";
 
-import { describeFamilyNotice } from "../catalog/attribution.js";
+import { carriesNotice, describeFamilyNotice } from "../catalog/attribution.js";
 import { parseIconClass, resolveIconClassName } from "../core/class-names.js";
 import { IconRegistry } from "../core/registry.js";
 import type { IconFamilyData } from "../core/types.js";
@@ -33,7 +33,8 @@ export interface TailwindIconsOptions {
   /**
    * Family prefixes to make resolvable, such as `lucide, phosphor-fill`.
    *
-   * Defaults to every family the package ships. Narrowing this does not make
+   * Defaults to every family the package ships except brand families such as
+   * `simple-icons`, which resolve only when listed here. Narrowing this does not make
    * the build cheaper -- the plugin has to be synchronous, so all families are
    * already loaded by the time options are read -- it decides which names
    * resolve, and which notices the output can carry.
@@ -91,7 +92,9 @@ function toArray(value: string | string[] | undefined): string[] | undefined {
 function selectFamilies(available: readonly IconFamilyData[], requested: string | string[] | undefined) {
   const prefixes = toArray(requested);
   if (!prefixes) {
-    return [...available];
+    // Brand families carry trademark terms the package makes no promise about,
+    // so they resolve only once a project names them.
+    return available.filter((family) => family.info.tier !== "brand");
   }
 
   const wanted = new Set(prefixes.map((prefix) => prefix.trim()).filter(Boolean));
@@ -197,7 +200,7 @@ export function createIconsTailwindPlugin(availableFamilies: readonly IconFamily
         noticed.add(familyPrefix);
 
         const family = registry.getFamily(familyPrefix);
-        if (!family || family.info.attribution === "none") {
+        if (!family || !carriesNotice(family)) {
           return;
         }
         addBase({

@@ -116,6 +116,11 @@
       "style": "./dist/css/phosphor-thin.css",
       "import": "./dist/css/phosphor-thin.css",
       "default": "./dist/css/phosphor-thin.css"
+    },
+    "./simple-icons": {
+      "style": "./dist/css/simple-icons.css",
+      "import": "./dist/css/simple-icons.css",
+      "default": "./dist/css/simple-icons.css"
     }
   },
   "publishConfig": {
@@ -144,6 +149,7 @@
     "@vitest/coverage-v8": "catalog:",
     "lucide-static": "1.33.0",
     "postcss": "^8.4.0",
+    "simple-icons": "16.35.0",
     "tailwindcss": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",

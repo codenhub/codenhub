@@ -26,11 +26,11 @@ The vehicle differs by delivery method, because not every method can carry a com
 | ------------------ | ---------------------------------------------------------------------------------------- |
 | Vite               | A `/*! … */` banner on the generated CSS, or `icons-attribution.txt` under `file`.       |
 | PostCSS            | A `/*! … */` banner on the generated CSS.                                                |
-| Tailwind `/tw`     | A `/*! … */` banner opening `dist/tw/index.css`, naming every bundled family.            |
+| Tailwind `/tw`     | A `/*! … */` banner opening `dist/tw/index.css`, naming every family it resolves.        |
 | Tailwind `@plugin` | A `--ic-attribution-<family>` custom property on `:root`, one per family the build used. |
 | Plain CSS          | A `/*! … */` banner opening each family stylesheet you imported.                         |
 
-`@import "@codenhub/icons/tw"` inlines a static file, so it carries an ordinary `/*! … */` banner. That file makes every bundled family resolvable, so the banner names them all — a superset notice, which is always safe. Declaring the plugin yourself with `@plugin "@codenhub/icons/tailwind"` narrows resolution, and there the notice is a `--ic-attribution-<family>` custom property instead: Tailwind's plugin API builds declarations, not comments, and the property is emitted the first time a family produces a utility, so the output carries notices for the artwork it actually shipped and no other.
+`@import "@codenhub/icons/tw"` inlines a static file, so it carries an ordinary `/*! … */` banner. That file makes every bundled family resolvable except brand families, so the banner names the rest — a superset notice, which is always safe. Declaring the plugin yourself with `@plugin "@codenhub/icons/tailwind"` narrows resolution, and there the notice is a `--ic-attribution-<family>` custom property instead: Tailwind's plugin API builds declarations, not comments, and the property is emitted the first time a family produces a utility, so the output carries notices for the artwork it actually shipped and no other.
 
 ## Obligation levels
 
@@ -40,6 +40,15 @@ Obligations come in three levels, because permissive is not the same as free of 
 - `notice` — MIT, ISC, Apache-2.0. The notice must travel with distributed output, which `auto` and `file` handle for you.
 - `credit` — CC-BY and similar. The author must be credited visibly.
 
-Every bundled family is `core` tier, meaning `none` or `notice`, so a default build satisfies every obligation automatically. A minifier configured with `legalComments: "none"` strips CSS comments, which is what `file` mode exists for.
+Every bundled family except `simple-icons` is `core` tier, meaning `none` or `notice`, so a default build satisfies every obligation automatically. A minifier configured with `legalComments: "none"` strips CSS comments, which is what `file` mode exists for.
 
 A set adopted through `adoptIconifySet` is `extended` tier — you remain responsible for its license terms and attribution material. See [JavaScript API](javascript-api.md).
+
+## Brand families
+
+`simple-icons` is `brand` tier: logos from [Simple Icons](https://simpleicons.org), dedicated to the public domain under CC0. It owes no license notice, but a logo is a trademark, and the trademark is not the license: using one is subject to its owner's brand guidelines, which no build setting can satisfy and the package makes no promise about.
+
+- It is opt-in. Vite and PostCSS load only the families you pass; the Tailwind entries leave brand families out unless `families` names them.
+- Its notice line, wherever the build emits one, says that the marks are trademarks of their owners. `off` suppresses it without a warning, because no license requires it.
+- Simple Icons records a separate license for some icons. Those whose own license places any obligation are left out, so every icon in the family is CC0 as far as upstream records show.
+- Simple Icons removes icons when brand owners ask. An upgrade of the family across an upstream major version can remove names, and its changelog lists them.

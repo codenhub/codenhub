@@ -46,8 +46,9 @@ const TW_DESCRIPTION = `/*!
  * Builds the header of `dist/tw/index.css`.
  *
  * `@import "@codenhub/icons/tw"` inlines this file, so the license banner rides
- * along with it. `/tw` makes every bundled family resolvable, so the banner
- * names them all: a superset notice is always safe, and a `/*!` comment is the
+ * along with it. `/tw` makes every bundled family resolvable except brand
+ * families, which need naming, so the banner names the rest: a superset notice
+ * is always safe, and a `/*!` comment is the
  * only notice this path can carry through a plain import. A configured `@plugin`
  * import narrows resolution and emits a `--ic-attribution-<family>` property per
  * used family instead, because Tailwind's plugin API builds declarations, not
@@ -87,7 +88,7 @@ await Promise.all(
 
 await writeFile(
   resolve(twDirectory, "index.css"),
-  `${twEntry(renderAttributionBanner(familyData))}${generateBaseCss({ prefix: PREFIX })}\n`,
+  `${twEntry(renderAttributionBanner(familyData.filter((family) => family.info.tier !== "brand")))}${generateBaseCss({ prefix: PREFIX })}\n`,
   "utf8",
 );
 
