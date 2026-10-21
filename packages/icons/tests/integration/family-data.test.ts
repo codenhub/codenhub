@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -45,11 +46,18 @@ describe("generated family data", () => {
     expect(files).toContain("ATTRIBUTION.md");
   });
 
-  it("publishes each family's license material in the tarball", () => {
-    const manifest = JSON.parse(readFileSync(resolve(dataDirectory, "../package.json"), "utf8")) as { files: string[] };
+  // Asks npm rather than reading `files`, so a glob or ignore rule that drops a
+  // notice fails here. Packing takes a few seconds, near the default timeout.
+  it("publishes each family's license material in the tarball", { timeout: 30_000 }, () => {
+    const [pack] = JSON.parse(
+      execSync("npm pack --dry-run --json --ignore-scripts", { cwd: resolve(dataDirectory, ".."), encoding: "utf8" }),
+    ) as [{ files: { path: string }[] }];
+    const packed = pack.files.map((file) => file.path);
 
-    expect(manifest.files).toContain("data/*/LICENSE");
-    expect(manifest.files).toContain("data/*/ATTRIBUTION.md");
+    for (const { prefix } of families) {
+      expect(packed).toContain(`data/${prefix}/LICENSE`);
+      expect(packed).toContain(`data/${prefix}/ATTRIBUTION.md`);
+    }
   });
 
   it.each(families)("$prefix declares an accepted license and the obligation it implies", ({ family }) => {
