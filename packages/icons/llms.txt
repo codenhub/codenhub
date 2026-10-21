@@ -6,7 +6,8 @@
 - Families are data, imported from `@codenhub/icons/data/<prefix>` and passed to a plugin. Nothing is bundled by default.
 - Variants such as filled or duotone are separate families with their own prefixes, never options on one family.
 - Stroke width is a modifier on the class, `ic-lucide-heart/1.5`. It applies only to families drawn with strokes, and needs one of the plugin delivery methods.
-- `after` and `bg` are reserved words in the class syntax and cannot be family prefixes.
+- `xs`, `sm`, `md`, `lg`, and `xl` are reserved for the `ic-xs`–`ic-xl` size classes: no family may use one as a prefix or icon name.
+- The brand family `simple-icons` is opt-in: `@codenhub/icons/tw` never resolves it, and the other methods resolve it only when named.
 - The build emits the license notices required by the families it used, controlled by the `attribution` option.
 
 ## Documentation

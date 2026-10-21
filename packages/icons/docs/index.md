@@ -25,7 +25,11 @@ Icons reach a project through CSS. The shortest path with no build step is the b
 ```
 
 ```html
-<i class="ic-lucide-heart" aria-hidden="true"></i> <button class="btn"><i class="ic-lucide-check" aria-hidden="true"></i>Submit</button>
+<!-- standalone -->
+<i class="ic-lucide-heart" aria-hidden="true"></i>
+
+<!-- beside a label -->
+<button><i class="ic-lucide-check" aria-hidden="true"></i>Submit</button>
 ```
 
 An icon is an `<i>` carrying an icon class (or `.ic` on any element, in the CSS-based methods). Size and color follow custom properties: set `--ic-size` and `--ic-color` on the icon or any ancestor, or use the `ic-xs`–`ic-xl` size classes.

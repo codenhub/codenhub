@@ -39,12 +39,16 @@ Variants such as filled or duotone are separate families rather than options on 
 An icon is identified by `prefix:name`. A class writes that with a dash, because a class name cannot contain a colon:
 
 ```html
-<i class="ic-lucide-heart"></i> <i class="ic-material-symbols-rounded-home"></i>
+<!-- lucide:heart -->
+<i class="ic-lucide-heart"></i>
+
+<!-- material-symbols-rounded:home -->
+<i class="ic-material-symbols-rounded-home"></i>
 ```
 
 The longest matching family prefix wins, so `material-symbols-outlined` is preferred over `material` when both are loaded.
 
-An unqualified name resolves against a default family, and against nothing at all when none is configured. The package names no default of its own and ships no curated map of semantic names: `ic-close` means whatever the family you chose calls `close`, and renders nothing if that family has no such icon. Lucide's is named `x`, so under Lucide you write `ic-x`.
+An unqualified name resolves against a default family, and against nothing at all when none is configured. The package names no default of its own and ships no curated map of semantic names: `ic-close` means whatever the family you chose calls `close`, and gets no icon if that family has no such icon. Lucide's is named `x`, so under Lucide you write `ic-x`.
 
 Where the default comes from depends on the delivery method:
 
@@ -105,7 +109,11 @@ Size and color follow CSS custom properties:
 Stroke width is a modifier on the icon class, and only families drawn with strokes answer to it. Of the bundled families, Lucide is the only one; the rest are drawn as filled paths and ignore it.
 
 ```html
-<i class="ic-lucide-heart/1.5"></i> <i class="ic-lucide-heart/3"></i>
+<!-- a thinner stroke -->
+<i class="ic-lucide-heart/1.5"></i>
+
+<!-- a heavier stroke -->
+<i class="ic-lucide-heart/3"></i>
 ```
 
 The width is baked into the artwork the rule carries, so it cannot be a second class applied on top: `ic-heart` and `ic-heart/1.5` are two icons, not one icon and a switch. One class is one rule, so a project pays for the widths it wrote and no others.

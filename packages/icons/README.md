@@ -104,9 +104,8 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 - An icon is an `<i>` (or `.ic` on any element, in the CSS-based methods). There is no `::before`, `::after`, or form-control form: an icon beside a label is a real `<i>` in the control, and a `background-image` icon comes from `getIconMaskUrl` / `getIconCssProps`.
 - `xs`, `sm`, `md`, `lg`, and `xl` are reserved (`ic-xs`–`ic-xl` are the size axis): no family may use one as a prefix or ship an icon by that name.
 - Size follows `--ic-size`, default `1em`. The `ic-xs`–`ic-xl` classes each set it to a rem value (`0.75`, `0.875`, `1`, `1.25`, `1.5`) and nothing else, so they compose with a stroke modifier. An inlined `<svg>` from the renderer or `mode: "svg"` carries a `1em` box of its own and honours `--ic-size` through the base rules.
-- The `/lucide` and other family stylesheets are large by construction — a whole family, because nothing is narrowing it. `dist/css` totals about 29 MB across all 14. Import the families you use, or use Tailwind or a plugin, which emit only what your markup asked for.
-- `mode: "svg"` in the Vite plugin rewrites `<i class="ic-...">` tags into inline SVG and nothing else. A class on another element renders nothing in this mode; the plugin warns when it finds one.
-- Icon data is generated from upstream packages and committed; `pnpm generate icons` rebuilds it and CI fails on drift.
+- The `/lucide` and other family stylesheets are large by construction — a whole family, because nothing is narrowing it. `dist/css` totals about 30 MB across all 14. Import the families you use, or use Tailwind or a plugin, which emit only what your markup asked for.
+- `mode: "svg"` in the Vite plugin rewrites `<i class="ic-...">` tags into inline SVG and nothing else. A class on another element gets no icon in this mode; the plugin warns when it finds one.
 
 ## License
 
