@@ -38,13 +38,13 @@ Four delivery methods understand the same classes — plain CSS, Tailwind CSS v4
 
 ## Requirements
 
-| Requirement  | Details                                                                           |
-| ------------ | --------------------------------------------------------------------------------- |
-| Node.js      | 24 or newer, for the build-time plugins and helpers.                              |
-| CSS imports  | Consumer tooling must resolve package CSS imports.                                |
-| Browsers     | Must support CSS `mask-image`; icons render as masks painted in the icon's color. |
-| Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.          |
-| Optional     | `vite` >= 5.0.0 for the Vite plugin, `postcss` >= 8.0.0 for the PostCSS plugin.   |
+| Requirement  | Details                                                                         |
+| ------------ | ------------------------------------------------------------------------------- |
+| Node.js      | 24 or newer, for the build-time plugins and helpers.                            |
+| CSS imports  | Consumer tooling must resolve package CSS imports.                              |
+| Browsers     | Must support CSS `mask-image`, which every method uses except inline SVG mode.  |
+| Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.        |
+| Optional     | `vite` >= 5.0.0 for the Vite plugin, `postcss` >= 8.0.0 for the PostCSS plugin. |
 
 ## Next steps
 

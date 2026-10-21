@@ -88,17 +88,17 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 - [JavaScript API](docs/javascript-api.md): the registry, renderers, and third-party set adapter.
 - [Licensing](docs/licensing.md): attribution modes and what each build owes.
 - [Troubleshooting](docs/troubleshooting.md): an icon that renders as nothing, as a solid square, or at the wrong width.
-- [API reference](docs/reference/index.md): every export, generated from the source.
+- [API reference](docs/reference/index.md): every export of the root, `/vite`, and `/postcss` entry points, generated from the source.
 
 ## Requirements
 
-| Requirement  | Details                                                                           |
-| ------------ | --------------------------------------------------------------------------------- |
-| Node.js      | 24 or newer, for the build-time plugins and helpers.                              |
-| CSS imports  | Consumer tooling must resolve package CSS imports.                                |
-| Browsers     | Must support CSS `mask-image`; icons render as masks painted in the icon's color. |
-| Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.          |
-| Optional     | `vite` >= 5.0.0 for the Vite plugin, `postcss` >= 8.0.0 for the PostCSS plugin.   |
+| Requirement  | Details                                                                         |
+| ------------ | ------------------------------------------------------------------------------- |
+| Node.js      | 24 or newer, for the build-time plugins and helpers.                            |
+| CSS imports  | Consumer tooling must resolve package CSS imports.                              |
+| Browsers     | Must support CSS `mask-image`, which every method uses except inline SVG mode.  |
+| Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.        |
+| Optional     | `vite` >= 5.0.0 for the Vite plugin, `postcss` >= 8.0.0 for the PostCSS plugin. |
 
 ## Notes
 
@@ -155,13 +155,13 @@ Four delivery methods understand the same classes — plain CSS, Tailwind CSS v4
 
 ## Requirements
 
-| Requirement  | Details                                                                           |
-| ------------ | --------------------------------------------------------------------------------- |
-| Node.js      | 24 or newer, for the build-time plugins and helpers.                              |
-| CSS imports  | Consumer tooling must resolve package CSS imports.                                |
-| Browsers     | Must support CSS `mask-image`; icons render as masks painted in the icon's color. |
-| Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.          |
-| Optional     | `vite` >= 5.0.0 for the Vite plugin, `postcss` >= 8.0.0 for the PostCSS plugin.   |
+| Requirement  | Details                                                                         |
+| ------------ | ------------------------------------------------------------------------------- |
+| Node.js      | 24 or newer, for the build-time plugins and helpers.                            |
+| CSS imports  | Consumer tooling must resolve package CSS imports.                              |
+| Browsers     | Must support CSS `mask-image`, which every method uses except inline SVG mode.  |
+| Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.        |
+| Optional     | `vite` >= 5.0.0 for the Vite plugin, `postcss` >= 8.0.0 for the PostCSS plugin. |
 
 ## Next steps
 
@@ -219,7 +219,7 @@ An icon is identified by `prefix:name`. A class writes that with a dash, because
 
 The longest matching family prefix wins, so `material-symbols-outlined` is preferred over `material` when both are loaded.
 
-An unqualified name resolves against a default family, and against nothing at all when none is configured. The package names no default of its own and ships no curated map of semantic names: `ic-close` means whatever the family you chose calls `close`, and gets no icon if that family has no such icon. Lucide's is named `x`, so under Lucide you write `ic-x`.
+An unqualified name resolves against a default family, and against nothing at all when none is configured. The package names no default of its own and ships no curated map of semantic names: `ic-close` means whatever the family you chose calls `close`, and gets no icon if that family has no such icon. In plain CSS an earlier-imported family that does have the name still answers to it, because a family stylesheet claims only the bare names it defines. Lucide's is named `x`, so under Lucide you write `ic-x`.
 
 Where the default comes from depends on the delivery method:
 
@@ -251,7 +251,7 @@ An icon's name is the one its upstream project gives it, so browse the family's 
 | `material-symbols-*`   | [fonts.google.com/icons](https://fonts.google.com/icons) | `ic-material-symbols-rounded-check_circle`      |
 | `simple-icons` (brand) | [simpleicons.org](https://simpleicons.org)               | `ic-simple-icons-github`, `ic-simple-icons-npm` |
 
-Material Symbols names keep Google's underscores: `check_circle`, not `check-circle`. A Simple Icons name is the icon's slug, with any `_` written as `-`. A misspelled name is not an error: the class resolves to nothing and the element renders as a solid square, so check the name against the family when an icon does not appear. Each family module also lists its names, as the keys of its `icons` object.
+Material Symbols names keep Google's underscores: `check_circle`, not `check-circle`. A Simple Icons name is the icon's slug, with any `_` written as `-`. A misspelled name is not an error: the class resolves to nothing, and the element renders as a solid square with the base rules loaded, or as nothing without them, so check the name against the family when an icon does not appear. Each family module also lists its names, as the keys of its `icons` object.
 
 ## Reserved names
 
@@ -335,7 +335,7 @@ Some brand colors are near-black — GitHub, X, and Vercel among them — and di
 }
 ```
 
-`color` alone does not recolor a brand icon, because its own color comes before `currentColor`; set `--ic-color` instead. All of this works the same in every delivery method and in [inline SVG mode](docs/delivery/vite.md#inline-svg-mode), where the brand color is carried by the `<svg>` itself and needs no stylesheet.
+`color` alone does not recolor a brand icon, because its own color comes before `currentColor`; set `--ic-color` instead. All of this works the same in every delivery method and in [inline SVG mode](docs/delivery/vite.md#inline-svg-mode), where the brand color is carried by the `<svg>` itself and needs no stylesheet. One exception there: under a Content Security Policy that blocks `style` attributes, an inlined brand icon keeps its brand color but `--ic-color` no longer reaches it.
 
 ## Accessibility
 
@@ -910,23 +910,23 @@ Every bundled, generated family ships the license text and attribution notice it
 
 What reaches your own output is the `attribution` option:
 
-| Mode             | Behavior                                                                                    |
-| ---------------- | ------------------------------------------------------------------------------------------- |
-| `auto` (default) | Prepends a `/*! … */` banner to the generated CSS, naming only the families the build used. |
-| `file`           | Emits `icons-attribution.txt` as a build asset instead. Vite only.                          |
-| `off`            | Emits nothing, and warns when a family used still requires a notice.                        |
+| Mode             | Behavior                                                                                                                                                                            |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auto` (default) | Prepends a `/*! … */` banner to the generated CSS, naming only the families the build used. Vite's inline SVG mode, which has no stylesheet, emits `icons-attribution.txt` instead. |
+| `file`           | Emits `icons-attribution.txt` as a build asset instead. Vite only.                                                                                                                  |
+| `off`            | Emits nothing, and warns when a family used still requires a notice.                                                                                                                |
 
 ## How the notice travels
 
 The vehicle differs by delivery method, because not every method can carry a comment:
 
-| Method             | How the notice travels                                                                   |
-| ------------------ | ---------------------------------------------------------------------------------------- |
-| Vite               | A `/*! … */` banner on the generated CSS, or `icons-attribution.txt` under `file`.       |
-| PostCSS            | A `/*! … */` banner on the generated CSS.                                                |
-| Tailwind `/tw`     | A `/*! … */` banner opening `dist/tw/index.css`, naming every family it resolves.        |
-| Tailwind `@plugin` | A `--ic-attribution-<family>` custom property on `:root`, one per family the build used. |
-| Plain CSS          | A `/*! … */` banner opening each family stylesheet you imported.                         |
+| Method             | How the notice travels                                                                                    |
+| ------------------ | --------------------------------------------------------------------------------------------------------- |
+| Vite               | A `/*! … */` banner on the generated CSS, or `icons-attribution.txt` under `file` and in inline SVG mode. |
+| PostCSS            | A `/*! … */` banner on the generated CSS.                                                                 |
+| Tailwind `/tw`     | A `/*! … */` banner opening `dist/tw/index.css`, naming every family it resolves.                         |
+| Tailwind `@plugin` | A `--ic-attribution-<family>` custom property on `:root`, one per family the build used.                  |
+| Plain CSS          | A `/*! … */` banner opening each family stylesheet you imported.                                          |
 
 `@import "@codenhub/icons/tw"` inlines a static file, so it carries an ordinary `/*! … */` banner. That file makes every bundled family resolvable except brand families, so the banner names the rest — a superset notice, which is always safe. Declaring the plugin yourself with `@plugin "@codenhub/icons/tailwind"` narrows resolution, and there the notice is a `--ic-attribution-<family>` custom property instead: Tailwind's plugin API builds declarations, not comments, and the property is emitted the first time a family produces a utility, so the output carries notices for the artwork it actually shipped and no other.
 
@@ -962,7 +962,7 @@ Most failures here are silent: the build stays green and the page is where the g
 
 No base rule matched the element, so it has no size.
 
-- **No base import.** Every delivery method needs `@import "@codenhub/icons";` in a stylesheet, or `@import "@codenhub/icons/tw";` with Tailwind. Plugins add per-icon rules next to it, never in place of it.
+- **No base rules.** Plain CSS and a declared Tailwind `@plugin` need `@import "@codenhub/icons";` in a stylesheet. `@codenhub/icons/tw`, the Vite plugin's stylesheet, and the PostCSS plugin include the base rules already, the PostCSS plugin unless `injectBase` is `false`. When the Vite plugin's stylesheet never reaches the page, as in an Astro production build without the `virtual:icons.css` import, the base rules are missing with it. Inline SVG mode needs no base rules to render; they add `--ic-size` and the size classes.
 - **The element is not an `<i>` and has no `.ic`.** The base rules match `<i class="ic-…">`, or any element that also carries `.ic`. A `<span class="ic-lucide-heart">` matches neither.
 
 ## The icon renders as a solid square
@@ -986,7 +986,7 @@ The base rules sized and colored the element, but no rule gave it a mask, so the
 
 ## The color does not change
 
-Set `--ic-color` on the icon or an ancestor. `color` reaches only icons without a color of their own: a brand icon keeps its brand color until `--ic-color` is set. A `background-color` you set on the icon element itself replaces its color, because the mask paints with the background. See [Color](docs/concepts.md#color).
+Set `--ic-color` on the icon or an ancestor. `color` reaches only icons without a color of their own: a brand icon keeps its brand color until `--ic-color` is set. A `background-color` you set on the icon element itself replaces its color, because the mask paints with the background. In inline SVG mode under a Content Security Policy that blocks `style` attributes, a brand icon keeps its brand color and ignores `--ic-color`. See [Color](docs/concepts.md#color).
 
 ## A brand icon is invisible in dark mode
 

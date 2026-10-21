@@ -194,7 +194,7 @@ Renders a resolved icon as a complete, self-contained SVG element.
 
 The element carries a namespace, a viewBox, a `1em` box, and `fill="currentColor"`, leaving color to CSS. The fill is for bodies that set none of their own, such as Material Symbols and Simple Icons paths, which SVG would otherwise paint black whatever `color` says; a body that sets its own fill, as Lucide's `fill="none"` does, still wins. The `1em` box is a floor for an icon inlined with no stylesheet behind it, which a bare `viewBox` renders at 0×0. It is a presentation attribute, so CSS `width`/`height` still wins — including the base stylesheet's `svg[class^="ic-"]` rule, which reads `--ic-size` and `--ic-color` and so carries the `ic-xs`–`ic-xl` size axis and the colour custom property onto an inlined icon the same as onto an `<i>`. Passing `width`, `height`, or `fill` in `RenderSvgOptions.attributes` replaces the default. The viewBox keeps the icon's own origin, because families such as Material Symbols draw above it. A stroke width is applied only when the icon's family is stroke-based.
 
-An icon with a color of its own, such as a brand mark, is painted in it unless `--ic-color` is set on the element or an ancestor. The color sits on a `<g>` around the body rather than on the `<svg>`, so it never collides with a `style` attribute a caller or the markup puts on the element.
+An icon with a color of its own, such as a brand mark, is painted in it unless `--ic-color` is set on the element or an ancestor. The color sits on a `<g>` around the body rather than on the `<svg>`, so it never collides with a `style` attribute a caller or the markup puts on the element. The `<g>` also carries the color as a presentation attribute: a Content Security Policy that blocks style attributes drops the `style`, and the icon keeps its own color, though `--ic-color` no longer reaches it.
 
 **Parameters**
 
@@ -613,7 +613,7 @@ export interface IconFamilyData
 
 A complete icon family: its artwork, aliases, geometry, and metadata.
 
-The shape is structurally compatible with IconifyJSON, so icon data authored for that format loads without transformation, while this package depends on nothing from it.
+The icon and geometry fields follow IconifyJSON's shape, so icon bodies authored for that format need no transformation, while this package depends on nothing from it. An IconifyJSON document still lacks the required `info`, so it loads through `adoptIconifySet`, not directly.
 
 #### aliases
 
@@ -1133,4 +1133,4 @@ export type IconFamilyTier = "core" | "extended" | "brand";
 
 Catalog tier a family belongs to.
 
-`"core"` families are public-domain or notice-only, and their obligations are satisfied by the notice the build emits. `"extended"` families require crediting the author and are opt-in. `"brand"` families hold logos and brand marks: they owe nothing on the copyright side, are opt-in, and remain subject to each brand owner's trademark guidelines, which no build setting satisfies.
+`"core"` families are public-domain or notice-only, and their obligations are satisfied by the notice the build emits. `"extended"` families are opt-in and outside the package's licensing promise: their `info.attribution` says whether a notice or author credit is owed. A generated extended family owes credit; a set adopted through `adoptIconifySet` is always extended, and owes whatever its caller declared. `"brand"` families hold logos and brand marks: they owe nothing on the copyright side, are opt-in, and remain subject to each brand owner's trademark guidelines, which no build setting satisfies.

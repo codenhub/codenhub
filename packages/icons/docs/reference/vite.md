@@ -17,7 +17,7 @@ export declare function viteIcons(options?: ViteIconsOptions): Plugin;
 
 Vite plugin that turns icon utility classes into CSS mask rules, or into inline SVG when `mode` is `"svg"`.
 
-In CSS mode it serves the generated stylesheet through `virtual:icons.css` and injects it into every HTML entry point. It leaves `@import "@codenhub/icons";` alone in both modes: that import is the base stylesheet and means the same thing whether or not this plugin is in the pipeline. In both modes it emits the license notices required by the families the build actually used.
+In CSS mode it serves the generated stylesheet, base rules included, as `virtual:icons.css` in dev and links it from every HTML entry point. A build with HTML entries emits it as a hashed CSS asset and links that instead; a build without HTML entries, such as a library build, emits no stylesheet. Svg mode emits none either. It leaves `@import "@codenhub/icons";` alone in both modes: that import is the base stylesheet and means the same thing whether or not this plugin is in the pipeline. In both modes it emits the license notices required by the families the build actually used.
 
 **Parameters**
 
@@ -33,7 +33,7 @@ export declare function viteIcons(options?: ViteIconsOptions): Plugin;
 
 Vite plugin that turns icon utility classes into CSS mask rules, or into inline SVG when `mode` is `"svg"`.
 
-In CSS mode it serves the generated stylesheet through `virtual:icons.css` and injects it into every HTML entry point. It leaves `@import "@codenhub/icons";` alone in both modes: that import is the base stylesheet and means the same thing whether or not this plugin is in the pipeline. In both modes it emits the license notices required by the families the build actually used.
+In CSS mode it serves the generated stylesheet, base rules included, as `virtual:icons.css` in dev and links it from every HTML entry point. A build with HTML entries emits it as a hashed CSS asset and links that instead; a build without HTML entries, such as a library build, emits no stylesheet. Svg mode emits none either. It leaves `@import "@codenhub/icons";` alone in both modes: that import is the base stylesheet and means the same thing whether or not this plugin is in the pipeline. In both modes it emits the license notices required by the families the build actually used.
 
 **Parameters**
 
@@ -59,7 +59,7 @@ attribution?: AttributionMode;
 
 How license notices for the families used reach the build output.
 
-`"auto"` prepends a preserved CSS comment, `"file"` emits `icons-attribution.txt` as an asset, and `"off"` emits nothing and warns when a used family still requires a notice. Defaults to `"auto"`.
+`"auto"` prepends a preserved CSS comment to the generated stylesheet, or, in svg mode, which has no stylesheet, emits `icons-attribution.txt` as an asset. `"file"` emits that asset in both modes, and `"off"` emits nothing and warns when a used family still requires a notice. Defaults to `"auto"`.
 
 #### content
 

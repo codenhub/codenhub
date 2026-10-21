@@ -86,17 +86,17 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 - [JavaScript API](docs/javascript-api.md): the registry, renderers, and third-party set adapter.
 - [Licensing](docs/licensing.md): attribution modes and what each build owes.
 - [Troubleshooting](docs/troubleshooting.md): an icon that renders as nothing, as a solid square, or at the wrong width.
-- [API reference](docs/reference/index.md): every export, generated from the source.
+- [API reference](docs/reference/index.md): every export of the root, `/vite`, and `/postcss` entry points, generated from the source.
 
 ## Requirements
 
-| Requirement  | Details                                                                           |
-| ------------ | --------------------------------------------------------------------------------- |
-| Node.js      | 24 or newer, for the build-time plugins and helpers.                              |
-| CSS imports  | Consumer tooling must resolve package CSS imports.                                |
-| Browsers     | Must support CSS `mask-image`; icons render as masks painted in the icon's color. |
-| Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.          |
-| Optional     | `vite` >= 5.0.0 for the Vite plugin, `postcss` >= 8.0.0 for the PostCSS plugin.   |
+| Requirement  | Details                                                                         |
+| ------------ | ------------------------------------------------------------------------------- |
+| Node.js      | 24 or newer, for the build-time plugins and helpers.                            |
+| CSS imports  | Consumer tooling must resolve package CSS imports.                              |
+| Browsers     | Must support CSS `mask-image`, which every method uses except inline SVG mode.  |
+| Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.        |
+| Optional     | `vite` >= 5.0.0 for the Vite plugin, `postcss` >= 8.0.0 for the PostCSS plugin. |
 
 ## Notes
 

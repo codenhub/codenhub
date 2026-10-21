@@ -15,8 +15,11 @@ export type IconAttribution = "none" | "notice" | "credit";
  * Catalog tier a family belongs to.
  *
  * `"core"` families are public-domain or notice-only, and their obligations are
- * satisfied by the notice the build emits. `"extended"` families require
- * crediting the author and are opt-in. `"brand"` families hold logos and brand
+ * satisfied by the notice the build emits. `"extended"` families are opt-in and
+ * outside the package's licensing promise: their `info.attribution` says
+ * whether a notice or author credit is owed. A generated extended family owes
+ * credit; a set adopted through `adoptIconifySet` is always extended, and owes
+ * whatever its caller declared. `"brand"` families hold logos and brand
  * marks: they owe nothing on the copyright side, are opt-in, and remain subject
  * to each brand owner's trademark guidelines, which no build setting satisfies.
  */
@@ -193,9 +196,10 @@ export interface IconAlias {
 /**
  * A complete icon family: its artwork, aliases, geometry, and metadata.
  *
- * The shape is structurally compatible with IconifyJSON, so icon data authored
- * for that format loads without transformation, while this package depends on
- * nothing from it.
+ * The icon and geometry fields follow IconifyJSON's shape, so icon bodies
+ * authored for that format need no transformation, while this package depends
+ * on nothing from it. An IconifyJSON document still lacks the required `info`,
+ * so it loads through `adoptIconifySet`, not directly.
  */
 export interface IconFamilyData {
   /**
