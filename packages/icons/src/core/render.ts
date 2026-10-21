@@ -54,15 +54,18 @@ export function setStrokeWidth(body: string, strokeWidth: number | string): stri
 /**
  * Renders a resolved icon as a complete, self-contained SVG element.
  *
- * The element carries a namespace, a viewBox, and a `1em` box, leaving color to
- * CSS — the icon body paints in `currentColor`. The `1em` box is a floor for an
+ * The element carries a namespace, a viewBox, a `1em` box, and
+ * `fill="currentColor"`, leaving color to CSS. The fill is for bodies that set
+ * none of their own, such as Material Symbols and Simple Icons paths, which SVG
+ * would otherwise paint black whatever `color` says; a body that sets its own
+ * fill, as Lucide's `fill="none"` does, still wins. The `1em` box is a floor for an
  * icon inlined with no stylesheet behind it, which a bare `viewBox` renders at
  * 0×0. It is a presentation attribute, so CSS `width`/`height` still wins —
  * including the base stylesheet's `svg[class^="ic-"]` rule, which reads
  * `--ic-size` and `--ic-color` and so carries the `ic-xs`–`ic-xl` size axis and
  * the colour custom property onto an inlined icon the same as onto an `<i>`.
- * Passing `width` or `height` in {@link RenderSvgOptions.attributes} replaces
- * the default. The viewBox keeps the icon's own origin, because families such as
+ * Passing `width`, `height`, or `fill` in {@link RenderSvgOptions.attributes}
+ * replaces the default. The viewBox keeps the icon's own origin, because families such as
  * Material Symbols draw above it. A stroke width is applied only when the icon's
  * family is stroke-based.
  *
@@ -75,7 +78,7 @@ export function renderSvg(icon: ResolvedIcon, options?: RenderSvgOptions): strin
     icon.strokeWidth !== undefined && options?.strokeWidth !== undefined
       ? setStrokeWidth(icon.body, options.strokeWidth)
       : icon.body;
-  const extra = renderAttributes({ width: "1em", height: "1em", ...options?.attributes });
+  const extra = renderAttributes({ width: "1em", height: "1em", fill: "currentColor", ...options?.attributes });
 
   return `<svg xmlns="${SVG_NAMESPACE}" viewBox="${icon.left} ${icon.top} ${icon.width} ${icon.height}"${extra}>${body}</svg>`;
 }
