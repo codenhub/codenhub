@@ -2,7 +2,7 @@
 
 Zero-runtime icon system for the web. Write `ic-lucide-heart` in your markup and the icon arrives as a CSS mask — no imports, no components, no icon library in the bundle.
 
-`@codenhub/icons` ships 13 generated icon families totalling over 34,000 icons, each with the license notices its artwork requires, so a project can adopt icons without auditing licenses itself.
+`@codenhub/icons` ships 13 generated icon families totalling over 34,000 icons, each with the license notices its artwork requires, so a project can adopt icons without auditing licenses itself. An opt-in brand family, `simple-icons`, adds over 3,000 logos such as GitHub and npm; brand marks stay subject to their owners' trademark guidelines.
 
 ## Installation
 
@@ -19,7 +19,7 @@ Icons reach a project through CSS. Pick the entry point that matches your pipeli
 
 ### Tailwind CSS v4
 
-One line. Every family is resolvable, and Tailwind emits only the icons your markup used.
+One line. Every family except the brand family `simple-icons` is resolvable, and Tailwind emits only the icons your markup used. To use `simple-icons`, declare the plugin yourself with `families`, as in [Tailwind](docs/delivery/tailwind.md).
 
 ```css
 @import "tailwindcss";
@@ -104,7 +104,7 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 - An icon is an `<i>` (or `.ic` on any element, in the CSS-based methods). There is no `::before`, `::after`, or form-control form: an icon beside a label is a real `<i>` in the control, and a `background-image` icon comes from `getIconMaskUrl` / `getIconCssProps`.
 - `xs`, `sm`, `md`, `lg`, and `xl` are reserved (`ic-xs`–`ic-xl` are the size axis): no family may use one as a prefix or ship an icon by that name.
 - Size follows `--ic-size`, default `1em`. The `ic-xs`–`ic-xl` classes each set it to a rem value (`0.75`, `0.875`, `1`, `1.25`, `1.5`) and nothing else, so they compose with a stroke modifier. An inlined `<svg>` from the renderer or `mode: "svg"` carries a `1em` box of its own and honours `--ic-size` through the base rules.
-- The `/lucide` and other family stylesheets are large by construction — a whole family, because nothing is narrowing it. `dist/css` totals about 22 MB across all 13. Import the families you use, or use Tailwind or a plugin, which emit only what your markup asked for.
+- The `/lucide` and other family stylesheets are large by construction — a whole family, because nothing is narrowing it. `dist/css` totals about 29 MB across all 14. Import the families you use, or use Tailwind or a plugin, which emit only what your markup asked for.
 - `mode: "svg"` in the Vite plugin rewrites `<i class="ic-...">` tags into inline SVG and nothing else. A class on another element renders nothing in this mode; the plugin warns when it finds one.
 - Icon data is generated from upstream packages and committed; `pnpm generate icons` rebuilds it and CI fails on drift.
 
@@ -112,4 +112,4 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 
 This package is licensed under the [Apache-2.0](LICENSE) license.
 
-Its bundled, generated icon artwork comes from third parties, under ISC, MIT, and Apache-2.0 terms. See [NOTICE](NOTICE) for the full list. Each family stylesheet opens with its own notice, and the plugins emit the notices of the families a build actually used, so a consumer carries no separate obligation for them; see the documentation for the `attribution` options that control it. A third-party set adopted through `adoptIconifySet` is not covered — a consumer remains responsible for its license terms and attribution material.
+Its bundled, generated icon artwork comes from third parties, under ISC, MIT, Apache-2.0, and CC0 terms. See [NOTICE](NOTICE) for the full list. Each family stylesheet opens with its own notice, and the plugins emit the notices of the families a build actually used, so a consumer carries no separate obligation for them; see the documentation for the `attribution` options that control it. The brand family `simple-icons` owes no license notice, but its marks are trademarks of their owners: using one is subject to that owner's brand guidelines, which no build setting satisfies. A third-party set adopted through `adoptIconifySet` is not covered — a consumer remains responsible for its license terms and attribution material.

@@ -7,8 +7,24 @@ export type AttributionMode = "auto" | "file" | "off";
 
 const OBLIGATION_ORDER: Record<IconAttribution, number> = { credit: 2, none: 0, notice: 1 };
 
+const TRADEMARK_NOTE = "brand marks are trademarks of their owners, subject to their brand guidelines";
+
 function hasObligation(family: IconFamilyData): boolean {
   return family.info.attribution !== "none";
+}
+
+/**
+ * Whether a build carries a notice line for this family.
+ *
+ * Every family whose license places an obligation does, and so does every
+ * brand family: it owes nothing on the copyright side, but its line is where
+ * the output says the marks belong to their owners.
+ *
+ * @param family - Family a build used.
+ * @returns `true` when the family gets a notice line.
+ */
+export function carriesNotice(family: IconFamilyData): boolean {
+  return hasObligation(family) || family.info.tier === "brand";
 }
 
 /**
@@ -23,7 +39,8 @@ function hasObligation(family: IconFamilyData): boolean {
  */
 export function describeFamilyNotice(family: IconFamilyData): string {
   const { author, license, name, upstream } = family.info;
-  const line = `${name} (${family.prefix}) ${upstream.version} — ${license.title} (${license.spdx}) — ${author.name} ${author.url}`;
+  const trademark = family.info.tier === "brand" ? ` — ${TRADEMARK_NOTE}` : "";
+  const line = `${name} (${family.prefix}) ${upstream.version} — ${license.title} (${license.spdx}) — ${author.name} ${author.url}${trademark}`;
   // Metadata for an adopted set is consumer-supplied; a "*/" in it must not close the /*! ... */ comment early.
   return line.replace(/\*\//g, "*\\/");
 }
@@ -33,14 +50,14 @@ export function describeFamilyNotice(family: IconFamilyData): string {
  * obligation first.
  *
  * Families under a public-domain dedication are omitted because nothing is owed
- * for them.
+ * for them, except brand families, whose line carries the trademark note.
  *
  * @param families - Families the build resolved icons from.
- * @returns Families that place an obligation on distributed output.
+ * @returns Families that get a line in the notice.
  */
 export function collectAttributedFamilies(families: Iterable<IconFamilyData>): IconFamilyData[] {
   return [...families]
-    .filter(hasObligation)
+    .filter(carriesNotice)
     .toSorted(
       (first, second) =>
         OBLIGATION_ORDER[second.info.attribution] - OBLIGATION_ORDER[first.info.attribution] ||
@@ -52,7 +69,7 @@ export function collectAttributedFamilies(families: Iterable<IconFamilyData>): I
  * Renders the plain-text license notice for the families a build used.
  *
  * @param families - Families the build resolved icons from.
- * @returns The notice text, or `undefined` when no family places an obligation.
+ * @returns The notice text, or `undefined` when no family carries a notice line.
  */
 export function renderAttributionNotice(families: Iterable<IconFamilyData>): string | undefined {
   const attributed = collectAttributedFamilies(families);
@@ -70,7 +87,7 @@ export function renderAttributionNotice(families: Iterable<IconFamilyData>): str
  * `legalComments` setting, so the notice survives minification.
  *
  * @param families - Families the build resolved icons from.
- * @returns The banner comment, or `undefined` when no family places an obligation.
+ * @returns The banner comment, or `undefined` when no family carries a notice line.
  */
 export function renderAttributionBanner(families: Iterable<IconFamilyData>): string | undefined {
   const notice = renderAttributionNotice(families);
@@ -85,7 +102,7 @@ export function renderAttributionBanner(families: Iterable<IconFamilyData>): str
  * @returns The warning text, or `undefined` when suppressing notices owes nothing.
  */
 export function renderSuppressedAttributionWarning(families: Iterable<IconFamilyData>): string | undefined {
-  const attributed = collectAttributedFamilies(families);
+  const attributed = collectAttributedFamilies(families).filter(hasObligation);
   if (attributed.length === 0) {
     return undefined;
   }

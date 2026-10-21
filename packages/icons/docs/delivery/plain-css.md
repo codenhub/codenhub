@@ -18,7 +18,7 @@ Every rule carries two selectors, the qualified `ic-lucide-heart` and the bare `
 
 ## Cost
 
-The family stylesheets are large by construction — every icon, because nothing is narrowing them. Lucide is about 1 MB, Material Symbols Rounded about 3.4 MB, all 13 families about 22 MB. A project chooses its cost by choosing which families it imports. If that is too much, use a plugin method or Tailwind, which emit only what your markup asked for.
+The family stylesheets are large by construction — every icon, because nothing is narrowing them. Lucide is about 1 MB, Material Symbols Rounded about 3.4 MB, all 14 families about 29 MB. A project chooses its cost by choosing which families it imports. If that is too much, use a plugin method or Tailwind, which emit only what your markup asked for.
 
 ## Limitations
 

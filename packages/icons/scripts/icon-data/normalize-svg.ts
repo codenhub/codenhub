@@ -13,6 +13,9 @@ export interface NormalizedIcon {
 }
 
 const XML_COMMENT = /<!--[\s\S]*?-->/g;
+// A title names the upstream file, not the consumer's use of the icon; the
+// consumer supplies the accessible name, or hides the icon from assistive tech.
+const TITLE_ELEMENT = /<title\b[^>]*>[\s\S]*?<\/title>/gi;
 const SVG_ELEMENT = /<svg\b(?<attributes>[^>]*)>(?<body>[\s\S]*)<\/svg>/i;
 const ATTRIBUTE = /(?<name>[a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*"(?<value>[^"]*)"/g;
 const WHITESPACE_BETWEEN_TAGS = />\s+</g;
@@ -102,7 +105,7 @@ export function normalizeSvg(source: string, origin: string): NormalizedIcon {
     throw new Error(`No usable viewBox in ${origin}.`);
   }
 
-  const body = collapse(match.groups.body);
+  const body = collapse(match.groups.body.replace(TITLE_ELEMENT, ""));
   if (body === "") {
     throw new Error(`Empty icon body in ${origin}.`);
   }

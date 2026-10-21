@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { IconAttribution, IconFamilyData } from "../core/types.js";
 import {
   collectAttributedFamilies,
+  describeFamilyNotice,
   renderAttributionBanner,
   renderAttributionNotice,
   renderSuppressedAttributionWarning,
@@ -86,5 +87,28 @@ describe("renderSuppressedAttributionWarning", () => {
 
   it("stays silent when suppressing notices owes nothing", () => {
     expect(renderSuppressedAttributionWarning([createFamily("public", "none")])).toBeUndefined();
+  });
+
+  it("stays silent for a brand family, which owes no license notice", () => {
+    expect(renderSuppressedAttributionWarning([createBrandFamily("logos")])).toBeUndefined();
+  });
+});
+
+function createBrandFamily(prefix: string): IconFamilyData {
+  const family = createFamily(prefix, "none");
+  family.info.tier = "brand";
+  return family;
+}
+
+describe("brand families", () => {
+  it("get a notice line although their license owes nothing", () => {
+    const families = [createFamily("public", "none"), createBrandFamily("logos")];
+
+    expect(collectAttributedFamilies(families).map(({ prefix }) => prefix)).toEqual(["logos"]);
+  });
+
+  it("say in their notice line that the marks belong to their owners", () => {
+    expect(describeFamilyNotice(createBrandFamily("logos"))).toContain("trademarks of their owners");
+    expect(describeFamilyNotice(createFamily("public", "none"))).not.toContain("trademark");
   });
 });

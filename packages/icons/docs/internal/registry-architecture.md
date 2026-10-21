@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-14
+last_updated: 2026-10-20
 scope: Icon data model, family catalog, generation pipeline, and resolution core of `@codenhub/icons`.
 ---
 
@@ -16,7 +16,7 @@ The package exists to make icons **easy, fast, and free of licensing worry**. Ev
 - **Fast**: zero runtime by default. Only the icons a project actually uses reach the bundle, whatever the family size.
 - **Free of worry**: a consumer using the core catalog has every license obligation satisfied by the default build, and a consumer opting into a credit-required family gets that credit produced for them too.
 
-Non-goals: being an Iconify wrapper, shipping a component library, hosting an icon API, or bundling brand and logo sets.
+Non-goals: being an Iconify wrapper, shipping a component library, or hosting an icon API. Brand and logo families are shipped, but outside the licensing promise above: see [Brand families](#brand-families).
 
 ## Why the previous design could not scale
 
@@ -92,7 +92,7 @@ interface IconFamilyInfo {
   author: { name: string; url: string };
   license: { title: string; spdx: string; url: string };
   attribution: "none" | "notice" | "credit"; // consumer-facing obligation
-  tier: "core" | "extended";
+  tier: "core" | "extended" | "brand";
   upstream: { package: string; version: string };
   strokeWidth?: number; // present only for stroke-based families
   style?: string; // descriptive: "outlined", "filled", "duotone"
@@ -125,7 +125,7 @@ packages/icons/data/<prefix>/
   ATTRIBUTION.md     generated notice naming author, license, upstream version
 ```
 
-All three are committed and generated. `icons.json` is the reviewable unit: one file per family, so an upstream bump is one diff, not thousands. Thirteen families currently occupy about 17 MB, which git stores compressed and which churns only when an upstream version moves.
+All three are committed and generated. `icons.json` is the reviewable unit: one file per family, so an upstream bump is one diff, not thousands. Fourteen families currently occupy about 22 MB, which git stores compressed and which churns only when an upstream version moves.
 
 The build compiles each family into `dist/data/<prefix>.js` plus declarations, exposed as:
 
@@ -158,6 +158,8 @@ Per family the generator:
 5. Copies the upstream `LICENSE` verbatim and writes `ATTRIBUTION.md`.
 6. Fails the run when the family license is not on the allowed list, when an icon body is empty, or when a viewBox is missing and cannot be defaulted.
 
+A brand family's source adapter also filters icons by their own upstream license and maps their names, as described under [Brand families](#brand-families).
+
 Output must be deterministic: no timestamps, no generation dates, stable key order. A generator whose output changes without an input change breaks the CI drift gate.
 
 ## License and attribution
@@ -184,8 +186,28 @@ Tiers make the promise machine-checkable:
 
 - **core**: `attribution` of `"none"` or `"notice"`. A default build satisfies every obligation automatically, so a consumer never has to think about it.
 - **extended**: `attribution: "credit"`. Opt-in per family, marked in the catalog and in docs, because a credit obligation is a design decision, not a build setting.
+- **brand**: logo and brand-mark families, with `attribution: "none"`. Opt-in per family and never resolvable unless named. The copyright side is held to `"none"`; the trademark side belongs to the consumer, and the package makes no promise about it.
 
-The generator refuses to write a family whose license is not on the allowed list for its declared tier. `attribution: "off"` is only legally free for a build using `"none"` families exclusively; the build warning says which families made it non-free. Brand and logo families are out of scope entirely: trademark obligations are independent of the icon license and the package cannot make its promise about them.
+The generator refuses to write a family whose license is not on the allowed list for its declared tier. `attribution: "off"` is only legally free for a build using `"none"` families exclusively; the build warning says which families made it non-free. Brand families follow their own rules, below.
+
+### Brand families
+
+A brand mark carries two obligations: the artwork's copyright license, which the tier check covers, and the brand owner's trademark and usage guidelines, which apply whatever the license says and which no build setting can satisfy. The package ships brand families on these terms:
+
+- **Source.** [Simple Icons](https://simpleicons.org) (`simple-icons` on npm, CC0-1.0), under the prefix `simple-icons`, as in `ic-simple-icons-github`. Its icons are one-color, fill-based 24×24 paths, so they fit the mask pipeline unchanged.
+- **Per-icon licenses.** Simple Icons is CC0 as a project but records a separate license for some icons. At 16.35.0, 211 of 3,466 icons carry one, including GPL, CC-BY-NC, CC-BY-ND, and custom terms. The data model has one license per family, so the source adapter keeps only icons with no recorded license or one whose obligation is `"none"` (CC0-1.0, Unlicense), 3,255 at that version, 3,254 once `lg` is dropped (below). `ATTRIBUTION.md` states how many were excluded. Upstream warns that missing license data does not prove an icon is unlicensed; that remaining risk is part of why the tier sits outside the core promise.
+- **Opt-in.** A brand family is never resolvable unless a project names it. The Vite and PostCSS plugins already load only the families passed in `families`. The Tailwind plugin without a `families` option, and `@codenhub/icons/tw`, resolve every family except brand ones; the generated plugin still imports brand families, because it imports every family statically, but excludes them from default resolution. `/tw` takes no options, so a project that wants a brand family declares the plugin itself. The per-family stylesheet, `@codenhub/icons/simple-icons`, is already an explicit import.
+- **Notice.** A brand family gets a notice line wherever the build emits one, although its license owes none, and that line adds that the marks are trademarks of their owners and subject to their guidelines. `attribution: "off"` drops it without a warning, since no license requires it.
+- **Names.** Icon names are upstream slugs, with `_` mapped to `-` (6 slugs at 16.35.0). The slug `lg` is a reserved size token. The adapter drops it and the generator reports it, rather than refusing the whole family as it does for a core family.
+- **Upgrades.** Simple Icons removes icons at brand owners' request, in major releases. Moving `simple-icons` across a major version is a breaking change for this family, and its changelog entry lists the removed names.
+- **Color.** Brand colors are not shipped. Icons render in `currentColor` like every other family, and the upstream `hex` values are not kept.
+
+Rejected alternatives:
+
+- **No brand families.** This was the previous decision: brand and logo sets were a non-goal because the package cannot make its licensing promise about trademarks. It did not weigh that `phosphor`, a core family, already ships 79 `*-logo` icons, including `github-logo`, `figma-logo`, and `open-ai-logo`, so the package already distributes brand marks with the trademark question unaddressed. Nor did it weigh that leaving brand families out does not remove the obligation. Consumers who copy SVGs by hand carry the same trademark obligations, with no license file, no provenance, and no upgrade path. The gap is concrete: `npm`, `claude`, and `anthropic` are in no shipped family.
+- **Keeping per-icon-licensed icons with per-icon notices.** This needs a license field on `IconData`, which the model does not have, for 211 icons. For some of them (NC, ND, GPL), no notice would make them safe in a consumer's build.
+- **Marking brand families `extended`.** `extended` means a credit obligation on the copyright side. Brand families owe none, and reusing the tier would blur what both tiers mean.
+- **A generic `brand` prefix.** Every other family is named for its source, which leaves room for a second brand set beside this one.
 
 A CSS comment is a defensible notice medium but a consumer minifying with `legalComments: "none"` strips it. That is why `"file"` exists, and the docs say so.
 
@@ -249,4 +271,4 @@ Not scheduled, recorded so the design leaves room:
 
 - A first-party Codenhub family owning the semantic names.
 - Per-icon virtual modules for bundlers other than Vite; only the Vite plugin serves them today.
-- Per-family Tailwind plugin entry points, e.g. `@plugin "@codenhub/icons/tailwind/lucide"`. A Tailwind plugin handler must be synchronous — utilities registered after an `await` are dropped — so the generated `dist/tw/plugin.js` imports all thirteen families statically and every build pays to load them: measured at ~130 ms and ~101 MB RSS, against ~11 ms and ~62 MB for one family. A per-family entry would load only what a project names, at the cost of thirteen generated modules, a `./tailwind/*` export, and a rule for how `default:` resolves across several `@plugin` imports (`default: true` per plugin, last import wins bare names by cascade). `/tw` stays all-families: that is the price of its zero configuration. The cost is per build and does not grow with project size, so this is optimisation, not correctness.
+- Per-family Tailwind plugin entry points, e.g. `@plugin "@codenhub/icons/tailwind/lucide"`. A Tailwind plugin handler must be synchronous — utilities registered after an `await` are dropped — so the generated `dist/tw/plugin.js` imports every family statically and every build pays to load them: measured at ~265 ms and ~103 MB RSS with all fourteen, ~220 ms and ~89 MB with the thirteen non-brand families, and ~35 ms and ~53 MB for one (Node 24.14, importing the built plugin or the family modules in a fresh process, 2026-10-21). A per-family entry would load only what a project names, at the cost of one generated module per family, a `./tailwind/*` export, and a rule for how `default:` resolves across several `@plugin` imports (`default: true` per plugin, last import wins bare names by cascade). `/tw` stays all non-brand families: that is the price of its zero configuration. The cost is per build and does not grow with project size, so this is optimisation, not correctness.
