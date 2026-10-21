@@ -1,11 +1,4 @@
-import {
-  generateBaseCss,
-  generateIconCss,
-  getIconCssProps,
-  getIconMaskUrl,
-  IconRegistry,
-  renderSvg,
-} from "@codenhub/icons";
+import { generateIconSetCss, getIconCssProps, getIconMaskUrl, IconRegistry } from "@codenhub/icons";
 import lucide from "@codenhub/icons/data/lucide";
 
 const registry = new IconRegistry({ defaultPrefix: lucide.prefix });
@@ -20,16 +13,10 @@ function initPlayground(): void {
   styleEl.id = "icons-generated-css";
   const testIcons = ["search", "check", "x", "settings", "user", "calendar", "arrow-right", "sun", "moon"];
 
-  const cssChunks: string[] = [generateBaseCss({ prefix: "ic" })];
-
-  for (const name of testIcons) {
-    const resolved = registry.resolve(name);
-    if (resolved) {
-      cssChunks.push(generateIconCss([`.ic-${name}`], renderSvg(resolved)));
-    }
-  }
-
-  styleEl.textContent = cssChunks.join("\n");
+  styleEl.textContent = generateIconSetCss(
+    testIcons.map((name) => `ic-${name}`),
+    registry,
+  ).css;
   document.head.appendChild(styleEl);
 
   // 2. Setup Theme Toggle (Light / Dark)
