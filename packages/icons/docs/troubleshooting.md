@@ -12,7 +12,7 @@ Most failures here are silent: the build stays green and the page is where the g
 
 No base rule matched the element, so it has no size.
 
-- **No base rules.** Plain CSS and a declared Tailwind `@plugin` need `@import "@codenhub/icons";` in a stylesheet. `@codenhub/icons/tw`, the Vite plugin's stylesheet, and the PostCSS plugin include the base rules already, the PostCSS plugin unless `injectBase` is `false`. When the Vite plugin's stylesheet never reaches the page, as in an Astro production build without the `virtual:icons.css` import, the base rules are missing with it. Inline SVG mode needs no base rules to render; they add `--ic-size`, the size classes, and `--ic-color` for icons without a color of their own.
+- **No base rules.** Plain CSS and a declared Tailwind `@plugin` need `@import "@codenhub/icons";` in a stylesheet. `@codenhub/icons/tw`, the Vite plugin's stylesheet, and the PostCSS plugin include the base rules already, the PostCSS plugin unless `injectBase` is `false`. Inline SVG mode needs no base rules to render; they add `--ic-size`, the size classes, and `--ic-color` for icons without a color of their own.
 - **The element is not an `<i>` and has no `.ic`.** The base rules match `<i class="ic-…">`, or any element that also carries `.ic`. A `<span class="ic-lucide-heart">` matches neither.
 
 ## The icon renders as a solid square
