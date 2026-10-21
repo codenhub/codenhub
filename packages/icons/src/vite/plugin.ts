@@ -308,7 +308,31 @@ interface ReplaceIconTagsOptions {
   prefix: string;
   strokeWidth?: number | string;
   isJsContext?: boolean;
+  /** Whether the source is JSX, where markup outside a string is a JSX element. */
+  isJsx?: boolean;
   onFamilyUsed: (family: IconFamilyData) => void;
+}
+
+const JSX_FILE = /\.[jt]sx$/i;
+const BRAND_COLOR_GROUP = /<g color="([^"]*)" style="([^"]*)">/g;
+
+/**
+ * Rewrites a brand icon's style string as a JSX style object.
+ *
+ * React rejects a string `style` prop and fails the render, so markup inserted
+ * as a JSX element carries the brand color as an object instead. Every other
+ * host, and markup inside a string, keeps the string.
+ */
+function toJsxStyle(svg: string): string {
+  return svg.replace(BRAND_COLOR_GROUP, (_match, color: string, style: string) => {
+    const declarations = Object.fromEntries(
+      style
+        .split(";")
+        .map((declaration) => declaration.split(/:(.*)/s).map((part) => part.trim()))
+        .filter(([property]) => property),
+    );
+    return `<g color="${color}" style={${JSON.stringify(declarations)}}>`;
+  });
 }
 
 /**
@@ -370,7 +394,7 @@ function removeIconTags(source: string, registry: IconRegistry, prefix: string):
 }
 
 function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options: ReplaceIconTagsOptions): string {
-  const { isJsContext = false, onFamilyUsed, prefix, strokeWidth } = options;
+  const { isJsContext = false, isJsx = false, onFamilyUsed, prefix, strokeWidth } = options;
 
   const cleanSource = isJsContext ? stripComments(source) : source;
 
@@ -419,6 +443,8 @@ function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options:
           svg = svg.replace(/'/g, "\\'");
         } else if (enclosingQuote === "`") {
           svg = svg.replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
+        } else if (isJsx) {
+          svg = toJsxStyle(svg);
         }
       }
 
@@ -740,7 +766,11 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
           };
           const replaced = ASTRO_FILE.test(id)
             ? replaceIconTagsInAstro(code, registry, replaceOptions)
-            : replaceIconTagsWithSvg(code, registry, { ...replaceOptions, isJsContext: true });
+            : replaceIconTagsWithSvg(code, registry, {
+                ...replaceOptions,
+                isJsContext: true,
+                isJsx: JSX_FILE.test(id),
+              });
           collectUnreplacedClasses(removeIconTags(code, registry, prefix), id);
           if (replaced !== code) {
             return { code: replaced, map: null };

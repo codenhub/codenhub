@@ -327,6 +327,39 @@ describe("viteIcons in svg mode", () => {
     expect(result?.code).toContain(`'<svg class="ic-user" xmlns="http://www.w3.org/2000/svg"`);
   });
 
+  describe("a brand icon's color", () => {
+    const brand: IconFamilyData = {
+      ...createFamily(),
+      icons: { mark: { body: '<path d="mark" />', color: "#181717" } },
+      prefix: "brand",
+    };
+
+    it("is a style object in bare JSX, which React requires", () => {
+      const { transform } = createPlugin({ families: [createFamily(), brand], mode: "svg" });
+
+      const code = transform('export const App = () => <i className="ic-brand-mark" />;', "app.tsx")?.code;
+
+      expect(code).toContain('<g color="#181717" style={{"color":"var(--ic-color, #181717)"}}>');
+      expect(code).not.toContain('style="');
+    });
+
+    it("stays a style string inside a string literal in a JSX file", () => {
+      const { transform } = createPlugin({ families: [createFamily(), brand], mode: "svg" });
+
+      const code = transform('const markup = `<i class="ic-brand-mark"></i>`;', "app.tsx")?.code;
+
+      expect(code).toContain('style="color: var(--ic-color, #181717)"');
+    });
+
+    it("stays a style string in a template that is not JSX", () => {
+      const { transform } = createPlugin({ families: [createFamily(), brand], mode: "svg" });
+
+      const code = transform('<template><i class="ic-brand-mark"></i></template>', "app.vue")?.code;
+
+      expect(code).toContain('style="color: var(--ic-color, #181717)"');
+    });
+  });
+
   it("replaces an icon tag written inside a template literal", () => {
     const { transform } = createPlugin({ mode: "svg" });
 
