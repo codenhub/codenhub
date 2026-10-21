@@ -69,6 +69,19 @@ registry.resolve("heart"); // lucide:heart
 registry.resolve("close"); // undefined -- lucide calls it "x"
 ```
 
+### Finding an icon's name
+
+An icon's name is the one its upstream project gives it, so browse the family's own site and write the name you find there:
+
+| Family                 | Browse at                                                | Example class                                   |
+| ---------------------- | -------------------------------------------------------- | ----------------------------------------------- |
+| `lucide`               | [lucide.dev/icons](https://lucide.dev/icons)             | `ic-lucide-circle-check`                        |
+| `phosphor`, variants   | [phosphoricons.com](https://phosphoricons.com)           | `ic-phosphor-fill-check-circle`                 |
+| `material-symbols-*`   | [fonts.google.com/icons](https://fonts.google.com/icons) | `ic-material-symbols-rounded-check_circle`      |
+| `simple-icons` (brand) | [simpleicons.org](https://simpleicons.org)               | `ic-simple-icons-github`, `ic-simple-icons-npm` |
+
+Material Symbols names keep Google's underscores: `check_circle`, not `check-circle`. A Simple Icons name is the icon's slug, with any `_` written as `-`. A misspelled name is not an error: the class resolves to nothing and the element renders as a solid square, so check the name against the family when an icon does not appear. Each family module also lists its names, as the keys of its `icons` object.
+
 ## Reserved names
 
 `ic-xs` through `ic-xl` are the [size axis](#size), so `xs`, `sm`, `md`, `lg`, and `xl` cannot be family prefixes or icon names. Generation refuses a family that claims one. Stroke width is written on the icon class itself, so it claims no prefix.
@@ -103,6 +116,23 @@ Size and color follow CSS custom properties:
   --ic-color: var(--color-accent);
 }
 ```
+
+## Accessibility
+
+An icon element has no text content, so assistive technology announces nothing for it, or an unhelpful guess. Say which kind of icon it is:
+
+```html
+<!-- decorative, beside a visible label: hide it -->
+<button><i class="ic-lucide-trash" aria-hidden="true"></i>Delete</button>
+
+<!-- the only content of a control: label the control, hide the icon -->
+<button aria-label="Delete"><i class="ic-lucide-trash" aria-hidden="true"></i></button>
+
+<!-- meaningful on its own, outside a control: give it a role and a name -->
+<i class="ic-lucide-triangle-alert" role="img" aria-label="Warning"></i>
+```
+
+In [inline SVG mode](delivery/vite.md#inline-svg-mode) the attributes you put on the `<i>` carry over to the `<svg>` that replaces it.
 
 ## Stroke width
 

@@ -26,6 +26,27 @@ getIconCssProps("lucide:x", registry);
 
 `generateIconSetCss` returns the families it drew from alongside the CSS, which is what lets a caller emit the right license notice.
 
+## Generating CSS outside a bundler
+
+The plugins are a scan followed by a generate. Run the two yourself to produce a stylesheet from a script:
+
+```ts
+import { generateIconSetCss, IconRegistry, renderAttributionBanner, scanFiles } from "@codenhub/icons";
+import lucide from "@codenhub/icons/data/lucide";
+
+const registry = new IconRegistry({ defaultPrefix: "lucide" });
+registry.registerFamily(lucide);
+
+const classes = scanFiles(["./src/**/*.html"]);
+const { css, families } = generateIconSetCss(classes, registry);
+const banner = renderAttributionBanner(families); // undefined when no family used owes a notice
+const stylesheet = banner ? `${banner}\n${css}` : css;
+```
+
+`scanFiles` takes paths and glob patterns, and ignores a file it cannot read.
+
+`generateFamilyCss` writes out one whole family instead, the way the package builds its own `@codenhub/icons/<family>` stylesheets.
+
 ## A background-image icon
 
 The base rules render an icon as an element (`<i>` or `.ic`) or an inlined `<svg>`, and nothing else. When you need one as a `background-image` — a custom control, an input affix, a `::before` you own — resolve the `url()` yourself:

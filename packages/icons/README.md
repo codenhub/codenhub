@@ -80,11 +80,12 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 ## Documentation
 
 - [Documentation overview](docs/index.md): what the package is, installation, and the shortest working setup.
-- [Concepts](docs/concepts.md): families, name resolution, reserved names, stroke width, and the markup forms.
+- [Concepts](docs/concepts.md): families, finding icon names, name resolution, stroke width, size, and accessibility.
 - [Delivery methods](docs/delivery/index.md): plain CSS, Tailwind CSS v4, the Vite plugin, and the PostCSS plugin.
 - [Frameworks](docs/frameworks/index.md): setup for Astro, Next.js, and SvelteKit.
 - [JavaScript API](docs/javascript-api.md): the registry, renderers, and third-party set adapter.
 - [Licensing](docs/licensing.md): attribution modes and what each build owes.
+- [Troubleshooting](docs/troubleshooting.md): an icon that renders as nothing, as a solid square, or at the wrong width.
 
 ## Requirements
 
@@ -106,6 +107,7 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 - Size follows `--ic-size`, default `1em`. The `ic-xs`–`ic-xl` classes each set it to a rem value (`0.75`, `0.875`, `1`, `1.25`, `1.5`) and nothing else, so they compose with a stroke modifier. An inlined `<svg>` from the renderer or `mode: "svg"` carries a `1em` box of its own and honours `--ic-size` through the base rules.
 - The `/lucide` and other family stylesheets are large by construction — a whole family, because nothing is narrowing it. `dist/css` totals about 30 MB across all 14. Import the families you use, or use Tailwind or a plugin, which emit only what your markup asked for.
 - `mode: "svg"` in the Vite plugin rewrites `<i class="ic-...">` tags into inline SVG and nothing else. A class on another element gets no icon in this mode; the plugin warns when it finds one.
+- Icon names are the upstream family's own: Material Symbols names keep their underscores, as in `ic-material-symbols-rounded-check_circle`.
 
 ## License
 

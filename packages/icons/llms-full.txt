@@ -82,11 +82,12 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 ## Documentation
 
 - [Documentation overview](docs/index.md): what the package is, installation, and the shortest working setup.
-- [Concepts](docs/concepts.md): families, name resolution, reserved names, stroke width, and the markup forms.
+- [Concepts](docs/concepts.md): families, finding icon names, name resolution, stroke width, size, and accessibility.
 - [Delivery methods](docs/delivery/index.md): plain CSS, Tailwind CSS v4, the Vite plugin, and the PostCSS plugin.
 - [Frameworks](docs/frameworks/index.md): setup for Astro, Next.js, and SvelteKit.
 - [JavaScript API](docs/javascript-api.md): the registry, renderers, and third-party set adapter.
 - [Licensing](docs/licensing.md): attribution modes and what each build owes.
+- [Troubleshooting](docs/troubleshooting.md): an icon that renders as nothing, as a solid square, or at the wrong width.
 
 ## Requirements
 
@@ -108,6 +109,7 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 - Size follows `--ic-size`, default `1em`. The `ic-xs`–`ic-xl` classes each set it to a rem value (`0.75`, `0.875`, `1`, `1.25`, `1.5`) and nothing else, so they compose with a stroke modifier. An inlined `<svg>` from the renderer or `mode: "svg"` carries a `1em` box of its own and honours `--ic-size` through the base rules.
 - The `/lucide` and other family stylesheets are large by construction — a whole family, because nothing is narrowing it. `dist/css` totals about 30 MB across all 14. Import the families you use, or use Tailwind or a plugin, which emit only what your markup asked for.
 - `mode: "svg"` in the Vite plugin rewrites `<i class="ic-...">` tags into inline SVG and nothing else. A class on another element gets no icon in this mode; the plugin warns when it finds one.
+- Icon names are the upstream family's own: Material Symbols names keep their underscores, as in `ic-material-symbols-rounded-check_circle`.
 
 ## License
 
@@ -162,11 +164,12 @@ Four delivery methods understand the same classes — plain CSS, Tailwind CSS v4
 
 ## Next steps
 
-- [Concepts](docs/concepts.md): families, name resolution, reserved names, stroke width, and the markup forms.
+- [Concepts](docs/concepts.md): families, finding icon names, name resolution, stroke width, size, and accessibility.
 - [Delivery methods](docs/delivery/index.md): the four ways icons reach your CSS and how to choose.
 - [Frameworks](docs/frameworks/index.md): setup for Astro, Next.js, and SvelteKit.
 - [JavaScript API](docs/javascript-api.md): the registry, renderers, and third-party set adapter.
 - [Licensing](docs/licensing.md): attribution modes and what each build owes.
+- [Troubleshooting](docs/troubleshooting.md): an icon that renders as nothing, as a solid square, or at the wrong width.
 
 <!-- Source: docs/concepts.md -->
 
@@ -235,6 +238,19 @@ registry.resolve("heart"); // lucide:heart
 registry.resolve("close"); // undefined -- lucide calls it "x"
 ```
 
+### Finding an icon's name
+
+An icon's name is the one its upstream project gives it, so browse the family's own site and write the name you find there:
+
+| Family                 | Browse at                                                | Example class                                   |
+| ---------------------- | -------------------------------------------------------- | ----------------------------------------------- |
+| `lucide`               | [lucide.dev/icons](https://lucide.dev/icons)             | `ic-lucide-circle-check`                        |
+| `phosphor`, variants   | [phosphoricons.com](https://phosphoricons.com)           | `ic-phosphor-fill-check-circle`                 |
+| `material-symbols-*`   | [fonts.google.com/icons](https://fonts.google.com/icons) | `ic-material-symbols-rounded-check_circle`      |
+| `simple-icons` (brand) | [simpleicons.org](https://simpleicons.org)               | `ic-simple-icons-github`, `ic-simple-icons-npm` |
+
+Material Symbols names keep Google's underscores: `check_circle`, not `check-circle`. A Simple Icons name is the icon's slug, with any `_` written as `-`. A misspelled name is not an error: the class resolves to nothing and the element renders as a solid square, so check the name against the family when an icon does not appear. Each family module also lists its names, as the keys of its `icons` object.
+
 ## Reserved names
 
 `ic-xs` through `ic-xl` are the [size axis](#size), so `xs`, `sm`, `md`, `lg`, and `xl` cannot be family prefixes or icon names. Generation refuses a family that claims one. Stroke width is written on the icon class itself, so it claims no prefix.
@@ -269,6 +285,23 @@ Size and color follow CSS custom properties:
   --ic-color: var(--color-accent);
 }
 ```
+
+## Accessibility
+
+An icon element has no text content, so assistive technology announces nothing for it, or an unhelpful guess. Say which kind of icon it is:
+
+```html
+<!-- decorative, beside a visible label: hide it -->
+<button><i class="ic-lucide-trash" aria-hidden="true"></i>Delete</button>
+
+<!-- the only content of a control: label the control, hide the icon -->
+<button aria-label="Delete"><i class="ic-lucide-trash" aria-hidden="true"></i></button>
+
+<!-- meaningful on its own, outside a control: give it a role and a name -->
+<i class="ic-lucide-triangle-alert" role="img" aria-label="Warning"></i>
+```
+
+In [inline SVG mode](docs/delivery/vite.md#inline-svg-mode) the attributes you put on the `<i>` carry over to the `<svg>` that replaces it.
 
 ## Stroke width
 
@@ -760,6 +793,27 @@ getIconCssProps("lucide:x", registry);
 
 `generateIconSetCss` returns the families it drew from alongside the CSS, which is what lets a caller emit the right license notice.
 
+## Generating CSS outside a bundler
+
+The plugins are a scan followed by a generate. Run the two yourself to produce a stylesheet from a script:
+
+```ts
+import { generateIconSetCss, IconRegistry, renderAttributionBanner, scanFiles } from "@codenhub/icons";
+import lucide from "@codenhub/icons/data/lucide";
+
+const registry = new IconRegistry({ defaultPrefix: "lucide" });
+registry.registerFamily(lucide);
+
+const classes = scanFiles(["./src/**/*.html"]);
+const { css, families } = generateIconSetCss(classes, registry);
+const banner = renderAttributionBanner(families); // undefined when no family used owes a notice
+const stylesheet = banner ? `${banner}\n${css}` : css;
+```
+
+`scanFiles` takes paths and glob patterns, and ignores a file it cannot read.
+
+`generateFamilyCss` writes out one whole family instead, the way the package builds its own `@codenhub/icons/<family>` stylesheets.
+
 ## A background-image icon
 
 The base rules render an icon as an element (`<i>` or `.ic`) or an inlined `<svg>`, and nothing else. When you need one as a `background-image` — a custom control, an input affix, a `::before` you own — resolve the `url()` yourself:
@@ -845,6 +899,46 @@ A set adopted through `adoptIconifySet` is `extended` tier — you remain respon
 - Its notice line, wherever the build emits one, says that the marks are trademarks of their owners. `off` suppresses it without a warning, because no license requires it.
 - Simple Icons records a separate license for some icons. Those whose own license places any obligation are left out, so no icon in the family carries a recorded license obligation: each is CC0, Unlicense, or has no license recorded upstream.
 - Simple Icons removes icons when brand owners ask. An upgrade of the family across an upstream major version can remove names, and its changelog lists them.
+
+<!-- Source: docs/troubleshooting.md -->
+
+# Troubleshooting
+
+Most failures here are silent: the build stays green and the page is where the gap shows. Work through the section that matches what you see.
+
+## The icon renders as nothing
+
+No base rule matched the element, so it has no size.
+
+- **No base import.** Every delivery method needs `@import "@codenhub/icons";` in a stylesheet, or `@import "@codenhub/icons/tw";` with Tailwind. Plugins add per-icon rules next to it, never in place of it.
+- **The element is not an `<i>` and has no `.ic`.** The base rules match `<i class="ic-…">`, or any element that also carries `.ic`. A `<span class="ic-lucide-heart">` matches neither.
+
+## The icon renders as a solid square
+
+The base rules sized and colored the element, but no rule gave it a mask, so the whole box paints in the icon color.
+
+- **The name does not exist in the family.** Names are upstream names: Material Symbols writes `check_circle`, Lucide writes `circle-check`, and Lucide has no `close` (it is `x`). See [Finding an icon's name](docs/concepts.md#finding-an-icons-name).
+- **An unqualified name with no default family.** `ic-heart` resolves only where you set a default: `defaultPrefix` in the Vite and PostCSS plugins, `default:` in the Tailwind plugin, or the last family stylesheet imported in plain CSS. Write the qualified `ic-lucide-heart`, or set a default. See [Names](docs/concepts.md#names).
+- **The family is not loaded.** The Vite and PostCSS plugins resolve only the families in `families`.
+- **A brand icon through `@codenhub/icons/tw`.** `/tw` never resolves `simple-icons`. Declare the plugin with `families` naming it. See [Tailwind CSS](docs/delivery/tailwind.md#configuring-the-plugin).
+- **The class is assembled at runtime.** A plugin finds a class only when it is written out in full: `` `ic-${name}` `` is invisible at build time. Write each class literally, or load the icon as a [module](docs/delivery/vite.md#one-module-per-icon).
+- **The class is in a file the plugin does not scan.** The Vite plugin scans the modules Vite transforms; `.astro`, `.md`, and `.mdx` need `content` globs. The PostCSS plugin scans only the stylesheet and `content`. See [Vite § Scanning](docs/delivery/vite.md#scanning) and [PostCSS § Scanning](docs/delivery/postcss.md#scanning).
+- **Astro, production build only.** Import `virtual:icons.css` from a layout. See [Astro § Vite plugin](docs/frameworks/astro.md#vite-plugin).
+- **Production only, with a Content Security Policy.** Versions up to 0.2.1 inlined the built stylesheet as a `<style>` tag, which a policy without `'unsafe-inline'` blocks. Later versions link a file instead. See [Vite § Scanning](docs/delivery/vite.md#scanning).
+- **Inline SVG mode, on an element it does not rewrite.** `mode: "svg"` replaces `<i class="ic-…">` tags and emits no mask rules, so `.ic` on any other element has nothing behind it. The build warns, naming the class and the file. Under Astro, `.md` and `.mdx` are not rewritten, and nothing warns. See [Vite § Inline SVG mode](docs/delivery/vite.md#inline-svg-mode) and [Astro § Inline SVG mode](docs/frameworks/astro.md#inline-svg-mode).
+
+## The stroke width does not change
+
+- **Plain CSS.** Family stylesheets carry each icon at its authored width; `ic-lucide-heart/1.5` needs Tailwind, Vite, or PostCSS. See [Stroke width](docs/concepts.md#stroke-width).
+- **A family drawn with fills.** Only `lucide` is stroke-based. Every other bundled family ignores the modifier.
+
+## The color does not change
+
+Set `--ic-color` on the icon or an ancestor, or set `color`: an icon with no `--ic-color` paints in `currentColor`. A `background-color` you set on the icon element itself replaces its color, because the mask paints with the background.
+
+## The license notice is missing from the output
+
+A minifier configured with `legalComments: "none"` strips `/*! … */` comments. Use `attribution: "file"` with Vite, or keep legal comments. See [Licensing](docs/licensing.md).
 
 <!-- Source: docs/changelog/0.2.1.md -->
 

@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-20
+last_updated: 2026-10-21
 scope: Icon data model, family catalog, generation pipeline, and resolution core of `@codenhub/icons`.
 ---
 
@@ -81,7 +81,9 @@ Rules:
 
 - `body` holds inner markup only. The `<svg>` wrapper is reconstructed at render time from `width`/`height`, so size, color, and stroke stay controllable.
 - Every field Iconify defines and we do not use is simply absent; every field we add lives under `info`, which Iconify treats as opaque. A third-party IconifyJSON set therefore loads through `adapters/iconify` with no transformation of icon bodies.
-- Icon names are kebab-case and unique within a prefix. An alias never points at another alias.
+- Icon names are the upstream project's own, unique within a prefix. An alias never points at another alias.
+
+Names are not normalised to kebab-case. Material Symbols writes `check_circle`, the name a consumer finds on fonts.google.com, and those names shipped in 0.2.x; rewriting them to `check-circle` would break every published class for consistency alone, and send a reader looking the name up upstream to a form that is not there. Simple Icons is the exception, its `_` mapped to `-` (see [Brand families](#brand-families)), because its slugs are not the brand's displayed name either way. Rejected: hyphenating every family, for the break above.
 
 ### Family info
 

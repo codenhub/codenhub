@@ -48,8 +48,9 @@ Four delivery methods understand the same classes — plain CSS, Tailwind CSS v4
 
 ## Next steps
 
-- [Concepts](concepts.md): families, name resolution, reserved names, stroke width, and the markup forms.
+- [Concepts](concepts.md): families, finding icon names, name resolution, stroke width, size, and accessibility.
 - [Delivery methods](delivery/index.md): the four ways icons reach your CSS and how to choose.
 - [Frameworks](frameworks/index.md): setup for Astro, Next.js, and SvelteKit.
 - [JavaScript API](javascript-api.md): the registry, renderers, and third-party set adapter.
 - [Licensing](licensing.md): attribution modes and what each build owes.
+- [Troubleshooting](troubleshooting.md): an icon that renders as nothing, as a solid square, or at the wrong width.
