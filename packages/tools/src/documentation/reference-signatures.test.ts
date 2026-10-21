@@ -62,6 +62,24 @@ describe("extractSignatures", () => {
     expect([...(registry?.members ?? [])]).toEqual([["add", "add(name: string, value: T): void;"]]);
   });
 
+  it("lists a class constructor, which has no name node, under `constructor`", () => {
+    const store = extractSignatures(
+      "export declare class Store {\n    constructor(options?: StoreOptions);\n    constructor(seed: string);\n}",
+      "store.d.ts",
+    ).get("Store");
+    expect([...(store?.members ?? [])]).toEqual([
+      ["constructor", "constructor(options?: StoreOptions);\nconstructor(seed: string);"],
+    ]);
+  });
+
+  it("drops a private constructor", () => {
+    const singleton = extractSignatures(
+      "export declare class Singleton {\n    private constructor();\n    static create(): Singleton;\n}",
+      "singleton.d.ts",
+    ).get("Singleton");
+    expect([...(singleton?.members ?? [])]).toEqual([["create", "static create(): Singleton;"]]);
+  });
+
   it("keeps a type alias and a variable declaration whole, with a terminating semicolon", () => {
     expect(index.get("Result")?.text).toBe("export type Result<T> = Ok<T> | Err;");
     expect(index.get("DEFAULT_APP_ERROR_MESSAGE")?.text).toBe(

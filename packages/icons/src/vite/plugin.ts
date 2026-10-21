@@ -64,9 +64,10 @@ export interface ViteIconsOptions {
   /**
    * How license notices for the families used reach the build output.
    *
-   * `"auto"` prepends a preserved CSS comment, `"file"` emits
-   * `icons-attribution.txt` as an asset, and `"off"` emits nothing and warns
-   * when a used family still requires a notice. Defaults to `"auto"`.
+   * `"auto"` prepends a preserved CSS comment to the generated stylesheet, or,
+   * in svg mode, which has no stylesheet, emits `icons-attribution.txt` as an
+   * asset. `"file"` emits that asset in both modes, and `"off"` emits nothing
+   * and warns when a used family still requires a notice. Defaults to `"auto"`.
    */
   attribution?: AttributionMode;
 }
@@ -95,8 +96,8 @@ function resolveIconModule(registry: IconRegistry, request: string): ResolvedIco
   return icon;
 }
 
-function renderIconModule(icon: ResolvedIcon, strokeWidth: number | string | undefined): string {
-  const svg = renderSvg(icon, { strokeWidth });
+function renderIconModule(icon: ResolvedIcon, strokeWidth: number | string | undefined, prefix: string): string {
+  const svg = renderSvg(icon, { prefix, strokeWidth });
   return `export const icon = ${JSON.stringify(icon)};
 export const svg = ${JSON.stringify(svg)};
 export default svg;
@@ -307,7 +308,51 @@ interface ReplaceIconTagsOptions {
   prefix: string;
   strokeWidth?: number | string;
   isJsContext?: boolean;
+  /** Whether the source is JSX, where markup outside a string is a JSX element. */
+  isJsx?: boolean;
   onFamilyUsed: (family: IconFamilyData) => void;
+}
+
+const JSX_FILE = /\.[jt]sx$/i;
+
+/**
+ * Returns the quote of the string literal an icon tag sits in, or `null`.
+ *
+ * The quote scanner knows nothing of JSX text, so an apostrophe there, as in
+ * "Don't", reads to it as an open string. A real `'` or `"` string cannot span
+ * a line, so one that does not close before the end of the tag's line was JSX
+ * text, and the tag is not in a string. Template literals may span lines and
+ * are taken as reported.
+ */
+function stringQuoteAt(code: string, offset: number, length: number): string | null {
+  const quote = getEnclosingQuote(code, offset);
+  if (quote !== '"' && quote !== "'") {
+    return quote;
+  }
+  const rest = code.slice(offset + length);
+  const lineEnd = rest.indexOf("\n");
+  const line = lineEnd === -1 ? rest : rest.slice(0, lineEnd);
+  return new RegExp(`(?<!\\\\)${quote}`).test(line) ? quote : null;
+}
+const BRAND_COLOR_GROUP = /<g color="([^"]*)" style="([^"]*)">/g;
+
+/**
+ * Rewrites a brand icon's style string as a JSX style object.
+ *
+ * React rejects a string `style` prop and fails the render, so markup inserted
+ * as a JSX element carries the brand color as an object instead. Every other
+ * host, and markup inside a string, keeps the string.
+ */
+function toJsxStyle(svg: string): string {
+  return svg.replace(BRAND_COLOR_GROUP, (_match, color: string, style: string) => {
+    const declarations = Object.fromEntries(
+      style
+        .split(";")
+        .map((declaration) => declaration.split(/:(.*)/s).map((part) => part.trim()))
+        .filter(([property]) => property),
+    );
+    return `<g color="${color}" style={${JSON.stringify(declarations)}}>`;
+  });
 }
 
 /**
@@ -369,7 +414,7 @@ function removeIconTags(source: string, registry: IconRegistry, prefix: string):
 }
 
 function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options: ReplaceIconTagsOptions): string {
-  const { isJsContext = false, onFamilyUsed, prefix, strokeWidth } = options;
+  const { isJsContext = false, isJsx = false, onFamilyUsed, prefix, strokeWidth } = options;
 
   const cleanSource = isJsContext ? stripComments(source) : source;
 
@@ -379,7 +424,7 @@ function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options:
       match: string,
       before: string,
       attrName: string,
-      _backslash: string,
+      backslash: string,
       quote: string,
       classValue: string,
       after: string,
@@ -397,7 +442,7 @@ function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options:
       }
 
       const effectiveStrokeWidth = resolved.strokeWidth ?? strokeWidth;
-      let svg = renderSvg(icon, { strokeWidth: effectiveStrokeWidth });
+      let svg = renderSvg(icon, { prefix, strokeWidth: effectiveStrokeWidth });
 
       const passthroughAttrs = [before.trim(), after.trim()].filter(Boolean).join(" ");
       const passthroughStr = passthroughAttrs ? ` ${passthroughAttrs}` : "";
@@ -411,13 +456,17 @@ function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options:
       }
 
       if (isJsContext) {
-        const enclosingQuote = getEnclosingQuote(cleanSource, offset);
+        const enclosingQuote = stringQuoteAt(cleanSource, offset, match.length);
         if (enclosingQuote === '"') {
           svg = svg.replace(/"/g, '\\"');
         } else if (enclosingQuote === "'") {
           svg = svg.replace(/'/g, "\\'");
         } else if (enclosingQuote === "`") {
           svg = svg.replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
+        } else if (isJsx || (attrName === "className" && !backslash)) {
+          // `className` with plain quotes outside a string is a JSX element in
+          // any file, `.js` included.
+          svg = toJsxStyle(svg);
         }
       }
 
@@ -500,12 +549,16 @@ function replaceIconTagsInAstro(source: string, registry: IconRegistry, options:
  * Vite plugin that turns icon utility classes into CSS mask rules, or into
  * inline SVG when `mode` is `"svg"`.
  *
- * In CSS mode it serves the generated stylesheet through `virtual:icons.css`
- * and injects it into every HTML entry point. It leaves
+ * In CSS mode it serves the generated stylesheet, base rules included, as
+ * `virtual:icons.css` in dev and links it from every HTML entry point. A build
+ * with HTML entries emits it as a hashed CSS asset and links that instead; a
+ * build without HTML entries, such as a library build, emits no stylesheet.
+ * Svg mode emits none either. It leaves
  * `@import "@codenhub/icons";` alone in both modes: that import is the base
  * stylesheet and means the same thing whether or not this plugin is in the
- * pipeline. In both modes it emits the license notices required by the families
- * the build actually used.
+ * pipeline. The license notices for the families the build used travel as a
+ * banner on the generated stylesheet, wherever that stylesheet goes, or as
+ * `icons-attribution.txt` in svg mode and under `attribution: "file"`.
  *
  * @param options - Families, scanning, class prefix, delivery mode, and attribution.
  * @returns The Vite plugin.
@@ -651,7 +704,7 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
         if (family) {
           rememberFamily(family);
         }
-        return renderIconModule(icon, options.strokeWidth);
+        return renderIconModule(icon, options.strokeWidth, prefix);
       }
       // Matched by the exact same fixed ids `resolveId` claims above, not by
       // the `\0virtual:` convention alone: that prefix is a generic Vite/Rollup
@@ -736,7 +789,11 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
           };
           const replaced = ASTRO_FILE.test(id)
             ? replaceIconTagsInAstro(code, registry, replaceOptions)
-            : replaceIconTagsWithSvg(code, registry, { ...replaceOptions, isJsContext: true });
+            : replaceIconTagsWithSvg(code, registry, {
+                ...replaceOptions,
+                isJsContext: true,
+                isJsx: JSX_FILE.test(id),
+              });
           collectUnreplacedClasses(removeIconTags(code, registry, prefix), id);
           if (replaced !== code) {
             return { code: replaced, map: null };

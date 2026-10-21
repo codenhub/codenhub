@@ -230,7 +230,11 @@ export function createIconsTailwindPlugin(availableFamilies: readonly IconFamily
           }
 
           noticeFamily(icon.prefix);
-          return { [`--${prefix}-uri`]: url, [`--${prefix}-mask`]: `var(--${prefix}-uri)` };
+          return {
+            [`--${prefix}-uri`]: url,
+            [`--${prefix}-mask`]: `var(--${prefix}-uri)`,
+            ...(icon.color === undefined ? {} : { [`--${prefix}-brand-color`]: icon.color }),
+          };
         },
       };
 

@@ -69,11 +69,11 @@ import "virtual:icons.css";
 ---
 ```
 
-Both lines are required, and this one is specific to Astro. Everywhere else the plugin injects the generated stylesheet into the HTML itself, from Vite's `transformIndexHtml` hook. A production `astro build` renders pages through Astro's own pipeline rather than as Vite HTML entries and does not put them through that hook, so the injection never reaches them and this import is what puts the mask rules on the page. Without it the build still succeeds, `@import "@codenhub/icons"` still supplies the base rules, and every icon renders as an empty box.
+Both lines are required, and this one is specific to Astro. Everywhere else the plugin injects the generated stylesheet into the HTML itself, from Vite's `transformIndexHtml` hook. A production `astro build` renders pages through Astro's own pipeline rather than as Vite HTML entries and does not put them through that hook, so the injection never reaches them and this import is what puts the mask rules on the page. Without it the build still succeeds, `@import "@codenhub/icons"` still supplies the base rules, and every icon renders as a solid square in its color.
 
 The `content` entry is required, not optional. The plugin auto-scans the files Vite transforms for `.html`, `.js(x)`, `.ts(x)`, `.vue`, `.svelte`, and stylesheets — `.astro` is not in that set, so classes written in `.astro`, `.md`, or `.mdx` templates are only discovered through `content`. List those globs and keep `@import "@codenhub/icons";` in a stylesheet for the base rules.
 
-Check that every class you write resolves in a family you registered. An icon name the registry cannot find is left without a rule and renders as an empty box. CSS mode reports nothing when that happens — in any host, not only in Astro — so the build stays green and the gap is visible only on the page. Inline SVG mode does warn, naming the class and the file.
+Check that every class you write resolves in a family you registered. An icon name the registry cannot find is left without a rule and renders as a solid square. CSS mode reports nothing when that happens — in any host, not only in Astro — so the build stays green and the gap is visible only on the page. Inline SVG mode does warn, naming the class and the file.
 
 ## Inline SVG mode
 
@@ -81,7 +81,7 @@ Check that every class you write resolves in a family you registered. An icon na
 
 Keep `@import "@codenhub/icons"` even so. An inlined `<svg>` renders at `1em` on its own, but that base stylesheet is what lets `--ic-size` and the `ic-xs`–`ic-xl` size classes reach it. See [Vite plugin § Inline SVG mode](../delivery/vite.md#inline-svg-mode).
 
-`.md` and `.mdx` are not rewritten. An icon class written in one of those reaches the page as a bare `<i>` element with no stylesheet behind it, so it renders as nothing at all — not even the empty box CSS mode would leave. Nothing reports it, either: the unresolved-class warning only covers the files this mode rewrites, so such a page builds green and ships blank.
+`.md` and `.mdx` are not rewritten. An icon class written in one of those reaches the page as a bare `<i>` element with no mask rule behind it, so it renders as a solid square with the base rules loaded, or as nothing without them. Nothing reports it, either: the unresolved-class warning only covers the files this mode rewrites, so such a page builds green and ships broken icons.
 
 There are two ways through it. In `.mdx`, put the icon in a component and use the component from the markdown: the component is an `.astro`, `.jsx`, or `.tsx` file, all of which are rewritten. In plain `.md`, which cannot import a component, there is no such route — a site that writes icon classes directly into its markdown wants CSS mode, where `content` globs cover `.md` and `.mdx` like any other file.
 

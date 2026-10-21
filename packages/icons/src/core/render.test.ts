@@ -58,7 +58,7 @@ const offsetIcon: ResolvedIcon = {
 describe("renderSvg", () => {
   it("wraps the body in an element carrying a namespace, a viewBox, and a 1em box", () => {
     expect(renderSvg(strokeIcon)).toBe(
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em"><g stroke-width="2"><path d="M0 0" /></g></svg>',
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><g stroke-width="2"><path d="M0 0" /></g></svg>',
     );
   });
 
@@ -79,8 +79,24 @@ describe("renderSvg", () => {
 
   it("ignores a requested stroke width for an icon that is not stroke-based", () => {
     expect(renderSvg(filledIcon, { strokeWidth: 1 })).toBe(
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em"><path fill="currentColor" d="M0 0" /></svg>',
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em" fill="currentColor"><path fill="currentColor" d="M0 0" /></svg>',
     );
+  });
+
+  it("paints a body that sets no fill of its own in currentColor", () => {
+    // Material Symbols and Simple Icons bodies are bare paths, which SVG fills
+    // black by default: inlined, they ignored `color` and `--ic-color`.
+    expect(renderSvg(offsetIcon)).toContain(' fill="currentColor">');
+  });
+
+  it("paints a colored icon in its own color unless --ic-color says otherwise", () => {
+    expect(renderSvg({ ...offsetIcon, color: "#181717" })).toContain(
+      '<g color="#181717" style="color: var(--ic-color, #181717)"><path d="M0 0" /></g></svg>',
+    );
+  });
+
+  it("names the color property after a custom class prefix", () => {
+    expect(renderSvg({ ...offsetIcon, color: "#181717" }, { prefix: "ux" })).toContain("var(--ux-color, #181717)");
   });
 
   it("keeps a viewBox that does not start at the origin", () => {
@@ -89,7 +105,7 @@ describe("renderSvg", () => {
 
   it("places extra attributes on the element", () => {
     expect(renderSvg(strokeIcon, { attributes: { "aria-hidden": "true", class: "icon" } })).toContain(
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" class="icon">',
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" aria-hidden="true" class="icon">',
     );
   });
 

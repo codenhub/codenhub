@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-20
+last_updated: 2026-10-21
 scope: Icon data model, family catalog, generation pipeline, and resolution core of `@codenhub/icons`.
 ---
 
@@ -70,6 +70,7 @@ interface IconData {
   width?: number; // per-icon override
   height?: number;
   tags?: string[];
+  color?: string; // the icon's own color, "#rrggbb"; brand families only
 }
 
 interface IconAlias {
@@ -80,8 +81,10 @@ interface IconAlias {
 Rules:
 
 - `body` holds inner markup only. The `<svg>` wrapper is reconstructed at render time from `width`/`height`, so size, color, and stroke stay controllable.
-- Every field Iconify defines and we do not use is simply absent; every field we add lives under `info`, which Iconify treats as opaque. A third-party IconifyJSON set therefore loads through `adapters/iconify` with no transformation of icon bodies.
-- Icon names are kebab-case and unique within a prefix. An alias never points at another alias.
+- Every field Iconify defines and we do not use is simply absent; every family-level field we add lives under `info`, which Iconify treats as opaque. The per-icon `tags` and `color` are additions Iconify readers ignore. A third-party IconifyJSON set therefore loads through `adapters/iconify` with no transformation of icon bodies.
+- Icon names are the upstream project's own, unique within a prefix. An alias never points at another alias.
+
+Names are not normalised to kebab-case. Material Symbols writes `check_circle`, the name a consumer finds on fonts.google.com, and those names shipped in 0.2.x; rewriting them to `check-circle` would break every published class for consistency alone, and send a reader looking the name up upstream to a form that is not there. Simple Icons is the exception, its `_` mapped to `-` (see [Brand families](#brand-families)), because its slugs are not the brand's displayed name either way. Rejected: hyphenating every family, for the break above.
 
 ### Family info
 
@@ -200,7 +203,7 @@ A brand mark carries two obligations: the artwork's copyright license, which the
 - **Notice.** A brand family gets a notice line wherever the build emits one, although its license owes none, and that line adds that the marks are trademarks of their owners and subject to their guidelines. `attribution: "off"` drops it without a warning, since no license requires it.
 - **Names.** Icon names are upstream slugs, with `_` mapped to `-` (6 slugs at 16.35.0). The slug `lg` is a reserved size token. The adapter drops it and the generator reports it, rather than refusing the whole family as it does for a core family.
 - **Upgrades.** Simple Icons removes icons at brand owners' request, in major releases. Moving `simple-icons` across a major version is a breaking change for this family, and its changelog entry lists the removed names.
-- **Color.** Brand colors are not shipped. Icons render in `currentColor` like every other family, and the upstream `hex` values are not kept.
+- **Color.** Each icon keeps its upstream `hex` as `IconData.color` (`#rrggbb`), and renders in it by default. `--ic-color` (`--<prefix>-color` under a custom class prefix), set on the icon or any ancestor, overrides it, so `:root { --ic-color: currentColor }` makes every brand icon monochrome and a per-icon value recolors one. In CSS the icon rule sets `--ic-brand-color` and the base rule paints `var(--ic-color, var(--ic-brand-color, currentColor))`; the mask artwork itself carries no color. An inlined `<svg>` wraps the body in `<g color="#hex" style="color: var(--ic-color, #hex)">`, which works with no stylesheet and never collides with a `style` attribute on the element. The `color` presentation attribute is what a Content Security Policy that blocks `style` attributes leaves behind: the icon keeps its brand color there, though `--ic-color` no longer reaches it, rather than silently falling back to the text color. Svg mode writes that style as an object, `style={{"color": …}}`, where the tag lands in JSX, because React fails the render on a string `style` prop. The registry drops a `color` that is not a hex value, because it reaches CSS and a `style` attribute verbatim. The cost: 753 of 3,466 Simple Icons colors at 16.35.0 are near-black (relative luminance below 0.05), GitHub's `#181717` and X's `#000000` among them, and vanish on a dark background until a consumer overrides them.
 
 Rejected alternatives:
 
@@ -208,6 +211,8 @@ Rejected alternatives:
 - **Keeping per-icon-licensed icons with per-icon notices.** This needs a license field on `IconData`, which the model does not have, for 211 icons. For some of them (NC, ND, GPL), no notice would make them safe in a consumer's build.
 - **Marking brand families `extended`.** `extended` means a credit obligation on the copyright side. Brand families owe none, and reusing the tier would blur what both tiers mean.
 - **A generic `brand` prefix.** Every other family is named for its source, which leaves room for a second brand set beside this one.
+- **Rendering brand icons in `currentColor`, dropping `hex`.** This was the previous decision, recorded with no reason. It did not weigh that a logo is recognised by its color as much as its shape, and that brand guidelines commonly allow a mark in its official color or in plain monochrome, which `--ic-color` still provides. A consumer who wanted the official color had to look up and hand-copy each hex value.
+- **Full-color, multi-color logos** from another source. A mask paints one color, so they need a second render path (`background-image`), a new source, and a new license review, and "set a color" would mean flattening the logo. Simple Icons' one color per mark fits the mask pipeline unchanged.
 
 A CSS comment is a defensible notice medium but a consumer minifying with `legalComments: "none"` strips it. That is why `"file"` exists, and the docs say so.
 
@@ -269,6 +274,6 @@ The package is pre-1.0. The rewrite breaks freely and documents what breaks; no 
 
 Not scheduled, recorded so the design leaves room:
 
-- A first-party Codenhub family owning the semantic names.
+- A first-party family owning the semantic names.
 - Per-icon virtual modules for bundlers other than Vite; only the Vite plugin serves them today.
 - Per-family Tailwind plugin entry points, e.g. `@plugin "@codenhub/icons/tailwind/lucide"`. A Tailwind plugin handler must be synchronous — utilities registered after an `await` are dropped — so the generated `dist/tw/plugin.js` imports every family statically and every build pays to load them: measured at ~265 ms and ~103 MB RSS with all fourteen, ~220 ms and ~89 MB with the thirteen non-brand families, and ~35 ms and ~53 MB for one (Node 24.14, importing the built plugin or the family modules in a fresh process, 2026-10-21). A per-family entry would load only what a project names, at the cost of one generated module per family, a `./tailwind/*` export, and a rule for how `default:` resolves across several `@plugin` imports (`default: true` per plugin, last import wins bare names by cascade). `/tw` stays all non-brand families: that is the price of its zero configuration. The cost is per build and does not grow with project size, so this is optimisation, not correctness.

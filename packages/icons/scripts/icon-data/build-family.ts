@@ -96,6 +96,35 @@ async function readIncompatibleIcons(packageDirectory: string, definition: IconF
   );
 }
 
+const UPSTREAM_HEX = /^[0-9a-f]{6}$/i;
+
+/**
+ * Reads each icon's brand color, keyed by upstream name, as a lowercase `#rrggbb`.
+ *
+ * @throws When a color is not six hex digits, so a malformed upstream value
+ * fails generation rather than reaching a stylesheet.
+ */
+async function readColors(packageDirectory: string, definition: IconFamilyDefinition): Promise<Map<string, string>> {
+  if (!definition.iconColorsFile) {
+    return new Map();
+  }
+  const source = await readFile(resolve(packageDirectory, definition.iconColorsFile), "utf8");
+  const entries = JSON.parse(source) as { slug: string; hex?: string }[];
+  return new Map(
+    entries.flatMap(({ hex, slug }) => {
+      if (hex === undefined) {
+        return [];
+      }
+      if (!UPSTREAM_HEX.test(hex)) {
+        throw new Error(
+          `Family "${definition.prefix}" lists color "${hex}" for "${slug}", which is not six hex digits.`,
+        );
+      }
+      return [[slug, `#${hex.toLowerCase()}`] as const];
+    }),
+  );
+}
+
 async function readTags(packageDirectory: string, definition: IconFamilyDefinition): Promise<Record<string, string[]>> {
   if (!definition.tagsFile) {
     return {};
@@ -189,6 +218,7 @@ export async function buildFamily(
   const fileNames = (await readdir(iconsDirectory)).toSorted((first, second) => first.localeCompare(second));
   const tags = await readTags(packageDirectory, definition);
   const incompatible = await readIncompatibleIcons(packageDirectory, definition);
+  const colors = await readColors(packageDirectory, definition);
   const exclusions: Exclusions = { licensed: 0, reserved: [] };
 
   const iconFiles = fileNames.flatMap((fileName) => {
@@ -207,8 +237,15 @@ export async function buildFamily(
       exclusions.reserved.push(iconName);
       return [];
     }
-    return [{ fileName, iconName }];
+    return [{ fileName, iconName, upstreamName }];
   });
+
+  const colorsByIcon = new Map(
+    iconFiles.flatMap(({ iconName, upstreamName }) => {
+      const color = colors.get(upstreamName);
+      return color === undefined ? [] : [[iconName, color] as const];
+    }),
+  );
 
   const duplicateNames = iconFiles
     .map(({ iconName }) => iconName)
@@ -245,6 +282,7 @@ export async function buildFamily(
   const icons: Record<string, IconData> = {};
   for (const [iconName, icon] of normalized) {
     const iconTags = tags[iconName];
+    const color = colorsByIcon.get(iconName);
     icons[iconName] = {
       body: icon.body,
       ...(icon.width === familyViewBox.width ? {} : { width: icon.width }),
@@ -252,6 +290,7 @@ export async function buildFamily(
       ...(icon.left === familyViewBox.left ? {} : { left: icon.left }),
       ...(icon.top === familyViewBox.top ? {} : { top: icon.top }),
       ...(iconTags && iconTags.length > 0 ? { tags: iconTags } : {}),
+      ...(color === undefined ? {} : { color }),
     };
   }
 

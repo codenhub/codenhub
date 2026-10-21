@@ -36,6 +36,12 @@ export interface IconFamilyDefinition {
    * obligation, or is not on the accepted list, are left out of the family.
    */
   iconLicensesFile?: string;
+  /**
+   * JSON file inside the upstream package listing a brand color per icon, as an
+   * array of `{ slug, hex }` with `hex` six hex digits and no `#`. Each icon
+   * keeps its color, which renders by default.
+   */
+  iconColorsFile?: string;
   /** Rewrites `_` in upstream file names to `-`, so icon names stay kebab-case. */
   hyphenateNames?: boolean;
 }
@@ -267,6 +273,7 @@ export const ICON_FAMILIES: readonly IconFamilyDefinition[] = [
   {
     author: { name: "Simple Icons Collaborators", url: "https://simpleicons.org" },
     hyphenateNames: true,
+    iconColorsFile: "data/simple-icons.json",
     iconLicensesFile: "data/simple-icons.json",
     iconsDirectory: "icons",
     license: {

@@ -19,7 +19,8 @@ export type PostcssAttributionMode = "auto" | "off";
  */
 export interface PostcssIconsOptions {
   /**
-   * File paths to scan for icon class names.
+   * File paths and glob patterns, such as `src/**\/*.{html,tsx}`, to scan for
+   * icon class names.
    */
   content?: string[];
 

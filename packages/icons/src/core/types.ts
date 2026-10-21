@@ -15,8 +15,11 @@ export type IconAttribution = "none" | "notice" | "credit";
  * Catalog tier a family belongs to.
  *
  * `"core"` families are public-domain or notice-only, and their obligations are
- * satisfied by the notice the build emits. `"extended"` families require
- * crediting the author and are opt-in. `"brand"` families hold logos and brand
+ * satisfied by the notice the build emits. `"extended"` families are opt-in and
+ * outside the package's licensing promise: their `info.attribution` says
+ * whether a notice or author credit is owed. A generated extended family owes
+ * credit; a set adopted through `adoptIconifySet` is always extended, and owes
+ * whatever its caller declared. `"brand"` families hold logos and brand
  * marks: they owe nothing on the copyright side, are opt-in, and remain subject
  * to each brand owner's trademark guidelines, which no build setting satisfies.
  */
@@ -171,6 +174,14 @@ export interface IconData {
    * Search keywords for catalog and documentation surfaces.
    */
   tags?: string[];
+
+  /**
+   * The icon's own color, as a hex value such as `#181717`. Brand families
+   * carry their mark's color here; it is the icon's default paint, and
+   * `--ic-color` overrides it (`--<prefix>-color` under a custom class prefix).
+   * A value that is not a hex color is ignored.
+   */
+  color?: string;
 }
 
 /**
@@ -186,9 +197,10 @@ export interface IconAlias {
 /**
  * A complete icon family: its artwork, aliases, geometry, and metadata.
  *
- * The shape is structurally compatible with IconifyJSON, so icon data authored
- * for that format loads without transformation, while this package depends on
- * nothing from it.
+ * The icon and geometry fields follow IconifyJSON's shape, so icon bodies
+ * authored for that format need no transformation, while this package depends
+ * on nothing from it. An IconifyJSON document still lacks the required `info`,
+ * so it loads through `adoptIconifySet`, not directly.
  */
 export interface IconFamilyData {
   /**
@@ -305,4 +317,10 @@ export interface ResolvedIcon {
    * and therefore accepts a different stroke width.
    */
   strokeWidth?: number;
+
+  /**
+   * The icon's own color as a hex value, present only when its data declares a
+   * valid one.
+   */
+  color?: string;
 }

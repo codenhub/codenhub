@@ -19,16 +19,16 @@ import phosphorFill from "@codenhub/icons/data/phosphor-fill";
 
 Available families:
 
-| Prefix                                                           | Icons     | Style                   | License    |
-| ---------------------------------------------------------------- | --------- | ----------------------- | ---------- |
-| `lucide`                                                         | 2034      | outlined, stroke-based  | ISC        |
-| `phosphor`                                                       | 1512      | outlined                | MIT        |
-| `phosphor-thin`, `phosphor-light`, `phosphor-bold`               | 1512 each | outlined, other weights | MIT        |
-| `phosphor-fill`                                                  | 1512      | filled                  | MIT        |
-| `phosphor-duotone`                                               | 1512      | duotone                 | MIT        |
-| `material-symbols-outlined`, `-rounded`, `-sharp`                | 3899 each | outlined                | Apache-2.0 |
-| `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3899 each | filled                  | Apache-2.0 |
-| `simple-icons` (brand)                                           | 3254      | filled, one-color logos | CC0-1.0    |
+| Prefix                                                           | Icons     | Style                       | License    |
+| ---------------------------------------------------------------- | --------- | --------------------------- | ---------- |
+| `lucide`                                                         | 2034      | outlined, stroke-based      | ISC        |
+| `phosphor`                                                       | 1512      | outlined                    | MIT        |
+| `phosphor-thin`, `phosphor-light`, `phosphor-bold`               | 1512 each | outlined, other weights     | MIT        |
+| `phosphor-fill`                                                  | 1512      | filled                      | MIT        |
+| `phosphor-duotone`                                               | 1512      | duotone                     | MIT        |
+| `material-symbols-outlined`, `-rounded`, `-sharp`                | 3899 each | outlined                    | Apache-2.0 |
+| `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3899 each | filled                      | Apache-2.0 |
+| `simple-icons` (brand)                                           | 3254      | filled logos, brand-colored | CC0-1.0    |
 
 Variants such as filled or duotone are separate families rather than options on one, so resolution stays a prefix and a name.
 
@@ -39,12 +39,16 @@ Variants such as filled or duotone are separate families rather than options on 
 An icon is identified by `prefix:name`. A class writes that with a dash, because a class name cannot contain a colon:
 
 ```html
-<i class="ic-lucide-heart"></i> <i class="ic-material-symbols-rounded-home"></i>
+<!-- lucide:heart -->
+<i class="ic-lucide-heart"></i>
+
+<!-- material-symbols-rounded:home -->
+<i class="ic-material-symbols-rounded-home"></i>
 ```
 
 The longest matching family prefix wins, so `material-symbols-outlined` is preferred over `material` when both are loaded.
 
-An unqualified name resolves against a default family, and against nothing at all when none is configured. The package names no default of its own and ships no curated map of semantic names: `ic-close` means whatever the family you chose calls `close`, and renders nothing if that family has no such icon. Lucide's is named `x`, so under Lucide you write `ic-x`.
+An unqualified name resolves against a default family, and against nothing at all when none is configured. The package names no default of its own and ships no curated map of semantic names: `ic-close` means whatever the family you chose calls `close`, and gets no icon if that family has no such icon. In plain CSS an earlier-imported family that does have the name still answers to it, because a family stylesheet claims only the bare names it defines. Lucide's is named `x`, so under Lucide you write `ic-x`.
 
 Where the default comes from depends on the delivery method:
 
@@ -64,6 +68,19 @@ registry.registerFamily(lucide);
 registry.resolve("heart"); // lucide:heart
 registry.resolve("close"); // undefined -- lucide calls it "x"
 ```
+
+### Finding an icon's name
+
+An icon's name is the one its upstream project gives it, so browse the family's own site and write the name you find there:
+
+| Family                 | Browse at                                                | Example class                                   |
+| ---------------------- | -------------------------------------------------------- | ----------------------------------------------- |
+| `lucide`               | [lucide.dev/icons](https://lucide.dev/icons)             | `ic-lucide-circle-check`                        |
+| `phosphor`, variants   | [phosphoricons.com](https://phosphoricons.com)           | `ic-phosphor-fill-check-circle`                 |
+| `material-symbols-*`   | [fonts.google.com/icons](https://fonts.google.com/icons) | `ic-material-symbols-rounded-check_circle`      |
+| `simple-icons` (brand) | [simpleicons.org](https://simpleicons.org)               | `ic-simple-icons-github`, `ic-simple-icons-npm` |
+
+Material Symbols names keep Google's underscores: `check_circle`, not `check-circle`. A Simple Icons name is the icon's slug, with any `_` written as `-`. A misspelled name is not an error: the class resolves to nothing, and the element renders as a solid square with the base rules loaded, or as nothing without them, so check the name against the family when an icon does not appear. Each family module also lists its names, as the keys of its `icons` object.
 
 ## Reserved names
 
@@ -100,12 +117,82 @@ Size and color follow CSS custom properties:
 }
 ```
 
+See [Size](#size) and [Color](#color).
+
+## Color
+
+An icon paints in the first of these that applies:
+
+1. `--ic-color`, set on the icon itself or on any ancestor.
+2. The icon's own color. Only brand icons have one: `ic-simple-icons-github` is GitHub's `#181717`, `ic-simple-icons-npm` is npm's `#cb3837`.
+3. `currentColor`, the text color around it.
+
+So every icon follows the text color by default, except brand icons, which arrive in their brand color. Setting `--ic-color` changes that, at whatever scope you set it:
+
+```css
+/* every icon on the page, brand icons included, in the text color */
+:root {
+  --ic-color: currentColor;
+}
+
+/* every icon in the toolbar */
+.toolbar {
+  --ic-color: var(--color-accent);
+}
+
+/* brand icons only, back to monochrome */
+[class*="ic-simple-icons-"] {
+  --ic-color: currentColor;
+}
+```
+
+```html
+<!-- one icon -->
+<i class="ic-simple-icons-npm" style="--ic-color: white" aria-hidden="true"></i>
+```
+
+To keep brand colors inside a scope that sets `--ic-color`, reset it on them with `--ic-color: initial`, which lets the brand color through again.
+
+Some brand colors are near-black — GitHub, X, and Vercel among them — and disappear on a dark background. Give those a light color in your dark theme:
+
+```css
+@media (prefers-color-scheme: dark) {
+  .ic-simple-icons-github,
+  .ic-simple-icons-x {
+    --ic-color: white;
+  }
+}
+```
+
+With a custom class `prefix`, every property here is renamed to match: `--ux-color` under `prefix: "ux"`. `color` alone does not recolor a brand icon, because its own color comes before `currentColor`; set `--ic-color` instead. All of this works the same in every delivery method and in [inline SVG mode](delivery/vite.md#inline-svg-mode), where the brand color is carried by the `<svg>` itself and needs no stylesheet. One exception there: under a Content Security Policy that blocks `style` attributes, an inlined brand icon keeps its brand color but `--ic-color` no longer reaches it.
+
+## Accessibility
+
+An icon element has no text content, so assistive technology announces nothing for it, or an unhelpful guess. Say which kind of icon it is:
+
+```html
+<!-- decorative, beside a visible label: hide it -->
+<button><i class="ic-lucide-trash" aria-hidden="true"></i>Delete</button>
+
+<!-- the only content of a control: label the control, hide the icon -->
+<button aria-label="Delete"><i class="ic-lucide-trash" aria-hidden="true"></i></button>
+
+<!-- meaningful on its own, outside a control: give it a role and a name -->
+<i class="ic-lucide-triangle-alert" role="img" aria-label="Warning"></i>
+```
+
+In [inline SVG mode](delivery/vite.md#inline-svg-mode) the attributes you put on the `<i>` carry over to the `<svg>` that replaces it.
+
 ## Stroke width
 
 Stroke width is a modifier on the icon class, and only families drawn with strokes answer to it. Of the bundled families, Lucide is the only one; the rest are drawn as filled paths and ignore it.
 
 ```html
-<i class="ic-lucide-heart/1.5"></i> <i class="ic-lucide-heart/3"></i>
+<!-- a thinner stroke -->
+<i class="ic-lucide-heart/1.5"></i>
+
+<!-- a heavier stroke -->
+<i class="ic-lucide-heart/3"></i>
 ```
 
 The width is baked into the artwork the rule carries, so it cannot be a second class applied on top: `ic-heart` and `ic-heart/1.5` are two icons, not one icon and a switch. One class is one rule, so a project pays for the widths it wrote and no others.

@@ -22,7 +22,6 @@ export {
   describeFamilyNotice,
   renderAttributionBanner,
   renderAttributionNotice,
-  renderSuppressedAttributionWarning,
 } from "./catalog/attribution.js";
 export type { AttributionMode } from "./catalog/attribution.js";
 
@@ -30,10 +29,8 @@ export { adoptIconifySet } from "./adapters/iconify.js";
 export type { IconifyAdapterOptions, IconifyJson } from "./adapters/iconify.js";
 
 export {
-  escapeSelectorClass,
   generateBaseCss,
   generateFamilyCss,
-  generateIconCss,
   generateIconSetCss,
   getIconCssProps,
   getIconMaskUrl,
@@ -41,7 +38,6 @@ export {
 export type {
   BaseCssOptions,
   GenerateFamilyCssOptions,
-  GenerateIconCssOptions,
   GenerateIconSetCssOptions,
   IconSetCssResult,
 } from "./generator/css-generator.js";

@@ -49,10 +49,31 @@ function createFilledFamily(): IconFamilyData {
   };
 }
 
+function createBrandFamily(): IconFamilyData {
+  return {
+    icons: {
+      // Same artwork, different colors: one rule each, never grouped.
+      mark: { body: '<path d="mark" />', color: "#181717" },
+      twin: { body: '<path d="mark" />', color: "#cb3837" },
+    },
+    info: {
+      attribution: "none",
+      author: { name: "Brand Authors", url: "https://brand.test" },
+      license: { spdx: "CC0-1.0", title: "CC0 1.0", url: "https://brand.test/license" },
+      name: "Brand Family",
+      tier: "brand",
+      total: 2,
+      upstream: { package: "brand-icons", version: "1.0.0" },
+    },
+    prefix: "brand",
+  };
+}
+
 function createRegistry(): IconRegistry {
   const registry = new IconRegistry({ defaultPrefix: "quill" });
   registry.registerFamily(createQuillFamily());
   registry.registerFamily(createFilledFamily());
+  registry.registerFamily(createBrandFamily());
   return registry;
 }
 
@@ -100,6 +121,40 @@ describe("generateBaseCss", () => {
     expect(css).toContain('i[class^="ux-"]');
     expect(css).toContain('svg[class^="ux-"]');
     expect(css).toContain(".ux-lg {\n  --ux-size: 1.25rem;\n}");
+  });
+});
+
+describe("generateBaseCss colors", () => {
+  it("paints with --ic-color first, then an icon's brand color, then currentColor", () => {
+    expect(generateBaseCss()).toContain("background-color: var(--ic-color, var(--ic-brand-color, currentColor));");
+  });
+});
+
+describe("brand colors in generated rules", () => {
+  it("gives a brand icon's rule its color, and keeps the color out of the mask", () => {
+    const { css } = generateIconSetCss(["ic-brand-mark"], createRegistry());
+
+    expect(css).toContain("--ic-brand-color: #181717;");
+    const mask = /--ic-uri: url\("([^"]+)"\)/.exec(css.slice(css.indexOf(".ic-brand-mark")))?.[1];
+    expect(mask).toBeDefined();
+    expect(mask).not.toContain("181717");
+    expect(mask).not.toContain("ic-color");
+  });
+
+  it("does not group two icons whose artwork matches but whose colors differ", () => {
+    const { css } = generateIconSetCss(["ic-brand-mark", "ic-brand-twin"], createRegistry(), { injectBase: false });
+
+    expect(css).toContain(".ic-brand-mark {");
+    expect(css).toContain(".ic-brand-twin {");
+    expect(css).toContain("--ic-brand-color: #cb3837;");
+  });
+
+  it("writes the color into a family stylesheet", () => {
+    expect(generateFamilyCss(createBrandFamily())).toContain("--ic-brand-color: #181717;");
+  });
+
+  it("includes the color in the inline-style properties", () => {
+    expect(getIconCssProps("brand:mark", createRegistry())?.["--ic-brand-color"]).toBe("#181717");
   });
 });
 

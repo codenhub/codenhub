@@ -84,17 +84,22 @@ function headerText(
 function memberEntries(members: ts.NodeArray<ts.ClassElement | ts.TypeElement | ts.EnumMember>, source: ts.SourceFile) {
   const entries = new Map<string, string>();
   for (const member of members) {
-    const name = member.name;
-    if (name === undefined || !(ts.isIdentifier(name) || ts.isStringLiteral(name))) {
+    // A constructor has no name node; the reference model names it `constructor`.
+    const name = ts.isConstructorDeclaration(member) ? "constructor" : member.name;
+    if (name === undefined) {
+      continue;
+    }
+    if (typeof name !== "string" && !(ts.isIdentifier(name) || ts.isStringLiteral(name))) {
       continue;
     }
     if (ts.canHaveModifiers(member) && hasModifier(member, ts.SyntaxKind.PrivateKeyword)) {
       continue;
     }
+    const key = typeof name === "string" ? name : name.text;
     const text = member.getText(source).replace(/\s+/g, " ").trim();
-    const existing = entries.get(name.text);
+    const existing = entries.get(key);
     // A repeated member name is a method overload set: one line per overload.
-    entries.set(name.text, existing === undefined ? text : `${existing}\n${text}`);
+    entries.set(key, existing === undefined ? text : `${existing}\n${text}`);
   }
   return entries;
 }
