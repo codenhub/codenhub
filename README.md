@@ -17,7 +17,7 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 - `packages/components`: Lightweight, native Web Components wrapper for fast-loading SPA UIs.
 - `packages/error`: Typed error normalization, result helpers, and opt-in registry presets for TypeScript apps.
 - `packages/i18n`: Runtime-neutral translations with optional browser and locale-path integrations.
-- `packages/icons`: Icon registry, CSS mask generator, and scanner module for Codenhub icon system.
+- `packages/icons`: Zero-runtime CSS icons from Lucide, Phosphor, Material Symbols, and Simple Icons, for Tailwind v4, Vite, PostCSS, or plain CSS.
 - `packages/jwt`: JWS signing and verification, JWK import and export, and key sets on Web Crypto, for untrusted tokens.
 - `packages/kbd`: Page-wide and target-scoped keyboard shortcut event binding registry.
 - `packages/oidc`: OpenID Connect for both sides: a relying-party client and an OpenID Provider on the Fetch API, built on @codenhub/jwt.

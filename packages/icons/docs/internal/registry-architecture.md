@@ -274,6 +274,6 @@ The package is pre-1.0. The rewrite breaks freely and documents what breaks; no 
 
 Not scheduled, recorded so the design leaves room:
 
-- A first-party Codenhub family owning the semantic names.
+- A first-party family owning the semantic names.
 - Per-icon virtual modules for bundlers other than Vite; only the Vite plugin serves them today.
 - Per-family Tailwind plugin entry points, e.g. `@plugin "@codenhub/icons/tailwind/lucide"`. A Tailwind plugin handler must be synchronous — utilities registered after an `await` are dropped — so the generated `dist/tw/plugin.js` imports every family statically and every build pays to load them: measured at ~265 ms and ~103 MB RSS with all fourteen, ~220 ms and ~89 MB with the thirteen non-brand families, and ~35 ms and ~53 MB for one (Node 24.14, importing the built plugin or the family modules in a fresh process, 2026-10-21). A per-family entry would load only what a project names, at the cost of one generated module per family, a `./tailwind/*` export, and a rule for how `default:` resolves across several `@plugin` imports (`default: true` per plugin, last import wins bare names by cascade). `/tw` stays all non-brand families: that is the price of its zero configuration. The cost is per build and does not grow with project size, so this is optimisation, not correctness.
