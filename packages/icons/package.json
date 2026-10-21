@@ -180,7 +180,6 @@
   "codenhub": {
     "label": "IconKit",
     "status": "active",
-    "demoUrl": "https://icons.codenhub.dev",
     "docs": {
       "reference": {
         "entrypoints": [
