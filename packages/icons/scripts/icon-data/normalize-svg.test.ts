@@ -40,6 +40,15 @@ describe("normalizeSvg", () => {
     expect(icon.body).not.toContain('width="24"');
   });
 
+  it("drops the title an upstream file names its artwork with", () => {
+    const icon = normalizeSvg(
+      '<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>GitHub</title><path d="M12 0"/></svg>',
+      "github.svg",
+    );
+
+    expect(icon.body).toBe('<path d="M12 0"/>');
+  });
+
   it("leaves markup ungrouped when the wrapper carried no presentation", () => {
     const icon = normalizeSvg('<svg viewBox="0 0 20 20"><path d="M0 0" /></svg>', "plain.svg");
 
