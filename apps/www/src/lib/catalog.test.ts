@@ -12,7 +12,7 @@ describe("catalogPackages", () => {
       license: "Apache-2.0",
       links: {
         changelog: "https://docs.codenhub.dev/icons/changelog/",
-        demo: "https://icons.codenhub.dev",
+        demo: "https://demo.codenhub.dev/icons/",
         docs: "https://docs.codenhub.dev/icons/",
         github: "https://github.com/codenhub/codenhub/tree/main/packages/icons",
         npm: "https://www.npmjs.com/package/@codenhub/icons",
