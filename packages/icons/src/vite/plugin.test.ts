@@ -362,6 +362,15 @@ describe("viteIcons in svg mode", () => {
       expect(code).toContain('style={{"color":"var(--ic-color, #181717)"}}');
     });
 
+    it("stays an escaped style string for a className tag inside a string literal", () => {
+      const { transform } = createPlugin({ families: [createFamily(), brand], mode: "svg" });
+
+      const code = transform(`const markup = "<i className='ic-brand-mark' />";`, "app.tsx")?.code;
+
+      expect(code).toContain('style=\\"color: var(--ic-color, #181717)\\"');
+      expect(code).not.toContain("style={{");
+    });
+
     it("stays a style string inside a string literal in a JSX file", () => {
       const { transform } = createPlugin({ families: [createFamily(), brand], mode: "svg" });
 

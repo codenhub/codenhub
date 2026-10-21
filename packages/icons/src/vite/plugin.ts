@@ -314,6 +314,26 @@ interface ReplaceIconTagsOptions {
 }
 
 const JSX_FILE = /\.[jt]sx$/i;
+
+/**
+ * Returns the quote of the string literal an icon tag sits in, or `null`.
+ *
+ * The quote scanner knows nothing of JSX text, so an apostrophe there, as in
+ * "Don't", reads to it as an open string. A real `'` or `"` string cannot span
+ * a line, so one that does not close before the end of the tag's line was JSX
+ * text, and the tag is not in a string. Template literals may span lines and
+ * are taken as reported.
+ */
+function stringQuoteAt(code: string, offset: number, length: number): string | null {
+  const quote = getEnclosingQuote(code, offset);
+  if (quote !== '"' && quote !== "'") {
+    return quote;
+  }
+  const rest = code.slice(offset + length);
+  const lineEnd = rest.indexOf("\n");
+  const line = lineEnd === -1 ? rest : rest.slice(0, lineEnd);
+  return new RegExp(`(?<!\\\\)${quote}`).test(line) ? quote : null;
+}
 const BRAND_COLOR_GROUP = /<g color="([^"]*)" style="([^"]*)">/g;
 
 /**
@@ -435,20 +455,17 @@ function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options:
         svg = svg.replace(/^<svg\b/i, `<svg${passthroughStr}`);
       }
 
-      // `className` with plain quotes only appears on a JSX element, never in an
-      // HTML string, so it settles what the quote scanner cannot: JSX text such
-      // as "Don't" reads to the scanner as an open string literal.
-      if (isJsContext && attrName === "className" && !backslash) {
-        svg = toJsxStyle(svg);
-      } else if (isJsContext) {
-        const enclosingQuote = getEnclosingQuote(cleanSource, offset);
+      if (isJsContext) {
+        const enclosingQuote = stringQuoteAt(cleanSource, offset, match.length);
         if (enclosingQuote === '"') {
           svg = svg.replace(/"/g, '\\"');
         } else if (enclosingQuote === "'") {
           svg = svg.replace(/'/g, "\\'");
         } else if (enclosingQuote === "`") {
           svg = svg.replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
-        } else if (isJsx) {
+        } else if (isJsx || (attrName === "className" && !backslash)) {
+          // `className` with plain quotes outside a string is a JSX element in
+          // any file, `.js` included.
           svg = toJsxStyle(svg);
         }
       }
