@@ -135,7 +135,10 @@ describe("brand colors in generated rules", () => {
     const { css } = generateIconSetCss(["ic-brand-mark"], createRegistry());
 
     expect(css).toContain("--ic-brand-color: #181717;");
-    expect(css.slice(css.indexOf(".ic-brand-mark"))).not.toContain("ic-color");
+    const mask = /--ic-uri: url\("([^"]+)"\)/.exec(css.slice(css.indexOf(".ic-brand-mark")))?.[1];
+    expect(mask).toBeDefined();
+    expect(mask).not.toContain("181717");
+    expect(mask).not.toContain("ic-color");
   });
 
   it("does not group two icons whose artwork matches but whose colors differ", () => {
