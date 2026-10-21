@@ -70,7 +70,10 @@ export interface PostcssIconsOptions {
  */
 export interface PostcssIconsPluginObject extends Plugin {
   postcssPlugin: string;
-  Once: (root: { toString(): string; append(ast: unknown): void }, helpers?: { parse(css: string): unknown }) => void;
+  Once: (
+    root: { toString(): string; append(ast: unknown): void; source?: { input: { file?: string } } },
+    helpers?: { parse(css: string, options?: { from?: string }): unknown },
+  ) => void;
 }
 
 function createRegistry(options: PostcssIconsOptions): IconRegistry {
@@ -130,7 +133,8 @@ export const postcssIcons = (options: PostcssIconsOptions = {}): PostcssIconsPlu
 
       const output = banner === undefined ? css : `${banner}\n${css}`;
       if (helpers && typeof helpers.parse === "function") {
-        root.append(helpers.parse(output));
+        // Without `from`, the nodes have no source file, and Vite warns on every build.
+        root.append(helpers.parse(output, { from: root.source?.input.file }));
         return;
       }
       root.append(output);
