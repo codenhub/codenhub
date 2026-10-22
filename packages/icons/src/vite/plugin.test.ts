@@ -366,6 +366,17 @@ describe("viteIcons in svg mode", () => {
     expect(markup).toContain("<g>\n<path d='a' />\r\n</g>");
   });
 
+  it("keeps a line break in the artwork raw inside a tagged template", () => {
+    const family = createFamily();
+    family.icons.path = { body: "<g>\n<path d='a' /></g>" };
+    const { transform } = createPlugin({ families: [family], mode: "svg" });
+
+    const result = transform('const markup = String.raw`<i class="ic-path"></i>`;', "app.ts");
+    const markup = new Function(`${result?.code ?? ""}; return markup;`)() as string;
+
+    expect(markup).toContain("<g>\n<path d='a' /></g>");
+  });
+
   describe("a multicolor icon's paint", () => {
     const logos: IconFamilyData = {
       ...createFamily(),
