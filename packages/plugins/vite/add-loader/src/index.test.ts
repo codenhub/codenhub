@@ -335,4 +335,39 @@ describe("addLoaderPlugin", () => {
     expect(performance.now() - start).toBeLessThan(1_000);
     expect(typeof result === "string" ? result : "").not.toContain('<div id="page-loader"');
   });
+
+  async function transform(html: string, options?: Parameters<typeof addLoaderPlugin>[0]): Promise<string> {
+    const transformIndexHtml = addLoaderPlugin(options).transformIndexHtml;
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object") {
+      throw new Error("Expected transformIndexHtml to be object");
+    }
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+    const result = await handler.call(undefined as unknown as ThisParameterType<IndexHtmlTransformHook>, html, {
+      path: "/index.html",
+      filename: "index.html",
+    } as unknown as IndexHtmlTransformContext);
+    return typeof result === "string" ? result : "";
+  }
+
+  it.each([
+    ["script start tags that never close", "<script".repeat(50_000)],
+    ["script elements that never end", "<script>".repeat(50_000)],
+    ["script end tags that never close", `<script>${"</script ".repeat(50_000)}`],
+    ["comments that never end", "<!--".repeat(50_000)],
+  ])("should return in linear time with %s", async (_, tail) => {
+    // Retrying the literal-block match at every candidate scanned to the end each time: 50k took 10.8 s before.
+    const start = performance.now();
+    const outputHtml = await transform(`<html><head></head><body>${tail}`);
+    expect(performance.now() - start).toBeLessThan(1_000);
+    expect(outputHtml).toContain('<div id="page-loader"');
+  });
+
+  it("should keep a literal block after an unclosed one of another kind", async () => {
+    const outputHtml = await transform(
+      "<html><head></head><body><style><script>const s = '<body>';</script></body></html>",
+    );
+    expect(outputHtml).toContain('<body>\n  <div id="page-loader"');
+    expect(outputHtml).toContain("<script>const s = '<body>';</script>");
+    expect(outputHtml.match(/id="page-loader"/g)).toHaveLength(1);
+  });
 });
