@@ -141,12 +141,8 @@ jobs:
       # Every package names its Playwright projects after the engine they run on,
       # so one glob selects this job's engine across all of them. See
       # `docs/specs/tests.md` for the naming rule.
-      #
-      # WebKit runs two packages at a time instead of six: with the browsers of
-      # Playwright 1.64, six WebKit suites at once ran the runner out of memory
-      # (exit 137, no test output) on #334 and #344.
       - name: Run browser tests
-        run: pnpm test:browser $SELECTOR --parallel=${{ matrix.engine == 'webkit' && 2 || 6 }} -- --project='*${{ matrix.engine }}*'
+        run: pnpm test:browser $SELECTOR -- --project='*${{ matrix.engine }}*'
 
       - name: Upload failure artifacts
         if: failure()
