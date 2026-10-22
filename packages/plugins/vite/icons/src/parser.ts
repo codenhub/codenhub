@@ -311,6 +311,9 @@ function buildSvgReplacement(options: SvgReplacementOptions): string {
 
   if (isJsContext) {
     const enclosingQuote = getEnclosingQuote(source, offset);
+    if (enclosingQuote) {
+      markup = markup.replace(/\\/g, "\\\\");
+    }
     if (enclosingQuote === '"') {
       markup = markup.replace(/"/g, '\\"');
     } else if (enclosingQuote === "'") {

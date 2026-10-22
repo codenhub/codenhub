@@ -1052,6 +1052,20 @@ describe("defineComponent - additional validations and features", () => {
     }).toThrow('Invalid custom element tag name: "my-component!".');
   });
 
+  it("shouldRejectALongRunOfHyphensWithoutBacktracking", () => {
+    const tagName = `a-${"-".repeat(100_000)}!`;
+    const startedAt = performance.now();
+
+    expect(() => {
+      defineComponent(tagName, {
+        render() {
+          return "<p></p>";
+        },
+      });
+    }).toThrow("Invalid custom element tag name");
+    expect(performance.now() - startedAt).toBeLessThan(1000);
+  });
+
   it("shouldThrowErrorWhenTagNameIsReserved", () => {
     expect(() => {
       defineComponent("font-face", {

@@ -459,23 +459,28 @@ function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options:
       // below adds the backslash, and adding it here too would double it.
       svg = svg.replace(/^<svg\b/i, `<svg ${attrName}=${quote}${resolved.classes.join(" ")}${quote}`);
 
+      const enclosingQuote = isJsContext ? stringQuoteAt(cleanSource, offset, match.length) : null;
+      if (enclosingQuote) {
+        svg = svg.replace(/\\/g, "\\\\");
+      }
+      if (enclosingQuote === '"') {
+        svg = svg.replace(/"/g, '\\"');
+      } else if (enclosingQuote === "'") {
+        svg = svg.replace(/'/g, "\\'");
+      } else if (enclosingQuote === "`") {
+        svg = svg.replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
+      }
+
+      // Passthrough attributes are copied from the source, already escaped for
+      // the string they sit in, so they join after the escaping.
       if (passthroughStr) {
         svg = svg.replace(/^<svg\b/i, `<svg${passthroughStr}`);
       }
 
-      if (isJsContext) {
-        const enclosingQuote = stringQuoteAt(cleanSource, offset, match.length);
-        if (enclosingQuote === '"') {
-          svg = svg.replace(/"/g, '\\"');
-        } else if (enclosingQuote === "'") {
-          svg = svg.replace(/'/g, "\\'");
-        } else if (enclosingQuote === "`") {
-          svg = svg.replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
-        } else if (isJsx || (attrName === "className" && !backslash)) {
-          // `className` with plain quotes outside a string is a JSX element in
-          // any file, `.js` included.
-          svg = toJsxStyle(svg);
-        }
+      if (isJsContext && !enclosingQuote && (isJsx || (attrName === "className" && !backslash))) {
+        // `className` with plain quotes outside a string is a JSX element in
+        // any file, `.js` included.
+        svg = toJsxStyle(svg);
       }
 
       return svg;
@@ -530,7 +535,7 @@ function replaceIconTagsInTemplate(source: string, registry: IconRegistry, optio
   // the frontmatter's rule rather than the template's. Only the body does: the
   // opening tag's own attributes carry quotes that would derail the scan for the
   // string enclosing a match.
-  const scriptRegion = /(<script\b[^>]*>)([\s\S]*?)(<\/script>)/gi;
+  const scriptRegion = /(<script\b[^>]*>)([\s\S]*?)(<\/script\b[^>]*>)/gi;
   const markup = (text: string): string => replaceIconTagsWithSvg(text, registry, { ...options, isJsContext: false });
 
   let result = "";

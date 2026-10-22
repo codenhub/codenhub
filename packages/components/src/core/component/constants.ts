@@ -5,7 +5,7 @@
  *
  * @internal
  */
-export const VALID_TAG_NAME_REGEX = /^[a-z][a-z0-9._-]*-[a-z0-9._-]*$/;
+export const VALID_TAG_NAME_REGEX = /^[a-z][a-z0-9._]*-[a-z0-9._-]*$/;
 
 /**
  * Reserved SVG/MathML element names that cannot be used as custom element tag
