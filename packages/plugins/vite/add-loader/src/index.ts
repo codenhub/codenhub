@@ -132,7 +132,8 @@ export function addLoaderPlugin(options?: AddLoaderPluginOptions): Plugin {
       handler(html: string) {
         const literalBlocks: string[] = [];
         const cleanedHtml = html.replace(
-          /(<!--[\s\S]*?-->|<pre\b[^>]*>[\s\S]*?<\/pre>|<script\b[^>]*>[\s\S]*?<\/script>|<style\b[^>]*>[\s\S]*?<\/style>|<noscript\b[^>]*>[\s\S]*?<\/noscript>)/gi,
+          // An end tag ends at the first ">" after whitespace or "/", as HTML parses `</script foo>`.
+          /(<!--[\s\S]*?-->|<pre\b[^>]*>[\s\S]*?<\/pre(?:[\s/][^>]*)?>|<script\b[^>]*>[\s\S]*?<\/script(?:[\s/][^>]*)?>|<style\b[^>]*>[\s\S]*?<\/style(?:[\s/][^>]*)?>|<noscript\b[^>]*>[\s\S]*?<\/noscript(?:[\s/][^>]*)?>)/gi,
           (match) => {
             literalBlocks.push(match);
             return `<!--__LITERAL_PLACEHOLDER_${literalBlocks.length - 1}__-->`;
@@ -150,7 +151,12 @@ export function addLoaderPlugin(options?: AddLoaderPluginOptions): Plugin {
             .replace(/<script>/g, `<script${nonceAttr}>`)
             .replace(/<style>/g, `<style${nonceAttr}>`);
         }
-        const withLoader = withStyle.replace(/(<body([^>]*)>)/i, `$1${loaderBodyWithNonce}`);
+        // Searching from the first "<body" keeps a start tag without ">" from rescanning the rest per candidate.
+        const bodyTagEnd = withStyle.indexOf(">", withStyle.search(/<body\b/i)) + 1;
+        const withLoader =
+          bodyTagEnd > 0
+            ? `${withStyle.slice(0, bodyTagEnd)}${loaderBodyWithNonce}${withStyle.slice(bodyTagEnd)}`
+            : withStyle;
 
         return withLoader.replace(/<!--__LITERAL_PLACEHOLDER_(\d+)__-->/g, (_, indexStr) => {
           const index = parseInt(indexStr, 10);

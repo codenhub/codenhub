@@ -4,7 +4,7 @@ const STYLESHEET_RE =
   /<link\b(?=[^>]*\brel\s*=\s*(?:"[^"]*\bstylesheet\b[^"]*"|'[^']*\bstylesheet\b[^']*'|stylesheet(?=[\s>])))(?=[^>]*\bhref\s*=)[^>]*\/?\s*>/gi;
 const STYLESHEET_REL_ATTR_RE =
   /\brel\s*=\s*(?:"[^"]*\bstylesheet\b[^"]*"|'[^']*\bstylesheet\b[^']*'|stylesheet(?=[\s>]))/i;
-const ONLOAD_ATTR_RE = /\bonload\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/i;
+const ATTRIBUTE_RE = /(\s+)([^\s"'>/=]+)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/g;
 const LINK_TAG_END_RE = /\/?\s*>$/;
 
 /** Options accepted by {@link deferCssPlugin}. */
@@ -56,7 +56,8 @@ export function deferCssPlugin(options?: DeferCssPluginOptions): Plugin {
       handler(html: string) {
         const literalBlocks: string[] = [];
         const cleanedHtml = html.replace(
-          /(<!--[\s\S]*?-->|<pre\b[^>]*>[\s\S]*?<\/pre>|<script\b[^>]*>[\s\S]*?<\/script>|<style\b[^>]*>[\s\S]*?<\/style>|<noscript\b[^>]*>[\s\S]*?<\/noscript>)/gi,
+          // An end tag ends at the first ">" after whitespace or "/", as HTML parses `</script foo>`.
+          /(<!--[\s\S]*?-->|<pre\b[^>]*>[\s\S]*?<\/pre(?:[\s/][^>]*)?>|<script\b[^>]*>[\s\S]*?<\/script(?:[\s/][^>]*)?>|<style\b[^>]*>[\s\S]*?<\/style(?:[\s/][^>]*)?>|<noscript\b[^>]*>[\s\S]*?<\/noscript(?:[\s/][^>]*)?>)/gi,
           (match) => {
             literalBlocks.push(match);
             return `<!--__LITERAL_PLACEHOLDER_${literalBlocks.length - 1}__-->`;
@@ -67,7 +68,9 @@ export function deferCssPlugin(options?: DeferCssPluginOptions): Plugin {
         const transformed = cleanedHtml.replace(STYLESHEET_RE, (linkTag: string) => {
           noscript += `    ${linkTag.replace(LINK_TAG_END_RE, ">")}\n`;
 
-          const cleanTag = linkTag.replace(ONLOAD_ATTR_RE, "");
+          const cleanTag = linkTag.replace(ATTRIBUTE_RE, (attribute: string, whitespace: string, name: string) =>
+            name.toLowerCase() === "onload" ? whitespace : attribute,
+          );
 
           return cleanTag
             .replace(STYLESHEET_REL_ATTR_RE, 'rel="preload"')

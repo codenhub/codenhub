@@ -2,6 +2,23 @@ import { getThemeClass } from "./class-resolver";
 import { DEFAULT_OPTIONS } from "./constants";
 import type { ThemeOptions, ThemeDefinition } from "./types";
 
+const INLINE_SCRIPT_UNSAFE = /[<\u2028\u2029]/g;
+
+/**
+ * Serializes a value as a JavaScript literal that is safe inside an inline `<script>` element.
+ *
+ * Escaping `<` keeps a value from closing the element or opening an HTML comment, and escaping
+ * U+2028 and U+2029 keeps it a valid string literal in engines that predate ES2019.
+ * @param value - Value to serialize.
+ * @returns JavaScript literal with the same runtime value.
+ */
+function toInlineScriptLiteral(value: unknown): string {
+  return String(JSON.stringify(value)).replace(
+    INLINE_SCRIPT_UNSAFE,
+    (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
+}
+
 /**
  * Generates a synchronous inline IIFE script string to inject into document `<head>`.
  * Prevents Flash of Unstyled Content (FOUC) by applying storage or system theme before render.
@@ -49,13 +66,13 @@ export function getPrePaintScript<TSchema extends Record<string, string> = Recor
     };
   }
 
-  const jsonKey = JSON.stringify(opts.storageKey);
-  const jsonAttr = JSON.stringify(opts.attribute);
-  const jsonDef = JSON.stringify(opts.defaultTheme);
-  const jsonSysLight = JSON.stringify(opts.systemTheme.light);
-  const jsonSysDark = JSON.stringify(opts.systemTheme.dark);
-  const jsonThemes = JSON.stringify(themeMap);
-  const jsonTailwind = JSON.stringify(opts.isTailwindCss);
+  const jsonKey = toInlineScriptLiteral(opts.storageKey);
+  const jsonAttr = toInlineScriptLiteral(opts.attribute);
+  const jsonDef = toInlineScriptLiteral(opts.defaultTheme);
+  const jsonSysLight = toInlineScriptLiteral(opts.systemTheme.light);
+  const jsonSysDark = toInlineScriptLiteral(opts.systemTheme.dark);
+  const jsonThemes = toInlineScriptLiteral(themeMap);
+  const jsonTailwind = toInlineScriptLiteral(opts.isTailwindCss);
 
   return `!(function(){try{var k=${jsonKey},a=${jsonAttr},d=${jsonDef},sl=${jsonSysLight},sd=${jsonSysDark},tm=${jsonThemes},tw=${jsonTailwind},s=localStorage.getItem(k),m=window.matchMedia("(prefers-color-scheme: dark)").matches,n=(s&&tm[s])?s:(m?sd:sl);if(!tm[n])n=d;var t=tm[n],r=document.documentElement;r.setAttribute(a,n);if(t&&t.colorScheme)r.style.colorScheme=t.colorScheme;if(t&&t.className)r.classList.add(t.className);if(tw)r.classList.toggle("dark",t&&t.colorScheme==="dark");if(t&&t.vars)for(var v in t.vars)r.style.setProperty(v,t.vars[v])}catch(e){}})()`;
 }
