@@ -26,6 +26,78 @@ function isStylesheetLink(linkTag: string): boolean {
   return hasHref && rel !== undefined && STYLESHEET_TOKEN_RE.test(rel);
 }
 
+const LITERAL_START_RE = /<!--|<(pre|script|style|noscript)\b/gi;
+
+/**
+ * Replaces comments and `pre`, `script`, `style` and `noscript` elements with
+ * placeholders, pushing each original into `literalBlocks`.
+ *
+ * A single forward scan: once a search for a closing `-->`, `>` or end tag
+ * fails, every later search of the same kind would fail too, so it is not
+ * retried. Retrying it at each candidate made a malformed document quadratic.
+ */
+function protectLiteralBlocks(html: string, literalBlocks: string[]): string {
+  let result = "";
+  let copiedUpTo = 0;
+  let isCommentUnclosed = false;
+  const unclosedNames = new Set<string>();
+
+  LITERAL_START_RE.lastIndex = 0;
+  for (let match = LITERAL_START_RE.exec(html); match; match = LITERAL_START_RE.exec(html)) {
+    const start = match.index;
+    let end = -1;
+    if (match[1] === undefined) {
+      if (!isCommentUnclosed) {
+        const close = html.indexOf("-->", start + 4);
+        isCommentUnclosed = close === -1;
+        end = close === -1 ? -1 : close + 3;
+      }
+    } else {
+      const name = match[1].toLowerCase();
+      if (!unclosedNames.has(name)) {
+        end = findElementEnd(html, name, LITERAL_START_RE.lastIndex);
+        if (end === -1) {
+          unclosedNames.add(name);
+        }
+      }
+    }
+    if (end === -1) {
+      continue;
+    }
+    literalBlocks.push(html.slice(start, end));
+    result += `${html.slice(copiedUpTo, start)}<!--__LITERAL_PLACEHOLDER_${literalBlocks.length - 1}__-->`;
+    copiedUpTo = end;
+    LITERAL_START_RE.lastIndex = end;
+  }
+  return result + html.slice(copiedUpTo);
+}
+
+/**
+ * Returns the index just past the end tag of the element named `name`, whose
+ * start tag name ends at `from`, or -1 when the start tag or the element never
+ * closes. An end tag ends at the first ">" after whitespace or "/", as HTML
+ * parses `</script foo>`.
+ */
+function findElementEnd(html: string, name: string, from: number): number {
+  const startTagEnd = html.indexOf(">", from);
+  if (startTagEnd === -1) {
+    return -1;
+  }
+  const endTagRe = new RegExp(`</${name}`, "gi");
+  endTagRe.lastIndex = startTagEnd + 1;
+  for (let endTag = endTagRe.exec(html); endTag; endTag = endTagRe.exec(html)) {
+    const next = html[endTagRe.lastIndex];
+    if (next === ">") {
+      return endTagRe.lastIndex + 1;
+    }
+    if (next !== undefined && /[\s/]/.test(next)) {
+      const close = html.indexOf(">", endTagRe.lastIndex);
+      return close === -1 ? -1 : close + 1;
+    }
+  }
+  return -1;
+}
+
 /** Options accepted by {@link deferCssPlugin}. */
 export interface DeferCssPluginOptions {
   /**
@@ -74,14 +146,7 @@ export function deferCssPlugin(options?: DeferCssPluginOptions): Plugin {
       order: "post",
       handler(html: string) {
         const literalBlocks: string[] = [];
-        const cleanedHtml = html.replace(
-          // An end tag ends at the first ">" after whitespace or "/", as HTML parses `</script foo>`.
-          /(<!--[\s\S]*?-->|<pre\b[^>]*>[\s\S]*?<\/pre(?:[\s/][^>]*)?>|<script\b[^>]*>[\s\S]*?<\/script(?:[\s/][^>]*)?>|<style\b[^>]*>[\s\S]*?<\/style(?:[\s/][^>]*)?>|<noscript\b[^>]*>[\s\S]*?<\/noscript(?:[\s/][^>]*)?>)/gi,
-          (match) => {
-            literalBlocks.push(match);
-            return `<!--__LITERAL_PLACEHOLDER_${literalBlocks.length - 1}__-->`;
-          },
-        );
+        const cleanedHtml = protectLiteralBlocks(html, literalBlocks);
 
         let noscript = "";
         const transformed = cleanedHtml.replace(LINK_RE, (linkTag: string) => {
