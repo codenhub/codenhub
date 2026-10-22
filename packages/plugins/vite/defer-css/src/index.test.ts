@@ -407,4 +407,20 @@ describe("deferCssPlugin", () => {
     const inputHtml = `<html><head><link title="rel=stylesheet" rel="icon" href="/a.png"></head><body></body></html>`;
     expect(await transform(inputHtml)).toBe(inputHtml);
   });
+
+  it.each([
+    ["the first rel is not a stylesheet", `<link rel="icon" rel="stylesheet" href="/a.css">`],
+    ["stylesheet is only part of a rel token", `<link rel="x-stylesheet" href="/a.css">`],
+    ["stylesheet is separated by a no-break space", `<link rel="stylesheet icon" href="/a.css">`],
+  ])("should not defer a link when %s", async (_, link) => {
+    const inputHtml = `<html><head>${link}</head><body></body></html>`;
+    expect(await transform(inputHtml)).toBe(inputHtml);
+  });
+
+  it("should defer a link whose attributes follow a quoted value without whitespace", async () => {
+    const outputHtml = await transform(`<html><head><link rel="stylesheet"href="/a.css"></head><body></body></html>`);
+    expect(outputHtml).toContain(
+      `<link rel="preload"href="/a.css" as="style" onload="this.onload=null;this.rel='stylesheet'">`,
+    );
+  });
 });

@@ -1,8 +1,10 @@
 import type { Plugin } from "vite";
 
 const LINK_RE = /<link\b[^>]*>/gi;
-const ATTRIBUTE_RE = /(\s+)([^\s"'>/=]+)(?:\s*=\s*("[^"]*"|'[^']*'|[^\s>]+))?/g;
-const STYLESHEET_TOKEN_RE = /(?:^|\s)stylesheet(?:\s|$)/i;
+// An attribute starts after whitespace, or right after a quoted value, as HTML parses `rel="a"href="b"`.
+const ATTRIBUTE_RE = /(\s+|(?<=["']))([^\s"'>/=]+)(?:\s*=\s*("[^"]*"|'[^']*'|[^\s>]+))?/g;
+// `rel` splits on ASCII whitespace only, so a no-break space is part of a token.
+const STYLESHEET_TOKEN_RE = /(?:^|[\t\n\f\r ])stylesheet(?:[\t\n\f\r ]|$)/i;
 const LINK_TAG_END_RE = /\/?\s*>$/;
 
 /**
