@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 
-const WINDOWS_QUOTE_ESCAPE = /(\\*)"/g;
-const WINDOWS_TRAILING_BACKSLASHES = /(\\+)$/g;
+const WINDOWS_QUOTE_ESCAPE = /(?<!\\)(\\*)"/g;
+const WINDOWS_TRAILING_BACKSLASHES = /(?<!\\)(\\+)$/g;
 const CMD_ESCAPE = /[\s"&()<>^|%]/g;
 const WINDOWS_COMMAND_QUOTING_REQUIRED = /[\s"&()<>^|%]/;
 const WINDOWS_INVOCATION_VARIABLE = "CODENHUB_INVOCATION";
