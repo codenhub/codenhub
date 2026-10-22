@@ -6,7 +6,7 @@ packages:
   - "packages/plugins/**"
 
 catalog:
-  "@astrojs/check": ^0.9.10
+  "@astrojs/check": ^0.9.11
   "@astrojs/markdown-remark": 7.3.3
   "@codenhub/error": ^0.2.1
   "@codenhub/jwt": ^0.0.1
@@ -17,26 +17,28 @@ catalog:
   "@tauri-apps/api": ^2.0.0
   "@tailwindcss/cli": ^4.3.2
   "@tailwindcss/vite": ^4.3.2
-  "@playwright/test": ^1.61.1
+  # Tilde, not caret: Dependabot holds the target below 1.64 (`.github/dependabot.yml`), but a caret range
+  # it raises to ^1.63 still resolves to 1.64, as on #352.
+  "@playwright/test": ~1.63.0
   "@types/node": ^26.1.0
   "@vitest/coverage-v8": ^4.1.10
-  astro: ^7.0.7
+  astro: ^7.4.1
   esbuild: ^0.28.1
   jose: ^6.2.12
   oidc-provider: ^9.12.2
   openid-client: ^6.8.8
-  jsdom: ^29.1.1
+  jsdom: ^30.1.3
   miniflare: ^5.20261012.1-beta
-  oxfmt: ^0.73.0
-  oxlint: ^1.72.0
+  oxfmt: ^0.74.0
+  oxlint: ^1.89.0
   prettier: ^3.6.0
   tailwindcss: ^4.3.2
-  tsdown: ^0.22.3
+  tsdown: ^0.23.1
   typedoc: ^0.28.20
   typescript: ^6.0.3
   vite: ^8.1.3
   vitest: ^4.1.10
-  wrangler: ^4.120.0
+  wrangler: ^4.151.2
 
 blockExoticSubdeps: true
 trustPolicy: no-downgrade

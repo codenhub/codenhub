@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test, type Page } from "./fixtures";
-import { expectSameColor, readSrgb } from "./test-utils";
+import { drawsCornerShape, expectSameColor, readSrgb } from "./test-utils";
 
 /* A solo class exists for an element this package does not style, on a page
    that may never have loaded the base stylesheet. So unlike the aesthetic
@@ -119,8 +119,8 @@ test.describe("solo utilities", () => {
     expect(cyber["box-shadow"], "cyber glow").toMatch(/\b0px 0px 8px 1px\b/);
     /* A pane takes the surface diagonal: top-right and bottom-left. */
     expect(cyber["border-top-left-radius"], "cyber top-left").toBe("0px");
-    if (browserName === "chromium") {
-      expect(cyber["corner-shape"], "cyber bevel").toBe("bevel");
+    if (await drawsCornerShape(page)) {
+      expect(cyber["corner-shape"], "cyber bevel").toBe("superellipse(0)");
       expect(cyber["border-top-right-radius"], "cyber cut").toBe("min(10px, 25%)");
     } else {
       expect(cyber["border-top-right-radius"], "cyber squares where no bevel is drawn").toBe("0px");
@@ -294,12 +294,14 @@ test.describe("solo utilities", () => {
 
   /* The same split the aesthetic class draws between controls and surfaces:
      an action cuts the opposite diagonal to a pane. */
-  test("cut a cyber action on the control diagonal", async ({ page, browserName }) => {
+  test("cut a cyber action on the control diagonal", async ({ page }) => {
     await load(page, ["aesthetics/cyber.css"], `<button id="action" class="cyber-solo">Go</button>`);
 
     const action = await read(page, "#action", ["border-top-left-radius", "border-top-right-radius"]);
 
-    expect(action["border-top-left-radius"], "top-left").toBe(browserName === "chromium" ? "min(10px, 25%)" : "0px");
+    const cuts = await drawsCornerShape(page);
+
+    expect(action["border-top-left-radius"], "top-left").toBe(cuts ? "min(10px, 25%)" : "0px");
     expect(action["border-top-right-radius"], "top-right").toBe("0px");
   });
 

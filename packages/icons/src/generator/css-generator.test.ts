@@ -219,6 +219,24 @@ describe("escapeSelectorClass", () => {
   it("escapes the slash and the dot of a stroke modifier", () => {
     expect(escapeSelectorClass("ic-heart/1.5")).toBe("ic-heart\\/1\\.5");
   });
+
+  it("escapes a backslash so it is not read as the start of an escape", () => {
+    expect(escapeSelectorClass(String.raw`ic-a\b`)).toBe(String.raw`ic-a\\b`);
+  });
+
+  it.each([
+    ["ic-a:b", String.raw`ic-a\:b`],
+    ["ic-a#b+c", String.raw`ic-a\#b\+c`],
+    ["ic-a b", String.raw`ic-a\ b`],
+    ["ic-a\nb", String.raw`ic-a\a b`],
+    ["ic-a\0b", "ic-a�b"],
+    ["ic-café_x", "ic-café_x"],
+    ["1a", String.raw`\31 a`],
+    ["-1a", String.raw`-\31 a`],
+    ["-", String.raw`\-`],
+  ])("escapes %j as a CSS identifier", (className, expected) => {
+    expect(escapeSelectorClass(className)).toBe(expected);
+  });
 });
 
 describe("generateIconSetCss", () => {

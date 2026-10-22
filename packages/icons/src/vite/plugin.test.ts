@@ -327,6 +327,56 @@ describe("viteIcons in svg mode", () => {
     expect(result?.code).toContain(`'<svg class="ic-user" xmlns="http://www.w3.org/2000/svg"`);
   });
 
+  it("keeps an escaped attribute beside the class as written in a string literal", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    const result = transform(`const markup = "<i aria-hidden=\\"true\\" class=\\"ic-user\\"></i>";`, "app.ts");
+    const markup = new Function(`${result?.code ?? ""}; return markup;`)() as string;
+
+    expect(markup).toContain('<svg aria-hidden="true" class="ic-user"');
+  });
+
+  it.each([
+    ['"', `const markup = "<i class=\\"ic-path\\"></i>";`],
+    ["'", `const markup = '<i class="ic-path"></i>';`],
+    ["`", 'const markup = `<i class="ic-path"></i>`;'],
+  ])("keeps a backslash in the artwork inside a %s-quoted string", (_quote, source) => {
+    const family = createFamily();
+    family.icons.path = { body: String.raw`<text>C:\new</text>` };
+    const { transform } = createPlugin({ families: [family], mode: "svg" });
+
+    const result = transform(source, "app.ts");
+    const markup = new Function(`${result?.code ?? ""}; return markup;`)() as string;
+
+    expect(markup).toContain(String.raw`<text>C:\new</text>`);
+  });
+
+  it.each([
+    ['"', `const markup = "<i class=\\"ic-path\\"></i>";`],
+    ["'", `const markup = '<i class="ic-path"></i>';`],
+    ["`", 'const markup = `<i class="ic-path"></i>`;'],
+  ])("keeps line breaks in the artwork inside a %s-quoted string", (_quote, source) => {
+    const family = createFamily();
+    family.icons.path = { body: "<g>\n<path d='a' />\r\n</g>" };
+    const { transform } = createPlugin({ families: [family], mode: "svg" });
+
+    const result = transform(source, "app.ts");
+    const markup = new Function(`${result?.code ?? ""}; return markup;`)() as string;
+
+    expect(markup).toContain("<g>\n<path d='a' />\r\n</g>");
+  });
+
+  it("keeps a line break in the artwork raw inside a tagged template", () => {
+    const family = createFamily();
+    family.icons.path = { body: "<g>\n<path d='a' /></g>" };
+    const { transform } = createPlugin({ families: [family], mode: "svg" });
+
+    const result = transform('const markup = String.raw`<i class="ic-path"></i>`;', "app.ts");
+    const markup = new Function(`${result?.code ?? ""}; return markup;`)() as string;
+
+    expect(markup).toContain("<g>\n<path d='a' /></g>");
+  });
+
   describe("a multicolor icon's paint", () => {
     const logos: IconFamilyData = {
       ...createFamily(),
@@ -499,6 +549,17 @@ describe("viteIcons in svg mode", () => {
 
     expect(result?.code).toContain('<svg class="ic-user" xmlns="http://www.w3.org/2000/svg"');
     expect(result?.code).not.toContain('\\"');
+  });
+
+  it("escapes an icon tag in a template script whose end tag has whitespace before its bracket", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    const source = ["---", "---", "<script>", '  el.innerHTML = "<i class=\\"ic-user\\"></i>";', "</script >"].join(
+      "\n",
+    );
+    const result = transform(source, "index.astro");
+
+    expect(result?.code).toContain('<svg class=\\"ic-user\\" xmlns=\\"http://www.w3.org/2000/svg\\"');
   });
 
   it("escapes an icon tag inside an .astro template script block", () => {

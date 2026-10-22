@@ -23,6 +23,16 @@ updates:
     schedule:
       interval: weekly
     labels: ["type:chore"]
+    # TypeScript 7 drops the JavaScript compiler API that typedoc, `@astrojs/check`, and `packages/tools`'s
+    # reference generator call, and both tools declare `typescript` peers up to 6. Remove this once they
+    # support 7.
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      # With Playwright 1.64's WebKit, the WebKit CI job runs out of memory and is killed (exit 137)
+      # before any test output, as on #334 and #344. Remove this once a newer Playwright passes WebKit.
+      - dependency-name: "@playwright/test"
+        versions: [">=1.64.0"]
     groups:
       npm:
         patterns: ["*"]

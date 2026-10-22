@@ -56,6 +56,78 @@ const LOADER_BODY = `
   </script>
 `;
 
+const LITERAL_START_RE = /<!--|<(pre|script|style|noscript)\b/gi;
+
+/**
+ * Replaces comments and `pre`, `script`, `style` and `noscript` elements with
+ * placeholders, pushing each original into `literalBlocks`.
+ *
+ * A single forward scan: once a search for a closing `-->`, `>` or end tag
+ * fails, every later search of the same kind would fail too, so it is not
+ * retried. Retrying it at each candidate made a malformed document quadratic.
+ */
+function protectLiteralBlocks(html: string, literalBlocks: string[]): string {
+  let result = "";
+  let copiedUpTo = 0;
+  let isCommentUnclosed = false;
+  const unclosedNames = new Set<string>();
+
+  LITERAL_START_RE.lastIndex = 0;
+  for (let match = LITERAL_START_RE.exec(html); match; match = LITERAL_START_RE.exec(html)) {
+    const start = match.index;
+    let end = -1;
+    if (match[1] === undefined) {
+      if (!isCommentUnclosed) {
+        const close = html.indexOf("-->", start + 4);
+        isCommentUnclosed = close === -1;
+        end = close === -1 ? -1 : close + 3;
+      }
+    } else {
+      const name = match[1].toLowerCase();
+      if (!unclosedNames.has(name)) {
+        end = findElementEnd(html, name, LITERAL_START_RE.lastIndex);
+        if (end === -1) {
+          unclosedNames.add(name);
+        }
+      }
+    }
+    if (end === -1) {
+      continue;
+    }
+    literalBlocks.push(html.slice(start, end));
+    result += `${html.slice(copiedUpTo, start)}<!--__LITERAL_PLACEHOLDER_${literalBlocks.length - 1}__-->`;
+    copiedUpTo = end;
+    LITERAL_START_RE.lastIndex = end;
+  }
+  return result + html.slice(copiedUpTo);
+}
+
+/**
+ * Returns the index just past the end tag of the element named `name`, whose
+ * start tag name ends at `from`, or -1 when the start tag or the element never
+ * closes. An end tag ends at the first ">" after whitespace or "/", as HTML
+ * parses `</script foo>`.
+ */
+function findElementEnd(html: string, name: string, from: number): number {
+  const startTagEnd = html.indexOf(">", from);
+  if (startTagEnd === -1) {
+    return -1;
+  }
+  const endTagRe = new RegExp(`</${name}`, "gi");
+  endTagRe.lastIndex = startTagEnd + 1;
+  for (let endTag = endTagRe.exec(html); endTag; endTag = endTagRe.exec(html)) {
+    const next = html[endTagRe.lastIndex];
+    if (next === ">") {
+      return endTagRe.lastIndex + 1;
+    }
+    if (next !== undefined && /[\s/]/.test(next)) {
+      const close = html.indexOf(">", endTagRe.lastIndex);
+      return close === -1 ? -1 : close + 1;
+    }
+  }
+  return -1;
+}
+
 /** Options accepted by {@link addLoaderPlugin}. */
 export interface AddLoaderPluginOptions {
   /**
@@ -131,26 +203,30 @@ export function addLoaderPlugin(options?: AddLoaderPluginOptions): Plugin {
       order: "post",
       handler(html: string) {
         const literalBlocks: string[] = [];
-        const cleanedHtml = html.replace(
-          /(<!--[\s\S]*?-->|<pre\b[^>]*>[\s\S]*?<\/pre>|<script\b[^>]*>[\s\S]*?<\/script>|<style\b[^>]*>[\s\S]*?<\/style>|<noscript\b[^>]*>[\s\S]*?<\/noscript>)/gi,
-          (match) => {
-            literalBlocks.push(match);
-            return `<!--__LITERAL_PLACEHOLDER_${literalBlocks.length - 1}__-->`;
-          },
-        );
+        const cleanedHtml = protectLiteralBlocks(html, literalBlocks);
 
         if (!/<\/head>/i.test(cleanedHtml) || !/<body\b/i.test(cleanedHtml)) {
           return html;
         }
 
-        const withStyle = cleanedHtml.replace(/(<\/head>)/i, `<style${nonceAttr}>${styledCss}</style>\n$1`);
+        // A function replacer, so "$" in an option value is not read as a replacement pattern.
+        const withStyle = cleanedHtml.replace(
+          /<\/head>/i,
+          (headEnd) => `<style${nonceAttr}>${styledCss}</style>\n${headEnd}`,
+        );
         let loaderBodyWithNonce = LOADER_BODY.replace("__TIMEOUT_VALUE__", String(timeoutValue));
+        // Plain string matches: these tags come from LOADER_BODY above, never from the page's HTML.
         if (nonceAttr) {
           loaderBodyWithNonce = loaderBodyWithNonce
-            .replace(/<script>/g, `<script${nonceAttr}>`)
-            .replace(/<style>/g, `<style${nonceAttr}>`);
+            .replaceAll("<script>", `<script${nonceAttr}>`)
+            .replaceAll("<style>", `<style${nonceAttr}>`);
         }
-        const withLoader = withStyle.replace(/(<body([^>]*)>)/i, `$1${loaderBodyWithNonce}`);
+        // Searching from the first "<body" keeps a start tag without ">" from rescanning the rest per candidate.
+        const bodyTagEnd = withStyle.indexOf(">", withStyle.search(/<body\b/i)) + 1;
+        const withLoader =
+          bodyTagEnd > 0
+            ? `${withStyle.slice(0, bodyTagEnd)}${loaderBodyWithNonce}${withStyle.slice(bodyTagEnd)}`
+            : withStyle;
 
         return withLoader.replace(/<!--__LITERAL_PLACEHOLDER_(\d+)__-->/g, (_, indexStr) => {
           const index = parseInt(indexStr, 10);

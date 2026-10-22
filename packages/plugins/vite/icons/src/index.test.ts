@@ -227,6 +227,25 @@ describe("iconsPlugin — custom icons option", () => {
   });
 
   describe("JS context quote escaping and stroke-width verification", () => {
+    it.each([
+      ['"', `const markup = "<i class=\\"ic-custom\\"></i>";`],
+      ["'", `const markup = '<i class="ic-custom"></i>';`],
+      ["`", 'const markup = `<i class="ic-custom"></i>`;'],
+    ])("should keep line breaks in custom markup inside a %s-quoted string", async (_quote, code) => {
+      const customMarkup = "<svg viewBox='0 0 10 10'>\n<circle r='5'/>\r\n</svg>";
+      const result = await runTransform(code, "entry.ts", { icons: { custom: customMarkup } });
+      const markup = new Function(`${result?.code ?? ""}; return markup;`)() as string;
+      expect(markup).toContain("\n<circle r='5'/>\r\n</svg>");
+    });
+
+    it("should keep a line break in custom markup raw inside a tagged template", async () => {
+      const customMarkup = "<svg viewBox='0 0 10 10'>\n<circle r='5'/></svg>";
+      const code = 'const markup = String.raw`<i class="ic-custom"></i>`;';
+      const result = await runTransform(code, "entry.ts", { icons: { custom: customMarkup } });
+      const markup = new Function(`${result?.code ?? ""}; return markup;`)() as string;
+      expect(markup).toContain("\n<circle r='5'/></svg>");
+    });
+
     it("should escape double quotes when matching class inside double-quoted JS string context", async () => {
       const jsCode = `const icon = "<div><i class='ic-success size-4'></i></div>";`;
       const result = await runTransform(jsCode, "entry.ts");
@@ -324,6 +343,18 @@ describe("iconsPlugin — custom icons option", () => {
       expect(result).not.toBeNull();
       expect(result?.code).toContain('data-val="\\`hello\\`"');
       expect(result?.code).toContain('id="\\${expr}"');
+    });
+
+    it.each([
+      ['"', `const icon = "<i class=\\"ic-test\\"></i>";`],
+      ["'", `const icon = '<i class="ic-test"></i>';`],
+      ["`", 'const icon = `<i class="ic-test"></i>`;'],
+    ])("should keep backslashes in SVG markup literal inside a %s-quoted JS string", async (_quote, jsCode) => {
+      const markup = String.raw`<svg><text>C:\new</text></svg>`;
+      const result = await runTransform(jsCode, "entry.ts", { icons: { test: markup } });
+      expect(result).not.toBeNull();
+      const icon = new Function(`${result?.code ?? ""}; return icon;`)() as string;
+      expect(icon).toContain(String.raw`<text>C:\new</text>`);
     });
   });
 

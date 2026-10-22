@@ -309,4 +309,141 @@ describe("deferCssPlugin", () => {
     expect(fallbackNoscriptStart).toBeLessThan(actualHeadEnd);
     expect(outputHtml.lastIndexOf("</noscript>")).toBeLessThan(actualHeadEnd);
   });
+
+  it.each(["</script >", "</script\t\n bar>", "</script/>"])(
+    "should transform stylesheet links after a script that ends with %j",
+    async (endTag) => {
+      const plugin = deferCssPlugin();
+      const transformIndexHtml = plugin.transformIndexHtml;
+      if (!transformIndexHtml || typeof transformIndexHtml !== "object" || !("handler" in transformIndexHtml)) {
+        throw new Error("Expected transformIndexHtml to have handler");
+      }
+      const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+      const inputHtml = `<html><head><script>window.config = {};${endTag}<link rel="stylesheet" href="a.css"></head><body><script type="module" src="/main.js"></script></body></html>`;
+      const result = await handler.call(
+        { format: "html" } as unknown as ThisParameterType<IndexHtmlTransformHook>,
+        inputHtml,
+        { path: "/index.html", filename: "index.html" } as unknown as IndexHtmlTransformContext,
+      );
+      const outputHtml = getHtml(result);
+      expect(outputHtml).toContain(
+        `<link rel="preload" href="a.css" as="style" onload="this.onload=null;this.rel='stylesheet'">`,
+      );
+    },
+  );
+
+  it("should keep attributes whose name ends in onload", async () => {
+    const plugin = deferCssPlugin();
+    const transformIndexHtml = plugin.transformIndexHtml;
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object" || !("handler" in transformIndexHtml)) {
+      throw new Error("Expected transformIndexHtml to have handler");
+    }
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+    const inputHtml = `<html><head><link rel="stylesheet" href="a.css" data-onload="track"></head><body></body></html>`;
+    const result = await handler.call(
+      { format: "html" } as unknown as ThisParameterType<IndexHtmlTransformHook>,
+      inputHtml,
+      { path: "/index.html", filename: "index.html" } as unknown as IndexHtmlTransformContext,
+    );
+    const outputHtml = getHtml(result);
+    expect(outputHtml).toContain(
+      `<link rel="preload" href="a.css" data-onload="track" as="style" onload="this.onload=null;this.rel='stylesheet'">`,
+    );
+  });
+
+  it("should keep attribute values that contain onload", async () => {
+    const plugin = deferCssPlugin();
+    const transformIndexHtml = plugin.transformIndexHtml;
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object" || !("handler" in transformIndexHtml)) {
+      throw new Error("Expected transformIndexHtml to have handler");
+    }
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+    const inputHtml = `<html><head><link rel="stylesheet" href="a.css" title="no onload=handler"></head><body></body></html>`;
+    const result = await handler.call(
+      { format: "html" } as unknown as ThisParameterType<IndexHtmlTransformHook>,
+      inputHtml,
+      { path: "/index.html", filename: "index.html" } as unknown as IndexHtmlTransformContext,
+    );
+    const outputHtml = getHtml(result);
+    expect(outputHtml).toContain(
+      `<link rel="preload" href="a.css" title="no onload=handler" as="style" onload="this.onload=null;this.rel='stylesheet'">`,
+    );
+  });
+
+  async function transform(inputHtml: string): Promise<string | undefined> {
+    const transformIndexHtml = deferCssPlugin().transformIndexHtml;
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object" || !("handler" in transformIndexHtml)) {
+      throw new Error("Expected transformIndexHtml to have handler");
+    }
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+    const result = await handler.call(
+      { format: "html" } as unknown as ThisParameterType<IndexHtmlTransformHook>,
+      inputHtml,
+      { path: "/index.html", filename: "index.html" } as unknown as IndexHtmlTransformContext,
+    );
+    return getHtml(result);
+  }
+
+  it("should rewrite rel and keep data-rel when both say stylesheet", async () => {
+    const outputHtml = await transform(
+      `<html><head><link data-rel="stylesheet" rel="stylesheet" href="/a.css"></head><body></body></html>`,
+    );
+    expect(outputHtml).toContain(
+      `<link data-rel="stylesheet" rel="preload" href="/a.css" as="style" onload="this.onload=null;this.rel='stylesheet'">`,
+    );
+  });
+
+  it("should not defer a link whose stylesheet value is only in data-rel", async () => {
+    const inputHtml = `<html><head><link data-rel="stylesheet" rel="icon" href="/a.png"></head><body></body></html>`;
+    expect(await transform(inputHtml)).toBe(inputHtml);
+  });
+
+  it("should not defer a stylesheet link whose href is only in data-href", async () => {
+    const inputHtml = `<html><head><link rel="stylesheet" data-href="/a.css"></head><body></body></html>`;
+    expect(await transform(inputHtml)).toBe(inputHtml);
+  });
+
+  it("should not defer a link whose rel attribute value only mentions rel=stylesheet", async () => {
+    const inputHtml = `<html><head><link title="rel=stylesheet" rel="icon" href="/a.png"></head><body></body></html>`;
+    expect(await transform(inputHtml)).toBe(inputHtml);
+  });
+
+  it.each([
+    ["the first rel is not a stylesheet", `<link rel="icon" rel="stylesheet" href="/a.css">`],
+    ["stylesheet is only part of a rel token", `<link rel="x-stylesheet" href="/a.css">`],
+    ["stylesheet is separated by a no-break space", `<link rel="stylesheet icon" href="/a.css">`],
+  ])("should not defer a link when %s", async (_, link) => {
+    const inputHtml = `<html><head>${link}</head><body></body></html>`;
+    expect(await transform(inputHtml)).toBe(inputHtml);
+  });
+
+  it("should defer a link whose attributes follow a quoted value without whitespace", async () => {
+    const outputHtml = await transform(`<html><head><link rel="stylesheet"href="/a.css"></head><body></body></html>`);
+    expect(outputHtml).toContain(
+      `<link rel="preload"href="/a.css" as="style" onload="this.onload=null;this.rel='stylesheet'">`,
+    );
+  });
+
+  it.each([
+    ["script start tags that never close", "<script".repeat(50_000)],
+    ["script elements that never end", "<script>".repeat(50_000)],
+    ["script end tags that never close", `<script>${"</script ".repeat(50_000)}`],
+    ["comments that never end", "<!--".repeat(50_000)],
+  ])("should return in linear time with %s", async (_, tail) => {
+    // Retrying the literal-block match at every candidate scanned to the end each time: 50k took 6.3 s before.
+    const start = performance.now();
+    const outputHtml = await transform(`<html><head><link rel="stylesheet" href="/a.css"></head><body>${tail}`);
+    expect(performance.now() - start).toBeLessThan(1_000);
+    expect(outputHtml).toContain('<link rel="preload" href="/a.css"');
+  });
+
+  it("should keep a literal block after an unclosed one of another kind", async () => {
+    // A script left unprotected would have the stylesheet link in its string deferred too.
+    const script = `<script>const s = '<link rel="stylesheet" href="/x.css">';</script>`;
+    const outputHtml = await transform(
+      `<html><head><style>${script}<link rel="stylesheet" href="/a.css"></head><body></body></html>`,
+    );
+    expect(outputHtml).toContain(script);
+    expect(outputHtml).toContain('<link rel="preload" href="/a.css"');
+  });
 });

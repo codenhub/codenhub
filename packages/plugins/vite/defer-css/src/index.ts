@@ -1,11 +1,102 @@
 import type { Plugin } from "vite";
 
-const STYLESHEET_RE =
-  /<link\b(?=[^>]*\brel\s*=\s*(?:"[^"]*\bstylesheet\b[^"]*"|'[^']*\bstylesheet\b[^']*'|stylesheet(?=[\s>])))(?=[^>]*\bhref\s*=)[^>]*\/?\s*>/gi;
-const STYLESHEET_REL_ATTR_RE =
-  /\brel\s*=\s*(?:"[^"]*\bstylesheet\b[^"]*"|'[^']*\bstylesheet\b[^']*'|stylesheet(?=[\s>]))/i;
-const ONLOAD_ATTR_RE = /\bonload\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/i;
+const LINK_RE = /<link\b[^>]*>/gi;
+// An attribute starts after whitespace, or right after a quoted value, as HTML parses `rel="a"href="b"`.
+const ATTRIBUTE_RE = /(\s+|(?<=["']))([^\s"'>/=]+)(?:\s*=\s*("[^"]*"|'[^']*'|[^\s>]+))?/g;
+// `rel` splits on ASCII whitespace only, so a no-break space is part of a token.
+const STYLESHEET_TOKEN_RE = /(?:^|[\t\n\f\r ])stylesheet(?:[\t\n\f\r ]|$)/i;
 const LINK_TAG_END_RE = /\/?\s*>$/;
+
+/**
+ * Whether a `<link>` tag is a stylesheet with an `href`. Attributes are read by
+ * exact name, so `data-rel` or `data-href` never count, and only the first
+ * `rel` counts, as in HTML.
+ */
+function isStylesheetLink(linkTag: string): boolean {
+  let rel: string | undefined;
+  let hasHref = false;
+  for (const [, , name, value] of linkTag.matchAll(ATTRIBUTE_RE)) {
+    const attributeName = name.toLowerCase();
+    if (attributeName === "rel" && rel === undefined) {
+      rel = (value ?? "").replace(/^(["'])([\s\S]*)\1$/, "$2");
+    } else if (attributeName === "href" && value !== undefined) {
+      hasHref = true;
+    }
+  }
+  return hasHref && rel !== undefined && STYLESHEET_TOKEN_RE.test(rel);
+}
+
+const LITERAL_START_RE = /<!--|<(pre|script|style|noscript)\b/gi;
+
+/**
+ * Replaces comments and `pre`, `script`, `style` and `noscript` elements with
+ * placeholders, pushing each original into `literalBlocks`.
+ *
+ * A single forward scan: once a search for a closing `-->`, `>` or end tag
+ * fails, every later search of the same kind would fail too, so it is not
+ * retried. Retrying it at each candidate made a malformed document quadratic.
+ */
+function protectLiteralBlocks(html: string, literalBlocks: string[]): string {
+  let result = "";
+  let copiedUpTo = 0;
+  let isCommentUnclosed = false;
+  const unclosedNames = new Set<string>();
+
+  LITERAL_START_RE.lastIndex = 0;
+  for (let match = LITERAL_START_RE.exec(html); match; match = LITERAL_START_RE.exec(html)) {
+    const start = match.index;
+    let end = -1;
+    if (match[1] === undefined) {
+      if (!isCommentUnclosed) {
+        const close = html.indexOf("-->", start + 4);
+        isCommentUnclosed = close === -1;
+        end = close === -1 ? -1 : close + 3;
+      }
+    } else {
+      const name = match[1].toLowerCase();
+      if (!unclosedNames.has(name)) {
+        end = findElementEnd(html, name, LITERAL_START_RE.lastIndex);
+        if (end === -1) {
+          unclosedNames.add(name);
+        }
+      }
+    }
+    if (end === -1) {
+      continue;
+    }
+    literalBlocks.push(html.slice(start, end));
+    result += `${html.slice(copiedUpTo, start)}<!--__LITERAL_PLACEHOLDER_${literalBlocks.length - 1}__-->`;
+    copiedUpTo = end;
+    LITERAL_START_RE.lastIndex = end;
+  }
+  return result + html.slice(copiedUpTo);
+}
+
+/**
+ * Returns the index just past the end tag of the element named `name`, whose
+ * start tag name ends at `from`, or -1 when the start tag or the element never
+ * closes. An end tag ends at the first ">" after whitespace or "/", as HTML
+ * parses `</script foo>`.
+ */
+function findElementEnd(html: string, name: string, from: number): number {
+  const startTagEnd = html.indexOf(">", from);
+  if (startTagEnd === -1) {
+    return -1;
+  }
+  const endTagRe = new RegExp(`</${name}`, "gi");
+  endTagRe.lastIndex = startTagEnd + 1;
+  for (let endTag = endTagRe.exec(html); endTag; endTag = endTagRe.exec(html)) {
+    const next = html[endTagRe.lastIndex];
+    if (next === ">") {
+      return endTagRe.lastIndex + 1;
+    }
+    if (next !== undefined && /[\s/]/.test(next)) {
+      const close = html.indexOf(">", endTagRe.lastIndex);
+      return close === -1 ? -1 : close + 1;
+    }
+  }
+  return -1;
+}
 
 /** Options accepted by {@link deferCssPlugin}. */
 export interface DeferCssPluginOptions {
@@ -55,28 +146,34 @@ export function deferCssPlugin(options?: DeferCssPluginOptions): Plugin {
       order: "post",
       handler(html: string) {
         const literalBlocks: string[] = [];
-        const cleanedHtml = html.replace(
-          /(<!--[\s\S]*?-->|<pre\b[^>]*>[\s\S]*?<\/pre>|<script\b[^>]*>[\s\S]*?<\/script>|<style\b[^>]*>[\s\S]*?<\/style>|<noscript\b[^>]*>[\s\S]*?<\/noscript>)/gi,
-          (match) => {
-            literalBlocks.push(match);
-            return `<!--__LITERAL_PLACEHOLDER_${literalBlocks.length - 1}__-->`;
-          },
-        );
+        const cleanedHtml = protectLiteralBlocks(html, literalBlocks);
 
         let noscript = "";
-        const transformed = cleanedHtml.replace(STYLESHEET_RE, (linkTag: string) => {
+        const transformed = cleanedHtml.replace(LINK_RE, (linkTag: string) => {
+          if (!isStylesheetLink(linkTag)) {
+            return linkTag;
+          }
           noscript += `    ${linkTag.replace(LINK_TAG_END_RE, ">")}\n`;
 
-          const cleanTag = linkTag.replace(ONLOAD_ATTR_RE, "");
+          let isFirstRel = true;
+          const cleanTag = linkTag.replace(ATTRIBUTE_RE, (attribute: string, whitespace: string, name: string) => {
+            const attributeName = name.toLowerCase();
+            if (attributeName === "onload") {
+              return whitespace;
+            }
+            if (attributeName === "rel" && isFirstRel) {
+              isFirstRel = false;
+              return `${whitespace}rel="preload"`;
+            }
+            return attribute;
+          });
 
-          return cleanTag
-            .replace(STYLESHEET_REL_ATTR_RE, 'rel="preload"')
-            .replace(
-              LINK_TAG_END_RE,
-              options?.nonce
-                ? ' as="style" data-defer-css>'
-                : ' as="style" onload="this.onload=null;this.rel=\'stylesheet\'">',
-            );
+          return cleanTag.replace(
+            LINK_TAG_END_RE,
+            options?.nonce
+              ? ' as="style" data-defer-css>'
+              : ' as="style" onload="this.onload=null;this.rel=\'stylesheet\'">',
+          );
         });
 
         const restoreLiterals = (content: string) => {

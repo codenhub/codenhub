@@ -3,6 +3,23 @@ import { DEFAULT_OPTIONS } from "./constants";
 import type { ThemeOptions, ResolvedThemeOptions } from "./types";
 import { assertThemeConfig } from "./validation";
 
+const INLINE_SCRIPT_UNSAFE = /[<\u2028\u2029]/g;
+
+/**
+ * Serializes a value as a JavaScript literal that is safe inside an inline `<script>` element.
+ *
+ * Escaping `<` keeps a value from closing the element or opening an HTML comment, and escaping
+ * U+2028 and U+2029 keeps it a valid string literal in engines that predate ES2019.
+ * @param value - Value to serialize.
+ * @returns JavaScript literal with the same runtime value.
+ */
+function toInlineScriptLiteral(value: unknown): string {
+  return String(JSON.stringify(value)).replace(
+    INLINE_SCRIPT_UNSAFE,
+    (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
+}
+
 /**
  * Generates a synchronous inline IIFE script string to inject into document `<head>`.
  * Prevents Flash of Unstyled Content (FOUC) by applying storage or system theme before render.
@@ -32,6 +49,7 @@ export function buildPrePaintScript<TSchema extends Record<string, string>>(
   opts: ResolvedThemeOptions<TSchema>,
 ): string {
   const themes = opts.themes;
+  // No prototype, so a theme named "__proto__" is an own key rather than the object's prototype.
   const themeMap: Record<
     string,
     {
@@ -39,7 +57,7 @@ export function buildPrePaintScript<TSchema extends Record<string, string>>(
       className: string | null;
       vars?: Record<string, string>;
     }
-  > = {};
+  > = Object.create(null);
 
   for (const t of themes) {
     const className = getThemeClass(t, opts.shouldApplyClass);
@@ -62,13 +80,14 @@ export function buildPrePaintScript<TSchema extends Record<string, string>>(
     };
   }
 
-  const jsonKey = JSON.stringify(opts.storageKey);
-  const jsonAttr = JSON.stringify(opts.attribute);
-  const jsonDef = JSON.stringify(opts.defaultTheme);
-  const jsonSysLight = JSON.stringify(opts.systemTheme.light);
-  const jsonSysDark = JSON.stringify(opts.systemTheme.dark);
-  const jsonThemes = JSON.stringify(themeMap);
-  const jsonTailwind = JSON.stringify(opts.isTailwindCss);
+  const jsonKey = toInlineScriptLiteral(opts.storageKey);
+  const jsonAttr = toInlineScriptLiteral(opts.attribute);
+  const jsonDef = toInlineScriptLiteral(opts.defaultTheme);
+  const jsonSysLight = toInlineScriptLiteral(opts.systemTheme.light);
+  const jsonSysDark = toInlineScriptLiteral(opts.systemTheme.dark);
+  // Parsed rather than written as an object literal, where a "__proto__" key would set the prototype.
+  const jsonThemes = `JSON.parse(${toInlineScriptLiteral(JSON.stringify(themeMap))})`;
+  const jsonTailwind = toInlineScriptLiteral(opts.isTailwindCss);
 
-  return `!(function(){try{var k=${jsonKey},a=${jsonAttr},d=${jsonDef},sl=${jsonSysLight},sd=${jsonSysDark},tm=${jsonThemes},tw=${jsonTailwind},s=localStorage.getItem(k),m=window.matchMedia("(prefers-color-scheme: dark)").matches,n=(s&&tm[s])?s:(m?sd:sl);if(!tm[n])n=d;var t=tm[n],r=document.documentElement;r.setAttribute(a,n);if(t&&t.colorScheme)r.style.colorScheme=t.colorScheme;if(t&&t.className)r.classList.add(t.className);if(tw)r.classList.toggle("dark",t&&t.colorScheme==="dark");if(t&&t.vars)for(var v in t.vars)r.style.setProperty(v,t.vars[v])}catch(e){}})()`;
+  return `!(function(){try{var k=${jsonKey},a=${jsonAttr},d=${jsonDef},sl=${jsonSysLight},sd=${jsonSysDark},tm=${jsonThemes},tw=${jsonTailwind},s=localStorage.getItem(k),h=function(x){return Object.prototype.hasOwnProperty.call(tm,x)},m=window.matchMedia("(prefers-color-scheme: dark)").matches,n=(s&&h(s))?s:(m?sd:sl);if(!h(n))n=d;var t=tm[n],r=document.documentElement;r.setAttribute(a,n);if(t&&t.colorScheme)r.style.colorScheme=t.colorScheme;if(t&&t.className)r.classList.add(t.className);if(tw)r.classList.toggle("dark",t&&t.colorScheme==="dark");if(t&&t.vars)for(var v in t.vars)r.style.setProperty(v,t.vars[v])}catch(e){}})()`;
 }
