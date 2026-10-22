@@ -295,4 +295,44 @@ describe("addLoaderPlugin", () => {
     const outputHtml = typeof result === "string" ? result : "";
     expect(outputHtml).toContain("setTimeout(removeLoader, 3000);");
   });
+
+  it.each(["</script >", "</script\t\n bar>", "</script/>"])(
+    "should inject the loader when a script ends with %j",
+    async (endTag) => {
+      const plugin = addLoaderPlugin();
+      const transformIndexHtml = plugin.transformIndexHtml;
+      if (!transformIndexHtml || typeof transformIndexHtml !== "object") {
+        throw new Error("Expected transformIndexHtml to be object");
+      }
+      const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+
+      const inputHtml = `<html><head><script>window.config = {};${endTag}</head><body><script type="module" src="/main.js"></script></body></html>`;
+      const result = await handler.call(undefined as unknown as ThisParameterType<IndexHtmlTransformHook>, inputHtml, {
+        path: "/index.html",
+        filename: "index.html",
+      } as unknown as IndexHtmlTransformContext);
+      const outputHtml = typeof result === "string" ? result : "";
+      expect(outputHtml).toContain(`<script>window.config = {};${endTag}<style>`);
+      expect(outputHtml).toContain('<body>\n  <div id="page-loader"');
+    },
+  );
+
+  it("should return in linear time when a body start tag never closes", async () => {
+    const plugin = addLoaderPlugin();
+    const transformIndexHtml = plugin.transformIndexHtml;
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object") {
+      throw new Error("Expected transformIndexHtml to be object");
+    }
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+
+    // Retrying the body tag match at every "<body" scanned to the end each time: this took seconds before.
+    const inputHtml = `<html><head></head><body${"<body=".repeat(50_000)}`;
+    const start = performance.now();
+    const result = await handler.call(undefined as unknown as ThisParameterType<IndexHtmlTransformHook>, inputHtml, {
+      path: "/index.html",
+      filename: "index.html",
+    } as unknown as IndexHtmlTransformContext);
+    expect(performance.now() - start).toBeLessThan(1_000);
+    expect(typeof result === "string" ? result : "").not.toContain('<div id="page-loader"');
+  });
 });
