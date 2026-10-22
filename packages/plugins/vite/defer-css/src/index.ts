@@ -56,7 +56,8 @@ export function deferCssPlugin(options?: DeferCssPluginOptions): Plugin {
       handler(html: string) {
         const literalBlocks: string[] = [];
         const cleanedHtml = html.replace(
-          /(<!--[\s\S]*?-->|<pre\b[^>]*>[\s\S]*?<\/pre\s*>|<script\b[^>]*>[\s\S]*?<\/script\s*>|<style\b[^>]*>[\s\S]*?<\/style\s*>|<noscript\b[^>]*>[\s\S]*?<\/noscript\s*>)/gi,
+          // An end tag ends at the first ">" after whitespace or "/", as HTML parses `</script foo>`.
+          /(<!--[\s\S]*?-->|<pre\b[^>]*>[\s\S]*?<\/pre(?:[\s/][^>]*)?>|<script\b[^>]*>[\s\S]*?<\/script(?:[\s/][^>]*)?>|<style\b[^>]*>[\s\S]*?<\/style(?:[\s/][^>]*)?>|<noscript\b[^>]*>[\s\S]*?<\/noscript(?:[\s/][^>]*)?>)/gi,
           (match) => {
             literalBlocks.push(match);
             return `<!--__LITERAL_PLACEHOLDER_${literalBlocks.length - 1}__-->`;
