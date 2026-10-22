@@ -325,6 +325,18 @@ describe("iconsPlugin — custom icons option", () => {
       expect(result?.code).toContain('data-val="\\`hello\\`"');
       expect(result?.code).toContain('id="\\${expr}"');
     });
+
+    it.each([
+      ['"', `const icon = "<i class=\\"ic-test\\"></i>";`],
+      ["'", `const icon = '<i class="ic-test"></i>';`],
+      ["`", 'const icon = `<i class="ic-test"></i>`;'],
+    ])("should keep backslashes in SVG markup literal inside a %s-quoted JS string", async (_quote, jsCode) => {
+      const markup = String.raw`<svg><text>C:\new</text></svg>`;
+      const result = await runTransform(jsCode, "entry.ts", { icons: { test: markup } });
+      expect(result).not.toBeNull();
+      const icon = new Function(`${result?.code ?? ""}; return icon;`)() as string;
+      expect(icon).toContain(String.raw`<text>C:\new</text>`);
+    });
   });
 
   describe("HTML transform literal blocks", () => {
