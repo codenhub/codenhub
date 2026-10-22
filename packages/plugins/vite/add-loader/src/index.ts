@@ -146,10 +146,11 @@ export function addLoaderPlugin(options?: AddLoaderPluginOptions): Plugin {
 
         const withStyle = cleanedHtml.replace(/(<\/head>)/i, `<style${nonceAttr}>${styledCss}</style>\n$1`);
         let loaderBodyWithNonce = LOADER_BODY.replace("__TIMEOUT_VALUE__", String(timeoutValue));
+        // Plain string matches: these tags come from LOADER_BODY above, never from the page's HTML.
         if (nonceAttr) {
           loaderBodyWithNonce = loaderBodyWithNonce
-            .replace(/<script>/g, `<script${nonceAttr}>`)
-            .replace(/<style>/g, `<style${nonceAttr}>`);
+            .replaceAll("<script>", `<script${nonceAttr}>`)
+            .replaceAll("<style>", `<style${nonceAttr}>`);
         }
         // Searching from the first "<body" keeps a start tag without ">" from rescanning the rest per candidate.
         const bodyTagEnd = withStyle.indexOf(">", withStyle.search(/<body\b/i)) + 1;
