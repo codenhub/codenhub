@@ -1027,6 +1027,27 @@ describe("Theme CSS tokens support", () => {
     expect(document.documentElement.style.getPropertyValue("--font-body")).toBe(font);
   });
 
+  it("should keep theme names and options from closing the inline script element", () => {
+    const name = "</script><!--dark";
+    const storageKey = "</script>key";
+    const options = {
+      themes: [{ name, colorScheme: "dark" as const, tokens: {} }],
+      defaultTheme: name,
+      systemTheme: { light: name, dark: name },
+      storageKey,
+    };
+
+    expect(getPrePaintScript({ ...options, attribute: "data-</script>" })).not.toMatch(/<\/script|<!--/i);
+
+    const script = getPrePaintScript({ ...options, attribute: "data-theme" });
+    expect(script).not.toMatch(/<\/script|<!--/i);
+
+    window.localStorage.setItem(storageKey, name);
+    new Function(script)();
+
+    expect(document.documentElement.getAttribute("data-theme")).toBe(name);
+  });
+
   it("should respect skipComputed option in get()", () => {
     const tokenSchema = { primary: "--color-primary" };
     const theme = createTheme({ tokenSchema }).init();
