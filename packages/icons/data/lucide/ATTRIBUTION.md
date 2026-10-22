@@ -1,7 +1,7 @@
 # Lucide
 
 Icon artwork in `lucide` comes from Lucide, generated from
-`lucide-static@1.33.0`.
+`lucide-static@1.59.0`.
 
 - Author: [Lucide Contributors](https://lucide.dev)
 - License: [ISC License (ISC)](https://github.com/lucide-icons/lucide/blob/main/LICENSE)
