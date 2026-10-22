@@ -36,6 +36,7 @@ export function getPrePaintScript<TSchema extends Record<string, string> = Recor
   };
 
   const themes = opts.themes || DEFAULT_OPTIONS.themes;
+  // No prototype, so a theme named "__proto__" is an own key rather than the object's prototype.
   const themeMap: Record<
     string,
     {
@@ -43,7 +44,7 @@ export function getPrePaintScript<TSchema extends Record<string, string> = Recor
       className: string | null;
       vars?: Record<string, string>;
     }
-  > = {};
+  > = Object.create(null);
 
   for (const t of themes) {
     const className = getThemeClass(t as unknown as ThemeDefinition<TSchema>, opts.shouldApplyClass);
@@ -71,7 +72,8 @@ export function getPrePaintScript<TSchema extends Record<string, string> = Recor
   const jsonDef = toInlineScriptLiteral(opts.defaultTheme);
   const jsonSysLight = toInlineScriptLiteral(opts.systemTheme.light);
   const jsonSysDark = toInlineScriptLiteral(opts.systemTheme.dark);
-  const jsonThemes = toInlineScriptLiteral(themeMap);
+  // Parsed rather than written as an object literal, where a "__proto__" key would set the prototype.
+  const jsonThemes = `JSON.parse(${toInlineScriptLiteral(JSON.stringify(themeMap))})`;
   const jsonTailwind = toInlineScriptLiteral(opts.isTailwindCss);
 
   return `!(function(){try{var k=${jsonKey},a=${jsonAttr},d=${jsonDef},sl=${jsonSysLight},sd=${jsonSysDark},tm=${jsonThemes},tw=${jsonTailwind},s=localStorage.getItem(k),h=function(x){return Object.prototype.hasOwnProperty.call(tm,x)},m=window.matchMedia("(prefers-color-scheme: dark)").matches,n=(s&&h(s))?s:(m?sd:sl);if(!h(n))n=d;var t=tm[n],r=document.documentElement;r.setAttribute(a,n);if(t&&t.colorScheme)r.style.colorScheme=t.colorScheme;if(t&&t.className)r.classList.add(t.className);if(tw)r.classList.toggle("dark",t&&t.colorScheme==="dark");if(t&&t.vars)for(var v in t.vars)r.style.setProperty(v,t.vars[v])}catch(e){}})()`;
