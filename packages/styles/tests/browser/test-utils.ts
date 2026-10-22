@@ -1,4 +1,4 @@
-import { expect } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 interface LinearColor {
   alpha: number;
@@ -179,6 +179,10 @@ export const getContrastRatio = (foreground: string, background: string) => {
 
   return (lighter + 0.05) / (darker + 0.05);
 };
+
+/* The aesthetics draw `corner-shape` only under `@supports (corner-shape: bevel)`, so a test
+   asks the engine the same question rather than naming the engines that support it. */
+export const drawsCornerShape = (page: Page) => page.evaluate(() => CSS.supports("corner-shape", "bevel"));
 
 /* Presentation and intent resolve colors through `color-mix`, so a computed
    value carries the same color as its token in a different syntax, and can land
