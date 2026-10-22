@@ -1027,6 +1027,23 @@ describe("Theme CSS tokens support", () => {
     expect(document.documentElement.style.getPropertyValue("--font-body")).toBe(font);
   });
 
+  it.each(["constructor", "toString", "__proto__", "hasOwnProperty"])(
+    "should fall back as for an unknown name when the stored theme is the Object property %s",
+    (storedName) => {
+      const script = getPrePaintScript({ storageKey: "inherited-key" });
+
+      window.localStorage.setItem("inherited-key", "nope");
+      new Function(script)();
+      const fallback = document.documentElement.getAttribute("data-theme");
+      expect(fallback).not.toBeNull();
+      document.documentElement.removeAttribute("data-theme");
+
+      window.localStorage.setItem("inherited-key", storedName);
+      new Function(script)();
+      expect(document.documentElement.getAttribute("data-theme")).toBe(fallback);
+    },
+  );
+
   it("should keep theme names and options from closing the inline script element", () => {
     const name = "</script><!--dark";
     const storageKey = "</script>key";
