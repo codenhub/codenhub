@@ -346,8 +346,8 @@ describe("lazy", () => {
         // segment of the place alone, every row went through the places of the rows before it, so twice
         // the rows took four times as long: 7.8 s for 80,000. The two times are compared with each
         // other and not with a limit, which a busy machine fails by its load. Four times the rows take
-        // four times as long when lookup is linear and sixteen when it is not, so the limit of eight
-        // leaves a pause during either run room to double it before the test fails.
+        // about 4x as long when lookup is linear and about 16x when it is quadratic. The limit of 8x sits
+        // at twice the first and half the second, so noise can double the ratio before the test fails.
         const tag = object({ name: string() });
         const rows = array(object({ id: number(), tag: lazy(() => tag, { maxCalls: 100_000 }) }));
         const tags = Array.from({ length: 10 }, (_, index) => ({ name: `tag ${index}` }));
