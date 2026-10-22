@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-18
+last_updated: 2026-10-22
 scope: Continuous integration workflows, the pinned workspace toolchain, and the checks that report on pull requests.
 ---
 
@@ -100,7 +100,13 @@ The rule is all or nothing on purpose. Pinning some actions and not others is wo
 
 `./.github/actions/setup` is deliberately not pinned. It is a path in this repository, so it is already versioned by the commit under test; pinning it would mean a run could use a setup step other than the one it is checking.
 
-Nothing updates these automatically. That is the cost of the rule, accepted rather than overlooked: upgrades are manual, and a pin left alone is a pin going stale. Resolve the new SHA with `gh` and update the comment alongside it:
+The repository's Actions settings require the rule too: GitHub refuses to run a workflow that references another repository's action by anything but a full SHA. That setting is dashboard state, so it is recorded here.
+
+Dependabot proposes weekly updates for these actions, as `.github/dependabot.yml` sets out. It moves the SHA and its version comment together, so a pin and its label cannot drift apart, and every update is still a reviewable diff. The same file covers npm dependencies: minor and patch updates are grouped per ecosystem, and each major update arrives as a pull request of its own, because it may need code changes rather than a merge.
+
+Updating pins by hand was the earlier choice, with stale pins as its accepted cost. It was reversed on what that cost turned out to be: by October 2026, `actions/checkout`, `actions/setup-node`, and `actions/upload-artifact` were each pinned at v5 while v7 was current, two majors of fixes this repository was not running. Rejected with it: Renovate, which does the same job through a GitHub App and a configuration of its own, where Dependabot is built into GitHub and already raises this repository's security updates.
+
+For a hand upgrade, resolve the new SHA with `gh` and update the comment alongside it:
 
 ```sh
 gh api repos/actions/checkout/commits/v5 --jq .sha

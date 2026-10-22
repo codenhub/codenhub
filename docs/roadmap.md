@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-18
+last_updated: 2026-10-22
 scope: repo-wide direction for the workspace's packages and deploy surfaces
 ---
 
@@ -37,7 +37,6 @@ Durable direction for the workspace: what is being worked on now, what is intend
 ## Not Planned
 
 - **Changesets.** It brings its own versioning model, file format, and release-PR bot next to a `hub release` that already knows this workspace. `hub release --cut` raises the version and scaffolds the changelog entry; a `changelog` check makes skipping it impossible.
-- **Dependabot.** `docs/ci.md` accepts that action pins are updated by hand; automating them is a decision to revisit there, not a gap here.
 - **Publish-on-merge.** A merge is a decision to change `main`, not to release, and a version bump has to stay revertible until someone tags it (`docs/specs/packages-lifecycle.md`).
 
 ## Notes
