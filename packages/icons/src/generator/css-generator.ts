@@ -85,7 +85,7 @@ export interface IconSetCssResult {
  * @returns The escaped selector fragment.
  */
 export function escapeSelectorClass(className: string): string {
-  return className.replace(/[./]/g, "\\$&");
+  return className.replace(/[./\\]/g, "\\$&");
 }
 
 /**

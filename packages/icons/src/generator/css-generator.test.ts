@@ -219,6 +219,10 @@ describe("escapeSelectorClass", () => {
   it("escapes the slash and the dot of a stroke modifier", () => {
     expect(escapeSelectorClass("ic-heart/1.5")).toBe("ic-heart\\/1\\.5");
   });
+
+  it("escapes a backslash so it is not read as the start of an escape", () => {
+    expect(escapeSelectorClass(String.raw`ic-a\b`)).toBe(String.raw`ic-a\\b`);
+  });
 });
 
 describe("generateIconSetCss", () => {
