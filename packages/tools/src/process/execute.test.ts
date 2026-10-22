@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { execute, formatCommand, listDescendants, resolveInvocation } from "./execute.ts";
+import { execute, formatCommand, listDescendants, quoteForWindows, resolveInvocation } from "./execute.ts";
 
 const isWindows = process.platform === "win32";
 
@@ -46,6 +46,16 @@ describe("resolveInvocation", () => {
     expect(invocation.file).toBe("pnpm");
     expect(invocation.args).toEqual(["run", "test"]);
     expect(invocation.useWindowsVerbatimArguments).toBe(false);
+  });
+});
+
+describe("quoteForWindows", () => {
+  it("shouldQuoteALongRunOfBackslashesWithoutBacktracking", () => {
+    const backslashes = "\\".repeat(100_000);
+    const startedAt = performance.now();
+
+    expect(quoteForWindows(`${backslashes}x`)).toBe(`"${backslashes}x"`);
+    expect(performance.now() - startedAt).toBeLessThan(1000);
   });
 });
 
