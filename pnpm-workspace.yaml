@@ -17,7 +17,9 @@ catalog:
   "@tauri-apps/api": ^2.0.0
   "@tailwindcss/cli": ^4.3.2
   "@tailwindcss/vite": ^4.3.2
-  "@playwright/test": ^1.61.1
+  # Tilde, not caret: Dependabot holds the target below 1.64 (`.github/dependabot.yml`), but a caret range
+  # it raises to ^1.63 still resolves to 1.64, as on #352.
+  "@playwright/test": ~1.61.1
   "@types/node": ^26.1.0
   "@vitest/coverage-v8": ^4.1.10
   astro: ^7.0.7
