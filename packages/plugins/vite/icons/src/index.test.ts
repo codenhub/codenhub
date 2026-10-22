@@ -238,6 +238,14 @@ describe("iconsPlugin — custom icons option", () => {
       expect(markup).toContain("\n<circle r='5'/>\r\n</svg>");
     });
 
+    it("should keep a line break in custom markup raw inside a tagged template", async () => {
+      const customMarkup = "<svg viewBox='0 0 10 10'>\n<circle r='5'/></svg>";
+      const code = 'const markup = String.raw`<i class="ic-custom"></i>`;';
+      const result = await runTransform(code, "entry.ts", { icons: { custom: customMarkup } });
+      const markup = new Function(`${result?.code ?? ""}; return markup;`)() as string;
+      expect(markup).toContain("\n<circle r='5'/></svg>");
+    });
+
     it("should escape double quotes when matching class inside double-quoted JS string context", async () => {
       const jsCode = `const icon = "<div><i class='ic-success size-4'></i></div>";`;
       const result = await runTransform(jsCode, "entry.ts");
