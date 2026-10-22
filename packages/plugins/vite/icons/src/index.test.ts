@@ -227,6 +227,17 @@ describe("iconsPlugin — custom icons option", () => {
   });
 
   describe("JS context quote escaping and stroke-width verification", () => {
+    it.each([
+      ['"', `const markup = "<i class=\\"ic-custom\\"></i>";`],
+      ["'", `const markup = '<i class="ic-custom"></i>';`],
+      ["`", 'const markup = `<i class="ic-custom"></i>`;'],
+    ])("should keep line breaks in custom markup inside a %s-quoted string", async (_quote, code) => {
+      const customMarkup = "<svg viewBox='0 0 10 10'>\n<circle r='5'/>\r\n</svg>";
+      const result = await runTransform(code, "entry.ts", { icons: { custom: customMarkup } });
+      const markup = new Function(`${result?.code ?? ""}; return markup;`)() as string;
+      expect(markup).toContain("\n<circle r='5'/>\r\n</svg>");
+    });
+
     it("should escape double quotes when matching class inside double-quoted JS string context", async () => {
       const jsCode = `const icon = "<div><i class='ic-success size-4'></i></div>";`;
       const result = await runTransform(jsCode, "entry.ts");
