@@ -1027,6 +1027,43 @@ describe("Theme CSS tokens support", () => {
     expect(document.documentElement.style.getPropertyValue("--font-body")).toBe(font);
   });
 
+  it("should apply a configured theme named __proto__ when it is stored", () => {
+    const tokenSchema = { primary: "--color-primary" };
+    const script = getPrePaintScript({
+      themes: [
+        { name: "light", colorScheme: "light", tokens: { primary: "#ffffff" } },
+        { name: "__proto__", colorScheme: "dark", tokens: { primary: "#000000" } },
+      ],
+      defaultTheme: "light",
+      systemTheme: { light: "light", dark: "light" },
+      tokenSchema,
+      storageKey: "proto-key",
+    });
+
+    window.localStorage.setItem("proto-key", "__proto__");
+    new Function(script)();
+
+    expect(document.documentElement.getAttribute("data-theme")).toBe("__proto__");
+    expect(document.documentElement.style.getPropertyValue("--color-primary")).toBe("#000000");
+  });
+
+  it.each(["constructor", "toString", "__proto__", "hasOwnProperty"])(
+    "should fall back as for an unknown name when the stored theme is the Object property %s",
+    (storedName) => {
+      const script = getPrePaintScript({ storageKey: "inherited-key" });
+
+      window.localStorage.setItem("inherited-key", "nope");
+      new Function(script)();
+      const fallback = document.documentElement.getAttribute("data-theme");
+      expect(fallback).not.toBeNull();
+      document.documentElement.removeAttribute("data-theme");
+
+      window.localStorage.setItem("inherited-key", storedName);
+      new Function(script)();
+      expect(document.documentElement.getAttribute("data-theme")).toBe(fallback);
+    },
+  );
+
   it("should keep theme names and options from closing the inline script element", () => {
     const name = "</script><!--dark";
     const storageKey = "</script>key";
