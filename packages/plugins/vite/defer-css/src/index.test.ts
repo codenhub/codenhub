@@ -309,4 +309,61 @@ describe("deferCssPlugin", () => {
     expect(fallbackNoscriptStart).toBeLessThan(actualHeadEnd);
     expect(outputHtml.lastIndexOf("</noscript>")).toBeLessThan(actualHeadEnd);
   });
+
+  it("should transform stylesheet links after a script end tag with whitespace before its closing bracket", async () => {
+    const plugin = deferCssPlugin();
+    const transformIndexHtml = plugin.transformIndexHtml;
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object" || !("handler" in transformIndexHtml)) {
+      throw new Error("Expected transformIndexHtml to have handler");
+    }
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+    const inputHtml = `<html><head><script>window.config = {};</script ><link rel="stylesheet" href="a.css"></head><body><script type="module" src="/main.js"></script></body></html>`;
+    const result = await handler.call(
+      { format: "html" } as unknown as ThisParameterType<IndexHtmlTransformHook>,
+      inputHtml,
+      { path: "/index.html", filename: "index.html" } as unknown as IndexHtmlTransformContext,
+    );
+    const outputHtml = getHtml(result);
+    expect(outputHtml).toContain(
+      `<link rel="preload" href="a.css" as="style" onload="this.onload=null;this.rel='stylesheet'">`,
+    );
+  });
+
+  it("should keep attributes whose name ends in onload", async () => {
+    const plugin = deferCssPlugin();
+    const transformIndexHtml = plugin.transformIndexHtml;
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object" || !("handler" in transformIndexHtml)) {
+      throw new Error("Expected transformIndexHtml to have handler");
+    }
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+    const inputHtml = `<html><head><link rel="stylesheet" href="a.css" data-onload="track"></head><body></body></html>`;
+    const result = await handler.call(
+      { format: "html" } as unknown as ThisParameterType<IndexHtmlTransformHook>,
+      inputHtml,
+      { path: "/index.html", filename: "index.html" } as unknown as IndexHtmlTransformContext,
+    );
+    const outputHtml = getHtml(result);
+    expect(outputHtml).toContain(
+      `<link rel="preload" href="a.css" data-onload="track" as="style" onload="this.onload=null;this.rel='stylesheet'">`,
+    );
+  });
+
+  it("should keep attribute values that contain onload", async () => {
+    const plugin = deferCssPlugin();
+    const transformIndexHtml = plugin.transformIndexHtml;
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object" || !("handler" in transformIndexHtml)) {
+      throw new Error("Expected transformIndexHtml to have handler");
+    }
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+    const inputHtml = `<html><head><link rel="stylesheet" href="a.css" title="no onload=handler"></head><body></body></html>`;
+    const result = await handler.call(
+      { format: "html" } as unknown as ThisParameterType<IndexHtmlTransformHook>,
+      inputHtml,
+      { path: "/index.html", filename: "index.html" } as unknown as IndexHtmlTransformContext,
+    );
+    const outputHtml = getHtml(result);
+    expect(outputHtml).toContain(
+      `<link rel="preload" href="a.css" title="no onload=handler" as="style" onload="this.onload=null;this.rel='stylesheet'">`,
+    );
+  });
 });
