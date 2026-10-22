@@ -1,11 +1,28 @@
 import type { Plugin } from "vite";
 
-const STYLESHEET_RE =
-  /<link\b(?=[^>]*\brel\s*=\s*(?:"[^"]*\bstylesheet\b[^"]*"|'[^']*\bstylesheet\b[^']*'|stylesheet(?=[\s>])))(?=[^>]*\bhref\s*=)[^>]*\/?\s*>/gi;
-const STYLESHEET_REL_ATTR_RE =
-  /\brel\s*=\s*(?:"[^"]*\bstylesheet\b[^"]*"|'[^']*\bstylesheet\b[^']*'|stylesheet(?=[\s>]))/i;
-const ATTRIBUTE_RE = /(\s+)([^\s"'>/=]+)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/g;
+const LINK_RE = /<link\b[^>]*>/gi;
+const ATTRIBUTE_RE = /(\s+)([^\s"'>/=]+)(?:\s*=\s*("[^"]*"|'[^']*'|[^\s>]+))?/g;
+const STYLESHEET_TOKEN_RE = /(?:^|\s)stylesheet(?:\s|$)/i;
 const LINK_TAG_END_RE = /\/?\s*>$/;
+
+/**
+ * Whether a `<link>` tag is a stylesheet with an `href`. Attributes are read by
+ * exact name, so `data-rel` or `data-href` never count, and only the first
+ * `rel` counts, as in HTML.
+ */
+function isStylesheetLink(linkTag: string): boolean {
+  let rel: string | undefined;
+  let hasHref = false;
+  for (const [, , name, value] of linkTag.matchAll(ATTRIBUTE_RE)) {
+    const attributeName = name.toLowerCase();
+    if (attributeName === "rel" && rel === undefined) {
+      rel = (value ?? "").replace(/^(["'])([\s\S]*)\1$/, "$2");
+    } else if (attributeName === "href" && value !== undefined) {
+      hasHref = true;
+    }
+  }
+  return hasHref && rel !== undefined && STYLESHEET_TOKEN_RE.test(rel);
+}
 
 /** Options accepted by {@link deferCssPlugin}. */
 export interface DeferCssPluginOptions {
@@ -65,21 +82,31 @@ export function deferCssPlugin(options?: DeferCssPluginOptions): Plugin {
         );
 
         let noscript = "";
-        const transformed = cleanedHtml.replace(STYLESHEET_RE, (linkTag: string) => {
+        const transformed = cleanedHtml.replace(LINK_RE, (linkTag: string) => {
+          if (!isStylesheetLink(linkTag)) {
+            return linkTag;
+          }
           noscript += `    ${linkTag.replace(LINK_TAG_END_RE, ">")}\n`;
 
-          const cleanTag = linkTag.replace(ATTRIBUTE_RE, (attribute: string, whitespace: string, name: string) =>
-            name.toLowerCase() === "onload" ? whitespace : attribute,
-          );
+          let isFirstRel = true;
+          const cleanTag = linkTag.replace(ATTRIBUTE_RE, (attribute: string, whitespace: string, name: string) => {
+            const attributeName = name.toLowerCase();
+            if (attributeName === "onload") {
+              return whitespace;
+            }
+            if (attributeName === "rel" && isFirstRel) {
+              isFirstRel = false;
+              return `${whitespace}rel="preload"`;
+            }
+            return attribute;
+          });
 
-          return cleanTag
-            .replace(STYLESHEET_REL_ATTR_RE, 'rel="preload"')
-            .replace(
-              LINK_TAG_END_RE,
-              options?.nonce
-                ? ' as="style" data-defer-css>'
-                : ' as="style" onload="this.onload=null;this.rel=\'stylesheet\'">',
-            );
+          return cleanTag.replace(
+            LINK_TAG_END_RE,
+            options?.nonce
+              ? ' as="style" data-defer-css>'
+              : ' as="style" onload="this.onload=null;this.rel=\'stylesheet\'">',
+          );
         });
 
         const restoreLiterals = (content: string) => {
