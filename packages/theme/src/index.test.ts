@@ -987,6 +987,26 @@ describe("Theme CSS tokens support", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
+  it("should reject in the standalone getPrePaintScript the options createTheme rejects", () => {
+    expect(() =>
+      getPrePaintScript({
+        themes: [{ name: "light", colorScheme: "light" }],
+        defaultTheme: "missing",
+        systemTheme: { light: "missing", dark: "missing" },
+      }),
+    ).toThrow("Default theme is not configured: missing.");
+    expect(() => getPrePaintScript({ systemTheme: { light: "light", dark: "missing" } })).toThrow(
+      "System dark theme is not configured: missing.",
+    );
+    expect(() => getPrePaintScript({ attribute: "data theme" })).toThrow(
+      "Theme attribute option must be a valid HTML attribute name.",
+    );
+    expect(() => getPrePaintScript({ themes: [LIGHT_THEME, { name: "light", colorScheme: "dark" }] })).toThrow(
+      "Duplicate theme name: light.",
+    );
+    expect(() => getPrePaintScript({ themes: undefined })).toThrow("Theme options.themes must be an array.");
+  });
+
   it("should generate pre-paint script with custom shouldApplyClass resolver and tokenSchema static variables", () => {
     const tokenSchema = { primary: "--color-primary" };
     const customLight = { name: "light", colorScheme: "light" as const, tokens: { primary: "#ffffff" } };
@@ -1068,13 +1088,15 @@ describe("Theme CSS tokens support", () => {
     const name = "</script><!--dark";
     const storageKey = "</script>key";
     const options = {
-      themes: [{ name, colorScheme: "dark" as const, tokens: {} }],
+      themes: [{ name, colorScheme: "dark" as const }],
       defaultTheme: name,
       systemTheme: { light: name, dark: name },
       storageKey,
     };
 
-    expect(getPrePaintScript({ ...options, attribute: "data-</script>" })).not.toMatch(/<\/script|<!--/i);
+    expect(() => getPrePaintScript({ ...options, attribute: "data-</script>" })).toThrow(
+      "Theme attribute option must be a valid HTML attribute name.",
+    );
 
     const script = getPrePaintScript({ ...options, attribute: "data-theme" });
     expect(script).not.toMatch(/<\/script|<!--/i);

@@ -39,6 +39,8 @@ Generates a synchronous inline IIFE script string to inject into document `<head
 
 **Returns** — Minified JavaScript script string.
 
+**Throws** — When the options are invalid, under the same rules and with the same messages as `createTheme`, such as a `defaultTheme` or `systemTheme` naming a theme that is not configured.
+
 ## Interfaces
 
 ### SystemThemeMap
