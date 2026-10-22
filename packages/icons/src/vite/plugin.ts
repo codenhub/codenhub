@@ -461,7 +461,12 @@ function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options:
 
       const enclosingQuote = isJsContext ? stringQuoteAt(cleanSource, offset, match.length) : null;
       if (enclosingQuote) {
-        svg = svg.replace(/\\/g, "\\\\");
+        // A template literal reads "\r\n" as "\n", so "\r" is escaped in every string.
+        svg = svg.replace(/\\/g, "\\\\").replace(/\r/g, "\\r");
+      }
+      if (enclosingQuote === '"' || enclosingQuote === "'") {
+        // A line break ends a quoted string. A template keeps it, raw text included, so it stays there.
+        svg = svg.replace(/\n/g, "\\n");
       }
       if (enclosingQuote === '"') {
         svg = svg.replace(/"/g, '\\"');

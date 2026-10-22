@@ -75,9 +75,10 @@ export interface IconSetCssResult {
 }
 
 /**
- * Escapes characters in a CSS class name so it can be used in a selector.
+ * Escapes characters in a CSS class name so it can be used in a selector,
+ * whatever characters a custom icon name contains.
  *
- * A stroke modifier contributes both characters that need it: `ic-heart/1.5`
+ * A stroke modifier contributes two characters that need it: `ic-heart/1.5`
  * carries a slash a selector would read as the start of a comment, and a dot it
  * would read as a second class.
  *
@@ -85,7 +86,27 @@ export interface IconSetCssResult {
  * @returns The escaped selector fragment.
  */
 export function escapeSelectorClass(className: string): string {
-  return className.replace(/[./\\]/g, "\\$&");
+  // Serializes an identifier as CSSOM's `CSS.escape` does; that function is not available outside a browser.
+  if (className === "-") {
+    return "\\-";
+  }
+  let escaped = "";
+  let index = 0;
+  for (const char of className) {
+    const code = char.codePointAt(0) ?? 0;
+    const isLeadingDigit = /\d/.test(char) && (index === 0 || (index === 1 && className.startsWith("-")));
+    if (code === 0) {
+      escaped += "�";
+    } else if (code < 0x20 || code === 0x7f || isLeadingDigit) {
+      escaped += `\\${code.toString(16)} `;
+    } else if (code >= 0x80 || /[\w-]/.test(char)) {
+      escaped += char;
+    } else {
+      escaped += `\\${char}`;
+    }
+    index += 1;
+  }
+  return escaped;
 }
 
 /**

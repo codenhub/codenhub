@@ -312,7 +312,12 @@ function buildSvgReplacement(options: SvgReplacementOptions): string {
   if (isJsContext) {
     const enclosingQuote = getEnclosingQuote(source, offset);
     if (enclosingQuote) {
-      markup = markup.replace(/\\/g, "\\\\");
+      // A template literal reads "\r\n" as "\n", so "\r" is escaped in every string.
+      markup = markup.replace(/\\/g, "\\\\").replace(/\r/g, "\\r");
+    }
+    if (enclosingQuote === '"' || enclosingQuote === "'") {
+      // A line break ends a quoted string. A template keeps it, raw text included, so it stays there.
+      markup = markup.replace(/\n/g, "\\n");
     }
     if (enclosingQuote === '"') {
       markup = markup.replace(/"/g, '\\"');
