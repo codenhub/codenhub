@@ -1046,7 +1046,10 @@ test.describe("aesthetics", () => {
         expect(read.liquid.line, "no hairline on the surface").toBe(read.plain.line);
         expect(read.liquid.fieldLine, "a field keeps its line").toBe(read.plain.fieldLine);
         expect(read.liquid.layer, "no layers without glass").toBe("none");
-        expect(read.liquid.shape, "standalone liquid corners").toBe(browserName === "chromium" ? "squircle" : "");
+        /* `corner-shape` computes to its `superellipse()` form (CSS Borders 4), so `squircle` reads back as 2. */
+        expect(read.liquid.shape, "standalone liquid corners").toBe(
+          browserName === "chromium" ? "superellipse(2)" : "",
+        );
       });
 
       test("drops the blur and the lens under reduced transparency", async ({ page, browserName }) => {
@@ -1783,7 +1786,9 @@ test.describe("aesthetics", () => {
        and bottom-right, surfaces the opposite diagonal, anything fully round
        cuts to points, and chips square -- which is what tells the checkbox from
        the diamond radio. Where it is not: cut corners square, and what is fully
-       round stays round, because a square radio is a checkbox. */
+       round stays round, because a square radio is a checkbox. `corner-shape`
+       computes to its `superellipse()` form (CSS Borders 4): `bevel` reads back
+       as `superellipse(0)` and `round` as `superellipse(1)`. */
     test("cuts controls and surfaces on opposite diagonals, points the pills, and squares the chips", async ({
       page,
       browserName,
@@ -1800,20 +1805,20 @@ test.describe("aesthetics", () => {
         expect(corner.topLeft, `${corner.name} top-left`).toBe(bevels ? "10px" : "0px");
         expect(corner.topRight, `${corner.name} top-right`).toBe("0px");
         if (bevels) {
-          expect(corner.shape, `${corner.name} shape`).toBe("bevel");
+          expect(corner.shape, `${corner.name} shape`).toBe("superellipse(0)");
         }
       }
       for (const corner of surfaces) {
         expect(corner.topLeft, `${corner.name} top-left`).toBe("0px");
         expect(corner.topRight, `${corner.name} top-right`).toBe(bevels ? "10px" : "0px");
         if (bevels) {
-          expect(corner.shape, `${corner.name} shape`).toBe("bevel");
+          expect(corner.shape, `${corner.name} shape`).toBe("superellipse(0)");
         }
       }
       for (const corner of pills) {
         expect(isFull(corner.topLeft), `${corner.name} is fully round: ${corner.topLeft}`).toBe(true);
         if (bevels) {
-          expect(corner.shape, `${corner.name} cuts to points`).toBe("bevel");
+          expect(corner.shape, `${corner.name} cuts to points`).toBe("superellipse(0)");
         }
       }
       for (const corner of chips) {
@@ -1992,7 +1997,7 @@ test.describe("aesthetics", () => {
           // oxlint-disable-next-line no-await-in-loop -- four regions, measured in turn on one page.
           const [nested] = await readCorners(page, [{ className: "card" }], "", aesthetic);
 
-          expect(nested!.shape, aesthetic).toBe("round");
+          expect(nested!.shape, aesthetic).toBe("superellipse(1)");
         }
       }
     });

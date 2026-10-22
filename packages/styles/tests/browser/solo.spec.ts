@@ -120,7 +120,8 @@ test.describe("solo utilities", () => {
     /* A pane takes the surface diagonal: top-right and bottom-left. */
     expect(cyber["border-top-left-radius"], "cyber top-left").toBe("0px");
     if (browserName === "chromium") {
-      expect(cyber["corner-shape"], "cyber bevel").toBe("bevel");
+      /* `corner-shape` computes to its `superellipse()` form (CSS Borders 4); `bevel` is 0. */
+      expect(cyber["corner-shape"], "cyber bevel").toBe("superellipse(0)");
       expect(cyber["border-top-right-radius"], "cyber cut").toBe("min(10px, 25%)");
     } else {
       expect(cyber["border-top-right-radius"], "cyber squares where no bevel is drawn").toBe("0px");

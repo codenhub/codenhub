@@ -1,7 +1,7 @@
 # Material Symbols Sharp Filled
 
 Icon artwork in `material-symbols-sharp-fill` comes from Material Symbols Sharp Filled, generated from
-`@material-symbols/svg-400@0.46.0`.
+`@material-symbols/svg-400@0.48.0`.
 
 - Author: [Google](https://fonts.google.com/icons)
 - License: [Apache License 2.0 (Apache-2.0)](https://www.apache.org/licenses/LICENSE-2.0)
