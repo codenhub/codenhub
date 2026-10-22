@@ -1,6 +1,7 @@
 # Weekly update pull requests, labelled with the repository's own `type:chore`.
 #
-# The groups take minor and patch updates only, so one week is one review per ecosystem. A major update
+# The groups take minor and patch updates only, so one week is one grouped pull request per directory: one for
+# npm, and up to two for actions, because Dependabot groups each listed directory on its own. A major update
 # arrives as a pull request of its own, because it is a decision (it may need code changes) rather than
 # upkeep, and a group that mixes one in cannot be merged until the major is dealt with. `docs/ci.md`,
 # "Pinning third-party actions", records why the actions are updated this way.
