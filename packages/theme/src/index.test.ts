@@ -1010,6 +1010,23 @@ describe("Theme CSS tokens support", () => {
     expect(document.documentElement.style.getPropertyValue("--color-primary")).toBe("#000000");
   });
 
+  it("should keep token values from closing the inline script element", () => {
+    const tokenSchema = { font: "--font-body" };
+    const font = "</script><script>alert(1)</script><!--\u2028a\u2029b";
+    const script = getPrePaintScript({
+      themes: [{ name: "light", colorScheme: "light", tokens: { font } }],
+      defaultTheme: "light",
+      systemTheme: { light: "light", dark: "light" },
+      tokenSchema,
+    });
+
+    expect(script).not.toMatch(/<\/script|<!--|\u2028|\u2029/i);
+
+    new Function(script)();
+
+    expect(document.documentElement.style.getPropertyValue("--font-body")).toBe(font);
+  });
+
   it("should respect skipComputed option in get()", () => {
     const tokenSchema = { primary: "--color-primary" };
     const theme = createTheme({ tokenSchema }).init();
