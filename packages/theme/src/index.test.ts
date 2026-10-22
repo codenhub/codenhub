@@ -1004,6 +1004,7 @@ describe("Theme CSS tokens support", () => {
     expect(() => getPrePaintScript({ themes: [LIGHT_THEME, { name: "light", colorScheme: "dark" }] })).toThrow(
       "Duplicate theme name: light.",
     );
+    expect(() => getPrePaintScript({ themes: undefined })).toThrow("Theme options.themes must be an array.");
   });
 
   it("should generate pre-paint script with custom shouldApplyClass resolver and tokenSchema static variables", () => {
