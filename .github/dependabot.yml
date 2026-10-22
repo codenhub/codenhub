@@ -23,6 +23,12 @@ updates:
     schedule:
       interval: weekly
     labels: ["type:chore"]
+    # TypeScript 7 drops the JavaScript compiler API that typedoc, `@astrojs/check`, and `packages/tools`'s
+    # reference generator call, and both tools declare `typescript` peers up to 6. Remove this once they
+    # support 7.
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
     groups:
       npm:
         patterns: ["*"]
