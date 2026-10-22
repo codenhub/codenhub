@@ -1,5 +1,12 @@
 import { expect, test, type Page } from "./fixtures";
-import { expectSameColor, flattenColor, getColorDistance, isTransparent, readSrgb } from "./test-utils";
+import {
+  drawsCornerShape,
+  expectSameColor,
+  flattenColor,
+  getColorDistance,
+  isTransparent,
+  readSrgb,
+} from "./test-utils";
 
 /* An aesthetic is a cascading class the playground puts on the preview root, so
    these read the ordinary component fixtures under a chosen aesthetic rather
@@ -1011,8 +1018,10 @@ test.describe("aesthetics", () => {
         expect(read.nestedBackdrop, "and keeps its own blur").toContain("blur(14px)");
       });
 
-      test("changes only the corners where glass is not in scope", async ({ page, browserName }) => {
+      test("changes only the corners where glass is not in scope", async ({ page }) => {
         await page.goto(SURFACES_URL);
+
+        const shapes = await drawsCornerShape(page);
 
         const read = await page.getByTestId("preview-root").evaluate((root) => {
           const region = document.createElement("div");
@@ -1046,7 +1055,8 @@ test.describe("aesthetics", () => {
         expect(read.liquid.line, "no hairline on the surface").toBe(read.plain.line);
         expect(read.liquid.fieldLine, "a field keeps its line").toBe(read.plain.fieldLine);
         expect(read.liquid.layer, "no layers without glass").toBe("none");
-        expect(read.liquid.shape, "standalone liquid corners").toBe(browserName === "chromium" ? "squircle" : "");
+        /* `corner-shape` computes to its `superellipse()` form (CSS Borders 4), so `squircle` reads back as 2. */
+        expect(read.liquid.shape, "standalone liquid corners").toBe(shapes ? "superellipse(2)" : "");
       });
 
       test("drops the blur and the lens under reduced transparency", async ({ page, browserName }) => {
@@ -1778,19 +1788,20 @@ test.describe("aesthetics", () => {
 
     const isFull = (radius: string) => Number.parseFloat(radius) > 1000;
 
-    /* Only Chromium draws `corner-shape` today, so the engine split is the
-       contract rather than a skip. Where the bevel is drawn: controls cut top-left
+    /* Not every engine draws `corner-shape`, so the split is the contract
+       rather than a skip. Where the bevel is drawn: controls cut top-left
        and bottom-right, surfaces the opposite diagonal, anything fully round
        cuts to points, and chips square -- which is what tells the checkbox from
        the diamond radio. Where it is not: cut corners square, and what is fully
-       round stays round, because a square radio is a checkbox. */
+       round stays round, because a square radio is a checkbox. `corner-shape`
+       computes to its `superellipse()` form (CSS Borders 4): `bevel` reads back
+       as `superellipse(0)` and `round` as `superellipse(1)`. */
     test("cuts controls and surfaces on opposite diagonals, points the pills, and squares the chips", async ({
       page,
-      browserName,
     }) => {
       await page.goto(withAesthetic(SURFACES_URL, "cyber"));
 
-      const bevels = browserName === "chromium";
+      const bevels = await drawsCornerShape(page);
       const controls = await readCorners(page, CONTROLS, "", "cyber");
       const surfaces = await readCorners(page, SURFACES, "", "cyber");
       const pills = await readCorners(page, PILLS, "", "cyber");
@@ -1800,20 +1811,20 @@ test.describe("aesthetics", () => {
         expect(corner.topLeft, `${corner.name} top-left`).toBe(bevels ? "10px" : "0px");
         expect(corner.topRight, `${corner.name} top-right`).toBe("0px");
         if (bevels) {
-          expect(corner.shape, `${corner.name} shape`).toBe("bevel");
+          expect(corner.shape, `${corner.name} shape`).toBe("superellipse(0)");
         }
       }
       for (const corner of surfaces) {
         expect(corner.topLeft, `${corner.name} top-left`).toBe("0px");
         expect(corner.topRight, `${corner.name} top-right`).toBe(bevels ? "10px" : "0px");
         if (bevels) {
-          expect(corner.shape, `${corner.name} shape`).toBe("bevel");
+          expect(corner.shape, `${corner.name} shape`).toBe("superellipse(0)");
         }
       }
       for (const corner of pills) {
         expect(isFull(corner.topLeft), `${corner.name} is fully round: ${corner.topLeft}`).toBe(true);
         if (bevels) {
-          expect(corner.shape, `${corner.name} cuts to points`).toBe("bevel");
+          expect(corner.shape, `${corner.name} cuts to points`).toBe("superellipse(0)");
         }
       }
       for (const corner of chips) {
@@ -1918,10 +1929,10 @@ test.describe("aesthetics", () => {
       ).toBeLessThan(2);
     });
 
-    test("takes its cut, shapes, glow, and ink from knobs an ancestor can reach", async ({ page, browserName }) => {
+    test("takes its cut, shapes, glow, and ink from knobs an ancestor can reach", async ({ page }) => {
       await page.goto(withAesthetic(SURFACES_URL, "cyber"));
 
-      const bevels = browserName === "chromium";
+      const bevels = await drawsCornerShape(page);
       /* The cut sizes the default pair without restating it. */
       const [scaledButton, scaledCard] = await readCorners(
         page,
@@ -1974,7 +1985,7 @@ test.describe("aesthetics", () => {
        token separately and one it leaves undeclared is inherited -- a glass badge
        inside a cyber region would otherwise come out a pointed hexagon, and a
        glass checkbox square. */
-    test("keeps its corners out of an aesthetic nested inside it", async ({ page, browserName }) => {
+    test("keeps its corners out of an aesthetic nested inside it", async ({ page }) => {
       await page.goto(withAesthetic(SURFACES_URL, "cyber"));
 
       const [card, badge, checkbox] = await readCorners(
@@ -1987,12 +1998,12 @@ test.describe("aesthetics", () => {
       expect(card!.topLeft, "glass card corner").toBe("16px");
       expect(badge!.topLeft, "glass badge corner").toBe("12px");
       expect(checkbox!.topLeft, "glass checkbox corner").toBe("4px");
-      if (browserName === "chromium") {
+      if (await drawsCornerShape(page)) {
         for (const aesthetic of ["glass", "neobrutalism", "pixel", "chunky-tile"]) {
           // oxlint-disable-next-line no-await-in-loop -- four regions, measured in turn on one page.
           const [nested] = await readCorners(page, [{ className: "card" }], "", aesthetic);
 
-          expect(nested!.shape, aesthetic).toBe("round");
+          expect(nested!.shape, aesthetic).toBe("superellipse(1)");
         }
       }
     });
