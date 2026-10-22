@@ -349,6 +349,15 @@ describe("addLoaderPlugin", () => {
     return typeof result === "string" ? result : "";
   }
 
+  it("should insert color options literally, without expanding replacement patterns", async () => {
+    const outputHtml = await transform("<html><head></head><body></body></html>", {
+      backgroundColor: "$&",
+      color: "$'$1$$",
+    });
+    expect(outputHtml).toContain("#page-loader { background: $&; }");
+    expect(outputHtml).toContain("#page-loader .spinner { color: $'$1$$; }");
+  });
+
   it.each([
     ["script start tags that never close", "<script".repeat(50_000)],
     ["script elements that never end", "<script>".repeat(50_000)],

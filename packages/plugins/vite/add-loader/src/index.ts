@@ -209,7 +209,11 @@ export function addLoaderPlugin(options?: AddLoaderPluginOptions): Plugin {
           return html;
         }
 
-        const withStyle = cleanedHtml.replace(/(<\/head>)/i, `<style${nonceAttr}>${styledCss}</style>\n$1`);
+        // A function replacer, so "$" in an option value is not read as a replacement pattern.
+        const withStyle = cleanedHtml.replace(
+          /<\/head>/i,
+          (headEnd) => `<style${nonceAttr}>${styledCss}</style>\n${headEnd}`,
+        );
         let loaderBodyWithNonce = LOADER_BODY.replace("__TIMEOUT_VALUE__", String(timeoutValue));
         // Plain string matches: these tags come from LOADER_BODY above, never from the page's HTML.
         if (nonceAttr) {
