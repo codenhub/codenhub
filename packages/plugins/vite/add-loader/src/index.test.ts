@@ -372,8 +372,9 @@ describe("addLoaderPlugin", () => {
   });
 
   it("should keep a literal block after an unclosed one of another kind", async () => {
+    // The "<body>" in the script comes before the real one, so a script left unprotected gets the loader.
     const outputHtml = await transform(
-      "<html><head></head><body><style><script>const s = '<body>';</script></body></html>",
+      "<html><head><style><script>const s = '<body>';</script></head><body></body></html>",
     );
     expect(outputHtml).toContain('<body>\n  <div id="page-loader"');
     expect(outputHtml).toContain("<script>const s = '<body>';</script>");
