@@ -423,4 +423,27 @@ describe("deferCssPlugin", () => {
       `<link rel="preload"href="/a.css" as="style" onload="this.onload=null;this.rel='stylesheet'">`,
     );
   });
+
+  it.each([
+    ["script start tags that never close", "<script".repeat(50_000)],
+    ["script elements that never end", "<script>".repeat(50_000)],
+    ["script end tags that never close", `<script>${"</script ".repeat(50_000)}`],
+    ["comments that never end", "<!--".repeat(50_000)],
+  ])("should return in linear time with %s", async (_, tail) => {
+    // Retrying the literal-block match at every candidate scanned to the end each time: 50k took 6.3 s before.
+    const start = performance.now();
+    const outputHtml = await transform(`<html><head><link rel="stylesheet" href="/a.css"></head><body>${tail}`);
+    expect(performance.now() - start).toBeLessThan(1_000);
+    expect(outputHtml).toContain('<link rel="preload" href="/a.css"');
+  });
+
+  it("should keep a literal block after an unclosed one of another kind", async () => {
+    // A script left unprotected would have the stylesheet link in its string deferred too.
+    const script = `<script>const s = '<link rel="stylesheet" href="/x.css">';</script>`;
+    const outputHtml = await transform(
+      `<html><head><style>${script}<link rel="stylesheet" href="/a.css"></head><body></body></html>`,
+    );
+    expect(outputHtml).toContain(script);
+    expect(outputHtml).toContain('<link rel="preload" href="/a.css"');
+  });
 });
