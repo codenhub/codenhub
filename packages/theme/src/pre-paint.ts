@@ -1,6 +1,7 @@
 import { getThemeClass } from "./class-resolver";
 import { DEFAULT_OPTIONS } from "./constants";
-import type { ThemeOptions, ThemeDefinition } from "./types";
+import type { ThemeOptions, ResolvedThemeOptions } from "./types";
+import { assertThemeConfig } from "./validation";
 
 /**
  * Generates a synchronous inline IIFE script string to inject into document `<head>`.
@@ -8,6 +9,7 @@ import type { ThemeOptions, ThemeDefinition } from "./types";
  *
  * @param options - Configuration options used to determine storage keys, attributes, default/system themes, custom class resolvers, and token schemas.
  * @returns Minified JavaScript script string.
+ * @throws {Error} When the options are invalid, under the same rules and with the same messages as `createTheme`, such as a `defaultTheme` or `systemTheme` naming a theme that is not configured.
  */
 export function getPrePaintScript<TSchema extends Record<string, string> = Record<string, string>>(
   options: ThemeOptions<TSchema> = {},
@@ -16,9 +18,20 @@ export function getPrePaintScript<TSchema extends Record<string, string> = Recor
     ...DEFAULT_OPTIONS,
     ...options,
     systemTheme: { ...DEFAULT_OPTIONS.systemTheme, ...options.systemTheme },
-  };
+  } as ResolvedThemeOptions<TSchema>;
+  assertThemeConfig(opts);
+  return buildPrePaintScript(opts);
+}
 
-  const themes = opts.themes || DEFAULT_OPTIONS.themes;
+/**
+ * Builds the pre-paint script from options that `assertThemeConfig` has already accepted.
+ *
+ * @internal
+ */
+export function buildPrePaintScript<TSchema extends Record<string, string>>(
+  opts: ResolvedThemeOptions<TSchema>,
+): string {
+  const themes = opts.themes;
   const themeMap: Record<
     string,
     {
@@ -29,7 +42,7 @@ export function getPrePaintScript<TSchema extends Record<string, string> = Recor
   > = {};
 
   for (const t of themes) {
-    const className = getThemeClass(t as unknown as ThemeDefinition<TSchema>, opts.shouldApplyClass);
+    const className = getThemeClass(t, opts.shouldApplyClass);
     let vars: Record<string, string> | undefined;
 
     if (opts.tokenSchema && t.tokens) {

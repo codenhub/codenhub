@@ -1,7 +1,7 @@
 import { getThemeClass } from "./class-resolver";
 import { DEFAULT_OPTIONS } from "./constants";
 import { applyTheme, readComputedTokens, emitThemeEvent, removeAppliedTheme } from "./dom";
-import { getPrePaintScript } from "./pre-paint";
+import { buildPrePaintScript } from "./pre-paint";
 import { readStorage, writeStorage, removeStorage } from "./storage";
 import { readSystemTheme, registerSystemListener, registerStorageListener } from "./system";
 import type {
@@ -169,7 +169,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
   }
 
   getPrePaintScript(): string {
-    return getPrePaintScript(this.#options);
+    return buildPrePaintScript(this.#options);
   }
 
   destroy(options?: { revertDom?: boolean }): void {
