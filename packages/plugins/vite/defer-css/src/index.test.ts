@@ -369,4 +369,58 @@ describe("deferCssPlugin", () => {
       `<link rel="preload" href="a.css" title="no onload=handler" as="style" onload="this.onload=null;this.rel='stylesheet'">`,
     );
   });
+
+  async function transform(inputHtml: string): Promise<string | undefined> {
+    const transformIndexHtml = deferCssPlugin().transformIndexHtml;
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object" || !("handler" in transformIndexHtml)) {
+      throw new Error("Expected transformIndexHtml to have handler");
+    }
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+    const result = await handler.call(
+      { format: "html" } as unknown as ThisParameterType<IndexHtmlTransformHook>,
+      inputHtml,
+      { path: "/index.html", filename: "index.html" } as unknown as IndexHtmlTransformContext,
+    );
+    return getHtml(result);
+  }
+
+  it("should rewrite rel and keep data-rel when both say stylesheet", async () => {
+    const outputHtml = await transform(
+      `<html><head><link data-rel="stylesheet" rel="stylesheet" href="/a.css"></head><body></body></html>`,
+    );
+    expect(outputHtml).toContain(
+      `<link data-rel="stylesheet" rel="preload" href="/a.css" as="style" onload="this.onload=null;this.rel='stylesheet'">`,
+    );
+  });
+
+  it("should not defer a link whose stylesheet value is only in data-rel", async () => {
+    const inputHtml = `<html><head><link data-rel="stylesheet" rel="icon" href="/a.png"></head><body></body></html>`;
+    expect(await transform(inputHtml)).toBe(inputHtml);
+  });
+
+  it("should not defer a stylesheet link whose href is only in data-href", async () => {
+    const inputHtml = `<html><head><link rel="stylesheet" data-href="/a.css"></head><body></body></html>`;
+    expect(await transform(inputHtml)).toBe(inputHtml);
+  });
+
+  it("should not defer a link whose rel attribute value only mentions rel=stylesheet", async () => {
+    const inputHtml = `<html><head><link title="rel=stylesheet" rel="icon" href="/a.png"></head><body></body></html>`;
+    expect(await transform(inputHtml)).toBe(inputHtml);
+  });
+
+  it.each([
+    ["the first rel is not a stylesheet", `<link rel="icon" rel="stylesheet" href="/a.css">`],
+    ["stylesheet is only part of a rel token", `<link rel="x-stylesheet" href="/a.css">`],
+    ["stylesheet is separated by a no-break space", `<link rel="stylesheet icon" href="/a.css">`],
+  ])("should not defer a link when %s", async (_, link) => {
+    const inputHtml = `<html><head>${link}</head><body></body></html>`;
+    expect(await transform(inputHtml)).toBe(inputHtml);
+  });
+
+  it("should defer a link whose attributes follow a quoted value without whitespace", async () => {
+    const outputHtml = await transform(`<html><head><link rel="stylesheet"href="/a.css"></head><body></body></html>`);
+    expect(outputHtml).toContain(
+      `<link rel="preload"href="/a.css" as="style" onload="this.onload=null;this.rel='stylesheet'">`,
+    );
+  });
 });
