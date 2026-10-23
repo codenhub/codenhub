@@ -28,7 +28,7 @@ Creates a theme preference manager. Nothing touches the DOM, storage, or listene
 
 **Returns** — A [Theme](#theme) whose methods are bound to it.
 
-**Throws** — When the options are invalid: a non-object `themes`, `systemTheme`, or `tokenSchema`, an empty theme name or, while `className` is `true`, a class-unsafe one, an invalid `colorScheme`, a `defaultTheme`, `systemTheme`, or `pairedTheme` naming an unconfigured theme, theme tokens outside `tokenSchema`, a `tokenSchema` value not starting with `--`, a `className` that is neither a boolean nor a function, a non-boolean `darkClass`, or an empty or invalid `attribute` or `storageKey`.
+**Throws** — When the options are invalid: a `themes`, `systemTheme`, `tokenSchema`, or theme `tokens` value that is set but is not a plain, non-array object, an empty theme name or, while `className` is `true`, a class-unsafe one, an invalid `colorScheme`, a `defaultTheme`, `systemTheme`, or `pairedTheme` naming an unconfigured theme, theme tokens outside `tokenSchema`, a `tokenSchema` value not starting with `--`, a `className` that is neither a boolean nor a function, a non-boolean `darkClass`, or an empty or invalid `attribute` or `storageKey`. An option set to `undefined` is treated as omitted.
 
 **Example**
 
