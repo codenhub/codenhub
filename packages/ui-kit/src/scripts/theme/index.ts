@@ -1,9 +1,8 @@
 import { createTheme } from "@codenhub/theme";
 
-const themeManager = createTheme({ isTailwindCss: true });
+export { THEME_CHANGE_EVENT } from "@codenhub/theme";
 
-/** Window event name emitted after the shared theme manager applies a theme. */
-export const THEME_CHANGE_EVENT = "themechange";
+const themeManager = createTheme({ isTailwindCss: true });
 
 const THEMES = ["light", "dark"] as const;
 /** Theme names supported by the UI Kit theme singleton. */
