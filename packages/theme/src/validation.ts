@@ -18,6 +18,11 @@ export interface UncheckedThemeOptions {
 
 const isNonEmptyString = (value: unknown): value is string => typeof value === "string" && value.trim().length > 0;
 
+// A custom property a stylesheet can name without escapes: "--" and then ASCII letters, digits, "-", "_", or any
+// non-ASCII character. Browsers do not apply "--" alone, and a name with a space or ";" is reachable only as an
+// escaped `var(--a\ b)`.
+const CUSTOM_PROPERTY_NAME = /^--(?:[\w-]|\P{ASCII})+$/u;
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -47,8 +52,15 @@ export const assertThemeConfig = (options: UncheckedThemeOptions): void => {
     throw new Error("Theme attribute option must be a non-empty string.");
   }
 
-  if (/[\s"'/>=]/.test(options.attribute)) {
+  if (/[\s"'/>=\0]/.test(options.attribute)) {
     throw new Error("Theme attribute option must be a valid HTML attribute name.");
+  }
+
+  // Setting either to the theme name would replace every class or inline style the page put on the root element.
+  // HTML lowercases attribute names, so "CLASS" is the same attribute.
+  const attributeName = options.attribute.toLowerCase();
+  if (attributeName === "class" || attributeName === "style") {
+    throw new Error(`Theme attribute option cannot be "${attributeName}"; use the className option to apply a class.`);
   }
 
   if (!isNonEmptyString(options.storageKey)) {
@@ -73,9 +85,9 @@ export const assertThemeConfig = (options: UncheckedThemeOptions): void => {
       throw new Error("Theme tokenSchema option must be an object.");
     }
     for (const [key, value] of Object.entries(tokenSchema)) {
-      if (typeof value !== "string" || !value.startsWith("--")) {
+      if (typeof value !== "string" || !CUSTOM_PROPERTY_NAME.test(value)) {
         throw new Error(
-          `Token schema key "${key}" must map to a CSS custom property starting with "--". Received: "${String(value)}".`,
+          `Token schema key "${key}" must map to a CSS custom property name, such as "--color-primary". Received: "${String(value)}".`,
         );
       }
     }

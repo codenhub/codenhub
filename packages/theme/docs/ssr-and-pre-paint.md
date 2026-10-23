@@ -28,6 +28,13 @@ const script = createTheme(themeOptions).getPrePaintScript();
 
 The script handles storage and `matchMedia` failures the same way `init()` does: blocked storage still applies the system theme, and a missing `matchMedia` applies `defaultTheme`. It removes the classes of other configured themes, so a class rendered by the server is replaced rather than joined. It serializes only **static** tokens from each theme's `tokens`; runtime overrides from `setTokens()` exist only in the running page and cannot be part of a script that runs before any application code.
 
+### Content Security Policy
+
+A `script-src` policy without `'unsafe-inline'` blocks the inline script, and the flash returns with only a console error to show for it. Allow it in either of two ways:
+
+- **Nonce:** render the element as `<script nonce="…">` with the per-request nonce your policy already names.
+- **Hash:** add `'sha256-…'` of the script text to `script-src`. The script is the same for the same options, so the hash can be computed once at build time, such as with `createHash("sha256").update(script).digest("base64")` from `node:crypto`. Inline the string byte for byte: any change, including whitespace around it inside the element, changes the hash.
+
 ## Server-side rendering
 
 Without browser APIs, `Theme` methods skip storage reads/writes, DOM updates, and listener registration; `theme.system` falls back to `defaultTheme`. Every member remains safe to use during SSR — nothing throws for a missing `window`, `document`, or `localStorage` — but the package cannot produce server-rendered HTML attributes on its own. To avoid a flash on a server-rendered page, either:
@@ -43,6 +50,6 @@ Set `darkClass: true` to add a `dark` class to `document.documentElement` while 
 
 ## Classes and cleanup
 
-`className` controls the class applied to `document.documentElement` alongside the attribute: `true` (the default) applies `theme-<name>`, `false` applies no class, and a `ThemeClassResolver` function receives the theme with its static tokens and returns one custom class token. A resolver runs once per theme, on first use rather than at construction, and the operation that triggered it throws if it returns an empty or whitespace-containing string.
+`className` controls the class applied to `document.documentElement` alongside the attribute: `true` (the default) applies `theme-<name>`, `false` applies no class, and a `ThemeClassResolver` function receives the theme with its static tokens and returns one custom class token. Code moving from a library configured with `attribute: "class"` wants `className: (theme) => theme.name` instead, which works while every theme name is a single class token without whitespace: `attribute` cannot be `class` or `style`, in any letter case, because writing the theme name there would replace every class or inline style the page put on `<html>`. A resolver runs once per theme, on first use rather than at construction, and the operation that triggered it throws if it returns an empty or whitespace-containing string.
 
 `destroy(options?)` removes the media-query and storage listeners and clears in-process subscribers and runtime tokens, leaving the instance safe to `init()` again. By default it does **not** touch the DOM or stored preference. Pass `{ revertDom: true }` to also remove the configured attribute, classes, `color-scheme`, and CSS custom properties from `document.documentElement` — useful when unmounting a scoped theme manager that should leave no trace, such as in a component test or a preview pane.

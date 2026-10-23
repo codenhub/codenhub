@@ -78,12 +78,14 @@ document.querySelector("#theme-toggle")?.addEventListener("click", theme.toggle)
 
 ### Reading state
 
-| Member             | Value                                                                               |
-| ------------------ | ----------------------------------------------------------------------------------- |
-| `theme.name`       | Active theme name.                                                                  |
-| `theme.get()`      | Active theme — `name`, `colorScheme`, `tokens`, `pairedTheme` — as a frozen object. |
-| `theme.preference` | Explicit stored preference, or `null` while the theme follows the OS.               |
-| `theme.system`     | Theme the OS preference maps to right now.                                          |
+| Member             | Value                                                                                     |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| `theme.name`       | Active theme name.                                                                        |
+| `theme.get()`      | Active theme — `name`, `colorScheme`, `tokens`, `pairedTheme` — as a frozen object.       |
+| `theme.preference` | Explicit preference stored in `localStorage` when it names a configured theme, or `null`. |
+| `theme.system`     | Theme the OS preference maps to right now.                                                |
+
+`theme.preference` reflects what storage holds, so it is also `null` while storage cannot be read. When storing a choice made with `set()` or `toggle()` fails, the choice still holds over OS changes, while `preference` keeps reporting storage: `null` when reading fails too, or the previously stored theme when only writing fails, as with a full quota; see [Persistence](docs/tokens-and-persistence.md#persistence).
 
 `get()` returns the same object until the next change, so it works directly as a store snapshot. In React:
 
@@ -118,7 +120,7 @@ theme.set("dim");
 
 `themes` is keyed by theme name and replaces the built-in list entirely — include `light` and `dark`, or set `defaultTheme` and `systemTheme` to names you do define. Theme names are inferred from its keys, so `defaultTheme`, `systemTheme`, `pairedTheme`, and `set()` accept only configured names at compile time. The types do not make `defaultTheme` and `systemTheme` required when `themes` lacks `light` or `dark`; `createTheme()` throws instead, naming the missing theme. A conditional parameter type would catch it at compile time, but it was rejected because it breaks generic wrappers that forward `ThemeOptions<N>` to `createTheme()`. `tokenSchema` maps the typed token names used in `tokens` to the CSS custom property each one writes to `document.documentElement`. See [Tokens, persistence, and cross-tab sync](docs/tokens-and-persistence.md) for how token values are resolved and stored, and [SSR, pre-paint, and Tailwind](docs/ssr-and-pre-paint.md) for flash-of-unstyled-content prevention, `darkClass`, and `className`.
 
-Construction validates the options and throws on invalid configuration, such as a `themes` or `systemTheme` value that is not a plain object, an empty theme name, a `defaultTheme`, `systemTheme`, or `pairedTheme` name that is not in `themes`, an invalid `colorScheme`, theme tokens outside `tokenSchema`, a `darkClass` that is not a boolean, or, while `className` is `true`, a theme name that cannot form the default `theme-<name>` class. The [API reference](docs/reference/index.md) lists every rule.
+Construction validates the options and throws on invalid configuration, such as a `themes` or `systemTheme` value that is not a plain object, an empty theme name, a `defaultTheme`, `systemTheme`, or `pairedTheme` name that is not in `themes`, an invalid `colorScheme`, theme tokens outside `tokenSchema`, a `darkClass` that is not a boolean, an `attribute` of `class` or `style`, or, while `className` is `true`, a theme name that cannot form the default `theme-<name>` class. The [API reference](docs/reference/index.md) lists every rule.
 
 An option set to `undefined` uses its default, exactly as an omitted one does. The option types accept `undefined`, so a wrapper that forwards an unset option, such as `storageKey: props.storageKey`, gets the default instead of a construction error. Rejecting `undefined` was the behavior before 0.2.0; it was dropped because it failed at runtime on code the types accept.
 
@@ -162,6 +164,13 @@ const script = createTheme(themeOptions).getPrePaintScript();
 
 The script handles storage and `matchMedia` failures the same way `init()` does: blocked storage still applies the system theme, and a missing `matchMedia` applies `defaultTheme`. It removes the classes of other configured themes, so a class rendered by the server is replaced rather than joined. It serializes only **static** tokens from each theme's `tokens`; runtime overrides from `setTokens()` exist only in the running page and cannot be part of a script that runs before any application code.
 
+### Content Security Policy
+
+A `script-src` policy without `'unsafe-inline'` blocks the inline script, and the flash returns with only a console error to show for it. Allow it in either of two ways:
+
+- **Nonce:** render the element as `<script nonce="…">` with the per-request nonce your policy already names.
+- **Hash:** add `'sha256-…'` of the script text to `script-src`. The script is the same for the same options, so the hash can be computed once at build time, such as with `createHash("sha256").update(script).digest("base64")` from `node:crypto`. Inline the string byte for byte: any change, including whitespace around it inside the element, changes the hash.
+
 ## Server-side rendering
 
 Without browser APIs, `Theme` methods skip storage reads/writes, DOM updates, and listener registration; `theme.system` falls back to `defaultTheme`. Every member remains safe to use during SSR — nothing throws for a missing `window`, `document`, or `localStorage` — but the package cannot produce server-rendered HTML attributes on its own. To avoid a flash on a server-rendered page, either:
@@ -177,7 +186,7 @@ Set `darkClass: true` to add a `dark` class to `document.documentElement` while 
 
 ## Classes and cleanup
 
-`className` controls the class applied to `document.documentElement` alongside the attribute: `true` (the default) applies `theme-<name>`, `false` applies no class, and a `ThemeClassResolver` function receives the theme with its static tokens and returns one custom class token. A resolver runs once per theme, on first use rather than at construction, and the operation that triggered it throws if it returns an empty or whitespace-containing string.
+`className` controls the class applied to `document.documentElement` alongside the attribute: `true` (the default) applies `theme-<name>`, `false` applies no class, and a `ThemeClassResolver` function receives the theme with its static tokens and returns one custom class token. Code moving from a library configured with `attribute: "class"` wants `className: (theme) => theme.name` instead, which works while every theme name is a single class token without whitespace: `attribute` cannot be `class` or `style`, in any letter case, because writing the theme name there would replace every class or inline style the page put on `<html>`. A resolver runs once per theme, on first use rather than at construction, and the operation that triggered it throws if it returns an empty or whitespace-containing string.
 
 `destroy(options?)` removes the media-query and storage listeners and clears in-process subscribers and runtime tokens, leaving the instance safe to `init()` again. By default it does **not** touch the DOM or stored preference. Pass `{ revertDom: true }` to also remove the configured attribute, classes, `color-scheme`, and CSS custom properties from `document.documentElement` — useful when unmounting a scoped theme manager that should leave no trace, such as in a component test or a preview pane.
 
@@ -212,6 +221,10 @@ theme.readTokens(); // { accent: "#00c853", surface: "<computed --color-surface>
 Reading computed values can force a synchronous layout, so prefer `get().tokens` when tokens defined only in CSS are not needed. `readTokens()` skips the read when every token is known in JS.
 
 Token values are strings. A finite number passed from JavaScript, such as a value read from a JSON config, is written as its string, so `get().tokens` reports `"4"` for `4`. An `undefined` value counts as omitted, so `setTokens({ primary: undefined })` leaves the theme's static `primary` in place. Any other value, including `NaN` and `Infinity`, throws.
+
+Token values are not parsed as CSS. When the browser rejects a value as a custom property value, such as `"red !important"` or `"red; color: blue"`, it is not applied and the property keeps whatever value it had, such as the previous theme's, while `get().tokens` still reports the rejected value, since `get()` never reads the DOM. Check values that come from user input, such as a color picker, before passing them to `setTokens()`.
+
+Each `tokenSchema` value must be a custom property a stylesheet can name without escapes: `--` followed by ASCII letters, digits, `-`, `_`, or non-ASCII characters. Anything else throws from `createTheme()`, including `"--"` alone, which browsers do not apply, and a name with a space or `;`.
 
 Runtime overrides apply to every theme and persist across theme changes until `setTokens()` replaces them — pass `{}` to remove them. They are not stored, so they last until the page unloads or `destroy()` runs, and they are not part of the pre-paint script. Passing a token key that is not in `tokenSchema` throws.
 
@@ -279,6 +292,8 @@ The event does not identify which manager sent it, so use `subscribe()` when a p
 - A theme or runtime token value that is not a string, a finite number, or `undefined` throws; a number is written as its string, which `get().tokens` now reports too.
 - A runtime token set to `undefined` counts as omitted, so `setTokens({ primary: undefined })` keeps the theme's static `primary` instead of removing it.
 - `createTheme()` throws `Theme options must be an object.` for options such as `null`, instead of an unrelated `TypeError`.
+- `createTheme()` throws for an `attribute` containing NUL, which `setAttribute()` rejects, and for an `attribute` of `class` or `style` in any letter case, which replaced every class or inline style the page put on `<html>` with the theme name. To apply the theme name as a class, use `className: (theme) => theme.name`.
+- A `tokenSchema` value must be a custom property name a stylesheet can use without escapes, such as `--color-primary`. `"--"` alone, which browsers ignored, and names with a space or `;` now throw from `createTheme()`.
 
 ## Removed
 

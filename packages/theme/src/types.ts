@@ -149,7 +149,8 @@ export interface ThemeOptions<
    */
   storageKey?: string;
   /**
-   * Attribute set on `document.documentElement` to the active theme name.
+   * Attribute set on `document.documentElement` to the active theme name. It cannot be `class` or `style`, in any letter case, which
+   * would replace the page's own classes or inline styles; use `className` to apply a class.
    *
    * @defaultValue `"data-theme"`
    */
@@ -168,7 +169,11 @@ export interface ThemeOptions<
    * @defaultValue `true`
    */
   className?: boolean | ThemeClassResolver<NoInfer<TName>, NoInfer<TSchema>>;
-  /** Maps token names to the CSS custom properties they are written to, such as `{ primary: "--color-primary" }`. */
+  /**
+   * Maps token names to the CSS custom properties they are written to, such as `{ primary: "--color-primary" }`. Each
+   * property is `--` followed by ASCII letters, digits, `-`, `_`, or non-ASCII characters, so a stylesheet can name it
+   * without escapes.
+   */
   tokenSchema?: TSchema;
 }
 

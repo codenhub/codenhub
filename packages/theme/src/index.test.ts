@@ -184,8 +184,16 @@ describe("Theme config", () => {
   });
 
   it("should reject attribute option containing invalid characters", () => {
-    for (const attribute of ["data theme", 'data-theme"', "data-theme>", "data-</script>"]) {
+    for (const attribute of ["data theme", 'data-theme"', "data-theme>", "data-</script>", "data\u0000theme"]) {
       expect(() => createTheme({ attribute })).toThrow("Theme attribute option must be a valid HTML attribute name.");
+    }
+  });
+
+  it("should reject the class and style attributes, which would replace the page's own values", () => {
+    for (const attribute of ["class", "style", "CLASS", "Style"]) {
+      expect(() => createTheme({ attribute })).toThrow(
+        `Theme attribute option cannot be "${attribute.toLowerCase()}"; use the className option to apply a class.`,
+      );
     }
   });
 
@@ -238,10 +246,18 @@ describe("Theme config", () => {
     );
   });
 
-  it("should reject tokenSchema values that do not start with --", () => {
-    expect(() => createTheme({ tokenSchema: { primary: "color-primary" } })).toThrow(
-      'Token schema key "primary" must map to a CSS custom property starting with "--". Received: "color-primary".',
-    );
+  it("should reject tokenSchema values that are not CSS custom property names", () => {
+    for (const value of ["color-primary", "--", "--color primary", "--color;primary", "--color\\ primary", "-color"]) {
+      expect(() => createTheme({ tokenSchema: { primary: value } })).toThrow(
+        `Token schema key "primary" must map to a CSS custom property name, such as "--color-primary". Received: "${value}".`,
+      );
+    }
+  });
+
+  it("should accept tokenSchema names made of letters, digits, hyphens, underscores, and non-ASCII characters", () => {
+    for (const value of ["--color-primary", "--_x", "--1", "---", "--couleur-élevée", "--🎨"]) {
+      expect(() => createTheme({ tokenSchema: { primary: value } })).not.toThrow();
+    }
   });
 
   it("should reject theme static tokens not present in tokenSchema", () => {
