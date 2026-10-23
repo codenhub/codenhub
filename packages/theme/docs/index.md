@@ -28,14 +28,14 @@ document.querySelector("#theme-toggle")?.addEventListener("click", theme.toggle)
 
 ### Reading state
 
-| Member             | Value                                                                               |
-| ------------------ | ----------------------------------------------------------------------------------- |
-| `theme.name`       | Active theme name.                                                                  |
-| `theme.get()`      | Active theme — `name`, `colorScheme`, `tokens`, `pairedTheme` — as a frozen object. |
-| `theme.preference` | Explicit preference stored in `localStorage`, or `null` when none is stored.        |
-| `theme.system`     | Theme the OS preference maps to right now.                                          |
+| Member             | Value                                                                                     |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| `theme.name`       | Active theme name.                                                                        |
+| `theme.get()`      | Active theme — `name`, `colorScheme`, `tokens`, `pairedTheme` — as a frozen object.       |
+| `theme.preference` | Explicit preference stored in `localStorage` when it names a configured theme, or `null`. |
+| `theme.system`     | Theme the OS preference maps to right now.                                                |
 
-`theme.preference` reflects storage only. When storage is blocked, a choice made with `set()` or `toggle()` still holds over OS changes while `preference` stays `null`; see [Persistence](tokens-and-persistence.md#persistence).
+`theme.preference` reflects storage only, so it is also `null` while storage is unavailable. When storage is blocked, a choice made with `set()` or `toggle()` still holds over OS changes while `preference` stays `null`; see [Persistence](tokens-and-persistence.md#persistence).
 
 `get()` returns the same object until the next change, so it works directly as a store snapshot. In React:
 

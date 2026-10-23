@@ -350,7 +350,7 @@ Configuration for theme definitions, persistence, DOM application, and system pr
 attribute?: string;
 ```
 
-Attribute set on `document.documentElement` to the active theme name. It cannot be `class` or `style`, which would replace the page's own classes or inline styles; use `className` to apply a class.
+Attribute set on `document.documentElement` to the active theme name. It cannot be `class` or `style`, in any letter case, which would replace the page's own classes or inline styles; use `className` to apply a class.
 
 #### className
 

@@ -32,7 +32,7 @@ Reading computed values can force a synchronous layout, so prefer `get().tokens`
 
 Token values are strings. A finite number passed from JavaScript, such as a value read from a JSON config, is written as its string, so `get().tokens` reports `"4"` for `4`. An `undefined` value counts as omitted, so `setTokens({ primary: undefined })` leaves the theme's static `primary` in place. Any other value, including `NaN` and `Infinity`, throws.
 
-Token values are not parsed as CSS. One the browser rejects as a custom property value, such as `"red !important"` or `"red; color: blue"`, is not applied and leaves the property unset, but `get().tokens` still reports it, since `get()` never reads the DOM. Check values that come from user input, such as a color picker's, before passing them to `setTokens()`.
+Token values are not parsed as CSS. When the browser rejects a value as a custom property value, such as `"red !important"` or `"red; color: blue"`, it is not applied and the property keeps whatever value it had, such as the previous theme's, while `get().tokens` still reports the rejected value, since `get()` never reads the DOM. Check values that come from user input, such as a color picker, before passing them to `setTokens()`.
 
 Each `tokenSchema` value must be a custom property a stylesheet can name without escapes: `--` followed by ASCII letters, digits, `-`, `_`, or non-ASCII characters. Anything else throws from `createTheme()`, including `"--"` alone, which browsers do not apply, and a name with a space or `;`.
 
