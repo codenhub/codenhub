@@ -21,7 +21,7 @@ const isNonEmptyString = (value: unknown): value is string => typeof value === "
 // A custom property a stylesheet can name without escapes: "--" and then ASCII letters, digits, "-", "_", or any
 // non-ASCII character. Browsers do not apply "--" alone, and a name with a space or ";" is reachable only as an
 // escaped `var(--a\ b)`.
-const CUSTOM_PROPERTY_NAME = /^--(?:[\w-]|[^\x00-\x7F])+$/;
+const CUSTOM_PROPERTY_NAME = /^--(?:[\w-]|\P{ASCII})+$/u;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
