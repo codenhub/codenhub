@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 
 import { createTheme } from ".";
@@ -8,26 +9,28 @@ describe("Theme SSR / non-browser behavior", () => {
     const theme = createTheme();
 
     expect(() => theme.init()).not.toThrow();
-    expect(theme.get().name).toBe("light");
-    expect(theme.getStored()).toBeNull();
-    expect(theme.getSystem().name).toBe("light");
+    expect(theme.name).toBe("light");
+    expect(theme.preference).toBeNull();
+    expect(theme.system).toBe("light");
     expect(() => theme.set("dark")).not.toThrow();
     expect(theme.toggle().name).toBe("light");
     expect(theme.clearPreference().name).toBe("light");
-    expect(() => theme.destroy()).not.toThrow();
+    expect(() => theme.destroy({ revertDom: true })).not.toThrow();
 
     theme.subscribe(listener);
     theme.set("dark");
-    expect(listener.mock.calls[0]?.[0]?.name).toBe("dark");
-    expect(listener.mock.calls[0]?.[0]?.source).toBe("set");
+    expect(listener.mock.calls[0]?.[0]).toMatchObject({ name: "dark", source: "set" });
   });
 
-  it("should handle dynamic token fallback gracefully under SSR", () => {
-    const tokenSchema = { primary: "--color-primary" };
-    const theme = createTheme({
-      tokenSchema,
-    }).init();
+  it("should return known tokens without computed styles", () => {
+    const theme = createTheme({ tokenSchema: { primary: "--color-primary", bg: "--color-bg" } }).init();
 
-    expect(theme.get().tokens).toEqual({});
+    theme.setTokens({ primary: "blue" });
+
+    expect(theme.readTokens()).toEqual({ primary: "blue" });
+  });
+
+  it("should generate the pre-paint script on the server", () => {
+    expect(createTheme().getPrePaintScript()).toMatch(/^!\(function\(\)\{/);
   });
 });

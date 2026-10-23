@@ -1,7 +1,7 @@
 import type { ThemeDefinition } from "@codenhub/theme";
 
 /** A playground-authored theme: a name, color scheme, and token values keyed by the current schema. */
-export interface StoredTheme extends ThemeDefinition<Record<string, string>> {
+export interface StoredTheme extends ThemeDefinition {
   name: string;
   colorScheme: "light" | "dark";
   tokens: Record<string, string>;

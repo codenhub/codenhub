@@ -6,41 +6,47 @@ title: Tokens, Persistence, and Cross-Tab Sync
 
 ## Token resolution
 
-`tokenSchema` maps typed token names to the CSS custom property each one writes, such as `{ primary: "--color-primary" }`. Once configured, `get()` returns the active `ThemeDefinition` with every schema key resolved from three sources, in this priority order (last wins):
+`tokenSchema` maps typed token names to the CSS custom property each one writes, such as `{ primary: "--color-primary" }`. Each token can come from three sources, in this priority order (last wins):
 
-1. **Computed style** — for a token not defined in JS, the value is read from `window.getComputedStyle(document.documentElement)` in browser environments.
-2. **Theme static tokens** — values set on the active theme's own `ThemeDefinition.tokens`.
-3. **Runtime overrides** — values passed to `init()`, `set()`, or `toggle()`.
+1. **Computed style** — the value CSS gives the property on `document.documentElement`, for a token not defined in JS.
+2. **Theme static tokens** — values set on the active theme's `tokens`.
+3. **Runtime overrides** — values passed to `setTokens()`.
+
+`get().tokens` holds the JS sources, 2 and 3, and never reads the DOM. `readTokens()` adds the computed values of the remaining tokens at the time of the call:
 
 ```ts
 const theme = createTheme({
-  themes: [{ name: "brand", colorScheme: "light", tokens: { accent: "#ff6600" } }],
-  tokenSchema: { accent: "--color-accent" },
+  themes: {
+    light: { colorScheme: "light", tokens: { accent: "#ff6600" } },
+    dark: { colorScheme: "dark" },
+  },
+  tokenSchema: { accent: "--color-accent", surface: "--color-surface" },
 }).init();
 
-theme.set("brand", { accent: "#00c853" }); // runtime override wins over the static "#ff6600"
-theme.get().tokens?.accent; // "#00c853"
+theme.setTokens({ accent: "#00c853" }); // runtime override wins over the static "#ff6600"
+theme.get().tokens; // { accent: "#00c853" }
+theme.readTokens(); // { accent: "#00c853", surface: "<computed --color-surface>" }
 ```
 
-Reading computed values can force a synchronous layout reflow. Pass `{ skipComputed: true }` to `get()` to skip that source and avoid the reflow when only the JS-known values are needed.
+Reading computed values can force a synchronous layout, so prefer `get().tokens` when tokens defined only in CSS are not needed. `readTokens()` skips the read when every token is known in JS.
 
-Runtime overrides persist across subsequent theme changes until explicitly replaced — pass a new object, including `{}`, to `init()`, `set()`, or `toggle()` to clear or replace them. Passing a token key that is not in `tokenSchema` throws.
+Runtime overrides apply to every theme and persist across theme changes until `setTokens()` replaces them — pass `{}` to remove them. They are not stored, so they last until the page unloads or `destroy()` runs, and they are not part of the pre-paint script. Passing a token key that is not in `tokenSchema` throws.
 
 ## Persistence
 
-An explicit preference set through `set()` or `toggle()` is written to `localStorage` under `storageKey` (default `"app-theme-preference"`). `getStored()` returns that value when it names a currently configured theme, or `null` when it is unset, invalid, or storage is unavailable (for example during SSR). `clearPreference()` removes the stored value and re-applies whichever theme `getSystem()` currently resolves to.
+An explicit preference set through `set()` or `toggle()` is written to `localStorage` under `storageKey` (default `"app-theme-preference"`). `theme.preference` returns that value when it names a configured theme, or `null` when it is unset, invalid, or storage is unavailable (for example during SSR). `clearPreference()` removes the stored value and applies `theme.system`, the theme the OS preference currently maps to.
 
 Storage reads, writes, and removals that throw — a full quota, a disabled storage API, a private-browsing restriction — are logged with `console.error` and treated the same as unavailable storage; they never throw out of `Theme` methods.
 
 ## Cross-tab sync
 
-Every tab running `createTheme().init()` against the same `storageKey` stays in sync: a `storage` event fires in every other tab when one tab writes a new preference, and each one applies the change if it names a valid configured theme. A tab with its own runtime token overrides keeps them — only the active theme name changes from cross-tab sync, not tokens passed in-process.
+Every tab running `createTheme().init()` against the same `storageKey` stays in sync: when another tab sets, clears, or invalidates the stored preference — including through `localStorage.clear()` — each tab re-resolves its theme from storage and the OS preference and notifies with `source: "storage"`. A tab with its own runtime token overrides keeps them; only the active theme changes.
 
 The OS `prefers-color-scheme` media query applies automatically only while no valid stored preference exists. Once a tab (or a previous session) has stored an explicit preference, later system-preference changes are ignored until `clearPreference()` runs.
 
 ## Reacting to changes
 
-`subscribe(listener)` registers a callback invoked after every applied change — from `init()`, `set()`, `toggle()`, `clearPreference()`, or an accepted `system` or cross-tab update — and returns an unsubscribe function:
+`subscribe(listener)` registers a callback invoked after every applied change and returns an unsubscribe function:
 
 ```ts
 const unsubscribe = theme.subscribe(({ name, source }) => {
@@ -48,4 +54,6 @@ const unsubscribe = theme.subscribe(({ name, source }) => {
 });
 ```
 
-A subscriber that throws is logged and does not stop other subscribers from running. Browsers also receive a `window` `CustomEvent` named by the exported `THEME_CHANGE_EVENT` constant (`"themechange"`) carrying the same detail, for code that prefers DOM events over `subscribe()`.
+`source` names what caused the change: the method that ran (`"init"`, `"set"`, `"toggle"`, `"clearPreference"`, `"setTokens"`), `"system"` for an OS color-scheme change, or `"storage"` for a change made in another tab. Code that mirrors the preference elsewhere, such as to a user profile, should act on `"set"`, `"toggle"`, and `"clearPreference"` only, so that every open tab does not repeat the same write.
+
+A subscriber that throws is logged and does not stop other subscribers from running. Browsers also receive a `window` `CustomEvent` named by the exported `THEME_CHANGE_EVENT` constant (`"themechange"`) carrying the same detail, for code that has no access to the manager. The event does not identify which manager sent it, so use `subscribe()` when a page runs more than one.

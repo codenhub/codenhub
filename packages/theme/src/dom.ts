@@ -1,22 +1,21 @@
 import { DARK_CLASS, THEME_CHANGE_EVENT } from "./constants";
-import type { ThemeDefinition, ResolvedThemeOptions, ThemeChangeDetail } from "./types";
+import type { ResolvedThemeOptions } from "./options";
+import type { ActiveTheme, ThemeChangeDetail } from "./types";
 
 /**
- * Applies the active theme configuration, class/attribute updates, and CSS Custom Properties to the DOM.
+ * Applies the active theme's attribute, color scheme, classes, and CSS custom properties to the DOM.
  *
- * @param resolvedClasses - Pre-computed class strings for all configured themes. Callers must supply
- *   this value; computing it on each activation is the caller's responsibility (see `ThemeImpl`).
- * @param nextClass - Pre-computed class string for the active theme, or `null` when class application is disabled.
+ * @param classes - Classes of every configured theme, removed unless they belong to the active theme.
+ * @param nextClass - Class of the active theme, or `null` when class application is disabled.
  * @internal
  */
-export const applyTheme = <TSchema extends Record<string, string>>(args: {
-  theme: ThemeDefinition<TSchema>;
-  options: ResolvedThemeOptions<TSchema>;
-  activeTokens: Partial<Record<keyof TSchema, string>>;
-  resolvedClasses: readonly string[];
+export const applyTheme = <TName extends string, TSchema extends Record<string, string>>(args: {
+  theme: ActiveTheme<TName, TSchema>;
+  options: ResolvedThemeOptions<TName, TSchema>;
+  classes: readonly string[];
   nextClass: string | null;
 }): void => {
-  const { theme, options, activeTokens, resolvedClasses, nextClass } = args;
+  const { theme, options, classes, nextClass } = args;
   if (typeof document === "undefined") {
     return;
   }
@@ -26,7 +25,7 @@ export const applyTheme = <TSchema extends Record<string, string>>(args: {
   root.setAttribute(options.attribute, theme.name);
   root.style.colorScheme = theme.colorScheme;
 
-  for (const configuredClass of resolvedClasses) {
+  for (const configuredClass of classes) {
     if (configuredClass !== nextClass) {
       root.classList.remove(configuredClass);
     }
@@ -36,84 +35,63 @@ export const applyTheme = <TSchema extends Record<string, string>>(args: {
     root.classList.add(nextClass);
   }
 
-  if (options.isTailwindCss) {
+  if (options.darkClass) {
     root.classList.toggle(DARK_CLASS, theme.colorScheme === "dark");
   }
 
   if (options.tokenSchema) {
-    const schema = options.tokenSchema;
-    const mergedTokens = {
-      ...theme.tokens,
-      ...activeTokens,
-    };
-
-    for (const key of Object.keys(schema) as Array<keyof TSchema>) {
-      const cssVarName = schema[key];
-      const tokenValue = mergedTokens[key];
-      if (tokenValue !== undefined && tokenValue !== null) {
-        root.style.setProperty(cssVarName, tokenValue);
-      } else {
+    for (const [key, cssVarName] of Object.entries(options.tokenSchema)) {
+      const tokenValue = Object.hasOwn(theme.tokens, key) ? theme.tokens[key] : undefined;
+      if (tokenValue === undefined) {
         root.style.removeProperty(cssVarName);
+      } else {
+        root.style.setProperty(cssVarName, tokenValue);
       }
     }
   }
 };
 
 /**
- * Resolves any missing CSS variables from the computed style of the root DOM element.
+ * Reads the computed CSS value of every `tokenSchema` token missing from `knownTokens`.
  *
  * @internal
  */
-export const readComputedTokens = <TSchema extends Record<string, string>>(args: {
-  theme: ThemeDefinition<TSchema>;
-  options: ResolvedThemeOptions<TSchema>;
-  activeTokens: Partial<Record<keyof TSchema, string>>;
-  skipComputed?: boolean;
-}): Partial<Record<keyof TSchema, string>> => {
-  const { theme, options, activeTokens, skipComputed } = args;
-  const computedTokens: Partial<Record<keyof TSchema, string>> = {};
+export const readComputedTokens = <TSchema extends Record<string, string>>(
+  tokenSchema: TSchema | undefined,
+  knownTokens: Readonly<Partial<Record<keyof TSchema, string>>>,
+): Partial<Record<keyof TSchema, string>> => {
+  // No prototype, so a token named "__proto__" is recorded as an own key.
+  const computedTokens: Partial<Record<keyof TSchema, string>> = Object.create(null);
 
   if (
-    skipComputed ||
+    !tokenSchema ||
     typeof window === "undefined" ||
     typeof window.getComputedStyle !== "function" ||
-    typeof document === "undefined" ||
-    !options.tokenSchema
+    typeof document === "undefined"
   ) {
     return computedTokens;
   }
 
-  const root = document.documentElement;
+  const missingKeys = (Object.keys(tokenSchema) as Array<keyof TSchema>).filter(
+    (key) => !Object.hasOwn(knownTokens, key) || knownTokens[key] === undefined,
+  );
+  if (missingKeys.length === 0) {
+    return computedTokens;
+  }
+
   try {
-    const schema = options.tokenSchema;
-    const mergedTokens = {
-      ...theme.tokens,
-      ...activeTokens,
-    };
-
-    const hasMissingTokens = (Object.keys(schema) as Array<keyof TSchema>).some(
-      (key) => mergedTokens[key] === undefined,
-    );
-
-    if (!hasMissingTokens) {
-      return computedTokens;
-    }
-
-    const style = window.getComputedStyle(root);
+    const style = window.getComputedStyle(document.documentElement);
     if (!style) {
       return computedTokens;
     }
-    for (const key of Object.keys(schema) as Array<keyof TSchema>) {
-      if (mergedTokens[key] === undefined) {
-        const val = style.getPropertyValue(schema[key]).trim();
-        if (val) {
-          computedTokens[key] = val;
-        }
+    for (const key of missingKeys) {
+      const value = style.getPropertyValue(tokenSchema[key]).trim();
+      if (value) {
+        computedTokens[key] = value;
       }
     }
   } catch (error) {
-    // getComputedStyle can fail in sandboxed or restricted environments;
-    // log in development so unexpected failures are visible, then fall back gracefully.
+    // getComputedStyle can fail in sandboxed or restricted environments; report it and fall back to known tokens.
     console.error("[theme] Failed to read computed token styles:", error);
   }
 
@@ -125,7 +103,9 @@ export const readComputedTokens = <TSchema extends Record<string, string>>(args:
  *
  * @internal
  */
-export const emitThemeEvent = <TSchema extends Record<string, string>>(detail: ThemeChangeDetail<TSchema>): void => {
+export const emitThemeEvent = <TName extends string, TSchema extends Record<string, string>>(
+  detail: ThemeChangeDetail<TName, TSchema>,
+): void => {
   if (
     typeof window === "undefined" ||
     typeof window.dispatchEvent !== "function" ||
@@ -134,19 +114,19 @@ export const emitThemeEvent = <TSchema extends Record<string, string>>(detail: T
     return;
   }
 
-  window.dispatchEvent(new CustomEvent<ThemeChangeDetail<TSchema>>(THEME_CHANGE_EVENT, { detail }));
+  window.dispatchEvent(new CustomEvent<ThemeChangeDetail<TName, TSchema>>(THEME_CHANGE_EVENT, { detail }));
 };
 
 /**
- * Reverts DOM attribute, classes, colorScheme, and CSS Custom Properties applied to the document element.
+ * Reverts the attribute, classes, color scheme, and CSS custom properties applied to the document element.
  *
  * @internal
  */
-export const removeAppliedTheme = <TSchema extends Record<string, string>>(args: {
-  options: ResolvedThemeOptions<TSchema>;
-  resolvedClasses: readonly string[];
+export const removeAppliedTheme = <TName extends string, TSchema extends Record<string, string>>(args: {
+  options: ResolvedThemeOptions<TName, TSchema>;
+  classes: readonly string[];
 }): void => {
-  const { options, resolvedClasses } = args;
+  const { options, classes } = args;
   if (typeof document === "undefined") {
     return;
   }
@@ -156,11 +136,11 @@ export const removeAppliedTheme = <TSchema extends Record<string, string>>(args:
   root.removeAttribute(options.attribute);
   root.style.removeProperty("color-scheme");
 
-  for (const configuredClass of resolvedClasses) {
+  for (const configuredClass of classes) {
     root.classList.remove(configuredClass);
   }
 
-  if (options.isTailwindCss) {
+  if (options.darkClass) {
     root.classList.remove(DARK_CLASS);
   }
 

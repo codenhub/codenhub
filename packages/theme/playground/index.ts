@@ -15,7 +15,7 @@ export interface ThemePlaygroundReadyDetail {
 const STORAGE_KEY = "playground-theme-pref";
 
 const store = loadThemeStore();
-let themeManager: Theme<Record<string, string>> | null = null;
+let themeManager: Theme | null = null;
 let unsubscribe: (() => void) | null = null;
 
 function setText(id: string, text: string): void {
@@ -31,12 +31,13 @@ function updateStateDisplay(): void {
   }
 
   const active = themeManager.get();
-  const system = themeManager.getSystem();
+  const system = themeManager.system;
+  const systemScheme = store.themes.find((theme) => theme.name === system)?.colorScheme;
 
   setText("state-active", active.name);
   setText("state-scheme", active.colorScheme);
-  setText("state-system", `${system.name} (${system.colorScheme})`);
-  setText("state-stored", themeManager.getStored() ?? "None");
+  setText("state-system", `${system} (${systemScheme})`);
+  setText("state-stored", themeManager.preference ?? "None");
 
   renderThemesList(store.themes, active.name, {
     onActivate: (name) => themeManager?.set(name),
@@ -63,11 +64,11 @@ function initThemeManager(): void {
   themeManager?.destroy();
 
   themeManager = createTheme({
-    themes: store.themes,
+    themes: Object.fromEntries(store.themes.map(({ name, ...definition }) => [name, definition])),
     tokenSchema: store.schema,
     defaultTheme: "light",
     storageKey: STORAGE_KEY,
-    isTailwindCss: true,
+    darkClass: true,
   });
   themeManager.init();
   unsubscribe = themeManager.subscribe(updateStateDisplay);

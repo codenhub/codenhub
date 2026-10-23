@@ -1,15 +1,13 @@
-import type { ThemeDefinition } from "./types";
-
 /**
  * Reads and validates the user's stored theme preference from `localStorage`.
  * Returns the theme name if it exists and matches a configured theme; otherwise `null`.
  *
  * @internal
  */
-export const readStorage = <TSchema extends Record<string, string>>(
+export const readStorage = <TName extends string>(
   storageKey: string,
-  themes: readonly ThemeDefinition<TSchema>[],
-): string | null => {
+  themes: ReadonlyMap<TName, unknown>,
+): TName | null => {
   if (typeof window === "undefined") {
     return null;
   }
@@ -19,8 +17,7 @@ export const readStorage = <TSchema extends Record<string, string>>(
     if (storedName === null) {
       return null;
     }
-    const isConfigured = themes.some((t) => t.name === storedName);
-    return isConfigured ? storedName : null;
+    return themes.has(storedName as TName) ? (storedName as TName) : null;
   } catch (error) {
     console.error("[theme] Failed to read from localStorage:", error);
     return null;

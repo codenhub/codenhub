@@ -11,16 +11,20 @@ pnpm add @codenhub/theme
 ## Usage
 
 ```ts
-import { createTheme, getPrePaintScript } from "@codenhub/theme";
+import { createTheme } from "@codenhub/theme";
 
+// In the browser:
 const theme = createTheme().init();
-theme.set("dark");
 
-// Get inline IIFE script string for <head> to prevent FOUC:
-const script = theme.getPrePaintScript(); // or standalone getPrePaintScript()
+document.querySelector("#theme-toggle")?.addEventListener("click", theme.toggle);
+theme.subscribe(({ name }) => console.log(`theme is now ${name}`));
 
 // Remove media-query/storage listeners and subscribers on teardown.
 theme.destroy({ revertDom: true });
+
+// On the server or at build time, with the same options: inline this string in a
+// blocking <head> script so the theme applies before the first paint.
+const script = createTheme().getPrePaintScript();
 ```
 
 ## Documentation
@@ -34,7 +38,7 @@ theme.destroy({ revertDom: true });
 
 - Browser integration uses `document.documentElement`, `localStorage`, `matchMedia`, `storage` events, and `CustomEvent`.
 - SSR is supported by skipping unavailable browser work and using the configured default theme.
-- Consumers provide CSS selectors, variables, visual tokens, and any pre-paint script needed to prevent a theme flash.
+- Consumers provide CSS selectors, variables, and visual tokens, and inline the script from `getPrePaintScript()` to prevent a theme flash.
 
 ## Notes
 

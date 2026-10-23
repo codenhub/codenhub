@@ -1,270 +1,213 @@
 import { getThemeClass } from "./class-resolver";
-import { DEFAULT_OPTIONS } from "./constants";
-import { applyTheme, readComputedTokens, emitThemeEvent, removeAppliedTheme } from "./dom";
+import { applyTheme, emitThemeEvent, readComputedTokens, removeAppliedTheme } from "./dom";
+import { resolveOptions } from "./options";
 import { buildPrePaintScript } from "./pre-paint";
-import { readStorage, writeStorage, removeStorage } from "./storage";
-import { readSystemTheme, registerSystemListener, registerStorageListener } from "./system";
-import type {
-  Theme,
-  ThemeDefinition,
-  ThemeChangeSource,
-  ThemeChangeDetail,
-  ThemeChangeListener,
-  ThemeOptions,
-  ResolvedThemeOptions,
-} from "./types";
-import { assertThemeConfig, assertRuntimeTokens } from "./validation";
+import { readStorage, removeStorage, writeStorage } from "./storage";
+import { readSystemTheme, registerStorageListener, registerSystemListener } from "./system";
+import type { ActiveTheme, Theme, ThemeChangeListener, ThemeChangeSource, ThemeOptions } from "./types";
+import { assertRuntimeTokens } from "./validation";
 
-class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>> implements Theme<TSchema> {
-  #options: ResolvedThemeOptions<TSchema>;
-  #activeName: string;
-  #activeTokens: Partial<Record<keyof TSchema, string>> = {};
-  #listeners = new Set<ThemeChangeListener<TSchema>>();
-  #systemListenerCleanup: (() => void) | null = null;
-  #storageListenerCleanup: (() => void) | null = null;
-  #isInitialized = false;
-  #resolvedClasses: Map<string, string | null> | null = null;
-  #resolvedClassesList: string[] | null = null;
+/**
+ * Creates a theme preference manager. Nothing touches the DOM, storage, or listeners until a method is called.
+ *
+ * @example
+ * ```ts
+ * const theme = createTheme({
+ *   themes: {
+ *     light: { colorScheme: "light", tokens: { primary: "#171717" } },
+ *     dark: { colorScheme: "dark", tokens: { primary: "#f9fafb" } },
+ *   },
+ *   tokenSchema: { primary: "--color-primary" },
+ *   darkClass: true,
+ * }).init();
+ *
+ * document.querySelector("#theme-toggle")?.addEventListener("click", theme.toggle);
+ * ```
+ *
+ * @typeParam TName - Names of every configured theme, inferred from the keys of `options.themes`.
+ * @typeParam TSchema - Token schema, inferred from `options.tokenSchema`.
+ * @param options - Themes, persistence key, DOM attribute and classes, system mapping, and token schema.
+ * @returns A {@link Theme} whose methods are bound to it.
+ * @throws {Error} When the options are invalid: a `themes`, `systemTheme`, `tokenSchema`, or theme `tokens` value that
+ *   is set but is not a plain, non-array object, an empty theme name or, while `className` is `true`, a class-unsafe
+ *   one, an invalid `colorScheme`, a `defaultTheme`, `systemTheme`, or `pairedTheme` naming an unconfigured theme,
+ *   theme tokens outside `tokenSchema`, a `tokenSchema` value not starting with `--`, a `className` that is neither a
+ *   boolean nor a function, a non-boolean `darkClass`, or an empty or invalid `attribute` or `storageKey`. An option
+ *   set to `undefined` is treated as omitted.
+ */
+export function createTheme<
+  TName extends string = "light" | "dark",
+  TSchema extends Record<string, string> = Record<string, string>,
+>(options: ThemeOptions<TName, TSchema> = {}): Theme<TName, TSchema> {
+  const config = resolveOptions(options);
+  const listeners = new Set<ThemeChangeListener<TName, TSchema>>();
+  let activeName = config.defaultTheme;
+  const noTokens: Readonly<Partial<Record<keyof TSchema, string>>> = Object.freeze({});
+  let runtimeTokens = noTokens;
+  let snapshot: ActiveTheme<TName, TSchema> | null = null;
+  // Resolved on first use, so a custom resolver never runs during construction.
+  let classes: Map<TName, string | null> | null = null;
+  let stopListening: (() => void) | null = null;
 
-  #getResolvedClasses(): Map<string, string | null> {
-    if (this.#resolvedClasses === null) {
-      this.#resolvedClasses = new Map();
-      for (const t of this.#options.themes) {
-        this.#resolvedClasses.set(t.name, getThemeClass(t, this.#options.shouldApplyClass));
+  const getClasses = (): Map<TName, string | null> => {
+    if (classes === null) {
+      const resolved = new Map<TName, string | null>();
+      for (const [name, definition] of config.themes) {
+        resolved.set(name, getThemeClass(definition, config.className));
       }
+      classes = resolved;
     }
-    return this.#resolvedClasses;
-  }
-
-  #getResolvedClassesList(): string[] {
-    if (this.#resolvedClassesList === null) {
-      const resolved = this.#getResolvedClasses();
-      this.#resolvedClassesList = Array.from(resolved.values()).filter((c): c is string => c !== null);
-    }
-    return this.#resolvedClassesList;
-  }
-
-  #handleSystemChange = (event: MediaQueryListEvent): void => {
-    if (readStorage(this.#options.storageKey, this.#options.themes) !== null) {
-      return;
-    }
-
-    const name = event.matches ? this.#options.systemTheme.dark : this.#options.systemTheme.light;
-    if (this.#activeName !== name) {
-      this.#activate(name, { source: "system", shouldStore: false });
-    }
+    return classes;
   };
 
-  #handleStorageChange = (event: StorageEvent): void => {
-    if (event.key !== this.#options.storageKey) {
-      return;
-    }
+  const getClassList = (): string[] =>
+    Array.from(getClasses().values()).filter((className): className is string => className !== null);
 
-    if (event.newValue === null) {
-      const systemTheme = this.getSystem().name;
-      this.#activate(systemTheme, { source: "clearPreference", shouldStore: false });
-    } else {
-      const isConfigured = this.#options.themes.some((t) => t.name === event.newValue);
-      if (isConfigured && this.#activeName !== event.newValue) {
-        this.#activate(event.newValue, { source: "set", shouldStore: false });
-      }
+  const getDefinition = (name: TName): ActiveTheme<TName, TSchema> => {
+    const definition = config.themes.get(name);
+    if (definition === undefined) {
+      throw new Error(`Theme is not configured: ${String(name)}.`);
     }
+    return definition;
   };
 
-  constructor(options: ThemeOptions<TSchema> = {}) {
-    this.#options = {
-      ...DEFAULT_OPTIONS,
-      ...options,
-      systemTheme: { ...DEFAULT_OPTIONS.systemTheme, ...options.systemTheme },
-    } as ResolvedThemeOptions<TSchema>;
-    assertThemeConfig(this.#options);
-    this.#activeName = this.#options.defaultTheme;
-  }
+  const readPreference = (): TName | null => readStorage(config.storageKey, config.themes);
 
-  init(tokens?: Partial<Record<keyof TSchema, string>>): this {
-    if (this.#isInitialized) {
-      return this;
-    }
-    this.#systemListenerCleanup = registerSystemListener(this.#handleSystemChange);
-    this.#storageListenerCleanup = registerStorageListener(this.#handleStorageChange);
-    this.#activate(readStorage(this.#options.storageKey, this.#options.themes) ?? this.getSystem().name, {
-      source: "init",
-      shouldStore: false,
-      tokens,
-    });
-    this.#isInitialized = true;
-    return this;
-  }
+  const readSystem = (): TName => readSystemTheme(config);
 
-  get(options?: { skipComputed?: boolean }): ThemeDefinition<TSchema> {
-    const baseTheme = this.#getTheme(this.#activeName);
-    const resolvedOptions = this.#options;
-    const activeTokens = this.#activeTokens;
-    const skipComputed = options?.skipComputed;
-    let cachedTokens: Partial<Record<keyof TSchema, string>> | null = null;
-
-    return {
-      ...baseTheme,
-      get tokens() {
-        if (cachedTokens === null) {
-          const computedTokens = readComputedTokens({
-            theme: baseTheme,
-            options: resolvedOptions,
-            activeTokens,
-            skipComputed,
-          });
-          cachedTokens = {
-            ...computedTokens,
-            ...baseTheme.tokens,
-            ...activeTokens,
-          };
-        }
-        return cachedTokens;
-      },
-    };
-  }
-
-  set(name: string, tokens?: Partial<Record<keyof TSchema, string>>): ThemeDefinition<TSchema> {
-    return this.#activate(name, { source: "set", shouldStore: true, tokens });
-  }
-
-  toggle(tokens?: Partial<Record<keyof TSchema, string>>): ThemeDefinition<TSchema> {
-    const currentTheme = this.#getTheme(this.#activeName);
-    let nextName: string;
-
-    if (
-      currentTheme.pairedTheme !== undefined &&
-      this.#options.themes.some((t) => t.name === currentTheme.pairedTheme)
-    ) {
-      nextName = currentTheme.pairedTheme;
-    } else {
-      nextName = currentTheme.colorScheme === "dark" ? this.#options.systemTheme.light : this.#options.systemTheme.dark;
-    }
-
-    return this.#activate(nextName, { source: "toggle", shouldStore: true, tokens });
-  }
-
-  clearPreference(): ThemeDefinition<TSchema> {
-    removeStorage(this.#options.storageKey);
-    return this.#activate(this.getSystem().name, { source: "clearPreference", shouldStore: false });
-  }
-
-  getStored(): string | null {
-    return readStorage(this.#options.storageKey, this.#options.themes);
-  }
-
-  getSystem(): ThemeDefinition<TSchema> {
-    return readSystemTheme({
-      defaultTheme: this.#options.defaultTheme,
-      systemTheme: this.#options.systemTheme,
-      themes: this.#options.themes,
-    });
-  }
-
-  subscribe(listener: ThemeChangeListener<TSchema>): () => void {
-    this.#listeners.add(listener);
-    return () => {
-      this.#listeners.delete(listener);
-    };
-  }
-
-  getPrePaintScript(): string {
-    return buildPrePaintScript(this.#options);
-  }
-
-  destroy(options?: { revertDom?: boolean }): void {
-    if (options?.revertDom) {
-      removeAppliedTheme({
-        options: this.#options,
-        resolvedClasses: this.#getResolvedClassesList(),
+  const get = (): ActiveTheme<TName, TSchema> => {
+    if (snapshot === null) {
+      const definition = getDefinition(activeName);
+      snapshot = Object.freeze({
+        ...definition,
+        tokens: Object.freeze({ ...definition.tokens, ...runtimeTokens }),
       });
     }
+    return snapshot;
+  };
 
-    if (this.#systemListenerCleanup) {
-      this.#systemListenerCleanup();
-      this.#systemListenerCleanup = null;
-    }
-
-    if (this.#storageListenerCleanup) {
-      this.#storageListenerCleanup();
-      this.#storageListenerCleanup = null;
-    }
-
-    this.#listeners.clear();
-    this.#activeTokens = {};
-    this.#activeName = this.#options.defaultTheme;
-    this.#resolvedClasses = null;
-    this.#resolvedClassesList = null;
-    this.#isInitialized = false;
-  }
-
-  #activate(
-    name: string,
-    options: {
-      source: ThemeChangeSource;
-      shouldStore?: boolean;
-      tokens?: Partial<Record<keyof TSchema, string>>;
-    },
-  ): ThemeDefinition<TSchema> {
-    assertRuntimeTokens(options.tokens, this.#options.tokenSchema);
-    const theme = this.#getTheme(name);
-    this.#activeName = theme.name;
-    if (options.tokens !== undefined) {
-      this.#activeTokens = options.tokens;
-    }
-
-    if (options.shouldStore) {
-      writeStorage(this.#options.storageKey, theme.name);
-    }
-
-    const resolved = this.#getResolvedClasses();
+  const apply = (source: ThemeChangeSource): ActiveTheme<TName, TSchema> => {
+    snapshot = null;
+    const active = get();
     applyTheme({
-      theme,
-      options: this.#options,
-      activeTokens: this.#activeTokens,
-      resolvedClasses: this.#getResolvedClassesList(),
-      nextClass: resolved.get(theme.name) ?? null,
+      theme: active,
+      options: config,
+      classes: getClassList(),
+      nextClass: getClasses().get(active.name) ?? null,
     });
 
-    const activeTheme = this.get();
-    this.#emit({ name: activeTheme.name, theme: activeTheme, source: options.source });
-
-    return activeTheme;
-  }
-
-  #emit(detail: ThemeChangeDetail<TSchema>): void {
-    for (const listener of this.#listeners) {
+    const detail = { name: active.name, theme: active, source };
+    for (const listener of listeners) {
       try {
         listener(detail);
       } catch (error) {
-        console.error("Error in theme change listener:", error);
+        console.error("[theme] Error in theme change listener:", error);
       }
     }
-
     emitThemeEvent(detail);
-  }
 
-  #getTheme(name: string): ThemeDefinition<TSchema> {
-    const theme = this.#options.themes.find((candidate) => candidate.name === name);
+    return active;
+  };
 
-    if (theme === undefined) {
-      throw new Error(`Theme is not configured: ${name}.`);
+  const activate = (name: TName, source: ThemeChangeSource, shouldStore: boolean): ActiveTheme<TName, TSchema> => {
+    const { name: nextName } = getDefinition(name);
+    // Resolved before any state changes, so a throwing class resolver leaves state, storage, and the DOM as they were.
+    getClasses();
+    activeName = nextName;
+    if (shouldStore) {
+      writeStorage(config.storageKey, activeName);
     }
+    return apply(source);
+  };
 
-    return theme;
-  }
-}
+  const handleSystemChange = (event: MediaQueryListEvent): void => {
+    if (readPreference() !== null) {
+      return;
+    }
+    const name = event.matches ? config.systemTheme.dark : config.systemTheme.light;
+    if (name !== activeName) {
+      activate(name, "system", false);
+    }
+  };
 
-/**
- * Factory function that creates and returns a `Theme` instance.
- *
- * @param options - Configuration options for theme definitions, persistence keys, DOM attributes, custom class resolvers, and dynamic token schemas.
- * @returns A `Theme` instance.
- * @throws {Error} If configured theme names are empty, duplicated, invalid for CSS class application, have an
- *   invalid `colorScheme`, or if the default/system themes are not present in the configured list.
- */
-export function createTheme<TSchema extends Record<string, string> = Record<string, string>>(
-  options: ThemeOptions<TSchema> = {},
-): Theme<TSchema> {
-  return new ThemeImpl<TSchema>(options);
+  const handleStorageChange = (event: StorageEvent): void => {
+    // A null key means another tab called localStorage.clear(), which also removes the preference.
+    if (event.key !== null && event.key !== config.storageKey) {
+      return;
+    }
+    activate(readPreference() ?? readSystem(), "storage", false);
+  };
+
+  const theme: Theme<TName, TSchema> = {
+    get name() {
+      return activeName;
+    },
+    get preference() {
+      return readPreference();
+    },
+    get system() {
+      return readSystem();
+    },
+    init() {
+      if (stopListening === null) {
+        getClasses();
+        const stopSystem = registerSystemListener(handleSystemChange);
+        const stopStorage = registerStorageListener(handleStorageChange);
+        stopListening = () => {
+          stopSystem();
+          stopStorage();
+        };
+        activate(readPreference() ?? readSystem(), "init", false);
+      }
+      return theme;
+    },
+    get,
+    set(name) {
+      return activate(name, "set", true);
+    },
+    toggle() {
+      const current = getDefinition(activeName);
+      const next =
+        current.pairedTheme ?? (current.colorScheme === "dark" ? config.systemTheme.light : config.systemTheme.dark);
+      return activate(next, "toggle", true);
+    },
+    clearPreference() {
+      getClasses();
+      removeStorage(config.storageKey);
+      return activate(readSystem(), "clearPreference", false);
+    },
+    setTokens(tokens) {
+      assertRuntimeTokens(tokens, config.tokenSchema);
+      getClasses();
+      runtimeTokens = Object.freeze({ ...tokens });
+      return apply("setTokens");
+    },
+    readTokens() {
+      const known = get().tokens;
+      return { ...readComputedTokens(config.tokenSchema, known), ...known };
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    getPrePaintScript() {
+      return buildPrePaintScript(config, getClasses());
+    },
+    destroy(destroyOptions) {
+      if (destroyOptions?.revertDom) {
+        removeAppliedTheme({ options: config, classes: getClassList() });
+      }
+      stopListening?.();
+      stopListening = null;
+      listeners.clear();
+      runtimeTokens = noTokens;
+      activeName = config.defaultTheme;
+      snapshot = null;
+      classes = null;
+    },
+  };
+
+  return theme;
 }

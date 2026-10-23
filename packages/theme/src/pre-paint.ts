@@ -1,7 +1,5 @@
-import { getThemeClass } from "./class-resolver";
-import { DEFAULT_OPTIONS } from "./constants";
-import type { ThemeOptions, ResolvedThemeOptions } from "./types";
-import { assertThemeConfig } from "./validation";
+import { DARK_CLASS, PREFERS_DARK_QUERY } from "./constants";
+import type { ResolvedThemeOptions } from "./options";
 
 const INLINE_SCRIPT_UNSAFE = /[<\u2028\u2029]/g;
 
@@ -21,34 +19,14 @@ function toInlineScriptLiteral(value: unknown): string {
 }
 
 /**
- * Generates a synchronous inline IIFE script string to inject into document `<head>`.
- * Prevents Flash of Unstyled Content (FOUC) by applying storage or system theme before render.
- *
- * @param options - Configuration options used to determine storage keys, attributes, default/system themes, custom class resolvers, and token schemas.
- * @returns Minified JavaScript script string.
- * @throws {Error} When the options are invalid, under the same rules and with the same messages as `createTheme`, such as a `defaultTheme` or `systemTheme` naming a theme that is not configured.
- */
-export function getPrePaintScript<TSchema extends Record<string, string> = Record<string, string>>(
-  options: ThemeOptions<TSchema> = {},
-): string {
-  const opts = {
-    ...DEFAULT_OPTIONS,
-    ...options,
-    systemTheme: { ...DEFAULT_OPTIONS.systemTheme, ...options.systemTheme },
-  } as ResolvedThemeOptions<TSchema>;
-  assertThemeConfig(opts);
-  return buildPrePaintScript(opts);
-}
-
-/**
- * Builds the pre-paint script from options that `assertThemeConfig` has already accepted.
+ * Builds the pre-paint script from validated options and the resolved class of every theme.
  *
  * @internal
  */
-export function buildPrePaintScript<TSchema extends Record<string, string>>(
-  opts: ResolvedThemeOptions<TSchema>,
+export function buildPrePaintScript<TName extends string, TSchema extends Record<string, string>>(
+  opts: ResolvedThemeOptions<TName, TSchema>,
+  classes: ReadonlyMap<TName, string | null>,
 ): string {
-  const themes = opts.themes;
   // No prototype, so a theme named "__proto__" is an own key rather than the object's prototype.
   const themeMap: Record<
     string,
@@ -59,35 +37,37 @@ export function buildPrePaintScript<TSchema extends Record<string, string>>(
     }
   > = Object.create(null);
 
-  for (const t of themes) {
-    const className = getThemeClass(t, opts.shouldApplyClass);
+  for (const [name, theme] of opts.themes) {
     let vars: Record<string, string> | undefined;
 
-    if (opts.tokenSchema && t.tokens) {
+    if (opts.tokenSchema) {
       for (const [tokenKey, cssVarName] of Object.entries(opts.tokenSchema)) {
-        const tokenValue = t.tokens[tokenKey];
-        if (tokenValue !== undefined && tokenValue !== null) {
+        const tokenValue = Object.hasOwn(theme.tokens, tokenKey) ? theme.tokens[tokenKey] : undefined;
+        if (tokenValue !== undefined) {
           vars ??= {};
           vars[cssVarName] = tokenValue;
         }
       }
     }
 
-    themeMap[t.name] = {
-      colorScheme: t.colorScheme,
-      className,
+    themeMap[name] = {
+      colorScheme: theme.colorScheme,
+      className: classes.get(name) ?? null,
       ...(vars ? { vars } : {}),
     };
   }
 
-  const jsonKey = toInlineScriptLiteral(opts.storageKey);
-  const jsonAttr = toInlineScriptLiteral(opts.attribute);
-  const jsonDef = toInlineScriptLiteral(opts.defaultTheme);
-  const jsonSysLight = toInlineScriptLiteral(opts.systemTheme.light);
-  const jsonSysDark = toInlineScriptLiteral(opts.systemTheme.dark);
+  const key = toInlineScriptLiteral(opts.storageKey);
+  const attribute = toInlineScriptLiteral(opts.attribute);
+  const defaultTheme = toInlineScriptLiteral(opts.defaultTheme);
+  const systemLight = toInlineScriptLiteral(opts.systemTheme.light);
+  const systemDark = toInlineScriptLiteral(opts.systemTheme.dark);
   // Parsed rather than written as an object literal, where a "__proto__" key would set the prototype.
-  const jsonThemes = `JSON.parse(${toInlineScriptLiteral(JSON.stringify(themeMap))})`;
-  const jsonTailwind = toInlineScriptLiteral(opts.isTailwindCss);
+  const themes = `JSON.parse(${toInlineScriptLiteral(JSON.stringify(themeMap))})`;
+  const darkClass = toInlineScriptLiteral(opts.darkClass ? DARK_CLASS : null);
+  const query = toInlineScriptLiteral(PREFERS_DARK_QUERY);
 
-  return `!(function(){try{var k=${jsonKey},a=${jsonAttr},d=${jsonDef},sl=${jsonSysLight},sd=${jsonSysDark},tm=${jsonThemes},tw=${jsonTailwind},s=localStorage.getItem(k),h=function(x){return Object.prototype.hasOwnProperty.call(tm,x)},m=window.matchMedia("(prefers-color-scheme: dark)").matches,n=(s&&h(s))?s:(m?sd:sl);if(!h(n))n=d;var t=tm[n],r=document.documentElement;r.setAttribute(a,n);if(t&&t.colorScheme)r.style.colorScheme=t.colorScheme;if(t&&t.className)r.classList.add(t.className);if(tw)r.classList.toggle("dark",t&&t.colorScheme==="dark");if(t&&t.vars)for(var v in t.vars)r.style.setProperty(v,t.vars[v])}catch(e){}})()`;
+  // Storage and matchMedia each fail on their own, as createTheme() treats them: blocked storage still applies the
+  // system theme, and a missing matchMedia falls back to the default theme.
+  return `!(function(){try{var tm=${themes},h=function(x){return Object.prototype.hasOwnProperty.call(tm,x)},s=null,m=null;try{s=localStorage.getItem(${key})}catch(e){}try{m=window.matchMedia(${query}).matches}catch(e){}var n=s!==null&&h(s)?s:m===null?${defaultTheme}:m?${systemDark}:${systemLight},t=tm[n],r=document.documentElement,c=r.classList,dc=${darkClass};r.setAttribute(${attribute},n);r.style.colorScheme=t.colorScheme;for(var x in tm)if(tm[x].className&&tm[x].className!==t.className)c.remove(tm[x].className);if(t.className)c.add(t.className);if(dc)c.toggle(dc,t.colorScheme==="dark");if(t.vars)for(var v in t.vars)r.style.setProperty(v,t.vars[v])}catch(e){}})()`;
 }

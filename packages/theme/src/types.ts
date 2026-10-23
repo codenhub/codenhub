@@ -1,193 +1,271 @@
-/** Theme option stored, applied to the configured DOM attribute, and mapped to the browser color scheme. */
-export interface ThemeDefinition<TSchema extends Record<string, string> = Record<string, string>> {
-  /** Unique configured theme name used for storage, DOM attributes, and generated default classes. */
-  name: string;
-  /** Browser color scheme applied to `document.documentElement.style.colorScheme`. */
+/**
+ * Configured theme, keyed by its name in {@link ThemeOptions.themes}.
+ *
+ * @typeParam TName - Names of every configured theme, used to type `pairedTheme`.
+ * @typeParam TSchema - Token schema from {@link ThemeOptions.tokenSchema}, used to type `tokens`.
+ */
+export interface ThemeDefinition<
+  TName extends string = string,
+  TSchema extends Record<string, string> = Record<string, string>,
+> {
+  /** Browser color scheme applied to `document.documentElement.style.colorScheme`; also decides what `toggle()` falls back to and whether `darkClass` applies. */
   colorScheme: "light" | "dark";
-  /** Optional theme-specific static token values. */
+  /** Static token values written to the CSS custom properties named by `tokenSchema`. */
   tokens?: Partial<Record<keyof TSchema, string>>;
-  /** Optional theme name activated when calling `toggle()` from this theme. */
-  pairedTheme?: string;
+  /** Theme activated when calling `toggle()` from this theme, instead of the opposite `systemTheme` entry. */
+  pairedTheme?: TName;
 }
 
-/** Mapping from OS color-scheme preferences to configured theme names. */
-export interface SystemThemeMap {
-  /** Configured theme name used when the OS preference is light or no dark preference is detected. */
-  light: string;
-  /** Configured theme name used when the OS preference is dark. */
-  dark: string;
+/**
+ * Frozen view of a configured theme with its name and the token values written to the DOM.
+ *
+ * @typeParam TName - Names of every configured theme.
+ * @typeParam TSchema - Token schema from {@link ThemeOptions.tokenSchema}.
+ */
+export interface ActiveTheme<
+  TName extends string = string,
+  TSchema extends Record<string, string> = Record<string, string>,
+> {
+  /** Configured theme name. */
+  readonly name: TName;
+  /** Browser color scheme of the theme. */
+  readonly colorScheme: "light" | "dark";
+  /**
+   * Static theme tokens merged with the runtime overrides from `setTokens()`, which win.
+   * Tokens defined only in CSS are not included; read them with `readTokens()`.
+   */
+  readonly tokens: Readonly<Partial<Record<keyof TSchema, string>>>;
+  /** Theme activated when calling `toggle()` from this theme, when configured. */
+  readonly pairedTheme?: TName;
 }
 
-/** Resolves the single DOM class token applied for a theme when custom class application is enabled. */
-export type ThemeClassResolver<TSchema extends Record<string, string> = Record<string, string>> = (
-  theme: ThemeDefinition<TSchema>,
-) => string;
+/**
+ * Mapping from OS color-scheme preferences to configured theme names.
+ *
+ * @typeParam TName - Names of every configured theme.
+ */
+export interface SystemThemeMap<TName extends string = string> {
+  /** Theme used when the OS preference is light, and the one `toggle()` selects from a dark theme without `pairedTheme`. */
+  light: TName;
+  /** Theme used when the OS preference is dark, and the one `toggle()` selects from a light theme without `pairedTheme`. */
+  dark: TName;
+}
 
-/** Reason a theme change notification was emitted. */
-export type ThemeChangeSource = "init" | "set" | "toggle" | "clearPreference" | "system";
+/**
+ * Returns the single DOM class token applied to `document.documentElement` for a theme.
+ *
+ * @typeParam TName - Names of every configured theme.
+ * @typeParam TSchema - Token schema from {@link ThemeOptions.tokenSchema}.
+ * @param theme - The configured theme, with its static tokens only.
+ * @returns A non-empty class name without whitespace. Any other value makes the calling theme operation throw.
+ */
+export type ThemeClassResolver<
+  TName extends string = string,
+  TSchema extends Record<string, string> = Record<string, string>,
+> = (theme: ActiveTheme<TName, TSchema>) => string;
 
-/** Payload passed to subscribers and the browser `themechange` event after a theme change. */
-export interface ThemeChangeDetail<TSchema extends Record<string, string> = Record<string, string>> {
+/**
+ * Reason a theme change notification was emitted: the `Theme` method that caused it, `"system"` for an
+ * OS color-scheme change, or `"storage"` for a preference change made in another tab.
+ */
+export type ThemeChangeSource = "init" | "set" | "toggle" | "clearPreference" | "setTokens" | "system" | "storage";
+
+/**
+ * Payload passed to subscribers and the browser `themechange` event after a theme change.
+ *
+ * @typeParam TName - Names of every configured theme.
+ * @typeParam TSchema - Token schema from {@link ThemeOptions.tokenSchema}.
+ */
+export interface ThemeChangeDetail<
+  TName extends string = string,
+  TSchema extends Record<string, string> = Record<string, string>,
+> {
   /** Active theme name after the change. */
-  name: string;
-  /** Active theme definition after the change. */
-  theme: ThemeDefinition<TSchema>;
+  name: TName;
+  /** Active theme after the change; the same object `get()` returns until the next change. */
+  theme: ActiveTheme<TName, TSchema>;
   /** Operation or browser signal that caused the change notification. */
   source: ThemeChangeSource;
 }
 
-/** In-process callback registered with `Theme.subscribe()` for applied theme changes. */
-export type ThemeChangeListener<TSchema extends Record<string, string> = Record<string, string>> = (
-  detail: ThemeChangeDetail<TSchema>,
-) => void;
-
-/** Configuration for theme definitions, persistence, DOM application, and system preference mapping. */
-export interface ThemeOptions<TSchema extends Record<string, string> = Record<string, string>> {
-  /** Available themes. Names must be unique, non-empty, and valid default class tokens when `shouldApplyClass` is `true`. */
-  themes?: readonly ThemeDefinition<TSchema>[];
-  /** Configured theme name used before initialization and when browser APIs are unavailable. */
-  defaultTheme?: string;
-  /** Configured theme names selected for OS light and dark color-scheme preferences. */
-  systemTheme?: SystemThemeMap;
-  /** `localStorage` key used for explicit user preferences. */
-  storageKey?: string;
-  /** Attribute set on `document.documentElement` with the active theme name. */
-  attribute?: string;
-  /** Whether to toggle Tailwind CSS's `dark` class for themes with `colorScheme: "dark"`. */
-  isTailwindCss?: boolean;
-  /** Whether and how to apply a theme-specific class to `document.documentElement`. */
-  shouldApplyClass?: boolean | ThemeClassResolver<TSchema>;
-  /** Schema mapping theme token names to their corresponding CSS Custom Property names. */
-  tokenSchema?: TSchema;
-}
-
 /**
- * Fully resolved configuration options for theme management.
- * Contains defaults for any option not explicitly provided in the initial configuration.
+ * Callback registered with `Theme.subscribe()`, called after every applied change.
  *
- * @internal
+ * @typeParam TName - Names of every configured theme.
+ * @typeParam TSchema - Token schema from {@link ThemeOptions.tokenSchema}.
+ * @param detail - The applied change.
  */
-export interface ResolvedThemeOptions<TSchema extends Record<string, string> = Record<string, string>> {
-  /** The complete list of available theme definitions. */
-  themes: readonly ThemeDefinition<TSchema>[];
-  /** The theme name used when no user preference has been saved and the system preference cannot be determined. */
-  defaultTheme: string;
-  /** Mapping of system color scheme preferences (light/dark) to target theme names. */
-  systemTheme: SystemThemeMap;
-  /** The localStorage key under which the user's explicit theme preference is persisted. */
-  storageKey: string;
-  /** The HTML attribute on `document.documentElement` where the active theme name is applied. */
-  attribute: string;
-  /** Whether Tailwind CSS's dark mode class should be automatically toggled on the document element. */
-  isTailwindCss: boolean;
-  /** Custom resolver function or boolean determining whether and how theme-specific CSS classes are applied to the document element. */
-  shouldApplyClass: boolean | ThemeClassResolver<TSchema>;
-  /** Optional schema mapping token names to their corresponding CSS Custom Property names. */
+export type ThemeChangeListener<
+  TName extends string = string,
+  TSchema extends Record<string, string> = Record<string, string>,
+> = (detail: ThemeChangeDetail<TName, TSchema>) => void;
+
+/**
+ * Configuration for theme definitions, persistence, DOM application, and system preference mapping. An option set
+ * to `undefined` uses its default, as an omitted one does.
+ *
+ * @typeParam TName - Names of every configured theme, inferred from the keys of `themes`.
+ * @typeParam TSchema - Token schema, inferred from `tokenSchema`.
+ */
+export interface ThemeOptions<
+  TName extends string = string,
+  TSchema extends Record<string, string> = Record<string, string>,
+> {
+  /**
+   * Available themes keyed by name. Replaces the built-in list entirely. Names must be non-empty and, while
+   * `className` is `true`, usable in a class name.
+   *
+   * @defaultValue `{ light: { colorScheme: "light" }, dark: { colorScheme: "dark" } }`
+   */
+  themes?: { readonly [K in TName]: ThemeDefinition<NoInfer<TName>, NoInfer<TSchema>> };
+  /**
+   * Theme used before initialization and when `matchMedia` is unavailable.
+   *
+   * @defaultValue `"light"`
+   */
+  defaultTheme?: NoInfer<TName>;
+  /**
+   * Themes selected for OS light and dark color-scheme preferences.
+   *
+   * @defaultValue `{ light: "light", dark: "dark" }`
+   */
+  systemTheme?: SystemThemeMap<NoInfer<TName>>;
+  /**
+   * `localStorage` key used for the explicit user preference.
+   *
+   * @defaultValue `"app-theme-preference"`
+   */
+  storageKey?: string;
+  /**
+   * Attribute set on `document.documentElement` to the active theme name.
+   *
+   * @defaultValue `"data-theme"`
+   */
+  attribute?: string;
+  /**
+   * Whether to add a `dark` class to `document.documentElement` while a theme with `colorScheme: "dark"` is active,
+   * as Tailwind CSS's class-based `dark:` variant expects.
+   *
+   * @defaultValue `false`
+   */
+  darkClass?: boolean;
+  /**
+   * Class applied to `document.documentElement` for the active theme: `true` applies `theme-<name>`, `false` applies
+   * none, and a {@link ThemeClassResolver} returns a custom one.
+   *
+   * @defaultValue `true`
+   */
+  className?: boolean | ThemeClassResolver<NoInfer<TName>, NoInfer<TSchema>>;
+  /** Maps token names to the CSS custom properties they are written to, such as `{ primary: "--color-primary" }`. */
   tokenSchema?: TSchema;
 }
 
 /**
- * Core theme preference handler. Manages initialization, switching themes,
- * persistence to localStorage, synchronizing with the OS prefers-color-scheme preference,
- * dynamic token mapping to CSS Custom Properties, and dispatching change events.
+ * Theme preference manager returned by `createTheme()`. Methods are bound, so they can be passed as callbacks.
+ *
+ * @remarks
+ * Every member is safe to use without browser APIs: storage, DOM, and listener work is skipped, and the system
+ * theme falls back to `defaultTheme`.
+ *
+ * @typeParam TName - Names of every configured theme.
+ * @typeParam TSchema - Token schema from {@link ThemeOptions.tokenSchema}.
  */
-export interface Theme<TSchema extends Record<string, string> = Record<string, string>> {
-  /**
-   * Initializes the theme manager. Resolves the active theme (using the stored preference if valid,
-   * falling back to the current OS color-scheme preference), applies classes/attributes to the DOM,
-   * and registers the media query listener for automatic system preference updates.
-   *
-   * @param tokens - Optional runtime override token values to merge and apply.
-   * @returns The current `Theme` manager instance for method chaining.
-   * @sideEffect Registers a media query event listener on `window` and updates root DOM element attributes/styles. Dispatches a "themechange" event.
-   */
-  init(tokens?: Partial<Record<keyof TSchema, string>>): this;
+export interface Theme<TName extends string = string, TSchema extends Record<string, string> = Record<string, string>> {
+  /** Active theme name. `defaultTheme` until `init()` or another change runs. */
+  readonly name: TName;
+  /** Explicit preference stored in `localStorage`, or `null` when none is stored, the stored name is not configured, or storage is unavailable. */
+  readonly preference: TName | null;
+  /** Theme matching the current OS color-scheme preference, or `defaultTheme` when `matchMedia` is unavailable. */
+  readonly system: TName;
 
   /**
-   * Retrieves the active theme configuration including static and computed tokens.
+   * Applies the stored preference, or the system theme when there is none, and starts following OS
+   * color-scheme changes and preference changes from other tabs. Calling it again does nothing until `destroy()`.
    *
-   * Token values are merged in this priority order (last wins):
-   * 1. CSS computed style — values read from `window.getComputedStyle` for tokens not defined in JS (unless `options.skipComputed` is true).
-   * 2. Theme static tokens — values defined in `ThemeDefinition.tokens` for the active theme.
-   * 3. Runtime overrides — values passed to `init()`, `set()`, `toggle()`, or other methods.
-   *
-   * @param options - Optional getter options. Set `skipComputed: true` to avoid reading computed styles from the DOM via `window.getComputedStyle`, preventing potential layout reflows.
-   * @returns The active `ThemeDefinition` object. If `tokenSchema` is configured and a token is not
-   * explicitly defined in JS, its value is dynamically resolved from the computed style of the root DOM element in browser environments.
-   * @warning Reading computed styles from the DOM via `window.getComputedStyle` can trigger a synchronous layout reflow. Avoid calling `get()` frequently or inside high-performance loops, or pass `{ skipComputed: true }`.
+   * @returns This manager.
+   * @throws {Error} When a `className` resolver returns an empty or whitespace-containing class.
    */
-  get(options?: { skipComputed?: boolean }): ThemeDefinition<TSchema>;
+  init(): Theme<TName, TSchema>;
 
   /**
-   * Activates a configured theme by name and updates the stored preference in `localStorage`.
+   * Returns the active theme without reading the DOM.
    *
-   * @param name - The name of the configured theme to activate.
-   * @param tokens - Optional runtime override token values to apply. Active overrides persist across subsequent theme changes unless cleared (by passing new overrides or an empty object).
-   * @returns The activated `ThemeDefinition` with merged and resolved tokens.
-   * @throws {Error} If the specified theme name is not found in the configured themes list.
-   * @sideEffect Updates root DOM attributes, colorscheme styles, classes, and saves preference to `localStorage`. Dispatches a "themechange" event.
+   * @returns The same frozen object on every call until the next change, so it can serve as a store snapshot.
    */
-  set(name: string, tokens?: Partial<Record<keyof TSchema, string>>): ThemeDefinition<TSchema>;
+  get(): ActiveTheme<TName, TSchema>;
 
   /**
-   * Switches away from the active theme and persists the change. If the active theme configures a
-   * `pairedTheme`, that theme is activated. Otherwise the next theme is selected from
-   * `systemTheme.light` or `systemTheme.dark` based on the active theme's `colorScheme`, not by
-   * cycling the active theme name.
+   * Activates a theme and stores it as the explicit preference.
    *
-   * @param tokens - Optional runtime override token values to apply. Active overrides persist across subsequent theme changes unless cleared (by passing new overrides or an empty object).
-   * @returns The activated `ThemeDefinition` with merged and resolved tokens.
-   * @sideEffect Updates root DOM attributes, colorscheme styles, classes, and saves preference to `localStorage`. Dispatches a "themechange" event.
+   * @param name - Configured theme name.
+   * @returns The activated theme.
+   * @throws {Error} When `name` is not a configured theme, or a `className` resolver returns an invalid class.
    */
-  toggle(tokens?: Partial<Record<keyof TSchema, string>>): ThemeDefinition<TSchema>;
+  set(name: TName): ActiveTheme<TName, TSchema>;
 
   /**
-   * Removes the explicit user theme preference from storage and resets the theme to match the OS system preference.
+   * Activates the active theme's `pairedTheme`, or else the `systemTheme` entry for the opposite color scheme, and
+   * stores it as the explicit preference.
    *
-   * @returns The activated system `ThemeDefinition` with merged and resolved tokens.
-   * @sideEffect Deletes the storage key from `localStorage`, updates root DOM attributes, styles, classes. Dispatches a "themechange" event.
+   * @returns The activated theme.
+   * @throws {Error} When a `className` resolver returns an invalid class.
    */
-  clearPreference(): ThemeDefinition<TSchema>;
+  toggle(): ActiveTheme<TName, TSchema>;
 
   /**
-   * Retrieves the currently stored theme preference name from `localStorage`.
+   * Removes the explicit preference and activates the system theme, which then follows OS changes again.
    *
-   * @returns The stored theme name if valid and currently configured; otherwise `null` (e.g. during SSR, if storage is empty/unavailable, or if the stored theme name is not configured).
+   * @returns The activated theme.
+   * @throws {Error} When a `className` resolver returns an invalid class.
    */
-  getStored(): string | null;
+  clearPreference(): ActiveTheme<TName, TSchema>;
 
   /**
-   * Resolves the configured theme that matches the active OS color-scheme preference.
+   * Replaces the runtime token overrides, which win over every theme's static tokens until replaced again. Pass
+   * `{}` to remove them. Overrides are not stored and are not part of the pre-paint script.
    *
-   * @returns The matching `ThemeDefinition`. Falls back to the default theme during SSR or if `matchMedia` is unavailable.
+   * @param tokens - Token values keyed by `tokenSchema` names.
+   * @returns The active theme with the new overrides.
+   * @throws {Error} When `tokens` is not an object, no `tokenSchema` is configured, or a key is not in `tokenSchema`.
    */
-  getSystem(): ThemeDefinition<TSchema>;
+  setTokens(tokens: Partial<Record<keyof TSchema, string>>): ActiveTheme<TName, TSchema>;
 
   /**
-   * Registers a callback listener to receive notifications when the theme or its tokens change.
+   * Reads every `tokenSchema` token: the values in `get().tokens`, completed with the computed CSS values of
+   * `document.documentElement` for tokens defined only in CSS.
    *
-   * @param listener - Callback function invoked on theme changes.
-   * @returns An unsubscribe function to remove the registered listener.
-   * @sideEffect Adds the listener to the internal callbacks registry.
+   * @remarks
+   * Reading computed styles can force a synchronous layout. Prefer `get().tokens` when CSS-only tokens are not needed.
+   *
+   * @returns Token values at the time of the call. Tokens with no value anywhere are omitted, and computed values
+   * are omitted without browser APIs or when reading them fails, which is logged with `console.error`.
    */
-  subscribe(listener: ThemeChangeListener<TSchema>): () => void;
+  readTokens(): Partial<Record<keyof TSchema, string>>;
 
   /**
-   * Generates a synchronous inline IIFE script string to inject into document `<head>`.
-   * Prevents Flash of Unstyled Content (FOUC) by applying storage or system theme before render.
+   * Registers a listener called after every applied change. A listener that throws is logged with
+   * `console.error` and does not stop the others.
    *
-   * @returns Minified JavaScript script string.
+   * @param listener - Callback receiving the change.
+   * @returns A function that removes the listener.
+   */
+  subscribe(listener: ThemeChangeListener<TName, TSchema>): () => void;
+
+  /**
+   * Returns an inline script that applies the stored or system theme, its class, and its static tokens before the
+   * first paint, preventing a theme flash. Runtime overrides from `setTokens()` are not included.
+   *
+   * @returns Minified JavaScript, safe to place inside an inline `<script>` element.
+   * @throws {Error} When a `className` resolver returns an invalid class.
    */
   getPrePaintScript(): string;
 
   /**
-   * Cleans up the theme instance by removing all in-process change listeners, the system
-   * preference media query listener, and the cross-tab storage listener. Resets active tokens
-   * and the active theme name to the configured `defaultTheme` so the instance can be safely
-   * re-initialized with `init()`.
+   * Stops following OS and cross-tab changes, removes every listener and runtime override, and resets `name` to
+   * `defaultTheme`, so `init()` can run again. The DOM and stored preference stay as they are unless `revertDom` is set.
    *
-   * @param options - Optional cleanup options. Set `revertDom: true` to remove configured DOM attributes, classes, and CSS custom properties applied to `document.documentElement`.
-   * @sideEffect Removes event listeners from `window` and clears internal subscriber sets. If `revertDom: true`, removes theme attributes, classes, and custom properties from the DOM root.
+   * @param options - Set `revertDom: true` to also remove the attribute, classes, `color-scheme`, and custom
+   * properties this manager writes to `document.documentElement`.
    */
   destroy(options?: { revertDom?: boolean }): void;
 }
