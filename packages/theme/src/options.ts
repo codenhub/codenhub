@@ -1,6 +1,6 @@
 import { DEFAULT_ATTRIBUTE, DEFAULT_STORAGE_KEY } from "./constants";
 import type { ActiveTheme, SystemThemeMap, ThemeClassResolver, ThemeDefinition, ThemeOptions } from "./types";
-import { assertThemeConfig } from "./validation";
+import { assertSystemThemeOption, assertThemeConfig } from "./validation";
 
 /**
  * Options after defaults are applied and validation passed, with themes keyed in a map so no name can collide
@@ -42,6 +42,7 @@ const withoutUndefined = <T extends object>(value: T | undefined): Partial<T> =>
 export const resolveOptions = <TName extends string, TSchema extends Record<string, string>>(
   options: ThemeOptions<TName, TSchema>,
 ): ResolvedThemeOptions<TName, TSchema> => {
+  assertSystemThemeOption(options.systemTheme);
   const merged = {
     ...DEFAULT_OPTIONS,
     ...withoutUndefined(options),

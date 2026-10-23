@@ -42,7 +42,7 @@ export function buildPrePaintScript<TName extends string, TSchema extends Record
 
     if (opts.tokenSchema) {
       for (const [tokenKey, cssVarName] of Object.entries(opts.tokenSchema)) {
-        const tokenValue = theme.tokens[tokenKey];
+        const tokenValue = Object.hasOwn(theme.tokens, tokenKey) ? theme.tokens[tokenKey] : undefined;
         if (tokenValue !== undefined) {
           vars ??= {};
           vars[cssVarName] = tokenValue;
