@@ -15,16 +15,18 @@ pnpm add @codenhub/theme
 ```ts
 import { createTheme } from "@codenhub/theme";
 
+// In the browser:
 const theme = createTheme().init();
 
-button.addEventListener("click", theme.toggle);
+document.querySelector("#theme-toggle")?.addEventListener("click", theme.toggle);
 theme.subscribe(({ name }) => console.log(`theme is now ${name}`));
-
-// Inline this string in a blocking <head> script to apply the theme before the first paint:
-const script = theme.getPrePaintScript();
 
 // Remove media-query/storage listeners and subscribers on teardown.
 theme.destroy({ revertDom: true });
+
+// On the server or at build time, with the same options: inline this string in a
+// blocking <head> script so the theme applies before the first paint.
+const script = createTheme().getPrePaintScript();
 ```
 
 ## Documentation
@@ -69,7 +71,7 @@ import { createTheme } from "@codenhub/theme";
 
 const theme = createTheme().init();
 
-button.addEventListener("click", theme.toggle);
+document.querySelector("#theme-toggle")?.addEventListener("click", theme.toggle);
 ```
 
 `createTheme()` with no arguments configures the built-in `light` and `dark` themes. `init()` resolves the theme to apply — a stored preference if one is valid, otherwise the OS preference — and applies it to `document.documentElement`. Every method is bound to its manager, so `theme.toggle` and `theme.subscribe` can be passed as callbacks directly. Call `destroy()` when the manager's owner is torn down, such as in a framework component's cleanup hook; it stops listening but leaves the DOM and stored preference as they were unless told otherwise (see [SSR, pre-paint, and Tailwind](docs/ssr-and-pre-paint.md)).
@@ -86,7 +88,11 @@ button.addEventListener("click", theme.toggle);
 `get()` returns the same object until the next change, so it works directly as a store snapshot. In React:
 
 ```ts
-const active = useSyncExternalStore(theme.subscribe, theme.get, theme.get);
+import { useSyncExternalStore } from "react";
+
+function useActiveTheme() {
+  return useSyncExternalStore(theme.subscribe, theme.get, theme.get);
+}
 ```
 
 ### Configuration
@@ -112,7 +118,7 @@ theme.set("dim");
 
 `themes` is keyed by theme name and replaces the built-in list entirely — include `light` and `dark`, or set `defaultTheme` and `systemTheme` to names you do define. Theme names are inferred from its keys, so `defaultTheme`, `systemTheme`, `pairedTheme`, and `set()` accept only configured names at compile time. `tokenSchema` maps the typed token names used in `tokens` to the CSS custom property each one writes to `document.documentElement`. See [Tokens, persistence, and cross-tab sync](docs/tokens-and-persistence.md) for how token values are resolved and stored, and [SSR, pre-paint, and Tailwind](docs/ssr-and-pre-paint.md) for flash-of-unstyled-content prevention, `darkClass`, and `className`.
 
-Construction validates every option and throws on invalid configuration: a `themes` value that is not an object, an empty theme name, a `defaultTheme`, `systemTheme`, or `pairedTheme` name that is not in `themes`, an invalid `colorScheme`, theme tokens outside `tokenSchema`, or a theme name that cannot form the default `theme-<name>` class.
+Construction validates every option and throws on invalid configuration: a `themes` or `systemTheme` value that is not an object, an empty theme name, a `defaultTheme`, `systemTheme`, or `pairedTheme` name that is not in `themes`, an invalid `colorScheme`, theme tokens outside `tokenSchema`, a `darkClass` that is not a boolean, or, while `className` is `true`, a theme name that cannot form the default `theme-<name>` class.
 
 An option set to `undefined` uses its default, exactly as an omitted one does. The option types accept `undefined`, so a wrapper that forwards an unset option, such as `storageKey: props.storageKey`, gets the default instead of a construction error. Rejecting `undefined` was the behavior before 0.2.0; it was dropped because it failed at runtime on code the types accept.
 

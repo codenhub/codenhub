@@ -41,7 +41,7 @@ export const applyTheme = <TName extends string, TSchema extends Record<string, 
 
   if (options.tokenSchema) {
     for (const [key, cssVarName] of Object.entries(options.tokenSchema)) {
-      const tokenValue = theme.tokens[key];
+      const tokenValue = Object.hasOwn(theme.tokens, key) ? theme.tokens[key] : undefined;
       if (tokenValue === undefined) {
         root.style.removeProperty(cssVarName);
       } else {
@@ -60,7 +60,8 @@ export const readComputedTokens = <TSchema extends Record<string, string>>(
   tokenSchema: TSchema | undefined,
   knownTokens: Readonly<Partial<Record<keyof TSchema, string>>>,
 ): Partial<Record<keyof TSchema, string>> => {
-  const computedTokens: Partial<Record<keyof TSchema, string>> = {};
+  // No prototype, so a token named "__proto__" is recorded as an own key.
+  const computedTokens: Partial<Record<keyof TSchema, string>> = Object.create(null);
 
   if (
     !tokenSchema ||
@@ -72,7 +73,7 @@ export const readComputedTokens = <TSchema extends Record<string, string>>(
   }
 
   const missingKeys = (Object.keys(tokenSchema) as Array<keyof TSchema>).filter(
-    (key) => knownTokens[key] === undefined,
+    (key) => !Object.hasOwn(knownTokens, key) || knownTokens[key] === undefined,
   );
   if (missingKeys.length === 0) {
     return computedTokens;

@@ -12,6 +12,7 @@ export interface UncheckedThemeOptions {
   storageKey: unknown;
   attribute: unknown;
   className: unknown;
+  darkClass: unknown;
   tokenSchema?: unknown;
 }
 
@@ -40,6 +41,10 @@ export const assertThemeConfig = (options: UncheckedThemeOptions): void => {
 
   if (typeof options.className !== "boolean" && typeof options.className !== "function") {
     throw new Error("Theme className option must be a boolean or a function.");
+  }
+
+  if (typeof options.darkClass !== "boolean") {
+    throw new Error("Theme darkClass option must be a boolean.");
   }
 
   if (!isRecord(options.themes)) {
@@ -120,6 +125,17 @@ export const assertThemeConfig = (options: UncheckedThemeOptions): void => {
 
   if (!isConfigured(options.systemTheme.dark)) {
     throw new Error(`System dark theme is not configured: ${String(options.systemTheme.dark)}.`);
+  }
+};
+
+/**
+ * Validates the `systemTheme` option before it is merged over its default, where a non-object would vanish.
+ *
+ * @internal
+ */
+export const assertSystemThemeOption = (systemTheme: unknown): void => {
+  if (systemTheme !== undefined && !isRecord(systemTheme)) {
+    throw new Error("Theme systemTheme option must be an object with light and dark theme names.");
   }
 };
 

@@ -110,6 +110,20 @@ describe("Theme config", () => {
     expect(root.className).toBe("theme-dark");
   });
 
+  it("should reject a systemTheme option that is not an object", () => {
+    for (const systemTheme of ["dark", 1, []]) {
+      expect(() => createTheme({ systemTheme: systemTheme as never })).toThrow(
+        "Theme systemTheme option must be an object with light and dark theme names.",
+      );
+    }
+  });
+
+  it("should reject a darkClass option that is not a boolean", () => {
+    expect(() => createTheme({ darkClass: "yes" as unknown as boolean })).toThrow(
+      "Theme darkClass option must be a boolean.",
+    );
+  });
+
   it("should reject empty theme names", () => {
     expect(() => createTheme({ themes: { " ": { colorScheme: "light" } } as never })).toThrow(
       "Theme names must be non-empty strings.",
@@ -918,6 +932,32 @@ describe("Theme CSS tokens", () => {
     theme.init();
 
     expect(theme.get().tokens).toEqual({});
+  });
+
+  it("should treat token names shared with Object.prototype as ordinary tokens", () => {
+    const styleEl = document.createElement("style");
+    styleEl.textContent = `:root { --token-constructor: red; --token-proto: blue; }`;
+    document.head.append(styleEl);
+
+    try {
+      const schema = JSON.parse(
+        '{"constructor":"--token-constructor","toString":"--token-to-string","__proto__":"--token-proto"}',
+      ) as Record<string, string>;
+      const theme = createTheme({ tokenSchema: schema }).init();
+
+      expect(root.style.getPropertyValue("--token-constructor")).toBe("");
+      expect(root.style.getPropertyValue("--token-to-string")).toBe("");
+
+      const tokens = theme.readTokens();
+      expect(Object.hasOwn(tokens, "constructor") && tokens.constructor).toBe("red");
+      expect(Object.hasOwn(tokens, "toString")).toBe(false);
+      expect(Object.hasOwn(tokens, "__proto__") && tokens["__proto__"]).toBe("blue");
+
+      new Function(theme.getPrePaintScript())();
+      expect(root.style.getPropertyValue("--token-constructor")).toBe("");
+    } finally {
+      styleEl.remove();
+    }
   });
 
   it("should complete tokens from computed styles in readTokens()", () => {
