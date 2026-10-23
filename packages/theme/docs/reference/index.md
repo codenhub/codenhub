@@ -28,7 +28,7 @@ Creates a theme preference manager. Nothing touches the DOM, storage, or listene
 
 **Returns** — A [Theme](#theme) whose methods are bound to it.
 
-**Throws** — When the options are invalid: a `themes`, `systemTheme`, `tokenSchema`, or theme `tokens` value that is set but is not a plain, non-array object, an empty theme name or, while `className` is `true`, a class-unsafe one, an invalid `colorScheme`, a `defaultTheme`, `systemTheme`, or `pairedTheme` naming an unconfigured theme, theme tokens outside `tokenSchema`, a `tokenSchema` value not starting with `--`, a `className` that is neither a boolean nor a function, a non-boolean `darkClass`, or an empty or invalid `attribute` or `storageKey`. An option set to `undefined` is treated as omitted.
+**Throws** — When the options are invalid: an `options` value that is not an object, a `themes`, `systemTheme`, `tokenSchema`, or theme `tokens` value that is set but is not a plain, non-array object, an empty theme name or, while `className` is `true`, a class-unsafe one, an invalid `colorScheme`, a `defaultTheme`, `systemTheme`, or `pairedTheme` naming an unconfigured theme, theme tokens outside `tokenSchema` or whose value is not a string, a finite number, or `undefined`, a `tokenSchema` value not starting with `--`, a `className` that is neither a boolean nor a function, a non-boolean `darkClass`, or an empty or invalid `attribute` or `storageKey`. An option set to `undefined` is treated as omitted.
 
 **Example**
 
@@ -243,7 +243,7 @@ Replaces the runtime token overrides, which win over every theme's static tokens
 subscribe(listener: ThemeChangeListener<TName, TSchema>): () => void;
 ```
 
-Registers a listener called after every applied change. A listener that throws is logged with `console.error` and does not stop the others.
+Registers a listener called after every applied change. A listener that throws is logged with `console.error` and does not stop the others. When a listener or a `themechange` listener makes another change, the listeners after it receive only that newer change.
 
 **Parameters**
 
@@ -329,7 +329,7 @@ Theme activated when calling `toggle()` from this theme, instead of the opposite
 tokens?: Partial<Record<keyof TSchema, string>>;
 ```
 
-Static token values written to the CSS custom properties named by `tokenSchema`.
+Static token values written to the CSS custom properties named by `tokenSchema`. A number from JavaScript is written as a string.
 
 ### ThemeOptions
 
@@ -409,6 +409,19 @@ tokenSchema?: TSchema;
 Maps token names to the CSS custom properties they are written to, such as `{ primary: "--color-primary" }`.
 
 ## Type aliases
+
+### ThemeChangeEvent
+
+```ts
+export type ThemeChangeEvent<TName extends string = string, TSchema extends Record<string, string> = Record<string, string>> = CustomEvent<ThemeChangeDetail<TName, TSchema>>;
+```
+
+Browser event dispatched on `window` under the `THEME_CHANGE_EVENT` name after a theme change, such as `window.addEventListener(THEME_CHANGE_EVENT, (event) => (event as ThemeChangeEvent).detail)`.
+
+**Type parameters**
+
+- `TName` — Names of every configured theme.
+- `TSchema` — Token schema from `ThemeOptions.tokenSchema`.
 
 ### ThemeChangeListener
 

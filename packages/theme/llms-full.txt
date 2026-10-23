@@ -116,7 +116,7 @@ const theme = createTheme({
 theme.set("dim");
 ```
 
-`themes` is keyed by theme name and replaces the built-in list entirely — include `light` and `dark`, or set `defaultTheme` and `systemTheme` to names you do define. Theme names are inferred from its keys, so `defaultTheme`, `systemTheme`, `pairedTheme`, and `set()` accept only configured names at compile time. `tokenSchema` maps the typed token names used in `tokens` to the CSS custom property each one writes to `document.documentElement`. See [Tokens, persistence, and cross-tab sync](docs/tokens-and-persistence.md) for how token values are resolved and stored, and [SSR, pre-paint, and Tailwind](docs/ssr-and-pre-paint.md) for flash-of-unstyled-content prevention, `darkClass`, and `className`.
+`themes` is keyed by theme name and replaces the built-in list entirely — include `light` and `dark`, or set `defaultTheme` and `systemTheme` to names you do define. Theme names are inferred from its keys, so `defaultTheme`, `systemTheme`, `pairedTheme`, and `set()` accept only configured names at compile time. The types do not make `defaultTheme` and `systemTheme` required when `themes` lacks `light` or `dark`; `createTheme()` throws instead, naming the missing theme. A conditional parameter type would catch it at compile time, but it was rejected because it breaks generic wrappers that forward `ThemeOptions<N>` to `createTheme()`. `tokenSchema` maps the typed token names used in `tokens` to the CSS custom property each one writes to `document.documentElement`. See [Tokens, persistence, and cross-tab sync](docs/tokens-and-persistence.md) for how token values are resolved and stored, and [SSR, pre-paint, and Tailwind](docs/ssr-and-pre-paint.md) for flash-of-unstyled-content prevention, `darkClass`, and `className`.
 
 Construction validates the options and throws on invalid configuration, such as a `themes` or `systemTheme` value that is not a plain object, an empty theme name, a `defaultTheme`, `systemTheme`, or `pairedTheme` name that is not in `themes`, an invalid `colorScheme`, theme tokens outside `tokenSchema`, a `darkClass` that is not a boolean, or, while `className` is `true`, a theme name that cannot form the default `theme-<name>` class. The [API reference](docs/reference/index.md) lists every rule.
 
@@ -211,13 +211,17 @@ theme.readTokens(); // { accent: "#00c853", surface: "<computed --color-surface>
 
 Reading computed values can force a synchronous layout, so prefer `get().tokens` when tokens defined only in CSS are not needed. `readTokens()` skips the read when every token is known in JS.
 
+Token values are strings. A finite number passed from JavaScript, such as a value read from a JSON config, is written as its string, so `get().tokens` reports `"4"` for `4`. An `undefined` value counts as omitted, so `setTokens({ primary: undefined })` leaves the theme's static `primary` in place. Any other value, including `NaN` and `Infinity`, throws.
+
 Runtime overrides apply to every theme and persist across theme changes until `setTokens()` replaces them — pass `{}` to remove them. They are not stored, so they last until the page unloads or `destroy()` runs, and they are not part of the pre-paint script. Passing a token key that is not in `tokenSchema` throws.
 
 ## Persistence
 
 An explicit preference set through `set()` or `toggle()` is written to `localStorage` under `storageKey` (default `"app-theme-preference"`). `theme.preference` returns that value when it names a configured theme, or `null` when it is unset, invalid, or storage is unavailable (for example during SSR). `clearPreference()` removes the stored value and applies `theme.system`, the theme the OS preference currently maps to.
 
-Storage reads, writes, and removals that throw — a full quota, a disabled storage API, a private-browsing restriction — are logged with `console.error` and treated the same as unavailable storage; they never throw out of `Theme` methods.
+Storage reads, writes, and removals that throw — a full quota, a disabled storage API, a private-browsing restriction — are treated the same as unavailable storage; they never throw out of `Theme` methods. Each kind of operation is logged with `console.error` the first time it fails for a manager, so a page with blocked storage logs one error per kind rather than one per read.
+
+When storing a choice made with `set()` or `toggle()` fails, the manager still remembers the choice for as long as it runs, including one made before `init()`: OS color-scheme changes do not override it until `clearPreference()` or `destroy()` runs. `theme.preference` reports only what storage holds: `null` while storage is unavailable, or the previously stored theme when only writing fails, as with a full quota.
 
 ## Cross-tab sync
 
@@ -237,7 +241,17 @@ const unsubscribe = theme.subscribe(({ name, source }) => {
 
 `source` names what caused the change: the method that ran (`"init"`, `"set"`, `"toggle"`, `"clearPreference"`, `"setTokens"`), `"system"` for an OS color-scheme change, or `"storage"` for a change made in another tab. Code that mirrors the preference elsewhere, such as to a user profile, should act on `"set"`, `"toggle"`, and `"clearPreference"` only, so that every open tab does not repeat the same write.
 
-A subscriber that throws is logged and does not stop other subscribers from running. Browsers also receive a `window` `CustomEvent` named by the exported `THEME_CHANGE_EVENT` constant (`"themechange"`) carrying the same detail, for code that has no access to the manager. The event does not identify which manager sent it, so use `subscribe()` when a page runs more than one.
+A subscriber that throws is logged and does not stop other subscribers from running. A subscriber or `themechange` listener that makes another change, such as calling `set()` or `setTokens()`, ends delivery of the change it received: the subscribers and listeners after it receive only the newer change, so none of them is left holding a superseded theme. Browsers also receive a `window` `CustomEvent` named by the exported `THEME_CHANGE_EVENT` constant (`"themechange"`) carrying the same detail, for code that has no access to the manager. Type it with the exported `ThemeChangeEvent`:
+
+```ts
+import { THEME_CHANGE_EVENT, type ThemeChangeEvent } from "@codenhub/theme";
+
+window.addEventListener(THEME_CHANGE_EVENT, (event) => {
+  console.log(`theme is now ${(event as ThemeChangeEvent).detail.name}`);
+});
+```
+
+The event does not identify which manager sent it, so use `subscribe()` when a page runs more than one.
 
 <!-- Source: docs/changelog/0.2.0.md -->
 
@@ -250,6 +264,7 @@ A subscriber that throws is logged and does not stop other subscribers from runn
 - `setTokens(tokens)` replaces the runtime token overrides; pass `{}` to remove them. Changes it makes report `source: "setTokens"`.
 - `readTokens()` returns every token, completed with computed CSS values at the time of the call.
 - Changes made in another tab report `source: "storage"`, so code that mirrors the preference elsewhere can tell them from local changes.
+- The `ThemeChangeEvent` type types the `themechange` window event, whose `detail` was untyped.
 
 ## Changed
 
@@ -260,6 +275,10 @@ A subscriber that throws is logged and does not stop other subscribers from runn
 - `Theme`, `ThemeOptions`, and the other generic types take the theme name union as their first type parameter, before the token schema.
 - When another tab sets, clears, or invalidates the preference, every tab re-resolves its theme and notifies, even when the active theme stays the same, so a settings screen sees the preference change.
 - Listener errors are logged as `[theme] Error in theme change listener:`, matching the package's other messages.
+- A storage operation that fails is logged the first time it fails for a manager, not on every call, so a page with blocked storage no longer logs an error each time `theme.preference` is read.
+- A theme or runtime token value that is not a string, a finite number, or `undefined` throws; a number is written as its string, which `get().tokens` now reports too.
+- A runtime token set to `undefined` counts as omitted, so `setTokens({ primary: undefined })` keeps the theme's static `primary` instead of removing it.
+- `createTheme()` throws `Theme options must be an object.` for options such as `null`, instead of an unrelated `TypeError`.
 
 ## Removed
 
@@ -279,6 +298,10 @@ A subscriber that throws is logged and does not stop other subscribers from runn
 - A `systemTheme` that is not an object, or a `darkClass` that is not a boolean, throws from `createTheme()` instead of being silently accepted.
 - The pre-paint script falls back as for an unknown name when the stored value is an `Object.prototype` property such as `toString`, and applies a configured theme named `__proto__`. ([#345](https://github.com/codenhub/codenhub/issues/345))
 - Invalid options, such as a `defaultTheme` naming an unconfigured theme, throw from `createTheme()` instead of reaching the page through the pre-paint script. ([#364](https://github.com/codenhub/codenhub/issues/364))
+
+- A subscriber or `themechange` listener that changes the theme, such as by calling `set()` or `setTokens()`, no longer leaves the subscribers and `themechange` listeners after it with the superseded change.
+- When storing fails, an explicit choice made with `set()` or `toggle()`, before or after `init()`, is no longer overridden by `init()` or the next OS color-scheme change.
+- The `themechange` event is built with the window's own `CustomEvent`, so `init()` and other changes no longer throw when the global `CustomEvent` belongs to another realm, as in a hand-built jsdom setup.
 
 ## Security
 

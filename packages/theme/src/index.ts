@@ -8,6 +8,7 @@ export type {
   ThemeClassResolver,
   ThemeChangeSource,
   ThemeChangeDetail,
+  ThemeChangeEvent,
   ThemeChangeListener,
   ThemeOptions,
 } from "./types";

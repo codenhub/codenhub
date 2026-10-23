@@ -1,59 +1,51 @@
 /**
- * Reads and validates the user's stored theme preference from `localStorage`.
- * Returns the theme name if it exists and matches a configured theme; otherwise `null`.
+ * Reads, writes, and removes the explicit theme preference in `localStorage`.
  *
  * @internal
  */
-export const readStorage = <TName extends string>(
+export interface PreferenceStorage<TName extends string> {
+  /** Returns the stored name when it matches a configured theme; otherwise `null`. */
+  read(): TName | null;
+  write(themeName: TName): void;
+  remove(): void;
+}
+
+type StorageOperation = "read from" | "write to" | "remove from";
+
+/**
+ * Creates the preference storage of one manager. A failing operation is logged with `console.error` the first time
+ * it fails, so a page with blocked storage logs one error per kind of operation instead of one per call.
+ *
+ * @internal
+ */
+export const createPreferenceStorage = <TName extends string>(
   storageKey: string,
   themes: ReadonlyMap<TName, unknown>,
-): TName | null => {
-  if (typeof window === "undefined") {
-    return null;
-  }
+): PreferenceStorage<TName> => {
+  const reported = new Set<StorageOperation>();
 
-  try {
-    const storedName = window.localStorage.getItem(storageKey);
-    if (storedName === null) {
-      return null;
+  const attempt = <T>(operation: StorageOperation, fallback: T, run: (storage: Storage) => T): T => {
+    if (typeof window === "undefined") {
+      return fallback;
     }
-    return themes.has(storedName as TName) ? (storedName as TName) : null;
-  } catch (error) {
-    console.error("[theme] Failed to read from localStorage:", error);
-    return null;
-  }
-};
+    try {
+      return run(window.localStorage);
+    } catch (error) {
+      if (!reported.has(operation)) {
+        reported.add(operation);
+        console.error(`[theme] Failed to ${operation} localStorage:`, error);
+      }
+      return fallback;
+    }
+  };
 
-/**
- * Writes the explicit theme preference to `localStorage`.
- *
- * @internal
- */
-export const writeStorage = (storageKey: string, themeName: string): void => {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    window.localStorage.setItem(storageKey, themeName);
-  } catch (error) {
-    console.error("[theme] Failed to write to localStorage:", error);
-  }
-};
-
-/**
- * Removes the explicit theme preference from `localStorage`.
- *
- * @internal
- */
-export const removeStorage = (storageKey: string): void => {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    window.localStorage.removeItem(storageKey);
-  } catch (error) {
-    console.error("[theme] Failed to remove from localStorage:", error);
-  }
+  return {
+    read: () =>
+      attempt("read from", null, (storage) => {
+        const storedName = storage.getItem(storageKey);
+        return storedName !== null && themes.has(storedName as TName) ? (storedName as TName) : null;
+      }),
+    write: (themeName) => attempt("write to", undefined, (storage) => storage.setItem(storageKey, themeName)),
+    remove: () => attempt("remove from", undefined, (storage) => storage.removeItem(storageKey)),
+  };
 };

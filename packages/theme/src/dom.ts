@@ -99,22 +99,24 @@ export const readComputedTokens = <TSchema extends Record<string, string>>(
 };
 
 /**
- * Dispatches a custom `themechange` event on the window.
+ * Creates the `themechange` event for the window, or returns `null` when the window cannot dispatch one.
  *
  * @internal
  */
-export const emitThemeEvent = <TName extends string, TSchema extends Record<string, string>>(
+export const createThemeEvent = <TName extends string, TSchema extends Record<string, string>>(
   detail: ThemeChangeDetail<TName, TSchema>,
-): void => {
+): CustomEvent<ThemeChangeDetail<TName, TSchema>> | null => {
   if (
     typeof window === "undefined" ||
     typeof window.dispatchEvent !== "function" ||
     typeof window.CustomEvent !== "function"
   ) {
-    return;
+    return null;
   }
 
-  window.dispatchEvent(new CustomEvent<ThemeChangeDetail<TName, TSchema>>(THEME_CHANGE_EVENT, { detail }));
+  // Built from the window's own constructor so the event belongs to the realm whose dispatchEvent receives it, which
+  // a global `CustomEvent` from another realm, as in a hand-built jsdom setup, does not.
+  return new window.CustomEvent<ThemeChangeDetail<TName, TSchema>>(THEME_CHANGE_EVENT, { detail });
 };
 
 /**

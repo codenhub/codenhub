@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 
-import { createTheme as originalCreateTheme, THEME_CHANGE_EVENT, type ActiveTheme, type ThemeChangeDetail } from ".";
+import {
+  createTheme as originalCreateTheme,
+  THEME_CHANGE_EVENT,
+  type ActiveTheme,
+  type ThemeChangeDetail,
+  type ThemeChangeEvent,
+} from ".";
 
 const activeThemes: Array<{ destroy(): void }> = [];
 const createTheme = ((options) => {
@@ -83,6 +89,12 @@ afterEach(() => {
 });
 
 describe("Theme config", () => {
+  it("should reject options that are not an object", () => {
+    for (const options of [null, "dark", []]) {
+      expect(() => createTheme(options as never)).toThrow("Theme options must be an object.");
+    }
+  });
+
   it("should reject a themes option that is not an object keyed by name", () => {
     for (const themes of [[], null]) {
       expect(() => createTheme({ themes: themes as never })).toThrow(
@@ -294,6 +306,10 @@ describe("Theme types", () => {
       // @ts-expect-error -- pairedTheme must name a configured theme
       createTheme({ themes: { light: { colorScheme: "light", pairedTheme: "drak" } } });
     }).toThrow('Theme "light" references unconfigured pairedTheme: drak.');
+  });
+
+  it("should type the themechange event detail", () => {
+    expectTypeOf<ThemeChangeEvent<"light" | "dim">["detail"]>().toEqualTypeOf<ThemeChangeDetail<"light" | "dim">>();
   });
 
   it("should type tokens from tokenSchema", () => {
@@ -594,6 +610,81 @@ describe("Theme behavior", () => {
     }
   });
 
+  it("should keep a choice made before init when storage is unavailable", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const mediaQueryList = createMatchMedia(false);
+    const restore = replaceLocalStorage({
+      get: () => {
+        throw new Error("blocked");
+      },
+    });
+
+    try {
+      const theme = createTheme();
+      theme.set("dark");
+      theme.init();
+      expect(theme.name).toBe("dark");
+
+      theme.clearPreference();
+      mediaQueryList.dispatch(true);
+      expect(theme.name).toBe("dark");
+    } finally {
+      restore();
+    }
+  });
+
+  it("should keep an explicit choice over OS changes when storage is unavailable", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const mediaQueryList = createMatchMedia(false);
+    const restore = replaceLocalStorage({
+      get: () => {
+        throw new Error("blocked");
+      },
+    });
+
+    try {
+      const theme = createTheme().init();
+      theme.set("dark");
+      mediaQueryList.dispatch(true);
+      mediaQueryList.dispatch(false);
+      expect(theme.name).toBe("dark");
+
+      theme.clearPreference();
+      mediaQueryList.dispatch(true);
+      expect(theme.name).toBe("dark");
+      mediaQueryList.dispatch(false);
+      expect(theme.name).toBe("light");
+    } finally {
+      restore();
+    }
+  });
+
+  it("should log each kind of storage failure once per manager", () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const restore = replaceLocalStorage({
+      get: () => {
+        throw new Error("blocked");
+      },
+    });
+
+    try {
+      const theme = createTheme().init();
+      for (let attempt = 0; attempt < 3; attempt++) {
+        void theme.preference;
+        theme.set("dark");
+        theme.clearPreference();
+      }
+
+      expect(consoleErrorSpy.mock.calls.map(([message]) => message)).toEqual([
+        "[theme] Failed to read from localStorage:",
+        "[theme] Failed to write to localStorage:",
+        "[theme] Failed to remove from localStorage:",
+      ]);
+    } finally {
+      restore();
+    }
+  });
+
   it("should fall back to the default theme when matchMedia throws", () => {
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
@@ -719,6 +810,69 @@ describe("Theme change notifications", () => {
     expect(consoleErrorSpy).toHaveBeenCalledWith("[theme] Error in theme change listener:", expect.any(Error));
   });
 
+  it("should stop delivering a change once a listener starts a newer one", () => {
+    const theme = createTheme().init();
+    const seen: string[] = [];
+    const eventListener = (event: Event): void => {
+      seen.push(`event:${(event as ThemeChangeEvent).detail.name}`);
+    };
+    theme.subscribe(({ name }) => {
+      if (name === "dark") {
+        theme.set("light");
+      }
+    });
+    theme.subscribe(({ name }) => seen.push(name));
+    window.addEventListener(THEME_CHANGE_EVENT, eventListener);
+
+    theme.set("dark");
+    window.removeEventListener(THEME_CHANGE_EVENT, eventListener);
+
+    expect(theme.name).toBe("light");
+    expect(seen).toEqual(["light", "event:light"]);
+  });
+
+  it("should stop delivering a themechange event once a window listener starts a newer change", () => {
+    const theme = createTheme().init();
+    const seen: string[] = [];
+    const changeOnDark = (event: Event): void => {
+      if ((event as ThemeChangeEvent).detail.name === "dark") {
+        theme.set("light");
+      }
+    };
+    const record = (event: Event): void => {
+      seen.push((event as ThemeChangeEvent).detail.name);
+    };
+    window.addEventListener(THEME_CHANGE_EVENT, changeOnDark);
+    window.addEventListener(THEME_CHANGE_EVENT, record);
+
+    try {
+      theme.set("dark");
+    } finally {
+      window.removeEventListener(THEME_CHANGE_EVENT, changeOnDark);
+      window.removeEventListener(THEME_CHANGE_EVENT, record);
+    }
+
+    expect(theme.name).toBe("light");
+    expect(seen).toEqual(["light"]);
+  });
+
+  it("should build the themechange event with the window's CustomEvent", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    class WindowCustomEvent<T> extends CustomEvent<T> {}
+    const dispatchEvent = vi.fn((_event: Event) => true);
+    vi.stubGlobal(
+      "window",
+      Object.create(window, { CustomEvent: { value: WindowCustomEvent }, dispatchEvent: { value: dispatchEvent } }),
+    );
+
+    try {
+      expect(() => createTheme().set("dark")).not.toThrow();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(dispatchEvent.mock.calls[0]?.[0]).toBeInstanceOf(WindowCustomEvent);
+  });
+
   it("should respond to system changes only without a stored preference", () => {
     const mediaQueryList = createMatchMedia(false);
     const theme = createTheme().init();
@@ -742,6 +896,19 @@ describe("Theme change notifications", () => {
 });
 
 describe("Theme cross-tab sync", () => {
+  it("should follow OS changes again after another tab clears the preference", () => {
+    const mediaQueryList = createMatchMedia(false);
+    const theme = createTheme().init();
+    theme.set("dark");
+
+    window.localStorage.removeItem("app-theme-preference");
+    dispatchStorage({ key: "app-theme-preference", oldValue: "dark", newValue: null });
+    mediaQueryList.dispatch(true);
+    mediaQueryList.dispatch(false);
+
+    expect(theme.name).toBe("light");
+  });
+
   it("should apply a preference set in another tab and report it as storage", () => {
     const theme = createTheme().init();
     const listener = vi.fn();
@@ -826,6 +993,44 @@ describe("Theme cross-tab sync", () => {
 });
 
 describe("Theme CSS tokens", () => {
+  it("should reject token values that are not strings or numbers", () => {
+    expect(() =>
+      createTheme({
+        themes: { light: { colorScheme: "light", tokens: { primary: {} as never } }, dark: { colorScheme: "dark" } },
+        tokenSchema,
+      }),
+    ).toThrow('Theme "light" token "primary" must be a string or a finite number.');
+    expect(() => createTheme({ tokenSchema }).setTokens({ primary: null as never })).toThrow(
+      'Runtime token "primary" must be a string or a finite number.',
+    );
+  });
+
+  it("should reject token values that are not finite numbers", () => {
+    for (const value of [Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => createTheme({ tokenSchema }).setTokens({ primary: value as never })).toThrow(
+        'Runtime token "primary" must be a string or a finite number.',
+      );
+    }
+  });
+
+  it("should treat an undefined runtime token as omitted", () => {
+    const theme = createTheme({ themes: tokenThemes, tokenSchema }).init();
+
+    expect(theme.setTokens({ primary: undefined }).tokens.primary).toBe("blue");
+    expect(root.style.getPropertyValue("--color-primary")).toBe("blue");
+  });
+
+  it("should write number token values as strings", () => {
+    const theme = createTheme({
+      themes: { light: { colorScheme: "light", tokens: { primary: 4 as never } }, dark: { colorScheme: "dark" } },
+      tokenSchema,
+    }).init();
+
+    expect(theme.get().tokens.primary).toBe("4");
+    expect(theme.setTokens({ bg: 0 as never }).tokens.bg).toBe("0");
+    expect(root.style.getPropertyValue("--color-bg")).toBe("0");
+  });
+
   it("should apply theme-defined tokens on init and theme change", () => {
     const theme = createTheme({ themes: tokenThemes, tokenSchema }).init();
 

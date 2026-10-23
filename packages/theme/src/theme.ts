@@ -1,8 +1,8 @@
 import { getThemeClass } from "./class-resolver";
-import { applyTheme, emitThemeEvent, readComputedTokens, removeAppliedTheme } from "./dom";
-import { resolveOptions } from "./options";
+import { applyTheme, createThemeEvent, readComputedTokens, removeAppliedTheme } from "./dom";
+import { resolveOptions, toTokenValues } from "./options";
 import { buildPrePaintScript } from "./pre-paint";
-import { readStorage, removeStorage, writeStorage } from "./storage";
+import { createPreferenceStorage } from "./storage";
 import { readSystemTheme, registerStorageListener, registerSystemListener } from "./system";
 import type { ActiveTheme, Theme, ThemeChangeListener, ThemeChangeSource, ThemeOptions } from "./types";
 import { assertRuntimeTokens } from "./validation";
@@ -28,10 +28,10 @@ import { assertRuntimeTokens } from "./validation";
  * @typeParam TSchema - Token schema, inferred from `options.tokenSchema`.
  * @param options - Themes, persistence key, DOM attribute and classes, system mapping, and token schema.
  * @returns A {@link Theme} whose methods are bound to it.
- * @throws {Error} When the options are invalid: a `themes`, `systemTheme`, `tokenSchema`, or theme `tokens` value that
- *   is set but is not a plain, non-array object, an empty theme name or, while `className` is `true`, a class-unsafe
+ * @throws {Error} When the options are invalid: an `options` value that is not an object, a `themes`, `systemTheme`,
+ *   `tokenSchema`, or theme `tokens` value that is set but is not a plain, non-array object, an empty theme name or, while `className` is `true`, a class-unsafe
  *   one, an invalid `colorScheme`, a `defaultTheme`, `systemTheme`, or `pairedTheme` naming an unconfigured theme,
- *   theme tokens outside `tokenSchema`, a `tokenSchema` value not starting with `--`, a `className` that is neither a
+ *   theme tokens outside `tokenSchema` or whose value is not a string, a finite number, or `undefined`, a `tokenSchema` value not starting with `--`, a `className` that is neither a
  *   boolean nor a function, a non-boolean `darkClass`, or an empty or invalid `attribute` or `storageKey`. An option
  *   set to `undefined` is treated as omitted.
  */
@@ -48,6 +48,13 @@ export function createTheme<
   // Resolved on first use, so a custom resolver never runs during construction.
   let classes: Map<TName, string | null> | null = null;
   let stopListening: (() => void) | null = null;
+  // Counts applied changes, so a change started by a listener stops delivery of the one that called it.
+  let changeCount = 0;
+  // The themechange event being dispatched, stopped when a window listener starts a newer change.
+  let dispatchingEvent: Event | null = null;
+  // Kept in memory as well as storage, so an explicit choice still wins over OS changes when storage is unavailable.
+  let hasExplicitChoice = false;
+  const storage = createPreferenceStorage(config.storageKey, config.themes);
 
   const getClasses = (): Map<TName, string | null> => {
     if (classes === null) {
@@ -71,7 +78,7 @@ export function createTheme<
     return definition;
   };
 
-  const readPreference = (): TName | null => readStorage(config.storageKey, config.themes);
+  const readPreference = (): TName | null => storage.read();
 
   const readSystem = (): TName => readSystemTheme(config);
 
@@ -96,15 +103,29 @@ export function createTheme<
       nextClass: getClasses().get(active.name) ?? null,
     });
 
+    const change = ++changeCount;
+    dispatchingEvent?.stopImmediatePropagation();
     const detail = { name: active.name, theme: active, source };
     for (const listener of listeners) {
+      if (change !== changeCount) {
+        return active;
+      }
       try {
         listener(detail);
       } catch (error) {
         console.error("[theme] Error in theme change listener:", error);
       }
     }
-    emitThemeEvent(detail);
+    const event = change === changeCount ? createThemeEvent(detail) : null;
+    if (event !== null) {
+      const previousEvent = dispatchingEvent;
+      dispatchingEvent = event;
+      try {
+        window.dispatchEvent(event);
+      } finally {
+        dispatchingEvent = previousEvent;
+      }
+    }
 
     return active;
   };
@@ -115,13 +136,14 @@ export function createTheme<
     getClasses();
     activeName = nextName;
     if (shouldStore) {
-      writeStorage(config.storageKey, activeName);
+      hasExplicitChoice = true;
+      storage.write(activeName);
     }
     return apply(source);
   };
 
   const handleSystemChange = (event: MediaQueryListEvent): void => {
-    if (readPreference() !== null) {
+    if (hasExplicitChoice || readPreference() !== null) {
       return;
     }
     const name = event.matches ? config.systemTheme.dark : config.systemTheme.light;
@@ -135,7 +157,9 @@ export function createTheme<
     if (event.key !== null && event.key !== config.storageKey) {
       return;
     }
-    activate(readPreference() ?? readSystem(), "storage", false);
+    const preference = readPreference();
+    hasExplicitChoice = preference !== null;
+    activate(preference ?? readSystem(), "storage", false);
   };
 
   const theme: Theme<TName, TSchema> = {
@@ -157,7 +181,8 @@ export function createTheme<
           stopSystem();
           stopStorage();
         };
-        activate(readPreference() ?? readSystem(), "init", false);
+        // A choice made before init() stands when storage could not keep it.
+        activate(readPreference() ?? (hasExplicitChoice ? activeName : readSystem()), "init", false);
       }
       return theme;
     },
@@ -173,13 +198,14 @@ export function createTheme<
     },
     clearPreference() {
       getClasses();
-      removeStorage(config.storageKey);
+      hasExplicitChoice = false;
+      storage.remove();
       return activate(readSystem(), "clearPreference", false);
     },
     setTokens(tokens) {
       assertRuntimeTokens(tokens, config.tokenSchema);
       getClasses();
-      runtimeTokens = Object.freeze({ ...tokens });
+      runtimeTokens = Object.freeze(toTokenValues(tokens));
       return apply("setTokens");
     },
     readTokens() {
@@ -204,6 +230,7 @@ export function createTheme<
       listeners.clear();
       runtimeTokens = noTokens;
       activeName = config.defaultTheme;
+      hasExplicitChoice = false;
       snapshot = null;
       classes = null;
     },

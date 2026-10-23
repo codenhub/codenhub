@@ -10,7 +10,7 @@ export interface ThemeDefinition<
 > {
   /** Browser color scheme applied to `document.documentElement.style.colorScheme`; also decides what `toggle()` falls back to and whether `darkClass` applies. */
   colorScheme: "light" | "dark";
-  /** Static token values written to the CSS custom properties named by `tokenSchema`. */
+  /** Static token values written to the CSS custom properties named by `tokenSchema`. A number from JavaScript is written as a string. */
   tokens?: Partial<Record<keyof TSchema, string>>;
   /** Theme activated when calling `toggle()` from this theme, instead of the opposite `systemTheme` entry. */
   pairedTheme?: TName;
@@ -87,6 +87,18 @@ export interface ThemeChangeDetail<
   /** Operation or browser signal that caused the change notification. */
   source: ThemeChangeSource;
 }
+
+/**
+ * Browser event dispatched on `window` under the `THEME_CHANGE_EVENT` name after a theme change, such as
+ * `window.addEventListener(THEME_CHANGE_EVENT, (event) => (event as ThemeChangeEvent).detail)`.
+ *
+ * @typeParam TName - Names of every configured theme.
+ * @typeParam TSchema - Token schema from {@link ThemeOptions.tokenSchema}.
+ */
+export type ThemeChangeEvent<
+  TName extends string = string,
+  TSchema extends Record<string, string> = Record<string, string>,
+> = CustomEvent<ThemeChangeDetail<TName, TSchema>>;
 
 /**
  * Callback registered with `Theme.subscribe()`, called after every applied change.
@@ -226,7 +238,8 @@ export interface Theme<TName extends string = string, TSchema extends Record<str
    *
    * @param tokens - Token values keyed by `tokenSchema` names.
    * @returns The active theme with the new overrides.
-   * @throws {Error} When `tokens` is not an object, no `tokenSchema` is configured, or a key is not in `tokenSchema`.
+   * @throws {Error} When `tokens` is not an object, no `tokenSchema` is configured, a key is not in `tokenSchema`, or a
+   *   value is not a string, a finite number, or `undefined`. An `undefined` value counts as omitted.
    */
   setTokens(tokens: Partial<Record<keyof TSchema, string>>): ActiveTheme<TName, TSchema>;
 
@@ -244,7 +257,8 @@ export interface Theme<TName extends string = string, TSchema extends Record<str
 
   /**
    * Registers a listener called after every applied change. A listener that throws is logged with
-   * `console.error` and does not stop the others.
+   * `console.error` and does not stop the others. When a listener or a `themechange` listener makes another change,
+   * the listeners after it receive only that newer change.
    *
    * @param listener - Callback receiving the change.
    * @returns A function that removes the listener.
