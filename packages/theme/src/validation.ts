@@ -21,9 +21,10 @@ const isNonEmptyString = (value: unknown): value is string => typeof value === "
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-// Numbers are accepted from JavaScript callers, such as JSON configs, and written as strings.
+// Finite numbers are accepted from JavaScript callers, such as JSON configs, and written as strings; `undefined` is
+// treated as an omitted token.
 const isTokenValue = (value: unknown): boolean =>
-  value === undefined || typeof value === "string" || typeof value === "number";
+  value === undefined || typeof value === "string" || (typeof value === "number" && Number.isFinite(value));
 
 /**
  * Validates that `createTheme()` received an options object.
@@ -125,7 +126,7 @@ export const assertThemeConfig = (options: UncheckedThemeOptions): void => {
           throw new Error(`Theme "${name}" defines token "${tokenKey}" which is not present in tokenSchema.`);
         }
         if (!isTokenValue(tokenValue)) {
-          throw new Error(`Theme "${name}" token "${tokenKey}" must be a string or a number.`);
+          throw new Error(`Theme "${name}" token "${tokenKey}" must be a string or a finite number.`);
         }
       }
     }
@@ -174,7 +175,7 @@ export const assertRuntimeTokens = (tokens: unknown, tokenSchema: Record<string,
       throw new Error(`Runtime token override "${tokenKey}" is not present in tokenSchema.`);
     }
     if (!isTokenValue(tokenValue)) {
-      throw new Error(`Runtime token "${tokenKey}" must be a string or a number.`);
+      throw new Error(`Runtime token "${tokenKey}" must be a string or a finite number.`);
     }
   }
 };

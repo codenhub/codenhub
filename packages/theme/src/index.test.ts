@@ -610,6 +610,29 @@ describe("Theme behavior", () => {
     }
   });
 
+  it("should keep a choice made before init when storage is unavailable", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const mediaQueryList = createMatchMedia(false);
+    const restore = replaceLocalStorage({
+      get: () => {
+        throw new Error("blocked");
+      },
+    });
+
+    try {
+      const theme = createTheme();
+      theme.set("dark");
+      theme.init();
+      expect(theme.name).toBe("dark");
+
+      theme.clearPreference();
+      mediaQueryList.dispatch(true);
+      expect(theme.name).toBe("dark");
+    } finally {
+      restore();
+    }
+  });
+
   it("should keep an explicit choice over OS changes when storage is unavailable", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const mediaQueryList = createMatchMedia(false);
@@ -808,6 +831,31 @@ describe("Theme change notifications", () => {
     expect(seen).toEqual(["light", "event:light"]);
   });
 
+  it("should stop delivering a themechange event once a window listener starts a newer change", () => {
+    const theme = createTheme().init();
+    const seen: string[] = [];
+    const changeOnDark = (event: Event): void => {
+      if ((event as ThemeChangeEvent).detail.name === "dark") {
+        theme.set("light");
+      }
+    };
+    const record = (event: Event): void => {
+      seen.push((event as ThemeChangeEvent).detail.name);
+    };
+    window.addEventListener(THEME_CHANGE_EVENT, changeOnDark);
+    window.addEventListener(THEME_CHANGE_EVENT, record);
+
+    try {
+      theme.set("dark");
+    } finally {
+      window.removeEventListener(THEME_CHANGE_EVENT, changeOnDark);
+      window.removeEventListener(THEME_CHANGE_EVENT, record);
+    }
+
+    expect(theme.name).toBe("light");
+    expect(seen).toEqual(["light"]);
+  });
+
   it("should build the themechange event with the window's CustomEvent", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     class WindowCustomEvent<T> extends CustomEvent<T> {}
@@ -951,10 +999,25 @@ describe("Theme CSS tokens", () => {
         themes: { light: { colorScheme: "light", tokens: { primary: {} as never } }, dark: { colorScheme: "dark" } },
         tokenSchema,
       }),
-    ).toThrow('Theme "light" token "primary" must be a string or a number.');
+    ).toThrow('Theme "light" token "primary" must be a string or a finite number.');
     expect(() => createTheme({ tokenSchema }).setTokens({ primary: null as never })).toThrow(
-      'Runtime token "primary" must be a string or a number.',
+      'Runtime token "primary" must be a string or a finite number.',
     );
+  });
+
+  it("should reject token values that are not finite numbers", () => {
+    for (const value of [Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => createTheme({ tokenSchema }).setTokens({ primary: value as never })).toThrow(
+        'Runtime token "primary" must be a string or a finite number.',
+      );
+    }
+  });
+
+  it("should treat an undefined runtime token as omitted", () => {
+    const theme = createTheme({ themes: tokenThemes, tokenSchema }).init();
+
+    expect(theme.setTokens({ primary: undefined }).tokens.primary).toBe("blue");
+    expect(root.style.getPropertyValue("--color-primary")).toBe("blue");
   });
 
   it("should write number token values as strings", () => {

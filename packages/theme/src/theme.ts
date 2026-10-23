@@ -1,5 +1,5 @@
 import { getThemeClass } from "./class-resolver";
-import { applyTheme, emitThemeEvent, readComputedTokens, removeAppliedTheme } from "./dom";
+import { applyTheme, createThemeEvent, readComputedTokens, removeAppliedTheme } from "./dom";
 import { resolveOptions, toTokenValues } from "./options";
 import { buildPrePaintScript } from "./pre-paint";
 import { createPreferenceStorage } from "./storage";
@@ -31,7 +31,7 @@ import { assertRuntimeTokens } from "./validation";
  * @throws {Error} When the options are invalid: an `options` value that is not an object, a `themes`, `systemTheme`,
  *   `tokenSchema`, or theme `tokens` value that is set but is not a plain, non-array object, an empty theme name or, while `className` is `true`, a class-unsafe
  *   one, an invalid `colorScheme`, a `defaultTheme`, `systemTheme`, or `pairedTheme` naming an unconfigured theme,
- *   theme tokens outside `tokenSchema` or whose value is neither a string nor a number, a `tokenSchema` value not starting with `--`, a `className` that is neither a
+ *   theme tokens outside `tokenSchema` or whose value is not a string, a finite number, or `undefined`, a `tokenSchema` value not starting with `--`, a `className` that is neither a
  *   boolean nor a function, a non-boolean `darkClass`, or an empty or invalid `attribute` or `storageKey`. An option
  *   set to `undefined` is treated as omitted.
  */
@@ -50,6 +50,8 @@ export function createTheme<
   let stopListening: (() => void) | null = null;
   // Counts applied changes, so a change started by a listener stops delivery of the one that called it.
   let changeCount = 0;
+  // The themechange event being dispatched, stopped when a window listener starts a newer change.
+  let dispatchingEvent: Event | null = null;
   // Kept in memory as well as storage, so an explicit choice still wins over OS changes when storage is unavailable.
   let hasExplicitChoice = false;
   const storage = createPreferenceStorage(config.storageKey, config.themes);
@@ -102,6 +104,7 @@ export function createTheme<
     });
 
     const change = ++changeCount;
+    dispatchingEvent?.stopImmediatePropagation();
     const detail = { name: active.name, theme: active, source };
     for (const listener of listeners) {
       if (change !== changeCount) {
@@ -113,8 +116,15 @@ export function createTheme<
         console.error("[theme] Error in theme change listener:", error);
       }
     }
-    if (change === changeCount) {
-      emitThemeEvent(detail);
+    const event = change === changeCount ? createThemeEvent(detail) : null;
+    if (event !== null) {
+      const previousEvent = dispatchingEvent;
+      dispatchingEvent = event;
+      try {
+        window.dispatchEvent(event);
+      } finally {
+        dispatchingEvent = previousEvent;
+      }
     }
 
     return active;
@@ -171,7 +181,8 @@ export function createTheme<
           stopSystem();
           stopStorage();
         };
-        activate(readPreference() ?? readSystem(), "init", false);
+        // A choice made before init() stands when storage could not keep it.
+        activate(readPreference() ?? (hasExplicitChoice ? activeName : readSystem()), "init", false);
       }
       return theme;
     },
