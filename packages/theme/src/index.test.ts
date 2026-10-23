@@ -960,6 +960,31 @@ describe("Theme CSS tokens", () => {
     }
   });
 
+  it("should write and serialize static tokens named after Object.prototype members", () => {
+    const schema = JSON.parse(
+      '{"constructor":"--token-constructor","toString":"--token-to-string","__proto__":"--token-proto"}',
+    ) as Record<string, string>;
+    const themes = JSON.parse(
+      '{"light":{"colorScheme":"light","tokens":{"constructor":"red","toString":"green","__proto__":"blue"}},"dark":{"colorScheme":"dark"}}',
+    ) as Record<"light" | "dark", { colorScheme: "light" | "dark"; tokens?: Record<string, string> }>;
+    const theme = createTheme({ themes, tokenSchema: schema });
+    const expected = { "--token-constructor": "red", "--token-to-string": "green", "--token-proto": "blue" };
+
+    expect(Object.hasOwn(theme.get().tokens, "__proto__")).toBe(true);
+    expect(theme.get().tokens).toEqual(themes.light.tokens);
+
+    new Function(theme.getPrePaintScript())();
+    for (const [property, value] of Object.entries(expected)) {
+      expect(root.style.getPropertyValue(property)).toBe(value);
+    }
+
+    root.removeAttribute("style");
+    theme.init();
+    for (const [property, value] of Object.entries(expected)) {
+      expect(root.style.getPropertyValue(property)).toBe(value);
+    }
+  });
+
   it("should complete tokens from computed styles in readTokens()", () => {
     const styleEl = document.createElement("style");
     styleEl.textContent = `:root { --color-primary: blue; } .theme-dark { --color-primary: red; }`;

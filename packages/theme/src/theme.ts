@@ -28,11 +28,12 @@ import { assertRuntimeTokens } from "./validation";
  * @typeParam TSchema - Token schema, inferred from `options.tokenSchema`.
  * @param options - Themes, persistence key, DOM attribute and classes, system mapping, and token schema.
  * @returns A {@link Theme} whose methods are bound to it.
- * @throws {Error} When the options are invalid: a non-object `themes`, `systemTheme`, or `tokenSchema`, an empty
- *   theme name or, while `className` is `true`, a class-unsafe one, an invalid `colorScheme`, a `defaultTheme`,
- *   `systemTheme`, or `pairedTheme` naming an unconfigured theme, theme tokens outside `tokenSchema`, a `tokenSchema`
- *   value not starting with `--`, a `className` that is neither a boolean nor a function, a non-boolean `darkClass`,
- *   or an empty or invalid `attribute` or `storageKey`.
+ * @throws {Error} When the options are invalid: a `themes`, `systemTheme`, `tokenSchema`, or theme `tokens` value that
+ *   is set but is not a plain, non-array object, an empty theme name or, while `className` is `true`, a class-unsafe
+ *   one, an invalid `colorScheme`, a `defaultTheme`, `systemTheme`, or `pairedTheme` naming an unconfigured theme,
+ *   theme tokens outside `tokenSchema`, a `tokenSchema` value not starting with `--`, a `className` that is neither a
+ *   boolean nor a function, a non-boolean `darkClass`, or an empty or invalid `attribute` or `storageKey`. An option
+ *   set to `undefined` is treated as omitted.
  */
 export function createTheme<
   TName extends string = "light" | "dark",
