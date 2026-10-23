@@ -337,7 +337,7 @@ Static token values written to the CSS custom properties named by `tokenSchema`.
 export interface ThemeOptions<TName extends string = string, TSchema extends Record<string, string> = Record<string, string>>
 ```
 
-Configuration for theme definitions, persistence, DOM application, and system preference mapping.
+Configuration for theme definitions, persistence, DOM application, and system preference mapping. An option set to `undefined` uses its default, as an omitted one does.
 
 **Type parameters**
 

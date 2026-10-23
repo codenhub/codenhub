@@ -101,7 +101,8 @@ export type ThemeChangeListener<
 > = (detail: ThemeChangeDetail<TName, TSchema>) => void;
 
 /**
- * Configuration for theme definitions, persistence, DOM application, and system preference mapping.
+ * Configuration for theme definitions, persistence, DOM application, and system preference mapping. An option set
+ * to `undefined` uses its default, as an omitted one does.
  *
  * @typeParam TName - Names of every configured theme, inferred from the keys of `themes`.
  * @typeParam TSchema - Token schema, inferred from `tokenSchema`.
