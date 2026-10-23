@@ -28,7 +28,7 @@ Creates a theme preference manager. Nothing touches the DOM, storage, or listene
 
 **Returns** — A [Theme](#theme) whose methods are bound to it.
 
-**Throws** — When the options are invalid: an `options` value that is not an object, a `themes`, `systemTheme`, `tokenSchema`, or theme `tokens` value that is set but is not a plain, non-array object, an empty theme name or, while `className` is `true`, a class-unsafe one, an invalid `colorScheme`, a `defaultTheme`, `systemTheme`, or `pairedTheme` naming an unconfigured theme, theme tokens outside `tokenSchema` or whose value is not a string, a finite number, or `undefined`, a `tokenSchema` value not starting with `--`, a `className` that is neither a boolean nor a function, a non-boolean `darkClass`, or an empty or invalid `attribute` or `storageKey`. An option set to `undefined` is treated as omitted.
+**Throws** — When the options are invalid: an `options` value that is not an object, a `themes`, `systemTheme`, `tokenSchema`, or theme `tokens` value that is set but is not a plain, non-array object, an empty theme name or, while `className` is `true`, a class-unsafe one, an invalid `colorScheme`, a `defaultTheme`, `systemTheme`, or `pairedTheme` naming an unconfigured theme, theme tokens outside `tokenSchema` or whose value is not a string, a finite number, or `undefined`, a `tokenSchema` value not starting with `--`, a `className` that is neither a boolean nor a function, a non-boolean `darkClass`, an empty or invalid `attribute` or `storageKey`, or an `attribute` of `class` or `style`. An option set to `undefined` is treated as omitted.
 
 **Example**
 
@@ -350,7 +350,7 @@ Configuration for theme definitions, persistence, DOM application, and system pr
 attribute?: string;
 ```
 
-Attribute set on `document.documentElement` to the active theme name.
+Attribute set on `document.documentElement` to the active theme name. It cannot be `class` or `style`, which would replace the page's own classes or inline styles; use `className` to apply a class.
 
 #### className
 

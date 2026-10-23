@@ -189,6 +189,14 @@ describe("Theme config", () => {
     }
   });
 
+  it("should reject the class and style attributes, which would replace the page's own values", () => {
+    for (const attribute of ["class", "style", "CLASS", "Style"]) {
+      expect(() => createTheme({ attribute })).toThrow(
+        `Theme attribute option cannot be "${attribute.toLowerCase()}"; use the className option to apply a class.`,
+      );
+    }
+  });
+
   it("should reject a className option that is neither a boolean nor a function", () => {
     expect(() => createTheme({ className: "theme" as unknown as boolean })).toThrow(
       "Theme className option must be a boolean or a function.",

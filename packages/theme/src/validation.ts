@@ -51,6 +51,13 @@ export const assertThemeConfig = (options: UncheckedThemeOptions): void => {
     throw new Error("Theme attribute option must be a valid HTML attribute name.");
   }
 
+  // Setting either to the theme name would replace every class or inline style the page put on the root element.
+  // HTML lowercases attribute names, so "CLASS" is the same attribute.
+  const attributeName = options.attribute.toLowerCase();
+  if (attributeName === "class" || attributeName === "style") {
+    throw new Error(`Theme attribute option cannot be "${attributeName}"; use the className option to apply a class.`);
+  }
+
   if (!isNonEmptyString(options.storageKey)) {
     throw new Error("Theme storageKey option must be a non-empty string.");
   }

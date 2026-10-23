@@ -149,7 +149,8 @@ export interface ThemeOptions<
    */
   storageKey?: string;
   /**
-   * Attribute set on `document.documentElement` to the active theme name.
+   * Attribute set on `document.documentElement` to the active theme name. It cannot be `class` or `style`, which
+   * would replace the page's own classes or inline styles; use `className` to apply a class.
    *
    * @defaultValue `"data-theme"`
    */

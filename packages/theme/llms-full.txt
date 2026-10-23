@@ -118,7 +118,7 @@ theme.set("dim");
 
 `themes` is keyed by theme name and replaces the built-in list entirely — include `light` and `dark`, or set `defaultTheme` and `systemTheme` to names you do define. Theme names are inferred from its keys, so `defaultTheme`, `systemTheme`, `pairedTheme`, and `set()` accept only configured names at compile time. The types do not make `defaultTheme` and `systemTheme` required when `themes` lacks `light` or `dark`; `createTheme()` throws instead, naming the missing theme. A conditional parameter type would catch it at compile time, but it was rejected because it breaks generic wrappers that forward `ThemeOptions<N>` to `createTheme()`. `tokenSchema` maps the typed token names used in `tokens` to the CSS custom property each one writes to `document.documentElement`. See [Tokens, persistence, and cross-tab sync](docs/tokens-and-persistence.md) for how token values are resolved and stored, and [SSR, pre-paint, and Tailwind](docs/ssr-and-pre-paint.md) for flash-of-unstyled-content prevention, `darkClass`, and `className`.
 
-Construction validates the options and throws on invalid configuration, such as a `themes` or `systemTheme` value that is not a plain object, an empty theme name, a `defaultTheme`, `systemTheme`, or `pairedTheme` name that is not in `themes`, an invalid `colorScheme`, theme tokens outside `tokenSchema`, a `darkClass` that is not a boolean, or, while `className` is `true`, a theme name that cannot form the default `theme-<name>` class. The [API reference](docs/reference/index.md) lists every rule.
+Construction validates the options and throws on invalid configuration, such as a `themes` or `systemTheme` value that is not a plain object, an empty theme name, a `defaultTheme`, `systemTheme`, or `pairedTheme` name that is not in `themes`, an invalid `colorScheme`, theme tokens outside `tokenSchema`, a `darkClass` that is not a boolean, an `attribute` of `class` or `style`, or, while `className` is `true`, a theme name that cannot form the default `theme-<name>` class. The [API reference](docs/reference/index.md) lists every rule.
 
 An option set to `undefined` uses its default, exactly as an omitted one does. The option types accept `undefined`, so a wrapper that forwards an unset option, such as `storageKey: props.storageKey`, gets the default instead of a construction error. Rejecting `undefined` was the behavior before 0.2.0; it was dropped because it failed at runtime on code the types accept.
 
@@ -177,7 +177,7 @@ Set `darkClass: true` to add a `dark` class to `document.documentElement` while 
 
 ## Classes and cleanup
 
-`className` controls the class applied to `document.documentElement` alongside the attribute: `true` (the default) applies `theme-<name>`, `false` applies no class, and a `ThemeClassResolver` function receives the theme with its static tokens and returns one custom class token. A resolver runs once per theme, on first use rather than at construction, and the operation that triggered it throws if it returns an empty or whitespace-containing string.
+`className` controls the class applied to `document.documentElement` alongside the attribute: `true` (the default) applies `theme-<name>`, `false` applies no class, and a `ThemeClassResolver` function receives the theme with its static tokens and returns one custom class token. Code moving from a library configured with `attribute: "class"` wants `className: (theme) => theme.name` instead: `attribute` cannot be `class` or `style`, because writing the theme name there would replace every class or inline style the page put on `<html>`. A resolver runs once per theme, on first use rather than at construction, and the operation that triggered it throws if it returns an empty or whitespace-containing string.
 
 `destroy(options?)` removes the media-query and storage listeners and clears in-process subscribers and runtime tokens, leaving the instance safe to `init()` again. By default it does **not** touch the DOM or stored preference. Pass `{ revertDom: true }` to also remove the configured attribute, classes, `color-scheme`, and CSS custom properties from `document.documentElement` — useful when unmounting a scoped theme manager that should leave no trace, such as in a component test or a preview pane.
 
@@ -279,6 +279,7 @@ The event does not identify which manager sent it, so use `subscribe()` when a p
 - A theme or runtime token value that is not a string, a finite number, or `undefined` throws; a number is written as its string, which `get().tokens` now reports too.
 - A runtime token set to `undefined` counts as omitted, so `setTokens({ primary: undefined })` keeps the theme's static `primary` instead of removing it.
 - `createTheme()` throws `Theme options must be an object.` for options such as `null`, instead of an unrelated `TypeError`.
+- `createTheme()` throws for an `attribute` of `class` or `style`, which replaced every class or inline style the page put on `<html>` with the theme name. To apply the theme name as a class, use `className: (theme) => theme.name`.
 
 ## Removed
 
