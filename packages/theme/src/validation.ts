@@ -47,7 +47,7 @@ export const assertThemeConfig = (options: UncheckedThemeOptions): void => {
     throw new Error("Theme attribute option must be a non-empty string.");
   }
 
-  if (/[\s"'/>=]/.test(options.attribute)) {
+  if (/[\s"'/>=\0]/.test(options.attribute)) {
     throw new Error("Theme attribute option must be a valid HTML attribute name.");
   }
 

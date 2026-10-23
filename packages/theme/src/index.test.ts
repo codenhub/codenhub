@@ -184,7 +184,7 @@ describe("Theme config", () => {
   });
 
   it("should reject attribute option containing invalid characters", () => {
-    for (const attribute of ["data theme", 'data-theme"', "data-theme>", "data-</script>"]) {
+    for (const attribute of ["data theme", 'data-theme"', "data-theme>", "data-</script>", "data\u0000theme"]) {
       expect(() => createTheme({ attribute })).toThrow("Theme attribute option must be a valid HTML attribute name.");
     }
   });
