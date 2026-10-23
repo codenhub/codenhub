@@ -21,17 +21,18 @@ import { assertRuntimeTokens } from "./validation";
  *   darkClass: true,
  * }).init();
  *
- * button.addEventListener("click", theme.toggle);
+ * document.querySelector("#theme-toggle")?.addEventListener("click", theme.toggle);
  * ```
  *
  * @typeParam TName - Names of every configured theme, inferred from the keys of `options.themes`.
  * @typeParam TSchema - Token schema, inferred from `options.tokenSchema`.
  * @param options - Themes, persistence key, DOM attribute and classes, system mapping, and token schema.
  * @returns A {@link Theme} whose methods are bound to it.
- * @throws {Error} When the options are invalid: a non-object `themes` or `tokenSchema`, an empty or class-unsafe
- *   theme name, an invalid `colorScheme`, a `defaultTheme`, `systemTheme`, or `pairedTheme` naming an unconfigured
- *   theme, theme tokens outside `tokenSchema`, a `tokenSchema` value not starting with `--`, or an empty or invalid
- *   `attribute` or `storageKey`.
+ * @throws {Error} When the options are invalid: a non-object `themes`, `systemTheme`, or `tokenSchema`, an empty
+ *   theme name or, while `className` is `true`, a class-unsafe one, an invalid `colorScheme`, a `defaultTheme`,
+ *   `systemTheme`, or `pairedTheme` naming an unconfigured theme, theme tokens outside `tokenSchema`, a `tokenSchema`
+ *   value not starting with `--`, a `className` that is neither a boolean nor a function, a non-boolean `darkClass`,
+ *   or an empty or invalid `attribute` or `storageKey`.
  */
 export function createTheme<
   TName extends string = "light" | "dark",

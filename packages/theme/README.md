@@ -13,16 +13,18 @@ pnpm add @codenhub/theme
 ```ts
 import { createTheme } from "@codenhub/theme";
 
+// In the browser:
 const theme = createTheme().init();
 
-button.addEventListener("click", theme.toggle);
+document.querySelector("#theme-toggle")?.addEventListener("click", theme.toggle);
 theme.subscribe(({ name }) => console.log(`theme is now ${name}`));
-
-// Inline this string in a blocking <head> script to apply the theme before the first paint:
-const script = theme.getPrePaintScript();
 
 // Remove media-query/storage listeners and subscribers on teardown.
 theme.destroy({ revertDom: true });
+
+// On the server or at build time, with the same options: inline this string in a
+// blocking <head> script so the theme applies before the first paint.
+const script = createTheme().getPrePaintScript();
 ```
 
 ## Documentation
