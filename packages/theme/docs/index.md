@@ -35,7 +35,7 @@ document.querySelector("#theme-toggle")?.addEventListener("click", theme.toggle)
 | `theme.preference` | Explicit preference stored in `localStorage` when it names a configured theme, or `null`. |
 | `theme.system`     | Theme the OS preference maps to right now.                                                |
 
-`theme.preference` reflects storage only, so it is also `null` while storage is unavailable. When storage is blocked, a choice made with `set()` or `toggle()` still holds over OS changes while `preference` stays `null`; see [Persistence](tokens-and-persistence.md#persistence).
+`theme.preference` reflects what storage holds, so it is also `null` while storage cannot be read. When storing a choice made with `set()` or `toggle()` fails, the choice still holds over OS changes, while `preference` keeps reporting storage: `null` when reading fails too, or the previously stored theme when only writing fails, as with a full quota; see [Persistence](tokens-and-persistence.md#persistence).
 
 `get()` returns the same object until the next change, so it works directly as a store snapshot. In React:
 

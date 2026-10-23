@@ -85,7 +85,7 @@ document.querySelector("#theme-toggle")?.addEventListener("click", theme.toggle)
 | `theme.preference` | Explicit preference stored in `localStorage` when it names a configured theme, or `null`. |
 | `theme.system`     | Theme the OS preference maps to right now.                                                |
 
-`theme.preference` reflects storage only, so it is also `null` while storage is unavailable. When storage is blocked, a choice made with `set()` or `toggle()` still holds over OS changes while `preference` stays `null`; see [Persistence](docs/tokens-and-persistence.md#persistence).
+`theme.preference` reflects what storage holds, so it is also `null` while storage cannot be read. When storing a choice made with `set()` or `toggle()` fails, the choice still holds over OS changes, while `preference` keeps reporting storage: `null` when reading fails too, or the previously stored theme when only writing fails, as with a full quota; see [Persistence](docs/tokens-and-persistence.md#persistence).
 
 `get()` returns the same object until the next change, so it works directly as a store snapshot. In React:
 
@@ -186,7 +186,7 @@ Set `darkClass: true` to add a `dark` class to `document.documentElement` while 
 
 ## Classes and cleanup
 
-`className` controls the class applied to `document.documentElement` alongside the attribute: `true` (the default) applies `theme-<name>`, `false` applies no class, and a `ThemeClassResolver` function receives the theme with its static tokens and returns one custom class token. Code moving from a library configured with `attribute: "class"` wants `className: (theme) => theme.name` instead, which works while every theme name is a single class token without whitespace: `attribute` cannot be `class` or `style`, because writing the theme name there would replace every class or inline style the page put on `<html>`. A resolver runs once per theme, on first use rather than at construction, and the operation that triggered it throws if it returns an empty or whitespace-containing string.
+`className` controls the class applied to `document.documentElement` alongside the attribute: `true` (the default) applies `theme-<name>`, `false` applies no class, and a `ThemeClassResolver` function receives the theme with its static tokens and returns one custom class token. Code moving from a library configured with `attribute: "class"` wants `className: (theme) => theme.name` instead, which works while every theme name is a single class token without whitespace: `attribute` cannot be `class` or `style`, in any letter case, because writing the theme name there would replace every class or inline style the page put on `<html>`. A resolver runs once per theme, on first use rather than at construction, and the operation that triggered it throws if it returns an empty or whitespace-containing string.
 
 `destroy(options?)` removes the media-query and storage listeners and clears in-process subscribers and runtime tokens, leaving the instance safe to `init()` again. By default it does **not** touch the DOM or stored preference. Pass `{ revertDom: true }` to also remove the configured attribute, classes, `color-scheme`, and CSS custom properties from `document.documentElement` — useful when unmounting a scoped theme manager that should leave no trace, such as in a component test or a preview pane.
 
