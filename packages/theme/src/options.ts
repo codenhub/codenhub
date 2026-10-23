@@ -1,6 +1,6 @@
 import { DEFAULT_ATTRIBUTE, DEFAULT_STORAGE_KEY } from "./constants";
 import type { ActiveTheme, SystemThemeMap, ThemeClassResolver, ThemeDefinition, ThemeOptions } from "./types";
-import { assertSystemThemeOption, assertThemeConfig } from "./validation";
+import { assertOptionsObject, assertSystemThemeOption, assertThemeConfig } from "./validation";
 
 /**
  * Options after defaults are applied and validation passed, with themes keyed in a map so no name can collide
@@ -34,6 +34,18 @@ const withoutUndefined = <T extends object>(value: T | undefined): Partial<T> =>
   Object.fromEntries(Object.entries(value ?? {}).filter(([, entry]) => entry !== undefined)) as Partial<T>;
 
 /**
+ * Copies validated token values, writing numbers as the strings the DOM receives.
+ *
+ * @internal
+ */
+export const toTokenValues = <TKey extends PropertyKey>(
+  tokens: Partial<Record<TKey, string>> | undefined,
+): Partial<Record<TKey, string>> =>
+  Object.fromEntries(
+    Object.entries(tokens ?? {}).map(([key, value]) => [key, typeof value === "number" ? String(value) : value]),
+  ) as Partial<Record<TKey, string>>;
+
+/**
  * Applies defaults to `createTheme()` options and validates them.
  *
  * @throws {Error} When the options are invalid; see `assertThemeConfig`.
@@ -42,6 +54,7 @@ const withoutUndefined = <T extends object>(value: T | undefined): Partial<T> =>
 export const resolveOptions = <TName extends string, TSchema extends Record<string, string>>(
   options: ThemeOptions<TName, TSchema>,
 ): ResolvedThemeOptions<TName, TSchema> => {
+  assertOptionsObject(options);
   assertSystemThemeOption(options.systemTheme);
   const merged = {
     ...DEFAULT_OPTIONS,
@@ -58,7 +71,7 @@ export const resolveOptions = <TName extends string, TSchema extends Record<stri
       Object.freeze({
         name: name as TName,
         colorScheme,
-        tokens: Object.freeze({ ...tokens }) as Partial<Record<keyof TSchema, string>>,
+        tokens: Object.freeze(toTokenValues(tokens)),
         ...(pairedTheme === undefined ? {} : { pairedTheme }),
       }),
     );

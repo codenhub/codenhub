@@ -21,6 +21,21 @@ const isNonEmptyString = (value: unknown): value is string => typeof value === "
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+// Numbers are accepted from JavaScript callers, such as JSON configs, and written as strings.
+const isTokenValue = (value: unknown): boolean =>
+  value === undefined || typeof value === "string" || typeof value === "number";
+
+/**
+ * Validates that `createTheme()` received an options object.
+ *
+ * @internal
+ */
+export const assertOptionsObject = (options: unknown): void => {
+  if (!isRecord(options)) {
+    throw new Error("Theme options must be an object.");
+  }
+};
+
 /**
  * Validates theme options, throwing descriptive errors on misconfiguration.
  *
@@ -105,9 +120,12 @@ export const assertThemeConfig = (options: UncheckedThemeOptions): void => {
       if (tokenSchema === undefined) {
         throw new Error(`Theme "${name}" defines tokens but no tokenSchema is configured.`);
       }
-      for (const tokenKey of Object.keys(theme.tokens)) {
+      for (const [tokenKey, tokenValue] of Object.entries(theme.tokens)) {
         if (!Object.hasOwn(tokenSchema, tokenKey)) {
           throw new Error(`Theme "${name}" defines token "${tokenKey}" which is not present in tokenSchema.`);
+        }
+        if (!isTokenValue(tokenValue)) {
+          throw new Error(`Theme "${name}" token "${tokenKey}" must be a string or a number.`);
         }
       }
     }
@@ -151,9 +169,12 @@ export const assertRuntimeTokens = (tokens: unknown, tokenSchema: Record<string,
   if (tokenSchema === undefined) {
     throw new Error("Runtime tokens provided but no tokenSchema is configured.");
   }
-  for (const tokenKey of Object.keys(tokens)) {
+  for (const [tokenKey, tokenValue] of Object.entries(tokens)) {
     if (!Object.hasOwn(tokenSchema, tokenKey)) {
       throw new Error(`Runtime token override "${tokenKey}" is not present in tokenSchema.`);
+    }
+    if (!isTokenValue(tokenValue)) {
+      throw new Error(`Runtime token "${tokenKey}" must be a string or a number.`);
     }
   }
 };

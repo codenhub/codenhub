@@ -114,7 +114,8 @@ export const emitThemeEvent = <TName extends string, TSchema extends Record<stri
     return;
   }
 
-  window.dispatchEvent(new CustomEvent<ThemeChangeDetail<TName, TSchema>>(THEME_CHANGE_EVENT, { detail }));
+  // The window's own constructor, which is the only one its dispatchEvent accepts when realms differ.
+  window.dispatchEvent(new window.CustomEvent<ThemeChangeDetail<TName, TSchema>>(THEME_CHANGE_EVENT, { detail }));
 };
 
 /**
