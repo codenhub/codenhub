@@ -399,6 +399,40 @@ describe("Theme behavior", () => {
     expect(root.className).toBe("app-shell");
   });
 
+  it("should leave state, storage, and the DOM unchanged when a class resolver throws", () => {
+    const listener = vi.fn();
+    const theme = createTheme({ className: (definition) => (definition.name === "dark" ? "two classes" : "light") });
+    theme.subscribe(listener);
+
+    for (const operation of [() => theme.set("dark"), () => theme.toggle(), () => theme.clearPreference()]) {
+      expect(operation).toThrow("Theme class resolver returned an invalid class for theme: dark.");
+    }
+
+    expect(theme.name).toBe("light");
+    expect(theme.get().name).toBe("light");
+    expect(theme.preference).toBeNull();
+    expect(root.hasAttribute("data-theme")).toBe(false);
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("should keep runtime tokens unchanged when a class resolver throws in setTokens", () => {
+    const theme = createTheme({ tokenSchema, className: () => "two classes" });
+
+    expect(() => theme.setTokens({ primary: "purple" })).toThrow(
+      "Theme class resolver returned an invalid class for theme: light.",
+    );
+    expect(theme.get().tokens).toEqual({});
+  });
+
+  it("should not start listening when init throws for a class resolver", () => {
+    const mediaQueryList = createMatchMedia(false);
+    const theme = createTheme({ className: () => "two classes" });
+
+    expect(() => theme.init()).toThrow("Theme class resolver returned an invalid class for theme: light.");
+    expect(mediaQueryList.addEventListener).not.toHaveBeenCalled();
+    expect(() => theme.init()).toThrow("Theme class resolver returned an invalid class for theme: light.");
+  });
+
   it("should call a custom class resolver once per theme", () => {
     const resolver = vi.fn().mockImplementation((theme: ActiveTheme) => `custom-${theme.name}`);
     const theme = createTheme({ className: resolver }).init();
