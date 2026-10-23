@@ -1,5 +1,3 @@
-import type { ThemeDefinition, ResolvedThemeOptions } from "./types";
-
 /** Window event name dispatched with `ThemeChangeDetail` after a theme change is applied in browser environments. */
 export const THEME_CHANGE_EVENT = "themechange";
 
@@ -18,7 +16,7 @@ export const DEFAULT_STORAGE_KEY = "app-theme-preference";
 export const DEFAULT_ATTRIBUTE = "data-theme";
 
 /**
- * Default CSS class name applied to `document.documentElement` when a dark color scheme theme is active.
+ * Class added to `document.documentElement` for dark themes when `darkClass` is enabled.
  *
  * @internal
  */
@@ -37,30 +35,3 @@ export const PREFERS_DARK_QUERY = "(prefers-color-scheme: dark)";
  * @internal
  */
 export const CLASS_TOKEN_WHITESPACE = /\s/;
-
-/** Built-in light theme used by default and available for custom theme lists. */
-export const LIGHT_THEME: ThemeDefinition = Object.freeze({
-  name: "light",
-  colorScheme: "light",
-});
-
-/** Built-in dark theme used by default and available for custom theme lists. */
-export const DARK_THEME: ThemeDefinition = Object.freeze({
-  name: "dark",
-  colorScheme: "dark",
-});
-
-/**
- * Default resolved options used to initialize theme management when custom options are not provided.
- *
- * @internal
- */
-export const DEFAULT_OPTIONS: ResolvedThemeOptions<Record<string, string>> = Object.freeze({
-  themes: Object.freeze([LIGHT_THEME, DARK_THEME]),
-  defaultTheme: LIGHT_THEME.name,
-  systemTheme: Object.freeze({ light: LIGHT_THEME.name, dark: DARK_THEME.name }),
-  storageKey: DEFAULT_STORAGE_KEY,
-  attribute: DEFAULT_ATTRIBUTE,
-  isTailwindCss: false,
-  shouldApplyClass: true,
-});

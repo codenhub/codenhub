@@ -1,37 +1,25 @@
 import { PREFERS_DARK_QUERY } from "./constants";
-import type { ThemeDefinition } from "./types";
+import type { SystemThemeMap } from "./types";
 
 /**
- * Resolves the configured theme that matches the active OS color-scheme preference.
+ * Returns the theme name mapped to the current OS color-scheme preference, or `defaultTheme` when `matchMedia` is
+ * unavailable or throws.
  *
  * @internal
  */
-export const readSystemTheme = <TSchema extends Record<string, string>>(options: {
-  defaultTheme: string;
-  systemTheme: { light: string; dark: string };
-  themes: readonly ThemeDefinition<TSchema>[];
-}): ThemeDefinition<TSchema> => {
-  const { defaultTheme, systemTheme, themes } = options;
-  const getTheme = (name: string): ThemeDefinition<TSchema> => {
-    const theme = themes.find((candidate) => candidate.name === name);
-    if (theme === undefined) {
-      // Constructor validation (assertThemeConfig) prevents this path via the public API.
-      // c8 ignore next
-      throw new Error(`Theme is not configured: ${name}.`);
-    }
-    return theme;
-  };
-
+export const readSystemTheme = <TName extends string>(options: {
+  defaultTheme: TName;
+  systemTheme: SystemThemeMap<TName>;
+}): TName => {
+  const { defaultTheme, systemTheme } = options;
   if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-    return getTheme(defaultTheme);
+    return defaultTheme;
   }
 
   try {
-    const mql = window.matchMedia(PREFERS_DARK_QUERY);
-    const name = mql.matches ? systemTheme.dark : systemTheme.light;
-    return getTheme(name);
+    return window.matchMedia(PREFERS_DARK_QUERY).matches ? systemTheme.dark : systemTheme.light;
   } catch {
-    return getTheme(defaultTheme);
+    return defaultTheme;
   }
 };
 

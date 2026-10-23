@@ -1,5 +1,5 @@
 import { CLASS_TOKEN_WHITESPACE } from "./constants";
-import type { ThemeDefinition, ThemeClassResolver } from "./types";
+import type { ActiveTheme, ThemeClassResolver } from "./types";
 
 /**
  * Resolves the single DOM class token applied for a theme.
@@ -7,23 +7,33 @@ import type { ThemeDefinition, ThemeClassResolver } from "./types";
  * @returns The class string, or `null` when class application is disabled.
  * @internal
  */
-export const getThemeClass = <TSchema extends Record<string, string>>(
-  theme: ThemeDefinition<TSchema>,
-  shouldApplyClass: boolean | ThemeClassResolver<TSchema>,
+export const getThemeClass = <TName extends string, TSchema extends Record<string, string>>(
+  theme: ActiveTheme<TName, TSchema>,
+  className: boolean | ThemeClassResolver<TName, TSchema>,
 ): string | null => {
-  if (shouldApplyClass === false) {
+  if (className === false) {
     return null;
   }
 
-  if (typeof shouldApplyClass === "function") {
-    const className = shouldApplyClass(theme);
-    assertClassToken(className, `Theme class resolver returned an invalid class for theme: ${theme.name}.`);
-    return className;
+  if (typeof className === "function") {
+    const resolved = className(theme);
+    assertClassToken(resolved, `Theme class resolver returned an invalid class for theme: ${theme.name}.`);
+    return resolved;
   }
 
-  const className = `theme-${theme.name}`;
-  assertClassToken(className, `Theme name cannot be used as a default theme class: ${theme.name}.`);
-  return className;
+  return getDefaultThemeClass(theme.name);
+};
+
+/**
+ * Returns the `theme-<name>` class applied when `className` is `true`.
+ *
+ * @throws {Error} When the name contains whitespace.
+ * @internal
+ */
+export const getDefaultThemeClass = (name: string): string => {
+  const resolved = `theme-${name}`;
+  assertClassToken(resolved, `Theme name cannot be used as a default theme class: ${name}.`);
+  return resolved;
 };
 
 /**

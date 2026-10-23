@@ -1,15 +1,32 @@
-import { getThemeClass } from "./class-resolver";
-import type { ResolvedThemeOptions } from "./types";
+import { getDefaultThemeClass } from "./class-resolver";
 
 /**
- * Validates the resolved theme configuration, throwing descriptive errors on misconfiguration.
+ * Options as `createTheme()` receives them from JavaScript callers, after defaults are applied.
  *
  * @internal
  */
-export const assertThemeConfig = <TSchema extends Record<string, string>>(
-  options: ResolvedThemeOptions<TSchema>,
-): void => {
-  if (typeof options.attribute !== "string" || options.attribute.trim().length === 0) {
+export interface UncheckedThemeOptions {
+  themes: unknown;
+  defaultTheme: unknown;
+  systemTheme: { light?: unknown; dark?: unknown };
+  storageKey: unknown;
+  attribute: unknown;
+  className: unknown;
+  tokenSchema?: unknown;
+}
+
+const isNonEmptyString = (value: unknown): value is string => typeof value === "string" && value.trim().length > 0;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/**
+ * Validates theme options, throwing descriptive errors on misconfiguration.
+ *
+ * @internal
+ */
+export const assertThemeConfig = (options: UncheckedThemeOptions): void => {
+  if (!isNonEmptyString(options.attribute)) {
     throw new Error("Theme attribute option must be a non-empty string.");
   }
 
@@ -17,85 +34,92 @@ export const assertThemeConfig = <TSchema extends Record<string, string>>(
     throw new Error("Theme attribute option must be a valid HTML attribute name.");
   }
 
-  if (typeof options.storageKey !== "string" || options.storageKey.trim().length === 0) {
+  if (!isNonEmptyString(options.storageKey)) {
     throw new Error("Theme storageKey option must be a non-empty string.");
   }
 
-  if (!Array.isArray(options.themes)) {
-    throw new Error("Theme options.themes must be an array.");
+  if (typeof options.className !== "boolean" && typeof options.className !== "function") {
+    throw new Error("Theme className option must be a boolean or a function.");
   }
 
-  const names = new Set<string>();
+  if (!isRecord(options.themes)) {
+    throw new Error("Theme options.themes must be an object keyed by theme name.");
+  }
 
-  if (options.tokenSchema) {
-    for (const [key, value] of Object.entries(options.tokenSchema)) {
+  const { tokenSchema } = options;
+  if (tokenSchema !== undefined) {
+    if (!isRecord(tokenSchema)) {
+      throw new Error("Theme tokenSchema option must be an object.");
+    }
+    for (const [key, value] of Object.entries(tokenSchema)) {
       if (typeof value !== "string" || !value.startsWith("--")) {
         throw new Error(
-          `Token schema key "${key}" must map to a CSS custom property starting with "--". Received: "${value}".`,
+          `Token schema key "${key}" must map to a CSS custom property starting with "--". Received: "${String(value)}".`,
         );
       }
     }
   }
 
-  for (const theme of options.themes) {
-    if (typeof theme !== "object" || theme === null) {
-      throw new Error("Theme definitions must be objects.");
+  const themes = options.themes;
+  const names = Object.keys(themes);
+
+  for (const name of names) {
+    const theme = themes[name];
+
+    if (name.trim().length === 0) {
+      throw new Error("Theme names must be non-empty strings.");
     }
 
-    if (typeof theme.name !== "string" || theme.name.trim().length === 0) {
-      throw new Error("Theme names must be non-empty strings.");
+    if (!isRecord(theme)) {
+      throw new Error(`Theme "${name}" definition must be an object.`);
     }
 
     if (theme.colorScheme !== "light" && theme.colorScheme !== "dark") {
       throw new Error(
-        `Theme "${theme.name}" has an invalid colorScheme: ${theme.colorScheme}. Must be "light" or "dark".`,
+        `Theme "${name}" has an invalid colorScheme: ${String(theme.colorScheme)}. Must be "light" or "dark".`,
       );
     }
 
     if (theme.pairedTheme !== undefined) {
-      if (typeof theme.pairedTheme !== "string" || theme.pairedTheme.trim().length === 0) {
-        throw new Error(`Theme "${theme.name}" pairedTheme must be a non-empty string.`);
+      if (!isNonEmptyString(theme.pairedTheme)) {
+        throw new Error(`Theme "${name}" pairedTheme must be a non-empty string.`);
+      }
+      if (!Object.hasOwn(themes, theme.pairedTheme)) {
+        throw new Error(`Theme "${name}" references unconfigured pairedTheme: ${theme.pairedTheme}.`);
       }
     }
 
-    if (names.has(theme.name)) {
-      throw new Error(`Duplicate theme name: ${theme.name}.`);
+    if (options.className === true) {
+      getDefaultThemeClass(name);
     }
 
-    names.add(theme.name);
-
-    if (typeof options.shouldApplyClass !== "function") {
-      getThemeClass(theme, options.shouldApplyClass);
-    }
-
-    if (theme.tokens) {
-      if (!options.tokenSchema) {
-        throw new Error(`Theme "${theme.name}" defines tokens but no tokenSchema is configured.`);
+    if (theme.tokens !== undefined) {
+      if (!isRecord(theme.tokens)) {
+        throw new Error(`Theme "${name}" tokens must be an object.`);
+      }
+      if (tokenSchema === undefined) {
+        throw new Error(`Theme "${name}" defines tokens but no tokenSchema is configured.`);
       }
       for (const tokenKey of Object.keys(theme.tokens)) {
-        if (!Object.hasOwn(options.tokenSchema, tokenKey)) {
-          throw new Error(`Theme "${theme.name}" defines token "${tokenKey}" which is not present in tokenSchema.`);
+        if (!Object.hasOwn(tokenSchema, tokenKey)) {
+          throw new Error(`Theme "${name}" defines token "${tokenKey}" which is not present in tokenSchema.`);
         }
       }
     }
   }
 
-  for (const theme of options.themes) {
-    if (theme.pairedTheme !== undefined && !names.has(theme.pairedTheme)) {
-      throw new Error(`Theme "${theme.name}" references unconfigured pairedTheme: ${theme.pairedTheme}.`);
-    }
+  const isConfigured = (name: unknown): boolean => typeof name === "string" && Object.hasOwn(themes, name);
+
+  if (!isConfigured(options.defaultTheme)) {
+    throw new Error(`Default theme is not configured: ${String(options.defaultTheme)}.`);
   }
 
-  if (!names.has(options.defaultTheme)) {
-    throw new Error(`Default theme is not configured: ${options.defaultTheme}.`);
+  if (!isConfigured(options.systemTheme.light)) {
+    throw new Error(`System light theme is not configured: ${String(options.systemTheme.light)}.`);
   }
 
-  if (!names.has(options.systemTheme.light)) {
-    throw new Error(`System light theme is not configured: ${options.systemTheme.light}.`);
-  }
-
-  if (!names.has(options.systemTheme.dark)) {
-    throw new Error(`System dark theme is not configured: ${options.systemTheme.dark}.`);
+  if (!isConfigured(options.systemTheme.dark)) {
+    throw new Error(`System dark theme is not configured: ${String(options.systemTheme.dark)}.`);
   }
 };
 
@@ -104,14 +128,8 @@ export const assertThemeConfig = <TSchema extends Record<string, string>>(
  *
  * @internal
  */
-export const assertRuntimeTokens = <TSchema extends Record<string, string>>(
-  tokens: Partial<Record<keyof TSchema, string>> | undefined,
-  tokenSchema: TSchema | undefined,
-): void => {
-  if (tokens === undefined || tokens === null) {
-    return;
-  }
-  if (typeof tokens !== "object" || Array.isArray(tokens)) {
+export const assertRuntimeTokens = (tokens: unknown, tokenSchema: Record<string, string> | undefined): void => {
+  if (!isRecord(tokens)) {
     throw new Error("Runtime tokens must be an object.");
   }
   if (tokenSchema === undefined) {
