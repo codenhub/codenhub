@@ -29,6 +29,10 @@ const DEFAULT_OPTIONS = {
   className: true,
 } as const;
 
+// The option types accept `undefined`, so a wrapper forwarding an unset option gets the default rather than a throw.
+const withoutUndefined = <T extends object>(value: T | undefined): Partial<T> =>
+  Object.fromEntries(Object.entries(value ?? {}).filter(([, entry]) => entry !== undefined)) as Partial<T>;
+
 /**
  * Applies defaults to `createTheme()` options and validates them.
  *
@@ -40,8 +44,8 @@ export const resolveOptions = <TName extends string, TSchema extends Record<stri
 ): ResolvedThemeOptions<TName, TSchema> => {
   const merged = {
     ...DEFAULT_OPTIONS,
-    ...options,
-    systemTheme: { ...DEFAULT_OPTIONS.systemTheme, ...options.systemTheme },
+    ...withoutUndefined(options),
+    systemTheme: { ...DEFAULT_OPTIONS.systemTheme, ...withoutUndefined(options.systemTheme) },
   };
   assertThemeConfig(merged);
 

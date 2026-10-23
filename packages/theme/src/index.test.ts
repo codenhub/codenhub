@@ -84,11 +84,30 @@ afterEach(() => {
 
 describe("Theme config", () => {
   it("should reject a themes option that is not an object keyed by name", () => {
-    for (const themes of [[], null, undefined]) {
+    for (const themes of [[], null]) {
       expect(() => createTheme({ themes: themes as never })).toThrow(
         "Theme options.themes must be an object keyed by theme name.",
       );
     }
+  });
+
+  it("should use the default for an option set to undefined", () => {
+    const theme = createTheme({
+      themes: undefined,
+      defaultTheme: undefined,
+      systemTheme: { light: undefined, dark: undefined } as never,
+      storageKey: undefined,
+      attribute: undefined,
+      darkClass: undefined,
+      className: undefined,
+      tokenSchema: undefined,
+    }).init();
+
+    theme.set("dark");
+
+    expect(window.localStorage.getItem("app-theme-preference")).toBe("dark");
+    expect(root.getAttribute("data-theme")).toBe("dark");
+    expect(root.className).toBe("theme-dark");
   });
 
   it("should reject empty theme names", () => {
