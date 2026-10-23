@@ -169,7 +169,11 @@ export interface ThemeOptions<
    * @defaultValue `true`
    */
   className?: boolean | ThemeClassResolver<NoInfer<TName>, NoInfer<TSchema>>;
-  /** Maps token names to the CSS custom properties they are written to, such as `{ primary: "--color-primary" }`. */
+  /**
+   * Maps token names to the CSS custom properties they are written to, such as `{ primary: "--color-primary" }`. Each
+   * property is `--` followed by ASCII letters, digits, `-`, `_`, or non-ASCII characters, so a stylesheet can name it
+   * without escapes.
+   */
   tokenSchema?: TSchema;
 }
 

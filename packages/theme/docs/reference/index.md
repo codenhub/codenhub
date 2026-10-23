@@ -28,7 +28,7 @@ Creates a theme preference manager. Nothing touches the DOM, storage, or listene
 
 **Returns** — A [Theme](#theme) whose methods are bound to it.
 
-**Throws** — When the options are invalid: an `options` value that is not an object, a `themes`, `systemTheme`, `tokenSchema`, or theme `tokens` value that is set but is not a plain, non-array object, an empty theme name or, while `className` is `true`, a class-unsafe one, an invalid `colorScheme`, a `defaultTheme`, `systemTheme`, or `pairedTheme` naming an unconfigured theme, theme tokens outside `tokenSchema` or whose value is not a string, a finite number, or `undefined`, a `tokenSchema` value not starting with `--`, a `className` that is neither a boolean nor a function, a non-boolean `darkClass`, an empty or invalid `attribute` or `storageKey`, or an `attribute` of `class` or `style`. An option set to `undefined` is treated as omitted.
+**Throws** — When the options are invalid: an `options` value that is not an object, a `themes`, `systemTheme`, `tokenSchema`, or theme `tokens` value that is set but is not a plain, non-array object, an empty theme name or, while `className` is `true`, a class-unsafe one, an invalid `colorScheme`, a `defaultTheme`, `systemTheme`, or `pairedTheme` naming an unconfigured theme, theme tokens outside `tokenSchema` or whose value is not a string, a finite number, or `undefined`, a `tokenSchema` value that is not a custom property name such as `--color-primary`, a `className` that is neither a boolean nor a function, a non-boolean `darkClass`, an empty or invalid `attribute` or `storageKey`, or an `attribute` of `class` or `style`. An option set to `undefined` is treated as omitted.
 
 **Example**
 
@@ -406,7 +406,7 @@ Available themes keyed by name. Replaces the built-in list entirely. Names must 
 tokenSchema?: TSchema;
 ```
 
-Maps token names to the CSS custom properties they are written to, such as `{ primary: "--color-primary" }`.
+Maps token names to the CSS custom properties they are written to, such as `{ primary: "--color-primary" }`. Each property is `--` followed by ASCII letters, digits, `-`, `_`, or non-ASCII characters, so a stylesheet can name it without escapes.
 
 ## Type aliases
 

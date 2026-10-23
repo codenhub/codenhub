@@ -18,6 +18,11 @@ export interface UncheckedThemeOptions {
 
 const isNonEmptyString = (value: unknown): value is string => typeof value === "string" && value.trim().length > 0;
 
+// A custom property a stylesheet can name without escapes: "--" and then ASCII letters, digits, "-", "_", or any
+// non-ASCII character. Browsers do not apply "--" alone, and a name with a space or ";" is reachable only as an
+// escaped `var(--a\ b)`.
+const CUSTOM_PROPERTY_NAME = /^--(?:[\w-]|[^\x00-\x7F])+$/;
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -80,9 +85,9 @@ export const assertThemeConfig = (options: UncheckedThemeOptions): void => {
       throw new Error("Theme tokenSchema option must be an object.");
     }
     for (const [key, value] of Object.entries(tokenSchema)) {
-      if (typeof value !== "string" || !value.startsWith("--")) {
+      if (typeof value !== "string" || !CUSTOM_PROPERTY_NAME.test(value)) {
         throw new Error(
-          `Token schema key "${key}" must map to a CSS custom property starting with "--". Received: "${String(value)}".`,
+          `Token schema key "${key}" must map to a CSS custom property name, such as "--color-primary". Received: "${String(value)}".`,
         );
       }
     }

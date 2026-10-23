@@ -246,10 +246,18 @@ describe("Theme config", () => {
     );
   });
 
-  it("should reject tokenSchema values that do not start with --", () => {
-    expect(() => createTheme({ tokenSchema: { primary: "color-primary" } })).toThrow(
-      'Token schema key "primary" must map to a CSS custom property starting with "--". Received: "color-primary".',
-    );
+  it("should reject tokenSchema values that are not CSS custom property names", () => {
+    for (const value of ["color-primary", "--", "--color primary", "--color;primary", "--color\\ primary", "-color"]) {
+      expect(() => createTheme({ tokenSchema: { primary: value } })).toThrow(
+        `Token schema key "primary" must map to a CSS custom property name, such as "--color-primary". Received: "${value}".`,
+      );
+    }
+  });
+
+  it("should accept tokenSchema names made of letters, digits, hyphens, underscores, and non-ASCII characters", () => {
+    for (const value of ["--color-primary", "--_x", "--1", "---", "--couleur-élevée", "--🎨"]) {
+      expect(() => createTheme({ tokenSchema: { primary: value } })).not.toThrow();
+    }
   });
 
   it("should reject theme static tokens not present in tokenSchema", () => {
