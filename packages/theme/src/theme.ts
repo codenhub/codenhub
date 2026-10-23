@@ -49,10 +49,11 @@ export function createTheme<
 
   const getClasses = (): Map<TName, string | null> => {
     if (classes === null) {
-      classes = new Map();
+      const resolved = new Map<TName, string | null>();
       for (const [name, definition] of config.themes) {
-        classes.set(name, getThemeClass(definition, config.className));
+        resolved.set(name, getThemeClass(definition, config.className));
       }
+      classes = resolved;
     }
     return classes;
   };
@@ -107,7 +108,10 @@ export function createTheme<
   };
 
   const activate = (name: TName, source: ThemeChangeSource, shouldStore: boolean): ActiveTheme<TName, TSchema> => {
-    activeName = getDefinition(name).name;
+    const { name: nextName } = getDefinition(name);
+    // Resolved before any state changes, so a throwing class resolver leaves state, storage, and the DOM as they were.
+    getClasses();
+    activeName = nextName;
     if (shouldStore) {
       writeStorage(config.storageKey, activeName);
     }
@@ -144,6 +148,7 @@ export function createTheme<
     },
     init() {
       if (stopListening === null) {
+        getClasses();
         const stopSystem = registerSystemListener(handleSystemChange);
         const stopStorage = registerStorageListener(handleStorageChange);
         stopListening = () => {
@@ -165,11 +170,13 @@ export function createTheme<
       return activate(next, "toggle", true);
     },
     clearPreference() {
+      getClasses();
       removeStorage(config.storageKey);
       return activate(readSystem(), "clearPreference", false);
     },
     setTokens(tokens) {
       assertRuntimeTokens(tokens, config.tokenSchema);
+      getClasses();
       runtimeTokens = Object.freeze({ ...tokens });
       return apply("setTokens");
     },
