@@ -8,6 +8,11 @@ export interface PreferenceStorage<TName extends string> {
   read(): TName | null;
   write(themeName: TName): void;
   remove(): void;
+  /**
+   * Returns whether a `storage` event's area is `localStorage`. A `null` area, which only a hand-built event has,
+   * counts as `localStorage`.
+   */
+  isArea(area: Storage | null): boolean;
 }
 
 type StorageOperation = "read from" | "write to" | "remove from";
@@ -47,5 +52,6 @@ export const createPreferenceStorage = <TName extends string>(
       }),
     write: (themeName) => attempt("write to", undefined, (storage) => storage.setItem(storageKey, themeName)),
     remove: () => attempt("remove from", undefined, (storage) => storage.removeItem(storageKey)),
+    isArea: (area) => area === null || attempt("read from", false, (storage) => area === storage),
   };
 };

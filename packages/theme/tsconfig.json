@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "composite": true,
+    "exactOptionalPropertyTypes": true,
     "lib": ["DOM", "ES2024"],
     "module": "Preserve",
     "moduleResolution": "bundler",

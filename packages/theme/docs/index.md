@@ -43,7 +43,17 @@ document.querySelector("#theme-toggle")?.addEventListener("click", theme.toggle)
 import { useSyncExternalStore } from "react";
 
 function useActiveTheme() {
-  return useSyncExternalStore(theme.subscribe, theme.get, theme.get);
+  return useSyncExternalStore(theme.subscribe, theme.get);
+}
+```
+
+A server-rendered app also passes `getServerSnapshot`, which must return what the server rendered: `defaultTheme`, since the server has no stored or OS preference. Passing `theme.get` there makes hydration read the theme `init()` resolved in the browser, and React reports a mismatch when it differs. Take the snapshot before `init()` runs instead; the component then renders the default theme while hydrating and updates right after:
+
+```ts
+const serverSnapshot = theme.get(); // before theme.init()
+
+function useActiveTheme() {
+  return useSyncExternalStore(theme.subscribe, theme.get, () => serverSnapshot);
 }
 ```
 

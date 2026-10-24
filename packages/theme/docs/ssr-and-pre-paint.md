@@ -28,6 +28,12 @@ const script = createTheme(themeOptions).getPrePaintScript();
 
 The script handles storage and `matchMedia` failures the same way `init()` does: blocked storage still applies the system theme, and a missing `matchMedia` applies `defaultTheme`. It removes the classes of other configured themes, so a class rendered by the server is replaced rather than joined. It serializes only **static** tokens from each theme's `tokens`; runtime overrides from `setTokens()` exist only in the running page and cannot be part of a script that runs before any application code.
 
+A framework that renders `<html>` itself and hydrates it, such as Next.js or Remix, finds the attribute, class, and `style` the script added and warns that they do not match the server markup. The difference is intended, so mark the element with React's `suppressHydrationWarning`, which silences attribute warnings on that element only:
+
+```tsx
+<html lang="en" suppressHydrationWarning>
+```
+
 ### Content Security Policy
 
 A `script-src` policy without `'unsafe-inline'` blocks the inline script, and the flash returns with only a console error to show for it. Allow it in either of two ways:

@@ -5,7 +5,7 @@
  */
 type TokenValues<TSchema extends Record<string, string>> = [keyof TSchema] extends [never]
   ? never
-  : Partial<Record<keyof TSchema, string>>;
+  : Partial<Record<keyof TSchema, string | undefined>>;
 
 /**
  * Configured theme, keyed by its name in {@link ThemeOptions.themes}.
@@ -24,9 +24,9 @@ export interface ThemeDefinition<
    * from JavaScript is written as a string, `undefined` or an empty string counts as omitted, and any other value throws.
    * Values are not parsed as CSS: one the browser rejects is not applied but still appears in `get().tokens`.
    */
-  tokens?: TokenValues<TSchema>;
+  tokens?: TokenValues<TSchema> | undefined;
   /** Theme activated when calling `toggle()` from this theme, instead of the opposite `systemTheme` entry. */
-  pairedTheme?: TName;
+  pairedTheme?: TName | undefined;
 }
 
 /**
@@ -142,52 +142,52 @@ export interface ThemeOptions<
    *
    * @defaultValue `{ light: { colorScheme: "light" }, dark: { colorScheme: "dark" } }`
    */
-  themes?: { readonly [K in TName]: ThemeDefinition<NoInfer<TName>, NoInfer<TSchema>> };
+  themes?: { readonly [K in TName]: ThemeDefinition<NoInfer<TName>, NoInfer<TSchema>> } | undefined;
   /**
    * Theme used before initialization and when `matchMedia` is unavailable.
    *
    * @defaultValue `"light"`
    */
-  defaultTheme?: NoInfer<TName>;
+  defaultTheme?: NoInfer<TName> | undefined;
   /**
    * Themes selected for OS light and dark color-scheme preferences.
    *
    * @defaultValue `{ light: "light", dark: "dark" }`
    */
-  systemTheme?: SystemThemeMap<NoInfer<TName>>;
+  systemTheme?: SystemThemeMap<NoInfer<TName>> | undefined;
   /**
    * `localStorage` key used for the explicit user preference.
    *
    * @defaultValue `"app-theme-preference"`
    */
-  storageKey?: string;
+  storageKey?: string | undefined;
   /**
    * Attribute set on `document.documentElement` to the active theme name. It cannot be `class` or `style`, in any letter case, which
    * would replace the page's own classes or inline styles; use `className` to apply a class.
    *
    * @defaultValue `"data-theme"`
    */
-  attribute?: string;
+  attribute?: string | undefined;
   /**
    * Whether to add a `dark` class to `document.documentElement` while a theme with `colorScheme: "dark"` is active,
    * as Tailwind CSS's class-based `dark:` variant expects.
    *
    * @defaultValue `false`
    */
-  darkClass?: boolean;
+  darkClass?: boolean | undefined;
   /**
    * Class applied to `document.documentElement` for the active theme: `true` applies `theme-<name>`, `false` applies
    * none, and a {@link ThemeClassResolver} returns a custom one.
    *
    * @defaultValue `true`
    */
-  className?: boolean | ThemeClassResolver<NoInfer<TName>, NoInfer<TSchema>>;
+  className?: boolean | ThemeClassResolver<NoInfer<TName>, NoInfer<TSchema>> | undefined;
   /**
    * Maps token names to the CSS custom properties they are written to, such as `{ primary: "--color-primary" }`. Each
    * property is `--` followed by ASCII letters, digits, `-`, `_`, or non-ASCII characters, so a stylesheet can name it
    * without escapes.
    */
-  tokenSchema?: TSchema;
+  tokenSchema?: TSchema | undefined;
 }
 
 /**
@@ -254,7 +254,9 @@ export interface Theme<TName extends string = string, TSchema extends Record<str
    * Replaces the runtime token overrides, which win over every theme's static tokens until replaced again. Pass
    * `{}` to remove them. Overrides are not stored and are not part of the pre-paint script. A token set to `undefined`
    * or `""` is omitted, so the theme's static value applies. Values are not parsed as CSS: one the browser rejects is
-   * not applied, and the property keeps its previous value, but it still appears in `get().tokens`.
+   * not applied, and the property keeps its previous value, but it still appears in `get().tokens`. Before any theme
+   * is applied, such as before `init()`, the overrides are only recorded: the DOM and listeners are left alone until
+   * the next change applies them.
    *
    * @param tokens - Token values keyed by `tokenSchema` names.
    * @returns The active theme with the new overrides.
@@ -278,7 +280,8 @@ export interface Theme<TName extends string = string, TSchema extends Record<str
   /**
    * Registers a listener called after every applied change. A listener that throws is logged with
    * `console.error` and does not stop the others. When a listener or a `themechange` listener makes another change,
-   * the listeners after it receive only that newer change.
+   * or calls `destroy()`, the listeners after it receive only that newer change, or none. A listener subscribed during
+   * a delivery receives only later changes.
    *
    * @param listener - Callback receiving the change.
    * @returns A function that removes the listener.
@@ -301,5 +304,5 @@ export interface Theme<TName extends string = string, TSchema extends Record<str
    * @param options - Set `revertDom: true` to also remove the attribute, classes, `color-scheme`, and custom
    * properties this manager writes to `document.documentElement`.
    */
-  destroy(options?: { revertDom?: boolean }): void;
+  destroy(options?: { revertDom?: boolean | undefined }): void;
 }

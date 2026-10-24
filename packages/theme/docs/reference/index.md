@@ -170,7 +170,7 @@ Removes the explicit preference and activates the system theme, which then follo
 #### destroy
 
 ```ts
-destroy(options?: { revertDom?: boolean; }): void;
+destroy(options?: { revertDom?: boolean | undefined; }): void;
 ```
 
 Stops following OS and cross-tab changes, removes every listener and runtime override, and resets `name` to `defaultTheme`, so `init()` can run again. The DOM and stored preference stay as they are unless `revertDom` is set.
@@ -231,7 +231,7 @@ Activates a theme and stores it as the explicit preference.
 setTokens(tokens: TokenValues<TSchema>): ActiveTheme<TName, TSchema>;
 ```
 
-Replaces the runtime token overrides, which win over every theme's static tokens until replaced again. Pass `{}` to remove them. Overrides are not stored and are not part of the pre-paint script. A token set to `undefined` or `""` is omitted, so the theme's static value applies. Values are not parsed as CSS: one the browser rejects is not applied, and the property keeps its previous value, but it still appears in `get().tokens`.
+Replaces the runtime token overrides, which win over every theme's static tokens until replaced again. Pass `{}` to remove them. Overrides are not stored and are not part of the pre-paint script. A token set to `undefined` or `""` is omitted, so the theme's static value applies. Values are not parsed as CSS: one the browser rejects is not applied, and the property keeps its previous value, but it still appears in `get().tokens`. Before any theme is applied, such as before `init()`, the overrides are only recorded: the DOM and listeners are left alone until the next change applies them.
 
 **Parameters**
 
@@ -243,7 +243,7 @@ Replaces the runtime token overrides, which win over every theme's static tokens
 subscribe(listener: ThemeChangeListener<TName, TSchema>): () => void;
 ```
 
-Registers a listener called after every applied change. A listener that throws is logged with `console.error` and does not stop the others. When a listener or a `themechange` listener makes another change, the listeners after it receive only that newer change.
+Registers a listener called after every applied change. A listener that throws is logged with `console.error` and does not stop the others. When a listener or a `themechange` listener makes another change, or calls `destroy()`, the listeners after it receive only that newer change, or none. A listener subscribed during a delivery receives only later changes.
 
 **Parameters**
 
@@ -318,7 +318,7 @@ Browser color scheme applied to `document.documentElement.style.colorScheme`; al
 #### pairedTheme
 
 ```ts
-pairedTheme?: TName;
+pairedTheme?: TName | undefined;
 ```
 
 Theme activated when calling `toggle()` from this theme, instead of the opposite `systemTheme` entry.
@@ -326,7 +326,7 @@ Theme activated when calling `toggle()` from this theme, instead of the opposite
 #### tokens
 
 ```ts
-tokens?: TokenValues<TSchema>;
+tokens?: TokenValues<TSchema> | undefined;
 ```
 
 Static token values written to the CSS custom properties named by `tokenSchema`, which they require. A finite number from JavaScript is written as a string, `undefined` or an empty string counts as omitted, and any other value throws. Values are not parsed as CSS: one the browser rejects is not applied but still appears in `get().tokens`.
@@ -347,7 +347,7 @@ Configuration for theme definitions, persistence, DOM application, and system pr
 #### attribute
 
 ```ts
-attribute?: string;
+attribute?: string | undefined;
 ```
 
 Attribute set on `document.documentElement` to the active theme name. It cannot be `class` or `style`, in any letter case, which would replace the page's own classes or inline styles; use `className` to apply a class.
@@ -355,7 +355,7 @@ Attribute set on `document.documentElement` to the active theme name. It cannot 
 #### className
 
 ```ts
-className?: boolean | ThemeClassResolver<NoInfer<TName>, NoInfer<TSchema>>;
+className?: boolean | ThemeClassResolver<NoInfer<TName>, NoInfer<TSchema>> | undefined;
 ```
 
 Class applied to `document.documentElement` for the active theme: `true` applies `theme-<name>`, `false` applies none, and a [ThemeClassResolver](#themeclassresolver) returns a custom one.
@@ -363,7 +363,7 @@ Class applied to `document.documentElement` for the active theme: `true` applies
 #### darkClass
 
 ```ts
-darkClass?: boolean;
+darkClass?: boolean | undefined;
 ```
 
 Whether to add a `dark` class to `document.documentElement` while a theme with `colorScheme: "dark"` is active, as Tailwind CSS's class-based `dark:` variant expects.
@@ -371,7 +371,7 @@ Whether to add a `dark` class to `document.documentElement` while a theme with `
 #### defaultTheme
 
 ```ts
-defaultTheme?: NoInfer<TName>;
+defaultTheme?: NoInfer<TName> | undefined;
 ```
 
 Theme used before initialization and when `matchMedia` is unavailable.
@@ -379,7 +379,7 @@ Theme used before initialization and when `matchMedia` is unavailable.
 #### storageKey
 
 ```ts
-storageKey?: string;
+storageKey?: string | undefined;
 ```
 
 `localStorage` key used for the explicit user preference.
@@ -387,7 +387,7 @@ storageKey?: string;
 #### systemTheme
 
 ```ts
-systemTheme?: SystemThemeMap<NoInfer<TName>>;
+systemTheme?: SystemThemeMap<NoInfer<TName>> | undefined;
 ```
 
 Themes selected for OS light and dark color-scheme preferences.
@@ -395,7 +395,7 @@ Themes selected for OS light and dark color-scheme preferences.
 #### themes
 
 ```ts
-themes?: { readonly [K in TName]: ThemeDefinition<NoInfer<TName>, NoInfer<TSchema>>; };
+themes?: { readonly [K in TName]: ThemeDefinition<NoInfer<TName>, NoInfer<TSchema>>; } | undefined;
 ```
 
 Available themes keyed by name. Replaces the built-in list entirely. Names must be non-empty and, while `className` is `true`, usable in a class name.
@@ -403,7 +403,7 @@ Available themes keyed by name. Replaces the built-in list entirely. Names must 
 #### tokenSchema
 
 ```ts
-tokenSchema?: TSchema;
+tokenSchema?: TSchema | undefined;
 ```
 
 Maps token names to the CSS custom properties they are written to, such as `{ primary: "--color-primary" }`. Each property is `--` followed by ASCII letters, digits, `-`, `_`, or non-ASCII characters, so a stylesheet can name it without escapes.
@@ -472,7 +472,7 @@ Window event name dispatched with `ThemeChangeDetail` after a theme change is ap
 ### TokenValues
 
 ```ts
-type TokenValues<TSchema extends Record<string, string>> = [keyof TSchema] extends [never] ? never : Partial<Record<keyof TSchema, string>>;
+type TokenValues<TSchema extends Record<string, string>> = [keyof TSchema] extends [never] ? never : Partial<Record<keyof TSchema, string | undefined>>;
 ```
 
 Token values keyed by `tokenSchema` names, or `never` when no `tokenSchema` is configured, since any token then throws.
