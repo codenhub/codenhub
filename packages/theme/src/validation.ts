@@ -26,8 +26,8 @@ const CUSTOM_PROPERTY_NAME = /^--(?:[\w-]|\P{ASCII})+$/u;
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-// Finite numbers are accepted from JavaScript callers, such as JSON configs, and written as strings; `undefined` is
-// treated as an omitted token.
+// Finite numbers are accepted from JavaScript callers, such as JSON configs, and written as strings; `undefined` and
+// `""` are treated as an omitted token.
 const isTokenValue = (value: unknown): boolean =>
   value === undefined || typeof value === "string" || (typeof value === "number" && Number.isFinite(value));
 
@@ -84,12 +84,19 @@ export const assertThemeConfig = (options: UncheckedThemeOptions): void => {
     if (!isRecord(tokenSchema)) {
       throw new Error("Theme tokenSchema option must be an object.");
     }
+    // Two keys on one property would fight over it: applying a theme writes one key's value and removes it for the other.
+    const keysByProperty = new Map<string, string>();
     for (const [key, value] of Object.entries(tokenSchema)) {
       if (typeof value !== "string" || !CUSTOM_PROPERTY_NAME.test(value)) {
         throw new Error(
           `Token schema key "${key}" must map to a CSS custom property name, such as "--color-primary". Received: "${String(value)}".`,
         );
       }
+      const otherKey = keysByProperty.get(value);
+      if (otherKey !== undefined) {
+        throw new Error(`Token schema keys "${otherKey}" and "${key}" both map to "${value}".`);
+      }
+      keysByProperty.set(value, key);
     }
   }
 

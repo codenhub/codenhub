@@ -12,7 +12,7 @@ group: Reference
 ### createTheme
 
 ```ts
-export declare function createTheme<TName extends string = "light" | "dark", TSchema extends Record<string, string> = Record<string, string>>(options?: ThemeOptions<TName, TSchema>): Theme<TName, TSchema>;
+export declare function createTheme<TName extends string = "light" | "dark", TSchema extends Record<string, string> = Record<never, string>>(options?: ThemeOptions<TName, TSchema>): Theme<TName, TSchema>;
 ```
 
 Creates a theme preference manager. Nothing touches the DOM, storage, or listeners until a method is called.
@@ -28,7 +28,7 @@ Creates a theme preference manager. Nothing touches the DOM, storage, or listene
 
 **Returns** — A [Theme](#theme) whose methods are bound to it.
 
-**Throws** — When the options are invalid: an `options` value that is not an object, a `themes`, `systemTheme`, `tokenSchema`, or theme `tokens` value that is set but is not a plain, non-array object, an empty theme name or, while `className` is `true`, a class-unsafe one, an invalid `colorScheme`, a `defaultTheme`, `systemTheme`, or `pairedTheme` naming an unconfigured theme, theme tokens outside `tokenSchema` or whose value is not a string, a finite number, or `undefined`, a `tokenSchema` value that is not a custom property name such as `--color-primary`, a `className` that is neither a boolean nor a function, a non-boolean `darkClass`, an empty or invalid `attribute` or `storageKey`, or an `attribute` of `class` or `style`. An option set to `undefined` is treated as omitted.
+**Throws** — When the options are invalid: an `options` value that is not an object, a `themes`, `systemTheme`, `tokenSchema`, or theme `tokens` value that is set but is not a plain, non-array object, an empty theme name or, while `className` is `true`, a class-unsafe one, an invalid `colorScheme`, a `defaultTheme`, `systemTheme`, or `pairedTheme` naming an unconfigured theme, theme tokens outside `tokenSchema` or whose value is not a string, a finite number, or `undefined`, a `tokenSchema` value that is not a custom property name such as `--color-primary` or that another key already maps to, a `className` that is neither a boolean nor a function, a non-boolean `darkClass`, an empty or invalid `attribute` or `storageKey`, or an `attribute` of `class` or `style`. An option set to `undefined` is treated as omitted.
 
 **Example**
 
@@ -53,7 +53,7 @@ document.querySelector("#theme-toggle")?.addEventListener("click", theme.toggle)
 export interface ActiveTheme<TName extends string = string, TSchema extends Record<string, string> = Record<string, string>>
 ```
 
-Frozen view of a configured theme with its name and the token values written to the DOM.
+Frozen view of a configured theme with its name and its static and runtime token values.
 
 **Type parameters**
 
@@ -228,10 +228,10 @@ Activates a theme and stores it as the explicit preference.
 #### setTokens
 
 ```ts
-setTokens(tokens: Partial<Record<keyof TSchema, string>>): ActiveTheme<TName, TSchema>;
+setTokens(tokens: TokenValues<TSchema>): ActiveTheme<TName, TSchema>;
 ```
 
-Replaces the runtime token overrides, which win over every theme's static tokens until replaced again. Pass `{}` to remove them. Overrides are not stored and are not part of the pre-paint script.
+Replaces the runtime token overrides, which win over every theme's static tokens until replaced again. Pass `{}` to remove them. Overrides are not stored and are not part of the pre-paint script. A token set to `undefined` or `""` is omitted, so the theme's static value applies. Values are not parsed as CSS: one the browser rejects is not applied, and the property keeps its previous value, but it still appears in `get().tokens`.
 
 **Parameters**
 
@@ -326,10 +326,10 @@ Theme activated when calling `toggle()` from this theme, instead of the opposite
 #### tokens
 
 ```ts
-tokens?: Partial<Record<keyof TSchema, string>>;
+tokens?: TokenValues<TSchema>;
 ```
 
-Static token values written to the CSS custom properties named by `tokenSchema`. A number from JavaScript is written as a string.
+Static token values written to the CSS custom properties named by `tokenSchema`, which they require. A finite number from JavaScript is written as a string, `undefined` or an empty string counts as omitted, and any other value throws. Values are not parsed as CSS: one the browser rejects is not applied but still appears in `get().tokens`.
 
 ### ThemeOptions
 
@@ -466,3 +466,15 @@ export declare const THEME_CHANGE_EVENT = "themechange";
 ```
 
 Window event name dispatched with `ThemeChangeDetail` after a theme change is applied in browser environments.
+
+## Internal types
+
+### TokenValues
+
+```ts
+type TokenValues<TSchema extends Record<string, string>> = [keyof TSchema] extends [never] ? never : Partial<Record<keyof TSchema, string>>;
+```
+
+Token values keyed by `tokenSchema` names, or `never` when no `tokenSchema` is configured, since any token then throws.
+
+Not exported; declared in `src/types.ts`.

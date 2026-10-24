@@ -1,4 +1,13 @@
 /**
+ * Token values keyed by `tokenSchema` names, or `never` when no `tokenSchema` is configured, since any token then throws.
+ *
+ * @internal
+ */
+type TokenValues<TSchema extends Record<string, string>> = [keyof TSchema] extends [never]
+  ? never
+  : Partial<Record<keyof TSchema, string>>;
+
+/**
  * Configured theme, keyed by its name in {@link ThemeOptions.themes}.
  *
  * @typeParam TName - Names of every configured theme, used to type `pairedTheme`.
@@ -10,14 +19,18 @@ export interface ThemeDefinition<
 > {
   /** Browser color scheme applied to `document.documentElement.style.colorScheme`; also decides what `toggle()` falls back to and whether `darkClass` applies. */
   colorScheme: "light" | "dark";
-  /** Static token values written to the CSS custom properties named by `tokenSchema`. A number from JavaScript is written as a string. */
-  tokens?: Partial<Record<keyof TSchema, string>>;
+  /**
+   * Static token values written to the CSS custom properties named by `tokenSchema`, which they require. A finite number
+   * from JavaScript is written as a string, `undefined` or an empty string counts as omitted, and any other value throws.
+   * Values are not parsed as CSS: one the browser rejects is not applied but still appears in `get().tokens`.
+   */
+  tokens?: TokenValues<TSchema>;
   /** Theme activated when calling `toggle()` from this theme, instead of the opposite `systemTheme` entry. */
   pairedTheme?: TName;
 }
 
 /**
- * Frozen view of a configured theme with its name and the token values written to the DOM.
+ * Frozen view of a configured theme with its name and its static and runtime token values.
  *
  * @typeParam TName - Names of every configured theme.
  * @typeParam TSchema - Token schema from {@link ThemeOptions.tokenSchema}.
@@ -239,14 +252,16 @@ export interface Theme<TName extends string = string, TSchema extends Record<str
 
   /**
    * Replaces the runtime token overrides, which win over every theme's static tokens until replaced again. Pass
-   * `{}` to remove them. Overrides are not stored and are not part of the pre-paint script.
+   * `{}` to remove them. Overrides are not stored and are not part of the pre-paint script. A token set to `undefined`
+   * or `""` is omitted, so the theme's static value applies. Values are not parsed as CSS: one the browser rejects is
+   * not applied, and the property keeps its previous value, but it still appears in `get().tokens`.
    *
    * @param tokens - Token values keyed by `tokenSchema` names.
    * @returns The active theme with the new overrides.
    * @throws {Error} When `tokens` is not an object, no `tokenSchema` is configured, a key is not in `tokenSchema`, or a
-   *   value is not a string, a finite number, or `undefined`. An `undefined` value counts as omitted.
+   *   value is not a string, a finite number, or `undefined`. An `undefined` or empty value counts as omitted.
    */
-  setTokens(tokens: Partial<Record<keyof TSchema, string>>): ActiveTheme<TName, TSchema>;
+  setTokens(tokens: TokenValues<TSchema>): ActiveTheme<TName, TSchema>;
 
   /**
    * Reads every `tokenSchema` token: the values in `get().tokens`, completed with the computed CSS values of
