@@ -255,8 +255,8 @@ export interface Theme<TName extends string = string, TSchema extends Record<str
    * `{}` to remove them. Overrides are not stored and are not part of the pre-paint script. A token set to `undefined`
    * or `""` is omitted, so the theme's static value applies. Values are not parsed as CSS: one the browser rejects is
    * not applied, and the property keeps its previous value, but it still appears in `get().tokens`. Before any theme
-   * is applied, such as before `init()`, the overrides are only recorded: the DOM and listeners are left alone until
-   * the next change applies them.
+   * is applied, that is before `init()` or another change first runs or after `destroy()`, the overrides are only
+   * recorded: the DOM and listeners are left alone until the next change applies them.
    *
    * @param tokens - Token values keyed by `tokenSchema` names.
    * @returns The active theme with the new overrides.
