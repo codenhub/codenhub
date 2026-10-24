@@ -231,7 +231,7 @@ Activates a theme and stores it as the explicit preference.
 setTokens(tokens: TokenValues<TSchema>): ActiveTheme<TName, TSchema>;
 ```
 
-Replaces the runtime token overrides, which win over every theme's static tokens until replaced again. Pass `{}` to remove them. Overrides are not stored and are not part of the pre-paint script.
+Replaces the runtime token overrides, which win over every theme's static tokens until replaced again. Pass `{}` to remove them. Overrides are not stored and are not part of the pre-paint script. A token set to `undefined` or `""` is omitted, so the theme's static value applies. Values are not parsed as CSS: one the browser rejects is not applied, and the property keeps its previous value, but it still appears in `get().tokens`.
 
 **Parameters**
 
@@ -329,7 +329,7 @@ Theme activated when calling `toggle()` from this theme, instead of the opposite
 tokens?: TokenValues<TSchema>;
 ```
 
-Static token values written to the CSS custom properties named by `tokenSchema`, which they require. A number from JavaScript is written as a string, and an empty string counts as omitted.
+Static token values written to the CSS custom properties named by `tokenSchema`, which they require. A finite number from JavaScript is written as a string, `undefined` or an empty string counts as omitted, and any other value throws. Values are not parsed as CSS: one the browser rejects is not applied but still appears in `get().tokens`.
 
 ### ThemeOptions
 

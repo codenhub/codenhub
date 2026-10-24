@@ -20,8 +20,9 @@ export interface ThemeDefinition<
   /** Browser color scheme applied to `document.documentElement.style.colorScheme`; also decides what `toggle()` falls back to and whether `darkClass` applies. */
   colorScheme: "light" | "dark";
   /**
-   * Static token values written to the CSS custom properties named by `tokenSchema`, which they require. A number from
-   * JavaScript is written as a string, and an empty string counts as omitted.
+   * Static token values written to the CSS custom properties named by `tokenSchema`, which they require. A finite number
+   * from JavaScript is written as a string, `undefined` or an empty string counts as omitted, and any other value throws.
+   * Values are not parsed as CSS: one the browser rejects is not applied but still appears in `get().tokens`.
    */
   tokens?: TokenValues<TSchema>;
   /** Theme activated when calling `toggle()` from this theme, instead of the opposite `systemTheme` entry. */
@@ -251,7 +252,9 @@ export interface Theme<TName extends string = string, TSchema extends Record<str
 
   /**
    * Replaces the runtime token overrides, which win over every theme's static tokens until replaced again. Pass
-   * `{}` to remove them. Overrides are not stored and are not part of the pre-paint script.
+   * `{}` to remove them. Overrides are not stored and are not part of the pre-paint script. A token set to `undefined`
+   * or `""` is omitted, so the theme's static value applies. Values are not parsed as CSS: one the browser rejects is
+   * not applied, and the property keeps its previous value, but it still appears in `get().tokens`.
    *
    * @param tokens - Token values keyed by `tokenSchema` names.
    * @returns The active theme with the new overrides.
