@@ -30,8 +30,10 @@ const DEFAULT_OPTIONS = {
 } as const;
 
 // The option types accept `undefined`, so a wrapper forwarding an unset option gets the default rather than a throw.
-const withoutUndefined = <T extends object>(value: T | undefined): Partial<T> =>
-  Object.fromEntries(Object.entries(value ?? {}).filter(([, entry]) => entry !== undefined)) as Partial<T>;
+const withoutUndefined = <T extends object>(value: T | undefined): { [K in keyof T]?: Exclude<T[K], undefined> } =>
+  Object.fromEntries(Object.entries(value ?? {}).filter(([, entry]) => entry !== undefined)) as {
+    [K in keyof T]?: Exclude<T[K], undefined>;
+  };
 
 /**
  * Copies validated token values, writing numbers as the strings the DOM receives and dropping `undefined` and empty
@@ -40,7 +42,7 @@ const withoutUndefined = <T extends object>(value: T | undefined): Partial<T> =>
  * @internal
  */
 export const toTokenValues = <TKey extends PropertyKey>(
-  tokens: Partial<Record<TKey, string>> | undefined,
+  tokens: Partial<Record<TKey, string | undefined>> | undefined,
 ): Partial<Record<TKey, string>> =>
   Object.fromEntries(
     Object.entries(tokens ?? {})

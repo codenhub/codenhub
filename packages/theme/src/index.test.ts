@@ -124,6 +124,22 @@ describe("Theme config", () => {
     expect(root.className).toBe("theme-dark");
   });
 
+  it("should accept options and token values that may be undefined under exactOptionalPropertyTypes", () => {
+    const props: { storageKey?: string | undefined; primary?: string | undefined; revertDom?: boolean | undefined } =
+      {};
+    const theme = createTheme({
+      themes: {
+        light: { colorScheme: "light", tokens: { primary: props.primary }, pairedTheme: undefined },
+        dark: { colorScheme: "dark" },
+      },
+      tokenSchema: { primary: "--color-primary" },
+      storageKey: props.storageKey,
+    }).init();
+
+    expect(theme.setTokens({ primary: props.primary }).tokens).toEqual({});
+    expect(() => theme.destroy({ revertDom: props.revertDom })).not.toThrow();
+  });
+
   it("should reject a systemTheme option that is not an object", () => {
     for (const systemTheme of ["dark", 1, []]) {
       expect(() => createTheme({ systemTheme: systemTheme as never })).toThrow(
@@ -382,7 +398,7 @@ describe("Theme types", () => {
 
     expectTypeOf(wrap({ themes: tokenThemes, tokenSchema }).setTokens)
       .parameter(0)
-      .toEqualTypeOf<Partial<Record<string, string>>>();
+      .toEqualTypeOf<Partial<Record<string, string | undefined>>>();
     expect([withoutSchema, withSchema]).toHaveLength(2);
   });
 });
@@ -940,6 +956,64 @@ describe("Theme change notifications", () => {
     expect(seen).toEqual(["light"]);
   });
 
+  it("should not dispatch themechange for a change whose subscriber destroyed the manager", () => {
+    const theme = createTheme().init();
+    const eventListener = vi.fn();
+    theme.subscribe(() => theme.destroy());
+    window.addEventListener(THEME_CHANGE_EVENT, eventListener);
+
+    try {
+      theme.set("dark");
+    } finally {
+      window.removeEventListener(THEME_CHANGE_EVENT, eventListener);
+    }
+
+    expect(eventListener).not.toHaveBeenCalled();
+  });
+
+  it("should stop delivering a themechange event once a window listener destroys the manager", () => {
+    const theme = createTheme().init();
+    const destroy = (): void => theme.destroy();
+    const record = vi.fn();
+    window.addEventListener(THEME_CHANGE_EVENT, destroy);
+    window.addEventListener(THEME_CHANGE_EVENT, record);
+
+    try {
+      theme.set("dark");
+    } finally {
+      window.removeEventListener(THEME_CHANGE_EVENT, destroy);
+      window.removeEventListener(THEME_CHANGE_EVENT, record);
+    }
+
+    expect(record).not.toHaveBeenCalled();
+  });
+
+  it("should not deliver a change to a listener subscribed during its delivery", () => {
+    const theme = createTheme().init();
+    const late = vi.fn();
+    theme.subscribe(() => {
+      theme.subscribe(late);
+    });
+
+    theme.set("dark");
+    expect(late).not.toHaveBeenCalled();
+
+    theme.set("light");
+    expect(late).toHaveBeenCalledWith(expect.objectContaining({ name: "light" }));
+  });
+
+  it("should not deliver a change to a listener unsubscribed during its delivery", () => {
+    const theme = createTheme().init();
+    const later = vi.fn();
+    let unsubscribeLater = (): void => {};
+    theme.subscribe(() => unsubscribeLater());
+    unsubscribeLater = theme.subscribe(later);
+
+    theme.set("dark");
+
+    expect(later).not.toHaveBeenCalled();
+  });
+
   it("should build the themechange event with the window's CustomEvent", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     class WindowCustomEvent<T> extends CustomEvent<T> {}
@@ -1065,6 +1139,33 @@ describe("Theme cross-tab sync", () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
+  it("should ignore sessionStorage events", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("quota");
+    });
+    const theme = createTheme().init();
+    theme.set("dark");
+    const listener = vi.fn();
+    theme.subscribe(listener);
+
+    // As a same-origin frame calling sessionStorage.clear() fires it.
+    dispatchStorage({ key: null, newValue: null, storageArea: window.sessionStorage });
+    dispatchStorage({ key: "app-theme-preference", newValue: null, storageArea: window.sessionStorage });
+
+    expect(theme.name).toBe("dark");
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("should apply localStorage events that name their storage area", () => {
+    const theme = createTheme().init();
+
+    window.localStorage.setItem("app-theme-preference", "dark");
+    dispatchStorage({ key: "app-theme-preference", newValue: "dark", storageArea: window.localStorage });
+
+    expect(theme.name).toBe("dark");
+  });
+
   it("should stop syncing after destroy", () => {
     const theme = createTheme().init();
     theme.destroy();
@@ -1181,6 +1282,42 @@ describe("Theme CSS tokens", () => {
     window.localStorage.setItem("app-theme-preference", "light");
     dispatchStorage({ key: "app-theme-preference", newValue: "light" });
     expect(theme.get()).toMatchObject({ name: "light", tokens: { primary: "orange" } });
+  });
+
+  it("should only record runtime overrides set before a theme is applied", () => {
+    window.localStorage.setItem("app-theme-preference", "dark");
+    // As the pre-paint script leaves the page.
+    root.setAttribute("data-theme", "dark");
+    const theme = createTheme({ tokenSchema });
+    const sources: string[] = [];
+    theme.subscribe(({ name, source }) => sources.push(`${name}/${source}`));
+
+    expect(theme.setTokens({ primary: "orange" }).tokens).toEqual({ primary: "orange" });
+    expect(root.getAttribute("data-theme")).toBe("dark");
+    expect(root.style.getPropertyValue("--color-primary")).toBe("");
+    expect(sources).toEqual([]);
+
+    theme.init();
+    expect(root.style.getPropertyValue("--color-primary")).toBe("orange");
+    expect(sources).toEqual(["dark/init"]);
+  });
+
+  it("should apply runtime overrides set after set() runs before init()", () => {
+    const theme = createTheme({ tokenSchema });
+    theme.set("dark");
+
+    theme.setTokens({ primary: "orange" });
+
+    expect(root.style.getPropertyValue("--color-primary")).toBe("orange");
+  });
+
+  it("should only record runtime overrides set after destroy() until a theme is applied again", () => {
+    const theme = createTheme({ tokenSchema }).init();
+    theme.destroy();
+
+    theme.setTokens({ primary: "orange" });
+
+    expect(root.style.getPropertyValue("--color-primary")).toBe("");
   });
 
   it("should replace runtime overrides on each setTokens call", () => {

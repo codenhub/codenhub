@@ -55,6 +55,9 @@ export function createTheme<
   let dispatchingEvent: Event | null = null;
   // Kept in memory as well as storage, so an explicit choice still wins over OS changes when storage is unavailable.
   let hasExplicitChoice = false;
+  // Whether a theme has been applied since construction or destroy(); until then setTokens() only records overrides,
+  // so it cannot replace the theme the pre-paint script applied with defaultTheme.
+  let hasApplied = false;
   const storage = createPreferenceStorage(config.storageKey, config.themes);
 
   const getClasses = (): Map<TName, string | null> => {
@@ -96,6 +99,7 @@ export function createTheme<
 
   const apply = (source: ThemeChangeSource): ActiveTheme<TName, TSchema> => {
     snapshot = null;
+    hasApplied = true;
     const active = get();
     applyTheme({
       theme: active,
@@ -107,9 +111,13 @@ export function createTheme<
     const change = ++changeCount;
     dispatchingEvent?.stopImmediatePropagation();
     const detail = { name: active.name, theme: active, source };
-    for (const listener of listeners) {
+    // A copy, so a listener subscribed during delivery receives only later changes.
+    for (const listener of Array.from(listeners)) {
       if (change !== changeCount) {
         return active;
+      }
+      if (!listeners.has(listener)) {
+        continue;
       }
       try {
         listener(detail);
@@ -154,6 +162,9 @@ export function createTheme<
   };
 
   const handleStorageChange = (event: StorageEvent): void => {
+    if (!storage.isArea(event.storageArea)) {
+      return;
+    }
     // A null key means another tab called localStorage.clear(), which also removes the preference.
     if (event.key !== null && event.key !== config.storageKey) {
       return;
@@ -207,6 +218,10 @@ export function createTheme<
       assertRuntimeTokens(tokens, config.tokenSchema);
       getClasses();
       runtimeTokens = Object.freeze(toTokenValues(tokens));
+      if (!hasApplied) {
+        snapshot = null;
+        return get();
+      }
       return apply("setTokens");
     },
     readTokens() {
@@ -228,10 +243,14 @@ export function createTheme<
       }
       stopListening?.();
       stopListening = null;
+      // Ends delivery of a change in progress, as a newer change would.
+      changeCount++;
+      dispatchingEvent?.stopImmediatePropagation();
       listeners.clear();
       runtimeTokens = noTokens;
       activeName = config.defaultTheme;
       hasExplicitChoice = false;
+      hasApplied = false;
       snapshot = null;
       classes = null;
     },

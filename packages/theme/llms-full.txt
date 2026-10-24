@@ -93,9 +93,21 @@ document.querySelector("#theme-toggle")?.addEventListener("click", theme.toggle)
 import { useSyncExternalStore } from "react";
 
 function useActiveTheme() {
-  return useSyncExternalStore(theme.subscribe, theme.get, theme.get);
+  return useSyncExternalStore(theme.subscribe, theme.get);
 }
 ```
+
+A server-rendered app also passes `getServerSnapshot`, which must return the theme the server rendered with. Passing `theme.get` there makes hydration read the theme `init()` resolved in the browser, and React reports a mismatch when it differs. A server that renders with this package alone renders `defaultTheme`, since it has no stored or OS preference, so take the snapshot before `init()` runs; the component then renders the default theme while hydrating and updates right after:
+
+```ts
+const serverSnapshot = theme.get(); // before theme.init()
+
+function useActiveTheme() {
+  return useSyncExternalStore(theme.subscribe, theme.get, () => serverSnapshot);
+}
+```
+
+A server that resolves the theme per request instead, such as from a cookie, renders with that theme, so `getServerSnapshot` must return the same one, passed to the client with the page.
 
 ### Configuration
 
@@ -164,6 +176,12 @@ const script = createTheme(themeOptions).getPrePaintScript();
 
 The script handles storage and `matchMedia` failures the same way `init()` does: blocked storage still applies the system theme, and a missing `matchMedia` applies `defaultTheme`. It removes the classes of other configured themes, so a class rendered by the server is replaced rather than joined. It serializes only **static** tokens from each theme's `tokens`; runtime overrides from `setTokens()` exist only in the running page and cannot be part of a script that runs before any application code.
 
+A framework that renders `<html>` itself and hydrates it, such as Next.js or Remix, finds the attribute, class, and `style` the script added and warns that they do not match the server markup. The difference is intended, so mark the element with React's `suppressHydrationWarning`, which silences attribute warnings on that element only:
+
+```tsx
+<html lang="en" suppressHydrationWarning>
+```
+
 ### Content Security Policy
 
 A `script-src` policy without `'unsafe-inline'` blocks the inline script, and the flash returns with only a console error to show for it. Allow it in either of two ways:
@@ -228,6 +246,8 @@ Each `tokenSchema` value must be a custom property a stylesheet can name without
 
 Runtime overrides apply to every theme and persist across theme changes until `setTokens()` replaces them — pass `{}` to remove them. They are not stored, so they last until the page unloads or `destroy()` runs, and they are not part of the pre-paint script. Passing a token key that is not in `tokenSchema` throws.
 
+Before any theme is applied — before `init()`, `set()`, `toggle()`, or `clearPreference()` first runs, or after `destroy()` — `setTokens()` only records the overrides and returns `get()` with them; it leaves the DOM alone and notifies no one, and the next change applies them. Applying right away would mean applying `defaultTheme`, the only theme the manager knows before `init()`, which replaced the theme the pre-paint script had applied and flashed the wrong theme when `init()` ran later, such as in a component's effect. Resolving the stored or system theme at that point instead was rejected because it would be `init()` without its listeners, and its `"setTokens"` notification would announce a theme change.
+
 ## Persistence
 
 An explicit preference set through `set()` or `toggle()` is written to `localStorage` under `storageKey` (default `"app-theme-preference"`). `theme.preference` returns that value when it names a configured theme, or `null` when it is unset, invalid, or storage is unavailable (for example during SSR). `clearPreference()` removes the stored value and applies `theme.system`, the theme the OS preference currently maps to.
@@ -238,7 +258,7 @@ When storing a choice made with `set()` or `toggle()` fails, the manager still r
 
 ## Cross-tab sync
 
-Every tab running `createTheme().init()` against the same `storageKey` stays in sync: when another tab sets, clears, or invalidates the stored preference — including through `localStorage.clear()` — each tab re-resolves its theme from storage and the OS preference and notifies with `source: "storage"`. A tab with its own runtime token overrides keeps them; only the active theme changes.
+Every tab running `createTheme().init()` against the same `storageKey` stays in sync: when another tab sets, clears, or invalidates the stored preference — including through `localStorage.clear()` — each tab re-resolves its theme from storage and the OS preference and notifies with `source: "storage"`. `storage` events for `sessionStorage`, which a same-origin frame in the same tab fires, are ignored. A tab with its own runtime token overrides keeps them; only the active theme changes.
 
 The OS `prefers-color-scheme` media query applies automatically only while no valid stored preference exists. Once a tab (or a previous session) has stored an explicit preference, later system-preference changes are ignored until `clearPreference()` runs.
 
@@ -254,7 +274,7 @@ const unsubscribe = theme.subscribe(({ name, source }) => {
 
 `source` names what caused the change: the method that ran (`"init"`, `"set"`, `"toggle"`, `"clearPreference"`, `"setTokens"`), `"system"` for an OS color-scheme change, or `"storage"` for a change made in another tab. Code that mirrors the preference elsewhere, such as to a user profile, should act on `"set"`, `"toggle"`, and `"clearPreference"` only, so that every open tab does not repeat the same write.
 
-A subscriber that throws is logged and does not stop other subscribers from running. A subscriber or `themechange` listener that makes another change, such as calling `set()` or `setTokens()`, ends delivery of the change it received: the subscribers and listeners after it receive only the newer change, so none of them is left holding a superseded theme. Browsers also receive a `window` `CustomEvent` named by the exported `THEME_CHANGE_EVENT` constant (`"themechange"`) carrying the same detail, for code that has no access to the manager. Type it with the exported `ThemeChangeEvent`:
+A subscriber that throws is logged and does not stop other subscribers from running. A subscriber or `themechange` listener that makes another change, such as calling `set()` or `setTokens()`, ends delivery of the change it received: the subscribers and listeners after it receive only the newer change, so none of them is left holding a superseded theme. One that calls `destroy()` ends delivery too, and no `themechange` event follows. A subscriber added during a delivery receives only later changes. Browsers also receive a `window` `CustomEvent` named by the exported `THEME_CHANGE_EVENT` constant (`"themechange"`) carrying the same detail, for code that has no access to the manager. Type it with the exported `ThemeChangeEvent`:
 
 ```ts
 import { THEME_CHANGE_EVENT, type ThemeChangeEvent } from "@codenhub/theme";
@@ -274,7 +294,7 @@ The event does not identify which manager sent it, so use `subscribe()` when a p
 
 - Theme names are inferred from the keys of `themes`, so `defaultTheme`, `systemTheme`, `pairedTheme`, and `set()` reject unconfigured names at compile time.
 - `theme.name`, `theme.preference`, and `theme.system` getters read the active name, the stored preference, and the theme the OS preference maps to.
-- `setTokens(tokens)` replaces the runtime token overrides; pass `{}` to remove them. Changes it makes report `source: "setTokens"`.
+- `setTokens(tokens)` replaces the runtime token overrides; pass `{}` to remove them. Changes it makes report `source: "setTokens"`. Called before `init()` or any other change, it only records the overrides, so it cannot replace the theme the pre-paint script applied.
 - `readTokens()` returns every token, completed with computed CSS values at the time of the call.
 - Changes made in another tab report `source: "storage"`, so code that mirrors the preference elsewhere can tell them from local changes.
 - The `ThemeChangeEvent` type types the `themechange` window event, whose `detail` was untyped.
@@ -310,12 +330,13 @@ The event does not identify which manager sent it, so use `subscribe()` when a p
 - A snapshot taken before a theme change no longer reports the new theme's computed tokens under the old theme's name.
 - The pre-paint script applies the OS theme when `localStorage` access throws, applies `defaultTheme` when `matchMedia` is missing as `init()` does, and replaces a server-rendered theme class instead of adding a second one.
 - `localStorage.clear()` in another tab now applies the system theme.
-- An option set to `undefined`, such as `storageKey: props.storageKey` forwarded by a wrapper, uses its default instead of making `createTheme()` throw.
+- An option set to `undefined`, such as `storageKey: props.storageKey` forwarded by a wrapper, uses its default instead of making `createTheme()` throw. The option, token value, and `destroy()` option types accept `undefined` under TypeScript's `exactOptionalPropertyTypes` too.
 - A token named after an `Object.prototype` member, such as `constructor`, is handled as an ordinary token instead of writing the inherited function to the DOM.
 - A `systemTheme` that is not an object, or a `darkClass` that is not a boolean, throws from `createTheme()` instead of being silently accepted.
 - The pre-paint script falls back as for an unknown name when the stored value is an `Object.prototype` property such as `toString`, and applies a configured theme named `__proto__`. ([#345](https://github.com/codenhub/codenhub/issues/345))
 - Invalid options, such as a `defaultTheme` naming an unconfigured theme, throw from `createTheme()` instead of reaching the page through the pre-paint script. ([#364](https://github.com/codenhub/codenhub/issues/364))
-- A subscriber or `themechange` listener that changes the theme, such as by calling `set()` or `setTokens()`, no longer leaves the subscribers and `themechange` listeners after it with the superseded change.
+- A subscriber or `themechange` listener that changes the theme, such as by calling `set()` or `setTokens()`, no longer leaves the subscribers and `themechange` listeners after it with the superseded change. One that calls `destroy()` ends the delivery too, and a subscriber added during a delivery no longer receives the change being delivered.
+- `storage` events for `sessionStorage`, fired when a same-origin frame in the tab changes it, are ignored. A frame calling `sessionStorage.clear()` re-applied the theme with `source: "storage"`, and discarded a choice that could not be stored.
 - When storing fails, an explicit choice made with `set()` or `toggle()`, before or after `init()`, is no longer overridden by `init()` or the next OS color-scheme change.
 - The `themechange` event is built with the window's own `CustomEvent`, so `init()` and other changes no longer throw when the global `CustomEvent` belongs to another realm, as in a hand-built jsdom setup.
 
