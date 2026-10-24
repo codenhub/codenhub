@@ -5,8 +5,10 @@ import {
   createTheme as originalCreateTheme,
   THEME_CHANGE_EVENT,
   type ActiveTheme,
+  type Theme,
   type ThemeChangeDetail,
   type ThemeChangeEvent,
+  type ThemeOptions,
 } from ".";
 
 const activeThemes: Array<{ destroy(): void }> = [];
@@ -241,6 +243,7 @@ describe("Theme config", () => {
   });
 
   it("should reject theme tokens if no tokenSchema is configured", () => {
+    // @ts-expect-error -- tokens need a tokenSchema
     expect(() => createTheme({ themes: { custom: { colorScheme: "light", tokens: { primary: "blue" } } } })).toThrow(
       'Theme "custom" defines tokens but no tokenSchema is configured.',
     );
@@ -251,6 +254,27 @@ describe("Theme config", () => {
       expect(() => createTheme({ tokenSchema: { primary: value } })).toThrow(
         `Token schema key "primary" must map to a CSS custom property name, such as "--color-primary". Received: "${value}".`,
       );
+    }
+  });
+
+  it("should reject two tokenSchema keys that map to the same CSS custom property", () => {
+    expect(() => createTheme({ tokenSchema: { primary: "--color-primary", brand: "--color-primary" } })).toThrow(
+      'Token schema keys "primary" and "brand" both map to "--color-primary".',
+    );
+  });
+
+  it("should reject theme tokens that are not an object", () => {
+    expect(() =>
+      createTheme({
+        themes: { light: { colorScheme: "light", tokens: "blue" as never }, dark: { colorScheme: "dark" } },
+        tokenSchema,
+      }),
+    ).toThrow('Theme "light" tokens must be an object.');
+  });
+
+  it("should reject a tokenSchema that is not an object", () => {
+    for (const value of [null, "--color-primary", ["--color-primary"]]) {
+      expect(() => createTheme({ tokenSchema: value as never })).toThrow("Theme tokenSchema option must be an object.");
     }
   });
 
@@ -336,6 +360,30 @@ describe("Theme types", () => {
       // @ts-expect-error -- "secondary" is not in tokenSchema
       theme.setTokens({ secondary: "red" });
     }).toThrow('Runtime token override "secondary" is not present in tokenSchema.');
+  });
+
+  it("should reject tokens without a tokenSchema at compile time", () => {
+    expect(() => {
+      createTheme({
+        // @ts-expect-error -- tokens need a tokenSchema
+        themes: { light: { colorScheme: "light", tokens: { primary: "blue" } }, dark: { colorScheme: "dark" } },
+      });
+    }).toThrow('Theme "light" defines tokens but no tokenSchema is configured.');
+    expect(() => {
+      // @ts-expect-error -- setTokens needs a tokenSchema
+      createTheme().setTokens({ primary: "blue" });
+    }).toThrow("Runtime tokens provided but no tokenSchema is configured.");
+  });
+
+  it("should keep managers without a tokenSchema assignable to the default Theme type", () => {
+    const withoutSchema: Theme = createTheme();
+    const withSchema: Theme = createTheme({ themes: tokenThemes, tokenSchema });
+    const wrap = <TName extends string>(options: ThemeOptions<TName>): Theme<TName> => createTheme(options);
+
+    expectTypeOf(wrap({ themes: tokenThemes, tokenSchema }).setTokens)
+      .parameter(0)
+      .toEqualTypeOf<Partial<Record<string, string>>>();
+    expect([withoutSchema, withSchema]).toHaveLength(2);
   });
 });
 
@@ -496,6 +544,26 @@ describe("Theme behavior", () => {
     expect(() => theme.init()).toThrow("Theme class resolver returned an invalid class for theme: light.");
     expect(mediaQueryList.addEventListener).not.toHaveBeenCalled();
     expect(() => theme.init()).toThrow("Theme class resolver returned an invalid class for theme: light.");
+  });
+
+  it("should follow OS changes through the legacy addListener API", () => {
+    const listeners = new Set<(event: MediaQueryListEvent) => void>();
+    const mediaQueryList = {
+      matches: false,
+      addListener: vi.fn((listener: (event: MediaQueryListEvent) => void) => listeners.add(listener)),
+      removeListener: vi.fn((listener: (event: MediaQueryListEvent) => void) => listeners.delete(listener)),
+    };
+    Object.defineProperty(window, "matchMedia", { configurable: true, value: vi.fn().mockReturnValue(mediaQueryList) });
+    const theme = createTheme().init();
+
+    for (const listener of listeners) {
+      listener({ matches: true } as MediaQueryListEvent);
+    }
+    expect(theme.name).toBe("dark");
+
+    theme.destroy();
+    expect(mediaQueryList.removeListener).toHaveBeenCalledTimes(1);
+    expect(listeners.size).toBe(0);
   });
 
   it("should call a custom class resolver once per theme", () => {
@@ -1034,6 +1102,19 @@ describe("Theme CSS tokens", () => {
 
     expect(theme.setTokens({ primary: undefined }).tokens.primary).toBe("blue");
     expect(root.style.getPropertyValue("--color-primary")).toBe("blue");
+  });
+
+  it("should treat an empty-string token as omitted", () => {
+    const theme = createTheme({
+      themes: { light: { colorScheme: "light", tokens: { primary: "blue", bg: "" } }, dark: { colorScheme: "dark" } },
+      tokenSchema,
+    }).init();
+
+    expect(Object.hasOwn(theme.get().tokens, "bg")).toBe(false);
+    theme.setTokens({ primary: "red" });
+    expect(theme.setTokens({ primary: "" }).tokens.primary).toBe("blue");
+    expect(root.style.getPropertyValue("--color-primary")).toBe("blue");
+    expect(theme.getPrePaintScript()).not.toContain("--color-bg");
   });
 
   it("should write number token values as strings", () => {

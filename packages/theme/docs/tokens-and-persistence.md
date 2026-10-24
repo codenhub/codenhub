@@ -30,11 +30,11 @@ theme.readTokens(); // { accent: "#00c853", surface: "<computed --color-surface>
 
 Reading computed values can force a synchronous layout, so prefer `get().tokens` when tokens defined only in CSS are not needed. `readTokens()` skips the read when every token is known in JS.
 
-Token values are strings. A finite number passed from JavaScript, such as a value read from a JSON config, is written as its string, so `get().tokens` reports `"4"` for `4`. An `undefined` value counts as omitted, so `setTokens({ primary: undefined })` leaves the theme's static `primary` in place. Any other value, including `NaN` and `Infinity`, throws.
+Token values are strings. A finite number passed from JavaScript, such as a value read from a JSON config, is written as its string, so `get().tokens` reports `"4"` for `4`. An `undefined` or empty value counts as omitted, so `setTokens({ primary: undefined })` and `setTokens({ primary: "" })` leave the theme's static `primary` in place. An empty value is omitted rather than reported, because the browser removes a custom property set to `""` instead of applying it; a cleared color-picker input therefore falls back to the theme's value. Any other value, including `NaN` and `Infinity`, throws.
 
 Token values are not parsed as CSS. When the browser rejects a value as a custom property value, such as `"red !important"` or `"red; color: blue"`, it is not applied and the property keeps whatever value it had, such as the previous theme's, while `get().tokens` still reports the rejected value, since `get()` never reads the DOM. Check values that come from user input, such as a color picker, before passing them to `setTokens()`.
 
-Each `tokenSchema` value must be a custom property a stylesheet can name without escapes: `--` followed by ASCII letters, digits, `-`, `_`, or non-ASCII characters. Anything else throws from `createTheme()`, including `"--"` alone, which browsers do not apply, and a name with a space or `;`.
+Each `tokenSchema` value must be a custom property a stylesheet can name without escapes: `--` followed by ASCII letters, digits, `-`, `_`, or non-ASCII characters. Anything else throws from `createTheme()`, including `"--"` alone, which browsers do not apply, and a name with a space or `;`. Two keys cannot map to the same property, because applying a theme would write one key's value and then remove it for the other.
 
 Runtime overrides apply to every theme and persist across theme changes until `setTokens()` replaces them — pass `{}` to remove them. They are not stored, so they last until the page unloads or `destroy()` runs, and they are not part of the pre-paint script. Passing a token key that is not in `tokenSchema` throws.
 

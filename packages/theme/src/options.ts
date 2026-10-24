@@ -34,8 +34,8 @@ const withoutUndefined = <T extends object>(value: T | undefined): Partial<T> =>
   Object.fromEntries(Object.entries(value ?? {}).filter(([, entry]) => entry !== undefined)) as Partial<T>;
 
 /**
- * Copies validated token values, writing numbers as the strings the DOM receives and dropping `undefined` ones, which
- * count as omitted.
+ * Copies validated token values, writing numbers as the strings the DOM receives and dropping `undefined` and empty
+ * ones, which count as omitted. An empty value would not be written anyway: `setProperty()` removes the property.
  *
  * @internal
  */
@@ -44,7 +44,7 @@ export const toTokenValues = <TKey extends PropertyKey>(
 ): Partial<Record<TKey, string>> =>
   Object.fromEntries(
     Object.entries(tokens ?? {})
-      .filter(([, value]) => value !== undefined)
+      .filter(([, value]) => value !== undefined && value !== "")
       .map(([key, value]) => [key, typeof value === "number" ? String(value) : value]),
   ) as Partial<Record<TKey, string>>;
 
