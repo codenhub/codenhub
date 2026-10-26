@@ -63,13 +63,12 @@ export function createThemeDialog(handlers: ThemeDialogHandlers): ThemeDialog {
       return;
     }
 
-    const tokens: Record<string, string> = {};
-    valuesContainer?.querySelectorAll<HTMLInputElement>("[data-token-key]").forEach((input) => {
-      const key = input.dataset.tokenKey;
-      if (key) {
-        tokens[key] = input.value.trim();
-      }
-    });
+    // Built with Object.fromEntries, since assigning a "__proto__" key would set the prototype instead of a token.
+    const tokens: Record<string, string> = Object.fromEntries(
+      Array.from(valuesContainer?.querySelectorAll<HTMLInputElement>("[data-token-key]") ?? [])
+        .filter((input) => input.dataset.tokenKey)
+        .map((input) => [input.dataset.tokenKey, input.value.trim()]),
+    );
 
     const editIndex = Number(editIndexInput?.value ?? "-1");
     if (handlers.onSave({ name, colorScheme, tokens }, editIndex)) {
