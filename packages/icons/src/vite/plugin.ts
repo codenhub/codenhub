@@ -279,7 +279,15 @@ function getEnclosingQuote(code: string, matchIndex: number): string | null {
       continue;
     }
 
-    if (char === '"' || char === "'" || char === "`") {
+    // `stripComments` leaves a template literal whole, so a comment inside its
+    // `${…}` arrives here, where a brace or quote in it would derail the stack.
+    if (char === "/" && nextChar === "/") {
+      const lineEnd = code.indexOf("\n", i);
+      i = lineEnd === -1 ? matchIndex : lineEnd - 1;
+    } else if (char === "/" && nextChar === "*") {
+      const commentEnd = code.indexOf("*/", i + 2);
+      i = commentEnd === -1 ? matchIndex : commentEnd + 1;
+    } else if (char === '"' || char === "'" || char === "`") {
       frames.push(char);
     } else if (char === "{") {
       frames[frames.length - 1] = (top as number) + 1;
