@@ -226,11 +226,11 @@ An unqualified name resolves against a default family, and against nothing at al
 
 Where the default comes from depends on the delivery method:
 
-| Method        | Default family                                                                  |
-| ------------- | ------------------------------------------------------------------------------- |
-| Vite, PostCSS | The `defaultPrefix` option.                                                     |
-| Tailwind      | The `default:` plugin option.                                                   |
-| Plain CSS     | The last family stylesheet imported. Brand families never answer to bare names. |
+| Method        | Default family                                                                                                                                |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vite, PostCSS | The `defaultPrefix` option.                                                                                                                   |
+| Tailwind      | The `default:` plugin option.                                                                                                                 |
+| Plain CSS     | The last core family stylesheet imported. A brand family stylesheet claims no bare names, so importing one last leaves the default as it was. |
 
 ```ts
 import { IconRegistry } from "@codenhub/icons";
@@ -975,7 +975,7 @@ No base rule matched the element, so it has no size.
 
 - **No base rules.** Plain CSS and a declared Tailwind `@plugin` need `@import "@codenhub/icons";` in a stylesheet. `@codenhub/icons/tw`, the Vite plugin's stylesheet, and the PostCSS plugin include the base rules already, the PostCSS plugin unless `injectBase` is `false`. Inline SVG mode needs no base rules to render; they add `--ic-size`, the size classes, and `--ic-color` for icons without a color of their own.
 - **The element is not an `<i>` and has no `.ic`.** The base rules match `<i class="ic-…">`, or any element that also carries `.ic`. A `<span class="ic-lucide-heart">` matches neither.
-- **An inlined logo whose first copy is hidden.** In inline SVG, two copies of the same `logos` icon share their gradient and mask ids, and a copy drawn after one inside a `display: none` element renders blank. See [Vite § Inline SVG mode](docs/delivery/vite.md#inline-svg-mode).
+- **An inlined logo whose first copy is hidden.** In inline SVG, two copies of the same `logos` icon share their gradient, mask, and clip-path ids, and a copy drawn after one inside a `display: none` element renders blank. See [Vite § Inline SVG mode](docs/delivery/vite.md#inline-svg-mode).
 
 ## The icon renders as a solid square
 
@@ -1015,7 +1015,7 @@ A minifier configured with `legalComments: "none"` strips `/*! … */` comments.
 ## Added
 
 - `simple-icons`, a brand family of 3,254 logos such as `ic-simple-icons-github` and `ic-simple-icons-npm`, from [Simple Icons](https://simpleicons.org). It is opt-in: `@codenhub/icons/tw` never resolves it, and the other methods resolve it only when named, and its stylesheet carries only qualified names, so it never takes a bare name such as `ic-x` from another family. Icons that Simple Icons records under a license of their own are left out unless that license is one that places no obligation, CC0 or Unlicense. The marks are trademarks of their owners; see Licensing.
-- `logos`, a brand family of 2,016 full-color logos such as `ic-logos-google` and `ic-logos-slack-icon`, from [gilbarbara/logos](https://github.com/gilbarbara/logos) under CC0-1.0, and its stylesheet `@codenhub/icons/logos`. It is opt-in in the same way as `simple-icons`, and its stylesheet likewise carries only qualified names. Multicolor marks keep their colors and gradients in CSS, inline SVG, and a Vite build, including under a Content Security Policy that blocks inline styles. Variants such as `-icon` and `-dark` are separate names. Two upstream files whose markup cannot render self-contained, `sinatra` and `waffle-icon`, are left out. About 80% of the logos are not square, mostly wordmarks, and render small in the square icon box. Inlined as SVG, two copies of one logo share its gradient and mask ids, so a copy shown after one hidden with `display: none` renders blank; see Vite, Inline SVG mode. [codenhub/codenhub#326](https://github.com/codenhub/codenhub/issues/326)
+- `logos`, a brand family of 2,016 full-color logos such as `ic-logos-google` and `ic-logos-slack-icon`, from [gilbarbara/logos](https://github.com/gilbarbara/logos) under CC0-1.0, and its stylesheet `@codenhub/icons/logos`. It is opt-in in the same way as `simple-icons`, and its stylesheet likewise carries only qualified names. Multicolor marks keep their colors and gradients in CSS, inline SVG, and a Vite build, including under a Content Security Policy that blocks inline styles. Variants such as `-icon` and `-dark` are separate names. Two upstream files whose markup cannot render self-contained, `sinatra` and `waffle-icon`, are left out. About 80% of the logos are not square, mostly wordmarks, and render small in the square icon box. Inlined as SVG, two copies of one logo share its gradient, mask, and clip-path ids, so a copy shown after one hidden with `display: none` renders blank; see Vite, Inline SVG mode. [codenhub/codenhub#326](https://github.com/codenhub/codenhub/issues/326)
 - Brand icons render in their brand color by default. `--ic-color`, set on an icon or any ancestor, overrides it: `:root { --ic-color: currentColor; }` makes every icon monochrome, and a per-icon value recolors one, turning a full-color logo into a one-color silhouette. In inline SVG mode under a Content Security Policy that blocks `style` attributes, a brand icon keeps its brand colors and `--ic-color` no longer reaches it. Several brand colors are near-black and need an override in a dark theme. See Concepts, Color.
 - `IconData.color` and `ResolvedIcon.color` carry an icon's own color. `RenderSvgOptions.prefix` sets the class prefix whose `--<prefix>-color` overrides it.
 - A Troubleshooting page, guidance on finding icon names, accessibility guidance, and a generated API reference.

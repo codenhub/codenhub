@@ -55,11 +55,11 @@ An unqualified name resolves against a default family, and against nothing at al
 
 Where the default comes from depends on the delivery method:
 
-| Method        | Default family                                                                  |
-| ------------- | ------------------------------------------------------------------------------- |
-| Vite, PostCSS | The `defaultPrefix` option.                                                     |
-| Tailwind      | The `default:` plugin option.                                                   |
-| Plain CSS     | The last family stylesheet imported. Brand families never answer to bare names. |
+| Method        | Default family                                                                                                                                |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vite, PostCSS | The `defaultPrefix` option.                                                                                                                   |
+| Tailwind      | The `default:` plugin option.                                                                                                                 |
+| Plain CSS     | The last core family stylesheet imported. A brand family stylesheet claims no bare names, so importing one last leaves the default as it was. |
 
 ```ts
 import { IconRegistry } from "@codenhub/icons";
