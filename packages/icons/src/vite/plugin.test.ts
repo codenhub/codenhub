@@ -377,6 +377,29 @@ describe("viteIcons in svg mode", () => {
     expect(markup).toContain("<g>\n<path d='a' /></g>");
   });
 
+  it.each([
+    ['"', 'const ok = true; const markup = `<p>${ok ? "<i class=\\"ic-user\\"></i>" : ""}</p>`;'],
+    ["'", "const ok = true; const markup = `<p>${ok ? '<i class=\"ic-user\"></i>' : ''}</p>`;"],
+    ["`", 'const ok = true; const markup = `<p>${ok ? `<i class="ic-user"></i>` : ``}</p>`;'],
+  ])("escapes an icon tag in a %s-quoted string inside a template expression", (_quote, source) => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    const result = transform(source, "app.ts");
+    const markup = new Function(`${result?.code ?? ""}; return markup;`)() as string;
+
+    expect(markup).toContain('<p><svg class="ic-user" xmlns="http://www.w3.org/2000/svg"');
+  });
+
+  it("finds the string an icon tag sits in after a template expression with nested braces closes", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    const source = 'const a = `${{ b: 1 }.b}`; const markup = "<i class=\\"ic-user\\"></i>";';
+    const result = transform(source, "app.ts");
+    const markup = new Function(`${result?.code ?? ""}; return markup;`)() as string;
+
+    expect(markup).toContain('<svg class="ic-user"');
+  });
+
   describe("a multicolor icon's paint", () => {
     const logos: IconFamilyData = {
       ...createFamily(),
