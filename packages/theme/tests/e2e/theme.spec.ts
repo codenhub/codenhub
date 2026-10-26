@@ -118,5 +118,109 @@ for (const port of ports) {
       await page.locator('[data-delete-schema="brand-color"]').click();
       await expect(schemaList).not.toContainText("brand-color");
     });
+
+    test("rejects a token schema entry createTheme() rejects", async ({ page }) => {
+      const alerts: string[] = [];
+      page.on("dialog", (dialog) => {
+        alerts.push(dialog.message());
+        void dialog.accept();
+      });
+
+      await page.locator("#btn-add-token").click();
+      await page.locator("#new-token-key").fill("brand-color");
+      await page.locator("#new-token-var").fill("color-brand");
+      await page.locator('#form-add-token button[type="submit"]').click();
+
+      await expect.poll(() => alerts).toHaveLength(1);
+      expect(alerts[0]).toContain("color-brand");
+      await expect(page.locator("#new-token-var")).toHaveValue("color-brand");
+      await expect(page.locator("#token-schema-list")).not.toContainText("brand-color");
+      const schema = await page.evaluate(() => localStorage.getItem("playground-token-schema"));
+      expect(schema).not.toContain("brand-color");
+
+      await page.reload();
+      await expect(page.locator("#state-active")).toHaveText("light");
+    });
+
+    test("rejects a theme createTheme() rejects", async ({ page }) => {
+      const alerts: string[] = [];
+      page.on("dialog", (dialog) => {
+        alerts.push(dialog.message());
+        void dialog.accept();
+      });
+
+      await page.locator("#btn-new-theme").click();
+      await page.locator("#theme-name").fill("Ocean Blue");
+      await page.locator('[data-testid="btn-save-theme"]').click();
+
+      await expect.poll(() => alerts).toHaveLength(1);
+      expect(alerts[0]).toContain("Ocean Blue");
+      await expect(page.locator("#theme-dialog")).toBeVisible();
+      await expect(page.locator("#theme-name")).toHaveValue("Ocean Blue");
+      await expect(page.locator('[data-theme-item="Ocean Blue"]')).toHaveCount(0);
+      const themes = await page.evaluate(() => localStorage.getItem("playground-themes-list"));
+      expect(themes).not.toContain("Ocean Blue");
+
+      await page.reload();
+      await expect(page.locator("#state-active")).toHaveText("light");
+    });
+
+    test("keeps the value of a token named __proto__", async ({ page }) => {
+      await page.locator("#btn-add-token").click();
+      await page.locator("#new-token-key").fill("__proto__");
+      await page.locator("#new-token-var").fill("--color-proto");
+      await page.locator('#form-add-token button[type="submit"]').click();
+      await expect(page.locator("#token-schema-list")).toContainText("--color-proto");
+      await page.locator("#btn-close-schema").click();
+
+      await page.locator("#btn-new-theme").click();
+      await page.locator("#theme-name").fill("proto-theme");
+      await page.locator('input[data-token-key="__proto__"]').fill("#123456");
+      await page.locator('[data-testid="btn-save-theme"]').click();
+      await page.locator('[data-theme-item="proto-theme"]').click();
+
+      const value = await page.evaluate(() =>
+        getComputedStyle(document.documentElement).getPropertyValue("--color-proto").trim(),
+      );
+      expect(value).toBe("#123456");
+    });
+
+    test("recovers from a saved schema createTheme() rejects", async ({ page }) => {
+      await page.evaluate(() => {
+        localStorage.setItem("playground-token-schema", JSON.stringify({ primary: "color-primary" }));
+      });
+      await page.reload();
+
+      await expect(page.locator("#state-active")).toHaveText("light");
+      await expect(page.locator('[data-theme-item="emerald-dream"]')).toBeVisible();
+      const schema = await page.evaluate(() => localStorage.getItem("playground-token-schema"));
+      expect(schema).toContain('"primary":"--color-primary"');
+    });
+
+    test("recovers from a saved theme createTheme() rejects", async ({ page }) => {
+      await page.evaluate(() => {
+        const theme = (name: string, colorScheme: string) => ({ name, colorScheme, tokens: {} });
+        localStorage.setItem(
+          "playground-themes-list",
+          JSON.stringify([theme("light", "light"), theme("dark", "dark"), theme("Ocean Blue", "dark")]),
+        );
+      });
+      await page.reload();
+
+      await expect(page.locator("#state-active")).toHaveText("light");
+      await expect(page.locator('[data-theme-item="Ocean Blue"]')).toHaveCount(0);
+      await expect(page.locator('[data-theme-item="emerald-dream"]')).toBeVisible();
+    });
+
+    test("recovers from saved themes with duplicate names", async ({ page }) => {
+      await page.evaluate(() => {
+        const theme = { name: "light", colorScheme: "light", tokens: {} };
+        localStorage.setItem("playground-themes-list", JSON.stringify([theme, theme, { ...theme, name: "dark" }]));
+      });
+      await page.reload();
+
+      await expect(page.locator('[data-theme-item="light"]')).toHaveCount(1);
+      await expect(page.locator('[data-theme-item="emerald-dream"]')).toBeVisible();
+    });
   });
 }

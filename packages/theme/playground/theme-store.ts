@@ -135,16 +135,22 @@ function writeJson(key: string, value: unknown): void {
   }
 }
 
+// Copies tokens too, since deleting a schema key deletes it from every theme's tokens in place.
+const copyDefaultThemes = (): StoredTheme[] =>
+  DEFAULT_THEMES.map((theme) => ({ ...theme, tokens: { ...theme.tokens } }));
+
+/** Returns the seeded schema and themes, unsaved. */
+export function createDefaultThemeStore(): ThemeStore {
+  return { schema: { ...DEFAULT_SCHEMA }, themes: copyDefaultThemes() };
+}
+
 /** Loads the persisted schema/themes, seeding defaults and backfilling any schema keys older data is missing. */
 export function loadThemeStore(): ThemeStore {
   const rawSchema = readJson(SCHEMA_STORAGE_KEY);
   const schema = isStringRecord(rawSchema) ? rawSchema : { ...DEFAULT_SCHEMA };
 
   const rawThemes = readJson(THEMES_STORAGE_KEY);
-  let themes =
-    Array.isArray(rawThemes) && rawThemes.every(isStoredTheme)
-      ? rawThemes
-      : DEFAULT_THEMES.map((theme) => ({ ...theme }));
+  let themes = Array.isArray(rawThemes) && rawThemes.every(isStoredTheme) ? rawThemes : copyDefaultThemes();
 
   const missingKeys = Object.keys(DEFAULT_SCHEMA).filter((key) => !(key in schema));
   if (missingKeys.length > 0) {
