@@ -91,6 +91,7 @@ An option set to `undefined` uses its default, exactly as an omitted one does. T
 - Browser integration uses `document.documentElement`, `localStorage`, `matchMedia`, `storage` events, and `CustomEvent`. Every one of these is read defensively: an unavailable or throwing API is treated as absent rather than crashing the caller.
 - SSR is supported by skipping unavailable browser work and using the configured `defaultTheme`. The package cannot produce server HTML attributes or prevent a flash on its own — see [SSR, pre-paint, and Tailwind](ssr-and-pre-paint.md).
 - Consumers provide CSS selectors, variables, and visual tokens. The package only ever writes an attribute, optional classes, `color-scheme`, and CSS custom properties — it ships no CSS or token values.
+- TypeScript 5.4 or newer, for the types, which use `NoInfer` to infer theme names from `themes` alone. Older compilers report `Cannot find name 'NoInfer'`, or, with `skipLibCheck`, accept unconfigured theme names.
 
 ## Next steps
 
