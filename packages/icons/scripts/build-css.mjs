@@ -11,7 +11,8 @@
  * `ic-heart`. They share one copy of the artwork, so the bare name costs a
  * selector rather than a second data URI, and the last family a project imports
  * wins the bare names by plain cascade. That is what replaces the default
- * prefix a stylesheet has no way to configure.
+ * prefix a stylesheet has no way to configure. Brand families are the
+ * exception: their rules carry only the qualified name.
  */
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
@@ -82,7 +83,10 @@ const familyData = await Promise.all(
 let total = 0;
 await Promise.all(
   familyData.map(async (family) => {
-    const css = generateFamilyCss(family, { prefix: PREFIX });
+    // A brand family claims no bare names: the plugins never make one the default
+    // unless a project names it, and imported after a core family it would turn
+    // `ic-x` or `ic-play` into a company's logo.
+    const css = generateFamilyCss(family, { bareNames: family.info.tier !== "brand", prefix: PREFIX });
     total += css.length;
     await writeFile(resolve(outputDirectory, `${family.prefix}.css`), css, "utf8");
   }),

@@ -14,6 +14,7 @@ No base rule matched the element, so it has no size.
 
 - **No base rules.** Plain CSS and a declared Tailwind `@plugin` need `@import "@codenhub/icons";` in a stylesheet. `@codenhub/icons/tw`, the Vite plugin's stylesheet, and the PostCSS plugin include the base rules already, the PostCSS plugin unless `injectBase` is `false`. Inline SVG mode needs no base rules to render; they add `--ic-size`, the size classes, and `--ic-color` for icons without a color of their own.
 - **The element is not an `<i>` and has no `.ic`.** The base rules match `<i class="ic-…">`, or any element that also carries `.ic`. A `<span class="ic-lucide-heart">` matches neither.
+- **An inlined logo whose first copy is hidden.** In inline SVG, two copies of the same `logos` icon share their gradient, mask, and clip-path ids, and a copy drawn after one inside a `display: none` element renders blank. See [Vite § Inline SVG mode](delivery/vite.md#inline-svg-mode).
 
 ## The icon renders as a solid square
 

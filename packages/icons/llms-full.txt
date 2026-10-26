@@ -103,7 +103,7 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 ## Notes
 
 - An icon is named `prefix:name`, written `ic-prefix-name` in a class, as in `ic-material-symbols-rounded-home`.
-- The package names no default family. An unqualified `ic-heart` resolves only where you said what it means: through `defaultPrefix` in the Vite and PostCSS plugins, through `default:` in the Tailwind plugin, or, in the plugin-free path, through the last family stylesheet you imported that defines it. A family that has no icon by that name does not claim the bare selector, so an earlier family still answers to it.
+- The package names no default family. An unqualified `ic-heart` resolves only where you said what it means: through `defaultPrefix` in the Vite and PostCSS plugins, through `default:` in the Tailwind plugin, or, in the plugin-free path, through the last family stylesheet you imported that defines it. A family that has no icon by that name does not claim the bare selector, so an earlier family still answers to it, and the brand family stylesheets claim no bare names at all.
 - Stroke width is a modifier on the icon class, `ic-lucide-heart/1.5`, and applies only to families drawn with strokes. It needs one of the plugins: a plugin-free stylesheet has no way to know which widths you want, so families there render at their authored width.
 - An icon is an `<i>` (or `.ic` on any element, in the CSS-based methods). There is no `::before`, `::after`, or form-control form: an icon beside a label is a real `<i>` in the control, and a `background-image` icon comes from `getIconMaskUrl` / `getIconCssProps`.
 - `xs`, `sm`, `md`, `lg`, and `xl` are reserved (`ic-xs`–`ic-xl` are the size axis): no family may use one as a prefix or ship an icon by that name.
@@ -192,13 +192,13 @@ Available families:
 
 | Prefix                                                           | Icons     | Style                       | License    |
 | ---------------------------------------------------------------- | --------- | --------------------------- | ---------- |
-| `lucide`                                                         | 2034      | outlined, stroke-based      | ISC        |
+| `lucide`                                                         | 2159      | outlined, stroke-based      | ISC        |
 | `phosphor`                                                       | 1512      | outlined                    | MIT        |
 | `phosphor-thin`, `phosphor-light`, `phosphor-bold`               | 1512 each | outlined, other weights     | MIT        |
 | `phosphor-fill`                                                  | 1512      | filled                      | MIT        |
 | `phosphor-duotone`                                               | 1512      | duotone                     | MIT        |
-| `material-symbols-outlined`, `-rounded`, `-sharp`                | 3899 each | outlined                    | Apache-2.0 |
-| `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3899 each | filled                      | Apache-2.0 |
+| `material-symbols-outlined`, `-rounded`, `-sharp`                | 3929 each | outlined                    | Apache-2.0 |
+| `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3929 each | filled                      | Apache-2.0 |
 | `simple-icons` (brand)                                           | 3254      | filled logos, brand-colored | CC0-1.0    |
 | `logos` (brand)                                                  | 2016      | full-color logos            | CC0-1.0    |
 
@@ -226,11 +226,11 @@ An unqualified name resolves against a default family, and against nothing at al
 
 Where the default comes from depends on the delivery method:
 
-| Method        | Default family                       |
-| ------------- | ------------------------------------ |
-| Vite, PostCSS | The `defaultPrefix` option.          |
-| Tailwind      | The `default:` plugin option.        |
-| Plain CSS     | The last family stylesheet imported. |
+| Method        | Default family                                                                                                                                |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vite, PostCSS | The `defaultPrefix` option.                                                                                                                   |
+| Tailwind      | The `default:` plugin option.                                                                                                                 |
+| Plain CSS     | The last core family stylesheet imported. A brand family stylesheet claims no bare names, so importing one last leaves the default as it was. |
 
 ```ts
 import { IconRegistry } from "@codenhub/icons";
@@ -442,6 +442,8 @@ Import the base rules, then a stylesheet per family. Each family stylesheet is c
 
 Every rule carries two selectors, the qualified `ic-lucide-heart` and the bare `ic-heart`, sharing one copy of the artwork. That is how this method gets a default family without any configuration to hold one: the last family you import wins every bare name it defines. Above, `ic-heart` is Lucide's.
 
+The brand families are the exception. `@codenhub/icons/simple-icons` and `@codenhub/icons/logos` carry only qualified names, such as `ic-logos-google`, so importing one never changes what `ic-x` or `ic-play` draws.
+
 ## Cost
 
 The family stylesheets are large by construction — every icon, because nothing is narrowing them. Lucide is about 1.3 MB, Material Symbols Rounded about 3.9 MB, the full-color `logos` about 6.5 MB, all 15 families about 36 MB. A project chooses its cost by choosing which families it imports. If that is too much, use a plugin method or Tailwind, which emit only what your markup asked for.
@@ -552,6 +554,8 @@ Switching an existing project from CSS mode is not only a config change, because
 
 - **Size.** The rendered `<svg>` carries a `1em` box as a presentation attribute, so an icon renders at text size with no stylesheet at all. CSS still wins over that: keep `@import "@codenhub/icons"` in a stylesheet and the base rules size the inlined `<svg>` from `--ic-size` exactly as they size an `<i>`, so setting `--ic-size` on an ancestor and the `ic-xs`–`ic-xl` classes both work. Without that import an icon is fixed at `1em`.
 - **`hidden`.** `[hidden] { display: none }` is a user-agent rule for HTML elements, and an inlined icon is in the SVG namespace, so the attribute no longer hides it. Script that toggles an icon needs an explicit `[hidden] { display: none }` rule, and a guard written as `instanceof HTMLElement` stops matching — an SVG element is not one.
+
+One limitation is new to logos. About 400 `logos` icons draw with gradients, masks, or clip paths, which they reach by `id`. Each logo's ids are prefixed with its name, so two different logos never collide, but two copies of the same logo share them, and the browser draws both copies from the first. If that first copy is inside an element hidden with `display: none`, as in a collapsed mobile menu, every later copy renders blank (seen in Chromium). Keep a visible copy ahead of the hidden one, hide with `visibility: hidden` instead, or use CSS mode for a logo that appears more than once, since each mask image there is a document of its own. The same applies to `renderSvg` and [one module per icon](#one-module-per-icon).
 
 Rewriting covers `.html`, `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte`, and `.astro`. An `.astro` file is rewritten in both halves, its frontmatter escaped as JavaScript and its template left as markup. `content` plays no part here — it feeds stylesheet generation, which this mode does not do.
 
@@ -971,6 +975,7 @@ No base rule matched the element, so it has no size.
 
 - **No base rules.** Plain CSS and a declared Tailwind `@plugin` need `@import "@codenhub/icons";` in a stylesheet. `@codenhub/icons/tw`, the Vite plugin's stylesheet, and the PostCSS plugin include the base rules already, the PostCSS plugin unless `injectBase` is `false`. Inline SVG mode needs no base rules to render; they add `--ic-size`, the size classes, and `--ic-color` for icons without a color of their own.
 - **The element is not an `<i>` and has no `.ic`.** The base rules match `<i class="ic-…">`, or any element that also carries `.ic`. A `<span class="ic-lucide-heart">` matches neither.
+- **An inlined logo whose first copy is hidden.** In inline SVG, two copies of the same `logos` icon share their gradient, mask, and clip-path ids, and a copy drawn after one inside a `display: none` element renders blank. See [Vite § Inline SVG mode](docs/delivery/vite.md#inline-svg-mode).
 
 ## The icon renders as a solid square
 
@@ -1009,8 +1014,8 @@ A minifier configured with `legalComments: "none"` strips `/*! … */` comments.
 
 ## Added
 
-- `simple-icons`, a brand family of 3,254 logos such as `ic-simple-icons-github` and `ic-simple-icons-npm`, from [Simple Icons](https://simpleicons.org). It is opt-in: `@codenhub/icons/tw` never resolves it, and the other methods resolve it only when named. Icons that Simple Icons records under a license of their own are left out unless that license is one that places no obligation, CC0 or Unlicense. The marks are trademarks of their owners; see Licensing.
-- `logos`, a brand family of 2,016 full-color logos such as `ic-logos-google` and `ic-logos-slack-icon`, from [gilbarbara/logos](https://github.com/gilbarbara/logos) under CC0-1.0, and its stylesheet `@codenhub/icons/logos`. It is opt-in in the same way as `simple-icons`. Multicolor marks keep their colors and gradients in CSS, inline SVG, and a Vite build, including under a Content Security Policy that blocks inline styles. Variants such as `-icon` and `-dark` are separate names. Two upstream files whose markup cannot render self-contained, `sinatra` and `waffle-icon`, are left out. About 80% of the logos are not square, mostly wordmarks, and render small in the square icon box. [codenhub/codenhub#326](https://github.com/codenhub/codenhub/issues/326)
+- `simple-icons`, a brand family of 3,254 logos such as `ic-simple-icons-github` and `ic-simple-icons-npm`, from [Simple Icons](https://simpleicons.org). It is opt-in: `@codenhub/icons/tw` never resolves it, and the other methods resolve it only when named, and its stylesheet carries only qualified names, so it never takes a bare name such as `ic-x` from another family. Icons that Simple Icons records under a license of their own are left out unless that license is one that places no obligation, CC0 or Unlicense. The marks are trademarks of their owners; see Licensing.
+- `logos`, a brand family of 2,016 full-color logos such as `ic-logos-google` and `ic-logos-slack-icon`, from [gilbarbara/logos](https://github.com/gilbarbara/logos) under CC0-1.0, and its stylesheet `@codenhub/icons/logos`. It is opt-in in the same way as `simple-icons`, and its stylesheet likewise carries only qualified names. Multicolor marks keep their colors and gradients in CSS, inline SVG, and a Vite build, including under a Content Security Policy that blocks inline styles. Variants such as `-icon` and `-dark` are separate names. Two upstream files whose markup cannot render self-contained, `sinatra` and `waffle-icon`, are left out. About 80% of the logos are not square, mostly wordmarks, and render small in the square icon box. Inlined as SVG, two copies of one logo share its gradient, mask, and clip-path ids, so a copy shown after one hidden with `display: none` renders blank; see Vite, Inline SVG mode. [codenhub/codenhub#326](https://github.com/codenhub/codenhub/issues/326)
 - Brand icons render in their brand color by default. `--ic-color`, set on an icon or any ancestor, overrides it: `:root { --ic-color: currentColor; }` makes every icon monochrome, and a per-icon value recolors one, turning a full-color logo into a one-color silhouette. In inline SVG mode under a Content Security Policy that blocks `style` attributes, a brand icon keeps its brand colors and `--ic-color` no longer reaches it. Several brand colors are near-black and need an override in a dark theme. See Concepts, Color.
 - `IconData.color` and `ResolvedIcon.color` carry an icon's own color. `RenderSvgOptions.prefix` sets the class prefix whose `--<prefix>-color` overrides it.
 - A Troubleshooting page, guidance on finding icon names, accessibility guidance, and a generated API reference.
@@ -1021,6 +1026,7 @@ A minifier configured with `legalComments: "none"` strips `/*! … */` comments.
 - **Breaking.** `escapeSelectorClass`, `generateIconCss`, `GenerateIconCssOptions`, and `renderSuppressedAttributionWarning` are no longer exported. They were the plugins' internals; `generateIconSetCss` and `generateFamilyCss` produce complete rules.
 - **Breaking.** The base rules paint an icon with the `background` shorthand, `var(--ic-color, var(--ic-brand-paint, var(--ic-brand-color, currentColor)))`, instead of `background-color`, so a full-color logo can paint its own artwork. An element carrying `.ic` no longer keeps a `background-image` of its own. Nothing else changes for an icon without a color of its own.
 - A Vite build in CSS mode with HTML entries links the generated stylesheet as a hashed CSS asset instead of inlining a `<style>` tag. A build without HTML entries, such as a library build, emits no stylesheet.
+- **Breaking.** `drive_fusiontable` is gone from all six Material Symbols families, removed upstream in `@material-symbols/svg-400` 0.48.0. Material Symbols now has 3,929 icons per family, up from 3,899, and Lucide 2,159, up from 2,034 (`lucide-static` 1.59.0).
 - The package is larger: the tarball unpacks to about 66 MB, up from 43 MB, mostly the `logos` artwork. Builds with the Tailwind plugin use more memory, since it loads every family. CSS from the plugins still carries only the icons a project uses.
 
 ## Fixed
@@ -1031,6 +1037,8 @@ A minifier configured with `legalComments: "none"` strips `/*! … */` comments.
 - An icon inlined by `mode: "svg"` lost its icon class, so `--ic-size`, `--ic-color`, and the size classes did not reach it.
 - `mode: "svg"` rewrote `<i data-class="ic-…">` as if it were `class`.
 - The PostCSS plugin's generated rules carried no source file, so Vite warned on every build.
+- Icon class names holding characters other than `.` and `/`, possible with a custom family or prefix, produced invalid selectors. They are now escaped as `CSS.escape` would.
+- `mode: "svg"` broke a build, or changed the string, when an inlined icon landed in a string literal and its artwork held a backslash or a line break; when the tag sat in a double-quoted string inside a template literal's `${…}`; or, in an `.astro` template, when a `<script>` closed with a space before `>`.
 - The codenhub.dev package list linked the demo to `icons.codenhub.dev` instead of `demo.codenhub.dev/icons/`.
 
 <!-- Source: docs/changelog/0.2.1.md -->

@@ -1,25 +1,25 @@
 {
-  "bundler": "rolldown@1.1.5",
+  "bundler": "rolldown@1.2.14",
   "entrypoints": {
     ".": {
-      "gzip": 3844,
-      "minified": 9988,
-      "sha256": "43c4495063e371509721841f4ccd7ab6ef05dcfc961c6664b1bebd7113346e57"
+      "gzip": 3999,
+      "minified": 10329,
+      "sha256": "f8d4908cb4e8da0572a148dc914c7f122d750a3a23650fc47de23c1cda9999df"
     },
     "./tailwind": {
-      "gzip": 8559656,
-      "minified": 26587772,
-      "sha256": "c175dd0cab0317f74cd36bb22b1860bc165dc5472e60734e7d3f6f163c757ca4"
+      "gzip": 8607174,
+      "minified": 26753667,
+      "sha256": "534ff4244d515c07246dc58f461ff9365dd1373661fc9c2c8e300a27a4d416f9"
     },
     "./postcss": {
-      "gzip": 3558,
-      "minified": 8765,
-      "sha256": "5b9956f8a1865cc5e9a567c93eeed0e353e13740787f3583b712b5102d9ad365"
+      "gzip": 3704,
+      "minified": 9095,
+      "sha256": "5283b623590c7640f6731efaa68ff0f2f7005f601604e0df3e8d9e45ed2ff390"
     },
     "./vite": {
-      "gzip": 6183,
-      "minified": 15597,
-      "sha256": "dfce0a965e9d532c3037d7e29f372508faebfaad0f207ec0a284d228fd5357cb"
+      "gzip": 6502,
+      "minified": 16441,
+      "sha256": "703957212ac49503bba334ab4223741854d2cd4ee70cf4763584abc6c0e9eeb9"
     }
   }
 }

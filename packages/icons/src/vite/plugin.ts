@@ -236,15 +236,23 @@ function stripComments(code: string): string {
   return chars.join("");
 }
 
+/**
+ * Returns the quote of the innermost string literal enclosing `matchIndex`, or `null`.
+ *
+ * A template literal's `${…}` is code again, with strings of its own, so the
+ * scan keeps a stack: a string inside an expression inside a template is that
+ * string, not the template.
+ */
 function getEnclosingQuote(code: string, matchIndex: number): string | null {
-  let isInsideDouble = false;
-  let isInsideSingle = false;
-  let isInsideBacktick = false;
+  // Each frame is a string's quote, or a brace depth for code: the file itself
+  // at the bottom, and one per open `${`.
+  const frames: (string | number)[] = [0];
   let isEscaped = false;
 
   for (let i = 0; i < matchIndex; i++) {
     const char = code[i];
     const nextChar = code[i + 1];
+    const top = frames[frames.length - 1];
 
     if (isEscaped) {
       isEscaped = false;
@@ -255,51 +263,69 @@ function getEnclosingQuote(code: string, matchIndex: number): string | null {
       continue;
     }
 
-    if (!isInsideDouble && !isInsideSingle && !isInsideBacktick) {
-      if (char === "/" && nextChar !== "/" && nextChar !== "*" && isRegexStart(code, i)) {
-        let j = i + 1;
-        let isInsideCharClass = false;
-        while (j < matchIndex) {
-          const c = code[j];
-          if (c === "\\") {
-            j += 2;
-            continue;
-          }
-          if (isInsideCharClass) {
-            if (c === "]") {
-              isInsideCharClass = false;
-            }
-          } else {
-            if (c === "[") {
-              isInsideCharClass = true;
-            } else if (c === "/") {
-              i = j;
-              break;
-            }
-          }
-          j++;
+    if (top === '"' || top === "'") {
+      if (char === top) {
+        frames.pop();
+      }
+      continue;
+    }
+    if (top === "`") {
+      if (char === "`") {
+        frames.pop();
+      } else if (char === "$" && nextChar === "{") {
+        frames.push(0);
+        i++;
+      }
+      continue;
+    }
+
+    // `stripComments` leaves a template literal whole, so a comment inside its
+    // `${…}` arrives here, where a brace or quote in it would derail the stack.
+    if (char === "/" && nextChar === "/") {
+      const lineEnd = code.indexOf("\n", i);
+      i = lineEnd === -1 ? matchIndex : lineEnd - 1;
+    } else if (char === "/" && nextChar === "*") {
+      const commentEnd = code.indexOf("*/", i + 2);
+      i = commentEnd === -1 ? matchIndex : commentEnd + 1;
+    } else if (char === '"' || char === "'" || char === "`") {
+      frames.push(char);
+    } else if (char === "{") {
+      frames[frames.length - 1] = (top as number) + 1;
+    } else if (char === "}") {
+      if (top === 0 && frames.length > 1) {
+        frames.pop();
+      } else {
+        frames[frames.length - 1] = Math.max(0, (top as number) - 1);
+      }
+    } else if (char === "/" && nextChar !== "/" && nextChar !== "*" && isRegexStart(code, i)) {
+      let j = i + 1;
+      let isInsideCharClass = false;
+      while (j < matchIndex) {
+        const c = code[j];
+        if (c === "\\") {
+          j += 2;
+          continue;
         }
-        continue;
+        if (isInsideCharClass) {
+          if (c === "]") {
+            isInsideCharClass = false;
+          }
+        } else {
+          if (c === "[") {
+            isInsideCharClass = true;
+          } else if (c === "/") {
+            i = j;
+            break;
+          }
+        }
+        j++;
       }
     }
-
-    if (char === '"' && !isInsideSingle && !isInsideBacktick) {
-      isInsideDouble = !isInsideDouble;
-    } else if (char === "'" && !isInsideDouble && !isInsideBacktick) {
-      isInsideSingle = !isInsideSingle;
-    } else if (char === "`" && !isInsideDouble && !isInsideSingle) {
-      isInsideBacktick = !isInsideBacktick;
-    }
   }
 
-  if (isInsideDouble) {
-    return '"';
-  }
-  if (isInsideSingle) {
-    return "'";
-  }
-  if (isInsideBacktick) {
-    return "`";
+  const top = frames[frames.length - 1];
+  if (typeof top === "string") {
+    return top;
   }
   return null;
 }

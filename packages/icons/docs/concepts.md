@@ -21,13 +21,13 @@ Available families:
 
 | Prefix                                                           | Icons     | Style                       | License    |
 | ---------------------------------------------------------------- | --------- | --------------------------- | ---------- |
-| `lucide`                                                         | 2034      | outlined, stroke-based      | ISC        |
+| `lucide`                                                         | 2159      | outlined, stroke-based      | ISC        |
 | `phosphor`                                                       | 1512      | outlined                    | MIT        |
 | `phosphor-thin`, `phosphor-light`, `phosphor-bold`               | 1512 each | outlined, other weights     | MIT        |
 | `phosphor-fill`                                                  | 1512      | filled                      | MIT        |
 | `phosphor-duotone`                                               | 1512      | duotone                     | MIT        |
-| `material-symbols-outlined`, `-rounded`, `-sharp`                | 3899 each | outlined                    | Apache-2.0 |
-| `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3899 each | filled                      | Apache-2.0 |
+| `material-symbols-outlined`, `-rounded`, `-sharp`                | 3929 each | outlined                    | Apache-2.0 |
+| `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3929 each | filled                      | Apache-2.0 |
 | `simple-icons` (brand)                                           | 3254      | filled logos, brand-colored | CC0-1.0    |
 | `logos` (brand)                                                  | 2016      | full-color logos            | CC0-1.0    |
 
@@ -55,11 +55,11 @@ An unqualified name resolves against a default family, and against nothing at al
 
 Where the default comes from depends on the delivery method:
 
-| Method        | Default family                       |
-| ------------- | ------------------------------------ |
-| Vite, PostCSS | The `defaultPrefix` option.          |
-| Tailwind      | The `default:` plugin option.        |
-| Plain CSS     | The last family stylesheet imported. |
+| Method        | Default family                                                                                                                                |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vite, PostCSS | The `defaultPrefix` option.                                                                                                                   |
+| Tailwind      | The `default:` plugin option.                                                                                                                 |
+| Plain CSS     | The last core family stylesheet imported. A brand family stylesheet claims no bare names, so importing one last leaves the default as it was. |
 
 ```ts
 import { IconRegistry } from "@codenhub/icons";

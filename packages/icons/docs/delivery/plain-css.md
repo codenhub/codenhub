@@ -16,6 +16,8 @@ Import the base rules, then a stylesheet per family. Each family stylesheet is c
 
 Every rule carries two selectors, the qualified `ic-lucide-heart` and the bare `ic-heart`, sharing one copy of the artwork. That is how this method gets a default family without any configuration to hold one: the last family you import wins every bare name it defines. Above, `ic-heart` is Lucide's.
 
+The brand families are the exception. `@codenhub/icons/simple-icons` and `@codenhub/icons/logos` carry only qualified names, such as `ic-logos-google`, so importing one never changes what `ic-x` or `ic-play` draws.
+
 ## Cost
 
 The family stylesheets are large by construction — every icon, because nothing is narrowing them. Lucide is about 1.3 MB, Material Symbols Rounded about 3.9 MB, the full-color `logos` about 6.5 MB, all 15 families about 36 MB. A project chooses its cost by choosing which families it imports. If that is too much, use a plugin method or Tailwind, which emit only what your markup asked for.
