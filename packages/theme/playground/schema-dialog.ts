@@ -1,6 +1,6 @@
-/** Actions the token schema dialog hands back to the caller. */
+/** Actions the token schema dialog hands back to the caller. `onAdd` returns `false` to keep the entry in the form, e.g. on a rejected property name. */
 export interface SchemaDialogHandlers {
-  onAdd: (key: string, cssVariable: string) => void;
+  onAdd: (key: string, cssVariable: string) => boolean;
   onDelete: (key: string) => void;
 }
 
@@ -28,7 +28,9 @@ export function createSchemaDialog(handlers: SchemaDialogHandlers): SchemaDialog
     if (!key || !cssVariable) {
       return;
     }
-    handlers.onAdd(key, cssVariable);
+    if (!handlers.onAdd(key, cssVariable)) {
+      return;
+    }
     form.reset();
     keyInput?.focus();
   });

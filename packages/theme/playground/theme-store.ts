@@ -139,6 +139,11 @@ function writeJson(key: string, value: unknown): void {
 const copyDefaultThemes = (): StoredTheme[] =>
   DEFAULT_THEMES.map((theme) => ({ ...theme, tokens: { ...theme.tokens } }));
 
+/** Returns the seeded schema and themes, unsaved. */
+export function createDefaultThemeStore(): ThemeStore {
+  return { schema: { ...DEFAULT_SCHEMA }, themes: copyDefaultThemes() };
+}
+
 /** Loads the persisted schema/themes, seeding defaults and backfilling any schema keys older data is missing. */
 export function loadThemeStore(): ThemeStore {
   const rawSchema = readJson(SCHEMA_STORAGE_KEY);

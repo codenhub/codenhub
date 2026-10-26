@@ -118,5 +118,58 @@ for (const port of ports) {
       await page.locator('[data-delete-schema="brand-color"]').click();
       await expect(schemaList).not.toContainText("brand-color");
     });
+
+    test("rejects a token schema entry createTheme() rejects", async ({ page }) => {
+      const alerts: string[] = [];
+      page.on("dialog", (dialog) => {
+        alerts.push(dialog.message());
+        void dialog.accept();
+      });
+
+      await page.locator("#btn-add-token").click();
+      await page.locator("#new-token-key").fill("brand-color");
+      await page.locator("#new-token-var").fill("color-brand");
+      await page.locator('#form-add-token button[type="submit"]').click();
+
+      await expect.poll(() => alerts).toHaveLength(1);
+      expect(alerts[0]).toContain("color-brand");
+      await expect(page.locator("#new-token-var")).toHaveValue("color-brand");
+      await expect(page.locator("#token-schema-list")).not.toContainText("brand-color");
+
+      await page.reload();
+      await expect(page.locator("#state-active")).toHaveText("light");
+    });
+
+    test("rejects a theme createTheme() rejects", async ({ page }) => {
+      const alerts: string[] = [];
+      page.on("dialog", (dialog) => {
+        alerts.push(dialog.message());
+        void dialog.accept();
+      });
+
+      await page.locator("#btn-new-theme").click();
+      await page.locator("#theme-name").fill("Ocean Blue");
+      await page.locator('[data-testid="btn-save-theme"]').click();
+
+      await expect.poll(() => alerts).toHaveLength(1);
+      expect(alerts[0]).toContain("Ocean Blue");
+      await expect(page.locator("#theme-dialog")).toBeVisible();
+      await expect(page.locator('[data-theme-item="Ocean Blue"]')).toHaveCount(0);
+
+      await page.reload();
+      await expect(page.locator("#state-active")).toHaveText("light");
+    });
+
+    test("recovers from saved themes createTheme() rejects", async ({ page }) => {
+      await page.evaluate(() => {
+        localStorage.setItem("playground-token-schema", JSON.stringify({ primary: "color-primary" }));
+      });
+      await page.reload();
+
+      await expect(page.locator("#state-active")).toHaveText("light");
+      await expect(page.locator('[data-theme-item="emerald-dream"]')).toBeVisible();
+      const schema = await page.evaluate(() => localStorage.getItem("playground-token-schema"));
+      expect(schema).toContain('"primary":"--color-primary"');
+    });
   });
 }

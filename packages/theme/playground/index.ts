@@ -3,7 +3,13 @@ import type { Theme } from "@codenhub/theme";
 
 import { createSchemaDialog } from "./schema-dialog";
 import { createThemeDialog } from "./theme-dialog";
-import { loadThemeStore, saveThemeStore, type StoredTheme } from "./theme-store";
+import {
+  createDefaultThemeStore,
+  loadThemeStore,
+  saveThemeStore,
+  type StoredTheme,
+  type ThemeStore,
+} from "./theme-store";
 import { renderThemesList } from "./themes-list";
 
 /** Elements a chrome layer (e.g. `demo/chrome.ts`) needs handed off once the header is wired. */
@@ -14,7 +20,40 @@ export interface ThemePlaygroundReadyDetail {
 
 const STORAGE_KEY = "playground-theme-pref";
 
-const store = loadThemeStore();
+function toThemeOptions(candidate: ThemeStore) {
+  return {
+    themes: Object.fromEntries(candidate.themes.map(({ name, ...definition }) => [name, definition])),
+    tokenSchema: candidate.schema,
+    defaultTheme: "light",
+    storageKey: STORAGE_KEY,
+    darkClass: true,
+  };
+}
+
+/** Returns why `createTheme()` rejects the candidate, or `null` when it accepts it. Construction touches no DOM or storage. */
+function findConfigError(candidate: ThemeStore): string | null {
+  try {
+    createTheme(toThemeOptions(candidate));
+    return null;
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+}
+
+/** Loads the saved store, resetting it to the defaults when `createTheme()` rejects it, so the page cannot stay broken. */
+function loadValidThemeStore(): ThemeStore {
+  const loaded = loadThemeStore();
+  const error = findConfigError(loaded);
+  if (error === null) {
+    return loaded;
+  }
+  console.error(`Saved playground themes were reset to the defaults: ${error}`);
+  const defaults = createDefaultThemeStore();
+  saveThemeStore(defaults);
+  return defaults;
+}
+
+const store = loadValidThemeStore();
 let themeManager: Theme | null = null;
 let unsubscribe: (() => void) | null = null;
 
@@ -63,24 +102,33 @@ function initThemeManager(): void {
   unsubscribe?.();
   themeManager?.destroy();
 
-  themeManager = createTheme({
-    themes: Object.fromEntries(store.themes.map(({ name, ...definition }) => [name, definition])),
-    tokenSchema: store.schema,
-    defaultTheme: "light",
-    storageKey: STORAGE_KEY,
-    darkClass: true,
-  });
+  themeManager = createTheme(toThemeOptions(store));
   themeManager.init();
   unsubscribe = themeManager.subscribe(updateStateDisplay);
   updateStateDisplay();
 }
 
+/** Saves and applies the candidate when `createTheme()` accepts it; otherwise alerts why and keeps the store as it was. */
+function commitThemeStore(candidate: ThemeStore): boolean {
+  const error = findConfigError(candidate);
+  if (error !== null) {
+    window.alert(`Cannot save: ${error}`);
+    return false;
+  }
+  store.schema = candidate.schema;
+  store.themes = candidate.themes;
+  saveThemeStore(store);
+  initThemeManager();
+  return true;
+}
+
 const schemaDialog = createSchemaDialog({
   onAdd: (key, cssVariable) => {
-    store.schema[key] = cssVariable;
-    saveThemeStore(store);
+    if (!commitThemeStore({ ...store, schema: { ...store.schema, [key]: cssVariable } })) {
+      return false;
+    }
     schemaDialog.renderList(store.schema);
-    initThemeManager();
+    return true;
   },
   onDelete: (key) => {
     delete store.schema[key];
@@ -100,14 +148,8 @@ const themeDialog = createThemeDialog({
       window.alert(`A theme named "${theme.name}" already exists.`);
       return false;
     }
-    if (editIndex >= 0) {
-      store.themes[editIndex] = theme;
-    } else {
-      store.themes.push(theme);
-    }
-    saveThemeStore(store);
-    initThemeManager();
-    return true;
+    const themes = editIndex >= 0 ? store.themes.with(editIndex, theme) : [...store.themes, theme];
+    return commitThemeStore({ ...store, themes });
   },
 });
 
