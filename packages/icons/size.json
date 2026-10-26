@@ -17,9 +17,9 @@
       "sha256": "5283b623590c7640f6731efaa68ff0f2f7005f601604e0df3e8d9e45ed2ff390"
     },
     "./vite": {
-      "gzip": 6465,
-      "minified": 16310,
-      "sha256": "a5a44541f23f5d3d0ff019f45647abb7e20a2ca424c89ff440b4031fd529e59e"
+      "gzip": 6502,
+      "minified": 16441,
+      "sha256": "703957212ac49503bba334ab4223741854d2cd4ee70cf4763584abc6c0e9eeb9"
     }
   }
 }
