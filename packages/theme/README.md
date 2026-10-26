@@ -39,6 +39,7 @@ const script = createTheme().getPrePaintScript();
 - Browser integration uses `document.documentElement`, `localStorage`, `matchMedia`, `storage` events, and `CustomEvent`.
 - SSR is supported by skipping unavailable browser work and using the configured default theme.
 - Consumers provide CSS selectors, variables, and visual tokens, and inline the script from `getPrePaintScript()` to prevent a theme flash.
+- TypeScript 5.4 or newer, for the types, which use `NoInfer`.
 
 ## Notes
 
