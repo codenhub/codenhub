@@ -813,7 +813,7 @@ Finishes an interaction: issues a code, or sends the denial, as a `302` to the c
 
 **Returns** — The response, or `interaction_not_found` when the interaction does not exist, was already completed, or expired.
 
-**Throws** — When `outcome` is invalid: scopes outside the request or without `openid`, an `authTime` before the interaction under `prompt=login`, an `authTime` in the future, or more than the requested `max_age` before the request. The interaction is consumed before these checks, so after a `TypeError` a retry gets `interaction_not_found` and the user must start over.
+**Throws** — When `outcome` is malformed, such as an empty `subject`, `scopes` that is not an array of strings, or a denial with other members; the interaction is left in place, so a corrected retry works. Also when a well-formed grant does not fit the request: scopes outside the request or without `openid`, an `authTime` before the interaction under `prompt=login`, an `authTime` in the future, or more than the requested `max_age` before the request. The interaction is consumed before these checks, so after one of these a retry gets `interaction_not_found` and the user must start over.
 
 #### endSession
 
@@ -833,7 +833,7 @@ handle(request: Request): Promise<Response | null>;
 
 Answers the discovery, JWKS, token, userinfo, and revocation endpoints.
 
-**Returns** — The response, or `null` when the request is for none of those URLs. Never throws for any request; rejects only when the store, the `claims` callback or `onDiagnostic` does, or with a `TypeError` when the `claims` callback resolves to something that is not an object, the store returns a malformed client record, or a token or revocation `POST`'s body was already read, such as by middleware that parsed it.
+**Returns** — The response, or `null` when the request is for none of those URLs. Never throws for any request; rejects only when the store, the `claims` callback or `onDiagnostic` does, or with a `TypeError` when the `claims` callback resolves to something that is not an object, the store returns a malformed client record, or a token or revocation `POST`'s body was already read, such as by middleware that parsed it. A signing key from another `@codenhub/jwt` copy also makes the JWKS endpoint and token issuance reject; see `ProviderOptions.signingKeys`.
 
 ### ProviderDiagnostic
 
@@ -877,7 +877,7 @@ The HTTP status the client was sent.
 export interface ProviderEndpoints
 ```
 
-Endpoint URLs, each an absolute `https` URL on any origin.
+Endpoint URLs, each an absolute `https` URL on any origin. A default appends its path to the issuer without the issuer's trailing `/`, so the issuer `https://id.example/` gives `https://id.example/token`.
 
 #### authorization
 

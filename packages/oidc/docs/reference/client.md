@@ -214,7 +214,7 @@ Gets an access token for the client itself, with no user, through the `client_cr
 
 **Returns** — The tokens, or every issue found. An `id_token` or `refresh_token` in the response is dropped: nothing checks the one, and RFC 6749 §4.4.3 says the other SHOULD NOT be included. Never throws for any response; it rejects only for the caller errors listed below.
 
-**Throws** — When the client authenticates with `none`, when the provider metadata lists grant_types_supported without client_credentials, or when `scope` is not a non-empty array of at most 100 scope tokens.
+**Throws** — When the client authenticates with `none`, when the provider metadata lists grant_types_supported without client_credentials, or when `scope` is given but is not a non-empty array of at most 100 scope tokens.
 
 #### endSessionUrl
 
@@ -260,7 +260,7 @@ Revokes an access or refresh token at the provider's revocation endpoint (RFC 70
 userinfo(options: UserinfoOptions): Promise<OidcResult<UserinfoClaims>>;
 ```
 
-Fetches the user's claims from the userinfo endpoint.
+Fetches the user's claims from the userinfo endpoint. The access token must be granted `openid`, so one from `Client.clientCredentials`, which has no user, gets an issue instead: this package's provider answers it with `403 insufficient_scope`.
 
 **Returns** — The claims, or every issue found. Never throws for any response; it rejects only for the caller errors listed below.
 
