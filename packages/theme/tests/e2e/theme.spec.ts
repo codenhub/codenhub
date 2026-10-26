@@ -171,5 +171,16 @@ for (const port of ports) {
       const schema = await page.evaluate(() => localStorage.getItem("playground-token-schema"));
       expect(schema).toContain('"primary":"--color-primary"');
     });
+
+    test("recovers from saved themes with duplicate names", async ({ page }) => {
+      await page.evaluate(() => {
+        const theme = { name: "light", colorScheme: "light", tokens: {} };
+        localStorage.setItem("playground-themes-list", JSON.stringify([theme, theme, { ...theme, name: "dark" }]));
+      });
+      await page.reload();
+
+      await expect(page.locator('[data-theme-item="light"]')).toHaveCount(1);
+      await expect(page.locator('[data-theme-item="emerald-dream"]')).toBeVisible();
+    });
   });
 }

@@ -32,6 +32,12 @@ function toThemeOptions(candidate: ThemeStore) {
 
 /** Returns why `createTheme()` rejects the candidate, or `null` when it accepts it. Construction touches no DOM or storage. */
 function findConfigError(candidate: ThemeStore): string | null {
+  // Object.fromEntries keeps only the last of two same-named themes, so createTheme() would never see the duplicate.
+  const names = candidate.themes.map((theme) => theme.name);
+  const duplicate = names.find((name, index) => names.indexOf(name) !== index);
+  if (duplicate !== undefined) {
+    return `Two themes are named "${duplicate}".`;
+  }
   try {
     createTheme(toThemeOptions(candidate));
     return null;
