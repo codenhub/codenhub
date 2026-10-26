@@ -514,6 +514,42 @@ describe("analyzeReference", () => {
     );
   });
 
+  it("renders a member's @defaultValue, @returns, and @throws as written", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-member-tags", {
+      "index.ts": [
+        "/** Retry settings. */",
+        "export interface RetryOptions {",
+        "  /**",
+        "   * Attempts before giving up.",
+        "   * @defaultValue 3",
+        "   */",
+        "  attempts?: number;",
+        "  /**",
+        "   * Backoff strategy.",
+        '   * @defaultValue `"linear"`',
+        "   */",
+        "  backoff?: string;",
+        "  /**",
+        "   * Starts retrying.",
+        "   * @returns Whether the call eventually succeeded.",
+        "   * @throws When attempts is negative.",
+        "   */",
+        "  run(): boolean;",
+        "}",
+        "",
+      ].join("\n"),
+    });
+
+    const { files } = await analyzeReference(workspacePackage, { prose: true });
+    const page = files[0]?.contents ?? "";
+
+    expect(page).toContain("Attempts before giving up.\n\n**Default** — 3\n");
+    expect(page).toContain('Backoff strategy.\n\n**Default** — `"linear"`\n');
+    expect(page).toContain(
+      "Starts retrying.\n\n**Returns** — Whether the call eventually succeeded.\n\n**Throws** — When attempts is negative.\n",
+    );
+  });
+
   it("lists unexported types that public declarations name as internal types", { timeout: 30_000 }, async () => {
     const workspacePackage = await createReferenceFixture("fixture-internal", {
       "index.ts": [

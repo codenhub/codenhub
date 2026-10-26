@@ -335,6 +335,8 @@ readonly grantTypes?: readonly GrantType[];
 
 Grants this client may use, without repeats, naming at least one: an empty list throws a `TypeError` when the record is read. `client_credentials` needs a client that authenticates, so not one whose `auth.method` is `none`.
 
+**Default** — `["authorization_code"]`
+
 #### postLogoutRedirectUris
 
 ```ts
@@ -799,6 +801,8 @@ beginAuthorization(request: Request): Promise<OidcResult<AuthorizationInteractio
 
 Validates an authorization request and saves it as an interaction for the app's login and consent pages.
 
+**Returns** — The interaction, or a failure whose `redirect` is the response to send, or `null` when the app must render an error itself. Never throws for any request; rejects only when the store does, or with a `TypeError` when the store returns a malformed client record or a `POST`'s body was already read.
+
 #### completeAuthorization
 
 ```ts
@@ -806,6 +810,10 @@ completeAuthorization(interactionId: string, outcome: AuthorizationGrant | Autho
 ```
 
 Finishes an interaction: issues a code, or sends the denial, as a `302` to the client's redirect URI.
+
+**Returns** — The response, or `interaction_not_found` when the interaction does not exist, was already completed, or expired.
+
+**Throws** — When `outcome` is invalid: scopes outside the request or without `openid`, an `authTime` before the interaction under `prompt=login`, an `authTime` in the future, or more than the requested `max_age` before the request. The interaction is consumed before these checks, so after a `TypeError` a retry gets `interaction_not_found` and the user must start over.
 
 #### endSession
 
@@ -815,6 +823,8 @@ endSession(request: Request): Promise<OidcResult<EndSession>>;
 
 Validates an RP-initiated logout request (RP-Initiated Logout 1.0) at the end-session endpoint, which the app routes. The app then ends its own session, after asking the user to confirm when it chooses to, and answers with `redirect`, or with its own page when `redirect` is `null`.
 
+**Returns** — What the request names, or a failure for the app to render: `invalid_request` for a malformed request or an `id_token_hint` issued to another client than `client_id`, `unknown_client`, or `invalid_redirect_uri` with path `["post_logout_redirect_uri"]` for a URI the client did not register. A failure never redirects. Never throws for any request; rejects only when the store does, or with a `TypeError` when the store returns a malformed client record or a `POST`'s body was already read.
+
 #### handle
 
 ```ts
@@ -822,6 +832,8 @@ handle(request: Request): Promise<Response | null>;
 ```
 
 Answers the discovery, JWKS, token, userinfo, and revocation endpoints.
+
+**Returns** — The response, or `null` when the request is for none of those URLs. Never throws for any request; rejects only when the store, the `claims` callback or `onDiagnostic` does, or with a `TypeError` when the `claims` callback resolves to something that is not an object, the store returns a malformed client record, or a token or revocation `POST`'s body was already read, such as by middleware that parsed it.
 
 ### ProviderDiagnostic
 
@@ -873,6 +885,8 @@ Endpoint URLs, each an absolute `https` URL on any origin.
 readonly authorization?: string;
 ```
 
+**Default** — `${issuer}/authorize`
+
 #### endSession
 
 ```ts
@@ -881,11 +895,15 @@ readonly endSession?: string;
 
 RP-initiated logout. The app routes it and calls `Provider.endSession`, as it does for authorization.
 
+**Default** — `${issuer}/logout`
+
 #### jwks
 
 ```ts
 readonly jwks?: string;
 ```
+
+**Default** — `${issuer}/jwks`
 
 #### revocation
 
@@ -895,17 +913,23 @@ readonly revocation?: string;
 
 Token revocation (RFC 7009).
 
+**Default** — `${issuer}/revoke`
+
 #### token
 
 ```ts
 readonly token?: string;
 ```
 
+**Default** — `${issuer}/token`
+
 #### userinfo
 
 ```ts
 readonly userinfo?: string;
 ```
+
+**Default** — `${issuer}/userinfo`
 
 ### ProviderMetadata
 
@@ -1077,6 +1101,8 @@ readonly accessToken?: AccessTokenFormat;
 
 The format of access tokens. Opaque tokens are random values a resource server can check only through the provider's store. JWT access tokens (RFC 9068) are signed with the first signing key, with `typ: at+jwt` and this `audience`, so a resource server can verify them offline; such a server sees a revocation only when the token expires. Either format is stored by its digest, so the userinfo and revocation endpoints work alike.
 
+**Default** — `{ format: "opaque" }`
+
 #### claims
 
 ```ts
@@ -1108,6 +1134,8 @@ readonly now?: () => number;
 ```
 
 Current time in milliseconds since the Unix epoch, for tests.
+
+**Default** — `Date.now`
 
 #### onDiagnostic
 
@@ -1169,6 +1197,8 @@ readonly accessToken?: number;
 
 Access tokens. An integer from 60 through 86400.
 
+**Default** — 600
+
 #### code
 
 ```ts
@@ -1176,6 +1206,8 @@ readonly code?: number;
 ```
 
 Authorization codes. An integer from 1 through 600.
+
+**Default** — 60
 
 #### idToken
 
@@ -1185,6 +1217,8 @@ readonly idToken?: number;
 
 ID tokens. An integer from 60 through 86400.
 
+**Default** — 600
+
 #### interaction
 
 ```ts
@@ -1193,6 +1227,8 @@ readonly interaction?: number;
 
 Interactions between `beginAuthorization` and `completeAuthorization`. An integer from 60 through 86400.
 
+**Default** — 1800
+
 #### refreshToken
 
 ```ts
@@ -1200,6 +1236,8 @@ readonly refreshToken?: number;
 ```
 
 A refresh token family, counted from the code exchange; rotation does not extend it. An integer from 60 through 31536000.
+
+**Default** — 2592000 (30 days)
 
 ### RefreshTokenRecord
 

@@ -324,6 +324,8 @@ Consumers use it to read family metadata such as license and attribution.
 
 - `prefix` — Family prefix to read.
 
+**Returns** — The family data, or `undefined` when it is not loaded.
+
 #### has
 
 ```ts
@@ -335,6 +337,8 @@ Reports whether an icon name resolves against the families already loaded.
 **Parameters**
 
 - `name` — Icon name, qualified or not.
+
+**Returns** — `true` when `IconRegistry.resolve` would return an icon.
 
 #### list
 
@@ -348,6 +352,8 @@ Lists the primary icon names of a loaded family, excluding aliases.
 
 - `prefix` — Family prefix to list. Defaults to the configured default prefix.
 
+**Returns** — Icon names in the order the family declares them, or an empty array when the family is not loaded.
+
 #### listFamilies
 
 ```ts
@@ -355,6 +361,8 @@ listFamilies(): string[];
 ```
 
 Lists the prefixes of every family currently loaded.
+
+**Returns** — Loaded family prefixes.
 
 #### load
 
@@ -369,6 +377,10 @@ Concurrent calls for the same prefix share one load. An already-loaded family is
 **Parameters**
 
 - `prefix` — Family prefix to load.
+
+**Returns** — The loaded family data.
+
+**Throws** — When no family or loader is registered for the prefix.
 
 #### registerFamily
 
@@ -413,6 +425,8 @@ An unqualified name resolves against the configured default prefix, and against 
 
 - `name` — Icon name, qualified (`"lucide:x"`) or not (`"x"`).
 
+**Returns** — The resolved icon, or `undefined` when it is not available.
+
 #### resolveAsync
 
 ```ts
@@ -424,6 +438,8 @@ Resolves an icon name, loading its family first when it is not yet available.
 **Parameters**
 
 - `name` — Icon name, qualified (`"lucide:x"`) or not (`"x"`).
+
+**Returns** — The resolved icon, or `undefined` when the name is unknown or its family has neither data nor a loader.
 
 ## Interfaces
 

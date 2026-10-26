@@ -322,6 +322,10 @@ Displays a blocking informational alert modal dialog.
 - `message` — The alert warning or notification statement.
 - `options` — Custom OK button labels and backdrop click closing options.
 
+**Returns** — An interactive handle containing the acknowledgement promise.
+
+**Throws** — If the instance is destroyed, the message is empty, or no DOM is available.
+
 #### confirm
 
 ```ts
@@ -335,6 +339,10 @@ Displays a confirmation modal dialog with confirm and cancel buttons.
 - `message` — The confirmation message or question text.
 - `options` — Configuration options for labels and backdrop behavior.
 
+**Returns** — An interactive handle containing the user decision promise.
+
+**Throws** — If the instance is destroyed, the message is empty, or no DOM is available.
+
 #### prompt
 
 ```ts
@@ -347,6 +355,10 @@ Displays a prompt input dialog requesting user text input.
 
 - `message` — Label description for the text input.
 - `options` — Prefilled default value, placeholder text, and cancel behavior options.
+
+**Returns** — An interactive handle containing the input value promise.
+
+**Throws** — If the instance is destroyed, the message is empty, or no DOM is available.
 
 ### InteractiveToastHandle
 
@@ -805,6 +817,8 @@ clear(): void;
 
 Clears all active and queued non-interactive toasts.
 
+**Throws** — If the toaster instance has been destroyed.
+
 #### configure
 
 ```ts
@@ -885,6 +899,8 @@ Binds a notification to a Promise lifecycle, automatically managing transition s
 
 - `promise` — The Promise or PromiseLike to track.
 - `options` — State configurations for loading, success, and error.
+
+**Returns** — The original Promise result.
 
 #### success
 
@@ -1072,6 +1088,8 @@ Registers a callback to trigger when the toast is fully removed from DOM.
 
 - `subscriber` — Callback subscriber function.
 
+**Returns** — Unsubscribe function.
+
 #### onHide
 
 ```ts
@@ -1083,6 +1101,8 @@ Registers a callback to trigger when the toast begins to hide.
 **Parameters**
 
 - `subscriber` — Callback subscriber function.
+
+**Returns** — Unsubscribe function.
 
 #### onShow
 
@@ -1096,6 +1116,8 @@ Registers a callback to trigger when the toast is initially requested to show.
 
 - `subscriber` — Callback subscriber function.
 
+**Returns** — Unsubscribe function.
+
 #### onShown
 
 ```ts
@@ -1108,6 +1130,8 @@ Registers a callback to trigger when the entrance animation completes.
 
 - `subscriber` — Callback subscriber function.
 
+**Returns** — Unsubscribe function.
+
 #### update
 
 ```ts
@@ -1119,6 +1143,8 @@ Patches the message, content, icon, severity, timing, styles, or classes of a to
 **Parameters**
 
 - `options` — Partial updates to apply.
+
+**Throws** — If `options.tokens` contains an invalid CSS color, `options.duration` is not a finite number >= 0, `options.type` is not a recognized severity, or `options.content` resolves to nothing renderable.
 
 ### ToastLabels
 

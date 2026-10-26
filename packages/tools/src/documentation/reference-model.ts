@@ -49,8 +49,8 @@ export interface ReferenceNamedDoc {
   doc?: string;
 }
 
-/** One member of a class, interface, or enum. */
-export interface ReferenceMember {
+/** One member of a class, interface, or enum, with the same TSDoc prose a symbol has. */
+export interface ReferenceMember extends ReferenceProse {
   /** Member name as declared. */
   name: string;
   /** Member kind. */
@@ -65,16 +65,12 @@ export interface ReferenceMember {
    * Bare name of the type this member is inherited from, when it is not declared
    * in place. Set for a member reached through `extends`; the empty string when
    * the member is inherited but the source type could not be named. An inherited
-   * member carries no `doc`, `signature`, or parameter docs — it is rendered as a
-   * link to the type that declares it, per `docs/specs/packages-reference.md`.
+   * member carries no `signature` or prose — it is rendered as a link to the type
+   * that declares it, per `docs/specs/packages-reference.md`.
    */
   inheritedFrom?: string;
-  /** Rendered Markdown summary, when the member carries TSDoc. */
-  doc?: string;
-  /** `@deprecated` text, or `true` when the tag was present without one. */
-  deprecated?: string | true;
-  /** Parameter docs for a method or constructor. */
-  parameters: ReferenceNamedDoc[];
+  /** `@defaultValue` text for a property or accessor, when present. */
+  defaultValue?: string;
   /** Declaration text sliced from the emitted `.d.ts`, attached after the model is built. */
   signature?: string;
 }
@@ -438,6 +434,7 @@ function buildMember(reflection: Reflection): ReferenceMember | undefined {
     // An inherited member is a pointer to its declaring type, not a second copy
     // of that type's documentation. The renderer turns it into a link.
     return {
+      examples: [],
       inheritedFrom,
       isOptional: reflection.flags?.isOptional === true,
       isReadonly: reflection.flags?.isReadonly === true,
@@ -445,19 +442,21 @@ function buildMember(reflection: Reflection): ReferenceMember | undefined {
       kind,
       name: reflection.name,
       parameters: [],
+      see: [],
+      throws: [],
+      typeParameters: [],
     };
   }
 
   const comment = declarationComment(reflection);
   return {
-    deprecated: deprecation(comment),
-    doc: renderComment(comment),
+    ...proseOf(comment, signatureParts(reflection, "parameters"), signatureParts(reflection, "typeParameters")),
+    defaultValue: optionalBlockTagText(comment, "@defaultValue"),
     isOptional: reflection.flags?.isOptional === true,
     isReadonly: reflection.flags?.isReadonly === true,
     isStatic: reflection.flags?.isStatic === true,
     kind,
     name: reflection.name,
-    parameters: namedDocs(signatureParts(reflection, "parameters"), comment, "@param"),
   };
 }
 

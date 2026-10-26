@@ -157,14 +157,8 @@ function memberBlocks(
   if (member.signature !== undefined) {
     blocks.push(codeBlock(member.signature));
   }
-  if (prose && member.deprecated !== undefined) {
-    blocks.push(deprecationNote(member.deprecated, link));
-  }
-  if (prose && member.doc !== undefined) {
-    blocks.push(link(member.doc));
-  }
   if (prose) {
-    blocks.push(...namedDocList("Parameters", member.parameters, link));
+    blocks.push(...proseBlocks(member, link, member.defaultValue));
   }
   return blocks;
 }

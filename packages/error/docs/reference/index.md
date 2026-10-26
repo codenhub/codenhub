@@ -435,6 +435,8 @@ toJSON(): { name: string; message: string; type: AppErrorType; code: string | nu
 
 Produces the normalized fields used by `JSON.stringify`, excluding the diagnostic `cause` and `originalError` values.
 
+**Returns** — The safe, serializable projection of this error.
+
 ### AppErrorOptions
 
 ```ts
@@ -580,6 +582,8 @@ Adds or replaces a RegExp pattern and its feedback mapping.
 - `pattern` — The regular expression to evaluate against error messages.
 - `feedback` — The feedback metadata to attach on pattern match.
 
+**Throws** — TypeError - If the pattern is not a RegExp or feedback is invalid.
+
 #### addList
 
 ```ts
@@ -591,6 +595,8 @@ Adds or replaces multiple RegExp pattern definitions from a list of tuples.
 **Parameters**
 
 - `entries` — List of tuples containing [pattern, feedback].
+
+**Throws** — TypeError - If any entry is invalid. No entries are added on failure.
 
 #### clear
 
@@ -612,6 +618,10 @@ Removes a RegExp pattern and its feedback mapping.
 
 - `pattern` — The regular expression to remove.
 
+**Returns** — True if the pattern existed and has been removed; otherwise, false.
+
+**Throws** — TypeError - If `pattern` is not a RegExp.
+
 #### values
 
 ```ts
@@ -621,6 +631,8 @@ values(): readonly Readonly<ErrorPatternDefinition>[];
 Returns every registered pattern definition in insertion order.
 
 The returned list, its definitions, and their RegExp instances are frozen. Sharing the RegExp instances is safe because global and sticky flags are stripped on registration, leaving them stateless.
+
+**Returns** — Frozen list of pattern definitions.
 
 ### ErrorPrefixDefinition
 
@@ -675,6 +687,8 @@ Adds or replaces feedback for a given message prefix. Strips trailing punctuatio
 - `prefix` — The message prefix to register (e.g., `"Upload failed:"`).
 - `feedback` — The feedback metadata to assign when matching this prefix.
 
+**Throws** — TypeError - If the prefix is empty or feedback is invalid.
+
 #### addList
 
 ```ts
@@ -686,6 +700,8 @@ Adds or replaces multiple prefix feedback definitions from a list of tuples.
 **Parameters**
 
 - `entries` — List of tuples containing [prefix, feedback].
+
+**Throws** — TypeError - If any entry is invalid. No entries are added on failure.
 
 #### clear
 
@@ -707,6 +723,10 @@ Removes prefix-based feedback definition for the specified prefix. Strips traili
 
 - `prefix` — The message prefix to delete.
 
+**Returns** — True if the prefix definition existed and has been removed; otherwise, false.
+
+**Throws** — TypeError - If the prefix is not a non-empty string.
+
 #### values
 
 ```ts
@@ -716,6 +736,8 @@ values(): readonly Readonly<ErrorPrefixDefinition>[];
 Returns every registered prefix definition, ordered from longest to shortest prefix.
 
 The returned list and its definitions are frozen.
+
+**Returns** — Frozen list of prefix definitions.
 
 ### ErrorRegistry
 
@@ -785,6 +807,8 @@ Merges all mappings from the source registry into this registry, overwriting mat
 
 - `registry` — The source registry to merge. Accepts both mutable and read-only registries.
 
+**Throws** — TypeError - If the source does not implement the readable registry interface or contains an invalid registry entry.
+
 ### ErrorRegistryBucket
 
 ```ts
@@ -806,6 +830,8 @@ Adds or replaces error feedback for a given identifier. Code and name buckets tr
 - `identifier` — The exact identifier to match (e.g., `"23505"`, `"AbortError"`).
 - `feedback` — The feedback metadata to attach to this identifier.
 
+**Throws** — TypeError - If the identifier is empty or feedback is invalid.
+
 #### addList
 
 ```ts
@@ -817,6 +843,8 @@ Adds or replaces multiple feedback entries from a list of tuple definitions.
 **Parameters**
 
 - `entries` — List of tuples containing [identifier, feedback].
+
+**Throws** — TypeError - If any identifier or feedback in the list is invalid. No entries are added on failure.
 
 #### clear
 
@@ -838,6 +866,10 @@ Removes error feedback mapped to the specified identifier. Uses the same bucket-
 
 - `identifier` — The exact identifier to delete.
 
+**Returns** — True if an element in the bucket existed and has been removed, or false if the element does not exist.
+
+**Throws** — TypeError - If the identifier is not a non-empty string.
+
 #### get
 
 ```ts
@@ -850,6 +882,8 @@ Retrieves the frozen feedback mapping for the specified identifier.
 
 - `identifier` — The exact error identifier to lookup.
 
+**Returns** — The matched frozen feedback mapping, or `undefined` if not found.
+
 #### values
 
 ```ts
@@ -857,6 +891,8 @@ values(): IterableIterator<[string, Readonly<ErrorFeedback>]>;
 ```
 
 Returns an iterator yielding every frozen mapping stored in the bucket.
+
+**Returns** — An iterator of [identifier, feedback] entries.
 
 ### Ok
 
