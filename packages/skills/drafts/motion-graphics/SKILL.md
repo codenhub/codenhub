@@ -47,7 +47,7 @@ Write a table with one row per beat: start time, duration, on-screen text, what 
 
 - Every beat carries one idea. A beat that needs two sentences of text is two beats.
 - Every text gets time to be read: after it has fully arrived, hold it for at least 1 second plus about 0.3 seconds per word. Viewers read slower in motion than on a page.
-- Every text adds something the earlier beats did not say, so cut any headline that restates the previous beat. Write each as a plain sentence; generated scripts fall back on two-fragment slogans ("Seven days. Seven pings.") and "X, not Y" contrasts. Use each of those patterns at most once in the piece.
+- Every text adds something the earlier beats did not say, so cut any headline that restates the previous beat. Write each as a plain sentence, unless the words are given, such as a quote or a title sequence's credits; generated scripts fall back on two-fragment slogans ("Seven days. Seven pings.") and "X, not Y" contrasts. Use each of those patterns at most once in the piece.
 - The first two seconds state what the video is about. On social platforms, most viewers decide within them whether to keep watching.
 - The last beat holds the call to action or the logo for at least 2 seconds.
 
