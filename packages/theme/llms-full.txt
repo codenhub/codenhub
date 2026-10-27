@@ -462,7 +462,7 @@ While a choice is saved, changes to the operating system's light or dark mode ar
 
 Browsers can refuse `localStorage`: a private window may block it, a user may disable site data, or storage may be full. The package never lets that break your page, and each kind of failure (read, write, delete) is logged once with `console.error`, not on every call:
 
-- **A failed read** counts as no saved choice, so the operating system's setting applies.
+- **A failed read** counts as no saved choice, so the operating system's setting applies, unless the user already picked a theme with `set()` or `toggle()` on this page, which stays.
 - **A failed write** keeps whatever was saved before, if anything. The user's new choice still works for as long as the page is open: after `set()` or `toggle()`, the chosen theme stays, and operating-system changes do not override it. On reload, the previously saved theme, or the operating system's setting, applies again.
 - **A failed delete** in `clearPreference()` leaves the old choice saved. The page switches to the system theme, but a reload restores the saved choice, and operating-system changes stay ignored while it is there.
 
