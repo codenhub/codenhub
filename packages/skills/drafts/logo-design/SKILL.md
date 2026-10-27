@@ -9,9 +9,16 @@ A logo is a signature, not an illustration. It identifies; it does not explain w
 
 Generated logos fail in predictable ways: a literal picture of the business (a wheat stalk for a bakery, a circuit brain for AI), an initial letter or a stack of basic shapes standing in for an idea, a freehand SVG drawing that reads as a blob, the first font that came to mind with no spacing work, a gradient that carries the idea, `<text>` left in the final file, and a single option presented as the answer. Work from the idea first, choose forms you can execute precisely, and check the mark at every size it will meet.
 
-## Existing Identity First
+## Fitting The Request
 
-When the brand already has a logo, a refinement keeps what people recognize, such as the shape, the color, or the letterform, and fixes what is broken: spacing, detail that fails at small sizes, inconsistent versions. Replace a mark only when asked to. A redesign that discards recognized equity costs the client that recognition.
+The Procedure below is for a new mark. When the brand already has a logo, keep what people recognize, such as the shape, the color, or the letterform, and replace the mark only when asked to; a redesign that discards recognized equity costs the client that recognition. Do only the work the request needs, and say which steps you skipped:
+
+- **Critique.** Render the existing logo and run the checks in Verification on the mark itself: its sizes, backgrounds, one-color and reversed versions, silhouette, and resemblance to known logos. Skip the new-mark checks for the presentation and its records, and the final-SVG check for a file you did not make. Add the competitor comparison when you can find the category's marks. Report each problem with where it shows, such as the size, background, or version, and the smallest fix for it, most damaging first, and say what works and should be kept. Do not redesign the mark unless asked.
+- **Refinement,** such as spacing, a small-size version, a one-color or reversed version, or cleaning up the file: keep the mark, apply the sections the change touches, such as Wordmarks, Small Sizes, Color, or Drawing In SVG, and verify every version you changed. Skip competitors, ideation, and routes.
+- **Derived assets,** such as a favicon, app icon, or social avatar from an existing logo: apply Small Sizes, then the size and background checks in Verification.
+- **A new mark** follows the whole Procedure.
+
+For anything short of a new mark, deliver the critique report, or the changed files with a short note of what changed and why, instead of the full presentation.
 
 ## Procedure
 
@@ -59,7 +66,7 @@ Agents draw precise geometry well and freehand shapes badly. Design concepts tha
 ## Wordmarks
 
 - Start from a real typeface chosen for the personality, with a license that permits logo use. Open-licensed fonts (SIL Open Font License) permit it; check the license of any commercial font before using it in a logo.
-- Set the name and space it by hand. Default spacing is designed for running text, not for one word at display size. Adjust every letter pair until the gaps look even, and track the word tighter or looser to suit the size it will be seen at. Record each adjustment in the presentation, pair by pair, with its value. A wordmark with no recorded adjustments has not been spaced, and "default metrics kept after review" is not a record.
+- Set the name and space it by hand. Default spacing is designed for running text, not for one word at display size. Adjust every letter pair until the gaps look even, and track the word tighter or looser to suit the size it will be seen at. Record each adjustment in the presentation or delivery note, pair by pair, with its value. A wordmark with no recorded adjustments has not been spaced, and "default metrics kept after review" is not a record.
 - Customize at most one or two details, and only where the change carries the idea, such as a ligature, a cut, or one modified letter. Every modification must survive at the smallest size.
 - Convert the text to outlines in the final file, with a font tool or a vector editor's text-to-path conversion. A logo file that contains `<text>` depends on fonts installed on the viewer's machine and will render differently or not at all.
 - When no conversion tool is available, construct the letters as geometric paths on the same grid as the mark, which suits short names and geometric styles. When the name needs a real typeface, deliver the wordmark with `<text>` as a clearly labeled working file, state that outlining is still required, and never present it as final. Do not drop the wordmark from the delivery.
@@ -70,7 +77,7 @@ Agents draw precise geometry well and freehand shapes badly. Design concepts tha
 
 - Design in black first. A mark that only works in color does not work.
 - Use one or two colors. Each additional color adds cost in print and embroidery and reduces recognition.
-- Choose the color from the brief and the competitor notes. A color the brief specifies, or the existing identity uses, stands. Otherwise, generated logos default to an orange, rust, or copper accent, and to indigo or violet for technical products. Use one of these only when competitor notes from marks you actually looked at show none of those competitors uses it, and write that reason in the presentation. Without such notes, choose another color; an unverified guess that the color is free is not a reason.
+- Choose the color from the brief and the competitor notes. A color the brief specifies, or the existing identity uses, stands. Otherwise, generated logos default to an orange, rust, terracotta, or copper accent, and to indigo or violet for technical products. Use one of these only when competitor notes from marks you actually looked at show none of those competitors uses it, and write that reason in the presentation. Without such notes, choose another color; an unverified guess that the color is free is not a reason.
 - Provide a one-color version, a reversed version for dark backgrounds, and the full-color version. Build each version by deciding which parts become light and which become knockouts, not by swapping fill values: a part drawn in the background's color disappears. Gradients, glows, and shadows can decorate an application of the logo but never carry the mark itself.
 - Check every version on each background it will sit on, including the brand color, and confirm that every part of the mark is still visible and contrasts enough with the background to read at a glance.
 
@@ -89,7 +96,7 @@ Render the work to images and look at them before presenting.
 - Blur or squint. The silhouette alone should be distinctive.
 - Place it beside the competitor marks from step 2. It should not look like any of them, or like the category average.
 - Check that it does not closely resemble a well-known logo. You cannot clear a trademark; say that a trademark search by a qualified person is still needed before the client adopts it.
-- Confirm the presentation holds the spacing record from Wordmarks and, for each route, a competitor swap recorded as fitting only this brand. When a record is missing, do that work before presenting. When a route fits a competitor too, draw another concept from the list in its place; presenting it with the failure flagged as a risk, or listing the missing route as a gap, is not enough.
+- For a new mark, confirm the presentation holds the spacing record from Wordmarks and, for each route, a competitor swap recorded as fitting only this brand. When a record is missing, do that work before presenting. When a route fits a competitor too, draw another concept from the list in its place; presenting it with the failure flagged as a risk, or listing the missing route as a gap, is not enough.
 - Open the final SVG and confirm it has no `<text>`, no raster images, no strokes that should be fills, and a fitted `viewBox`.
 - Compare the result against the failures listed at the top and remove each one that has no reason to be there.
 
