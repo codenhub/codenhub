@@ -18,7 +18,7 @@ The Procedure below is for a new mark. When the brand already has a logo, keep w
 - **Derived assets,** such as a favicon, app icon, or social avatar from an existing logo: apply Small Sizes, then the size and background checks in Verification.
 - **A new mark** follows the whole Procedure.
 
-For anything short of a new mark, deliver the changed files and a short note of what changed and why, instead of the full presentation.
+For anything short of a new mark, deliver the critique report, or the changed files with a short note of what changed and why, instead of the full presentation.
 
 ## Procedure
 
