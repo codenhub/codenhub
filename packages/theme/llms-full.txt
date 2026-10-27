@@ -827,6 +827,19 @@ Your TypeScript version is older than 5.4, which added `NoInfer`. Update TypeScr
 
 React found the `data-theme`, class, or `style` the pre-paint script added. That difference is expected; add `suppressHydrationWarning` to your `<html>` element, as shown in [Preventing the flash](docs/preventing-the-flash.md#in-a-server-rendered-app).
 
+<!-- Source: docs/changelog/0.2.1.md -->
+
+# 0.2.1
+
+## Added
+
+- The package declares `"sideEffects": false`, so a bundler can drop it from a build that imports it but uses none of its exports.
+- A documentation walkthrough, from a first light and dark toggle to a production setup, with CSS examples, a table of every option and its default, a Vite example for the pre-paint script, React and Tailwind CSS setup, and a troubleshooting page.
+
+## Changed
+
+- Documentation pages are reorganized around the walkthrough: `docs/tokens-and-persistence.md` is replaced by `docs/tokens.md` and `docs/persistence-and-sync.md`, and `docs/ssr-and-pre-paint.md` by `docs/preventing-the-flash.md` and `docs/frameworks.md`. Update any link that pointed at the old pages.
+
 <!-- Source: docs/changelog/0.2.0.md -->
 
 # 0.2.0
@@ -839,12 +852,9 @@ React found the `data-theme`, class, or `style` the pre-paint script added. That
 - `readTokens()` returns every token, completed with computed CSS values at the time of the call.
 - Changes made in another tab report `source: "storage"`, so code that mirrors the preference elsewhere can tell them from local changes.
 - The `ThemeChangeEvent` type types the `themechange` window event, whose `detail` was untyped.
-- The package declares `"sideEffects": false`, so a bundler drops it entirely from a build that imports nothing from it.
-- A documentation walkthrough, from a first light and dark toggle to a production setup, with CSS examples, a table of every option and its default, a Vite example for the pre-paint script, React and Tailwind CSS setup, and a troubleshooting page.
 
 ## Changed
 
-- Documentation pages are reorganized around the walkthrough: `docs/tokens-and-persistence.md` is replaced by `docs/tokens.md` and `docs/persistence-and-sync.md`, and `docs/ssr-and-pre-paint.md` by `docs/preventing-the-flash.md` and `docs/frameworks.md`. Update any link that pointed at the old pages.
 - `themes` is an object keyed by theme name instead of an array: `{ light: { colorScheme: "light" } }` replaces `[{ name: "light", colorScheme: "light" }]`.
 - Methods are bound to their manager, so `theme.toggle` and `theme.subscribe` can be passed as callbacks directly.
 - `get()` returns the same frozen object until the next change and never reads the DOM, so it can serve as a store snapshot such as `useSyncExternalStore(theme.subscribe, theme.get)`. Its `tokens` holds static and runtime tokens only; call `readTokens()` for tokens defined only in CSS.
