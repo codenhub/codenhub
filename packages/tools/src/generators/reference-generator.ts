@@ -164,6 +164,10 @@ async function convertProject(pkgDir: string, plans: readonly EntrypointPlan[]):
       entryPoints: plans.map((plan) => `${pkgDir}/src/${plan.sourceRel}`),
       entryPointStrategy: "resolve",
       excludeInternal: true,
+      // TSDoc reads `@defaultValue` as Markdown. TypeDoc's JSDoc compatibility instead
+      // fences a value written without backticks, such as `@defaultValue 128`, as a
+      // `ts` block, which breaks the one-line `**Default** — text` the reference renders.
+      jsDocCompatibility: { defaultTag: false },
       logLevel: "Error",
       // The package's own `pnpm typecheck` is the type gate; here a test file that
       // self-imports the not-yet-built package must not abort the whole run.

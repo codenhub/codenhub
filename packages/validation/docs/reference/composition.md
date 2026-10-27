@@ -1110,6 +1110,8 @@ repeated?: boolean | undefined;
 
 Gives the validator every value of every key as an array, and accepts a key given more than once, as a form with several files in one field or several checked boxes of one name sends it.
 
+**Default** — false
+
 ### LazyOptions
 
 ```ts
@@ -1126,6 +1128,8 @@ maxCalls?: number | undefined;
 
 The most calls this `lazy` may make in one validation, those made for the options a `union` tries and fails included; a result this `lazy` already found for an object at a path is not a call, and neither is a primitive, such as a number in a list, that reaches no further `lazy` call and whose result is not pending. Past it, every further call fails with `too_big`, so a schema whose work grows faster than its input stops instead of running for hours on a few hundred bytes. A validation is a call such as `schema(input)` and everything it reaches before it settles, after any await included, so an `array` of recursive items shares this `lazy`'s count, and validations made one after another, or from a callback such as a check's test, or after an await inside a validator you write yourself, have counts of their own. Each `lazy` counts its own calls against its own limit, so no other `lazy` overrides it. Recursive data with more nodes than this in one validation needs it raised.
 
+**Default** — 10000
+
 #### maxDepth
 
 ```ts
@@ -1133,6 +1137,8 @@ maxDepth?: number | undefined;
 ```
 
 The most levels of `lazy` that may be open at once, counting every `lazy` validator, not only this one. Input nested deeper fails with `too_big` instead of exhausting the stack. Since the levels of every `lazy` count, a `maxDepth` of 1 inside another `lazy` fails at once: set it for the whole nesting. A worker has about half the stack of a page in Chromium and Firefox, so a schema with many validators at each level that runs in one needs it lowered.
+
+**Default** — 128
 
 #### message
 
@@ -1197,6 +1203,8 @@ unknownKeys?: "strip" | "strict" | "passthrough" | undefined;
 ```
 
 What to do with input properties the shape does not list. `"strip"` drops them from the output, `"strict"` rejects each with an `unrecognized_key` issue, up to the 1,000 issues a collection reports, and `"passthrough"` copies them to the output unchecked, except `__proto__`, which it rejects with an `invalid_key` issue: copied, it would become the prototype of any copy of the output made by assignment. A shape that lists `__proto__` keeps it, as data.
+
+**Default** — "strip"
 
 ### SizeOptions
 

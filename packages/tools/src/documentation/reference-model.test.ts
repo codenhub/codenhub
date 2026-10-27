@@ -126,6 +126,53 @@ const project = {
               inheritedFrom: { type: "reference", name: "BaseError.isRetryable" },
               comment: { summary: [textPart("Whether a retry may succeed.")] },
             },
+            {
+              id: 24,
+              name: "severity",
+              kind: 1024,
+              flags: { isOptional: true },
+              comment: {
+                summary: [textPart("How loudly to report.")],
+                blockTags: [
+                  { tag: "@defaultValue", content: [{ kind: "code", text: '`"error"`' }] },
+                  { tag: "@since", content: [textPart("1.3.0")] },
+                ],
+              },
+            },
+            {
+              id: 25,
+              name: "toJSON",
+              kind: 2048,
+              flags: {},
+              signatures: [
+                {
+                  id: 26,
+                  name: "toJSON",
+                  variant: "signature",
+                  kind: 4096,
+                  flags: {},
+                  comment: {
+                    summary: [textPart("Serializes the error.")],
+                    blockTags: [
+                      { tag: "@returns", content: [textPart("A plain object.")] },
+                      { tag: "@throws", content: [textPart("When the cause is circular.")] },
+                      { tag: "@example", content: [{ kind: "code", text: "```ts\nerror.toJSON();\n```" }] },
+                      { tag: "@see", content: [textPart("JSON.stringify")] },
+                    ],
+                  },
+                  parameters: [
+                    {
+                      id: 27,
+                      name: "space",
+                      variant: "param",
+                      kind: 32768,
+                      flags: {},
+                      comment: { summary: [textPart("Indentation.")] },
+                    },
+                  ],
+                },
+              ],
+            },
           ],
         },
         {
@@ -238,19 +285,35 @@ describe("buildReferenceModel", () => {
         isReadonly: true,
         isStatic: false,
         inheritedFrom: "BaseError",
+        examples: [],
         parameters: [],
+        see: [],
+        throws: [],
+        typeParameters: [],
       },
-      {
-        name: "messageKey",
-        kind: "property",
-        isOptional: true,
-        isReadonly: true,
-        isStatic: false,
-        doc: "Translation key.",
-        deprecated: undefined,
-        parameters: [],
-      },
+      expect.objectContaining({ name: "messageKey", doc: "Translation key.", deprecated: undefined }),
+      expect.objectContaining({ name: "severity" }),
+      expect.objectContaining({ name: "toJSON" }),
     ]);
+  });
+
+  it("reads a member's block tags the same way as a symbol's", () => {
+    const model = buildReferenceModel(project, subpaths);
+    const members = model.entrypoints[0]?.symbols.find((symbol) => symbol.name === "AppError")?.members ?? [];
+
+    expect(members.find((member) => member.name === "severity")).toMatchObject({
+      defaultValue: '`"error"`',
+      doc: "How loudly to report.",
+      since: "1.3.0",
+    });
+    expect(members.find((member) => member.name === "toJSON")).toMatchObject({
+      doc: "Serializes the error.",
+      examples: ["```ts\nerror.toJSON();\n```"],
+      parameters: [{ name: "space", doc: "Indentation." }],
+      returns: "A plain object.",
+      see: ["JSON.stringify"],
+      throws: ["When the cause is circular."],
+    });
   });
 
   it("reads @defaultValue for a variable", () => {
@@ -301,9 +364,13 @@ function memberFixture(overrides: Partial<ReferenceMember> & Pick<ReferenceMembe
     isOptional: false,
     isReadonly: false,
     isStatic: false,
+    examples: [],
     kind: "property",
     parameters: [],
+    see: [],
     signature: `${overrides.name}: string;`,
+    throws: [],
+    typeParameters: [],
     ...overrides,
   };
 }

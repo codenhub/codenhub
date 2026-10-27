@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { renderReferencePage, symbolSlug } from "./reference-markdown.ts";
-import type { ReferenceEntrypoint, ReferenceSymbol } from "./reference-model.ts";
+import type { ReferenceEntrypoint, ReferenceMember, ReferenceSymbol } from "./reference-model.ts";
 
 function symbol(partial: Partial<ReferenceSymbol> & Pick<ReferenceSymbol, "name" | "kind">): ReferenceSymbol {
   return {
@@ -13,6 +13,20 @@ function symbol(partial: Partial<ReferenceSymbol> & Pick<ReferenceSymbol, "name"
     members: [],
     namespaceMembers: [],
     overloads: [],
+    ...partial,
+  };
+}
+
+function member(partial: Partial<ReferenceMember> & Pick<ReferenceMember, "name" | "kind">): ReferenceMember {
+  return {
+    isOptional: false,
+    isReadonly: false,
+    isStatic: false,
+    typeParameters: [],
+    parameters: [],
+    throws: [],
+    examples: [],
+    see: [],
     ...partial,
   };
 }
@@ -39,35 +53,30 @@ const entrypoint: ReferenceEntrypoint = {
       signature: "export interface AppError extends Error",
       doc: "Normalized error shape.",
       members: [
-        {
+        member({
           name: "messageKey",
           kind: "property",
           isOptional: true,
           isReadonly: true,
-          isStatic: false,
           doc: "Translation key.",
           signature: "readonly messageKey?: string;",
-          parameters: [],
-        },
-        {
+          defaultValue: '`"app.error"`',
+        }),
+        member({
           name: "origin",
           kind: "property",
-          isOptional: false,
-          isReadonly: false,
-          isStatic: false,
           inheritedFrom: "ErrorFeedback",
-          parameters: [],
-        },
-        {
+        }),
+        member({
           name: "toJSON",
           kind: "method",
-          isOptional: false,
-          isReadonly: false,
-          isStatic: false,
           doc: "Serializes the error.",
           signature: "toJSON(space?: number): AppErrorJson;",
           parameters: [{ name: "space", doc: "Indentation passed through." }],
-        },
+          returns: "A plain {@link AppError} snapshot.",
+          throws: ["When the cause is circular."],
+          deprecated: "Use serialize instead.",
+        }),
       ],
     }),
     symbol({
@@ -205,6 +214,19 @@ describe("renderReferencePage", () => {
     expect(page).toContain("Serializes the error.\n\n**Parameters**\n\n- `space` — Indentation passed through.");
   });
 
+  it("renders a member's block tags through the same prose path as a symbol's", () => {
+    expect(page).toContain(
+      "#### messageKey\n\n```ts\nreadonly messageKey?: string;\n```\n\nTranslation key.\n\n" +
+        '**Default** — `"app.error"`',
+    );
+    const section = page.slice(page.indexOf("#### toJSON"), page.indexOf("## Type aliases"));
+    expect(section).toContain(
+      "> **Deprecated.** Use serialize instead.\n\nSerializes the error.\n\n**Parameters**\n\n" +
+        "- `space` — Indentation passed through.\n\n**Returns** — A plain [AppError](#apperror) snapshot.\n\n" +
+        "**Throws** — When the cause is circular.",
+    );
+  });
+
   it("omits prose when prose is false", () => {
     const bare = renderReferencePage(entrypoint, {
       title: "/",
@@ -216,6 +238,8 @@ describe("renderReferencePage", () => {
     expect(bare).toContain("### createAppError\n\n```ts");
     expect(bare).not.toContain("**Parameters**");
     expect(bare).not.toContain("> **Deprecated.**");
+    expect(bare).not.toContain("**Returns**");
+    expect(bare).not.toContain("**Default**");
     expect(bare).toContain("order: 0");
   });
 });

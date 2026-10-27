@@ -167,6 +167,10 @@ clearPreference(): ActiveTheme<TName, TSchema>;
 
 Removes the explicit preference and activates the system theme, which then follows OS changes again.
 
+**Returns** — The activated theme.
+
+**Throws** — When a `className` resolver returns an invalid class.
+
 #### destroy
 
 ```ts
@@ -187,6 +191,8 @@ get(): ActiveTheme<TName, TSchema>;
 
 Returns the active theme without reading the DOM.
 
+**Returns** — The same frozen object on every call until the next change, so it can serve as a store snapshot.
+
 #### getPrePaintScript
 
 ```ts
@@ -195,6 +201,10 @@ getPrePaintScript(): string;
 
 Returns an inline script that applies the stored or system theme, its class, and its static tokens before the first paint, preventing a theme flash. Runtime overrides from `setTokens()` are not included.
 
+**Returns** — Minified JavaScript, safe to place inside an inline `<script>` element.
+
+**Throws** — When a `className` resolver returns an invalid class.
+
 #### init
 
 ```ts
@@ -202,6 +212,10 @@ init(): Theme<TName, TSchema>;
 ```
 
 Applies the stored preference, or the system theme when there is none, and starts following OS color-scheme changes and preference changes from other tabs. Calling it again does nothing until `destroy()`.
+
+**Returns** — This manager.
+
+**Throws** — When a `className` resolver returns an empty or whitespace-containing class.
 
 #### readTokens
 
@@ -212,6 +226,8 @@ readTokens(): Partial<Record<keyof TSchema, string>>;
 Reads every `tokenSchema` token: the values in `get().tokens`, completed with the computed CSS values of `document.documentElement` for tokens defined only in CSS.
 
 Reading computed styles can force a synchronous layout. Prefer `get().tokens` when CSS-only tokens are not needed.
+
+**Returns** — Token values at the time of the call. Tokens with no value anywhere are omitted, and computed values are omitted without browser APIs or when reading them fails, which is logged with `console.error`.
 
 #### set
 
@@ -225,6 +241,10 @@ Activates a theme and stores it as the explicit preference.
 
 - `name` — Configured theme name.
 
+**Returns** — The activated theme.
+
+**Throws** — When `name` is not a configured theme, or a `className` resolver returns an invalid class.
+
 #### setTokens
 
 ```ts
@@ -236,6 +256,10 @@ Replaces the runtime token overrides, which win over every theme's static tokens
 **Parameters**
 
 - `tokens` — Token values keyed by `tokenSchema` names.
+
+**Returns** — The active theme with the new overrides.
+
+**Throws** — When `tokens` is not an object, no `tokenSchema` is configured, a key is not in `tokenSchema`, or a value is not a string, a finite number, or `undefined`. An `undefined` or empty value counts as omitted.
 
 #### subscribe
 
@@ -249,6 +273,8 @@ Registers a listener called after every applied change. A listener that throws i
 
 - `listener` — Callback receiving the change.
 
+**Returns** — A function that removes the listener.
+
 #### toggle
 
 ```ts
@@ -256,6 +282,10 @@ toggle(): ActiveTheme<TName, TSchema>;
 ```
 
 Activates the active theme's `pairedTheme`, or else the `systemTheme` entry for the opposite color scheme, and stores it as the explicit preference.
+
+**Returns** — The activated theme.
+
+**Throws** — When a `className` resolver returns an invalid class.
 
 ### ThemeChangeDetail
 
@@ -352,6 +382,8 @@ attribute?: string | undefined;
 
 Attribute set on `document.documentElement` to the active theme name. It cannot be `class` or `style`, in any letter case, which would replace the page's own classes or inline styles; use `className` to apply a class.
 
+**Default** — `"data-theme"`
+
 #### className
 
 ```ts
@@ -359,6 +391,8 @@ className?: boolean | ThemeClassResolver<NoInfer<TName>, NoInfer<TSchema>> | und
 ```
 
 Class applied to `document.documentElement` for the active theme: `true` applies `theme-<name>`, `false` applies none, and a [ThemeClassResolver](#themeclassresolver) returns a custom one.
+
+**Default** — `true`
 
 #### darkClass
 
@@ -368,6 +402,8 @@ darkClass?: boolean | undefined;
 
 Whether to add a `dark` class to `document.documentElement` while a theme with `colorScheme: "dark"` is active, as Tailwind CSS's class-based `dark:` variant expects.
 
+**Default** — `false`
+
 #### defaultTheme
 
 ```ts
@@ -375,6 +411,8 @@ defaultTheme?: NoInfer<TName> | undefined;
 ```
 
 Theme used before initialization and when `matchMedia` is unavailable.
+
+**Default** — `"light"`
 
 #### storageKey
 
@@ -384,6 +422,8 @@ storageKey?: string | undefined;
 
 `localStorage` key used for the explicit user preference.
 
+**Default** — `"app-theme-preference"`
+
 #### systemTheme
 
 ```ts
@@ -392,6 +432,8 @@ systemTheme?: SystemThemeMap<NoInfer<TName>> | undefined;
 
 Themes selected for OS light and dark color-scheme preferences.
 
+**Default** — `{ light: "light", dark: "dark" }`
+
 #### themes
 
 ```ts
@@ -399,6 +441,8 @@ themes?: { readonly [K in TName]: ThemeDefinition<NoInfer<TName>, NoInfer<TSchem
 ```
 
 Available themes keyed by name. Replaces the built-in list entirely. Names must be non-empty and, while `className` is `true`, usable in a class name.
+
+**Default** — `{ light: { colorScheme: "light" }, dark: { colorScheme: "dark" } }`
 
 #### tokenSchema
 

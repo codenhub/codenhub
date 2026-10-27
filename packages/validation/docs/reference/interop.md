@@ -183,6 +183,8 @@ io?: "input" | "output" | undefined;
 
 Which side of the validator to write. `"input"` is what a value must look like to pass, which is what the body of a request or the arguments of a tool must satisfy. `"output"` is what the validator produces. They differ where a validator changes its value: a default, a coercion, `json`, `fallback`.
 
+**Default** — "input"
+
 #### target
 
 ```ts
@@ -191,6 +193,8 @@ target?: "draft-2020-12" | "draft-07" | undefined;
 
 The draft of JSON Schema to write. `"draft-07"` is for a reader that does not know 2020-12, such as some tools of language models: it writes a tuple with `items` and `additionalItems`, definitions under `definitions`, and leaves out the `contentSchema` of `json`, which that draft has no word for.
 
+**Default** — "draft-2020-12"
+
 #### unrepresentable
 
 ```ts
@@ -198,6 +202,8 @@ unrepresentable?: "throw" | "any" | undefined;
 ```
 
 What to do with a part JSON Schema has no words for, such as a `date`, a `bigint`, the result of a `transform` or a check written by hand. `"throw"` names the part and where it is. `"any"` writes a schema that accepts anything there, and leaves a check out.
+
+**Default** — "throw"
 
 ### StandardJSONSchemaV1
 

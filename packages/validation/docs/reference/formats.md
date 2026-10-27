@@ -117,6 +117,8 @@ url?: boolean | undefined;
 
 Requires the URL-safe alphabet of RFC 4648, with `-` and `_` for `+` and `/` and the padding optional, and reports the format as `base64url`.
 
+**Default** — false
+
 ### DatetimeOptions
 
 ```ts
@@ -133,6 +135,8 @@ local?: boolean | undefined;
 
 Also accepts a date-time without a zone, which names a time on a local clock rather than a moment, such as `2026-09-28T14:30` from an HTML `datetime-local` input. Without `precision`, such a time may leave out its seconds, as that input does when they are zero; a time with a zone still needs them.
 
+**Default** — false
+
 #### message
 
 Inherited from [MessageOptions](index.md#messageoptions).
@@ -144,6 +148,8 @@ offset?: boolean | undefined;
 ```
 
 Accepts a UTC offset such as `+02:00` instead of only `Z`.
+
+**Default** — false
 
 #### precision
 
@@ -168,6 +174,8 @@ allowPlus?: boolean | undefined;
 ```
 
 Accepts `+` in the local part, as in `me+tag@example.com`.
+
+**Default** — true
 
 #### domain
 
@@ -228,6 +236,8 @@ repeated?: boolean | undefined;
 ```
 
 Gives the validator every value of every key as an array, and accepts a key given more than once.
+
+**Default** — false
 
 ### TimeOptions
 
@@ -301,6 +311,8 @@ protocols?: readonly string[] | undefined;
 
 Accepted protocols, without the colon, in any letter case. Of the schemes without a host, `mailto`, `tel` and `urn` are accepted, each checked by its own rules even when written with a host; any other is always rejected. `javascript`, `vbscript` and `data` cannot be listed, since their URLs run script.
 
+**Default** — ["http", "https"]
+
 #### query
 
 ```ts
@@ -316,6 +328,8 @@ repeated?: boolean | undefined;
 ```
 
 Gives `query` every value of every key as an array, and accepts a key given more than once.
+
+**Default** — false
 
 ### UuidOptions
 

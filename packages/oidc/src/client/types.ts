@@ -242,7 +242,9 @@ export interface Client {
    */
   refresh(options: RefreshOptions): Promise<OidcResult<Refreshed>>;
   /**
-   * Fetches the user's claims from the userinfo endpoint.
+   * Fetches the user's claims from the userinfo endpoint. The access token must be granted `openid`, so one from
+   * {@link Client.clientCredentials}, which has no user, gets an issue instead: this package's provider answers
+   * it with `403 insufficient_scope`.
    *
    * @returns The claims, or every issue found. Never throws for any response; it rejects only for the caller
    * errors listed below.
@@ -268,8 +270,8 @@ export interface Client {
    * checks the one, and RFC 6749 §4.4.3 says the other SHOULD NOT be included.
    * Never throws for any response; it rejects only for the caller errors listed below.
    * @throws {TypeError} When the client authenticates with `none`, when the provider metadata lists
-   * grant_types_supported without client_credentials, or when `scope` is not a non-empty array of at most 100
-   * scope tokens.
+   * grant_types_supported without client_credentials, or when `scope` is given but is not a non-empty array of at
+   * most 100 scope tokens.
    */
   clientCredentials(options?: ClientCredentialsOptions): Promise<OidcResult<TokenSet>>;
   /**

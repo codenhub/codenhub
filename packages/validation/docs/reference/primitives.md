@@ -281,6 +281,8 @@ int?: boolean | undefined;
 
 Requires a whole number.
 
+**Default** — false
+
 #### lt
 
 ```ts
@@ -316,6 +318,8 @@ safeInt?: boolean | undefined;
 ```
 
 Requires a whole number that a double represents exactly, that is within `Number.MAX_SAFE_INTEGER`.
+
+**Default** — false
 
 ### StringOptions
 
@@ -368,6 +372,8 @@ trim?: boolean | undefined;
 ```
 
 Removes leading and trailing whitespace before the constraints run, and from the output.
+
+**Default** — false
 
 ## Type aliases
 
