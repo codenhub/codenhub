@@ -34,11 +34,11 @@ button {
 
 In TypeScript, the keys of `tokenSchema` type every `tokens` object, so a misspelled token name is a compile error. Without a `tokenSchema`, tokens are not allowed at all.
 
-Each `tokenSchema` value must be a custom property name a stylesheet can use as written: `--` followed by letters, digits, `-`, or `_`. Anything else, such as `"--"` alone or a name containing a space, throws from `createTheme()`, as does mapping two tokens to the same property.
+Each `tokenSchema` value must be a custom property name a stylesheet can use as written: `--` followed by letters, digits, `-`, `_`, or non-ASCII characters. Anything else, such as `"--"` alone or a name containing a space, throws from `createTheme()`, as does mapping two tokens to the same property.
 
 ## Mix tokens with CSS
 
-A theme does not have to set every token. When the active theme leaves a token out, the package removes that property from `<html>`, and whatever your stylesheet says applies instead. Token values are set as inline styles on `<html>`, so when a theme does set one, it wins over a value for the same property in a `[data-theme]` rule.
+A theme does not have to set every token. When the active theme leaves a token out, the package removes that property from `<html>`, and whatever your stylesheet says applies instead. Token values are set as inline styles on `<html>`, so when a theme does set one, it wins over a value for the same property in a `[data-theme]` rule, unless that rule uses `!important`.
 
 That lets you keep most values in CSS and move only the ones JavaScript must control.
 
@@ -59,10 +59,10 @@ Overrides win over the themes' own `tokens`, and they stay in place when the the
 A few rules keep the values predictable:
 
 - **Overrides are not saved.** They last until the page unloads or `destroy()` runs. To keep a user's color, save it yourself and call `setTokens()` again on the next visit.
-- **An empty value means "no override".** A token set to `""` or `undefined` falls back to the theme's own value. A cleared color input therefore returns to the theme color instead of removing it.
+- **An empty value means "no override".** A token set to `""` or `undefined` falls back to the theme's own value, or to your CSS when the theme sets none. A cleared color input therefore returns to the theme color instead of removing it.
 - **Numbers are written as strings.** `setTokens({ radius: 4 })` writes `"4"`. Any value that is not a string, a finite number, `undefined`, or `""` throws, as does a token name that is not in `tokenSchema`.
-- **Values are not checked as CSS.** A value the browser rejects, such as `"red; color: blue"`, is simply not applied, and the property keeps its previous value. Check values that come from user input before passing them in.
-- **Before `init()`, overrides wait.** Called before the first theme is applied, `setTokens()` only records the overrides; the next change, usually `init()`, applies them. This keeps an early call from showing the default theme over the one already on the page.
+- **Values are not checked as CSS.** A value the browser rejects, such as `"red; color: blue"`, is simply not applied, and the property keeps its previous value, although `get().tokens` still reports the rejected value. Check values that come from user input before passing them in.
+- **Before `init()`, overrides wait.** Called before the first theme is applied, or after `destroy()`, `setTokens()` only records the overrides; the next change, usually `init()`, applies them. This keeps an early call from showing the default theme over the one already on the page.
 
 ## Read token values
 

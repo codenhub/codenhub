@@ -65,7 +65,7 @@ Because this script runs after the browser first paints, a user who chose dark b
 ## Notes
 
 - `createTheme()` validates its options immediately and throws an `Error` naming the problem, such as a `defaultTheme` that is not one of your themes.
-- When the browser blocks `localStorage`, the package logs the failure once with `console.error` and keeps working; the user's choice lasts until the page closes.
+- When the browser blocks `localStorage`, the package logs each kind of failure (read, write, delete) once with `console.error` and keeps working; a choice it could not save lasts until the page closes.
 
 ## License
 

@@ -67,7 +67,7 @@ Because this script runs after the browser first paints, a user who chose dark b
 ## Notes
 
 - `createTheme()` validates its options immediately and throws an `Error` naming the problem, such as a `defaultTheme` that is not one of your themes.
-- When the browser blocks `localStorage`, the package logs the failure once with `console.error` and keeps working; the user's choice lasts until the page closes.
+- When the browser blocks `localStorage`, the package logs each kind of failure (read, write, delete) once with `console.error` and keeps working; a choice it could not save lasts until the page closes.
 
 ## License
 
@@ -92,9 +92,9 @@ On every change, it writes the active theme onto the `<html>` element (`document
 ```
 
 - `data-theme="dark"`: the theme's name, for CSS selectors such as `[data-theme="dark"]`.
-- `class="theme-dark"`: the same name as a class, for code that prefers classes. A `dark` class for Tailwind CSS is available too.
+- `class="theme-dark"`: the same name as a `theme-<name>` class, added by default for code that prefers classes (the `className` option changes or removes it). With `darkClass: true`, a `dark` class for Tailwind CSS is added too.
 - `color-scheme: dark`: tells the browser to draw its own controls, such as scrollbars and form fields, in dark colors.
-- CSS custom properties, such as `--color-primary`, when you give your themes token values in JavaScript.
+- CSS custom properties, such as `--color-primary`, for the tokens you list in `tokenSchema` and give values in JavaScript.
 
 It ships no CSS, no colors, and no toggle button. Those stay in your application, in whatever form you already write them.
 
@@ -122,7 +122,7 @@ The [API reference](docs/reference/index.md) lists every export with its full si
 
 ## Requirements
 
-- A browser for the theme to show. The package uses `document.documentElement`, `localStorage`, `matchMedia`, `storage` events, and `CustomEvent`, and treats any of them that is missing or throws as absent instead of crashing your page. On a server it does nothing that needs a browser; see [Preventing the flash](docs/preventing-the-flash.md).
+- A browser for the theme to show. The package uses `document.documentElement`, `localStorage`, `matchMedia`, `storage` events, and `CustomEvent`, and treats any of them that is missing as absent instead of crashing your page. A `localStorage` or `matchMedia` call that throws, as in a private window, is treated the same way. On a server it does nothing that needs a browser; see [Preventing the flash](docs/preventing-the-flash.md).
 - TypeScript 5.4 or newer, if you use TypeScript. The types use `NoInfer`, which older compilers report as `Cannot find name 'NoInfer'`. Plain JavaScript projects need nothing extra.
 - No other dependencies, and no framework.
 
@@ -319,12 +319,12 @@ Now `sepia` toggles to `dim`, and `dim` toggles back to `light`. A pair goes one
 
 The manager answers four questions:
 
-| Member             | Answers                                                                                   |
-| ------------------ | ----------------------------------------------------------------------------------------- |
-| `theme.name`       | Which theme is active, such as `"dim"`.                                                   |
-| `theme.get()`      | Everything about the active theme: `name`, `colorScheme`, `tokens`, and `pairedTheme`.    |
-| `theme.preference` | Which theme the user saved, or `null` when they have not chosen one.                      |
-| `theme.system`     | Which theme the operating system's setting maps to right now, whether or not it is shown. |
+| Member             | Answers                                                                                                                                 |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `theme.name`       | Which theme is active, such as `"dim"`.                                                                                                 |
+| `theme.get()`      | Everything about the active theme: `name`, `colorScheme`, `tokens`, and `pairedTheme`.                                                  |
+| `theme.preference` | Which theme the user saved, or `null` when nothing is saved, storage cannot be read, or the saved name is no longer one of your themes. |
+| `theme.system`     | Which theme the operating system's setting maps to right now, whether or not it is shown.                                               |
 
 `preference` is what makes an "Auto" option possible: a menu shows "Auto" as selected while it is `null`.
 
@@ -354,7 +354,7 @@ All options are optional. An option set to `undefined` gets its default, exactly
 A few of these deserve a word:
 
 - **`storageKey`**: Every app on the same domain shares one `localStorage`. If two apps on one domain both use this package, give each its own key, such as `"my-app-theme"`, so they do not overwrite each other's choice.
-- **`attribute`**: Any attribute name works except `class` and `style`, because writing the theme name there would erase the classes and inline styles your page put on `<html>`. Use `className` to get a class.
+- **`attribute`**: Any valid HTML attribute name works, one without spaces, quotes, `/`, `>`, or `=`, except `class` and `style`, because writing the theme name there would erase the classes and inline styles your page put on `<html>`. Use `className` to get a class.
 - **`className`**: A function receives the theme, including its static tokens, and returns one class name with no spaces. `className: (theme) => theme.name` gives classes like `dark` and `dim` instead of `theme-dark`. A function that returns an empty or space-containing name makes the operation that applied it throw.
 
 ## When the configuration is wrong
@@ -396,11 +396,11 @@ button {
 
 In TypeScript, the keys of `tokenSchema` type every `tokens` object, so a misspelled token name is a compile error. Without a `tokenSchema`, tokens are not allowed at all.
 
-Each `tokenSchema` value must be a custom property name a stylesheet can use as written: `--` followed by letters, digits, `-`, or `_`. Anything else, such as `"--"` alone or a name containing a space, throws from `createTheme()`, as does mapping two tokens to the same property.
+Each `tokenSchema` value must be a custom property name a stylesheet can use as written: `--` followed by letters, digits, `-`, `_`, or non-ASCII characters. Anything else, such as `"--"` alone or a name containing a space, throws from `createTheme()`, as does mapping two tokens to the same property.
 
 ## Mix tokens with CSS
 
-A theme does not have to set every token. When the active theme leaves a token out, the package removes that property from `<html>`, and whatever your stylesheet says applies instead. Token values are set as inline styles on `<html>`, so when a theme does set one, it wins over a value for the same property in a `[data-theme]` rule.
+A theme does not have to set every token. When the active theme leaves a token out, the package removes that property from `<html>`, and whatever your stylesheet says applies instead. Token values are set as inline styles on `<html>`, so when a theme does set one, it wins over a value for the same property in a `[data-theme]` rule, unless that rule uses `!important`.
 
 That lets you keep most values in CSS and move only the ones JavaScript must control.
 
@@ -421,10 +421,10 @@ Overrides win over the themes' own `tokens`, and they stay in place when the the
 A few rules keep the values predictable:
 
 - **Overrides are not saved.** They last until the page unloads or `destroy()` runs. To keep a user's color, save it yourself and call `setTokens()` again on the next visit.
-- **An empty value means "no override".** A token set to `""` or `undefined` falls back to the theme's own value. A cleared color input therefore returns to the theme color instead of removing it.
+- **An empty value means "no override".** A token set to `""` or `undefined` falls back to the theme's own value, or to your CSS when the theme sets none. A cleared color input therefore returns to the theme color instead of removing it.
 - **Numbers are written as strings.** `setTokens({ radius: 4 })` writes `"4"`. Any value that is not a string, a finite number, `undefined`, or `""` throws, as does a token name that is not in `tokenSchema`.
-- **Values are not checked as CSS.** A value the browser rejects, such as `"red; color: blue"`, is simply not applied, and the property keeps its previous value. Check values that come from user input before passing them in.
-- **Before `init()`, overrides wait.** Called before the first theme is applied, `setTokens()` only records the overrides; the next change, usually `init()`, applies them. This keeps an early call from showing the default theme over the one already on the page.
+- **Values are not checked as CSS.** A value the browser rejects, such as `"red; color: blue"`, is simply not applied, and the property keeps its previous value, although `get().tokens` still reports the rejected value. Check values that come from user input before passing them in.
+- **Before `init()`, overrides wait.** Called before the first theme is applied, or after `destroy()`, `setTokens()` only records the overrides; the next change, usually `init()`, applies them. This keeps an early call from showing the default theme over the one already on the page.
 
 ## Read token values
 
@@ -460,15 +460,17 @@ While a choice is saved, changes to the operating system's light or dark mode ar
 
 ## When storage fails
 
-Browsers can refuse `localStorage`: a private window may block it, a user may disable site data, or storage may be full. The package never lets that break your page. A read, write, or delete that fails is treated as if storage were empty, and each kind of failure is logged once with `console.error`, not on every call.
+Browsers can refuse `localStorage`: a private window may block it, a user may disable site data, or storage may be full. The package never lets that break your page, and each kind of failure (read, write, delete) is logged once with `console.error`, not on every call:
 
-The user's choice still works for as long as the page is open: after `set()` or `toggle()`, the chosen theme stays, and operating-system changes do not override it. It is only forgotten on reload, because there was nowhere to keep it.
+- **A failed read** counts as no saved choice, so the operating system's setting applies.
+- **A failed write** keeps whatever was saved before, if anything. The user's new choice still works for as long as the page is open: after `set()` or `toggle()`, the chosen theme stays, and operating-system changes do not override it. On reload, the previously saved theme, or the operating system's setting, applies again.
+- **A failed delete** in `clearPreference()` leaves the old choice saved. The page switches to the system theme, but a reload restores the saved choice, and operating-system changes stay ignored while it is there.
 
 `theme.preference` always reports what storage actually holds, so in that situation it can disagree with the active theme: it stays `null` when storage cannot be read at all, and keeps the previously saved theme when only saving fails, as with a full quota.
 
 ## Keeping tabs in agreement
 
-A user with your app open in two tabs who switches the theme in one expects the other to follow. It does, automatically: every tab whose manager has run `init()` with the same `storageKey` listens for changes to the saved choice. When another tab saves, clears, or replaces it, including with `localStorage.clear()`, each tab picks its theme again, exactly as `init()` would.
+A user with your app open in two tabs who switches the theme in one expects the other to follow. It does, automatically: every tab whose manager has run `init()` with the same `storageKey` listens for changes to the saved choice. When another tab saves, clears, or replaces it, including with `localStorage.clear()`, each tab picks its theme again from storage and the operating system, as `init()` does. A choice a tab could not save is dropped at that point, because storage no longer agrees with it.
 
 Only the theme follows. Token overrides from `setTokens()` belong to the tab that set them.
 

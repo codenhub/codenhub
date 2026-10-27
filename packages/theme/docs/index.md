@@ -19,9 +19,9 @@ On every change, it writes the active theme onto the `<html>` element (`document
 ```
 
 - `data-theme="dark"`: the theme's name, for CSS selectors such as `[data-theme="dark"]`.
-- `class="theme-dark"`: the same name as a class, for code that prefers classes. A `dark` class for Tailwind CSS is available too.
+- `class="theme-dark"`: the same name as a `theme-<name>` class, added by default for code that prefers classes (the `className` option changes or removes it). With `darkClass: true`, a `dark` class for Tailwind CSS is added too.
 - `color-scheme: dark`: tells the browser to draw its own controls, such as scrollbars and form fields, in dark colors.
-- CSS custom properties, such as `--color-primary`, when you give your themes token values in JavaScript.
+- CSS custom properties, such as `--color-primary`, for the tokens you list in `tokenSchema` and give values in JavaScript.
 
 It ships no CSS, no colors, and no toggle button. Those stay in your application, in whatever form you already write them.
 
@@ -49,6 +49,6 @@ The [API reference](reference/index.md) lists every export with its full signatu
 
 ## Requirements
 
-- A browser for the theme to show. The package uses `document.documentElement`, `localStorage`, `matchMedia`, `storage` events, and `CustomEvent`, and treats any of them that is missing or throws as absent instead of crashing your page. On a server it does nothing that needs a browser; see [Preventing the flash](preventing-the-flash.md).
+- A browser for the theme to show. The package uses `document.documentElement`, `localStorage`, `matchMedia`, `storage` events, and `CustomEvent`, and treats any of them that is missing as absent instead of crashing your page. A `localStorage` or `matchMedia` call that throws, as in a private window, is treated the same way. On a server it does nothing that needs a browser; see [Preventing the flash](preventing-the-flash.md).
 - TypeScript 5.4 or newer, if you use TypeScript. The types use `NoInfer`, which older compilers report as `Cannot find name 'NoInfer'`. Plain JavaScript projects need nothing extra.
 - No other dependencies, and no framework.

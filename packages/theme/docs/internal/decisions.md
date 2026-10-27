@@ -26,7 +26,7 @@ A theme or runtime token set to `""` falls back to the theme's static value, or 
 
 ## `setTokens()` before the first change only records the overrides
 
-Before any theme is applied, that is before `init()`, `set()`, `toggle()`, or `clearPreference()` first runs, or after `destroy()`, `setTokens()` records the overrides, leaves the DOM alone, and notifies no one. The next change applies them.
+Before any theme is applied, that is before `init()`, `set()`, `toggle()`, or `clearPreference()` first runs, or after `destroy()`, `setTokens()` records the overrides, leaves the DOM alone, and notifies no one. The next change applies them. It still resolves the active theme's classes first, so a custom `className` function runs, and can throw, even then.
 
 Applying right away was the earlier behavior. The only theme the manager knows before `init()` is `defaultTheme`, so applying it replaced the theme the pre-paint script had applied and flashed the wrong theme until `init()` ran, typically later in a component effect.
 

@@ -95,12 +95,12 @@ Now `sepia` toggles to `dim`, and `dim` toggles back to `light`. A pair goes one
 
 The manager answers four questions:
 
-| Member             | Answers                                                                                   |
-| ------------------ | ----------------------------------------------------------------------------------------- |
-| `theme.name`       | Which theme is active, such as `"dim"`.                                                   |
-| `theme.get()`      | Everything about the active theme: `name`, `colorScheme`, `tokens`, and `pairedTheme`.    |
-| `theme.preference` | Which theme the user saved, or `null` when they have not chosen one.                      |
-| `theme.system`     | Which theme the operating system's setting maps to right now, whether or not it is shown. |
+| Member             | Answers                                                                                                                                 |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `theme.name`       | Which theme is active, such as `"dim"`.                                                                                                 |
+| `theme.get()`      | Everything about the active theme: `name`, `colorScheme`, `tokens`, and `pairedTheme`.                                                  |
+| `theme.preference` | Which theme the user saved, or `null` when nothing is saved, storage cannot be read, or the saved name is no longer one of your themes. |
+| `theme.system`     | Which theme the operating system's setting maps to right now, whether or not it is shown.                                               |
 
 `preference` is what makes an "Auto" option possible: a menu shows "Auto" as selected while it is `null`.
 
@@ -130,7 +130,7 @@ All options are optional. An option set to `undefined` gets its default, exactly
 A few of these deserve a word:
 
 - **`storageKey`**: Every app on the same domain shares one `localStorage`. If two apps on one domain both use this package, give each its own key, such as `"my-app-theme"`, so they do not overwrite each other's choice.
-- **`attribute`**: Any attribute name works except `class` and `style`, because writing the theme name there would erase the classes and inline styles your page put on `<html>`. Use `className` to get a class.
+- **`attribute`**: Any valid HTML attribute name works, one without spaces, quotes, `/`, `>`, or `=`, except `class` and `style`, because writing the theme name there would erase the classes and inline styles your page put on `<html>`. Use `className` to get a class.
 - **`className`**: A function receives the theme, including its static tokens, and returns one class name with no spaces. `className: (theme) => theme.name` gives classes like `dark` and `dim` instead of `theme-dark`. A function that returns an empty or space-containing name makes the operation that applied it throw.
 
 ## When the configuration is wrong
