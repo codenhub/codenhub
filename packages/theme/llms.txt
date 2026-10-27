@@ -1,19 +1,34 @@
 # @codenhub/theme
 
-> Zero-dependency browser theme preference, persistence, DOM, cross-tab, event,
-> and token manager with SSR-safe fallbacks.
+> Zero-dependency browser theme manager: picks the active theme from the user's
+> saved choice or the OS light/dark setting, saves it to `localStorage`, syncs
+> tabs, and writes it to `<html>` as an attribute, class, `color-scheme`, and
+> optional CSS custom properties. Ships no CSS.
 
-Call `init()` in the browser, keep pre-paint logic aligned with configuration,
-and call `destroy()` to release media-query/storage listeners and subscribers.
+Create one manager with `createTheme(options)` and call `init()` in the browser.
+Style themes in CSS with `[data-theme="<name>"]`. Inline the string from
+`getPrePaintScript()` in `<head>`, built from the same options, to avoid a flash
+on load. Call `destroy()` only for a manager that lives shorter than the page.
 
 ## Documentation
 
-- [Documentation overview](docs/index.md): Purpose, status, and starting points.
-- [Tokens, persistence, and cross-tab sync](docs/tokens-and-persistence.md): Token
-  resolution priority, `localStorage` persistence, and cross-tab sync.
-- [SSR, pre-paint, and Tailwind](docs/ssr-and-pre-paint.md): FOUC prevention, SSR
-  fallbacks, and Tailwind `dark` class toggling.
+- [Documentation overview](docs/index.md): What the package does, how a theme is
+  chosen, and the walkthrough in reading order.
+- [Getting started](docs/getting-started.md): Installation, CSS, and a working
+  light and dark toggle.
+- [Defining themes](docs/themes.md): Custom themes, `systemTheme`, `toggle()` and
+  `pairedTheme`, reading state, and every option with its default.
+- [Design tokens](docs/tokens.md): `tokenSchema`, theme tokens, `setTokens()`,
+  and `readTokens()`.
+- [Saving and syncing](docs/persistence-and-sync.md): `localStorage`, storage
+  failures, cross-tab sync, `subscribe()`, and the `themechange` event.
+- [Preventing the flash](docs/preventing-the-flash.md): `getPrePaintScript()` in
+  static and server-rendered apps, SSR behavior, and Content Security Policy.
+- [Frameworks](docs/frameworks.md): React with `useSyncExternalStore`, cleanup
+  with `destroy()`, and Tailwind CSS's `dark:` variant.
+- [Troubleshooting](docs/troubleshooting.md): Symptoms, causes, and fixes.
 
 ## Optional
 
 - [API reference](docs/reference/index.md): Generated per-symbol signatures and prose.
+- [Changelog](docs/changelog/index.md): Changes in each release.
