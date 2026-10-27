@@ -46,7 +46,7 @@ Test every strategy statement by asking whether a named competitor could sign it
 
 ## Directions
 
-At concept stage, present two or three directions before finishing any of them. Each direction is a different interpretation of the same strategy, with its own name, a one-sentence idea, and a mood: a few key frames showing type, color, imagery, and a sketch of the logo route together. Directions differ in idea, not in color. Finish the chosen direction only.
+At concept stage, present two or three directions before finishing any of them. Each direction is a different interpretation of the same strategy, with its own name, a one-sentence idea, and a mood: a few key frames showing type, color, imagery, and a sketch of the logo route together. Directions differ in idea, not merely in color. Finish the chosen direction only.
 
 When the client has already chosen a direction, or the request is for a single element, skip this step.
 
@@ -62,7 +62,7 @@ When the client has already chosen a direction, or the request is for a single e
 Derive each element from the strategy and the competitor map, and be able to say for each why it fits the brand idea and how it differs from the cluster.
 
 - **Logo.** Treat the logo as its own design task: concepts in words first, routes that differ in idea, precise construction, and checks at favicon size and in one color. Final logo files contain no live text: convert lettering to outlines, or construct it as paths, so the logo does not depend on installed fonts. When that is not possible, label the file as a working file that still needs outlining.
-- **Color.** A primary brand color chosen for distinctiveness in the category, a neutral range for text and backgrounds, an accent when needed, and functional colors for status in digital products. Define the proportions of use, since proportion is as recognizable as hue. Give values in HEX and RGB, and provide CMYK and spot-color matches only as starting points that a print professional must confirm. Check text contrast for every approved pairing.
+- **Color.** A primary brand color chosen for distinctiveness in the category, a neutral range for text and backgrounds, an accent when needed, and functional colors for status in digital products. Define the proportions of use, since proportion is as recognizable as hue. Give values in HEX and RGB, and provide CMYK and spot-color matches only as starting points that a print professional must confirm. Check text contrast for every approved pairing: at least 4.5:1 for body text and 3:1 for large text and interface components, per WCAG AA. Logotypes, purely decorative text, and incidental text in photographs are exempt.
 - **Typography.** One or two families with distinct roles, chosen for the personality and with licenses covering every use the brand needs: web, app, print, video, and office documents. Name a free or system fallback for the documents people outside the design team will make.
 - **Imagery.** Define the photography or illustration style by its subject, light, color treatment, framing, and what it avoids, with examples. Choose one style of iconography with a consistent stroke and corner.
 - **Graphic elements.** One or two distinctive devices derived from the logo or the brand idea, such as a shape, a pattern, a crop, or a layout rule, that make materials recognizable without the logo.
@@ -79,7 +79,7 @@ Apply the system to the touchpoints that matter most for this brand, such as a w
 - **Trace test.** For each element, state which part of the strategy it expresses. Cut or change any element with no answer.
 - **Cliché test.** Read every line of text, and compare the visuals against the clichés of the category. Replace what any competitor could have produced.
 - **Consistency test.** View all applications side by side. They should apply the same rules for type, color proportion, spacing, and imagery.
-- **Accessibility.** Text contrast of approved color pairings, legibility of the typefaces at the sizes they will be used, and the logo at its minimum size.
+- **Accessibility.** Text contrast of approved color pairings against the WCAG AA thresholds in Color, exempting logotypes and decorative text, legibility of the typefaces at the sizes they will be used, and the logo at its minimum size.
 - **Clearance.** You cannot clear names, taglines, or logos legally. State what was checked, such as domains and an informal search, and that trademark clearance by a qualified person is needed before adoption, along with a native-speaker check in each target market.
 
 When applications cannot be rendered, say so and name what was not checked.

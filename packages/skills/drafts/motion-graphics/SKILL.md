@@ -75,7 +75,7 @@ When the project already uses another tool that meets the requirements, such as 
 
 ## Encoding
 
-- Deliver MP4 with H.264 and the `yuv420p` pixel format for broad compatibility: `ffmpeg -framerate 30 -i frames/%05d.png -c:v libx264 -pix_fmt yuv420p -crf 18 -movflags +faststart out.mp4`.
+- Deliver MP4 with H.264 and the `yuv420p` pixel format for broad compatibility, with `-framerate` set to the rate the frames were captured at: `ffmpeg -framerate 30 -i frames/%05d.png -c:v libx264 -pix_fmt yuv420p -crf 18 -movflags +faststart out.mp4`.
 - For a transparent background, as with an overlay or a lower third, deliver ProRes 4444 (`-c:v prores_ks -profile:v 4444 -pix_fmt yuva444p10le`) or WebM with VP9 (`-c:v libvpx-vp9 -pix_fmt yuva420p`), and capture the frames with a transparent background.
 - For a GIF, generate a palette first (`palettegen` and `paletteuse` filters), keep it short, and reduce the frame rate and size; GIFs grow large fast.
 - Mix audio in the same `ffmpeg` call, and trim the video and audio to the same length.
@@ -84,7 +84,7 @@ When the project already uses another tool that meets the requirements, such as 
 
 Look at the output, not the code. Most timing and composition problems are invisible in code and obvious in frames.
 
-- Make a contact sheet of one frame every half second, for example with `ffmpeg -i out.mp4 -vf "fps=2,scale=480:-1,tile=6x5" sheet.png`, and check the sequence: one focal point per frame, nothing cut off, nothing overlapping by accident.
+- Make a contact sheet of one frame every half second, for example with `ffmpeg -i out.mp4 -vf "fps=2,scale=480:-1,tile=6x5" sheet%03d.png`, which writes one sheet per 15 seconds, and check the sequence: one focal point per frame, nothing cut off, nothing overlapping by accident.
 - Extract every frame across each transition and each text entrance, and confirm the motion is smooth, with no jumps, flashes of unstyled or missing content, or frames where the wrong font appears.
 - View the hold frame of every beat at phone size and confirm its text reads.
 - Check the first frame, which platforms often show as the thumbnail, and the last frame. For a loop, confirm the last frame leads into the first.

@@ -25,7 +25,7 @@
 - Set the piece's easing family once with `gsap.defaults({ ease: "power3.out", duration: 0.6 })`, and override it per tween only for exits and moves.
 - Use `expo.out` or `power4.out` for strong entrances, `power2.in` for exits, and `power2.inOut` for moves. Use `CustomEase` when the brand needs its own curve.
 - Give repeating motion a finite `repeat` count that fits the scene. An infinite repeat makes the timeline's duration infinite.
-- Build the whole timeline before rendering starts, after fonts have loaded, and expose seeking for the renderer:
+- Build the whole timeline before rendering starts, after fonts have loaded, and expose seeking for the renderer. Put this in a `<script type="module">`, since top-level `await` is a syntax error in a classic script and `window.ready` would never be set:
 
 ```js
 await document.fonts.ready;
@@ -77,7 +77,7 @@ const page = await browser.newPage({ viewport: { width: +width, height: +height 
 await page.goto(url);
 await page.waitForFunction(() => window.ready === true);
 
-const total = Math.round((await page.evaluate(() => window.duration)) * +fps);
+const total = Math.ceil((await page.evaluate(() => window.duration)) * +fps);
 for (let frame = 0; frame < total; frame++) {
   await page.evaluate((t) => window.seek(t), frame / +fps);
   await page.screenshot({ path: `frames/${String(frame).padStart(5, "0")}.png`, omitBackground: true });

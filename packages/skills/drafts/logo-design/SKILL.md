@@ -53,8 +53,8 @@ Agents draw precise geometry well and freehand shapes badly. Design concepts tha
 - Build marks from geometric primitives on a grid: circles, rectangles, and straight or circular-arc paths, with integer coordinates on a grid such as 24 or 48 units. Reuse a small set of radii and stroke widths throughout the mark.
 - Do not draw recognizable organic subjects, such as animals, faces, hands, plants, or objects, freehand. When a concept depends on one, reduce it to a few geometric parts that still read as the subject at the smallest size, or present it as a direction for an illustrator or an image model rather than shipping a crude drawing.
 - Correct optically. Round shapes overshoot flat ones slightly to look the same size, horizontal strokes are slightly thinner than vertical strokes to look equal, and pointed shapes extend past the baseline. Trust the render over equal numbers.
-- Make the final file solid fills. Convert strokes to outlines, merge overlapping shapes, and remove hidden geometry, so the mark scales without changing weight and renders the same everywhere.
-- Keep the file clean: a `viewBox` fitted to the mark, no transforms left on groups where coordinates can be baked in, no embedded raster images, no unused definitions, and no editor metadata.
+- Make the final file solid fills. Convert strokes to outlines, merge overlapping shapes that share a fill, keep intentional layers and knockouts, and remove geometry that is truly hidden, so the mark scales without changing weight and renders the same everywhere.
+- Keep the file clean: a `viewBox` fitted to the mark, no transforms left on groups where coordinates can be baked in, no embedded raster images, no external references such as linked files, stylesheets, or fonts (local `#id` references are fine), no unused definitions, and no editor metadata.
 
 ## Wordmarks
 
