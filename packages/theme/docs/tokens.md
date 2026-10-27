@@ -60,7 +60,7 @@ A few rules keep the values predictable:
 
 - **Overrides are not saved.** They last until the page unloads or `destroy()` runs. To keep a user's color, save it yourself and call `setTokens()` again on the next visit.
 - **An empty value means "no override".** A token set to `""` or `undefined` falls back to the theme's own value, or to your CSS when the theme sets none. A cleared color input therefore returns to the theme color instead of removing it.
-- **Numbers are written as strings.** `setTokens({ radius: 4 })` writes `"4"`. Any value that is not a string, a finite number, `undefined`, or `""` throws, as does a token name that is not in `tokenSchema`.
+- **Numbers are written as strings.** In JavaScript, `setTokens({ radius: 4 })` writes `"4"`; the TypeScript types accept strings only, so write `"4"` there. Any value that is not a string, a finite number, `undefined`, or `""` throws, as does a token name that is not in `tokenSchema`.
 - **Values are not checked as CSS.** A value the browser rejects, such as `"red; color: blue"`, is simply not applied, and the property keeps its previous value, although `get().tokens` still reports the rejected value. Check values that come from user input before passing them in.
 - **Before `init()`, overrides wait.** Called before the first theme is applied, or after `destroy()`, `setTokens()` only records the overrides; the next change, usually `init()`, applies them. This keeps an early call from showing the default theme over the one already on the page.
 

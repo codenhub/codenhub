@@ -99,10 +99,10 @@ The script is safe to place inside `<script>` as is: theme names and token value
 In a React framework that renders `<html>` itself, such as Next.js, put it in the root layout:
 
 ```tsx
-// app/layout.tsx
+// src/app/layout.tsx
 import { createTheme } from "@codenhub/theme";
 
-import { themeOptions } from "./theme-options";
+import { themeOptions } from "../theme-options";
 
 const prePaintScript = createTheme(themeOptions).getPrePaintScript();
 

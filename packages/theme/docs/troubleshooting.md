@@ -12,7 +12,7 @@ Start with the symptom you see. Each entry says how to confirm the cause, then h
 Open the browser's developer tools and inspect the `<html>` element while you click the toggle.
 
 - **`data-theme` changes, but the page does not.** The package is working; your CSS has no rules for that theme name. Add a `[data-theme="<name>"]` rule for every theme, as in [Getting started](getting-started.md#2-write-the-css-for-each-theme). If you set `attribute`, use that attribute name in your selectors instead.
-- **`data-theme` never appears.** `init()` was not called, or the code calling it never ran. `createTheme()` alone does nothing to the page. Check the console for an error thrown earlier, such as one from `createTheme()` about invalid options.
+- **`data-theme` never appears.** If you set `attribute`, look for that attribute instead. Otherwise, `init()` was not called, or the code calling it never ran. `createTheme()` alone does nothing to the page. Check the console for an error thrown earlier, such as one from `createTheme()` about invalid options.
 - **Tailwind `dark:` styles do not apply.** Check for `darkClass: true` in the options, a `dark` class on `<html>`, and the Tailwind configuration from [Frameworks](frameworks.md#tailwind-css). Without that configuration, Tailwind follows the operating-system setting and ignores the class.
 
 ## The wrong theme flashes when the page loads

@@ -154,7 +154,7 @@ bun add @codenhub/theme
 
 ## 2. Write the CSS for each theme
 
-The package only writes the theme's name onto `<html>`, as `data-theme="light"` or `data-theme="dark"`. Your stylesheet gives each name its look. CSS custom properties keep that short: define the colors once per theme, and use them everywhere else.
+The package writes the theme's name onto `<html>`, as `data-theme="light"` or `data-theme="dark"`, along with a matching `theme-<name>` class and the `color-scheme` property. Your stylesheet gives each name its look. CSS custom properties keep that short: define the colors once per theme, and use them everywhere else.
 
 ```css
 /* styles.css */
@@ -422,7 +422,7 @@ A few rules keep the values predictable:
 
 - **Overrides are not saved.** They last until the page unloads or `destroy()` runs. To keep a user's color, save it yourself and call `setTokens()` again on the next visit.
 - **An empty value means "no override".** A token set to `""` or `undefined` falls back to the theme's own value, or to your CSS when the theme sets none. A cleared color input therefore returns to the theme color instead of removing it.
-- **Numbers are written as strings.** `setTokens({ radius: 4 })` writes `"4"`. Any value that is not a string, a finite number, `undefined`, or `""` throws, as does a token name that is not in `tokenSchema`.
+- **Numbers are written as strings.** In JavaScript, `setTokens({ radius: 4 })` writes `"4"`; the TypeScript types accept strings only, so write `"4"` there. Any value that is not a string, a finite number, `undefined`, or `""` throws, as does a token name that is not in `tokenSchema`.
 - **Values are not checked as CSS.** A value the browser rejects, such as `"red; color: blue"`, is simply not applied, and the property keeps its previous value, although `get().tokens` still reports the rejected value. Check values that come from user input before passing them in.
 - **Before `init()`, overrides wait.** Called before the first theme is applied, or after `destroy()`, `setTokens()` only records the overrides; the next change, usually `init()`, applies them. This keeps an early call from showing the default theme over the one already on the page.
 
@@ -466,11 +466,11 @@ Browsers can refuse `localStorage`: a private window may block it, a user may di
 - **A failed write** keeps whatever was saved before, if anything. The user's new choice still works for as long as the page is open: after `set()` or `toggle()`, the chosen theme stays, and operating-system changes do not override it. On reload, the previously saved theme, or the operating system's setting, applies again.
 - **A failed delete** in `clearPreference()` leaves the old choice saved. The page switches to the system theme, but a reload restores the saved choice, and operating-system changes stay ignored while it is there.
 
-`theme.preference` always reports what storage actually holds, so in that situation it can disagree with the active theme: it stays `null` when storage cannot be read at all, and keeps the previously saved theme when only saving fails, as with a full quota.
+`theme.preference` reports the saved choice when it names one of your themes, and `null` otherwise, so in that situation it can disagree with the active theme: it stays `null` when storage cannot be read at all, and keeps the previously saved theme when only saving fails, as with a full quota.
 
 ## Keeping tabs in agreement
 
-A user with your app open in two tabs who switches the theme in one expects the other to follow. It does, automatically: every tab whose manager has run `init()` with the same `storageKey` listens for changes to the saved choice. When another tab saves, clears, or replaces it, including with `localStorage.clear()`, each tab picks its theme again from storage and the operating system, as `init()` does. A choice a tab could not save is dropped at that point, because storage no longer agrees with it.
+A user with your app open in two tabs who switches the theme in one expects the other to follow. It does, automatically: every tab whose manager has run `init()` with the same `storageKey` listens for changes to the saved choice. When another tab saves, clears, or replaces it, including with `localStorage.clear()`, each tab picks its theme again from storage and the operating system, as `init()` does. A choice a tab could not save is dropped at that point, because storage no longer agrees with it. The exception is a tab that cannot reach `localStorage` at all: it ignores these events and keeps its choice.
 
 Only the theme follows. Token overrides from `setTokens()` belong to the tab that set them.
 
@@ -503,7 +503,7 @@ A few guarantees make subscribers safe to write:
 
 ### From code without access to the manager
 
-Some code cannot import the manager, such as a third-party widget or a separate script. The package also dispatches a `themechange` event on `window` after every change, with the same information in its `detail`. Import the event name and type instead of writing the string yourself:
+Some code cannot import the manager, such as a third-party widget or a separate script. The package also dispatches a `themechange` event on `window` after every change that a subscriber did not replace with a newer one, with the same information in its `detail`. Import the event name and type instead of writing the string yourself:
 
 ```ts
 import { THEME_CHANGE_EVENT, type ThemeChangeEvent } from "@codenhub/theme";
@@ -616,10 +616,10 @@ The script is safe to place inside `<script>` as is: theme names and token value
 In a React framework that renders `<html>` itself, such as Next.js, put it in the root layout:
 
 ```tsx
-// app/layout.tsx
+// src/app/layout.tsx
 import { createTheme } from "@codenhub/theme";
 
-import { themeOptions } from "./theme-options";
+import { themeOptions } from "../theme-options";
 
 const prePaintScript = createTheme(themeOptions).getPrePaintScript();
 
@@ -789,7 +789,7 @@ Start with the symptom you see. Each entry says how to confirm the cause, then h
 Open the browser's developer tools and inspect the `<html>` element while you click the toggle.
 
 - **`data-theme` changes, but the page does not.** The package is working; your CSS has no rules for that theme name. Add a `[data-theme="<name>"]` rule for every theme, as in [Getting started](docs/getting-started.md#2-write-the-css-for-each-theme). If you set `attribute`, use that attribute name in your selectors instead.
-- **`data-theme` never appears.** `init()` was not called, or the code calling it never ran. `createTheme()` alone does nothing to the page. Check the console for an error thrown earlier, such as one from `createTheme()` about invalid options.
+- **`data-theme` never appears.** If you set `attribute`, look for that attribute instead. Otherwise, `init()` was not called, or the code calling it never ran. `createTheme()` alone does nothing to the page. Check the console for an error thrown earlier, such as one from `createTheme()` about invalid options.
 - **Tailwind `dark:` styles do not apply.** Check for `darkClass: true` in the options, a `dark` class on `<html>`, and the Tailwind configuration from [Frameworks](docs/frameworks.md#tailwind-css). Without that configuration, Tailwind follows the operating-system setting and ignores the class.
 
 ## The wrong theme flashes when the page loads
