@@ -1,0 +1,4 @@
+interface:
+  display_name: "Branding"
+  short_description: "Build brand strategy and identity systems"
+  default_prompt: "Use $branding to build this brand: confirm a discovery brief, write the positioning, brand idea, and personality, develop distinct directions, then derive voice and visual identity from the strategy, apply it to real touchpoints, and test it against competitors."

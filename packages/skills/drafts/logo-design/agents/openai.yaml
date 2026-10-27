@@ -1,0 +1,4 @@
+interface:
+  display_name: "Logo Design"
+  short_description: "Concept, draw, and check logos and marks"
+  default_prompt: "Use $logo-design to design this logo: write the brief, study competitors, generate concepts in words, develop three distinct routes in precise SVG, and check each at favicon size, in one color, and on dark backgrounds."
