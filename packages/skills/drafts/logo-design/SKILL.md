@@ -19,7 +19,7 @@ When the brand already has a logo, a refinement keeps what people recognize, suc
 2. **Competitors.** Look at the marks of five or more competitors or neighbors in the category. Note the shapes, colors, and type they share. A logo that blends into its category is not recognized; differ on purpose. Without web access, list the competitors and category conventions you know and say they were not researched. Write these notes down before ideation and include them in the presentation. Do not skip this step.
 3. **Mark type.** Choose it from the use, as described in Choosing The Mark Type.
 4. **Ideas in words.** Generate concepts as written one-line ideas before drawing anything, as described in Ideation.
-5. **Routes.** Pick three routes from concepts whose swap fits only this brand, and that differ in idea, not three variations of one idea. At most one route may be built on the name's initial letter, and that route must change the letter to carry an idea; an initial set in a typeface, alone or in a shape, is not a concept. Draw each in black on white first.
+5. **Routes.** Pick three routes from concepts whose swap fits only this brand, and that differ in idea, not three variations of one idea. At most one route may be built on the name's initial letter, and that route must change the letter to carry an idea; an initial set in a typeface, alone or in a shape, is not a concept. When the mark type is a lettermark or monogram, every route is built on the letters, so each must change them to carry a different idea. Draw each in black on white first.
 6. **Construction.** Build each route precisely, as described in Drawing In SVG and Wordmarks.
 7. **Refine.** Add color, build lockups and the small-size version, and finish the chosen route.
 8. **Check.** Follow Verification below, then present as described in Presenting.
@@ -44,7 +44,7 @@ Write at least twenty one-line concepts before choosing. Spread them across rout
 
 Discard concepts that land on category clichés unless the brief gives a real reason to keep one: a lightbulb for ideas, a globe for international, gears for engineering, a leaf for sustainability, a shield or padlock for security, a speech bubble for communication, a brain, circuit, or sparkle for AI, a rocket or upward arrow for growth, connected dots for networks, concentric arcs or waves for signal, a swoosh, an initial in a rounded square, a letter replaced by a picture of the product (a bean for an "o", a drop for an "i"), and an arrangement of circles, squares, and triangles whose only idea is being geometric.
 
-For each surviving concept, write one sentence that explains the idea. A concept that cannot be explained in one sentence will not be understood in one glance. Then swap in a competitor's name: when the concept and its sentence would serve that competitor as well, it is about the category, not this brand; discard it, even when a detail of the brand's story could be added to rescue it. Record each result as "fits only [brand]" or "fits [competitor] too"; "passes" and "fails" get read both ways.
+For each surviving concept, write one sentence that explains the idea. A concept that cannot be explained in one sentence will not be understood in one glance. Then swap in the name of each competitor from step 2: when the concept and its sentence would serve any of them as well, it is about the category, not this brand; discard it, even when a detail of the brand's story could be added to rescue it. For a concept built from the name's letters or sound, apply the same construction to the competitor's name; a letter in a circle still fits when the letter changes. Record each result as "fits only [brand]" or "fits [competitor] too"; "passes" and "fails" get read both ways.
 
 ## Drawing In SVG
 
@@ -70,13 +70,13 @@ Agents draw precise geometry well and freehand shapes badly. Design concepts tha
 
 - Design in black first. A mark that only works in color does not work.
 - Use one or two colors. Each additional color adds cost in print and embroidery and reduces recognition.
-- Choose the color from the brief and the competitor notes. Generated logos default to an orange, rust, or copper accent, and to indigo or violet for technical products. Use one of these only when competitor notes from marks you actually looked at show it is unclaimed, and write that reason in the presentation. Without such notes, choose another color; an unverified guess that the color is free is not a reason.
+- Choose the color from the brief and the competitor notes. A color the brief specifies, or the existing identity uses, stands. Otherwise, generated logos default to an orange, rust, or copper accent, and to indigo or violet for technical products. Use one of these only when competitor notes from marks you actually looked at show none of those competitors uses it, and write that reason in the presentation. Without such notes, choose another color; an unverified guess that the color is free is not a reason.
 - Provide a one-color version, a reversed version for dark backgrounds, and the full-color version. Build each version by deciding which parts become light and which become knockouts, not by swapping fill values: a part drawn in the background's color disappears. Gradients, glows, and shadows can decorate an application of the logo but never carry the mark itself.
-- Check every version on each background it will sit on, including the brand color, and confirm that every part of the mark is still visible.
+- Check every version on each background it will sit on, including the brand color, and confirm that every part of the mark is still visible and contrasts enough with the background to read at a glance.
 
 ## Small Sizes
 
-At 16 to 32px, thin strokes vanish, close shapes merge, and counters fill in. When the full mark loses its idea at those sizes, draw a simplified small version with thicker strokes, fewer parts, and wider gaps, rather than shrinking the full one. Remove any detail, stroke, or gap that would be smaller than about 2px at the target size, since it renders as a blur or disappears. App icons and favicons usually need the symbol alone, filling most of the available square; use a single letter only when the logo is a wordmark or lettermark.
+At 16 to 32px, thin strokes vanish, close shapes merge, and counters fill in. When the full mark loses its idea at those sizes, draw a simplified small version with thicker strokes, fewer parts, and wider gaps, rather than shrinking the full one. Thicken or remove any detail or stroke that would be thinner than about 2px at the target size, since it renders as a blur or disappears, and widen any gap under about 2px, or simplify the parts beside it, since a closed gap merges them. App icons and favicons usually need the symbol alone, filling most of the available square; use a single letter only when the logo is a wordmark or lettermark.
 
 ## Verification
 
@@ -85,7 +85,7 @@ Render the work to images and look at them before presenting.
 - View each route at 16, 32, 64, and 256px and at large size. The idea must still read at 32px, and the mark must still be recognizable at 16px. When any detail, stroke, or gap falls under about 2px at 16px, draw and deliver the small version described in Small Sizes; noting the problem is not enough.
 - View it on white, on black, on the brand color, and on a busy photograph.
 - View the one-color and reversed versions.
-- For each render, write down what you see, part by part, before comparing it with what was intended. A part that vanished, merged, or reads as a different shape is a defect: fix it, or drop the route, before presenting. Do not present a route with a known broken construction.
+- For each render, write down what you see, part by part, before comparing it with what was intended. A part that vanished, merged, or reads as a different shape when the design did not intend it, unlike a planned knockout, is a defect: fix it, or drop the route, before presenting. Do not present a route with a known broken construction.
 - Blur or squint. The silhouette alone should be distinctive.
 - Place it beside the competitor marks from step 2. It should not look like any of them, or like the category average.
 - Check that it does not closely resemble a well-known logo. You cannot clear a trademark; say that a trademark search by a qualified person is still needed before the client adopts it.

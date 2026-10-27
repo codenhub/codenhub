@@ -36,7 +36,7 @@ Generated motion fails in predictable ways: a sequence of headline cards that is
 
 ## Concept
 
-A motion piece shows things changing; a headline that slides in and is then replaced by the next one is a slide. Before the storyboard, decide in one sentence what the viewer watches happen, such as the product's real screen doing the task, a number building from its parts, an object transforming, or one continuous move through a space, and carry that visual through the beats. Text supports the picture: most beats should still make sense with the text covered.
+A motion piece shows things changing; a headline that slides in and is then replaced by the next one is a slide. Before the storyboard, decide in one sentence what the viewer watches happen, such as the product's real screen doing the task, a number building from its parts, an object transforming, or one continuous move through a space, and carry that visual through the beats. Text supports the picture: most beats should still make sense with the text covered. The text-led briefs below are the exception, since there the typography is the picture.
 
 - Show the real thing. When the piece is about a product, use its real screens, footage, or assets, and ask for them when the brief does not include them. When none exist, say so and mark the substitute as a placeholder; invented interface built from dark rounded rectangles makes every product look the same.
 - Use a sequence of text cards only when the brief is a title sequence, a quote, or kinetic typography, and then make the typography itself the picture: large, filling the frame, and moving with the meaning of the words.
@@ -47,7 +47,7 @@ Write a table with one row per beat: start time, duration, on-screen text, what 
 
 - Every beat carries one idea. A beat that needs two sentences of text is two beats.
 - Every text gets time to be read: after it has fully arrived, hold it for at least 1 second plus about 0.3 seconds per word. Viewers read slower in motion than on a page.
-- Every text adds something the earlier beats did not say. Write each as a plain sentence; generated scripts fall back on two-fragment slogans ("Seven days. Seven pings."), "X, not Y" contrasts, and headlines that restate the previous beat. Use each of those patterns at most once in the piece.
+- Every text adds something the earlier beats did not say, so cut any headline that restates the previous beat. Write each as a plain sentence; generated scripts fall back on two-fragment slogans ("Seven days. Seven pings.") and "X, not Y" contrasts. Use each of those patterns at most once in the piece.
 - The first two seconds state what the video is about. On social platforms, most viewers decide within them whether to keep watching.
 - The last beat holds the call to action or the logo for at least 2 seconds.
 
@@ -70,7 +70,7 @@ Write a table with one row per beat: start time, duration, on-screen text, what 
 - Keep text large. On a 1080px-tall frame, keep body text at 40px or more and headlines at 80px or more; on vertical video seen on a phone, go larger. Check legibility by viewing a frame at phone size.
 - Animate text by line or word for anything people must read. Animate by letter only for short display words, since letter-by-letter animation delays reading.
 - Use the brand's fonts, colors, and assets, including the logo file for logo and end cards, never the name retyped in a font. When no logo file is supplied, put a box labeled as the logo placeholder where it goes, with no name set in type beside it, and ask for the file. Load fonts locally and confirm they render before any frame is captured.
-- Without brand colors, take them from the subject, such as the product's interface, the place, or the material, and write in the storyboard which part of the subject each color comes from. Avoid the two palettes generated video falls back to: a near-black ground with one bright accent, and a cream or off-white ground with dark ink. Moods such as "calm", "technical", or "paper-like" are not a source.
+- Without brand colors, take them from the subject, such as the product's interface, the place, or the material, and write in the storyboard which part of the subject each color comes from. Avoid the two palettes generated video falls back to, unless the subject's own colors produce one: a near-black ground with one bright accent, and a cream or off-white ground with dark ink. Moods such as "calm", "technical", or "paper-like" are not a source.
 - Color a word in the accent only when that word is the point of the beat. Coloring the last word of every headline turns emphasis into decoration.
 - Avoid decorative motion without meaning, such as floating particles, perpetual wobble, and lens flares, the motion equivalents of decorative noise.
 
@@ -99,11 +99,11 @@ Look at the output, not the code. Most timing and composition problems are invis
 
 - Make a contact sheet of one frame every half second, for example with `ffmpeg -i out.mp4 -vf "fps=2,scale=480:-1,tile=6x5" sheet%03d.png`, which writes one sheet per 15 seconds, and check the sequence: one focal point per frame, nothing cut off, nothing overlapping by accident.
 - Extract every frame across each transition and each text entrance, and confirm the motion is smooth, with no jumps, flashes of unstyled or missing content, or frames where the wrong font appears.
-- View the hold frame of every beat at phone size and confirm its text reads. Measure the smallest text on the stage against the sizes in Composition, including labels inside interface and charts.
+- View the hold frame of every beat at phone size and confirm its text reads. Measure the smallest text the video adds against the sizes in Composition, including chart labels you set. Text inside real screens or footage keeps its own size; when the text that matters there does not read at phone size, zoom or crop to it.
 - Check the first frame, which platforms often show as the thumbnail, and the last frame. The first frame must show the subject, not an empty background; start the piece with the first beat already partly in view when its entrance would leave frame 0 blank. For a loop, confirm the last frame leads into the first.
 - Overlay the platform's safe area on the key frames and confirm nothing important falls outside it.
-- On each key frame, draw the bounding box of everything visible. On 9:16 it should span at least half the safe area's height; on 16:9, at least half its width. When it does not, enlarge or re-place the content, unless the emptiness is the point of the beat and the storyboard says so.
-- Confirm the file's duration, frame rate, resolution, and codec with `ffprobe`, and that the frame count equals duration times frame rate.
+- On each key frame, draw the bounding box of the content, leaving out full-frame backgrounds and the safe-area overlay. It should span at least half the safe area's longer side: its height on 9:16 and 4:5, its width on 16:9, and either side on 1:1. When it does not, enlarge or re-place the content, unless the emptiness is the point of the beat and the storyboard says so.
+- Confirm the file's duration, frame rate, resolution, and codec with `ffprobe`. For a video file, confirm the frame count equals duration times frame rate; for a GIF or an image sequence, confirm it equals the number of frames rendered.
 - Fix each failure, then render again. A failed check, such as a hold shorter than the minimum or a blank first frame, is not an open decision to hand to the client.
 - When the output cannot be rendered or inspected, say so and name what was not checked.
 

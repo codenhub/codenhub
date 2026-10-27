@@ -76,7 +76,7 @@ Apply the system to the touchpoints that matter most for this brand, such as a w
 
 - Build every application from the system's own assets: the logo file, never the name retyped in a font; the approved colors, type roles, and graphic elements. An application that departs from a rule is either an error or a missing rule; fix one or the other.
 - Show physical items, such as packaging, signage, a vehicle, or merchandise, in a plausible setting at a believable scale, with the brand applied to the object's real shape. A flat colored rectangle labeled with the item's name is not a mockup, and neither is the flat print artwork: a label file or a sticker design is an asset, so render the bag, jar, or window it goes on as well.
-- Use the brand's real content: product names, prices, screens, and data. When the product does not exist yet, write content specific enough that it could only belong to this brand, such as realistic records from its domain; generic interface panels and placeholder copy make every brand look the same.
+- Use the brand's real content: product names, prices, screens, and data, with personal or confidential records replaced by realistic invented ones. When the product does not exist yet, write content specific enough that it could only belong to this brand, such as realistic records from its domain; generic interface panels and placeholder copy make every brand look the same.
 
 ## Verification
 
@@ -84,7 +84,7 @@ Apply the system to the touchpoints that matter most for this brand, such as a w
 - **Logo-free test.** Cover the logo on several applications. They should still look like the same brand, through color, type, imagery, and graphic elements.
 - **Trace test.** For each element, state which part of the strategy it expresses. Cut or change any element with no answer.
 - **Cliché test.** Read every line of text, and compare the visuals against the clichés of the category. Replace what any competitor could have produced.
-- **Copy pattern count.** Search every line of copy, in the guidelines and in the applications, for ", not ", for "Less X. More Y." pairs, for two-fragment slogans, for middot lists, and for uppercase labels above headlines. Count each pattern; when one appears more than once, rewrite all but the clearest as plain sentences, then count again.
+- **Copy pattern count.** Search every line of copy, in the guidelines, the presentation, and the applications, for ", not ", for "Less X. More Y." pairs, for two-fragment slogans, for middot lists, and for uppercase labels above headlines. Count each pattern; when one appears more than once, rewrite all but the clearest as plain sentences, then count again.
 - **Look at the renders.** Open every rendered image and describe what it actually shows, part by part, before judging it. Missing, broken, or vanished elements are easy to miss when checking against what the code was meant to draw.
 - **Consistency test.** View all applications side by side. They should apply the same rules for type, color proportion, spacing, and imagery.
 - **Accessibility.** Text contrast of approved color pairings against the WCAG AA thresholds in Color, exempting logotypes and decorative text, legibility of the typefaces at the sizes they will be used, and the logo at its minimum size.
