@@ -2,291 +2,830 @@
 
 # @codenhub/theme
 
-Zero-dependency browser theme preference, persistence, DOM, and token manager.
+Light and dark mode for browser apps, without the boilerplate. `@codenhub/theme` decides which theme is active, remembers the user's choice in `localStorage`, follows the operating system's light or dark setting until the user picks one, keeps open tabs in agreement, and writes the result onto `<html>` for your CSS to style. It has no dependencies, works with any framework or none, and ships no CSS: your stylesheets decide what each theme looks like.
 
 ## Installation
 
 ```sh
+npm install @codenhub/theme
 pnpm add @codenhub/theme
+yarn add @codenhub/theme
+bun add @codenhub/theme
 ```
 
 ## Usage
 
+Style each theme by its name, which the package writes to `<html>` as `data-theme`:
+
+```css
+:root,
+[data-theme="light"] {
+  --background: #ffffff;
+  --text: #171717;
+}
+
+[data-theme="dark"] {
+  --background: #171717;
+  --text: #f5f5f5;
+}
+
+body {
+  background: var(--background);
+  color: var(--text);
+}
+```
+
+Then create the manager once, start it, and wire up a button:
+
 ```ts
 import { createTheme } from "@codenhub/theme";
 
-// In the browser:
 const theme = createTheme().init();
 
 document.querySelector("#theme-toggle")?.addEventListener("click", theme.toggle);
-theme.subscribe(({ name }) => console.log(`theme is now ${name}`));
-
-// Remove media-query/storage listeners and subscribers on teardown.
-theme.destroy({ revertDom: true });
-
-// On the server or at build time, with the same options: inline this string in a
-// blocking <head> script so the theme applies before the first paint.
-const script = createTheme().getPrePaintScript();
 ```
+
+With no options, there are two themes, `light` and `dark`. `init()` applies the user's saved choice, or else the operating system's setting, and `toggle()` switches themes and saves the choice.
+
+Because this script runs after the browser first paints, a user who chose dark briefly sees the light theme on load. Production apps also inline the script from `getPrePaintScript()` in `<head>` to apply the theme before the first paint; [Preventing the flash](docs/preventing-the-flash.md) shows how.
 
 ## Documentation
 
-- [Documentation overview](docs/index.md)
-- [Tokens, persistence, and cross-tab sync](docs/tokens-and-persistence.md)
-- [SSR, pre-paint, and Tailwind](docs/ssr-and-pre-paint.md)
-- [API reference](docs/reference/index.md)
+- [Documentation overview](docs/index.md): How the package works, and a walkthrough from first theme to production setup.
+- [Getting started](docs/getting-started.md): A working light and dark toggle, step by step.
+- [Preventing the flash](docs/preventing-the-flash.md): Applying the theme before the first paint, in static and server-rendered apps.
+- [Frameworks](docs/frameworks.md): React and Tailwind CSS.
+- [API reference](docs/reference/index.md): Every export with its full signature.
+- [Changelog](docs/changelog/index.md): Changes in each release.
 
 ## Requirements
 
-- Browser integration uses `document.documentElement`, `localStorage`, `matchMedia`, `storage` events, and `CustomEvent`.
-- SSR is supported by skipping unavailable browser work and using the configured default theme.
-- Consumers provide CSS selectors, variables, and visual tokens, and inline the script from `getPrePaintScript()` to prevent a theme flash.
-- TypeScript 5.4 or newer, for the types, which use `NoInfer`.
+- A browser to apply the theme. On a server, the manager safely does nothing that needs one and reports the default theme.
+- Your own CSS for each theme. The package writes the theme's name, an optional class, `color-scheme`, and optional CSS custom properties to `<html>`; it ships no styles.
+- TypeScript 5.4 or newer, if you use TypeScript, for the `NoInfer` the types rely on.
 
 ## Notes
 
-Construction validates theme names, mappings, attributes, classes, and token schemas and throws on invalid configuration. Storage failures are reported to the console and treated as unavailable storage.
+- `createTheme()` validates its options immediately and throws an `Error` naming the problem, such as a `defaultTheme` that is not one of your themes.
+- When the browser blocks `localStorage`, the package logs each kind of failure (read, write, delete) once with `console.error` and keeps working; a choice it could not save lasts until the page closes.
 
 ## License
 
-Licensed under Apache-2.0.
+Licensed under the [Apache-2.0](LICENSE) license.
 
 <!-- Source: docs/index.md -->
 
 # Manage Browser Themes
 
-`@codenhub/theme` owns one thing for a browser application: deciding which theme is active, keeping it in sync with `localStorage` and the OS `prefers-color-scheme` setting, and reflecting it onto the DOM as an attribute, a class, a `color-scheme`, and CSS custom properties. It fits applications that want one place to own that decision instead of scattering `matchMedia` listeners and `localStorage` reads across the codebase, while keeping selectors, visual design, and CSS entirely in application code.
+Almost every app that offers a dark mode ends up writing the same code: check `localStorage` for a saved choice, fall back to the operating system's light or dark setting, put a class or attribute on `<html>` so CSS can react, save the choice when the user clicks a toggle, and keep every open tab in agreement. Then it flashes the wrong theme on page load, and the code grows a second copy of itself inside an inline script to fix that.
 
-## Setup
+`@codenhub/theme` is that code, written once. You describe your themes, and it decides which one is active, remembers the user's choice, follows the operating system until the user makes one, and tells the page about it.
 
-### Installation
+## What it does, and what it leaves to you
+
+The package decides **which** theme is active. Your CSS decides what each theme **looks like**.
+
+On every change, it writes the active theme onto the `<html>` element (`document.documentElement`):
+
+```html
+<html data-theme="dark" class="theme-dark" style="color-scheme: dark"></html>
+```
+
+- `data-theme="dark"`: the theme's name, for CSS selectors such as `[data-theme="dark"]`.
+- `class="theme-dark"`: the same name as a `theme-<name>` class, added by default for code that prefers classes (the `className` option changes or removes it). With `darkClass: true`, a `dark` class for Tailwind CSS is added too.
+- `color-scheme: dark`: tells the browser to draw its own controls, such as scrollbars and form fields, in dark colors.
+- CSS custom properties, such as `--color-primary`, for the tokens you list in `tokenSchema` and give values in JavaScript.
+
+It ships no CSS, no colors, and no toggle button. Those stay in your application, in whatever form you already write them.
+
+## How a theme is chosen
+
+When the page starts, the package picks a theme in this order:
+
+1. **The user's saved choice.** Once the user picks a theme, it is saved in the browser's `localStorage` and wins on every later visit.
+2. **The operating system's setting.** Until the user picks one, the theme follows the system's light or dark mode, and changes with it.
+3. **The default theme.** If neither is available, such as on a server, the default theme applies: `light`, unless you configure another.
+
+## The walkthrough
+
+These pages build on each other, so reading them in order takes you from an empty page to a production setup:
+
+1. [Getting started](docs/getting-started.md): Install the package and build a working light and dark toggle.
+2. [Defining themes](docs/themes.md): Add your own themes, decide how the toggle and the system setting pick between them, and read the current state.
+3. [Design tokens](docs/tokens.md): Keep theme colors in JavaScript and change them at runtime.
+4. [Saving and syncing](docs/persistence-and-sync.md): How the choice is saved, how tabs stay in agreement, and how to react when the theme changes.
+5. [Preventing the flash](docs/preventing-the-flash.md): Apply the theme before the first paint, in a static site or a server-rendered one.
+6. [Frameworks](docs/frameworks.md): Use the package with React, and with Tailwind CSS's `dark:` variant.
+7. [Troubleshooting](docs/troubleshooting.md): What to check when something does not work.
+
+The [API reference](docs/reference/index.md) lists every export with its full signature. Look things up there; read the walkthrough to learn how they fit together.
+
+## Requirements
+
+- A browser for the theme to show. The package uses `document.documentElement`, `localStorage`, `matchMedia`, `storage` events, and `CustomEvent`, and treats any of them that is missing as absent instead of crashing your page. A `localStorage` or `matchMedia` call that throws, as in a private window, is treated the same way. On a server it does nothing that needs a browser; see [Preventing the flash](docs/preventing-the-flash.md).
+- TypeScript 5.4 or newer, if you use TypeScript. The types use `NoInfer`, which older compilers report as `Cannot find name 'NoInfer'`. Plain JavaScript projects need nothing extra.
+- No other dependencies, and no framework.
+
+<!-- Source: docs/getting-started.md -->
+
+# Getting Started
+
+This page builds the smallest useful thing: a page with a light and a dark theme, and a button that switches between them. It assumes a project with a bundler, such as [Vite](https://vite.dev/), that resolves `import` statements from `node_modules`.
+
+## 1. Install the package
+
+Install it with your project's package manager:
+
+```sh
+npm install @codenhub/theme
+```
 
 ```sh
 pnpm add @codenhub/theme
 ```
 
-### Quick start
+```sh
+yarn add @codenhub/theme
+```
+
+```sh
+bun add @codenhub/theme
+```
+
+## 2. Write the CSS for each theme
+
+The package writes the theme's name onto `<html>`, as `data-theme="light"` or `data-theme="dark"`, along with the `color-scheme` property and, by default, a matching `theme-<name>` class. Your stylesheet gives each name its look. CSS custom properties keep that short: define the colors once per theme, and use them everywhere else.
+
+```css
+/* styles.css */
+:root,
+[data-theme="light"] {
+  --background: #ffffff;
+  --text: #171717;
+}
+
+[data-theme="dark"] {
+  --background: #171717;
+  --text: #f5f5f5;
+}
+
+body {
+  background: var(--background);
+  color: var(--text);
+}
+```
+
+`:root` gives the page the light colors before any theme is applied, so it never renders with no colors at all.
+
+## 3. Add a button
+
+Any element works. This one has an `id` so the script can find it:
+
+```html
+<button id="theme-toggle" type="button">Toggle theme</button>
+```
+
+## 4. Create the theme manager
 
 ```ts
+// main.ts
 import { createTheme } from "@codenhub/theme";
+
+import "./styles.css";
 
 const theme = createTheme().init();
 
 document.querySelector("#theme-toggle")?.addEventListener("click", theme.toggle);
 ```
 
-`createTheme()` with no arguments configures the built-in `light` and `dark` themes. `init()` resolves the theme to apply — a stored preference if one is valid, otherwise the OS preference — and applies it to `document.documentElement`. Every method is bound to its manager, so `theme.toggle` and `theme.subscribe` can be passed as callbacks directly. Call `destroy()` when the manager's owner is torn down, such as in a framework component's cleanup hook; it stops listening but leaves the DOM and stored preference as they were unless told otherwise (see [SSR, pre-paint, and Tailwind](docs/ssr-and-pre-paint.md)).
+Three things happen here:
 
-### Reading state
+- `createTheme()` creates a **theme manager**, the object that owns the active theme. With no options, it knows two themes, `light` and `dark`. Creating it changes nothing on the page yet.
+- `.init()` starts it. It picks the theme to show, the user's saved choice or else the operating system's setting, applies it to `<html>`, and starts listening for system changes. It returns the same manager, so the two calls chain.
+- `theme.toggle` switches to the other theme and saves the choice. Every method of the manager can be passed as a callback on its own, as it is here, without wrapping it in an arrow function.
 
-| Member             | Value                                                                                     |
-| ------------------ | ----------------------------------------------------------------------------------------- |
-| `theme.name`       | Active theme name.                                                                        |
-| `theme.get()`      | Active theme — `name`, `colorScheme`, `tokens`, `pairedTheme` — as a frozen object.       |
-| `theme.preference` | Explicit preference stored in `localStorage` when it names a configured theme, or `null`. |
-| `theme.system`     | Theme the OS preference maps to right now.                                                |
+## 5. Try it
 
-`theme.preference` reflects what storage holds, so it is also `null` while storage cannot be read. When storing a choice made with `set()` or `toggle()` fails, the choice still holds over OS changes, while `preference` keeps reporting storage: `null` when reading fails too, or the previously stored theme when only writing fails, as with a full quota; see [Persistence](docs/tokens-and-persistence.md#persistence).
+Open the page and click the button: the colors switch. Now reload the page. The theme you picked is still there, because `toggle()` saved it to `localStorage`.
 
-`get()` returns the same object until the next change, so it works directly as a store snapshot. In React:
+To see the operating-system part, clear the saved choice by running this in the browser console:
 
-```ts
-import { useSyncExternalStore } from "react";
-
-function useActiveTheme() {
-  return useSyncExternalStore(theme.subscribe, theme.get);
-}
+```js
+localStorage.removeItem("app-theme-preference");
 ```
 
-A server-rendered app also passes `getServerSnapshot`, which must return the theme the server rendered with. Passing `theme.get` there makes hydration read the theme `init()` resolved in the browser, and React reports a mismatch when it differs. A server that renders with this package alone renders `defaultTheme`, since it has no stored or OS preference, so take the snapshot before `init()` runs; the component then renders the default theme while hydrating and updates right after:
+Reload, then switch your system between light and dark mode. With no saved choice, the page follows along.
 
-```ts
-const serverSnapshot = theme.get(); // before theme.init()
+## What you have, and what is next
 
-function useActiveTheme() {
-  return useSyncExternalStore(theme.subscribe, theme.get, () => serverSnapshot);
-}
-```
+You now have a working theme switch. Two things are still missing for a production app:
 
-A server that resolves the theme per request instead, such as from a cookie, renders with that theme, so `getServerSnapshot` must return the same one, passed to the client with the page.
+- **A flash on load.** Your script runs after the browser has already painted the page once, so a user who chose dark sees a light page for a moment first. [Preventing the flash](docs/preventing-the-flash.md) fixes that with a small inline script.
+- **Cleanup**, if the manager lives inside a component that can unmount. Call `theme.destroy()` in its cleanup to stop the manager's listeners. A manager created once for the whole page, as above, never needs it. [Frameworks](docs/frameworks.md) shows where it goes in React.
 
-### Configuration
+Next, [Defining themes](docs/themes.md) replaces the two built-in themes with your own.
 
-Most applications configure their themes and a `tokenSchema` up front:
+<!-- Source: docs/themes.md -->
+
+# Defining Themes
+
+[Getting started](docs/getting-started.md) used the two built-in themes. Real apps usually want their own: a dimmer dark theme, a high-contrast one, a brand theme. This page adds them, explains how the toggle and the operating system choose between them, and shows how to read what is active.
+
+## Describe your themes
+
+Pass `themes` to `createTheme()`, keyed by theme name:
 
 ```ts
 import { createTheme } from "@codenhub/theme";
 
 const theme = createTheme({
   themes: {
-    light: { colorScheme: "light", tokens: { primary: "#171717" } },
-    dark: { colorScheme: "dark", tokens: { primary: "#f9fafb" } },
-    dim: { colorScheme: "dark", pairedTheme: "light" },
+    light: { colorScheme: "light" },
+    dark: { colorScheme: "dark" },
+    dim: { colorScheme: "dark" },
   },
-  tokenSchema: { primary: "--color-primary" },
-  storageKey: "app-theme-preference",
-  darkClass: true,
 }).init();
+```
 
+Each name is what lands in `data-theme`, so the CSS from Getting started gains one more block:
+
+```css
+[data-theme="dim"] {
+  --background: #2b2b33;
+  --text: #e4e4e7;
+}
+```
+
+`colorScheme` says whether a theme is light or dark. It is required, and it does three jobs: the package writes it to `color-scheme` so browser controls match, the toggle uses it to find the opposite theme, and Tailwind's `dark` class follows it.
+
+`themes` replaces the built-in list rather than adding to it. Keep themes named `light` and `dark`, as above, or tell the package which themes to use instead, as the next sections show.
+
+## Switch to a specific theme
+
+`set()` applies a theme and saves it as the user's choice, the same way the toggle does. Use it for a theme menu:
+
+```ts
 theme.set("dim");
 ```
 
-`themes` is keyed by theme name and replaces the built-in list entirely — include `light` and `dark`, or set `defaultTheme` and `systemTheme` to names you do define. Theme names are inferred from its keys, so `defaultTheme`, `systemTheme`, `pairedTheme`, and `set()` accept only configured names at compile time. The types do not make `defaultTheme` and `systemTheme` required when `themes` lacks `light` or `dark`; `createTheme()` throws instead, naming the missing theme. A conditional parameter type would catch it at compile time, but it was rejected because it breaks generic wrappers that forward `ThemeOptions<N>` to `createTheme()`. `tokenSchema` maps the typed token names used in `tokens` to the CSS custom property each one writes to `document.documentElement`. See [Tokens, persistence, and cross-tab sync](docs/tokens-and-persistence.md) for how token values are resolved and stored, and [SSR, pre-paint, and Tailwind](docs/ssr-and-pre-paint.md) for flash-of-unstyled-content prevention, `darkClass`, and `className`.
+The names come from your `themes` object, so in TypeScript a misspelled name, such as `theme.set("dimm")`, is a compile error. In JavaScript it throws `Theme is not configured: dimm.`
 
-Construction validates the options and throws on invalid configuration, such as a `themes` or `systemTheme` value that is not a plain object, an empty theme name, a `defaultTheme`, `systemTheme`, or `pairedTheme` name that is not in `themes`, an invalid `colorScheme`, theme tokens outside `tokenSchema`, a `darkClass` that is not a boolean, an `attribute` of `class` or `style`, or, while `className` is `true`, a theme name that cannot form the default `theme-<name>` class. The [API reference](docs/reference/index.md) lists every rule.
+To forget the user's choice and follow the operating system again, for an "Auto" or "System" menu entry, call `clearPreference()`:
 
-An option set to `undefined` uses its default, exactly as an omitted one does. The option types accept `undefined`, so a wrapper that forwards an unset option, such as `storageKey: props.storageKey`, gets the default instead of a construction error. Rejecting `undefined` was the behavior before 0.2.0; it was dropped because it failed at runtime on code the types accept.
+```ts
+theme.clearPreference();
+```
 
-## Requirements
+## Choose the themes the system picks
 
-- Browser integration uses `document.documentElement`, `localStorage`, `matchMedia`, `storage` events, and `CustomEvent`. Every one of these is read defensively: an unavailable or throwing API is treated as absent rather than crashing the caller.
-- SSR is supported by skipping unavailable browser work and using the configured `defaultTheme`. The package cannot produce server HTML attributes or prevent a flash on its own — see [SSR, pre-paint, and Tailwind](docs/ssr-and-pre-paint.md).
-- Consumers provide CSS selectors, variables, and visual tokens. The package only ever writes an attribute, optional classes, `color-scheme`, and CSS custom properties — it ships no CSS or token values.
-- TypeScript 5.4 or newer, for the types, which use `NoInfer` to infer theme names from `themes` alone. Older compilers report `Cannot find name 'NoInfer'`, or, with `skipLibCheck`, accept unconfigured theme names.
+When the user has not chosen a theme, the package follows the operating system: `light` when it is in light mode, `dark` when it is in dark mode. `systemTheme` changes which of your themes those are:
 
-## Next steps
+```ts
+const theme = createTheme({
+  themes: {
+    paper: { colorScheme: "light" },
+    ink: { colorScheme: "dark" },
+  },
+  systemTheme: { light: "paper", dark: "ink" },
+  defaultTheme: "paper",
+});
+```
 
-- [Tokens, persistence, and cross-tab sync](docs/tokens-and-persistence.md): How token values are resolved, how preferences persist to `localStorage` and sync across tabs, and how to react to changes.
-- [SSR, pre-paint, and Tailwind](docs/ssr-and-pre-paint.md): Preventing a flash of unstyled content before hydration, server-rendering considerations, and the classes the package applies.
-- [API reference](docs/reference/index.md): Every exported function, type, and interface member with its full signature.
+`defaultTheme` is the theme used when there is no system setting to read, such as on a server or in a browser without `matchMedia`, and before `init()` runs. Because these themes are not named `light` and `dark`, both options are needed here; without them, `createTheme()` throws an error naming the missing theme.
 
-<!-- Source: docs/ssr-and-pre-paint.md -->
+## Decide what the toggle does
 
-# SSR, Pre-Paint, and Tailwind
+A toggle switches between two things, but an app can have more than two themes. `toggle()` decides where to go from the active theme:
 
-## Preventing a flash of unstyled content
+1. If the active theme has a `pairedTheme`, it goes there.
+2. Otherwise, it goes to the system theme of the opposite color scheme: from a dark theme to `systemTheme.light`, from a light theme to `systemTheme.dark`.
 
-A client-side `init()` call runs after the page has already painted once, which is visible as a flash from the default theme to the resolved one. `getPrePaintScript()` returns a synchronous, minified inline IIFE string that repeats the same stored-preference-then-system-preference resolution and applies the configured attribute, `color-scheme`, classes, and static tokens before the browser paints:
+With the three themes from the start of this page, toggling from `light` goes to `dark` and back, and `dim` would toggle to `light`, the light system theme. To send `dim` somewhere else, pair it:
+
+```ts
+const theme = createTheme({
+  themes: {
+    light: { colorScheme: "light" },
+    dark: { colorScheme: "dark" },
+    dim: { colorScheme: "dark", pairedTheme: "light" },
+    sepia: { colorScheme: "light", pairedTheme: "dim" },
+  },
+});
+```
+
+Now `sepia` toggles to `dim`, and `dim` toggles back to `light`. A pair goes one way only: give each theme its own `pairedTheme` when the toggle should return to where it came from.
+
+## Read the current state
+
+The manager answers four questions:
+
+| Member             | Answers                                                                                                                                 |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `theme.name`       | Which theme is active, such as `"dim"`.                                                                                                 |
+| `theme.get()`      | Everything about the active theme: `name`, `colorScheme`, `tokens`, and `pairedTheme`.                                                  |
+| `theme.preference` | Which theme the user saved, or `null` when nothing is saved, storage cannot be read, or the saved name is no longer one of your themes. |
+| `theme.system`     | Which theme the operating system's setting maps to right now, whether or not it is shown.                                               |
+
+`preference` is what makes an "Auto" option possible: a menu shows "Auto" as selected while it is `null`.
+
+```ts
+const selected = theme.preference ?? "auto";
+```
+
+`preference` reads what is actually saved. While the browser blocks `localStorage`, it stays `null` even after the user picks a theme, although the choice is still applied for as long as the page runs; [Saving and syncing](docs/persistence-and-sync.md#when-storage-fails) covers that case.
+
+`get()` returns a frozen object, and the same object until the theme next changes. That makes it safe to hand to a UI framework as a store snapshot, which [Frameworks](docs/frameworks.md#react) relies on.
+
+## Every option, and its default
+
+All options are optional. An option set to `undefined` gets its default, exactly as an omitted one does, so a wrapper can forward its own optional settings without checking them.
+
+| Option         | Default                                                              | What it controls                                                                                            |
+| -------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `themes`       | `{ light: { colorScheme: "light" }, dark: { colorScheme: "dark" } }` | The available themes, keyed by name.                                                                        |
+| `defaultTheme` | `"light"`                                                            | The theme used when no system setting can be read, and before `init()`.                                     |
+| `systemTheme`  | `{ light: "light", dark: "dark" }`                                   | The themes used for the operating system's light and dark modes.                                            |
+| `storageKey`   | `"app-theme-preference"`                                             | The `localStorage` key the user's choice is saved under.                                                    |
+| `attribute`    | `"data-theme"`                                                       | The attribute on `<html>` that holds the theme name.                                                        |
+| `className`    | `true`                                                               | The class on `<html>`: `true` adds `theme-<name>`, `false` adds none, and a function returns a custom one.  |
+| `darkClass`    | `false`                                                              | Whether to add a `dark` class while a dark theme is active, for [Tailwind CSS](docs/frameworks.md#tailwind-css). |
+| `tokenSchema`  | none                                                                 | The CSS custom properties token values are written to; see [Design tokens](docs/tokens.md).                      |
+
+A few of these deserve a word:
+
+- **`storageKey`**: Every app on the same domain shares one `localStorage`. If two apps on one domain both use this package, give each its own key, such as `"my-app-theme"`, so they do not overwrite each other's choice.
+- **`attribute`**: Any valid HTML attribute name works, one without spaces, quotes, `/`, `>`, or `=`, except `class` and `style`, because writing the theme name there would erase the classes and inline styles your page put on `<html>`. Use `className` to get a class.
+- **`className`**: A function receives the theme, including its static tokens, and returns one class name with no spaces. `className: (theme) => theme.name` gives classes like `dark` and `dim` instead of `theme-dark`. A function that returns an empty or space-containing name makes the operation that applied it throw.
+
+## When the configuration is wrong
+
+`createTheme()` checks every option immediately and throws an `Error` describing the first problem it finds, such as a `defaultTheme` or `pairedTheme` that names no configured theme, a `colorScheme` that is neither `"light"` nor `"dark"`, or, while `className` is `true`, a theme name that cannot be part of a class. Nothing reaches the page from invalid options, so a mistake shows up the first time the code runs, not as a theme that silently never applies. The [`createTheme` reference](docs/reference/index.md#createtheme) lists every rule.
+
+Next, [Design tokens](docs/tokens.md) moves theme colors from CSS into JavaScript, for apps that need to change them while running.
+
+<!-- Source: docs/tokens.md -->
+
+# Design Tokens
+
+So far, every color lived in CSS, keyed by `[data-theme]`. That is the simplest setup and often all an app needs. Some apps need theme values in JavaScript too: colors loaded from a JSON config, a brand color the user picks in a settings screen, or a value a canvas chart reads. **Tokens** cover those cases. A token is a named value, such as `primary`, that the package writes to a CSS custom property, such as `--color-primary`, whenever its theme is active.
+
+## Name your tokens
+
+`tokenSchema` lists the tokens and the custom property each one is written to:
+
+```ts
+import { createTheme } from "@codenhub/theme";
+
+const theme = createTheme({
+  themes: {
+    light: { colorScheme: "light", tokens: { primary: "#171717", surface: "#ffffff" } },
+    dark: { colorScheme: "dark", tokens: { primary: "#f9fafb", surface: "#171717" } },
+  },
+  tokenSchema: { primary: "--color-primary", surface: "--color-surface" },
+}).init();
+```
+
+Each theme's `tokens` holds its values. When `dark` becomes active, the package sets `--color-primary: #f9fafb` and `--color-surface: #171717` on `<html>`, and your CSS uses them like any other custom property:
+
+```css
+button {
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+```
+
+In TypeScript, the keys of `tokenSchema` type every `tokens` object, so a misspelled token name is a compile error. Without a `tokenSchema`, tokens are not allowed at all.
+
+Each `tokenSchema` value must be a custom property name a stylesheet can use as written: `--` followed by letters, digits, `-`, `_`, or non-ASCII characters. Anything else, such as `"--"` alone or a name containing a space, throws from `createTheme()`, as does mapping two tokens to the same property.
+
+## Mix tokens with CSS
+
+A theme does not have to set every token. When the active theme leaves a token out, the package removes that property from `<html>`, and whatever your stylesheet says applies instead. Token values are set as inline styles on `<html>`, so when a theme does set one, it wins over a value for the same property in a `[data-theme]` rule, unless that rule uses `!important`.
+
+That lets you keep most values in CSS and move only the ones JavaScript must control.
+
+## Change tokens at runtime
+
+`setTokens()` overrides token values for every theme, which suits a color the user picks:
+
+```ts
+const picker = document.querySelector<HTMLInputElement>("#accent-picker");
+
+picker?.addEventListener("input", () => {
+  theme.setTokens({ primary: picker.value });
+});
+```
+
+Overrides win over the themes' own `tokens`, and they stay in place when the theme changes. Each call replaces all previous overrides, so pass every token you want overridden, and pass `{}` to remove them all.
+
+A few rules keep the values predictable:
+
+- **Overrides are not saved.** They last until the page unloads or `destroy()` runs. To keep a user's color, save it yourself and call `setTokens()` again on the next visit.
+- **An empty value means "no override".** A token set to `""` or `undefined` falls back to the theme's own value, or to your CSS when the theme sets none. A cleared color input therefore returns to the theme color instead of removing it.
+- **Numbers are written as strings.** In JavaScript, `setTokens({ radius: 4 })` writes `"4"`; the TypeScript types accept strings only, so write `"4"` there. Any value that is not a string, a finite number, `undefined`, or `""` throws, as does a token name that is not in `tokenSchema`.
+- **Values are not checked as CSS.** A value the browser rejects, such as `"red; color: blue"`, is simply not applied, and the property keeps its previous value, although `get().tokens` still reports the rejected value. Check values that come from user input before passing them in.
+- **Before `init()`, overrides wait.** Called before the first theme is applied, or after `destroy()`, `setTokens()` only records the overrides; the next change, usually `init()`, applies them. This keeps an early call from showing the default theme over the one already on the page.
+
+## Read token values
+
+`theme.get().tokens` holds the values JavaScript knows about: the active theme's `tokens` with your overrides on top. It never reads the page.
+
+`theme.readTokens()` also includes tokens defined only in CSS. For each token JavaScript has no value for, it reads the value the browser computed for the custom property on `<html>`:
+
+```ts
+theme.setTokens({ primary: "#00c853" });
+
+// With the light theme active:
+theme.get().tokens; // { primary: "#00c853", surface: "#ffffff" }
+theme.readTokens(); // the same, plus any token the theme left to CSS
+```
+
+Reading computed styles can make the browser recalculate layout, so prefer `get().tokens` unless you need the CSS-only values. `readTokens()` skips the read entirely when JavaScript knows every token.
+
+Next, [Saving and syncing](docs/persistence-and-sync.md) covers how the user's choice is saved and how the rest of your code finds out when the theme changes.
+
+<!-- Source: docs/persistence-and-sync.md -->
+
+# Saving and Syncing
+
+The theme switch already remembers the user's choice and follows the operating system. This page explains how that works, what happens when the browser gets in the way, and how the rest of your code can follow along when the theme changes.
+
+## How the choice is saved
+
+`set()` and `toggle()` save the chosen theme's name in `localStorage`, under the key `"app-theme-preference"` unless you set `storageKey`. On the next visit, `init()` finds it and applies it. `clearPreference()` deletes it and returns to the operating system's setting.
+
+Only a name that matches a configured theme counts. If the saved value names a theme you have since removed, the package ignores it, as if nothing were saved.
+
+While a choice is saved, changes to the operating system's light or dark mode are ignored: the user said what they want. They apply again once `clearPreference()` runs.
+
+## When storage fails
+
+Browsers can refuse `localStorage`: a private window may block it, a user may disable site data, or storage may be full. The package never lets that break your page, and each kind of failure (read, write, delete) is logged once with `console.error`, not on every call:
+
+- **A failed read** counts as no saved choice, so the operating system's setting applies, unless the user already picked a theme with `set()` or `toggle()` on this page, which stays.
+- **A failed write** keeps whatever was saved before, if anything. The user's new choice still works for as long as the page is open: after `set()` or `toggle()`, the chosen theme stays, and operating-system changes do not override it. On reload, the previously saved theme, or the operating system's setting, applies again.
+- **A failed delete** in `clearPreference()` leaves the old choice saved. The page switches to the system theme, but a reload restores the saved choice, and operating-system changes stay ignored while it is there.
+
+`theme.preference` reports the saved choice when it names one of your themes, and `null` otherwise, so in that situation it can disagree with the active theme: it stays `null` when storage cannot be read at all, and keeps the previously saved theme when only saving fails, as with a full quota.
+
+## Keeping tabs in agreement
+
+A user with your app open in two tabs who switches the theme in one expects the other to follow. It does, automatically: every tab whose manager has run `init()` with the same `storageKey` listens for changes to the saved choice. When another tab saves, clears, or replaces it, including with `localStorage.clear()`, each tab picks its theme again from storage and the operating system, as `init()` does. A choice a tab could not save is dropped at that point, because storage no longer agrees with it. The exception is a tab where accessing `window.localStorage` itself throws: it ignores these events and keeps its choice. A tab that can reach `localStorage` but fails to read from it drops its choice like any other.
+
+Only the theme follows. Token overrides from `setTokens()` belong to the tab that set them.
+
+## Reacting to changes
+
+Other parts of your code may need to know when the theme changes: a chart that redraws in new colors, or an icon that shows a sun or a moon. `subscribe()` calls a function after every change and returns a function that stops it:
+
+```ts
+const unsubscribe = theme.subscribe(({ name, theme: active, source }) => {
+  console.log(`Now showing ${name}, a ${active.colorScheme} theme, because of ${source}.`);
+});
+
+// Later, when it is no longer needed:
+unsubscribe();
+```
+
+The function receives:
+
+- `name`: the active theme's name.
+- `theme`: the same object `theme.get()` returns.
+- `source`: what caused the change. It is the method that ran, `"init"`, `"set"`, `"toggle"`, `"clearPreference"`, or `"setTokens"`; `"system"` when the operating system's mode changed; or `"storage"` when another tab changed the saved choice.
+
+`source` matters when your app also saves the theme somewhere else, such as a user profile on your server. React only to `"set"`, `"toggle"`, and `"clearPreference"`, the user's own actions. Otherwise every open tab would repeat the same request when it receives the change through `"storage"`.
+
+A few guarantees make subscribers safe to write:
+
+- A subscriber that throws is logged, and the others still run.
+- A subscriber that changes the theme itself, such as by calling `set()`, stops the delivery of the change it received: the subscribers after it receive only the newer change, so none of them acts on a theme that is already gone.
+- A subscriber added while a change is being delivered receives only later changes.
+
+### From code without access to the manager
+
+Some code cannot import the manager, such as a third-party widget or a separate script. The package also dispatches a `themechange` event on `window` after every change that a subscriber did not replace with a newer one, with the same information in its `detail`. Import the event name and type instead of writing the string yourself:
+
+```ts
+import { THEME_CHANGE_EVENT, type ThemeChangeEvent } from "@codenhub/theme";
+
+window.addEventListener(THEME_CHANGE_EVENT, (event) => {
+  const { name } = (event as ThemeChangeEvent).detail;
+  console.log(`Now showing ${name}.`);
+});
+```
+
+The event does not say which manager sent it. If a page runs more than one manager, use `subscribe()` on the one you care about.
+
+Next, [Preventing the flash](docs/preventing-the-flash.md) makes the right theme appear before the page is first drawn.
+
+<!-- Source: docs/preventing-the-flash.md -->
+
+# Preventing the Flash
+
+Reload the page from [Getting started](docs/getting-started.md) with the dark theme chosen, and look closely: for a moment, it is light. The browser draws the page as soon as it has the HTML and CSS, and your script, which calls `init()`, runs after that. Until then, `<html>` carries no `data-theme`, so the page shows its default colors.
+
+The fix is a tiny script that runs **before** the first paint. It must be written directly into the page's `<head>`, not loaded from a file, so the browser runs it before drawing anything. `getPrePaintScript()` returns that script as a string. It repeats exactly what `init()` decides, the saved choice, else the operating system's setting, and applies the attribute, classes, `color-scheme`, and theme tokens. When `init()` runs later, the right theme is already there and nothing visibly changes.
+
+## Share the options
+
+The pre-paint script and the manager in your app must agree on every option: if one uses another `storageKey`, they disagree about the saved choice and the flash comes back. Keep the options in one module that both import:
+
+```ts
+// src/theme-options.ts
+import type { ThemeOptions } from "@codenhub/theme";
+
+export const themeOptions = {
+  themes: {
+    light: { colorScheme: "light" },
+    dark: { colorScheme: "dark" },
+  },
+  storageKey: "my-app-theme",
+} satisfies ThemeOptions;
+```
+
+```ts
+// src/main.ts
+import { createTheme } from "@codenhub/theme";
+
+import { themeOptions } from "./theme-options";
+
+export const theme = createTheme(themeOptions).init();
+```
+
+`satisfies ThemeOptions` checks the object against the option types while keeping its exact theme names, so `theme.set()` still accepts only `"light"` and `"dark"`.
+
+Where the script is generated depends on how your HTML is produced.
+
+## In a static site
+
+A single-page app built with Vite has one `index.html`, written at build time. `createTheme()` is safe to call outside a browser, so a small plugin in `vite.config.ts` can generate the script during the build and put it at the top of `<head>`:
+
+```ts
+// vite.config.ts
+import { createTheme } from "@codenhub/theme";
+import { defineConfig } from "vite";
+
+import { themeOptions } from "./src/theme-options";
+
+export default defineConfig({
+  plugins: [
+    {
+      name: "theme-pre-paint",
+      transformIndexHtml() {
+        return [
+          {
+            tag: "script",
+            children: createTheme(themeOptions).getPrePaintScript(),
+            injectTo: "head-prepend",
+          },
+        ];
+      },
+    },
+  ],
+});
+```
+
+Run the dev server, view the page source, and the script is the first thing in `<head>`. Other build tools have an equivalent step for editing the HTML; what matters is that the string ends up inside a `<script>` element in `<head>`, before your stylesheets.
+
+## In a server-rendered app
+
+When a server builds each page, generate the script there and write it into the HTML it sends. With any Node.js server that writes HTML as a string:
 
 ```ts
 import { createTheme } from "@codenhub/theme";
 
 import { themeOptions } from "./theme-options";
 
-const script = createTheme(themeOptions).getPrePaintScript();
+// The script depends only on the options, so build it once.
+const prePaintScript = createTheme(themeOptions).getPrePaintScript();
+
+function renderPage(body: string): string {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <script>${prePaintScript}</script>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>${body}</body>
+</html>`;
+}
 ```
 
-`createTheme()` is safe to call on the server, so one options module can build the script there and the manager in the browser, keeping the two in agreement. Inject the returned string into a blocking `<script>` in the document `<head>`, before any stylesheet or content that depends on the theme:
+The script is safe to place inside `<script>` as is: theme names and token values cannot close the element or break out of it.
 
-```html
-<head>
-  <script>
-    /* inline the string returned by getPrePaintScript() here */
-  </script>
-</head>
-```
-
-The script handles storage and `matchMedia` failures the same way `init()` does: blocked storage still applies the system theme, and a missing `matchMedia` applies `defaultTheme`. It removes the classes of other configured themes, so a class rendered by the server is replaced rather than joined. It serializes only **static** tokens from each theme's `tokens`; runtime overrides from `setTokens()` exist only in the running page and cannot be part of a script that runs before any application code.
-
-A framework that renders `<html>` itself and hydrates it, such as Next.js or Remix, finds the attribute, class, and `style` the script added and warns that they do not match the server markup. The difference is intended, so mark the element with React's `suppressHydrationWarning`, which silences attribute warnings on that element only:
+In a React framework that renders `<html>` itself, such as Next.js, put it in the root layout:
 
 ```tsx
-<html lang="en" suppressHydrationWarning>
+// src/app/layout.tsx
+import { createTheme } from "@codenhub/theme";
+
+import { themeOptions } from "../theme-options";
+
+const prePaintScript = createTheme(themeOptions).getPrePaintScript();
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: prePaintScript }} />
+      </head>
+      <body>{children}</body>
+    </html>
+  );
+}
 ```
 
-### Content Security Policy
+`suppressHydrationWarning` is needed because the script changes `<html>` before React loads: React finds a `data-theme`, class, and `style` the server did not render, and would warn that they do not match. The difference is intended. The flag silences that warning on `<html>` only, not on its children.
 
-A `script-src` policy without `'unsafe-inline'` blocks the inline script, and the flash returns with only a console error to show for it. Allow it in either of two ways:
+## What the server knows
 
-- **Nonce:** render the element as `<script nonce="…">` with the per-request nonce your policy already names.
-- **Hash:** add `'sha256-…'` of the script text to `script-src`. The script is the same for the same options, so the hash can be computed once at build time, such as with `createHash("sha256").update(script).digest("base64")` from `node:crypto`. Inline the string byte for byte: any change, including whitespace around it inside the element, changes the hash.
+On a server there is no `localStorage` and no operating-system setting, so the manager does nothing there that needs a browser: it applies nothing, saves nothing, listens to nothing, and `theme.system` reports `defaultTheme`. Every method is still safe to call; none throws for a missing `window` or `document`.
 
-## Server-side rendering
+That means the server cannot know which theme the user chose, and the HTML it sends carries none. The pre-paint script fills it in before the first paint, which is enough for most apps. If your server must render the right theme itself, for example because it renders theme-specific markup, it has to learn the choice from the request, typically from a cookie your app sets when the theme changes. That logic is yours to write; keep its theme names, attribute, and classes aligned with the same options.
 
-Without browser APIs, `Theme` methods skip storage reads/writes, DOM updates, and listener registration; `theme.system` falls back to `defaultTheme`. Every member remains safe to use during SSR — nothing throws for a missing `window`, `document`, or `localStorage` — but the package cannot produce server-rendered HTML attributes on its own. To avoid a flash on a server-rendered page, either:
+## Content Security Policy
 
-- Render the server markup with the same attribute/class the pre-paint script would apply (requiring the server to read the same cookie or header a real theme service would use), or
-- Rely on the pre-paint script above to correct the DOM before first paint, accepting that server-rendered markup itself does not carry theme state.
+If your site sends a Content Security Policy whose `script-src` does not include `'unsafe-inline'`, the browser blocks the inline script, the flash returns, and the only sign is an error in the console. Allow the script in one of two ways:
 
-Keep any server-side resolution logic — stored names, system mapping, storage key, attribute, classes, color scheme — aligned with the options passed to `createTheme()`; a mismatch reintroduces the flash it exists to prevent.
+- **Nonce:** render the element as `<script nonce="…">`, using the per-request nonce your policy already names.
+- **Hash:** add `'sha256-…'` of the script text to `script-src`. The script is the same for the same options, so compute the hash once at build time, for example with `createHash("sha256").update(script).digest("base64")` from `node:crypto`. Insert the string exactly as returned: any change, even whitespace around it inside the element, changes the hash.
 
-## Tailwind's `dark` class
+## What the script does not include
 
-Set `darkClass: true` to add a `dark` class to `document.documentElement` while a theme whose `colorScheme` is `"dark"` is active, as Tailwind CSS's class-based `dark:` variant expects. This is independent of `className` (below) — a Tailwind app commonly wants both the `dark` class and, when `className` is left at its default, a `theme-<name>` class for custom per-theme CSS.
+Token overrides from `setTokens()` exist only in the running page, so the script cannot know them; it applies the themes' own `tokens`. Overrides your app saves itself appear once your code calls `setTokens()` again.
 
-## Classes and cleanup
+Next, [Frameworks](docs/frameworks.md) shows how to use the manager inside React components and with Tailwind CSS.
 
-`className` controls the class applied to `document.documentElement` alongside the attribute: `true` (the default) applies `theme-<name>`, `false` applies no class, and a `ThemeClassResolver` function receives the theme with its static tokens and returns one custom class token. Code moving from a library configured with `attribute: "class"` wants `className: (theme) => theme.name` instead, which works while every theme name is a single class token without whitespace: `attribute` cannot be `class` or `style`, in any letter case, because writing the theme name there would replace every class or inline style the page put on `<html>`. A resolver runs once per theme, on first use rather than at construction, and the operation that triggered it throws if it returns an empty or whitespace-containing string.
+<!-- Source: docs/frameworks.md -->
 
-`destroy(options?)` removes the media-query and storage listeners and clears in-process subscribers and runtime tokens, leaving the instance safe to `init()` again. By default it does **not** touch the DOM or stored preference. Pass `{ revertDom: true }` to also remove the configured attribute, classes, `color-scheme`, and CSS custom properties from `document.documentElement` — useful when unmounting a scoped theme manager that should leave no trace, such as in a component test or a preview pane.
+# Frameworks
 
-<!-- Source: docs/tokens-and-persistence.md -->
+The package has no framework adapter because it does not need one: a manager is a plain object, and its methods can be passed anywhere as callbacks. This page shows the patterns for React and for Tailwind CSS. The same ideas carry over to other frameworks: create one manager for the page, start it once in the browser, and subscribe to it wherever the UI shows the theme.
 
-# Tokens, Persistence, and Cross-Tab Sync
+## React
 
-## Token resolution
+### One manager for the whole app
 
-`tokenSchema` maps typed token names to the CSS custom property each one writes, such as `{ primary: "--color-primary" }`. Each token can come from three sources, in this priority order (last wins):
-
-1. **Computed style** — the value CSS gives the property on `document.documentElement`, for a token not defined in JS.
-2. **Theme static tokens** — values set on the active theme's `tokens`.
-3. **Runtime overrides** — values passed to `setTokens()`.
-
-`get().tokens` holds the JS sources, 2 and 3, and never reads the DOM. `readTokens()` adds the computed values of the remaining tokens at the time of the call:
+Create the manager once, in its own module, and import it wherever you need it. Do not create it inside a component: each render would create a new one.
 
 ```ts
-const theme = createTheme({
-  themes: {
-    light: { colorScheme: "light", tokens: { accent: "#ff6600" } },
-    dark: { colorScheme: "dark" },
-  },
-  tokenSchema: { accent: "--color-accent", surface: "--color-surface" },
-}).init();
+// src/theme.ts
+import { createTheme } from "@codenhub/theme";
 
-theme.setTokens({ accent: "#00c853" }); // runtime override wins over the static "#ff6600"
-theme.get().tokens; // { accent: "#00c853" }
-theme.readTokens(); // { accent: "#00c853", surface: "<computed --color-surface>" }
+import { themeOptions } from "./theme-options";
+
+export const theme = createTheme(themeOptions).init();
 ```
 
-Reading computed values can force a synchronous layout, so prefer `get().tokens` when tokens defined only in CSS are not needed. `readTokens()` skips the read when every token is known in JS.
+In an app that only runs in the browser, such as one built with Vite, calling `init()` right there is fine. Server-rendered apps start it differently; see [With server rendering](#with-server-rendering) below.
 
-Token values are strings. A finite number passed from JavaScript, such as a value read from a JSON config, is written as its string, so `get().tokens` reports `"4"` for `4`. An `undefined` or empty value counts as omitted, so `setTokens({ primary: undefined })` and `setTokens({ primary: "" })` leave the theme's static `primary` in place. An empty value is omitted rather than reported, because the browser removes a custom property set to `""` instead of applying it; a cleared color-picker input therefore falls back to the theme's value. Any other value, including `NaN` and `Infinity`, throws.
+### Show the active theme in a component
 
-Token values are not parsed as CSS. When the browser rejects a value as a custom property value, such as `"red !important"` or `"red; color: blue"`, it is not applied and the property keeps whatever value it had, such as the previous theme's, while `get().tokens` still reports the rejected value, since `get()` never reads the DOM. Check values that come from user input, such as a color picker, before passing them to `setTokens()`.
+React re-renders a component when its data changes only if it knows about the change. `useSyncExternalStore` connects React to an outside source like the manager: `theme.subscribe` tells React when to re-read, and `theme.get` is what it reads. `get()` returns the same object until the theme changes, which is exactly what React expects.
 
-Each `tokenSchema` value must be a custom property a stylesheet can name without escapes: `--` followed by ASCII letters, digits, `-`, `_`, or non-ASCII characters. Anything else throws from `createTheme()`, including `"--"` alone, which browsers do not apply, and a name with a space or `;`. Two keys cannot map to the same property, because applying a theme would write one key's value and then remove it for the other.
+```tsx
+import { useSyncExternalStore } from "react";
 
-Runtime overrides apply to every theme and persist across theme changes until `setTokens()` replaces them — pass `{}` to remove them. They are not stored, so they last until the page unloads or `destroy()` runs, and they are not part of the pre-paint script. Passing a token key that is not in `tokenSchema` throws.
+import { theme } from "./theme";
 
-Before any theme is applied — before `init()`, `set()`, `toggle()`, or `clearPreference()` first runs, or after `destroy()` — `setTokens()` only records the overrides and returns `get()` with them; it leaves the DOM alone and notifies no one, and the next change applies them. Applying right away would mean applying `defaultTheme`, the only theme the manager knows before `init()`, which replaced the theme the pre-paint script had applied and flashed the wrong theme when `init()` ran later, such as in a component's effect. Resolving the stored or system theme at that point instead was rejected because it would be `init()` without its listeners, and its `"setTokens"` notification would announce a theme change.
+export function useActiveTheme() {
+  return useSyncExternalStore(theme.subscribe, theme.get);
+}
 
-## Persistence
+export function ThemeToggle() {
+  const active = useActiveTheme();
+  return (
+    <button type="button" onClick={theme.toggle}>
+      {active.colorScheme === "dark" ? "Switch to light" : "Switch to dark"}
+    </button>
+  );
+}
+```
 
-An explicit preference set through `set()` or `toggle()` is written to `localStorage` under `storageKey` (default `"app-theme-preference"`). `theme.preference` returns that value when it names a configured theme, or `null` when it is unset, invalid, or storage is unavailable (for example during SSR). `clearPreference()` removes the stored value and applies `theme.system`, the theme the OS preference currently maps to.
+### With server rendering
 
-Storage reads, writes, and removals that throw — a full quota, a disabled storage API, a private-browsing restriction — are treated the same as unavailable storage; they never throw out of `Theme` methods. Each kind of operation is logged with `console.error` the first time it fails for a manager, so a page with blocked storage logs one error per kind rather than one per read.
+In a server-rendered app, such as Next.js or Remix, the same module also runs on the server, where there is nothing to start, and React first renders the page in the browser by **hydrating** the server's HTML: it expects the first browser render to match what the server rendered.
 
-When storing a choice made with `set()` or `toggle()` fails, the manager still remembers the choice for as long as it runs, including one made before `init()`: OS color-scheme changes do not override it until `clearPreference()` or `destroy()` runs. `theme.preference` reports only what storage holds: `null` while storage is unavailable, or the previously stored theme when only writing fails, as with a full quota.
+Two changes handle that. Start the manager from an effect, which runs only in the browser, and give `useSyncExternalStore` a third argument, `getServerSnapshot`, that returns the theme the server rendered with:
 
-## Cross-tab sync
+```tsx
+// src/theme.ts
+import { createTheme } from "@codenhub/theme";
+import { useSyncExternalStore } from "react";
 
-Every tab running `createTheme().init()` against the same `storageKey` stays in sync: when another tab sets, clears, or invalidates the stored preference — including through `localStorage.clear()` — each tab re-resolves its theme from storage and the OS preference and notifies with `source: "storage"`. `storage` events for `sessionStorage`, which a same-origin frame in the same tab fires, are ignored. A tab with its own runtime token overrides keeps them; only the active theme changes.
+import { themeOptions } from "./theme-options";
 
-The OS `prefers-color-scheme` media query applies automatically only while no valid stored preference exists. Once a tab (or a previous session) has stored an explicit preference, later system-preference changes are ignored until `clearPreference()` runs.
+export const theme = createTheme(themeOptions);
 
-## Reacting to changes
+// Taken before init(), so it is the default theme, the one the server renders with.
+const serverSnapshot = theme.get();
 
-`subscribe(listener)` registers a callback invoked after every applied change and returns an unsubscribe function:
+export function useActiveTheme() {
+  return useSyncExternalStore(theme.subscribe, theme.get, () => serverSnapshot);
+}
+```
+
+```tsx
+// In your root client component:
+useEffect(() => {
+  theme.init();
+}, []);
+```
+
+Hydration then renders the default theme, matching the server, and the component updates to the user's theme right after `init()` runs. The page itself never shows the wrong colors: the [pre-paint script](docs/preventing-the-flash.md) already applied the right theme to `<html>`, and only components that read `useActiveTheme()` briefly see the default. Calling `init()` more than once does nothing after the first call, so React's development double-run of effects is harmless.
+
+If your server resolves the theme per request instead, such as from a cookie, it renders with that theme, so `getServerSnapshot` must return that same theme, passed to the browser with the page.
+
+### Cleaning up
+
+A manager created once for the whole page lives as long as the page, and needs no cleanup. A manager that belongs to something shorter-lived, such as a component that mounts and unmounts or a test, must be stopped with `destroy()`:
+
+```tsx
+useEffect(() => {
+  const preview = createTheme(previewOptions).init();
+  return () => preview.destroy();
+}, []);
+```
+
+`destroy()` stops listening to the operating system and other tabs, removes every subscriber, and drops token overrides. It leaves `<html>` and the saved choice as they are, so the page does not change when the component unmounts. Pass `{ revertDom: true }` to also remove the attribute, classes, `color-scheme`, and token properties the manager wrote, leaving no trace. A destroyed manager can be started again with `init()`.
+
+## Tailwind CSS
+
+Tailwind's `dark:` variant, as in `class="bg-white dark:bg-black"`, applies its styles when it decides the page is dark. Set `darkClass: true`, and the package adds a `dark` class to `<html>` whenever the active theme's `colorScheme` is `"dark"`:
 
 ```ts
-const unsubscribe = theme.subscribe(({ name, source }) => {
-  console.log(`theme is now "${name}" (${source})`);
-});
+const theme = createTheme({ darkClass: true }).init();
 ```
 
-`source` names what caused the change: the method that ran (`"init"`, `"set"`, `"toggle"`, `"clearPreference"`, `"setTokens"`), `"system"` for an OS color-scheme change, or `"storage"` for a change made in another tab. Code that mirrors the preference elsewhere, such as to a user profile, should act on `"set"`, `"toggle"`, and `"clearPreference"` only, so that every open tab does not repeat the same write.
+Then tell Tailwind to look for that class instead of the operating-system setting, which it uses by default. In Tailwind CSS v4, add this to your main CSS file:
 
-A subscriber that throws is logged and does not stop other subscribers from running. A subscriber or `themechange` listener that makes another change, such as calling `set()` or `setTokens()`, ends delivery of the change it received: the subscribers and listeners after it receive only the newer change, so none of them is left holding a superseded theme. One that calls `destroy()` ends delivery too, and no `themechange` event follows. A subscriber added during a delivery receives only later changes. Browsers also receive a `window` `CustomEvent` named by the exported `THEME_CHANGE_EVENT` constant (`"themechange"`) carrying the same detail, for code that has no access to the manager. Type it with the exported `ThemeChangeEvent`:
+```css
+@import "tailwindcss";
 
-```ts
-import { THEME_CHANGE_EVENT, type ThemeChangeEvent } from "@codenhub/theme";
-
-window.addEventListener(THEME_CHANGE_EVENT, (event) => {
-  console.log(`theme is now ${(event as ThemeChangeEvent).detail.name}`);
-});
+@custom-variant dark (&:where(.dark, .dark *));
 ```
 
-The event does not identify which manager sent it, so use `subscribe()` when a page runs more than one.
+In Tailwind CSS v3, set it in `tailwind.config.js`:
+
+```js
+export default {
+  darkMode: "class",
+  // …the rest of your configuration
+};
+```
+
+Because the `dark` class follows `colorScheme` rather than a theme's name, every dark theme you define, such as a `dim` theme, gets `dark:` styles too. `darkClass` works alongside `className`, so `<html>` can carry both `dark` and `theme-dim`, for custom CSS that only the `dim` theme needs.
+
+Next, [Troubleshooting](docs/troubleshooting.md) collects the problems people hit most often.
+
+<!-- Source: docs/troubleshooting.md -->
+
+# Troubleshooting
+
+Start with the symptom you see. Each entry says how to confirm the cause, then how to fix it.
+
+## Nothing changes when the theme switches
+
+Open the browser's developer tools and inspect the `<html>` element while you click the toggle.
+
+- **`data-theme` changes, but the page does not.** The package is working; your CSS has no rules for that theme name. Add a `[data-theme="<name>"]` rule for every theme, as in [Getting started](docs/getting-started.md#2-write-the-css-for-each-theme). If you set `attribute`, use that attribute name in your selectors instead.
+- **`data-theme` never appears.** If you set `attribute`, look for that attribute instead. If it never appears either, `init()` was not called, or the code calling it never ran. `createTheme()` alone does nothing to the page. Check the console for an error thrown earlier, such as one from `createTheme()` about invalid options.
+- **Tailwind `dark:` styles do not apply.** Check for `darkClass: true` in the options, a `dark` class on `<html>`, and the Tailwind configuration from [Frameworks](docs/frameworks.md#tailwind-css). Without that configuration, Tailwind follows the operating-system setting and ignores the class.
+
+## The wrong theme flashes when the page loads
+
+The pre-paint script is missing, blocked, or out of step with your app. In order:
+
+1. View the page source, not the developer tools' element view, and check that the script is inside `<head>`. If it is not there, set it up as in [Preventing the flash](docs/preventing-the-flash.md).
+2. Check the console for a Content Security Policy error. If there is one, allow the script with a nonce or a hash; see [Content Security Policy](docs/preventing-the-flash.md#content-security-policy).
+3. Check that the script and your app's manager use the same options, especially `storageKey` and `themes`. Importing both from one module keeps them aligned.
+
+## The choice is forgotten after a reload
+
+- **The browser blocks storage**, as some private windows do. The console shows a `[theme]` error the first time saving fails. The choice still works until the page closes; there is nowhere to keep it longer. See [When storage fails](docs/persistence-and-sync.md#when-storage-fails).
+- **Another app on the same domain uses the same `storageKey`** and overwrites it. Give your app its own `storageKey`.
+- **The saved theme no longer exists**, because it was renamed or removed from `themes`. The package ignores a saved name it does not recognize, so the user falls back to the operating-system setting.
+
+## The theme ignores the operating system
+
+The user has a saved choice, which always wins. `theme.preference` shows it. Call `theme.clearPreference()`, from an "Auto" or "System" option in your UI, to follow the operating system again.
+
+## `createTheme()` throws
+
+The options are invalid, and the error message names the problem. The most common ones:
+
+- **A missing theme.** Custom `themes` without `light` and `dark` also need `defaultTheme` and `systemTheme` naming themes you defined; see [Choose the themes the system picks](docs/themes.md#choose-the-themes-the-system-picks).
+- **A `pairedTheme`, `defaultTheme`, or `systemTheme` naming a theme that is not in `themes`.** Check the spelling.
+- **A theme name that cannot be a class.** While `className` is `true`, each name becomes part of a `theme-<name>` class, so it cannot contain spaces. Rename the theme, or set `className` to `false` or a function.
+- **`tokens` without a `tokenSchema`, or a token not listed in it.** Every token needs an entry in `tokenSchema`; see [Design tokens](docs/tokens.md).
+
+## TypeScript reports `Cannot find name 'NoInfer'`
+
+Your TypeScript version is older than 5.4, which added `NoInfer`. Update TypeScript in your project. Turning on `skipLibCheck` hides the error, but then the types also accept theme names you did not configure.
+
+## A React hydration warning mentions `<html>`
+
+React found the `data-theme`, class, or `style` the pre-paint script added. That difference is expected; add `suppressHydrationWarning` to your `<html>` element, as shown in [Preventing the flash](docs/preventing-the-flash.md#in-a-server-rendered-app).
 
 <!-- Source: docs/changelog/0.2.0.md -->
 
@@ -300,9 +839,12 @@ The event does not identify which manager sent it, so use `subscribe()` when a p
 - `readTokens()` returns every token, completed with computed CSS values at the time of the call.
 - Changes made in another tab report `source: "storage"`, so code that mirrors the preference elsewhere can tell them from local changes.
 - The `ThemeChangeEvent` type types the `themechange` window event, whose `detail` was untyped.
+- The package declares `"sideEffects": false`, so a bundler drops it entirely from a build that imports nothing from it.
+- A documentation walkthrough, from a first light and dark toggle to a production setup, with CSS examples, a table of every option and its default, a Vite example for the pre-paint script, React and Tailwind CSS setup, and a troubleshooting page.
 
 ## Changed
 
+- Documentation pages are reorganized around the walkthrough: `docs/tokens-and-persistence.md` is replaced by `docs/tokens.md` and `docs/persistence-and-sync.md`, and `docs/ssr-and-pre-paint.md` by `docs/preventing-the-flash.md` and `docs/frameworks.md`. Update any link that pointed at the old pages.
 - `themes` is an object keyed by theme name instead of an array: `{ light: { colorScheme: "light" } }` replaces `[{ name: "light", colorScheme: "light" }]`.
 - Methods are bound to their manager, so `theme.toggle` and `theme.subscribe` can be passed as callbacks directly.
 - `get()` returns the same frozen object until the next change and never reads the DOM, so it can serve as a store snapshot such as `useSyncExternalStore(theme.subscribe, theme.get)`. Its `tokens` holds static and runtime tokens only; call `readTokens()` for tokens defined only in CSS.
@@ -311,7 +853,7 @@ The event does not identify which manager sent it, so use `subscribe()` when a p
 - When another tab sets, clears, or invalidates the preference, every tab re-resolves its theme and notifies, even when the active theme stays the same, so a settings screen sees the preference change.
 - Listener errors are logged as `[theme] Error in theme change listener:`, matching the package's other messages.
 - A storage operation that fails is logged the first time it fails for a manager, not on every call, so a page with blocked storage no longer logs an error each time `theme.preference` is read.
-- A theme or runtime token value that is not a string, a finite number, or `undefined` throws; a number is written as its string, which `get().tokens` now reports too. Strings are not parsed as CSS, so one the browser rejects is not applied but still appears in `get().tokens`; see [Token resolution](docs/tokens-and-persistence.md#token-resolution).
+- A theme or runtime token value that is not a string, a finite number, or `undefined` throws; a number is written as its string, which `get().tokens` now reports too. Strings are not parsed as CSS, so one the browser rejects is not applied but still appears in `get().tokens`; see [Change tokens at runtime](docs/tokens.md#change-tokens-at-runtime).
 - A runtime token set to `undefined` counts as omitted, so `setTokens({ primary: undefined })` keeps the theme's static `primary` instead of removing it.
 - A theme or runtime token set to `""` counts as omitted. The browser removed the property while `get().tokens` and `readTokens()` reported `""`; now an emptied override falls back to the theme's static token, and `readTokens()` reports that token, or the value CSS gives the property when the theme has none.
 - `tokens` and `setTokens()` are rejected at compile time when `createTheme()` infers its types from options without a `tokenSchema`, since they always threw. `Theme` and `ThemeOptions` keep their broad default schema, so code typed with them, such as a generic wrapper, still compiles them and gets the runtime error.
