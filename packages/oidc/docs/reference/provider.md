@@ -833,7 +833,7 @@ handle(request: Request): Promise<Response | null>;
 
 Answers the discovery, JWKS, token, userinfo, and revocation endpoints.
 
-**Returns** — The response, or `null` when the request is for none of those URLs. Never throws for any request; rejects only when the store, the `claims` callback or `onDiagnostic` does, or with a `TypeError` when the `claims` callback resolves to something that is not an object, the store returns a malformed client record, or a token or revocation `POST`'s body was already read, such as by middleware that parsed it. A signing key from another `@codenhub/jwt` copy also makes the JWKS endpoint and token issuance reject; see `ProviderOptions.signingKeys`.
+**Returns** — The response, or `null` when the request is for none of those URLs. Never throws for any request; rejects only when the store, the `claims` callback or `onDiagnostic` does, or with a `TypeError` when the `claims` callback resolves to something that is not an object, the store returns a malformed client record, or a token or revocation `POST`'s body was already read, such as by middleware that parsed it. A signing key from another `@codenhub/jwt` copy also makes the JWKS endpoint reject, and any token response that signs an ID token or a JWT access token; see `ProviderOptions.signingKeys`.
 
 ### ProviderDiagnostic
 
@@ -1163,7 +1163,7 @@ readonly signingKeys: readonly KeyPair[];
 
 Key pairs from `generateKeyPair` or `importPrivateKey`/`importPublicKey`, each with a unique `kid`. The first signs ID tokens; every public key is published, so a retiring key stays verifiable.
 
-Each pair's private and public keys must be the two halves of one key pair. Only their algorithm and `kid` are checked, so a mismatched pair issues ID tokens nobody can verify. The keys must come from the same `@codenhub/jwt` copy as this package's peer dependency: a key from another copy makes the JWKS endpoint and token issuance reject.
+Each pair's private and public keys must be the two halves of one key pair. Only their algorithm and `kid` are checked, so a mismatched pair issues ID tokens nobody can verify. The keys must come from the same `@codenhub/jwt` copy as this package's peer dependency: a key from another copy makes the JWKS endpoint reject, and any token response that signs an ID token or a JWT access token. An opaque access token from the client-credentials grant signs nothing, so it is still issued.
 
 #### store
 
