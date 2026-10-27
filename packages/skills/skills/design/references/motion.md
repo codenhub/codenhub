@@ -68,10 +68,10 @@ When the person has asked for reduced motion, replace movement with an instant c
 - Animate `transform` and `opacity`. Animating `width`, `height`, `top`, `left`, or `margin` makes the browser recalculate layout every frame and stutters on weaker devices.
 - Use CSS transitions for state changes, such as open and closed or hover. They retarget smoothly when interrupted halfway; keyframe animations restart instead. Use keyframe animations for loops and multi-step sequences.
 - Use the Web Animations API when script must start, reverse, or sequence motion. Use the View Transitions API for transitions between views where the browser supports it, and leave the change instant elsewhere.
-- To animate to and from an automatic height, animate `grid-template-rows` from `0fr` to `1fr` on a grid wrapper, or measure the height and animate a transform.
+- To animate to and from an automatic height, animate `grid-template-rows` from `0fr` to `1fr` on a grid wrapper, or animate `height` to a measured value on an `overflow: hidden` wrapper and clear it when the animation ends. A transform alone leaves the surrounding content in place, so it overlaps or leaves a gap.
 - Interface motion rarely needs an animation library. Use one when the product already has one, or for physics-based gestures such as drag with momentum.
 - Gate hover effects behind `@media (hover: hover)` so touch devices do not get stuck in the hover state after a tap.
-- Never let an animation shift the layout around it. Reserve the element's space before it appears, or animate it out of the document flow.
+- Never let an animation shift the layout around it unexpectedly. Reserve the element's space before it appears, or animate it out of the document flow. When content is intentionally expanded, collapsed, inserted, or removed, let the surrounding content reflow smoothly with it instead of jumping.
 
 ## Checking Motion
 

@@ -75,7 +75,7 @@ Every view and component that shows data has more states than the one in the moc
 ## Accessibility
 
 - Every control has an accessible name that matches its visible label, so speech users can say what they see.
-- Focus is always visible and follows reading order. When anything opens over or beside the page, such as a dialog, a side panel, a drawer, or a menu, focus moves into it; a modal one keeps focus inside until it closes. When it closes, focus returns to what opened it.
+- Focus is always visible and follows reading order. When a dialog, side panel, drawer, or menu opens, focus moves into it; a modal one keeps focus inside until it closes. When it closes, focus returns to what opened it. A non-modal disclosure, such as an expanding section or a popover of information, leaves focus on the control that opened it.
 - Escape closes dialogs, side panels, drawers, menus, and popovers.
 - Announce changes that appear away from focus, such as a saved status or a result count, to screen readers.
 - Content still works at 200% zoom and at 320px width without scrolling in two directions.
@@ -87,7 +87,7 @@ Every view and component that shows data has more states than the one in the moc
 - Use native form controls before custom ones; style them instead of rebuilding them. A custom select, date picker, or combobox must implement the full keyboard and screen-reader pattern, which is easy to get wrong.
 - Add ARIA only where no native element expresses the role. Wrong ARIA is worse than none.
 - Give inputs the right `type`, `inputmode`, and `autocomplete` values, such as `type="email"` and `autocomplete="one-time-code"`, so phones show the right keyboard and browsers can fill them.
-- Style focus with `:focus-visible`. Never remove the outline without a replacement that meets 3:1 contrast.
+- Style focus with `:focus-visible`. Never remove the outline without a replacement at least 2px thick that meets 3:1 contrast against its surroundings.
 - Never disable zoom in the viewport meta tag.
 - Respect `prefers-reduced-motion` and `prefers-color-scheme` when the product supports a dark theme, and set `color-scheme` so native controls and scrollbars match.
 - Lay out by content, not by device: let components respond to the space they have, with container queries where a component appears at several widths.
