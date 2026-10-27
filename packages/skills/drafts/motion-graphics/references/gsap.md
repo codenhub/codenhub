@@ -32,10 +32,13 @@ await document.fonts.ready;
 const master = gsap.timeline({ paused: true });
 // add scenes here
 window.duration = master.duration();
-window.seek = (seconds) => master.seek(seconds, false);
+window.seek = (seconds) => {
+  master.seek(seconds, false);
+};
 window.ready = true;
 ```
 
+- Keep `seek` from returning the timeline. The renderer calls it through `page.evaluate`, which serializes the return value, and serializing a GSAP timeline hangs the call.
 - Use timeline callbacks only for changes that are themselves functions of time. A callback that starts a separate tween or timer escapes the timeline and will not render correctly when frames are seeked.
 
 ## Text
