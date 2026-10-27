@@ -29,7 +29,7 @@ bun add @codenhub/theme
 
 ## 2. Write the CSS for each theme
 
-The package writes the theme's name onto `<html>`, as `data-theme="light"` or `data-theme="dark"`, along with a matching `theme-<name>` class and the `color-scheme` property. Your stylesheet gives each name its look. CSS custom properties keep that short: define the colors once per theme, and use them everywhere else.
+The package writes the theme's name onto `<html>`, as `data-theme="light"` or `data-theme="dark"`, along with the `color-scheme` property and, by default, a matching `theme-<name>` class. Your stylesheet gives each name its look. CSS custom properties keep that short: define the colors once per theme, and use them everywhere else.
 
 ```css
 /* styles.css */

@@ -27,7 +27,7 @@ Browsers can refuse `localStorage`: a private window may block it, a user may di
 
 ## Keeping tabs in agreement
 
-A user with your app open in two tabs who switches the theme in one expects the other to follow. It does, automatically: every tab whose manager has run `init()` with the same `storageKey` listens for changes to the saved choice. When another tab saves, clears, or replaces it, including with `localStorage.clear()`, each tab picks its theme again from storage and the operating system, as `init()` does. A choice a tab could not save is dropped at that point, because storage no longer agrees with it. The exception is a tab that cannot reach `localStorage` at all: it ignores these events and keeps its choice.
+A user with your app open in two tabs who switches the theme in one expects the other to follow. It does, automatically: every tab whose manager has run `init()` with the same `storageKey` listens for changes to the saved choice. When another tab saves, clears, or replaces it, including with `localStorage.clear()`, each tab picks its theme again from storage and the operating system, as `init()` does. A choice a tab could not save is dropped at that point, because storage no longer agrees with it. The exception is a tab where accessing `window.localStorage` itself throws: it ignores these events and keeps its choice. A tab that can reach `localStorage` but fails to read from it drops its choice like any other.
 
 Only the theme follows. Token overrides from `setTokens()` belong to the tab that set them.
 
