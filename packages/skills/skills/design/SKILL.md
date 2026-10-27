@@ -1,6 +1,6 @@
 ---
 name: design
-description: Guides visual design decisions in any medium, including typography and font choice, spacing and density, layout and alignment, hierarchy, color and palettes, and contrast. Use when building, restyling, or reviewing a UI, web page, component, dashboard, landing page, app screen, email, slide, social media image, thumbnail, poster, video frame, or motion graphic, when choosing fonts or colors, or when something looks generic, cluttered, off, or obviously AI-generated.
+description: Guides visual and interface design decisions in any medium, including typography and font choice, spacing and density, layout and alignment, hierarchy, color and palettes, contrast, interaction states, forms, navigation, accessibility, and interface transitions and micro-interactions. Use when building, restyling, or reviewing a UI, web page, component, form, flow, dashboard, landing page, app screen, email, slide, social media image, thumbnail, poster, video frame, or motion graphic, when choosing fonts or colors, when adding UI animation, or when something looks generic, cluttered, off, or obviously AI-generated.
 ---
 
 # Design
@@ -21,7 +21,8 @@ In a product with a design system, brand guide, or established screens, use its 
 4. **Type.** Choose type before color, since most of any interface is text. Read [references/typography.md](references/typography.md) before choosing a typeface, pairing fonts, building a type scale, or setting text for video or social media. When the typeface is not already set by the system or brand, shortlist at least three from at least two different constructions, judge them against the reference's criteria, and say why the winner beat the others.
 5. **Space and layout.** Apply the next two sections.
 6. **Color.** Read [references/color.md](references/color.md) before building a palette, choosing an accent or working with a brand color, setting up dark mode, or choosing colors for status or data.
-7. **Check.** Follow Verification below before presenting the work.
+7. **Interaction.** When people operate the work, as in an app screen, a form, a flow, a component, or navigation, read [references/interaction.md](references/interaction.md) and design its states, feedback, and keyboard use along with its looks. Read [references/motion.md](references/motion.md) before adding transitions, animations, or micro-interactions to an interface.
+8. **Check.** Follow Verification below before presenting the work.
 
 ## Hierarchy
 
@@ -74,7 +75,7 @@ Generated design converges on the patterns below. Each is wrong as a default, an
 - **Decorative noise.** Blobs, grain, mesh gradients, floating 3D shapes, and frosted glass layered behind content that has no image of its own. Use real content as the visual, such as product screenshots, photos, or data, or let type and space carry the page.
 - **Crude illustration.** A hand-drawn SVG of the subject, such as a loaf, a laptop, or a server, that reads as a blob or as a different object. A weak drawing costs more than no drawing. Keep one only when it reads as the thing at a glance at the viewing size; otherwise let type carry the piece, or use a simple, recognizable symbol.
 - **Filler content.** Lorem ipsum, "John Doe", suspiciously round metrics, and three identical feature columns of icon, heading, and sentence. Use realistic content in realistic, uneven amounts.
-- **Motion by default.** A fade-up on every section and a scale on every hover. Motion explains change: where something came from, what responded, what is loading. Use it there, keep it short, and respect the reduced-motion preference.
+- **Motion by default.** A fade-up on every section and a scale on every hover. Motion explains change: where something came from, what responded, what is loading. Use it there, keep it short, and respect the reduced-motion preference. See [references/motion.md](references/motion.md).
 
 ## Verification
 
