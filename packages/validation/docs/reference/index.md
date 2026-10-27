@@ -191,6 +191,8 @@ messages?: Messages | undefined;
 
 Wording for issues that carry no message of their own, keyed by issue code, such as `englishMessages` or a map of the wordings the validator can report.
 
+**Default** — An empty map, which words such an issue as "Invalid value".
+
 #### subject
 
 ```ts
@@ -322,6 +324,8 @@ code?: ValidationIssueCode;
 ```
 
 Failure category.
+
+**Default** — "custom"
 
 #### message
 

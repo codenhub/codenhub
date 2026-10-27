@@ -158,6 +158,8 @@ readonly scope?: readonly string[];
 
 Scopes to request. Must include `openid`.
 
+**Default** — `["openid"]`
+
 #### uiLocales
 
 ```ts
@@ -190,6 +192,8 @@ authorize(options?: AuthorizeOptions): Promise<AuthorizationStart>;
 
 Starts an authorization code flow with PKCE `S256`, a fresh `state`, and a fresh `nonce`.
 
+**Throws** — When `options` are invalid, such as a scope list without `openid`.
+
 #### callback
 
 ```ts
@@ -197,6 +201,8 @@ callback(url: string | URL, pending: PendingAuthorization): Promise<OidcResult<S
 ```
 
 Finishes a sign-in from the URL the provider redirected the browser to: checks `state` and `iss`, exchanges the code, and validates the ID token.
+
+**Returns** — The validated claims and tokens, or every issue found. Never throws for any URL or response.
 
 #### clientCredentials
 
@@ -206,6 +212,10 @@ clientCredentials(options?: ClientCredentialsOptions): Promise<OidcResult<TokenS
 
 Gets an access token for the client itself, with no user, through the `client_credentials` grant (RFC 6749 §4.4), as a service calling an API does. No ID token or refresh token is involved: when the access token expires, call it again.
 
+**Returns** — The tokens, or every issue found. An `id_token` or `refresh_token` in the response is dropped: nothing checks the one, and RFC 6749 §4.4.3 says the other SHOULD NOT be included. Never throws for any response; it rejects only for the caller errors listed below.
+
+**Throws** — When the client authenticates with `none`, when the provider metadata lists grant_types_supported without client_credentials, or when `scope` is given but is not a non-empty array of at most 100 scope tokens.
+
 #### endSessionUrl
 
 ```ts
@@ -213,6 +223,10 @@ endSessionUrl(options?: EndSessionOptions): string;
 ```
 
 Builds the URL to send the browser to so the provider ends the user's session there (RP-Initiated Logout 1.0). Revoke the tokens and end the app's own session as well: logging out at the provider does neither.
+
+**Returns** — The logout request URL, with `client_id` always included.
+
+**Throws** — When the provider metadata has no end_session_endpoint, an option is invalid, or the URL would be longer than 8192 characters.
 
 #### refresh
 
@@ -224,6 +238,10 @@ Exchanges a refresh token for new tokens. The provider may rotate refresh tokens
 
 When the response carries an ID token that fails validation, the result is a failure and the new tokens are not returned: a response with an ID token that cannot be trusted is not trusted at all. The provider has already spent the refresh token that was sent, so the session cannot be refreshed again; sign the user in again.
 
+**Returns** — The new tokens, or every issue found. Never throws for any response.
+
+**Throws** — When `options` is invalid, such as an empty `refreshToken` or a scope list that is not a non-empty array of scope tokens. The message names the option and never its value.
+
 #### revoke
 
 ```ts
@@ -232,13 +250,21 @@ revoke(options: RevokeOptions): Promise<OidcResult<void>>;
 
 Revokes an access or refresh token at the provider's revocation endpoint (RFC 7009), as when the user signs out. Providers such as this package's revoke every token of the sign-in along with it.
 
+**Returns** — Success when the provider answered `200`, which it also does for a token that was unknown or already revoked, or every issue found. Never throws for any response; it rejects only for the caller errors listed below.
+
+**Throws** — When the provider metadata has no revocation_endpoint, or an option is invalid.
+
 #### userinfo
 
 ```ts
 userinfo(options: UserinfoOptions): Promise<OidcResult<UserinfoClaims>>;
 ```
 
-Fetches the user's claims from the userinfo endpoint.
+Fetches the user's claims from the userinfo endpoint. The access token must be granted `openid`, so one from `Client.clientCredentials`, which has no user, gets an issue instead: this package's provider answers it with `403 insufficient_scope`.
+
+**Returns** — The claims, or every issue found. Never throws for any response; it rejects only for the caller errors listed below.
+
+**Throws** — When the provider metadata has no userinfo_endpoint, or an option is invalid.
 
 ### ClientCredentialsOptions
 
@@ -288,6 +314,8 @@ readonly clockTolerance?: number;
 
 Seconds of clock skew allowed on the ID token's `exp`, `iat`, and `auth_time`. An integer from 0 through 300.
 
+**Default** — 0
+
 #### fetch
 
 ```ts
@@ -295,6 +323,8 @@ readonly fetch?: typeof fetch;
 ```
 
 The `fetch` to call for the token, userinfo, revocation, and JWKS endpoints.
+
+**Default** — `globalThis.fetch`, looked up at each call
 
 #### metadata
 
@@ -312,6 +342,8 @@ readonly now?: () => number;
 
 Current time in milliseconds since the Unix epoch, for tests.
 
+**Default** — `Date.now`
+
 #### redirectUri
 
 ```ts
@@ -327,6 +359,8 @@ readonly timeout?: number;
 ```
 
 Seconds to wait for each response before failing. An integer from 1 through 60.
+
+**Default** — 5
 
 ### DiscoverOptions
 
@@ -344,6 +378,8 @@ readonly fetch?: typeof fetch;
 
 The `fetch` to call.
 
+**Default** — `globalThis.fetch`, looked up at each call
+
 #### timeout
 
 ```ts
@@ -351,6 +387,8 @@ readonly timeout?: number;
 ```
 
 Seconds to wait for the response before failing. An integer from 1 through 60.
+
+**Default** — 5
 
 ### EndSessionOptions
 

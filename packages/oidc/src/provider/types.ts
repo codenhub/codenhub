@@ -244,7 +244,10 @@ export type AccessTokenFormat =
   /** `audience` is the `aud` every access token carries: the resource server's identifier, usually its URL. */
   | { readonly format: "jwt"; readonly audience: string };
 
-/** Endpoint URLs, each an absolute `https` URL on any origin. */
+/**
+ * Endpoint URLs, each an absolute `https` URL on any origin. A default appends its path to the issuer without
+ * the issuer's trailing `/`, so the issuer `https://id.example/` gives `https://id.example/token`.
+ */
 export interface ProviderEndpoints {
   /** @defaultValue `${issuer}/authorize` */
   readonly authorization?: string;
@@ -339,7 +342,8 @@ export interface ProviderOptions {
    * Each pair's private and public keys must be the two halves of one key pair. Only their algorithm and
    * `kid` are checked, so a mismatched pair issues ID tokens nobody can verify. The keys must come from the
    * same `@codenhub/jwt` copy as this package's peer dependency: a key from another copy makes the JWKS
-   * endpoint and token issuance reject.
+   * endpoint reject, and any token response that signs an ID token or a JWT access token. An opaque access
+   * token from the client-credentials grant signs nothing, so it is still issued.
    */
   readonly signingKeys: readonly KeyPair[];
   /** Where clients, codes, tokens, and interactions are kept. */
@@ -457,7 +461,8 @@ export interface Provider {
    * request; rejects only when the store, the `claims` callback or `onDiagnostic` does, or with a
    * `TypeError` when the `claims` callback resolves to something that is not an object, the store returns
    * a malformed client record, or a token or revocation `POST`'s body was already read, such as by middleware
-   * that parsed it.
+   * that parsed it. A signing key from another `@codenhub/jwt` copy also makes the JWKS endpoint reject, and
+   * any token response that signs an ID token or a JWT access token; see {@link ProviderOptions.signingKeys}.
    */
   handle(request: Request): Promise<Response | null>;
   /**
@@ -473,10 +478,12 @@ export interface Provider {
    *
    * @returns The response, or `interaction_not_found` when the interaction does not exist, was already
    * completed, or expired.
-   * @throws {TypeError} When `outcome` is invalid: scopes outside the request or without `openid`, an
+   * @throws {TypeError} When `outcome` is malformed, such as an empty `subject`, `scopes` that is not an array of
+   * strings, or a denial with other members; the interaction is left in place, so a corrected retry works. Also
+   * when a well-formed grant does not fit the request: scopes outside the request or without `openid`, an
    * `authTime` before the interaction under `prompt=login`, an `authTime` in the future, or more than the
-   * requested `max_age` before the request. The interaction is consumed before these checks, so after a
-   * `TypeError` a retry gets `interaction_not_found` and the user must start over.
+   * requested `max_age` before the request. The interaction is consumed before these checks, so after one of
+   * these a retry gets `interaction_not_found` and the user must start over.
    */
   completeAuthorization(
     interactionId: string,
