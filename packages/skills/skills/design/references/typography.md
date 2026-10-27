@@ -84,8 +84,8 @@ Derive the scale from the hierarchy, not from a ratio picked in advance.
 
 - **Size for the smallest view.** A social image is judged as a feed thumbnail on a phone; a video frame on a phone held at arm's length. Text must stay readable with the image shrunk to about a quarter of its width. That usually means few words, large and heavy.
 - **Few words per frame or slide.** One idea per frame. A headline over about seven words becomes a paragraph nobody reads in time.
-- **Reading time.** Keep text on screen long enough to read, about 15–17 characters per second for adult viewers, and never under about 1.5 seconds for even a short line.
+- **Reading time.** After text has fully arrived, hold it for at least 1 second plus about 0.3 seconds per word. Viewers read slower in motion than on a page.
 - **Survive compression and motion.** Heavier weights and large x-heights hold up; hairline strokes, fine serifs, and small text shimmer, blur, and break up in compressed video.
 - **Legibility over busy footage.** Put text where the background is calm, or behind a solid or semi-opaque band. Do not add a glow or heavy outline.
-- **Safe zones.** Vertical-video and social platforms cover parts of the frame, mostly the bottom and the right edge, with captions, buttons, and profile details. Check the target platform's current safe-zone guidance and keep text and faces inside it.
+- **Safe zones.** Vertical-video platforms cover the frame with the account name at the top, the caption and sound at the bottom, and a column of action buttons on the right. On a 1080×1920 frame, keep text and faces clear of about 250px at the top, 480px at the bottom, 140px on the right, and 60px on the left. These are working margins, not platform specifications; when the target platform publishes a safe-zone template, such as for ads, use it instead.
 - **Animate readable units.** Animate whole words or lines that are meant to be read. Letter-by-letter animation is for short titles where the motion itself is the point.

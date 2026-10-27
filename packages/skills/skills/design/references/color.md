@@ -41,7 +41,7 @@ Build the neutrals first; they cover most of any surface. Then add one accent, t
 
 ## Choosing A Hue
 
-When no brand exists, derive the accent from the content and the audience, not from defaults. The default indigo and violet of popular CSS frameworks and the purple-to-blue gradient mark work as generated.
+When no brand exists, derive the accent from the content and the audience, not from defaults. These mark work as generated: the indigo and violet of popular CSS frameworks, the purple-to-blue gradient, a cream ground with an orange, rust, terracotta, or copper accent, and a near-black or slate ground with one bright accent.
 
 - Hue associations are weak and cultural. Blue reads as trust and default (and therefore generic), green as growth, money, or go, red as danger or urgency in many places and as luck in others. Use them as one input, not a rule.
 - Saturation and lightness carry more meaning than hue. Muted and darker colors read as serious, calm, or premium; bright, saturated colors read as energetic and young, and as cheap when they cover everything.

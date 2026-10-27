@@ -1,6 +1,6 @@
 ---
 name: motion-graphics
-description: Creates motion graphics and animated videos built with web technology, such as explainers, product promos, animated social posts, kinetic typography, title cards, lower thirds, logo animations, and animated charts, rendered to MP4, WebM, GIF, or image sequences. Use when asked to make, storyboard, animate, time, or render a video or animation meant to be watched as video. Not for transitions or micro-interactions inside an app or website.
+description: Creates motion graphics and animated videos built with web technology, such as explainers, product promos, animated social posts, kinetic typography, title cards, lower thirds, logo animations, and animated charts, rendered to MP4, WebM, GIF, or image sequences. Use when asked to make, storyboard, animate, time, render, or review a video or animation meant to be watched as video. Not for transitions or micro-interactions inside an app or website.
 ---
 
 # Motion Graphics
@@ -20,6 +20,12 @@ Generated motion fails in predictable ways: a sequence of headline cards that is
 7. **Render.** Render every frame from the timeline, then encode.
 8. **Check.** Follow Verification below, and fix every failure before presenting.
 
+Fit the procedure to the request, and say which steps you skipped:
+
+- **A single element,** such as a lower third, title card, logo sting, or a loop under about 6 seconds: skip the Script and Concept steps, write its beats straight into the storyboard table, and render one still of its key frame. Keep Render Setup, Encoding, and Verification in full; exact frames and the checks matter at any length.
+- **An edit to an existing piece,** such as retiming, changed text, or a new end card: keep its setup, style, and easing, change only what was asked, re-render, and run Verification on the changed beats plus the `ffprobe` check on the whole file.
+- **A review of a video:** run the checks in Verification on the file, and report each failure with its timestamp or frame number and the fix, most damaging first. Do not rebuild the piece unless asked.
+
 ## Formats
 
 | Platform                                    | Aspect | Resolution |
@@ -31,7 +37,7 @@ Generated motion fails in predictable ways: a sequence of headline cards that is
 
 - Use 30fps by default, 60fps for screen recordings and fast movement, and 24fps only for a deliberately filmic look.
 - Assume social video plays muted. Put the message in on-screen text and add captions for any speech.
-- Vertical platforms cover the top and bottom of the frame with their own interface. Keep text and key content inside the middle area: about 250px clear at the top and 400px at the bottom of a 1080×1920 frame, and about 60px on each side.
+- Vertical platforms cover the frame with their own interface: the account name at the top, the caption and sound at the bottom, and a column of action buttons on the right. On a 1080×1920 frame, keep text and key content clear of about 250px at the top, 480px at the bottom, 140px on the right, and 60px on the left. These are working margins, not platform specifications; when the target platform publishes a safe-zone template, such as for ads, use it instead.
 - On 16:9, keep text within the central 90% of the frame.
 
 ## Concept
@@ -70,7 +76,7 @@ Write a table with one row per beat: start time, duration, on-screen text, what 
 - Keep text large. On a 1080px-tall frame, keep body text at 40px or more and headlines at 80px or more; on vertical video seen on a phone, go larger. Check legibility by viewing a frame at phone size.
 - Animate text by line or word for anything people must read. Animate by letter only for short display words, since letter-by-letter animation delays reading.
 - Use the brand's fonts, colors, and assets, including the logo file for logo and end cards, never the name retyped in a font. When no logo file is supplied, put a box labeled as the logo placeholder where it goes, with no name set in type beside it, and ask for the file. Load fonts locally and confirm they render before any frame is captured.
-- Without brand colors, take them from the subject, such as the product's interface, the place, or the material, and write in the storyboard which part of the subject each color comes from. Avoid the two palettes generated video falls back to, unless the subject's own colors produce one: a near-black ground with one bright accent, and a cream or off-white ground with dark ink. Moods such as "calm", "technical", or "paper-like" are not a source.
+- Without brand colors, take them from the subject, such as the product's interface, the place, or the material, and write in the storyboard which part of the subject each color comes from. Avoid the palettes generated video falls back to, unless the subject's own colors produce one: a near-black or slate ground with one bright accent, a cream or off-white ground with dark ink or an orange, rust, terracotta, or copper accent, and indigo or violet for anything technical. Moods such as "calm", "technical", or "paper-like" are not a source.
 - Color a word in the accent only when that word is the point of the beat. Coloring the last word of every headline turns emphasis into decoration.
 - Avoid decorative motion without meaning, such as floating particles, perpetual wobble, and lens flares, the motion equivalents of decorative noise.
 
