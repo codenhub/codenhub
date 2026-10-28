@@ -78,6 +78,8 @@ export interface PublicPackage {
   /** Accessible label for the GitHub action when {@link githubUrl} is set. */
   githubLabel?: string;
   label: string;
+  /** npm package name from the manifest. */
+  name?: string;
   /** npmjs.com URL, when the package is published. */
   npmUrl?: string;
   /** Accessible label for the npm action when {@link npmUrl} is set. */
@@ -198,6 +200,7 @@ async function loadCatalog(): Promise<PublicPackage[]> {
         githubLabel: githubUrl === undefined ? undefined : `${name} on GitHub`,
         githubUrl,
         label: packageDefinition.label,
+        name,
         npmLabel: npmUrl === undefined ? undefined : `${name} on npm`,
         npmUrl,
         slug: packageDefinition.slug,

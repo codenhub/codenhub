@@ -23,6 +23,16 @@ describe("package documentation resources", () => {
     expect(response?.headers.get("content-type")).toBe("image/svg+xml");
   });
 
+  it("serves llms files as text with absolute site links", async () => {
+    const rootPath = await mkdtemp(path.join(tmpdir(), "codenhub-resource-llms-"));
+    await writeFile(path.join(rootPath, "llms.txt"), "- [Overview](docs/index.md)\n");
+    const resources = discoverPublicResources("example", ["llms.txt"]).map((resource) => ({ ...resource, rootPath }));
+    const response = await createResourceMiddleware(resources)(new Request("http://localhost/example/llms.txt"));
+
+    expect(await response?.text()).toBe("- [Overview](https://docs.codenhub.dev/example/)\n");
+    expect(response?.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+  });
+
   it("does not serve undiscovered package files", async () => {
     const rootPath = await mkdtemp(path.join(tmpdir(), "codenhub-resource-traversal-"));
     await writeFile(path.join(rootPath, "NOTICE"), "Notice");
@@ -45,5 +55,21 @@ describe("package documentation resources", () => {
     await copyPublicResources(resources, outputPath);
 
     await expect(readFile(path.join(outputPath, "example", "assets", "diagram.svg"), "utf8")).resolves.toBe("<svg/>");
+  });
+
+  it("copies llms files with absolute site links", async () => {
+    const rootPath = await mkdtemp(path.join(tmpdir(), "codenhub-resource-llms-source-"));
+    const outputPath = await mkdtemp(path.join(tmpdir(), "codenhub-resource-llms-output-"));
+    await writeFile(path.join(rootPath, "llms-full.txt"), "[Errors](docs/reference.md#errors)\n");
+    const resources = discoverPublicResources("example", ["llms-full.txt"]).map((resource) => ({
+      ...resource,
+      rootPath,
+    }));
+
+    await copyPublicResources(resources, outputPath);
+
+    await expect(readFile(path.join(outputPath, "example", "llms-full.txt"), "utf8")).resolves.toBe(
+      "[Errors](https://docs.codenhub.dev/example/reference/#errors)\n",
+    );
   });
 });

@@ -44,6 +44,8 @@ describe("package documentation loading", () => {
         rootPath,
         routePath: "/example/assets/diagram.svg",
       },
+      { packagePath: "llms-full.txt", rootPath, routePath: "/example/llms-full.txt" },
+      { packagePath: "llms.txt", rootPath, routePath: "/example/llms.txt" },
     ]);
   });
 
