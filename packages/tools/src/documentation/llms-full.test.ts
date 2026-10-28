@@ -242,6 +242,10 @@ describe("renderLlmsFull", () => {
 });
 
 describe("rewriteMarkdownTargets", () => {
+  it("shouldRewriteThePathInsideAngleBracketDestinations", () => {
+    expect(rewriteMarkdownTargets("[a](<one.md>)", (target) => target.toUpperCase())).toBe("[a](<ONE.MD>)");
+  });
+
   it("shouldPassEveryLinkTargetOutsideCodeToTheRewrite", () => {
     const body = ["[a](one.md) ![b](two.svg)", "", "[c]: three.md", '<a href="four.md">x</a> `[d](five.md)`'];
 

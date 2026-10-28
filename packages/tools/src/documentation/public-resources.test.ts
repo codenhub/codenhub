@@ -102,6 +102,12 @@ describe("publishLlmsText", () => {
     );
   });
 
+  it("shouldRewriteAngleBracketDestinations", () => {
+    expect(publishLlmsText("[Overview](<docs/index.md>)", site)).toBe(
+      "[Overview](<https://docs.example.dev/example/>)",
+    );
+  });
+
   it("shouldLeaveTargetsTheSiteDoesNotPublishUnchanged", () => {
     const body = "[README](./README.md) [Site](https://example.com) [Here](#usage) [Escape](../other/llms.txt)";
 

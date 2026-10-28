@@ -191,8 +191,8 @@ function findCodeRanges(body: string): CodeRange[] {
 /**
  * Replaces every link and image target in a Markdown body.
  *
- * Inline links, reference definitions, and HTML `href` and `src` attributes are
- * covered. Code blocks and inline code spans are left untouched so example
+ * Inline links, including `<...>` destinations, reference definitions, and HTML
+ * `href` and `src` attributes are covered. Code blocks and inline code spans are left untouched so example
  * snippets keep the paths their authors wrote.
  * @param body Authored Markdown body.
  * @param rewrite Returns the replacement for one target, or the target itself to keep it.
@@ -204,7 +204,9 @@ export function rewriteMarkdownTargets(body: string, rewrite: (target: string) =
       (current, pattern) =>
         current.replaceAll(pattern, (_match, ...groups) => {
           const named = groups.at(-1) as { prefix: string; target: string };
-          return `${named.prefix}${rewrite(named.target)}`;
+          const { prefix, target } = named;
+          // CommonMark allows `<...>` around a destination; rewrite the path inside it.
+          return /^<.+>$/.test(target) ? `${prefix}<${rewrite(target.slice(1, -1))}>` : `${prefix}${rewrite(target)}`;
         }),
       text,
     );
