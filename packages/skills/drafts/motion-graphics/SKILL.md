@@ -97,7 +97,7 @@ When the project already uses another tool that meets the requirements, such as 
 - Capture each render in a fresh directory so a shorter revision cannot retain an obsolete tail. Deliver MP4 with H.264 and the `yuv420p` pixel format for broad compatibility, with `-framerate` set to the rate the frames were captured at: `ffmpeg -framerate 30 -i frames-XXXXXX/%05d.png -c:v libx264 -pix_fmt yuv420p -crf 18 -movflags +faststart out.mp4`. Replace `frames-XXXXXX` with the directory from the current capture run.
 - For a transparent background, as with an overlay or a lower third, deliver ProRes 4444 (`-c:v prores_ks -profile:v 4444 -pix_fmt yuva444p10le`) or WebM with VP9 (`-c:v libvpx-vp9 -pix_fmt yuva420p`), and capture the frames with a transparent background.
 - For a GIF, generate a palette first (`palettegen` and `paletteuse` filters), keep it short, and reduce the frame rate and size; GIFs grow large fast.
-- Mix audio in the same `ffmpeg` call, and trim the video and audio to the same length.
+- Mix audio in the same `ffmpeg` call, and fit the audio to the video's length: `ffmpeg -framerate 30 -i frames-XXXXXX/%05d.png -i audio.wav -map 0:v -map 1:a -c:v libx264 -pix_fmt yuv420p -crf 18 -c:a aac -b:a 192k -af apad -t DURATION -movflags +faststart out.mp4`, with `DURATION` set to the captured frame count divided by the frame rate. `apad` pads shorter audio with silence and `-t` cuts longer audio, so every frame stays. Fade music out before the cut when it would end mid-phrase.
 
 ## Verification
 
