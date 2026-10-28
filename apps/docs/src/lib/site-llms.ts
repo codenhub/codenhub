@@ -33,14 +33,14 @@ export function buildSiteLlmsTxt(
   const fullLines = packages.map(
     (entry) =>
       `- [${entry.name ?? entry.label} full documentation](${fileUrl(entry, "llms-full.txt")}): ` +
-      "The README and every public document in one file.",
+      "The README and every document the package publishes, in one file.",
   );
   return [
     `# ${site.title}`,
     "",
     `> ${site.description}`,
     "",
-    "Each package publishes an `llms.txt` that routes to its documentation and an `llms-full.txt` that compiles its README and public documentation into one file. Links in both are absolute.",
+    "Each package publishes an `llms.txt` that routes to its documentation and an `llms-full.txt` that compiles its README and public documentation into one file. Links to files this site publishes are absolute; other package-relative links, such as `README.md`, stay as authored.",
     "",
     "## Packages",
     "",
