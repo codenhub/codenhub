@@ -30,7 +30,7 @@ Not every request needs every step. A tagline alone still needs the positioning;
 
 - **The offer:** what is sold, to whom, at what price level, and why someone chooses it over the alternatives.
 - **The audience:** a specific group with a specific need, not "everyone" or "businesses". Include who decides and who uses, when they differ.
-- **Competitors:** collect five to ten, including indirect alternatives. For each, record its name, its claim, its main colors, its type style, and its tone. Then map where they cluster. The cluster is what this brand must not look or sound like.
+- **Competitors:** collect five to ten, including indirect alternatives. For each, record its name, its claim, its main colors, its type style, and its tone. When you can browse the web, open each competitor's site or social profile to record its colors and type; a search result listing does not show them. For a competitor whose colors you still cannot find, write that against its name. Then map where they cluster. The cluster is what this brand must not look or sound like.
 - **Constraints:** existing assets, budget for licensed fonts and photography, markets and languages, legal or industry requirements, and the touchpoints that matter most.
 
 Ask the client the questions whose answers would change the direction, such as the audience or the price level. For the rest, state assumptions. Write the result as a short brief and confirm it before strategy.
