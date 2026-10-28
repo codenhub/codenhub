@@ -102,6 +102,12 @@ describe("publishLlmsText", () => {
     );
   });
 
+  it("shouldRewriteAngleBracketReferenceDefinitions", () => {
+    expect(publishLlmsText("[guide]: <docs/setup.md>", site)).toBe(
+      "[guide]: <https://docs.example.dev/example/setup/>",
+    );
+  });
+
   it("shouldRewriteAngleBracketDestinations", () => {
     expect(publishLlmsText("[Overview](<docs/index.md>)", site)).toBe(
       "[Overview](<https://docs.example.dev/example/>)",

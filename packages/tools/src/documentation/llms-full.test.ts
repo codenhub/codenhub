@@ -242,6 +242,12 @@ describe("renderLlmsFull", () => {
 });
 
 describe("rewriteMarkdownTargets", () => {
+  it("shouldKeepBalancedParenthesesInsideADestination", () => {
+    expect(rewriteMarkdownTargets("[a](guide(v2).md) next)", (target) => target.toUpperCase())).toBe(
+      "[a](GUIDE(V2).MD) next)",
+    );
+  });
+
   it("shouldRewriteThePathInsideAngleBracketDestinations", () => {
     expect(rewriteMarkdownTargets("[a](<one.md>)", (target) => target.toUpperCase())).toBe("[a](<ONE.MD>)");
   });

@@ -14,7 +14,8 @@ import {
 
 const SOURCE_MARKER = "<!-- Source: %s -->";
 const CODE_TYPES = new Set(["code", "inlineCode"]);
-const INLINE_TARGET = /(?<prefix>\]\(\s*)(?<target>[^)\s]+)/g;
+// A destination may hold one level of balanced parentheses, as CommonMark allows: `guide(v2).md`.
+const INLINE_TARGET = /(?<prefix>\]\(\s*)(?<target>(?:[^()\s]|\([^()\s]*\))+)/g;
 const DEFINITION_TARGET = /(?<prefix>^ {0,3}\[[^\]\n]+\]:[^\S\n]*)(?<target>\S+)/gm;
 const ATTRIBUTE_TARGET = /(?<prefix>\b(?:href|src)\s*=\s*["'])(?<target>[^"']+)/g;
 const TARGET_PATTERNS = [INLINE_TARGET, DEFINITION_TARGET, ATTRIBUTE_TARGET];
