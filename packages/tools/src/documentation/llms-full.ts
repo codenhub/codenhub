@@ -189,6 +189,37 @@ function findCodeRanges(body: string): CodeRange[] {
 }
 
 /**
+ * Replaces every link and image target in a Markdown body.
+ *
+ * Inline links, reference definitions, and HTML `href` and `src` attributes are
+ * covered. Code blocks and inline code spans are left untouched so example
+ * snippets keep the paths their authors wrote.
+ * @param body Authored Markdown body.
+ * @param rewrite Returns the replacement for one target, or the target itself to keep it.
+ * @returns Body with its targets rewritten.
+ */
+export function rewriteMarkdownTargets(body: string, rewrite: (target: string) => string): string {
+  const rewriteText = (text: string): string =>
+    TARGET_PATTERNS.reduce(
+      (current, pattern) =>
+        current.replaceAll(pattern, (_match, ...groups) => {
+          const named = groups.at(-1) as { prefix: string; target: string };
+          return `${named.prefix}${rewrite(named.target)}`;
+        }),
+      text,
+    );
+
+  const parts: string[] = [];
+  let cursor = 0;
+  for (const { end, start } of findCodeRanges(body)) {
+    parts.push(rewriteText(body.slice(cursor, start)), body.slice(start, end));
+    cursor = end;
+  }
+  parts.push(rewriteText(body.slice(cursor)));
+  return parts.join("");
+}
+
+/**
  * Rewrites package-relative link targets so they resolve from the package root.
  *
  * Code blocks and inline code spans are left untouched so example snippets keep
@@ -201,25 +232,7 @@ export function rebaseMarkdownTargets(body: string, sourceDirectory: string): st
   if (sourceDirectory === "" || sourceDirectory === ".") {
     return body;
   }
-
-  const rebaseText = (text: string): string =>
-    TARGET_PATTERNS.reduce(
-      (current, pattern) =>
-        current.replaceAll(pattern, (_match, ...groups) => {
-          const named = groups.at(-1) as { prefix: string; target: string };
-          return `${named.prefix}${rebaseTarget(named.target, sourceDirectory)}`;
-        }),
-      text,
-    );
-
-  const parts: string[] = [];
-  let cursor = 0;
-  for (const { end, start } of findCodeRanges(body)) {
-    parts.push(rebaseText(body.slice(cursor, start)), body.slice(start, end));
-    cursor = end;
-  }
-  parts.push(rebaseText(body.slice(cursor)));
-  return parts.join("");
+  return rewriteMarkdownTargets(body, (target) => rebaseTarget(target, sourceDirectory));
 }
 
 /**

@@ -12,6 +12,7 @@ import {
   orderLlmsFullSources,
   rebaseMarkdownTargets,
   renderLlmsFull,
+  rewriteMarkdownTargets,
 } from "./llms-full.ts";
 
 describe("parseMarkdown", () => {
@@ -236,6 +237,16 @@ describe("renderLlmsFull", () => {
         "[Reference](docs/reference.md)",
         "",
       ].join("\n"),
+    );
+  });
+});
+
+describe("rewriteMarkdownTargets", () => {
+  it("shouldPassEveryLinkTargetOutsideCodeToTheRewrite", () => {
+    const body = ["[a](one.md) ![b](two.svg)", "", "[c]: three.md", '<a href="four.md">x</a> `[d](five.md)`'];
+
+    expect(rewriteMarkdownTargets(body.join("\n"), (target) => target.toUpperCase())).toBe(
+      ["[a](ONE.MD) ![b](TWO.SVG)", "", "[c]: THREE.MD", '<a href="FOUR.MD">x</a> `[d](five.md)`'].join("\n"),
     );
   });
 });
