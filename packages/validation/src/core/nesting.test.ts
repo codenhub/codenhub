@@ -85,13 +85,14 @@ describe("deep input with many issues", () => {
     ok: false,
     error: { issues: (input as unknown[]).map((_, index) => ({ code: "invalid_type", path: [index] })) as never },
   });
+  // Deeper than the default limit of 128, so the two depths compared can be far apart.
   const level: Validator<Level> = object({
-    next: optional(lazy(() => level)),
+    next: optional(lazy(() => level, { maxDepth: 200 })),
     items: optional(many),
   });
 
   const nested = (depth: number): Level => {
-    let input: Level = { items: Array.from({ length: 20_000 }, () => "x") };
+    let input: Level = { items: Array.from({ length: 10_000 }, () => "x") };
     for (let count = 0; count < depth; count += 1) {
       input = { next: input };
     }
@@ -121,12 +122,12 @@ describe("deep input with many issues", () => {
     return fastest;
   };
 
-  const deep = nested(100);
+  const deep = nested(160);
 
   it("should report every issue at its full path", () => {
     const issues = issuesOf(level(deep));
-    expect(issues).toHaveLength(20_000);
-    expect(issues[0]?.path).toEqual([...Array.from({ length: 100 }, () => "next"), "items", 0]);
+    expect(issues).toHaveLength(10_000);
+    expect(issues[0]?.path).toEqual([...Array.from({ length: 160 }, () => "next"), "items", 0]);
   });
 
   // Each composer used to copy the path of every issue below it, which cost the square of the depth for
@@ -136,9 +137,13 @@ describe("deep input with many issues", () => {
   // compared with: a path of three segments became six times faster to write and one of a hundred three
   // times, so that ratio rose from 14 to 28 with nothing copied twice, and the test failed one run in two.
   // The depths were once timed one after the other, and a CI runner busy only while the deep one ran
-  // measured a ratio of 10.04 where a quiet machine measures about five.
+  // measured a ratio of 10.04 where a quiet machine measures about five. Comparing 100 levels with 25
+  // left too little room on either side: the copying was measured at 12 to 14 times, and a busy runner
+  // still measured 10.03 interleaved. Sixteen times the depth separates the two: on one machine, 160
+  // levels took 11 to 13 times what 10 took alone and 6 to 21 times with four suites running at once,
+  // while copying the path at every level took 250 to 270 times alone and 81 to 300 under that load.
   it("should report them in time that grows with the input", { timeout: 30_000 }, () => {
-    const [deepTime, shallowTime] = fastestOfEach(deep, nested(25));
-    expect(deepTime).toBeLessThan(10 * shallowTime);
+    const [deepTime, shallowTime] = fastestOfEach(deep, nested(10));
+    expect(deepTime).toBeLessThan(40 * shallowTime);
   });
 });
