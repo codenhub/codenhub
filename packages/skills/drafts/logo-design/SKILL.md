@@ -97,7 +97,8 @@ Render the work to images and look at them before presenting.
 - Place it beside the competitor marks from step 2. It should not look like any of them, or like the category average.
 - Check that it does not closely resemble a well-known logo. You cannot clear a trademark; say that a trademark search by a qualified person is still needed before the client adopts it.
 - For a new mark, confirm the presentation holds the spacing review from Wordmarks when the route includes lettering, and each route's competitor comparison: shared ideas and the visual distinctions observed in the renders. When a record is missing, do that work before presenting. Revise or replace a route that visually resembles a competitor or offers no meaningful distinction; a shared verbal explanation alone is not a failed check.
-- Open the final SVG and confirm it has no `<text>`, no raster images, no strokes that should be fills, and a fitted `viewBox`.
+- Open the final SVG and confirm it has no `<text>`, no raster images, no strokes that should be fills, and a fitted `viewBox`. View each final file at its final size and confirm every letter and part is whole and clear of the edges.
+- For each check, write in the presentation what you measured or saw, and list every defect found, fixed or not. A check reported only as passed was not run.
 - Compare the result against the failures listed at the top and remove each one that has no reason to be there.
 
 When the work cannot be rendered, say so and name what was not checked.
