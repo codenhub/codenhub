@@ -149,7 +149,10 @@ function describePackage(summary: PublicPackageSummary): CatalogPackage {
           : undefined),
       docs,
       github: homepage?.startsWith("https://github.com/") === true ? homepage : undefined,
-      llms: docs !== undefined && llmsPaths.includes(`${root}/llms.txt`) ? `${docs}llms.txt` : undefined,
+      llms:
+        tag !== undefined && docs !== undefined && llmsPaths.includes(`${root}/llms.txt`)
+          ? `${docs}llms.txt`
+          : undefined,
       npm: packageNpmUrl(summary.name),
     },
     logoUrl: metadata?.logo === undefined ? undefined : `/logos/${slug}.svg`,
