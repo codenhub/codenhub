@@ -1461,6 +1461,39 @@
         "song"
       ]
     },
+    "avocado": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M13.465 3.464a5 5 0 017.07 0 5 5 0 010 7.072c-1.204 1.203-2.38 2.89-2.614 4.577A8 8 0 118.886 6.08c1.687-.235 3.375-1.41 4.579-2.615\" /><circle cx=\"10\" cy=\"14\" r=\"3\" /></g>",
+      "tags": [
+        "fruit",
+        "snack",
+        "meal",
+        "lunch",
+        "ingredient",
+        "cooking",
+        "cookery",
+        "kitchen",
+        "cuisine",
+        "eating",
+        "healthy",
+        "nutrition",
+        "diet",
+        "guacamole",
+        "mexican",
+        "green",
+        "pit",
+        "seed",
+        "half",
+        "produce",
+        "vegetarian",
+        "vegan",
+        "grocery",
+        "supermarket",
+        "toast",
+        "superfood",
+        "plant based",
+        "ripe"
+      ]
+    },
     "award": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526\" /><circle cx=\"12\" cy=\"8\" r=\"6\" /></g>",
       "tags": [
@@ -1515,6 +1548,41 @@
         "camping",
         "school",
         "childhood"
+      ]
+    },
+    "bacon": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M2.795 16.804c-.789-.79-1.09-2.018-.442-2.928 1.933-2.713 4.414-1.05 6.145-5.378 1.868-4.67 4.608-2.366 6.592-6.107.218-.412.78-.53 1.11-.2l5.005 5.005c.789.79 1.09 2.018.442 2.928-1.933 2.713-4.414 1.05-6.145 5.378-1.868 4.67-4.608 2.366-6.591 6.107-.22.412-.78.53-1.11.2z\" /><path d=\"M4.5 18.5c2-5 5-2 7-7s5-2 7-7\" /></g>",
+      "tags": [
+        "rashers",
+        "smoked",
+        "streaky",
+        "crispy",
+        "meat",
+        "fast food",
+        "junk food",
+        "snack",
+        "dish",
+        "restaurant",
+        "brunch",
+        "lunch",
+        "meal",
+        "savory",
+        "savoury",
+        "cookery",
+        "cooking",
+        "grilled",
+        "barbecue",
+        "barbeque",
+        "bbq",
+        "pig",
+        "pork",
+        "breakfast",
+        "cured",
+        "butcher",
+        "sandwich",
+        "protein",
+        "grocery",
+        "kitchen"
       ]
     },
     "badge-alert": {
@@ -3644,7 +3712,7 @@
       ]
     },
     "brain-circuit": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z\" /><path d=\"M9 13a4.5 4.5 0 0 0 3-4\" /><path d=\"M6.003 5.125A3 3 0 0 0 6.401 6.5\" /><path d=\"M3.477 10.896a4 4 0 0 1 .585-.396\" /><path d=\"M6 18a4 4 0 0 1-1.967-.516\" /><path d=\"M12 13h4\" /><path d=\"M12 18h6a2 2 0 0 1 2 2v1\" /><path d=\"M12 8h8\" /><path d=\"M16 8V5a2 2 0 0 1 2-2\" /><circle cx=\"16\" cy=\"13\" r=\".5\" /><circle cx=\"18\" cy=\"3\" r=\".5\" /><circle cx=\"20\" cy=\"21\" r=\".5\" /><circle cx=\"20\" cy=\"8\" r=\".5\" /></g>",
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 13h4\" /><path d=\"M12 18h6a2 2 0 012 2v1\" /><path d=\"M12 8h8\" /><path d=\"M12 9a4.17 4.17 0 01-3 4\" /><path d=\"M16 8V5a2 2 0 012-2\" /><path d=\"M6 18a4 4 0 01-2-7.465\" /><path d=\"M6.004 5.125a4 4 0 00-2.526 5.77\" /><path d=\"M6.294 6.294A3 3 0 1112 5v13a4 4 0 11-7.967-.518\" /><circle cx=\"16\" cy=\"13\" r=\"0.5\" fill=\"currentColor\" /><circle cx=\"18\" cy=\"3\" r=\"0.5\" fill=\"currentColor\" /><circle cx=\"20\" cy=\"21\" r=\"0.5\" fill=\"currentColor\" /><circle cx=\"20\" cy=\"8\" r=\"0.5\" fill=\"currentColor\" /></g>",
       "tags": [
         "mind",
         "intellect",
@@ -3656,7 +3724,7 @@
       ]
     },
     "brain-cog": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m10.852 14.772-.383.923\" /><path d=\"m10.852 9.228-.383-.923\" /><path d=\"m13.148 14.772.382.924\" /><path d=\"m13.531 8.305-.383.923\" /><path d=\"m14.772 10.852.923-.383\" /><path d=\"m14.772 13.148.923.383\" /><path d=\"M17.598 6.5A3 3 0 1 0 12 5a3 3 0 0 0-5.63-1.446 3 3 0 0 0-.368 1.571 4 4 0 0 0-2.525 5.771\" /><path d=\"M17.998 5.125a4 4 0 0 1 2.525 5.771\" /><path d=\"M19.505 10.294a4 4 0 0 1-1.5 7.706\" /><path d=\"M4.032 17.483A4 4 0 0 0 11.464 20c.18-.311.892-.311 1.072 0a4 4 0 0 0 7.432-2.516\" /><path d=\"M4.5 10.291A4 4 0 0 0 6 18\" /><path d=\"M6.002 5.125a3 3 0 0 0 .4 1.375\" /><path d=\"m9.228 10.852-.923-.383\" /><path d=\"m9.228 13.148-.923.383\" /><circle cx=\"12\" cy=\"12\" r=\"3\" /></g>",
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m10.852 14.772-.383.923\" /><path d=\"m10.852 9.228-.383-.923\" /><path d=\"m13.148 14.772.382.924\" /><path d=\"m13.53 8.305-.382.923\" /><path d=\"m14.772 10.852.923-.383\" /><path d=\"m14.772 13.148.923.383\" /><path d=\"M17.997 5.125a4 4 0 012.526 5.77\" /><path d=\"M18 18a4 4 0 002-7.464\" /><path d=\"M4.033 17.483A4 4 0 0011.46 20c.184-.31.896-.31 1.076 0a4 4 0 007.43-2.517\" /><path d=\"M6 18a4 4 0 01-2-7.464\" /><path d=\"M6.002 5.125a4 4 0 00-2.525 5.77\" /><path d=\"M6.293 6.294a3 3 0 01-.287-1.098l-.004-.07a3 3 0 015.968-.543c.05.02.057.01.059 0a3 3 0 015.968.542l-.004.071a3 3 0 01-.287 1.098\" /><path d=\"m9.228 10.852-.923-.383\" /><path d=\"m9.228 13.148-.923.383\" /><circle cx=\"12\" cy=\"12\" r=\"3\" /></g>",
       "tags": [
         "mind",
         "intellect",
@@ -3667,8 +3735,26 @@
         "computing"
       ]
     },
+    "brain-off": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 18v-6\" /><path d=\"M12 5v1.344\" /><path d=\"M17.707 6.293A3 3 0 1012 5a3 3 0 00-4.124-2.781\" /><path d=\"M17.997 5.125a4 4 0 012.526 5.77\" /><path d=\"M19.644 19.644A4 4 0 0112 18a4 4 0 11-7.967-.517\" /><path d=\"m2 2 20 20\" /><path d=\"M20 10.536a4 4 0 011.533 5.34\" /><path d=\"M3.477 10.895a4 4 0 011.876-5.542\" /><path d=\"M6 18a4 4 0 01-2-7.464\" /><path d=\"M9 13a4.17 4.17 0 002.166-1.5 4 4 0 00.138-.196\" /></g>",
+      "tags": [
+        "medical",
+        "mind",
+        "mental",
+        "intellect",
+        "cerebral",
+        "consciousness",
+        "genius",
+        "artificial intelligence",
+        "ai",
+        "think",
+        "deep learning",
+        "machine learning",
+        "computing"
+      ]
+    },
     "brain": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 18V5\" /><path d=\"M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4\" /><path d=\"M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5\" /><path d=\"M17.997 5.125a4 4 0 0 1 2.526 5.77\" /><path d=\"M18 18a4 4 0 0 0 2-7.464\" /><path d=\"M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517\" /><path d=\"M6 18a4 4 0 0 1-2-7.464\" /><path d=\"M6.003 5.125a4 4 0 0 0-2.526 5.77\" /></g>",
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 18V5\" /><path d=\"M15 13a4.17 4.17 0 01-3-4 4.17 4.17 0 01-3 4\" /><path d=\"M17.707 6.294A3 3 0 1012 5a3 3 0 10-5.707 1.294\" /><path d=\"M17.996 5.125a4 4 0 012.526 5.77\" /><path d=\"M18 18a4 4 0 002-7.465\" /><path d=\"M19.967 17.482a4 4 0 11-7.967.517 4 4 0 11-7.967-.517\" /><path d=\"M6 18a4 4 0 01-2-7.465\" /><path d=\"M6.004 5.125a4 4 0 00-2.526 5.77\" /></g>",
       "tags": [
         "medical",
         "mind",
@@ -5690,6 +5776,105 @@
         "ahead",
         "menu",
         "^"
+      ]
+    },
+    "circle-chevrons-down": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 14L12 17L15 14\" /><path d=\"M9 8L12 11L15 8\" /><circle cx=\"12\" cy=\"12\" r=\"10\" /></g>",
+      "tags": [
+        "bottom",
+        "descend",
+        "page",
+        "page down",
+        "scroll",
+        "jump",
+        "south",
+        "caret",
+        "button",
+        "skip",
+        "end",
+        "last page",
+        "latest",
+        "feed",
+        "chat",
+        "pagination",
+        "fast",
+        "media"
+      ]
+    },
+    "circle-chevrons-left": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10 9L7 12L10 15\" /><path d=\"M16 9L13 12L16 15\" /><circle cx=\"12\" cy=\"12\" r=\"10\" /></g>",
+      "tags": [
+        "previous",
+        "rewind",
+        "backward",
+        "first",
+        "beginning",
+        "start",
+        "west",
+        "music",
+        "caret",
+        "button",
+        "pagination",
+        "skip",
+        "skip-back",
+        "seek-back",
+        "media-controls",
+        "player",
+        "playlist",
+        "track",
+        "chapter",
+        "jump",
+        "timeline",
+        "controls"
+      ]
+    },
+    "circle-chevrons-right": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M14 15L17 12L14 9\" /><path d=\"M8 15L11 12L8 9\" /><circle cx=\"12\" cy=\"12\" r=\"10\" /></g>",
+      "tags": [
+        "next",
+        "forward",
+        "skip",
+        "fast forward",
+        "last",
+        "end",
+        "east",
+        "music",
+        "caret",
+        "button",
+        "pagination",
+        "jump",
+        "seek",
+        "seek forward",
+        "player control",
+        "chapter",
+        "track",
+        "timeline",
+        "navigation control"
+      ]
+    },
+    "circle-chevrons-up": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 10L12 7L9 10\" /><path d=\"M15 16L12 13L9 16\" /><circle cx=\"12\" cy=\"12\" r=\"10\" /></g>",
+      "tags": [
+        "top",
+        "ascend",
+        "page",
+        "page up",
+        "back to top",
+        "scroll",
+        "jump",
+        "north",
+        "caret",
+        "button",
+        "skip",
+        "pagination",
+        "first page",
+        "fast",
+        "fast scroll",
+        "rewind",
+        "jump to start",
+        "floating action button",
+        "anchor",
+        "timeline"
       ]
     },
     "circle-dashed-check": {
@@ -11133,6 +11318,26 @@
         "food"
       ]
     },
+    "graph-hub": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"7\" r=\"4\" /><circle cx=\"4\" cy=\"19\" r=\"2\" /><circle cx=\"12\" cy=\"19\" r=\"2\" /><circle cx=\"20\" cy=\"19\" r=\"2\" /><path d=\"M8 7a4 4 0 0 0-4 4v6\" /><path d=\"M12 11v6\" /><path d=\"M16 7a4 4 0 0 1 4 4v6\" /></g>",
+      "tags": [
+        "load balancer",
+        "distribute",
+        "traffic",
+        "network",
+        "nodes",
+        "parallel",
+        "branch",
+        "hierarchy",
+        "routing",
+        "dispatcher",
+        "cluster",
+        "backend",
+        "fan-out",
+        "topology",
+        "orchestration"
+      ]
+    },
     "graph-star": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m12.342 9.316 1.764-3.527\" /><path d=\"m12.59 14.545 2.35 3.759\" /><path d=\"m13.982 12.332 4.03.447\" /><path d=\"M5.414 17.586 8.88 14.12\" /><path d=\"M9.025 9.742 5.317 5.505\" /><circle cx=\"11\" cy=\"12\" r=\"3\" /><circle cx=\"15\" cy=\"4\" r=\"2\" /><circle cx=\"16\" cy=\"20\" r=\"2\" /><circle cx=\"20\" cy=\"13\" r=\"2\" /><circle cx=\"4\" cy=\"19\" r=\"2\" /><circle cx=\"4\" cy=\"4\" r=\"2\" /></g>",
       "tags": [
@@ -13069,6 +13274,21 @@
         "zoom"
       ]
     },
+    "letter-spacing": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 14H9\" /><path d=\"M21 3v18\" /><path d=\"M3 3v18\" /><path d=\"m8 16 3.453-7.648a.6.6 0 011.094.001L16 16\" /></g>",
+      "tags": [
+        "tracking",
+        "kerning",
+        "design",
+        "lettering",
+        "text",
+        "letters",
+        "characters",
+        "font",
+        "typography",
+        "formatting"
+      ]
+    },
     "letter-text": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 5h6\" /><path d=\"M15 12h6\" /><path d=\"M3 19h18\" /><path d=\"m3 12 3.553-7.724a.5.5 0 0 1 .894 0L11 12\" /><path d=\"M3.92 10h6.16\" /></g>"
     },
@@ -13278,6 +13498,23 @@
         "station",
         "last",
         "end"
+      ]
+    },
+    "line-height": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 14H9\" /><path d=\"M21 21H3\" /><path d=\"M21 3H3\" /><path d=\"m8 16 3.453-7.648a.6.6 0 011.094.001L16 16\" /></g>",
+      "tags": [
+        "leading",
+        "text",
+        "letters",
+        "characters",
+        "font",
+        "typography",
+        "spacing",
+        "paragraph",
+        "formatting",
+        "editor",
+        "readability",
+        "typesetting"
       ]
     },
     "line-squiggle": {
@@ -20840,6 +21077,23 @@
         "screen"
       ]
     },
+    "smartphone-user-round": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10 22H6a2 2 0 01-2-2V4a2 2 0 012-2h10a2 2 0 012 2v4\" /><path d=\"M11 18h.01\" /><path d=\"M22 22a4 4 0 00-8 0\" /><circle cx=\"18\" cy=\"15\" r=\"3\" /></g>",
+      "tags": [
+        "phone",
+        "cellphone",
+        "device",
+        "mobile",
+        "person",
+        "profile",
+        "account",
+        "avatar",
+        "contact",
+        "identity",
+        "owner",
+        "authentication"
+      ]
+    },
     "smartphone": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /><path d=\"M12 18h.01\" /></g>",
       "tags": [
@@ -23700,6 +23954,31 @@
         "washroom"
       ]
     },
+    "tombstone": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M11 10h2\" /><path d=\"M19 21V10a7 7 0 00-14 0v11\" /><path d=\"M2 21h20\" /><path d=\"M9 14h6\" /></g>",
+      "tags": [
+        "grave",
+        "gravestone",
+        "headstone",
+        "cemetery",
+        "graveyard",
+        "death",
+        "memorial",
+        "funeral",
+        "halloween",
+        "rip",
+        "obituary",
+        "deceased",
+        "epitaph",
+        "mourning",
+        "bereavement",
+        "condolence",
+        "deprecated",
+        "retired",
+        "archived",
+        "decommissioned"
+      ]
+    },
     "tool-case": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10 15h4\" /><path d=\"m14.5 4.058.571-1.429a1 1 0 011.3-.558l5 2a1 1 0 01.549.534.88.88 0 01.01.765l-2.332 5.83\" /><path d=\"M15.634 11a2 2 0 00-.186-.34l-1.17-1.757 1.31-1.656a2 2 0 00-2.109-3.165l-2.032.57-1.17-1.758a2 2 0 00-3.664 1.028l-.086 2.11-2.032.568a2 2 0 00-.155 3.8l1.617.6\" /><path d=\"M4 12.006A1 1 0 014.994 11H19a1 1 0 011 1v7a2 2 0 01-2 2H6a2 2 0 01-2-2z\" /></g>",
       "tags": [
@@ -26135,10 +26414,10 @@
     },
     "name": "Lucide",
     "tier": "core",
-    "total": 2159,
+    "total": 2171,
     "upstream": {
       "package": "lucide-static",
-      "version": "1.59.0"
+      "version": "1.61.0"
     },
     "strokeWidth": 2,
     "style": "outlined",
