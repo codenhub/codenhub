@@ -70,26 +70,35 @@ The following script, using Playwright, seeks the timeline to each frame and sav
 
 ```js
 import { chromium } from "playwright";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 
 const [url = "file:///path/to/index.html", fps = "30", width = "1920", height = "1080"] = process.argv.slice(2);
 const framesDir = await mkdtemp("frames-");
 
-const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: +width, height: +height }, deviceScaleFactor: 1 });
-await page.goto(url);
-await page.waitForFunction(() => window.ready === true);
+let total;
+try {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage({ viewport: { width: +width, height: +height }, deviceScaleFactor: 1 });
+    await page.goto(url);
+    await page.waitForFunction(() => window.ready === true);
 
-const total = Math.ceil((await page.evaluate(() => window.duration)) * +fps);
-for (let frame = 0; frame < total; frame++) {
-  await page.evaluate((t) => window.seek(t), frame / +fps);
-  await page.screenshot({ path: `${framesDir}/${String(frame).padStart(5, "0")}.png`, omitBackground: true });
+    total = Math.ceil((await page.evaluate(() => window.duration)) * +fps);
+    for (let frame = 0; frame < total; frame++) {
+      await page.evaluate((t) => window.seek(t), frame / +fps);
+      await page.screenshot({ path: `${framesDir}/${String(frame).padStart(5, "0")}.png`, omitBackground: true });
+    }
+  } finally {
+    await browser.close();
+  }
+} catch (error) {
+  await rm(framesDir, { recursive: true, force: true });
+  throw error;
 }
-await browser.close();
 console.log(`${total} frames written to ${framesDir}`);
 ```
 
-- Each run creates a fresh directory and prints its path and planned frame count. Encode only that directory and compare the encoded frame count with the printed count. Reusing a directory can append obsolete frames when a later render is shorter.
+- Each run creates a fresh directory and prints its path and planned capture frame count on success; a failed run removes its partial directory. Encode only the reported directory. When delivery keeps the capture rate, compare the encoded frame count with the printed count; when reducing the rate, such as for GIF, calculate the delivery count from the planned duration and delivery rate instead. Reusing a directory can append obsolete frames when a later render is shorter.
 - `omitBackground: true` keeps a transparent page background transparent in the PNGs, for overlays. For an opaque video, give the stage a background color.
 - When the page draws on a canvas or uses WebGL, wait for the next animation frame inside `seek` before returning, so the canvas has painted.
 - Rendering takes about as long as the screenshots do. For long pieces, split the frame range across several pages or processes, which requires the determinism above.
