@@ -44,7 +44,7 @@ In a codebase, read the README, the package manifest, existing names, and any br
 Write down the attributes from step 1: function, mechanism, feeling, promise, audience. Then work each one through several source lanes:
 
 - **Myth and religion.** Figures, creatures, places, and objects from Greek, Roman, Norse, Egyptian, Mesopotamian, Hindu, Buddhist, Chinese, Japanese, Celtic, Slavic, Yoruba, Polynesian, Mesoamerican, Jewish, Christian, and Islamic tradition. Go for the specific story that matches (Ariadne's thread, Huginn the raven of thought, the Golem), not the most famous god.
-- **History.** People (Claude, from Claude Shannon; Ada; Turing; Hypatia), cities and empires (Alexandria, Samarkand, Byzantium), and artifacts (Rosetta, Antikythera, Quipu, Codex).
+- **History.** People (Claude, widely read as a nod to Claude Shannon; Ada; Turing; Hypatia), cities and empires (Alexandria, Samarkand, Byzantium), and artifacts (Rosetta, Antikythera, Quipu, Codex).
 - **Science and phenomena.** Elements, minerals, particles, astronomy, weather, biology, mathematics, and named effects (Helium, Obsidian, Googol, Mycelium, Doppler).
 - **The field itself.** Objects, tools, trades, places, and actions directly related to the thing (Cursor, Docker, Blender, Steam).
 - **Language roots.** Latin, Greek, Sanskrit, Japanese, Romance-language, and other words whose meaning fits (Manus is Latin for "hand", Vista is "view", Meta is "beyond").
@@ -58,7 +58,7 @@ When the user brings names to judge, compare, or check, start at step 3 with the
 
 Do this for every name you will present, the pick and each alternative, and for any candidate you're unsure about:
 
-- **Verify the meaning.** Confirm the myth, etymology, or translation from a reliable source before presenting the name, whether as the pick or an alternative. If you can't confirm a story, drop the candidate or list it under rejected names with "unverified" as the reason.
+- **Verify the meaning.** Confirm the myth, etymology, or translation, and the pronunciation of any existing word you use, from a reliable source before presenting the name, whether as the pick or an alternative. For a coined name, give the pronunciation you intend and label it as proposed. If you can't confirm a story, drop the candidate or list it under rejected names with "unverified" as the reason.
 - **Check collisions.** Search the web for the name together with the category's general term, not only your niche: "docket task queue" finds a Python task queue named Docket that "docket postgres queue" misses. A product with the same name and purpose in another language ecosystem or country still collides. Check the registry the thing will ship in (npm, PyPI, crates.io, app stores, and so on), GitHub, and the obvious domains. Record each collision's purpose, prominence, and evidence of current activity or dormancy, with sources, then apply the collision gate in step 4. Missing evidence leaves activity unresolved and does not qualify a candidate for the dormant-project exception.
 - **Check other languages.** Look up the name, and words that sound like it, in the audience's major languages, including slang. Mist is manure in German. A name that's harmless in English can be crude, sacred, or comical somewhere else.
 - **Flag trademark risk.** Note obvious registered marks in the same class. This isn't legal clearance, and say so when the stakes are commercial.

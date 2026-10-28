@@ -83,7 +83,8 @@ try {
     await page.goto(url);
     await page.waitForFunction(() => window.ready === true);
 
-    total = Math.ceil((await page.evaluate(() => window.duration)) * +fps);
+    // Round off floating-point noise first, so 2.2 s at 25 fps is 55 frames, not 56.
+    total = Math.ceil(Math.round((await page.evaluate(() => window.duration)) * +fps * 1e6) / 1e6);
     for (let frame = 0; frame < total; frame++) {
       await page.evaluate((t) => window.seek(t), frame / +fps);
       await page.screenshot({ path: `${framesDir}/${String(frame).padStart(5, "0")}.png`, omitBackground: true });

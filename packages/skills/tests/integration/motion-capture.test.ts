@@ -87,6 +87,18 @@ it("should isolate shorter renders and report their directories and frame counts
   });
 });
 
+it("should not add a frame when duration times fps lands just above a whole number", () => {
+  withCapture((temporary, script) => {
+    // 2.2 * 25 is 55.00000000000001 in floating point.
+    const report = execFileSync(process.execPath, [script, "2.2", "25"], {
+      cwd: temporary,
+      encoding: "utf8",
+      stdio: "pipe",
+    });
+    expect(report.trim()).toMatch(/^55 frames written to /);
+  });
+});
+
 it.each(["launch", "capture"])("should remove failed output and release the browser: %s", (failure) => {
   withCapture((temporary, script) => {
     expect(() =>

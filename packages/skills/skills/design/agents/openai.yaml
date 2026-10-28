@@ -1,4 +1,4 @@
 interface:
   display_name: "Design"
-  short_description: "Reason through type, space, and color"
+  short_description: "Reason through type, space, color, and interaction"
   default_prompt: "Use $design to design this: establish the medium, audience, and content hierarchy first, then choose type, spacing, and color for reasons you can state, avoid the default generated look, and check the rendered result."
