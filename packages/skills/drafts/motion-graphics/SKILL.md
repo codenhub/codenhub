@@ -94,7 +94,7 @@ When the project already uses another tool that meets the requirements, such as 
 
 ## Encoding
 
-- Deliver MP4 with H.264 and the `yuv420p` pixel format for broad compatibility, with `-framerate` set to the rate the frames were captured at: `ffmpeg -framerate 30 -i frames/%05d.png -c:v libx264 -pix_fmt yuv420p -crf 18 -movflags +faststart out.mp4`.
+- Capture each render in a fresh directory so a shorter revision cannot retain an obsolete tail. Deliver MP4 with H.264 and the `yuv420p` pixel format for broad compatibility, with `-framerate` set to the rate the frames were captured at: `ffmpeg -framerate 30 -i frames-XXXXXX/%05d.png -c:v libx264 -pix_fmt yuv420p -crf 18 -movflags +faststart out.mp4`. Replace `frames-XXXXXX` with the directory from the current capture run.
 - For a transparent background, as with an overlay or a lower third, deliver ProRes 4444 (`-c:v prores_ks -profile:v 4444 -pix_fmt yuva444p10le`) or WebM with VP9 (`-c:v libvpx-vp9 -pix_fmt yuva420p`), and capture the frames with a transparent background.
 - For a GIF, generate a palette first (`palettegen` and `paletteuse` filters), keep it short, and reduce the frame rate and size; GIFs grow large fast.
 - Mix audio in the same `ffmpeg` call, and trim the video and audio to the same length.
@@ -109,7 +109,7 @@ Look at the output, not the code. Most timing and composition problems are invis
 - Check the first frame, which platforms often show as the thumbnail, and the last frame. The first frame must show the subject, not an empty background; start the piece with the first beat already partly in view when its entrance would leave frame 0 blank. For a loop, confirm the last frame leads into the first.
 - Overlay the platform's safe area on the key frames and confirm nothing important falls outside it.
 - On each key frame, draw the bounding box of the content, leaving out full-frame backgrounds and the safe-area overlay. It should span at least half the safe area's longer side: its height on 9:16 and 4:5, its width on 16:9, and either side on 1:1. When it does not, enlarge or re-place the content, unless the emptiness is the point of the beat and the storyboard says so.
-- Confirm the file's duration, frame rate, resolution, and codec with `ffprobe`. For a video file, confirm the frame count equals duration times frame rate; for a GIF or an image sequence, confirm it equals the number of frames rendered.
+- Confirm the file's duration, frame rate, resolution, and codec with `ffprobe` against the storyboard and output settings. Before capture, calculate the planned frame count as the duration times the frame rate, rounded up to a whole frame. For a video, GIF, or image sequence, confirm the delivered frame count equals that planned count; matching the encoded file's own duration and frame rate alone does not catch an obsolete tail.
 - Fix each failure, then render again. A failed check, such as a hold shorter than the minimum or a blank first frame, is not an open decision to hand to the client.
 - When the output cannot be rendered or inspected, say so and name what was not checked.
 

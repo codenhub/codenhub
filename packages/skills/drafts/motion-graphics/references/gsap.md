@@ -70,10 +70,10 @@ The following script, using Playwright, seeks the timeline to each frame and sav
 
 ```js
 import { chromium } from "playwright";
-import { mkdir } from "node:fs/promises";
+import { mkdtemp } from "node:fs/promises";
 
 const [url = "file:///path/to/index.html", fps = "30", width = "1920", height = "1080"] = process.argv.slice(2);
-await mkdir("frames", { recursive: true });
+const framesDir = await mkdtemp("frames-");
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: +width, height: +height }, deviceScaleFactor: 1 });
@@ -83,12 +83,13 @@ await page.waitForFunction(() => window.ready === true);
 const total = Math.ceil((await page.evaluate(() => window.duration)) * +fps);
 for (let frame = 0; frame < total; frame++) {
   await page.evaluate((t) => window.seek(t), frame / +fps);
-  await page.screenshot({ path: `frames/${String(frame).padStart(5, "0")}.png`, omitBackground: true });
+  await page.screenshot({ path: `${framesDir}/${String(frame).padStart(5, "0")}.png`, omitBackground: true });
 }
 await browser.close();
-console.log(`${total} frames written`);
+console.log(`${total} frames written to ${framesDir}`);
 ```
 
+- Each run creates a fresh directory and prints its path and planned frame count. Encode only that directory and compare the encoded frame count with the printed count. Reusing a directory can append obsolete frames when a later render is shorter.
 - `omitBackground: true` keeps a transparent page background transparent in the PNGs, for overlays. For an opaque video, give the stage a background color.
 - When the page draws on a canvas or uses WebGL, wait for the next animation frame inside `seek` before returning, so the canvas has painted.
 - Rendering takes about as long as the screenshots do. For long pieces, split the frame range across several pages or processes, which requires the determinism above.

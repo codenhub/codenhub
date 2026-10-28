@@ -59,7 +59,7 @@ When the user brings names to judge, compare, or check, start at step 3 with the
 Do this for every name you will present, the pick and each alternative, and for any candidate you're unsure about:
 
 - **Verify the meaning.** Confirm the myth, etymology, or translation from a reliable source before presenting the name, whether as the pick or an alternative. If you can't confirm a story, drop the candidate or list it under rejected names with "unverified" as the reason.
-- **Check collisions.** Search the web for the name together with the category's general term, not only your niche: "docket task queue" finds a Python task queue named Docket that "docket postgres queue" misses. A product with the same name and purpose in another language ecosystem or country still collides. Check the registry the thing will ship in (npm, PyPI, crates.io, app stores, and so on), GitHub, and the obvious domains. A famous product in the same or an adjacent field is disqualifying. A small dormant project usually isn't, but tell the user about it.
+- **Check collisions.** Search the web for the name together with the category's general term, not only your niche: "docket task queue" finds a Python task queue named Docket that "docket postgres queue" misses. A product with the same name and purpose in another language ecosystem or country still collides. Check the registry the thing will ship in (npm, PyPI, crates.io, app stores, and so on), GitHub, and the obvious domains. Record each collision's purpose, prominence, and evidence of current activity, then apply the collision gate in step 4.
 - **Check other languages.** Look up the name, and words that sound like it, in the audience's major languages, including slang. Mist is manure in German. A name that's harmless in English can be crude, sacred, or comical somewhere else.
 - **Flag trademark risk.** Note obvious registered marks in the same class. This isn't legal clearance, and say so when the stakes are commercial.
 
@@ -69,7 +69,7 @@ If you can't search the web or query registries, say exactly which checks weren'
 
 Cut any candidate that fails a gate:
 
-- **Collision.** A known product in the same or an adjacent field already has the name.
+- **Collision.** A known product in the same or an adjacent field already has the name. The exception is a small dormant project: disclose it, verify that the intended registry identifier is available when one is needed, and explain why confusion is unlikely before keeping the candidate. Active or famous products do not qualify for the exception. Dormancy alone does not establish availability or legal clearance. When activity or confusion remains unresolved, treat the collision as an unresolved doubt under the rule below.
 - **Say-and-spell.** Someone who hears it once can't type it correctly, or someone who reads it once can't say it.
 - **Bad meaning.** It's crude, offensive, or ridiculous in a major language of the audience.
 - **Length.** For a brand, more than three syllables or about ten letters needs a strong reason.
