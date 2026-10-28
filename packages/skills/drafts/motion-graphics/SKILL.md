@@ -116,4 +116,4 @@ Look at the output, not the code. Most timing and composition problems are invis
 
 ## Presenting
 
-Deliver the rendered file, the storyboard table, a poster frame as an image, and the source project. State the main decisions with one reason each: the easing character, the pacing, and how transitions connect the scenes.
+Deliver the rendered file, the storyboard table, a poster frame as an image, the source project, and the delivery notes with the verification observations and defects. State the main decisions with one reason each: the easing character, the pacing, and how transitions connect the scenes.
