@@ -48,6 +48,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "harfbuzzjs": "^1.6.4",
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
