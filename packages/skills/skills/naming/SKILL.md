@@ -44,7 +44,7 @@ In a codebase, read the README, the package manifest, existing names, and any br
 Write down the attributes from step 1: function, mechanism, feeling, promise, audience. Then work each one through several source lanes:
 
 - **Myth and religion.** Figures, creatures, places, and objects from Greek, Roman, Norse, Egyptian, Mesopotamian, Hindu, Buddhist, Chinese, Japanese, Celtic, Slavic, Yoruba, Polynesian, Mesoamerican, Jewish, Christian, and Islamic tradition. Go for the specific story that matches (Ariadne's thread, Huginn the raven of thought, the Golem), not the most famous god.
-- **History.** People (Claude, from Claude Shannon; Ada; Turing; Hypatia), cities and empires (Alexandria, Samarkand, Byzantium), and artifacts (Rosetta, Antikythera, Quipu, Codex).
+- **History.** People (Claude, widely read as a nod to Claude Shannon; Ada; Turing; Hypatia), cities and empires (Alexandria, Samarkand, Byzantium), and artifacts (Rosetta, Antikythera, Quipu, Codex).
 - **Science and phenomena.** Elements, minerals, particles, astronomy, weather, biology, mathematics, and named effects (Helium, Obsidian, Googol, Mycelium, Doppler).
 - **The field itself.** Objects, tools, trades, places, and actions directly related to the thing (Cursor, Docker, Blender, Steam).
 - **Language roots.** Latin, Greek, Sanskrit, Japanese, Romance-language, and other words whose meaning fits (Manus is Latin for "hand", Vista is "view", Meta is "beyond").
