@@ -21,7 +21,7 @@ export interface CatalogLinks {
   docs?: string;
   /** The package's directory on GitHub, from its manifest `homepage`. */
   github?: string;
-  /** `llms.txt` as released, on GitHub at the release tag. */
+  /** `llms.txt` as released, on the documentation site. */
   llms?: string;
   /** npmjs.com listing. */
   npm: string;
@@ -149,10 +149,7 @@ function describePackage(summary: PublicPackageSummary): CatalogPackage {
           : undefined),
       docs,
       github: homepage?.startsWith("https://github.com/") === true ? homepage : undefined,
-      llms:
-        tag !== undefined && llmsPaths.includes(`${root}/llms.txt`)
-          ? `${siteConfig.githubUrl}/blob/${tag}/${workspaceRoot(manifestPath)}/llms.txt`
-          : undefined,
+      llms: docs !== undefined && llmsPaths.includes(`${root}/llms.txt`) ? `${docs}llms.txt` : undefined,
       npm: packageNpmUrl(summary.name),
     },
     logoUrl: metadata?.logo === undefined ? undefined : `/logos/${slug}.svg`,
