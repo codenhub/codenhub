@@ -26,7 +26,7 @@ For anything short of a new mark, deliver the critique report, or the changed fi
 2. **Competitors.** Look at the marks of five or more competitors or neighbors in the category. Note the shapes, colors, and type they share. A logo that blends into its category is not recognized; differ on purpose. Without web access, list the competitors and category conventions you know and say they were not researched. Write these notes down before ideation and include them in the presentation. Do not skip this step.
 3. **Mark type.** Choose it from the use, as described in Choosing The Mark Type.
 4. **Ideas in words.** Generate concepts as written one-line ideas before drawing anything, as described in Ideation.
-5. **Routes.** Pick three routes from concepts whose swap fits only this brand, and that differ in idea, not three variations of one idea. At most one route may be built on the name's initial letter, and that route must change the letter to carry an idea; an initial set in a typeface, alone or in a shape, is not a concept. When the mark type is a lettermark or monogram, every route is built on the letters, so each must change them to carry a different idea. Draw each in black on white first.
+5. **Routes.** Pick three routes from the surviving concepts that fit the brief, have a specific visual distinction from the competitors, and differ in idea, not three variations of one idea. At most one route may be built on the name's initial letter, and that route must change the letter to carry an idea; an initial set in a typeface, alone or in a shape, is not a concept. When the mark type is a lettermark or monogram, every route is built on the letters, so each must change them to carry a different idea. Draw each in black on white first.
 6. **Construction.** Build each route precisely, as described in Drawing In SVG and Wordmarks.
 7. **Refine.** Add color, build lockups and the small-size version, and finish the chosen route.
 8. **Check.** Follow Verification below, then present as described in Presenting.
@@ -51,7 +51,7 @@ Write at least twenty one-line concepts before choosing. Spread them across rout
 
 Discard concepts that land on category clichés unless the brief gives a real reason to keep one: a lightbulb for ideas, a globe for international, gears for engineering, a leaf for sustainability, a shield or padlock for security, a speech bubble for communication, a brain, circuit, or sparkle for AI, a rocket or upward arrow for growth, connected dots for networks, concentric arcs or waves for signal, a swoosh, an initial in a rounded square, a letter replaced by a picture of the product (a bean for an "o", a drop for an "i"), and an arrangement of circles, squares, and triangles whose only idea is being geometric.
 
-For each surviving concept, write one sentence that explains the idea. A concept that cannot be explained in one sentence will not be understood in one glance. Then swap in the name of each competitor from step 2: when the concept and its sentence would serve any of them as well, it is about the category, not this brand; discard it, even when a detail of the brand's story could be added to rescue it. For a concept built from the name's letters or sound, apply the same construction to the competitor's name; a letter in a circle still fits when the letter changes. Record each result as "fits only [brand]" or "fits [competitor] too"; "passes" and "fails" get read both ways.
+For each surviving concept, write one sentence that explains the idea. Then swap in the name of each competitor from step 2 to expose reasoning that only describes the category. For a concept built from the name's letters or sound, apply the same construction to the competitor's name; a letter in a circle still fits when the letter changes. Record which competitors share the idea and what specific construction could distinguish this mark, such as its silhouette, negative space, or customized lettering. A shared benefit, such as dependable delivery, is not by itself a reason to discard a concept: recognition can come from its execution and use over time. Discard a concept when neither its idea nor its proposed construction offers a meaningful distinction. Test the visual distinction on the drawn routes, rather than claiming the idea fits only this brand.
 
 ## Drawing In SVG
 
@@ -66,7 +66,7 @@ Agents draw precise geometry well and freehand shapes badly. Design concepts tha
 ## Wordmarks
 
 - Start from a real typeface chosen for the personality, with a license that permits logo use. Open-licensed fonts (SIL Open Font License) permit it; check the license of any commercial font before using it in a logo.
-- Set the name and space it by hand. Default spacing is designed for running text, not for one word at display size. Adjust every letter pair until the gaps look even, and track the word tighter or looser to suit the size it will be seen at. Record each adjustment in the presentation or delivery note, pair by pair, with its value. A wordmark with no recorded adjustments has not been spaced, and "default metrics kept after review" is not a record.
+- Review the spacing of every letter pair at the intended sizes. Adjust uneven gaps and track the word tighter or looser when the render needs it. In the presentation or delivery note, record each pair's adjustment, including zero when the font's spacing already works, and the overall tracking. State the sizes reviewed and why any unchanged spacing was kept. A review does not have to produce a change; the record must show what was checked.
 - Customize at most one or two details, and only where the change carries the idea, such as a ligature, a cut, or one modified letter. Every modification must survive at the smallest size.
 - Convert the text to outlines in the final file, with a font tool or a vector editor's text-to-path conversion. A logo file that contains `<text>` depends on fonts installed on the viewer's machine and will render differently or not at all.
 - When no conversion tool is available, construct the letters as geometric paths on the same grid as the mark, which suits short names and geometric styles. When the name needs a real typeface, deliver the wordmark with `<text>` as a clearly labeled working file, state that outlining is still required, and never present it as final. Do not drop the wordmark from the delivery.
@@ -96,7 +96,7 @@ Render the work to images and look at them before presenting.
 - Blur or squint. The silhouette alone should be distinctive.
 - Place it beside the competitor marks from step 2. It should not look like any of them, or like the category average.
 - Check that it does not closely resemble a well-known logo. You cannot clear a trademark; say that a trademark search by a qualified person is still needed before the client adopts it.
-- For a new mark, confirm the presentation holds the spacing record from Wordmarks and, for each route, a competitor swap recorded as fitting only this brand. When a record is missing, do that work before presenting. When a route fits a competitor too, draw another concept from the list in its place; presenting it with the failure flagged as a risk, or listing the missing route as a gap, is not enough.
+- For a new mark, confirm the presentation holds the spacing review from Wordmarks when the route includes lettering, and each route's competitor comparison: shared ideas and the visual distinctions observed in the renders. When a record is missing, do that work before presenting. Revise or replace a route that visually resembles a competitor or offers no meaningful distinction; a shared verbal explanation alone is not a failed check.
 - Open the final SVG and confirm it has no `<text>`, no raster images, no strokes that should be fills, and a fitted `viewBox`.
 - Compare the result against the failures listed at the top and remove each one that has no reason to be there.
 
@@ -108,7 +108,7 @@ Write the presentation as a document delivered with the files, such as a Markdow
 
 For each route, show:
 
-- The idea in one sentence, before the mark, and the competitor swap from Ideation: which competitor's name was tried and why the idea does not fit it.
+- The idea in one sentence, before the mark, and the competitor comparison from Ideation: which competitors share the idea and how the drawn mark differs visually.
 - The mark in black on white, then in color, on light and dark backgrounds.
 - The mark at real small size, such as a browser tab or a phone home screen, and in one or two realistic applications.
 
