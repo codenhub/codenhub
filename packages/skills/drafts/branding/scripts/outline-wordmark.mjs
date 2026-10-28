@@ -21,7 +21,7 @@ const { values, positionals } = parseArgs({
   },
 });
 const [fontFile, text] = positionals;
-if (!fontFile || !text) {
+if (positionals.length !== 2 || !fontFile || !text) {
   throw new Error("Usage: node outline-wordmark.mjs <font-file> <text> [options]");
 }
 
@@ -41,8 +41,12 @@ const setting = (value, label) => {
 };
 
 const size = number(values.size, "--size");
+if (size <= 0) {
+  throw new Error("--size must be greater than zero");
+}
 const tracking = number(values.tracking, "--tracking");
 const pairs = new Map(values.pair.map((value) => setting(value, "--pair")));
+const unusedPairs = new Set(pairs.keys());
 
 const face = new hb.Face(new hb.Blob(readFileSync(fontFile)));
 const font = new hb.Font(face);
@@ -84,7 +88,18 @@ const em = face.upem;
 const scale = size / em;
 const thousandths = (units) => Math.round((units / em) * 1000);
 const round = (value) => Math.round(value * 100) / 100;
-const clusterText = (index) => text.slice(glyphs[index].cluster, glyphs[index + 1]?.cluster ?? text.length);
+// Cluster offsets follow logical text order even when the glyphs run right to left.
+const clusters = [...new Set(glyphs.map(({ cluster }) => cluster))].sort((a, b) => a - b);
+const clusterEnds = new Map(clusters.map((cluster, index) => [cluster, clusters[index + 1] ?? text.length]));
+const advances = (run) => {
+  const result = new Map();
+  for (const { cluster, xAdvance } of run) {
+    result.set(cluster, (result.get(cluster) ?? 0) + xAdvance);
+  }
+  return result;
+};
+const kernedAdvances = advances(glyphs);
+const unkernedAdvances = advances(unkerned);
 
 const paths = [];
 const record = [];
@@ -115,16 +130,23 @@ for (const [index, glyph] of glyphs.entries()) {
     }
   }
   pen += glyph.xAdvance;
-  if (index < glyphs.length - 1) {
-    const pair = clusterText(index) + clusterText(index + 1);
+  const next = glyphs[index + 1];
+  if (next && next.cluster !== glyph.cluster) {
+    const left = Math.min(glyph.cluster, next.cluster);
+    const right = Math.max(glyph.cluster, next.cluster);
+    const pair = text.slice(left, clusterEnds.get(right));
     const adjustment = pairs.get(pair) ?? 0;
-    pairs.delete(pair);
-    record.push({ pair, kerning: thousandths(glyph.xAdvance - unkerned[index].xAdvance), adjustment });
+    unusedPairs.delete(pair);
+    record.push({
+      pair,
+      kerning: thousandths(kernedAdvances.get(glyph.cluster) - (unkernedAdvances.get(glyph.cluster) ?? 0)),
+      adjustment,
+    });
     pen += ((tracking + adjustment) / 1000) * em;
   }
 }
-if (pairs.size > 0) {
-  throw new Error(`These pairs are not in the text: ${[...pairs.keys()].join(", ")}`);
+if (unusedPairs.size > 0) {
+  throw new Error(`These pairs are not in the text: ${[...unusedPairs].join(", ")}`);
 }
 if (paths.length === 0) {
   throw new Error("The text has no visible glyphs");

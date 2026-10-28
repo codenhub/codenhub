@@ -25,7 +25,13 @@ export class Font {
 export class Buffer {
   addText(text) { this.text = text; }
   guessSegmentProperties() {}
-  getGlyphInfos() { return [...this.text].map((char, cluster) => ({ codepoint: char === "?" ? 0 : 1, cluster })); }
+  getGlyphInfos() {
+    const infos = [...this.text].map((char, cluster) => ({
+      codepoint: char === "?" ? 0 : 1,
+      cluster: char === "\u0301" ? cluster - 1 : cluster,
+    }));
+    return /^[\u0590-\u05ff]/.test(this.text) ? infos.reverse() : infos;
+  }
   getGlyphPositions() { return this.positions; }
 }
 export const shape = (font, buffer, features) => {
@@ -96,3 +102,58 @@ it("should ship the same script in every skill that outlines lettering", () => {
 it("should name a variable font by family and settings, not by its default style", () => {
   expect(outline("AV", "--variation", "wght=600").report).toContain("Font: Stub (wght 600)\n");
 });
+
+it("should apply an adjustment to every occurrence of a pair", () => {
+  const { report, svg } = outline("AVAV", "--size=1000", "--pair", "AV=-20");
+  expect(report.match(/AV \| -50 \| -20/g)).toHaveLength(2);
+  expect(svg).toContain('viewBox="50 -700 1760 700"');
+});
+
+it("should keep glyphs in a combining cluster together when tracking", () => {
+  const { report, svg } = outline("A\u0301V", "--size=1000", "--tracking=100");
+  expect(svg).toContain("M550 0L950 0L950 -700L550 -700Z");
+  expect(report).toContain("A\u0301V | 0 | 0");
+  expect(report.split(" | 0 | 0")).toHaveLength(2);
+});
+
+it("should name RTL pairs in logical text order", () => {
+  const { report } = outline("אבג", "--pair", "אב=-20");
+  expect(report).toContain("אב | 0 | -20");
+  expect(report).toContain("בג | 0 | 0");
+});
+
+it.each(["0", "-10"])("should reject an unusable size: %s", (size) => {
+  expect(() => outline("AV", `--size=${size}`)).toThrow("--size must be greater than zero");
+});
+
+it("should reject an unquoted multiword name rather than silently truncate it", () => {
+  expect(() => outline("New", "Name")).toThrow("Usage:");
+});
+
+it.each(["inter/Inter-Variable.ttf", "monomaniac-one/MonomaniacOne-Regular.ttf"])(
+  "should outline a repository font through the installed HarfBuzz: %s",
+  (font) => {
+    const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "outline-wordmark-font-"));
+    try {
+      const output = path.join(temporary, "wordmark.svg");
+      const report = execFileSync(
+        process.execPath,
+        [
+          fileURLToPath(new URL("../../drafts/logo-design/scripts/outline-wordmark.mjs", import.meta.url)),
+          fileURLToPath(new URL(`../../../../assets/fonts/${font}`, import.meta.url)),
+          "AVIVA",
+          "--out",
+          output,
+          "--tracking=-10",
+          "--pair",
+          "AV=-20",
+        ],
+        { encoding: "utf8", stdio: "pipe" },
+      );
+      expect(report).toMatch(/AV \| -?\d+ \| -20/);
+      expect(fs.readFileSync(output, "utf8")).toMatch(/<path d="M/);
+    } finally {
+      fs.rmSync(temporary, { recursive: true, force: true });
+    }
+  },
+);
