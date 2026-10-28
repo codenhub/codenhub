@@ -1,7 +1,9 @@
-import { copyFile, mkdir, readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { PublicResource } from "@codenhub/tools/documentation";
+import { publishLlmsText, type PublicResource } from "@codenhub/tools/documentation";
+
+import { siteConfig } from "../site-config";
 
 const CONTENT_TYPES: Record<string, string> = {
   ".css": "text/css; charset=utf-8",
@@ -24,6 +26,18 @@ function getResourcePath(resource: PublicResource): string {
   return sourcePath;
 }
 
+const LLMS_FILES = new Set(["llms-full.txt", "llms.txt"]);
+
+/** Reads a resource as published: LLM files get absolute site links, everything else is copied byte for byte. */
+async function readPublishedResource(resource: PublicResource): Promise<Uint8Array<ArrayBuffer>> {
+  const content = await readFile(getResourcePath(resource));
+  if (!LLMS_FILES.has(resource.packagePath)) {
+    return content;
+  }
+  const slug = resource.routePath.split("/")[1] as string;
+  return new TextEncoder().encode(publishLlmsText(content.toString("utf8"), { siteUrl: siteConfig.siteUrl, slug }));
+}
+
 export function createResourceMiddleware(resources: PublicResource[]) {
   const resourcesByRoute = new Map(resources.map((resource) => [resource.routePath, resource]));
   return async (request: Request): Promise<Response | undefined> => {
@@ -40,7 +54,7 @@ export function createResourceMiddleware(resources: PublicResource[]) {
     if (resource === undefined) {
       return undefined;
     }
-    const content = await readFile(getResourcePath(resource));
+    const content = await readPublishedResource(resource);
     const contentType = ["LICENSE", "NOTICE"].includes(resource.packagePath)
       ? "text/plain; charset=utf-8"
       : (CONTENT_TYPES[path.extname(resource.packagePath).toLowerCase()] ?? "application/octet-stream");
@@ -53,7 +67,7 @@ export async function copyPublicResources(resources: PublicResource[], outputPat
     resources.map(async (resource) => {
       const destinationPath = path.join(outputPath, ...resource.routePath.split("/").filter(Boolean));
       await mkdir(path.dirname(destinationPath), { recursive: true });
-      await copyFile(getResourcePath(resource), destinationPath);
+      await writeFile(destinationPath, await readPublishedResource(resource));
     }),
   );
 }
