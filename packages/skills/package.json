@@ -17,6 +17,7 @@
     "dist",
     "skills",
     "docs/*.md",
+    "docs/changelog/*.md",
     "llms.txt",
     "llms-full.txt",
     "NOTICE"
