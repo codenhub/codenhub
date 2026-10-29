@@ -100,7 +100,7 @@ Use whichever encoder the environment has. The settings below are what matter; t
 - For a transparent background, as with an overlay or a lower third, deliver ProRes 4444 with alpha (`-c:v prores_ks -profile:v 4444 -pix_fmt yuva444p10le`) or WebM with VP9 and alpha (`-c:v libvpx-vp9 -pix_fmt yuva420p`), and capture the frames with a transparent background.
 - For a GIF, generate a palette from the frames first (in `ffmpeg`, the `palettegen` and `paletteuse` filters), keep it short, and reduce the frame rate and size; GIFs grow large fast.
 - Mix audio in the same encode, and fit it to the video's length: pad shorter audio with silence and cut longer audio at the captured frame count divided by the frame rate, so every frame stays. With `ffmpeg`: `ffmpeg -framerate 30 -i frames-XXXXXX/%05d.png -i audio.wav -map 0:v -map 1:a -c:v libx264 -pix_fmt yuv420p -crf 18 -c:a aac -b:a 192k -af apad -t DURATION -movflags +faststart out.mp4`, with `DURATION` set to that length. Fade music out before the cut when it would end mid-phrase.
-- When no encoder is available, deliver the numbered frame sequence, and the audio file when the piece has sound, with its frame rate and the encoder settings above, state that the video is not encoded, and run every check that the frames allow.
+- When no encoder is available, deliver the numbered frame sequence, and the audio file when the piece has sound, with its frame rate, the video length as the frame count divided by the frame rate so the audio can be fit to it, and the encoder settings above, state that the video is not encoded, and run every check that the frames allow.
 
 ## Verification
 
