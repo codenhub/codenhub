@@ -38,7 +38,10 @@ const ariaCurrent = (link: ShellLocalLink) => {
     return undefined;
   }
 
-  return withoutTrailingSlash(link.href) === withoutTrailingSlash(Astro.url.pathname) ? "page" : "true";
+  // Resolved, so a fragment, query, or relative href still matches its page.
+  const target = new URL(link.href, Astro.url).pathname;
+
+  return withoutTrailingSlash(target) === withoutTrailingSlash(Astro.url.pathname) ? "page" : "true";
 };
 
 /*
