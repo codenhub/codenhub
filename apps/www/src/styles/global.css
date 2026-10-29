@@ -5,6 +5,27 @@
    that stylesheet carries the base, so a separate `@import "@codenhub/icons"`
    here would only duplicate it. */
 
+/* Header: see-through at the top of the page, so the landing hero's glyph
+   field shows behind it; the shell's fill, blur, and rule return once the page
+   scrolls. `data-at-top` is set by the inline script in `base-layout.astro`. */
+.shell-header {
+  transition:
+    background-color var(--motion-duration-fast, 120ms) var(--motion-ease),
+    border-color var(--motion-duration-fast, 120ms) var(--motion-ease);
+}
+
+.shell-header[data-at-top] {
+  border-bottom-color: transparent;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-header {
+    transition: none;
+  }
+}
+
 /* Page width, gutter, and centering come from `.shell-content` in
    `@codenhub/app-shell/styles.css`, so the index lines up with the header and
    footer. */

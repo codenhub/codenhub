@@ -17,5 +17,32 @@ const localLinks = [{ href: "/packages/", label: "Packages", current: Astro.url.
 
 <ShellLayout localLinks={localLinks} {...Astro.props}>
   <SearchPalette indexUrl={`${siteConfig.docsUrl}/search-index.json`} slot="actions" />
+  <!--
+    The header is see-through while the page sits at its top, so the landing
+    hero's glyph field runs up behind it, and takes its fill and rule once the
+    page scrolls (`global.css`, "Header"). Inline, right after the header, so
+    the state is set before first paint rather than flipping after a deferred
+    module runs. Without JavaScript the attribute never appears and the header
+    stays solid. The header's measured height goes to `--www-header-height`,
+    which the hero uses to slide under it, since it grows past
+    `--shell-header-height` when its actions wrap to a second row.
+  -->
+  <script is:inline>
+    (() => {
+      const header = document.querySelector(".shell-header");
+      if (header === null) {
+        return;
+      }
+
+      const syncTop = () => header.toggleAttribute("data-at-top", scrollY <= 8);
+      syncTop();
+      addEventListener("scroll", syncTop, { passive: true });
+
+      const syncHeight = () =>
+        document.documentElement.style.setProperty("--www-header-height", `${header.offsetHeight}px`);
+      syncHeight();
+      new ResizeObserver(syncHeight).observe(header);
+    })();
+  </script>
   <slot />
 </ShellLayout>
