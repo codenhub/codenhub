@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { rehypeHeadingIds, unified } from "@astrojs/markdown-remark";
 import { remarkAlerts } from "@codenhub/app-shell/remark-alerts";
 import lucide from "@codenhub/icons/data/lucide";
+import simpleIcons from "@codenhub/icons/data/simple-icons";
 import { viteIcons } from "@codenhub/icons/vite";
 import { snapshotPackagesRoot } from "@codenhub/tools/release";
 import tailwindcss from "@tailwindcss/vite";
@@ -49,7 +50,7 @@ export default defineConfig({
          classes reach the generated stylesheet through the `content` glob. */
       viteIcons({
         mode: "css",
-        families: [lucide],
+        families: [lucide, simpleIcons],
         defaultPrefix: "lucide",
         content: [path.join(packagesRoot, "app-shell/src/**/*.astro")],
       }),

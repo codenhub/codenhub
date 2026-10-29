@@ -20,20 +20,14 @@ const { indexUrl } = Astro.props;
   data-search-trigger
   type="button"
 >
-  <svg aria-hidden="true" class="shell-search-icon" viewBox="0 0 24 24">
-    <circle cx="11" cy="11" r="7"></circle>
-    <path d="m20 20-3.5-3.5"></path>
-  </svg>
+  <i aria-hidden="true" class="ic-lucide-search shell-search-icon"></i>
   <span class="shell-search-trigger-label">Search</span>
   <kbd class="kbd shell-search-trigger-shortcut" data-search-shortcut>Ctrl + K</kbd>
 </button>
 
 <dialog aria-label="Search documentation" class="shell-search-dialog" data-index-url={indexUrl} data-search-dialog>
   <div class="shell-search-field">
-    <svg aria-hidden="true" class="shell-search-icon" viewBox="0 0 24 24">
-      <circle cx="11" cy="11" r="7"></circle>
-      <path d="m20 20-3.5-3.5"></path>
-    </svg>
+    <i aria-hidden="true" class="ic-lucide-search shell-search-icon"></i>
     <input
       aria-autocomplete="list"
       aria-controls="shell-search-results"

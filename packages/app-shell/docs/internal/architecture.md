@@ -48,7 +48,7 @@ The header and footer size their content to `--shell-max-width` (default `80rem`
 
 ## Icons
 
-Chrome icons are `@codenhub/icons` classes (`ic-lucide-*`) in **CSS mode**. GitHub and npm are brand marks, not UI icons, and stay inline `<svg>` in the components.
+Chrome icons are `@codenhub/icons` classes in **CSS mode**: `ic-lucide-*` for UI icons, and `ic-simple-icons-github` and `ic-simple-icons-npm` for the brand marks. The marks were inline `<svg>` until `@codenhub/icons` 0.3.0 shipped the `simple-icons` family; they set `--ic-color: currentcolor`, since GitHub's brand color is near-black and would vanish on the dark theme. The vanilla hosts still hand-author inline `<svg>` marks, and `.shell-action-brand` sizes both forms.
 
 CSS mode is required because the icons Vite plugin skips `node_modules` in both its `transform` and its scan, and a pnpm workspace package resolves under `node_modules`. In CSS mode the plugin instead generates mask rules from a `content` glob, and those rules apply to any `<i class="ic-…">` element regardless of which file authored it. SVG mode would leave the shell's icons unrendered.
 
@@ -58,7 +58,7 @@ CSS mode is required because the icons Vite plugin skips `node_modules` in both 
 
 Any host consuming the shell — Astro or not — must:
 
-1. Register `@codenhub/icons/vite` in its Vite (or Astro) config with `mode: "css"`, the `lucide` family, and a `content` entry covering this package's components, e.g. `path.join(packagesRoot, "app-shell/src/**/*.astro")`.
+1. Register `@codenhub/icons/vite` in its Vite (or Astro) config with `mode: "css"`, the `lucide` and `simple-icons` families, and a `content` entry covering this package's components, e.g. `path.join(packagesRoot, "app-shell/src/**/*.astro")`.
 2. Import the generated `virtual:icons.css` module somewhere it actually loads. `base-layout.astro` does this itself, since Astro never runs `transformIndexHtml` for its own pages; a non-Astro host (`packages/icons/demo`, `packages/styles/demo`) has no such layout, so it imports `virtual:icons.css` from its own JS entry point instead. In CSS mode that stylesheet carries the base rules (the `1em` box, the `ic-xs`–`ic-xl` size classes) alongside the generated masks — skip it and every shell icon renders `0×0`. A host must **not** also `@import "@codenhub/icons"` — that only ships the base a second time, and the copy that loses the cascade is the one `styles.css` needs to win. A host that keeps its own `@codenhub/icons` mode (as `apps/docs` and `apps/demo` may) still adds the `content` entry so the shell's classes reach whichever stylesheet that mode generates.
 3. `@import "@codenhub/app-shell/styles.css";` in its global stylesheet, after its `@codenhub/styles` import.
 4. Import `@codenhub/styles` — either `/tw` or `/native` — so the tokens `styles.css` reads are defined.
