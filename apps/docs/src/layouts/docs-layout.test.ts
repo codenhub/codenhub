@@ -214,15 +214,31 @@ describe("documentation chrome", () => {
     expect(robots).toBe("User-agent: *\nAllow: /\n\nSitemap: https://docs.codenhub.dev/sitemap.xml\n");
   });
 
-  it("lists every published page in the sitemap and nothing that is curated away", async () => {
+  it("lists every published page in the sitemap, including a curated changelog's overview", async () => {
     const sitemap = await readOutput("sitemap.xml");
 
     // The root redirects to codenhub.dev/packages/, so it is not a page here.
     expect(sitemap).not.toContain("<loc>https://docs.codenhub.dev/</loc>");
     expect(sitemap).toContain("<loc>https://docs.codenhub.dev/error/</loc>");
     expect(sitemap).toContain("<loc>https://docs.codenhub.dev/icons/changelog/0.2.0/</loc>");
-    // The curated changelog `index.md` has no route, so it is absent here too.
-    expect(sitemap).not.toContain("<loc>https://docs.codenhub.dev/icons/changelog/</loc>");
+    expect(sitemap).toContain("<loc>https://docs.codenhub.dev/icons/changelog/</loc>");
+  });
+
+  it("renders a curated changelog index as an overview with each version's date and description", async () => {
+    const html = await readOutput("icons/changelog/index.html");
+    // Released versions keep their dates, and a later release only adds a line
+    // above these, so this block stays contiguous and in curated order.
+    const released = [
+      ["0.3.0", "2026-10-26", "October 26, 2026"],
+      ["0.2.1", "2026-09-14", "September 14, 2026"],
+      ["0.2.0", "2026-09-02", "September 2, 2026"],
+    ];
+    const entry = ([version, isoDate, shownDate]: string[]): string =>
+      `<li><a href="/icons/changelog/${version}/">${version.replaceAll(".", "\\.")}</a> ` +
+      `<span class="curated-entry-date">Released on <time datetime="${isoDate}">${shownDate}</time></span>` +
+      `<p class="curated-entry-description">[^<]+</p></li>\\s*`;
+
+    expect(html).toMatch(new RegExp(released.map(entry).join("").replaceAll("/", "\\/")));
   });
 
   it("redirects the root to the package list on codenhub.dev", async () => {
@@ -248,6 +264,9 @@ describe("documentation chrome", () => {
     expect(presentation?.section).toBe("Presentation tokens");
     expect(presentation?.text).toContain("Presentation tokens describe");
     expect(entries.some((entry) => entry.route === "/error/")).toBe(true);
+    // A curated overview only repeats its versions' own entries, so it is left out.
+    expect(entries.some((entry) => entry.route === "/icons/changelog/")).toBe(false);
+    expect(entries.some((entry) => entry.route === "/icons/changelog/0.2.0/")).toBe(true);
   });
 
   it("puts a search trigger with its shortcut in the header", async () => {

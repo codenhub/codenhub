@@ -220,6 +220,14 @@ html {
   @apply text-text-secondary text-label mt-2 mb-0;
 }
 
+.markdown-content .curated-entry-date {
+  @apply text-text-secondary text-label ms-2;
+}
+
+.markdown-content .curated-entry-description {
+  @apply text-text-secondary my-1;
+}
+
 /* No `scroll-mt-*` here: the page scrolls, so `html` already reserves the sticky
    header through `scroll-padding-top`, and a scroll margin would stack onto it. */
 .markdown-content h2 {

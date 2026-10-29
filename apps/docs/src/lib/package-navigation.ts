@@ -104,8 +104,8 @@ function reframeReferenceSubpaths(documents: readonly PublicDocument[]): PublicD
  * the section the current page sits in.
  *
  * Each tab points at its section's first document in catalog order — the package
- * overview for Guides, the reference entrypoint for Reference, the newest
- * version for Changelog. The tree is `buildNavigationTree` over just the active
+ * overview for Guides, the reference entrypoint for Reference, the changelog
+ * overview for Changelog. The tree is `buildNavigationTree` over just the active
  * section's pages, with the `reference/` or `changelog/` path prefix removed so
  * a nested folder (error's `registries/`) still groups; links keep their real
  * routes and titles.
@@ -145,8 +145,7 @@ export function buildPackageSidebar(
     }
     // Point the tab at the section's own entry page — `reference/index.md`, a
     // bare `reference.md`, the package overview — not whatever sorts first once
-    // the entrypoints carry their own `order`. Changelog has no index page
-    // (its `index.md` is curated away), so its newest version leads.
+    // the entrypoints carry their own `order`, and the changelog overview.
     const landing =
       sectionDocuments.find((document) => {
         const path = relativeTo(id, document.relativePath);

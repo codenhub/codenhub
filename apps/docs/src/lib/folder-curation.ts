@@ -49,14 +49,14 @@ function normalizeLinkTarget(target: string): string {
  * `curated: true` publishes only the sibling documents it links to, in that
  * link order, instead of every document physically present in the folder.
  *
- * The curated `index.md` is a functional entrypoint, not a page: it names what
- * to publish and is itself dropped, so it gets no route, no navigation entry,
- * and no search hit (`docs/specs/packages-changelog.md`,
+ * The curated `index.md` names what to publish and is kept as the folder's
+ * overview page; {@link annotateCuratedLinks} adds each entry's date and
+ * description to it (`docs/specs/packages-changelog.md`,
  * `docs/specs/packages-documentation.md`). A folder without a curated index page
  * is returned unchanged, so this has no effect on any other folder in the
  * workspace.
  * @param documents One package's public documents, unfiltered.
- * @returns The same documents, minus every curated folder's index page and unlinked siblings, with kept siblings reordered to match their curated index's link order.
+ * @returns The same documents, minus every curated folder's unlinked siblings, with each curated index followed by its kept siblings in link order.
  */
 export function applyFolderCuration<T extends CuratableDocument>(documents: readonly T[]): T[] {
   const rootDocuments: T[] = [];
@@ -97,8 +97,9 @@ export function applyFolderCuration<T extends CuratableDocument>(documents: read
       linkedNames.add(normalizeLinkTarget(target));
     }
 
-    // The curated index is read for its link list, then left out of the result:
-    // only the version pages it links to are published.
+    // The curated index leads as the folder's overview page, followed by only
+    // the siblings it links to.
+    result.push(indexDocument);
     let position = 0;
     for (const name of linkedNames) {
       const sibling = siblingsByName.get(name);
@@ -110,4 +111,60 @@ export function applyFolderCuration<T extends CuratableDocument>(documents: read
   }
 
   return result;
+}
+
+/** A published sibling of a curated index, as its overview page lists it. */
+export interface CuratedEntry {
+  /** Release date, as an ISO `YYYY-MM-DD` string, when the page sets one. */
+  date?: string;
+  description?: string;
+  /** Site route the curated index's rewritten link points at. */
+  route: string;
+}
+
+const ANCHOR_ELEMENT = /<a\b[^>]*\bhref=(['"])([^'"]+)\1[^>]*>[\s\S]*?<\/a>/gi;
+
+const escapeHtml = (value: string): string =>
+  value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+
+// Fixed locale and UTC, so a build renders the same words on every machine and
+// a `YYYY-MM-DD` date never shifts a day with the builder's time zone.
+const RELEASE_DATE_FORMAT = new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeZone: "UTC" });
+
+/** Spells an ISO `YYYY-MM-DD` date out for readers, as in "October 7, 2026". */
+function formatReleaseDate(isoDate: string): string {
+  const parsed = new Date(`${isoDate}T00:00:00Z`);
+  return Number.isNaN(parsed.getTime()) ? isoDate : RELEASE_DATE_FORMAT.format(parsed);
+}
+
+/**
+ * Adds each linked entry's date and description right after its link in a
+ * curated index page, so the overview says when each version shipped and what
+ * it changed without the author repeating that in `index.md`.
+ *
+ * Only the first link to each entry is annotated; links to anything else are
+ * left as authored.
+ * @param html Rendered index HTML, with links already rewritten to site routes.
+ * @param entries The siblings the index publishes.
+ * @returns The HTML with each entry's details inserted after its first link.
+ */
+export function annotateCuratedLinks(html: string, entries: readonly CuratedEntry[]): string {
+  const pending = new Map(entries.map((entry) => [entry.route, entry]));
+  return html.replace(ANCHOR_ELEMENT, (anchor: string, _quote: string, href: string) => {
+    const route = href.replace(/[?#].*$/, "");
+    const entry = pending.get(route);
+    if (entry === undefined) {
+      return anchor;
+    }
+    pending.delete(route);
+    const date =
+      entry.date === undefined
+        ? ""
+        : ` <span class="curated-entry-date">Released on <time datetime="${escapeHtml(entry.date)}">${escapeHtml(formatReleaseDate(entry.date))}</time></span>`;
+    const description =
+      entry.description === undefined
+        ? ""
+        : `<p class="curated-entry-description">${escapeHtml(entry.description)}</p>`;
+    return `${anchor}${date}${description}`;
+  });
 }

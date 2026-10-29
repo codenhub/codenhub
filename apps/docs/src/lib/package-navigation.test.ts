@@ -195,6 +195,22 @@ describe("buildPackageSidebar", () => {
     expect(tabs.map((tab) => tab.id)).toEqual(["guides", "reference"]);
     expect(tabs.find((tab) => tab.current)?.id).toBe("reference");
   });
+
+  it("points the Changelog tab at the curated overview and lists it before the versions", () => {
+    // Curated versions carry a link-position order; the overview keeps none.
+    const { tabs, tree } = buildPackageSidebar(
+      [
+        doc("index.md", "Overview", "/styles/"),
+        doc("changelog/0.7.0.md", "0.7.0", "/styles/changelog/0.7.0/", { order: 0 }),
+        doc("changelog/0.6.0.md", "0.6.0", "/styles/changelog/0.6.0/", { order: 1 }),
+        doc("changelog/index.md", "Changelog", "/styles/changelog/", { group: "Changelog" }),
+      ],
+      "/styles/changelog/",
+    );
+
+    expect(tabs.find((tab) => tab.id === "changelog")?.route).toBe("/styles/changelog/");
+    expect(tree.map((node) => node.title)).toEqual(["Changelog", "0.7.0", "0.6.0"]);
+  });
 });
 
 describe("groupContainsRoute", () => {

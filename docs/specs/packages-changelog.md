@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-06
+last_updated: 2026-10-29
 scope: Recommended changelog documentation for workspace packages.
 ---
 
@@ -29,11 +29,13 @@ docs/
     1.0.0.md
 ```
 
-### `index.md` is a functional entrypoint, not a page
+### `index.md` decides what is published and lists it
 
-Set `curated: true` in its frontmatter, per `docs/specs/packages-documentation.md`. That flag tells the documentation site that this page's job is to list what to publish, not to be read as an article: only the version pages it links to, in the order it links them, get a route, a nav entry, and a search hit. It MAY also set `group` (for example `group: Changelog`) to label its sidebar section.
+Set `curated: true` in its frontmatter, per `docs/specs/packages-documentation.md`. That flag tells the documentation site that this page's links decide what to publish: only the version pages it links to, in the order it links them, get a route, a nav entry, and a search hit. The index itself is published as the changelog's overview at `/<slug>/changelog/`, where the site shows each linked version with its `date` and `description`. A version page written before both were required may lack one; its line then shows only what the page sets. It MAY also set `group` (for example `group: Changelog`) to label its sidebar section.
 
-After the required H1, its body is an ordered list of links, newest first, and nothing else:
+The index was first a routing file with no route of its own: its body is only a list of links, so rendering it as authored would repeat the sidebar. That left `/<slug>/changelog/` a 404 while the README link required below, the codenhub.dev package page, and each package's `llms.txt` all point there. The overview fixes that without repeating the sidebar, because the date and summary of each release are what the sidebar cannot show and what an upgrading reader scans for. Redirecting `/<slug>/changelog/` to the newest version page was rejected: it fixes the link but makes a reader click through versions one at a time to find what changed since theirs.
+
+After the required H1, its body is an ordered list of links, newest first, and nothing else. The date and description come from each version page's frontmatter; do not repeat them here:
 
 ```markdown
 ---
@@ -50,7 +52,7 @@ curated: true
 
 Releasing a new version means adding its file and one link here.
 
-Keep every released version linked. The list is meant to grow — a link is one line and nothing is ever renumbered — and removing a link has a cost: an unlinked version page gets no route, no navigation entry, and no search result on the documentation site, so a consumer still on that version can no longer look up what changed in their release. The file itself is untouched and keeps shipping wherever public `docs/` ships, so it stays in the package tarball regardless. Drop a link only when keeping the version visible would mislead more than help, such as a pre-1.0 entry that no longer describes any supported behavior. Nothing is ever deleted and nothing moves to `docs/internal/`.
+Keep every released version linked. The list is meant to grow — a link is one line and nothing is ever renumbered — and removing a link has a cost: an unlinked version page gets no route, no navigation entry, no search result, and no line in the overview on the documentation site, so a consumer still on that version can no longer look up what changed in their release. The file itself is untouched and keeps shipping wherever public `docs/` ships, so it stays in the package tarball regardless. Drop a link only when keeping the version visible would mislead more than help, such as a pre-1.0 entry that no longer describes any supported behavior. Nothing is ever deleted and nothing moves to `docs/internal/`.
 
 ### Version pages own only their own content
 
