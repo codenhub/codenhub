@@ -15,7 +15,7 @@ type Props = ComponentProps<typeof ShellLayout>;
 const localLinks = [{ href: "/packages/", label: "Packages", current: Astro.url.pathname.startsWith("/packages") }];
 ---
 
-<ShellLayout localLinks={localLinks} {...Astro.props}>
+<ShellLayout {...Astro.props} localLinks={localLinks}>
   <SearchPalette indexUrl={`${siteConfig.docsUrl}/search-index.json`} slot="actions" />
   <!--
     The header is see-through while the page sits at its top, so the landing
