@@ -15,7 +15,11 @@ interface Props {
   localLinks?: ShellLocalLink[];
 }
 
-/** A header link within the current surface. `current` marks the page, or section, the visitor is on. */
+/**
+ * A header link within the current surface. `current` marks the section the
+ * visitor is in: the link is announced as the current page when it is that
+ * exact page, and as the current item of the nav otherwise.
+ */
 export interface ShellLocalLink extends ShellNavLink {
   current?: boolean;
 }
@@ -27,6 +31,15 @@ const {
   npmLabel = "CodenHub on npm",
   localLinks = [],
 } = Astro.props;
+
+const withoutTrailingSlash = (path: string) => path.replace(/\/+$/, "");
+const ariaCurrent = (link: ShellLocalLink) => {
+  if (link.current !== true) {
+    return undefined;
+  }
+
+  return withoutTrailingSlash(link.href) === withoutTrailingSlash(Astro.url.pathname) ? "page" : "true";
+};
 
 /*
  * The standard cross-surface links, left of the brand actions, after any of
@@ -64,7 +77,7 @@ const navLinks = resolveNavLinks(siteConfig);
       localLinks.length + navLinks.length > 0 && (
         <nav aria-label="Sites" class="shell-nav">
           {localLinks.map((link) => (
-            <a aria-current={link.current === true ? "page" : undefined} class="shell-nav-link" href={link.href}>
+            <a aria-current={ariaCurrent(link)} class="shell-nav-link" href={link.href}>
               {link.label}
             </a>
           ))}

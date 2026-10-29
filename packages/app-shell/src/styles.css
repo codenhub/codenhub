@@ -136,7 +136,7 @@
 }
 
 .shell-nav-link:hover,
-.shell-nav-link[aria-current="page"] {
+.shell-nav-link[aria-current] {
   color: var(--color-text);
 }
 
