@@ -59,6 +59,9 @@
     const loadPreviews = () => (previews ??= fetchPreviews());
 
     let activeLink: HTMLAnchorElement | undefined;
+    // The link the latest hover or focus asked about. The index may still be
+    // loading when the reader moves on, and a late answer must not open a card.
+    let requestedLink: HTMLAnchorElement | undefined;
     // Escape hands focus back to the link; that focus must not reopen the card.
     let dismissedLink: HTMLAnchorElement | undefined;
     let openTimer: ReturnType<typeof setTimeout> | undefined;
@@ -133,12 +136,28 @@
         card.hidePopover();
       }
       activeLink = undefined;
+      requestedLink = undefined;
+    };
+
+    // Only a link on this site needs the index; the rest are described from their address.
+    const isSiteLink = (href: string) => {
+      try {
+        return new URL(href, location.href).origin === location.origin;
+      } catch {
+        return false;
+      }
     };
 
     const open = async (link: HTMLAnchorElement) => {
-      const index = await loadPreviews();
-      const preview = describeLink(link.getAttribute("href") ?? "", { pageUrl: location.href, previews: index });
+      requestedLink = link;
+      const href = link.getAttribute("href") ?? "";
+      const index = isSiteLink(href) ? await loadPreviews() : {};
+      if (requestedLink !== link) {
+        return;
+      }
+      const preview = describeLink(href, { pageUrl: location.href, previews: index });
       if (preview === undefined) {
+        close();
         return;
       }
       activeLink = link;
@@ -208,8 +227,9 @@
 
     document.addEventListener("focusout", (event) => {
       const to = event.relatedTarget instanceof Node ? event.relatedTarget : null;
-      const isStillInside = to !== null && (card.contains(to) || to === activeLink);
-      if (activeLink !== undefined && !isStillInside && !card.matches(":hover")) {
+      const link = activeLink ?? requestedLink;
+      const isStillInside = to !== null && (card.contains(to) || to === link);
+      if (link !== undefined && !isStillInside && !card.matches(":hover")) {
         close();
       }
     });

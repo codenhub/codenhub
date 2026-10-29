@@ -67,6 +67,11 @@ const downloadName = `${route.split("/").filter(Boolean).join("-")}.md`;
   const markdownUrl = root?.dataset.markdownUrl;
 
   if (root && copyButton && status && toggle && menu && markdownUrl !== undefined) {
+    // Without the Popover API the menu cannot open; copying still works.
+    if (typeof HTMLElement.prototype.showPopover !== "function") {
+      toggle.hidden = true;
+    }
+
     const copyController = createCopyController();
 
     const fetchMarkdown = async () => {
@@ -97,7 +102,7 @@ const downloadName = `${route.split("/").filter(Boolean).join("-")}.md`;
     copyButton.addEventListener("click", () => void copyPage());
 
     menu.querySelector("[data-page-copy-item]")?.addEventListener("click", () => {
-      menu.hidePopover();
+      menu.hidePopover?.();
       copyButton.focus();
       void copyPage();
     });

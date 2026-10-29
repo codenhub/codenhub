@@ -50,7 +50,7 @@ describe("buildLinkPreviewIndex", () => {
     ]);
     const summary = index["/kit/setup/"]?.summary ?? "";
 
-    expect(summary.length).toBeLessThanOrEqual(201);
+    expect(summary.length).toBeLessThanOrEqual(200);
     expect(summary).toMatch(/word…$/);
   });
 

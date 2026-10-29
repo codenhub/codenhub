@@ -42,7 +42,7 @@ function navigationActions(url: URL): LinkPreviewAction[] {
 function describeSiteLink(url: URL, previews: LinkPreviewIndex): LinkPreview {
   const fragment = decode(url.hash.slice(1));
   const entry = (fragment === "" ? undefined : previews[`${url.pathname}#${fragment}`]) ?? previews[url.pathname];
-  const detail = decode(`${url.pathname}${url.hash}`);
+  const detail = decode(`${url.pathname}${url.search}${url.hash}`);
   if (entry !== undefined) {
     return { actions: navigationActions(url), detail, summary: entry.summary, title: entry.title, trail: entry.trail };
   }

@@ -385,11 +385,6 @@ html {
   @apply invisible translate-y-2 opacity-0;
 }
 
-/* Back to top hands focus to the content; it is a landing point, not a control. */
-#main-content:focus {
-  outline: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .back-to-top {
     @apply transition-none;
@@ -400,6 +395,14 @@ html {
    describes, so every rule here is scoped under `.link-preview` to outrank the
    article's own `p` and `a` styles. A manual popover gets the UA's centered,
    full-inset placement; the script positions it from the link instead. */
+/* Without the Popover API a `[popover]` element would render in place. */
+@supports not selector(:popover-open) {
+  .link-preview,
+  .page-actions-menu {
+    display: none;
+  }
+}
+
 .link-preview {
   @apply border-border bg-background text-text fixed m-0 w-[min(24rem,calc(100vw-1rem))] rounded-(--radius-surface) border p-0 shadow-(--elevation-lg);
   inset: auto;
@@ -480,7 +483,7 @@ html {
 }
 
 .page-actions-menu {
-  @apply border-border bg-background text-text fixed m-0 w-72 rounded-(--radius-surface) border p-1.5 shadow-(--elevation-lg);
+  @apply border-border bg-background text-text fixed m-0 w-[min(18rem,calc(100vw-1rem))] rounded-(--radius-surface) border p-1.5 shadow-(--elevation-lg);
   inset: auto;
 }
 
