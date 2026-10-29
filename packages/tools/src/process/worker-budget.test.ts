@@ -29,6 +29,12 @@ describe("shareWorkers", () => {
     expect(shareWorkers(BROWSER_WORKER_POOL, 1, {}, LAPTOP)).toEqual({ concurrency: 1, workersPerPackage: 2 });
   });
 
+  it("shouldNotRoundAMachineBetweenSizesUpToTheNextBrowser", () => {
+    const machine = { cores: 16, memoryBytes: 12 * GIB };
+
+    expect(shareWorkers(BROWSER_WORKER_POOL, 1, {}, machine)).toEqual({ concurrency: 1, workersPerPackage: 1 });
+  });
+
   it("shouldKeepAtLeastOneWorkerOnASmallMachine", () => {
     const machine = { cores: 1, memoryBytes: 0.5 * GIB };
 

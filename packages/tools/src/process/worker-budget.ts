@@ -41,11 +41,11 @@ export const TEST_WORKER_POOL: WorkerPool = {
  *
  * Each worker is a whole browser. Two is what a 16 GB Windows machine held without
  * WebKit losing its page; see the worker comment in `packages/jwt/playwright.config.ts`.
- * The count is rounded rather than floored because a 16 GB machine reports a little
- * under 16 GiB.
+ * Half a GiB of slack absorbs what a 16 GB machine under-reports, which is a few
+ * hundred MiB, without rounding a 12 GiB machine up to two browsers.
  */
 export const BROWSER_WORKER_POOL: WorkerPool = {
-  capacity: ({ memoryBytes }) => Math.max(1, Math.round(memoryBytes / (8 * BYTES_PER_GIB))),
+  capacity: ({ memoryBytes }) => Math.max(1, Math.floor((memoryBytes + BYTES_PER_GIB / 2) / (8 * BYTES_PER_GIB))),
   variable: "PLAYWRIGHT_WORKERS",
 };
 
