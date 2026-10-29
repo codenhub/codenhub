@@ -12,7 +12,7 @@ import { siteConfig } from "../site-config";
 
 type Props = ComponentProps<typeof ShellLayout>;
 
-const localLinks = [{ href: "/packages/", label: "Packages", current: /^\/packages(\/|$)/.test(Astro.url.pathname) }];
+const localLinks = [{ href: "/packages/", label: "Packages", current: /^\/packages\/?$/.test(Astro.url.pathname) }];
 ---
 
 <ShellLayout {...Astro.props} localLinks={localLinks}>
