@@ -135,7 +135,8 @@
   transition: color var(--motion-duration-fast, 120ms) var(--motion-ease);
 }
 
-.shell-nav-link:hover {
+.shell-nav-link:hover,
+.shell-nav-link[aria-current="page"] {
   color: var(--color-text);
 }
 
