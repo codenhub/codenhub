@@ -54,9 +54,10 @@ describe("app-shell chrome stylesheet", () => {
     expect(rule).toContain("min-height: 0");
   });
 
-  it("keeps the search field at 16px so iOS does not zoom on focus", () => {
+  it("keeps the search field at 16px or more so iOS does not zoom on focus", () => {
     const rule = styles.match(/\.shell-search-input\s*\{([^}]*)\}/)?.[1];
+    const size = rule?.match(/font-size:\s*([\d.]+)rem/)?.[1];
 
-    expect(rule).toContain("font-size: 1rem");
+    expect(Number(size)).toBeGreaterThanOrEqual(1);
   });
 });
