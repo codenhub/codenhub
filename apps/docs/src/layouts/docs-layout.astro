@@ -1,4 +1,7 @@
 ---
+import BackToTop from "../components/back-to-top.astro";
+import LinkPreview from "../components/link-preview.astro";
+import PageActions from "../components/page-actions.astro";
 import PackageNavigation from "../components/package-navigation.astro";
 import { isReferenceDocument, type PublicDocument, type PublicPackage } from "../lib/catalog";
 import BaseLayout from "./base-layout.astro";
@@ -39,9 +42,12 @@ const browserTitle =
     </aside>
 
     <main class="document-column" id="main-content">
-      <article class="markdown-content">
-        <slot />
-      </article>
+      <div class="document-body">
+        <PageActions route={document.route} />
+        <article class="markdown-content">
+          <slot />
+        </article>
+      </div>
     </main>
 
     <aside class="toc-rail">
@@ -61,6 +67,9 @@ const browserTitle =
       }
     </aside>
   </div>
+
+  <BackToTop />
+  <LinkPreview />
 
   <script>
     import { findActiveHeadingId } from "../lib/toc-highlight";

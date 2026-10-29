@@ -1,0 +1,267 @@
+---
+/*
+ * A card that says where a link in the article leads before the reader follows
+ * it: the page's place and summary for a link on this site, the host for an
+ * external one, the address for an email. It opens on hover or keyboard focus,
+ * never on touch, where a tap already follows the link.
+ *
+ * The one card is moved to sit right after the link it describes, so Tab goes
+ * from the link into the card's actions. As a manual popover it still paints in
+ * the top layer, clear of the article's overflow and stacking.
+ */
+---
+
+<div aria-label="Link preview" class="link-preview" data-link-preview popover="manual" role="group">
+  <p class="link-preview-trail" data-link-preview-trail></p>
+  <p class="link-preview-title" data-link-preview-title></p>
+  <p class="link-preview-summary" data-link-preview-summary></p>
+  <p class="link-preview-detail" data-link-preview-detail></p>
+  <div class="link-preview-actions" data-link-preview-actions></div>
+  <span aria-live="polite" class="sr-only" data-link-preview-status></span>
+</div>
+
+<script>
+  import { createCopyController } from "@codenhub/app-shell/copy-feedback";
+
+  import { placeFloating } from "../lib/floating-position";
+  import type { LinkPreviewIndex } from "../lib/link-preview/build-index";
+  import { describeLink, type LinkPreview, type LinkPreviewAction } from "../lib/link-preview/describe-link";
+
+  /** Hover intent: long enough that sweeping the pointer across a paragraph opens nothing. */
+  const OPEN_DELAY_MS = 450;
+  /** Grace period to cross the gap from the link into the card. */
+  const CLOSE_DELAY_MS = 200;
+  const LINK_SELECTOR = ".markdown-content a[href]:not(.heading-anchor)";
+
+  const card = document.querySelector<HTMLElement>("[data-link-preview]");
+  const supportsPopover = typeof HTMLElement.prototype.showPopover === "function";
+
+  if (card !== null && supportsPopover) {
+    const part = (name: string) => card.querySelector<HTMLElement>(`[data-link-preview-${name}]`)!;
+    const trail = part("trail");
+    const title = part("title");
+    const summary = part("summary");
+    const detail = part("detail");
+    const actions = part("actions");
+    const status = part("status");
+    const copyController = createCopyController();
+
+    // A failed fetch still previews every link, just without page summaries.
+    const fetchPreviews = async (): Promise<LinkPreviewIndex> => {
+      try {
+        const response = await fetch("/link-previews.json");
+        return response.ok ? ((await response.json()) as LinkPreviewIndex) : {};
+      } catch {
+        return {};
+      }
+    };
+    let previews: Promise<LinkPreviewIndex> | undefined;
+    const loadPreviews = () => (previews ??= fetchPreviews());
+
+    let activeLink: HTMLAnchorElement | undefined;
+    // The link the latest hover or focus asked about. The index may still be
+    // loading when the reader moves on, and a late answer must not open a card.
+    let requestedLink: HTMLAnchorElement | undefined;
+    // Escape hands focus back to the link; that focus must not reopen the card.
+    let dismissedLink: HTMLAnchorElement | undefined;
+    let openTimer: ReturnType<typeof setTimeout> | undefined;
+    let closeTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const renderAction = (action: LinkPreviewAction): HTMLElement => {
+      const control =
+        action.kind === "copy" ? document.createElement("button") : document.createElement("a");
+      control.className = "link-preview-action";
+      if (control instanceof HTMLButtonElement) {
+        control.type = "button";
+        control.title = action.label;
+        control.setAttribute("aria-label", action.label);
+        control.dataset.copyText = action.kind === "copy" ? action.text : "";
+      } else if (action.kind === "open") {
+        control.href = action.href;
+        if (action.isNewTab) {
+          control.target = "_blank";
+          control.rel = "noopener";
+        }
+      }
+      const icon = document.createElement("i");
+      icon.setAttribute("aria-hidden", "true");
+      icon.className = action.icon;
+      const copiedIcon = document.createElement("i");
+      copiedIcon.setAttribute("aria-hidden", "true");
+      copiedIcon.className = "ic-lucide-check link-preview-copied-icon";
+      control.append(icon, ...(action.kind === "copy" ? [copiedIcon] : []), action.label);
+      return control;
+    };
+
+    const fill = (preview: LinkPreview) => {
+      trail.replaceChildren(
+        ...preview.trail.flatMap((step, index) => {
+          const label = document.createElement("span");
+          label.textContent = step;
+          if (index === 0) {
+            return [label];
+          }
+          const separator = document.createElement("i");
+          separator.setAttribute("aria-hidden", "true");
+          separator.className = "ic-lucide-chevron-right";
+          return [separator, label];
+        }),
+      );
+      title.textContent = preview.title;
+      summary.textContent = preview.summary ?? "";
+      summary.hidden = preview.summary === undefined;
+      detail.textContent = preview.detail ?? "";
+      detail.hidden = preview.detail === undefined;
+      actions.replaceChildren(...preview.actions.map(renderAction));
+    };
+
+    const position = () => {
+      if (activeLink === undefined) {
+        return;
+      }
+      const { left, top } = placeFloating({
+        align: "start",
+        anchor: activeLink.getBoundingClientRect(),
+        floating: { height: card.offsetHeight, width: card.offsetWidth },
+        viewport: { height: window.innerHeight, width: document.documentElement.clientWidth },
+      });
+      card.style.left = `${left}px`;
+      card.style.top = `${top}px`;
+    };
+
+    const close = () => {
+      clearTimeout(openTimer);
+      clearTimeout(closeTimer);
+      if (card.matches(":popover-open")) {
+        card.hidePopover();
+      }
+      activeLink = undefined;
+      requestedLink = undefined;
+    };
+
+    // Only a link on this site needs the index; the rest are described from their address.
+    const isSiteLink = (href: string) => {
+      try {
+        return new URL(href, location.href).origin === location.origin;
+      } catch {
+        return false;
+      }
+    };
+
+    const open = async (link: HTMLAnchorElement) => {
+      requestedLink = link;
+      const href = link.getAttribute("href") ?? "";
+      const index = isSiteLink(href) ? await loadPreviews() : {};
+      if (requestedLink !== link) {
+        return;
+      }
+      const preview = describeLink(href, { pageUrl: location.href, previews: index });
+      if (preview === undefined) {
+        close();
+        return;
+      }
+      activeLink = link;
+      fill(preview);
+      link.after(card);
+      if (!card.matches(":popover-open")) {
+        card.showPopover();
+      }
+      position();
+    };
+
+    const scheduleOpen = (link: HTMLAnchorElement) => {
+      clearTimeout(closeTimer);
+      clearTimeout(openTimer);
+      if (activeLink === link) {
+        return;
+      }
+      openTimer = setTimeout(() => void open(link), OPEN_DELAY_MS);
+    };
+
+    const scheduleClose = () => {
+      clearTimeout(openTimer);
+      clearTimeout(closeTimer);
+      closeTimer = setTimeout(close, CLOSE_DELAY_MS);
+    };
+
+    const linkFrom = (target: EventTarget | null) =>
+      target instanceof Element ? (target.closest<HTMLAnchorElement>(LINK_SELECTOR) ?? undefined) : undefined;
+
+    document.addEventListener("pointerover", (event) => {
+      if (event.pointerType !== "mouse") {
+        return;
+      }
+      const link = linkFrom(event.target);
+      if (link !== undefined && !card.contains(link)) {
+        scheduleOpen(link);
+      } else if (event.target instanceof Node && card.contains(event.target)) {
+        clearTimeout(closeTimer);
+      }
+    });
+
+    document.addEventListener("pointerout", (event) => {
+      if (event.pointerType !== "mouse") {
+        return;
+      }
+      const from = event.target instanceof Node ? event.target : null;
+      const to = event.relatedTarget instanceof Node ? event.relatedTarget : null;
+      const leftLink = linkFrom(from) !== undefined && linkFrom(to) !== linkFrom(from);
+      const leftCard = from !== null && card.contains(from) && (to === null || !card.contains(to));
+      if ((leftLink && (to === null || !card.contains(to))) || leftCard) {
+        scheduleClose();
+      }
+    });
+
+    // Keyboard focus opens the card; a mouse click that focuses the link does not.
+    document.addEventListener("focusin", (event) => {
+      const link = linkFrom(event.target);
+      if (link !== undefined && link === dismissedLink) {
+        dismissedLink = undefined;
+      } else if (link !== undefined && !card.contains(link) && link.matches(":focus-visible")) {
+        clearTimeout(closeTimer);
+        void open(link);
+      } else if (event.target instanceof Node && card.contains(event.target)) {
+        clearTimeout(closeTimer);
+      }
+    });
+
+    document.addEventListener("focusout", (event) => {
+      const to = event.relatedTarget instanceof Node ? event.relatedTarget : null;
+      const link = activeLink ?? requestedLink;
+      const isStillInside = to !== null && (card.contains(to) || to === link);
+      if (link !== undefined && !isStillInside && !card.matches(":hover")) {
+        close();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || activeLink === undefined) {
+        return;
+      }
+      const link = activeLink;
+      const hadFocusInside = card.contains(document.activeElement);
+      close();
+      if (hadFocusInside) {
+        dismissedLink = link;
+        link.focus();
+      }
+    });
+
+    card.addEventListener("click", async (event) => {
+      const target = event.target instanceof Element ? event.target.closest("a, button") : null;
+      if (target instanceof HTMLButtonElement && target.dataset.copyText !== undefined) {
+        await copyController.copy({
+          button: target,
+          clipboard: navigator.clipboard,
+          status,
+          text: target.dataset.copyText,
+        });
+      } else if (target instanceof HTMLAnchorElement) {
+        close();
+      }
+    });
+
+    window.addEventListener("scroll", position, { passive: true });
+    window.addEventListener("resize", position, { passive: true });
+  }
+</script>

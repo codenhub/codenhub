@@ -9,6 +9,7 @@ import {
 import type { MarkdownHeading, MarkdownInstance } from "astro";
 
 import { siteConfig } from "../site-config";
+import { publishDocumentMarkdown } from "./document-markdown";
 import { annotateCuratedLinks, applyFolderCuration } from "./folder-curation";
 import { rewritePackageMarkdownLinks } from "./markdown-links";
 
@@ -22,6 +23,8 @@ export interface PublicDocument {
   group?: string;
   headings: MarkdownHeading[];
   html: string;
+  /** Markdown body without frontmatter, published beside the page as `index.md`, with site links made absolute. */
+  markdown: string;
   /** Explicit sidebar position from frontmatter, when the page sets one. */
   order?: number;
   relativePath: string;
@@ -171,6 +174,12 @@ async function loadCatalog(): Promise<PublicPackage[]> {
             html: isReference
               ? insertReferenceDeck(linkedHtml, { description: frontmatter.description, since: frontmatter.since })
               : linkedHtml,
+            markdown: publishDocumentMarkdown({
+              body: documentModule.rawContent(),
+              relativePath: definition.relativePath,
+              siteUrl: siteConfig.siteUrl,
+              slug: packageDefinition.slug,
+            }),
             order: frontmatter.order,
             rawHtml,
             relativePath: definition.relativePath,

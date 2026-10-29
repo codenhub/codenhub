@@ -201,6 +201,32 @@ html {
   @apply w-full max-w-3xl;
 }
 
+/* The page actions sit outside the article, which renders the Markdown as
+   authored, and float into the top-right corner beside the H1. The H1 keeps
+   clear of them by the group's width. */
+.document-body {
+  @apply relative w-full max-w-3xl;
+  --page-actions-width: 9.5rem;
+}
+
+.document-body > .page-actions {
+  @apply absolute top-1 right-0;
+}
+
+.document-body .markdown-content h1 {
+  padding-inline-end: calc(var(--page-actions-width) + 1rem);
+}
+
+@media (max-width: 40rem) {
+  .document-body > .page-actions {
+    @apply static mb-4 flex justify-end;
+  }
+
+  .document-body .markdown-content h1 {
+    padding-inline-end: 0;
+  }
+}
+
 .markdown-content h1 {
   @apply text-title-lg mb-8 break-words;
 }
@@ -346,4 +372,138 @@ html {
   .document-column {
     @apply px-(--layout-gutter) py-8;
   }
+}
+
+/* Out of sight, and out of the tab order through `visibility`, until the reader
+   is a screen down the page. */
+.back-to-top {
+  @apply border-border bg-background text-text-secondary hover:text-text hover:border-border-hover fixed right-6 bottom-6 z-20 grid size-11 cursor-pointer place-items-center rounded-full border shadow-(--elevation-md) transition-[opacity,translate,visibility,color,border-color] duration-(--motion-duration-fast) ease-(--motion-ease);
+  --ic-size: 1.125rem;
+}
+
+.back-to-top:not([data-visible="true"]) {
+  @apply invisible translate-y-2 opacity-0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-to-top {
+    @apply transition-none;
+  }
+}
+
+/* Link preview card. It is moved inside the article next to the link it
+   describes, so every rule here is scoped under `.link-preview` to outrank the
+   article's own `p` and `a` styles. A manual popover gets the UA's centered,
+   full-inset placement; the script positions it from the link instead. */
+/* Without the Popover API a `[popover]` element would render in place. */
+@supports not selector(:popover-open) {
+  .link-preview,
+  .page-actions-menu {
+    display: none;
+  }
+}
+
+.link-preview {
+  @apply border-border bg-background text-text fixed m-0 w-[min(24rem,calc(100vw-1rem))] rounded-(--radius-surface) border p-0 shadow-(--elevation-lg);
+  inset: auto;
+}
+
+.link-preview .link-preview-trail {
+  @apply text-text-secondary text-label m-0 flex flex-wrap items-center gap-1 px-4 pt-3.5;
+  --ic-size: 0.875rem;
+}
+
+.link-preview .link-preview-title {
+  @apply text-text m-0 mt-1.5 px-4 text-[0.95rem] leading-6 font-semibold;
+}
+
+.link-preview .link-preview-summary {
+  @apply text-text-secondary m-0 mt-1 line-clamp-3 px-4 text-sm leading-6;
+}
+
+.link-preview .link-preview-detail {
+  @apply text-text-secondary m-0 mt-2 truncate px-4 font-mono text-xs;
+}
+
+.link-preview .link-preview-actions {
+  @apply border-border mt-3.5 flex border-t p-1.5;
+}
+
+.link-preview .link-preview-action {
+  @apply text-text-secondary hover:text-text hover:bg-foreground focus-visible:bg-foreground flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-(--radius-control) border-0 bg-transparent px-2 py-2 text-sm font-normal no-underline transition-colors;
+  --ic-size: 1rem;
+}
+
+.link-preview .link-preview-copied-icon,
+.link-preview .link-preview-action[data-copy-state="copied"] > i:first-child {
+  @apply hidden;
+}
+
+.link-preview .link-preview-action[data-copy-state="copied"] > .link-preview-copied-icon {
+  @apply inline-block;
+}
+
+/* Split button: copy in one click, the rest behind the caret. */
+.page-actions {
+  @apply flex;
+}
+
+.page-actions-copy,
+.page-actions-toggle {
+  @apply border-border bg-background text-text-secondary hover:text-text hover:border-border-hover hover:bg-foreground flex h-9 cursor-pointer items-center border text-sm transition-colors;
+  --ic-size: 1rem;
+}
+
+.page-actions-copy {
+  @apply gap-2 rounded-l-(--radius-control) px-3;
+}
+
+.page-actions-toggle {
+  @apply -ml-px rounded-r-(--radius-control) px-2;
+}
+
+.page-actions-toggle:has(+ * + .page-actions-menu:popover-open) {
+  @apply bg-foreground text-text;
+}
+
+/* Scoped under `.page-actions` to outrank the icon stylesheet's own `display`. */
+.page-actions .page-actions-copied-icon,
+.page-actions .page-actions-label-copied,
+.page-actions .page-actions-label-failed,
+.page-actions .page-actions-copy[data-copy-state] .page-actions-rest-icon,
+.page-actions .page-actions-copy[data-copy-state] .page-actions-label-rest {
+  @apply hidden;
+}
+
+.page-actions .page-actions-copy[data-copy-state="copied"] .page-actions-copied-icon,
+.page-actions .page-actions-copy[data-copy-state="copied"] .page-actions-label-copied,
+.page-actions .page-actions-copy[data-copy-state="failed"] .page-actions-rest-icon,
+.page-actions .page-actions-copy[data-copy-state="failed"] .page-actions-label-failed {
+  @apply inline-block;
+}
+
+.page-actions-menu {
+  @apply border-border bg-background text-text fixed m-0 w-[min(18rem,calc(100vw-1rem))] rounded-(--radius-surface) border p-1.5 shadow-(--elevation-lg);
+  inset: auto;
+}
+
+.page-actions-item {
+  @apply text-text hover:bg-foreground focus-visible:bg-foreground flex w-full cursor-pointer items-start gap-3 rounded-(--radius-control) border-0 bg-transparent px-3 py-2.5 text-left no-underline transition-colors;
+  --ic-size: 1.125rem;
+}
+
+.page-actions-item > i {
+  @apply text-text-secondary mt-0.5 shrink-0;
+}
+
+.page-actions-item-text {
+  @apply flex min-w-0 flex-col gap-0.5;
+}
+
+.page-actions-item-label {
+  @apply text-sm font-semibold;
+}
+
+.page-actions-item-description {
+  @apply text-text-secondary truncate text-xs;
 }

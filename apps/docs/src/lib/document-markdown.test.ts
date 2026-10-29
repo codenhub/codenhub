@@ -1,0 +1,46 @@
+import { describe, expect, it } from "vitest";
+
+import { documentMarkdownRoute, publishDocumentMarkdown } from "./document-markdown";
+
+const site = { siteUrl: "https://docs.example.dev", slug: "kit" };
+
+describe("publishDocumentMarkdown", () => {
+  it("makes links the site publishes absolute, from a nested page", () => {
+    const body = [
+      "# Setup",
+      "",
+      "See [concepts](../concepts.md#errors), [tokens](./tokens.md), and the [license](../../LICENSE).",
+      "",
+      "![Diagram](assets/flow.svg)",
+    ].join("\n");
+
+    expect(publishDocumentMarkdown({ ...site, body, relativePath: "guides/setup.md" })).toBe(
+      [
+        "# Setup",
+        "",
+        "See [concepts](https://docs.example.dev/kit/concepts/#errors), [tokens](https://docs.example.dev/kit/guides/tokens/), and the [license](https://docs.example.dev/kit/LICENSE).",
+        "",
+        "![Diagram](https://docs.example.dev/kit/guides/assets/flow.svg)",
+      ].join("\n"),
+    );
+  });
+
+  it("keeps external links, fragments, and code as written", () => {
+    const body = "[npm](https://npmjs.com) [below](#usage) `./setup.md`\n\n```md\n[x](./setup.md)\n```\n";
+
+    expect(publishDocumentMarkdown({ ...site, body, relativePath: "index.md" })).toBe(body);
+  });
+
+  it("drops the blank lines left where the frontmatter was", () => {
+    const body = "   \n      \n\n# Setup\n";
+
+    expect(publishDocumentMarkdown({ ...site, body, relativePath: "index.md" })).toBe("# Setup\n");
+  });
+});
+
+describe("documentMarkdownRoute", () => {
+  it("places the Markdown inside the page's route", () => {
+    expect(documentMarkdownRoute("/kit/guides/setup/")).toBe("/kit/guides/setup/index.md");
+    expect(documentMarkdownRoute("/kit/")).toBe("/kit/index.md");
+  });
+});

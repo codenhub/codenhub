@@ -1,0 +1,35 @@
+import { posix } from "node:path";
+
+import { publishLlmsText, rebaseMarkdownTargets } from "@codenhub/tools/documentation";
+
+export interface DocumentMarkdownSource {
+  /**
+   * Authored Markdown body without its frontmatter. Astro's `rawContent()`
+   * blanks the frontmatter out with whitespace, which is dropped here.
+   */
+  body: string;
+  /** Path relative to the package's `docs/`, such as `guides/setup.md`. */
+  relativePath: string;
+  siteUrl: string;
+  slug: string;
+}
+
+const LEADING_BLANK_LINES = /^(?:[ \t]*\r?\n)+/;
+
+/**
+ * Prepares one page's Markdown for publication beside the page as `index.md`.
+ *
+ * Package-relative targets the site publishes become absolute site URLs, the
+ * rule `llms-full.txt` follows on this site, because the text is meant to be
+ * copied, downloaded, and pasted where no base URL exists.
+ */
+export function publishDocumentMarkdown({ body, relativePath, siteUrl, slug }: DocumentMarkdownSource): string {
+  const sourceDirectory = posix.join("docs", posix.dirname(relativePath));
+  const content = body.replace(LEADING_BLANK_LINES, "");
+  return publishLlmsText(rebaseMarkdownTargets(content, sourceDirectory), { siteUrl, slug });
+}
+
+/** Where a page's Markdown is published: `index.md` inside the page's own route. */
+export function documentMarkdownRoute(route: string): string {
+  return `${route}index.md`;
+}

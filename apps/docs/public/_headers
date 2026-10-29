@@ -2,3 +2,8 @@
 # here. The index is public documentation text, so any origin may read it.
 /search-index.json
   Access-Control-Allow-Origin: *
+
+# Each page's Markdown source (`<route>/index.md`). The charset keeps non-ASCII
+# text readable when a browser opens the file directly.
+/*.md
+  Content-Type: text/markdown; charset=utf-8

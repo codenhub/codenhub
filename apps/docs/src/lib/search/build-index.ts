@@ -33,7 +33,7 @@ const decodeEntities = (value: string) =>
     .replaceAll("&amp;", "&");
 
 /** Strips markup and collapses whitespace so prose is searchable as one line. */
-const toText = (html: string) =>
+export const toText = (html: string) =>
   decodeEntities(html.replaceAll(/<[^>]*>/g, " "))
     .replaceAll(/\s+/g, " ")
     .trim();
@@ -47,7 +47,7 @@ const toText = (html: string) =>
  * `<h2` cannot appear inside text or an attribute value, because the compiler
  * escapes `<` everywhere else, so scanning for it alone is exact.
  */
-const findSectionBounds = (html: string) =>
+export const findSectionBounds = (html: string) =>
   [...html.matchAll(HEADING_OPEN)].map((match) => {
     const openIndex = match.index ?? 0;
     const closeTag = `</h${match[1]}>`;

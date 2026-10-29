@@ -1,0 +1,138 @@
+---
+/*
+ * Copy, view, or download the page's Markdown, published beside the page as
+ * `index.md`. The split button copies in one click; the menu holds the rest.
+ */
+import { documentMarkdownRoute } from "../lib/document-markdown";
+
+interface Props {
+  route: string;
+}
+
+const { route } = Astro.props;
+const markdownUrl = documentMarkdownRoute(route);
+// Every file is `index.md` on the server; a download named after the route
+// keeps several saved pages apart.
+const downloadName = `${route.split("/").filter(Boolean).join("-")}.md`;
+---
+
+<div class="page-actions" data-markdown-url={markdownUrl} data-page-actions>
+  <button aria-describedby="page-copy-status" aria-label="Copy page as Markdown" class="page-actions-copy" data-page-copy title="Copy page as Markdown" type="button">
+    <i aria-hidden="true" class="ic-lucide-copy page-actions-rest-icon"></i>
+    <i aria-hidden="true" class="ic-lucide-check page-actions-copied-icon"></i>
+    <span class="page-actions-label-rest">Copy page</span>
+    <span class="page-actions-label-copied">Copied</span>
+    <span class="page-actions-label-failed">Copy failed</span>
+  </button>
+  <button aria-label="More page actions" class="page-actions-toggle" popovertarget="page-actions-menu" title="More page actions" type="button">
+    <i aria-hidden="true" class="ic-lucide-chevron-down"></i>
+  </button>
+  <span aria-live="polite" class="sr-only" id="page-copy-status"></span>
+
+  <div class="page-actions-menu" id="page-actions-menu" popover>
+    <button class="page-actions-item" data-page-copy-item type="button">
+      <i aria-hidden="true" class="ic-lucide-copy"></i>
+      <span class="page-actions-item-text">
+        <span class="page-actions-item-label">Copy page</span>
+        <span class="page-actions-item-description">As Markdown, ready to paste anywhere</span>
+      </span>
+    </button>
+    <a class="page-actions-item" href={markdownUrl} rel="noopener" target="_blank">
+      <i aria-hidden="true" class="ic-lucide-file-text"></i>
+      <span class="page-actions-item-text">
+        <span class="page-actions-item-label">View Markdown</span>
+        <span class="page-actions-item-description">The source text of this page</span>
+      </span>
+    </a>
+    <a class="page-actions-item" download={downloadName} href={markdownUrl}>
+      <i aria-hidden="true" class="ic-lucide-download"></i>
+      <span class="page-actions-item-text">
+        <span class="page-actions-item-label">Download Markdown</span>
+        <span class="page-actions-item-description">{downloadName}</span>
+      </span>
+    </a>
+  </div>
+</div>
+
+<script>
+  import { createCopyController } from "@codenhub/app-shell/copy-feedback";
+
+  import { placeFloating } from "../lib/floating-position";
+
+  const root = document.querySelector<HTMLElement>("[data-page-actions]");
+  const copyButton = root?.querySelector<HTMLButtonElement>("[data-page-copy]");
+  const status = root?.querySelector<HTMLElement>("#page-copy-status");
+  const toggle = root?.querySelector<HTMLButtonElement>(".page-actions-toggle");
+  const menu = root?.querySelector<HTMLElement>(".page-actions-menu");
+  const markdownUrl = root?.dataset.markdownUrl;
+
+  if (root && copyButton && status && toggle && menu && markdownUrl !== undefined) {
+    // Without the Popover API the menu cannot open; copying still works.
+    if (typeof HTMLElement.prototype.showPopover !== "function") {
+      toggle.hidden = true;
+    }
+
+    const copyController = createCopyController();
+
+    const fetchMarkdown = async () => {
+      const response = await fetch(markdownUrl);
+      if (!response.ok) {
+        throw new Error(`Unable to load ${markdownUrl}: HTTP ${response.status}.`);
+      }
+      return response.text();
+    };
+
+    // The text arrives over the network, and Safari drops the click's
+    // permission to write once a copy awaits anything first. Handing the
+    // clipboard a pending item starts the write inside the click instead.
+    const pageClipboard = {
+      async writeText() {
+        if (typeof ClipboardItem === "function") {
+          const fetchBlob = async () => new Blob([await fetchMarkdown()], { type: "text/plain" });
+          await navigator.clipboard.write([new ClipboardItem({ "text/plain": fetchBlob() })]);
+        } else {
+          await navigator.clipboard.writeText(await fetchMarkdown());
+        }
+      },
+    };
+
+    const copyPage = () =>
+      copyController.copy({ button: copyButton, clipboard: pageClipboard, status, text: "" });
+
+    copyButton.addEventListener("click", () => void copyPage());
+
+    menu.querySelector("[data-page-copy-item]")?.addEventListener("click", () => {
+      menu.hidePopover?.();
+      copyButton.focus();
+      void copyPage();
+    });
+
+    menu.addEventListener("toggle", (event) => {
+      if ((event as ToggleEvent).newState !== "open") {
+        return;
+      }
+      const { left, top } = placeFloating({
+        align: "end",
+        anchor: root.getBoundingClientRect(),
+        floating: { height: menu.offsetHeight, width: menu.offsetWidth },
+        viewport: { height: window.innerHeight, width: document.documentElement.clientWidth },
+      });
+      menu.style.left = `${left}px`;
+      menu.style.top = `${top}px`;
+      menu.querySelector<HTMLElement>(".page-actions-item")?.focus();
+    });
+
+    // An open menu would drift from its button as the page scrolls.
+    window.addEventListener("scroll", () => {
+      if (menu.matches(":popover-open")) {
+        menu.hidePopover();
+      }
+    }, { passive: true });
+
+    menu.addEventListener("click", (event) => {
+      if (event.target instanceof Element && event.target.closest("a") !== null) {
+        menu.hidePopover();
+      }
+    });
+  }
+</script>
