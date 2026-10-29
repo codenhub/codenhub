@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-18
+last_updated: 2026-10-29
 scope: "@codenhub/app-shell: what it provides to the three deploy surfaces and the contract each host must satisfy."
 ---
 
@@ -21,7 +21,7 @@ Through `exports`, as source:
 - `./nav` — `resolveNavLinks(siteConfig)`, the header's cross-surface link list. Pure: takes a `SiteConfig`, returns link/label pairs, touches nothing. `site-header.astro` calls it internally; a non-Astro host calls it too, and renders the result in its own markup — see `docs/internal/vanilla-host-markup.md`.
 - `./theme` — `resolveInitialTheme`, `nextTheme`, `themeToggleAria`, and the shared `THEME_STORAGE_KEY` constant. Pure functions with no DOM or storage access; every consumer, `base-layout.astro` included, writes its own few lines of glue calling them. See "Theme" below and `docs/internal/vanilla-host-markup.md`.
 - `./copy-feedback` — `createCopyController()`, the clipboard write and feedback behind every copy button: the `data-copy-state` (`copied`/`failed`), label, and status announcement, their 2000 ms reset to the button's own resting `aria-label` and `title`, and the rule that only the latest click on a given button shows its result. Each app owns its button markup, icons, and click wiring; `apps/docs` uses it for code blocks, `apps/www` for its copy buttons.
-- `./remark-alerts` — `remarkAlerts`, the remark plugin that renders a GitHub-style alert blockquote, such as `> [!NOTE]` on a line of its own (also `TIP`, `IMPORTANT`, `WARNING`, and `CAUTION`), as `<aside class="markdown-alert alert {intent}">` with a `.markdown-alert-title` and `.markdown-alert-icon`. `apps/docs` registers it for its pages and `apps/www` for package READMEs; each styles that markup in its own stylesheet.
+- `./remark-alerts` — `remarkAlerts`, the remark plugin that renders a GitHub-style alert blockquote, such as `> [!NOTE]` on a line of its own (also `TIP`, `IMPORTANT`, `WARNING`, and `CAUTION`), as `<aside class="markdown-alert alert {intent}">` with a `.markdown-alert-title` and `.markdown-alert-icon`. It also accepts the alert's text on the marker's line, as in `> [!WARNING] Experimental.`, which GitHub shows as a plain quote: some published READMEs use that form ([#395](https://github.com/codenhub/codenhub/issues/395)), and the sites render the published copies. `apps/docs` registers it for its pages and `apps/www` for package READMEs; each styles that markup in its own stylesheet.
 - `./site-config` — the `SiteConfig` type each app fills in.
 - `./seo` — `buildRobotsTxt(baseUrl)` and `buildSitemapXml(baseUrl, routePaths)`.
 - `./styles.css` — the chrome stylesheet.
