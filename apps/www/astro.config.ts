@@ -1,6 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import logos from "@codenhub/icons/data/logos";
 import lucide from "@codenhub/icons/data/lucide";
 import simpleIcons from "@codenhub/icons/data/simple-icons";
 import { viteIcons } from "@codenhub/icons/vite";
@@ -25,7 +26,7 @@ export default defineConfig({
     plugins: [
       viteIcons({
         mode: "css",
-        families: [lucide, simpleIcons],
+        families: [lucide, simpleIcons, logos],
         defaultPrefix: "lucide",
         // The shared shell's `<i class="ic-…">` markup resolves under
         // node_modules, which the plugin's own scan skips; this glob is how its

@@ -91,18 +91,11 @@
   font-weight: 600;
 }
 
-/* Leading mark: a lucide `<i>` for the internal surfaces, an inline brand
-   `<svg>` for GitHub and npm — the same split the shell header uses. */
+/* Leading mark. */
 .www-route-icon {
   flex-shrink: 0;
   --ic-size: 1.125rem;
   color: var(--color-text-secondary);
-}
-
-.www-route-icon.www-route-brand {
-  width: 1.125rem;
-  height: 1.125rem;
-  fill: currentcolor;
 }
 
 .www-route-arrow {
@@ -302,10 +295,11 @@
   --ic-size: 1rem;
 }
 
-.package-card-link svg {
-  width: 1rem;
-  height: 1rem;
-  fill: currentcolor;
+/* `--ic-color` drops the brand colors for the link's own, so the marks stay
+   quiet next to the card's text. */
+.package-card-brand {
+  --ic-size: 0.875rem;
+  --ic-color: currentcolor;
 }
 
 .package-card-updated {
@@ -486,10 +480,9 @@
   min-height: 0;
 }
 
+/* Full-color brand marks, so no `--ic-color` here. */
 .install-tab-icon {
-  width: 0.875rem;
-  height: 0.875rem;
-  fill: currentcolor;
+  --ic-size: 0.875rem;
 }
 
 .install-panel {
