@@ -396,6 +396,50 @@ html {
   }
 }
 
+/* Link preview card. It is moved inside the article next to the link it
+   describes, so every rule here is scoped under `.link-preview` to outrank the
+   article's own `p` and `a` styles. A manual popover gets the UA's centered,
+   full-inset placement; the script positions it from the link instead. */
+.link-preview {
+  @apply border-border bg-background text-text fixed m-0 w-[min(24rem,calc(100vw-1rem))] rounded-(--radius-surface) border p-0 shadow-(--elevation-lg);
+  inset: auto;
+}
+
+.link-preview .link-preview-trail {
+  @apply text-text-secondary text-label m-0 flex flex-wrap items-center gap-1 px-4 pt-3.5;
+  --ic-size: 0.875rem;
+}
+
+.link-preview .link-preview-title {
+  @apply text-text m-0 mt-1.5 px-4 text-[0.95rem] leading-6 font-semibold;
+}
+
+.link-preview .link-preview-summary {
+  @apply text-text-secondary m-0 mt-1 line-clamp-3 px-4 text-sm leading-6;
+}
+
+.link-preview .link-preview-detail {
+  @apply text-text-secondary m-0 mt-2 truncate px-4 font-mono text-xs;
+}
+
+.link-preview .link-preview-actions {
+  @apply border-border mt-3.5 flex border-t p-1.5;
+}
+
+.link-preview .link-preview-action {
+  @apply text-text-secondary hover:text-text hover:bg-foreground focus-visible:bg-foreground flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-(--radius-control) border-0 bg-transparent px-2 py-2 text-sm font-normal no-underline transition-colors;
+  --ic-size: 1rem;
+}
+
+.link-preview .link-preview-copied-icon,
+.link-preview .link-preview-action[data-copy-state="copied"] > i:first-child {
+  @apply hidden;
+}
+
+.link-preview .link-preview-action[data-copy-state="copied"] > .link-preview-copied-icon {
+  @apply inline-block;
+}
+
 /* Split button: copy in one click, the rest behind the caret. */
 .page-actions {
   @apply flex;

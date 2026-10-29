@@ -1,5 +1,6 @@
 ---
 import BackToTop from "../components/back-to-top.astro";
+import LinkPreview from "../components/link-preview.astro";
 import PageActions from "../components/page-actions.astro";
 import PackageNavigation from "../components/package-navigation.astro";
 import { isReferenceDocument, type PublicDocument, type PublicPackage } from "../lib/catalog";
@@ -68,6 +69,7 @@ const browserTitle =
   </div>
 
   <BackToTop />
+  <LinkPreview />
 
   <script>
     import { findActiveHeadingId } from "../lib/toc-highlight";
