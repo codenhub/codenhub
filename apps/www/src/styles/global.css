@@ -272,13 +272,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.package-card p.package-card-size {
-  margin-top: 0.5rem;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  font-variant-numeric: tabular-nums;
-}
-
 .package-card p {
   margin: 0.75rem 0 0;
   color: var(--color-text-secondary);
