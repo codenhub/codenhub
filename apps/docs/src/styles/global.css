@@ -202,6 +202,20 @@ html {
 }
 
 .markdown-content h1 {
+  padding-inline-end: calc(var(--page-actions-width) + 1rem);
+}
+
+@media (max-width: 40rem) {
+  .document-body > .page-actions {
+    @apply static mb-4 flex justify-end;
+  }
+
+  .document-body .markdown-content h1 {
+    padding-inline-end: 0;
+  }
+}
+
+.markdown-content h1 {
   @apply text-title-lg mb-8 break-words;
 }
 
@@ -345,5 +359,27 @@ html {
 
   .document-column {
     @apply px-(--layout-gutter) py-8;
+  }
+}
+
+/* Out of sight, and out of the tab order through `visibility`, until the reader
+   is a screen down the page. */
+.back-to-top {
+  @apply border-border bg-background text-text-secondary hover:text-text hover:border-border-hover fixed right-6 bottom-6 z-20 grid size-11 cursor-pointer place-items-center rounded-full border shadow-(--elevation-md) transition-[opacity,translate,visibility,color,border-color] duration-(--motion-duration-fast) ease-(--motion-ease);
+  --ic-size: 1.125rem;
+}
+
+.back-to-top:not([data-visible="true"]) {
+  @apply invisible translate-y-2 opacity-0;
+}
+
+/* Back to top hands focus to the content; it is a landing point, not a control. */
+#main-content:focus {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-to-top {
+    @apply transition-none;
   }
 }

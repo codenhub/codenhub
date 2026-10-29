@@ -1,0 +1,33 @@
+<button aria-label="Back to top" class="back-to-top" data-back-to-top title="Back to top" type="button">
+  <i aria-hidden="true" class="ic-lucide-arrow-up"></i>
+</button>
+
+<script>
+  const button = document.querySelector<HTMLButtonElement>("[data-back-to-top]");
+
+  if (button !== null) {
+    // Shown once the reader is a screen past the top, where scrolling back by hand starts to cost something.
+    const update = () => {
+      button.dataset.visible = String(window.scrollY > window.innerHeight);
+    };
+
+    button.addEventListener("click", () => {
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({ behavior: reducedMotion ? "auto" : "smooth", top: 0 });
+
+      // The button hides at the top, so keyboard focus would fall to the body.
+      // Hand it to the start of the content instead.
+      const main = document.getElementById("main-content");
+      if (main !== null) {
+        if (!main.hasAttribute("tabindex")) {
+          main.setAttribute("tabindex", "-1");
+        }
+        main.focus({ preventScroll: true });
+      }
+    });
+
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update, { passive: true });
+  }
+</script>
