@@ -23,7 +23,10 @@ function createBlockquote(marker: string): TestNode {
           { type: "strong", children: [{ type: "text", value: "body" }] },
         ],
       },
-      { type: "paragraph", children: [{ type: "text", value: "Second paragraph." }] },
+      {
+        type: "paragraph",
+        children: [{ type: "text", value: "Second paragraph." }],
+      },
     ],
   };
 }
@@ -55,7 +58,10 @@ describe("remarkAlerts", () => {
       data: { hProperties: { className: ["markdown-alert-title"] } },
       type: "paragraph",
     });
-    expect(alert.children?.[0]?.children).toContainEqual({ type: "text", value: title });
+    expect(alert.children?.[0]?.children).toContainEqual({
+      type: "text",
+      value: title,
+    });
   });
 
   it("preserves body paragraphs and inline formatting", () => {
@@ -71,7 +77,22 @@ describe("remarkAlerts", () => {
     });
   });
 
-  it.each(["Ordinary quote", "[!UNKNOWN]\nBody", "[!NOTE] trailing text"])(
+  // GitHub wants the marker alone on its line, but several published package
+  // READMEs put the text right after it (codenhub/codenhub#395), and the sites
+  // render those published copies, so the one-line form is accepted too.
+  it("transforms an alert whose text follows the marker on its line", () => {
+    const alert = transform(createBlockquote("[!WARNING] This package is experimental."));
+
+    expect(alert.data).toMatchObject({
+      hProperties: { "data-alert-type": "warning" },
+    });
+    expect(alert.children?.[1]?.children).toEqual([
+      { type: "text", value: "This package is experimental.\nFormatted " },
+      { type: "strong", children: [{ type: "text", value: "body" }] },
+    ]);
+  });
+
+  it.each(["Ordinary quote", "[!UNKNOWN]\nBody", "[!NOTE]trailing text", "Text before [!NOTE] marker"])(
     "preserves the non-alert blockquote %s",
     (marker) => {
       const quote = createBlockquote(marker);

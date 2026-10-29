@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import lucide from "@codenhub/icons/data/lucide";
+import simpleIcons from "@codenhub/icons/data/simple-icons";
 import { viteIcons } from "@codenhub/icons/vite";
 import { defineConfig } from "astro/config";
 
@@ -23,7 +24,7 @@ export default defineConfig({
          unaffected. */
       viteIcons({
         mode: "css",
-        families: [lucide],
+        families: [lucide, simpleIcons],
         defaultPrefix: "lucide",
         content: [path.join(packagesRoot, "app-shell/src/**/*.astro")],
       }),

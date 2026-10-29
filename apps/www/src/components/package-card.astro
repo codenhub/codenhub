@@ -11,9 +11,7 @@
 import StatusBadge from "@codenhub/app-shell/components/status-badge.astro";
 
 import { formatDate } from "../lib/format";
-import { describeRootSize } from "../lib/package-facts";
 import type { CatalogPackage } from "../lib/catalog";
-import BrandIcon from "./brand-icon.astro";
 
 interface Props {
   entry: CatalogPackage;
@@ -22,7 +20,6 @@ interface Props {
 const { entry } = Astro.props;
 const latest = entry.releases.latest;
 const lastRelease = entry.releases.lastPublished;
-const size = describeRootSize(entry.size);
 const haystack = `${entry.label} ${entry.name} ${entry.description ?? ""}`.toLowerCase();
 ---
 
@@ -39,7 +36,6 @@ const haystack = `${entry.label} ${entry.name} ${entry.description ?? ""}`.toLow
       </div>
     </div>
     <p>{entry.description ?? entry.name}</p>
-    {size !== undefined && <p class="package-card-size">{size}</p>}
   </a>
   <div class="package-card-links">
     {
@@ -51,7 +47,7 @@ const haystack = `${entry.label} ${entry.name} ${entry.description ?? ""}`.toLow
           rel="noopener noreferrer"
           target="_blank"
         >
-          <BrandIcon brand="github" />
+          <i aria-hidden="true" class="ic-simple-icons-github package-card-brand"></i>
         </a>
       )
     }
@@ -62,7 +58,7 @@ const haystack = `${entry.label} ${entry.name} ${entry.description ?? ""}`.toLow
       rel="noopener noreferrer"
       target="_blank"
     >
-      <BrandIcon brand="npm" />
+      <i aria-hidden="true" class="ic-simple-icons-npm package-card-brand"></i>
     </a>
     {
       lastRelease !== undefined && (

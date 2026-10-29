@@ -10,7 +10,11 @@ interface AstNode {
 }
 
 const ALERTS = {
-  NOTE: { intent: "info", title: "Note", icon: "<circle cx='12' cy='12' r='10'/><path d='M12 16v-4M12 8h.01'/>" },
+  NOTE: {
+    intent: "info",
+    title: "Note",
+    icon: "<circle cx='12' cy='12' r='10'/><path d='M12 16v-4M12 8h.01'/>",
+  },
   TIP: {
     intent: "success",
     title: "Tip",
@@ -56,9 +60,12 @@ function transformBlockquote(node: AstNode): void {
   }
   const firstParagraph = node.children?.[0];
   const firstText = firstParagraph?.type === "paragraph" ? firstParagraph.children?.[0] : undefined;
+  // The marker ends its line, as GitHub requires, or is followed by spaces and
+  // the alert's text on the same line, a form GitHub renders as a plain quote
+  // but some published READMEs use (codenhub/codenhub#395).
   const match =
     firstText?.type === "text"
-      ? firstText.value?.match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:\r?\n|$)/)
+      ? firstText.value?.match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:[ \t]*(?:\r?\n|$)|[ \t]+)/)
       : undefined;
   if (match === undefined || match === null) {
     return;

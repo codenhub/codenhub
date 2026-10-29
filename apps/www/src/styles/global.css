@@ -5,6 +5,27 @@
    that stylesheet carries the base, so a separate `@import "@codenhub/icons"`
    here would only duplicate it. */
 
+/* Header: see-through at the top of the page, so the landing hero's glyph
+   field shows behind it; the shell's fill, blur, and rule return once the page
+   scrolls. `data-at-top` is set by the inline script in `base-layout.astro`. */
+.shell-header {
+  transition:
+    background-color var(--motion-duration-fast, 120ms) var(--motion-ease),
+    border-color var(--motion-duration-fast, 120ms) var(--motion-ease);
+}
+
+.shell-header[data-at-top] {
+  border-bottom-color: transparent;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-header {
+    transition: none;
+  }
+}
+
 /* Page width, gutter, and centering come from `.shell-content` in
    `@codenhub/app-shell/styles.css`, so the index lines up with the header and
    footer. */
@@ -70,18 +91,11 @@
   font-weight: 600;
 }
 
-/* Leading mark: a lucide `<i>` for the internal surfaces, an inline brand
-   `<svg>` for GitHub and npm — the same split the shell header uses. */
+/* Leading mark. */
 .www-route-icon {
   flex-shrink: 0;
   --ic-size: 1.125rem;
   color: var(--color-text-secondary);
-}
-
-.www-route-icon.www-route-brand {
-  width: 1.125rem;
-  height: 1.125rem;
-  fill: currentcolor;
 }
 
 .www-route-arrow {
@@ -251,13 +265,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.package-card p.package-card-size {
-  margin-top: 0.5rem;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  font-variant-numeric: tabular-nums;
-}
-
 .package-card p {
   margin: 0.75rem 0 0;
   color: var(--color-text-secondary);
@@ -288,10 +295,11 @@
   --ic-size: 1rem;
 }
 
-.package-card-link svg {
-  width: 1rem;
-  height: 1rem;
-  fill: currentcolor;
+/* `--ic-color` drops the brand colors for the link's own, so the marks stay
+   quiet next to the card's text. */
+.package-card-brand {
+  --ic-size: 0.875rem;
+  --ic-color: currentcolor;
 }
 
 .package-card-updated {
@@ -472,10 +480,9 @@
   min-height: 0;
 }
 
+/* Full-color brand marks, so no `--ic-color` here. */
 .install-tab-icon {
-  width: 0.875rem;
-  height: 0.875rem;
-  fill: currentcolor;
+  --ic-size: 0.875rem;
 }
 
 .install-panel {

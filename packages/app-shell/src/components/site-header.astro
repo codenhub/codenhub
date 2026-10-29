@@ -1,5 +1,5 @@
 ---
-import { resolveNavLinks } from "../nav.ts";
+import { resolveNavLinks, type ShellNavLink } from "../nav.ts";
 import type { SiteConfig } from "../site-config.ts";
 import ThemeToggle from "./theme-toggle.astro";
 
@@ -11,14 +11,43 @@ interface Props {
   githubLabel?: string;
   /** Accessible label for the npm action, when `siteConfig.npmUrl` points at a specific package rather than the org page. */
   npmLabel?: string;
+  /** Links within this surface, shown before the cross-surface links. They open in the same tab, with no outbound arrow. */
+  localLinks?: ShellLocalLink[];
 }
 
-const { siteConfig, homeHref = "/", githubLabel = "CodenHub on GitHub", npmLabel = "CodenHub on npm" } = Astro.props;
+/**
+ * A header link within the current surface. `current` marks the section the
+ * visitor is in: the link is announced as the current page when it is that
+ * exact page, and as the current item of the nav otherwise.
+ */
+export interface ShellLocalLink extends ShellNavLink {
+  current?: boolean;
+}
+
+const {
+  siteConfig,
+  homeHref = "/",
+  githubLabel = "CodenHub on GitHub",
+  npmLabel = "CodenHub on npm",
+  localLinks = [],
+} = Astro.props;
+
+const withoutTrailingSlash = (path: string) => path.replace(/\/+$/, "");
+const ariaCurrent = (link: ShellLocalLink) => {
+  if (link.current !== true) {
+    return undefined;
+  }
+
+  // Resolved, so a fragment, query, or relative href still matches its page.
+  const target = new URL(link.href, Astro.url).pathname;
+
+  return withoutTrailingSlash(target) === withoutTrailingSlash(Astro.url.pathname) ? "page" : "true";
+};
 
 /*
- * The standard cross-surface links, left of the brand actions. Every one
- * points at another origin, so it opens in a new tab and carries the
- * outbound arrow.
+ * The standard cross-surface links, left of the brand actions, after any of
+ * the surface's own `localLinks`. Every one points at another origin, so it
+ * opens in a new tab and carries the outbound arrow.
  *
  * DOM order is brand, links, actions at every width — the wide row shows them
  * in that order, and the narrow layout keeps the links on the brand's row and
@@ -48,8 +77,13 @@ const navLinks = resolveNavLinks(siteConfig);
       />
     </a>
     {
-      navLinks.length > 0 && (
+      localLinks.length + navLinks.length > 0 && (
         <nav aria-label="Sites" class="shell-nav">
+          {localLinks.map((link) => (
+            <a aria-current={ariaCurrent(link)} class="shell-nav-link" href={link.href}>
+              {link.label}
+            </a>
+          ))}
           {navLinks.map((link) => (
             <a class="shell-nav-link" href={link.href} rel="noopener noreferrer" target="_blank">
               {link.label}
@@ -68,11 +102,7 @@ const navLinks = resolveNavLinks(siteConfig);
         rel="noopener noreferrer"
         target="_blank"
       >
-        <svg aria-hidden="true" class="shell-action-brand" viewBox="0 0 16 16">
-          <path
-            d="M8 0C3.58 0 0 3.64 0 8.13c0 3.59 2.29 6.64 5.47 7.71.4.08.55-.17.55-.39 0-.19-.01-.83-.01-1.51-2.01.38-2.53-.5-2.69-.96-.09-.23-.48-.96-.82-1.15-.28-.15-.68-.53-.01-.54.63-.01 1.08.59 1.23.83.72 1.23 1.87.88 2.33.67.07-.53.28-.88.51-1.08-1.78-.21-3.64-.91-3.64-4.02 0-.89.31-1.62.82-2.19-.08-.2-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.48 7.48 0 0 1 8 3.91c.68 0 1.36.09 2 .27 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.96.08 2.16.51.57.82 1.29.82 2.19 0 3.12-1.87 3.81-3.65 4.02.29.25.54.74.54 1.51 0 1.09-.01 1.97-.01 2.24 0 .22.15.47.55.39A8.12 8.12 0 0 0 16 8.13C16 3.64 12.42 0 8 0Z"
-          ></path>
-        </svg>
+        <i aria-hidden="true" class="ic-simple-icons-github shell-action-brand"></i>
       </a>
       {
         siteConfig.npmUrl !== undefined && (
@@ -83,9 +113,7 @@ const navLinks = resolveNavLinks(siteConfig);
             rel="noopener noreferrer"
             target="_blank"
           >
-            <svg aria-hidden="true" class="shell-action-brand" viewBox="0 0 24 24">
-              <path d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474c.977 0 1.763-.786 1.763-1.763V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323l13.837.019-.009 13.836h-3.464l.01-10.382h-3.456L12.04 19.17H5.113z" />
-            </svg>
+            <i aria-hidden="true" class="ic-simple-icons-npm shell-action-brand"></i>
           </a>
         )
       }

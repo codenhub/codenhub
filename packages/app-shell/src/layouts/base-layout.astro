@@ -3,7 +3,7 @@ import "virtual:icons.css";
 
 import type { SiteConfig } from "../site-config.ts";
 import SiteFooter from "../components/site-footer.astro";
-import SiteHeader from "../components/site-header.astro";
+import SiteHeader, { type ShellLocalLink } from "../components/site-header.astro";
 import { THEME_STORAGE_KEY } from "../theme.ts";
 
 interface Props {
@@ -18,6 +18,8 @@ interface Props {
   githubLabel?: string;
   /** Passed through to the header's npm action. */
   npmLabel?: string;
+  /** Passed through to the header: links within this surface. */
+  localLinks?: ShellLocalLink[];
 }
 
 const {
@@ -28,6 +30,7 @@ const {
   homeHref,
   githubLabel,
   npmLabel,
+  localLinks,
 } = Astro.props;
 
 const pageTitle =
@@ -71,7 +74,13 @@ const pageTitle =
   </head>
   <body class="shell-body">
     <a class="shell-skip-link" href="#main-content">Skip to main content</a>
-    <SiteHeader githubLabel={githubLabel} homeHref={homeHref} npmLabel={npmLabel} siteConfig={siteConfig}>
+    <SiteHeader
+      githubLabel={githubLabel}
+      homeHref={homeHref}
+      localLinks={localLinks}
+      npmLabel={npmLabel}
+      siteConfig={siteConfig}
+    >
       <slot name="actions" slot="actions" />
     </SiteHeader>
     <slot />

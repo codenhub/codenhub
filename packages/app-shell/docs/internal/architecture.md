@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-18
+last_updated: 2026-10-29
 scope: "@codenhub/app-shell: what it provides to the three deploy surfaces and the contract each host must satisfy."
 ---
 
@@ -21,7 +21,7 @@ Through `exports`, as source:
 - `./nav` — `resolveNavLinks(siteConfig)`, the header's cross-surface link list. Pure: takes a `SiteConfig`, returns link/label pairs, touches nothing. `site-header.astro` calls it internally; a non-Astro host calls it too, and renders the result in its own markup — see `docs/internal/vanilla-host-markup.md`.
 - `./theme` — `resolveInitialTheme`, `nextTheme`, `themeToggleAria`, and the shared `THEME_STORAGE_KEY` constant. Pure functions with no DOM or storage access; every consumer, `base-layout.astro` included, writes its own few lines of glue calling them. See "Theme" below and `docs/internal/vanilla-host-markup.md`.
 - `./copy-feedback` — `createCopyController()`, the clipboard write and feedback behind every copy button: the `data-copy-state` (`copied`/`failed`), label, and status announcement, their 2000 ms reset to the button's own resting `aria-label` and `title`, and the rule that only the latest click on a given button shows its result. Each app owns its button markup, icons, and click wiring; `apps/docs` uses it for code blocks, `apps/www` for its copy buttons.
-- `./remark-alerts` — `remarkAlerts`, the remark plugin that renders a GitHub-style alert blockquote, such as `> [!NOTE]` on a line of its own (also `TIP`, `IMPORTANT`, `WARNING`, and `CAUTION`), as `<aside class="markdown-alert alert {intent}">` with a `.markdown-alert-title` and `.markdown-alert-icon`. `apps/docs` registers it for its pages and `apps/www` for package READMEs; each styles that markup in its own stylesheet.
+- `./remark-alerts` — `remarkAlerts`, the remark plugin that renders a GitHub-style alert blockquote, such as `> [!NOTE]` on a line of its own (also `TIP`, `IMPORTANT`, `WARNING`, and `CAUTION`), as `<aside class="markdown-alert alert {intent}">` with a `.markdown-alert-title` and `.markdown-alert-icon`. It also accepts the alert's text on the marker's line, as in `> [!WARNING] Experimental.`, which GitHub shows as a plain quote: some published READMEs use that form ([#395](https://github.com/codenhub/codenhub/issues/395)), and the sites render the published copies. `apps/docs` registers it for its pages and `apps/www` for package READMEs; each styles that markup in its own stylesheet.
 - `./site-config` — the `SiteConfig` type each app fills in.
 - `./seo` — `buildRobotsTxt(baseUrl)` and `buildSitemapXml(baseUrl, routePaths)`.
 - `./styles.css` — the chrome stylesheet.
@@ -34,11 +34,11 @@ There is no build step and no `dist/`. The package is private, so the lifecycle 
 
 ## Header
 
-The header is one standard layout every surface shares, not a set of parts each app assembles. On the left: the brand/logo (linking to `homeHref`, the surface's own root by default) followed by the cross-surface text links — **CodenHub** (`wwwUrl`), **Documentation** (`docsUrl`), **Demo** (`demoUrl`). Documentation and Demo point at the current package's docs or demo, never at a site root: `apps/docs` and `apps/demo` have no root page of their own, so a page outside any package leaves them unset. On the right: the `actions` slot for genuine per-surface extras, then the **GitHub** mark, the **npm** mark (`npmUrl`), and the theme switch.
+The header is one standard layout every surface shares, not a set of parts each app assembles. On the left: the brand/logo (linking to `homeHref`, the surface's own root by default), then any `localLinks` the surface passes, then the cross-surface text links — **CodenHub** (`wwwUrl`), **Documentation** (`docsUrl`), **Demo** (`demoUrl`). Documentation and Demo point at the current package's docs or demo, never at a site root: `apps/docs` and `apps/demo` have no root page of their own, so a page outside any package leaves them unset. On the right: the `actions` slot for genuine per-surface extras, then the **GitHub** mark, the **npm** mark (`npmUrl`), and the theme switch.
 
-Each link renders only when its `SiteConfig` URL is set, so a surface opts a link in or out purely by whether it carries that URL — there is no per-link prop. Every left link points at another origin, so all three open in a new tab and carry an outbound arrow. The `actions` slot is for things the standard set cannot express: `apps/docs` and `apps/www` put the search trigger there. `apps/demo` passes nothing.
+Each cross-surface link renders only when its `SiteConfig` URL is set, so a surface opts a link in or out purely by whether it carries that URL — there is no per-link prop. Those links point at another origin, so all three open in a new tab and carry an outbound arrow. `localLinks` is the one exception: links within the surface itself, such as `apps/www`'s **Packages**, which open in the same tab, carry no arrow, and, when the surface sets `current: true` on one, mark it with `aria-current`: `"page"` on that exact page, `"true"` on the pages below it, so a package page does not announce **Packages** as the page itself. They come first because they are the surface's own navigation, and the outbound links read as leaving it. The `actions` slot is for things the standard set cannot express: `apps/docs` and `apps/www` put the search trigger there. `apps/demo` passes nothing.
 
-Below `40rem` the three groups can no longer share a line. The links stay on the brand's row (scrolling sideways if they overrun) and the actions drop to a full-width row below, so the rendered order still matches the DOM order — brand, links, actions — and keyboard focus follows it. A header with no cross-surface links, such as `apps/www`'s, has nothing to share the brand's row with, so its actions stay on that row instead. The header grows to hold the extra row (`--shell-header-height` is a minimum, not a fixed height); a surface that keys layout off the header height — `apps/docs` does, for `scroll-padding-top` — raises its own value at that breakpoint.
+Below `40rem` the three groups can no longer share a line. The links stay on the brand's row (scrolling sideways if they overrun) and the actions drop to a full-width row below, so the rendered order still matches the DOM order — brand, links, actions — and keyboard focus follows it. A header with no links at all has nothing to share the brand's row with, so its actions stay on that row instead. The header grows to hold the extra row (`--shell-header-height` is a minimum, not a fixed height); a surface that keys layout off the header height — `apps/docs` does, for `scroll-padding-top` — raises its own value at that breakpoint.
 
 ## Layout width
 
@@ -48,7 +48,7 @@ The header and footer size their content to `--shell-max-width` (default `80rem`
 
 ## Icons
 
-Chrome icons are `@codenhub/icons` classes (`ic-lucide-*`) in **CSS mode**. GitHub and npm are brand marks, not UI icons, and stay inline `<svg>` in the components.
+Chrome icons are `@codenhub/icons` classes in **CSS mode**: `ic-lucide-*` for UI icons, and `ic-simple-icons-github` and `ic-simple-icons-npm` for the brand marks. The marks were inline `<svg>` until `@codenhub/icons` 0.3.0 shipped the `simple-icons` family; they set `--ic-color: currentcolor`, since GitHub's brand color is near-black and would vanish on the dark theme. The vanilla hosts still hand-author inline `<svg>` marks, and `.shell-action-brand` sizes both forms.
 
 CSS mode is required because the icons Vite plugin skips `node_modules` in both its `transform` and its scan, and a pnpm workspace package resolves under `node_modules`. In CSS mode the plugin instead generates mask rules from a `content` glob, and those rules apply to any `<i class="ic-…">` element regardless of which file authored it. SVG mode would leave the shell's icons unrendered.
 
@@ -58,7 +58,7 @@ CSS mode is required because the icons Vite plugin skips `node_modules` in both 
 
 Any host consuming the shell — Astro or not — must:
 
-1. Register `@codenhub/icons/vite` in its Vite (or Astro) config with `mode: "css"`, the `lucide` family, and a `content` entry covering this package's components, e.g. `path.join(packagesRoot, "app-shell/src/**/*.astro")`.
+1. Register `@codenhub/icons/vite` in its Vite (or Astro) config with `mode: "css"`, the `lucide` and `simple-icons` families, and a `content` entry covering this package's components, e.g. `path.join(packagesRoot, "app-shell/src/**/*.astro")`.
 2. Import the generated `virtual:icons.css` module somewhere it actually loads. `base-layout.astro` does this itself, since Astro never runs `transformIndexHtml` for its own pages; a non-Astro host (`packages/icons/demo`, `packages/styles/demo`) has no such layout, so it imports `virtual:icons.css` from its own JS entry point instead. In CSS mode that stylesheet carries the base rules (the `1em` box, the `ic-xs`–`ic-xl` size classes) alongside the generated masks — skip it and every shell icon renders `0×0`. A host must **not** also `@import "@codenhub/icons"` — that only ships the base a second time, and the copy that loses the cascade is the one `styles.css` needs to win. A host that keeps its own `@codenhub/icons` mode (as `apps/docs` and `apps/demo` may) still adds the `content` entry so the shell's classes reach whichever stylesheet that mode generates.
 3. `@import "@codenhub/app-shell/styles.css";` in its global stylesheet, after its `@codenhub/styles` import.
 4. Import `@codenhub/styles` — either `/tw` or `/native` — so the tokens `styles.css` reads are defined.

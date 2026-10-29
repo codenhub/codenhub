@@ -6,7 +6,6 @@
  *
  * @param packageName - Full npm name, such as `@codenhub/validation`.
  */
-import BrandIcon, { type Brand } from "./brand-icon.astro";
 import CopyButton from "./copy-button.astro";
 
 interface Props {
@@ -15,18 +14,22 @@ interface Props {
 
 const { packageName } = Astro.props;
 
-const managers: { brand: Brand; command: string }[] = [
-  { brand: "npm", command: `npm install ${packageName}` },
-  { brand: "pnpm", command: `pnpm add ${packageName}` },
-  { brand: "yarn", command: `yarn add ${packageName}` },
-  { brand: "bun", command: `bun add ${packageName}` },
+// Full-color `logos` marks: `simple-icons` has no Yarn mark (upstream records
+// it under CC-BY-4.0, which the family leaves out), and `logos` has all four
+// under CC0. Each class is written out in full so the icons plugin finds it at
+// build time.
+const managers = [
+  { brand: "npm", command: `npm install ${packageName}`, icon: "ic-logos-npm-icon" },
+  { brand: "pnpm", command: `pnpm add ${packageName}`, icon: "ic-logos-pnpm" },
+  { brand: "yarn", command: `yarn add ${packageName}`, icon: "ic-logos-yarn" },
+  { brand: "bun", command: `bun add ${packageName}`, icon: "ic-logos-bun" },
 ];
 ---
 
 <div class="install-tabs" data-install-tabs>
   <div aria-label="Package manager" class="www-tablist" role="tablist">
     {
-      managers.map(({ brand }, index) => (
+      managers.map(({ brand, icon }, index) => (
         <button
           aria-controls={`install-panel-${brand}`}
           aria-selected={index === 0 ? "true" : "false"}
@@ -37,7 +40,7 @@ const managers: { brand: Brand; command: string }[] = [
           tabindex={index === 0 ? 0 : -1}
           type="button"
         >
-          <BrandIcon brand={brand} class="install-tab-icon" />
+          <i aria-hidden="true" class:list={[icon, "install-tab-icon"]} />
           {brand}
         </button>
       ))
