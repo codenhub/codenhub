@@ -10,7 +10,7 @@ const withCapture = (check: (temporary: string, script: string) => void) => {
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "motion-capture-"));
   try {
     const reference = fs.readFileSync(
-      fileURLToPath(new URL("../../drafts/motion-graphics/references/gsap.md", import.meta.url)),
+      fileURLToPath(new URL("../../skills/motion-graphics/references/gsap.md", import.meta.url)),
       "utf8",
     );
     const capture = [...reference.matchAll(/```js\r?\n([\s\S]*?)```/g)]

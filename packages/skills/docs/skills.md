@@ -59,9 +59,12 @@ The rest of the authoring guidance, such as how a description is phrased or whet
 | `agents-md-improver`      | Audits and improves repository `AGENTS.md` guidance.                          |
 | `audit`                   | Audits and reviews code, classifying findings consistently.                   |
 | `brainstorming`           | Explores requirements and design before implementation.                       |
+| `branding`                | Builds brand strategy and identity systems, from positioning to guidelines.   |
 | `caveman`                 | Provides an ultra-compressed communication mode.                              |
 | `caveman-commit`          | Generates terse Conventional Commit messages.                                 |
 | `design`                  | Guides visual and interface design: hierarchy, type, space, color, behavior.  |
+| `logo-design`             | Designs logos and marks from concept to outlined SVG files and usage rules.   |
+| `motion-graphics`         | Storyboards, animates, and renders motion graphics frame by frame.            |
 | `naming`                  | Finds meaningful, memorable, ownable names for anything.                      |
 | `ponytail`                | Builds the simplest solution that works, nothing speculative.                 |
 | `ponytail-review`         | Finds over-engineering and ledgers deferred work.                             |

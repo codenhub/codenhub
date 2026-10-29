@@ -63,6 +63,8 @@ Do this for every name you will present, the pick and each alternative, and for 
 - **Check other languages.** Look up the name, and words that sound like it, in the audience's major languages, including slang. Mist is manure in German. A name that's harmless in English can be crude, sacred, or comical somewhere else.
 - **Flag trademark risk.** Note obvious registered marks in the same class. This isn't legal clearance, and say so when the stakes are commercial.
 
+When your searches are limited, run the meaning and collision checks once for every name you will present before searching further on any one name.
+
 If you can't search the web or query registries, say exactly which checks weren't done instead of implying the name is free.
 
 ### 4. Screen And Rank
@@ -75,7 +77,7 @@ Cut any candidate that fails a gate:
 - **Length.** For a brand, more than three syllables or about ten letters needs a strong reason.
 - **No story.** You can't say in one sentence why this name fits this thing.
 
-The recommended name passes every gate you could check. A gate you couldn't check, such as a registry you couldn't query, is neither a pass nor a miss: name it as unchecked, and don't imply the name is available or cleared. A concrete doubt your research turned up and couldn't resolve, such as a dictionary listing a possible slur, counts as a miss until someone resolves it. A mitigation, such as registering a likely misspelling, reduces the harm of a miss but doesn't make it a pass, since the owner pays for the miss every time the name is said. A strong candidate that misses one gate narrowly can appear only as an alternative, with the miss and its mitigation named.
+The recommended name passes every gate you could check. When no candidate passes every gate you could check, say so and recommend none, not even as a provisional, preferred, or leaning pick; present the strongest candidates as alternatives with their misses named, and generate a new round if the user wants one. A gate you couldn't check, such as a registry you couldn't query, is neither a pass nor a miss: name it as unchecked, and don't imply the name is available or cleared. A concrete doubt your research turned up and couldn't resolve, such as a dictionary listing a possible slur, counts as a miss until someone resolves it. A mitigation, such as registering a likely misspelling, reduces the harm of a miss but doesn't make it a pass, since the owner pays for the miss every time the name is said. A strong candidate that misses one gate narrowly can appear only as an alternative, with the miss and its mitigation named.
 
 Rank the survivors by these strengths, as judgments rather than added-up scores:
 
@@ -87,9 +89,9 @@ Rank the survivors by these strengths, as judgments rather than added-up scores:
 
 ### 5. Present
 
-Lead with the recommendation, then two to four alternatives that take meaningfully different directions, ideally from different lanes, not variations of the pick. Present only names you put through step 3. A candidate you didn't verify or check belongs under rejected names, or in a list for the next round, not among the alternatives. For each, give:
+Lead with the recommendation, or with the statement that no candidate passed, then two to four alternatives that take meaningfully different directions, ideally from different lanes, not variations of the pick. Present only names you put through step 3. A candidate you didn't verify or check belongs under rejected names, or in a list for the next round, not among the alternatives; a name whose origin or pronunciation you would have to mark "not verified" is one you didn't verify. For each, give:
 
-- the name and its pronunciation, when that isn't obvious;
+- the name and its pronunciation, sourced for an existing word and labeled as proposed for a coined one;
 - its origin, verified, in one line;
 - why it fits this thing, as a one-sentence story;
 - risks, including the weaker sides of its sound and its reach across languages;

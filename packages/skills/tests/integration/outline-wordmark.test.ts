@@ -45,7 +45,7 @@ export const shape = (font, buffer, features) => {
 
 const script = (skill: string) =>
   fs.readFileSync(
-    fileURLToPath(new URL(`../../drafts/${skill}/scripts/outline-wordmark.mjs`, import.meta.url)),
+    fileURLToPath(new URL(`../../skills/${skill}/scripts/outline-wordmark.mjs`, import.meta.url)),
     "utf8",
   );
 
@@ -139,7 +139,7 @@ it.each(["inter/Inter-Variable.ttf", "monomaniac-one/MonomaniacOne-Regular.ttf"]
       const report = execFileSync(
         process.execPath,
         [
-          fileURLToPath(new URL("../../drafts/logo-design/scripts/outline-wordmark.mjs", import.meta.url)),
+          fileURLToPath(new URL("../../skills/logo-design/scripts/outline-wordmark.mjs", import.meta.url)),
           fileURLToPath(new URL(`../../../../assets/fonts/${font}`, import.meta.url)),
           "AVIVA",
           "--out",
