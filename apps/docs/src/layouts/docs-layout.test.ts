@@ -214,15 +214,23 @@ describe("documentation chrome", () => {
     expect(robots).toBe("User-agent: *\nAllow: /\n\nSitemap: https://docs.codenhub.dev/sitemap.xml\n");
   });
 
-  it("lists every published page in the sitemap and nothing that is curated away", async () => {
+  it("lists every published page in the sitemap, including a curated changelog's overview", async () => {
     const sitemap = await readOutput("sitemap.xml");
 
     // The root redirects to codenhub.dev/packages/, so it is not a page here.
     expect(sitemap).not.toContain("<loc>https://docs.codenhub.dev/</loc>");
     expect(sitemap).toContain("<loc>https://docs.codenhub.dev/error/</loc>");
     expect(sitemap).toContain("<loc>https://docs.codenhub.dev/icons/changelog/0.2.0/</loc>");
-    // The curated changelog `index.md` has no route, so it is absent here too.
-    expect(sitemap).not.toContain("<loc>https://docs.codenhub.dev/icons/changelog/</loc>");
+    expect(sitemap).toContain("<loc>https://docs.codenhub.dev/icons/changelog/</loc>");
+  });
+
+  it("renders a curated changelog index as an overview with each version's date and description", async () => {
+    const html = await readOutput("icons/changelog/index.html");
+
+    expect(html).toMatch(
+      /<a href="\/icons\/changelog\/0\.2\.0\/">0\.2\.0<\/a> <span class="curated-entry-date">Released on <time datetime="\d{4}-\d{2}-\d{2}">[A-Z][a-z]+ \d{1,2}, \d{4}<\/time><\/span>/,
+    );
+    expect(html).toMatch(/<p class="curated-entry-description">[^<]+<\/p>/);
   });
 
   it("redirects the root to the package list on codenhub.dev", async () => {
@@ -248,6 +256,9 @@ describe("documentation chrome", () => {
     expect(presentation?.section).toBe("Presentation tokens");
     expect(presentation?.text).toContain("Presentation tokens describe");
     expect(entries.some((entry) => entry.route === "/error/")).toBe(true);
+    // A curated overview only repeats its versions' own entries, so it is left out.
+    expect(entries.some((entry) => entry.route === "/icons/changelog/")).toBe(false);
+    expect(entries.some((entry) => entry.route === "/icons/changelog/0.2.0/")).toBe(true);
   });
 
   it("puts a search trigger with its shortcut in the header", async () => {

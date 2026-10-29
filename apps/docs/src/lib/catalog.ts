@@ -9,12 +9,14 @@ import {
 import type { MarkdownHeading, MarkdownInstance } from "astro";
 
 import { siteConfig } from "../site-config";
-import { applyFolderCuration } from "./folder-curation";
+import { annotateCuratedLinks, applyFolderCuration } from "./folder-curation";
 import { rewritePackageMarkdownLinks } from "./markdown-links";
 
 type PublicDocumentModule = MarkdownInstance<Record<string, unknown>>;
 
 export interface PublicDocument {
+  /** Whether this is a curated folder's overview page, which lists its published siblings. */
+  curated?: boolean;
   description?: string;
   /** Section label from a folder `index.md`, when it sets one. */
   group?: string;
@@ -132,8 +134,8 @@ function readManifestString(manifest: unknown, key: string): string | undefined 
 }
 
 interface LoadedDocument extends PublicDocument {
-  /** Whether this document is a folder's curated entrypoint. Stripped before publication. */
-  curated?: boolean;
+  /** Release date of a changelog version page, used only to annotate its curated index. */
+  date?: string;
   /** Compiled HTML before local links are rewritten, used only to resolve curated-folder links. */
   rawHtml: string;
 }
@@ -162,6 +164,7 @@ async function loadCatalog(): Promise<PublicPackage[]> {
 
           return {
             curated: frontmatter.curated,
+            date: frontmatter.date,
             description: frontmatter.description,
             group: frontmatter.group,
             headings,
@@ -179,9 +182,19 @@ async function loadCatalog(): Promise<PublicPackage[]> {
         }),
       );
 
-      const documents: PublicDocument[] = applyFolderCuration(loadedDocuments).map(
-        ({ curated: _curated, rawHtml: _rawHtml, ...document }) => document,
-      );
+      const curatedDocuments = applyFolderCuration(loadedDocuments);
+      const documents: PublicDocument[] = curatedDocuments.map(({ date: _date, rawHtml: _rawHtml, ...document }) => {
+        if (document.curated !== true) {
+          return document;
+        }
+        const folder = document.relativePath.slice(0, -"index.md".length);
+        // Every other document directly in the index's folder is a sibling it links.
+        const siblings = curatedDocuments.filter(({ relativePath }) => {
+          const rest = relativePath.slice(folder.length);
+          return relativePath.startsWith(folder) && rest !== "index.md" && !rest.includes("/");
+        });
+        return { ...document, html: annotateCuratedLinks(document.html, siblings) };
+      });
       documents.sort(comparePublicDocuments);
 
       const manifest = manifestModules[packageDefinition.manifestPath];
