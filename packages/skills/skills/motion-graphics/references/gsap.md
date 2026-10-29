@@ -66,7 +66,7 @@ Register each plugin before use: `gsap.registerPlugin(SplitText, DrawSVGPlugin)`
 
 ## Capturing Frames
 
-The following script, using Playwright, seeks the timeline to each frame and saves a PNG sequence that `ffmpeg` can encode. It assumes the page exposes `window.ready`, `window.duration`, and `window.seek` as shown above. Run it with Node after installing `playwright` and a Chromium browser for it.
+The following script, using Playwright, seeks the timeline to each frame and saves a PNG sequence that any video encoder, such as `ffmpeg`, can encode. Another browser automation tool works the same way when it can seek the page and capture the stage at its exact size. It assumes the page exposes `window.ready`, `window.duration`, and `window.seek` as shown above. Run it with Node after installing `playwright` and a Chromium browser for it.
 
 ```js
 import { chromium } from "playwright";

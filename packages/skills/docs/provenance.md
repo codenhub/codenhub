@@ -11,9 +11,12 @@ This page records the origin and license context of skill assets shipped by `@co
 | `agents-md-improver`      | Original Coden Agency work             | Apache-2.0 |
 | `audit`                   | Adapted from [JuliusBrussee/caveman]   | MIT        |
 | `brainstorming`           | Adapted from [obra/superpowers]        | MIT        |
+| `branding`                | Original Coden Agency work             | Apache-2.0 |
 | `caveman`                 | Adapted from [JuliusBrussee/caveman]   | MIT        |
 | `caveman-commit`          | Adapted from [JuliusBrussee/caveman]   | MIT        |
 | `design`                  | Original Coden Agency work             | Apache-2.0 |
+| `logo-design`             | Original Coden Agency work             | Apache-2.0 |
+| `motion-graphics`         | Original Coden Agency work             | Apache-2.0 |
 | `naming`                  | Original Coden Agency work             | Apache-2.0 |
 | `ponytail`                | Adapted from [DietrichGebert/ponytail] | MIT        |
 | `ponytail-review`         | Adapted from [DietrichGebert/ponytail] | MIT        |
