@@ -1,7 +1,8 @@
 ---
 /**
- * The shell layout with the documentation search in the header's actions.
- * The index lives on the documentation site, which serves it cross-origin.
+ * The shell layout with the documentation search in the header's actions and
+ * a Packages link in its nav. The index lives on the documentation site, which
+ * serves it cross-origin.
  */
 import type { ComponentProps } from "astro/types";
 import SearchPalette from "@codenhub/app-shell/components/search-palette.astro";
@@ -10,9 +11,11 @@ import ShellLayout from "@codenhub/app-shell/layouts/base-layout.astro";
 import { siteConfig } from "../site-config";
 
 type Props = ComponentProps<typeof ShellLayout>;
+
+const localLinks = [{ href: "/packages/", label: "Packages", current: Astro.url.pathname.startsWith("/packages") }];
 ---
 
-<ShellLayout {...Astro.props}>
+<ShellLayout localLinks={localLinks} {...Astro.props}>
   <SearchPalette indexUrl={`${siteConfig.docsUrl}/search-index.json`} slot="actions" />
   <slot />
 </ShellLayout>
