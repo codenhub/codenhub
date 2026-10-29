@@ -226,11 +226,19 @@ describe("documentation chrome", () => {
 
   it("renders a curated changelog index as an overview with each version's date and description", async () => {
     const html = await readOutput("icons/changelog/index.html");
+    // Released versions keep their dates, and a later release only adds a line
+    // above these, so this block stays contiguous and in curated order.
+    const released = [
+      ["0.3.0", "2026-10-26", "October 26, 2026"],
+      ["0.2.1", "2026-09-14", "September 14, 2026"],
+      ["0.2.0", "2026-09-02", "September 2, 2026"],
+    ];
+    const entry = ([version, isoDate, shownDate]: string[]): string =>
+      `<li><a href="/icons/changelog/${version}/">${version.replaceAll(".", "\\.")}</a> ` +
+      `<span class="curated-entry-date">Released on <time datetime="${isoDate}">${shownDate}</time></span>` +
+      `<p class="curated-entry-description">[^<]+</p></li>\\s*`;
 
-    expect(html).toMatch(
-      /<a href="\/icons\/changelog\/0\.2\.0\/">0\.2\.0<\/a> <span class="curated-entry-date">Released on <time datetime="\d{4}-\d{2}-\d{2}">[A-Z][a-z]+ \d{1,2}, \d{4}<\/time><\/span>/,
-    );
-    expect(html).toMatch(/<p class="curated-entry-description">[^<]+<\/p>/);
+    expect(html).toMatch(new RegExp(released.map(entry).join("").replaceAll("/", "\\/")));
   });
 
   it("redirects the root to the package list on codenhub.dev", async () => {
