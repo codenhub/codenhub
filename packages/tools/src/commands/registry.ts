@@ -1,5 +1,6 @@
 import { planAssetSyncs } from "../assets/prepare.ts";
 import { planBrowserInstalls } from "../browsers/playwright.ts";
+import { BROWSER_WORKER_POOL, TEST_WORKER_POOL } from "../process/worker-budget.ts";
 import { createAssetsCommand } from "./assets-command.ts";
 import { createBrowsersCommand } from "./browsers-command.ts";
 import { createCheckCommand } from "./check-command.ts";
@@ -39,6 +40,7 @@ const COMMANDS: readonly CommandDefinition[] = [
     name: "test",
     prerequisite: "build",
     summary: "Run tests, optionally narrowed to files or directories.",
+    workerPool: TEST_WORKER_POOL,
   }),
   createScriptCommand({
     forwardsPaths: true,
@@ -46,6 +48,7 @@ const COMMANDS: readonly CommandDefinition[] = [
     prepare: async (context, packages) => planBrowserInstalls(context.workspace.root, packages),
     prerequisite: "build",
     summary: "Run browser tests, installing their browsers first.",
+    workerPool: BROWSER_WORKER_POOL,
   }),
   createScriptCommand({
     forwardsPaths: true,
@@ -60,6 +63,7 @@ const COMMANDS: readonly CommandDefinition[] = [
     name: "test:coverage",
     prerequisite: "build",
     summary: "Run tests with a coverage report.",
+    workerPool: TEST_WORKER_POOL,
   }),
   createScriptCommand({
     forwardsPaths: true,

@@ -1,6 +1,7 @@
 import { mapConcurrent, mapSeries } from "../process/concurrency.ts";
 import { formatCommand, type CommandSpec, execute } from "../process/execute.ts";
 import { buildScriptSpec } from "../process/script-runner.ts";
+import { shareWorkers, type WorkerPool } from "../process/worker-budget.ts";
 import { prepareCapturedOutput } from "../reporting/captured-output.ts";
 import { formatDuration, type SummaryRow } from "../reporting/reporter.ts";
 import {
@@ -43,6 +44,17 @@ export interface ScriptCommandOptions {
    * than executed so `--dry-run` can print them and one runner reports them all.
    */
   prepare?(context: CommandContext, packages: readonly WorkspacePackage[]): Promise<readonly CommandSpec[]>;
+  /**
+   * Worker pool the script's test runner sizes from the machine.
+   *
+   * The run shares it out among the packages it starts at once, and starts no more
+   * of them than the pool has workers.
+   */
+  workerPool?: WorkerPool;
+}
+
+function withWorkerCount(spec: CommandSpec, variable: string, count: number): CommandSpec {
+  return { ...spec, env: { ...(spec.env ?? process.env), [variable]: String(count) } };
 }
 
 function collectScriptPackages(
@@ -292,8 +304,16 @@ async function runScriptCommand(
     options.includesDependencies === true
       ? collectScriptPackages(context, runnable, script)
       : runnable.map(({ package: workspacePackage }) => workspacePackage);
-  const runs = runPackages.map<PackageRun>((workspacePackage) => ({
-    spec: buildScriptSpec(
+  const isInteractive = options.isInteractive === true;
+  const concurrency = isInteractive ? 1 : context.options.concurrency;
+  // Shared among the packages that will run, not the width asked for: one package
+  // selected out of a run allowed six gets the whole pool.
+  const share =
+    options.workerPool === undefined
+      ? { concurrency }
+      : shareWorkers(options.workerPool, Math.max(1, Math.min(concurrency, runPackages.length)));
+  const runs = runPackages.map<PackageRun>((workspacePackage) => {
+    const spec = buildScriptSpec(
       workspacePackage,
       script,
       [
@@ -301,9 +321,15 @@ async function runScriptCommand(
         ...context.passthrough,
       ],
       root,
-    ),
-    workspacePackage,
-  }));
+    );
+    return {
+      spec:
+        options.workerPool === undefined || share.workersPerPackage === undefined
+          ? spec
+          : withWorkerCount(spec, options.workerPool.variable, share.workersPerPackage),
+      workspacePackage,
+    };
+  });
 
   const prerequisite = options.prerequisite;
   const prerequisiteRuns =
@@ -330,9 +356,7 @@ async function runScriptCommand(
     return EXIT_SUCCESS;
   }
 
-  const isInteractive = options.isInteractive === true;
   const isVerbose = context.options.isVerbose;
-  const concurrency = isInteractive ? 1 : context.options.concurrency;
   const timeoutMs = isInteractive ? undefined : context.options.timeoutMs;
   const settings: RunSettings = {
     bails: context.options.shouldBail,
@@ -366,7 +390,8 @@ async function runScriptCommand(
     reporter.step(`${script} › ${runs.length} package(s)`);
   }
   const startedAt = performance.now();
-  const rows = await runPackageBatch(context, script, runs, settings);
+  // Builds run at the requested width; only the script itself draws on the pool.
+  const rows = await runPackageBatch(context, script, runs, { ...settings, concurrency: share.concurrency });
   const hasFailure = rows.some(({ status }) => status === "failed" || status === "timed-out");
 
   reporter.blank();

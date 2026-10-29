@@ -145,6 +145,21 @@ Unrecognized flags and everything after a bare `--` are forwarded to the underly
 
 The flags above always belong to `hub`, even where the underlying tool has one of the same name. `hub test error --changed` narrows the selection rather than asking Vitest for its own `--changed`, and `--bail=3` sets `hub`'s bail with the count ignored. `-v` and `-V` print the tooling version. A tool's flag that shares a name with one of these reaches the tool only after `--`, as `hub test error -- --bail=3`.
 
+## Worker budget
+
+`--parallel` counts packages, but a package's test run is a pool of workers that its runner sizes from the whole machine. Left alone, six packages start six such pools. On a 16 GB Windows machine, `hub test` brought commit charge to within 1.4 GB of the limit, editors and browser tabs crashed, and the run still failed on timeouts.
+
+So `test`, `test:coverage`, and `test:browser` share one pool per run instead. Each package is handed its share through the variable its runner reads, and no more packages start than the pool has workers:
+
+| Command                 | Variable             | Pool size                                          | On 16 cores and 16 GB  |
+| ----------------------- | -------------------- | -------------------------------------------------- | ---------------------- |
+| `test`, `test:coverage` | `VITEST_MAX_WORKERS` | One worker per GiB of memory, at most one per core | 6 packages × 2 workers |
+| `test:browser`          | `PLAYWRIGHT_WORKERS` | One browser per 8 GiB of memory                    | 2 packages × 1 browser |
+
+A single selected package gets the whole pool. Builds are not pooled; they run at the `--parallel` width. A variable already set in the environment takes the run out of the budget: packages get that worker count each, and `--parallel` applies as given. CI's browser job does this, because it runs one engine on a machine of its own. Every Playwright config reads `PLAYWRIGHT_WORKERS` except `router`'s, which always runs one. Without the variable, `styles` runs up to four workers and the rest two, so a suite run outside `hub` stays close to the same limit.
+
+The budget cannot reach a test that starts heavy work of its own. `apps/docs` builds the whole documentation site inside its unit tests, which costs about 4 GB however few workers it is given.
+
 ## Reporting
 
 A run reports what failed. Child output is captured rather than streamed, and a package that passed prints nothing beyond its place in the closing count; a package that failed prints diagnostics under its own heading. A green workspace run is a handful of lines, which is what makes the one red package in it findable.
