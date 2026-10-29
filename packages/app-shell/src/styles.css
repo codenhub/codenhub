@@ -135,8 +135,11 @@
   transition: color var(--motion-duration-fast, 120ms) var(--motion-ease);
 }
 
+/* Only the page itself looks active: a link marking the section the page sits
+   in (`aria-current="true"`) keeps the resting color, since it is not where
+   the reader is. */
 .shell-nav-link:hover,
-.shell-nav-link[aria-current] {
+.shell-nav-link[aria-current="page"] {
   color: var(--color-text);
 }
 

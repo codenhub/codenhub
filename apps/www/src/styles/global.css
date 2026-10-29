@@ -10,14 +10,16 @@
    scrolls. `data-at-top` is set by the inline script in `base-layout.astro`. */
 .shell-header {
   transition:
-    background-color var(--motion-duration-fast, 120ms) var(--motion-ease),
-    border-color var(--motion-duration-fast, 120ms) var(--motion-ease);
+    background-color var(--motion-duration-slow) var(--motion-ease),
+    border-color var(--motion-duration-slow) var(--motion-ease),
+    backdrop-filter var(--motion-duration-slow) var(--motion-ease);
 }
 
+/* `blur(0)` rather than `none`, so the blur eases in with the fill. */
 .shell-header[data-at-top] {
   border-bottom-color: transparent;
-  background: transparent;
-  backdrop-filter: none;
+  background-color: transparent;
+  backdrop-filter: blur(0);
 }
 
 @media (prefers-reduced-motion: reduce) {
