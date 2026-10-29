@@ -12,6 +12,7 @@ function doc(
   return {
     headings: [],
     html: "",
+    markdown: "",
     relativePath,
     route,
     routePath: relativePath.replace(/\.md$/, ""),

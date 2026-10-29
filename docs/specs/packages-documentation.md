@@ -196,6 +196,10 @@ The site root also publishes `https://docs.codenhub.dev/llms.txt`, generated fro
 
 The files are hosted on the documentation site rather than `codenhub.dev` because the documentation site already serves every package under `/<slug>/` from the same snapshot, so the files sit next to the pages they link to. Serving them from the main site would add a second consumer of the snapshot's link layout for no gain. Linking to the files on GitHub, which the main site did before, was rejected because GitHub serves them inside an HTML page unless the reader knows to request the raw URL, and their relative links resolve to source files rather than documentation pages.
 
+### Page Markdown
+
+The documentation site also publishes each hosted public document's Markdown at `index.md` inside the page's own route: `docs/guides/setup.md`, served at `https://docs.codenhub.dev/<slug>/guides/setup/`, has its Markdown at `https://docs.codenhub.dev/<slug>/guides/setup/index.md`. Each page offers to copy, view, or download it. The file is the document's Markdown body without its frontmatter, from the same release-tag snapshot as the page, and its link and image targets follow the rule above for `llms-full.txt`: each package-relative target the site publishes becomes an absolute site URL, and code is left alone. Readers copy this text to paste it elsewhere, often into a prompt, where a relative link resolves to nothing. A generated reference page's Markdown carries no `description`/`since` deck, which the site adds only to the rendered page.
+
 ## Consumer and maintainer truth
 
 The README, public docs, and LLM files MUST describe current supported behavior. Public docs and source JSDoc/TSDoc MUST use the same terms, defaults, constraints, and observable failure behavior.

@@ -1,5 +1,6 @@
 ---
 import BackToTop from "../components/back-to-top.astro";
+import PageActions from "../components/page-actions.astro";
 import PackageNavigation from "../components/package-navigation.astro";
 import { isReferenceDocument, type PublicDocument, type PublicPackage } from "../lib/catalog";
 import BaseLayout from "./base-layout.astro";
@@ -40,9 +41,12 @@ const browserTitle =
     </aside>
 
     <main class="document-column" id="main-content">
-      <article class="markdown-content">
-        <slot />
-      </article>
+      <div class="document-body">
+        <PageActions route={document.route} />
+        <article class="markdown-content">
+          <slot />
+        </article>
+      </div>
     </main>
 
     <aside class="toc-rail">

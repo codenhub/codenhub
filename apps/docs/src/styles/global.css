@@ -201,7 +201,19 @@ html {
   @apply w-full max-w-3xl;
 }
 
-.markdown-content h1 {
+/* The page actions sit outside the article, which renders the Markdown as
+   authored, and float into the top-right corner beside the H1. The H1 keeps
+   clear of them by the group's width. */
+.document-body {
+  @apply relative w-full max-w-3xl;
+  --page-actions-width: 9.5rem;
+}
+
+.document-body > .page-actions {
+  @apply absolute top-1 right-0;
+}
+
+.document-body .markdown-content h1 {
   padding-inline-end: calc(var(--page-actions-width) + 1rem);
 }
 
@@ -382,4 +394,69 @@ html {
   .back-to-top {
     @apply transition-none;
   }
+}
+
+/* Split button: copy in one click, the rest behind the caret. */
+.page-actions {
+  @apply flex;
+}
+
+.page-actions-copy,
+.page-actions-toggle {
+  @apply border-border bg-background text-text-secondary hover:text-text hover:border-border-hover hover:bg-foreground flex h-9 cursor-pointer items-center border text-sm transition-colors;
+  --ic-size: 1rem;
+}
+
+.page-actions-copy {
+  @apply gap-2 rounded-l-(--radius-control) px-3;
+}
+
+.page-actions-toggle {
+  @apply -ml-px rounded-r-(--radius-control) px-2;
+}
+
+.page-actions-toggle:has(+ * + .page-actions-menu:popover-open) {
+  @apply bg-foreground text-text;
+}
+
+/* Scoped under `.page-actions` to outrank the icon stylesheet's own `display`. */
+.page-actions .page-actions-copied-icon,
+.page-actions .page-actions-label-copied,
+.page-actions .page-actions-label-failed,
+.page-actions .page-actions-copy[data-copy-state] .page-actions-rest-icon,
+.page-actions .page-actions-copy[data-copy-state] .page-actions-label-rest {
+  @apply hidden;
+}
+
+.page-actions .page-actions-copy[data-copy-state="copied"] .page-actions-copied-icon,
+.page-actions .page-actions-copy[data-copy-state="copied"] .page-actions-label-copied,
+.page-actions .page-actions-copy[data-copy-state="failed"] .page-actions-rest-icon,
+.page-actions .page-actions-copy[data-copy-state="failed"] .page-actions-label-failed {
+  @apply inline-block;
+}
+
+.page-actions-menu {
+  @apply border-border bg-background text-text fixed m-0 w-72 rounded-(--radius-surface) border p-1.5 shadow-(--elevation-lg);
+  inset: auto;
+}
+
+.page-actions-item {
+  @apply text-text hover:bg-foreground focus-visible:bg-foreground flex w-full cursor-pointer items-start gap-3 rounded-(--radius-control) border-0 bg-transparent px-3 py-2.5 text-left no-underline transition-colors;
+  --ic-size: 1.125rem;
+}
+
+.page-actions-item > i {
+  @apply text-text-secondary mt-0.5 shrink-0;
+}
+
+.page-actions-item-text {
+  @apply flex min-w-0 flex-col gap-0.5;
+}
+
+.page-actions-item-label {
+  @apply text-sm font-semibold;
+}
+
+.page-actions-item-description {
+  @apply text-text-secondary truncate text-xs;
 }
