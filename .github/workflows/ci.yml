@@ -141,7 +141,13 @@ jobs:
       # Every package names its Playwright projects after the engine they run on,
       # so one glob selects this job's engine across all of them. See
       # `docs/specs/tests.md` for the naming rule.
+      #
+      # Setting the worker count takes the run out of `hub`'s browser budget, which
+      # is sized for a machine that runs all three engines beside an editor. This
+      # job runs one engine on a machine of its own, at two workers per package.
       - name: Run browser tests
+        env:
+          PLAYWRIGHT_WORKERS: 2
         run: pnpm test:browser $SELECTOR -- --project='*${{ matrix.engine }}*'
 
       - name: Upload failure artifacts

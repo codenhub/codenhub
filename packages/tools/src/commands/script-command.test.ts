@@ -125,4 +125,67 @@ describe("createScriptCommand", () => {
 
     await expect(command.run(context)).resolves.toBe(0);
   });
+
+  it("shouldGiveEachConcurrentPackageItsShareOfTheWorkerPool", async () => {
+    const lines: string[] = [];
+    const script = `"${process.execPath}" -e "console.log('workers=' + process.env.HUB_TEST_WORKERS)"`;
+    const packages = ["one", "two"].map<WorkspacePackage>((name) => ({
+      ...createPackage(name, `packages/${name}`, []),
+      directory: process.cwd(),
+      scripts: { test: script },
+    }));
+    const context: CommandContext = {
+      options: parseArguments(["test", "--parallel=2", "--verbose", "--no-build"]).options,
+      passthrough: [],
+      reporter: createReporter({
+        useColor: false,
+        write: (message) => lines.push(message),
+        writeError: (message) => lines.push(message),
+      }),
+      selection: {
+        isImplicit: false,
+        targets: packages.map((workspacePackage) => ({ package: workspacePackage, paths: [] })),
+        unownedPaths: [],
+      },
+      tokens: [],
+      workspace: { packages, root: process.cwd() },
+    };
+    const command = createScriptCommand({
+      name: "test",
+      summary: "Run tests.",
+      workerPool: { capacity: () => 4, variable: "HUB_TEST_WORKERS" },
+    });
+
+    await expect(command.run(context)).resolves.toBe(0);
+    expect(lines.join("\n").match(/workers=\d+/g)).toEqual(["workers=2", "workers=2"]);
+  });
+
+  it("shouldGiveTheWholeWorkerPoolToTheOnlyPackageThatRuns", async () => {
+    const lines: string[] = [];
+    const only: WorkspacePackage = {
+      ...createPackage("only", "packages/only", []),
+      directory: process.cwd(),
+      scripts: { test: `"${process.execPath}" -e "console.log('workers=' + process.env.HUB_TEST_WORKERS)"` },
+    };
+    const context: CommandContext = {
+      options: parseArguments(["test", "--parallel=6", "--verbose", "--no-build"]).options,
+      passthrough: [],
+      reporter: createReporter({
+        useColor: false,
+        write: (message) => lines.push(message),
+        writeError: (message) => lines.push(message),
+      }),
+      selection: { isImplicit: false, targets: [{ package: only, paths: [] }], unownedPaths: [] },
+      tokens: [],
+      workspace: { packages: [only], root: process.cwd() },
+    };
+    const command = createScriptCommand({
+      name: "test",
+      summary: "Run tests.",
+      workerPool: { capacity: () => 4, variable: "HUB_TEST_WORKERS" },
+    });
+
+    await expect(command.run(context)).resolves.toBe(0);
+    expect(lines.join("\n").match(/workers=\d+/g)).toEqual(["workers=4"]);
+  });
 });
