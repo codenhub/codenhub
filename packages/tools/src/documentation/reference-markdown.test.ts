@@ -364,6 +364,36 @@ describe("renderReferencePage", () => {
     expect(escaped).toContain("### \\_\\_Internal\\_\\_");
   });
 
+  it("links an in-page {@link} to an internal type heading", () => {
+    const rendered = renderReferencePage(
+      {
+        ...entrypoint,
+        symbols: [symbol({ name: "parse", kind: "function", doc: "Returns {@link Options}." })],
+        internalTypes: [{ name: "Options", signature: "type Options = {};", declaredIn: ["src/index.ts"] }],
+      },
+      { title: "Reference", heading: "Reference", sourceRoot: "src", prose: true },
+    );
+    expect(rendered).toContain("Returns [Options](#options).");
+  });
+
+  it("prefers a target documented on the current page over another page's copy", () => {
+    const rendered = renderReferencePage(
+      {
+        ...entrypoint,
+        symbols: [symbol({ name: "parse", kind: "function", doc: "Returns {@link Options}." })],
+        internalTypes: [{ name: "Options", signature: "type Options = {};", declaredIn: ["src/index.ts"] }],
+      },
+      {
+        title: "Reference",
+        heading: "Reference",
+        sourceRoot: "src",
+        prose: true,
+        resolveLink: () => "other.md#options",
+      },
+    );
+    expect(rendered).toContain("Returns [Options](#options).");
+  });
+
   it("renders interface members with their own heading and signature block", () => {
     expect(page).toContain("#### messageKey\n\n```ts\nreadonly messageKey?: string;\n```\n\nTranslation key.");
   });

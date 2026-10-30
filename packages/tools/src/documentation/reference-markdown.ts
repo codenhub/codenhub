@@ -198,7 +198,7 @@ function resolveLinks(
         return match;
       }
       const ownSlug = ownSlugs.get(target);
-      const href = resolve?.(target) ?? (ownSlug === undefined ? undefined : `#${ownSlug}`);
+      const href = ownSlug === undefined ? resolve?.(target) : `#${ownSlug}`;
       return href === undefined ? `\`${label}\`` : `[${escapeMarkdown(label)}](${href})`;
     }),
   );
@@ -418,7 +418,9 @@ function pageBlocks(
   if (entrypoint.internalTypes.length > 0) {
     sections.push("## Internal types");
     for (const type of entrypoint.internalTypes) {
-      sections.push(heading(3, type.name), codeBlock(type.signature));
+      const exported = entrypoint.symbols.some((symbol) => symbol.name === type.name);
+      const typeHeading = heading(3, type.name);
+      sections.push(exported ? typeHeading : { markdown: typeHeading, target: type.name }, codeBlock(type.signature));
       if (options.prose && type.doc !== undefined) {
         sections.push(nestHeadings(link(type.doc), 3));
       }
