@@ -79,6 +79,48 @@ describe("accessor documentation", () => {
   });
 });
 
+describe("resolved comment links", () => {
+  it("keeps a resolved target apart from its display label", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("link-label", {
+      "index.ts": `
+        /** A token. */ export interface Token { value: string; }
+        /** Makes a token.
+         * @returns A {@link Token | token result}.
+         */
+        export function make(): Token { return { value: "" }; }
+      `,
+    });
+    const { model, files } = await analyzeReference(fixture, { prose: true });
+    expect(model.entrypoints[0]?.symbols[0]?.returns).toBe("A {@link Token | token result}.");
+    expect(files[0]?.contents).toContain("A [token result](#token).");
+  });
+
+  it("links an original declaration name to its renamed export", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("links", {
+      "index.ts": 'export { original as renamed, use } from "./leaf";',
+      "leaf.ts": `
+        /** Original. */ export function original(): void {}
+        /** Uses {@link original}. */ export function use(): void {}
+      `,
+    });
+    const { files } = await analyzeReference(fixture, { prose: true });
+    expect(files[0]?.contents).toContain("Uses [original](#renamed).");
+  });
+
+  it("qualifies a resolved namespace-local target", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("ns-reference", {
+      "index.ts": `
+        export namespace NS {
+          /** Shape. */ export interface Shape { value: number; }
+          /** Uses {@link Shape}. */ export function make(value: Shape): Shape { return value; }
+        }
+      `,
+    });
+    const { files } = await analyzeReference(fixture, { prose: true });
+    expect(files[0]?.contents).toContain("Uses [Shape](#nsshape).");
+  });
+});
+
 const browserRegistryVariable = {
   id: 900,
   name: "browserErrorRegistry",

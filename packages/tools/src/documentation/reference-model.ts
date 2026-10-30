@@ -305,7 +305,8 @@ function renderParts(parts: CommentPart[] | undefined): string {
     .map((part) => {
       if (part.kind === "inline-tag") {
         const label = (part.text ?? "").trim();
-        return label === "" ? "" : `{@link ${label}}`;
+        const target = typeof part.target === "string" ? part.target : label;
+        return label === "" ? "" : `{@link ${target}${target === label ? "" : ` | ${label}`}}`;
       }
       return part.text ?? "";
     })
@@ -747,6 +748,69 @@ function sourceFileOf(target: Reflection): string | undefined {
   return typeof fileName === "string" ? stripLeadingDotSlash(fileName) : undefined;
 }
 
+/** Keeps resolved reflection identities in comment links before flattening their display text. */
+function withResolvedCommentTargets(project: Reflection): Reflection {
+  const resolve = indexReflections(project);
+  const byModule = new Map<Reflection, Map<number, string>>();
+  const allNames = new Map<number, string>();
+  const record = (
+    reflection: Reflection,
+    qualifier: string,
+    names: Map<number, string>,
+    seen: Set<Reflection>,
+  ): void => {
+    if (typeof reflection.name !== "string") {
+      return;
+    }
+    const declaration =
+      reflection.kind === KIND_REFERENCE && typeof reflection.target === "number"
+        ? (resolve(reflection.target) ?? reflection)
+        : reflection;
+    const qualified = qualifier === "" ? reflection.name : `${qualifier}.${reflection.name}`;
+    for (const target of [reflection, declaration, ...(declaration.signatures ?? [])]) {
+      if (typeof target.id === "number" && !names.has(target.id)) {
+        names.set(target.id, qualified);
+      }
+    }
+    if (!seen.has(declaration)) {
+      for (const child of declaration.children ?? []) {
+        record(child, qualified, names, new Set([...seen, declaration]));
+      }
+    }
+  };
+  for (const module of project.children ?? []) {
+    const names = new Map<number, string>();
+    for (const child of module.children ?? []) {
+      record(child, "", names, new Set());
+    }
+    byModule.set(module, names);
+    for (const [id, name] of names) {
+      if (!allNames.has(id)) {
+        allNames.set(id, name);
+      }
+    }
+  }
+  const rewrite = (value: unknown, names: ReadonlyMap<number, string>): unknown => {
+    if (Array.isArray(value)) {
+      return value.map((entry) => rewrite(entry, names));
+    }
+    if (!isRecord(value)) {
+      return value;
+    }
+    const copy = Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, rewrite(entry, names)]));
+    if (value.kind === "inline-tag" && typeof value.target === "number") {
+      copy.target = names.get(value.target) ?? value.target;
+    }
+    return copy;
+  };
+  return {
+    ...project,
+    children: project.children?.map(
+      (module) => rewrite(module, new Map([...allNames, ...(byModule.get(module) ?? [])])) as Reflection,
+    ),
+  };
+}
+
 /**
  * Transforms a TypeDoc JSON project into the presentation-neutral reference model.
  *
@@ -766,7 +830,7 @@ export function buildReferenceModel(project: unknown, subpathByModule: Record<st
     throw new Error("Invalid TypeDoc project: expected an object.");
   }
 
-  const root = project as Reflection;
+  const root = withResolvedCommentTargets(project as Reflection);
   const resolve = indexReflections(root);
   const packageName = typeof root.name === "string" ? root.name : "";
 
