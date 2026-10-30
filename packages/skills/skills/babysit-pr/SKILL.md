@@ -35,11 +35,12 @@ A round is one push of fixes. Repeat until the pull request is done, for at most
 3. **Read every unresolved review thread.** List them with their authors:
 
    ```sh
-   gh api graphql -f owner=<owner> -f repo=<repo> -F pr=<pr> -f query='
-   query($owner: String!, $repo: String!, $pr: Int!) {
+   gh api graphql --paginate -f owner=<owner> -f repo=<repo> -F pr=<pr> -f query='
+   query($owner: String!, $repo: String!, $pr: Int!, $endCursor: String) {
      repository(owner: $owner, name: $repo) {
        pullRequest(number: $pr) {
-         reviewThreads(first: 100) {
+         reviewThreads(first: 100, after: $endCursor) {
+           pageInfo { hasNextPage endCursor }
            nodes { id isResolved isOutdated path line
              comments(first: 50) { nodes { author { __typename login } body url } } }
          }
@@ -53,7 +54,7 @@ A round is one push of fixes. Repeat until the pull request is done, for at most
 4. **Judge each comment against the code.** AI reviewers are often wrong or out of date, and people sometimes are too. Fix what is right. Decline what is wrong, with the reason. When a comment needs a decision that changes behavior or scope, ask the user instead of choosing.
 5. **Push the fixes,** then reply to and resolve the threads (see Threads). Go back to step 1: a push reruns the checks, and many AI reviewers review again.
 
-The pull request is done when every check has passed, no thread is left unresolved except those you leave open on purpose, no review requested on it is still pending (`gh pr view <pr> --json reviewRequests`), and no new comments have arrived since your last push.
+The pull request is done when every check has passed, it has no merge conflict, no thread is left unresolved except those you leave open on purpose, no review requested on it is still pending, and no new comments have arrived since your last push. Check the merge state and reviews with `gh pr view <pr> --json mergeable,reviewDecision,reviewRequests`. A merge conflict or a missing required approval (`reviewDecision` of `REVIEW_REQUIRED` or `CHANGES_REQUESTED`) is not yours to settle: stop and report it.
 
 ## Threads
 
@@ -69,7 +70,7 @@ mutation($id: ID!) { resolveReviewThread(input: { threadId: $id }) { thread { is
 ```
 
 - The reply says what changed and where, or why you declined. Keep it to a sentence or two.
-- Resolve threads from bots, whose author `__typename` is `Bot`, whether you fixed or declined them.
+- Resolve threads whose comments all come from bots, whose author `__typename` is `Bot`, whether you fixed or declined them. A thread where a person has commented follows the rules for people's threads.
 - Resolve a person's thread when you did what it asked.
 - Leave open a person's thread that you declined, that asks a question you cannot answer, or that waits on the user's decision. Reply in it, and list it in the report. Resolving it would close the reviewer's objection without their agreement.
 - When the user has said you may resolve people's threads too, in this request or in their standing instructions, resolve those as well, after the reply, except a thread still waiting on the user's decision. A repository rule that threads must be resolved before merging is not that permission.
