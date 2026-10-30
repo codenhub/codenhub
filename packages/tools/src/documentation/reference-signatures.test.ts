@@ -149,6 +149,18 @@ describe("namespace export signatures", () => {
 });
 
 describe("index signature members", () => {
+  it("groups multiple index signatures under one readable heading", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("multiple-index-signatures", {
+      "index.ts": `export interface Lookup {
+        [key: string]: string | number;
+        [key: number]: number;
+      }`,
+    });
+    const { files } = await analyzeReference(fixture, { prose: true });
+    expect(files[0]?.contents.match(/^#### Index signature$/gm)).toHaveLength(1);
+    expect(files[0]?.contents).toContain("```ts\n[key: string]: string | number;\n[key: number]: number;\n```");
+  });
+
   it.each([
     ["interface", "export interface Lookup {\n /** Looks up a value. */\n [key: string]: number; }"],
     ["class", "export class Lookup {\n /** Looks up a value. */\n [key: string]: number; }"],

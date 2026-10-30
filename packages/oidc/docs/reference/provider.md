@@ -1085,7 +1085,7 @@ readonly token_endpoint_auth_signing_alg_values_supported?: readonly string[];
 readonly userinfo_endpoint?: string;
 ```
 
-#### __index
+#### Index signature
 
 ```ts
 readonly [member: string]: unknown;

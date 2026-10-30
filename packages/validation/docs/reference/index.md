@@ -303,7 +303,7 @@ readonly options?: Readonly<Record<string, unknown>>;
 
 The options the factory read, `message` included, for a validator that takes options.
 
-#### __index
+#### Index signature
 
 ```ts
 readonly [part: string]: unknown;

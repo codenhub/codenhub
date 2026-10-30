@@ -503,7 +503,7 @@ export interface LocaleDictionary
 
 Immutable flat translation keys and string values.
 
-#### __index
+#### Index signature
 
 ```ts
 readonly [key: string]: string;

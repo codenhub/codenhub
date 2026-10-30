@@ -89,7 +89,7 @@ readonly nonce?: string;
 readonly sub: string;
 ```
 
-#### __index
+#### Index signature
 
 ```ts
 readonly [claim: string]: unknown;
@@ -345,7 +345,7 @@ readonly token_endpoint_auth_signing_alg_values_supported?: readonly string[];
 readonly userinfo_endpoint?: string;
 ```
 
-#### __index
+#### Index signature
 
 ```ts
 readonly [member: string]: unknown;
@@ -369,7 +369,7 @@ readonly sub: string;
 
 Always equal to the ID token's `sub` the caller expected.
 
-#### __index
+#### Index signature
 
 ```ts
 readonly [claim: string]: unknown;

@@ -248,6 +248,7 @@ function memberBlocks(
   link: (text: string) => string,
   level: number,
 ): string[] {
+  const name = member.kind === "index-signature" ? "Index signature" : member.name;
   if (member.inheritedFrom !== undefined) {
     if (!prose) {
       // An inherited member has no signature of its own to put in a manifest-only
@@ -258,12 +259,12 @@ function memberBlocks(
     // An inherited member points at the type that declares it; that type's own
     // section carries the signature and prose.
     return [
-      heading(level, member.name),
+      heading(level, name),
       member.inheritedFrom === "" ? "_Inherited._" : `Inherited from ${link(`{@link ${member.inheritedFrom}}`)}.`,
     ];
   }
 
-  const blocks = [heading(level, member.name)];
+  const blocks = [heading(level, name)];
   if (member.signature !== undefined) {
     blocks.push(codeBlock(member.signature));
   }

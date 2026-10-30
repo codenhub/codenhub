@@ -167,7 +167,7 @@ required?: string[];
 
 The properties an object must have.
 
-#### __index
+#### Index signature
 
 ```ts
 [keyword: string]: unknown;
