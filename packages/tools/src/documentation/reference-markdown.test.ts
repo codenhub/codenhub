@@ -328,6 +328,17 @@ describe("renderReferencePage", () => {
     expect(rendered).toContain("After [\\_\\_label\\_\\_](#__dev__).");
   });
 
+  it("scans unterminated links in linear time", () => {
+    const doc = `See {@link ${" ".repeat(50_000)}| ${" ".repeat(50_000)}.`;
+    const started = performance.now();
+    const rendered = renderReferencePage(
+      { ...entrypoint, symbols: [symbol({ name: "__DEV__", kind: "variable", doc })] },
+      { title: "Reference", heading: "Reference", sourceRoot: "src", prose: true },
+    );
+    expect(performance.now() - started).toBeLessThan(1_000);
+    expect(rendered).toContain("See {@link ");
+  });
+
   it("escapes generated identifiers and link labels so Markdown preserves their text", () => {
     const escaped = renderReferencePage(
       {

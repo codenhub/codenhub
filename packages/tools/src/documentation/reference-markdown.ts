@@ -21,7 +21,7 @@ const GROUP_HEADINGS: readonly { kind: ReferenceSymbol["kind"]; heading: string 
   { kind: "namespace", heading: "Namespaces" },
 ];
 
-const LINK_PATTERN = /\{@link\s+([^}|]+?)(?:\s*\|\s*([^}]+?))?\s*\}/g;
+const LINK_PATTERN = /\{@link\s([^}]*)\}/g;
 
 const markdownParser = unified()
   .use(remarkParse)
@@ -184,16 +184,19 @@ function resolveLinks(
   };
   visit(markdownParser.parse(markdown));
   return escapeHtml(
-    markdown.replace(LINK_PATTERN, (match, rawTarget: string, rawLabel: string | undefined, offset: number) => {
+    markdown.replace(LINK_PATTERN, (match, body: string, offset: number) => {
       const end = offset + match.length;
+      const separator = body.indexOf("|");
+      const target = (separator === -1 ? body : body.slice(0, separator)).trim();
+      const label = separator === -1 ? target : body.slice(separator + 1).trim();
       if (
+        target === "" ||
+        label === "" ||
         !prose.some((range) => offset >= range.start && end <= range.end) ||
         protectedRanges.some((range) => offset < range.end && end > range.start)
       ) {
         return match;
       }
-      const target = rawTarget.trim();
-      const label = (rawLabel ?? target).trim();
       const ownSlug = ownSlugs.get(target);
       const href = resolve?.(target) ?? (ownSlug === undefined ? undefined : `#${ownSlug}`);
       return href === undefined ? `\`${label}\`` : `[${escapeMarkdown(label)}](${href})`;
