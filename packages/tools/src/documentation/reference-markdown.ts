@@ -21,7 +21,7 @@ const GROUP_HEADINGS: readonly { kind: ReferenceSymbol["kind"]; heading: string 
   { kind: "namespace", heading: "Namespaces" },
 ];
 
-const LINK_PATTERN = /\{@link\s([^}]*)\}/g;
+const LINK_PATTERN = /\{@link\s([^{}]*)\}/g;
 
 const markdownParser = unified()
   .use(remarkParse)
