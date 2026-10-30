@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { findActiveHeadingId, type HeadingPosition } from "./toc-highlight";
+import { createTocRevealer, findActiveHeadingId, type HeadingPosition } from "./toc-highlight";
 
 const headings: HeadingPosition[] = [
   { id: "install", top: 0 },
@@ -50,5 +50,90 @@ describe("findActiveHeadingId", () => {
 
   it("treats a document shorter than its viewport as fully scrolled", () => {
     expect(resolve(0, { scrollHeight: 600, viewportHeight: 800 })).toBe("api");
+  });
+});
+
+describe("createTocRevealer", () => {
+  const linkAt = (top: number, bottom: number) => ({ getBoundingClientRect: () => ({ bottom, top }) }) as HTMLElement;
+  const railFixture = () =>
+    ({
+      clientHeight: 750,
+      getBoundingClientRect: () => ({ top: 64 }),
+      matches: vi.fn().mockReturnValue(false),
+      scrollTop: 0,
+    }) as unknown as HTMLElement;
+
+  it("reveals an active link below the rail by scrolling only the rail", () => {
+    const rail = railFixture();
+
+    createTocRevealer(rail)(linkAt(2818, 2850));
+
+    expect(rail.scrollTop).toBe(2036);
+  });
+
+  it("reveals a link clipped above the rail", () => {
+    const rail = railFixture();
+    rail.scrollTop = 500;
+
+    createTocRevealer(rail)(linkAt(32, 64));
+
+    expect(rail.scrollTop).toBe(468);
+  });
+
+  it("leaves a fully visible link and a hidden rail alone", () => {
+    const rail = railFixture();
+
+    createTocRevealer(rail)(linkAt(100, 132));
+    expect(rail.scrollTop).toBe(0);
+
+    Object.defineProperty(rail, "clientHeight", { value: 0 });
+    createTocRevealer(rail)(linkAt(1000, 1032));
+    expect(rail.scrollTop).toBe(0);
+  });
+
+  it("reveals the current link when the hidden rail becomes visible", () => {
+    const rail = railFixture();
+    const reveal = createTocRevealer(rail);
+    const link = linkAt(2818, 2850);
+    Object.defineProperty(rail, "clientHeight", { configurable: true, value: 0 });
+    reveal(link);
+    Object.defineProperty(rail, "clientHeight", { value: 750 });
+
+    reveal(link);
+
+    expect(rail.scrollTop).toBe(2036);
+  });
+
+  it.each([":hover", ":focus-within"])("leaves the rail alone while the reader browses it with %s", (state) => {
+    const rail = railFixture();
+    vi.mocked(rail.matches).mockImplementation((selector) => selector.includes(state));
+
+    createTocRevealer(rail)(linkAt(2818, 2850));
+
+    expect(rail.scrollTop).toBe(0);
+  });
+
+  it("does not pull back to the same active link after a manual rail scroll", () => {
+    const rail = railFixture();
+    const reveal = createTocRevealer(rail);
+    const link = linkAt(2818, 2850);
+    reveal(link);
+    rail.scrollTop = 100;
+
+    reveal(link);
+
+    expect(rail.scrollTop).toBe(100);
+  });
+
+  it("resumes following new active links once the reader leaves the rail", () => {
+    const rail = railFixture();
+    const reveal = createTocRevealer(rail);
+    vi.mocked(rail.matches).mockReturnValue(true);
+    reveal(linkAt(1000, 1032));
+    vi.mocked(rail.matches).mockReturnValue(false);
+
+    reveal(linkAt(2818, 2850));
+
+    expect(rail.scrollTop).toBe(2036);
   });
 });

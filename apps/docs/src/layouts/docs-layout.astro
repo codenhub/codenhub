@@ -72,11 +72,12 @@ const browserTitle =
   <LinkPreview />
 
   <script>
-    import { findActiveHeadingId } from "../lib/toc-highlight";
+    import { createTocRevealer, findActiveHeadingId } from "../lib/toc-highlight";
 
-    const toc = document.querySelector("[data-toc]");
+    const toc = document.querySelector<HTMLElement>("[data-toc]");
 
     if (toc !== null) {
+      const revealActiveLink = createTocRevealer(toc);
       const links = [...toc.querySelectorAll<HTMLAnchorElement>("a[href^='#']")];
       const entries = links.flatMap((link) => {
         const id = decodeURIComponent(link.hash.slice(1));
@@ -114,6 +115,8 @@ const browserTitle =
             link.removeAttribute("aria-current");
           }
         }
+
+        revealActiveLink(entries.find(({ id }) => id === activeId)?.link);
       };
 
       let queued = false;

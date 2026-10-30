@@ -58,3 +58,30 @@ export function findActiveHeadingId({
 
   return activeId;
 }
+
+/** Reveals changed active links inside the rail, leaving deliberate rail browsing alone. */
+export function createTocRevealer(toc: HTMLElement): (link: HTMLElement | undefined) => void {
+  let activeLink: HTMLElement | undefined;
+
+  return (link) => {
+    if (toc.clientHeight === 0 || link === activeLink) {
+      return;
+    }
+
+    activeLink = link;
+    if (link === undefined || toc.matches(":hover, :focus-within")) {
+      return;
+    }
+
+    const railTop = toc.getBoundingClientRect().top;
+    const railBottom = railTop + toc.clientHeight;
+    const bounds = link.getBoundingClientRect();
+
+    // scrollIntoView can also move the document, even with block: "nearest".
+    if (bounds.top < railTop) {
+      toc.scrollTop += bounds.top - railTop;
+    } else if (bounds.bottom > railBottom) {
+      toc.scrollTop += bounds.bottom - railBottom;
+    }
+  };
+}
