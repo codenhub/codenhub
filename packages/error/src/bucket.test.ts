@@ -175,7 +175,9 @@ describe("feedback map bucket (codes / names / messages)", () => {
   it("should delete an entry and return true, then false on repeated delete", () => {
     const registry = createErrorRegistry();
     registry.codes.add("code1", { message: "Msg" });
+    registry.codes.values();
     expect(registry.codes.delete("code1")).toBe(true);
+    expect(registry.codes.values()).toEqual([]);
     expect(registry.codes.get("code1")).toBeUndefined();
     expect(registry.codes.delete("code1")).toBe(false);
   });
