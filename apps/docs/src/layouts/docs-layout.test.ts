@@ -87,6 +87,29 @@ describe("documentation chrome", () => {
     expect(html).toMatch(/<main[^>]*id="main-content"/);
   });
 
+  it.each(["theme/reference/index.html", "styles/usage/customizing/index.html"])(
+    "offers a closed phone outline matching the desktop outline on %s",
+    async (path) => {
+      const html = await readOutput(path);
+      const mobile = html.match(/<div class="page-outline">([\s\S]*?)<\/nav>\s*<\/div>/)?.[1];
+      const desktop = html.match(/<nav aria-label="On this page" data-toc>([\s\S]*?)<\/nav>/)?.[1];
+
+      expect(mobile).toMatch(/<button[^>]*aria-expanded="false"[^>]*aria-controls="page-outline-links"/);
+      expect(mobile).toMatch(/<nav[^>]*id="page-outline-links"[^>]*hidden/);
+      const links = (markup: string | undefined) =>
+        [...(markup ?? "").matchAll(/<a href="#[^"]+">[^<]*<\/a>/g)].map(([link]) => link);
+      expect(links(mobile).length).toBeGreaterThan(0);
+      expect(links(mobile)).toEqual(links(desktop));
+    },
+  );
+
+  it("shows the phone outline at the breakpoint that hides the desktop rail", async () => {
+    const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
+
+    expect(css).toMatch(/\.page-outline\s*\{[^}]*hidden/s);
+    expect(css).toMatch(/@media \(max-width: 74rem\)[\s\S]*?\.page-outline\s*\{[^}]*block/s);
+  });
+
   it("renders the shared app-shell chrome", async () => {
     const html = await readOutput("error/index.html");
 

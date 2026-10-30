@@ -151,6 +151,8 @@ A page's H1 is the entrypoint's full import specifier — the package name for `
 
 The site indexes H4–H6 member headings separately for search and link previews, labelled by their owner-qualified names (for example, `Theme.setTokens`). Each member gets a heading permalink. Member entries contain only their own section's text; namespace headings that already carry their owner are not prefixed again. The default page outline still lists H2/H3 only, keeping large member catalogues out of it.
 
+Below the 74rem breakpoint where the site's desktop outline disappears, every documentation page with outline entries offers a closed-by-default “On this page” disclosure above the article. Its button exposes the expanded state, its entries match the desktop outline, and choosing an entry closes it. This includes guides as well as reference pages: both lose the same rail at that breakpoint.
+
 The site soft-wraps signatures because the earlier horizontal-scroll decision did not weigh an 841-character `ProviderDiagnosticReason` union measuring about 6,500 pixels, roughly nineteen phone code viewports. Keeping horizontal scroll was rejected on that evidence. Formatting signatures in the generator was rejected because the page would differ from the emitted `.d.ts`; soft wrapping changes presentation alone.
 
 When `prose` is `true` and a public symbol has no TSDoc, the page still lists it with its signature. Missing source documentation is an error reported by the independent `undocumented-export` check (see "Validation").

@@ -1,12 +1,39 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createTocRevealer, findActiveHeadingId, type HeadingPosition } from "./toc-highlight";
+import { createTocRevealer, findActiveHeadingId, initializePageOutline, type HeadingPosition } from "./toc-highlight";
 
 const headings: HeadingPosition[] = [
   { id: "install", top: 0 },
   { id: "usage", top: 400 },
   { id: "api", top: 900 },
 ];
+
+describe("initializePageOutline", () => {
+  it("toggles the outline and closes it after choosing an entry, returning focus to the button", () => {
+    const attributes = new Map([["aria-expanded", "false"]]);
+    const button = Object.assign(new EventTarget(), {
+      setAttribute: (name: string, value: string) => attributes.set(name, value),
+      focus: vi.fn(),
+    });
+    const link = new EventTarget();
+    const panel = { hidden: true, querySelectorAll: () => [link] };
+
+    initializePageOutline(button as unknown as HTMLButtonElement, panel as unknown as HTMLElement);
+    button.dispatchEvent(new Event("click"));
+    expect(panel.hidden).toBe(false);
+    expect(attributes.get("aria-expanded")).toBe("true");
+
+    button.dispatchEvent(new Event("click"));
+    expect(panel.hidden).toBe(true);
+    expect(attributes.get("aria-expanded")).toBe("false");
+
+    button.dispatchEvent(new Event("click"));
+    link.dispatchEvent(new Event("click"));
+    expect(panel.hidden).toBe(true);
+    expect(attributes.get("aria-expanded")).toBe("false");
+    expect(button.focus).toHaveBeenCalledWith({ preventScroll: true });
+  });
+});
 
 const resolve = (scrollTop: number, overrides: Partial<Parameters<typeof findActiveHeadingId>[0]> = {}) =>
   findActiveHeadingId({
