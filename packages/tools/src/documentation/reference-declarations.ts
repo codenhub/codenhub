@@ -44,10 +44,11 @@ function entryStem(target: string): string {
  * Resolves the entrypoints to document from a package's `exports` and its config.
  * @param exportsMap The manifest `exports` object.
  * @param config Parsed `codenhub.docs.reference`.
+ * @param pkgDir Package directory, when available, to resolve the actual source extension.
  * @returns One plan per documented entrypoint, in `exports` order (or `config.entrypoints` order).
  * @throws When a configured subpath is absent from `exports` or resolves to no file target.
  */
-export function resolveEntrypoints(exportsMap: unknown, config: ReferenceConfig): EntrypointPlan[] {
+export function resolveEntrypoints(exportsMap: unknown, config: ReferenceConfig, pkgDir?: string): EntrypointPlan[] {
   const map = exportsMap !== null && typeof exportsMap === "object" ? (exportsMap as Record<string, unknown>) : {};
   const explicit = config.entrypoints !== undefined;
   const subpaths = config.entrypoints ?? Object.keys(map).filter((key) => key === "." || key.startsWith("./"));
@@ -74,11 +75,18 @@ export function resolveEntrypoints(exportsMap: unknown, config: ReferenceConfig)
       {
         entryDts: `${stem}.d.${extension}`,
         module,
-        sourceRel: `${stem}.${extension}`,
+        sourceRel: pkgDir === undefined ? `${stem}.${extension}` : resolveSourceRel(pkgDir, `${stem}.${extension}`),
         subpath,
       },
     ];
   });
+}
+
+function resolveSourceRel(pkgDir: string, sourceRel: string): string {
+  const tsx = sourceRel.replace(/\.ts$/, ".tsx");
+  return !ts.sys.fileExists(`${pkgDir}/src/${sourceRel}`) && ts.sys.fileExists(`${pkgDir}/src/${tsx}`)
+    ? tsx
+    : sourceRel;
 }
 
 function readTsconfig(pkgDir: string): ts.ParsedCommandLine {
@@ -129,11 +137,7 @@ export function emitDeclarations(pkgDir: string, plans: readonly EntrypointPlan[
       skipLibCheck: true,
       tsBuildInfoFile: undefined,
     },
-    rootNames: plans.map((plan) => {
-      const source = `${pkgDir}/src/${plan.sourceRel}`;
-      const tsx = source.replace(/\.ts$/, ".tsx");
-      return !ts.sys.fileExists(source) && ts.sys.fileExists(tsx) ? tsx : source;
-    }),
+    rootNames: plans.map((plan) => `${pkgDir}/src/${resolveSourceRel(pkgDir, plan.sourceRel)}`),
   });
 
   const sourceRoot = `${pkgDir}/src/`;

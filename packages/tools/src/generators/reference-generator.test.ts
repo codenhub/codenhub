@@ -341,6 +341,17 @@ function createSingleEntrypointFixture(): Promise<WorkspacePackage> {
 }
 
 describe("analyzeReference", () => {
+  it.each(["tsx", "mts", "cts"])("documents the actual .%s entry source", { timeout: 30_000 }, async (extension) => {
+    const workspacePackage = await createReferenceFixture(`fixture-${extension}`, {
+      [`index.${extension}`]: "/** The answer. */\nexport const answer = 42;\n",
+    });
+    (workspacePackage.manifest.exports as Record<string, unknown>)["."] = {
+      types: `./dist/index.d.${extension === "tsx" ? "ts" : extension}`,
+    };
+    const { files } = await analyzeReference(workspacePackage, { prose: true });
+    expect(files[0]?.contents).toContain("export declare const answer = 42;");
+  });
+
   // A real TypeDoc run: a few seconds alone, past the five-second default when
   // it shares the machine with the rest of the suite.
   it("documents a package with exactly one entrypoint", { timeout: 30_000 }, async () => {

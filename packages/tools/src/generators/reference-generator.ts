@@ -220,7 +220,7 @@ export async function analyzeReference(
   config: ReferenceConfig,
 ): Promise<ReferenceAnalysis> {
   const pkgDir = workspacePackage.directory.split("\\").join("/");
-  const plans = resolveEntrypoints(workspacePackage.manifest.exports, config);
+  const plans = resolveEntrypoints(workspacePackage.manifest.exports, config, pkgDir);
   assertKebabEntrypoints(plans);
 
   const subpathByModule = Object.fromEntries(plans.map((plan) => [plan.module, plan.subpath]));
