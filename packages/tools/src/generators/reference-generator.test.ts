@@ -44,6 +44,32 @@ describe("resolveEntrypoints", () => {
     expect(plans.map((plan) => plan.subpath)).toEqual(["./registries/browser", "."]);
   });
 
+  it("resolves type targets nested in export conditions", () => {
+    const plans = resolveEntrypoints(
+      {
+        "./client": { import: { types: "./dist/client.d.ts", default: "./dist/client.js" } },
+        "./server": { types: { default: "./dist/server.d.ts" } },
+      },
+      { prose: true },
+    );
+    expect(plans.map(({ subpath, entryDts }) => ({ subpath, entryDts }))).toEqual([
+      { subpath: "./client", entryDts: "client.d.ts" },
+      { subpath: "./server", entryDts: "server.d.ts" },
+    ]);
+  });
+
+  it("selects only subpaths with type targets by default", () => {
+    const plans = resolveEntrypoints(
+      {
+        ".": { types: "./dist/index.d.ts" },
+        "./runtime": { import: "./dist/runtime.js" },
+        "./direct": "./dist/direct.d.ts",
+      },
+      { prose: true },
+    );
+    expect(plans.map((plan) => plan.subpath)).toEqual([".", "./direct"]);
+  });
+
   it("throws for a configured entrypoint that is not exported", () => {
     expect(() =>
       resolveEntrypoints(exportsMap, {

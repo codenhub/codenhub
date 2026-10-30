@@ -18,12 +18,16 @@ export interface EntrypointPlan {
 
 function subpathTarget(entry: unknown): string | undefined {
   if (typeof entry === "string") {
-    return entry;
+    return /\.(?:d\.[cm]?ts|[cm]?ts)$/.test(entry) ? entry : undefined;
   }
   if (entry !== null && typeof entry === "object") {
     const conditions = entry as Record<string, unknown>;
-    const candidate = conditions.types ?? conditions.import ?? conditions.default;
-    return typeof candidate === "string" ? candidate : undefined;
+    return (
+      subpathTarget(conditions.types) ??
+      Object.values(conditions)
+        .map(subpathTarget)
+        .find((target) => target !== undefined)
+    );
   }
   return undefined;
 }
