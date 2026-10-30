@@ -405,6 +405,36 @@ function createSingleEntrypointFixture(): Promise<WorkspacePackage> {
 }
 
 describe("analyzeReference", () => {
+  it("excludes exact null exports from wildcard entrypoints", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-wildcard-null", {
+      "parts/a.ts": "/** A. */ export const a = 1;",
+      "parts/hidden.ts": "/** Private. */ export const hidden = 2;",
+    });
+    (workspacePackage.manifest as Record<string, unknown>).exports = {
+      "./parts/*": { types: "./dist/parts/*.d.ts" },
+      "./parts/hidden": null,
+    };
+    const { model } = await analyzeReference(workspacePackage, { prose: true });
+    expect(model.entrypoints.map((entry) => entry.subpath)).toEqual(["./parts/a"]);
+  });
+
+  it("uses exact typed exports instead of wildcard targets", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-wildcard-override", {
+      "parts/a.ts": "/** A. */ export const a = 1;",
+      "parts/special.ts": "/** Old. */ export const old = 1;",
+      "override.ts": "/** New. */ export const current = 2;",
+    });
+    (workspacePackage.manifest as Record<string, unknown>).exports = {
+      "./parts/*": { types: "./dist/parts/*.d.ts" },
+      "./parts/special": { types: "./dist/override.d.ts" },
+    };
+    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    expect(model.entrypoints.map((entry) => entry.subpath)).toEqual(["./parts/a", "./parts/special"]);
+    expect(files.find((file) => file.path.endsWith("/parts/special.md"))?.contents).toContain(
+      "export declare const current = 2;",
+    );
+  });
+
   it("expands typed wildcard exports from sources before naming pages", { timeout: 30_000 }, async () => {
     const workspacePackage = await createReferenceFixture("fixture-wildcard", {
       "parts/a.ts": "/** A value. */\nexport const a = 1;\n",

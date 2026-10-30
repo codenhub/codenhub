@@ -277,7 +277,17 @@ export async function analyzeReference(
   const resolved = resolveEntrypoints(workspacePackage.manifest.exports, config, pkgDir);
   const expanded =
     config.entrypoints === undefined
-      ? (await Promise.all(resolved.map((plan) => expandEntrypoint(pkgDir, plan, `dist/${plan.entryDts}`)))).flat()
+      ? (
+          await Promise.all(
+            resolved.map(async (plan) =>
+              (await expandEntrypoint(pkgDir, plan, `dist/${plan.entryDts}`)).filter(
+                (entry) =>
+                  entry.subpath === plan.subpath ||
+                  !Object.hasOwn(workspacePackage.manifest.exports as object, entry.subpath),
+              ),
+            ),
+          )
+        ).flat()
       : resolved;
   const plans = expanded.map((plan) => ({
     ...plan,
