@@ -164,6 +164,13 @@ describe("documentation chrome", () => {
     expect(css).not.toMatch(/overflow:\s*hidden/);
   });
 
+  it("wraps long headings and prose URLs within the article width", async () => {
+    const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
+    const articleRule = css.match(/\.markdown-content\s*\{([^}]*)\}/)?.[1];
+
+    expect(articleRule).toMatch(/overflow-wrap:\s*anywhere/);
+  });
+
   it("runs each rail divider the full document while only its panel scrolls", async () => {
     const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
     const stickyRule = css.match(/\.left-rail > \*,\s*\.toc-rail > \*\s*\{([^}]*)\}/)?.[1];

@@ -199,6 +199,7 @@ html {
 
 .markdown-content {
   @apply w-full max-w-3xl;
+  overflow-wrap: anywhere;
 }
 
 /* The page actions sit outside the article, which renders the Markdown as
