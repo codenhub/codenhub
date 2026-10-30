@@ -74,6 +74,59 @@ describe("reference rule run", () => {
     return workspacePackage;
   }
 
+  it("reports every ungenerated file in the reference area", { timeout: 30_000 }, async () => {
+    const workspacePackage = await committedFixture("fixture-rule-unexpected", {
+      "index.ts": "/** A value. */\nexport const value = 1;\n",
+    });
+    await mkdir(join(workspacePackage.directory, "docs/reference/nested"), { recursive: true });
+    await Promise.all([
+      writeFile(join(workspacePackage.directory, "docs/reference/nested/extra.txt"), "unexpected"),
+      writeFile(join(workspacePackage.directory, "docs/reference/extra.md"), "# Unexpected\n"),
+    ]);
+    const findings = await rule.run({ package: workspacePackage, includePack: false });
+    expect(findings.map(({ code, location }) => ({ code, location }))).toEqual([
+      { code: "reference/unexpected-file", location: "docs/reference/extra.md" },
+      { code: "reference/unexpected-file", location: "docs/reference/nested/extra.txt" },
+    ]);
+  });
+
+  it.each([false, true])(
+    "rejects a sibling reference.md with generated area present=%s",
+    { timeout: 30_000 },
+    async (generated) => {
+      const sources = { "index.ts": "/** A value. */\nexport const value = 1;\n" };
+      const workspacePackage = await (generated ? committedFixture : createReferenceFixture)(
+        "fixture-rule-sibling",
+        sources,
+      );
+      await mkdir(join(workspacePackage.directory, "docs"), { recursive: true });
+      await writeFile(join(workspacePackage.directory, "docs/reference.md"), "# Authored reference\n");
+      const findings = await rule.run({ package: workspacePackage, includePack: false });
+      expect(findings.filter((finding) => finding.code === "reference/unexpected-file")).toEqual([
+        {
+          code: "reference/unexpected-file",
+          location: "docs/reference.md",
+          message: expect.any(String),
+          severity: "error",
+        },
+      ]);
+    },
+  );
+
+  it.each([undefined, false])("leaves a non-opted-in package's reference files alone (%s)", async (reference) => {
+    const workspacePackage = await createReferenceFixture("fixture-rule-legacy", {
+      "index.ts": "/** A value. */\nexport const value = 1;\n",
+    });
+    (workspacePackage.manifest as { codenhub: { docs: { reference: unknown } } }).codenhub.docs.reference = reference;
+    await mkdir(join(workspacePackage.directory, "docs/reference"), { recursive: true });
+    await Promise.all([
+      writeFile(join(workspacePackage.directory, "docs/reference.md"), "# Authored reference\n"),
+      writeFile(join(workspacePackage.directory, "docs/reference/extra.txt"), "authored"),
+    ]);
+    expect(rule.appliesTo(workspacePackage)).toBe(false);
+    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([]);
+  });
+
   it("fails on a public signature that names a type the reference does not document", { timeout: 30_000 }, async () => {
     const workspacePackage = await committedFixture("fixture-rule-unresolved", {
       // A global type from a hand-written declaration file has no emitted declaration to list.
