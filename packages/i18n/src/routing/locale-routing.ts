@@ -5,8 +5,8 @@ const MAX_PATHNAME_LENGTH = 8_192;
 
 /** Configuration snapshotted for locale-prefixed pathname parsing and generation. */
 export interface LocaleRoutingConfig<TLocale extends string> {
-  /** The trimmed, case-insensitively matched locale used for unprefixed paths. */
-  defaultLocale: TLocale;
+  /** The trimmed, case-insensitively matched locale used for unprefixed paths; its type is inferred from `locales` only. */
+  defaultLocale: NoInfer<TLocale>;
   /** ASCII locale identifiers with alphanumeric hyphen-separated subtags, preserved in `localizeAll` order. */
   locales: readonly TLocale[];
   /** Whether paths require a default-locale prefix, snapshotted when routing is created. */

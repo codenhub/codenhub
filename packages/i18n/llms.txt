@@ -1,17 +1,23 @@
 # @codenhub/i18n
 
-> Runtime-neutral translations with consumer-provided loading,
-> deterministic fallback, and optional browser and locale-path integrations.
+> Translations with typed keys, CLDR plurals, `{name}` placeholders, and a
+> default-locale fallback, plus optional browser and locale-path helpers.
 
-Use only the root, `/browser`, and `/routing` entrypoints. Await successful core
-initialization and keep concurrent server/build instances isolated. Locale
-identifiers use alphanumeric ASCII subtags joined by single hyphens.
+Use only the root, `/browser`, and `/routing` entry points. Await `init()` (or
+`initializeBrowserI18n()`) before calling `t()`. Create one manager per request
+or page on a server or in a static build. A key missing from every dictionary
+returns the trimmed key.
 
 ## Documentation
 
-- [Documentation overview](docs/index.md): Entrypoint selection, core quick
-  start, and failure model.
-- [Usage across runtimes](docs/examples.md): Browser, framework rendering, routed hydration, SSR,
-  SSG, and loader examples.
-- [API reference](docs/reference.md): Complete exports, defaults, behavior,
-  events, routing constraints, and observable errors.
+- [Overview](docs/index.md): Core ideas, a walkthrough, and missing-key behavior.
+- [Write your translations](docs/translations.md): Dictionary rules, JSON
+  loaders, placeholders, plurals, typed keys, key-parity tests, and size limits.
+- [Translate a browser app](docs/browser.md): Locale detection order,
+  persistence, `lang`/`dir` sync, framework re-rendering, and `data-i18n`.
+- [Render on a server or at build time](docs/server-rendering.md): Per-request
+  managers, `Accept-Language` matching, logging, and static builds.
+- [Localized URLs](docs/localized-urls.md): `parse`, `localize`, `localizeAll`,
+  and accepted paths.
+- [Troubleshooting](docs/troubleshooting.md): Every error and warning, with fixes.
+- [API reference](docs/reference/index.md): Generated reference for every export.

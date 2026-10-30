@@ -6,6 +6,17 @@ import { createLocaleRouting, type LocaleRoutingConfig } from "../routing";
 const LOCALES = ["en-US", "pt-BR"] as const;
 
 describe("createLocaleRouting", () => {
+  it("should type locales from `locales` and reject a widened default locale", () => {
+    const config = { defaultLocale: "en-US", locales: LOCALES, prefixDefaultLocale: false };
+
+    // @ts-expect-error - a `string` default locale would otherwise make `localize()` accept any string
+    expect(createLocaleRouting(config).localize("/", "en-US")).toBe("/");
+
+    const routing = createLocaleRouting({ ...config, defaultLocale: "en-US" as const });
+    // @ts-expect-error - "fr" is not a configured locale
+    expect(() => routing.localize("/", "fr")).toThrow(RangeError);
+  });
+
   it("should parse a supported locale prefix", () => {
     const routing = createLocaleRouting({
       defaultLocale: "en-US",

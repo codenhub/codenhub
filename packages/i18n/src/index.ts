@@ -1,3 +1,9 @@
+/**
+ * Translation managers that load dictionaries, pick locales, and translate keys in any JavaScript runtime.
+ *
+ * @packageDocumentation
+ */
+
 export { I18nError, i18nErrors } from "./core/errors";
 export { createI18n } from "./core/i18n";
 export type { I18nErrorCode, I18nErrorOptions } from "./core/errors";

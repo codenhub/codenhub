@@ -23,12 +23,13 @@ export interface LocaleDictionaryLimits {
   maxTotalLength?: number;
 }
 
-// Distributes over the property type so an optional leaf (`string | undefined`) still counts as a key.
+// Distributes over the property type so an optional leaf (`string | undefined`) still counts as a key. A group with an
+// `other` form is a plural, so the group itself is a key as well as each of its forms.
 type PropertyKeyPath<K extends string, TValue> = TValue extends string
   ? K
   : TValue extends undefined
     ? never
-    : `${K}.${FlattenedKey<TValue>}`;
+    : `${K}.${FlattenedKey<TValue>}` | (TValue extends { readonly other: string } ? K : never);
 
 type FlattenedKey<TMessages> = TMessages extends string
   ? never
@@ -37,7 +38,8 @@ type FlattenedKey<TMessages> = TMessages extends string
     }[keyof TMessages & string];
 
 /**
- * Dot-separated keys of a dictionary type's string leaves, or any string when the dictionary type is unknown.
+ * Dot-separated keys of a dictionary type's string leaves and of its plural groups, those with an `other` form, or any
+ * string when the dictionary type is unknown.
  *
  * @example
  * ```ts
@@ -58,8 +60,12 @@ export type TranslationKey<TMessages> = unknown extends TMessages ? string : Fla
  * @typeParam TMessages - Dictionary type returned by `loadLocale`; its flattened leaf paths type translation keys.
  */
 export interface I18nConfig<TLocale extends string = string, TMessages = unknown> {
-  /** Supported ASCII locale used initially and for missing-key fallback; matched after trimming, case-insensitively. */
-  defaultLocale: TLocale;
+  /**
+   * Supported ASCII locale used initially and for missing-key fallback; matched after trimming, case-insensitively.
+   * Locale types are inferred from `locales` only, so a `string` here is a compile error rather than a reason to
+   * accept any string as a locale.
+   */
+  defaultLocale: NoInfer<TLocale>;
   /** Non-empty, case-insensitively unique ASCII locale identifiers composed of alphanumeric hyphen-separated subtags. */
   locales: readonly TLocale[];
   /**
@@ -67,21 +73,21 @@ export interface I18nConfig<TLocale extends string = string, TMessages = unknown
    * Its declared return type, such as an `as const` object or an imported JSON module, types translation keys;
    * an `unknown` or `any` return accepts any string key.
    */
-  loadLocale(locale: TLocale): TMessages | Promise<TMessages>;
+  loadLocale(locale: NoInfer<TLocale>): TMessages | Promise<TMessages>;
   /**
    * Resolves `ltr` or `rtl`; called during creation and state changes, with failures propagated unchanged.
    *
    * @defaultValue `rtl` for a right-to-left script subtag, such as `uz-Arab`, or, without a script subtag, a
    * right-to-left language, such as `ar`, `he`, `fa`, or `ur`; otherwise `ltr`.
    */
-  getLocaleDirection?(locale: TLocale): LocaleDirection;
+  getLocaleDirection?(locale: NoInfer<TLocale>): LocaleDirection;
   /**
    * Called for every key missing from both the active and default dictionaries, in place of the default warning.
    * Exceptions propagate from the lookup, so a test can throw here to fail on a missing key.
    *
    * @defaultValue A `console.warn` once for each of the 1,000 most recent locale/key pairs, unless `isSilent`.
    */
-  onMissingKey?(key: string, locale: TLocale): void;
+  onMissingKey?(key: string, locale: NoInfer<TLocale>): void;
   /** Suppresses optional diagnostics, including the default missing-key warning, without suppressing failures. Defaults to `false`. */
   isSilent?: boolean;
   /** Raises or lowers the resource limits applied to loaded dictionaries; unset limits keep their defaults. */
@@ -123,7 +129,8 @@ export interface I18nEventMap<TLocale extends string = string> {
  * Every method is bound to its manager, so a destructured method, such as `const { t } = i18n`, keeps working.
  *
  * @typeParam TLocale - Union of supported canonical locale identifiers.
- * @typeParam TKey - Union of accepted translation keys, inferred from the configured loader.
+ * @typeParam TKey - Union of accepted translation keys. Defaults to `string`; `createI18n()` sets it to
+ * `TranslationKey<TMessages>` for the loader's dictionary type.
  */
 export interface I18n<TLocale extends string = string, TKey extends string = string> {
   /** Canonical fallback locale. */
@@ -206,9 +213,20 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   /**
    * Resolves a trimmed key against active and default dictionaries and fills its `{name}` placeholders.
    *
-   * @param key - Translation key.
+   * @remarks
+   * When `params.count` is a number and the key is a group of plural forms rather than a text, such as
+   * `{ one: "{count} item", other: "{count} items" }`, the form is chosen with `Intl.PluralRules` for the locale of the
+   * dictionary that has the group, falling back to its `other` form. Forms are named by CLDR plural category: `zero`,
+   * `one`, `two`, `few`, `many`, and `other`.
+   *
+   * @example
+   * ```ts
+   * t("cart.items", { count: 3 }); // "3 items"
+   * ```
+   *
+   * @param key - Translation key, or the key of a plural group when `params.count` is a number.
    * @param params - Values for `{name}` placeholders, read from own properties. A placeholder without a value is left
-   * as written; without `params`, the text is returned unchanged.
+   * as written; without `params`, the text is returned unchanged. A numeric `count` also selects a plural form.
    * @returns The translated text, or the trimmed key when neither dictionary has it. A miss calls `onMissingKey`, or
    * warns once per recent locale/key pair unless silent.
    * @throws {Error} When called before successful initialization.

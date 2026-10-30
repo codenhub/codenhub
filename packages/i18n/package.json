@@ -1,6 +1,6 @@
 {
   "name": "@codenhub/i18n",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": false,
   "description": "Runtime-neutral translations with optional browser and locale-path integrations.",
   "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/i18n",
@@ -12,7 +12,8 @@
   },
   "files": [
     "dist",
-    "docs/*.md",
+    "docs",
+    "!docs/internal",
     "llms.txt",
     "llms-full.txt"
   ],
@@ -67,6 +68,8 @@
   "codenhub": {
     "label": "i18n",
     "status": "active",
-    "docs": {}
+    "docs": {
+      "reference": {}
+    }
   }
 }

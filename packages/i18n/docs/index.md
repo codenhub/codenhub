@@ -1,77 +1,136 @@
 ---
 title: Overview
-description: Runtime-neutral translations with optional browser and locale-path integrations.
+description: What @codenhub/i18n does, the four ideas behind it, and a five-minute walkthrough.
 ---
 
-# Translate applications across runtimes
+# Translate your app
 
-`@codenhub/i18n` provides isolated translation managers with consumer-owned locale loading. Use the core API in browser main threads, browser Web Workers, servers, and static builds, then add browser effects or locale-prefixed paths when needed.
+`@codenhub/i18n` turns keys such as `"home.title"` into text in the reader's language. You write your translations as plain objects or JSON files, one per language, and the package handles the rest: it loads the right one, falls back to your main language when a translation is missing, fills in values like names and counts, and tells TypeScript which keys exist, so a typo fails to compile.
 
-## Setup
+It works the same in a browser, a Web Worker, a Node.js server, or a static site build. Two optional extras handle the jobs that differ by environment:
 
-### Installation
+- **`@codenhub/i18n/browser`** picks the visitor's language, remembers their choice, and keeps the page's `lang` and `dir` attributes in step.
+- **`@codenhub/i18n/routing`** puts the language in the URL, as in `/pt/about`.
+
+## Four ideas
+
+You only need four ideas to use this package.
+
+**A locale** names a language, and sometimes a region: `en`, `pt`, `pt-BR`, `ar`. You list the locales your app supports, and pick one as the **default locale**: the language your app is written in first, which every other locale falls back to.
+
+**A dictionary** holds every translation for one locale. Keys can be nested to keep related text together:
+
+```json
+{
+  "home": {
+    "title": "Welcome",
+    "greeting": "Hello, {name}!"
+  }
+}
+```
+
+Nested keys are joined with dots, so this dictionary has the keys `home.title` and `home.greeting`.
+
+**A loader** is a function you write that returns the dictionary for a locale. It can return an object you imported, read a file, or fetch JSON from your server. The package never decides where translations live; it calls your loader when it needs a locale, and keeps the result.
+
+**A manager** ties these together. You create one with `createI18n()`, tell it which locale to use, and ask it for text with `t()`.
+
+## Walkthrough
+
+### 1. Install
 
 ```sh
 pnpm add @codenhub/i18n
 ```
 
-### Quick start
+The package is an ES module and needs Node.js 24 or newer, or a current browser. It has no runtime dependencies.
 
-In a browser application, or any runtime with one active locale at a time, create the manager once in an application module and export it with its bound `t`:
+### 2. Write two dictionaries
+
+Start with your default language and one more. Here they are objects in a TypeScript file; [Write your translations](translations.md) shows how to keep them in JSON files instead.
+
+```ts
+// src/locales.ts
+export const dictionaries = {
+  en: {
+    home: { title: "Welcome", greeting: "Hello, {name}!" },
+    cart: { items: { one: "{count} item", other: "{count} items" } },
+  },
+  pt: {
+    home: { title: "Bem-vindo", greeting: "Olá, {name}!" },
+    cart: { items: { one: "{count} item", other: "{count} itens" } },
+  },
+} as const;
+```
+
+The `as const` lets TypeScript see the exact keys, so it can check every `t()` call against them.
+
+### 3. Create the manager
+
+In a browser app, create the manager once in its own module and import it wherever you need text:
 
 ```ts
 // src/i18n.ts
 import { createI18n } from "@codenhub/i18n";
-
-const dictionaries = {
-  en: { page: { title: "Welcome", description: "Learn more", greeting: "Hello, {name}!" } },
-  pt: { page: { title: "Bem-vindo", greeting: "Olá, {name}!" } },
-} as const;
+import { dictionaries } from "./locales";
 
 export const i18n = createI18n({
-  defaultLocale: "en",
   locales: ["en", "pt"] as const,
+  defaultLocale: "en",
   loadLocale: (locale) => dictionaries[locale],
 });
 
 export const { t } = i18n;
 ```
 
-Initialize it once at startup, then import `t` wherever text is needed:
+`t` is a short name for `i18n.translate`. Every method on the manager works on its own after you pull it off, like `t` here, so you can import `t` directly.
+
+### 4. Start it, then translate
+
+The manager has to load a dictionary before it can translate, so start it once when your app starts and wait for it:
 
 ```ts
+// src/main.ts
 import { i18n, t } from "./i18n";
 
 await i18n.init({ locale: "pt" });
 
-t("page.title"); // "Bem-vindo"
-t("page.description"); // "Learn more" from the default locale
-t("page.greeting", { name: "Ana" }); // "Olá, Ana!"
-t("page.titel"); // compile error: keys are typed from the dictionaries
+t("home.title"); // "Bem-vindo"
+t("home.greeting", { name: "Ana" }); // "Olá, Ana!"
+t("cart.items", { count: 3 }); // "3 itens"
+t("home.titel"); // compile error: there is no such key
 ```
 
-Core never reads browser, request, or process state: pass the locale, or pick one from preferences with `i18n.matchLocale(["pt-BR"])`, which returns `"pt"` here. Omitting `init({ locale })` selects the configured default. Selecting another locale loads both its dictionary and the default dictionary before applying state, so fallback is deterministic.
+`init()` without a locale starts with the default locale. Calling `t()` before `init()` has finished throws an error, because there is nothing to translate with yet.
 
-`t` always returns a string: a key missing from both dictionaries returns the key and is reported to `onMissingKey`, or warned once by default. Every manager method is bound, so destructured methods keep working, and `t` checks readiness when called rather than when exported. `i18n.subscribe(listener)` calls `listener` after every applied initialization and locale change, for re-rendering a framework. Servers and static builds that render concurrently create one manager per request or page instead of sharing a module.
+### 5. Switch languages
 
-### Configuration
+```ts
+await i18n.setLocale("en");
+t("home.title"); // "Welcome"
+```
 
-Configure supported locales, a default locale, and a dictionary loader. Text direction defaults from each locale, such as `rtl` for `ar` or `he`, and `getLocaleDirection` overrides it. The loader may use imports, HTTP, files, or another runtime-specific source.
+`setLocale()` loads the new dictionary first and only switches once it has loaded, so text never shows half in one language and half in another. To redraw your interface when the language changes, pass a function to `i18n.subscribe()`; it runs after every switch.
 
-Use `@codenhub/i18n/browser` for browser locale selection, persistence, document attributes, and optional DOM translation. Use `@codenhub/i18n/routing` for pure locale-prefixed pathname parsing and generation.
+## What happens when a translation is missing
 
-## Requirements
+Translations rarely stay complete. A new feature adds keys in English first, and the other languages catch up later. The package handles this in two steps:
 
-- ESM-aware package resolution.
-- Node.js 24 or newer, or a current Chromium, Firefox, WebKit, or browser Web Worker runtime with the required standard globals.
-- Core requires standard `Event` and `EventTarget` globals.
-- Browser features require only the browser APIs they enable.
-- Browser initialization must not overlap direct core initialization on the same manager; a superseded browser call rejects and releases ownership.
-- Concurrent SSR requests and SSG renders require separate manager instances.
+1. **The key is missing in the current locale but present in the default one.** You get the default text. In the example above, a key only in `en` shows English to Portuguese readers. Nothing is logged, because this is normal while translators catch up; [a key check in your tests](translations.md#find-untranslated-keys) finds these.
+2. **The key is missing everywhere.** `t()` returns the key, trimmed, such as `"home.subtitle"`, so the gap is visible on screen and easy to search for, and the manager logs a warning once. You can send these to your own logger with the `onMissingKey` option.
 
-The package intentionally focuses on deterministic string lookup and locale paths. Interpolation fills `{name}` placeholders only; it does not provide plural selection, ICU or rich messages, HTML rendering, number/date formatting, navigation, or redirects.
+`t()` always returns a string, so you never need `?? ""` after it.
 
-## Next steps
+## Where to go next
 
-- [Usage across runtimes](examples.md) covers browser setup, routed hydration, SSR, SSG, and loader patterns.
-- [API reference](reference.md) documents configuration, dictionaries, browser behavior, routing, events, and failures.
+- [Write your translations](translations.md): dictionaries, JSON files, placeholders, plurals, typed keys, and checking for untranslated keys.
+- [Translate a browser app](browser.md): detect and remember the visitor's language, translate HTML with `data-i18n`, and re-render a framework.
+- [Render on a server or at build time](server-rendering.md): one manager per request, choosing a locale from `Accept-Language`, and static site builds.
+- [Localized URLs](localized-urls.md): put the locale in the path, build links to other languages, and generate every localized page.
+- [Troubleshooting](troubleshooting.md): what each error means and how to fix it.
+- [API reference](reference/index.md): every export, option, and type.
+- [Changelog](changelog/index.md): what changed in each version, and how to upgrade.
+
+## What this package does not do
+
+It translates and picks locales. It does not format numbers or dates (use the built-in `Intl.NumberFormat` and `Intl.DateTimeFormat` with `i18n.locale`), render HTML from translations, or support the full ICU message format. Locale routing reads and builds paths, but your framework or server still registers routes, redirects, and navigates.
