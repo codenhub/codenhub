@@ -121,6 +121,48 @@ describe("resolved comment links", () => {
   });
 });
 
+describe("default export aliases", () => {
+  it.each([
+    ["local", "/** Plugin. */ function original() {} export { original, original as default };", "original"],
+    ["renamed", "/** Plugin. */ function original() {} export { original as plugin, original as default };", "plugin"],
+    ["barrel", 'export { original, original as default } from "./leaf";', "original"],
+  ])("renders a %s default alias once and resolves both names", { timeout: 30_000 }, async (_case, source, name) => {
+    const fixture = await createReferenceFixture("default-alias", {
+      "index.ts": source + "\n/** Uses {@link default}. */ export function use() {}",
+      "leaf.ts": "/** Plugin. */ export function original() {}",
+    });
+    const { model, files } = await analyzeReference(fixture, { prose: true });
+    expect(model.entrypoints[0]?.symbols.map((symbol) => symbol.name)).toEqual([name, "use"]);
+    expect(files[0]?.contents.match(new RegExp(`^### ${name}$`, "gm"))).toHaveLength(1);
+    expect(files[0]?.contents).toContain("Also exported as `default`.");
+    expect(files[0]?.contents).toContain(`[default](#${name})`);
+  });
+
+  it("resolves cross-page links to a default alias's named section", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("default-alias-links", {
+      "index.ts":
+        'export { original, original as default } from "./leaf";\n/** Uses {@link original} and {@link default}. */ export function use() {}',
+      "leaf.ts": "/** Plugin. */ export function original() {}",
+    });
+    const { files } = await analyzeReference(fixture, {
+      prose: true,
+      pages: { ".": { split: { plugin: { source: ["src/leaf.ts"] } } } },
+    });
+    const root = files.find((file) => file.path.endsWith("/index.md"))?.contents;
+    expect(root).toContain("[original](plugin.md#original)");
+    expect(root).toContain("[default](plugin.md#original)");
+  });
+
+  it("keeps the default alias notice when prose is disabled", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("default-alias-manifest", {
+      "index.ts": "const plugin = 1; export { plugin, plugin as default };",
+    });
+    const { files } = await analyzeReference(fixture, { prose: false });
+    expect(files[0]?.contents.match(/^### plugin$/gm)).toHaveLength(1);
+    expect(files[0]?.contents).toContain("Also exported as `default`.");
+  });
+});
+
 describe("reference ordering", () => {
   it(
     "orders symbols, members, and internal types independently of the default locale",

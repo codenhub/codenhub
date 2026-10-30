@@ -315,7 +315,7 @@ function proseBlocks(
   return blocks;
 }
 
-type PageBlock = string | { markdown: string; target: string };
+type PageBlock = string | { markdown: string; target: string; aliases?: string[] };
 
 /**
  * One symbol's section. A namespace member is a section one level deeper than the
@@ -329,7 +329,13 @@ function symbolBlocks(
   level = 3,
   qualifiedName = symbol.name,
 ): PageBlock[] {
-  const blocks: PageBlock[] = [{ markdown: heading(level, qualifiedName), target: qualifiedName }];
+  const blocks: PageBlock[] = [
+    {
+      markdown: heading(level, qualifiedName),
+      target: qualifiedName,
+      ...(symbol.alsoExportedAsDefault ? { aliases: [`${qualifiedName.slice(0, -symbol.name.length)}default`] } : {}),
+    },
+  ];
 
   if (symbol.overloads.length > 0) {
     for (const overload of symbol.overloads) {
@@ -349,6 +355,9 @@ function symbolBlocks(
     }
   }
 
+  if (symbol.alsoExportedAsDefault) {
+    blocks.push("Also exported as `default`.");
+  }
   for (const member of symbol.members) {
     blocks.push(...memberBlocks(member, prose, link, level + 1));
   }
@@ -426,13 +435,13 @@ export function referencePageSlugs(
   entrypoint: ReferenceEntrypoint,
   options: Pick<RenderReferencePageOptions, "heading" | "prose">,
 ): ReadonlyMap<string, string> {
-  const targets = new Map<number, string>();
+  const targets = new Map<number, string[]>();
   let offset = 0;
   const markdown = pageBlocks(entrypoint, options, (text) => resolveLinks(text, new Map()))
     .map((block) => {
       const text = typeof block === "string" ? block : block.markdown;
       if (typeof block !== "string") {
-        targets.set(offset, block.target);
+        targets.set(offset, [block.target, ...(block.aliases ?? [])]);
       }
       offset += text.length + 2;
       return text;
@@ -452,8 +461,7 @@ export function referencePageSlugs(
   const visit = (node: MarkdownNode): void => {
     if (node.type === "heading") {
       const anchor = slugger.slug(textOf(node));
-      const target = targets.get(node.position?.start.offset ?? -1);
-      if (target !== undefined) {
+      for (const target of targets.get(node.position?.start.offset ?? -1) ?? []) {
         slugs.set(target, anchor);
       }
     }

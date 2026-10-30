@@ -114,6 +114,8 @@ export interface ReferenceOverload extends ReferenceProse {
 export interface ReferenceSymbol extends ReferenceProse {
   /** Symbol name as exported. `default` for an anonymous default export. */
   name: string;
+  /** Whether the same declaration is also exported as `default` on this page. */
+  alsoExportedAsDefault?: boolean;
   /** Declaration kind. */
   kind: ReferenceSymbolKind;
   /** `@defaultValue` text for a variable or property, when present. */
@@ -694,8 +696,26 @@ function buildSymbols(
   children: readonly Reflection[],
   resolve: (id: number) => Reflection | undefined,
 ): ReferenceSymbol[] {
-  const groups = groupChildren(children, resolve).values();
-  return sortSymbols([...groups].flatMap((declarations) => buildSymbol(declarations, resolve) ?? []));
+  const groups = groupChildren(children, resolve);
+  const defaultDeclaration = groups.get("default")?.[0]?.declaration;
+  const namedDefault =
+    defaultDeclaration === undefined
+      ? undefined
+      : [...groups].find(
+          ([name, declarations]) =>
+            name !== "default" && declarations.some(({ declaration }) => declaration === defaultDeclaration),
+        )?.[0];
+  return sortSymbols(
+    [...groups].flatMap(([name, declarations]) => {
+      if (name === "default" && namedDefault !== undefined) {
+        return [];
+      }
+      const symbol = buildSymbol(declarations, resolve);
+      return symbol === undefined
+        ? []
+        : [{ ...symbol, ...(name === namedDefault ? { alsoExportedAsDefault: true } : {}) }];
+    }),
+  );
 }
 
 function sortSymbols(symbols: ReferenceSymbol[]): ReferenceSymbol[] {
