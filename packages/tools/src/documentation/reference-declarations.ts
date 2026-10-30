@@ -93,6 +93,22 @@ function resolveSourceRel(pkgDir: string, sourceRel: string): string {
 }
 
 /**
+ * Lists package files matching an export pattern, whose `*` may span directories as in Node's resolution.
+ * @param pkgDir Package directory to search.
+ * @param pattern Package-relative pattern with one `*`.
+ * @returns Matching package-relative paths, using POSIX separators.
+ */
+async function matchExportPattern(pkgDir: string, pattern: string): Promise<string[]> {
+  const star = pattern.indexOf("*");
+  const prefix = pattern.slice(0, star);
+  const suffix = pattern.slice(star + 1);
+  const files = await Array.fromAsync(glob(`${prefix.slice(0, prefix.lastIndexOf("/") + 1)}**/*`, { cwd: pkgDir }));
+  return files
+    .map((path) => path.replaceAll("\\", "/"))
+    .filter((path) => path.length > prefix.length + suffix.length && path.startsWith(prefix) && path.endsWith(suffix));
+}
+
+/**
  * Expands a typed export pattern from built declarations and matching source entry files.
  * @param pkgDir Package directory to search.
  * @param plan The unresolved export pattern.
@@ -103,22 +119,16 @@ export async function expandEntrypoint(pkgDir: string, plan: EntrypointPlan, tar
   if (!target.includes("*")) {
     return [{ ...plan, target: posix.normalize(target) }];
   }
-  const sourcePattern = plan.sourceRel.replace(/\.ts$/, ".{ts,tsx}");
-  const [disk, sources] = await Promise.all([
-    Array.fromAsync(glob(target, { cwd: pkgDir })),
-    Array.fromAsync(glob(`src/${sourcePattern}`, { cwd: pkgDir })),
+  const pattern = posix.normalize(target);
+  const [disk, sources, tsxSources] = await Promise.all([
+    matchExportPattern(pkgDir, pattern),
+    matchExportPattern(pkgDir, `src/${plan.sourceRel}`),
+    plan.sourceRel.endsWith(".ts") ? matchExportPattern(pkgDir, `src/${plan.sourceRel}x`) : [],
   ]);
   const matches = new Set([
-    ...disk.map((path) => path.replaceAll("\\", "/")),
-    ...sources.map(
-      (path) =>
-        `dist/${path
-          .replaceAll("\\", "/")
-          .slice(4)
-          .replace(/\.([cm]?ts)x?$/, ".d.$1")}`,
-    ),
+    ...disk,
+    ...[...sources, ...tsxSources].map((path) => `dist/${path.slice(4).replace(/\.([cm]?ts)x?$/, ".d.$1")}`),
   ]);
-  const pattern = posix.normalize(target);
   const star = pattern.indexOf("*");
   return matches.size === 0
     ? [{ ...plan, target: pattern }]

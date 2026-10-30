@@ -453,6 +453,31 @@ describe("analyzeReference", () => {
     expect(files[1]?.contents).toContain("export declare const b = 2;");
   });
 
+  it("expands export patterns across nested source directories", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-wildcard-nested", {
+      "parts/a.ts": "/** A. */ export const a = 1;",
+      "parts/nested/b.ts": "/** B. */ export const b = 2;",
+    });
+    (workspacePackage.manifest as Record<string, unknown>).exports = {
+      "./parts/*": { types: "./dist/parts/*.d.ts" },
+    };
+    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    expect(model.entrypoints.map((entry) => entry.subpath)).toEqual(["./parts/a", "./parts/nested/b"]);
+    expect(files[1]?.path).toBe("fixture-wildcard-nested/docs/reference/parts/nested/b.md");
+    expect(files[1]?.contents).toContain("export declare const b = 2;");
+  });
+
+  it("rejects a nested wildcard segment that is not kebab-case", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-wildcard-nested-invalid", {
+      "parts/a.ts": "/** A. */ export const a = 1;",
+      "parts/notKebab/b.ts": "/** B. */ export const b = 2;",
+    });
+    (workspacePackage.manifest as Record<string, unknown>).exports = {
+      "./parts/*": { types: "./dist/parts/*.d.ts" },
+    };
+    await expect(analyzeReference(workspacePackage, { prose: true })).rejects.toThrow(/notKebab.*kebab-case/);
+  });
+
   it("ignores ambient files belonging only to a referenced test project", { timeout: 30_000 }, async () => {
     const workspacePackage = await createReferenceFixture("fixture-solution-test-types", {
       "index.ts": "/** Makes a map. */\nexport function make(): Map<string, string> { return new Map(); }\n",
