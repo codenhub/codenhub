@@ -39,7 +39,7 @@ function makeToast(options: RawToastOptions): Toast {
 
 function renderToast(toast: Toast): HTMLDivElement {
   toast.show();
-  const element = document.body.querySelector("[role='status'], [role='alert']");
+  const element = document.body.querySelector(".coden-toast");
   if (!(element instanceof HTMLDivElement)) {
     throw new Error("Expected toast element to render.");
   }
@@ -59,9 +59,8 @@ describe("Toast rendering", () => {
     expect(element.children).toHaveLength(2);
     expect(element.querySelector(".coden-toast-main")).not.toBeNull();
     expect(element.querySelector(".coden-toast-actions")).not.toBeNull();
-    expect(element.getAttribute("role")).toBe("status");
-    expect(element.getAttribute("aria-live")).toBe("polite");
-    expect(element.getAttribute("aria-atomic")).toBe("true");
+    expect(element.hasAttribute("role")).toBe(false);
+    expect(element.hasAttribute("aria-live")).toBe(false);
   });
 
   it("should use a compact dismiss button with a larger close icon", () => {

@@ -6,7 +6,7 @@ export type {
   CustomDefaults,
   CustomToastOptions,
   DialogDispatcher,
-  InteractiveToastHandle,
+  DialogHandle,
   LoadingDefaults,
   LoadingToastOptions,
   PromiseToastOptions,

@@ -62,7 +62,7 @@ This document records the internal architecture, DOM isolation strategies, lifec
 
 ### 4. Thenable Interactive Handles (`PromiseLike<T>`)
 
-- `InteractiveToastHandle<T>` implements the `PromiseLike<T>` interface.
+- `DialogHandle<T>` implements the `PromiseLike<T>` interface.
 - Awaiting the return value of `dialog.confirm(...)`, `dialog.prompt(...)`, or `dialog.alert(...)` directly invokes its `.then()` implementation, resolving to `boolean`, `string | null`, or `void` upon user interaction.
 - If a consumer retains the handle object rather than immediately awaiting it, they retain access to programmatic control (`handle.dismiss()`), lifecycle inspection (`handle.state`), and cleanup monitoring (`handle.settled`).
 - If dismissed programmatically or cancelled via the ESC key, the dialog settles with its canonical fallback value (`false` for confirm, `null` for prompt, `undefined` for alert).

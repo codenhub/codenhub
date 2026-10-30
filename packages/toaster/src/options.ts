@@ -57,7 +57,6 @@ const TOAST_POSITIONS: readonly ToastPosition[] = [
   "bottom-left",
   "top-center",
   "bottom-center",
-  "center",
 ];
 const TOAST_ROLES: readonly ToastRole[] = ["alert", "status"];
 
@@ -314,7 +313,6 @@ export interface RawToastOptions {
   position?: ToastPosition;
   duration?: number;
   dismissible?: boolean;
-  closeButton?: boolean;
   autoDismiss?: boolean;
   tokens?: ToastTokens;
   className?: string;
@@ -360,7 +358,7 @@ export function normalizeToastOptions(params: {
   assertToastRole(role);
 
   const margin = options.margin ?? config.margin;
-  const dismissible = options.dismissible ?? options.closeButton ?? config.dismissible;
+  const dismissible = options.dismissible ?? config.dismissible;
   const autoDismiss = options.autoDismiss ?? preset?.autoDismiss ?? config.autoDismiss;
 
   const resolvedTitle = hasNonEmptyString(title) ? title : null;

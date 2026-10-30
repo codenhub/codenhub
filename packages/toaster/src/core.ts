@@ -1,8 +1,8 @@
-import { removeInstanceContainers } from "./dom";
+import { applyInstanceMargin, removeInstanceContainers } from "./dom";
 import { ModalController } from "./modal";
 import { DEFAULT_CONFIG, DEFAULT_DISMISS_LABEL, assertToastPosition } from "./options";
 import type { RawToastOptions, ResolvedToastConfig } from "./options";
-import { Toast } from "./toast-base";
+import { Toast, reportUncaughtError } from "./toast-base";
 import { reconcileCapacity } from "./toast-helpers";
 import { applyGlobalTokens, assertValidTokens, removeGlobalTokens } from "./tokens";
 import type {
@@ -103,7 +103,7 @@ function toStructuredPromiseUpdate(result: string | ToastOptions, type: Semantic
     action: result.action !== undefined ? result.action : null,
     icon: result.icon,
     duration: result.duration,
-    dismissible: result.dismissible ?? result.closeButton,
+    dismissible: result.dismissible,
     className: result.className,
     tokens: result.tokens,
   };
@@ -282,17 +282,25 @@ class ToastManager {
       duration: options.duration,
     });
 
+    // A throwing formatter must not strand the loader (it is neither
+    // dismissible nor evictable) or replace the caller's outcome, so its
+    // error is reported and the loader is dismissed instead.
+    const settle = (type: SemanticType, format: () => string | ToastOptions): void => {
+      try {
+        handle.update(toStructuredPromiseUpdate(format(), type));
+      } catch (formatError) {
+        reportUncaughtError(formatError);
+        handle.dismiss();
+      }
+    };
+
     return Promise.resolve(promise).then(
       (value) => {
-        const successResult = typeof options.success === "function" ? options.success(value) : options.success;
-        const successOpts = toStructuredPromiseUpdate(successResult, "success");
-        handle.update(successOpts);
+        settle("success", () => (typeof options.success === "function" ? options.success(value) : options.success));
         return value;
       },
       (error) => {
-        const errorResult = typeof options.error === "function" ? options.error(error) : options.error;
-        const errorOpts = toStructuredPromiseUpdate(errorResult, "error");
-        handle.update(errorOpts);
+        settle("error", () => (typeof options.error === "function" ? options.error(error) : options.error));
         throw error;
       },
     );
@@ -322,7 +330,7 @@ class ToastManager {
     this.validateConfig(merged);
     const nextConfig = copyConfig(merged);
 
-    if (config.tokens !== undefined) {
+    if (config.tokens !== undefined || config.nonce !== undefined) {
       applyGlobalTokens(
         nextConfig.tokens,
         this.instanceId,
@@ -343,33 +351,7 @@ class ToastManager {
     }
 
     if (config.margin !== undefined) {
-      const parent = this.getParent();
-      parent.querySelectorAll(`[data-toast-container][data-toast-instance="${this.instanceId}"]`).forEach((el) => {
-        if (el.tagName === "DIV") {
-          const container = el as HTMLDivElement;
-          const margin = config.margin;
-          if (margin) {
-            if (typeof margin === "string") {
-              container.style.setProperty("--toast-margin-x", margin);
-              container.style.setProperty("--toast-margin-y", margin);
-            } else {
-              if (margin.x) {
-                container.style.setProperty("--toast-margin-x", margin.x);
-              } else {
-                container.style.removeProperty("--toast-margin-x");
-              }
-              if (margin.y) {
-                container.style.setProperty("--toast-margin-y", margin.y);
-              } else {
-                container.style.removeProperty("--toast-margin-y");
-              }
-            }
-          } else {
-            container.style.removeProperty("--toast-margin-x");
-            container.style.removeProperty("--toast-margin-y");
-          }
-        }
-      });
+      applyInstanceMargin({ parent: this.getParent(), instanceId: this.instanceId, margin: config.margin });
     }
   }
 
@@ -436,7 +418,7 @@ class ToastManager {
       instanceId: this.instanceId,
       position: config.position ?? DEFAULT_CONFIG.position,
       duration: config.duration ?? DEFAULT_CONFIG.duration,
-      dismissible: config.dismissible ?? config.closeButton ?? DEFAULT_CONFIG.dismissible,
+      dismissible: config.dismissible ?? DEFAULT_CONFIG.dismissible,
       autoDismiss: config.autoDismiss ?? DEFAULT_CONFIG.autoDismiss,
       maxVisible: config.maxVisible ?? DEFAULT_CONFIG.maxVisible,
       margin: config.margin,
@@ -524,8 +506,11 @@ export function createToaster(config?: ToasterConfig): Toaster {
   return toaster as Toaster;
 }
 
+// Both singletons are marked pure so a bundler drops them, and with them the
+// whole package, when nothing uses them. The package declares no side effects.
+
 /** Pre-configured default browser singleton for notifications. */
-export const toast: Toaster = createToaster();
+export const toast: Toaster = /* @__PURE__ */ createToaster();
 
 /** Pre-configured default browser singleton for interactive dialogs. */
-export const dialog: DialogDispatcher = toast.dialog;
+export const dialog: DialogDispatcher = /* @__PURE__ */ (() => toast.dialog)();

@@ -21,7 +21,7 @@ describe("overflow protection", () => {
     const toaster = createToaster({ maxVisible: 1 });
     const first = toaster.success("Hovered");
     flushAnimations();
-    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
     element.dispatchEvent(new MouseEvent("mouseenter"));
 
     const second = toaster.success("Waiting");
@@ -35,7 +35,7 @@ describe("overflow protection", () => {
     const toaster = createToaster({ maxVisible: 1 });
     const first = toaster.success("Focused");
     flushAnimations();
-    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
     element.dispatchEvent(new FocusEvent("focusin"));
 
     const second = toaster.success("Waiting");
@@ -59,7 +59,7 @@ describe("overflow protection", () => {
     const toaster = createToaster({ maxVisible: 1 });
     const first = toaster.success("Hovered");
     flushAnimations();
-    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
     element.dispatchEvent(new MouseEvent("mouseenter"));
     const second = toaster.success("Waiting");
     expect(second.state).toBe("queued");
@@ -86,7 +86,7 @@ describe("overflow protection", () => {
     const toaster = createToaster({ maxVisible: 1 });
     const first = toaster.success("Persistent", { autoDismiss: false });
     flushAnimations();
-    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
     element.dispatchEvent(new MouseEvent("mouseenter"));
 
     const second = toaster.success("Waiting");
@@ -100,7 +100,7 @@ describe("overflow protection", () => {
     const toaster = createToaster({ maxVisible: 1 });
     const first = toaster.success("Persistent", { autoDismiss: false });
     flushAnimations();
-    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
     element.dispatchEvent(new FocusEvent("focusin"));
 
     const second = toaster.success("Waiting");
@@ -114,7 +114,7 @@ describe("overflow protection", () => {
     const toaster = createToaster({ maxVisible: 1 });
     const first = toaster.success("Interactive", { autoDismiss: false });
     flushAnimations();
-    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
     // Simulates a second focusable element inside the toast, e.g. a link in
     // custom content alongside the dismiss button.
     const innerButton = document.createElement("button");
@@ -141,7 +141,7 @@ describe("overflow protection", () => {
     const toaster = createToaster({ maxVisible: 1 });
     const first = toaster.success("Persistent", { autoDismiss: false });
     flushAnimations();
-    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
     element.dispatchEvent(new MouseEvent("mouseenter"));
     const second = toaster.success("Waiting");
     expect(second.state).toBe("queued");
@@ -158,7 +158,7 @@ describe("overflow protection", () => {
     const toaster = createToaster({ maxVisible: 1, duration: 100000 });
     const first = toaster.success("Hovered");
     flushAnimations();
-    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
     element.dispatchEvent(new MouseEvent("mouseenter"));
     const second = toaster.success("Waiting");
     expect(second.state).toBe("queued");
@@ -175,7 +175,7 @@ describe("overflow protection", () => {
     const toaster = createToaster({ maxVisible: 1 });
     const first = toaster.success("Both", { autoDismiss: false });
     flushAnimations();
-    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
     element.dispatchEvent(new MouseEvent("mouseenter"));
     element.dispatchEvent(new FocusEvent("focusin"));
 
@@ -290,6 +290,27 @@ describe("token stylesheet CSP compatibility", () => {
     toaster.destroy();
   });
 
+  it("rewrites the token stylesheet with a nonce passed to configure()", () => {
+    const toaster = createToaster({ tokens: { successBg: "red" }, nonce: "first" });
+    toaster.configure({ nonce: "second" });
+    const styleElements = document.head.querySelectorAll<HTMLStyleElement>("style[data-toast-token-owner]");
+
+    // A new element, since a browser checks a nonce when a stylesheet is inserted, not when its attribute changes.
+    expect(styleElements).toHaveLength(1);
+    expect(styleElements[0]!.nonce).toBe("second");
+    toaster.destroy();
+  });
+
+  it("rewrites the token stylesheet when configure() changes tokens and nonce together", () => {
+    const toaster = createToaster({ tokens: { successBg: "red" }, nonce: "first" });
+    toaster.configure({ tokens: { successBg: "blue" }, nonce: "second" });
+    const styleElements = document.head.querySelectorAll<HTMLStyleElement>("style[data-toast-token-owner]");
+
+    expect(styleElements).toHaveLength(1);
+    expect(styleElements[0]!.nonce).toBe("second");
+    toaster.destroy();
+  });
+
   it("removes the owned node and rejects construction if the stylesheet cannot initialize", () => {
     const sheetSpy = vi.spyOn(HTMLStyleElement.prototype, "sheet", "get").mockReturnValue(null);
 
@@ -336,28 +357,21 @@ describe("token stylesheet CSP compatibility", () => {
 
     toaster.destroy();
   });
-});
 
-describe("live region announcement ordering", () => {
-  it("inserts the announcement region before populating its content", () => {
-    const toaster = createToaster();
-    const observer = new MutationObserver(() => {});
-    observer.observe(document.body, { childList: true, subtree: true });
+  it("keeps the working token stylesheet when its replacement for a new nonce fails", () => {
+    const toaster = createToaster({ tokens: { successBg: "red" }, nonce: "first" });
+    const styleElement = document.head.querySelector<HTMLStyleElement>("style[data-toast-token-owner]");
 
-    toaster.success("Announced");
+    const sheetSpy = vi.spyOn(HTMLStyleElement.prototype, "sheet", "get").mockReturnValue(null);
+    expect(() => toaster.configure({ nonce: "second" })).toThrow(/could not be initialized/);
+    sheetSpy.mockRestore();
 
-    const records = observer.takeRecords();
-    observer.disconnect();
-    const toastNode = document.body.querySelector("[role='status']") as HTMLElement;
-
-    const insertionIndex = records.findIndex((record) => Array.from(record.addedNodes).includes(toastNode));
-    const contentIndex = records.findIndex((record) => record.target === toastNode && record.addedNodes.length > 0);
-
-    expect(insertionIndex).toBeGreaterThanOrEqual(0);
-    expect(contentIndex).toBeGreaterThan(insertionIndex);
-    expect(toastNode.textContent).toContain("Announced");
+    expect(Array.from(document.head.querySelectorAll("style[data-toast-token-owner]"))).toEqual([styleElement]);
+    const rule = styleElement!.sheet!.cssRules[0] as CSSStyleRule;
+    expect(rule.style.getPropertyValue("--toast-color-success-bg")).toBe("red");
 
     toaster.destroy();
+    expect(document.head.querySelector("style[data-toast-token-owner]")).toBeNull();
   });
 });
 
@@ -400,7 +414,7 @@ describe("queued toast updates", () => {
     flushAnimations();
 
     expect(queued.state).toBe("visible");
-    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
     expect(element.className).toContain("coden-toast-success");
     expect(element.textContent).toContain("Done");
     toaster.destroy();
@@ -430,7 +444,7 @@ describe("option mutation safety", () => {
 
     tokens.successBg = "blue";
 
-    const element = document.body.querySelector<HTMLDivElement>("[role='status']");
+    const element = document.body.querySelector<HTMLDivElement>(".coden-toast");
     expect(element?.style.getPropertyValue("--toast-color-success-bg")).toBe("red");
     toaster.destroy();
   });
@@ -438,7 +452,7 @@ describe("option mutation safety", () => {
   it("does not apply a partial update when token validation fails", () => {
     const toaster = createToaster();
     const handle = toaster.success("Original message");
-    const element = document.body.querySelector("[role='status']");
+    const element = document.body.querySelector(".coden-toast");
 
     expect(() =>
       handle.update({ message: "Changed message", tokens: { successBg: "red; } body { display: none" } }),

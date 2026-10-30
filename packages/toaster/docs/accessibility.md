@@ -10,26 +10,26 @@ order: 5
 
 ## Toast announcements and ARIA live regions
 
-Screen readers and assistive devices receive toast updates through ARIA live regions:
+Screen readers hear toasts through two visually hidden live regions that each toaster instance adds to its container: one polite, one assertive. A toast's `role` decides which one speaks its text:
 
-- **Informational and loading toasts** (`toast()`, `toast.success()`, `toast.info()`, `toast.loading()`): Default to `role="status"`. Assistive technology announces the update at the next grace period without interrupting ongoing speech.
-- **Error and warning toasts** (`toast.error()`, `toast.warning()`): Default to `role="alert"`. Assistive technology immediately interrupts to communicate the urgent notification.
+- **`"status"`**, the default for `toast()`, `toast.success()`, `toast.info()`, and `toast.loading()`: announced through the polite region, after any speech in progress.
+- **`"alert"`**, the default for `toast.error()` and `toast.warning()`: announced through the assertive region, interrupting speech in progress.
 
 You can override the role per call when needed:
 
 ```ts
 import { toast } from "@codenhub/toaster";
 
-toast.info("Low-priority sync completed", {
+toast.warning("Storage is almost full", {
   role: "status",
 });
 ```
 
-### The ARIA22 live-region technique
+The announcement is the toast's title, description, or message, or the text of its custom content. Buttons are left out. A toast is announced again when an update changes its text or role, so a promise toast announces both its loading text and its outcome. The visible toast element is not itself a live region.
 
-A common bug in client-rendered live regions is inserting an element with `role="status"` and its content at the exact same moment. Many screen readers miss the announcement because the region was not being monitored prior to the mutation.
+A live region inserted together with its text is often missed, because assistive technology only announces changes to a region it already tracks. Each region is therefore added empty, and its first text follows 100ms later, as in the [W3C ARIA22 technique](https://www.w3.org/WAI/WCAG21/Techniques/aria/ARIA22.html). Announced text is removed from the region after 7 seconds.
 
-`@codenhub/toaster` follows the [W3C ARIA22 technique](https://www.w3.org/WAI/WCAG21/Techniques/aria/ARIA22.html): it inserts the empty live region container into the DOM first, giving assistive technology time to attach its observer before the text content is populated.
+While one of its dialogs is open, a toaster announces through live regions inside that dialog, because the rest of the page is inert then. Toasts from another toaster instance are not announced while the dialog is open, and the library does not repeat them after it closes.
 
 ### Accessible dismiss buttons
 

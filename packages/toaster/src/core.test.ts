@@ -164,7 +164,7 @@ describe("instance-level className", () => {
     const toaster = createToaster({ className: "glass" });
     toaster.success("Styled");
 
-    const element = document.body.querySelector("[role='status']");
+    const element = document.body.querySelector(".coden-toast");
     expect(element?.className).toContain("glass");
     toaster.destroy();
   });
@@ -173,7 +173,7 @@ describe("instance-level className", () => {
     const toaster = createToaster({ className: "glass" });
     toaster.success("Styled", { className: "urgent" });
 
-    const element = document.body.querySelector<HTMLDivElement>("[role='status']");
+    const element = document.body.querySelector<HTMLDivElement>(".coden-toast");
     expect(element?.className).toContain("glass");
     expect(element?.className).toContain("urgent");
     expect(element!.className.indexOf("glass")).toBeLessThan(element!.className.indexOf("urgent"));
@@ -209,7 +209,7 @@ describe("instance-level className", () => {
     const toaster = createToaster({ className: "glass" });
     const handle = toaster.success("Styled", { className: "class-one" });
 
-    const element = document.body.querySelector("[role='status']");
+    const element = document.body.querySelector(".coden-toast");
     expect(element?.className).toContain("glass");
     expect(element?.className).toContain("class-one");
 
@@ -322,6 +322,10 @@ describe("structured content and actions", () => {
 });
 
 describe("toast.promise", () => {
+  // Reads only the toasts: the hidden announcement regions repeat their text.
+  const toastText = (): string =>
+    Array.from(document.body.querySelectorAll(".coden-toast"), (element) => element.textContent).join(" ");
+
   it("manages promise success lifecycle with autoDismiss re-arming", async () => {
     vi.useFakeTimers();
     const toaster = createToaster();
@@ -337,7 +341,7 @@ describe("toast.promise", () => {
       error: "Failed",
     });
 
-    expect(document.body.textContent).toContain("Saving...");
+    expect(toastText()).toContain("Saving...");
     const loaderRoot = document.body.querySelector(".coden-toast");
     expect(loaderRoot?.classList.contains("coden-toast-default")).toBe(true);
 
@@ -346,14 +350,14 @@ describe("toast.promise", () => {
     expect(result).toEqual({ name: "Doc" });
 
     flushAnimations();
-    expect(document.body.textContent).toContain("Saved Doc!");
+    expect(toastText()).toContain("Saved Doc!");
     const successRoot = document.body.querySelector(".coden-toast");
     expect(successRoot?.classList.contains("coden-toast-success")).toBe(true);
 
     // Re-armed auto-dismiss should dismiss it after default duration
     vi.advanceTimersByTime(5000);
     flushAnimations();
-    expect(document.body.textContent).not.toContain("Saved Doc!");
+    expect(toastText()).not.toContain("Saved Doc!");
 
     vi.useRealTimers();
     toaster.destroy();
@@ -374,21 +378,70 @@ describe("toast.promise", () => {
       error: (err: unknown) => `Error: ${(err as Error).message}`,
     });
 
-    expect(document.body.textContent).toContain("Connecting...");
+    expect(toastText()).toContain("Connecting...");
 
     rejectPromise(new Error("Network timeout"));
     await expect(toastPromise).rejects.toThrow("Network timeout");
 
     flushAnimations();
-    expect(document.body.textContent).toContain("Error: Network timeout");
+    expect(toastText()).toContain("Error: Network timeout");
     const errorRoot = document.body.querySelector(".coden-toast");
     expect(errorRoot?.classList.contains("coden-toast-error")).toBe(true);
 
     vi.advanceTimersByTime(5000);
     flushAnimations();
-    expect(document.body.textContent).not.toContain("Error: Network timeout");
+    expect(toastText()).not.toContain("Error: Network timeout");
 
     vi.useRealTimers();
+    toaster.destroy();
+  });
+
+  it("dismisses the loader and keeps the original rejection when the error formatter throws", async () => {
+    const reportError = vi.fn();
+    vi.stubGlobal("reportError", reportError);
+    const toaster = createToaster();
+    const original = new Error("Network timeout");
+    const formatterError = new TypeError("formatter bug");
+
+    const toastPromise = toaster.promise(Promise.reject(original), {
+      loading: "Saving",
+      success: "Saved",
+      error: () => {
+        throw formatterError;
+      },
+    });
+
+    await expect(toastPromise).rejects.toBe(original);
+    flushAnimations();
+    expect(document.body.querySelector(".coden-toast-spinner")).toBeNull();
+    expect(document.body.textContent).not.toContain("Saving");
+    expect(reportError).toHaveBeenCalledWith(formatterError);
+
+    vi.unstubAllGlobals();
+    toaster.destroy();
+  });
+
+  it("dismisses the loader and keeps the resolved value when the success formatter throws", async () => {
+    const reportError = vi.fn();
+    vi.stubGlobal("reportError", reportError);
+    const toaster = createToaster();
+    const formatterError = new TypeError("formatter bug");
+
+    const toastPromise = toaster.promise(Promise.resolve(42), {
+      loading: "Saving",
+      success: () => {
+        throw formatterError;
+      },
+      error: "Failed",
+    });
+
+    await expect(toastPromise).resolves.toBe(42);
+    flushAnimations();
+    expect(document.body.querySelector(".coden-toast-spinner")).toBeNull();
+    expect(document.body.textContent).not.toContain("Saving");
+    expect(reportError).toHaveBeenCalledWith(formatterError);
+
+    vi.unstubAllGlobals();
     toaster.destroy();
   });
 
@@ -586,7 +639,7 @@ describe("toaster.clear() and dismiss()", () => {
     toaster.clear();
     flushAnimations();
 
-    expect(document.body.querySelector("[role='status'], [role='alert']")).toBeNull();
+    expect(document.body.querySelector(".coden-toast")).toBeNull();
     toaster.destroy();
   });
 
@@ -598,7 +651,7 @@ describe("toaster.clear() and dismiss()", () => {
     toaster.dismiss();
     flushAnimations();
 
-    expect(document.body.querySelector("[role='status'], [role='alert']")).toBeNull();
+    expect(document.body.querySelector(".coden-toast")).toBeNull();
     toaster.destroy();
   });
 
@@ -826,29 +879,30 @@ describe("SSR compatibility", () => {
 });
 
 describe("positioning and margins", () => {
-  it("should support top-center, bottom-center, and center positions", () => {
+  it("should support top-center and bottom-center positions", () => {
     const toaster = createToaster();
     const h1 = toaster.success("Top Center", { position: "top-center" });
     const h2 = toaster.success("Bottom Center", { position: "bottom-center" });
-    const h3 = toaster.success("Center", { position: "center" });
 
     const topCenterContainer = document.body.querySelector("[data-toast-container*='top-center']") as HTMLDivElement;
     const bottomCenterContainer = document.body.querySelector(
       "[data-toast-container*='bottom-center']",
     ) as HTMLDivElement;
-    const centerContainer = document.body.querySelector(".coden-toast-stack-center") as HTMLDivElement;
-
-    expect(topCenterContainer).not.toBeNull();
-    expect(bottomCenterContainer).not.toBeNull();
-    expect(centerContainer).not.toBeNull();
 
     expect(topCenterContainer.className).toContain("coden-toast-stack-top-center");
     expect(bottomCenterContainer.className).toContain("coden-toast-stack-bottom-center");
-    expect(centerContainer.className).toContain("coden-toast-stack-center");
 
     h1.dismiss();
     h2.dismiss();
-    h3.dismiss();
+    toaster.destroy();
+  });
+
+  it("has no center position", () => {
+    const toaster = createToaster();
+    // @ts-expect-error `"center"` was removed in 0.3.0.
+    expect(() => toaster.success("Center", { position: "center" })).toThrow("Invalid toast position: center");
+    // @ts-expect-error see above
+    expect(() => createToaster({ position: "center" })).toThrow("Invalid toast position: center");
     toaster.destroy();
   });
 
@@ -1001,7 +1055,7 @@ describe("Toast update", () => {
     const toaster = createToaster();
     const handle = toaster.success("Initial message");
 
-    const element = document.body.querySelector("[role='status']");
+    const element = document.body.querySelector(".coden-toast");
     expect(element?.textContent).toContain("Initial message");
 
     handle.update({ message: "Updated message" });
@@ -1017,7 +1071,7 @@ describe("Toast update", () => {
       tokens: { successBg: "red" },
     });
 
-    const element = document.body.querySelector<HTMLDivElement>("[role='status']");
+    const element = document.body.querySelector<HTMLDivElement>(".coden-toast");
     expect(element?.style.getPropertyValue("--toast-color-success-bg")).toBe("red");
 
     handle.update({ tokens: { successBg: "blue" } });
@@ -1032,7 +1086,7 @@ describe("Toast update", () => {
       className: "class-one",
     });
 
-    const element = document.body.querySelector("[role='status']");
+    const element = document.body.querySelector(".coden-toast");
     expect(element?.className).toContain("class-one");
     expect(element?.className).not.toContain("class-two");
 
@@ -1049,7 +1103,7 @@ describe("Toast update", () => {
     const handle = toaster.loading("Uploading…");
     flushAnimations();
 
-    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
     expect(element.className).toContain("coden-toast-default");
 
     handle.update({ type: "success", message: "Uploaded", duration: 2000, autoDismiss: true });
@@ -1090,7 +1144,7 @@ describe("Toast update", () => {
     const toaster = createToaster();
     const handle = toaster.success("Working");
     flushAnimations();
-    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
 
     handle.update({ type: "error", icon: "success" });
 
@@ -1105,7 +1159,7 @@ describe("Toast update", () => {
     const toaster = createToaster();
     const handle = toaster.success("Working");
     flushAnimations();
-    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
     expect(element.querySelector("svg.coden-toast-icon")).not.toBeNull();
 
     handle.update({ icon: null });
@@ -1118,7 +1172,7 @@ describe("Toast update", () => {
     const toaster = createToaster();
     const handle = toaster.success("Old message");
     flushAnimations();
-    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
     expect(element.textContent).toContain("Old message");
 
     const replacement = document.createElement("span");
@@ -1186,7 +1240,7 @@ describe("Toast update", () => {
     const toaster = createToaster();
     const handle = toaster.success("Original");
     flushAnimations();
-    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
 
     expect(() => handle.update({ content: "<script>alert(1)</script>" })).toThrow(/empty/);
     expect(element.textContent).toContain("Original");
@@ -1198,7 +1252,7 @@ describe("Toast update", () => {
     const toaster = createToaster();
     const handle = toaster("Persistent message");
     flushAnimations();
-    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
     expect(element.textContent).toContain("Persistent message");
 
     handle.update({ title: "" });
@@ -1207,15 +1261,18 @@ describe("Toast update", () => {
     toaster.destroy();
   });
 
-  it("honors closeButton alias in update()", () => {
-    const toaster = createToaster({ dismissible: false });
-    const handle = toaster("No close button");
+  it("has no closeButton alias for dismissible", () => {
+    // @ts-expect-error `closeButton` was removed in 0.3.0; `dismissible` is the only name.
+    const toaster = createToaster({ dismissible: false, closeButton: true });
+    // @ts-expect-error see above
+    const handle = toaster("No close button", { closeButton: true });
     flushAnimations();
-    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
     expect(element.querySelector(".coden-toast-dismiss")).toBeNull();
 
+    // @ts-expect-error see above
     handle.update({ closeButton: true });
-    expect(element.querySelector(".coden-toast-dismiss")).not.toBeNull();
+    expect(element.querySelector(".coden-toast-dismiss")).toBeNull();
 
     toaster.destroy();
   });
@@ -1246,7 +1303,7 @@ describe("Toast update", () => {
     const handle = toaster({ title: "Title Only" });
     flushAnimations();
 
-    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
     expect(element.textContent).toContain("Title Only");
     expect(element.querySelector("[data-toast-content]")).toBeNull();
 
@@ -1263,7 +1320,7 @@ describe("Toast update", () => {
     const handle = toaster("Initial body", { title: "Preserved Title" });
     flushAnimations();
 
-    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
     const titleEl = element.querySelector("[data-toast-title]");
     const descEl = element.querySelector("[data-toast-description]");
     expect(titleEl?.textContent).toBe("Preserved Title");
@@ -1313,7 +1370,7 @@ describe("background-tab auto-dismiss pause", () => {
     const toaster = createToaster({ duration: 1000 });
     const handle = toaster.success("Hover then hide");
     flushAnimations();
-    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
 
     element.dispatchEvent(new MouseEvent("mouseenter"));
     Object.defineProperty(document, "hidden", { value: true, configurable: true });
@@ -1524,6 +1581,18 @@ describe("Interactive Dialog Backdrop Dismiss and Title Options", () => {
     toaster.destroy();
   });
 
+  it("has no shouldBackdropDismiss alias for backdropDismiss", async () => {
+    const toaster = createToaster();
+    // @ts-expect-error `shouldBackdropDismiss` was removed in 0.3.0; `backdropDismiss` is the only name.
+    const handleConfirm = toaster.dialog.confirm("Confirm message", { shouldBackdropDismiss: false });
+    const dialogElement = document.body.querySelector("dialog")!;
+    mockBackdropRect(dialogElement);
+    clickBackdrop(dialogElement);
+    expect(await handleConfirm.result).toBe(false);
+    expect(dialogElement.open).toBe(false);
+    toaster.destroy();
+  });
+
   it("should NOT dismiss confirm modal on backdrop click if backdropDismiss: false is passed", async () => {
     const toaster = createToaster();
     const handleConfirm = toaster.dialog.confirm("Confirm message", { backdropDismiss: false });
@@ -1582,7 +1651,7 @@ describe("WCAG Accessibility", () => {
     const handle = toaster.success("Hover Test");
     flushAnimations();
 
-    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
     expect(element).toBeTruthy();
 
     vi.advanceTimersByTime(1000);
@@ -1609,7 +1678,7 @@ describe("WCAG Accessibility", () => {
     const handle = toaster.success("Focus Test");
     flushAnimations();
 
-    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
     expect(element).toBeTruthy();
 
     element.dispatchEvent(new FocusEvent("focusin"));

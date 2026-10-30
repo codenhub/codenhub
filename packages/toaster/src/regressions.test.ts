@@ -65,14 +65,6 @@ describe("configuration boundaries", () => {
     expect(() => toaster("Invalid", { type: "critical" as never })).toThrow(/type/);
     toaster.destroy();
   });
-
-  it("should honor a semantic role override", () => {
-    const toaster = createToaster();
-    toaster.error("Recoverable", { role: "status" });
-
-    expect(document.body.querySelector("[role='status']")?.textContent).toContain("Recoverable");
-    toaster.destroy();
-  });
 });
 
 describe("toast lifecycle", () => {
@@ -174,7 +166,7 @@ describe("toast lifecycle", () => {
     const toaster = createToaster({ duration: 2000 });
     const handle = toaster.success("Timed");
     flushAnimations();
-    const element = document.body.querySelector("[role='status']")!;
+    const element = document.body.querySelector(".coden-toast")!;
 
     vi.advanceTimersByTime(1000);
     element.dispatchEvent(new MouseEvent("mouseenter"));
@@ -191,7 +183,7 @@ describe("toast lifecycle", () => {
     vi.useFakeTimers();
     const toaster = createToaster({ duration: 2000 });
     const handle = toaster.success("Entering");
-    const element = document.body.querySelector("[role='status']")!;
+    const element = document.body.querySelector(".coden-toast")!;
 
     element.dispatchEvent(new MouseEvent("mouseenter"));
     element.dispatchEvent(new MouseEvent("mouseleave"));

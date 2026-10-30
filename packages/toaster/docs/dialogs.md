@@ -13,7 +13,7 @@ order: 3
 Rather than simulating modal overlays with complex `z-index` stacks and manual focus traps, `@codenhub/toaster` uses the browser's native `<dialog>` platform primitive:
 
 - **Browser Top Layer**: Always renders above every other element in the DOM tree, regardless of ancestor `z-index` or `overflow: hidden` rules.
-- **Inert Document**: The browser automatically disables user interaction with the background document while the modal is open.
+- **Inert Document**: The browser automatically disables user interaction with the background document while the modal is open. The same toaster's toasts move into the dialog for that time, so they stay usable (see [Concepts](concepts.md#the-two-presentation-layers)).
 - **Focus Trap & Restoration**: Focus is automatically confined within the dialog, and restored to the triggering element when the dialog closes.
 - **Escape Key Handling**: Pressing Escape triggers standard dialog dismissal, resolving the operation with its cancel value.
 
@@ -87,7 +87,7 @@ redirectToLogin();
 
 ## The thenable handle contract
 
-All dialog methods return an `InteractiveToastHandle<T>`. This handle implements `PromiseLike<T>`, meaning you can either `await` the method call directly or capture the handle object for programmatic control:
+All dialog methods return an `DialogHandle<T>`. This handle implements `PromiseLike<T>`, meaning you can either `await` the method call directly or capture the handle object for programmatic control:
 
 ```ts
 import { dialog } from "@codenhub/toaster";

@@ -41,6 +41,8 @@ interface OwnedStyleEntry {
   readonly element: HTMLStyleElement;
   /** The exact `tokens` object last successfully applied, for the reference-equality skip in {@link applyGlobalTokens}. */
   tokens: ToastTokens;
+  /** The nonce the element was inserted with. */
+  nonce: string | undefined;
 }
 
 const ownedStyleElements = new Map<string, OwnedStyleEntry>();
@@ -97,8 +99,8 @@ export function replaceTokens(style: CSSStyleDeclaration, tokens: ToastTokens | 
  * @throws {Error} If the stylesheet cannot be read back as a `CSSStyleRule`
  *   -- typically a CSP blocking the element outright. A newly created
  *   element is removed before this throws, so a caught failure leaves no
- *   owned node behind; a previously working, reused element is left exactly
- *   as it was instead of being torn down.
+ *   new node behind; the previously working element, reused or about to be
+ *   replaced, is left exactly as it was instead of being torn down.
  */
 export function applyGlobalTokens(
   tokens: ToastTokens | null | undefined,
@@ -115,8 +117,13 @@ export function applyGlobalTokens(
     return;
   }
 
+  // A changed nonce needs a new element: a browser checks the nonce when a
+  // stylesheet is inserted, not when the attribute changes later.
   const isReusable = Boolean(
-    existing && existing.element.ownerDocument === documentRef && existing.element.isConnected,
+    existing &&
+    existing.element.ownerDocument === documentRef &&
+    existing.element.isConnected &&
+    existing.nonce === nonce,
   );
 
   // A toaster instance reapplies its own tokens on every dispatch (see
@@ -130,9 +137,6 @@ export function applyGlobalTokens(
   }
 
   const existingElement = existing?.element;
-  if (!isReusable) {
-    existingElement?.remove();
-  }
   const styleElement = isReusable ? existingElement! : documentRef.createElement("style");
   if (!isReusable) {
     styleElement.dataset.toastTokenOwner = styleId;
@@ -152,15 +156,20 @@ export function applyGlobalTokens(
     }
     rule.style.cssText = "";
     applyTokens(rule.style, tokens);
-    ownedStyleElements.set(styleId, { element: styleElement, tokens });
+    ownedStyleElements.set(styleId, { element: styleElement, tokens, nonce });
+    // Removed only once its replacement works, so a replacement a CSP blocks
+    // does not take the working token rule with it.
+    if (!isReusable) {
+      existingElement?.remove();
+    }
   } catch (error) {
     // A reused element was already working before this call: the failing
     // check above runs before any mutation, so its prior declarations are
     // untouched. Only a newly created element -- which never had a working
-    // state to preserve -- is torn down here.
+    // state to preserve -- is torn down here; the entry for the element it
+    // would have replaced stays, so destroy() still removes that one.
     if (!isReusable) {
       styleElement.remove();
-      ownedStyleElements.delete(styleId);
     }
     throw error;
   }

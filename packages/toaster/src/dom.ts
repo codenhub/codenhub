@@ -12,7 +12,6 @@ type ToastElementOptions = Pick<
   | "message"
   | "description"
   | "action"
-  | "role"
   | "rootClassName"
   | "className"
   | "instanceClassName"
@@ -27,7 +26,6 @@ const POSITION_CONTAINER_CLASSES: Record<ToastPosition, string> = {
   "bottom-left": "coden-toast-stack coden-toast-stack-bottom-left",
   "top-center": "coden-toast-stack coden-toast-stack-top-center",
   "bottom-center": "coden-toast-stack coden-toast-stack-bottom-center",
-  center: "coden-toast-stack coden-toast-stack-center",
 };
 
 const FALLBACK_ANIMATION_DURATION_MS = 400;
@@ -287,33 +285,21 @@ export function applyRootClassChange(
 }
 
 /**
- * Builds the toast's outer, empty announcement region: `role`/`aria-live`
- * carried from the first moment it exists, with no content inside yet.
- *
- * Deliberately separate from {@link populateToastContent}: assistive
- * technology tracks a live region from the mutation that inserts it, and a
- * region that arrives already full of content is one mutation an AT's
- * observer never had the chance to start watching (the ARIA22 technique).
- * Insert the empty shell this returns into the document first, then call
- * {@link populateToastContent} on the now-connected element.
+ * Builds the toast's outer element with no content inside yet. Its content
+ * comes from {@link populateToastContent}, and screen readers hear it
+ * through the instance's live regions (see `announcer.ts`), not through
+ * this element.
  */
 export function createToastShell(
-  options: Pick<
-    ToastElementOptions,
-    "className" | "instanceClassName" | "instanceId" | "role" | "rootClassName" | "tokens"
-  >,
+  options: Pick<ToastElementOptions, "className" | "instanceClassName" | "instanceId" | "rootClassName" | "tokens">,
   documentRef: Document,
 ): HTMLDivElement {
-  const ariaLive = options.role === "alert" ? "assertive" : "polite";
   const container = documentRef.createElement("div");
 
   container.className = options.className ? `${options.rootClassName} ${options.className}` : options.rootClassName;
   container.setAttribute("data-root-class", options.rootClassName);
   container.setAttribute("data-instance-class", options.instanceClassName ?? "");
   container.setAttribute("data-toast-instance", options.instanceId);
-  container.setAttribute("role", options.role);
-  container.setAttribute("aria-live", ariaLive);
-  container.setAttribute("aria-atomic", "true");
   applyTokens(container.style, options.tokens);
 
   return container;
@@ -417,6 +403,31 @@ export function populateToastContent(
   }
 }
 
+/** A node's text without the labels of any buttons inside it, such as the dismiss button or ones in custom content. */
+function getTextOutsideButtons(node: Node): string {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent ?? "";
+  }
+  if (node.nodeName === "BUTTON") {
+    return "";
+  }
+  return Array.from(node.childNodes, getTextOutsideButtons).join("");
+}
+
+/**
+ * The text a screen reader should hear for a populated toast: its title,
+ * description, or message, or the text of its custom content. Separate
+ * parts are joined with a space, and the dismiss and action buttons are
+ * left out.
+ */
+export function getToastAnnouncementText(element: HTMLDivElement): string {
+  const main = element.querySelector("[data-toast-main]");
+  const parts = main
+    ? Array.from(main.querySelectorAll("[data-toast-title], [data-toast-description], [data-toast-message]"))
+    : Array.from(element.childNodes);
+  return parts.map(getTextOutsideButtons).join(" ").replace(/\s+/g, " ").trim();
+}
+
 interface ContainerParams {
   parent: HTMLElement;
   position: ToastPosition;
@@ -429,15 +440,78 @@ function getContainerKey(params: { instanceId: string; position: ToastPosition }
   return `${instanceId}-${position}`;
 }
 
+/** Marks the instance dialog that holds the instance's stacks while it is open. */
+const LAYER_HOST_ATTRIBUTE = "data-toast-layer-host";
+
+/**
+ * Where an instance's stacks and live regions go: its dialog while that is
+ * open as a modal, since the browser makes everything outside a modal dialog
+ * inert, and `parent` otherwise.
+ */
+export function getToastLayerHost(parent: HTMLElement, instanceId: string): HTMLElement {
+  for (const child of parent.children) {
+    if (child.hasAttribute(LAYER_HOST_ATTRIBUTE) && child.getAttribute("data-toast-instance") === instanceId) {
+      return child as HTMLElement;
+    }
+  }
+  return parent;
+}
+
+/**
+ * Makes `dialog` the instance's layer host and moves its stacks into it, or,
+ * with `dialog` set to `null`, moves them from the current host back to
+ * `parent`. Live regions are not moved: a region inserted somewhere new may
+ * not be tracked again by assistive technology, so the dialog gets its own.
+ */
+export function setToastLayerHost(parent: HTMLElement, instanceId: string, dialog: HTMLDialogElement | null): void {
+  const from = getToastLayerHost(parent, instanceId);
+  const to = dialog ?? parent;
+  if (from === to) {
+    return;
+  }
+  const stacks = Array.from(from.children).filter(
+    (child) => child.hasAttribute("data-toast-container") && child.getAttribute("data-toast-instance") === instanceId,
+  );
+  from.removeAttribute(LAYER_HOST_ATTRIBUTE);
+  dialog?.setAttribute(LAYER_HOST_ATTRIBUTE, "");
+  to.append(...stacks);
+}
+
 export function getContainer(params: ContainerParams): HTMLDivElement | null {
   const { parent, position, instanceId } = params;
   const id = getContainerKey({ instanceId, position });
   return (
-    Array.from(parent.children).find(
+    Array.from(getToastLayerHost(parent, instanceId).children).find(
       (element): element is HTMLDivElement =>
         element.tagName === "DIV" && element.getAttribute("data-toast-container") === id,
     ) ?? null
   );
+}
+
+/** Writes `margin` onto a stack container; a falsy value clears it. */
+function setContainerMargin(container: HTMLDivElement, margin: NonNullable<ContainerParams["margin"]>): void {
+  const { x, y } = typeof margin === "string" ? { x: margin, y: margin } : margin;
+  if (x) {
+    container.style.setProperty("--toast-margin-x", x);
+  } else {
+    container.style.removeProperty("--toast-margin-x");
+  }
+  if (y) {
+    container.style.setProperty("--toast-margin-y", y);
+  } else {
+    container.style.removeProperty("--toast-margin-y");
+  }
+}
+
+/** Writes `margin` onto every stack container of an instance, as `configure({ margin })` does. */
+export function applyInstanceMargin(params: {
+  parent: HTMLElement;
+  instanceId: string;
+  margin: NonNullable<ContainerParams["margin"]>;
+}): void {
+  params.parent
+    .querySelectorAll<HTMLDivElement>(`div[data-toast-container][data-toast-instance="${params.instanceId}"]`)
+    .forEach((container) => setContainerMargin(container, params.margin));
 }
 
 /**
@@ -459,30 +533,11 @@ export function getOrCreateContainer(params: ContainerParams): HTMLDivElement {
     container.setAttribute("data-toast-container", id);
     container.setAttribute("data-toast-instance", instanceId);
     container.className = POSITION_CONTAINER_CLASSES[position];
-    parent.appendChild(container);
+    getToastLayerHost(parent, instanceId).appendChild(container);
   }
 
   if (margin !== undefined) {
-    if (margin) {
-      if (typeof margin === "string") {
-        container.style.setProperty("--toast-margin-x", margin);
-        container.style.setProperty("--toast-margin-y", margin);
-      } else {
-        if (margin.x) {
-          container.style.setProperty("--toast-margin-x", margin.x);
-        } else {
-          container.style.removeProperty("--toast-margin-x");
-        }
-        if (margin.y) {
-          container.style.setProperty("--toast-margin-y", margin.y);
-        } else {
-          container.style.removeProperty("--toast-margin-y");
-        }
-      }
-    } else {
-      container.style.removeProperty("--toast-margin-x");
-      container.style.removeProperty("--toast-margin-y");
-    }
+    setContainerMargin(container, margin);
   }
 
   return container;
@@ -519,12 +574,6 @@ function getKeyframes(position: ToastPosition): Keyframe[] {
     return [
       { transform: "translateY(100%)", opacity: 0 },
       { transform: "translateY(0)", opacity: 1 },
-    ];
-  }
-  if (position === "center") {
-    return [
-      { transform: "scale(0.9)", opacity: 0 },
-      { transform: "scale(1)", opacity: 1 },
     ];
   }
 
