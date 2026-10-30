@@ -69,7 +69,7 @@ export interface ReferenceMember extends ReferenceProse {
   /** Whether the member is `static`. */
   isStatic: boolean;
   /**
-   * Bare name of the type this member is inherited from, when it is not declared
+   * Qualified name of the type this member is inherited from, when it is not declared
    * in place. Set for a member reached through `extends`; the empty string when
    * the member is inherited but the source type could not be named. An inherited
    * member carries no `signature` or prose — it is rendered as a link to the type
@@ -439,7 +439,7 @@ function declarationComment(reflection: Reflection): Comment | undefined {
 }
 
 /**
- * The bare name of the type a member is inherited from, or `undefined` when the
+ * The qualified name of the type a member is inherited from, or `undefined` when the
  * member is declared in place. Returns the empty string when the member is
  * inherited but `inheritedFrom` carried no usable name.
  */
@@ -448,7 +448,11 @@ function inheritedTypeName(reflection: Reflection): string | undefined {
     return undefined;
   }
   const qualified = reflection.inheritedFrom?.name;
-  return typeof qualified === "string" && qualified !== "" ? (qualified.split(".")[0] ?? "") : "";
+  return typeof qualified === "string" && qualified !== ""
+    ? qualified.includes(".")
+      ? qualified.slice(0, qualified.lastIndexOf("."))
+      : qualified
+    : "";
 }
 
 function buildMember(reflection: Reflection): ReferenceMember | undefined {
@@ -800,6 +804,12 @@ function withResolvedCommentTargets(project: Reflection): Reflection {
     const copy = Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, rewrite(entry, names)]));
     if (value.kind === "inline-tag" && typeof value.target === "number") {
       copy.target = names.get(value.target) ?? value.target;
+    }
+    if (isRecord(value.inheritedFrom) && typeof value.inheritedFrom.target === "number") {
+      copy.inheritedFrom = {
+        ...value.inheritedFrom,
+        name: names.get(value.inheritedFrom.target) ?? value.inheritedFrom.name,
+      };
     }
     return copy;
   };

@@ -144,6 +144,26 @@ describe("overload documentation", () => {
   );
 });
 
+describe("inherited member identity", () => {
+  it("links an inherited member to its qualified declaring type", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("inherited-ns", {
+      "index.ts": `
+        export namespace NS {
+          /** Base. */ export class Base {
+            /** Field. */ field = 1;
+          }
+        }
+        /** Child. */ export class Child extends NS.Base {}
+      `,
+    });
+    const { model, files } = await analyzeReference(fixture, { prose: true });
+    expect(model.entrypoints[0]?.symbols[0]?.members.find((member) => member.name === "field")?.inheritedFrom).toBe(
+      "NS.Base",
+    );
+    expect(files[0]?.contents).toContain("Inherited from [NS.Base](#nsbase).");
+  });
+});
+
 describe("extractSignatures", () => {
   const index = extractSignatures(dts, "index.d.ts");
 
