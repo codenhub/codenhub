@@ -341,6 +341,21 @@ function createSingleEntrypointFixture(): Promise<WorkspacePackage> {
 }
 
 describe("analyzeReference", () => {
+  it("documents entrypoints sharing a nested source directory", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-nested", {
+      "nested/a.ts": "/** A value. */\nexport const a = 1;\n",
+      "nested/b/index.ts": "/** B value. */\nexport const b = 2;\n",
+    });
+    workspacePackage.manifest.exports = {
+      "./a": { types: "./dist/nested/a.d.ts" },
+      "./b": { types: "./dist/nested/b/index.d.ts" },
+    };
+    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    expect(model.entrypoints.map((entry) => entry.symbols.map((symbol) => symbol.name))).toEqual([["a"], ["b"]]);
+    expect(files[0]?.contents).toContain("export declare const a = 1;");
+    expect(files[1]?.contents).toContain("export declare const b = 2;");
+  });
+
   it.each(["tsx", "mts", "cts"])("documents the actual .%s entry source", { timeout: 30_000 }, async (extension) => {
     const workspacePackage = await createReferenceFixture(`fixture-${extension}`, {
       [`index.${extension}`]: "/** The answer. */\nexport const answer = 42;\n",

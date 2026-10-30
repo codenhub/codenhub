@@ -11,6 +11,25 @@ function textPart(text: string) {
   return { kind: "text", text };
 }
 
+it("rejects a missing expected entrypoint module", () => {
+  expect(() => buildReferenceModel({ name: "fixture", children: [] }, { "src/nested/a.ts": "./a" })).toThrow(
+    /entrypoint.*\.\/a.*src\/nested\/a\.ts/i,
+  );
+});
+
+it("associates modules by their source file even when display names differ", () => {
+  const model = buildReferenceModel(
+    {
+      name: "fixture",
+      children: [
+        { kind: 2, name: "a", sources: [{ fileName: "src/nested/a.ts" }], children: [{ kind: 32, name: "a" }] },
+      ],
+    },
+    { "src/nested/a.ts": "./a" },
+  );
+  expect(model.entrypoints[0]?.symbols.map((symbol) => symbol.name)).toEqual(["a"]);
+});
+
 const browserRegistryVariable = {
   id: 900,
   name: "browserErrorRegistry",

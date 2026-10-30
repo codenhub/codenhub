@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-26
+last_updated: 2026-10-30
 scope: Generated API reference documentation for public workspace packages.
 ---
 
@@ -177,7 +177,7 @@ TypeDoc is a dependency rather than an in-house extractor because faithfully mod
 - `reference/missing` — `error` — opted in, but `docs/reference/` is absent.
 - `reference/drift` — `error` — a generated page differs from what the generator produces now. This is the compliance-report view of the `hub generate --dry-run` gate.
 - `reference/unexpected-file` — `error` — a file exists under `docs/reference/` that the generator did not produce. `hub generate` only writes, so a page orphaned by a removed or renamed entrypoint must be deleted by hand in the same change; this finding fails the run until it is.
-- `reference/entrypoint` — `error` — a documented entrypoint's subpath is not kebab-case, a page path collides with another's, a configured `entrypoints` key does not resolve, `pages` is malformed or names an entrypoint that is not documented, or a split page receives no symbol.
+- `reference/entrypoint` — `error` — a documented entrypoint's subpath is not kebab-case, a page path collides with another's, a configured `entrypoints` key does not resolve, an expected entrypoint module is missing from analysis, `pages` is malformed or names an entrypoint that is not documented, or a split page receives no symbol.
 - `reference/unsupported-export` — `error` — a documented entrypoint exposes an export whose declaration kind the page model does not cover.
 - `reference/unresolved-type` — `error` — a documented declaration's emitted `.d.ts` names a type from this package that no page documents, either as a symbol or under **Internal types**. A global type from a hand-written `.d.ts` is one example: it has no emitted declaration to list.
 - `reference/empty-section` — `error` — a section would render nothing a reader can use: a symbol, overload, or declared member with no signature, or a namespace with no members. An inherited member is exempt, since it links to the type that declares it.

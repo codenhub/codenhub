@@ -702,9 +702,9 @@ function sourceFileOf(target: Reflection): string | undefined {
  * dropped; members inherited from another type in the package are kept as a bare
  * reference to that type, without repeating its signature or prose.
  * @param project Parsed `typedoc --json` output.
- * @param subpathByModule Maps each TypeDoc module name to its `exports` subpath key.
+ * @param subpathByModule Maps each entry source path (or TypeDoc module name) to its `exports` subpath key.
  * @returns The reference model, with entrypoints in the order `subpathByModule` iterates.
- * @throws When `project` is not an object or names a module with no mapped subpath.
+ * @throws When `project` is not an object or an expected entrypoint module is missing.
  */
 export function buildReferenceModel(project: unknown, subpathByModule: Record<string, string>): ReferenceModel {
   if (!isRecord(project)) {
@@ -720,7 +720,18 @@ export function buildReferenceModel(project: unknown, subpathByModule: Record<st
   const unsupported: UnsupportedExport[] = [];
 
   for (const [module, subpath] of Object.entries(subpathByModule)) {
-    const reflection = modules.find((candidate) => candidate.name === module);
+    const reflection = modules.find((candidate) =>
+      module.startsWith("src/")
+        ? candidate.sources?.some(
+            (source) =>
+              typeof source.fileName === "string" &&
+              source.fileName.replaceAll("\\", "/").replace(/^\.\//, "") === module,
+          )
+        : candidate.name === module,
+    );
+    if (reflection === undefined) {
+      throw new Error(`Reference entrypoint "${subpath}" has no TypeDoc module for "${module}".`);
+    }
     const children = reflection?.children ?? [];
     for (const name of unsupportedNames(children, resolve)) {
       unsupported.push({ name, subpath });

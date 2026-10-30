@@ -161,6 +161,7 @@ async function convertProject(pkgDir: string, plans: readonly EntrypointPlan[]):
       // `root.children.filter(isModule)` finds nothing for it — every symbol on a
       // package with exactly one documented entrypoint would render as an empty page.
       alwaysCreateEntryPointModule: true,
+      basePath: pkgDir,
       entryPoints: plans.map((plan) => `${pkgDir}/src/${plan.sourceRel}`),
       entryPointStrategy: "resolve",
       excludeInternal: true,
@@ -220,7 +221,10 @@ export async function analyzeReference(
   config: ReferenceConfig,
 ): Promise<ReferenceAnalysis> {
   const pkgDir = workspacePackage.directory.split("\\").join("/");
-  const plans = resolveEntrypoints(workspacePackage.manifest.exports, config, pkgDir);
+  const plans = resolveEntrypoints(workspacePackage.manifest.exports, config, pkgDir).map((plan) => ({
+    ...plan,
+    module: `src/${plan.sourceRel}`,
+  }));
   assertKebabEntrypoints(plans);
 
   const subpathByModule = Object.fromEntries(plans.map((plan) => [plan.module, plan.subpath]));
