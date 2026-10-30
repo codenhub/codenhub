@@ -214,6 +214,33 @@ describe("renderReferencePage", () => {
     expect(single).toContain("**See also** — unwrapOr");
   });
 
+  it("keeps multiline tag bodies inside their list item or deprecation blockquote", () => {
+    const body = "First paragraph.\n\n- alpha\n- beta\n\nSecond paragraph.";
+    const rendered = renderReferencePage(
+      {
+        ...entrypoint,
+        symbols: [
+          symbol({
+            name: "read",
+            kind: "function",
+            deprecated: body,
+            parameters: [{ name: "input", doc: body }],
+            typeParameters: [{ name: "T", doc: body }],
+            throws: [body, "Other failure."],
+            see: [body, "Other reference."],
+          }),
+        ],
+      },
+      { title: "Reference", heading: "Reference", sourceRoot: "src", prose: true },
+    );
+    const continuation = "First paragraph.\n\n  - alpha\n  - beta\n\n  Second paragraph.";
+    expect(rendered).toContain("- `input` — " + continuation);
+    expect(rendered).toContain("- `T` — " + continuation);
+    expect(rendered).toContain("**Throws**\n\n- " + continuation + "\n- Other failure.");
+    expect(rendered).toContain("**See also**\n\n- " + continuation + "\n- Other reference.");
+    expect(rendered).toContain("> **Deprecated.** First paragraph.\n>\n> - alpha\n> - beta\n>\n> Second paragraph.");
+  });
+
   it("resolves an in-page {@link} to a heading anchor and leaves unknown targets as code", () => {
     expect(page).toContain("Normalizes an unknown value into an [AppError](#apperror).");
     expect(page).toContain("See {@link https://mdn}.".replace("{@link https://mdn}", "`https://mdn`"));

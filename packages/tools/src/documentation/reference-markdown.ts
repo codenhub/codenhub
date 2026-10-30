@@ -168,6 +168,10 @@ function codeBlock(source: string): string {
   return ["```ts", source.trim(), "```"].join("\n");
 }
 
+function listItem(text: string): string {
+  return `- ${text.replace(/\n(?=.)/g, "\n  ")}`;
+}
+
 function namedDocList(
   heading: string,
   entries: readonly ReferenceNamedDoc[],
@@ -177,7 +181,10 @@ function namedDocList(
   if (documented.length === 0) {
     return [];
   }
-  return [`**${heading}**`, documented.map((entry) => `- \`${entry.name}\` — ${link(entry.doc ?? "")}`).join("\n")];
+  return [
+    `**${heading}**`,
+    documented.map((entry) => listItem(`\`${entry.name}\` — ${link(entry.doc ?? "")}`)).join("\n"),
+  ];
 }
 
 // A repeatable free-text tag section (@throws, @see). One entry reads as a
@@ -190,7 +197,7 @@ function notesSection(heading: string, items: readonly string[], link: (text: st
   if (items.length === 1) {
     return [`**${heading}** — ${link(items[0] ?? "")}`];
   }
-  return [`**${heading}**`, items.map((item) => `- ${link(item)}`).join("\n")];
+  return [`**${heading}**`, items.map((item) => listItem(link(item))).join("\n")];
 }
 
 // Markdown stops at H6; deeper nesting keeps the last level rather than breaking the page.
@@ -230,7 +237,11 @@ function memberBlocks(
 }
 
 function deprecationNote(deprecated: string | true, link: (text: string) => string): string {
-  return deprecated === true ? "> **Deprecated.**" : `> **Deprecated.** ${link(deprecated)}`;
+  const body = deprecated === true ? "**Deprecated.**" : `**Deprecated.** ${link(deprecated)}`;
+  return body
+    .split("\n")
+    .map((line) => (line === "" ? ">" : `> ${line}`))
+    .join("\n");
 }
 
 function proseBlocks(
