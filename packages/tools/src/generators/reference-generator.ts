@@ -1,7 +1,8 @@
 import { matchesGlob, posix } from "node:path";
 
 import { format, resolveConfig } from "prettier";
-import { Application, normalizePath, TSConfigReader } from "typedoc";
+import { Application, Converter, normalizePath, TSConfigReader } from "typedoc";
+import ts from "typescript";
 
 import { parseReferenceConfig, type ReferenceConfig } from "../documentation/reference-config.ts";
 import {
@@ -156,7 +157,46 @@ function assertKebabEntrypoints(plans: readonly EntrypointPlan[]): void {
   }
 }
 
-async function convertProject(pkgDir: string, plans: readonly EntrypointPlan[]): Promise<unknown> {
+function assertResolvedImports(program: ts.Program, entry: ts.SourceFile, packageName: string): void {
+  const checker = program.getTypeChecker();
+  const visited = new Set<ts.SourceFile>();
+  const visitFile = (file: ts.SourceFile): void => {
+    if (visited.has(file)) {
+      return;
+    }
+    visited.add(file);
+    const visit = (node: ts.Node): void => {
+      const specifier =
+        ts.isImportDeclaration(node) || ts.isExportDeclaration(node)
+          ? node.moduleSpecifier
+          : ts.isExternalModuleReference(node)
+            ? node.expression
+            : ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)
+              ? node.argument.literal
+              : ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword
+                ? node.arguments[0]
+                : undefined;
+      if (specifier !== undefined && ts.isStringLiteralLike(specifier)) {
+        const symbol = checker.getSymbolAtLocation(specifier);
+        if (symbol === undefined) {
+          throw new Error(
+            `Reference for ${packageName} cannot resolve module "${specifier.text}" imported by ${file.fileName}. Build dependencies first with \`pnpm build ${packageName}\`, then rerun.`,
+          );
+        }
+        for (const declaration of symbol.declarations ?? []) {
+          if (ts.isSourceFile(declaration) && !program.isSourceFileFromExternalLibrary(declaration)) {
+            visitFile(declaration);
+          }
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    ts.forEachChild(file, visit);
+  };
+  visitFile(entry);
+}
+
+async function convertProject(pkgDir: string, plans: readonly EntrypointPlan[], packageName: string): Promise<unknown> {
   const application = await Application.bootstrap(
     {
       // Without this, TypeDoc collapses a single entry point's exports onto the
@@ -180,6 +220,16 @@ async function convertProject(pkgDir: string, plans: readonly EntrypointPlan[]):
     },
     [new TSConfigReader()],
   );
+  application.converter.on(Converter.EVENT_BEGIN, (context) => {
+    for (const program of context.programs) {
+      for (const plan of plans) {
+        const source = program.getSourceFile(`${pkgDir}/src/${plan.sourceRel}`);
+        if (source !== undefined) {
+          assertResolvedImports(program, source, packageName);
+        }
+      }
+    }
+  });
   const project = await application.convert();
   if (project === undefined) {
     throw new Error(`TypeDoc could not analyse ${pkgDir}.`);
@@ -217,7 +267,7 @@ export interface ReferenceAnalysis {
  * @param workspacePackage The package.
  * @param config Its parsed `codenhub.docs.reference`.
  * @returns The model and the rendered, formatted pages.
- * @throws When an entrypoint is unresolved, non-kebab-case, or collides with another.
+ * @throws When an entrypoint or its source imports cannot be resolved, a name is not kebab-case, or pages collide.
  */
 export async function analyzeReference(
   workspacePackage: WorkspacePackage,
@@ -238,7 +288,7 @@ export async function analyzeReference(
   const declarations = emitDeclarations(pkgDir, plans);
   const entryDtsBySubpath = new Map(plans.map((plan) => [plan.subpath, plan.entryDts]));
   const resolver = buildDeclarationResolver(declarations);
-  const project = await convertProject(pkgDir, plans);
+  const project = await convertProject(pkgDir, plans, workspacePackage.name);
   const entryModels = plans.map((plan) => buildReferenceModel(project, { [plan.module]: plan.subpath }));
   const converted: ReferenceModel = {
     entrypoints: entryModels.flatMap((model) => model.entrypoints),

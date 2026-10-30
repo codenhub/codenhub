@@ -94,6 +94,23 @@ describe("reference rule run", () => {
     return workspacePackage;
   }
 
+  it("reports an unresolved source dependency with build instructions", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-rule-dependency", {
+      "index.ts": 'export { derived } from "./derive";',
+      "derive.ts": 'import { result } from "dependency";\n/** Derived. */ export const derived = result();',
+    });
+    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([
+      {
+        code: "reference/entrypoint",
+        location: "docs/reference",
+        message: expect.stringMatching(
+          /@codenhub\/fixture-rule-dependency.*dependency.*[Bb]uild dependencies first.*pnpm build @codenhub\/fixture-rule-dependency/s,
+        ),
+        severity: "error",
+      },
+    ]);
+  });
+
   it("reports an absent generated reference area", { timeout: 30_000 }, async () => {
     const workspacePackage = await createReferenceFixture("fixture-rule-missing", {
       "index.ts": "/** A value. */\nexport const value = 1;\n",

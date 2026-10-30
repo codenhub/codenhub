@@ -1,4 +1,4 @@
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -553,6 +553,73 @@ describe("analyzeReference", () => {
 
   // A real TypeDoc run: a few seconds alone, past the five-second default when
   // it shares the machine with the rest of the suite.
+  it.each(["index.ts", "derive.ts"])(
+    "rejects an unbuilt dependency imported by %s in the documented source graph",
+    { timeout: 30_000 },
+    async (importer) => {
+      const sources = {
+        [importer]: 'import { result } from "dependency";\n/** Derived value. */ export const derived = result();',
+      };
+      if (importer !== "index.ts") {
+        sources["index.ts"] = 'export { derived } from "./derive";';
+      }
+      const fixture = await createReferenceFixture("fixture-unbuilt-dependency", sources);
+      const dependencyDir = join(fixture.directory, "node_modules/dependency");
+      await mkdir(join(dependencyDir, "src"), { recursive: true });
+      await writeFile(
+        join(dependencyDir, "package.json"),
+        JSON.stringify({
+          name: "dependency",
+          type: "module",
+          exports: { ".": { types: "./dist/index.d.ts", default: "./dist/index.js" } },
+        }),
+      );
+      await writeFile(join(dependencyDir, "src/index.ts"), "export function result(): number { return 123; }");
+      await expect(analyzeReference(fixture, { prose: true })).rejects.toThrow(
+        /@codenhub\/fixture-unbuilt-dependency.*dependency.*[Bb]uild dependencies first.*pnpm build @codenhub\/fixture-unbuilt-dependency/s,
+      );
+      await mkdir(join(dependencyDir, "dist"));
+      await writeFile(join(dependencyDir, "dist/index.d.ts"), "export declare function result(): number;");
+      const { files } = await analyzeReference(fixture, { prose: true });
+      expect(files[0]?.contents).toContain("export declare const derived: number;");
+    },
+  );
+
+  it("leaves installed dependency declaration checking to the package type gate", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("fixture-optional-dependency", {
+      "index.ts": 'import { result } from "dependency"; /** Derived value. */ export const derived = result();',
+    });
+    const dependencyDir = join(fixture.directory, "node_modules/dependency");
+    await mkdir(join(dependencyDir, "dist"), { recursive: true });
+    await writeFile(
+      join(dependencyDir, "package.json"),
+      JSON.stringify({
+        name: "dependency",
+        exports: { ".": { types: "./dist/index.d.ts" } },
+      }),
+    );
+    await writeFile(
+      join(dependencyDir, "dist/index.d.ts"),
+      [
+        'import type { Optional } from "missing-optional-peer";',
+        "export declare function result(): number;",
+        "export type Options = Optional;",
+      ].join("\n"),
+    );
+    const { files } = await analyzeReference(fixture, { prose: true });
+    expect(files[0]?.contents).toContain("export declare const derived: number;");
+  });
+
+  it("ignores unresolved imports outside the documented source graph", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("fixture-unrelated-imports", {
+      "index.ts": "/** Public value. */ export const value = 42;",
+      "index.test.ts": 'import { value } from "@codenhub/fixture-unrelated-imports"; export const testValue = value;',
+      "undocumented.ts": 'import { result } from "missing-dependency"; export const ignored = result();',
+    });
+    const { files } = await analyzeReference(fixture, { prose: true });
+    expect(files[0]?.contents).toContain("export declare const value = 42;");
+  });
+
   it("documents a package with exactly one entrypoint", { timeout: 30_000 }, async () => {
     const workspacePackage = await createSingleEntrypointFixture();
 
