@@ -34,6 +34,17 @@ export { somethingReexported } from "./other";
 describe("extractSignatures", () => {
   const index = extractSignatures(dts, "index.d.ts");
 
+  it("keeps every method overload across merged interfaces in source order", () => {
+    const signature = extractSignatures(`
+      export interface Reader { read(value: string): string; }
+      export interface Reader { read(value: number): number; }
+      export interface Reader { read(value: boolean): boolean; }
+    `).get("Reader");
+    expect(signature?.members?.get("read")).toBe(
+      "read(value: string): string;\nread(value: number): number;\nread(value: boolean): boolean;",
+    );
+  });
+
   it("captures a function signature as one line", () => {
     expect(index.get("createAppError")?.text).toBe(
       "export declare function createAppError(message: string): AppError;",

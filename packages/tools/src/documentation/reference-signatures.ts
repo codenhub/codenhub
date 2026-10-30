@@ -128,7 +128,11 @@ function mergeSignature(index: SignatureIndex, name: string, signature: SymbolSi
     existing.merged = [...(existing.merged ?? []), signature.text];
   }
   if (signature.members !== undefined) {
-    existing.members = new Map([...(existing.members ?? []), ...signature.members]);
+    existing.members ??= new Map();
+    for (const [name, text] of signature.members) {
+      const previous = existing.members.get(name);
+      existing.members.set(name, previous === undefined ? text : `${previous}\n${text}`);
+    }
   }
   if (signature.namespaceMembers !== undefined) {
     existing.namespaceMembers = new Map([...(existing.namespaceMembers ?? []), ...signature.namespaceMembers]);
