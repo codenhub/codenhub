@@ -113,7 +113,7 @@ describe("toasts while a dialog is open", () => {
     toaster.destroy();
   });
 
-  it("announces in the closing dialog when the region is ready during its exit transition", () => {
+  it("announces outside the dialog when the region is ready during its exit transition", () => {
     vi.useFakeTimers();
     const originalGetComputedStyle = window.getComputedStyle;
     vi.spyOn(window, "getComputedStyle").mockImplementation((element) => {
@@ -127,15 +127,16 @@ describe("toasts while a dialog is open", () => {
     const dialog = document.querySelector("dialog")!;
     toaster.error("Upload failed");
 
-    // The dialog is still modal while it closes, so the rest of the page is still inert.
+    // The dialog is closed, and no longer modal, as soon as its exit transition starts.
     handle.dismiss();
     vi.advanceTimersByTime(100);
-    expect(dialog.querySelector('[data-toast-announcer="assertive"]')?.textContent).toBe("Upload failed");
+    expect(dialog.querySelector('[data-toast-announcer="assertive"]')?.textContent).toBe("");
 
-    // Cleanup clears the dialog; the line is not announced a second time.
     vi.advanceTimersByTime(500);
-    expect(dialog.querySelector("[data-toast-announcer]")).toBeNull();
-    expect(document.body.querySelector('[data-toast-announcer="assertive"]')).toBeNull();
+    const regions = document.querySelectorAll('[data-toast-announcer="assertive"]');
+    expect(Array.from(regions, (region) => [region.parentElement, region.textContent])).toEqual([
+      [document.body, "Upload failed"],
+    ]);
     toaster.destroy();
   });
 
