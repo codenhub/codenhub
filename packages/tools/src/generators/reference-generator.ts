@@ -162,7 +162,7 @@ async function convertProject(pkgDir: string, plans: readonly EntrypointPlan[]):
       // package with exactly one documented entrypoint would render as an empty page.
       alwaysCreateEntryPointModule: true,
       basePath: pkgDir,
-      entryPoints: plans.map((plan) => `${pkgDir}/src/${plan.sourceRel}`),
+      entryPoints: [...new Set(plans.map((plan) => `${pkgDir}/src/${plan.sourceRel}`))],
       entryPointStrategy: "resolve",
       excludeInternal: true,
       // TSDoc reads `@defaultValue` as Markdown. TypeDoc's JSDoc compatibility instead
@@ -227,13 +227,20 @@ export async function analyzeReference(
   }));
   assertKebabEntrypoints(plans);
 
-  const subpathByModule = Object.fromEntries(plans.map((plan) => [plan.module, plan.subpath]));
   const declarations = emitDeclarations(pkgDir, plans);
   const entryDtsBySubpath = new Map(plans.map((plan) => [plan.subpath, plan.entryDts]));
   const resolver = buildDeclarationResolver(declarations);
+  const project = await convertProject(pkgDir, plans);
+  const entryModels = plans.map((plan) => buildReferenceModel(project, { [plan.module]: plan.subpath }));
+  const converted: ReferenceModel = {
+    entrypoints: entryModels.flatMap((model) => model.entrypoints),
+    packageName: entryModels[0]?.packageName ?? workspacePackage.name,
+    unresolved: [],
+    unsupported: entryModels.flatMap((model) => model.unsupported),
+  };
   const model = attachInternalTypes(
     splitEntrypoints(
-      withSignatures(buildReferenceModel(await convertProject(pkgDir, plans), subpathByModule), plans, declarations),
+      withSignatures(converted, plans, declarations),
       config.pages,
       // The emitted declarations place a symbol where TypeDoc's source paths cannot: those are
       // relative to whatever directory the sources share, not to the package.

@@ -341,6 +341,30 @@ function createSingleEntrypointFixture(): Promise<WorkspacePackage> {
 }
 
 describe("analyzeReference", () => {
+  it.each([false, true])(
+    "documents every subpath targeting one file, with another entrypoint=%s",
+    { timeout: 30_000 },
+    async (withOther) => {
+      const workspacePackage = await createReferenceFixture("fixture-alias", {
+        "index.ts": "/** The answer. */\nexport const answer = 42;\n",
+        "other.ts": "/** Another value. */\nexport const other = 1;\n",
+      });
+      workspacePackage.manifest.exports = {
+        ".": { types: "./dist/index.d.ts" },
+        "./client": { types: "./dist/index.d.ts" },
+        ...(withOther ? { "./other": { types: "./dist/other.d.ts" } } : {}),
+      };
+      const { files } = await analyzeReference(workspacePackage, { prose: true });
+      expect(files.map((file) => file.path)).toEqual([
+        "fixture-alias/docs/reference/index.md",
+        "fixture-alias/docs/reference/client.md",
+        ...(withOther ? ["fixture-alias/docs/reference/other.md"] : []),
+      ]);
+      expect(files[0]?.contents).toContain("export declare const answer = 42;");
+      expect(files[1]?.contents).toContain("export declare const answer = 42;");
+    },
+  );
+
   it("documents entrypoints sharing a nested source directory", { timeout: 30_000 }, async () => {
     const workspacePackage = await createReferenceFixture("fixture-nested", {
       "nested/a.ts": "/** A value. */\nexport const a = 1;\n",
