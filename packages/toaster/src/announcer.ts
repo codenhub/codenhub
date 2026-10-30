@@ -101,13 +101,17 @@ export function announce(params: AnnounceParams): void {
   pendingLines.set(region, pending);
   setTimeout(() => {
     pendingLines.delete(region);
-    if (region.isConnected) {
+    // A dialog opened since the region was added, which makes the region
+    // inert. A dialog that is only closing is still modal, so its own
+    // region is not.
+    const isInert = getToastLayerHost(parent, instanceId) !== host && host === parent;
+    if (region.isConnected && !isInert) {
       pending.forEach((line) => appendLine(region, line));
-    } else if (host !== parent && host.isConnected) {
-      // The dialog that held the region closed and was cleared before the
-      // region was ready. The dialog stays in the document until the
-      // instance is destroyed, so the toasts are still showing: announce
-      // through the current host instead.
+    } else if (region.isConnected || (host !== parent && host.isConnected)) {
+      // Either the region is inert, or the dialog that held it closed and
+      // was cleared before the region was ready. The dialog stays in the
+      // document until the instance is destroyed, so the toasts are still
+      // showing: announce through the current host instead.
       pending.forEach((line) => announce({ parent, instanceId, role, text: line }));
     }
   }, FIRST_ANNOUNCEMENT_DELAY_MS);

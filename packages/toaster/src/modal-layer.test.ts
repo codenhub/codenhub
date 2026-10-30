@@ -100,6 +100,45 @@ describe("toasts while a dialog is open", () => {
     toaster.destroy();
   });
 
+  it("announces in the dialog a toast whose region was not ready when the dialog opened", () => {
+    vi.useFakeTimers();
+    const toaster = createToaster();
+    toaster.error("Upload failed");
+    void toaster.dialog.confirm("Delete?");
+    const dialog = document.querySelector("dialog")!;
+    vi.advanceTimersByTime(200);
+
+    const region = dialog.querySelector('[data-toast-announcer="assertive"]');
+    expect(region?.textContent).toBe("Upload failed");
+    toaster.destroy();
+  });
+
+  it("announces in the closing dialog when the region is ready during its exit transition", () => {
+    vi.useFakeTimers();
+    const originalGetComputedStyle = window.getComputedStyle;
+    vi.spyOn(window, "getComputedStyle").mockImplementation((element) => {
+      const style = originalGetComputedStyle(element);
+      return element.tagName === "DIALOG"
+        ? ({ ...style, transitionDuration: "0.2s" } as unknown as CSSStyleDeclaration)
+        : style;
+    });
+    const toaster = createToaster();
+    const handle = toaster.dialog.confirm("Delete?");
+    const dialog = document.querySelector("dialog")!;
+    toaster.error("Upload failed");
+
+    // The dialog is still modal while it closes, so the rest of the page is still inert.
+    handle.dismiss();
+    vi.advanceTimersByTime(100);
+    expect(dialog.querySelector('[data-toast-announcer="assertive"]')?.textContent).toBe("Upload failed");
+
+    // Cleanup clears the dialog; the line is not announced a second time.
+    vi.advanceTimersByTime(500);
+    expect(dialog.querySelector("[data-toast-announcer]")).toBeNull();
+    expect(document.body.querySelector('[data-toast-announcer="assertive"]')).toBeNull();
+    toaster.destroy();
+  });
+
   it("leaves another instance's toasts outside the dialog", () => {
     const first = createToaster();
     const second = createToaster();
