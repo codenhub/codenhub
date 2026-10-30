@@ -1008,7 +1008,7 @@ A Result type representing either a successful outcome (`Ok<T>`) or a failure ou
 
 ## Variables
 
-### DEFAULT_APP_ERROR_MESSAGE
+### DEFAULT\_APP\_ERROR\_MESSAGE
 
 ```ts
 export declare const DEFAULT_APP_ERROR_MESSAGE = "An unexpected error occurred.";

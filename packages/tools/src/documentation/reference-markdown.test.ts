@@ -219,6 +219,31 @@ describe("renderReferencePage", () => {
     expect(page).toContain("See {@link https://mdn}.".replace("{@link https://mdn}", "`https://mdn`"));
   });
 
+  it("escapes generated identifiers and link labels so Markdown preserves their text", () => {
+    const escaped = renderReferencePage(
+      {
+        ...entrypoint,
+        symbols: [
+          symbol({
+            name: "__DEV__",
+            kind: "variable",
+            doc: "See {@link __DEV__ | __DEV__}. ",
+            members: [member({ name: "*value*", kind: "property" })],
+          }),
+        ],
+        internalTypes: [
+          { name: "__Internal__", signature: "type __Internal__ = string;", declaredIn: ["src/index.ts"] },
+        ],
+      },
+      { title: "Reference", heading: "[Reference] __API__", sourceRoot: "src", prose: true },
+    );
+    expect(escaped).toContain("# \\[Reference\\] \\_\\_API\\_\\_");
+    expect(escaped).toContain("### \\_\\_DEV\\_\\_");
+    expect(escaped).toContain("[\\_\\_DEV\\_\\_](#__dev__)");
+    expect(escaped).toContain("#### \\*value\\*");
+    expect(escaped).toContain("### \\_\\_Internal\\_\\_");
+  });
+
   it("renders interface members with their own heading and signature block", () => {
     expect(page).toContain("#### messageKey\n\n```ts\nreadonly messageKey?: string;\n```\n\nTranslation key.");
   });

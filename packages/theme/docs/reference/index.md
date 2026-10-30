@@ -503,7 +503,7 @@ Returns the single DOM class token applied to `document.documentElement` for a t
 
 ## Variables
 
-### THEME_CHANGE_EVENT
+### THEME\_CHANGE\_EVENT
 
 ```ts
 export declare const THEME_CHANGE_EVENT = "themechange";
