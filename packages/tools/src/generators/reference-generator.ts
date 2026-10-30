@@ -11,10 +11,9 @@ import {
   resolveEntrypoints,
   type EntrypointPlan,
 } from "../documentation/reference-declarations.ts";
-import { renderReferencePage, symbolSlug } from "../documentation/reference-markdown.ts";
+import { referencePageSlugs, renderReferencePage } from "../documentation/reference-markdown.ts";
 import {
   buildReferenceModel,
-  walkSymbols,
   type ReferenceEntrypoint,
   type ReferenceModel,
 } from "../documentation/reference-model.ts";
@@ -116,15 +115,18 @@ function splitEntrypoints(
 }
 
 /** Builds a `{@link}` resolver: for a page, an href to another page's symbol, or `undefined`. */
-function linkResolverFor(pageRels: ReadonlyMap<ReferenceEntrypoint, string>) {
+function linkResolverFor(
+  pageRels: ReadonlyMap<ReferenceEntrypoint, string>,
+  slugsFor: (entrypoint: ReferenceEntrypoint) => ReadonlyMap<string, string>,
+) {
   // A symbol several entrypoints export is documented under each, so a name has a page per subpath.
-  const pagesBySymbol = new Map<string, Map<string, string>>();
+  const pagesBySymbol = new Map<string, Map<string, { path: string; anchor: string }>>();
   for (const [entrypoint, pageRel] of pageRels) {
-    for (const [qualifiedName] of walkSymbols(entrypoint.symbols)) {
-      const bySubpath = pagesBySymbol.get(qualifiedName) ?? new Map<string, string>();
+    for (const [qualifiedName, anchor] of slugsFor(entrypoint)) {
+      const bySubpath = pagesBySymbol.get(qualifiedName) ?? new Map<string, { path: string; anchor: string }>();
       pagesBySymbol.set(qualifiedName, bySubpath);
       if (!bySubpath.has(entrypoint.subpath)) {
-        bySubpath.set(entrypoint.subpath, pageRel);
+        bySubpath.set(entrypoint.subpath, { path: pageRel, anchor });
       }
     }
   }
@@ -133,12 +135,12 @@ function linkResolverFor(pageRels: ReadonlyMap<ReferenceEntrypoint, string>) {
     (name: string): string | undefined => {
       const bySubpath = pagesBySymbol.get(name);
       // The linking entrypoint's own copy first, then the first entrypoint that documents the name.
-      const toRel = bySubpath?.get(fromSubpath) ?? bySubpath?.values().next().value;
-      if (toRel === undefined || toRel === fromRel) {
+      const target = bySubpath?.get(fromSubpath) ?? bySubpath?.values().next().value;
+      if (target === undefined || target.path === fromRel) {
         return undefined;
       }
-      const relative = posix.relative(posix.dirname(fromRel), toRel);
-      return `${relative}#${symbolSlug(name)}`;
+      const relative = posix.relative(posix.dirname(fromRel), target.path);
+      return `${relative}#${target.anchor}`;
     };
 }
 
@@ -268,32 +270,40 @@ export async function analyzeReference(
     throw new Error(`Reference pages collide on page path: ${[...new Set(collisions)].join(", ")}.`);
   }
 
-  const resolveLinkFor = linkResolverFor(pageRels);
   const sourceRoot = `${workspacePackage.location}/src`;
+  const pageOptionsFor = (entrypoint: ReferenceEntrypoint, index: number) => {
+    const pageRel = pageRels.get(entrypoint) ?? referencePagePath(entrypoint, model.entrypoints);
+    const isIndex = pageRel === "index.md";
+    const pages = config.pages?.[entrypoint.subpath];
+    // A label is both the sidebar label and the H1. Without one, the sidebar label is
+    // the package name, then what a consumer appends to it (`/registries/browser`),
+    // and the H1 is the full specifier a consumer would `import` from.
+    const label =
+      entrypoint.page === undefined ? pages?.label : (pages?.split?.[entrypoint.page]?.label ?? entrypoint.page);
+    const suffix = entrypoint.subpath.slice(1);
+    const specifier = `${workspacePackage.name}${suffix}`;
+    return {
+      description: entrypoint.description,
+      group: isIndex ? REFERENCE_GROUP : undefined,
+      heading: label ?? specifier,
+      order: isIndex ? undefined : index,
+      prose: config.prose,
+      since: entrypoint.since,
+      sourceRoot,
+      title: label ?? (suffix === "" ? specifier : suffix),
+    };
+  };
+  const resolveLinkFor = linkResolverFor(pageRels, (entrypoint) =>
+    referencePageSlugs(entrypoint, pageOptionsFor(entrypoint, 0)),
+  );
 
   const files = await Promise.all(
     model.entrypoints.map(async (entrypoint, index) => {
       const pageRel = pageRels.get(entrypoint) ?? referencePagePath(entrypoint, model.entrypoints);
-      const isIndex = pageRel === "index.md";
-      const pages = config.pages?.[entrypoint.subpath];
-      // A label is both the sidebar label and the H1. Without one, the sidebar label is
-      // the package name, then what a consumer appends to it (`/registries/browser`),
-      // and the H1 is the full specifier a consumer would `import` from.
-      const label =
-        entrypoint.page === undefined ? pages?.label : (pages?.split?.[entrypoint.page]?.label ?? entrypoint.page);
-      const suffix = entrypoint.subpath.slice(1);
-      const specifier = `${workspacePackage.name}${suffix}`;
       const filepath = `${pkgDir}/${REFERENCE_DIR}/${pageRel}`;
       const rendered = renderReferencePage(entrypoint, {
-        description: entrypoint.description,
-        group: isIndex ? REFERENCE_GROUP : undefined,
-        heading: label ?? specifier,
-        order: isIndex ? undefined : index,
-        prose: config.prose,
+        ...pageOptionsFor(entrypoint, index),
         resolveLink: resolveLinkFor(entrypoint.subpath, pageRel),
-        since: entrypoint.since,
-        sourceRoot,
-        title: label ?? (suffix === "" ? specifier : suffix),
       });
       // Run the same formatter `pnpm format` applies — resolveConfig folds in the
       // docs/reference/ override — so a generated page is never reported as needing

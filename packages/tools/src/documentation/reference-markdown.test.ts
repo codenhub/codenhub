@@ -129,6 +129,28 @@ describe("renderReferencePage", () => {
     expect(headings).toEqual(["Functions", "Interfaces", "Type aliases"]);
   });
 
+  it("allocates same-page links across the complete heading sequence", () => {
+    const rendered = renderReferencePage(
+      {
+        ...entrypoint,
+        symbols: [
+          symbol({
+            name: "Foo",
+            kind: "function",
+            doc: "# err\n\nSee {@link Foo}, {@link foo}, {@link Functions}, {@link Err}, {@link err}.",
+          }),
+          symbol({ name: "foo", kind: "function" }),
+          symbol({ name: "Functions", kind: "function" }),
+          symbol({ name: "Reader", kind: "interface", members: [member({ name: "err", kind: "property" })] }),
+          symbol({ name: "Err", kind: "type-alias" }),
+          symbol({ name: "err", kind: "variable" }),
+        ],
+      },
+      { title: "Foo", heading: "Foo", sourceRoot: "src", prose: true },
+    );
+    expect(rendered).toContain("[Foo](#foo-1), [foo](#foo-2), [Functions](#functions-1), [Err](#err-2), [err](#err-3)");
+  });
+
   it("nests prose headings below their symbol or member and caps them at H6", () => {
     const nested = renderReferencePage(
       {

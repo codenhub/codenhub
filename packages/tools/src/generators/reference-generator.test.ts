@@ -177,6 +177,29 @@ describe("analyzeReference pages", () => {
   const page = (files: { path: string; contents: string }[], name: string): string =>
     files.find((file) => file.path.endsWith(`docs/reference/${name}`))?.contents ?? "";
 
+  it("uses each destination page's allocated anchors for cross-page links", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("fixture-anchor-collisions", {
+      "index.ts":
+        "/** See {@link Foo}, {@link foo}, {@link Functions}, {@link Err}, {@link err}. */\nexport function use(): void {}",
+      "target.ts": [
+        "/** First. */ export function Foo(): void {}",
+        "/** Second. */ export function foo(): void {}",
+        "/** Third. */ export function Functions(): void {}",
+        "/** Reader. */ export interface Reader { /** Earlier heading. */ err: string; }",
+        "/** Error type. */ export type Err = string;",
+        "/** Error value. */ export const err = 1;",
+      ].join("\n"),
+    });
+    (fixture.manifest.exports as Record<string, unknown>)["./target"] = { types: "./dist/target.d.ts" };
+    const { files } = await analyzeReference(fixture, { prose: true, pages: { "./target": { label: "Foo" } } });
+    const root = page(files, "index.md");
+    expect(root).toContain("[Foo](target.md#foo-2)");
+    expect(root).toContain("[foo](target.md#foo-1)");
+    expect(root).toContain("[Functions](target.md#functions-1)");
+    expect(root).toContain("[Err](target.md#err-1)");
+    expect(root).toContain("[err](target.md#err-2)");
+  });
+
   it("titles the main entrypoint's page with the package name", { timeout: 30_000 }, async () => {
     const { files } = await analyzeReference(await createSingleEntrypointFixture(), { prose: true });
 
