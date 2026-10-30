@@ -117,7 +117,7 @@ t("home.title"); // "Welcome"
 Translations rarely stay complete. A new feature adds keys in English first, and the other languages catch up later. The package handles this in two steps:
 
 1. **The key is missing in the current locale but present in the default one.** You get the default text. In the example above, a key only in `en` shows English to Portuguese readers. Nothing is logged, because this is normal while translators catch up; [a key check in your tests](translations.md#find-untranslated-keys) finds these.
-2. **The key is missing everywhere.** `t()` returns the key itself, such as `"home.subtitle"`, so the gap is visible on screen and easy to search for, and the manager logs a warning once. You can send these to your own logger with the `onMissingKey` option.
+2. **The key is missing everywhere.** `t()` returns the key, trimmed, such as `"home.subtitle"`, so the gap is visible on screen and easy to search for, and the manager logs a warning once. You can send these to your own logger with the `onMissingKey` option.
 
 `t()` always returns a string, so you never need `?? ""` after it.
 

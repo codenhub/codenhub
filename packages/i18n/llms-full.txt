@@ -188,7 +188,7 @@ t("home.title"); // "Welcome"
 Translations rarely stay complete. A new feature adds keys in English first, and the other languages catch up later. The package handles this in two steps:
 
 1. **The key is missing in the current locale but present in the default one.** You get the default text. In the example above, a key only in `en` shows English to Portuguese readers. Nothing is logged, because this is normal while translators catch up; [a key check in your tests](docs/translations.md#find-untranslated-keys) finds these.
-2. **The key is missing everywhere.** `t()` returns the key itself, such as `"home.subtitle"`, so the gap is visible on screen and easy to search for, and the manager logs a warning once. You can send these to your own logger with the `onMissingKey` option.
+2. **The key is missing everywhere.** `t()` returns the key, trimmed, such as `"home.subtitle"`, so the gap is visible on screen and easy to search for, and the manager logs a warning once. You can send these to your own logger with the `onMissingKey` option.
 
 `t()` always returns a string, so you never need `?? ""` after it.
 
@@ -636,11 +636,13 @@ function pickLocale<TLocale extends string>(i18n: I18n<TLocale>, request: Reques
     .split(",")
     .map((entry) => {
       const [tag = "", ...parameters] = entry.split(";");
-      const quality = parameters.map((parameter) => parameter.trim()).find((parameter) => /^q=/i.test(parameter));
-      return { tag: tag.trim(), quality: quality === undefined ? 1 : Number(quality.slice(2)) };
+      const weight = parameters.map((parameter) => parameter.trim()).find((parameter) => /^q=/i.test(parameter));
+      // A weight is 0 to 1 with up to three decimals; anything else, such as `q=0x1`, is malformed.
+      const quality = weight === undefined ? 1 : /^q=(0(\.\d{0,3})?|1(\.0{0,3})?)$/i.test(weight) ? Number(weight.slice(2)) : 0;
+      return { tag: tag.trim(), quality };
     })
     // Drops refused languages (q=0) and malformed weights.
-    .filter(({ quality }) => quality > 0 && quality <= 1)
+    .filter(({ quality }) => quality > 0)
     .sort((left, right) => right.quality - left.quality)
     .map(({ tag }) => tag);
 
@@ -791,8 +793,7 @@ routing.localize("/pt/about", "pt"); // "/pt/about"
 On a localized site, switching language is a navigation, not just `setLocale()`: `setLocale()` changes the text but never the URL. Build the new path, keep the query string and fragment, and let your router go there:
 
 ```ts
-const { pathname } = routing.parse(window.location.pathname)!;
-await navigate(routing.localize(pathname, "pt") + window.location.search + window.location.hash);
+await navigate(routing.localize(window.location.pathname, "pt") + window.location.search + window.location.hash);
 ```
 
 Use the same call for the `<link rel="alternate" hreflang>` tags that tell search engines about each language:
@@ -938,10 +939,10 @@ The path is not an absolute path or contains something routing refuses, such as 
 
 ## Changed
 
-- **Breaking.** `t()` and `translate()` return a `string`, never `undefined`. A key missing from every dictionary returns the key itself, such as `"home.subtitle"`, so the gap is visible on screen.
+- **Breaking.** `t()` and `translate()` return a `string`, never `undefined`. A key missing from every dictionary returns the key, trimmed, such as `"home.subtitle"`, so the gap is visible on screen.
 - **Breaking.** `init()` resolves `void` instead of `true` or `false`, like `setLocale()`. Read `i18n.locale` or `i18n.isReady` to see what was applied.
 - **Breaking, types only.** When `loadLocale` returns a typed dictionary, `t()` accepts only its keys, so a key built at runtime, such as ``t(`errors.${code}`)``, no longer compiles.
-- **Breaking, types only.** `defaultLocale` no longer widens the locale type. A configuration kept in a variable without `as const` on `defaultLocale` is now a compile error, where before it silently accepted any string as a locale.
+- **Breaking, types only.** Only `locales` sets the locale type; `defaultLocale` and a callback parameter typed `string`, such as `loadLocale: (locale: string) => …`, no longer widen it. A configuration kept in a variable without `as const` on `defaultLocale` is now a compile error, where before it silently accepted any string as a locale.
 
 ## Migrating from 0.1.0
 

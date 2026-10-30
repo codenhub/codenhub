@@ -6,7 +6,7 @@
 Use only the root, `/browser`, and `/routing` entry points. Await `init()` (or
 `initializeBrowserI18n()`) before calling `t()`. Create one manager per request
 or page on a server or in a static build. A key missing from every dictionary
-returns the key itself.
+returns the trimmed key.
 
 ## Documentation
 

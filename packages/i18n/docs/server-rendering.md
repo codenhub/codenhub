@@ -59,11 +59,13 @@ function pickLocale<TLocale extends string>(i18n: I18n<TLocale>, request: Reques
     .split(",")
     .map((entry) => {
       const [tag = "", ...parameters] = entry.split(";");
-      const quality = parameters.map((parameter) => parameter.trim()).find((parameter) => /^q=/i.test(parameter));
-      return { tag: tag.trim(), quality: quality === undefined ? 1 : Number(quality.slice(2)) };
+      const weight = parameters.map((parameter) => parameter.trim()).find((parameter) => /^q=/i.test(parameter));
+      // A weight is 0 to 1 with up to three decimals; anything else, such as `q=0x1`, is malformed.
+      const quality = weight === undefined ? 1 : /^q=(0(\.\d{0,3})?|1(\.0{0,3})?)$/i.test(weight) ? Number(weight.slice(2)) : 0;
+      return { tag: tag.trim(), quality };
     })
     // Drops refused languages (q=0) and malformed weights.
-    .filter(({ quality }) => quality > 0 && quality <= 1)
+    .filter(({ quality }) => quality > 0)
     .sort((left, right) => right.quality - left.quality)
     .map(({ tag }) => tag);
 

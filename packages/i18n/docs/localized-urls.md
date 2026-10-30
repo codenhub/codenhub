@@ -81,8 +81,7 @@ routing.localize("/pt/about", "pt"); // "/pt/about"
 On a localized site, switching language is a navigation, not just `setLocale()`: `setLocale()` changes the text but never the URL. Build the new path, keep the query string and fragment, and let your router go there:
 
 ```ts
-const { pathname } = routing.parse(window.location.pathname)!;
-await navigate(routing.localize(pathname, "pt") + window.location.search + window.location.hash);
+await navigate(routing.localize(window.location.pathname, "pt") + window.location.search + window.location.hash);
 ```
 
 Use the same call for the `<link rel="alternate" hreflang>` tags that tell search engines about each language:
