@@ -12,7 +12,8 @@ Split work so each agent holds only the context its task needs. The controller, 
 - **The controller owns the whole.** Planning, sequencing, final decisions, and integration stay with you; preserve your context for them.
 - **One complete brief, one run.** A worker gets everything it needs up front, plus at most one retry (see Retries). Never an open-ended conversation.
 - **Review artifacts, not reports.** A worker's summary says what it believes it did; the diff says what it did.
-- **Use what the environment offers.** Use only the delegation features actually available, such as background workers, messaging, or context forking. When delegation needs the user's permission, ask; never work around it.
+- **The environment's rules come first.** Use only the delegation features actually available, such as background workers, messaging, or context forking. When the harness or the user's instructions say how to delegate, such as which tool or worker type to use, how to wait for a worker, how to follow up or re-check, or when not to delegate at all, follow them and use this skill only for what they leave open. Where they conflict with this skill, they win: a retry they forbid sending to the same worker becomes a fresh worker, and a review they say to do yourself is done yourself. When delegation needs the user's permission, ask; never work around it.
+- **Workers do not delegate.** When you are the worker, do the task yourself; start subagents only when your brief says to.
 
 ## Choose a Path
 

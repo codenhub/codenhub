@@ -1,0 +1,4 @@
+interface:
+  display_name: "Babysit PR"
+  short_description: "See a pull request through CI and review"
+  default_prompt: "Use $babysit-pr to see this pull request through: wait for checks, fix failures your change caused, judge and answer every review comment, reply in its thread and resolve the threads the skill allows, and report what still needs me."
