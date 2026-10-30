@@ -38,7 +38,8 @@ type FlattenedKey<TMessages> = TMessages extends string
     }[keyof TMessages & string];
 
 /**
- * Dot-separated keys of a dictionary type's string leaves, or any string when the dictionary type is unknown.
+ * Dot-separated keys of a dictionary type's string leaves and of its plural groups, those with an `other` form, or any
+ * string when the dictionary type is unknown.
  *
  * @example
  * ```ts
@@ -128,7 +129,8 @@ export interface I18nEventMap<TLocale extends string = string> {
  * Every method is bound to its manager, so a destructured method, such as `const { t } = i18n`, keeps working.
  *
  * @typeParam TLocale - Union of supported canonical locale identifiers.
- * @typeParam TKey - Union of accepted translation keys, inferred from the configured loader.
+ * @typeParam TKey - Union of accepted translation keys. Defaults to `string`; `createI18n()` sets it to
+ * `TranslationKey<TMessages>` for the loader's dictionary type.
  */
 export interface I18n<TLocale extends string = string, TKey extends string = string> {
   /** Canonical fallback locale. */

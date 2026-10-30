@@ -43,7 +43,7 @@ t("home.titel"); // compile error: there is no such key
 
 Two optional entry points cover what differs by environment:
 
-- `@codenhub/i18n/browser` detects and remembers the visitor's language, keeps `<html lang>` and `dir` in step, and can translate HTML marked with `data-i18n`.
+- `@codenhub/i18n/browser` detects the visitor's language, remembers the one they choose, keeps `<html lang>` and `dir` in step, and can translate HTML marked with `data-i18n`.
 - `@codenhub/i18n/routing` reads and builds locale-prefixed paths, such as `/pt/about`.
 
 ## Documentation
@@ -242,7 +242,7 @@ src/locales/
   pt.json
 ```
 
-Load them with a dynamic `import()` so a visitor only downloads their own language:
+Load them with a dynamic `import()`, so a visitor downloads only the languages the manager needs: their own, plus your default language as the fallback:
 
 ```ts
 import { createI18n } from "@codenhub/i18n";
@@ -257,6 +257,8 @@ export const i18n = createI18n({
   },
 });
 ```
+
+This shares one manager across a browser app. On a server or in a static build, wrap `createI18n()` in a function and call it for each request or page instead, as [Render on a server](docs/server-rendering.md#one-manager-per-request) explains.
 
 The return type `Promise<typeof en>` is what gives you typed keys: a dynamic import returns `any`, which would otherwise let any string through. `import type` needs `"resolveJsonModule": true` in your `tsconfig.json`, and never ends up in your bundle.
 
@@ -278,7 +280,7 @@ Your loader owns everything about transport: URLs, caching headers, retries, tim
 - Starting or switching to a non-default locale loads that locale and the default locale together, because the default is the fallback.
 - If your loader throws or rejects, the call that needed it rejects with an `I18nError`, and the manager keeps its current language. The next call tries the loader again.
 - Returning the same object every time, such as a module-level import, lets every manager share one checked copy. That matters on a server, which [creates a manager per request](docs/server-rendering.md).
-- Treat a dictionary as read-only once loaded: the manager keeps its own frozen copy, so later changes to the object do nothing.
+- Treat a dictionary as read-only once loaded: the manager keeps a frozen, checked copy, shared by every manager that loads the same object, so later changes to the object do nothing.
 
 ## Put values into text
 
@@ -327,14 +329,14 @@ t("cart.items", { count: 5 }); // "5 items"
 
 The manager asks the built-in `Intl.PluralRules` which form the language uses for that number, and `count` also fills the `{count}` placeholder. The form names are the standard [CLDR plural categories](https://cldr.unicode.org/index/cldr-spec/plural-rules):
 
-| Form    | Used for                                                                               |
-| ------- | -------------------------------------------------------------------------------------- |
-| `zero`  | Languages with a zero form, such as Arabic and Latvian. English uses `other` for 0.    |
-| `one`   | Singular. Portuguese and French also use it for 0.                                     |
-| `two`   | Dual, such as Arabic, Hebrew, and Welsh.                                               |
-| `few`   | Small numbers, such as 2–4 in Polish and Czech.                                        |
-| `many`  | Large numbers in some languages, such as Polish and Arabic.                            |
-| `other` | Everything else. **Always include it**; it is the fallback for any form you leave out. |
+| Form    | Used for                                                                                       |
+| ------- | ---------------------------------------------------------------------------------------------- |
+| `zero`  | Languages with a zero form, such as Arabic and Latvian. English uses `other` for 0.            |
+| `one`   | Singular. French and Brazilian Portuguese (`pt`, `pt-BR`) also use it for 0; `pt-PT` does not. |
+| `two`   | Dual, such as Arabic, Hebrew, and Welsh.                                                       |
+| `few`   | Small numbers, such as 2–4 in Polish and Czech.                                                |
+| `many`  | Large numbers in some languages, such as Polish and Arabic.                                    |
+| `other` | Everything else. **Always include it**; it is the fallback for any form you leave out.         |
 
 Each dictionary only needs the forms its own language uses: the English file has `one` and `other`, and the Arabic file has all six. Look up a language's forms in the [CLDR plural rules chart](https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html).
 
@@ -371,6 +373,8 @@ t(`errors.${code}` as Key);
 
 `TranslationKey` is also useful for typing a component prop or helper that takes a key.
 
+If you write the manager's type yourself, as in `let i18n: I18n<"en" | "pt">`, pass the key type too: `I18n<"en" | "pt", Key>`. The second type argument defaults to `string`, which accepts any key. `createI18n()` fills it in for you.
+
 Let TypeScript infer the manager's types from the configuration. Passing some type arguments yourself, such as `createI18n<"en" | "pt">(...)`, turns off inference for the rest, and keys go back to plain `string`.
 
 If you keep the configuration in a separate variable, mark the default locale `as const`:
@@ -394,10 +398,15 @@ import { expect, test } from "vitest";
 import { i18n } from "./i18n";
 
 // Plural forms other than `other` differ by language, so they are not compared.
-const isLanguageSpecificForm = (key: string) => /\.(zero|one|two|few|many)$/.test(key);
+// A key such as `settings.one` is still compared unless its group also has `other`.
+const isLanguageSpecificForm = (key: string, dictionary: Readonly<Record<string, string>>) => {
+  const form = /^(.+)\.(zero|one|two|few|many)$/.exec(key);
+  return form !== null && `${form[1]}.other` in dictionary;
+};
 
 test("every locale has every key", async () => {
-  const reference = Object.keys(await i18n.loadLocale(i18n.defaultLocale)).filter((key) => !isLanguageSpecificForm(key));
+  const defaults = await i18n.loadLocale(i18n.defaultLocale);
+  const reference = Object.keys(defaults).filter((key) => !isLanguageSpecificForm(key, defaults));
 
   for (const locale of i18n.locales) {
     const dictionary = await i18n.loadLocale(locale);
@@ -479,7 +488,7 @@ The first of these that gives a supported locale wins:
 
 Pass `locale` when the page already knows its language, such as from the URL in [a localized site](docs/localized-urls.md#read-the-locale-on-the-client). It then overrides everything else, so the browser can't disagree with the server about which language the page is in.
 
-If the dictionary for a saved or detected locale fails to load, the visitor gets the default locale and a console warning instead of a broken app, and their saved choice is kept for next time. A failure to load a locale you passed explicitly, or the default locale, still rejects, since there is nothing sensible to fall back to.
+If your loader fails for a saved or detected locale, the visitor gets the default locale and a console warning instead of a broken app, and their saved choice is kept for next time. A loader failure for a locale you passed explicitly, or for the default locale, still rejects, since there is nothing sensible to fall back to. So does a dictionary that loads but [breaks the rules](docs/troubleshooting.md#a-dictionary-is-rejected), whatever the locale: that is a bug to fix, not a network hiccup to ride out.
 
 ## Let visitors switch languages
 
@@ -639,6 +648,8 @@ function pickLocale<TLocale extends string>(i18n: I18n<TLocale>, request: Reques
 }
 ```
 
+A visitor whose languages all fail to match, including one who refuses your default with `en;q=0`, still gets the default locale, since the page has to be in some language. This helper does not implement the rest of `Accept-Language`, such as `*`; use your server framework's parser if you need it, and pass its result to `matchLocale()`.
+
 `matchLocale()` takes a list rather than the header because parsing the header, and limiting its size, belongs to your server. It matches the same way the browser binding does, so a visitor gets the same language from the server as from the browser: `pt-BR` gets your `pt`, and `zh-TW` gets your `zh-Hant`. Malformed tags are skipped, and `undefined` means nothing matched.
 
 When the URL carries the language, as on [a localized site](docs/localized-urls.md), read it from the URL instead and use `Accept-Language` only to choose where to redirect a visitor who arrives at `/`.
@@ -674,14 +685,17 @@ const routing = createLocaleRouting({
   prefixDefaultLocale: false,
 });
 
-const pages = ["/", "/about"].flatMap((pathname) => routing.localizeAll(pathname));
-// [{ locale: "en", pathname: "/" }, { locale: "pt", pathname: "/pt" }, ...]
+// Your pages, keyed by their path without a locale.
+const pages = { "/": renderHome, "/about": renderAbout };
+
+const builds = Object.entries(pages).flatMap(([page, render]) => routing.localizeAll(page).map(({ locale, pathname }) => ({ locale, pathname, render })));
+// [{ locale: "en", pathname: "/", render: renderHome }, { locale: "pt", pathname: "/pt", render: renderHome }, ...]
 
 await Promise.all(
-  pages.map(async ({ locale, pathname }) => {
+  builds.map(async ({ locale, pathname, render }) => {
     const i18n = createAppI18n();
     await i18n.init({ locale });
-    await writePage(pathname, renderHome(i18n.t));
+    await writePage(pathname, render(i18n.t));
   }),
 );
 ```
@@ -743,7 +757,9 @@ With `prefixDefaultLocale: true`, a path without a locale returns `undefined`, s
 ```ts
 const route = routing.parse(url.pathname);
 if (route === undefined) {
-  return Response.redirect(new URL(routing.localize(url.pathname, pickLocale(i18n, request)), url), 302);
+  const target = new URL(url);
+  target.pathname = routing.localize(url.pathname, pickLocale(i18n, request));
+  return Response.redirect(target, 302);
 }
 ```
 
@@ -772,18 +788,20 @@ routing.localize("/pt/about", "en"); // "/about"
 routing.localize("/pt/about", "pt"); // "/pt/about"
 ```
 
-On a localized site, switching language is a navigation, not just `setLocale()`: `setLocale()` changes the text but never the URL. Build the new path and let your router go there:
+On a localized site, switching language is a navigation, not just `setLocale()`: `setLocale()` changes the text but never the URL. Build the new path, keep the query string and fragment, and let your router go there:
 
 ```ts
 const { pathname } = routing.parse(window.location.pathname)!;
-await navigate(routing.localize(pathname, "pt"));
+await navigate(routing.localize(pathname, "pt") + window.location.search + window.location.hash);
 ```
 
 Use the same call for the `<link rel="alternate" hreflang>` tags that tell search engines about each language:
 
 ```ts
-const alternates = routing.localizeAll(pathname).map((page) => `<link rel="alternate" hreflang="${page.locale}" href="https://example.com${page.pathname}">`);
+const alternates = routing.localizeAll(pathname).map((page) => `<link rel="alternate" hreflang="${escapeHtml(page.locale)}" href="${escapeHtml(new URL(page.pathname, "https://example.com").href)}">`);
 ```
+
+Escape both values as you would any text in HTML, or let your framework create the tags. A path can contain characters, such as `"` or `&`, that are allowed in a URL but not raw inside an attribute.
 
 ## Generate every localized page
 
@@ -898,6 +916,7 @@ The path is not an absolute path or contains something routing refuses, such as 
 - **"Browser observation requires a root"**: `observe: true` needs a `root` to watch.
 - **Storage warning**: `localStorage` is unavailable, as in some private browsing modes. The visitor's choice is not saved; everything else works.
 - **An element with `data-i18n` is skipped**: the element has child elements. Put the key on an element that contains only text, or translate it with `t()`.
+- **"Skipping translation on <style> because the element can activate or hide translated content"**: a `data-i18n` key is on a `<script>`, `<style>`, `<noscript>`, or `<template>` element, whose text runs as code or decides what shows. Move the key to an ordinary element.
 - **`data-i18n` text shows `{name}`**: HTML translation can't fill placeholders. Render that text with `t()` and pass the values.
 - **A `data-i18n-href` attribute does nothing**: only text attributes can be translated. See [Translate HTML without a framework](docs/browser.md#translate-html-without-a-framework).
 

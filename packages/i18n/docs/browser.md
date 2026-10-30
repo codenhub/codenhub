@@ -39,7 +39,7 @@ The first of these that gives a supported locale wins:
 
 Pass `locale` when the page already knows its language, such as from the URL in [a localized site](localized-urls.md#read-the-locale-on-the-client). It then overrides everything else, so the browser can't disagree with the server about which language the page is in.
 
-If the dictionary for a saved or detected locale fails to load, the visitor gets the default locale and a console warning instead of a broken app, and their saved choice is kept for next time. A failure to load a locale you passed explicitly, or the default locale, still rejects, since there is nothing sensible to fall back to.
+If your loader fails for a saved or detected locale, the visitor gets the default locale and a console warning instead of a broken app, and their saved choice is kept for next time. A loader failure for a locale you passed explicitly, or for the default locale, still rejects, since there is nothing sensible to fall back to. So does a dictionary that loads but [breaks the rules](troubleshooting.md#a-dictionary-is-rejected), whatever the locale: that is a bug to fix, not a network hiccup to ride out.
 
 ## Let visitors switch languages
 

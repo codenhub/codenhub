@@ -117,7 +117,7 @@ Optional DOM boundary whose safe `data-i18n` leaves and allowlisted `data-i18n-<
 storageKey?: string;
 ```
 
-Local storage key used for the JSON locale preference. Defaults to `"i18n"`. Requires storage when enabled.
+Local storage key used for the JSON locale preference. Defaults to `"i18n"`. Storage is best-effort: a failed read or write warns and is skipped.
 
 #### syncDocument
 

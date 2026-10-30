@@ -38,7 +38,7 @@ src/locales/
   pt.json
 ```
 
-Load them with a dynamic `import()` so a visitor only downloads their own language:
+Load them with a dynamic `import()`, so a visitor downloads only the languages the manager needs: their own, plus your default language as the fallback:
 
 ```ts
 import { createI18n } from "@codenhub/i18n";
@@ -53,6 +53,8 @@ export const i18n = createI18n({
   },
 });
 ```
+
+This shares one manager across a browser app. On a server or in a static build, wrap `createI18n()` in a function and call it for each request or page instead, as [Render on a server](server-rendering.md#one-manager-per-request) explains.
 
 The return type `Promise<typeof en>` is what gives you typed keys: a dynamic import returns `any`, which would otherwise let any string through. `import type` needs `"resolveJsonModule": true` in your `tsconfig.json`, and never ends up in your bundle.
 
@@ -74,7 +76,7 @@ Your loader owns everything about transport: URLs, caching headers, retries, tim
 - Starting or switching to a non-default locale loads that locale and the default locale together, because the default is the fallback.
 - If your loader throws or rejects, the call that needed it rejects with an `I18nError`, and the manager keeps its current language. The next call tries the loader again.
 - Returning the same object every time, such as a module-level import, lets every manager share one checked copy. That matters on a server, which [creates a manager per request](server-rendering.md).
-- Treat a dictionary as read-only once loaded: the manager keeps its own frozen copy, so later changes to the object do nothing.
+- Treat a dictionary as read-only once loaded: the manager keeps a frozen, checked copy, shared by every manager that loads the same object, so later changes to the object do nothing.
 
 ## Put values into text
 
@@ -123,14 +125,14 @@ t("cart.items", { count: 5 }); // "5 items"
 
 The manager asks the built-in `Intl.PluralRules` which form the language uses for that number, and `count` also fills the `{count}` placeholder. The form names are the standard [CLDR plural categories](https://cldr.unicode.org/index/cldr-spec/plural-rules):
 
-| Form    | Used for                                                                               |
-| ------- | -------------------------------------------------------------------------------------- |
-| `zero`  | Languages with a zero form, such as Arabic and Latvian. English uses `other` for 0.    |
-| `one`   | Singular. Portuguese and French also use it for 0.                                     |
-| `two`   | Dual, such as Arabic, Hebrew, and Welsh.                                               |
-| `few`   | Small numbers, such as 2–4 in Polish and Czech.                                        |
-| `many`  | Large numbers in some languages, such as Polish and Arabic.                            |
-| `other` | Everything else. **Always include it**; it is the fallback for any form you leave out. |
+| Form    | Used for                                                                                       |
+| ------- | ---------------------------------------------------------------------------------------------- |
+| `zero`  | Languages with a zero form, such as Arabic and Latvian. English uses `other` for 0.            |
+| `one`   | Singular. French and Brazilian Portuguese (`pt`, `pt-BR`) also use it for 0; `pt-PT` does not. |
+| `two`   | Dual, such as Arabic, Hebrew, and Welsh.                                                       |
+| `few`   | Small numbers, such as 2–4 in Polish and Czech.                                                |
+| `many`  | Large numbers in some languages, such as Polish and Arabic.                                    |
+| `other` | Everything else. **Always include it**; it is the fallback for any form you leave out.         |
 
 Each dictionary only needs the forms its own language uses: the English file has `one` and `other`, and the Arabic file has all six. Look up a language's forms in the [CLDR plural rules chart](https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html).
 
@@ -167,6 +169,8 @@ t(`errors.${code}` as Key);
 
 `TranslationKey` is also useful for typing a component prop or helper that takes a key.
 
+If you write the manager's type yourself, as in `let i18n: I18n<"en" | "pt">`, pass the key type too: `I18n<"en" | "pt", Key>`. The second type argument defaults to `string`, which accepts any key. `createI18n()` fills it in for you.
+
 Let TypeScript infer the manager's types from the configuration. Passing some type arguments yourself, such as `createI18n<"en" | "pt">(...)`, turns off inference for the rest, and keys go back to plain `string`.
 
 If you keep the configuration in a separate variable, mark the default locale `as const`:
@@ -190,10 +194,15 @@ import { expect, test } from "vitest";
 import { i18n } from "./i18n";
 
 // Plural forms other than `other` differ by language, so they are not compared.
-const isLanguageSpecificForm = (key: string) => /\.(zero|one|two|few|many)$/.test(key);
+// A key such as `settings.one` is still compared unless its group also has `other`.
+const isLanguageSpecificForm = (key: string, dictionary: Readonly<Record<string, string>>) => {
+  const form = /^(.+)\.(zero|one|two|few|many)$/.exec(key);
+  return form !== null && `${form[1]}.other` in dictionary;
+};
 
 test("every locale has every key", async () => {
-  const reference = Object.keys(await i18n.loadLocale(i18n.defaultLocale)).filter((key) => !isLanguageSpecificForm(key));
+  const defaults = await i18n.loadLocale(i18n.defaultLocale);
+  const reference = Object.keys(defaults).filter((key) => !isLanguageSpecificForm(key, defaults));
 
   for (const locale of i18n.locales) {
     const dictionary = await i18n.loadLocale(locale);

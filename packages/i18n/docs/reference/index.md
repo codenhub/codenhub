@@ -105,7 +105,7 @@ Every method is bound to its manager, so a destructured method, such as `const {
 **Type parameters**
 
 - `TLocale` — Union of supported canonical locale identifiers.
-- `TKey` — Union of accepted translation keys, inferred from the configured loader.
+- `TKey` — Union of accepted translation keys. Defaults to `string`; `createI18n()` sets it to `TranslationKey<TMessages>` for the loader's dictionary type.
 
 #### defaultLocale
 
@@ -575,7 +575,7 @@ Text direction used when rendering a locale.
 export type TranslationKey<TMessages> = unknown extends TMessages ? string : FlattenedKey<TMessages>;
 ```
 
-Dot-separated keys of a dictionary type's string leaves, or any string when the dictionary type is unknown.
+Dot-separated keys of a dictionary type's string leaves and of its plural groups, those with an `other` form, or any string when the dictionary type is unknown.
 
 **Type parameters**
 

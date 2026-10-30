@@ -26,7 +26,7 @@ export interface BrowserI18nOptions<TLocale extends string> {
    * Only `undefined` omits this input; other non-string runtime values reject initialization.
    */
   locale?: TLocale;
-  /** Local storage key used for the JSON locale preference. Defaults to `"i18n"`. Requires storage when enabled. */
+  /** Local storage key used for the JSON locale preference. Defaults to `"i18n"`. Storage is best-effort: a failed read or write warns and is skipped. */
   storageKey?: string;
   /**
    * Whether a stored locale is read, and explicit or later application-made locales are written. A locale detected
@@ -166,10 +166,17 @@ export async function initializeBrowserI18n<TLocale extends string>(
           }
         }
         for (const element of keyRemovedElements) {
-          domTranslator.translateRoot({ root: element, boundary: root, translate: (key) => internals.lookup(key) });
+          domTranslator.translateRoot({
+            root: element,
+            boundary: root,
+            translate: (key) => internals.lookup(key),
+          });
         }
       }
-      domTranslator.translateRoot({ root, translate: (key) => internals.lookup(key) });
+      domTranslator.translateRoot({
+        root,
+        translate: (key) => internals.lookup(key),
+      });
       // The records left are the full pass's own writes, which need no second pass.
       observer?.takeRecords();
     }
@@ -273,7 +280,9 @@ export async function initializeBrowserI18n<TLocale extends string>(
     let wasInitializationApplied: boolean;
 
     try {
-      wasInitializationApplied = await internals.init({ locale: initialLocale });
+      wasInitializationApplied = await internals.init({
+        locale: initialLocale,
+      });
     } catch (error) {
       // A stored or detected locale is a preference, not a requirement: when its loader fails, the default still serves
       // the user, and it is not persisted, so a later visit tries the preference again.
@@ -289,7 +298,9 @@ export async function initializeBrowserI18n<TLocale extends string>(
 
       warn(i18n, `[I18n] Could not load locale "${initialLocale}"; using the default locale.`, error);
       initialLocale = i18n.defaultLocale;
-      wasInitializationApplied = await internals.init({ locale: initialLocale });
+      wasInitializationApplied = await internals.init({
+        locale: initialLocale,
+      });
     }
 
     if (!wasInitializationApplied || !i18n.isReady || i18n.locale !== i18n.resolveLocale(initialLocale)) {

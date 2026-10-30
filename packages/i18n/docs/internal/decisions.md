@@ -51,7 +51,7 @@ A key whose value is a group with an `other` form is a plural group. `t(key, { c
 - **Forms are nested keys, not a new syntax.** `{ one, other }` under the key keeps dictionaries plain JSON that translation tools already edit, needs no parser, and keeps every form addressable as an ordinary key, such as `cart.items.one`. ICU `{count, plural, …}` was deferred, not rejected; see [roadmap.md](roadmap.md).
 - **Rules come from the dictionary's locale.** When the current dictionary lacks the group, the default dictionary's group is used with the default locale's rules, since that text is in the default language. Using the active locale's rules would pick a Portuguese category for English forms.
 - **Only a numeric `count` selects.** A string such as `"5"` does not, so a group used without a number is reported as a missing key instead of silently picking `other`. Converting strings was rejected because `"1,5"` and `"1.5"` parse differently by locale.
-- **An exact key wins.** A string under the key is returned as before, so adding `count` to an existing call never changes its text.
+- **An exact key wins within a dictionary.** A string under the key is returned as before, so adding `count` to an existing call never changes its text. Dictionaries are still checked in order, current then default, so a plural group in the current dictionary wins over a string that only the default dictionary has.
 - **A locale `Intl.PluralRules` rejects**, such as a private-use tag, always uses `other`, rather than failing a lookup.
 - **Typed keys** include the group key for any group with an `other` form, and still include each form.
 

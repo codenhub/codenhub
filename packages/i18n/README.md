@@ -41,7 +41,7 @@ t("home.titel"); // compile error: there is no such key
 
 Two optional entry points cover what differs by environment:
 
-- `@codenhub/i18n/browser` detects and remembers the visitor's language, keeps `<html lang>` and `dir` in step, and can translate HTML marked with `data-i18n`.
+- `@codenhub/i18n/browser` detects the visitor's language, remembers the one they choose, keeps `<html lang>` and `dir` in step, and can translate HTML marked with `data-i18n`.
 - `@codenhub/i18n/routing` reads and builds locale-prefixed paths, such as `/pt/about`.
 
 ## Documentation

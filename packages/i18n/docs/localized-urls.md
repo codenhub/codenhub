@@ -47,7 +47,9 @@ With `prefixDefaultLocale: true`, a path without a locale returns `undefined`, s
 ```ts
 const route = routing.parse(url.pathname);
 if (route === undefined) {
-  return Response.redirect(new URL(routing.localize(url.pathname, pickLocale(i18n, request)), url), 302);
+  const target = new URL(url);
+  target.pathname = routing.localize(url.pathname, pickLocale(i18n, request));
+  return Response.redirect(target, 302);
 }
 ```
 
@@ -76,18 +78,20 @@ routing.localize("/pt/about", "en"); // "/about"
 routing.localize("/pt/about", "pt"); // "/pt/about"
 ```
 
-On a localized site, switching language is a navigation, not just `setLocale()`: `setLocale()` changes the text but never the URL. Build the new path and let your router go there:
+On a localized site, switching language is a navigation, not just `setLocale()`: `setLocale()` changes the text but never the URL. Build the new path, keep the query string and fragment, and let your router go there:
 
 ```ts
 const { pathname } = routing.parse(window.location.pathname)!;
-await navigate(routing.localize(pathname, "pt"));
+await navigate(routing.localize(pathname, "pt") + window.location.search + window.location.hash);
 ```
 
 Use the same call for the `<link rel="alternate" hreflang>` tags that tell search engines about each language:
 
 ```ts
-const alternates = routing.localizeAll(pathname).map((page) => `<link rel="alternate" hreflang="${page.locale}" href="https://example.com${page.pathname}">`);
+const alternates = routing.localizeAll(pathname).map((page) => `<link rel="alternate" hreflang="${escapeHtml(page.locale)}" href="${escapeHtml(new URL(page.pathname, "https://example.com").href)}">`);
 ```
+
+Escape both values as you would any text in HTML, or let your framework create the tags. A path can contain characters, such as `"` or `&`, that are allowed in a URL but not raw inside an attribute.
 
 ## Generate every localized page
 

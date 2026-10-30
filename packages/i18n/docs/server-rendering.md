@@ -71,6 +71,8 @@ function pickLocale<TLocale extends string>(i18n: I18n<TLocale>, request: Reques
 }
 ```
 
+A visitor whose languages all fail to match, including one who refuses your default with `en;q=0`, still gets the default locale, since the page has to be in some language. This helper does not implement the rest of `Accept-Language`, such as `*`; use your server framework's parser if you need it, and pass its result to `matchLocale()`.
+
 `matchLocale()` takes a list rather than the header because parsing the header, and limiting its size, belongs to your server. It matches the same way the browser binding does, so a visitor gets the same language from the server as from the browser: `pt-BR` gets your `pt`, and `zh-TW` gets your `zh-Hant`. Malformed tags are skipped, and `undefined` means nothing matched.
 
 When the URL carries the language, as on [a localized site](localized-urls.md), read it from the URL instead and use `Accept-Language` only to choose where to redirect a visitor who arrives at `/`.
@@ -106,14 +108,17 @@ const routing = createLocaleRouting({
   prefixDefaultLocale: false,
 });
 
-const pages = ["/", "/about"].flatMap((pathname) => routing.localizeAll(pathname));
-// [{ locale: "en", pathname: "/" }, { locale: "pt", pathname: "/pt" }, ...]
+// Your pages, keyed by their path without a locale.
+const pages = { "/": renderHome, "/about": renderAbout };
+
+const builds = Object.entries(pages).flatMap(([page, render]) => routing.localizeAll(page).map(({ locale, pathname }) => ({ locale, pathname, render })));
+// [{ locale: "en", pathname: "/", render: renderHome }, { locale: "pt", pathname: "/pt", render: renderHome }, ...]
 
 await Promise.all(
-  pages.map(async ({ locale, pathname }) => {
+  builds.map(async ({ locale, pathname, render }) => {
     const i18n = createAppI18n();
     await i18n.init({ locale });
-    await writePage(pathname, renderHome(i18n.t));
+    await writePage(pathname, render(i18n.t));
   }),
 );
 ```
