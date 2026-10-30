@@ -101,7 +101,7 @@ Registered patterns run against arbitrary error text, so a pattern that backtrac
 
 ### To 0.3
 
-- The `"unexpected"` `AppErrorType` is renamed `"heuristic"`. Replace each comparison with `"unexpected"`. The type says how the error was matched, not how serious it is, which the old name contradicted.
+- The `"unexpected"` `AppErrorType` is renamed `"heuristic"`. Compare with `"heuristic"` wherever code compared with `"unexpected"`. The type says how the error was matched, not how serious it is, which the old name contradicted.
 - `appErrorFromJSON` rebuilds every error with `isRetryable: false`, and normalizes as raw input a value whose fields `toJSON()` cannot produce together.
 - The `codes`, `names`, and `messages` buckets' `values()` return a frozen list of `[identifier, feedback]` entries instead of an iterator. Spreading or iterating it works as before.
 - The browser failed-fetch pattern and `TimeoutError`, the Node.js `fetch failed` pattern, and the Supabase `FunctionsFetchError` and `FunctionsHttpError` messages tell the reader to check whether the request went through before trying again; their `messageKey` values are unchanged.
