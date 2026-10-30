@@ -217,6 +217,44 @@ describe("analyzeReference pages", () => {
     expect(files[0]?.contents).toContain("# Overview");
   });
 
+  it.each([undefined, ["./extra", "."]])(
+    "keeps split pages after their entrypoint in the selected order (%s)",
+    { timeout: 30_000 },
+    async (entrypoints) => {
+      const fixture = await createReferenceFixture("fixture-page-order", {
+        "index.ts": "/** Root value. */ export const root = 1;",
+        "extra.ts": 'export { detail } from "./details/value";',
+        "details/value.ts": "/** Detail value. */ export const detail = 2;",
+      });
+      (fixture.manifest.exports as Record<string, unknown>)["./extra"] = { types: "./dist/extra.d.ts" };
+      const { files, model } = await analyzeReference(fixture, {
+        entrypoints,
+        pages: { "./extra": { split: { details: { source: ["src/details/**"] } } } },
+        prose: true,
+      });
+      const expected =
+        entrypoints === undefined
+          ? ["index.md", "extra/index.md", "extra/details.md"]
+          : ["extra/index.md", "extra/details.md", "index.md"];
+      expect(files.map((file) => file.path.split("docs/reference/")[1])).toEqual(expected);
+      expect(model.entrypoints.map((entry) => [entry.subpath, entry.page])).toEqual(
+        entrypoints === undefined
+          ? [
+              [".", undefined],
+              ["./extra", undefined],
+              ["./extra", "details"],
+            ]
+          : [
+              ["./extra", undefined],
+              ["./extra", "details"],
+              [".", undefined],
+            ],
+      );
+      expect(page(files, "extra/index.md")).toContain(`order: ${expected.indexOf("extra/index.md")}`);
+      expect(page(files, "extra/details.md")).toContain(`order: ${expected.indexOf("extra/details.md")}`);
+    },
+  );
+
   it("moves symbols declared in matching sources onto a split page", { timeout: 30_000 }, async () => {
     const { files } = await analyzeReference(await createSplitFixture(), {
       pages: {
