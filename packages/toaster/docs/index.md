@@ -57,7 +57,7 @@ toast.success("Branch merged", {
 await toast.promise(publishArticle(), {
   loading: "Publishing article...",
   success: "Article published live!",
-  error: (err) => `Publication failed: ${err.message}`,
+  error: (err) => `Publication failed: ${err instanceof Error ? err.message : String(err)}`,
 });
 
 // 4. Interactive modal dialogs with native await

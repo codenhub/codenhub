@@ -188,3 +188,35 @@ describe("screen reader announcements", () => {
     second.destroy();
   });
 });
+
+describe("actionable toasts", () => {
+  it("announces the action label after the toast's text", () => {
+    const toaster = createToaster();
+    toaster.success("Deleted", { action: { label: "Undo", onClick: () => {} } });
+    toaster.info("Saved.", { action: { label: "View", onClick: () => {} } });
+    vi.advanceTimersByTime(100);
+
+    expect(lines("polite")).toEqual(["Deleted. Undo", "Saved. View"]);
+    toaster.destroy();
+  });
+
+  it("labels each stack as a notifications region", () => {
+    const toaster = createToaster();
+    toaster.success("Saved");
+    const stack = document.body.querySelector("[data-toast-container]")!;
+    expect(stack.getAttribute("role")).toBe("region");
+    expect(stack.getAttribute("aria-label")).toBe("Notifications");
+    toaster.destroy();
+  });
+
+  it("localizes the region label", () => {
+    const toaster = createToaster({ labels: { notifications: "Notificações" } });
+    toaster.success("Salvo");
+    const stack = document.body.querySelector("[data-toast-container]")!;
+    expect(stack.getAttribute("aria-label")).toBe("Notificações");
+
+    toaster.configure({ labels: { notifications: "Avisos" } });
+    expect(stack.getAttribute("aria-label")).toBe("Avisos");
+    toaster.destroy();
+  });
+});

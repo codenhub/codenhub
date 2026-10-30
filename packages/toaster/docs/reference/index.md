@@ -450,7 +450,7 @@ Optional secondary description text below the progress message.
 dismissible?: boolean;
 ```
 
-Whether the user can manually close it. Defaults to false.
+Whether the user can manually close it. Defaults to `ToasterConfig.loading.dismissible`, then the instance's `dismissible` (`false`).
 
 #### margin
 
@@ -514,7 +514,7 @@ Extra CSS classes.
 dismissible?: boolean;
 ```
 
-Whether to render a close button.
+Whether to render a close button, while pending and after. The resolved state defaults to `ToasterConfig.semantic.dismissible` when this is unset.
 
 #### duration
 
@@ -522,7 +522,7 @@ Whether to render a close button.
 duration?: number;
 ```
 
-Visibility duration in milliseconds for the resolved state.
+Visibility duration in milliseconds for the resolved state. Defaults to `ToasterConfig.semantic.duration`, then the instance's `duration`.
 
 #### error
 
@@ -535,10 +535,10 @@ Content to display when the promise rejects.
 #### loading
 
 ```ts
-loading: string | ToastOptions;
+loading: string | LoadingToastOptions;
 ```
 
-Content to display while the promise is pending.
+Content to display while the promise is pending: a message, or the options a `loading()` toast takes.
 
 #### margin
 
@@ -958,7 +958,7 @@ Default viewport position. Defaults to "top-right".
 semantic?: SemanticDefaults;
 ```
 
-Defaults for `success`, `error`, `warning`, and `info` toasts, over the instance-wide ones.
+Defaults for `success`, `error`, `warning`, and `info` toasts and the outcome of `promise`, over the instance-wide ones.
 
 #### tokens
 
@@ -1101,6 +1101,14 @@ dismiss?: string;
 ```
 
 Accessible label for a toast's dismiss button. Defaults to "Dismiss toast".
+
+#### notifications
+
+```ts
+notifications?: string;
+```
+
+Accessible name of the region landmark each toast stack is. Defaults to "Notifications".
 
 #### ok
 
@@ -1590,7 +1598,7 @@ New visibility duration in milliseconds, applied the next time an auto-dismiss t
 icon?: ToastIcon | null;
 ```
 
-Swaps the icon glyph, or `null` to remove it. Ignored in a call that also gives `content`. If `type` is given in the same call and `icon` is not, the icon matching that type is used automatically.
+Swaps the icon glyph, or `null` to remove it. Ignored in a call that also gives `content`, and on a toast showing custom content. If `type` is given in the same call and `icon` is not, the icon matching that type is used automatically.
 
 #### message
 

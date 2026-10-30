@@ -25,11 +25,13 @@ toast.warning("Storage is almost full", {
 });
 ```
 
-The announcement is the toast's title, description, or message, or the text of its custom content. Buttons are left out. A toast is announced again when an update changes its text or role, so a promise toast announces both its loading text and its outcome. The visible toast element is not itself a live region.
+The announcement is the toast's title, description, or message, or the text of its custom content. When a toast has an `action`, its label follows, as in "Deleted. Undo", so a screen reader user knows there is something to act on. The dismiss button and buttons inside custom content are left out. A toast is announced again when an update changes its text or role, so a promise toast announces both its loading text and its outcome. The visible toast element is not itself a live region.
 
 A live region inserted together with its text is often missed, because assistive technology only announces changes to a region it already tracks. Each region is therefore added empty, and its first text follows 100ms later, as in the [W3C ARIA22 technique](https://www.w3.org/WAI/WCAG21/Techniques/aria/ARIA22.html). Announced text is removed from the region after 7 seconds.
 
-While one of its dialogs is open, a toaster announces through live regions inside that dialog, because the rest of the page is inert then. Toasts from another toaster instance are not announced while the dialog is open, and the library does not repeat them after it closes.
+While one of its dialogs is open, a toaster announces through live regions inside that dialog, because the rest of the page is inert then. Toasts from another toaster instance are not announced while the dialog is open, and the library does not repeat them after it closes. The same holds under a modal dialog your application opens itself; see [Your own modal dialogs](concepts.md#your-own-modal-dialogs).
+
+Each toast stack is a `region` landmark named "Notifications", so screen reader users can jump to it to reach a toast's buttons. Set `labels.notifications` to localize the name.
 
 ### Accessible dismiss buttons
 

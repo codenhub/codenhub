@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createToaster, dialog as defaultDialog, toast as defaultToast } from ".";
+import type { LoadingToastOptions } from ".";
 import {
   animations,
   clickBackdrop,
@@ -515,7 +516,8 @@ describe("toast.promise", () => {
 
     toaster.promise(promise, {
       duration: 8000,
-      loading: { message: "Loading...", duration: 1000 },
+      // Not in the type, but a JavaScript caller can still pass it.
+      loading: { message: "Loading...", duration: 1000 } as LoadingToastOptions,
       success: "Finished!",
       error: "Error",
     });

@@ -150,7 +150,7 @@ toast.success("Branch merged", {
 await toast.promise(publishArticle(), {
   loading: "Publishing article...",
   success: "Article published live!",
-  error: (err) => `Publication failed: ${err.message}`,
+  error: (err) => `Publication failed: ${err instanceof Error ? err.message : String(err)}`,
 });
 
 // 4. Interactive modal dialogs with native await
@@ -198,6 +198,22 @@ Modern web applications need two fundamentally different kinds of feedback: peri
 | **Interactive Dialogs** | Browser Top Layer (`<dialog>` + `showModal()`)        | Destructive confirmations, user prompts, mandatory alerts                   | Explicit action button click, Escape key, or programmatic dismissal |
 
 Because modal dialogs use the platform's native `<dialog>` element and `showModal()`, the browser marks the rest of the document as `inert`. So while one of its dialogs is open, a toaster places its toast stacks inside that dialog: they stay in their viewport corner, above the backdrop, and can still be clicked, focused, and heard by screen readers. They move back out as soon as the dialog starts closing. Toasts from another toaster instance stay behind the backdrop, inert, until the dialog closes.
+
+### Your own modal dialogs
+
+The same applies to a `<dialog>` your application opens with `showModal()`, and the library does not move toasts into it. A toast dispatched while it is open renders behind its backdrop: it cannot be clicked, and screen readers do not announce it. To show toasts from inside your own modal, create a toaster scoped to that dialog and destroy it when the dialog closes:
+
+```ts
+import { createToaster } from "@codenhub/toaster";
+
+const modal = document.querySelector<HTMLDialogElement>("#settings")!;
+const modalToaster = createToaster({ container: modal });
+
+modal.showModal();
+modalToaster.success("Settings saved");
+
+modal.addEventListener("close", () => modalToaster.destroy(), { once: true });
+```
 
 ## Lifecycle states and handles
 
@@ -249,7 +265,7 @@ import { toast } from "@codenhub/toaster";
 const data = await toast.promise(fetchUserPayload(), {
   loading: "Loading user profile...",
   success: (res) => `Welcome back, ${res.name}!`,
-  error: (err) => `Failed to load profile: ${err.message}`,
+  error: (err) => `Failed to load profile: ${err instanceof Error ? err.message : String(err)}`,
 });
 ```
 
@@ -372,9 +388,13 @@ import { toast } from "@codenhub/toaster";
 const user = await toast.promise(updateUserProfile(payload), {
   loading: "Saving profile changes...",
   success: (updatedUser) => `Profile saved for ${updatedUser.username}!`,
-  error: (err) => `Failed to update profile: ${err.message}`,
+  error: (err) => `Failed to update profile: ${err instanceof Error ? err.message : String(err)}`,
 });
 ```
+
+The rejection reaches `error` as `unknown`, because a promise can reject with any value, so narrow it before reading `message`.
+
+`loading` takes a message or the options `toast.loading()` takes. The outcome is a semantic toast: settings it leaves unset come from the call's own `duration` and `dismissible`, then from the instance's `semantic` defaults, then from the instance itself.
 
 The `success` and `error` handlers can return either a simple string or a structured `ToastOptions` object:
 
@@ -394,7 +414,7 @@ await toast.promise(syncRepository(), {
   }),
   error: (err) => ({
     title: "Sync conflict",
-    description: err.message,
+    description: err instanceof Error ? err.message : String(err),
     duration: 10000,
   }),
 });
@@ -542,7 +562,7 @@ Read [Accessibility and security](docs/accessibility.md) for full details on the
 Rather than simulating modal overlays with complex `z-index` stacks and manual focus traps, `@codenhub/toaster` uses the browser's native `<dialog>` platform primitive:
 
 - **Browser Top Layer**: Always renders above every other element in the DOM tree, regardless of ancestor `z-index` or `overflow: hidden` rules.
-- **Inert Document**: The browser automatically disables user interaction with the background document while the modal is open. The same toaster's toasts move into the dialog for that time, so they stay usable (see [Concepts](docs/concepts.md#the-two-presentation-layers)).
+- **Inert Document**: The browser automatically disables user interaction with the background document while the modal is open. The same toaster's toasts move into the dialog for that time, so they stay usable (see [Concepts](docs/concepts.md#the-two-presentation-layers)). Your own modal dialogs need a scoped toaster for that (see [Your own modal dialogs](docs/concepts.md#your-own-modal-dialogs)).
 - **Focus Trap & Restoration**: Focus is automatically confined within the dialog, and restored to the triggering element when the dialog closes.
 - **Escape Key Handling**: Pressing Escape triggers standard dialog dismissal, resolving the operation with its cancel value.
 
@@ -664,10 +684,12 @@ const toaster = createToaster({
     submit: "Enviar",
     ok: "Entendido",
     dismiss: "Fechar notificação",
+    notifications: "Notificações",
   },
 });
 
-// All dialogs dispatched from this instance use Portuguese button labels:
+// `dismiss` names each toast's close button and `notifications` names the toast
+// stacks. All dialogs dispatched from this instance use Portuguese button labels:
 if (await toaster.dialog.confirm("Deseja prosseguir?")) {
   salvarAlteracoes();
 }
@@ -854,11 +876,13 @@ toast.warning("Storage is almost full", {
 });
 ```
 
-The announcement is the toast's title, description, or message, or the text of its custom content. Buttons are left out. A toast is announced again when an update changes its text or role, so a promise toast announces both its loading text and its outcome. The visible toast element is not itself a live region.
+The announcement is the toast's title, description, or message, or the text of its custom content. When a toast has an `action`, its label follows, as in "Deleted. Undo", so a screen reader user knows there is something to act on. The dismiss button and buttons inside custom content are left out. A toast is announced again when an update changes its text or role, so a promise toast announces both its loading text and its outcome. The visible toast element is not itself a live region.
 
 A live region inserted together with its text is often missed, because assistive technology only announces changes to a region it already tracks. Each region is therefore added empty, and its first text follows 100ms later, as in the [W3C ARIA22 technique](https://www.w3.org/WAI/WCAG21/Techniques/aria/ARIA22.html). Announced text is removed from the region after 7 seconds.
 
-While one of its dialogs is open, a toaster announces through live regions inside that dialog, because the rest of the page is inert then. Toasts from another toaster instance are not announced while the dialog is open, and the library does not repeat them after it closes.
+While one of its dialogs is open, a toaster announces through live regions inside that dialog, because the rest of the page is inert then. Toasts from another toaster instance are not announced while the dialog is open, and the library does not repeat them after it closes. The same holds under a modal dialog your application opens itself; see [Your own modal dialogs](docs/concepts.md#your-own-modal-dialogs).
+
+Each toast stack is a `region` landmark named "Notifications", so screen reader users can jump to it to reach a toast's buttons. Set `labels.notifications` to localize the name.
 
 ### Accessible dismiss buttons
 

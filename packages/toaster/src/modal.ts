@@ -3,7 +3,7 @@ import { createAlertRenderer, createConfirmRenderer, createPromptRenderer } from
 import type { ModalRenderContext, ModalRenderResult } from "./modal-renderers";
 import { DIALOG_CLASS, buildDialogContent } from "./modal-templates";
 import { closeDialog } from "./modal-transition";
-import { joinClassNames } from "./options";
+import { joinClassNames, withoutUndefined } from "./options";
 import { assertValidTokens } from "./tokens";
 import type { AlertOptions, ConfirmOptions, DialogHandle, PromptOptions, ToastLabels, ToastState } from "./types";
 
@@ -53,7 +53,7 @@ export class ModalController {
     const snapshot: ConfirmOptions = {
       confirmLabel: labels.confirm,
       cancelLabel: labels.cancel,
-      ...options,
+      ...withoutUndefined(options),
     };
     return this.createModal<boolean>({
       message,
@@ -68,7 +68,7 @@ export class ModalController {
     const snapshot: PromptOptions = {
       submitLabel: labels.submit,
       cancelLabel: labels.cancel,
-      ...options,
+      ...withoutUndefined(options),
     };
     return this.createModal<string | null>({
       message,
@@ -82,7 +82,7 @@ export class ModalController {
     const labels = this.getLabels();
     const snapshot: AlertOptions = {
       okLabel: labels.ok,
-      ...options,
+      ...withoutUndefined(options),
     };
     return this.createModal({
       message,
