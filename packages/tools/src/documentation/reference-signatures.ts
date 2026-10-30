@@ -690,6 +690,7 @@ export function attachSignatures(
 interface NamedType {
   name: string;
   module?: string;
+  declarations?: readonly ts.Node[];
 }
 
 function leftmostName(name: ts.EntityName | ts.Expression): string | undefined {
@@ -732,31 +733,42 @@ function boundNames(node: ts.Node): string[] {
 /**
  * Types a declaration names as its `.d.ts` text prints them, leaving out a name where
  * something binds it for its own use: a type parameter, a mapped-type key, an `infer`
- * binding in its conditional's true branch, or a namespace's own member.
+ * binding in its conditional's true branch. Namespace-local names carry their declarations.
  */
 function namedTypes(node: ts.Node): NamedType[] {
   const named: NamedType[] = [];
-  const add = (scope: ReadonlySet<string>, name: string | undefined, module?: string): void => {
+  const add = (current: ts.Node, scope: ReadonlySet<string>, name: string | undefined, module?: string): void => {
     if (name !== undefined && (module !== undefined || !scope.has(name))) {
+      if (module === undefined) {
+        for (let parent = current.parent; parent !== undefined; parent = parent.parent) {
+          const declarations = ts.isModuleBlock(parent)
+            ? collectDeclarationNodes(parent.statements).get(name)
+            : undefined;
+          if (declarations !== undefined) {
+            named.push({ declarations, name });
+            return;
+          }
+        }
+      }
       named.push(module === undefined ? { name } : { module, name });
     }
   };
   const visit = (current: ts.Node, outer: ReadonlySet<string>): void => {
-    const bound = boundNames(current);
+    const bound = ts.isModuleBlock(current) ? [] : boundNames(current);
     const scope = bound.length === 0 ? outer : new Set([...outer, ...bound]);
     if (ts.isTypeReferenceNode(current)) {
-      add(scope, leftmostName(current.typeName));
+      add(current, scope, leftmostName(current.typeName));
     } else if (ts.isExpressionWithTypeArguments(current)) {
-      add(scope, leftmostName(current.expression));
+      add(current, scope, leftmostName(current.expression));
     } else if (ts.isTypeQueryNode(current)) {
-      add(scope, leftmostName(current.exprName));
+      add(current, scope, leftmostName(current.exprName));
     } else if (
       ts.isImportTypeNode(current) &&
       current.qualifier !== undefined &&
       ts.isLiteralTypeNode(current.argument) &&
       ts.isStringLiteral(current.argument.literal)
     ) {
-      add(scope, leftmostName(current.qualifier), current.argument.literal.text);
+      add(current, scope, leftmostName(current.qualifier), current.argument.literal.text);
     } else if (ts.isConditionalTypeNode(current)) {
       visit(current.checkType, scope);
       visit(current.extendsType, scope);
@@ -846,31 +858,60 @@ export function attachInternalTypes(
   entryDtsBySubpath: ReadonlyMap<string, string>,
   ambient: ReadonlyMap<string, string>,
 ): ReferenceModel {
-  const resolver = buildDeclarationResolver(files);
+  const handwritten = new Map([...ambient].map(([path, text]) => [path.replace(/^src\//, ""), text]));
+  const allFiles = new Map([...handwritten, ...files]);
+  const resolver = buildDeclarationResolver(allFiles);
   const globals = ambientNames(ambient);
   const declarationsOf = (subpath: string, name: string): readonly ts.Node[] => {
     const entryDts = entryDtsBySubpath.get(subpath);
     return (entryDts === undefined ? undefined : resolver.lookup(entryDts, name)) ?? [];
   };
-  const documented = new Set(
-    model.entrypoints.flatMap((entrypoint) =>
-      entrypoint.symbols.flatMap((symbol) => declarationsOf(entrypoint.subpath, symbol.name)),
-    ),
-  );
+  const documented = new Set<ts.Node>();
+  const markDocumented = (symbol: ReferenceSymbol, nodes: readonly ts.Node[]): void => {
+    nodes.forEach((node) => documented.add(node));
+    const nested = nodes.flatMap((node) =>
+      ts.isModuleDeclaration(node) && node.body !== undefined && ts.isModuleBlock(node.body)
+        ? [...collectDeclarationNodes(node.body.statements).values()].flat()
+        : [],
+    );
+    for (const member of symbol.namespaceMembers) {
+      markDocumented(
+        member,
+        nested.filter((node) => (node as { name?: ts.Identifier }).name?.text === member.name),
+      );
+    }
+  };
+  for (const entrypoint of model.entrypoints) {
+    for (const symbol of entrypoint.symbols) {
+      const nodes = declarationsOf(entrypoint.subpath, symbol.name);
+      markDocumented(symbol, nodes);
+    }
+  }
 
   const resolve = (path: string, type: NamedType): Resolution => {
+    const resolved = (declarations: readonly ts.Node[] | undefined): Resolution => {
+      const handwrittenNode = declarations?.find((node) => !files.has(node.getSourceFile().fileName));
+      return handwrittenNode === undefined
+        ? declarations === undefined
+          ? undefined
+          : { declarations }
+        : { declaredIn: `src/${handwrittenNode.getSourceFile().fileName}`, missing: true };
+    };
+    if (type.declarations !== undefined) {
+      return resolved(type.declarations);
+    }
     if (type.module !== undefined) {
       if (!type.module.startsWith(".")) {
         return undefined;
       }
-      const target = resolveDtsCandidates(path, type.module).find((candidate) => files.has(candidate));
+      const target = resolveDtsCandidates(path, type.module).find((candidate) => allFiles.has(candidate));
       const declarations = target === undefined ? undefined : resolver.lookup(target, type.name);
-      return declarations === undefined ? undefined : { declarations };
+      return resolved(declarations);
     }
     // Follows the file's imports and re-exports too; a name it cannot place is a global.
     const declarations = resolver.lookup(path, type.name);
     if (declarations !== undefined) {
-      return { declarations };
+      return resolved(declarations);
     }
     const declaredIn = globals.get(type.name);
     return declaredIn === undefined ? undefined : { declaredIn, missing: true };

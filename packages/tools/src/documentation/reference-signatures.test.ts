@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { createReferenceFixture } from "../generators/reference-fixture.test-support.ts";
+import { analyzeReference } from "../generators/reference-generator.ts";
 import type { ReferenceModel } from "./reference-model.ts";
 import {
   attachSignatures,
@@ -30,6 +32,32 @@ export declare enum Level {
 }
 export { somethingReexported } from "./other";
 `;
+
+describe("internal type resolution", () => {
+  it("reports an imported type from a hand-written declaration", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("handwritten-only-type", {
+      "index.ts": "import type {Hidden} from './types'; /** Makes. */ export function make():Hidden {return {x:1};}",
+      "types.d.ts": "/** Hidden. */ export interface Hidden {x:number;}",
+    });
+    const { model } = await analyzeReference(fixture, { prose: true });
+    expect(model.unresolved).toEqual([{ subpath: ".", symbol: "make", name: "Hidden", declaredIn: "src/types.d.ts" }]);
+  });
+
+  it("lists namespace-local types without losing lexical shadowing", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("namespace-internal", {
+      "index.ts": `
+        export namespace NS {
+          type Hidden = {x:number};
+          /** Public. */ export function make():Hidden {return {x:1};}
+          /** Generic. */ export function identity<Hidden>(value:Hidden):Hidden {return value;}
+        }
+      `,
+    });
+    const { model } = await analyzeReference(fixture, { prose: true });
+    expect(model.unresolved).toEqual([]);
+    expect(model.entrypoints[0]?.internalTypes.map(({ name }) => name)).toEqual(["Hidden"]);
+  });
+});
 
 describe("extractSignatures", () => {
   const index = extractSignatures(dts, "index.d.ts");
