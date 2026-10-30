@@ -1,4 +1,6 @@
 import { slug } from "github-slugger";
+import remarkParse from "remark-parse";
+import { unified } from "unified";
 
 import {
   walkSymbols,
@@ -21,6 +23,38 @@ const GROUP_HEADINGS: readonly { kind: ReferenceSymbol["kind"]; heading: string 
 ];
 
 const LINK_PATTERN = /\{@link\s+([^}|]+?)(?:\s*\|\s*([^}]+?))?\s*\}/g;
+
+const markdownParser = unified().use(remarkParse);
+
+function nestHeadings(markdown: string, level: number): string {
+  const edits: { start: number; end: number; text: string }[] = [];
+  const visit = (
+    node: ReturnType<typeof markdownParser.parse> | ReturnType<typeof markdownParser.parse>["children"][number],
+  ): void => {
+    if (node.type === "heading" && node.position !== undefined) {
+      const start = node.position.start.offset ?? 0;
+      const end = node.position.end.offset ?? start;
+      const source = markdown.slice(start, end);
+      const hashes = "#".repeat(Math.min(level + node.depth, 6));
+      const atx = /^#{1,6}(?=\s|$)/.exec(source);
+      edits.push(
+        atx === null
+          ? { start, end, text: `${hashes} ${source.replace(/\r?\n[^\n]*$/, "")}` }
+          : { start, end: start + atx[0].length, text: hashes },
+      );
+    }
+    if ("children" in node) {
+      for (const child of node.children) {
+        visit(child);
+      }
+    }
+  };
+  visit(markdownParser.parse(markdown));
+  for (const edit of edits.reverse()) {
+    markdown = markdown.slice(0, edit.start) + edit.text + markdown.slice(edit.end);
+  }
+  return markdown;
+}
 
 /**
  * The heading-anchor slug for a symbol or member name.
@@ -158,7 +192,7 @@ function memberBlocks(
     blocks.push(codeBlock(member.signature));
   }
   if (prose) {
-    blocks.push(...proseBlocks(member, link, member.defaultValue));
+    blocks.push(...proseBlocks(member, link, level, member.defaultValue));
   }
   return blocks;
 }
@@ -167,7 +201,13 @@ function deprecationNote(deprecated: string | true, link: (text: string) => stri
   return deprecated === true ? "> **Deprecated.**" : `> **Deprecated.** ${link(deprecated)}`;
 }
 
-function proseBlocks(prose: ReferenceProse, link: (text: string) => string, defaultValue?: string): string[] {
+function proseBlocks(
+  prose: ReferenceProse,
+  resolve: (text: string) => string,
+  level: number,
+  defaultValue?: string,
+): string[] {
+  const link = (text: string): string => nestHeadings(resolve(text), level);
   const blocks: string[] = [];
   if (prose.deprecated !== undefined) {
     blocks.push(deprecationNote(prose.deprecated, link));
@@ -188,7 +228,7 @@ function proseBlocks(prose: ReferenceProse, link: (text: string) => string, defa
     blocks.push(`**Since** — ${link(prose.since)}`);
   }
   for (const example of prose.examples) {
-    blocks.push("**Example**", example.trim());
+    blocks.push("**Example**", nestHeadings(example.trim(), level));
   }
   blocks.push(...notesSection("See also", prose.see, link));
   return blocks;
@@ -214,7 +254,7 @@ function symbolBlocks(
         blocks.push(codeBlock(overload.signature));
       }
       if (prose) {
-        blocks.push(...proseBlocks(overload, link));
+        blocks.push(...proseBlocks(overload, link, level));
       }
     }
   } else {
@@ -222,7 +262,7 @@ function symbolBlocks(
       blocks.push(codeBlock(symbol.signature));
     }
     if (prose) {
-      blocks.push(...proseBlocks(symbol, link, symbol.defaultValue));
+      blocks.push(...proseBlocks(symbol, link, level, symbol.defaultValue));
     }
   }
 
@@ -274,7 +314,7 @@ export function renderReferencePage(entrypoint: ReferenceEntrypoint, options: Re
     for (const type of entrypoint.internalTypes) {
       sections.push(`### ${type.name}`, codeBlock(type.signature));
       if (options.prose && type.doc !== undefined) {
-        sections.push(link(type.doc));
+        sections.push(nestHeadings(link(type.doc), 3));
       }
       const files = type.declaredIn.map((file) => `\`${file}\``).join(", ");
       sections.push(`Not exported; declared in ${files}.`);

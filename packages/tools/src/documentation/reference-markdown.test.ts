@@ -129,6 +129,28 @@ describe("renderReferencePage", () => {
     expect(headings).toEqual(["Functions", "Interfaces", "Type aliases"]);
   });
 
+  it("nests prose headings below their symbol or member and caps them at H6", () => {
+    const nested = renderReferencePage(
+      {
+        ...entrypoint,
+        symbols: [
+          symbol({
+            name: "Reader",
+            kind: "interface",
+            doc: "# Summary\n\n## Remarks\n\nSetext\n======\n\n```md\n# Code\n```",
+            returns: "Result.\n\n# Return details",
+            members: [member({ name: "read", kind: "method", doc: "# Member\n\n###### Deep" })],
+          }),
+        ],
+      },
+      { title: "Reference", heading: "Reference", sourceRoot: "src", prose: true },
+    );
+    expect(nested).toContain("#### Summary\n\n##### Remarks\n\n#### Setext");
+    expect(nested).toContain("#### Return details");
+    expect(nested).toContain("##### Member\n\n###### Deep");
+    expect(nested).toContain("```md\n# Code\n```");
+  });
+
   it("renders the signature, a deprecation blockquote, then prose and tag sections", () => {
     const section = page.slice(page.indexOf("### createAppError"), page.indexOf("### AppError"));
     expect(section).toContain("```ts\nexport declare function createAppError(error: unknown): AppError;\n```");
