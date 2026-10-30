@@ -219,6 +219,19 @@ describe("renderReferencePage", () => {
     expect(page).toContain("See {@link https://mdn}.".replace("{@link https://mdn}", "`https://mdn`"));
   });
 
+  it("resolves links in prose while preserving inline, fenced, and indented code", () => {
+    const doc =
+      'See {@link __DEV__}. Code: `{@link __DEV__}`.\n\n```ts\nconst doc = "{@link __DEV__}";\n```\n\n    {@link __DEV__}\n\nAfter {@link __DEV__ | __label__}.';
+    const rendered = renderReferencePage(
+      { ...entrypoint, symbols: [symbol({ name: "__DEV__", kind: "variable", doc })] },
+      { title: "Reference", heading: "Reference", sourceRoot: "src", prose: true },
+    );
+    expect(rendered).toContain("See [\\_\\_DEV\\_\\_](#__dev__). Code: `{@link __DEV__}`.");
+    expect(rendered).toContain('```ts\nconst doc = "{@link __DEV__}";\n```');
+    expect(rendered).toContain("    {@link __DEV__}");
+    expect(rendered).toContain("After [\\_\\_label\\_\\_](#__dev__).");
+  });
+
   it("escapes generated identifiers and link labels so Markdown preserves their text", () => {
     const escaped = renderReferencePage(
       {

@@ -128,7 +128,35 @@ function resolveLinks(
   ownNames: ReadonlySet<string>,
   resolve?: (name: string) => string | undefined,
 ): string {
-  return markdown.replace(LINK_PATTERN, (_match, rawTarget: string, rawLabel: string | undefined) => {
+  const prose: { start: number; end: number }[] = [];
+  const protectedRanges: { start: number; end: number }[] = [];
+  const visit = (
+    node: ReturnType<typeof markdownParser.parse> | ReturnType<typeof markdownParser.parse>["children"][number],
+  ): void => {
+    const start = node.position?.start.offset;
+    const end = node.position?.end.offset;
+    if (start !== undefined && end !== undefined) {
+      if (["code", "inlineCode", "html", "link", "linkReference"].includes(node.type)) {
+        protectedRanges.push({ start, end });
+        return;
+      }
+      if (node.type === "paragraph" || node.type === "heading") {
+        prose.push({ start, end });
+      }
+    }
+    if ("children" in node) {
+      node.children.forEach(visit);
+    }
+  };
+  visit(markdownParser.parse(markdown));
+  return markdown.replace(LINK_PATTERN, (match, rawTarget: string, rawLabel: string | undefined, offset: number) => {
+    const end = offset + match.length;
+    if (
+      !prose.some((range) => offset >= range.start && end <= range.end) ||
+      protectedRanges.some((range) => offset < range.end && end > range.start)
+    ) {
+      return match;
+    }
     const target = rawTarget.trim();
     const label = (rawLabel ?? target).trim();
     const href = resolve?.(target) ?? (ownNames.has(target) ? `#${symbolSlug(target)}` : undefined);
