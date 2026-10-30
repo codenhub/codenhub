@@ -1,17 +1,11 @@
+import { setToastLayerHost } from "./dom";
 import { createAlertRenderer, createConfirmRenderer, createPromptRenderer } from "./modal-renderers";
 import type { ModalRenderContext, ModalRenderResult } from "./modal-renderers";
 import { DIALOG_CLASS, buildDialogContent } from "./modal-templates";
 import { closeDialog } from "./modal-transition";
 import { joinClassNames } from "./options";
 import { assertValidTokens } from "./tokens";
-import type {
-  AlertOptions,
-  ConfirmOptions,
-  InteractiveToastHandle,
-  PromptOptions,
-  ToastLabels,
-  ToastState,
-} from "./types";
+import type { AlertOptions, ConfirmOptions, DialogHandle, PromptOptions, ToastLabels, ToastState } from "./types";
 
 interface ModalJob {
   run(): void;
@@ -22,7 +16,6 @@ interface ModalJob {
 interface ModalOptions {
   title?: string;
   backdropDismiss?: boolean;
-  shouldBackdropDismiss?: boolean;
   tokens?: ConfirmOptions["tokens"];
   className?: string;
 }
@@ -50,7 +43,7 @@ export class ModalController {
     private readonly getLabels: () => ToastLabels = () => ({}),
   ) {}
 
-  public confirm(message: string, options: ConfirmOptions = {}): InteractiveToastHandle<boolean> {
+  public confirm(message: string, options: ConfirmOptions = {}): DialogHandle<boolean> {
     const labels = this.getLabels();
     // Cloned before use: the renderer closure below reads label/type fields
     // lazily when the queued job eventually runs, not synchronously here, so
@@ -70,7 +63,7 @@ export class ModalController {
     });
   }
 
-  public prompt(message: string, options: PromptOptions = {}): InteractiveToastHandle<string | null> {
+  public prompt(message: string, options: PromptOptions = {}): DialogHandle<string | null> {
     const labels = this.getLabels();
     const snapshot: PromptOptions = {
       submitLabel: labels.submit,
@@ -85,7 +78,7 @@ export class ModalController {
     });
   }
 
-  public alert(message: string, options: AlertOptions = {}): InteractiveToastHandle<void> {
+  public alert(message: string, options: AlertOptions = {}): DialogHandle<void> {
     const labels = this.getLabels();
     const snapshot: AlertOptions = {
       okLabel: labels.ok,
@@ -118,7 +111,7 @@ export class ModalController {
     }
   }
 
-  private createModal<T>(params: CreateModalParams<T>): InteractiveToastHandle<T> {
+  private createModal<T>(params: CreateModalParams<T>): DialogHandle<T> {
     if (params.message.trim().length === 0) {
       throw new Error("Interactive dialog message must not be empty.");
     }
@@ -126,14 +119,9 @@ export class ModalController {
     // while before its job runs, and a caller-owned options object mutated
     // in that window must not reach the eventually-rendered dialog (the
     // same boundary `normalizeToastOptions` in options.ts applies to toasts).
-    const backdropDismiss =
-      params.options.backdropDismiss !== undefined
-        ? params.options.backdropDismiss
-        : params.options.shouldBackdropDismiss;
     const options: ModalOptions = {
       title: params.options.title,
-      backdropDismiss,
-      shouldBackdropDismiss: backdropDismiss,
+      backdropDismiss: params.options.backdropDismiss,
       tokens: params.options.tokens ? { ...params.options.tokens } : undefined,
       className: params.options.className,
     };
@@ -185,6 +173,7 @@ export class ModalController {
         documentRef.defaultView?.cancelAnimationFrame(focusFrame);
       }
       abortController.abort();
+      this.releaseToastLayers();
       state = "hidden";
       // Cleared as soon as this dialog is done with, not left sitting until
       // the next open reuses the element: a prompt's draft input value, or
@@ -207,6 +196,9 @@ export class ModalController {
       }
       isClosing = true;
       state = "hiding";
+      // Toasts leave as soon as the dialog starts closing, so one dispatched
+      // during its exit transition is not hidden with it.
+      this.releaseToastLayers();
       abortController.abort();
       if (!dialog || isForced) {
         if (dialog?.open) {
@@ -220,6 +212,7 @@ export class ModalController {
 
     const fail = (error: unknown): void => {
       settleResult(params.cancelValue, error);
+      this.releaseToastLayers();
       if (dialog?.open) {
         dialog.close();
       }
@@ -270,7 +263,7 @@ export class ModalController {
         // `close()` itself is idempotent through `closeDialog`'s own
         // already-closed fast path, so replaying it here is safe.
         dialog.addEventListener("close", () => close(params.cancelValue), { signal: abortController.signal });
-        if (options.backdropDismiss !== false && options.shouldBackdropDismiss !== false) {
+        if (options.backdropDismiss !== false) {
           dialog.addEventListener(
             "click",
             (event) => {
@@ -293,6 +286,9 @@ export class ModalController {
         }
 
         dialog.showModal();
+        // Everything outside a modal dialog is inert, so this instance's
+        // toasts live inside it while it is open.
+        setToastLayerHost(this.parent, this.instanceId, dialog);
         state = "visible";
         if (rendered.shouldDeferFocus) {
           focusFrame = documentRef.defaultView!.requestAnimationFrame(() => {
@@ -372,6 +368,10 @@ export class ModalController {
       this.restoreTarget.focus();
     }
     this.restoreTarget = null;
+  }
+
+  private releaseToastLayers(): void {
+    setToastLayerHost(this.parent, this.instanceId, null);
   }
 
   private ensureDialog(): HTMLDialogElement {

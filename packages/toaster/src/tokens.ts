@@ -41,6 +41,8 @@ interface OwnedStyleEntry {
   readonly element: HTMLStyleElement;
   /** The exact `tokens` object last successfully applied, for the reference-equality skip in {@link applyGlobalTokens}. */
   tokens: ToastTokens;
+  /** The nonce the element was inserted with. */
+  nonce: string | undefined;
 }
 
 const ownedStyleElements = new Map<string, OwnedStyleEntry>();
@@ -115,8 +117,13 @@ export function applyGlobalTokens(
     return;
   }
 
+  // A changed nonce needs a new element: a browser checks the nonce when a
+  // stylesheet is inserted, not when the attribute changes later.
   const isReusable = Boolean(
-    existing && existing.element.ownerDocument === documentRef && existing.element.isConnected,
+    existing &&
+    existing.element.ownerDocument === documentRef &&
+    existing.element.isConnected &&
+    existing.nonce === nonce,
   );
 
   // A toaster instance reapplies its own tokens on every dispatch (see
@@ -152,7 +159,7 @@ export function applyGlobalTokens(
     }
     rule.style.cssText = "";
     applyTokens(rule.style, tokens);
-    ownedStyleElements.set(styleId, { element: styleElement, tokens });
+    ownedStyleElements.set(styleId, { element: styleElement, tokens, nonce });
   } catch (error) {
     // A reused element was already working before this call: the failing
     // check above runs before any mutation, so its prior declarations are

@@ -1,9 +1,11 @@
+import { announce } from "./announcer";
 import {
   animateIn,
   applyRootClassChange,
   captureStackRects,
   createToastShell,
   getOrCreateContainer,
+  getToastAnnouncementText,
   isTopAnchoredPosition,
   playStackShift,
   populateToastContent,
@@ -58,8 +60,10 @@ interface NormalizedUpdate {
 }
 
 /** Reports an error with no caller to propagate to, the same way a browser reports an unhandled rejection. */
-function reportUncaughtError(error: unknown): void {
-  const globalWithReportError = globalThis as typeof globalThis & { reportError?: (error: unknown) => void };
+export function reportUncaughtError(error: unknown): void {
+  const globalWithReportError = globalThis as typeof globalThis & {
+    reportError?: (error: unknown) => void;
+  };
   if (globalWithReportError.reportError) {
     globalWithReportError.reportError(error);
   } else {
@@ -111,6 +115,8 @@ export class Toast {
   private currentIcon: ToastIcon | null;
   private currentRootClassName: string;
   private currentRole: ToastRole;
+  private announcedText: string | null = null;
+  private announcedRole: ToastRole | null = null;
   private currentAutoDismiss: boolean;
   private currentDismissible: boolean;
   private currentTitle: string | null;
@@ -393,7 +399,7 @@ export class Toast {
       type: update.type,
       duration: update.duration,
       autoDismiss: update.autoDismiss,
-      dismissible: update.dismissible ?? update.closeButton,
+      dismissible: update.dismissible,
       // Snapshotted rather than referenced: the same boundary
       // normalizeToastOptions draws for construction-time tokens, so a
       // caller mutation after this call cannot change what gets applied.
@@ -452,9 +458,8 @@ export class Toast {
 
     if (normalized.type !== undefined && this.currentRootClassName !== previousRootClassName) {
       applyRootClassChange(element, previousRootClassName, this.currentRootClassName);
-      element.setAttribute("role", this.currentRole);
-      element.setAttribute("aria-live", this.currentRole === "alert" ? "assertive" : "polite");
     }
+    this.announceIfChanged(element);
 
     if (normalized.tokens !== undefined || normalized.className !== undefined) {
       applyUpdateToElement(element, { tokens: normalized.tokens, className: normalized.className });
@@ -514,19 +519,38 @@ export class Toast {
     this.render();
   }
 
-  /** `createToastShell`'s input, reading the mutable role/rootClassName fields `update()` can change instead of the frozen construction-time baseline. */
+  /** `createToastShell`'s input, reading the mutable rootClassName field `update()` can change instead of the frozen construction-time baseline. */
   private get shellOptions(): Pick<
     NormalizedToastOptions,
-    "className" | "instanceClassName" | "instanceId" | "role" | "rootClassName" | "tokens"
+    "className" | "instanceClassName" | "instanceId" | "rootClassName" | "tokens"
   > {
     return {
       className: this.options.className,
       instanceClassName: this.options.instanceClassName,
       instanceId: this.options.instanceId,
-      role: this.currentRole,
       rootClassName: this.currentRootClassName,
       tokens: this.options.tokens,
     };
+  }
+
+  /**
+   * Announces this toast's text through the instance's live regions, unless
+   * the same text was already announced with the same role -- so an update
+   * that only restyles the toast stays silent.
+   */
+  private announceIfChanged(element: HTMLDivElement): void {
+    const text = getToastAnnouncementText(element);
+    if (text === this.announcedText && this.currentRole === this.announcedRole) {
+      return;
+    }
+    this.announcedText = text;
+    this.announcedRole = this.currentRole;
+    announce({
+      parent: this.parent,
+      instanceId: this.options.instanceId,
+      role: this.currentRole,
+      text,
+    });
   }
 
   /** `populateToastContent`'s input, reading the mutable content/icon/message fields `update()` can change instead of the frozen construction-time baseline. */
@@ -646,10 +670,7 @@ export class Toast {
     // inserting the still-empty shell would capture its much shorter empty
     // height, understating the push and letting the true, larger shift
     // happen later as an unanimated snap the clipping stack then cuts into.
-    // The shell is still inserted empty first, then filled, since that is a
-    // distinct mutation an assistive technology's live-region observer can
-    // pick up -- see `createToastShell`'s own doc comment for why the order
-    // matters. A top-anchored stack inserts at the start rather than
+    // A top-anchored stack inserts at the start rather than
     // appending -- see `isTopAnchoredPosition` -- so the newest toast still
     // renders immediately below the anchored edge without needing
     // `flex-direction: column-reverse` to get there.
@@ -693,6 +714,7 @@ export class Toast {
     // position out from under it by however much the scroll offset moved.
     container.scrollTop = isTopAnchored ? 0 : container.scrollHeight;
     playStackShift(container, previousStackRects);
+    this.announceIfChanged(element);
 
     this.currentAnimation = animateIn({
       element,

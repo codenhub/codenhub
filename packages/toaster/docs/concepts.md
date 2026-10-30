@@ -17,14 +17,14 @@ Modern web applications need two fundamentally different kinds of feedback: peri
 | **Floating Toasts**     | Light DOM stack containers (`[data-toast-container]`) | Background job completion, copy confirmation, system alerts, promise states | Auto-dismiss timer, close button, or programmatic dismissal         |
 | **Interactive Dialogs** | Browser Top Layer (`<dialog>` + `showModal()`)        | Destructive confirmations, user prompts, mandatory alerts                   | Explicit action button click, Escape key, or programmatic dismissal |
 
-Because modal dialogs use the platform's native `<dialog>` element and `showModal()`, the browser marks the rest of the document as `inert`. Floating toasts remain visible in the background, but interaction with them (such as clicking a toast's dismiss button) pauses automatically until the modal dialog closes. This behavior is built into the web platform and guarantees that users resolve active modals before attending to secondary notifications.
+Because modal dialogs use the platform's native `<dialog>` element and `showModal()`, the browser marks the rest of the document as `inert`. So while one of its dialogs is open, a toaster places its toast stacks inside that dialog: they stay in their viewport corner, above the backdrop, and can still be clicked, focused, and heard by screen readers. They move back out as soon as the dialog starts closing. Toasts from another toaster instance stay behind the backdrop, inert, until the dialog closes.
 
 ## Lifecycle states and handles
 
 Every notification and dialog dispatched in `@codenhub/toaster` returns an active handle:
 
 - **`ToastHandle`**: Returned by `toast()`, `toast.success()`, `toast.error()`, `toast.warning()`, `toast.info()`, `toast.loading()`, and `toast.custom()`.
-- **`InteractiveToastHandle<T>`**: Returned by `dialog.confirm()`, `dialog.prompt()`, and `dialog.alert()`.
+- **`DialogHandle<T>`**: Returned by `dialog.confirm()`, `dialog.prompt()`, and `dialog.alert()`.
 
 A toast notification transitions through four deterministic lifecycle states:
 
@@ -45,7 +45,7 @@ Both handle types expose a `settled: Promise<void>` property. This promise resol
 
 A major flaw in traditional toast and dialog libraries is the "truthy object" trap: an interactive method returns a handle object, and calling `if (await dialog.confirm(...))` evaluates to `true` even if the user clicks "Cancel" because an object reference is always truthy.
 
-`@codenhub/toaster` resolves this by making `InteractiveToastHandle<T>` implement `PromiseLike<T>`:
+`@codenhub/toaster` resolves this by making `DialogHandle<T>` implement `PromiseLike<T>`:
 
 ```ts
 import { dialog } from "@codenhub/toaster";

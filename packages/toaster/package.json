@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "private": false,
   "description": "Instance-based browser toast and native dialog manager with accessible semantic, loading, and custom notifications.",
-  "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/toaster",
+  "homepage": "https://codenhub.dev/packages/toaster/",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -18,6 +18,9 @@
     "llms-full.txt"
   ],
   "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",

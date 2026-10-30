@@ -2,7 +2,9 @@
 
 Instance-based browser toasts and native interactive dialogs with isolated DOM, configuration, queues, and token styles.
 
-> [!WARNING] This package is experimental. Its API, rendering behavior, CSS, and support level may change before a stable release.
+> [!WARNING]
+>
+> This package is experimental. Its API, rendering behavior, CSS, and support level may change before a stable release.
 
 ## Installation
 
@@ -35,7 +37,7 @@ toast.success("Changes saved", {
 await toast.promise(saveChanges(), {
   loading: "Saving changes...",
   success: "Changes saved",
-  error: (err) => `Save failed: ${err.message}`,
+  error: (err) => `Save failed: ${err instanceof Error ? err.message : String(err)}`,
 });
 
 // Interactive modal dialogs
@@ -73,13 +75,12 @@ scopedToaster.destroy();
 
 ## Requirements
 
-- Rendering requires a browser DOM and `@codenhub/toaster/styles`.
-- Interactive APIs require native `<dialog>` support. Construction is SSR-safe, but rendering operations throw without a document.
-- `@codenhub/styles >=0.3.0` is an optional peer, and consumers do not need Tailwind configuration either way. Every toast and dialog color composes live against `@codenhub/styles`' own tokens — `--color-<intent>`, the presentation axis (`--ui-fill`/`--ui-border`), and the aesthetic axis (`--ui-clip`, `--ui-shadow-*`, `--ui-elevation`) — using the same fill/edge formula its own components run, so a runtime change to a `--color-*` token or an active aesthetic class reaches an already-rendered toast the same way it reaches a `.alert` or a `.btn`. When `@codenhub/styles` isn't installed, the identical formula runs against this package's own generated, uncomposed color inputs (`generated-defaults.css`), so standalone rendering stays usable with nothing left to drift from the real thing. The toast body composes like `.alert`'s own unstyled default (a soft, edged surface grounded on the page); the dialog's action buttons compose like `.btn`'s (a solid, edgeless, raised control).
-- Presentation (`.solid`, `.soft`, `.ghost`, `.edged`, `.edgeless`) works the same way it does on a real styles component: declared as a plain, inheriting custom-property class, so one on the toast or dialog element itself always wins over one only an ancestor carries. A consumer's own `ToastTokens` color always wins over the composed result for the property it sets.
-- A restrictive `style-src` Content Security Policy that blocks unnonced inline styles can supply `ToasterConfig.nonce`, applied to the `<style>` element instance color tokens are written through.
-- If also using `@codenhub/styles`' classless native-element mappings (`@codenhub/styles/native` or `/tw/native`), import them before `@codenhub/toaster/styles`: that stylesheet resets every bare `<button>` to the neutral intent at the same zero specificity toaster's dialog buttons use, and import order decides which wins.
-- Dark-mode styling activates under a `.dark` class or `data-theme="dark"` attribute on an ancestor (usually `<html>`) — the same DOM contract `@codenhub/theme` produces. Toaster has no dependency on `@codenhub/theme`; any mechanism that sets those attributes works. Theme resolution is nested: a `.light`/`.dark` section inside an oppositely-themed ancestor resolves its own colors correctly, standalone or not.
+- Rendering requires a browser DOM and `@codenhub/toaster/styles`. Construction is SSR-safe, but rendering throws without a document.
+- Dialogs require native `<dialog>` support.
+- `@codenhub/styles >=0.3.0` is an optional peer. When present, toasts and dialogs compose live with its color, presentation, and aesthetic tokens; without it, the package's own defaults apply. See the [styling guide](docs/styling.md).
+- If you use `@codenhub/styles`' native-element stylesheet, import it before `@codenhub/toaster/styles`. See [stylesheet ordering](docs/styling.md#classless-native-button-stylesheet-ordering).
+- Dark mode follows a `.dark` class or `data-theme="dark"` attribute on an ancestor, as `@codenhub/theme` sets. See [dark mode](docs/styling.md#dark-mode-support).
+- A strict `style-src` Content Security Policy needs `ToasterConfig.nonce`. See [CSP](docs/styling.md#content-security-policy-csp).
 
 ## Notes
 
@@ -87,6 +88,6 @@ Configuration, messages, durations, positions, and color tokens are validated an
 
 ## License
 
-Licensed under Apache-2.0.
+This project is licensed under the [Apache-2.0](LICENSE) license.
 
 Bundled Lucide SVG icons use the ISC License. See [NOTICE](NOTICE).

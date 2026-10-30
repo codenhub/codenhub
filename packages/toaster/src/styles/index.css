@@ -1,5 +1,10 @@
 /* @codenhub/toaster consumer stylesheet. Every element selector is instance-scoped. */
 
+/* The same layer order @codenhub/styles declares. Stated first so that
+   loading this sheet before that one cannot register `components` ahead
+   of `theme` and `base` and reorder its layers. */
+@layer theme, base, components, utilities;
+
 /* This package's own baked-in color inputs -- see generated-defaults.css's
    own header and scripts/generate-toast-defaults.mjs. */
 @import "./generated-defaults.css";
@@ -14,28 +19,34 @@
    is what makes a class on the toast/dialog element itself beat one only an
    ancestor carries: a rule matching the element directly always wins over
    the value that element would otherwise inherit, at any specificity. See
-   @codenhub/styles' own presentation.css for the model this mirrors. */
-.solid {
-  --ui-fill: 100%;
-  --ui-fg-on-fill: 100%;
-}
+   @codenhub/styles' own presentation.css for the model this mirrors.
 
-.soft {
-  --ui-fill: 12%;
-  --ui-fg-on-fill: 0%;
-}
+   They sit in the same `components` layer that package uses: unlayered,
+   these page-wide classes would beat every layered rule, such as a checked
+   `.checkbox.soft` setting `--ui-fill` from its utilities layer. */
+@layer components {
+  .solid {
+    --ui-fill: 100%;
+    --ui-fg-on-fill: 100%;
+  }
 
-.ghost {
-  --ui-fill: 0%;
-  --ui-fg-on-fill: 0%;
-}
+  .soft {
+    --ui-fill: 12%;
+    --ui-fg-on-fill: 0%;
+  }
 
-.edged {
-  --ui-border: 100%;
-}
+  .ghost {
+    --ui-fill: 0%;
+    --ui-fg-on-fill: 0%;
+  }
 
-.edgeless {
-  --ui-border: 0%;
+  .edged {
+    --ui-border: 100%;
+  }
+
+  .edgeless {
+    --ui-border: 0%;
+  }
 }
 
 /* `max-height`/`overflow-y` let the stack scroll instead of silently
@@ -158,14 +169,6 @@
   transform: translateX(-50%);
 }
 
-:where([data-toast-instance].coden-toast-stack-center) {
-  top: 50%;
-  left: 50%;
-  align-items: center;
-  flex-direction: column;
-  transform: translate(-50%, -50%);
-}
-
 /* Every severity declares its own intent inputs -- color, contrast, strong,
    border, and fill ceiling -- the same shape @codenhub/styles' intent.css
    gives `.success`/`.warning`/etc, but scoped to this package's own severity
@@ -262,17 +265,11 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  width: max-content;
-  /* Both floor and ceiling stay within what the stack's own margin leaves
-     available (see .coden-toast-stack's matching max-width), not just a
-     flat 2rem allowance: a large configured margin on a narrow viewport
-     would otherwise let this toast -- whether forced wide by its own
-     min-width floor, or simply by naturally wide `width: max-content`
-     content -- render wider than its container, overflowing past the
-     margin it was supposed to respect. `--toast-margin-x` inherits from
-     the stack container this toast renders inside. */
-  min-width: min(10rem, calc(100vw - (2 * var(--toast-margin-x, 1rem))));
-  max-width: min(24rem, calc(100vw - (2 * var(--toast-margin-x, 1rem))));
+  /* One width for every toast, so a stack has straight edges. It stays
+     within what the stack's margin leaves on a narrow viewport (see
+     .coden-toast-stack's matching max-width). `--toast-margin-x` inherits
+     from the stack container this toast renders inside. */
+  width: min(22.25rem, calc(100vw - (2 * var(--toast-margin-x, 1rem))));
   padding: 0.75rem;
   border-style: solid;
   border-width: var(--_width);
@@ -458,30 +455,19 @@ dialog[data-toast-instance].toast-dialog {
   border: 0;
   background: transparent;
   color: inherit;
-  opacity: 0;
-  transform: scale(0.96);
+  /* The fade and scale run on the panel inside, not here: the instance's
+     toasts move into this dialog while it is open (everything outside a
+     modal dialog is inert), and a transform here would make it their
+     containing block, pinning their fixed stacks to the panel instead of
+     the viewport. These keep the dialog rendered while the panel fades out. */
   transition:
-    opacity var(--motion-duration-normal, 200ms) ease,
-    transform var(--motion-duration-normal, 200ms) ease,
     overlay var(--motion-duration-normal, 200ms) ease allow-discrete,
     display var(--motion-duration-normal, 200ms) ease allow-discrete;
 }
 
-dialog[data-toast-instance].toast-dialog[open] {
-  opacity: 1;
-  transform: scale(1);
-}
-
-@starting-style {
-  dialog[data-toast-instance].toast-dialog[open] {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-}
-
 dialog[data-toast-instance].toast-dialog::backdrop {
   background: rgb(0 0 0 / 45%);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(2px);
   opacity: 0;
   transition:
     opacity var(--motion-duration-normal, 200ms) ease,
@@ -510,8 +496,8 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  width: min(24rem, calc(100vw - 2rem));
+  gap: 1rem;
+  width: min(28rem, calc(100vw - 2rem));
   max-height: calc(100dvh - 2rem);
   padding: 1.5rem;
   overflow: auto;
@@ -527,6 +513,23 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
   color: var(--toast-color-text, var(--color-text, var(--toast-default-color-text)));
   font-family: var(--default-font-family, ui-sans-serif, system-ui, sans-serif);
   overflow-wrap: anywhere;
+  opacity: 0;
+  transform: scale(0.96);
+  transition:
+    opacity var(--motion-duration-normal, 200ms) ease,
+    transform var(--motion-duration-normal, 200ms) ease;
+}
+
+:where(dialog[data-toast-instance][open] .toast-dialog-container) {
+  opacity: 1;
+  transform: none;
+}
+
+@starting-style {
+  :where(dialog[data-toast-instance][open] .toast-dialog-container) {
+    opacity: 0;
+    transform: scale(0.96);
+  }
 }
 
 :where(.edged) :where(dialog[data-toast-instance] .toast-dialog-container) {
@@ -743,7 +746,8 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
   }
 
   dialog[data-toast-instance].toast-dialog,
-  dialog[data-toast-instance].toast-dialog::backdrop {
+  dialog[data-toast-instance].toast-dialog::backdrop,
+  :where(dialog[data-toast-instance] .toast-dialog-container) {
     transition-duration: 0.01ms;
   }
 }

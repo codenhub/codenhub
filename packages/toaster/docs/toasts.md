@@ -192,7 +192,6 @@ Supported positions are:
 
 - `"top-left"`, `"top-center"`, `"top-right"`
 - `"bottom-left"`, `"bottom-center"`, `"bottom-right"`
-- `"center"`
 
 ### Margin and safe-area insets
 

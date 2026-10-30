@@ -33,6 +33,8 @@ To match the wider ecosystem, toaster components mirror the base styling convent
 - **Toast body**: Composes like an unstyled `.alert` component: a soft surface (12% intent fill), edged border, grounded on the page background with elevation 0.
 - **Dialog action buttons**: Compose like an unstyled `.btn` component: a solid surface (100% intent fill), edgeless border, and raised elevation 1.
 
+Every toast is 22.25rem (356px) wide, narrowed to fit the viewport inside the stack's margin, so a stack keeps straight edges. Set `width` through `className` to change it.
+
 ### Presentation classes
 
 Presentation helper classes (`.solid`, `.soft`, `.ghost`, `.edged`, `.edgeless`) adjust how background fills and borders render:
@@ -141,6 +143,8 @@ const toaster = createToaster({
   },
 });
 ```
+
+Changing the nonce with `configure({ nonce })` writes the token stylesheet again under the new nonce, because a browser checks a nonce only when a stylesheet is inserted.
 
 ## Classless native button stylesheet ordering
 

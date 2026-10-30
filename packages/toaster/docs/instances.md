@@ -47,19 +47,19 @@ if (await panelToaster.dialog.confirm("Reset panel layout?")) {
 
 ### Full configuration options
 
-| Option        | Type                   | Default          | Description                                                                                                                               |
-| ------------- | ---------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `container`   | `HTMLElement`          | `document.body`  | Target element holding the toast stack containers. Cannot be changed after construction.                                                  |
-| `position`    | `ToastPosition`        | `"top-right"`    | Viewport anchor position (`"top-left"`, `"top-center"`, `"top-right"`, `"bottom-left"`, `"bottom-center"`, `"bottom-right"`, `"center"`). |
-| `maxVisible`  | `number`               | `5`              | Maximum number of simultaneously visible toasts before FIFO eviction begins.                                                              |
-| `duration`    | `number`               | `4000`           | Default display duration in milliseconds before auto-dismissal.                                                                           |
-| `autoDismiss` | `boolean`              | `true`           | Whether toasts close automatically after `duration` expires.                                                                              |
-| `dismissible` | `boolean`              | `false`          | Whether to render a close button on toasts (aliased as `closeButton`).                                                                    |
-| `margin`      | `string \| { x?, y? }` | safe-area inset  | Spacing between the stack container and the viewport/container edge.                                                                      |
-| `className`   | `string`               | `undefined`      | Custom CSS class appended to every toast and dialog in this instance.                                                                     |
-| `labels`      | `ToastLabels`          | English defaults | Default text labels for dismiss buttons and dialog action buttons.                                                                        |
-| `tokens`      | `ToastTokens`          | `undefined`      | Design token color overrides applied across this instance.                                                                                |
-| `nonce`       | `string`               | `undefined`      | Content Security Policy nonce applied to the injected token `<style>` element.                                                            |
+| Option        | Type                   | Default          | Description                                                                                                                   |
+| ------------- | ---------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `container`   | `HTMLElement`          | `document.body`  | Target element holding the toast stack containers. Cannot be changed after construction.                                      |
+| `position`    | `ToastPosition`        | `"top-right"`    | Viewport anchor position (`"top-left"`, `"top-center"`, `"top-right"`, `"bottom-left"`, `"bottom-center"`, `"bottom-right"`). |
+| `maxVisible`  | `number`               | `5`              | Maximum number of simultaneously visible toasts before FIFO eviction begins.                                                  |
+| `duration`    | `number`               | `4000`           | Default display duration in milliseconds before auto-dismissal.                                                               |
+| `autoDismiss` | `boolean`              | `true`           | Whether toasts close automatically after `duration` expires.                                                                  |
+| `dismissible` | `boolean`              | `false`          | Whether to render a close button on toasts.                                                                                   |
+| `margin`      | `string \| { x?, y? }` | safe-area inset  | Spacing between the stack container and the viewport/container edge.                                                          |
+| `className`   | `string`               | `undefined`      | Custom CSS class appended to every toast and dialog in this instance.                                                         |
+| `labels`      | `ToastLabels`          | English defaults | Default text labels for dismiss buttons and dialog action buttons.                                                            |
+| `tokens`      | `ToastTokens`          | `undefined`      | Design token color overrides applied across this instance.                                                                    |
+| `nonce`       | `string`               | `undefined`      | Content Security Policy nonce applied to the injected token `<style>` element.                                                |
 
 ## Dynamic reconfiguration (`toaster.configure`)
 

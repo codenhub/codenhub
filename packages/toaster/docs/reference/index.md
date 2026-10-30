@@ -61,14 +61,6 @@ okLabel?: string;
 
 Label for the confirmation button. Defaults to "OK".
 
-#### shouldBackdropDismiss
-
-```ts
-shouldBackdropDismiss?: boolean;
-```
-
-Deprecated alias for `backdropDismiss`.
-
 #### title
 
 ```ts
@@ -133,14 +125,6 @@ confirmLabel?: string;
 
 Label for the positive action button. Defaults to "Confirm".
 
-#### shouldBackdropDismiss
-
-```ts
-shouldBackdropDismiss?: boolean;
-```
-
-Deprecated alias for `backdropDismiss`.
-
 #### title
 
 ```ts
@@ -180,14 +164,6 @@ autoDismiss?: boolean;
 ```
 
 Whether custom toasts automatically dismiss after duration.
-
-#### closeButton
-
-```ts
-closeButton?: boolean;
-```
-
-Intuitive alias for `dismissible`.
 
 #### dismissible
 
@@ -237,14 +213,6 @@ className?: string;
 
 Extra CSS class name.
 
-#### closeButton
-
-```ts
-closeButton?: boolean;
-```
-
-Intuitive alias for `dismissible`.
-
 #### content
 
 ```ts
@@ -291,7 +259,7 @@ Placement on the screen. Defaults to toaster configuration.
 role?: ToastRole;
 ```
 
-Accessibility role. Defaults to "status".
+Announcement role, see [ToastRole](#toastrole). Defaults to "status".
 
 #### tokens
 
@@ -312,7 +280,7 @@ Dispatcher interface for displaying interactive browser-native modal dialogs.
 #### alert
 
 ```ts
-alert(message: string, options?: AlertOptions): InteractiveToastHandle<void>;
+alert(message: string, options?: AlertOptions): DialogHandle<void>;
 ```
 
 Displays a blocking informational alert modal dialog.
@@ -329,7 +297,7 @@ Displays a blocking informational alert modal dialog.
 #### confirm
 
 ```ts
-confirm(message: string, options?: ConfirmOptions): InteractiveToastHandle<boolean>;
+confirm(message: string, options?: ConfirmOptions): DialogHandle<boolean>;
 ```
 
 Displays a confirmation modal dialog with confirm and cancel buttons.
@@ -346,7 +314,7 @@ Displays a confirmation modal dialog with confirm and cancel buttons.
 #### prompt
 
 ```ts
-prompt(message: string, options?: PromptOptions): InteractiveToastHandle<string | null>;
+prompt(message: string, options?: PromptOptions): DialogHandle<string | null>;
 ```
 
 Displays a prompt input dialog requesting user text input.
@@ -360,10 +328,10 @@ Displays a prompt input dialog requesting user text input.
 
 **Throws** — If the instance is destroyed, the message is empty, or no DOM is available.
 
-### InteractiveToastHandle
+### DialogHandle
 
 ```ts
-export interface InteractiveToastHandle<T> extends PromiseLike<T>
+export interface DialogHandle<T> extends PromiseLike<T>
 ```
 
 Control handle returned by interactive (confirm / prompt / alert) modals. Implements `PromiseLike<T>` so callers can directly `await dialog.confirm(...)` while retaining access to control methods (`dismiss`, `state`, `settled`).
@@ -436,14 +404,6 @@ export interface LoadingDefaults
 
 Fallback defaults for loading toasts.
 
-#### closeButton
-
-```ts
-closeButton?: boolean;
-```
-
-Intuitive alias for `dismissible`.
-
 #### dismissible
 
 ```ts
@@ -475,14 +435,6 @@ className?: string;
 ```
 
 Extra CSS class name.
-
-#### closeButton
-
-```ts
-closeButton?: boolean;
-```
-
-Intuitive alias for `dismissible`.
 
 #### description
 
@@ -555,14 +507,6 @@ className?: string;
 ```
 
 Extra CSS classes.
-
-#### closeButton
-
-```ts
-closeButton?: boolean;
-```
-
-Intuitive alias for `dismissible`.
 
 #### dismissible
 
@@ -676,14 +620,6 @@ placeholder?: string;
 
 Placeholder text when the input field is empty.
 
-#### shouldBackdropDismiss
-
-```ts
-shouldBackdropDismiss?: boolean;
-```
-
-Deprecated alias for `backdropDismiss`.
-
 #### submitLabel
 
 ```ts
@@ -731,14 +667,6 @@ autoDismiss?: boolean;
 ```
 
 Whether semantic toasts automatically dismiss after duration.
-
-#### closeButton
-
-```ts
-closeButton?: boolean;
-```
-
-Intuitive alias for `dismissible`.
 
 #### dismissible
 
@@ -944,14 +872,6 @@ className?: string;
 
 Extra CSS class name applied to every toast and dialog dispatched from this instance.
 
-#### closeButton
-
-```ts
-closeButton?: boolean;
-```
-
-Intuitive alias for `dismissible`.
-
 #### container
 
 ```ts
@@ -965,6 +885,8 @@ Parent DOM element receiving container stacks. Defaults to document.body.
 ```ts
 custom?: CustomDefaults;
 ```
+
+Defaults for `custom` toasts, over the instance-wide ones.
 
 #### dismissible
 
@@ -995,6 +917,8 @@ Instance-level default labels for the dismiss button and dialog buttons.
 ```ts
 loading?: LoadingDefaults;
 ```
+
+Defaults for `loading` toasts and the loading phase of `promise`, over the instance-wide ones.
 
 #### margin
 
@@ -1034,7 +958,7 @@ Default viewport position. Defaults to "top-right".
 semantic?: SemanticDefaults;
 ```
 
-Scoped fallback overrides per notification type.
+Defaults for `success`, `error`, `warning`, and `info` toasts, over the instance-wide ones.
 
 #### tokens
 
@@ -1226,14 +1150,6 @@ className?: string;
 
 Extra CSS class name.
 
-#### closeButton
-
-```ts
-closeButton?: boolean;
-```
-
-Intuitive alias for `dismissible`.
-
 #### description
 
 ```ts
@@ -1296,7 +1212,7 @@ Placement on the screen. Defaults to toaster configuration.
 role?: ToastRole;
 ```
 
-Accessibility role. Defaults to variant default.
+Announcement role, see [ToastRole](#toastrole). Defaults to the variant's role.
 
 #### title
 
@@ -1636,14 +1552,6 @@ className?: string;
 
 Extra CSS classes to append.
 
-#### closeButton
-
-```ts
-closeButton?: boolean;
-```
-
-Intuitive alias for `dismissible`.
-
 #### content
 
 ```ts
@@ -1714,7 +1622,7 @@ Scoped design token color overrides.
 type?: SemanticType | "default";
 ```
 
-Switches the toast's severity color and accessibility role to match -- the same success/error/warning/info categories a semantic toast is dispatched with -- so e.g. a loading toast can complete into a success toast: `update({ type: "success" })`.
+Switches the toast's severity color and announcement role to match -- the same success/error/warning/info categories a semantic toast is dispatched with -- so e.g. a loading toast can complete into a success toast: `update({ type: "success" })`.
 
 ## Type aliases
 
@@ -1737,10 +1645,10 @@ Category names for predefined styles.
 ### ToastContent
 
 ```ts
-export type ToastContent = string | Node | ((handle: ToastHandle) => string | Node) | (() => string | Node);
+export type ToastContent = string | Node | ((handle: ToastHandle) => string | Node);
 ```
 
-Supported custom content. Strings are sanitized by the package. DOM nodes are trusted application-owned content and are inserted without sanitizing. Can also be a function receiving the `ToastHandle` or returning content directly.
+Supported custom content. Strings are sanitized by the package. DOM nodes are trusted application-owned content and are inserted without sanitizing. Can also be a function that returns content; it receives the toast's `ToastHandle`.
 
 ### ToasterRuntimeConfig
 
@@ -1769,7 +1677,7 @@ Subscriber callback function signature for toast lifecycle events.
 ### ToastPosition
 
 ```ts
-export type ToastPosition = "top-left" | "top-right" | "bottom-right" | "bottom-left" | "top-center" | "bottom-center" | "center";
+export type ToastPosition = "top-left" | "top-right" | "bottom-right" | "bottom-left" | "top-center" | "bottom-center";
 ```
 
 Toast notification positions on the viewport.
@@ -1780,7 +1688,7 @@ Toast notification positions on the viewport.
 export type ToastRole = "alert" | "status";
 ```
 
-Accessibility roles for toast elements.
+How urgently screen readers announce a toast: `"status"` through the instance's polite live region, `"alert"` through its assertive one.
 
 ### ToastState
 

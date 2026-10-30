@@ -15,7 +15,7 @@ Modern applications frequently balance transient notifications (build status, sy
 
 - **Dual-layer architecture**: Floating toast stacks render in light DOM containers with FLIP animations and FIFO eviction, while confirmation and prompt dialogs render into the browser's native top layer using HTML5 `<dialog>`.
 - **Zero-boilerplate singletons**: Import `toast` and `dialog` directly for application-wide notifications, or use `createToaster()` for isolated containers and micro-frontends.
-- **First-class Promise workflows**: `toast.promise` coordinates pending, success, and error transitions with automatic timer re-arming; dialog methods return `InteractiveToastHandle<T>` implementing `PromiseLike<T>` so you can `await dialog.confirm(...)` directly.
+- **First-class Promise workflows**: `toast.promise` coordinates pending, success, and error transitions with automatic timer re-arming; dialog methods return `DialogHandle<T>` implementing `PromiseLike<T>` so you can `await dialog.confirm(...)` directly.
 - **Live token composition**: Toast colors, presentation axes (`.solid`, `.soft`, `.ghost`, `.edged`), and dark mode compose live with `@codenhub/styles` or fall back to standalone generated defaults.
 
 ## Setup
@@ -76,7 +76,7 @@ Explore the focused guides below to master every aspect of the package:
 | [Toasts](toasts.md)                 | Complete guide to dispatching neutral, semantic, loading, structured, and promise-driven notifications.                   |
 | [Dialogs](dialogs.md)               | Deep dive into native modal confirmations, prompts, alerts, thenable handles, and label localization.                     |
 | [Styling](styling.md)               | CSS custom property composition with `@codenhub/styles`, presentation classes, standalone fallback, dark mode, and CSP.   |
-| [Accessibility](accessibility.md)   | ARIA live regions, ARIA22 technique, native dialog focus trapping, reduced motion, and content sanitization.              |
+| [Accessibility](accessibility.md)   | Screen reader announcements, native dialog focus trapping, reduced motion, and content sanitization.                      |
 | [Scoped Instances](instances.md)    | Creating isolated instances with `createToaster()`, custom DOM containers, micro-frontends, and SSR safety.               |
 | [API Reference](reference/index.md) | Complete TypeScript API catalogue generated automatically from package declarations.                                      |
 | [Changelog](changelog/index.md)     | Release history, breaking changes, and migration notes across versions.                                                   |
