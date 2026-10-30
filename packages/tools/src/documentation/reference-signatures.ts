@@ -237,6 +237,8 @@ interface ReexportEdge {
   all: boolean;
   /** Exported name to the name it has in the target module, for `export { a, b as c } from`. */
   names: Map<string, string>;
+  /** Namespace binding for `export * as ns from`. */
+  namespace?: string;
 }
 
 /** An imported binding: `import { orig as local } from "./m"`. */
@@ -313,6 +315,7 @@ export function collectModuleGraph(source: ts.SourceFile): ModuleGraph {
       continue;
     }
     if (!ts.isNamedExports(statement.exportClause)) {
+      reexports.push({ all: false, module, names: new Map(), namespace: statement.exportClause.name.text });
       continue;
     }
     const names = new Map<string, string>();
@@ -368,7 +371,10 @@ export interface SignatureResolver {
  * @returns A resolver whose `lookup` keys are those same paths.
  */
 export function buildSignatureResolver(files: ReadonlyMap<string, string>): SignatureResolver {
-  return buildModuleResolver(files, collectDeclarations, renameSignature);
+  return buildModuleResolver(files, collectDeclarations, renameSignature, (name, namespaceMembers) => ({
+    namespaceMembers,
+    text: `export namespace ${name}`,
+  }));
 }
 
 /**
@@ -546,6 +552,7 @@ function buildModuleResolver<T>(
   files: ReadonlyMap<string, string>,
   collect: (source: ts.SourceFile) => Map<string, T>,
   rename: (value: T, from: string, to: string) => T,
+  namespace?: (name: string, members: Map<string, T>) => T,
 ) {
   const declarations = new Map<string, Map<string, T>>();
   const graphs = new Map<string, ModuleGraph>();
@@ -611,6 +618,16 @@ function buildModuleResolver<T>(
       const targetPath = resolveEdgeTarget(entryPath, edge.module);
       if (targetPath === undefined) {
         continue;
+      }
+      if (edge.namespace === name && namespace !== undefined) {
+        const members = new Map<string, T>();
+        for (const exported of listExports(targetPath, new Set())) {
+          const found = lookup(targetPath, exported, new Set(seen));
+          if (found !== undefined) {
+            members.set(exported, found);
+          }
+        }
+        return namespace(name, members);
       }
       if (edge.all && !listExports(targetPath, new Set()).has(name)) {
         continue;

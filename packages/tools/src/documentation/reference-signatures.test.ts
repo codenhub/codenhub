@@ -88,6 +88,19 @@ describe("special export bindings", () => {
   );
 });
 
+describe("namespace export signatures", () => {
+  it("attaches target-module declarations to namespace export members", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("ns-only", {
+      "index.ts": 'export * as ns from "./leaf";',
+      "leaf.ts": "/** Reads. */ export function read(value: string): string { return value; }",
+    });
+    const { model } = await analyzeReference(fixture, { prose: true });
+    expect(model.entrypoints[0]?.symbols[0]?.namespaceMembers[0]?.signature).toBe(
+      "export declare function read(value: string): string;",
+    );
+  });
+});
+
 describe("extractSignatures", () => {
   const index = extractSignatures(dts, "index.d.ts");
 
