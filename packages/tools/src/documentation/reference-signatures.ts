@@ -932,9 +932,33 @@ export function attachInternalTypes(
   const allFiles = new Map([...handwritten, ...files]);
   const resolver = buildDeclarationResolver(allFiles);
   const globals = ambientNames(ambient);
+  // `export * as name` stands for its module's exports, so the types its members name are walked too.
+  const membersOf = (node: ts.Node, seen: Set<string>): readonly ts.Node[] => {
+    if (
+      !ts.isExportDeclaration(node) ||
+      node.exportClause === undefined ||
+      !ts.isNamespaceExport(node.exportClause) ||
+      node.moduleSpecifier === undefined ||
+      !ts.isStringLiteral(node.moduleSpecifier)
+    ) {
+      return [node];
+    }
+    const target = resolveDtsCandidates(node.getSourceFile().fileName, node.moduleSpecifier.text).find((candidate) =>
+      allFiles.has(candidate),
+    );
+    if (target === undefined || seen.has(target)) {
+      return [];
+    }
+    seen.add(target);
+    return resolver
+      .exports(target)
+      .flatMap((name) => resolver.lookup(target, name) ?? [])
+      .flatMap((member) => membersOf(member, seen));
+  };
   const declarationsOf = (subpath: string, name: string): readonly ts.Node[] => {
     const entryDts = entryDtsBySubpath.get(subpath);
-    return (entryDts === undefined ? undefined : resolver.lookup(entryDts, name)) ?? [];
+    const nodes = (entryDts === undefined ? undefined : resolver.lookup(entryDts, name)) ?? [];
+    return nodes.flatMap((node) => membersOf(node, new Set()));
   };
   const documented = new Set<ts.Node>();
   const markDocumented = (symbol: ReferenceSymbol, nodes: readonly ts.Node[]): void => {

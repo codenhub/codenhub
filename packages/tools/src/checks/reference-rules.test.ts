@@ -259,6 +259,40 @@ describe("reference rule run", () => {
     ]);
   });
 
+  it("lists a type a namespace re-export's member names as internal", { timeout: 30_000 }, async () => {
+    const workspacePackage = await committedFixture("fixture-rule-namespace", {
+      "index.ts": 'export * as widgets from "./widgets.js";\n',
+      "widgets.ts": [
+        "/** Options. */",
+        "interface Options {",
+        "  enabled: boolean;",
+        "}",
+        "/** Make. */",
+        "export function make(options: Options): boolean {",
+        "  return options.enabled;",
+        "}",
+        "",
+      ].join("\n"),
+    });
+
+    const page = await readFile(join(workspacePackage.directory, "docs/reference/index.md"), "utf8");
+    expect(page).toContain(
+      [
+        "## Internal types",
+        "",
+        "### Options",
+        "",
+        "```ts",
+        "interface Options {",
+        "  enabled: boolean;",
+        "}",
+        "```",
+      ].join("\n"),
+    );
+    expect(page).toContain("Not exported; declared in `src/widgets.ts`.");
+    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([]);
+  });
+
   it("reports ambient types included by a referenced source project", { timeout: 30_000 }, async () => {
     const workspacePackage = await createReferenceFixture("fixture-rule-solution", {
       "index.ts": "/** Makes an ambient value. */\nexport function make(): Ambient { return { inner: 1 }; }\n",
