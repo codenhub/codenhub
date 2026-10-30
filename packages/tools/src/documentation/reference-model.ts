@@ -270,6 +270,8 @@ interface Reflection {
   comment?: Comment;
   children?: Reflection[];
   signatures?: Reflection[];
+  getSignature?: Reflection;
+  setSignature?: Reflection;
   indexSignatures?: Reflection[];
   type?: { declaration?: Reflection };
   parameters?: Reflection[];
@@ -387,7 +389,10 @@ function namedDocs(declared: Reflection[] | undefined, comment: Comment | undefi
 
 /** Parameters or type parameters declared across every call signature, overloads included. */
 function signatureParts(reflection: Reflection, part: "parameters" | "typeParameters"): Reflection[] | undefined {
-  const signatures = reflection.signatures ?? [];
+  const signatures = [
+    ...(reflection.signatures ?? []),
+    ...[reflection.getSignature, reflection.setSignature].flatMap((signature) => signature ?? []),
+  ];
   return signatures.length === 0 ? undefined : signatures.flatMap((signature) => signature[part] ?? []);
 }
 
@@ -412,6 +417,23 @@ function memberKind(kind: number): ReferenceMemberKind | undefined {
 
 /** The comment for a member or symbol: on the declaration, or on its first commented call signature. */
 function declarationComment(reflection: Reflection): Comment | undefined {
+  if (
+    reflection.comment === undefined &&
+    (reflection.getSignature !== undefined || reflection.setSignature !== undefined)
+  ) {
+    const comments = [reflection.getSignature?.comment, reflection.setSignature?.comment].flatMap((comment) =>
+      comment === undefined ? [] : [comment],
+    );
+    return comments.length === 0
+      ? undefined
+      : {
+          summary: comments.flatMap((comment, index) => [
+            ...(index === 0 ? [] : [{ kind: "text", text: "\n\n" }]),
+            ...(comment.summary ?? []),
+          ]),
+          blockTags: comments.flatMap((comment) => comment.blockTags ?? []),
+        };
+  }
   return reflection.comment ?? reflection.signatures?.find((signature) => signature.comment !== undefined)?.comment;
 }
 

@@ -53,6 +53,32 @@ describe("emitted constructors", () => {
   });
 });
 
+describe("accessor documentation", () => {
+  it("renders getter and setter comments and the setter parameter", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("accessors", {
+      "index.ts": `
+        export class Box {
+          /** Value getter.
+           * @returns The value.
+           */
+          get value(): number { return 1; }
+          /** Value setter.
+           * @param input - The new value.
+           */
+          set value(input: number) {}
+        }
+      `,
+    });
+    const { model, files } = await analyzeReference(fixture, { prose: true });
+    const member = model.entrypoints[0]?.symbols[0]?.members[0];
+    expect(member?.doc).toBe("Value getter.\n\nValue setter.");
+    expect(member?.returns).toBe("The value.");
+    expect(member?.parameters).toEqual([{ name: "input", doc: "The new value." }]);
+    expect(files[0]?.contents).toContain("Value setter.");
+    expect(files[0]?.contents).toContain("The new value.");
+  });
+});
+
 const browserRegistryVariable = {
   id: 900,
   name: "browserErrorRegistry",
