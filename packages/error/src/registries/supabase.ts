@@ -239,7 +239,7 @@ export const supabaseErrorCodes = freezeFeedbackMap({
 export const supabaseErrorNames = freezeFeedbackMap({
   FunctionsHttpError: {
     message:
-      "This couldn't be completed because the service reported a problem. Try again, and contact support if it keeps happening.",
+      "The service reported a problem, so this may not have finished. Check whether it went through before trying again, and contact support if it keeps happening.",
     messageKey: "error.supabase.functions.http",
     source: "supabase.functions",
   },
@@ -251,8 +251,10 @@ export const supabaseErrorNames = freezeFeedbackMap({
   },
   // Raised by the Supabase client, with no code, whenever a call needs a session and none is stored.
   AuthSessionMissingError: SESSION_ENDED,
+  // Raised when the request to the function fails, which can happen after the function received it.
   FunctionsFetchError: {
-    message: "We couldn't reach the server. Check your internet connection and try again.",
+    message:
+      "We couldn't complete the request to the service. Check your internet connection, then check whether it went through before trying again.",
     messageKey: "error.supabase.functions.fetch",
     source: "supabase.functions",
   },

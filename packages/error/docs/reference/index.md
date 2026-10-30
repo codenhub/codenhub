@@ -60,13 +60,13 @@ export declare function appErrorFromJSON(value: unknown): AppError;
 
 Rebuilds an `AppError` from the shape `AppError.toJSON()` produces, for the receiving side of a boundary an error was sent across as JSON, such as a server response read by a client.
 
-No registry is consulted: the rebuilt error carries the fields it was sent with, and the parsed value becomes its `originalError`. Whoever produced the value therefore chooses the message, so use this only on data from a source the application trusts to word its errors, such as its own server. Pass anything else to `createAppError`.
+No registry is consulted: the rebuilt error carries the fields it was sent with, except that `isRetryable` is always `false`, and the parsed value becomes its `originalError`. The sender's flag describes a call the sender made, not the request that carried the error back, which may already have run there. Whoever produced the value therefore chooses the message, so use this only on data from a source the application trusts to word its errors, such as its own server. Pass anything else to `createAppError`.
 
 **Parameters**
 
 - `value` — The parsed JSON value, typically `JSON.parse` output or a response body field.
 
-**Returns** — The rebuilt AppError. An existing AppError is returned as it is. A value that does not have exactly the serialized field types is normalized as raw input, as by `createAppError(value)`.
+**Returns** — The rebuilt AppError. An existing AppError is returned as it is. A value that does not have exactly the serialized field types, or combines them in a way `toJSON()` never does, such as an unknown error with a `code`, is normalized as raw input, as by `createAppError(value)`.
 
 ### attempt
 
@@ -123,11 +123,11 @@ Normalizes an unknown error value into a predictable, immutable `AppError`.
 Unrolls nested wrapper fields (`cause`, `originalError`, `error`, `err`, `inner`, `innerError`) up to the configured depth, and a `cause` chain alone past the default depth, then resolves a classification in priority order across every candidate found:
 
 1. Known `AppError` or deterministic registry match (code, name, exact message, prefix).
-2. Unexpected `AppError` or heuristic registry pattern match.
+2. Heuristic `AppError` or registry pattern match.
 3. Any remaining `AppError` candidate.
 4. An unknown error carrying the fallback message.
 
-A deep known match outranks a shallow unexpected match. A nested `AppError` is a candidate as it stands: the raw value inside it is classified again only when a `registry` is supplied, and then a known match from that registry outranks the nested classification.
+A deep known match outranks a shallow heuristic match. A nested `AppError` is a candidate as it stands: the raw value inside it is classified again only when a `registry` is supplied, and then a known match from that registry outranks the nested classification.
 
 Ordinary unknown input never throws, including objects and proxies whose inspected properties throw. A raw string is matched against the registry like any other candidate; when nothing matches, the resolved message is the fallback rather than the string itself, so raw text is never surfaced to consumers.
 
@@ -136,7 +136,7 @@ Ordinary unknown input never throws, including objects and proxies whose inspect
 - `error` — The raw error value to normalize, such as an `Error`, plain object, or string.
 - `options` — Configuration controlling fallback message, registry source, and wrapper depth.
 
-**Returns** — An AppError whose own properties cannot be changed or removed. An existing AppError is returned as-is unless a `registry` is supplied and finds something that improves on it: only an unexpected match replaces an unknown error, and only a known match that differs replaces a classified one. A `fallbackMessage` or `maxDepth` alone never changes an AppError.
+**Returns** — An AppError whose own properties cannot be changed or removed. An existing AppError is returned as-is unless a `registry` is supplied and finds something that improves on it: only a heuristic match replaces an unknown error, and only a known match that differs replaces a classified one. A `fallbackMessage` or `maxDepth` alone never changes an AppError.
 
 **Throws** — TypeError - If `options` is not an object, `fallbackMessage` is not a non-empty string, `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer from 0 through 3.
 
@@ -425,7 +425,7 @@ The optional source namespace, module, or package (e.g., `my-app.auth`, `supabas
 readonly type: AppErrorType;
 ```
 
-The classification of this error, denoting whether it was explicitly mapped as a known error, matched heuristically as unexpected, or completely unknown.
+The classification of this error, denoting whether it was explicitly mapped as a known error, matched heuristically, or completely unknown.
 
 #### toJSON
 
@@ -777,7 +777,7 @@ Mappings for exact error names, typically found on native `Error.name` or `DOMEx
 readonly patterns: ErrorPatternRegistryBucket;
 ```
 
-Heuristic mappings for matching errors using RegExp patterns. Matches are classified as `"unexpected"`.
+Heuristic mappings for matching errors using RegExp patterns. Matches are classified as `"heuristic"`.
 
 #### prefixes
 
@@ -887,12 +887,14 @@ Retrieves the frozen feedback mapping for the specified identifier.
 #### values
 
 ```ts
-values(): IterableIterator<[string, Readonly<ErrorFeedback>]>;
+values(): readonly (readonly [identifier: string, feedback: Readonly<ErrorFeedback>])[];
 ```
 
-Returns an iterator yielding every frozen mapping stored in the bucket.
+Returns every mapping stored in the bucket, in insertion order.
 
-**Returns** — An iterator of [identifier, feedback] entries.
+The returned list, its entries, and their feedback are frozen.
+
+**Returns** — Frozen list of [identifier, feedback] entries.
 
 ### Ok
 
@@ -981,16 +983,16 @@ The namespace or subsystem label (e.g., `browser`, `supabase.auth`) representing
 ### AppErrorType
 
 ```ts
-export type AppErrorType = "known" | "unexpected" | "unknown";
+export type AppErrorType = "known" | "heuristic" | "unknown";
 ```
 
 The classification level of a normalized application error.
 
 - `"known"`: Matched explicitly in the registry (by code, name, exact message, or prefix).
-- `"unexpected"`: Matched heuristically via regex patterns in the registry.
+- `"heuristic"`: Matched heuristically via regex patterns in the registry.
 - `"unknown"`: Could not be resolved/classified by the active registry.
 
-The type says how the error was matched, not how serious it is: a defect such as a missing table is `"known"` when its code is registered, and an offline user is `"unexpected"` when a pattern matched. Branch on `code` or `messageKey` to decide what to report.
+The type says how the error was matched, not how serious it is: a defect such as a missing table is `"known"` when its code is registered, and an offline user is `"heuristic"` when a pattern matched. Branch on `code` or `messageKey` to decide what to report.
 
 ### Result
 

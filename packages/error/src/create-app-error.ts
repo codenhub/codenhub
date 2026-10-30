@@ -188,12 +188,12 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
   const errorCandidates = getErrorCandidates(rawError, maxDepth, hasCustomRegistry ? undefined : isAppError);
 
   // Single pass over candidates resolving by priority tier:
-  // known > unexpected > appError fallback (any type).
+  // known > heuristic > appError fallback (any type).
   // All tiers are collected before returning so that a "known" match deep in the
-  // chain wins over an "unexpected" match at the surface.
+  // chain wins over a "heuristic" match at the surface.
   let knownResult: AppErrorResolution | null = null;
   let nestedKnownResult: AppErrorResolution | null = null;
-  let unexpectedResult: AppErrorResolution | null = null;
+  let heuristicResult: AppErrorResolution | null = null;
   let appErrorFallback: AppErrorResolution | null = null;
 
   for (const candidate of errorCandidates) {
@@ -209,8 +209,8 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
 
         knownResult = resolveFromAppError(candidate, error);
         break;
-      } else if (candidate.type === "unexpected" && unexpectedResult === null) {
-        unexpectedResult = resolveFromAppError(candidate, error);
+      } else if (candidate.type === "heuristic" && heuristicResult === null) {
+        heuristicResult = resolveFromAppError(candidate, error);
       } else if (appErrorFallback === null) {
         appErrorFallback = resolveFromAppError(candidate, error);
       }
@@ -220,23 +220,23 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
     const classification = classifyErrorCandidate({
       registry,
       error: candidate,
-      shouldMatchPatterns: unexpectedResult === null,
+      shouldMatchPatterns: heuristicResult === null,
     });
     if (classification?.type === "known") {
       knownResult = { ...classification, originalError: error };
       break;
     }
 
-    if (classification?.type === "unexpected" && unexpectedResult === null) {
-      unexpectedResult = { ...classification, originalError: error };
+    if (classification?.type === "heuristic" && heuristicResult === null) {
+      heuristicResult = { ...classification, originalError: error };
     }
   }
 
-  // Re-normalization only ever upgrades: an unexpected match replaces an unknown error, a known
+  // Re-normalization only ever upgrades: a heuristic match replaces an unknown error, a known
   // match replaces anything it differs from, and nothing else changes what the error already says.
   if (existingAppError !== null) {
     const replacement =
-      knownResult ?? nestedKnownResult ?? (existingAppError.type === "unknown" ? unexpectedResult : null);
+      knownResult ?? nestedKnownResult ?? (existingAppError.type === "unknown" ? heuristicResult : null);
 
     if (replacement === null || isSameClassification(replacement, existingAppError)) {
       return existingAppError;
@@ -248,7 +248,7 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
   return new AppErrorImpl(
     knownResult ??
       nestedKnownResult ??
-      unexpectedResult ??
+      heuristicResult ??
       appErrorFallback ?? {
         type: "unknown",
         code: null,
@@ -269,11 +269,11 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
  * candidate found:
  *
  * 1. Known `AppError` or deterministic registry match (code, name, exact message, prefix).
- * 2. Unexpected `AppError` or heuristic registry pattern match.
+ * 2. Heuristic `AppError` or registry pattern match.
  * 3. Any remaining `AppError` candidate.
  * 4. An unknown error carrying the fallback message.
  *
- * A deep known match outranks a shallow unexpected match. A nested `AppError` is a candidate as it
+ * A deep known match outranks a shallow heuristic match. A nested `AppError` is a candidate as it
  * stands: the raw value inside it is classified again only when a `registry` is supplied, and
  * then a known match from that registry outranks the nested classification.
  *
@@ -285,8 +285,8 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
  * @param error - The raw error value to normalize, such as an `Error`, plain object, or string.
  * @param options - Configuration controlling fallback message, registry source, and wrapper depth.
  * @returns An AppError whose own properties cannot be changed or removed. An existing AppError is
- * returned as-is unless a `registry` is supplied and finds something that improves on it: only an
- * unexpected match replaces an unknown error, and only a known match that differs replaces a
+ * returned as-is unless a `registry` is supplied and finds something that improves on it: only a
+ * heuristic match replaces an unknown error, and only a known match that differs replaces a
  * classified one. A `fallbackMessage` or `maxDepth` alone never changes an AppError.
  * @throws TypeError - If `options` is not an object, `fallbackMessage` is not a non-empty string,
  * `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer
@@ -296,9 +296,10 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
   return normalizeAppError(error, options);
 }
 
-const APP_ERROR_TYPES: readonly unknown[] = ["known", "unexpected", "unknown"] satisfies readonly AppErrorType[];
+const APP_ERROR_TYPES: readonly unknown[] = ["known", "heuristic", "unknown"] satisfies readonly AppErrorType[];
 
-const isStringOrNull = (value: unknown): value is string | null => value === null || typeof value === "string";
+const isNonEmptyStringOrNull = (value: unknown): value is string | null =>
+  value === null || (typeof value === "string" && value.trim().length > 0);
 
 // Reads each field once, so a value cannot answer the check one way and the build another.
 const readSerializedAppError = (value: unknown): AppErrorResolution | null => {
@@ -322,29 +323,43 @@ const readSerializedAppError = (value: unknown): AppErrorResolution | null => {
     typeof message !== "string" ||
     message.trim().length === 0 ||
     !APP_ERROR_TYPES.includes(type) ||
-    !isStringOrNull(code) ||
-    !isStringOrNull(messageKey) ||
-    !isStringOrNull(source) ||
+    !isNonEmptyStringOrNull(code) ||
+    !isNonEmptyStringOrNull(messageKey) ||
+    !isNonEmptyStringOrNull(source) ||
     typeof isRetryable !== "boolean"
   ) {
     return null;
   }
 
-  return { type: type as AppErrorType, code, message, messageKey, source, originalError: value, isRetryable };
+  // Only a code or name match carries a code, and an unknown error carries no feedback at all, so
+  // these combinations are not something `toJSON()` produces.
+  if (
+    (type !== "known" && code !== null) ||
+    (type === "unknown" && (messageKey !== null || source !== null || isRetryable))
+  ) {
+    return null;
+  }
+
+  // The flag describes a call the sender made, such as its own database call, not the request that
+  // carried the error back, which may already have run on the sender.
+  return { type: type as AppErrorType, code, message, messageKey, source, originalError: value, isRetryable: false };
 };
 
 /**
  * Rebuilds an `AppError` from the shape `AppError.toJSON()` produces, for the receiving side of a
  * boundary an error was sent across as JSON, such as a server response read by a client.
  *
- * No registry is consulted: the rebuilt error carries the fields it was sent with, and the parsed
- * value becomes its `originalError`. Whoever produced the value therefore chooses the message, so
+ * No registry is consulted: the rebuilt error carries the fields it was sent with, except that
+ * `isRetryable` is always `false`, and the parsed value becomes its `originalError`. The sender's
+ * flag describes a call the sender made, not the request that carried the error back, which may
+ * already have run there. Whoever produced the value therefore chooses the message, so
  * use this only on data from a source the application trusts to word its errors, such as its own
  * server. Pass anything else to `createAppError`.
  *
  * @param value - The parsed JSON value, typically `JSON.parse` output or a response body field.
  * @returns The rebuilt AppError. An existing AppError is returned as it is. A value that does not
- * have exactly the serialized field types is normalized as raw input, as by `createAppError(value)`.
+ * have exactly the serialized field types, or combines them in a way `toJSON()` never does, such as
+ * an unknown error with a `code`, is normalized as raw input, as by `createAppError(value)`.
  */
 export function appErrorFromJSON(value: unknown): AppError {
   if (isAppError(value)) {

@@ -269,7 +269,7 @@ const resolveHeuristicUnexpectedError = (
     return null;
   }
 
-  return toClassification("unexpected", matchedDefinition);
+  return toClassification("heuristic", matchedDefinition);
 };
 
 /**

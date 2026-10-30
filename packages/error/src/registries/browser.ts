@@ -51,7 +51,8 @@ export const browserErrorNames = freezeFeedbackMap({
     source: "browser",
   },
   TimeoutError: {
-    message: "This took too long and was stopped. Check your internet connection and try again.",
+    message:
+      "This took too long and was stopped. Check your internet connection, then check whether it went through before trying again.",
     messageKey: "error.browser.timeout",
     source: "browser",
   },
@@ -90,12 +91,15 @@ export const browserErrorNames = freezeFeedbackMap({
 const browserErrorPatternDefinitions: readonly (readonly [RegExp, ErrorFeedback])[] = [
   [
     // Anchored to the whole message each engine produces for a failed fetch, so unrelated text
-    // such as "Config load failed" is not classified as a network failure.
+    // such as "Config load failed" is not classified as a network failure. A CORS block and a
+    // dropped response produce it too, after the server ran the request, so the message does not
+    // claim the server was never reached.
     /^(?:failed to fetch|load failed|networkerror when attempting to fetch resource)\.?$/i,
     {
       // Distinct from error.browser.network so one translation key never has to cover both the
       // DOMException name match and this heuristic message match.
-      message: "We couldn't reach the server. Check your internet connection and try again.",
+      message:
+        "We couldn't complete the request to the server. Check your internet connection, then check whether it went through before trying again.",
       messageKey: "error.browser.requestFailed",
       source: "browser.network",
     },

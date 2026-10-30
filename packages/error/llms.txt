@@ -4,7 +4,7 @@
 > registry presets.
 
 Register application mappings explicitly. Deterministic registry matches become
-known errors, regex matches become unexpected errors, and unmatched values use
+known errors, regex matches become heuristic errors, and unmatched values use
 the configured fallback message.
 
 `isAppError` recognizes errors created by the current package runtime.

@@ -94,7 +94,8 @@ const nodeErrorPatternDefinitions: readonly (readonly [RegExp, ErrorFeedback])[]
     // no registered code, so the failure is not known to be transient.
     /^fetch failed$/i,
     {
-      message: "We couldn't complete the request to the server. Check your internet connection and try again.",
+      message:
+        "We couldn't complete the request to the server. Check your internet connection, then check whether it went through before trying again.",
       messageKey: "error.node.network.requestFailed",
       source: "node.network",
     },

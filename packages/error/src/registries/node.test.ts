@@ -77,11 +77,11 @@ describe("node registry preset", () => {
     });
   });
 
-  it("should classify a failed fetch with no recognized cause as unexpected and not retryable", () => {
+  it("should classify a failed fetch with no recognized cause as heuristic and not retryable", () => {
     const failure = new TypeError("fetch failed", { cause: new Error("bad port") });
 
     expect(createAppError(failure, { registry: nodeErrorRegistry })).toMatchObject({
-      type: "unexpected",
+      type: "heuristic",
       code: null,
       messageKey: "error.node.network.requestFailed",
       isRetryable: false,
