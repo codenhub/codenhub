@@ -11,6 +11,7 @@ export interface IndexableDocument {
   headings: readonly IndexableHeading[];
   /** Compiled document HTML, as rendered into the page. */
   html: string;
+  relativePath: string;
   route: string;
   title: string;
 }
@@ -20,8 +21,29 @@ export interface IndexablePackage {
   label: string;
 }
 
-const HEADING_OPEN = /<h([23])[\s>]/g;
 const TEXT_LIMIT = 600;
+
+/** Search and previews include reference members, qualified by their nearest owner. */
+export function indexableHeadings(document: Pick<IndexableDocument, "headings" | "relativePath">): IndexableHeading[] {
+  const isReference = document.relativePath.startsWith("reference/");
+  const owners: IndexableHeading[] = [];
+  return document.headings.flatMap((heading) => {
+    if (heading.depth < 2 || heading.depth > (isReference ? 6 : 3)) {
+      return [];
+    }
+    while (owners.length > 0 && (owners.at(-1)?.depth ?? 0) >= heading.depth) {
+      owners.pop();
+    }
+    const owner = owners.at(-1);
+    const text =
+      heading.depth > 3 && owner !== undefined && !heading.text.startsWith(`${owner.text}.`)
+        ? `${owner.text}.${heading.text}`
+        : heading.text;
+    const qualified = { ...heading, text };
+    owners.push(qualified);
+    return [qualified];
+  });
+}
 
 const NAMED_ENTITIES: Record<string, string> = { amp: "&", gt: ">", lt: "<", nbsp: " ", quot: '"' };
 
@@ -49,7 +71,7 @@ export const toText = (html: string) =>
     .trim();
 
 /**
- * Locates where each `h2`/`h3` section's prose begins.
+ * Locates where each section's prose begins, including H4–H6 in reference pages.
  *
  * Only the opening delimiter is matched, never the attributes: an id is allowed
  * to contain `>`, and a heading can wrap its text in an anchor or a code
@@ -57,8 +79,8 @@ export const toText = (html: string) =>
  * `<h2` cannot appear inside text or an attribute value, because the compiler
  * escapes `<` everywhere else, so scanning for it alone is exact.
  */
-export const findSectionBounds = (html: string) =>
-  [...html.matchAll(HEADING_OPEN)].map((match) => {
+export const findSectionBounds = (html: string, isReference = false) =>
+  [...html.matchAll(isReference ? /<h([2-6])[\s>]/g : /<h([23])[\s>]/g)].map((match) => {
     const openIndex = match.index ?? 0;
     const closeTag = `</h${match[1]}>`;
     const closeIndex = html.indexOf(closeTag, openIndex);
@@ -68,7 +90,7 @@ export const findSectionBounds = (html: string) =>
 
 /**
  * Flattens the package catalog into one search entry per document plus one per
- * `h2`/`h3` section.
+ * `h2`/`h3` section, plus H4–H6 members on generated reference pages.
  *
  * Sections are the useful unit: a reader searching for a token name wants the
  * heading that documents it, not the page it happens to live on. The document
@@ -83,8 +105,8 @@ export const findSectionBounds = (html: string) =>
 export function buildSearchIndex(packages: readonly IndexablePackage[]): SearchEntry[] {
   return packages.flatMap((packageEntry) =>
     packageEntry.documents.flatMap((document) => {
-      const headings = document.headings.filter(({ depth }) => depth === 2 || depth === 3);
-      const bounds = findSectionBounds(document.html);
+      const headings = indexableHeadings(document);
+      const bounds = findSectionBounds(document.html, document.relativePath.startsWith("reference/"));
 
       const documentEntry: SearchEntry = {
         packageLabel: packageEntry.label,

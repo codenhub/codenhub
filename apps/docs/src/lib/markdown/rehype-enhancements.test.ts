@@ -25,6 +25,18 @@ function transform(children: TestElement[], siteOrigin = "https://docs.example.c
 }
 
 describe("heading anchors", () => {
+  it.each(["h4", "h5", "h6"])("adds a permalink to reference member %s", (tagName) => {
+    const heading = element(tagName, { id: "settokens" }, [text("setTokens")]);
+    const tree: TestElement = { type: "root", children: [heading] };
+
+    rehypeMarkdownEnhancements()(tree, { path: "C:/repo/packages/theme/docs/reference/index.md" });
+
+    expect(heading.children.at(-1)).toMatchObject({
+      tagName: "a",
+      properties: { href: "#settokens", ariaLabel: "Link to setTokens", className: ["heading-anchor"] },
+    });
+  });
+
   it.each(["h2", "h3"])("adds an accessible anchor to %s", (tagName) => {
     const heading = element(tagName, { id: "install" }, [text("Install "), element("code", {}, [text("now")])]);
 

@@ -15,6 +15,7 @@ const documentFixture = (overrides: Partial<PreviewableDocument> = {}): Previewa
     "<pre><code>pnpm add kit</code></pre>",
     "<p>Add it with your package manager.</p>",
   ].join(""),
+  relativePath: "setup.md",
   route: "/kit/setup/",
   sectionLabel: "Guides",
   title: "Setup guide",
@@ -22,6 +23,34 @@ const documentFixture = (overrides: Partial<PreviewableDocument> = {}): Previewa
 });
 
 describe("buildLinkPreviewIndex", () => {
+  it("previews a reference member by its qualified owner and its own prose", () => {
+    const index = buildLinkPreviewIndex([
+      {
+        label: "ThemeSystem",
+        documents: [
+          documentFixture({
+            headings: [
+              { depth: 3, slug: "theme", text: "Theme" },
+              { depth: 4, slug: "settokens", text: "setTokens" },
+              { depth: 4, slug: "subscribe", text: "subscribe" },
+            ],
+            html: '<h3 id="theme">Theme</h3><h4 id="settokens">setTokens</h4><pre>setTokens()</pre><p>Updates tokens.</p><h4 id="subscribe">subscribe</h4><p>Subscribe.</p>',
+            relativePath: "reference/index.md",
+            route: "/theme/reference/",
+            title: "@codenhub/theme",
+          }),
+        ],
+      },
+    ]);
+
+    expect(index["/theme/reference/#settokens"]).toEqual({
+      title: "Theme.setTokens",
+      summary: "Updates tokens.",
+      trail: ["ThemeSystem", "@codenhub/theme"],
+    });
+    expect(index["/theme/reference/#theme"]?.summary).toBeUndefined();
+  });
+
   it("summarizes a page by its first paragraph and a section by the first paragraph under it", () => {
     const index = buildLinkPreviewIndex([{ documents: [documentFixture()], label: "Kit" }]);
 

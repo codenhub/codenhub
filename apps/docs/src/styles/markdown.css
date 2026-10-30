@@ -64,7 +64,8 @@
 }
 
 .markdown-content h2,
-.markdown-content h3 {
+.markdown-content h3,
+.markdown-content :is(h4, h5, h6):has(.heading-anchor) {
   @apply flex flex-wrap items-center gap-2;
 }
 
@@ -74,6 +75,7 @@
 
 .markdown-content h2:hover .heading-anchor,
 .markdown-content h3:hover .heading-anchor,
+.markdown-content :is(h4, h5, h6):hover .heading-anchor,
 .markdown-content .heading-anchor:focus-visible {
   @apply opacity-100;
 }

@@ -7,6 +7,7 @@ interface MarkdownEnhancementOptions {
 
 interface TransformContext extends MarkdownEnhancementOptions {
   codeBlockCount: number;
+  isReference: boolean;
 }
 
 const SVG_PROPERTIES = {
@@ -29,8 +30,8 @@ function icon(path: string, className?: string): AstNode {
   ]);
 }
 
-function appendHeadingAnchor(node: AstNode): void {
-  if ((node.tagName !== "h2" && node.tagName !== "h3") || typeof node.properties?.id !== "string") {
+function appendHeadingAnchor(node: AstNode, isReference: boolean): void {
+  if (!(isReference ? /^h[2-6]$/ : /^h[23]$/).test(node.tagName ?? "") || typeof node.properties?.id !== "string") {
     return;
   }
   const headingText = getNodeText(node).trim();
@@ -144,7 +145,7 @@ function wrapTable(node: AstNode): AstNode {
 function transformChildren(node: AstNode, context: TransformContext): void {
   node.children = node.children?.map((child) => {
     transformChildren(child, context);
-    appendHeadingAnchor(child);
+    appendHeadingAnchor(child, context.isReference);
     enhanceExternalLink(child, context.siteOrigin);
     return wrapTable(wrapCodeBlock(child, context));
   });
@@ -180,9 +181,10 @@ function markReferenceSignatures(tree: AstNode): void {
 export function rehypeMarkdownEnhancements(options: MarkdownEnhancementOptions = {}) {
   return (tree: unknown, file?: { path?: string }): void => {
     const root = tree as AstNode;
-    if (file?.path !== undefined && /\/docs\/reference\//.test(file.path.replaceAll("\\", "/"))) {
+    const isReference = file?.path !== undefined && /\/docs\/reference\//.test(file.path.replaceAll("\\", "/"));
+    if (isReference) {
       markReferenceSignatures(root);
     }
-    transformChildren(root, { ...options, codeBlockCount: 0 });
+    transformChildren(root, { ...options, codeBlockCount: 0, isReference });
   };
 }
