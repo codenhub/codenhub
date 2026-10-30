@@ -1,20 +1,20 @@
 {
-  "bundler": "rolldown@1.1.5",
+  "bundler": "rolldown@1.2.15",
   "entrypoints": {
     ".": {
-      "gzip": 3391,
-      "minified": 10112,
-      "sha256": "a9207a45242151e3467861ac075e5bada2fc93ef626cef683330f2ea802fed9d"
+      "gzip": 4435,
+      "minified": 13407,
+      "sha256": "154b50885b519067faa6eaa3bae091da880e307a7417a8d3f71c596c2656b2bf"
     },
     "./browser": {
-      "gzip": 2522,
-      "minified": 6078,
-      "sha256": "b324f2facd804d140b7692f4e432449c42e41f63446f8c253b2a326691f42add"
+      "gzip": 2337,
+      "minified": 5660,
+      "sha256": "563ac58f22cc74df771518888f53214ea8e43009b072982e5fcc45da8908d82c"
     },
     "./routing": {
-      "gzip": 1486,
-      "minified": 3201,
-      "sha256": "7f7d5a78959db6fa1f04581d67fcd06bdde6d8961e9cc2b9724b60c6b3c5d93c"
+      "gzip": 1507,
+      "minified": 3217,
+      "sha256": "e025acb6c47a7bd5979fed2039110e09dee8384c683cb7aa80acc4f5f1abf80b"
     }
   }
 }
