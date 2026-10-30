@@ -430,7 +430,15 @@ The classification of this error, denoting whether it was explicitly mapped as a
 #### toJSON
 
 ```ts
-toJSON(): { name: string; message: string; type: AppErrorType; code: string | null; messageKey: string | null; source: AppErrorSource; isRetryable: boolean; };
+toJSON(): {
+        name: string;
+        message: string;
+        type: AppErrorType;
+        code: string | null;
+        messageKey: string | null;
+        source: AppErrorSource;
+        isRetryable: boolean;
+    };
 ```
 
 Produces the normalized fields used by `JSON.stringify`, excluding the diagnostic `cause` and `originalError` values.

@@ -100,7 +100,7 @@ function memberEntries(members: ts.NodeArray<ts.ClassElement | ts.TypeElement | 
       continue;
     }
     const key = typeof name === "string" ? name : name.text;
-    const text = member.getText(source).replace(/\s+/g, " ").trim();
+    const text = member.getText(source);
     const existing = entries.get(key);
     // A repeated member name is a method overload set: one line per overload.
     entries.set(key, existing === undefined ? text : `${existing}\n${text}`);
@@ -145,7 +145,22 @@ function mergeSignature(index: SignatureIndex, name: string, signature: SymbolSi
 
 /** `import("../types").ReadonlyErrorRegistry` → `ReadonlyErrorRegistry`; adds a terminating `;`. */
 function tidy(text: string, terminate: boolean): string {
-  const stripped = text.replace(/import\((["'])[^"']*\1\)\./g, "").trim();
+  const source = ts.createSourceFile("signature.d.ts", text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const prefixes: { start: number; end: number }[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isImportTypeNode(node) && node.qualifier !== undefined) {
+      const keyword = node.getChildren(source).find((child) => child.kind === ts.SyntaxKind.ImportKeyword);
+      if (keyword !== undefined) {
+        prefixes.push({ start: keyword.getStart(source), end: node.qualifier.getStart(source) });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  for (const { start, end } of prefixes.sort((left, right) => right.start - left.start)) {
+    text = text.slice(0, start) + text.slice(end);
+  }
+  const stripped = text.trim();
   return terminate && !stripped.endsWith(";") ? `${stripped};` : stripped;
 }
 

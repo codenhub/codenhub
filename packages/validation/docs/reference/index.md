@@ -230,7 +230,9 @@ Always `await` its result. It is a promise only when the validator actually had 
 #### ~types
 
 ```ts
-readonly "~types"?: { readonly input: TInput; };
+readonly "~types"?: {
+        readonly input: TInput;
+    };
 ```
 
 Never set: it only carries `TInput`, as on [Validator](#validator).
@@ -508,7 +510,9 @@ It is called with any input, whatever `TInput` is: `TInput` is the type of input
 #### ~types
 
 ```ts
-readonly "~types"?: { readonly input: TInput; };
+readonly "~types"?: {
+        readonly input: TInput;
+    };
 ```
 
 Never set: it only carries `TInput`, the type of input that can pass, for [InferInput](#inferinput). Being optional, it lets any function of the right shape be a validator. The type is held in an object, since read straight from an optional property, an input type that includes `undefined` would lose it.

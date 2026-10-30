@@ -260,7 +260,10 @@ Constraints and clean-up for [number](#number). Every option is optional. Rarer 
 #### clamp
 
 ```ts
-clamp?: { min: number; max: number; } | undefined;
+clamp?: {
+        min: number;
+        max: number;
+    } | undefined;
 ```
 
 Moves the value into this range instead of rejecting it, before the constraints run and in the output.

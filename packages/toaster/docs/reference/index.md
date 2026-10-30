@@ -240,7 +240,10 @@ Visibility duration in milliseconds. Defaults to toaster configuration.
 #### margin
 
 ```ts
-margin?: string | { x?: string; y?: string; };
+margin?: string | {
+        x?: string;
+        y?: string;
+    };
 ```
 
 Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object.
@@ -455,7 +458,10 @@ Whether the user can manually close it. Defaults to `ToasterConfig.loading.dismi
 #### margin
 
 ```ts
-margin?: string | { x?: string; y?: string; };
+margin?: string | {
+        x?: string;
+        y?: string;
+    };
 ```
 
 Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object.
@@ -543,7 +549,10 @@ Content to display while the promise is pending: a message, or the options a `lo
 #### margin
 
 ```ts
-margin?: string | { x?: string; y?: string; };
+margin?: string | {
+        x?: string;
+        y?: string;
+    };
 ```
 
 Viewport margin configurations.
@@ -923,7 +932,10 @@ Defaults for `loading` toasts and the loading phase of `promise`, over the insta
 #### margin
 
 ```ts
-margin?: string | { x?: string; y?: string; };
+margin?: string | {
+        x?: string;
+        y?: string;
+    };
 ```
 
 Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object.
@@ -1193,7 +1205,10 @@ Icon glyph override, or `null` to render no icon.
 #### margin
 
 ```ts
-margin?: string | { x?: string; y?: string; };
+margin?: string | {
+        x?: string;
+        y?: string;
+    };
 ```
 
 Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. This is a property of the shared stack at this position, not of an individual toast: the most recent explicit value dispatched to a given position applies to every toast already showing there, and a dispatch that omits it leaves the stack's current margin unchanged. Toasts at the same position always share one margin.

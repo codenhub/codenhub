@@ -174,7 +174,9 @@ Removes the explicit preference and activates the system theme, which then follo
 #### destroy
 
 ```ts
-destroy(options?: { revertDom?: boolean | undefined; }): void;
+destroy(options?: {
+        revertDom?: boolean | undefined;
+    }): void;
 ```
 
 Stops following OS and cross-tab changes, removes every listener and runtime override, and resets `name` to `defaultTheme`, so `init()` can run again. The DOM and stored preference stay as they are unless `revertDom` is set.
@@ -437,7 +439,9 @@ Themes selected for OS light and dark color-scheme preferences.
 #### themes
 
 ```ts
-themes?: { readonly [K in TName]: ThemeDefinition<NoInfer<TName>, NoInfer<TSchema>>; } | undefined;
+themes?: {
+        readonly [K in TName]: ThemeDefinition<NoInfer<TName>, NoInfer<TSchema>>;
+    } | undefined;
 ```
 
 Available themes keyed by name. Replaces the built-in list entirely. Names must be non-empty and, while `className` is `true`, usable in a class name.

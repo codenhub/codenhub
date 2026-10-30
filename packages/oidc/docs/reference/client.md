@@ -921,7 +921,9 @@ The validated ID token's claims.
 #### tokens
 
 ```ts
-readonly tokens: TokenSet & { readonly idToken: string; };
+readonly tokens: TokenSet & {
+        readonly idToken: string;
+    };
 ```
 
 The tokens, with `idToken` always present.

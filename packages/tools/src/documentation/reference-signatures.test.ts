@@ -237,6 +237,35 @@ describe("extractSignatures", () => {
     );
   });
 
+  it("preserves whitespace in member string and template literal types", () => {
+    const members = extractSignatures(
+      'export interface Format { readonly separator?: "a  b"; pattern: `a  ${string}  b`; }',
+    ).get("Format")?.members;
+    expect(members?.get("separator")).toBe('readonly separator?: "a  b";');
+    expect(members?.get("pattern")).toBe("pattern: `a  ${string}  b`;");
+  });
+
+  it("preserves newlines after line comments inside member declarations", () => {
+    const declaration = "read(\n    // The next token must remain a parameter.\n    value: string\n  ): void;";
+    expect(extractSignatures(`export interface Reader { ${declaration} }`).get("Reader")?.members?.get("read")).toBe(
+      declaration,
+    );
+  });
+
+  it("cleans actual import types without rewriting string or template literal contents", () => {
+    const declarations = [
+      "export declare const syntax: \"import('./types.js').Value\";",
+      'export type Pattern = `import("./types.js").Value  ${string}`;',
+      'export type Actual = import("./types.js").Value<import("./types.js").Other>;',
+      'export type Query = typeof import("./types.js").value;',
+    ];
+    const signatures = extractSignatures(declarations.join("\n"));
+    expect(signatures.get("syntax")?.text).toBe(declarations[0]);
+    expect(signatures.get("Pattern")?.text).toBe(declarations[1]);
+    expect(signatures.get("Actual")?.text).toBe("export type Actual = Value<Other>;");
+    expect(signatures.get("Query")?.text).toBe("export type Query = typeof value;");
+  });
+
   it("captures an enum header and members", () => {
     const level = index.get("Level");
     expect(level?.text).toBe("export declare enum Level");
