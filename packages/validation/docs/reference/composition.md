@@ -304,8 +304,73 @@ intersection(named, aged)({ name: "Ada", age: 36 }); // { ok: true, value: { nam
 
 ```ts
 export declare function json(): Schema<unknown, string>;
+```
+
+Creates a validator for text that holds JSON: it parses the text, then optionally validates what was parsed.
+
+A non-string fails with `invalid_type`, and text that is not valid JSON fails with `invalid_format` and `{ format: "json" }`. Issues from `validator` have paths relative to the parsed value. Objects parsed from JSON are plain objects, so a `__proto__` key is data. Without `validator` the result is `unknown`.
+
+**Returns** — A validator that produces what `validator` produces, or `unknown` without one.
+
+**Throws** — When `validator` is given and is not a function, `undefined` included.
+
+**Example**
+
+```ts
+const settings = json(object({ theme: oneOf(["light", "dark"]) }));
+settings('{"theme":"dark"}'); // { ok: true, value: { theme: "dark" } }
+settings("{oops"); // { ok: false, ... }, code "invalid_format"
+```
+
+```ts
 export declare function json(options: MessageOptions): Schema<unknown, string>;
+```
+
+Creates a validator for text that holds JSON: it parses the text, then optionally validates what was parsed.
+
+A non-string fails with `invalid_type`, and text that is not valid JSON fails with `invalid_format` and `{ format: "json" }`. Issues from `validator` have paths relative to the parsed value. Objects parsed from JSON are plain objects, so a `__proto__` key is data. Without `validator` the result is `unknown`.
+
+**Returns** — A validator that produces what `validator` produces, or `unknown` without one.
+
+**Throws** — When `validator` is given and is not a function, `undefined` included.
+
+**Example**
+
+```ts
+const settings = json(object({ theme: oneOf(["light", "dark"]) }));
+settings('{"theme":"dark"}'); // { ok: true, value: { theme: "dark" } }
+settings("{oops"); // { ok: false, ... }, code "invalid_format"
+```
+
+```ts
 export declare function json<TValidator extends AnyValidator>(validator: TValidator, ...rest: Rest<Infer<TValidator>, MessageOptions>): Composed<TValidator, Infer<TValidator>, string>;
+```
+
+Creates a validator for text that holds JSON: it parses the text, then optionally validates what was parsed.
+
+A non-string fails with `invalid_type`, and text that is not valid JSON fails with `invalid_format` and `{ format: "json" }`. Issues from `validator` have paths relative to the parsed value. Objects parsed from JSON are plain objects, so a `__proto__` key is data. Without `validator` the result is `unknown`.
+
+**Parameters**
+
+- `validator` — Validates the parsed value.
+
+**Type parameters**
+
+- `TValidator` — The validator for the parsed value.
+
+**Returns** — A validator that produces what `validator` produces, or `unknown` without one.
+
+**Throws** — When `validator` is given and is not a function, `undefined` included.
+
+**Example**
+
+```ts
+const settings = json(object({ theme: oneOf(["light", "dark"]) }));
+settings('{"theme":"dark"}'); // { ok: true, value: { theme: "dark" } }
+settings("{oops"); // { ok: false, ... }, code "invalid_format"
+```
+
+```ts
 export declare function json<TValidator extends AnyValidator>(validator: TValidator, ...rest: AsyncRest<Infer<TValidator>, MessageOptions>): AsyncSchema<Infer<TValidator>, string>;
 ```
 
@@ -613,6 +678,37 @@ type Profile = Infer<typeof profile>; // { id: string; name: string }
 
 ```ts
 export declare function optional<TValidator extends AnyValidator>(validator: TValidator): Composed<TValidator, Infer<TValidator> | undefined, InferInput<TValidator> | undefined>;
+```
+
+Wraps a validator so `undefined` is accepted, and every other value goes to the wrapped validator. Inside `object`, the property then becomes optional in the inferred type.
+
+Given a default, `undefined` is replaced by it instead, the output type no longer includes `undefined`, and inside `object` the property is always present in the output. The default is trusted and is not run through the wrapped validator. A primitive is used as it is, and a function is called for every use, with no argument, to produce the default. An object or an array must come from a function, such as `() => []`, since one value would be shared by every result and a change to one would show up in the next: the types reject it, and so does `optional` when it is created. To use a function as the default value itself, return it from a function, `optional(func(), () => noop)`, which the types require when the wrapped validator can produce a function.
+
+**Parameters**
+
+- `validator` — The validator for values that are present.
+
+**Type parameters**
+
+- `TValidator` — The wrapped validator.
+
+**Returns** — A validator that produces the wrapped type, and `undefined` or the default for `undefined`.
+
+**Throws** — When `validator` is not a function, or `value` is an object or an array.
+
+**Example**
+
+```ts
+const nickname = optional(string({ min: 2 }));
+nickname(undefined); // { ok: true, value: undefined }
+nickname(null); // { ok: false, ... }: null is not undefined
+
+const role = optional(oneOf(["admin", "user"]), "user");
+role(undefined); // { ok: true, value: "user" }
+const tags = optional(array(string()), () => []);
+```
+
+```ts
 export declare function optional<TValidator extends AnyValidator>(validator: TValidator, value: Fallback<Exclude<Infer<TValidator>, undefined>>): Composed<TValidator, Exclude<Infer<TValidator>, undefined>, InferInput<TValidator> | undefined>;
 ```
 
@@ -649,8 +745,6 @@ const tags = optional(array(string()), () => []);
 
 ```ts
 export declare function partial<TShape extends Shape>(shape: TShape): PartialShape<TShape>;
-export declare function partial<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: Rest<AllOptional<Infer<TValidator>>, ObjectOptions>): Reshaped<TValidator, AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
-export declare function partial<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: AsyncRest<AllOptional<Infer<TValidator>>, ObjectOptions>): AsyncSchema<AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
 ```
 
 Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object` made, it returns a new object validator, with the same options unless options are given here.
@@ -660,11 +754,67 @@ An object validator with checks is refused, since a check may read a property th
 **Parameters**
 
 - `shape` — Property validators, or a validator made by `object`, without checks.
-- `rest` — For a validator only: options, replacing those of the object, then checks on the new object.
 
 **Type parameters**
 
 - `TShape` — The shape.
+
+**Returns** — A shape whose every validator also accepts `undefined`, or an object validator of one.
+
+**Throws** — When `shape` is not a plain object or a property validator is not a function, or, for a validator, when it was not made by `object` or has checks.
+
+**Example**
+
+```ts
+const user = { name: string({ min: 2 }), email: email() };
+const create = object(user);
+const update = object(partial(user)); // { name?: string; email?: string }
+const patch = partial(create); // the same, from the validator
+```
+
+```ts
+export declare function partial<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: Rest<AllOptional<Infer<TValidator>>, ObjectOptions>): Reshaped<TValidator, AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
+```
+
+Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object` made, it returns a new object validator, with the same options unless options are given here.
+
+An object validator with checks is refused, since a check may read a property that is now absent: give the checks the new object needs here instead. What was given is unchanged either way.
+
+**Parameters**
+
+- `rest` — For a validator only: options, replacing those of the object, then checks on the new object.
+
+**Type parameters**
+
+- `TValidator` — The object validator, when one is given in place of a shape.
+
+**Returns** — A shape whose every validator also accepts `undefined`, or an object validator of one.
+
+**Throws** — When `shape` is not a plain object or a property validator is not a function, or, for a validator, when it was not made by `object` or has checks.
+
+**Example**
+
+```ts
+const user = { name: string({ min: 2 }), email: email() };
+const create = object(user);
+const update = object(partial(user)); // { name?: string; email?: string }
+const patch = partial(create); // the same, from the validator
+```
+
+```ts
+export declare function partial<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: AsyncRest<AllOptional<Infer<TValidator>>, ObjectOptions>): AsyncSchema<AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
+```
+
+Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object` made, it returns a new object validator, with the same options unless options are given here.
+
+An object validator with checks is refused, since a check may read a property that is now absent: give the checks the new object needs here instead. What was given is unchanged either way.
+
+**Parameters**
+
+- `rest` — For a validator only: options, replacing those of the object, then checks on the new object.
+
+**Type parameters**
+
 - `TValidator` — The object validator, when one is given in place of a shape.
 
 **Returns** — A shape whose every validator also accepts `undefined`, or an object validator of one.

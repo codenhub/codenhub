@@ -655,7 +655,13 @@ function proseOf(
 function overloadsOf(declaration: Reflection): ReferenceOverload[] {
   const signatures = declaration.signatures ?? [];
   const comments = new Set(
-    signatures.flatMap((signature) => (signature.comment === undefined ? [] : [JSON.stringify(signature.comment)])),
+    signatures.map((signature) =>
+      JSON.stringify({
+        comment: signature.comment,
+        parameters: (signature.parameters ?? []).flatMap((parameter) => parameter.comment ?? []),
+        typeParameters: (signature.typeParameters ?? []).flatMap((parameter) => parameter.comment ?? []),
+      }),
+    ),
   );
   if (comments.size < 2) {
     return [];

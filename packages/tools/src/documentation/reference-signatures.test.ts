@@ -116,6 +116,34 @@ describe("index signature members", () => {
   });
 });
 
+describe("overload documentation", () => {
+  it.each(["param", "typeParam"])(
+    "separates overloads whose only distinct prose is @%s",
+    { timeout: 30_000 },
+    async (tag) => {
+      const fixture = await createReferenceFixture("overload-params", {
+        "index.ts": `
+        /** Reads a value.
+         * @${tag} ${tag === "param" ? "value" : "T"} - The first description.
+         */
+        export function read<T extends string>(value: T): T;
+        /** Reads a value.
+         * @${tag} ${tag === "param" ? "value" : "T"} - The second description.
+         */
+        export function read<T extends number>(value: T): T;
+        export function read(value: unknown): unknown { return value; }
+      `,
+      });
+      const { model, files } = await analyzeReference(fixture, { prose: true });
+      const overloads = model.entrypoints[0]?.symbols[0]?.overloads ?? [];
+      expect(overloads).toHaveLength(2);
+      expect(overloads.every((overload) => overload.signature !== undefined)).toBe(true);
+      expect(files[0]?.contents).toContain("The first description.");
+      expect(files[0]?.contents).toContain("The second description.");
+    },
+  );
+});
+
 describe("extractSignatures", () => {
   const index = extractSignatures(dts, "index.d.ts");
 
