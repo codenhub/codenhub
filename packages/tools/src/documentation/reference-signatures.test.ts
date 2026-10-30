@@ -34,6 +34,31 @@ export { somethingReexported } from "./other";
 `;
 
 describe("internal type resolution", () => {
+  it(
+    "lists unexported typeof values with their emitted declarations and source files",
+    { timeout: 30_000 },
+    async () => {
+      const fixture = await createReferenceFixture("hidden", {
+        "index.ts": `
+        type Mode = "test" | "live";
+        const config = { mode: "test" as Mode };
+        function read(): typeof config { return config; }
+        export type Config = typeof config;
+        export type Reader = typeof read;
+      `,
+      });
+      const { model, files } = await analyzeReference(fixture, { prose: true });
+      expect(model.unresolved).toEqual([]);
+      expect(model.entrypoints[0]?.internalTypes).toEqual([
+        { name: "config", signature: "declare const config: {\n    mode: Mode;\n};", declaredIn: ["src/index.ts"] },
+        { name: "Mode", signature: 'type Mode = "test" | "live";', declaredIn: ["src/index.ts"] },
+        { name: "read", signature: "declare function read(): typeof config;", declaredIn: ["src/index.ts"] },
+      ]);
+      expect(files[0]?.contents).toContain("declare const config:");
+      expect(files[0]?.contents).toContain("Not exported; declared in `src/index.ts`.");
+    },
+  );
+
   it("reports an imported type from a hand-written declaration", { timeout: 30_000 }, async () => {
     const fixture = await createReferenceFixture("handwritten-only-type", {
       "index.ts": "import type {Hidden} from './types'; /** Makes. */ export function make():Hidden {return {x:1};}",

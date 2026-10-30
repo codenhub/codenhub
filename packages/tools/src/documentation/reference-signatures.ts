@@ -749,6 +749,7 @@ interface NamedType {
   name: string;
   module?: string;
   declarations?: readonly ts.Node[];
+  isTypeQuery?: boolean;
 }
 
 function leftmostName(name: ts.EntityName | ts.Expression): string | undefined {
@@ -797,18 +798,19 @@ function namedTypes(node: ts.Node): NamedType[] {
   const named: NamedType[] = [];
   const add = (current: ts.Node, scope: ReadonlySet<string>, name: string | undefined, module?: string): void => {
     if (name !== undefined && (module !== undefined || !scope.has(name))) {
+      const isTypeQuery = ts.isTypeQueryNode(current) || (ts.isImportTypeNode(current) && current.isTypeOf);
       if (module === undefined) {
         for (let parent = current.parent; parent !== undefined; parent = parent.parent) {
           const declarations = ts.isModuleBlock(parent)
             ? collectDeclarationNodes(parent.statements).get(name)
             : undefined;
           if (declarations !== undefined) {
-            named.push({ declarations, name });
+            named.push({ declarations, isTypeQuery, name });
             return;
           }
         }
       }
-      named.push(module === undefined ? { name } : { module, name });
+      named.push(module === undefined ? { isTypeQuery, name } : { isTypeQuery, module, name });
     }
   };
   const visit = (current: ts.Node, outer: ReadonlySet<string>): void => {
@@ -864,14 +866,23 @@ function ambientNames(ambient: ReadonlyMap<string, string>): Map<string, string>
   return names;
 }
 
-function isTypeDeclaration(
+function isInternalDeclaration(
   node: ts.Node,
-): node is ts.TypeAliasDeclaration | ts.InterfaceDeclaration | ts.EnumDeclaration | ts.ClassDeclaration {
+  isTypeQuery: boolean,
+): node is
+  | ts.TypeAliasDeclaration
+  | ts.InterfaceDeclaration
+  | ts.EnumDeclaration
+  | ts.ClassDeclaration
+  | ts.VariableDeclaration
+  | ts.FunctionDeclaration
+  | ts.ModuleDeclaration {
   return (
     ts.isTypeAliasDeclaration(node) ||
     ts.isInterfaceDeclaration(node) ||
     ts.isEnumDeclaration(node) ||
-    ts.isClassDeclaration(node)
+    ts.isClassDeclaration(node) ||
+    (isTypeQuery && (ts.isVariableDeclaration(node) || ts.isFunctionDeclaration(node) || ts.isModuleDeclaration(node)))
   );
 }
 
@@ -1009,7 +1020,9 @@ export function attachInternalTypes(
           if (found.declarations.some((declaration) => documented.has(declaration))) {
             continue;
           }
-          const types = found.declarations.filter(isTypeDeclaration);
+          const types = found.declarations.filter((declaration) =>
+            isInternalDeclaration(declaration, type.isTypeQuery === true),
+          );
           const [first] = types;
           if (first === undefined) {
             report(type.name, sourcePathOf(found.declarations[0]?.getSourceFile().fileName ?? path));
@@ -1019,13 +1032,19 @@ export function attachInternalTypes(
             continue;
           }
           listed.add(first);
-          const name = first.name?.text ?? type.name;
+          const name = first.name !== undefined && ts.isIdentifier(first.name) ? first.name.text : type.name;
           const declaredIn = sourcePathOf(first.getSourceFile().fileName);
           // The reader cannot import it either way, so a module's `export` is left off.
           const signature = types
-            .map((declaration) =>
-              tidy(declaration.getText().replace(/^export (?:default )?/, ""), ts.isTypeAliasDeclaration(declaration)),
-            )
+            .map((declaration) => {
+              const statement = ts.isVariableDeclaration(declaration) ? declaration.parent.parent : declaration;
+              const text =
+                ts.isVariableDeclaration(declaration) && ts.isVariableStatement(statement)
+                  ? (collectStatements([statement], declaration.getSourceFile()).get(name)?.text ??
+                    declaration.getText())
+                  : declaration.getText();
+              return tidy(text.replace(/^export (?:default )?/, ""), ts.isTypeAliasDeclaration(declaration));
+            })
             .join("\n");
           // The same helper copied into two files is one entry that names both.
           const same = internal.find((entry) => entry.name === name && entry.signature === signature);
