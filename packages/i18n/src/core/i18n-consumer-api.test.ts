@@ -75,6 +75,19 @@ describe("typed locales", () => {
     await expect(i18n.setLocale("fr")).rejects.toThrow('Unsupported locale "fr"');
   });
 
+  it("should not widen locales from a callback parameter typed `string`", async () => {
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en", "pt"],
+      loadLocale: (locale: string) => dictionaries[locale as "en" | "pt"],
+      onMissingKey: (_key: string, _locale: string) => {},
+    });
+    await i18n.init();
+
+    // @ts-expect-error - "fr" is not a configured locale
+    await expect(i18n.setLocale("fr")).rejects.toThrow('Unsupported locale "fr"');
+  });
+
   it("should reject a widened default locale instead of widening every locale to string", () => {
     const config = {
       defaultLocale: "en",

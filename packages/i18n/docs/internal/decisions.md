@@ -40,7 +40,7 @@ Framework stores, such as React's `useSyncExternalStore`, need a subscribe funct
 
 ### `defaultLocale` does not drive locale inference (0.2.0)
 
-`defaultLocale` is typed `NoInfer<TLocale>` in `I18nConfig` and `LocaleRoutingConfig`. Before, a configuration in a separate variable without `as const` inferred `TLocale` as `string` from `defaultLocale`, so `setLocale("fr")` compiled for an app that supports only `en` and `pt`, and fails at runtime. Now that configuration is a compile error at `createI18n(config)`, fixed with `as const`. Inline configurations are unaffected, since `defaultLocale` is checked against the literal union inferred from `locales`.
+`defaultLocale` is typed `NoInfer<TLocale>` in `I18nConfig` and `LocaleRoutingConfig`, as is the locale parameter of `loadLocale`, `getLocaleDirection`, and `onMissingKey`, so a callback annotated `(locale: string)` cannot widen it either. Before, a configuration in a separate variable without `as const` inferred `TLocale` as `string` from `defaultLocale`, so `setLocale("fr")` compiled for an app that supports only `en` and `pt`, and fails at runtime. Now that configuration is a compile error at `createI18n(config)`, fixed with `as const`. Inline configurations are unaffected, since `defaultLocale` is checked against the literal union inferred from `locales`.
 
 Rejected: leaving it, because the widening is silent and loses the main benefit of typed locales.
 

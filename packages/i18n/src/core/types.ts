@@ -73,21 +73,21 @@ export interface I18nConfig<TLocale extends string = string, TMessages = unknown
    * Its declared return type, such as an `as const` object or an imported JSON module, types translation keys;
    * an `unknown` or `any` return accepts any string key.
    */
-  loadLocale(locale: TLocale): TMessages | Promise<TMessages>;
+  loadLocale(locale: NoInfer<TLocale>): TMessages | Promise<TMessages>;
   /**
    * Resolves `ltr` or `rtl`; called during creation and state changes, with failures propagated unchanged.
    *
    * @defaultValue `rtl` for a right-to-left script subtag, such as `uz-Arab`, or, without a script subtag, a
    * right-to-left language, such as `ar`, `he`, `fa`, or `ur`; otherwise `ltr`.
    */
-  getLocaleDirection?(locale: TLocale): LocaleDirection;
+  getLocaleDirection?(locale: NoInfer<TLocale>): LocaleDirection;
   /**
    * Called for every key missing from both the active and default dictionaries, in place of the default warning.
    * Exceptions propagate from the lookup, so a test can throw here to fail on a missing key.
    *
    * @defaultValue A `console.warn` once for each of the 1,000 most recent locale/key pairs, unless `isSilent`.
    */
-  onMissingKey?(key: string, locale: TLocale): void;
+  onMissingKey?(key: string, locale: NoInfer<TLocale>): void;
   /** Suppresses optional diagnostics, including the default missing-key warning, without suppressing failures. Defaults to `false`. */
   isSilent?: boolean;
   /** Raises or lowers the resource limits applied to loaded dictionaries; unset limits keep their defaults. */

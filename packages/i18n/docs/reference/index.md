@@ -366,7 +366,7 @@ Non-empty, case-insensitively unique ASCII locale identifiers composed of alphan
 #### getLocaleDirection
 
 ```ts
-getLocaleDirection?(locale: TLocale): LocaleDirection;
+getLocaleDirection?(locale: NoInfer<TLocale>): LocaleDirection;
 ```
 
 Resolves `ltr` or `rtl`; called during creation and state changes, with failures propagated unchanged.
@@ -376,7 +376,7 @@ Resolves `ltr` or `rtl`; called during creation and state changes, with failures
 #### loadLocale
 
 ```ts
-loadLocale(locale: TLocale): TMessages | Promise<TMessages>;
+loadLocale(locale: NoInfer<TLocale>): TMessages | Promise<TMessages>;
 ```
 
 Loads a flat or nested dictionary through a consumer-selected transport; callback failures become `I18nError`. Its declared return type, such as an `as const` object or an imported JSON module, types translation keys; an `unknown` or `any` return accepts any string key.
@@ -384,7 +384,7 @@ Loads a flat or nested dictionary through a consumer-selected transport; callbac
 #### onMissingKey
 
 ```ts
-onMissingKey?(key: string, locale: TLocale): void;
+onMissingKey?(key: string, locale: NoInfer<TLocale>): void;
 ```
 
 Called for every key missing from both the active and default dictionaries, in place of the default warning. Exceptions propagate from the lookup, so a test can throw here to fail on a missing key.
