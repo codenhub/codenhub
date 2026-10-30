@@ -59,6 +59,28 @@ describe("internal type resolution", () => {
   });
 });
 
+describe("protected class members", () => {
+  it("shows subclass members with protected signatures and hides private members", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("protected-members", {
+      "index.ts": `
+        export class Base {
+          protected value = 1;
+          protected read(): number { return this.value; }
+          private secret = 2;
+          #hidden = 3;
+        }
+      `,
+    });
+    const { model, files } = await analyzeReference(fixture, { prose: true });
+    expect(model.entrypoints[0]?.symbols[0]?.members.map(({ name, signature }) => ({ name, signature }))).toEqual([
+      { name: "value", signature: "protected value: number;" },
+      { name: "read", signature: "protected read(): number;" },
+    ]);
+    expect(files[0]?.contents).toContain("protected value: number;");
+    expect(files[0]?.contents).toContain("protected read(): number;");
+  });
+});
+
 describe("special export bindings", () => {
   it.each([
     [
