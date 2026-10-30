@@ -357,6 +357,22 @@ describe("token stylesheet CSP compatibility", () => {
 
     toaster.destroy();
   });
+
+  it("keeps the working token stylesheet when its replacement for a new nonce fails", () => {
+    const toaster = createToaster({ tokens: { successBg: "red" }, nonce: "first" });
+    const styleElement = document.head.querySelector<HTMLStyleElement>("style[data-toast-token-owner]");
+
+    const sheetSpy = vi.spyOn(HTMLStyleElement.prototype, "sheet", "get").mockReturnValue(null);
+    expect(() => toaster.configure({ nonce: "second" })).toThrow(/could not be initialized/);
+    sheetSpy.mockRestore();
+
+    expect(Array.from(document.head.querySelectorAll("style[data-toast-token-owner]"))).toEqual([styleElement]);
+    const rule = styleElement!.sheet!.cssRules[0] as CSSStyleRule;
+    expect(rule.style.getPropertyValue("--toast-color-success-bg")).toBe("red");
+
+    toaster.destroy();
+    expect(document.head.querySelector("style[data-toast-token-owner]")).toBeNull();
+  });
 });
 
 describe("queued toast updates", () => {

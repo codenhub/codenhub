@@ -85,6 +85,21 @@ describe("toasts while a dialog is open", () => {
     toaster.destroy();
   });
 
+  it("re-announces text still waiting when the dialog closes before its region is ready", async () => {
+    vi.useFakeTimers();
+    const toaster = createToaster();
+    const handle = toaster.dialog.confirm("Delete?");
+    toaster.error("Upload failed");
+
+    handle.dismiss();
+    await handle.settled;
+    vi.advanceTimersByTime(200);
+
+    const region = document.body.querySelector(':scope > [data-toast-announcer="assertive"]');
+    expect(region?.textContent).toBe("Upload failed");
+    toaster.destroy();
+  });
+
   it("leaves another instance's toasts outside the dialog", () => {
     const first = createToaster();
     const second = createToaster();

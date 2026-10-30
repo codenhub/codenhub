@@ -107,6 +107,21 @@ describe("screen reader announcements", () => {
     toaster.destroy();
   });
 
+  it("leaves buttons out of custom content and keeps its direct text", () => {
+    const toaster = createToaster();
+    const actions = document.createElement("div");
+    const button = document.createElement("button");
+    button.textContent = "Review";
+    actions.append("Changes", button);
+    const content = document.createDocumentFragment();
+    content.append("3 files", actions);
+    toaster.custom({ content, dismissible: true });
+    vi.advanceTimersByTime(100);
+
+    expect(lines("polite")).toEqual(["3 files Changes"]);
+    toaster.destroy();
+  });
+
   it("announces a settled promise in the region its outcome calls for", async () => {
     const toaster = createToaster();
     let reject!: (error: Error) => void;

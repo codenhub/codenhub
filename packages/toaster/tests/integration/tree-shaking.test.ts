@@ -15,7 +15,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 // Forward slashes, because the path is pasted into source code, where a Windows backslash is an escape.
 const distEntry = fileURLToPath(new URL("../../dist/index.js", import.meta.url)).replaceAll("\\", "/");
 
-const workspace = mkdtempSync(join(tmpdir(), "toaster-tree-shaking-"));
+// Created in `beforeAll`, so a run filtered to other tests leaves no directory behind.
+let workspace: string;
 
 /** Bundles `source` and returns the minified output. */
 const bundle = async (name: string, source: string): Promise<string> => {
@@ -43,10 +44,13 @@ describe("tree shaking", { timeout: 30_000 }, () => {
     if (!existsSync(distEntry)) {
       throw new Error("run `pnpm build` in packages/toaster first: this test reads dist/");
     }
+    workspace = mkdtempSync(join(tmpdir(), "toaster-tree-shaking-"));
   });
 
   afterAll(() => {
-    rmSync(workspace, { recursive: true, force: true });
+    if (workspace) {
+      rmSync(workspace, { recursive: true, force: true });
+    }
   });
 
   it.each([

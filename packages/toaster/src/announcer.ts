@@ -103,6 +103,12 @@ export function announce(params: AnnounceParams): void {
     pendingLines.delete(region);
     if (region.isConnected) {
       pending.forEach((line) => appendLine(region, line));
+    } else if (host !== parent && host.isConnected) {
+      // The dialog that held the region closed and was cleared before the
+      // region was ready. The dialog stays in the document until the
+      // instance is destroyed, so the toasts are still showing: announce
+      // through the current host instead.
+      pending.forEach((line) => announce({ parent, instanceId, role, text: line }));
     }
   }, FIRST_ANNOUNCEMENT_DELAY_MS);
 }

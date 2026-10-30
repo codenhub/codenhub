@@ -403,6 +403,17 @@ export function populateToastContent(
   }
 }
 
+/** A node's text without the labels of any buttons inside it, such as the dismiss button or ones in custom content. */
+function getTextOutsideButtons(node: Node): string {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent ?? "";
+  }
+  if (node.nodeName === "BUTTON") {
+    return "";
+  }
+  return Array.from(node.childNodes, getTextOutsideButtons).join("");
+}
+
 /**
  * The text a screen reader should hear for a populated toast: its title,
  * description, or message, or the text of its custom content. Separate
@@ -413,12 +424,8 @@ export function getToastAnnouncementText(element: HTMLDivElement): string {
   const main = element.querySelector("[data-toast-main]");
   const parts = main
     ? Array.from(main.querySelectorAll("[data-toast-title], [data-toast-description], [data-toast-message]"))
-    : Array.from(element.children).filter((child) => !child.classList.contains("coden-toast-dismiss"));
-  return parts
-    .map((part) => part.textContent ?? "")
-    .join(" ")
-    .replace(/\s+/g, " ")
-    .trim();
+    : Array.from(element.childNodes);
+  return parts.map(getTextOutsideButtons).join(" ").replace(/\s+/g, " ").trim();
 }
 
 interface ContainerParams {
