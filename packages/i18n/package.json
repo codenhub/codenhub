@@ -12,7 +12,8 @@
   },
   "files": [
     "dist",
-    "docs/*.md",
+    "docs",
+    "!docs/internal",
     "llms.txt",
     "llms-full.txt"
   ],
@@ -67,6 +68,8 @@
   "codenhub": {
     "label": "i18n",
     "status": "active",
-    "docs": {}
+    "docs": {
+      "reference": {}
+    }
   }
 }

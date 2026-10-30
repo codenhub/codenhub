@@ -2,7 +2,7 @@
 
 # @codenhub/i18n
 
-Runtime-neutral translations with consumer-provided locale loading, immutable dictionaries, deterministic fallback, and optional browser and locale-path integrations.
+Translate your app's text with typed keys, plurals, and a fallback language, in the browser, on a server, or at build time.
 
 ## Installation
 
@@ -12,20 +12,18 @@ pnpm add @codenhub/i18n
 
 ## Usage
 
-In a browser application, or any runtime with one active locale at a time, create the manager once in a module and import it, or its `t`, wherever text is needed:
-
 ```ts
 // src/i18n.ts
 import { createI18n } from "@codenhub/i18n";
 
 const dictionaries = {
-  en: { home: { title: "Welcome", greeting: "Hello, {name}!" } },
-  pt: { home: { title: "Bem-vindo", greeting: "Olá, {name}!" } },
+  en: { home: { title: "Welcome", greeting: "Hello, {name}!" }, cart: { items: { one: "{count} item", other: "{count} items" } } },
+  pt: { home: { title: "Bem-vindo", greeting: "Olá, {name}!" }, cart: { items: { one: "{count} item", other: "{count} itens" } } },
 } as const;
 
 export const i18n = createI18n({
-  defaultLocale: "en",
   locales: ["en", "pt"] as const,
+  defaultLocale: "en",
   loadLocale: (locale) => dictionaries[locale],
 });
 
@@ -37,42 +35,38 @@ export const { t } = i18n;
 import { i18n, t } from "./i18n";
 
 await i18n.init({ locale: "pt" });
-console.log(t("home.title")); // "Bem-vindo"
-console.log(t("home.greeting", { name: "Ana" })); // "Olá, Ana!"
+
+t("home.greeting", { name: "Ana" }); // "Olá, Ana!"
+t("cart.items", { count: 3 }); // "3 itens"
+t("home.titel"); // compile error: there is no such key
 ```
 
-`t` is a bound alias of `translate()`, and every manager method stays bound when destructured. Keys are typed from the loader's return type, so `t("home.titel")` fails to compile; a loader typed `unknown` or `any`, such as one returning `response.json()`, accepts any string key. `t` checks readiness when called, not when exported, so it works anywhere once `init()` has applied.
+Two optional entry points cover what differs by environment:
 
-`t(key, params)` fills `{name}` placeholders from `params` and always returns a string: a key missing from both dictionaries returns the key itself and is reported to `onMissingKey`, or by default with a deduplicated warning. Text direction defaults from the locale, `rtl` for languages such as Arabic or Hebrew; pass `getLocaleDirection` to override it.
-
-`init()` rejects when a required loader rejects or returns an invalid dictionary. Await it before calling `t()` or `setLocale()`. `i18n.subscribe(listener)` calls `listener` after every applied initialization and locale change, and returns the function that removes it, which fits framework stores such as React's `useSyncExternalStore`.
-
-On a server, create one manager per request instead of a shared module, and pick its locale from `Accept-Language` with `i18n.matchLocale(preferences)`, which maps `pt-BR` to a configured `pt`, as the [SSR example](docs/examples.md#ssr) shows.
+- `@codenhub/i18n/browser` detects and remembers the visitor's language, keeps `<html lang>` and `dir` in step, and can translate HTML marked with `data-i18n`.
+- `@codenhub/i18n/routing` reads and builds locale-prefixed paths, such as `/pt/about`.
 
 ## Documentation
 
-- [Documentation overview](docs/index.md)
-- [Usage across runtimes](docs/examples.md)
-- [API reference](docs/reference.md)
+- [Overview](docs/index.md): the ideas behind the package and a walkthrough.
+- [Write your translations](docs/translations.md): JSON files, placeholders, plurals, and typed keys.
+- [Translate a browser app](docs/browser.md)
+- [Render on a server or at build time](docs/server-rendering.md)
+- [Localized URLs](docs/localized-urls.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [API reference](docs/reference/index.md)
+- [Changelog](docs/changelog/index.md)
 
 ## Requirements
 
-- ESM-aware package resolution.
-- Node.js 24 or newer, or a current Chromium, Firefox, WebKit, or browser Web Worker runtime with the required standard globals.
-- Core requires standard `Event` and `EventTarget` globals and has no runtime dependencies.
-- Browser features require `navigator`, `document`, `localStorage`, or `MutationObserver` only when their related behavior is enabled.
-- Do not overlap `initializeBrowserI18n()` with direct `init()` calls on the same manager; a superseded browser initialization rejects and releases its binding.
-- Concurrent SSR requests and SSG renders must use separate manager instances.
+- An ESM-aware bundler or runtime.
+- Node.js 24 or newer, or a current Chromium, Firefox, or WebKit browser or Web Worker.
+- No runtime dependencies.
 
 ## Notes
 
-- Dictionaries may be flat or nested, but every leaf must be a string and every group a plain object. Valid dictionaries are flattened, frozen, cached per manager, and shared across managers that load the same payload object. Repeated object references and payloads exceeding the documented resource limits are rejected. `dictionaryLimits` raises or lowers the depth, translation, property, value-length, and aggregate-length limits; the 1,000-character flattened-key limit is fixed.
-- Locale identifiers use conservative ASCII syntax: alphanumeric subtags joined by single hyphens.
-- Missing active-locale keys fall back to the default dictionary without a warning; a key-parity check in tests finds them (see the examples). A key missing from both returns the key; the default warning deduplicates the 1,000 most recent locale/key pairs unless silent, and `onMissingKey` replaces it.
-- Interpolation replaces `{name}` placeholders only. Translation lookup and locale routing intentionally omit plural selection, ICU messages, rich messages, HTML rendering, number/date formatting, navigation, and redirects.
-- Browser DOM translation sets text with `data-i18n` and allowlisted text attributes, such as `placeholder` or `aria-label`, with `data-i18n-<attribute>`. It skips `style`, `script`, `noscript`, and `template` elements. Invalid keys are skipped without interrupting other translations.
-- Locale routing rejects encoded percent signs so later decoding cannot expose separators, controls, or dot segments.
-- The package does not own fetch policy, `Accept-Language` parsing, route registration, redirects, navigation, rendering, or static page generation.
+- On a server or in a static build, create one manager per request or page, not a shared one.
+- The package does not format numbers or dates, render HTML from translations, or support the ICU message format.
 
 ## License
 
@@ -80,155 +74,435 @@ Licensed under Apache-2.0.
 
 <!-- Source: docs/index.md -->
 
-# Translate applications across runtimes
+# Translate your app
 
-`@codenhub/i18n` provides isolated translation managers with consumer-owned locale loading. Use the core API in browser main threads, browser Web Workers, servers, and static builds, then add browser effects or locale-prefixed paths when needed.
+`@codenhub/i18n` turns keys such as `"home.title"` into text in the reader's language. You write your translations as plain objects or JSON files, one per language, and the package handles the rest: it loads the right one, falls back to your main language when a translation is missing, fills in values like names and counts, and tells TypeScript which keys exist, so a typo fails to compile.
 
-## Setup
+It works the same in a browser, a Web Worker, a Node.js server, or a static site build. Two optional extras handle the jobs that differ by environment:
 
-### Installation
+- **`@codenhub/i18n/browser`** picks the visitor's language, remembers their choice, and keeps the page's `lang` and `dir` attributes in step.
+- **`@codenhub/i18n/routing`** puts the language in the URL, as in `/pt/about`.
+
+## Four ideas
+
+You only need four ideas to use this package.
+
+**A locale** names a language, and sometimes a region: `en`, `pt`, `pt-BR`, `ar`. You list the locales your app supports, and pick one as the **default locale**: the language your app is written in first, which every other locale falls back to.
+
+**A dictionary** holds every translation for one locale. Keys can be nested to keep related text together:
+
+```json
+{
+  "home": {
+    "title": "Welcome",
+    "greeting": "Hello, {name}!"
+  }
+}
+```
+
+Nested keys are joined with dots, so this dictionary has the keys `home.title` and `home.greeting`.
+
+**A loader** is a function you write that returns the dictionary for a locale. It can return an object you imported, read a file, or fetch JSON from your server. The package never decides where translations live; it calls your loader when it needs a locale, and keeps the result.
+
+**A manager** ties these together. You create one with `createI18n()`, tell it which locale to use, and ask it for text with `t()`.
+
+## Walkthrough
+
+### 1. Install
 
 ```sh
 pnpm add @codenhub/i18n
 ```
 
-### Quick start
+The package is an ES module and needs Node.js 24 or newer, or a current browser. It has no runtime dependencies.
 
-In a browser application, or any runtime with one active locale at a time, create the manager once in an application module and export it with its bound `t`:
+### 2. Write two dictionaries
+
+Start with your default language and one more. Here they are objects in a TypeScript file; [Write your translations](docs/translations.md) shows how to keep them in JSON files instead.
+
+```ts
+// src/locales.ts
+export const dictionaries = {
+  en: {
+    home: { title: "Welcome", greeting: "Hello, {name}!" },
+    cart: { items: { one: "{count} item", other: "{count} items" } },
+  },
+  pt: {
+    home: { title: "Bem-vindo", greeting: "Olá, {name}!" },
+    cart: { items: { one: "{count} item", other: "{count} itens" } },
+  },
+} as const;
+```
+
+The `as const` lets TypeScript see the exact keys, so it can check every `t()` call against them.
+
+### 3. Create the manager
+
+In a browser app, create the manager once in its own module and import it wherever you need text:
 
 ```ts
 // src/i18n.ts
 import { createI18n } from "@codenhub/i18n";
-
-const dictionaries = {
-  en: { page: { title: "Welcome", description: "Learn more", greeting: "Hello, {name}!" } },
-  pt: { page: { title: "Bem-vindo", greeting: "Olá, {name}!" } },
-} as const;
+import { dictionaries } from "./locales";
 
 export const i18n = createI18n({
-  defaultLocale: "en",
   locales: ["en", "pt"] as const,
+  defaultLocale: "en",
   loadLocale: (locale) => dictionaries[locale],
 });
 
 export const { t } = i18n;
 ```
 
-Initialize it once at startup, then import `t` wherever text is needed:
+`t` is a short name for `i18n.translate`. Every method on the manager works on its own after you pull it off, like `t` here, so you can import `t` directly.
+
+### 4. Start it, then translate
+
+The manager has to load a dictionary before it can translate, so start it once when your app starts and wait for it:
 
 ```ts
+// src/main.ts
 import { i18n, t } from "./i18n";
 
 await i18n.init({ locale: "pt" });
 
-t("page.title"); // "Bem-vindo"
-t("page.description"); // "Learn more" from the default locale
-t("page.greeting", { name: "Ana" }); // "Olá, Ana!"
-t("page.titel"); // compile error: keys are typed from the dictionaries
+t("home.title"); // "Bem-vindo"
+t("home.greeting", { name: "Ana" }); // "Olá, Ana!"
+t("cart.items", { count: 3 }); // "3 itens"
+t("home.titel"); // compile error: there is no such key
 ```
 
-Core never reads browser, request, or process state: pass the locale, or pick one from preferences with `i18n.matchLocale(["pt-BR"])`, which returns `"pt"` here. Omitting `init({ locale })` selects the configured default. Selecting another locale loads both its dictionary and the default dictionary before applying state, so fallback is deterministic.
+`init()` without a locale starts with the default locale. Calling `t()` before `init()` has finished throws an error, because there is nothing to translate with yet.
 
-`t` always returns a string: a key missing from both dictionaries returns the key and is reported to `onMissingKey`, or warned once by default. Every manager method is bound, so destructured methods keep working, and `t` checks readiness when called rather than when exported. `i18n.subscribe(listener)` calls `listener` after every applied initialization and locale change, for re-rendering a framework. Servers and static builds that render concurrently create one manager per request or page instead of sharing a module.
+### 5. Switch languages
 
-### Configuration
+```ts
+await i18n.setLocale("en");
+t("home.title"); // "Welcome"
+```
 
-Configure supported locales, a default locale, and a dictionary loader. Text direction defaults from each locale, such as `rtl` for `ar` or `he`, and `getLocaleDirection` overrides it. The loader may use imports, HTTP, files, or another runtime-specific source.
+`setLocale()` loads the new dictionary first and only switches once it has loaded, so text never shows half in one language and half in another. To redraw your interface when the language changes, pass a function to `i18n.subscribe()`; it runs after every switch.
 
-Use `@codenhub/i18n/browser` for browser locale selection, persistence, document attributes, and optional DOM translation. Use `@codenhub/i18n/routing` for pure locale-prefixed pathname parsing and generation.
+## What happens when a translation is missing
 
-## Requirements
+Translations rarely stay complete. A new feature adds keys in English first, and the other languages catch up later. The package handles this in two steps:
 
-- ESM-aware package resolution.
-- Node.js 24 or newer, or a current Chromium, Firefox, WebKit, or browser Web Worker runtime with the required standard globals.
-- Core requires standard `Event` and `EventTarget` globals.
-- Browser features require only the browser APIs they enable.
-- Browser initialization must not overlap direct core initialization on the same manager; a superseded browser call rejects and releases ownership.
-- Concurrent SSR requests and SSG renders require separate manager instances.
+1. **The key is missing in the current locale but present in the default one.** You get the default text. In the example above, a key only in `en` shows English to Portuguese readers. Nothing is logged, because this is normal while translators catch up; [a key check in your tests](docs/translations.md#find-untranslated-keys) finds these.
+2. **The key is missing everywhere.** `t()` returns the key itself, such as `"home.subtitle"`, so the gap is visible on screen and easy to search for, and the manager logs a warning once. You can send these to your own logger with the `onMissingKey` option.
 
-The package intentionally focuses on deterministic string lookup and locale paths. Interpolation fills `{name}` placeholders only; it does not provide plural selection, ICU or rich messages, HTML rendering, number/date formatting, navigation, or redirects.
+`t()` always returns a string, so you never need `?? ""` after it.
 
-## Next steps
+## Where to go next
 
-- [Usage across runtimes](docs/examples.md) covers browser setup, routed hydration, SSR, SSG, and loader patterns.
-- [API reference](docs/reference.md) documents configuration, dictionaries, browser behavior, routing, events, and failures.
+- [Write your translations](docs/translations.md): dictionaries, JSON files, placeholders, plurals, typed keys, and checking for untranslated keys.
+- [Translate a browser app](docs/browser.md): detect and remember the visitor's language, translate HTML with `data-i18n`, and re-render a framework.
+- [Render on a server or at build time](docs/server-rendering.md): one manager per request, choosing a locale from `Accept-Language`, and static site builds.
+- [Localized URLs](docs/localized-urls.md): put the locale in the path, build links to other languages, and generate every localized page.
+- [Troubleshooting](docs/troubleshooting.md): what each error means and how to fix it.
+- [API reference](docs/reference/index.md): every export, option, and type.
+- [Changelog](docs/changelog/index.md): what changed in each version, and how to upgrade.
 
-<!-- Source: docs/examples.md -->
+## What this package does not do
 
-# Use i18n across runtimes
+It translates and picks locales. It does not format numbers or dates (use the built-in `Intl.NumberFormat` and `Intl.DateTimeFormat` with `i18n.locale`), render HTML from translations, or support the full ICU message format. Locale routing reads and builds paths, but your framework or server still registers routes, redirects, and navigates.
 
-The examples below use consumer-owned configuration. Replace the sample loader with the transport appropriate to the runtime.
+<!-- Source: docs/translations.md -->
 
-## Browser application
+# Write your translations
 
-The browser helper initializes core and optionally owns persistence, document attributes, safe leaf translation, and mutation observation.
+A dictionary is a plain object whose values are strings or more objects. This page covers how to organize dictionaries, load them, put values and counts into text, and keep every language complete.
+
+## Dictionary shape
+
+Nest keys to group related text. Every leaf must be a string:
+
+```json
+{
+  "nav": { "home": "Home", "settings": "Settings" },
+  "settings": {
+    "title": "Settings",
+    "language": { "label": "Language", "hint": "Used across the whole app" }
+  }
+}
+```
+
+The manager flattens nesting into dot-separated keys: `nav.home`, `settings.language.hint`. You can also write flat keys directly, as `{ "nav.home": "Home" }`, or mix both, as long as two spellings never produce the same key.
+
+A dictionary is rejected with a `TypeError` when it contains something that is not text or a group: a number, an array, `null`, a `Date`, a function, a key with an empty segment such as `"nav..home"`, or a `__proto__` key. [Troubleshooting](docs/troubleshooting.md#a-dictionary-is-rejected) lists every rule.
+
+An empty dictionary is fine. A locale you have added but not translated yet starts normally and shows default-locale text everywhere.
+
+## Keep dictionaries in JSON files
+
+Most apps keep one JSON file per locale, often because translators or a translation service edit them:
+
+```text
+src/locales/
+  en.json
+  pt.json
+```
+
+Load them with a dynamic `import()` so a visitor only downloads their own language:
 
 ```ts
 import { createI18n } from "@codenhub/i18n";
-import { initializeBrowserI18n } from "@codenhub/i18n/browser";
+import type en from "./locales/en.json";
 
-const i18n = createI18n({
-  defaultLocale: "en",
+export const i18n = createI18n({
   locales: ["en", "pt"] as const,
-  async loadLocale(locale) {
-    const response = await fetch(`/locales/${locale}.json`);
-    if (!response.ok) throw new Error(`Could not load ${locale}`);
-    return response.json();
+  defaultLocale: "en",
+  async loadLocale(locale): Promise<typeof en> {
+    const module = await import(`./locales/${locale}.json`);
+    return module.default;
   },
 });
-
-const binding = await initializeBrowserI18n({
-  i18n,
-  root: document,
-  observe: true,
-});
-
-console.log(i18n.t("home.title"));
-
-// Run when this browser owner is torn down.
-binding.disconnect();
 ```
 
-With a `root`, leaves such as `<h1 data-i18n="home.title">Fallback title</h1>` are translated, and so are text attributes such as `<input data-i18n-placeholder="search.hint" placeholder="Search">`. Frameworks that render translated values themselves should omit `root` and `observe`.
+The return type `Promise<typeof en>` is what gives you typed keys: a dynamic import returns `any`, which would otherwise let any string through. `import type` needs `"resolveJsonModule": true` in your `tsconfig.json`, and never ends up in your bundle.
 
-## Routed hydration
-
-Pass the route locale explicitly. It is authoritative over persisted and navigator preferences, preventing server/client locale disagreement.
+To fetch dictionaries from a server instead, return the parsed JSON and throw on a failed response, so the manager reports the failure instead of loading an error page as a dictionary:
 
 ```ts
-import { createI18n } from "@codenhub/i18n";
-import { initializeBrowserI18n } from "@codenhub/i18n/browser";
-import { createLocaleRouting } from "@codenhub/i18n/routing";
+async loadLocale(locale): Promise<typeof en> {
+  const response = await fetch(`/locales/${locale}.json`);
+  if (!response.ok) throw new Error(`Locale request failed: ${response.status}`);
+  return response.json();
+}
+```
 
-const routing = createLocaleRouting({
-  defaultLocale: "en",
+Your loader owns everything about transport: URLs, caching headers, retries, timeouts, and credentials. The manager only calls it and checks what comes back.
+
+### How loading behaves
+
+- The manager loads a locale the first time it needs it and keeps the result, so switching back to a language does not call your loader again.
+- Starting or switching to a non-default locale loads that locale and the default locale together, because the default is the fallback.
+- If your loader throws or rejects, the call that needed it rejects with an `I18nError`, and the manager keeps its current language. The next call tries the loader again.
+- Returning the same object every time, such as a module-level import, lets every manager share one checked copy. That matters on a server, which [creates a manager per request](docs/server-rendering.md).
+- Treat a dictionary as read-only once loaded: the manager keeps its own frozen copy, so later changes to the object do nothing.
+
+## Put values into text
+
+Write `{name}` where a value goes, and pass the value to `t()`:
+
+```json
+{ "welcome": "Welcome back, {name}. You have {count} new messages." }
+```
+
+```ts
+t("welcome", { name: "Ana", count: 4 });
+// "Welcome back, Ana. You have 4 new messages."
+```
+
+Placeholder names use letters, digits, and `_`. Values can be strings or numbers.
+
+Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs.
+
+A few details:
+
+- A placeholder with no matching value stays as written, so a missing value shows up as `{name}` on screen rather than disappearing.
+- Without a second argument, the text comes back unchanged. Text containing literal braces, such as a code sample, is safe as long as you don't pass a value with the same name.
+- Numbers are inserted as JavaScript writes them: `1234.5`, not `1,234.50`. To format a number or date for the reader, use `Intl.NumberFormat` or `Intl.DateTimeFormat` with `i18n.locale` and pass the result as a string.
+
+## Plurals
+
+"1 items" is wrong in English, and other languages have more forms than English does. Arabic has six. To let each language choose, write the key as a group of forms instead of a single string:
+
+```json
+{
+  "cart": {
+    "items": {
+      "one": "{count} item",
+      "other": "{count} items"
+    }
+  }
+}
+```
+
+Then pass a number as `count`:
+
+```ts
+t("cart.items", { count: 1 }); // "1 item"
+t("cart.items", { count: 5 }); // "5 items"
+```
+
+The manager asks the built-in `Intl.PluralRules` which form the language uses for that number, and `count` also fills the `{count}` placeholder. The form names are the standard [CLDR plural categories](https://cldr.unicode.org/index/cldr-spec/plural-rules):
+
+| Form    | Used for                                                                               |
+| ------- | -------------------------------------------------------------------------------------- |
+| `zero`  | Languages with a zero form, such as Arabic and Latvian. English uses `other` for 0.    |
+| `one`   | Singular. Portuguese and French also use it for 0.                                     |
+| `two`   | Dual, such as Arabic, Hebrew, and Welsh.                                               |
+| `few`   | Small numbers, such as 2–4 in Polish and Czech.                                        |
+| `many`  | Large numbers in some languages, such as Polish and Arabic.                            |
+| `other` | Everything else. **Always include it**; it is the fallback for any form you leave out. |
+
+Each dictionary only needs the forms its own language uses: the English file has `one` and `other`, and the Arabic file has all six. Look up a language's forms in the [CLDR plural rules chart](https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html).
+
+When a plural group is missing from the current locale, the default locale's group is used, with the default language's rules, since that text is in the default language.
+
+Two things to watch for:
+
+- `count` must be a number. A string such as `"5"` does not select a form; the group is then treated as a missing key.
+- A plain string under the same key wins over forms. If `cart.items` is a string, `count` only fills `{count}`.
+
+## Typed keys
+
+When TypeScript can see your dictionary's type, `t()` only accepts keys that exist:
+
+```ts
+t("cart.items", { count: 2 }); // ok: a plural group
+t("cart.items.one"); // ok: a single form is a key too
+t("cart"); // compile error: a group of text is not a key
+t("cart.itmes", { count: 2 }); // compile error: misspelled
+```
+
+The type comes from what your loader returns. If it returns several `as const` dictionaries, a key from any of them is accepted. If it returns `any` or `unknown`, as `response.json()` and dynamic imports do, every string is accepted; give the loader a return type, as in the JSON example above, to get checking back.
+
+A key you build at runtime, such as ``t(`errors.${code}`)``, fails to compile even when it exists, because TypeScript can't know the value of `code`. When you know the keys are there, cast it:
+
+```ts
+import type { TranslationKey } from "@codenhub/i18n";
+import type en from "./locales/en.json";
+
+type Key = TranslationKey<typeof en>;
+
+t(`errors.${code}` as Key);
+```
+
+`TranslationKey` is also useful for typing a component prop or helper that takes a key.
+
+Let TypeScript infer the manager's types from the configuration. Passing some type arguments yourself, such as `createI18n<"en" | "pt">(...)`, turns off inference for the rest, and keys go back to plain `string`.
+
+If you keep the configuration in a separate variable, mark the default locale `as const`:
+
+```ts
+const config = {
   locales: ["en", "pt"] as const,
-  prefixDefaultLocale: true,
-});
-const route = routing.parse(window.location.pathname);
-
-if (route === undefined) throw new Error("A locale prefix is required");
-
-const i18n = createI18n(config);
-const binding = await initializeBrowserI18n({
-  i18n,
-  locale: route.locale,
-  syncDocument: true,
-});
+  defaultLocale: "en" as const,
+  loadLocale: (locale: "en" | "pt") => dictionaries[locale],
+};
 ```
 
-Changing a routed locale remains a navigation operation:
+Without `as const`, TypeScript sees `defaultLocale` as any `string`, and `createI18n(config)` reports that `string` is not `"en" | "pt"`.
+
+## Find untranslated keys
+
+A key missing from one language quietly shows default-language text, which is easy to miss. Catch it in a test by comparing every dictionary with the default one. `loadLocale()` returns a dictionary without changing the manager's language:
 
 ```ts
-const nextPathname = routing.localize(route.pathname, "pt");
-await frameworkNavigate(nextPathname);
+import { expect, test } from "vitest";
+import { i18n } from "./i18n";
+
+// Plural forms other than `other` differ by language, so they are not compared.
+const isLanguageSpecificForm = (key: string) => /\.(zero|one|two|few|many)$/.test(key);
+
+test("every locale has every key", async () => {
+  const reference = Object.keys(await i18n.loadLocale(i18n.defaultLocale)).filter((key) => !isLanguageSpecificForm(key));
+
+  for (const locale of i18n.locales) {
+    const dictionary = await i18n.loadLocale(locale);
+    const missing = reference.filter((key) => !(key in dictionary));
+    expect(missing, `missing in ${locale}`).toEqual([]);
+  }
+});
 ```
 
-`setLocale()` changes translation state but never changes the URL.
+To fail a test on keys missing from every dictionary, such as a typo in a key you built at runtime, throw from `onMissingKey`:
 
-## Framework rendering
+```ts
+createI18n({
+  // ...
+  onMissingKey(key, locale) {
+    throw new Error(`Missing translation "${key}" in ${locale}`);
+  },
+});
+```
 
-Frameworks that render translated values themselves re-render on `subscribe()`, which fires after every applied initialization and locale change. This React example imports the shared module from the quick start, so it suits a browser application or another runtime with one active locale; server rendering creates a manager per request, as in the SSR example below, and passes it to components instead:
+## Size limits
+
+Dictionaries come from files and servers, so the manager limits how large they can be. This stops a corrupted or hostile file from freezing the page. The defaults fit any real app:
+
+| Limit                      | Default   | Option            |
+| -------------------------- | --------- | ----------------- |
+| Nesting depth              | 100       | `maxDepth`        |
+| Translations               | 10,000    | `maxTranslations` |
+| Keys and groups together   | 20,000    | `maxProperties`   |
+| Characters in one text     | 100,000   | `maxValueLength`  |
+| Characters in all texts    | 5,000,000 | `maxTotalLength`  |
+| Characters in one full key | 1,000     | fixed             |
+
+Raise one with `dictionaryLimits`, which keeps the default for any limit you leave out:
+
+```ts
+createI18n({
+  // ...
+  dictionaryLimits: { maxTranslations: 50_000, maxProperties: 100_000 },
+});
+```
+
+A nested dictionary counts each group as a property, so raising `maxTranslations` often means raising `maxProperties` too.
+
+<!-- Source: docs/browser.md -->
+
+# Translate a browser app
+
+In a browser, the manager from the [overview](docs/index.md) still does the translating. `@codenhub/i18n/browser` adds the parts only a browser has: the visitor's language settings, a place to remember their choice, and the page itself.
+
+## Start with `initializeBrowserI18n`
+
+Use `initializeBrowserI18n()` instead of `i18n.init()`. It picks a locale, starts the manager with it, and then keeps the page in step:
+
+```ts
+// src/main.ts
+import { initializeBrowserI18n } from "@codenhub/i18n/browser";
+import { i18n } from "./i18n";
+
+await initializeBrowserI18n({ i18n });
+```
+
+With no other options, this:
+
+1. Picks the visitor's locale (see below) and loads it.
+2. Sets `<html lang="pt" dir="ltr">` to match, so screen readers pronounce text correctly and right-to-left languages lay out correctly.
+3. Saves the visitor's choice whenever your app changes the language with `setLocale()`, and reads it back on their next visit.
+
+It returns a binding with a `disconnect()` method; you only need it when you tear the app down, as in tests or micro-frontends.
+
+### How the locale is chosen
+
+The first of these that gives a supported locale wins:
+
+1. The `locale` option, when you pass one.
+2. The visitor's saved choice from an earlier visit.
+3. The browser's language settings, `navigator.languages`, matched to your locales. A visitor whose browser asks for `pt-BR` gets your `pt`.
+4. Your default locale.
+
+Pass `locale` when the page already knows its language, such as from the URL in [a localized site](docs/localized-urls.md#read-the-locale-on-the-client). It then overrides everything else, so the browser can't disagree with the server about which language the page is in.
+
+If the dictionary for a saved or detected locale fails to load, the visitor gets the default locale and a console warning instead of a broken app, and their saved choice is kept for next time. A failure to load a locale you passed explicitly, or the default locale, still rejects, since there is nothing sensible to fall back to.
+
+## Let visitors switch languages
+
+Call `setLocale()` from your language picker. The binding reacts to every change: it saves the choice and updates `lang` and `dir`.
+
+```ts
+const picker = document.querySelector<HTMLSelectElement>("#language")!;
+
+picker.value = i18n.locale;
+picker.addEventListener("change", async () => {
+  await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
+});
+```
+
+Only choices your app makes are saved. A language detected from the browser settings is not, so a visitor who never picked one keeps following their browser settings, including when you add their language later.
+
+The choice is stored in `localStorage` as `{"locale":"pt"}` under the key `"i18n"`. Change the key with `storageKey`, or turn saving off with `persistLocale: false`. If storage is unavailable, as in some private browsing modes, the binding warns and carries on without it.
+
+## Re-render a framework
+
+Frameworks such as React, Vue, Svelte, or Solid render the text themselves by calling `t()`. They need to know when to render again, and `i18n.subscribe()` tells them: it calls your function after every language change and returns a function that stops it.
+
+In React, `useSyncExternalStore` connects the two:
 
 ```tsx
 import { useSyncExternalStore } from "react";
@@ -238,510 +512,422 @@ export function useLocale() {
   return useSyncExternalStore(i18n.subscribe, () => i18n.locale);
 }
 
-export function Greeting({ name }: { name: string }) {
-  useLocale();
-  return <h1>{t("page.greeting", { name })}</h1>;
+export function CartBadge({ count }: { count: number }) {
+  useLocale(); // re-renders this component when the language changes
+  return <span>{t("cart.items", { count })}</span>;
 }
 ```
 
-## SSR
+Other frameworks follow the same pattern: store `i18n.locale` in a reactive value and update it from `subscribe()`.
 
-Match the request's language preferences to a configured locale and create one manager per request. `preferences` is the request's `Accept-Language` tags sorted by quality; the [reference](docs/reference.md#matchlocalepreferences) shows a parser.
+## Translate HTML without a framework
+
+For static pages, or HTML your framework doesn't render, the binding can translate the page itself. Mark elements with the key, and pass the part of the page to translate as `root`:
+
+```html
+<h1 data-i18n="home.title">Welcome</h1>
+<input data-i18n-placeholder="search.hint" placeholder="Search" />
+<button data-i18n-aria-label="menu.open"><svg>…</svg></button>
+```
 
 ```ts
+await initializeBrowserI18n({ i18n, root: document });
+```
+
+- `data-i18n` replaces an element's text. The element must contain only text, with no child elements, so a translation can never remove your markup. Elements with children are skipped with a warning.
+- `data-i18n-<attribute>` translates one attribute. Only attributes that hold text for people or screen readers are allowed: `alt`, `title`, `placeholder`, `label`, `aria-label`, `aria-description`, `aria-placeholder`, `aria-roledescription`, and `aria-valuetext`. Others, such as `data-i18n-href` or `data-i18n-onclick`, are ignored, so a translation can never change a link, a style, or an event handler.
+- The text already in the HTML is the fallback. If a later language lacks the key, the original text comes back.
+- Text is set as plain text, never as HTML, and `<script>`, `<style>`, `<noscript>`, and `<template>` are never touched.
+- Placeholders such as `{name}` are not filled here, because there is nowhere in the HTML to pass a value from. Render text with values from your code with `t()`.
+
+The page is retranslated on every language change. To also translate elements your code adds later, turn on `observe`:
+
+```ts
+await initializeBrowserI18n({ i18n, root: document.querySelector("#app")!, observe: true });
+```
+
+With `observe`, adding an element, or changing or removing a `data-i18n` key, is handled as it happens. Leave `observe` off when a framework renders the page: the framework already calls `t()`, and watching the page would only duplicate its work.
+
+The binding does not look inside custom elements (tags with a dash, such as `<my-widget>`) from an outer root, since the component owns its content. To translate a component's content, pass the component, or its shadow root, as the `root` of its own binding.
+
+## Options
+
+| Option          | Default    | What it does                                                   |
+| --------------- | ---------- | -------------------------------------------------------------- |
+| `i18n`          | (required) | The manager to start.                                          |
+| `locale`        | none       | A locale that overrides saved and detected ones.               |
+| `persistLocale` | `true`     | Read the saved choice, and save choices your app makes.        |
+| `storageKey`    | `"i18n"`   | The `localStorage` key for the saved choice.                   |
+| `syncDocument`  | `true`     | Keep `<html lang>` and `dir` in step with the locale.          |
+| `root`          | none       | The part of the page to translate with `data-i18n` attributes. |
+| `observe`       | `false`    | Also translate changes below `root` as they happen.            |
+
+## Rules to know
+
+- **One binding per manager.** A second `initializeBrowserI18n()` call for the same manager rejects until the first is disconnected.
+- **Don't mix it with `init()`.** The binding starts the manager. If your code calls `i18n.init()` while the binding is starting, the binding rejects rather than fight over the language. Calling `init()` or `setLocale()` after it has started is fine.
+- **`disconnect()` stops reacting but undoes nothing.** It stops saving, syncing, and translating, but leaves the current text, attributes, and saved choice as they are. You can then start a new binding.
+
+The [browser reference](docs/reference/browser.md) documents every option and failure.
+
+<!-- Source: docs/server-rendering.md -->
+
+# Render on a server or at build time
+
+A browser has one visitor, so one manager for the whole app is right. A server renders pages for many visitors at once, often in different languages, and a static site build renders every language in one run. Both need a different shape: **one manager per page you render**.
+
+## One manager per request
+
+A manager has one current language. If two requests shared one, a Portuguese request calling `setLocale("pt")` would change the language of an English page still rendering. So create the manager inside the request:
+
+```ts
+// src/i18n.ts
 import { createI18n } from "@codenhub/i18n";
+import { dictionaries } from "./locales";
 
-export async function renderPage(preferences: readonly string[]) {
-  const i18n = createI18n(config);
-  const locale = i18n.matchLocale(preferences) ?? i18n.defaultLocale;
+export const createAppI18n = () =>
+  createI18n({
+    locales: ["en", "pt"] as const,
+    defaultLocale: "en",
+    loadLocale: (locale) => dictionaries[locale],
+  });
+```
 
-  await i18n.init({ locale });
+```ts
+// src/render.ts
+import { createAppI18n } from "./i18n";
+
+export async function renderPage(request: Request) {
+  const i18n = createAppI18n();
+  await i18n.init({ locale: pickLocale(i18n, request) });
   const { t } = i18n;
 
-  return frameworkRender({
-    locale: i18n.locale,
-    direction: i18n.direction,
-    title: t("page.title"),
-  });
+  return `<!doctype html>
+<html lang="${i18n.locale}" dir="${i18n.direction}">
+  <title>${escapeHtml(t("home.title"))}</title>
+</html>`;
 }
 ```
 
-Do not share mutable manager state across concurrent requests. In Node.js, an exception thrown by a `ready` or `locale-change` listener is reported as an uncaught exception and ends the process by default, as for any `EventTarget` listener, so keep server listeners from throwing. Immutable dictionary modules and runtime-level import caches may still be shared.
+Creating a manager is cheap, and the work that isn't is shared. When your loader returns the same object on every call, as an imported module does, every manager reuses the one checked copy of that dictionary instead of checking it again. A loader that reads and parses a file on every call loses that, so read each file once and keep the result.
 
-Return the same payload object for a locale on every request, such as a module-level import, rather than parsing it per request: managers then share its normalized dictionary instead of validating it again. Missing-key warnings are deduplicated per manager, so a per-request manager warns for a missing key on every request; in production SSR, send misses to a logger with `onMissingKey`, or set `isSilent: true`. In tests and builds, `onMissingKey: (key) => { throw new Error(key); }` fails on a key missing from both dictionaries. A key that only the default dictionary has does not warn; the key-parity check below finds it.
+Pass the manager, or `t`, down to whatever renders the page, rather than importing a shared one.
 
-## SSG
+`t()` returns plain text. Escape it before putting it into HTML, as you would any other text, or let your template engine do it.
 
-Use routing output to drive the framework's static path API. Keep a separate manager for every concurrently rendered page.
+## Choose a locale from `Accept-Language`
+
+Browsers send the visitor's languages in the `Accept-Language` header, such as `pt-BR,pt;q=0.9,en;q=0.8`. Turn it into a list, most preferred first, and let `matchLocale()` pick the best locale you support:
 
 ```ts
-import { createI18n } from "@codenhub/i18n";
+import type { I18n } from "@codenhub/i18n";
+
+function pickLocale<TLocale extends string>(i18n: I18n<TLocale>, request: Request): TLocale {
+  const preferences = (request.headers.get("accept-language") ?? "")
+    .split(",")
+    .map((entry) => {
+      const [tag = "", ...parameters] = entry.split(";");
+      const quality = parameters.map((parameter) => parameter.trim()).find((parameter) => /^q=/i.test(parameter));
+      return { tag: tag.trim(), quality: quality === undefined ? 1 : Number(quality.slice(2)) };
+    })
+    // Drops refused languages (q=0) and malformed weights.
+    .filter(({ quality }) => quality > 0 && quality <= 1)
+    .sort((left, right) => right.quality - left.quality)
+    .map(({ tag }) => tag);
+
+  return i18n.matchLocale(preferences) ?? i18n.defaultLocale;
+}
+```
+
+`matchLocale()` takes a list rather than the header because parsing the header, and limiting its size, belongs to your server. It matches the same way the browser binding does, so a visitor gets the same language from the server as from the browser: `pt-BR` gets your `pt`, and `zh-TW` gets your `zh-Hant`. Malformed tags are skipped, and `undefined` means nothing matched.
+
+When the URL carries the language, as on [a localized site](docs/localized-urls.md), read it from the URL instead and use `Accept-Language` only to choose where to redirect a visitor who arrives at `/`.
+
+## Keep production logs useful
+
+A missing key logs a warning once per manager. With a manager per request, that is once per request, which floods the logs. In production, send misses to your logger, or turn the warnings off:
+
+```ts
+createI18n({
+  // ...
+  onMissingKey(key, locale) {
+    logger.warn({ key, locale }, "missing translation");
+  },
+});
+```
+
+`isSilent: true` turns off warnings only. Errors, such as a failed load, still throw.
+
+In Node.js, an exception thrown from a function passed to `subscribe()`, or from a `ready` or `locale-change` listener, crashes the process, as with any `EventTarget`. Servers rarely need these, but if you use them, keep them from throwing.
+
+## Build a static site
+
+A static build renders every page in every language ahead of time. It follows the same rule: one manager per page. List your localized pages with [locale routing](docs/localized-urls.md#generate-every-localized-page), then render each one:
+
+```ts
 import { createLocaleRouting } from "@codenhub/i18n/routing";
+import { createAppI18n } from "./i18n";
 
 const routing = createLocaleRouting({
-  defaultLocale: "en",
   locales: ["en", "pt"] as const,
+  defaultLocale: "en",
   prefixDefaultLocale: false,
 });
-const applicationPaths = ["/", "/about"];
-const localizedPaths = applicationPaths.flatMap((pathname) => routing.localizeAll(pathname));
+
+const pages = ["/", "/about"].flatMap((pathname) => routing.localizeAll(pathname));
+// [{ locale: "en", pathname: "/" }, { locale: "pt", pathname: "/pt" }, ...]
 
 await Promise.all(
-  localizedPaths.map(async (route) => {
-    const i18n = createI18n(config);
-    await i18n.init({ locale: route.locale });
-
-    await frameworkGeneratePage({
-      pathname: route.pathname,
-      locale: i18n.locale,
-      direction: i18n.direction,
-      title: i18n.t("page.title"),
-    });
+  pages.map(async ({ locale, pathname }) => {
+    const i18n = createAppI18n();
+    await i18n.init({ locale });
+    await writePage(pathname, renderHome(i18n.t));
   }),
 );
 ```
 
-Loader and dictionary failures reject, allowing the build to fail rather than publishing pages without translations. A key missing from a locale but present in the default dictionary does not fail or warn: it renders the default text. Add a key-parity check to catch those before publishing.
+A dictionary that fails to load or check makes `init()` reject, so the build fails instead of publishing pages without text. A key that only your default language has does not fail the build; it renders in the default language. Add [the untranslated-keys test](docs/translations.md#find-untranslated-keys) to catch those, and make `onMissingKey` throw during the build to fail on keys missing from every language.
 
-## Key-parity check
+## Hand the locale to the browser
 
-`translate()` falls back to the default dictionary without a warning, so a key added to the default locale but not yet translated renders default-locale text everywhere else. Compare dictionaries in a test or build step, since `loadLocale()` returns each normalized dictionary without changing manager state:
+When the browser takes over a server-rendered page, it must start in the language the server used, or the text changes as the page loads. Pass that locale explicitly; it overrides saved and detected ones:
 
 ```ts
-const i18n = createI18n(config);
-const referenceKeys = Object.keys(await i18n.loadLocale(i18n.defaultLocale));
-
-const dictionaries = await Promise.all(i18n.locales.map((locale) => i18n.loadLocale(locale)));
-
-dictionaries.forEach((dictionary, index) => {
-  const missingKeys = referenceKeys.filter((key) => !(key in dictionary));
-
-  if (missingKeys.length > 0) {
-    throw new Error(`${i18n.locales[index]} is missing ${missingKeys.join(", ")}`);
-  }
-});
+await initializeBrowserI18n({ i18n, locale: document.documentElement.lang as "en" | "pt" });
 ```
 
-Keys are flattened, so nested payloads compare as dot-separated keys such as `page.title`.
+On a localized site, read it from the URL with `routing.parse()` instead, as [Localized URLs](docs/localized-urls.md#read-the-locale-on-the-client) shows.
 
-## Loader patterns
+<!-- Source: docs/localized-urls.md -->
 
-### Embedded dictionaries
+# Localized URLs
 
-```ts
-const dictionaries = {
-  en: { greeting: "Hello" },
-  pt: { greeting: "Ola" },
-} as const;
+Giving each language its own URL, such as `/about` and `/pt/about`, lets people share a link in the language they read, and lets search engines index every language. `@codenhub/i18n/routing` handles the part that is the same in every framework: reading the locale from a path, and building the path for another locale.
 
-const config = {
-  defaultLocale: "en",
-  locales: ["en", "pt"] as const,
-  loadLocale: (locale: keyof typeof dictionaries) => dictionaries[locale],
-};
-```
-
-### Dynamic imports
+## Set up routing
 
 ```ts
-type Locale = "en" | "pt";
-
-const config = {
-  defaultLocale: "en" as const,
-  locales: ["en", "pt"] as const,
-  async loadLocale(locale: Locale) {
-    const module = await import(`./locales/${locale}.json`);
-    return module.default;
-  },
-};
-```
-
-### HTTP fetch
-
-`response.json()` returns `any`, so a fetch loader accepts any string key. Declare its return type, such as an imported type of the default dictionary, to type keys:
-
-```ts
-import type en from "./locales/en.json";
-
-async function loadLocale(locale: "en" | "pt"): Promise<typeof en> {
-  const response = await fetch(`https://example.com/locales/${locale}.json`);
-  if (!response.ok) throw new Error(`Locale request failed: ${response.status}`);
-  return response.json();
-}
-```
-
-The loader owns URLs, timeouts, retries, credentials, filesystem access, and all other transport policy. Rejected loaders are wrapped in `I18nError`; invalid resolved payloads remain native `TypeError` failures.
-
-<!-- Source: docs/reference.md -->
-
-# API reference
-
-The package has three public entrypoints. Locale identifiers use conservative ASCII syntax: alphanumeric subtags joined by single hyphens. They are trimmed when configuration is created and matched case-insensitively; returned state uses the trimmed canonical spelling and order from `locales`.
-
-## `@codenhub/i18n`
-
-The root entrypoint is runtime-neutral. It exports `createI18n`, `I18nError`, and `i18nErrors`, plus the `I18n`, `I18nConfig`, `I18nErrorCode`, `I18nEventMap`, `I18nErrorOptions`, `I18nInitOptions`, `I18nLocaleChangeEventDetail`, `I18nReadyEventDetail`, `LocaleDictionary`, `LocaleDictionaryLimits`, `LocaleDirection`, and `TranslationKey` types.
-
-### Configuration
-
-```ts
-interface I18nConfig<TLocale extends string = string, TMessages = unknown> {
-  defaultLocale: TLocale;
-  locales: readonly TLocale[];
-  loadLocale(locale: TLocale): TMessages | Promise<TMessages>;
-  getLocaleDirection?(locale: TLocale): "ltr" | "rtl";
-  onMissingKey?(key: string, locale: TLocale): void;
-  isSilent?: boolean;
-  dictionaryLimits?: LocaleDictionaryLimits;
-}
-
-interface LocaleDictionaryLimits {
-  maxDepth?: number; // default 100
-  maxTranslations?: number; // default 10,000
-  maxProperties?: number; // default 20,000
-  maxValueLength?: number; // default 100,000
-  maxTotalLength?: number; // default 5,000,000
-}
-
-function createI18n<TLocale extends string, TMessages = unknown>(config: I18nConfig<TLocale, TMessages>): I18n<TLocale, TranslationKey<TMessages>>;
-```
-
-`TranslationKey<TMessages>` is the union of dot-separated paths to the string leaves of the loader's return type, such as `"page.title"` for `{ page: { title: "Welcome" } }`; groups such as `"page"` are not keys. When the loader returns a union, such as `dictionaries[locale]` over several `as const` dictionaries, keys from every member are accepted. A loader whose return type is `unknown` or `any`, such as one returning `response.json()`, accepts any string key; annotate its return type, for example with an imported JSON module type, to type keys. A typed manager rejects a key built at runtime, such as ``t(`errors.${code}`)``, at compile time even when the key exists; cast it to the key type to opt out deliberately. The type is exported, so a helper or component that takes a key can be typed `TranslationKey<typeof en>`. TypeScript infers all type arguments or none, so `createI18n<Locale>(config)` sets `TMessages` to `unknown` and accepts any string key; omit the type arguments, or pass both, to keep typed keys. Key typing is compile-time only and does not change runtime validation.
-
-The configuration must be a plain object, such as an object literal, and only its own properties are read: a class instance or an object built with `Object.create(defaults)` throws `TypeError`. `locales` must be a non-empty array of conservative ASCII locale identifiers that remain unique case-insensitively after trimming. `defaultLocale` must match one of them. `loadLocale` must be a function; `getLocaleDirection` and `onMissingKey`, when provided, must be functions, and `isSilent` must be boolean. Each `dictionaryLimits` entry, when provided, must be a positive safe integer, and an unknown limit name is rejected. Invalid configuration throws `TypeError` during `createI18n()`.
-
-Configuration locale metadata is copied and frozen. Later caller mutations do not alter `defaultLocale`, `locales`, or locale matching. The callbacks remain consumer-owned dependencies and are called with the configuration object as `this`, as `config.loadLocale(locale)` would be. Exceptions from `getLocaleDirection` propagate unchanged; the initial call occurs during `createI18n()`, and later calls occur before newly loaded state is applied.
-
-Without `getLocaleDirection`, a locale's direction comes from its subtags. A script subtag before any extension or private-use singleton decides when present, so the `arab` in `en-u-nu-arab` is not read as a script: `Adlm`, `Arab`, `Hebr`, `Mand`, `Mend`, `Nkoo`, `Rohg`, `Samr`, `Syrc`, `Thaa`, and `Yezi` are `rtl` and other scripts `ltr`, so `uz-Arab` is `rtl` and `ar-Latn` is `ltr`. Otherwise the language decides: `ar`, `arc`, `ckb`, `dv`, `fa`, `he`, `iw`, `ks`, `lrc`, `mzn`, `nqo`, `pnb`, `ps`, `sd`, `syr`, `ug`, `ur`, and `yi` are `rtl` and other languages `ltr`. The callback used to be required, which made nearly every configuration repeat `getLocaleDirection: () => "ltr"`, and an application that later added Arabic kept that wrong answer. The default reads fixed lists rather than `Intl.Locale.prototype.getTextInfo()`, because not every supported engine provides it and the direction must be the same in every runtime.
-
-### Initial state and properties
-
-An `I18n<TLocale>` starts with:
-
-- `defaultLocale`: canonical configured default.
-- `locales`: frozen canonical locale copy.
-- `isSilent`: `config.isSilent ?? false`.
-- `locale`: `defaultLocale`.
-- `direction`: the direction of `defaultLocale`.
-- `isReady`: `false`.
-
-Every method, including the listener methods, is bound to its manager, so a destructured method such as `const { t, setLocale } = i18n` keeps working. This makes the recommended pattern for single-locale-owner runtimes, such as a browser application, an application module that exports the manager and its `t`; servers and builds that render concurrently create a manager per request or page instead.
-
-The manager provides EventTarget-compatible `addEventListener()` and `removeEventListener()` methods. Only those listener methods are part of the supported public event API; `dispatchEvent()` and runtime inheritance details are not exposed by `I18n`. `translate()` and `setLocale()` throw `Error` before successful initialization. `loadLocale()`, `resolveLocale()`, `matchLocale()`, and `subscribe()` may be used before initialization.
-
-### `init(options?)`
-
-```ts
-interface I18nInitOptions<TLocale extends string = string> {
-  locale?: TLocale;
-}
-
-init(options?: I18nInitOptions<TLocale>): Promise<void>;
-```
-
-The explicit locale is trimmed and matched case-insensitively. Only `undefined` means omitted; omission selects `defaultLocale`. Core never inspects browser, route, request, or process state.
-
-Initialization of a non-default locale loads it and the default locale in parallel. State is applied only after both required dictionaries and the locale direction resolve successfully. An applied call sets `isReady` and emits `ready`; repeated applied calls emit another `ready` event.
-
-Overlapping initialization and locale-change operations use latest-request-wins application. A stale successful initialization resolves without applying state or emitting a success event, as a stale `setLocale()` does. `init()` used to resolve `true` or `false` for whether it applied; that was dropped because `setLocale()` reports the same case with no value, and a caller that needs the outcome reads `locale` and `isReady`. A failed initial call leaves the manager not ready; a failed reinitialization preserves prior ready state. A stale operation that fails before the application check still rejects with its normal error.
-
-### `loadLocale(locale)`
-
-```ts
-loadLocale(locale: TLocale): Promise<LocaleDictionary>;
-```
-
-Loads one supported locale without changing active locale, direction, readiness, or emitting events. Successful dictionaries and in-flight requests are cached per manager. Failed loads are removed from the in-flight cache and can be retried by a later call.
-
-### Dictionary contract
-
-`loadLocale` may resolve to a flat or nested object. Nested keys are flattened:
-
-```ts
-const payload = {
-  page: {
-    title: "Welcome",
-  },
-};
-// becomes { "page.title": "Welcome" }
-```
-
-The normalized `LocaleDictionary` has a null prototype, is frozen, and contains only string values.
-
-Dictionaries are checked against resource limits. By default they allow at most 100 levels of nesting, 10,000 translations, 20,000 traversed properties (translations and nested groups together), 100,000 characters per translation value, and 5,000,000 aggregate translation characters. `dictionaryLimits` raises or lowers any of these per manager; unset limits keep their defaults. Raising `maxTranslations` for a nested dictionary may also require raising `maxProperties`. Flattened keys are limited to 1,000 characters; that limit is fixed because `translate()` and DOM keys share it.
-
-A payload throws `TypeError` when it:
-
-- Is null, an array, a primitive, or another non-plain object.
-- Contains a non-string leaf, array, function, non-plain object such as a `Date` or `Map`, symbol key, accessor, cycle, or shared object reference. A plain object is one whose prototype is null or an `Object.prototype` from any realm; other objects are rejected rather than treated as empty groups, which would silently drop their translations.
-- Contains an empty dot-separated segment, an ASCII control character, a `__proto__` segment, or a flat/nested key collision. `prototype` and `constructor` are ordinary keys.
-- Exceeds a dictionary depth, translation count, property count, flattened-key length, translation-value length, or aggregate translation-character limit.
-
-A dictionary may be empty or hold only empty groups. A locale added before it is translated then initializes, and every key falls back to the default dictionary. Empty dictionaries used to be rejected; that was dropped because it made `init()` reject for such a locale, which in a browser stops the application from starting.
-
-Validation failures are not wrapped and are retryable on the next load.
-
-Normalized dictionaries are shared across managers by payload identity: when a loader returns the same object again, even to another manager, the normalized dictionary is reused after it is checked against that manager's limits. A payload is therefore treated as immutable once loaded; mutating it afterwards does not change translations. A loader that returns a new object each time, such as one that parses JSON per call, gets no sharing.
-
-### `setLocale(locale)`
-
-```ts
-setLocale(locale: TLocale): Promise<void>;
-```
-
-Loads the selected and, when needed, default dictionary before atomically applying locale, direction, and fallback state. Failure preserves current state. Setting the active locale resolves without loading or emitting. A stale successful completion resolves without applying or emitting.
-
-The method does not persist state, update a document, translate DOM, redirect, or navigate. An active browser binding reacts to successful changes and applies its configured effects.
-
-### `resolveLocale(value)`
-
-```ts
-resolveLocale(value: string): TLocale | undefined;
-```
-
-Trims an untrusted string and returns the canonical case-insensitive exact configured match. It returns `undefined` for blank, unsupported, and runtime non-string values. It does not perform language-subtag matching; `matchLocale()` does.
-
-### `matchLocale(preferences)`
-
-```ts
-matchLocale(preferences: readonly string[]): TLocale | undefined;
-```
-
-Picks the configured locale that best serves ordered preferences, such as `navigator.languages` or the tags of an `Accept-Language` header sorted by quality. Each preference, in order, tests an exact case-insensitive match first, then the longest configured locale that the preference starts with as whole subtags and that has the same likely script, such as `zh-Hant` for `zh-Hant-TW` or `pt` for `pt-BR`. The script condition keeps `zh`, whose likely script is Simplified, from taking `zh-TW` when `zh-Hant` is configured. It then adds likely subtags with `Intl.Locale.prototype.maximize()` to the preference and to each configured locale, and takes the first configured locale whose maximized form is equal, then the first with the same language and script, such as `zh-Hant` for `zh-TW` or `zh-HK`, `zh-TW` for `zh-HK` among `zh-CN` and `zh-TW`, or `sr-Cyrl` for `sr`. Last, it takes the first configured locale with the same language subtag. The first preference that matches wins; blank, malformed, and runtime non-string entries are skipped, and no match returns `undefined`. A non-array input throws `TypeError`.
-
-The matching used to live only in the browser entrypoint, so a server resolving `Accept-Language: pt-BR` with `resolveLocale()` rendered the default locale for a user the browser would have served in `pt`. It takes a parsed list rather than a header string, because header parsing, quality sorting, and size limits belong to the server that receives the header:
-
-```ts
-const preferences = (request.headers.get("accept-language") ?? "")
-  .split(",")
-  .map((entry) => {
-    const [tag = "", ...parameters] = entry.split(";");
-    const quality = parameters.map((parameter) => parameter.trim()).find((parameter) => /^q=/i.test(parameter));
-    return { tag: tag.trim(), quality: quality === undefined ? 1 : Number(quality.slice(2)) };
-  })
-  // Drops refused tags (q=0) and malformed qualities, which RFC 9110 limits to 0 through 1.
-  .filter(({ quality }) => quality > 0 && quality <= 1)
-  .sort((left, right) => right.quality - left.quality)
-  .map(({ tag }) => tag);
-
-const locale = i18n.matchLocale(preferences) ?? i18n.defaultLocale;
-```
-
-### `translate(key, params?)` and `t(key, params?)`
-
-```ts
-translate(key: TKey, params?: Readonly<Record<string, string | number>>): string;
-t(key: TKey, params?: Readonly<Record<string, string | number>>): string;
-```
-
-`t` is the same bound function as `translate`. `TKey` is the second type parameter of `I18n<TLocale, TKey>`, which `createI18n()` sets to `TranslationKey<TMessages>` as described under configuration; it defaults to `string`.
-
-Trims a non-empty key, checks the active dictionary, then the default dictionary. A key found only in the default dictionary returns the default text without a warning; compare dictionaries from `loadLocale()` in a test to find untranslated keys, as in the key-parity example. Blank, runtime non-string, longer than 1,000 characters, or ASCII-control-containing keys throw `TypeError`.
-
-A key missing from both dictionaries returns the trimmed key, and calls `onMissingKey(key, locale)` with the trimmed key and the active locale on every miss. Exceptions from `onMissingKey` propagate from `translate()`, so a test can throw there to fail on a missing key. Without `onMissingKey`, the manager warns unless `isSilent` is true, once for each of the 1,000 most recent active-locale/key pairs; an evicted pair can warn again. A miss used to return `undefined`, which typed every result `string | undefined`, so each call outside JSX needed `?? ""`, and a template literal rendered `undefined`. The key is returned instead because it renders a visible, searchable placeholder; an empty string was rejected because it hides the miss on screen.
-
-With `params`, each `{name}` placeholder whose name, made of ASCII letters, digits, and `_`, is an own property of `params` with a string or number value is replaced by that value. Other placeholders are left as written, and without `params` the text is returned unchanged, so a translation that contains literal braces is safe until it is called with a matching param. A missing key is returned without interpolation. Interpolation is offered before pluralization and ICU messages because without it a sentence with a value has to be concatenated from fragments, such as `t("cart.before") + count + t("cart.after")`, which fixes English word order into every translation. The `{name}` syntax is the ICU argument syntax, so ICU messages can extend it later without changing existing translations.
-
-The API does not provide plural selection, rich messages, number/date formatting, or HTML rendering.
-
-### `subscribe(listener)`
-
-```ts
-subscribe(listener: () => void): () => void;
-```
-
-Calls `listener` without arguments after every event that changes applied state: each applied `init()`, which emits `ready`, and each applied locale change, which emits `locale-change`. It returns a function that removes the listener; calling that function again does nothing. Listener exceptions are reported as for any `EventTarget` listener. It fits framework stores, such as `useSyncExternalStore(i18n.subscribe, () => i18n.locale)` in React, which previously had to register and remove two event listeners.
-
-### Events
-
-Typed `addEventListener` and `removeEventListener` overloads cover:
-
-```ts
-interface I18nReadyEventDetail<TLocale extends string = string> {
-  locale: TLocale;
-}
-
-interface I18nLocaleChangeEventDetail<TLocale extends string = string> {
-  locale: TLocale;
-  previousLocale: TLocale;
-}
-```
-
-- `ready` emits after every successfully applied `init()`.
-- `locale-change` emits after a successful applied change to a different locale.
-- `loadLocale()`, same-locale changes, stale completions, and failed operations emit no lifecycle event.
-
-Events are `CustomEvent` compatible even where the runtime lacks a global `CustomEvent` constructor. EventTarget-compatible listener overloads remain available, but consumers cannot dispatch manager lifecycle events through the public `I18n` type.
-
-### Errors
-
-Native errors identify programmer or payload failures:
-
-| Failure                                                                     | Error        |
-| --------------------------------------------------------------------------- | ------------ |
-| Invalid configuration or dictionary                                         | `TypeError`  |
-| Unsupported locale or runtime non-string locale in locale operations        | `RangeError` |
-| `translate()` or `setLocale()` before successful initialization             | `Error`      |
-| Blank, oversized, control-containing, or runtime non-string translation key | `TypeError`  |
-| Non-array `matchLocale()` preferences                                       | `TypeError`  |
-
-A rejected injected loader is wrapped:
-
-```ts
-type I18nErrorCode = "i18n.locale_load_failed";
-
-interface I18nErrorOptions {
-  readonly locale?: string;
-  readonly cause?: unknown;
-}
-
-class I18nError extends Error {
-  readonly code: I18nErrorCode;
-  readonly locale?: string;
-  override readonly cause?: unknown;
-
-  constructor(options: I18nErrorOptions);
-}
-```
-
-Its name is `"I18nError"`, message is `Failed to load translations for locale "<locale>".`, `locale` identifies the load, and `cause` preserves the rejection. Constructing it without a locale uses the message `Failed to load translations.`. `isSilent` does not suppress errors.
-
-`i18nErrors` is a plain safe-feedback mapping for optional registration with `@codenhub/error`:
-
-```ts
-{
-  "i18n.locale_load_failed": {
-    message: "Translations could not be loaded.",
-    messageKey: "error.i18n.loader.localeLoadFailed",
-    source: "i18n.loader",
-  },
-}
-```
-
-## `@codenhub/i18n/browser`
-
-The browser entrypoint exports `initializeBrowserI18n` and the `BrowserI18nOptions` and `BrowserI18nBinding` types.
-
-```ts
-interface BrowserI18nOptions<TLocale extends string> {
-  i18n: I18n<TLocale>;
-  locale?: TLocale;
-  storageKey?: string;
-  persistLocale?: boolean;
-  syncDocument?: boolean;
-  root?: ParentNode;
-  observe?: boolean;
-}
-
-interface BrowserI18nBinding {
-  disconnect(): void;
-}
-
-function initializeBrowserI18n<TLocale extends string>(options: BrowserI18nOptions<TLocale>): Promise<BrowserI18nBinding>;
-```
-
-### Locale selection and defaults
-
-The helper selects the initial locale in this order:
-
-1. Explicit `locale`.
-2. Valid JSON `{ "locale": "..." }` from `localStorage`, when persistence is enabled.
-3. `navigator.languages`, or `navigator.language` when that list is empty.
-4. The configured default locale.
-
-An explicit locale is authoritative. Navigator preferences are matched with `i18n.matchLocale()`, as described under the root entrypoint, so the browser and a server reading `Accept-Language` choose the same locale for the same preferences.
-
-Defaults are `storageKey: "i18n"`, `persistLocale: true`, `syncDocument: true`, and `observe: false`. DOM translation is disabled unless `root` is provided. `observe: true` without a root rejects with `TypeError` before core initialization.
-
-### Effects and cleanup
-
-After core initialization succeeds, the binding:
-
-- Persists `{ locale: i18n.locale }` as JSON when enabled and the initial locale was explicit. A locale chosen from storage or navigator preferences, or the default, is not written, so a later visit selects again from current preferences; persisting it made the first fallback permanent, so returning users never received a locale added later or a changed browser language.
-- Persists the active locale after every later successful `ready` or `locale-change`, when enabled, since those are changes the application made.
-- Sets `document.documentElement.lang` and `dir` when enabled.
-- Translates eligible `data-i18n` leaves and `data-i18n-<attribute>` attributes under `root`, when supplied.
-- Reapplies the other enabled effects after successful `ready` and `locale-change` events.
-- Observes additions and changes to `data-i18n` and `data-i18n-<attribute>` keys under `root` only when requested.
-
-Mutation observation translates only affected elements and added subtrees; locale changes still retranslate the complete configured root.
-
-The manager must come from `createI18n()`; another object, even one with the same methods, rejects with `TypeError`. Only one initializing or active browser binding may own a manager. A duplicate call rejects with `TypeError`. Failed setup releases listeners, observation, and ownership so initialization may be retried.
-
-If a concurrent direct core initialization supersedes the browser helper before its selected locale becomes active, the helper rejects with `Error` and releases its ownership. A later browser initialization may then retry.
-
-`disconnect()` is idempotent. It removes binding listeners, disconnects its observer, releases its root and manager ownership, and allows a new binding. It does not reset core readiness or locale, clear storage, revert DOM text, or revert document attributes.
-
-Storage read, parse, and write failures are recoverable: they warn unless the manager is silent and initialization continues.
-
-When the loader rejects for a locale chosen from storage or navigator preferences, the helper warns unless silent and initializes the default locale instead. The default is not persisted and a stored preference is kept, so a later visit tries the preference again. A stored or detected locale is a preference the default can still serve; rejecting made a temporary failure of one dictionary stop the application from starting, and the only recovery, passing the default explicitly, persisted it and kept that user on the default for good.
-
-An explicit locale whose loader rejects, a rejected default locale, invalid dictionaries, explicit invalid locales, and observer setup failures still reject. Runtime non-string explicit locales reject with `RangeError` without falling through to storage or navigator input.
-
-### DOM translation boundary
-
-Only elements carrying a valid, non-empty `data-i18n` key and no child elements are translated. `style`, `script`, `noscript`, and `template` elements are always skipped because their text can activate or hide content. Blank, longer than 1,000 characters, or ASCII-control-containing DOM keys are skipped. Skips warn without including key content unless the manager is silent, and one invalid element does not interrupt other initial or observed translations. Original text is retained as fallback and restored when a later locale lacks the key. Elements containing markup are skipped and warn unless silent.
-
-`data-i18n-<attribute>` translates one attribute of an element, including an element that contains markup, such as `<input data-i18n-placeholder="search.hint">` or `<button data-i18n-aria-label="menu.open"><svg></svg></button>`. Only text read by people or assistive technology is allowed: `alt`, `title`, `placeholder`, `label`, `aria-label`, `aria-description`, `aria-placeholder`, `aria-roledescription`, and `aria-valuetext`. Other names, such as `data-i18n-href`, `data-i18n-style`, or `data-i18n-onclick`, are ignored, so a translation can never set a URL, a style, or an event handler. One data attribute per translated attribute was chosen over a single list attribute, such as `data-i18n-attrs="placeholder:search.hint"`, because it needs no parsing and the observer can watch exactly those names. Attribute keys follow the same key-validity and warning rules as text keys. They are skipped on `style`, `script`, `noscript`, and `template` elements and inside custom elements, like text keys, but unlike text keys they do not require a leaf element. The original value is retained as fallback and restored when a later locale lacks the key; an attribute that was absent is removed again. A value the application sets after translation becomes the new fallback.
-
-With `observe: true`, removing a `data-i18n` or `data-i18n-<attribute>` key restores that text or attribute fallback, unless the application changed the value since translation; an attribute that was absent is removed. Text is not restored when the element has gained child elements, since setting its text would remove them. Without observation, a removed key is not noticed: the element keeps its translated value, and later locale changes no longer update it.
-
-Traversal does not enter a custom element from an outer root; pass that custom element or its shadow root explicitly when it owns translation.
-
-## `@codenhub/i18n/routing`
-
-The routing entrypoint exports `createLocaleRouting` and the `LocaleRouting`, `LocaleRoutingConfig`, `LocalizedPath`, and `ParsedLocalePath` types.
-
-```ts
-interface LocaleRoutingConfig<TLocale extends string> {
-  defaultLocale: TLocale;
-  locales: readonly TLocale[];
-  prefixDefaultLocale: boolean;
-}
-
-interface ParsedLocalePath<TLocale extends string> {
-  locale: TLocale;
-  pathname: string;
-}
-
-interface LocalizedPath<TLocale extends string> {
-  locale: TLocale;
-  pathname: string;
-}
-
-interface LocaleRouting<TLocale extends string> {
-  parse(pathname: string): ParsedLocalePath<TLocale> | undefined;
-  localize(pathname: string, locale: TLocale): string;
-  localizeAll(pathname: string): readonly LocalizedPath<TLocale>[];
-}
-```
-
-`createLocaleRouting(config)` trims and snapshots locale configuration. The configuration must be a plain object, such as an object literal, and only its own properties are read: a class instance or an object built with `Object.create(defaults)` throws `TypeError`. `locales` must be non-empty, contain conservative ASCII locale identifiers that are case-insensitively unique, and contain `defaultLocale`; `prefixDefaultLocale` must be boolean. Invalid configuration throws `TypeError`.
-
-```ts
+// src/routing.ts
 import { createLocaleRouting } from "@codenhub/i18n/routing";
 
-const routing = createLocaleRouting({
-  defaultLocale: "en",
+export const routing = createLocaleRouting({
   locales: ["en", "pt"] as const,
+  defaultLocale: "en",
   prefixDefaultLocale: false,
 });
-
-routing.parse("/pt/about");
-// { locale: "pt", pathname: "/about" }
-
-routing.localize("/about", "pt");
-// "/pt/about"
-
-routing.localizeAll("/about");
-// [{ locale: "en", pathname: "/about" },
-//  { locale: "pt", pathname: "/pt/about" }]
 ```
 
-`parse()` recognizes a complete first path segment case-insensitively. With `prefixDefaultLocale: true`, an unprefixed path returns `undefined`; with `false`, it resolves to the default locale. A recognized prefix is removed and the root normalizes to `/`.
+`prefixDefaultLocale` decides how your default language looks:
 
-`localize()` replaces a recognized locale prefix. It leaves an unsupported leading segment as application path content, emits canonical locale spelling, and omits the default prefix when configured. An unsupported or runtime non-string locale throws `RangeError`. `localizeAll()` returns one result per configured locale in configuration order.
+| `prefixDefaultLocale` | English about page | Portuguese about page |
+| --------------------- | ------------------ | --------------------- |
+| `false`               | `/about`           | `/pt/about`           |
+| `true`                | `/en/about`        | `/pt/about`           |
 
-All three methods accept only an absolute application pathname beginning with `/` and no longer than 8,192 characters. They reject `TypeError` for an empty, oversized, or relative path, full or protocol-relative URL, repeated slash, query, fragment, backslash, encoded slash or backslash, encoded percent sign, ASCII control character, encoded ASCII control character, malformed percent escape, and literal or encoded dot segment. Rejecting encoded percent signs prevents later decoding from exposing recursively encoded separators, controls, or dot segments. Non-root trailing slashes are preserved.
+`false` keeps your existing URLs when you add a language. `true` makes every URL name its language, so `/about` is not a page, which suits a site that redirects `/` to the visitor's language.
 
-Routing never reads globals, negotiates headers, registers routes, handles base paths, redirects, navigates, renders HTML, or emits static pages.
+Use the same `locales` and `defaultLocale` as your manager. Routing is separate from the manager, so it also works where no translation happens, such as in a server's redirect logic.
+
+## Read the locale from a path
+
+`parse()` splits a path into its locale and the rest:
+
+```ts
+routing.parse("/pt/about"); // { locale: "pt", pathname: "/about" }
+routing.parse("/about"); // { locale: "en", pathname: "/about" }
+routing.parse("/PT/about"); // { locale: "pt", pathname: "/about" }
+```
+
+With `prefixDefaultLocale: true`, a path without a locale returns `undefined`, so you can redirect it:
+
+```ts
+const route = routing.parse(url.pathname);
+if (route === undefined) {
+  return Response.redirect(new URL(routing.localize(url.pathname, pickLocale(i18n, request)), url), 302);
+}
+```
+
+`pickLocale` is the `Accept-Language` helper from [Render on a server](docs/server-rendering.md#choose-a-locale-from-accept-language).
+
+### Read the locale on the client
+
+In the browser, take the locale from the URL and pass it to the browser binding. The URL then wins over the visitor's saved and detected languages, so the page always matches its address:
+
+```ts
+import { initializeBrowserI18n } from "@codenhub/i18n/browser";
+import { i18n } from "./i18n";
+import { routing } from "./routing";
+
+const route = routing.parse(window.location.pathname);
+await initializeBrowserI18n({ i18n, locale: route?.locale });
+```
+
+## Link to another language
+
+`localize()` builds the path for a locale. It replaces the locale already in the path, if any:
+
+```ts
+routing.localize("/about", "pt"); // "/pt/about"
+routing.localize("/pt/about", "en"); // "/about"
+routing.localize("/pt/about", "pt"); // "/pt/about"
+```
+
+On a localized site, switching language is a navigation, not just `setLocale()`: `setLocale()` changes the text but never the URL. Build the new path and let your router go there:
+
+```ts
+const { pathname } = routing.parse(window.location.pathname)!;
+await navigate(routing.localize(pathname, "pt"));
+```
+
+Use the same call for the `<link rel="alternate" hreflang>` tags that tell search engines about each language:
+
+```ts
+const alternates = routing.localizeAll(pathname).map((page) => `<link rel="alternate" hreflang="${page.locale}" href="https://example.com${page.pathname}">`);
+```
+
+## Generate every localized page
+
+`localizeAll()` returns a path for every locale, in the order of `locales`:
+
+```ts
+routing.localizeAll("/about");
+// [{ locale: "en", pathname: "/about" }, { locale: "pt", pathname: "/pt/about" }]
+```
+
+Feed it your page list to get every page a static build needs, then render each one with its own manager, as in [Build a static site](docs/server-rendering.md#build-a-static-site).
+
+## Paths it accepts
+
+Routing works on the path of a URL only. Give it `url.pathname`, not the full URL, and handle the query string and fragment yourself.
+
+To keep a crafted URL from reaching a different page than the one checked, every method throws a `TypeError` for a path that:
+
+- does not start with `/`, or is a full or protocol-relative URL, such as `https://…` or `//host`;
+- contains `?`, `#`, `\`, `//`, or a control character;
+- contains a `.` or `..` segment, or encodes one, a slash, a backslash, a `%`, or a control character with `%`;
+- has a malformed `%` escape, or is longer than 8,192 characters.
+
+Ordinary escapes, such as `%20`, are fine, and a trailing slash is kept: `/pt/about/` localizes to `/about/`.
+
+## What routing leaves to your framework
+
+Routing reads and builds paths. Your framework or server still registers the routes, redirects, navigates, and renders. It also doesn't know about a base path: if your site lives under `/docs`, remove that before calling `parse()` and add it back after `localize()`.
+
+Paths keep the same words in every language: `/pt/about`, not `/pt/sobre`. Translated path segments are planned for a later version.
+
+<!-- Source: docs/troubleshooting.md -->
+
+# Troubleshooting
+
+Each section starts from what you see, then explains the cause and the fix.
+
+## A key shows on screen instead of text
+
+You see `home.subtitle` where text should be, and the console says the key is missing.
+
+Neither the current language nor the default language has that key. Check for a typo in the key or the dictionary, and that the dictionary file you edited is the one your loader returns. A plural group shows its key when `count` is missing or isn't a number: `t("cart.items")` or `t("cart.items", { count: "2" })`. Pass a number.
+
+If TypeScript didn't catch the typo, your loader's return type is `any` or `unknown`. See [Typed keys](docs/translations.md#typed-keys).
+
+## Text shows in the default language
+
+The current language lacks the key, so the default language's text is shown. This is the intended fallback and logs nothing. [Find untranslated keys](docs/translations.md#find-untranslated-keys) lists every gap.
+
+## `t()` throws "requires successful initialization"
+
+`t()` and `setLocale()` throw an `Error` until the manager has started, because there is no dictionary to use yet. Wait for `i18n.init()`, or `initializeBrowserI18n()` in a browser, before rendering. In a framework, render a loading state until the promise resolves, or start rendering after it.
+
+## A locale is rejected with `RangeError`
+
+`init()`, `setLocale()`, and `loadLocale()` throw a `RangeError` for a locale that isn't in `locales`. Matching ignores case and surrounding spaces, so `"PT"` finds `pt`, but `pt-BR` does not find `pt`. To find the closest supported locale for a visitor's language, use `matchLocale()`, which does map `pt-BR` to `pt`.
+
+## Loading a locale fails with `I18nError`
+
+Your loader threw or rejected, and the manager wrapped the failure in an `I18nError`:
+
+- `error.code` is `"i18n.locale_load_failed"`.
+- `error.locale` is the locale that failed.
+- `error.cause` is what your loader threw, such as a network error.
+
+The manager keeps its current language, and the next call tries the loader again, so a retry button can just call `setLocale()` again. In a browser, a saved or detected locale that fails falls back to the default; see [How the locale is chosen](docs/browser.md#how-the-locale-is-chosen).
+
+To show these errors with `@codenhub/error`, register `i18nErrors`, which gives the code a safe message for users.
+
+## A dictionary is rejected
+
+`init()`, `setLocale()`, or `loadLocale()` throws a `TypeError` naming the problem when a dictionary doesn't fit the rules. These failures are not wrapped in `I18nError`, because they come from the dictionary's content rather than from loading it.
+
+A dictionary must be a plain object, such as an object literal or parsed JSON, and:
+
+- **Every value is a string or a group.** Numbers, booleans, `null`, arrays, functions, and objects such as `Date` or `Map` are rejected. Write numbers as text, and put lists under numbered or named keys.
+- **Keys are well formed.** No empty segment, as in `"nav..home"` or a trailing dot; no control characters; no `__proto__` segment. A full key, with its dots, has at most 1,000 characters.
+- **Two spellings never meet.** `{ "nav.home": "A", nav: { home: "B" } }` is rejected, because both are `nav.home`.
+- **Each group appears once.** The same object used under two keys, or containing itself, is rejected. Copy it instead.
+- **No getters or symbol keys.** Data from JSON never has these.
+- **It fits the size limits.** See [Size limits](docs/translations.md#size-limits) to raise them.
+
+An empty dictionary is accepted.
+
+## `createI18n()` throws `TypeError`
+
+The configuration is invalid. Check that:
+
+- `locales` is a non-empty list with no duplicates, ignoring case, and each locale is ASCII letters and digits separated by hyphens, such as `pt-BR`.
+- `defaultLocale` is one of `locales`.
+- `loadLocale` is a function.
+- The configuration is a plain object. A class instance, or an object that inherits its options, is rejected so that inherited values can't slip in.
+
+`createLocaleRouting()` follows the same rules, and `prefixDefaultLocale` must be `true` or `false`.
+
+## TypeScript says `string` is not assignable to the locale type
+
+```text
+Type 'string' is not assignable to type '"en" | "pt"'.
+```
+
+The default locale lost its exact type, usually because the configuration lives in a separate variable. Mark it `as const`, as in [Typed keys](docs/translations.md#typed-keys). Locales are taken from `locales` only, so a plain `string` default can't widen them.
+
+## A routing method throws `TypeError`
+
+The path is not an absolute path or contains something routing refuses, such as `?`, `#`, `//`, or a dot segment. Pass `url.pathname` rather than the full URL. [Paths it accepts](docs/localized-urls.md#paths-it-accepts) has the full list.
+
+## The browser binding warns or rejects
+
+- **"The manager already has a browser binding"**: you called `initializeBrowserI18n()` twice for the same manager. Call `disconnect()` on the first binding, or keep one.
+- **"Browser initialization was superseded"**: your code called `i18n.init()` while the binding was starting the manager. Let the binding start the manager.
+- **"Browser observation requires a root"**: `observe: true` needs a `root` to watch.
+- **Storage warning**: `localStorage` is unavailable, as in some private browsing modes. The visitor's choice is not saved; everything else works.
+- **An element with `data-i18n` is skipped**: the element has child elements. Put the key on an element that contains only text, or translate it with `t()`.
+- **`data-i18n` text shows `{name}`**: HTML translation can't fill placeholders. Render that text with `t()` and pass the values.
+- **A `data-i18n-href` attribute does nothing**: only text attributes can be translated. See [Translate HTML without a framework](docs/browser.md#translate-html-without-a-framework).
+
+<!-- Source: docs/changelog/0.2.0.md -->
+
+# 0.2.0
+
+## Added
+
+- **Placeholders.** `t("welcome", { name: "Ana" })` fills `{name}` in the text. A placeholder without a value is left as written.
+- **Plurals.** A key can hold CLDR plural forms, such as `{ one: "{count} item", other: "{count} items" }`, and `t(key, { count })` picks the right one for the language with `Intl.PluralRules`. See [Plurals](docs/translations.md#plurals).
+- **Typed keys.** Keys are inferred from what `loadLocale` returns, so a misspelled key fails to compile. `TranslationKey<typeof en>` names the key type for your own helpers.
+- **`t`**, a short alias of `translate`, and every manager method keeps working when pulled off the manager, as in `export const { t } = i18n`.
+- **`matchLocale(preferences)`** picks the best supported locale for a list of language tags, such as `pt` for `pt-BR`. Servers can now resolve `Accept-Language` the way the browser binding resolves `navigator.languages`.
+- **`subscribe(listener)`** calls `listener` after every language change and returns a function that stops it, for framework stores such as React's `useSyncExternalStore`.
+- **`onMissingKey(key, locale)`** receives every key missing from all dictionaries, in place of the default warning. Throw from it to fail tests on missing keys.
+- **A default text direction.** `getLocaleDirection` is now optional; without it, Arabic, Hebrew, Persian, Urdu, and other right-to-left languages and scripts get `rtl`.
+- Guides for writing translations, browser apps, server rendering and static builds, localized URLs, and troubleshooting, and a generated API reference.
+
+## Changed
+
+- **Breaking.** `t()` and `translate()` return a `string`, never `undefined`. A key missing from every dictionary returns the key itself, such as `"home.subtitle"`, so the gap is visible on screen.
+- **Breaking.** `init()` resolves `void` instead of `true` or `false`, like `setLocale()`. Read `i18n.locale` or `i18n.isReady` to see what was applied.
+- **Breaking, types only.** When `loadLocale` returns a typed dictionary, `t()` accepts only its keys, so a key built at runtime, such as ``t(`errors.${code}`)``, no longer compiles.
+- **Breaking, types only.** `defaultLocale` no longer widens the locale type. A configuration kept in a variable without `as const` on `defaultLocale` is now a compile error, where before it silently accepted any string as a locale.
+
+## Migrating from 0.1.0
+
+1. **Remove the fallbacks after `t()`.** `t(key) ?? ""` and `t(key) ?? key` still work but are no longer needed. Code that checked `t(key) === undefined` to detect a missing key never matches now; use `onMissingKey` instead.
+2. **Stop reading `init()`'s result.** Replace `if (await i18n.init()) { … }` with `await i18n.init(); if (i18n.isReady) { … }`. A stale `init()`, superseded by a later call, resolves without applying, so compare `i18n.locale` when the outcome matters.
+3. **Cast keys built at runtime.** Where TypeScript now rejects a computed key you know exists, cast it with `as TranslationKey<typeof en>`, as in [Typed keys](docs/translations.md#typed-keys).
+4. **Mark a separate configuration's default locale `as const`.** Fix `Type 'string' is not assignable to type '"en" | "pt"'` at `createI18n(config)` or `createLocaleRouting(config)` with `defaultLocale: "en" as const`.
+5. **Optionally, drop `getLocaleDirection: () => "ltr"`.** The default gets right-to-left languages right; keep the option only to override it.
