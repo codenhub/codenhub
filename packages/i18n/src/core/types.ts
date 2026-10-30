@@ -58,8 +58,12 @@ export type TranslationKey<TMessages> = unknown extends TMessages ? string : Fla
  * @typeParam TMessages - Dictionary type returned by `loadLocale`; its flattened leaf paths type translation keys.
  */
 export interface I18nConfig<TLocale extends string = string, TMessages = unknown> {
-  /** Supported ASCII locale used initially and for missing-key fallback; matched after trimming, case-insensitively. */
-  defaultLocale: TLocale;
+  /**
+   * Supported ASCII locale used initially and for missing-key fallback; matched after trimming, case-insensitively.
+   * Locale types are inferred from `locales` only, so a `string` here is a compile error rather than a reason to
+   * accept any string as a locale.
+   */
+  defaultLocale: NoInfer<TLocale>;
   /** Non-empty, case-insensitively unique ASCII locale identifiers composed of alphanumeric hyphen-separated subtags. */
   locales: readonly TLocale[];
   /**

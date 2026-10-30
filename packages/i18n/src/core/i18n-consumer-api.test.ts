@@ -59,6 +59,34 @@ describe("bound methods", () => {
   });
 });
 
+describe("typed locales", () => {
+  it("should type locales from `locales` when the configuration is a separate object", async () => {
+    const config = {
+      defaultLocale: "en" as const,
+      locales: ["en", "pt"] as const,
+      loadLocale: (locale: "en" | "pt") => dictionaries[locale],
+    };
+    const i18n = createI18n(config);
+    const locale: "en" | "pt" = i18n.locale;
+    await i18n.init();
+
+    expect(locale).toBe("en");
+    // @ts-expect-error - "fr" is not a configured locale
+    await expect(i18n.setLocale("fr")).rejects.toThrow('Unsupported locale "fr"');
+  });
+
+  it("should reject a widened default locale instead of widening every locale to string", () => {
+    const config = {
+      defaultLocale: "en",
+      locales: ["en", "pt"] as const,
+      loadLocale: (locale: "en" | "pt") => dictionaries[locale],
+    };
+
+    // @ts-expect-error - a `string` default locale would otherwise make `locale` and `setLocale()` accept any string
+    expect(createI18n(config).locale).toBe("en");
+  });
+});
+
 describe("typed translation keys", () => {
   it("should accept flattened keys inferred from the loaded dictionaries", async () => {
     const i18n = createTypedI18n();
@@ -134,7 +162,10 @@ describe("typed translation keys", () => {
     const i18n = createI18n({
       defaultLocale: "en",
       locales: ["en"] as const,
-      loadLocale: (): Messages => ({ greeting: "Hello", page: { title: "Welcome" } }),
+      loadLocale: (): Messages => ({
+        greeting: "Hello",
+        page: { title: "Welcome" },
+      }),
       getLocaleDirection: () => "ltr",
       isSilent: true,
     });
