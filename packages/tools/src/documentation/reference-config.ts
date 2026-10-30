@@ -33,6 +33,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function assertKnownKeys(
+  value: Record<string, unknown>,
+  allowed: readonly string[],
+  field: string,
+  manifestPath: string,
+): void {
+  const key = Object.keys(value).find((key) => !allowed.includes(key));
+  if (key !== undefined) {
+    throw new Error(`Invalid ${field}.${key} in ${manifestPath}: unknown key "${key}".`);
+  }
+}
+
 function stringArray(value: unknown, field: string, manifestPath: string): string[] | undefined {
   if (value === undefined) {
     return undefined;
@@ -70,6 +82,7 @@ function parsePages(value: unknown, manifestPath: string): Record<string, Refere
       if ((subpath !== "." && !subpath.startsWith("./")) || !isRecord(entry)) {
         throw invalid(field, 'an object under a "." or "./"-prefixed key');
       }
+      assertKnownKeys(entry, ["label", "split"], `codenhub.docs.reference.${field}`, manifestPath);
       if (entry.split !== undefined && !isRecord(entry.split)) {
         throw invalid(`${field}.split`, "an object keyed by page name");
       }
@@ -78,6 +91,7 @@ function parsePages(value: unknown, manifestPath: string): Record<string, Refere
         if (name === "index" || !PAGE_NAME.test(name) || !isRecord(page)) {
           throw invalid(pageField, "an object under a kebab-case page name other than index");
         }
+        assertKnownKeys(page, ["source", "label"], `codenhub.docs.reference.${pageField}`, manifestPath);
         const source = stringArray(page.source, `${pageField}.source`, manifestPath);
         if (source === undefined || source.length === 0) {
           throw invalid(`${pageField}.source`, "at least one glob");
@@ -117,6 +131,8 @@ export function parseReferenceConfig(manifest: unknown, manifestPath: string): R
   if (!isRecord(value)) {
     throw new Error(`Invalid codenhub.docs.reference in ${manifestPath}: expected an object or false.`);
   }
+
+  assertKnownKeys(value, ["entrypoints", "exclude", "prose", "pages"], "codenhub.docs.reference", manifestPath);
 
   const entrypoints = stringArray(value.entrypoints, "entrypoints", manifestPath);
   if (entrypoints?.length === 0) {

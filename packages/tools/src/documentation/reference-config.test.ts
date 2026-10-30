@@ -29,6 +29,20 @@ describe("parseReferenceConfig", () => {
     expect(config).toEqual({ entrypoints: [".", "./sub"], exclude: ["src/internal/**"], prose: false });
   });
 
+  it.each([
+    ["root", { labe: "Typo" }, "codenhub.docs.reference.labe"],
+    ["page", { pages: { ".": { labe: "Typo" } } }, 'codenhub.docs.reference.pages["."].labe'],
+    [
+      "split",
+      { pages: { ".": { split: { parts: { source: ["src/**"], labe: "Typo" } } } } },
+      'codenhub.docs.reference.pages["."].split["parts"].labe',
+    ],
+  ])("rejects an unknown key at the %s level with its path", (_level, reference, field) => {
+    expect(() => parseReferenceConfig({ codenhub: { docs: { reference } } }, path)).toThrow(
+      `Invalid ${field} in ${path}: unknown key "labe".`,
+    );
+  });
+
   it("rejects a non-object, non-false value", () => {
     expect(() => parseReferenceConfig({ codenhub: { docs: { reference: "yes" } } }, path)).toThrow(
       /expected an object/,

@@ -55,6 +55,25 @@ describe("reference rule run", () => {
     ]);
   });
 
+  it.each([
+    ["root", { labe: "Typo" }, "codenhub.docs.reference.labe"],
+    ["page", { pages: { ".": { labe: "Typo" } } }, 'codenhub.docs.reference.pages["."].labe'],
+    [
+      "split",
+      { pages: { ".": { split: { parts: { source: ["src/**"], labe: "Typo" } } } } },
+      'codenhub.docs.reference.pages["."].split["parts"].labe',
+    ],
+  ])("reports an unknown %s key as reference/entrypoint", async (_level, reference, field) => {
+    expect(await rule.run({ package: fakePackage(reference), includePack: false })).toEqual([
+      {
+        code: "reference/entrypoint",
+        location: "package.json",
+        message: `Invalid ${field} in packages/example/package.json: unknown key "labe".`,
+        severity: "error",
+      },
+    ]);
+  });
+
   it("is a no-op when the package has no reference config", async () => {
     const withoutKey = fakePackage(undefined);
     delete (withoutKey.manifest as { codenhub: { docs: Record<string, unknown> } }).codenhub.docs.reference;

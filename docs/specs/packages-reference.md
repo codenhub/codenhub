@@ -55,6 +55,8 @@ A package opts in through `codenhub.docs.reference` in its `package.json`, neste
 
 A malformed `codenhub.docs.reference` value is invalid, the same way `docs/specs/packages-documentation.md` treats a malformed `codenhub.docs`. Only `private: false` packages, or private packages that already opt in to `docs/specs/packages-documentation.md`, may declare it.
 
+Unknown keys in the reference object, each `pages` value, and each `split` value are invalid and produce a `reference/entrypoint` finding naming the key and its configuration path. Ignoring unknown keys was previously accepted; that did not weigh a typo such as `labe` silently doing nothing. Alternatives weighed and rejected: ignoring unknown keys, because rejecting them catches typos and matches the closed public-document frontmatter schema.
+
 ## Structure
 
 The reference lives under the package's public `docs/`, in its own area:
