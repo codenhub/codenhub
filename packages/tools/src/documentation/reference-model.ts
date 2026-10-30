@@ -10,6 +10,7 @@ const KIND_INTERFACE = 256;
 const KIND_CONSTRUCTOR = 512;
 const KIND_PROPERTY = 1024;
 const KIND_METHOD = 2048;
+const KIND_INDEX_SIGNATURE = 8192;
 const KIND_ACCESSOR = 262144;
 const KIND_TYPE_ALIAS = 2097152;
 const KIND_REFERENCE = 4194304;
@@ -39,7 +40,13 @@ const SYMBOL_KIND_ORDER: readonly ReferenceSymbolKind[] = [
 export type ReferenceSymbolKind = "function" | "class" | "interface" | "type-alias" | "enum" | "variable" | "namespace";
 
 /** A member kind inside a class, interface, or enum. */
-export type ReferenceMemberKind = "constructor" | "property" | "method" | "accessor" | "enum-member";
+export type ReferenceMemberKind =
+  | "constructor"
+  | "property"
+  | "method"
+  | "accessor"
+  | "enum-member"
+  | "index-signature";
 
 /** A named entry documented from a `@param` or `@typeParam` tag. */
 export interface ReferenceNamedDoc {
@@ -263,6 +270,8 @@ interface Reflection {
   comment?: Comment;
   children?: Reflection[];
   signatures?: Reflection[];
+  indexSignatures?: Reflection[];
+  type?: { declaration?: Reflection };
   parameters?: Reflection[];
   typeParameters?: Reflection[];
   sources?: SourceReference[];
@@ -394,6 +403,8 @@ function memberKind(kind: number): ReferenceMemberKind | undefined {
       return "accessor";
     case KIND_ENUM_MEMBER:
       return "enum-member";
+    case KIND_INDEX_SIGNATURE:
+      return "index-signature";
     default:
       return undefined;
   }
@@ -467,6 +478,7 @@ function sortMembers(members: ReferenceMember[]): ReferenceMember[] {
     property: 2,
     accessor: 3,
     method: 4,
+    "index-signature": 5,
   };
   return [...members].sort(
     (left, right) => order[left.kind] - order[right.kind] || left.name.localeCompare(right.name),
@@ -542,8 +554,23 @@ function buildSymbol(
     .find((found) => found !== undefined);
   const members = sortMembers(
     ordered
-      .filter((candidate) => candidate.kind === "class" || candidate.kind === "interface" || candidate.kind === "enum")
-      .flatMap((candidate) => (candidate.declaration.children ?? []).flatMap((child) => buildMember(child) ?? [])),
+      .filter(
+        (candidate) =>
+          candidate.kind === "class" ||
+          candidate.kind === "interface" ||
+          candidate.kind === "enum" ||
+          candidate.kind === "type-alias",
+      )
+      .flatMap((candidate) => {
+        const declaration =
+          candidate.kind === "type-alias" ? candidate.declaration.type?.declaration : candidate.declaration;
+        const indexes = declaration?.indexSignatures ?? [];
+        const first = indexes[0];
+        return [
+          ...(candidate.kind === "type-alias" ? [] : (declaration?.children ?? [])),
+          ...(first === undefined ? [] : [{ ...first, signatures: indexes }]),
+        ].flatMap((child) => buildMember(child) ?? []);
+      }),
   );
   const namespaceMembers = buildSymbols(
     ordered

@@ -301,6 +301,14 @@ readonly options?: Readonly<Record<string, unknown>>;
 
 The options the factory read, `message` included, for a validator that takes options.
 
+#### __index
+
+```ts
+readonly [part: string]: unknown;
+```
+
+What a validator of this kind is made of.
+
 ### Factory
 
 ```ts

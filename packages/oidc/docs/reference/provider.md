@@ -1085,6 +1085,14 @@ readonly token_endpoint_auth_signing_alg_values_supported?: readonly string[];
 readonly userinfo_endpoint?: string;
 ```
 
+#### __index
+
+```ts
+readonly [member: string]: unknown;
+```
+
+Any other metadata member, unused by this package.
+
 ### ProviderOptions
 
 ```ts

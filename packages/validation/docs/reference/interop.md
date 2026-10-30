@@ -167,6 +167,14 @@ required?: string[];
 
 The properties an object must have.
 
+#### __index
+
+```ts
+[keyword: string]: unknown;
+```
+
+Every other keyword of JSON Schema, such as `type`, `items` or `anyOf`.
+
 ### JsonSchemaOptions
 
 ```ts

@@ -518,6 +518,14 @@ readonly nonce?: string;
 readonly sub: string;
 ```
 
+#### __index
+
+```ts
+readonly [claim: string]: unknown;
+```
+
+Any other claim the provider included.
+
 ### OidcErr
 
 ```ts
@@ -808,6 +816,14 @@ readonly token_endpoint_auth_signing_alg_values_supported?: readonly string[];
 readonly userinfo_endpoint?: string;
 ```
 
+#### __index
+
+```ts
+readonly [member: string]: unknown;
+```
+
+Any other metadata member, unused by this package.
+
 ### Refreshed
 
 ```ts
@@ -975,6 +991,14 @@ readonly sub: string;
 ```
 
 Always equal to the ID token's `sub` the caller expected.
+
+#### __index
+
+```ts
+readonly [claim: string]: unknown;
+```
+
+Any other claim the provider released for the granted scopes.
 
 ### UserinfoOptions
 

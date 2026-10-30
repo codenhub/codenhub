@@ -101,6 +101,21 @@ describe("namespace export signatures", () => {
   });
 });
 
+describe("index signature members", () => {
+  it.each([
+    ["interface", "export interface Lookup {\n /** Looks up a value. */\n [key: string]: number; }"],
+    ["class", "export class Lookup {\n /** Looks up a value. */\n [key: string]: number; }"],
+    ["type literal", "export type Lookup = {\n /** Looks up a value. */\n [key: string]: number; };"],
+  ])("keeps the declaration and prose of a %s index signature", { timeout: 30_000 }, async (_case, source) => {
+    const fixture = await createReferenceFixture("index-signatures", { "index.ts": source });
+    const { model, files } = await analyzeReference(fixture, { prose: true });
+    const member = model.entrypoints[0]?.symbols[0]?.members.find((member) => member.kind === "index-signature");
+    expect(member?.signature).toBe("[key: string]: number;");
+    expect(member?.doc).toBe("Looks up a value.");
+    expect(files[0]?.contents).toContain("Looks up a value.");
+  });
+});
+
 describe("extractSignatures", () => {
   const index = extractSignatures(dts, "index.d.ts");
 

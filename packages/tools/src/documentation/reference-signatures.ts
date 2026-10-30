@@ -85,7 +85,11 @@ function memberEntries(members: ts.NodeArray<ts.ClassElement | ts.TypeElement | 
   const entries = new Map<string, string>();
   for (const member of members) {
     // A constructor has no name node; the reference model names it `constructor`.
-    const name = ts.isConstructorDeclaration(member) ? "constructor" : member.name;
+    const name = ts.isConstructorDeclaration(member)
+      ? "constructor"
+      : ts.isIndexSignatureDeclaration(member)
+        ? "__index"
+        : member.name;
     if (name === undefined) {
       continue;
     }
@@ -177,7 +181,10 @@ function collectStatements(statements: readonly ts.Statement[], source: ts.Sourc
     }
 
     if (ts.isTypeAliasDeclaration(statement)) {
-      index.set(statement.name.text, { text: tidy(statement.getText(source), true) });
+      index.set(statement.name.text, {
+        ...(ts.isTypeLiteralNode(statement.type) ? { members: memberEntries(statement.type.members, source) } : {}),
+        text: tidy(statement.getText(source), true),
+      });
       continue;
     }
 

@@ -503,6 +503,12 @@ export interface LocaleDictionary
 
 Immutable flat translation keys and string values.
 
+#### __index
+
+```ts
+readonly [key: string]: string;
+```
+
 ### LocaleDictionaryLimits
 
 ```ts
