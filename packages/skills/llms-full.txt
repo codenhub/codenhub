@@ -281,6 +281,7 @@ This page records the origin and license context of skill assets shipped by `@co
 | ------------------------- | -------------------------------------- | ---------- |
 | `agents-md-improver`      | Original Coden Agency work             | Apache-2.0 |
 | `audit`                   | Adapted from [JuliusBrussee/caveman]   | MIT        |
+| `babysit-pr`              | Original Coden Agency work             | Apache-2.0 |
 | `brainstorming`           | Adapted from [obra/superpowers]        | MIT        |
 | `branding`                | Original Coden Agency work             | Apache-2.0 |
 | `caveman`                 | Adapted from [JuliusBrussee/caveman]   | MIT        |
@@ -398,6 +399,7 @@ The rest of the authoring guidance, such as how a description is phrased or whet
 | ------------------------- | ----------------------------------------------------------------------------- |
 | `agents-md-improver`      | Audits and improves repository `AGENTS.md` guidance.                          |
 | `audit`                   | Audits and reviews code, classifying findings consistently.                   |
+| `babysit-pr`              | Sees a pull request through CI and review until it is ready to merge.         |
 | `brainstorming`           | Explores requirements and design before implementation.                       |
 | `branding`                | Builds brand strategy and identity systems, from positioning to guidelines.   |
 | `caveman`                 | Provides an ultra-compressed communication mode.                              |

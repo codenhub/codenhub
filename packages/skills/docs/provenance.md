@@ -10,6 +10,7 @@ This page records the origin and license context of skill assets shipped by `@co
 | ------------------------- | -------------------------------------- | ---------- |
 | `agents-md-improver`      | Original Coden Agency work             | Apache-2.0 |
 | `audit`                   | Adapted from [JuliusBrussee/caveman]   | MIT        |
+| `babysit-pr`              | Original Coden Agency work             | Apache-2.0 |
 | `brainstorming`           | Adapted from [obra/superpowers]        | MIT        |
 | `branding`                | Original Coden Agency work             | Apache-2.0 |
 | `caveman`                 | Adapted from [JuliusBrussee/caveman]   | MIT        |

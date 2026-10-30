@@ -58,6 +58,7 @@ The rest of the authoring guidance, such as how a description is phrased or whet
 | ------------------------- | ----------------------------------------------------------------------------- |
 | `agents-md-improver`      | Audits and improves repository `AGENTS.md` guidance.                          |
 | `audit`                   | Audits and reviews code, classifying findings consistently.                   |
+| `babysit-pr`              | Sees a pull request through CI and review until it is ready to merge.         |
 | `brainstorming`           | Explores requirements and design before implementation.                       |
 | `branding`                | Builds brand strategy and identity systems, from positioning to guidelines.   |
 | `caveman`                 | Provides an ultra-compressed communication mode.                              |
