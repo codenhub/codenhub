@@ -6,6 +6,7 @@ import { Application, normalizePath, TSConfigReader } from "typedoc";
 import { parseReferenceConfig, type ReferenceConfig } from "../documentation/reference-config.ts";
 import {
   emitDeclarations,
+  expandEntrypoint,
   readAmbientDeclarations,
   resolveEntrypoints,
   type EntrypointPlan,
@@ -221,7 +222,12 @@ export async function analyzeReference(
   config: ReferenceConfig,
 ): Promise<ReferenceAnalysis> {
   const pkgDir = workspacePackage.directory.split("\\").join("/");
-  const plans = resolveEntrypoints(workspacePackage.manifest.exports, config, pkgDir).map((plan) => ({
+  const resolved = resolveEntrypoints(workspacePackage.manifest.exports, config, pkgDir);
+  const expanded =
+    config.entrypoints === undefined
+      ? (await Promise.all(resolved.map((plan) => expandEntrypoint(pkgDir, plan, `dist/${plan.entryDts}`)))).flat()
+      : resolved;
+  const plans = expanded.map((plan) => ({
     ...plan,
     module: `src/${plan.sourceRel}`,
   }));

@@ -1,4 +1,5 @@
-import { dirname } from "node:path";
+import { glob } from "node:fs/promises";
+import { dirname, posix } from "node:path";
 
 import ts from "typescript";
 
@@ -89,6 +90,48 @@ function resolveSourceRel(pkgDir: string, sourceRel: string): string {
   return !ts.sys.fileExists(`${pkgDir}/src/${sourceRel}`) && ts.sys.fileExists(`${pkgDir}/src/${tsx}`)
     ? tsx
     : sourceRel;
+}
+
+/**
+ * Expands a typed export pattern from built declarations and matching source entry files.
+ * @param pkgDir Package directory to search.
+ * @param plan The unresolved export pattern.
+ * @param target Its type target from the manifest.
+ * @returns Concrete plans and their declaration targets, or the original plan when nothing matches.
+ */
+export async function expandEntrypoint(pkgDir: string, plan: EntrypointPlan, target: string) {
+  if (!target.includes("*")) {
+    return [{ ...plan, target: posix.normalize(target) }];
+  }
+  const sourcePattern = plan.sourceRel.replace(/\.ts$/, ".{ts,tsx}");
+  const [disk, sources] = await Promise.all([
+    Array.fromAsync(glob(target, { cwd: pkgDir })),
+    Array.fromAsync(glob(`src/${sourcePattern}`, { cwd: pkgDir })),
+  ]);
+  const matches = new Set([
+    ...disk.map((path) => path.replaceAll("\\", "/")),
+    ...sources.map(
+      (path) =>
+        `dist/${path
+          .replaceAll("\\", "/")
+          .slice(4)
+          .replace(/\.([cm]?ts)x?$/, ".d.$1")}`,
+    ),
+  ]);
+  const pattern = posix.normalize(target);
+  const star = pattern.indexOf("*");
+  return matches.size === 0
+    ? [{ ...plan, target: pattern }]
+    : [...matches].sort().map((match) => {
+        const replacement = match.slice(star, match.length - (pattern.length - star - 1));
+        return {
+          entryDts: plan.entryDts.replaceAll("*", replacement),
+          module: plan.module.replaceAll("*", replacement),
+          sourceRel: resolveSourceRel(pkgDir, plan.sourceRel.replaceAll("*", replacement)),
+          subpath: plan.subpath.replaceAll("*", replacement),
+          target: match,
+        };
+      });
 }
 
 function readTsconfigs(pkgDir: string): ts.ParsedCommandLine[] {

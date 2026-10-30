@@ -344,6 +344,24 @@ function createSingleEntrypointFixture(): Promise<WorkspacePackage> {
 }
 
 describe("analyzeReference", () => {
+  it("expands typed wildcard exports from sources before naming pages", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-wildcard", {
+      "parts/a.ts": "/** A value. */\nexport const a = 1;\n",
+      "parts/b.tsx": "/** B value. */\nexport const b = 2;\n",
+    });
+    (workspacePackage.manifest as Record<string, unknown>).exports = {
+      "./parts/*": { types: "./dist/parts/*.d.ts" },
+    };
+    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    expect(model.entrypoints.map((entry) => entry.subpath)).toEqual(["./parts/a", "./parts/b"]);
+    expect(files.map((file) => file.path)).toEqual([
+      "fixture-wildcard/docs/reference/parts/a.md",
+      "fixture-wildcard/docs/reference/parts/b.md",
+    ]);
+    expect(files[0]?.contents).toContain("export declare const a = 1;");
+    expect(files[1]?.contents).toContain("export declare const b = 2;");
+  });
+
   it("ignores ambient files belonging only to a referenced test project", { timeout: 30_000 }, async () => {
     const workspacePackage = await createReferenceFixture("fixture-solution-test-types", {
       "index.ts": "/** Makes a map. */\nexport function make(): Map<string, string> { return new Map(); }\n",
