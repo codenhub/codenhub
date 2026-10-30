@@ -59,6 +59,35 @@ describe("internal type resolution", () => {
   });
 });
 
+describe("special export bindings", () => {
+  it.each([
+    [
+      "named function",
+      "export default function original() {}",
+      "original",
+      "export default function original(): void;",
+    ],
+    ["named class", "export default class Original {}", "Original", "export default class Original"],
+    ["anonymous function", "export default function() {}", "default", "export default function (): void;"],
+    [
+      "export assignment",
+      "function original() {} export = original;",
+      "original",
+      "declare function original(): void;",
+    ],
+  ])(
+    "attaches the declaration name and signature for %s",
+    { timeout: 30_000 },
+    async (_case, source, name, signature) => {
+      const fixture = await createReferenceFixture("special-export", { "index.ts": source });
+      const { model } = await analyzeReference(fixture, { prose: true });
+      expect(
+        model.entrypoints[0]?.symbols.map((symbol) => ({ name: symbol.name, signature: symbol.signature })),
+      ).toEqual([{ name, signature }]);
+    },
+  );
+});
+
 describe("extractSignatures", () => {
   const index = extractSignatures(dts, "index.d.ts");
 

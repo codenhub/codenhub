@@ -9,7 +9,7 @@ order: 2
 
 ## Functions
 
-### default
+### viteIcons
 
 ```ts
 export declare function viteIcons(options?: ViteIconsOptions): Plugin;

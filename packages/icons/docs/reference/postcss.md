@@ -9,7 +9,7 @@ order: 1
 
 ## Functions
 
-### default
+### postcssIcons
 
 ```ts
 export declare const postcssIcons: {

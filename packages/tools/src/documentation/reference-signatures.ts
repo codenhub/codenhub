@@ -266,6 +266,13 @@ export function collectModuleGraph(source: ts.SourceFile): ModuleGraph {
   const imports = new Map<string, ImportBinding>();
 
   for (const statement of source.statements) {
+    if (
+      (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) &&
+      statement.name !== undefined &&
+      hasModifier(statement, ts.SyntaxKind.DefaultKeyword)
+    ) {
+      localAliases.set(DEFAULT_EXPORT_NAME, statement.name.text);
+    }
     if (ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier)) {
       const clause = statement.importClause;
       if (clause?.name !== undefined) {
@@ -281,8 +288,8 @@ export function collectModuleGraph(source: ts.SourceFile): ModuleGraph {
       continue;
     }
 
-    if (ts.isExportAssignment(statement) && !statement.isExportEquals && ts.isIdentifier(statement.expression)) {
-      localAliases.set(DEFAULT_EXPORT_NAME, statement.expression.text);
+    if (ts.isExportAssignment(statement) && ts.isIdentifier(statement.expression)) {
+      localAliases.set(statement.isExportEquals ? "export=" : DEFAULT_EXPORT_NAME, statement.expression.text);
       continue;
     }
 
@@ -520,8 +527,8 @@ function collectExportNames(source: ts.SourceFile): Set<string> {
         }
       }
     }
-    if (ts.isExportAssignment(statement) && !statement.isExportEquals) {
-      names.add(DEFAULT_EXPORT_NAME);
+    if (ts.isExportAssignment(statement)) {
+      names.add(statement.isExportEquals ? "export=" : DEFAULT_EXPORT_NAME);
     }
     if (ts.isExportDeclaration(statement) && statement.exportClause !== undefined) {
       const clause = statement.exportClause;
@@ -555,7 +562,7 @@ function buildModuleResolver<T>(
 
   // A value found under another name keeps its declared name; show the public one. A `default` export is never renamed to.
   const asPublic = (found: T | undefined, declaredName: string, publicName: string): T | undefined =>
-    found === undefined || declaredName === publicName || publicName === DEFAULT_EXPORT_NAME
+    found === undefined || declaredName === publicName || publicName === DEFAULT_EXPORT_NAME || publicName === "export="
       ? found
       : rename(found, declaredName, publicName);
 
@@ -652,8 +659,17 @@ function withSignature(symbol: ReferenceSymbol, index: SignatureIndex | undefine
     return symbol;
   }
   const lines = [found.text, ...(found.overloads ?? [])];
+  const name =
+    symbol.name === DEFAULT_EXPORT_NAME || symbol.name === "export="
+      ? (collectDeclarationNodes(
+          ts.createSourceFile("signature.d.ts", found.text, ts.ScriptTarget.Latest, true).statements,
+        )
+          .keys()
+          .next().value ?? symbol.name)
+      : symbol.name;
   return {
     ...symbol,
+    name,
     // Overloads documented apart line up with the `.d.ts` overloads, both in source order.
     overloads:
       symbol.overloads.length === lines.length
