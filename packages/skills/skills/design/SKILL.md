@@ -1,6 +1,6 @@
 ---
 name: design
-description: Guides visual and interface design decisions in any medium, including typography and font choice, spacing and density, layout and alignment, hierarchy, color and palettes, contrast, interaction states, forms, navigation, accessibility, and interface transitions and micro-interactions. Use when building, restyling, or reviewing a UI, web page, component, form, flow, dashboard, landing page, app screen, email, slide, social media image, thumbnail, poster, video frame, or motion graphic, when choosing fonts or colors, when adding UI animation, or when something looks generic, cluttered, off, or obviously AI-generated.
+description: Guides visual and interface design decisions in any medium, including typography and font choice, spacing and density, layout and alignment, hierarchy, color and palettes, contrast, interaction states, forms, navigation, accessibility, and interface transitions and micro-interactions. Use when building, restyling, or reviewing a UI, web page, component, form, flow, dashboard, landing page, app screen, email, slide, social media image, thumbnail, poster, video frame, or motion graphic, when choosing fonts or colors, when adding UI animation, or when something looks generic, cluttered, off, or obviously AI-generated. Not for designing software, systems, APIs, data models, or features, or for writing specs, except for their visual interface.
 ---
 
 # Design
