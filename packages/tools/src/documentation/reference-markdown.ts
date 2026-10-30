@@ -64,7 +64,7 @@ export interface RenderReferencePageOptions {
 }
 
 function yamlValue(value: string): string {
-  return /^[\w .,'()/-]+$/.test(value) && !/^\s|\s$/.test(value) ? value : JSON.stringify(value);
+  return JSON.stringify(value);
 }
 
 function frontmatter(options: RenderReferencePageOptions): string {

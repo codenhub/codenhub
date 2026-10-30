@@ -1,5 +1,5 @@
 ---
-title: /vite
+title: "/vite"
 order: 2
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: /client
+title: "/client"
 order: 1
 ---
 

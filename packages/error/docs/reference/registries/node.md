@@ -1,5 +1,5 @@
 ---
-title: /registries/node
+title: "/registries/node"
 description: "Node.js error preset: network failure codes from sockets, DNS, and `fetch` mapped to safe feedback."
 order: 3
 ---

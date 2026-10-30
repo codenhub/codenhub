@@ -190,7 +190,7 @@ describe("analyzeReference pages", () => {
       prose: true,
     });
 
-    expect(files[0]?.contents).toContain("title: Overview");
+    expect(files[0]?.contents).toContain('title: "Overview"');
     expect(files[0]?.contents).toContain("# Overview");
   });
 
@@ -214,7 +214,7 @@ describe("analyzeReference pages", () => {
     expect(index).not.toContain("### circle");
     expect(index).not.toContain("## Internal types");
     expect(index).toContain("[circle](shapes.md#circle)");
-    expect(shapes).toContain("title: Shapes");
+    expect(shapes).toContain('title: "Shapes"');
     expect(shapes).toContain("order: 1");
     expect(shapes).toContain("# Shapes");
     expect(shapes).toContain("### circle");
@@ -239,7 +239,7 @@ describe("analyzeReference pages", () => {
         prose: true,
       });
 
-      expect(page(files, "round.md")).toContain("title: round");
+      expect(page(files, "round.md")).toContain('title: "round"');
       expect(page(files, "round.md")).toContain("### circle");
       expect(page(files, "shapes.md")).not.toContain("### circle");
       expect(page(files, "shapes.md")).toContain("### square");

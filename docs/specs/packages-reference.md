@@ -117,6 +117,8 @@ Generated pages use the closed frontmatter schema from `docs/specs/packages-docu
 - `order`: generator-assigned, placing pages in a stable order — `.` first, then remaining entrypoints by `exports` declaration order, each entrypoint followed by its split pages in declaration order.
 - `group`: set to `Reference` on `docs/reference/index.md` only, to label the sidebar section. Not set on any other page.
 
+String frontmatter values are always quoted as YAML strings, preserving literal quotes and labels such as `true` or `1`.
+
 `description` and `since` are page metadata and are emitted whether or not `prose` is enabled.
 
 ### Generated-file notice

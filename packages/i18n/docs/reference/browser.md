@@ -1,5 +1,5 @@
 ---
-title: /browser
+title: "/browser"
 description: "Browser locale detection, persistence, document `lang` and `dir`, and `data-i18n` DOM translation."
 order: 1
 ---
