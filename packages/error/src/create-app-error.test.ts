@@ -10,6 +10,7 @@ import {
   type AppError,
 } from "./index";
 import { browserErrorRegistry } from "./registries/browser";
+import { nodeErrorRegistry } from "./registries/node";
 
 afterEach(() => {
   getErrorRegistry().clear();
@@ -164,7 +165,7 @@ describe("createAppError — basic normalization", () => {
       },
     };
 
-    expect(createAppError(error, { registry }).type).toBe("unexpected");
+    expect(createAppError(error, { registry }).type).toBe("heuristic");
     expect(messageReads).toBe(1);
   });
 
@@ -251,11 +252,11 @@ describe("createAppError — registry matching priority", () => {
     });
   });
 
-  it("should classify via pattern match as unexpected", () => {
+  it("should classify via pattern match as heuristic", () => {
     const registry = createErrorRegistry();
     registry.patterns.add(/failed to fetch/i, { message: "Network request failed.", isRetryable: true });
     expect(createAppError(new Error("Failed to fetch"), { registry })).toMatchObject({
-      type: "unexpected",
+      type: "heuristic",
       message: "Network request failed.",
       isRetryable: true,
     });
@@ -275,7 +276,7 @@ describe("createAppError — registry matching priority", () => {
     expect(appError.message).toBe("Surface failure.");
   });
 
-  it("should prioritize any known match over any unexpected match across all candidates", () => {
+  it("should prioritize any known match over any heuristic match across all candidates", () => {
     const registry = createErrorRegistry();
     registry.patterns.add(/network error/i, { message: "Generic network failure." });
     registry.codes.add("AUTH_EXPIRED", { message: "Auth expired, please log in again." });
@@ -385,14 +386,14 @@ describe("createAppError — nested AppError handling", () => {
     expect(result.originalError).toBe(outerError);
   });
 
-  it("should preserve a nested unexpected AppError classification when outer error does not match", () => {
+  it("should preserve a nested heuristic AppError classification when outer error does not match", () => {
     const registry = createErrorRegistry();
     registry.patterns.add(/unexpected match/i, { message: "Mapped unexpected" });
     const nestedUnexpected = createAppError(new Error("unexpected match"), { registry });
     const wrapper = new Error("Outer error", { cause: nestedUnexpected });
 
     const result = createAppError(wrapper, { registry });
-    expect(result.type).toBe("unexpected");
+    expect(result.type).toBe("heuristic");
     expect(result.message).toBe("Mapped unexpected");
     expect(result.originalError).toBe(wrapper);
   });
@@ -447,7 +448,7 @@ describe("createAppError — custom registry implementations", () => {
         clear: () => {},
         delete: () => false,
         get: (id: string) => (id === "CUSTOM_CODE" ? { message: "Custom code matched" } : undefined),
-        values: () => [].values(),
+        values: () => [],
       },
       names: {
         add: () => {},
@@ -455,7 +456,7 @@ describe("createAppError — custom registry implementations", () => {
         clear: () => {},
         delete: () => false,
         get: () => undefined,
-        values: () => [].values(),
+        values: () => [],
       },
       messages: {
         add: () => {},
@@ -463,7 +464,7 @@ describe("createAppError — custom registry implementations", () => {
         clear: () => {},
         delete: () => false,
         get: (msg: string) => (msg === "exact custom message" ? { message: "Custom message matched" } : undefined),
-        values: () => [].values(),
+        values: () => [],
       },
       prefixes: {
         add: () => {},
@@ -492,7 +493,7 @@ describe("createAppError — custom registry implementations", () => {
       message: "Custom prefix matched",
     });
     expect(createAppError(new Error("custom pattern match"), { registry: customRegistry })).toMatchObject({
-      type: "unexpected",
+      type: "heuristic",
       message: "Custom pattern matched",
     });
   });
@@ -583,7 +584,7 @@ describe("createAppError — re-normalization with options", () => {
     expect(createAppError(unexpected, { registry })).toBe(unexpected);
   });
 
-  it("should keep an unexpected AppError over a pattern match from the new registry", () => {
+  it("should keep a heuristic AppError over a pattern match from the new registry", () => {
     const patternRegistry = createErrorRegistry();
     patternRegistry.patterns.add(/rate limit/i, { message: "Slow down." });
     const unexpected = createAppError(new Error("Rate limit hit"), { registry: patternRegistry });
@@ -657,7 +658,7 @@ describe("createAppError — re-normalization keeps an existing classification",
     expect(createAppError(known, { registry })).toBe(known);
   });
 
-  it("should keep an unexpected AppError when the new registry matches nothing", () => {
+  it("should keep a heuristic AppError when the new registry matches nothing", () => {
     const patternRegistry = createErrorRegistry();
     patternRegistry.patterns.add(/rate limit/i, { message: "Slow down." });
     const unexpected = createAppError(new Error("Rate limit hit"), { registry: patternRegistry });
@@ -665,7 +666,7 @@ describe("createAppError — re-normalization keeps an existing classification",
     expect(createAppError(unexpected, { registry: createErrorRegistry() })).toBe(unexpected);
   });
 
-  it("should upgrade an unexpected AppError when the new registry knows it", () => {
+  it("should upgrade a heuristic AppError when the new registry knows it", () => {
     const patternRegistry = createErrorRegistry();
     patternRegistry.patterns.add(/rate limit/i, { message: "Slow down." });
     const unexpected = createAppError(new Error("Rate limit hit"), { registry: patternRegistry });
@@ -892,7 +893,7 @@ describe("createAppError — a nested AppError keeps the classification it was g
     expect(result.isRetryable).toBe(false);
   });
 
-  it("should not replace a nested unexpected AppError with a global match for its raw value", () => {
+  it("should not replace a nested heuristic AppError with a global match for its raw value", () => {
     getErrorRegistry().codes.add("23505", { message: "Global wording." });
     const service = createErrorRegistry();
     service.patterns.add(/duplicate/i, { message: "Service wording." });
@@ -900,7 +901,7 @@ describe("createAppError — a nested AppError keeps the classification it was g
 
     const result = createAppError(new Error("save failed", { cause: fromService }));
 
-    expect(result.type).toBe("unexpected");
+    expect(result.type).toBe("heuristic");
     expect(result.message).toBe("Service wording.");
   });
 
@@ -961,6 +962,18 @@ describe("appErrorFromJSON", () => {
     expect(rebuilt.message).toBe("Sender wording.");
   });
 
+  it("should not carry the sender's isRetryable flag across the boundary", () => {
+    // The flag describes a call the sender made, such as its own database call, not the request
+    // that carried the response, which may already have run on the sender.
+    const sent = createAppError({ code: "ECONNREFUSED" }, { registry: nodeErrorRegistry });
+    expect(sent.isRetryable).toBe(true);
+
+    const rebuilt = appErrorFromJSON(roundTrip(sent));
+
+    expect(rebuilt.isRetryable).toBe(false);
+    expect(rebuilt.toJSON()).toEqual({ ...sent.toJSON(), isRetryable: false });
+  });
+
   it("should keep the parsed value as originalError", () => {
     const parsed = roundTrip(createAppError("anything"));
 
@@ -991,6 +1004,19 @@ describe("appErrorFromJSON", () => {
     ["a missing messageKey", { ...serialized, messageKey: undefined }],
     ["a non-string source", { ...serialized, source: 1 }],
     ["a non-boolean isRetryable", { ...serialized, isRetryable: "true" }],
+    ["an empty code", { ...serialized, code: "" }],
+    ["an empty messageKey", { ...serialized, messageKey: " " }],
+    ["an empty source", { ...serialized, source: "" }],
+    ["a code on a heuristic match", { ...serialized, type: "heuristic" }],
+    ["a code on an unknown error", { ...serialized, type: "unknown", isRetryable: false }],
+    [
+      "a retryable unknown error",
+      { ...serialized, type: "unknown", code: null, messageKey: null, source: null, isRetryable: true },
+    ],
+    [
+      "a messageKey on an unknown error",
+      { ...serialized, type: "unknown", code: null, messageKey: "k", isRetryable: false },
+    ],
   ])("should normalize a value with %s as raw input", (_label, value) => {
     const result = appErrorFromJSON(value);
 
@@ -1048,7 +1074,7 @@ describe("createAppError — a supplied registry and a nested AppError", () => {
     expect(result.message).toBe("Service wording.");
   });
 
-  it("should keep a nested unexpected AppError over a supplied pattern match", () => {
+  it("should keep a nested heuristic AppError over a supplied pattern match", () => {
     const service = createErrorRegistry();
     service.patterns.add(/duplicate/i, { message: "Service pattern wording." });
     const nested = createAppError(new Error("duplicate key"), { registry: service });
@@ -1067,7 +1093,7 @@ describe("createAppError — a supplied registry and a nested AppError", () => {
 
     const result = createAppError(new Error("layer", { cause: nested }), { registry: supplied });
 
-    expect(result.type).toBe("unexpected");
+    expect(result.type).toBe("heuristic");
     expect(result.message).toBe("Supplied pattern wording.");
   });
 

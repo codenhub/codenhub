@@ -69,7 +69,7 @@ describe("err", () => {
     [
       "pattern",
       (registry: ReturnType<typeof createErrorRegistry>) => registry.patterns.add(/raw secret/, { message: "Mapped" }),
-      "unexpected",
+      "heuristic",
     ],
   ])("should classify a string value through a %s mapping", (_, register, expectedType) => {
     const registry = createErrorRegistry();

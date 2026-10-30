@@ -51,6 +51,24 @@ describe("feedback map bucket (codes / names / messages)", () => {
     expect(registry.codes.get("code1")!.message).toBe("Msg");
   });
 
+  it("should return a frozen list of frozen entries from values, like the prefix and pattern buckets", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("code1", { message: "Msg" });
+    const values = registry.codes.values();
+
+    expect(Array.isArray(values)).toBe(true);
+    expect(values).toHaveLength(1);
+    expect(values).toEqual([["code1", { message: "Msg" }]]);
+    expect(Object.isFrozen(values)).toBe(true);
+    expect(Object.isFrozen(values[0])).toBe(true);
+    expect(registry.codes.values()).toBe(values);
+
+    registry.codes.add("code2", { message: "Other" });
+
+    expect(registry.codes.values()).not.toBe(values);
+    expect(registry.codes.values()).toHaveLength(2);
+  });
+
   it("should isolate stored feedback from later mutation of the source object", () => {
     const registry = createErrorRegistry();
     const feedback = { message: "Original", isRetryable: false };

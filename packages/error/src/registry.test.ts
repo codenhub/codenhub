@@ -110,7 +110,7 @@ describe("createErrorRegistry", () => {
       message: "Internal server error.",
     });
     expect(createAppError(new Error("failed to fetch"), { registry: target })).toMatchObject({
-      type: "unexpected",
+      type: "heuristic",
       message: "Network request failed.",
     });
   });

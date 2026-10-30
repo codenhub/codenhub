@@ -135,6 +135,7 @@ const isRegExp = (value: unknown): value is RegExp => {
  */
 export const createFeedbackMapBucket = (normalizeIdentifier: (identifier: string) => string): ErrorRegistryBucket => {
   const entries = new Map<string, Readonly<ErrorFeedback>>();
+  let cachedValues: readonly (readonly [string, Readonly<ErrorFeedback>])[] | null = null;
   const getNormalizedIdentifier = (identifier: string): string => {
     if (typeof identifier !== "string") {
       throw new TypeError("Error registry identifier must be a non-empty string.");
@@ -152,6 +153,7 @@ export const createFeedbackMapBucket = (normalizeIdentifier: (identifier: string
   ] => [getNormalizedIdentifier(identifier), freezeFeedback(feedback)];
   const add = (identifier: string, feedback: ErrorFeedback): void => {
     entries.set(...prepareEntry([identifier, feedback]));
+    cachedValues = null;
   };
 
   return {
@@ -161,12 +163,18 @@ export const createFeedbackMapBucket = (normalizeIdentifier: (identifier: string
       for (const entry of preparedEntries) {
         entries.set(...entry);
       }
+      cachedValues = null;
     },
     clear(): void {
       entries.clear();
+      cachedValues = null;
     },
     delete(identifier: string): boolean {
-      return entries.delete(getNormalizedIdentifier(identifier));
+      const deleted = entries.delete(getNormalizedIdentifier(identifier));
+      if (deleted) {
+        cachedValues = null;
+      }
+      return deleted;
     },
     get(identifier: string): Readonly<ErrorFeedback> | undefined {
       if (typeof identifier !== "string") {
@@ -180,8 +188,9 @@ export const createFeedbackMapBucket = (normalizeIdentifier: (identifier: string
 
       return entries.get(normalizedIdentifier);
     },
-    *values(): IterableIterator<[string, Readonly<ErrorFeedback>]> {
-      yield* entries;
+    values(): readonly (readonly [string, Readonly<ErrorFeedback>])[] {
+      cachedValues ??= Object.freeze(Array.from(entries, (entry) => Object.freeze(entry)));
+      return cachedValues;
     },
   };
 };

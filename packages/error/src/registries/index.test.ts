@@ -76,7 +76,7 @@ describe("ready registries", () => {
     "should classify the failed-fetch message %j",
     (message) => {
       expect(createAppError(new TypeError(message), { registry: browserErrorRegistry })).toMatchObject({
-        type: "unexpected",
+        type: "heuristic",
         messageKey: "error.browser.requestFailed",
       });
     },
@@ -93,7 +93,7 @@ describe("ready registries", () => {
       isRetryable: false,
     });
     expect(createAppError(chromeFailure, { registry: browserErrorRegistry })).toMatchObject({
-      type: "unexpected",
+      type: "heuristic",
       messageKey: "error.browser.moduleLoadFailed",
       isRetryable: false,
     });
@@ -211,6 +211,26 @@ describe("ready registries", () => {
 
     expect(createAppError({ name: "TimeoutError" }, { registry }).isRetryable).toBe(false);
     expect(createAppError({ code: "UND_ERR_HEADERS_TIMEOUT" }, { registry }).isRetryable).toBe(false);
+  });
+
+  it("should tell the reader to check before retrying a failure that may follow a sent request", () => {
+    // A failed fetch is also what a CORS block and a dropped response look like, both after the
+    // server ran the request, and a timeout or an Edge Function error status can follow one too.
+    const registry = createErrorRegistry([browserErrorRegistry, nodeErrorRegistry, supabaseErrorRegistry]);
+    const failures = [
+      new TypeError("Failed to fetch"),
+      new TypeError("fetch failed"),
+      { name: "TimeoutError" },
+      { name: "FunctionsFetchError" },
+      { name: "FunctionsHttpError" },
+    ];
+
+    for (const failure of failures) {
+      const { message } = createAppError(failure, { registry });
+
+      expect(message).toMatch(/check whether it went through/i);
+      expect(message).not.toMatch(/couldn't reach the server/i);
+    }
   });
 
   it("should not classify relayed server text that mentions a refused connection", () => {

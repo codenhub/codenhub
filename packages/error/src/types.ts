@@ -9,7 +9,7 @@
 export interface AppError extends Error {
   /**
    * The classification of this error, denoting whether it was explicitly mapped
-   * as a known error, matched heuristically as unexpected, or completely unknown.
+   * as a known error, matched heuristically, or completely unknown.
    */
   readonly type: AppErrorType;
 
@@ -96,14 +96,14 @@ export interface AppErrorOptions {
  * The classification level of a normalized application error.
  *
  * - `"known"`: Matched explicitly in the registry (by code, name, exact message, or prefix).
- * - `"unexpected"`: Matched heuristically via regex patterns in the registry.
+ * - `"heuristic"`: Matched heuristically via regex patterns in the registry.
  * - `"unknown"`: Could not be resolved/classified by the active registry.
  *
  * The type says how the error was matched, not how serious it is: a defect such as a missing
- * table is `"known"` when its code is registered, and an offline user is `"unexpected"` when a
+ * table is `"known"` when its code is registered, and an offline user is `"heuristic"` when a
  * pattern matched. Branch on `code` or `messageKey` to decide what to report.
  */
-export type AppErrorType = "known" | "unexpected" | "unknown";
+export type AppErrorType = "known" | "heuristic" | "unknown";
 
 /**
  * The namespace or subsystem label (e.g., `browser`, `supabase.auth`) representing
@@ -187,11 +187,13 @@ export interface ErrorRegistryBucket {
   delete(identifier: string): boolean;
 
   /**
-   * Returns an iterator yielding every frozen mapping stored in the bucket.
+   * Returns every mapping stored in the bucket, in insertion order.
    *
-   * @returns An iterator of [identifier, feedback] entries.
+   * The returned list, its entries, and their feedback are frozen.
+   *
+   * @returns Frozen list of [identifier, feedback] entries.
    */
-  values(): IterableIterator<[string, Readonly<ErrorFeedback>]>;
+  values(): readonly (readonly [identifier: string, feedback: Readonly<ErrorFeedback>])[];
 }
 
 /**
@@ -335,7 +337,7 @@ export interface ErrorRegistry {
   readonly prefixes: ErrorPrefixRegistryBucket;
 
   /**
-   * Heuristic mappings for matching errors using RegExp patterns. Matches are classified as `"unexpected"`.
+   * Heuristic mappings for matching errors using RegExp patterns. Matches are classified as `"heuristic"`.
    */
   readonly patterns: ErrorPatternRegistryBucket;
 
