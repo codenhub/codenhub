@@ -23,12 +23,13 @@ export interface LocaleDictionaryLimits {
   maxTotalLength?: number;
 }
 
-// Distributes over the property type so an optional leaf (`string | undefined`) still counts as a key.
+// Distributes over the property type so an optional leaf (`string | undefined`) still counts as a key. A group with an
+// `other` form is a plural, so the group itself is a key as well as each of its forms.
 type PropertyKeyPath<K extends string, TValue> = TValue extends string
   ? K
   : TValue extends undefined
     ? never
-    : `${K}.${FlattenedKey<TValue>}`;
+    : `${K}.${FlattenedKey<TValue>}` | (TValue extends { readonly other: string } ? K : never);
 
 type FlattenedKey<TMessages> = TMessages extends string
   ? never
@@ -210,9 +211,20 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   /**
    * Resolves a trimmed key against active and default dictionaries and fills its `{name}` placeholders.
    *
-   * @param key - Translation key.
+   * @remarks
+   * When `params.count` is a number and the key is a group of plural forms rather than a text, such as
+   * `{ one: "{count} item", other: "{count} items" }`, the form is chosen with `Intl.PluralRules` for the locale of the
+   * dictionary that has the group, falling back to its `other` form. Forms are named by CLDR plural category: `zero`,
+   * `one`, `two`, `few`, `many`, and `other`.
+   *
+   * @example
+   * ```ts
+   * t("cart.items", { count: 3 }); // "3 items"
+   * ```
+   *
+   * @param key - Translation key, or the key of a plural group when `params.count` is a number.
    * @param params - Values for `{name}` placeholders, read from own properties. A placeholder without a value is left
-   * as written; without `params`, the text is returned unchanged.
+   * as written; without `params`, the text is returned unchanged. A numeric `count` also selects a plural form.
    * @returns The translated text, or the trimmed key when neither dictionary has it. A miss calls `onMissingKey`, or
    * warns once per recent locale/key pair unless silent.
    * @throws {Error} When called before successful initialization.

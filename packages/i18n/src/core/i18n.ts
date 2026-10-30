@@ -72,6 +72,7 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
   private defaultDictionary: LocaleDictionary | undefined;
   private requestId = 0;
   private readonly warnedMissingKeys = new Map<string, undefined>();
+  private readonly pluralRules = new Map<TLocale, Intl.PluralRules | undefined>();
   private readonly localeLookup: ReadonlyMap<string, TLocale>;
   private readonly config: ValidatedI18nConfig<TLocale>;
   private readonly loader: LocaleLoader<TLocale>;
@@ -145,7 +146,8 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
   }
 
   translate(key: string, params?: TranslationParams): string {
-    const translation = this.lookup(key);
+    const count = params !== undefined && Object.hasOwn(params, "count") ? params["count"] : undefined;
+    const translation = this.lookup(key, typeof count === "number" ? count : undefined);
 
     if (translation === undefined) {
       return key.trim();
@@ -222,7 +224,7 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     );
   }
 
-  private lookup(key: string): string | undefined {
+  private lookup(key: string, count?: number): string | undefined {
     if (!this.isReadyState || this.currentDictionary === undefined || this.defaultDictionary === undefined) {
       throw new Error("[I18n] translate() requires successful initialization.");
     }
@@ -243,7 +245,9 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
       throw new TypeError("[I18n] A translation key must be a non-empty string.");
     }
 
-    const translation = this.currentDictionary[normalizedKey] ?? this.defaultDictionary[normalizedKey];
+    const translation =
+      this.findTranslation(this.currentDictionary, this.currentLocale, normalizedKey, count) ??
+      this.findTranslation(this.defaultDictionary, this.defaultLocale, normalizedKey, count);
 
     if (translation !== undefined) {
       return translation;
@@ -251,6 +255,43 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
 
     this.reportMissingKey(normalizedKey);
     return undefined;
+  }
+
+  /**
+   * Finds the exact key, or with a count, the plural form of the group at `key`. The form is chosen with the rules of
+   * the locale whose dictionary is read, since a fallback text is in the default locale's language.
+   */
+  private findTranslation(
+    dictionary: LocaleDictionary,
+    locale: TLocale,
+    key: string,
+    count: number | undefined,
+  ): string | undefined {
+    const translation = dictionary[key];
+
+    if (translation !== undefined || count === undefined) {
+      return translation;
+    }
+
+    const category = this.getPluralRules(locale)?.select(count) ?? "other";
+    return dictionary[`${key}.${category}`] ?? dictionary[`${key}.other`];
+  }
+
+  private getPluralRules(locale: TLocale): Intl.PluralRules | undefined {
+    if (!this.pluralRules.has(locale)) {
+      let rules: Intl.PluralRules | undefined;
+
+      try {
+        rules = new Intl.PluralRules(locale);
+      } catch {
+        // A locale `Intl` cannot read, such as private-use `x-test`, has no rules, so every count uses `other`.
+        rules = undefined;
+      }
+
+      this.pluralRules.set(locale, rules);
+    }
+
+    return this.pluralRules.get(locale);
   }
 
   private reportMissingKey(key: string): void {
