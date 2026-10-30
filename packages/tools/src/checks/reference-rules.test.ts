@@ -1,9 +1,10 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createReferenceFixture } from "../generators/reference-fixture.test-support.ts";
+import * as referenceGenerator from "../generators/reference-generator.ts";
 import { analyzeReference } from "../generators/reference-generator.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { createReferenceRules } from "./reference-rules.ts";
@@ -73,6 +74,75 @@ describe("reference rule run", () => {
     );
     return workspacePackage;
   }
+
+  it("reports an absent generated reference area", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-rule-missing", {
+      "index.ts": "/** A value. */\nexport const value = 1;\n",
+    });
+    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([
+      { code: "reference/missing", location: "docs/reference", message: expect.any(String), severity: "error" },
+    ]);
+  });
+
+  it("reports drift in a generated reference page", { timeout: 30_000 }, async () => {
+    const workspacePackage = await committedFixture("fixture-rule-drift", {
+      "index.ts": "/** A value. */\nexport const value = 1;\n",
+    });
+    await writeFile(join(workspacePackage.directory, "docs/reference/index.md"), "# Stale reference\n");
+    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([
+      { code: "reference/drift", location: "docs/reference/index.md", message: expect.any(String), severity: "error" },
+    ]);
+  });
+
+  it("accepts generated reference pages checked out with CRLF", { timeout: 30_000 }, async () => {
+    const workspacePackage = await committedFixture("fixture-rule-crlf", {
+      "index.ts": "/** A value. */\nexport const value = 1;\n",
+    });
+    const path = join(workspacePackage.directory, "docs/reference/index.md");
+    const contents = await readFile(path, "utf8");
+    await writeFile(path, contents.replace(/\r?\n/g, "\r\n"));
+    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([]);
+  });
+
+  it("reports unsupported exports from the analysis model", { timeout: 30_000 }, async () => {
+    const workspacePackage = await committedFixture("fixture-rule-unsupported", {
+      "index.ts": "/** A value. */\nexport const value = 1;\n",
+    });
+    const analysis = await analyzeReference(workspacePackage, { prose: true });
+    // TypeDoc's Document kind has no TypeScript declaration fixture. Inject the analysis boundary.
+    analysis.model.unsupported.push({ name: "Guide", subpath: "." });
+    const analyze = vi.spyOn(referenceGenerator, "analyzeReference").mockResolvedValueOnce(analysis);
+    try {
+      expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([
+        {
+          code: "reference/unsupported-export",
+          location: "package.json (.)",
+          message: expect.stringContaining('Export "Guide"'),
+          severity: "error",
+        },
+      ]);
+    } finally {
+      analyze.mockRestore();
+    }
+  });
+
+  it("reports an analysis failure when an expected entry module is missing", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-rule-analysis", {
+      "index.ts": "/** A value. */\nexport const value = 1;\n",
+    });
+    (workspacePackage.manifest as Record<string, unknown>).exports = {
+      ".": { types: "./dist/index.d.ts" },
+      "./missing": { types: "./dist/missing.d.ts" },
+    };
+    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([
+      {
+        code: "reference/entrypoint",
+        location: "docs/reference",
+        message: expect.stringContaining('Reference entrypoint "./missing" has no TypeDoc module'),
+        severity: "error",
+      },
+    ]);
+  });
 
   it("reports every ungenerated file in the reference area", { timeout: 30_000 }, async () => {
     const workspacePackage = await committedFixture("fixture-rule-unexpected", {
