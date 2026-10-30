@@ -152,7 +152,7 @@ When `prose` is `true` and a public symbol has no TSDoc, the page still lists it
 The reference is produced by a generator registered in `packages/tools/src/generators/`, run by `pnpm generate` (`hub generate`) like every other derived file. It:
 
 1. Reads each opted-in package's `exports` and `codenhub.docs.reference` to resolve the entrypoint set.
-2. Runs [TypeDoc](https://typedoc.org/) against those entrypoints in JSON-emit mode, using the package's own `tsconfig.json`.
+2. Runs [TypeDoc](https://typedoc.org/) against those entrypoints in JSON-emit mode, using the package's own `tsconfig.json`. For a solution config, each entry source uses its owning referenced project's compiler options and files, including hand-written ambient declarations; declaration emission uses the same ownership.
 3. Transforms the TypeDoc JSON into a repository-owned, presentation-neutral model in `packages/tools/src/documentation/`, published as part of `@codenhub/tools/documentation`.
 4. Renders that model to the Markdown pages defined above and returns their contents; `hub generate` diffs and writes, so `--dry-run` and change detection are not reimplemented.
 

@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -90,6 +90,33 @@ describe("reference rule run", () => {
       ].join("\n"),
     });
 
+    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([
+      {
+        code: "reference/unresolved-type",
+        location: "docs/reference/index.md",
+        message: expect.stringContaining('"make" names "Ambient"'),
+        severity: "error",
+      },
+    ]);
+  });
+
+  it("reports ambient types included by a referenced source project", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-rule-solution", {
+      "index.ts": "/** Makes an ambient value. */\nexport function make(): Ambient { return { inner: 1 }; }\n",
+      "ambient.d.ts": "type Ambient = { inner: number };\n",
+    });
+    const config = await readFile(join(workspacePackage.directory, "tsconfig.json"), "utf8");
+    await writeFile(join(workspacePackage.directory, "tsconfig.src.json"), config);
+    await writeFile(
+      join(workspacePackage.directory, "tsconfig.json"),
+      JSON.stringify({
+        files: [],
+        references: [{ path: "./tsconfig.src.json" }],
+      }),
+    );
+    const { files } = await analyzeReference(workspacePackage, { prose: true });
+    await mkdir(join(workspacePackage.directory, "docs/reference"), { recursive: true });
+    await writeFile(join(workspacePackage.directory, "docs/reference/index.md"), files[0]!.contents);
     expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([
       {
         code: "reference/unresolved-type",

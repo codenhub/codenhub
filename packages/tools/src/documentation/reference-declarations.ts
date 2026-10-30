@@ -1,3 +1,5 @@
+import { dirname } from "node:path";
+
 import ts from "typescript";
 
 import type { ReferenceConfig } from "./reference-config.ts";
@@ -89,22 +91,48 @@ function resolveSourceRel(pkgDir: string, sourceRel: string): string {
     : sourceRel;
 }
 
-function readTsconfig(pkgDir: string): ts.ParsedCommandLine {
-  const configFile = ts.readConfigFile(`${pkgDir}/tsconfig.json`, ts.sys.readFile);
-  if (configFile.error !== undefined) {
-    throw new Error(ts.flattenDiagnosticMessageText(configFile.error.messageText, "\n"));
-  }
-  return ts.parseJsonConfigFileContent(configFile.config, ts.sys, pkgDir);
+function readTsconfigs(pkgDir: string): ts.ParsedCommandLine[] {
+  const configs: ts.ParsedCommandLine[] = [];
+  const visited = new Set<string>();
+  const read = (path: string): void => {
+    if (visited.has(path)) {
+      return;
+    }
+    visited.add(path);
+    const configFile = ts.readConfigFile(path, ts.sys.readFile);
+    if (configFile.error !== undefined) {
+      throw new Error(ts.flattenDiagnosticMessageText(configFile.error.messageText, "\n"));
+    }
+    const parsed = ts.parseJsonConfigFileContent(configFile.config, ts.sys, dirname(path), undefined, path);
+    for (const reference of parsed.projectReferences ?? []) {
+      read(ts.resolveProjectReferencePath(reference));
+    }
+    configs.push(parsed);
+  };
+  read(`${pkgDir}/tsconfig.json`);
+  return configs;
+}
+
+function entrypointProjects(pkgDir: string, plans: readonly EntrypointPlan[]) {
+  const configs = readTsconfigs(pkgDir);
+  return Map.groupBy(plans, (plan) => {
+    const source = `${pkgDir}/src/${resolveSourceRel(pkgDir, plan.sourceRel)}`;
+    return (
+      configs.find((config) => config.fileNames.some((file) => file.replaceAll("\\", "/") === source)) ??
+      configs.at(-1)!
+    );
+  });
 }
 
 /**
  * Reads the hand-written declaration files the package's tsconfig includes from `src/`.
  * @param pkgDir Absolute package directory, using POSIX separators.
+ * @param plans Entrypoints whose owning projects supply the ambient files.
  * @returns Their contents keyed by package-relative path, such as `src/env.d.ts`.
  */
-export function readAmbientDeclarations(pkgDir: string): Map<string, string> {
+export function readAmbientDeclarations(pkgDir: string, plans: readonly EntrypointPlan[]): Map<string, string> {
   const ambient = new Map<string, string>();
-  for (const fileName of readTsconfig(pkgDir).fileNames) {
+  for (const fileName of [...entrypointProjects(pkgDir, plans).keys()].flatMap((config) => config.fileNames)) {
     const posixName = fileName.split("\\").join("/");
     if (posixName.startsWith(`${pkgDir}/src/`) && /\.d\.[cm]?ts$/.test(posixName)) {
       ambient.set(posixName.slice(pkgDir.length + 1), ts.sys.readFile(fileName) ?? "");
@@ -120,38 +148,46 @@ export function readAmbientDeclarations(pkgDir: string): Map<string, string> {
  * @returns Declaration contents keyed relative to src; nothing is written to disk.
  */
 export function emitDeclarations(pkgDir: string, plans: readonly EntrypointPlan[]): Map<string, string> {
-  const parsed = readTsconfig(pkgDir);
-  const program = ts.createProgram({
-    options: {
-      ...parsed.options,
-      composite: false,
-      declaration: true,
-      declarationDir: undefined,
-      emitDeclarationOnly: true,
-      incremental: false,
-      noEmit: false,
-      noEmitOnError: false,
-      removeComments: false,
-      outDir: undefined,
-      rootDir: `${pkgDir}/src`,
-      skipLibCheck: true,
-      tsBuildInfoFile: undefined,
-    },
-    rootNames: plans.map((plan) => `${pkgDir}/src/${resolveSourceRel(pkgDir, plan.sourceRel)}`),
-  });
-
+  const byProject = entrypointProjects(pkgDir, plans);
   const sourceRoot = `${pkgDir}/src/`;
   const declarations = new Map<string, string>();
-  program.emit(
-    undefined,
-    (fileName, text) => {
-      const posixName = fileName.split("\\").join("/");
-      if (posixName.startsWith(sourceRoot)) {
-        declarations.set(posixName.slice(sourceRoot.length), text);
-      }
-    },
-    undefined,
-    true,
-  );
+  for (const [parsed, entries] of byProject) {
+    const program = ts.createProgram({
+      options: {
+        ...parsed.options,
+        composite: false,
+        declaration: true,
+        declarationDir: undefined,
+        emitDeclarationOnly: true,
+        incremental: false,
+        noEmit: false,
+        noEmitOnError: false,
+        removeComments: false,
+        outDir: undefined,
+        rootDir: `${pkgDir}/src`,
+        skipLibCheck: true,
+        tsBuildInfoFile: undefined,
+      },
+      rootNames: [
+        ...new Set([
+          ...parsed.fileNames,
+          ...entries.map((plan) => `${pkgDir}/src/${resolveSourceRel(pkgDir, plan.sourceRel)}`),
+        ]),
+      ],
+      projectReferences: parsed.projectReferences,
+    });
+
+    program.emit(
+      undefined,
+      (fileName, text) => {
+        const posixName = fileName.split("\\").join("/");
+        if (posixName.startsWith(sourceRoot)) {
+          declarations.set(posixName.slice(sourceRoot.length), text);
+        }
+      },
+      undefined,
+      true,
+    );
+  }
   return declarations;
 }

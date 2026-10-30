@@ -1,3 +1,6 @@
+import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { resolveEntrypoints } from "../documentation/reference-declarations.ts";
@@ -341,6 +344,84 @@ function createSingleEntrypointFixture(): Promise<WorkspacePackage> {
 }
 
 describe("analyzeReference", () => {
+  it("ignores ambient files belonging only to a referenced test project", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-solution-test-types", {
+      "index.ts": "/** Makes a map. */\nexport function make(): Map<string, string> { return new Map(); }\n",
+      "test.d.ts": "interface Map<K, V> { testOnly: K | V; }\n",
+    });
+    await writeFile(
+      join(workspacePackage.directory, "tsconfig.json"),
+      JSON.stringify({
+        files: [],
+        references: [{ path: "./tsconfig.src.json" }, { path: "./tsconfig.test.json" }],
+      }),
+    );
+    await Promise.all(
+      (
+        [
+          ["src", ["src/index.ts"]],
+          ["test", ["src/test.d.ts"]],
+        ] as const
+      ).map(([name, files]) =>
+        writeFile(
+          join(workspacePackage.directory, `tsconfig.${name}.json`),
+          JSON.stringify({
+            compilerOptions: { target: "ESNext", module: "Preserve", composite: true, noEmit: true },
+            files,
+          }),
+        ),
+      ),
+    );
+    const { model } = await analyzeReference(workspacePackage, { prose: true });
+    expect(model.unresolved).toEqual([]);
+  });
+
+  it("uses each entry source's owning project's path aliases", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-solution-paths", {
+      "index.ts": 'import { make } from "internal-helper";\n/** Derived number. */\nexport const derived = make();\n',
+      "internal.ts": "export function make(): number { return 123; }\n",
+      "client.ts": 'import { make } from "internal-helper";\n/** Derived string. */\nexport const derived = make();\n',
+      "client-helper.ts": 'export function make(): string { return "value"; }\n',
+    });
+    (workspacePackage.manifest as Record<string, unknown>).exports = {
+      ".": { types: "./dist/index.d.ts" },
+      "./client": { types: "./dist/client.d.ts" },
+    };
+    await writeFile(
+      join(workspacePackage.directory, "tsconfig.json"),
+      JSON.stringify({
+        files: [],
+        references: [{ path: "./tsconfig.src.json" }, { path: "./tsconfig.client.json" }],
+      }),
+    );
+    await Promise.all(
+      (
+        [
+          ["src", ["src/index.ts", "src/internal.ts"], "internal.ts"],
+          ["client", ["src/client.ts", "src/client-helper.ts"], "client-helper.ts"],
+        ] as const
+      ).map(([name, files, helper]) =>
+        writeFile(
+          join(workspacePackage.directory, `tsconfig.${name}.json`),
+          JSON.stringify({
+            compilerOptions: {
+              module: "Preserve",
+              moduleResolution: "bundler",
+              strict: true,
+              noEmit: true,
+              composite: true,
+              paths: { "internal-helper": [`./src/${helper}`] },
+            },
+            files,
+          }),
+        ),
+      ),
+    );
+    const { files } = await analyzeReference(workspacePackage, { prose: true });
+    expect(files[0]?.contents).toContain("export declare const derived: number;");
+    expect(files[1]?.contents).toContain("export declare const derived: string;");
+  });
+
   it.each([false, true])(
     "documents every subpath targeting one file, with another entrypoint=%s",
     { timeout: 30_000 },
@@ -349,7 +430,7 @@ describe("analyzeReference", () => {
         "index.ts": "/** The answer. */\nexport const answer = 42;\n",
         "other.ts": "/** Another value. */\nexport const other = 1;\n",
       });
-      workspacePackage.manifest.exports = {
+      (workspacePackage.manifest as Record<string, unknown>).exports = {
         ".": { types: "./dist/index.d.ts" },
         "./client": { types: "./dist/index.d.ts" },
         ...(withOther ? { "./other": { types: "./dist/other.d.ts" } } : {}),
@@ -370,7 +451,7 @@ describe("analyzeReference", () => {
       "nested/a.ts": "/** A value. */\nexport const a = 1;\n",
       "nested/b/index.ts": "/** B value. */\nexport const b = 2;\n",
     });
-    workspacePackage.manifest.exports = {
+    (workspacePackage.manifest as Record<string, unknown>).exports = {
       "./a": { types: "./dist/nested/a.d.ts" },
       "./b": { types: "./dist/nested/b/index.d.ts" },
     };

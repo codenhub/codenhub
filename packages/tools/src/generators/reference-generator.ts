@@ -251,7 +251,7 @@ export async function analyzeReference(
     ),
     declarations,
     entryDtsBySubpath,
-    readAmbientDeclarations(pkgDir),
+    readAmbientDeclarations(pkgDir, plans),
   );
 
   const pageRels = new Map(
