@@ -23,14 +23,24 @@ export interface IndexablePackage {
 const HEADING_OPEN = /<h([23])[\s>]/g;
 const TEXT_LIMIT = 600;
 
+const NAMED_ENTITIES: Record<string, string> = { amp: "&", gt: ">", lt: "<", nbsp: " ", quot: '"' };
+
 const decodeEntities = (value: string) =>
-  value
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&#39;", "'")
-    .replaceAll("&nbsp;", " ")
-    .replaceAll("&amp;", "&");
+  value.replaceAll(
+    /&(?:#([xX][\da-fA-F]+|\d+)|(amp|gt|lt|nbsp|quot));/g,
+    (_reference, numeric: string | undefined, named: string) => {
+      if (numeric === undefined) {
+        return NAMED_ENTITIES[named] ?? _reference;
+      }
+
+      const isHex = /^[xX]/.test(numeric);
+      const codePoint = Number.parseInt(isHex ? numeric.slice(1) : numeric, isHex ? 16 : 10);
+
+      return codePoint > 0 && codePoint <= 0x10ffff && !(codePoint >= 0xd800 && codePoint <= 0xdfff)
+        ? String.fromCodePoint(codePoint)
+        : "\uFFFD";
+    },
+  );
 
 /** Strips markup and collapses whitespace so prose is searchable as one line. */
 export const toText = (html: string) =>

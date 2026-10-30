@@ -43,6 +43,22 @@ describe("buildLinkPreviewIndex", () => {
     expect(index["/kit/setup/"]?.summary).toBe("How to set the kit up.");
   });
 
+  it("shows generic types as plain text in page and section previews", () => {
+    const index = buildLinkPreviewIndex([
+      {
+        documents: [
+          documentFixture({
+            html: '<p>Returns Result&#60;T&#62;.</p><h2 id="install">Install</h2><p>Creates Ok&#x3C;void> Result.</p>',
+          }),
+        ],
+        label: "Kit",
+      },
+    ]);
+
+    expect(index["/kit/setup/"]?.summary).toBe("Returns Result<T>.");
+    expect(index["/kit/setup/#install"]?.summary).toBe("Creates Ok<void> Result.");
+  });
+
   it("clips a long summary at a word boundary", () => {
     const long = `${"word ".repeat(60)}end`;
     const index = buildLinkPreviewIndex([

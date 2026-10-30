@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildSearchIndex, type IndexablePackage } from "./build-index";
+import { buildSearchIndex, toText, type IndexablePackage } from "./build-index";
 
 const packages: IndexablePackage[] = [
   {
@@ -50,6 +50,24 @@ describe("buildSearchIndex", () => {
     expect(colorTokens?.text).toBe("Primary action color.");
   });
 
+  it("decodes numeric references in document and section search bodies", () => {
+    const entries = buildSearchIndex([
+      {
+        documents: [
+          {
+            headings: [{ depth: 3, slug: "ok", text: "ok" }],
+            html: '<p>Returns Result&#60;void&#62;.</p><h3 id="ok">ok</h3><p>Creates Ok&#x3C;void&#x3e;.</p>',
+            route: "/error/reference/",
+            title: "@codenhub/error",
+          },
+        ],
+        label: "ErrorKit",
+      },
+    ]);
+
+    expect(entries.map(({ text }) => text)).toEqual(["Returns Result<void>.", "Creates Ok<void>."]);
+  });
+
   it("labels a section from its parsed heading, not its compiled markup", () => {
     const entries = buildSearchIndex([
       {
@@ -79,5 +97,21 @@ describe("buildSearchIndex", () => {
       expect(entry.packageLabel).toBe("Styles");
       expect(entry.title).toBe("Tokens");
     }
+  });
+});
+
+describe("toText", () => {
+  it("decodes named, decimal, and hexadecimal references after stripping markup", () => {
+    expect(toText("<p>&lt;T&gt; &quot;value&quot; &#39;ok&#39;&nbsp;&amp; &#60;U&#62; &#X1F680;</p>")).toBe(
+      "<T> \"value\" 'ok' & <U> 🚀",
+    );
+  });
+
+  it("decodes each reference only once", () => {
+    expect(toText("<p>&amp;#x3C; &#38;lt; &#x26;#60;</p>")).toBe("&#x3C; &lt; &#60;");
+  });
+
+  it("replaces invalid Unicode references without throwing", () => {
+    expect(toText("<p>&#0; &#xD800; &#1114112;</p>")).toBe("� � �");
   });
 });
