@@ -7,6 +7,7 @@ const dictionaries = {
   en: {
     cart: { items: { one: "{count} item", other: "{count} items" } },
     inbox: { other: "{count} messages" },
+    notes: { one: "{count} note", other: "{count} notes" },
     title: "Cart",
   },
   pt: {
@@ -74,6 +75,8 @@ describe("plural selection", () => {
     expect(i18n.t("cart.items", { count: 0 })).toBe("0 item");
     expect(i18n.t("cart.items", { count: 2 })).toBe("2 itens");
     expect(i18n.t("inbox", { count: 3 })).toBe("3 messages");
+    // English rules put 0 in `other`; Portuguese rules would pick `one`.
+    expect(i18n.t("notes", { count: 0 })).toBe("0 notes");
   });
 
   it("should prefer an exact key over plural forms", async () => {
