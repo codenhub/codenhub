@@ -173,6 +173,24 @@ describe("renderReferencePage", () => {
     expect(nested).toContain("```md\n# Code\n```");
   });
 
+  it("preserves the complete text of multiline Setext headings in prose containers", () => {
+    const rendered = renderReferencePage(
+      {
+        ...entrypoint,
+        symbols: [
+          symbol({
+            name: "Reader",
+            kind: "interface",
+            doc: "First *line*\nsecond line\n===\n\n> Quoted first\n> second line\n> ---",
+          }),
+        ],
+      },
+      { title: "Reference", heading: "Reference", sourceRoot: "src", prose: true },
+    );
+    expect(rendered).toContain("#### First *line* second line");
+    expect(rendered).toContain("> ##### Quoted first second line");
+  });
+
   it("renders the signature, a deprecation blockquote, then prose and tag sections", () => {
     const section = page.slice(page.indexOf("### createAppError"), page.indexOf("### AppError"));
     expect(section).toContain("```ts\nexport declare function createAppError(error: unknown): AppError;\n```");

@@ -42,7 +42,11 @@ function nestHeadings(markdown: string, level: number): string {
       const atx = /^#{1,6}(?=\s|$)/.exec(source);
       edits.push(
         atx === null
-          ? { start, end, text: `${hashes} ${source.replace(/\r?\n[^\n]*$/, "")}` }
+          ? {
+              start,
+              end,
+              text: `${hashes} ${source.replace(/\r?\n[^\n]*$/, "").replace(/\r?\n(?:[ \t]*>[ \t]?)*[ \t]*/g, " ")}`,
+            }
           : { start, end: start + atx[0].length, text: hashes },
       );
     }
