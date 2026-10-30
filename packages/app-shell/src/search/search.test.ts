@@ -67,6 +67,70 @@ describe("searchDocumentation", () => {
     expect(routesFor("router")).not.toContain("/router/reference/#navigation");
   });
 
+  it.each(["validation", "@codenhub/validation"])(
+    "does not crowd package lookup %s with sections matched only by their page title",
+    (query) => {
+      const reference = {
+        packageLabel: "ValidationKit",
+        route: "/validation/reference/",
+        text: "Validate typed input.",
+        title: "@codenhub/validation",
+      };
+      const catalog: SearchEntry[] = [
+        { packageLabel: "ValidationKit", route: "/validation/", text: "Validate input.", title: "Overview" },
+        reference,
+        ...["AnyValidator", "assert", "AssertOptions", "AsyncCheck", "AsyncRest", "AsyncSchema", "AsyncValidator"].map(
+          (section) => ({ ...reference, route: `${reference.route}#${section.toLowerCase()}`, section }),
+        ),
+      ];
+      const results = searchDocumentation(catalog, query);
+
+      expect(results.map(({ entry }) => entry.route)).toEqual(
+        query === "validation" ? ["/validation/", "/validation/reference/"] : ["/validation/reference/"],
+      );
+      expect(results.find(({ entry }) => entry.route === reference.route)?.entry.title).toBe("@codenhub/validation");
+    },
+  );
+
+  it("keeps section heading and prose matches when the parent title also matches", () => {
+    const catalog: SearchEntry[] = [
+      {
+        packageLabel: "Kit",
+        route: "/kit/#validation",
+        section: "Validation",
+        text: "Check input.",
+        title: "Validation",
+      },
+      {
+        packageLabel: "Kit",
+        route: "/kit/#usage",
+        section: "Usage",
+        text: "Use validation here.",
+        title: "Validation",
+      },
+    ];
+
+    expect(searchDocumentation(catalog, "validation").map(({ entry }) => entry.route)).toEqual([
+      "/kit/#validation",
+      "/kit/#usage",
+    ]);
+  });
+
+  it("surfaces the overview when many reference headings begin with the package name", () => {
+    const catalog: SearchEntry[] = [
+      { packageLabel: "ValidationKit", route: "/validation/", text: "Validate input.", title: "Overview" },
+      ...["Ok", "Err", "Issue", "Result", "Failure", "IssueCode", "PathSegment", "Schema"].map((suffix) => ({
+        packageLabel: "ValidationKit",
+        route: `/validation/reference/#validation${suffix.toLowerCase()}`,
+        section: `Validation${suffix}`,
+        text: "Typed input.",
+        title: "@codenhub/validation",
+      })),
+    ];
+
+    expect(searchDocumentation(catalog, "validation").map(({ entry }) => entry.route)).toContain("/validation/");
+  });
+
   it("finds an entry through a literal phrase in its prose", () => {
     expect(routesFor("browser history")).toEqual(["/router/reference/#navigation"]);
   });
