@@ -328,15 +328,27 @@ describe("renderReferencePage", () => {
     expect(rendered).toContain("After [\\_\\_label\\_\\_](#__dev__).");
   });
 
-  it("scans unterminated links in linear time", () => {
-    const doc = `See {@link ${" ".repeat(50_000)}| ${" ".repeat(50_000)}.`;
-    const started = performance.now();
+  // A backtracking or rescanning pattern takes minutes on these inputs and exceeds the test timeout.
+  it.each([
+    ["one opening before long whitespace", `See {@link ${" ".repeat(50_000)}| ${" ".repeat(50_000)}.`],
+    ["many openings", `See ${"{@link x ".repeat(20_000)}`],
+  ])("scans unterminated links in linear time: %s", (_case, doc) => {
     const rendered = renderReferencePage(
       { ...entrypoint, symbols: [symbol({ name: "__DEV__", kind: "variable", doc })] },
       { title: "Reference", heading: "Reference", sourceRoot: "src", prose: true },
     );
-    expect(performance.now() - started).toBeLessThan(1_000);
     expect(rendered).toContain("See {@link ");
+  });
+
+  it("stops an unterminated link at the next opening so a later link still resolves", () => {
+    const rendered = renderReferencePage(
+      {
+        ...entrypoint,
+        symbols: [symbol({ name: "__DEV__", kind: "variable", doc: "See {@link broken, then {@link __DEV__}." })],
+      },
+      { title: "Reference", heading: "Reference", sourceRoot: "src", prose: true },
+    );
+    expect(rendered).toContain("See {@link broken, then [\\_\\_DEV\\_\\_](#__dev__).");
   });
 
   it("escapes generated identifiers and link labels so Markdown preserves their text", () => {
