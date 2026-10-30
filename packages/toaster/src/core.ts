@@ -1,6 +1,12 @@
-import { applyInstanceMargin, removeInstanceContainers } from "./dom";
+import { applyInstanceMargin, applyInstanceRegionLabel, removeInstanceContainers } from "./dom";
 import { ModalController } from "./modal";
-import { DEFAULT_CONFIG, DEFAULT_DISMISS_LABEL, assertToastPosition } from "./options";
+import {
+  DEFAULT_CONFIG,
+  DEFAULT_DISMISS_LABEL,
+  DEFAULT_REGION_LABEL,
+  assertToastPosition,
+  withoutUndefined,
+} from "./options";
 import type { RawToastOptions, ResolvedToastConfig } from "./options";
 import { Toast, reportUncaughtError } from "./toast-base";
 import { reconcileCapacity } from "./toast-helpers";
@@ -84,28 +90,31 @@ function parseCustomArgs(
   return { content: opts.content, options: opts };
 }
 
-function toStructuredPromiseUpdate(result: string | ToastOptions, type: SemanticType): ToastUpdateOptions {
-  if (typeof result === "string") {
-    return {
-      type,
-      autoDismiss: true,
-      message: result,
-      title: null,
-      description: null,
-    };
-  }
+/** The settings a promise's outcome falls back to when its own options leave them unset. */
+interface PromiseOutcomeDefaults {
+  duration?: number;
+  dismissible?: boolean;
+  autoDismiss?: boolean;
+}
+
+function toStructuredPromiseUpdate(
+  result: string | ToastOptions,
+  type: SemanticType,
+  defaults: PromiseOutcomeDefaults,
+): ToastUpdateOptions {
+  const options = typeof result === "string" ? { message: result } : result;
   return {
     type,
-    autoDismiss: true,
-    message: result.message !== undefined ? result.message : null,
-    title: result.title !== undefined ? result.title : null,
-    description: result.description !== undefined ? result.description : null,
-    action: result.action !== undefined ? result.action : null,
-    icon: result.icon,
-    duration: result.duration,
-    dismissible: result.dismissible,
-    className: result.className,
-    tokens: result.tokens,
+    autoDismiss: options.autoDismiss ?? defaults.autoDismiss ?? true,
+    message: options.message !== undefined ? options.message : null,
+    title: options.title !== undefined ? options.title : null,
+    description: options.description !== undefined ? options.description : null,
+    action: options.action !== undefined ? options.action : null,
+    icon: options.icon,
+    duration: options.duration ?? defaults.duration,
+    dismissible: options.dismissible ?? defaults.dismissible,
+    className: options.className,
+    tokens: options.tokens,
   };
 }
 
@@ -152,7 +161,7 @@ class ToastManager {
     this.assertAlive();
     const { message, options: parsedOpts } = parseToastArgs(messageOrOptions, options);
     const rawOptions: RawToastOptions = {
-      ...parsedOpts,
+      ...withoutUndefined(parsedOpts),
       message,
       title: parsedOpts.title,
       type: parsedOpts.type ?? "default",
@@ -170,7 +179,7 @@ class ToastManager {
     const { message, options: parsedOpts } = parseToastArgs(messageOrOptions, options);
     const rawOptions: RawToastOptions = {
       ...this.config.semantic,
-      ...parsedOpts,
+      ...withoutUndefined(parsedOpts),
       message,
       title: parsedOpts.title,
       type: "success",
@@ -188,7 +197,7 @@ class ToastManager {
     const { message, options: parsedOpts } = parseToastArgs(messageOrOptions, options);
     const rawOptions: RawToastOptions = {
       ...this.config.semantic,
-      ...parsedOpts,
+      ...withoutUndefined(parsedOpts),
       message,
       title: parsedOpts.title,
       type: "error",
@@ -206,7 +215,7 @@ class ToastManager {
     const { message, options: parsedOpts } = parseToastArgs(messageOrOptions, options);
     const rawOptions: RawToastOptions = {
       ...this.config.semantic,
-      ...parsedOpts,
+      ...withoutUndefined(parsedOpts),
       message,
       title: parsedOpts.title,
       type: "warning",
@@ -224,7 +233,7 @@ class ToastManager {
     const { message, options: parsedOpts } = parseToastArgs(messageOrOptions, options);
     const rawOptions: RawToastOptions = {
       ...this.config.semantic,
-      ...parsedOpts,
+      ...withoutUndefined(parsedOpts),
       message,
       title: parsedOpts.title,
       type: "info",
@@ -242,7 +251,7 @@ class ToastManager {
     const { message, options: parsedOpts } = parseLoadingArgs(messageOrOptions, options);
     const rawOptions: RawToastOptions = {
       ...this.config.loading,
-      ...parsedOpts,
+      ...withoutUndefined(parsedOpts),
       message,
       title: parsedOpts.title,
     };
@@ -262,7 +271,7 @@ class ToastManager {
     const { content, options: parsedOpts } = parseCustomArgs(contentOrOptions, options);
     const rawOptions: RawToastOptions = {
       ...this.config.custom,
-      ...parsedOpts,
+      ...withoutUndefined(parsedOpts),
       content,
     };
     const toast = new Toast({
@@ -285,9 +294,16 @@ class ToastManager {
     // A throwing formatter must not strand the loader (it is neither
     // dismissible nor evictable) or replace the caller's outcome, so its
     // error is reported and the loader is dismissed instead.
+    // The outcome is a semantic toast, so the call's own settings win, then
+    // the instance's `semantic` defaults.
+    const outcomeDefaults: PromiseOutcomeDefaults = {
+      duration: options.duration ?? this.config.semantic?.duration,
+      dismissible: options.dismissible ?? this.config.semantic?.dismissible,
+      autoDismiss: this.config.semantic?.autoDismiss,
+    };
     const settle = (type: SemanticType, format: () => string | ToastOptions): void => {
       try {
-        handle.update(toStructuredPromiseUpdate(format(), type));
+        handle.update(toStructuredPromiseUpdate(format(), type, outcomeDefaults));
       } catch (formatError) {
         reportUncaughtError(formatError);
         handle.dismiss();
@@ -330,7 +346,8 @@ class ToastManager {
     this.validateConfig(merged);
     const nextConfig = copyConfig(merged);
 
-    if (config.tokens !== undefined || config.nonce !== undefined) {
+    // Keyed on presence, not value: `tokens: undefined` clears them.
+    if ("tokens" in config || "nonce" in config) {
       applyGlobalTokens(
         nextConfig.tokens,
         this.instanceId,
@@ -347,6 +364,14 @@ class ToastManager {
         parent: this.getParent(),
         instanceId: this.instanceId,
         maxVisible: this.resolved.maxVisible,
+      });
+    }
+
+    if ("labels" in config) {
+      applyInstanceRegionLabel({
+        parent: this.getParent(),
+        instanceId: this.instanceId,
+        label: this.resolved.regionLabel,
       });
     }
 
@@ -424,6 +449,7 @@ class ToastManager {
       margin: config.margin,
       className: config.className,
       dismissLabel: config.labels?.dismiss ?? DEFAULT_DISMISS_LABEL,
+      regionLabel: config.labels?.notifications ?? DEFAULT_REGION_LABEL,
       dialogLabels: config.labels ?? {},
     };
   }

@@ -314,10 +314,13 @@ export class Toast {
         this.currentAction = normalized.action;
         this.currentContent = null;
       }
-      if (normalized.icon !== undefined) {
-        this.currentIcon = normalized.icon;
-      } else if (normalized.type !== undefined) {
-        this.currentIcon = SEMANTIC_ICONS[normalized.type];
+      // Custom content has no icon slot, the same rule construction applies.
+      if (this.currentContent === null) {
+        if (normalized.icon !== undefined) {
+          this.currentIcon = normalized.icon;
+        } else if (normalized.type !== undefined) {
+          this.currentIcon = SEMANTIC_ICONS[normalized.type];
+        }
       }
     }
 
@@ -595,6 +598,7 @@ export class Toast {
         position,
         instanceId: this.options.instanceId,
         margin: this.options.margin,
+        regionLabel: this.options.regionLabel,
       });
     } catch (error) {
       this.failRender(null, error);

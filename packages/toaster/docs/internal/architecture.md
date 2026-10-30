@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-22
+last_updated: 2026-10-30
 scope: Internal engine architecture, invariants, and implementation design for @codenhub/toaster.
 ---
 
@@ -41,7 +41,7 @@ This document records the internal architecture, DOM isolation strategies, lifec
 ### 1. Dual-Layer Isolation
 
 - **Floating Toasts**: Toast containers are `<div>` elements tagged with `[data-toast-container]` and `[data-toast-instance]`. Each instance owns its own container hierarchy at each used `ToastPosition`. Toasts within a container stack vertically, automatically responding to safe-area insets (`env(safe-area-inset-*)`) and viewport bounds.
-- **Top-Layer Modals**: Native `<dialog>` elements are rendered into the browser's top layer. Because `showModal()` makes the rest of the document inert according to the HTML specification, background toasts pause user interaction (such as dismiss button clicks) while any modal dialog is active, resuming once all dialogs close.
+- **Top-Layer Modals**: Native `<dialog>` elements are rendered into the browser's top layer. Because `showModal()` makes the rest of the document inert according to the HTML specification, the toaster moves its own toast stacks and live regions into its dialog while the dialog is open, and back once it starts closing. Toasts from another instance, or under a modal dialog the application opened, stay inert and unannounced until it closes.
 - **Independence**: Two separate `Toaster` instances configured to the same position render independent, isolated DOM trees. They do not synchronize stacks or share admission queues.
 
 ### 2. Admission Control, Capacity, and Eviction Safety

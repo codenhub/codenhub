@@ -416,16 +416,24 @@ function getTextOutsideButtons(node: Node): string {
 
 /**
  * The text a screen reader should hear for a populated toast: its title,
- * description, or message, or the text of its custom content. Separate
- * parts are joined with a space, and the dismiss and action buttons are
- * left out.
+ * description, or message, or the text of its custom content, followed by
+ * its action's label, so a listener learns the action exists. Separate parts
+ * are joined with a space; the dismiss button and buttons inside custom
+ * content are left out.
  */
 export function getToastAnnouncementText(element: HTMLDivElement): string {
   const main = element.querySelector("[data-toast-main]");
   const parts = main
     ? Array.from(main.querySelectorAll("[data-toast-title], [data-toast-description], [data-toast-message]"))
     : Array.from(element.childNodes);
-  return parts.map(getTextOutsideButtons).join(" ").replace(/\s+/g, " ").trim();
+  const text = parts.map(getTextOutsideButtons).join(" ").replace(/\s+/g, " ").trim();
+  const actionLabel = element.querySelector("[data-toast-action]")?.textContent?.trim();
+  if (!actionLabel) {
+    return text;
+  }
+  // A full stop between them, unless the text already ends a sentence, so
+  // the label is read as a separate phrase.
+  return /[.!?:;…]$/.test(text) ? `${text} ${actionLabel}` : `${text}. ${actionLabel}`;
 }
 
 interface ContainerParams {
@@ -433,6 +441,8 @@ interface ContainerParams {
   position: ToastPosition;
   instanceId: string;
   margin?: string | { x?: string; y?: string };
+  /** Accessible name of the stack's region landmark. */
+  regionLabel?: string;
 }
 
 function getContainerKey(params: { instanceId: string; position: ToastPosition }): string {
@@ -503,6 +513,13 @@ function setContainerMargin(container: HTMLDivElement, margin: NonNullable<Conta
   }
 }
 
+/** Writes the region label onto every stack container of an instance, as `configure({ labels })` does. */
+export function applyInstanceRegionLabel(params: { parent: HTMLElement; instanceId: string; label: string }): void {
+  params.parent
+    .querySelectorAll<HTMLDivElement>(`div[data-toast-container][data-toast-instance="${params.instanceId}"]`)
+    .forEach((container) => container.setAttribute("aria-label", params.label));
+}
+
 /** Writes `margin` onto every stack container of an instance, as `configure({ margin })` does. */
 export function applyInstanceMargin(params: {
   parent: HTMLElement;
@@ -524,7 +541,7 @@ export function applyInstanceMargin(params: {
  * contract.
  */
 export function getOrCreateContainer(params: ContainerParams): HTMLDivElement {
-  const { parent, position, instanceId, margin } = params;
+  const { parent, position, instanceId, margin, regionLabel } = params;
   let container = getContainer({ parent, position, instanceId });
 
   if (!container) {
@@ -533,11 +550,17 @@ export function getOrCreateContainer(params: ContainerParams): HTMLDivElement {
     container.setAttribute("data-toast-container", id);
     container.setAttribute("data-toast-instance", instanceId);
     container.className = POSITION_CONTAINER_CLASSES[position];
+    // A labeled landmark, so a screen reader or keyboard user can find a
+    // toast, and its action, after the announcement.
+    container.setAttribute("role", "region");
     getToastLayerHost(parent, instanceId).appendChild(container);
   }
 
   if (margin !== undefined) {
     setContainerMargin(container, margin);
+  }
+  if (regionLabel !== undefined) {
+    container.setAttribute("aria-label", regionLabel);
   }
 
   return container;

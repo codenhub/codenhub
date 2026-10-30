@@ -14,6 +14,9 @@ import type {
 /** Built-in text this package renders with no per-call override of its own -- see `ToastLabels.dismiss`. */
 export const DEFAULT_DISMISS_LABEL = "Dismiss toast";
 
+/** Accessible name of a toast stack's region -- see `ToastLabels.notifications`. */
+export const DEFAULT_REGION_LABEL = "Notifications";
+
 /**
  * Resolved runtime configurations for a Toaster instance.
  */
@@ -36,11 +39,16 @@ export interface ResolvedToastConfig {
   readonly className?: string;
   /** Accessible label for a toast's dismiss button. */
   readonly dismissLabel: string;
+  /** Accessible name of each toast stack's region landmark. */
+  readonly regionLabel: string;
   /** Instance-level default labels for dialog buttons (confirm/cancel/submit/ok). */
   readonly dialogLabels: ToastLabels;
 }
 
-export const DEFAULT_CONFIG: Omit<ResolvedToastConfig, "instanceId" | "margin" | "dismissLabel" | "dialogLabels"> = {
+export const DEFAULT_CONFIG: Omit<
+  ResolvedToastConfig,
+  "instanceId" | "margin" | "dismissLabel" | "regionLabel" | "dialogLabels"
+> = {
   position: "top-right",
   duration: 4000,
   dismissible: false,
@@ -146,6 +154,8 @@ export interface NormalizedToastOptions {
   readonly margin?: string | { x?: string; y?: string };
   /** Accessible label for this toast's dismiss button, from `ResolvedToastConfig.dismissLabel`. */
   readonly dismissLabel: string;
+  /** Accessible name of the stack this toast renders in, from `ResolvedToastConfig.regionLabel`. */
+  readonly regionLabel: string;
 }
 
 export interface ToastPresetOptions {
@@ -157,6 +167,15 @@ export interface ToastPresetOptions {
 
 export function hasNonEmptyString(value: string | undefined | null): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+/**
+ * A copy of `options` without its `undefined` entries, so spreading it over
+ * defaults treats `{ position: undefined }` as unset instead of erasing the
+ * default.
+ */
+export function withoutUndefined<T extends object>(options: T): T {
+  return Object.fromEntries(Object.entries(options).filter(([, value]) => value !== undefined)) as T;
 }
 
 export function joinClassNames(...classNames: Array<string | undefined>): string {
@@ -389,6 +408,7 @@ export function normalizeToastOptions(params: {
     tokens: options.tokens ? { ...options.tokens } : null,
     margin: typeof margin === "object" && margin !== null ? { ...margin } : margin,
     dismissLabel: config.dismissLabel,
+    regionLabel: config.regionLabel,
   });
 }
 

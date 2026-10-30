@@ -13,7 +13,7 @@ order: 3
 Rather than simulating modal overlays with complex `z-index` stacks and manual focus traps, `@codenhub/toaster` uses the browser's native `<dialog>` platform primitive:
 
 - **Browser Top Layer**: Always renders above every other element in the DOM tree, regardless of ancestor `z-index` or `overflow: hidden` rules.
-- **Inert Document**: The browser automatically disables user interaction with the background document while the modal is open. The same toaster's toasts move into the dialog for that time, so they stay usable (see [Concepts](concepts.md#the-two-presentation-layers)).
+- **Inert Document**: The browser automatically disables user interaction with the background document while the modal is open. The same toaster's toasts move into the dialog for that time, so they stay usable (see [Concepts](concepts.md#the-two-presentation-layers)). Your own modal dialogs need a scoped toaster for that (see [Your own modal dialogs](concepts.md#your-own-modal-dialogs)).
 - **Focus Trap & Restoration**: Focus is automatically confined within the dialog, and restored to the triggering element when the dialog closes.
 - **Escape Key Handling**: Pressing Escape triggers standard dialog dismissal, resolving the operation with its cancel value.
 
@@ -135,10 +135,12 @@ const toaster = createToaster({
     submit: "Enviar",
     ok: "Entendido",
     dismiss: "Fechar notificação",
+    notifications: "Notificações",
   },
 });
 
-// All dialogs dispatched from this instance use Portuguese button labels:
+// `dismiss` names each toast's close button and `notifications` names the toast
+// stacks. All dialogs dispatched from this instance use Portuguese button labels:
 if (await toaster.dialog.confirm("Deseja prosseguir?")) {
   salvarAlteracoes();
 }

@@ -19,6 +19,22 @@ Modern web applications need two fundamentally different kinds of feedback: peri
 
 Because modal dialogs use the platform's native `<dialog>` element and `showModal()`, the browser marks the rest of the document as `inert`. So while one of its dialogs is open, a toaster places its toast stacks inside that dialog: they stay in their viewport corner, above the backdrop, and can still be clicked, focused, and heard by screen readers. They move back out as soon as the dialog starts closing. Toasts from another toaster instance stay behind the backdrop, inert, until the dialog closes.
 
+### Your own modal dialogs
+
+The same applies to a `<dialog>` your application opens with `showModal()`, and the library does not move toasts into it. A toast dispatched while it is open renders behind its backdrop: it cannot be clicked, and screen readers do not announce it. To show toasts from inside your own modal, create a toaster scoped to that dialog and destroy it when the dialog closes:
+
+```ts
+import { createToaster } from "@codenhub/toaster";
+
+const modal = document.querySelector<HTMLDialogElement>("#settings")!;
+const modalToaster = createToaster({ container: modal });
+
+modal.showModal();
+modalToaster.success("Settings saved");
+
+modal.addEventListener("close", () => modalToaster.destroy(), { once: true });
+```
+
 ## Lifecycle states and handles
 
 Every notification and dialog dispatched in `@codenhub/toaster` returns an active handle:
@@ -69,7 +85,7 @@ import { toast } from "@codenhub/toaster";
 const data = await toast.promise(fetchUserPayload(), {
   loading: "Loading user profile...",
   success: (res) => `Welcome back, ${res.name}!`,
-  error: (err) => `Failed to load profile: ${err.message}`,
+  error: (err) => `Failed to load profile: ${err instanceof Error ? err.message : String(err)}`,
 });
 ```
 

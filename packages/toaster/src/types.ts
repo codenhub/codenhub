@@ -138,8 +138,9 @@ export interface ToastUpdateOptions {
   content?: ToastContent;
   /**
    * Swaps the icon glyph, or `null` to remove it. Ignored in a call that
-   * also gives `content`. If `type` is given in the same call and `icon`
-   * is not, the icon matching that type is used automatically.
+   * also gives `content`, and on a toast showing custom content. If `type`
+   * is given in the same call and `icon` is not, the icon matching that
+   * type is used automatically.
    */
   icon?: ToastIcon | null;
   /**
@@ -348,7 +349,7 @@ export interface LoadingToastOptions {
   description?: string;
   /** Placement on the screen. Defaults to toaster configuration. */
   position?: ToastPosition;
-  /** Whether the user can manually close it. Defaults to false. */
+  /** Whether the user can manually close it. Defaults to `ToasterConfig.loading.dismissible`, then the instance's `dismissible` (`false`). */
   dismissible?: boolean;
   /** Color token overrides. */
   tokens?: ToastTokens;
@@ -468,6 +469,8 @@ export interface ToastLabels {
   submit?: string;
   /** Default label for an alert dialog's acknowledgement button. Defaults to "OK". */
   ok?: string;
+  /** Accessible name of the region landmark each toast stack is. Defaults to "Notifications". */
+  notifications?: string;
 }
 
 /**
@@ -512,17 +515,17 @@ export interface CustomDefaults {
  * Options for binding toasts to promise lifecycles via `toast.promise()`.
  */
 export interface PromiseToastOptions<T> {
-  /** Content to display while the promise is pending. */
-  loading: string | ToastOptions;
+  /** Content to display while the promise is pending: a message, or the options a `loading()` toast takes. */
+  loading: string | LoadingToastOptions;
   /** Content to display when the promise successfully resolves. */
   success: string | ToastOptions | ((data: T) => string | ToastOptions);
   /** Content to display when the promise rejects. */
   error: string | ToastOptions | ((error: unknown) => string | ToastOptions);
   /** Viewport position for the toast. */
   position?: ToastPosition;
-  /** Visibility duration in milliseconds for the resolved state. */
+  /** Visibility duration in milliseconds for the resolved state. Defaults to `ToasterConfig.semantic.duration`, then the instance's `duration`. */
   duration?: number;
-  /** Whether to render a close button. */
+  /** Whether to render a close button, while pending and after. The resolved state defaults to `ToasterConfig.semantic.dismissible` when this is unset. */
   dismissible?: boolean;
   /** Scoped design tokens. */
   tokens?: ToastTokens;
@@ -687,7 +690,7 @@ export interface ToasterConfig {
    * effect without `tokens`.
    */
   nonce?: string;
-  /** Defaults for `success`, `error`, `warning`, and `info` toasts, over the instance-wide ones. */
+  /** Defaults for `success`, `error`, `warning`, and `info` toasts and the outcome of `promise`, over the instance-wide ones. */
   semantic?: SemanticDefaults;
   /** Defaults for `loading` toasts and the loading phase of `promise`, over the instance-wide ones. */
   loading?: LoadingDefaults;

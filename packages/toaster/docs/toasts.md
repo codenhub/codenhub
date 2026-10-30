@@ -102,9 +102,13 @@ import { toast } from "@codenhub/toaster";
 const user = await toast.promise(updateUserProfile(payload), {
   loading: "Saving profile changes...",
   success: (updatedUser) => `Profile saved for ${updatedUser.username}!`,
-  error: (err) => `Failed to update profile: ${err.message}`,
+  error: (err) => `Failed to update profile: ${err instanceof Error ? err.message : String(err)}`,
 });
 ```
+
+The rejection reaches `error` as `unknown`, because a promise can reject with any value, so narrow it before reading `message`.
+
+`loading` takes a message or the options `toast.loading()` takes. The outcome is a semantic toast: settings it leaves unset come from the call's own `duration` and `dismissible`, then from the instance's `semantic` defaults, then from the instance itself.
 
 The `success` and `error` handlers can return either a simple string or a structured `ToastOptions` object:
 
@@ -124,7 +128,7 @@ await toast.promise(syncRepository(), {
   }),
   error: (err) => ({
     title: "Sync conflict",
-    description: err.message,
+    description: err instanceof Error ? err.message : String(err),
     duration: 10000,
   }),
 });

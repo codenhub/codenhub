@@ -353,3 +353,100 @@ describe("interactive dialogs", () => {
     toaster.destroy();
   });
 });
+
+describe("explicit undefined options", () => {
+  it("keeps per-variant defaults when a per-call option is undefined", () => {
+    const toaster = createToaster({ semantic: { position: "bottom-left" }, custom: { position: "top-left" } });
+    toaster.success("Saved", { position: undefined });
+    toaster.custom("<b>Hi</b>", { position: undefined });
+
+    expect(document.body.querySelector(".coden-toast-stack-bottom-left .coden-toast")).not.toBeNull();
+    expect(document.body.querySelector(".coden-toast-stack-top-left .coden-toast")).not.toBeNull();
+    expect(document.body.querySelector(".coden-toast-stack-top-right")).toBeNull();
+    toaster.destroy();
+  });
+
+  it("keeps instance dialog labels when a per-call label is undefined", async () => {
+    const toaster = createToaster({ labels: { confirm: "Confirmar", cancel: "Cancelar", submit: "Enviar", ok: "Ok" } });
+
+    const confirm = toaster.dialog.confirm("Sure?", { confirmLabel: undefined, cancelLabel: undefined });
+    expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Confirmar");
+    expect(document.body.querySelector(".toast-dialog-btn-cancel")?.textContent).toBe("Cancelar");
+    confirm.dismiss();
+    await confirm.settled;
+
+    const prompt = toaster.dialog.prompt("Name?", { submitLabel: undefined });
+    expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Enviar");
+    prompt.dismiss();
+    await prompt.settled;
+
+    const alert = toaster.dialog.alert("Done", { okLabel: undefined });
+    expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Ok");
+    alert.dismiss();
+    await alert.settled;
+    toaster.destroy();
+  });
+});
+
+describe("promise outcome defaults", () => {
+  it("applies the semantic defaults to the outcome toast", async () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ semantic: { duration: 10000, dismissible: true } });
+    await toaster.promise(Promise.resolve(1), { loading: "Saving", success: "Saved", error: "Failed" });
+    flushAnimations();
+    const element = document.body.querySelector(".coden-toast")!;
+    expect(element.querySelector(".coden-toast-dismiss")).not.toBeNull();
+
+    vi.advanceTimersByTime(5000);
+    flushAnimations();
+    expect(document.body.querySelector(".coden-toast")).not.toBeNull();
+
+    vi.advanceTimersByTime(5100);
+    flushAnimations();
+    expect(document.body.querySelector(".coden-toast")).toBeNull();
+    toaster.destroy();
+  });
+
+  it("lets the outcome's own autoDismiss keep it open", async () => {
+    vi.useFakeTimers();
+    const toaster = createToaster();
+    await toaster.promise(Promise.resolve(1), {
+      loading: "Saving",
+      success: { message: "Saved", autoDismiss: false },
+      error: "Failed",
+    });
+    flushAnimations();
+    vi.advanceTimersByTime(20000);
+    flushAnimations();
+    expect(document.body.querySelector(".coden-toast")).not.toBeNull();
+    toaster.destroy();
+  });
+});
+
+describe("clearing instance tokens", () => {
+  it("removes the token stylesheet when configure sets tokens to undefined", () => {
+    const toaster = createToaster({ tokens: { successBg: "red" } });
+    expect(document.head.querySelectorAll("style[data-toast-token-owner]")).toHaveLength(1);
+
+    toaster.configure({ tokens: undefined });
+    expect(document.head.querySelectorAll("style[data-toast-token-owner]")).toHaveLength(0);
+    toaster.destroy();
+  });
+});
+
+describe("custom content updates", () => {
+  it("does not insert an icon into custom content when its type changes", () => {
+    const toaster = createToaster();
+    const handle = toaster.custom("<b>Hi</b>");
+    flushAnimations();
+
+    handle.update({ type: "success" });
+    const element = document.body.querySelector(".coden-toast")!;
+    expect(element.querySelector(".coden-toast-icon")).toBeNull();
+    expect(element.classList.contains("coden-toast-success")).toBe(true);
+
+    handle.update({ icon: "info" });
+    expect(element.querySelector(".coden-toast-icon")).toBeNull();
+    toaster.destroy();
+  });
+});

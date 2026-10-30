@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as toastModule from ".";
-import { DEFAULT_CONFIG, DEFAULT_DISMISS_LABEL } from "./options";
+import { DEFAULT_CONFIG, DEFAULT_DISMISS_LABEL, DEFAULT_REGION_LABEL } from "./options";
 import type { RawToastOptions } from "./options";
 import { Toast } from "./toast-base";
 
@@ -32,7 +32,13 @@ beforeEach(() => {
 function makeToast(options: RawToastOptions): Toast {
   return new Toast({
     options,
-    config: { ...DEFAULT_CONFIG, instanceId: "test-instance", dismissLabel: DEFAULT_DISMISS_LABEL, dialogLabels: {} },
+    config: {
+      ...DEFAULT_CONFIG,
+      instanceId: "test-instance",
+      dismissLabel: DEFAULT_DISMISS_LABEL,
+      regionLabel: DEFAULT_REGION_LABEL,
+      dialogLabels: {},
+    },
     parent: document.body,
   });
 }
