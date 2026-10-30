@@ -110,6 +110,11 @@
   @apply m-0 rounded-none border-0 shadow-none;
 }
 
+.markdown-content pre[data-reference-signature] {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .code-copy-button {
   @apply grid size-8 shrink-0 cursor-pointer place-items-center rounded-(--radius-control) border-0 bg-transparent text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-neutral-50;
 }

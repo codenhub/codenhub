@@ -150,6 +150,39 @@ function transformChildren(node: AstNode, context: TransformContext): void {
   });
 }
 
-export function rehypeMarkdownEnhancements(options: MarkdownEnhancementOptions = {}): (tree: unknown) => void {
-  return (tree) => transformChildren(tree as AstNode, { ...options, codeBlockCount: 0 });
+function markReferenceSignatures(tree: AstNode): void {
+  let heading = "";
+  let previousElement: AstNode | undefined;
+  for (const node of tree.children ?? []) {
+    if (node.type !== "element") {
+      continue;
+    }
+    if (/^h[3-6]$/.test(node.tagName ?? "")) {
+      heading = getNodeText(node).trim();
+    }
+    // Separate function overloads can follow prose instead of their heading.
+    const declaration = getNodeText(node);
+    const isOverload =
+      heading !== "" &&
+      (declaration.startsWith(`export declare function ${heading}(`) ||
+        declaration.startsWith(`export declare function ${heading}<`));
+    if (
+      node.tagName === "pre" &&
+      node.properties?.dataLanguage === "ts" &&
+      (/^h[3-6]$/.test(previousElement?.tagName ?? "") || isOverload)
+    ) {
+      node.properties.dataReferenceSignature = "";
+    }
+    previousElement = node;
+  }
+}
+
+export function rehypeMarkdownEnhancements(options: MarkdownEnhancementOptions = {}) {
+  return (tree: unknown, file?: { path?: string }): void => {
+    const root = tree as AstNode;
+    if (file?.path !== undefined && /\/docs\/reference\//.test(file.path.replaceAll("\\", "/"))) {
+      markReferenceSignatures(root);
+    }
+    transformChildren(root, { ...options, codeBlockCount: 0 });
+  };
 }
