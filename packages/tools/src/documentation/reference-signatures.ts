@@ -693,8 +693,11 @@ function withSignature(symbol: ReferenceSymbol, index: SignatureIndex | undefine
         ? symbol.overloads.map((overload, index) => ({ ...overload, signature: lines[index] }))
         : symbol.overloads,
     namespaceMembers: symbol.namespaceMembers.map((member) => withSignature(member, found.namespaceMembers)),
-    members: symbol.members.map((member) => {
+    members: symbol.members.flatMap((member) => {
       const text = found.members?.get(member.name);
+      if (member.kind === "constructor" && text === undefined) {
+        return [];
+      }
       return text === undefined ? member : { ...member, signature: text };
     }),
     // Overloads and merged declarations join the signature block as separate lines.

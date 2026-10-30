@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { createReferenceFixture } from "../generators/reference-fixture.test-support.ts";
+import { analyzeReference } from "../generators/reference-generator.ts";
 import {
   buildReferenceModel,
   findEmptySections,
@@ -28,6 +30,27 @@ it("associates modules by their source file even when display names differ", () 
     { "src/nested/a.ts": "./a" },
   );
   expect(model.entrypoints[0]?.symbols.map((symbol) => symbol.name)).toEqual(["a"]);
+});
+
+describe("emitted constructors", () => {
+  it("omits synthetic constructors while retaining explicit public constructors", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("constructors", {
+      "index.ts": `
+        export class Implicit { value = 1; }
+        export class Explicit { constructor(value: number) {} }
+        export class Private { private constructor() {} }
+      `,
+    });
+    const { model } = await analyzeReference(fixture, { prose: true });
+    expect(
+      model.entrypoints[0]?.symbols.map((symbol) => [symbol.name, symbol.members.map((member) => member.name)]),
+    ).toEqual([
+      ["Explicit", ["constructor"]],
+      ["Implicit", ["value"]],
+      ["Private", []],
+    ]);
+    expect(findEmptySections(model)).toEqual([]);
+  });
 });
 
 const browserRegistryVariable = {
