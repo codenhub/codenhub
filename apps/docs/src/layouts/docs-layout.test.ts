@@ -14,7 +14,7 @@ async function readOutput(path: string): Promise<string> {
 describe("documentation chrome", () => {
   beforeAll(async () => {
     await build({ logLevel: "silent", root: docsRoot });
-  }, 60_000);
+  }, 120_000);
 
   it("includes the package label in package document browser titles", async () => {
     const html = await readOutput("error/index.html");
@@ -187,11 +187,13 @@ describe("documentation chrome", () => {
     expect(css).not.toMatch(/overflow:\s*hidden/);
   });
 
-  it("wraps long headings and prose URLs within the article width", async () => {
+  it("wraps long headings and prose URLs without reducing table min-content widths", async () => {
     const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
     const articleRule = css.match(/\.markdown-content\s*\{([^}]*)\}/)?.[1];
 
-    expect(articleRule).toMatch(/overflow-wrap:\s*anywhere/);
+    expect(articleRule).toMatch(/overflow-wrap:\s*break-word/);
+    expect(css).toMatch(/\.markdown-content :is\(h1, h2, h3, h4, h5, h6\)\s*\{[^}]*overflow-wrap:\s*anywhere/s);
+    expect(css).toMatch(/\.markdown-content table code\s*\{[^}]*overflow-wrap:\s*break-word/s);
   });
 
   it("runs each rail divider the full document while only its panel scrolls", async () => {

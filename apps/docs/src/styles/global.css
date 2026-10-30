@@ -199,6 +199,11 @@ html {
 
 .markdown-content {
   @apply w-full max-w-3xl;
+  /* Unlike `anywhere`, this preserves table columns' min-content widths. */
+  overflow-wrap: break-word;
+}
+
+.markdown-content :is(h1, h2, h3, h4, h5, h6) {
   overflow-wrap: anywhere;
 }
 
@@ -321,6 +326,11 @@ html {
    horizontal overflow. */
 .markdown-content table {
   @apply data-table;
+}
+
+/* The wrapper scrolls wide tables; code can keep its natural min-content width. */
+.markdown-content table code {
+  overflow-wrap: break-word;
 }
 
 .markdown-content hr {
