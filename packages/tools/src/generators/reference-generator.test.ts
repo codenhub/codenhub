@@ -593,6 +593,46 @@ describe("analyzeReference", () => {
     expect(files[1]?.contents).toContain("export declare const derived: string;");
   });
 
+  it("uses the referenced project with the fewest files that includes an entry", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-solution-overlap", {
+      "index.ts": 'import { value } from "helper";\n/** A. */\nexport const a = value;\n',
+      "helper.ts": "export const value: number = 1;\n",
+      "test-helper.ts": 'export const value: string = "test";\n',
+    });
+    await writeFile(
+      join(workspacePackage.directory, "tsconfig.json"),
+      JSON.stringify({
+        files: [],
+        references: [{ path: "./tsconfig.test.json" }, { path: "./tsconfig.src.json" }],
+      }),
+    );
+    await Promise.all(
+      (
+        [
+          ["test", ["src/**/*"], "test-helper.ts"],
+          ["src", ["src/index.ts", "src/helper.ts"], "helper.ts"],
+        ] as const
+      ).map(([name, include, helper]) =>
+        writeFile(
+          join(workspacePackage.directory, `tsconfig.${name}.json`),
+          JSON.stringify({
+            compilerOptions: {
+              module: "Preserve",
+              moduleResolution: "bundler",
+              strict: true,
+              noEmit: true,
+              composite: true,
+              paths: { helper: [`./src/${helper}`] },
+            },
+            include,
+          }),
+        ),
+      ),
+    );
+    const { files } = await analyzeReference(workspacePackage, { prose: true });
+    expect(files[0]?.contents).toContain("export declare const a: number;");
+  });
+
   it.each([false, true])(
     "documents every subpath targeting one file, with another entrypoint=%s",
     { timeout: 30_000 },

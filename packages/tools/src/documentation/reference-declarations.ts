@@ -170,9 +170,14 @@ function entrypointProjects(pkgDir: string, plans: readonly EntrypointPlan[]) {
   const configs = readTsconfigs(pkgDir);
   return Map.groupBy(plans, (plan) => {
     const source = `${pkgDir}/src/${resolveSourceRel(pkgDir, plan.sourceRel)}`;
+    // The most specific owner: the fewest files, then the earliest reference.
     return (
-      configs.find((config) => config.fileNames.some((file) => file.replaceAll("\\", "/") === source)) ??
-      configs.at(-1)!
+      configs
+        .filter((config) => config.fileNames.some((file) => file.replaceAll("\\", "/") === source))
+        .reduce<ts.ParsedCommandLine | undefined>(
+          (best, config) => (best === undefined || config.fileNames.length < best.fileNames.length ? config : best),
+          undefined,
+        ) ?? configs.at(-1)!
     );
   });
 }
