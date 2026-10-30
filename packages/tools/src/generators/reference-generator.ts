@@ -94,7 +94,9 @@ function splitEntrypoints(
       file === undefined
         ? undefined
         : split.find(([, page]) => page.source.some((glob) => matchesGlob(file, glob)))?.[0];
-    const bySplit = Map.groupBy(entrypoint.symbols, (symbol) => pageOf(declaredIn(entrypoint.subpath, symbol.name)));
+    const bySplit = Map.groupBy(entrypoint.symbols, (symbol) =>
+      pageOf(declaredIn(entrypoint.subpath, symbol.exportName ?? symbol.name)),
+    );
     return [
       { ...entrypoint, symbols: bySplit.get(undefined) ?? [] },
       ...split.map(([page]): ReferenceEntrypoint => {

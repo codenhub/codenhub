@@ -333,7 +333,9 @@ function symbolBlocks(
     {
       markdown: heading(level, qualifiedName),
       target: qualifiedName,
-      ...(symbol.alsoExportedAsDefault ? { aliases: [`${qualifiedName.slice(0, -symbol.name.length)}default`] } : {}),
+      ...(symbol.alsoExportedAsDefault || symbol.exportName !== undefined
+        ? { aliases: [`${qualifiedName.slice(0, -symbol.name.length)}${symbol.exportName ?? "default"}`] }
+        : {}),
     },
   ];
 

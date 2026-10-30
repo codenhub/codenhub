@@ -709,6 +709,7 @@ function withSignature(symbol: ReferenceSymbol, index: SignatureIndex | undefine
   return {
     ...symbol,
     name,
+    ...(name === symbol.name ? {} : { exportName: symbol.name }),
     // Overloads documented apart line up with the `.d.ts` overloads, both in source order.
     overloads:
       symbol.overloads.length === lines.length
@@ -952,7 +953,7 @@ export function attachInternalTypes(
   };
   for (const entrypoint of model.entrypoints) {
     for (const symbol of entrypoint.symbols) {
-      const nodes = declarationsOf(entrypoint.subpath, symbol.name);
+      const nodes = declarationsOf(entrypoint.subpath, symbol.exportName ?? symbol.name);
       markDocumented(symbol, nodes);
     }
   }
@@ -994,7 +995,7 @@ export function attachInternalTypes(
     const listed = new Set<ts.Node>();
     // Symbols follow page order, so findings do too; each name is reported once per symbol.
     const queue = entrypoint.symbols.map((symbol) => ({
-      nodes: declarationsOf(subpath, symbol.name),
+      nodes: declarationsOf(subpath, symbol.exportName ?? symbol.name),
       symbol: symbol.name,
     }));
     for (let next = queue.shift(); next !== undefined; next = queue.shift()) {

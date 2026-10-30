@@ -284,6 +284,43 @@ describe("analyzeReference pages", () => {
     expect(shapes).toContain("[describe](index.md#describe)");
   });
 
+  it("places a re-exported default class on the split page of its source", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-default-split", {
+      "index.ts": 'export { default } from "./service.js";\n',
+      "service.ts": "/** Service. */\nexport default class Service {\n  /** Value. */\n  value = 1;\n}\n",
+    });
+    const { files } = await analyzeReference(workspacePackage, {
+      pages: { ".": { split: { service: { source: ["src/service.ts"] } } } },
+      prose: true,
+    });
+    const service = page(files, "service.md");
+    expect(service).toContain("### Service");
+    expect(service).toContain("export default class Service\n");
+    expect(service).not.toContain("## Internal types");
+  });
+
+  it("keeps a re-exported default class out of internal types", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-default-reexport", {
+      "index.ts": [
+        'export { default } from "./service.js";',
+        '/** Config. */ export type Config = typeof import("./service.js").default;',
+        "",
+      ].join("\n"),
+      "service.ts": "/** Service. */\nexport default class Service {\n  /** X. */\n  x = 1;\n}\n",
+    });
+    const { model } = await analyzeReference(workspacePackage, { prose: true });
+    expect(model.entrypoints[0]?.symbols.map((symbol) => symbol.name).toSorted()).toEqual(["Config", "Service"]);
+    expect(model.entrypoints[0]?.internalTypes).toEqual([]);
+  });
+
+  it("links a reference to the default export to its declaration", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-default-link", {
+      "index.ts": "/** Read {@link default}. */\nexport default class Service {\n  /** X. */\n  x = 1;\n}\n",
+    });
+    const { files } = await analyzeReference(workspacePackage, { prose: true });
+    expect(files[0]?.contents).toContain("Read [default](#service).");
+  });
+
   it(
     "gives a symbol to the first split page that matches, and labels a page by its name",
     { timeout: 30_000 },

@@ -114,6 +114,11 @@ export interface ReferenceOverload extends ReferenceProse {
 export interface ReferenceSymbol extends ReferenceProse {
   /** Symbol name as exported. `default` for an anonymous default export. */
   name: string;
+  /**
+   * The binding the entrypoint exports, when `name` differs from it: `default` for a
+   * default export named after its declaration. Lookups by export use this name.
+   */
+  exportName?: string;
   /** Whether the same declaration is also exported as `default` on this page. */
   alsoExportedAsDefault?: boolean;
   /** Declaration kind. */
