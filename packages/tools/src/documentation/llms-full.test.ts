@@ -57,6 +57,8 @@ describe("orderLlmsFullSources", () => {
         "docs/reference.md",
         "docs/guides/setup.md",
         "docs/index.md",
+        "docs/reference/index.md",
+        "docs/reference/nested/entry.md",
         "docs/internal/decisions.md",
         "docs/plans/rollout.md",
         "src/index.ts",
