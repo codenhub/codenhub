@@ -1039,7 +1039,7 @@ export function attachInternalTypes(
         }
       }
     }
-    internal.sort((left, right) => left.name.localeCompare(right.name));
+    internal.sort((left, right) => left.name.localeCompare(right.name, "en"));
     for (const type of internal) {
       type.declaredIn.sort();
     }

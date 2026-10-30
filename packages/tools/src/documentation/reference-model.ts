@@ -508,7 +508,7 @@ function sortMembers(members: ReferenceMember[]): ReferenceMember[] {
     "index-signature": 5,
   };
   return [...members].sort(
-    (left, right) => order[left.kind] - order[right.kind] || left.name.localeCompare(right.name),
+    (left, right) => order[left.kind] - order[right.kind] || left.name.localeCompare(right.name, "en"),
   );
 }
 
@@ -702,7 +702,7 @@ function sortSymbols(symbols: ReferenceSymbol[]): ReferenceSymbol[] {
   return [...symbols].sort(
     (left, right) =>
       SYMBOL_KIND_ORDER.indexOf(left.kind) - SYMBOL_KIND_ORDER.indexOf(right.kind) ||
-      left.name.localeCompare(right.name),
+      left.name.localeCompare(right.name, "en"),
   );
 }
 

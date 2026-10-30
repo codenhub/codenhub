@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createReferenceFixture } from "../generators/reference-fixture.test-support.ts";
 import { analyzeReference } from "../generators/reference-generator.ts";
@@ -119,6 +119,43 @@ describe("resolved comment links", () => {
     const { files } = await analyzeReference(fixture, { prose: true });
     expect(files[0]?.contents).toContain("Uses [Shape](#nsshape).");
   });
+});
+
+describe("reference ordering", () => {
+  it(
+    "orders symbols, members, and internal types independently of the default locale",
+    { timeout: 30_000 },
+    async () => {
+      const fixture = await createReferenceFixture("fixed-order", {
+        "index.ts": `
+        type Älpha = { kind: "alpha" };
+        type Zebra = { kind: "zebra" };
+        export function make(): Älpha | Zebra { return { kind: "alpha" }; }
+        export function Äbc(): void {}
+        export function Zed(): void {}
+        export class Store { äbc = 1; zed = 2; }
+      `,
+      });
+      const original = String.prototype.localeCompare;
+      const comparison = vi.spyOn(String.prototype, "localeCompare").mockImplementation(function (
+        this: string,
+        other,
+        locales,
+        options,
+      ) {
+        return original.call(this, other, locales ?? "sv", options);
+      });
+      try {
+        const { model } = await analyzeReference(fixture, { prose: false });
+        const entrypoint = model.entrypoints[0];
+        expect(entrypoint?.symbols.map((symbol) => symbol.name)).toEqual(["Äbc", "make", "Zed", "Store"]);
+        expect(entrypoint?.symbols[3]?.members.map((member) => member.name)).toEqual(["äbc", "zed"]);
+        expect(entrypoint?.internalTypes.map((type) => type.name)).toEqual(["Älpha", "Zebra"]);
+      } finally {
+        comparison.mockRestore();
+      }
+    },
+  );
 });
 
 const browserRegistryVariable = {
