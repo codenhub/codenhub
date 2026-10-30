@@ -191,6 +191,35 @@ describe("renderReferencePage", () => {
     expect(rendered).toContain("> ##### Quoted first second line");
   });
 
+  it("escapes HTML-looking prose while preserving code and Markdown links", () => {
+    const rendered = renderReferencePage(
+      {
+        ...entrypoint,
+        symbols: [
+          symbol({
+            name: "Reader",
+            kind: "interface",
+            doc: 'Returns a Map<K, V> or <T>, <br> and <span title="value">text</span>.\n\n<div>\n`<Inline>`\n\n```html\n<Fenced>\n```\n\n[Guide](https://example.com) and <https://example.com>. Already \\<Escaped\\>.',
+            examples: ["Prose <Example> with `<Code>`."],
+            parameters: [{ name: "value", doc: "A <Value>." }],
+            returns: "A {@link <External>}.",
+          }),
+        ],
+      },
+      { title: "Reference", heading: "Reference", sourceRoot: "src", prose: true },
+    );
+    expect(rendered).toContain(
+      'Returns a Map&lt;K, V&gt; or &lt;T&gt;, &lt;br&gt; and &lt;span title="value"&gt;text&lt;/span&gt;.',
+    );
+    expect(rendered).toContain("&lt;div&gt;\n`<Inline>`");
+    expect(rendered).toContain("```html\n<Fenced>\n```");
+    expect(rendered).toContain("[Guide](https://example.com) and <https://example.com>.");
+    expect(rendered).toContain("Already \\<Escaped\\>.");
+    expect(rendered).toContain("Prose &lt;Example&gt; with `<Code>`.");
+    expect(rendered).toContain("A &lt;Value&gt;.");
+    expect(rendered).toContain("A `<External>`.");
+  });
+
   it("renders the signature, a deprecation blockquote, then prose and tag sections", () => {
     const section = page.slice(page.indexOf("### createAppError"), page.indexOf("### AppError"));
     expect(section).toContain("```ts\nexport declare function createAppError(error: unknown): AppError;\n```");

@@ -1080,7 +1080,7 @@ Patches the message, content, icon, severity, timing, styles, or classes of a to
 
 - `options` — Partial updates to apply.
 
-**Throws** — If `options.tokens` contains an invalid CSS color, `options.duration` is not a finite number >= 0, `options.type` is not a recognized severity, or `options.content` resolves to nothing renderable.
+**Throws** — If `options.tokens` contains an invalid CSS color, `options.duration` is not a finite number &gt;= 0, `options.type` is not a recognized severity, or `options.content` resolves to nothing renderable.
 
 ### ToastLabels
 

@@ -23,10 +23,45 @@ const GROUP_HEADINGS: readonly { kind: ReferenceSymbol["kind"]; heading: string 
 
 const LINK_PATTERN = /\{@link\s+([^}|]+?)(?:\s*\|\s*([^}]+?))?\s*\}/g;
 
-const markdownParser = unified().use(remarkParse);
+const markdownParser = unified()
+  .use(remarkParse)
+  .data("micromarkExtensions", [{ disable: { null: ["htmlFlow", "htmlText"] } }]);
 
 function escapeMarkdown(text: string): string {
   return text.replace(/[\\`*_[\]<>#]/g, "\\$&");
+}
+
+function escapeHtml(markdown: string): string {
+  const edits: { start: number; end: number; text: string }[] = [];
+  const visit = (
+    node: ReturnType<typeof markdownParser.parse> | ReturnType<typeof markdownParser.parse>["children"][number],
+  ): void => {
+    const start = node.position?.start.offset;
+    const end = node.position?.end.offset;
+    if (start !== undefined && end !== undefined) {
+      // Autolinks use angle brackets as Markdown syntax, not HTML.
+      if (node.type === "link" && markdown[start] === "<") {
+        return;
+      }
+      if (node.type === "text") {
+        const source = markdown.slice(start, end);
+        const text = source.replace(/\\[\s\S]|\r?\n[ \t]*(?:>[ \t]?)+|[<>]/g, (token) =>
+          token === "<" ? "&lt;" : token === ">" ? "&gt;" : token,
+        );
+        if (text !== source) {
+          edits.push({ start, end, text });
+        }
+      }
+    }
+    if ("children" in node) {
+      node.children.forEach(visit);
+    }
+  };
+  visit(markdownParser.parse(markdown));
+  for (const edit of edits.reverse()) {
+    markdown = markdown.slice(0, edit.start) + edit.text + markdown.slice(edit.end);
+  }
+  return markdown;
 }
 
 function nestHeadings(markdown: string, level: number): string {
@@ -148,20 +183,22 @@ function resolveLinks(
     }
   };
   visit(markdownParser.parse(markdown));
-  return markdown.replace(LINK_PATTERN, (match, rawTarget: string, rawLabel: string | undefined, offset: number) => {
-    const end = offset + match.length;
-    if (
-      !prose.some((range) => offset >= range.start && end <= range.end) ||
-      protectedRanges.some((range) => offset < range.end && end > range.start)
-    ) {
-      return match;
-    }
-    const target = rawTarget.trim();
-    const label = (rawLabel ?? target).trim();
-    const ownSlug = ownSlugs.get(target);
-    const href = resolve?.(target) ?? (ownSlug === undefined ? undefined : `#${ownSlug}`);
-    return href === undefined ? `\`${label}\`` : `[${escapeMarkdown(label)}](${href})`;
-  });
+  return escapeHtml(
+    markdown.replace(LINK_PATTERN, (match, rawTarget: string, rawLabel: string | undefined, offset: number) => {
+      const end = offset + match.length;
+      if (
+        !prose.some((range) => offset >= range.start && end <= range.end) ||
+        protectedRanges.some((range) => offset < range.end && end > range.start)
+      ) {
+        return match;
+      }
+      const target = rawTarget.trim();
+      const label = (rawLabel ?? target).trim();
+      const ownSlug = ownSlugs.get(target);
+      const href = resolve?.(target) ?? (ownSlug === undefined ? undefined : `#${ownSlug}`);
+      return href === undefined ? `\`${label}\`` : `[${escapeMarkdown(label)}](${href})`;
+    }),
+  );
 }
 
 function codeBlock(source: string): string {
@@ -271,7 +308,7 @@ function proseBlocks(
     blocks.push(`**Since** — ${link(prose.since)}`);
   }
   for (const example of prose.examples) {
-    blocks.push("**Example**", nestHeadings(example.trim(), level));
+    blocks.push("**Example**", nestHeadings(escapeHtml(example.trim()), level));
   }
   blocks.push(...notesSection("See also", prose.see, link));
   return blocks;
