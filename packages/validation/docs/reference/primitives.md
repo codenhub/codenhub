@@ -149,7 +149,7 @@ export interface BigintOptions extends MessageOptions
 
 Constraints for [bigint](#bigint). Every option is optional.
 
-#### gt
+#### BigintOptions › gt
 
 ```ts
 gt?: bigint | undefined;
@@ -157,7 +157,7 @@ gt?: bigint | undefined;
 
 Requires a value strictly greater than this.
 
-#### lt
+#### BigintOptions › lt
 
 ```ts
 lt?: bigint | undefined;
@@ -165,7 +165,7 @@ lt?: bigint | undefined;
 
 Requires a value strictly less than this.
 
-#### max
+#### BigintOptions › max
 
 ```ts
 max?: bigint | undefined;
@@ -173,11 +173,11 @@ max?: bigint | undefined;
 
 Requires a value of at most this.
 
-#### message
+#### BigintOptions › message
 
 Inherited from [MessageOptions](index.md#messageoptions).
 
-#### min
+#### BigintOptions › min
 
 ```ts
 min?: bigint | undefined;
@@ -193,7 +193,7 @@ export interface DateOptions extends MessageOptions
 
 Bounds for [date](#date). Every option is optional.
 
-#### max
+#### DateOptions › max
 
 ```ts
 max?: Date | undefined;
@@ -201,11 +201,11 @@ max?: Date | undefined;
 
 Requires this moment or an earlier one. Must be a valid `Date`.
 
-#### message
+#### DateOptions › message
 
 Inherited from [MessageOptions](index.md#messageoptions).
 
-#### min
+#### DateOptions › min
 
 ```ts
 min?: Date | undefined;
@@ -221,7 +221,7 @@ export interface FileOptions extends MessageOptions
 
 Options for [file](#file).
 
-#### maxSize
+#### FileOptions › maxSize
 
 ```ts
 maxSize?: number | undefined;
@@ -229,11 +229,11 @@ maxSize?: number | undefined;
 
 Allows at most this many bytes. A non-negative integer. A file is held in memory by whoever read the form, so `audit` reports a `file` without one.
 
-#### message
+#### FileOptions › message
 
 Inherited from [MessageOptions](index.md#messageoptions).
 
-#### minSize
+#### FileOptions › minSize
 
 ```ts
 minSize?: number | undefined;
@@ -241,7 +241,7 @@ minSize?: number | undefined;
 
 Requires at least this many bytes. A non-negative integer.
 
-#### types
+#### FileOptions › types
 
 ```ts
 types?: readonly string[] | undefined;
@@ -257,18 +257,18 @@ export interface NumberOptions extends MessageOptions
 
 Constraints and clean-up for [number](#number). Every option is optional. Rarer constraints, such as `multipleOf` or `nonZero`, are checks given after the options.
 
-#### clamp
+#### NumberOptions › clamp
 
 ```ts
 clamp?: {
-        min: number;
-        max: number;
-    } | undefined;
+    min: number;
+    max: number;
+} | undefined;
 ```
 
 Moves the value into this range instead of rejecting it, before the constraints run and in the output.
 
-#### gt
+#### NumberOptions › gt
 
 ```ts
 gt?: number | undefined;
@@ -276,7 +276,7 @@ gt?: number | undefined;
 
 Requires a value strictly greater than this.
 
-#### int
+#### NumberOptions › int
 
 ```ts
 int?: boolean | undefined;
@@ -286,7 +286,7 @@ Requires a whole number.
 
 **Default** — false
 
-#### lt
+#### NumberOptions › lt
 
 ```ts
 lt?: number | undefined;
@@ -294,7 +294,7 @@ lt?: number | undefined;
 
 Requires a value strictly less than this.
 
-#### max
+#### NumberOptions › max
 
 ```ts
 max?: number | undefined;
@@ -302,11 +302,11 @@ max?: number | undefined;
 
 Requires a value of at most this.
 
-#### message
+#### NumberOptions › message
 
 Inherited from [MessageOptions](index.md#messageoptions).
 
-#### min
+#### NumberOptions › min
 
 ```ts
 min?: number | undefined;
@@ -314,7 +314,7 @@ min?: number | undefined;
 
 Requires a value of at least this.
 
-#### safeInt
+#### NumberOptions › safeInt
 
 ```ts
 safeInt?: boolean | undefined;
@@ -332,7 +332,7 @@ export interface StringOptions extends MessageOptions
 
 Constraints and clean-up for [string](#string). Every option is optional. Rarer constraints, such as a pattern or a prefix, are checks given after the options.
 
-#### case
+#### StringOptions › case
 
 ```ts
 case?: "lower" | "upper" | undefined;
@@ -340,7 +340,7 @@ case?: "lower" | "upper" | undefined;
 
 Converts the string to lowercase or uppercase before the constraints run, and in the output. To require a case without changing the string, use the `lowercase()` or `uppercase()` check.
 
-#### length
+#### StringOptions › length
 
 ```ts
 length?: number | undefined;
@@ -348,7 +348,7 @@ length?: number | undefined;
 
 Requires exactly this many characters. A non-negative integer.
 
-#### max
+#### StringOptions › max
 
 ```ts
 max?: number | undefined;
@@ -356,11 +356,11 @@ max?: number | undefined;
 
 Allows at most this many characters. A non-negative integer.
 
-#### message
+#### StringOptions › message
 
 Inherited from [MessageOptions](index.md#messageoptions).
 
-#### min
+#### StringOptions › min
 
 ```ts
 min?: number | undefined;
@@ -368,7 +368,7 @@ min?: number | undefined;
 
 Requires at least this many characters (UTF-16 code units, as `String.length` counts them). A non-negative integer.
 
-#### trim
+#### StringOptions › trim
 
 ```ts
 trim?: boolean | undefined;

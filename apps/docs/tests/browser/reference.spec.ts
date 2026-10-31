@@ -62,3 +62,44 @@ for (const document of [
     await expect(heading).toBeInViewport();
   });
 }
+
+test("wraps long identifiers inside the desktop outline rail", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/error/reference/");
+
+  const rail = page.locator(".toc-rail nav");
+  await expect(rail.getByRole("link", { name: "DEFAULT_APP_ERROR_MESSAGE", exact: true })).toBeVisible();
+  expect(await rail.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(0);
+});
+
+for (const width of [390, 1280]) {
+  test(`breaks a reference title only after a slash at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/error/reference/registries/browser/");
+
+    const heading = page.getByRole("heading", { level: 1 });
+    await expect(heading).toHaveText("@codenhub/error/registries/browser");
+    // Characters that start a new line, each preceded by the character before it.
+    const breaks = await heading.evaluate((element) => {
+      const found: string[] = [];
+      let previousTop: number | undefined;
+      let previous = "";
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+        for (let index = 0; index < (node.textContent ?? "").length; index += 1) {
+          const range = document.createRange();
+          range.setStart(node, index);
+          range.setEnd(node, index + 1);
+          const top = range.getBoundingClientRect().top;
+          if (previousTop !== undefined && top > previousTop + 1) {
+            found.push(previous);
+          }
+          previousTop = top;
+          previous = node.textContent![index]!;
+        }
+      }
+      return found;
+    });
+    expect(breaks.every((character) => character === "/")).toBe(true);
+  });
+}

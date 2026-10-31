@@ -142,9 +142,42 @@ function wrapTable(node: AstNode): AstNode {
   return element("div", { className: ["table-wrap"] }, [node]);
 }
 
+/* A reference page's H1 is an import specifier such as
+   `@codenhub/error/registries/browser`. Headings may wrap anywhere so one long
+   word cannot widen the page, but a break after a slash keeps each segment
+   whole where it fits. */
+function breakAfterSlashes(node: AstNode): void {
+  node.children = node.children?.flatMap((child) => {
+    if (child.type !== "text" || !child.value?.includes("/")) {
+      return [child];
+    }
+    return child.value
+      .split(/(?<=\/)/)
+      .flatMap((part, index) =>
+        (index === 0 ? [] : [element("wbr", {}, [])]).concat({ type: "text", value: part, children: [] }),
+      );
+  });
+}
+
+/* Every H3 on a reference page is a symbol: kinds are H2, and members and
+   prose headings sit below their symbol. The class lets the site set each
+   symbol apart from the member headings inside it. */
+function markReferenceHeading(node: AstNode): void {
+  if (node.tagName === "h1") {
+    breakAfterSlashes(node);
+  } else if (node.tagName === "h3") {
+    const properties = (node.properties ??= {});
+    const classNames = Array.isArray(properties.className) ? properties.className : [];
+    properties.className = [...classNames, "reference-symbol"];
+  }
+}
+
 function transformChildren(node: AstNode, context: TransformContext): void {
   node.children = node.children?.map((child) => {
     transformChildren(child, context);
+    if (context.isReference) {
+      markReferenceHeading(child);
+    }
     appendHeadingAnchor(child, context.isReference);
     enhanceExternalLink(child, context.siteOrigin);
     return wrapTable(wrapCodeBlock(child, context));

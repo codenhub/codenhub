@@ -173,10 +173,11 @@ describe("buildPackageSidebar", () => {
     const reference = buildPackageSidebar(errorLike, "/error/reference/").tree;
     expect(reference[0]).toEqual({ kind: "link", route: "/error/reference/", title: "/" });
     // The folder takes its `index.md` page's subpath as the group title, and the
-    // siblings drop that prefix: `/registries/browser` reads as `/browser`.
+    // siblings drop that prefix: `/registries/browser` reads as `/browser`. The
+    // folder's own page reads as "Overview", since a bare "/" names nothing.
     expect(reference[1]).toMatchObject({ kind: "group", title: "/registries" });
     expect((reference[1] as NavGroup).items).toEqual([
-      { kind: "link", route: "/error/reference/registries/", title: "/" },
+      { kind: "link", route: "/error/reference/registries/", title: "Overview" },
       { kind: "link", route: "/error/reference/registries/browser/", title: "/browser" },
     ]);
   });

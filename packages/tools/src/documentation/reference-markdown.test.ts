@@ -148,7 +148,26 @@ describe("renderReferencePage", () => {
       },
       { title: "Foo", heading: "Foo", sourceRoot: "src", prose: true },
     );
-    expect(rendered).toContain("[Foo](#foo-1), [foo](#foo-2), [Functions](#functions-1), [Err](#err-2), [err](#err-3)");
+    expect(rendered).toContain("[Foo](#foo-1), [foo](#foo-2), [Functions](#functions-1), [Err](#err-1), [err](#err-2)");
+  });
+
+  it("keeps a member from taking the anchor of a symbol its qualified name spells", () => {
+    const rendered = renderReferencePage(
+      {
+        ...entrypoint,
+        symbols: [
+          symbol({
+            name: "Issue",
+            kind: "interface",
+            doc: "See {@link IssueCode}.",
+            members: [member({ name: "code", kind: "property" })],
+          }),
+          symbol({ name: "IssueCode", kind: "type-alias" }),
+        ],
+      },
+      { title: "Reference", heading: "Reference", sourceRoot: "src", prose: true },
+    );
+    expect(rendered).toContain("[IssueCode](#issuecode)");
   });
 
   it("nests prose headings below their symbol or member and caps them at H6", () => {
@@ -372,7 +391,7 @@ describe("renderReferencePage", () => {
     expect(escaped).toContain("# \\[Reference\\] \\_\\_API\\_\\_");
     expect(escaped).toContain("### \\_\\_DEV\\_\\_");
     expect(escaped).toContain("[\\_\\_DEV\\_\\_](#__dev__)");
-    expect(escaped).toContain("#### \\*value\\*");
+    expect(escaped).toContain("#### \\_\\_DEV\\_\\_ › \\*value\\*");
     expect(escaped).toContain("### \\_\\_Internal\\_\\_");
   });
 
@@ -407,12 +426,14 @@ describe("renderReferencePage", () => {
   });
 
   it("renders interface members with their own heading and signature block", () => {
-    expect(page).toContain("#### messageKey\n\n```ts\nreadonly messageKey?: string;\n```\n\nTranslation key.");
+    expect(page).toContain(
+      "#### AppError › messageKey\n\n```ts\nreadonly messageKey?: string;\n```\n\nTranslation key.",
+    );
   });
 
   it("renders an inherited member as a link to its declaring type, with no signature block", () => {
-    const section = page.slice(page.indexOf("#### origin"), page.indexOf("#### toJSON"));
-    expect(section).toBe("#### origin\n\nInherited from `ErrorFeedback`.\n\n");
+    const section = page.slice(page.indexOf("#### AppError › origin"), page.indexOf("#### AppError › toJSON"));
+    expect(section).toBe("#### AppError › origin\n\nInherited from `ErrorFeedback`.\n\n");
 
     const linked = renderReferencePage(entrypoint, {
       title: "/",
@@ -421,7 +442,7 @@ describe("renderReferencePage", () => {
       prose: true,
       resolveLink: (name) => (name === "ErrorFeedback" ? "feedback.md#errorfeedback" : undefined),
     });
-    expect(linked).toContain("#### origin\n\nInherited from [ErrorFeedback](feedback.md#errorfeedback).");
+    expect(linked).toContain("#### AppError › origin\n\nInherited from [ErrorFeedback](feedback.md#errorfeedback).");
   });
 
   it("omits an inherited member entirely when prose is false", () => {
@@ -432,23 +453,23 @@ describe("renderReferencePage", () => {
       order: 0,
       prose: false,
     });
-    expect(bare).not.toContain("#### origin");
+    expect(bare).not.toContain("#### AppError › origin");
     expect(bare).not.toContain("Inherited from");
     // Own members are unaffected: they still get their heading and signature.
-    expect(bare).toContain("#### messageKey\n\n```ts\nreadonly messageKey?: string;\n```");
+    expect(bare).toContain("#### AppError › messageKey\n\n```ts\nreadonly messageKey?: string;\n```");
   });
 
   it("renders a method member's documented parameters", () => {
-    expect(page).toContain("#### toJSON");
+    expect(page).toContain("#### AppError › toJSON");
     expect(page).toContain("Serializes the error.\n\n**Parameters**\n\n- `space` — Indentation passed through.");
   });
 
   it("renders a member's block tags through the same prose path as a symbol's", () => {
     expect(page).toContain(
-      "#### messageKey\n\n```ts\nreadonly messageKey?: string;\n```\n\nTranslation key.\n\n" +
+      "#### AppError › messageKey\n\n```ts\nreadonly messageKey?: string;\n```\n\nTranslation key.\n\n" +
         '**Default** — `"app.error"`',
     );
-    const section = page.slice(page.indexOf("#### toJSON"), page.indexOf("## Type aliases"));
+    const section = page.slice(page.indexOf("#### AppError › toJSON"), page.indexOf("## Type aliases"));
     expect(section).toContain(
       "> **Deprecated.** Use serialize instead.\n\nSerializes the error.\n\n**Parameters**\n\n" +
         "- `space` — Indentation passed through.\n\n**Returns** — A plain [AppError](#apperror) snapshot.\n\n" +

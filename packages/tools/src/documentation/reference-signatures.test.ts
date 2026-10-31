@@ -157,7 +157,7 @@ describe("index signature members", () => {
       }`,
     });
     const { files } = await analyzeReference(fixture, { prose: true });
-    expect(files[0]?.contents.match(/^#### Index signature$/gm)).toHaveLength(1);
+    expect(files[0]?.contents.match(/^#### Lookup index signature$/gm)).toHaveLength(1);
     expect(files[0]?.contents).toContain("```ts\n[key: string]: string | number;\n[key: number]: number;\n```");
   });
 
@@ -309,6 +309,21 @@ describe("extractSignatures", () => {
     expect(extractSignatures(`export interface Reader { ${declaration} }`).get("Reader")?.members?.get("read")).toBe(
       declaration,
     );
+  });
+
+  it("dedents multiline members by their own indentation", () => {
+    const members = extractSignatures(
+      "export interface Shape {\n    toJSON(): {\n        name: string;\n    };\n}",
+    ).get("Shape")?.members;
+    expect(members?.get("toJSON")).toBe("toJSON(): {\n    name: string;\n};");
+  });
+
+  it("keeps the indentation of lines inside a multiline template literal member", () => {
+    const members = extractSignatures(
+      "export interface Shape {\n    pattern: `a\n        b`;\n    other: {\n        x: `c\n  d`;\n    };\n}",
+    ).get("Shape")?.members;
+    expect(members?.get("pattern")).toBe("pattern: `a\n        b`;");
+    expect(members?.get("other")).toBe("other: {\n    x: `c\n  d`;\n};");
   });
 
   it("cleans actual import types without rewriting string or template literal contents", () => {

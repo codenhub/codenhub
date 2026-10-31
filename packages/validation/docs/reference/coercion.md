@@ -17,19 +17,19 @@ export interface CoerceDateOptions extends DateOptions
 
 Options for [coerceDate](#coercedate): the bounds of `date`, and how to read text without a zone.
 
-#### max
+#### CoerceDateOptions › max
 
 Inherited from [DateOptions](primitives.md#dateoptions).
 
-#### message
+#### CoerceDateOptions › message
 
 Inherited from [DateOptions](primitives.md#dateoptions).
 
-#### min
+#### CoerceDateOptions › min
 
 Inherited from [DateOptions](primitives.md#dateoptions).
 
-#### zoneless
+#### CoerceDateOptions › zoneless
 
 ```ts
 zoneless?: "utc" | undefined;

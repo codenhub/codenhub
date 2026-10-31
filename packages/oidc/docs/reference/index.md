@@ -17,31 +17,31 @@ export interface IdTokenClaims
 
 Claims of a validated ID token (OpenID Connect Core §2). Frozen.
 
-#### acr
+#### IdTokenClaims › acr
 
 ```ts
 readonly acr?: string;
 ```
 
-#### amr
+#### IdTokenClaims › amr
 
 ```ts
 readonly amr?: readonly string[];
 ```
 
-#### at\_hash
+#### IdTokenClaims › at\_hash
 
 ```ts
 readonly at_hash?: string;
 ```
 
-#### aud
+#### IdTokenClaims › aud
 
 ```ts
 readonly aud: string | readonly string[];
 ```
 
-#### auth\_time
+#### IdTokenClaims › auth\_time
 
 ```ts
 readonly auth_time?: number;
@@ -49,13 +49,13 @@ readonly auth_time?: number;
 
 When the user authenticated, in seconds since the Unix epoch.
 
-#### azp
+#### IdTokenClaims › azp
 
 ```ts
 readonly azp?: string;
 ```
 
-#### exp
+#### IdTokenClaims › exp
 
 ```ts
 readonly exp: number;
@@ -63,7 +63,7 @@ readonly exp: number;
 
 Expiration time, in seconds since the Unix epoch.
 
-#### iat
+#### IdTokenClaims › iat
 
 ```ts
 readonly iat: number;
@@ -71,25 +71,25 @@ readonly iat: number;
 
 Issued-at time, in seconds since the Unix epoch.
 
-#### iss
+#### IdTokenClaims › iss
 
 ```ts
 readonly iss: string;
 ```
 
-#### nonce
+#### IdTokenClaims › nonce
 
 ```ts
 readonly nonce?: string;
 ```
 
-#### sub
+#### IdTokenClaims › sub
 
 ```ts
 readonly sub: string;
 ```
 
-#### Index signature
+#### IdTokenClaims index signature
 
 ```ts
 readonly [claim: string]: unknown;
@@ -105,7 +105,7 @@ export interface OidcErr<TFailure extends OidcFailure = OidcFailure>
 
 Failed outcome, carrying every issue found.
 
-#### error
+#### OidcErr › error
 
 ```ts
 readonly error: TFailure;
@@ -113,7 +113,7 @@ readonly error: TFailure;
 
 What went wrong.
 
-#### ok
+#### OidcErr › ok
 
 ```ts
 readonly ok: false;
@@ -127,7 +127,7 @@ export interface OidcFailure
 
 Everything a failed operation found.
 
-#### issues
+#### OidcFailure › issues
 
 ```ts
 readonly issues: readonly [OidcIssue, ...OidcIssue[]];
@@ -145,7 +145,7 @@ A single reason an operation failed.
 
 An issue never holds a value taken from untrusted input: no token, code, secret, verifier, claim value, or response body. It names which check failed and, where useful, a fact from the caller's own configuration, the package's limits, or a fixed vocabulary such as an [OAuthErrorCode](#oautherrorcode).
 
-#### code
+#### OidcIssue › code
 
 ```ts
 readonly code: OidcIssueCode;
@@ -153,7 +153,7 @@ readonly code: OidcIssueCode;
 
 Stable failure category.
 
-#### params
+#### OidcIssue › params
 
 ```ts
 readonly params?: Readonly<Record<string, string | number | boolean>>;
@@ -161,7 +161,7 @@ readonly params?: Readonly<Record<string, string | number | boolean>>;
 
 Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason` on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an [OAuthErrorCode](#oautherrorcode) or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and that issue's own params on `invalid_id_token`; `reason` on a provider `invalid_request` the app renders, and on `invalid_callback` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`.
 
-#### path
+#### OidcIssue › path
 
 ```ts
 readonly path?: readonly OidcPathSegment[];
@@ -177,13 +177,13 @@ export interface OidcOk<T>
 
 Successful outcome, carrying its value.
 
-#### ok
+#### OidcOk › ok
 
 ```ts
 readonly ok: true;
 ```
 
-#### value
+#### OidcOk › value
 
 ```ts
 readonly value: T;
@@ -199,13 +199,13 @@ export interface ProviderMetadata
 
 An OpenID Provider's metadata (OpenID Connect Discovery 1.0 §3, RFC 8414 §2, RFC 9207 §3), as this package reads and publishes it. Members this package does not use are kept as they were received.
 
-#### authorization\_endpoint
+#### ProviderMetadata › authorization\_endpoint
 
 ```ts
 readonly authorization_endpoint: string;
 ```
 
-#### authorization\_response\_iss\_parameter\_supported
+#### ProviderMetadata › authorization\_response\_iss\_parameter\_supported
 
 ```ts
 readonly authorization_response_iss_parameter_supported?: boolean;
@@ -213,25 +213,25 @@ readonly authorization_response_iss_parameter_supported?: boolean;
 
 Whether the provider sends `iss` in authorization responses (RFC 9207).
 
-#### claims\_parameter\_supported
+#### ProviderMetadata › claims\_parameter\_supported
 
 ```ts
 readonly claims_parameter_supported?: boolean;
 ```
 
-#### claims\_supported
+#### ProviderMetadata › claims\_supported
 
 ```ts
 readonly claims_supported?: readonly string[];
 ```
 
-#### code\_challenge\_methods\_supported
+#### ProviderMetadata › code\_challenge\_methods\_supported
 
 ```ts
 readonly code_challenge_methods_supported?: readonly string[];
 ```
 
-#### end\_session\_endpoint
+#### ProviderMetadata › end\_session\_endpoint
 
 ```ts
 readonly end_session_endpoint?: string;
@@ -239,19 +239,19 @@ readonly end_session_endpoint?: string;
 
 RP-Initiated Logout 1.0 §2.1.
 
-#### grant\_types\_supported
+#### ProviderMetadata › grant\_types\_supported
 
 ```ts
 readonly grant_types_supported?: readonly string[];
 ```
 
-#### id\_token\_signing\_alg\_values\_supported
+#### ProviderMetadata › id\_token\_signing\_alg\_values\_supported
 
 ```ts
 readonly id_token_signing_alg_values_supported: readonly string[];
 ```
 
-#### issuer
+#### ProviderMetadata › issuer
 
 ```ts
 readonly issuer: string;
@@ -259,37 +259,37 @@ readonly issuer: string;
 
 The issuer identifier. Always equal, byte for byte, to the issuer the document was fetched for.
 
-#### jwks\_uri
+#### ProviderMetadata › jwks\_uri
 
 ```ts
 readonly jwks_uri: string;
 ```
 
-#### request\_parameter\_supported
+#### ProviderMetadata › request\_parameter\_supported
 
 ```ts
 readonly request_parameter_supported?: boolean;
 ```
 
-#### request\_uri\_parameter\_supported
+#### ProviderMetadata › request\_uri\_parameter\_supported
 
 ```ts
 readonly request_uri_parameter_supported?: boolean;
 ```
 
-#### response\_modes\_supported
+#### ProviderMetadata › response\_modes\_supported
 
 ```ts
 readonly response_modes_supported?: readonly string[];
 ```
 
-#### response\_types\_supported
+#### ProviderMetadata › response\_types\_supported
 
 ```ts
 readonly response_types_supported: readonly string[];
 ```
 
-#### revocation\_endpoint
+#### ProviderMetadata › revocation\_endpoint
 
 ```ts
 readonly revocation_endpoint?: string;
@@ -297,55 +297,55 @@ readonly revocation_endpoint?: string;
 
 The token revocation endpoint (RFC 7009, RFC 8414 §2).
 
-#### revocation\_endpoint\_auth\_methods\_supported
+#### ProviderMetadata › revocation\_endpoint\_auth\_methods\_supported
 
 ```ts
 readonly revocation_endpoint_auth_methods_supported?: readonly string[];
 ```
 
-#### revocation\_endpoint\_auth\_signing\_alg\_values\_supported
+#### ProviderMetadata › revocation\_endpoint\_auth\_signing\_alg\_values\_supported
 
 ```ts
 readonly revocation_endpoint_auth_signing_alg_values_supported?: readonly string[];
 ```
 
-#### scopes\_supported
+#### ProviderMetadata › scopes\_supported
 
 ```ts
 readonly scopes_supported?: readonly string[];
 ```
 
-#### subject\_types\_supported
+#### ProviderMetadata › subject\_types\_supported
 
 ```ts
 readonly subject_types_supported: readonly string[];
 ```
 
-#### token\_endpoint
+#### ProviderMetadata › token\_endpoint
 
 ```ts
 readonly token_endpoint: string;
 ```
 
-#### token\_endpoint\_auth\_methods\_supported
+#### ProviderMetadata › token\_endpoint\_auth\_methods\_supported
 
 ```ts
 readonly token_endpoint_auth_methods_supported?: readonly string[];
 ```
 
-#### token\_endpoint\_auth\_signing\_alg\_values\_supported
+#### ProviderMetadata › token\_endpoint\_auth\_signing\_alg\_values\_supported
 
 ```ts
 readonly token_endpoint_auth_signing_alg_values_supported?: readonly string[];
 ```
 
-#### userinfo\_endpoint
+#### ProviderMetadata › userinfo\_endpoint
 
 ```ts
 readonly userinfo_endpoint?: string;
 ```
 
-#### Index signature
+#### ProviderMetadata index signature
 
 ```ts
 readonly [member: string]: unknown;
@@ -361,7 +361,7 @@ export interface UserinfoClaims
 
 Claims returned by a userinfo endpoint (OpenID Connect Core §5.3). Frozen.
 
-#### sub
+#### UserinfoClaims › sub
 
 ```ts
 readonly sub: string;
@@ -369,7 +369,7 @@ readonly sub: string;
 
 Always equal to the ID token's `sub` the caller expected.
 
-#### Index signature
+#### UserinfoClaims index signature
 
 ```ts
 readonly [claim: string]: unknown;

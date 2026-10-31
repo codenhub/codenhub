@@ -245,13 +245,20 @@ function heading(level: number, text: string): string {
   return `${"#".repeat(Math.min(level, 6))} ${escapeMarkdown(text)}`;
 }
 
+// A member's heading carries its owner, as `Owner › member`, so its anchor is
+// unique on the page: a bare `message` collides with every other `message` and
+// with a symbol of the same name, and the collision suffix shifts whenever an
+// unrelated member is added above it. The spaced separator survives in the slug
+// (`owner--member`), which no symbol name can produce; `Owner.member` slugs to
+// `ownermember` and takes the anchor of a symbol named `OwnerMember`.
 function memberBlocks(
   member: ReferenceMember,
+  owner: string,
   prose: boolean,
   link: (text: string) => string,
   level: number,
 ): string[] {
-  const name = member.kind === "index-signature" ? "Index signature" : member.name;
+  const name = member.kind === "index-signature" ? `${owner} index signature` : `${owner} › ${member.name}`;
   if (member.inheritedFrom !== undefined) {
     if (!prose) {
       // An inherited member has no signature of its own to put in a manifest-only
@@ -364,7 +371,7 @@ function symbolBlocks(
     blocks.push("Also exported as `default`.");
   }
   for (const member of symbol.members) {
-    blocks.push(...memberBlocks(member, prose, link, level + 1));
+    blocks.push(...memberBlocks(member, qualifiedName, prose, link, level + 1));
   }
   for (const nested of symbol.namespaceMembers) {
     blocks.push(...symbolBlocks(nested, prose, link, level + 1, `${qualifiedName}.${nested.name}`));

@@ -37,7 +37,7 @@ export interface MemoryStore extends OidcStore
 
 An [OidcStore](provider.md#oidcstore) that also lets tests register clients.
 
-#### addClient
+#### MemoryStore › addClient
 
 ```ts
 addClient(client: ClientRecord): void;
@@ -45,43 +45,43 @@ addClient(client: ClientRecord): void;
 
 Registers or replaces a client.
 
-#### consumeCode
+#### MemoryStore › consumeCode
 
 Inherited from [OidcStore](provider.md#oidcstore).
 
-#### consumeInteraction
+#### MemoryStore › consumeInteraction
 
 Inherited from [OidcStore](provider.md#oidcstore).
 
-#### consumeRefreshToken
+#### MemoryStore › consumeRefreshToken
 
 Inherited from [OidcStore](provider.md#oidcstore).
 
-#### findAccessToken
+#### MemoryStore › findAccessToken
 
 Inherited from [OidcStore](provider.md#oidcstore).
 
-#### findClient
+#### MemoryStore › findClient
 
 Inherited from [OidcStore](provider.md#oidcstore).
 
-#### revokeGrant
+#### MemoryStore › revokeGrant
 
 Inherited from [OidcStore](provider.md#oidcstore).
 
-#### saveAccessToken
+#### MemoryStore › saveAccessToken
 
 Inherited from [OidcStore](provider.md#oidcstore).
 
-#### saveCode
+#### MemoryStore › saveCode
 
 Inherited from [OidcStore](provider.md#oidcstore).
 
-#### saveInteraction
+#### MemoryStore › saveInteraction
 
 Inherited from [OidcStore](provider.md#oidcstore).
 
-#### saveRefreshToken
+#### MemoryStore › saveRefreshToken
 
 Inherited from [OidcStore](provider.md#oidcstore).
 
@@ -93,7 +93,7 @@ export interface MemoryStoreOptions
 
 Options for [createMemoryStore](#creatememorystore).
 
-#### clients
+#### MemoryStoreOptions › clients
 
 ```ts
 readonly clients?: readonly ClientRecord[];
@@ -109,13 +109,13 @@ export interface StoreConformanceCase
 
 One check of the OidcStore contract. `run` resolves when the store conforms and rejects with an Error naming the broken rule otherwise.
 
-#### name
+#### StoreConformanceCase › name
 
 ```ts
 readonly name: string;
 ```
 
-#### run
+#### StoreConformanceCase › run
 
 ```ts
 readonly run: (createStore: (seed: StoreSeed) => OidcStore | Promise<OidcStore>) => Promise<void>;
@@ -129,7 +129,7 @@ export interface StoreSeed
 
 What a case asks the store under test to hold before it runs. The `OidcStore` interface has no method that saves a client, so the factory registers these clients itself, the way the app's admin side would.
 
-#### clients
+#### StoreSeed › clients
 
 ```ts
 readonly clients: readonly ClientRecord[];

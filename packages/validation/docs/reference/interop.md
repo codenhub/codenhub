@@ -127,7 +127,7 @@ export interface JsonSchema
 
 A JSON Schema, draft 2020-12 or draft-07, as plain data ready for `JSON.stringify`.
 
-#### $defs
+#### JsonSchema › $defs
 
 ```ts
 $defs?: Record<string, JsonSchema>;
@@ -135,7 +135,7 @@ $defs?: Record<string, JsonSchema>;
 
 The definitions a recursive schema refers to, one for each `lazy`.
 
-#### $schema
+#### JsonSchema › $schema
 
 ```ts
 $schema?: string;
@@ -143,7 +143,7 @@ $schema?: string;
 
 The draft the schema is written in, on the schema `toJsonSchema` returns.
 
-#### definitions
+#### JsonSchema › definitions
 
 ```ts
 definitions?: Record<string, JsonSchema>;
@@ -151,7 +151,7 @@ definitions?: Record<string, JsonSchema>;
 
 The same definitions, under the name draft-07 gives them.
 
-#### properties
+#### JsonSchema › properties
 
 ```ts
 properties?: Record<string, JsonSchema>;
@@ -159,7 +159,7 @@ properties?: Record<string, JsonSchema>;
 
 The properties of an object.
 
-#### required
+#### JsonSchema › required
 
 ```ts
 required?: string[];
@@ -167,7 +167,7 @@ required?: string[];
 
 The properties an object must have.
 
-#### Index signature
+#### JsonSchema index signature
 
 ```ts
 [keyword: string]: unknown;
@@ -183,7 +183,7 @@ export interface JsonSchemaOptions
 
 Options for [toJsonSchema](#tojsonschema).
 
-#### io
+#### JsonSchemaOptions › io
 
 ```ts
 io?: "input" | "output" | undefined;
@@ -193,7 +193,7 @@ Which side of the validator to write. `"input"` is what a value must look like t
 
 **Default** — "input"
 
-#### target
+#### JsonSchemaOptions › target
 
 ```ts
 target?: "draft-2020-12" | "draft-07" | undefined;
@@ -203,7 +203,7 @@ The draft of JSON Schema to write. `"draft-07"` is for a reader that does not kn
 
 **Default** — "draft-2020-12"
 
-#### unrepresentable
+#### JsonSchemaOptions › unrepresentable
 
 ```ts
 unrepresentable?: "throw" | "any" | undefined;
@@ -227,7 +227,7 @@ Interface of a schema that can also be written as a JSON Schema, from the Standa
 - `TInput` — The input type accepted by the schema.
 - `TOutput` — The output type produced after validation.
 
-#### ~standard
+#### StandardJSONSchemaV1 › ~standard
 
 ```ts
 readonly "~standard": StandardJSONSchemaV1.Props<TInput, TOutput>;
@@ -243,7 +243,7 @@ interface Converter
 
 Writes a side of the schema as a JSON Schema. Each may throw when it cannot.
 
-##### input
+##### StandardJSONSchemaV1.Converter › input
 
 ```ts
 readonly input: (options: Options) => Record<string, unknown>;
@@ -251,7 +251,7 @@ readonly input: (options: Options) => Record<string, unknown>;
 
 Writes the input type as a JSON Schema.
 
-##### output
+##### StandardJSONSchemaV1.Converter › output
 
 ```ts
 readonly output: (options: Options) => Record<string, unknown>;
@@ -267,7 +267,7 @@ interface Options
 
 Options a caller passes to `input` and `output`.
 
-##### libraryOptions
+##### StandardJSONSchemaV1.Options › libraryOptions
 
 ```ts
 readonly libraryOptions?: Record<string, unknown> | undefined;
@@ -275,7 +275,7 @@ readonly libraryOptions?: Record<string, unknown> | undefined;
 
 Options specific to the library behind the schema.
 
-##### target
+##### StandardJSONSchemaV1.Options › target
 
 ```ts
 readonly target: Target;
@@ -291,7 +291,7 @@ interface Props<TInput = unknown, TOutput = TInput>
 
 Properties defined on the `~standard` object of a schema that can be written as a JSON Schema.
 
-##### jsonSchema
+##### StandardJSONSchemaV1.Props › jsonSchema
 
 ```ts
 readonly jsonSchema: Converter;
@@ -299,7 +299,7 @@ readonly jsonSchema: Converter;
 
 Methods that write the input or the output type as a JSON Schema.
 
-##### types
+##### StandardJSONSchemaV1.Props › types
 
 ```ts
 readonly types?: Types<TInput, TOutput> | undefined;
@@ -307,7 +307,7 @@ readonly types?: Types<TInput, TOutput> | undefined;
 
 Inferred TypeScript types preserved for schema inspection.
 
-##### vendor
+##### StandardJSONSchemaV1.Props › vendor
 
 ```ts
 readonly vendor: string;
@@ -315,7 +315,7 @@ readonly vendor: string;
 
 The vendor identifier of the schema library.
 
-##### version
+##### StandardJSONSchemaV1.Props › version
 
 ```ts
 readonly version: 1;
@@ -371,7 +371,7 @@ Conforming schemas expose the `~standard` property containing metadata and valid
 - `TInput` — The input type accepted by the schema.
 - `TOutput` — The output type produced after validation.
 
-#### ~standard
+#### StandardSchemaV1 › ~standard
 
 ```ts
 readonly "~standard": StandardSchemaV1.Props<TInput, TOutput>;
@@ -387,7 +387,7 @@ interface FailureResult
 
 Failed validation result containing accumulated issues.
 
-##### issues
+##### StandardSchemaV1.FailureResult › issues
 
 ```ts
 readonly issues: ReadonlyArray<Issue>;
@@ -403,7 +403,7 @@ interface Issue
 
 A single validation issue produced by a standard schema validator.
 
-##### message
+##### StandardSchemaV1.Issue › message
 
 ```ts
 readonly message: string;
@@ -411,7 +411,7 @@ readonly message: string;
 
 Human-readable description of the validation failure.
 
-##### path
+##### StandardSchemaV1.Issue › path
 
 ```ts
 readonly path?: ReadonlyArray<PropertyKey | PathSegment> | undefined;
@@ -427,7 +427,7 @@ interface Options
 
 Options a caller can pass to `validate`.
 
-##### libraryOptions
+##### StandardSchemaV1.Options › libraryOptions
 
 ```ts
 readonly libraryOptions?: Record<string, unknown> | undefined;
@@ -443,7 +443,7 @@ interface PathSegment
 
 Structured path segment identifying an issue location.
 
-##### key
+##### StandardSchemaV1.PathSegment › key
 
 ```ts
 readonly key: PropertyKey;
@@ -464,7 +464,7 @@ Properties defined on the `~standard` object of a compliant schema.
 - `TInput` — Inferred input type.
 - `TOutput` — Inferred output type.
 
-##### types
+##### StandardSchemaV1.Props › types
 
 ```ts
 readonly types?: Types<TInput, TOutput> | undefined;
@@ -472,7 +472,7 @@ readonly types?: Types<TInput, TOutput> | undefined;
 
 Inferred TypeScript types preserved for schema inspection.
 
-##### validate
+##### StandardSchemaV1.Props › validate
 
 ```ts
 readonly validate: (value: unknown, options?: Options | undefined) => Result<TOutput> | Promise<Result<TOutput>>;
@@ -480,7 +480,7 @@ readonly validate: (value: unknown, options?: Options | undefined) => Result<TOu
 
 Validates an unknown input value and returns a synchronous or asynchronous result.
 
-##### vendor
+##### StandardSchemaV1.Props › vendor
 
 ```ts
 readonly vendor: string;
@@ -488,7 +488,7 @@ readonly vendor: string;
 
 The vendor identifier of the schema library.
 
-##### version
+##### StandardSchemaV1.Props › version
 
 ```ts
 readonly version: 1;
@@ -508,7 +508,7 @@ Successful validation result containing the validated or transformed value.
 
 - `TOutput` — Inferred output type.
 
-##### issues
+##### StandardSchemaV1.SuccessResult › issues
 
 ```ts
 readonly issues?: undefined;
@@ -516,7 +516,7 @@ readonly issues?: undefined;
 
 Discriminant indicating absence of validation issues.
 
-##### value
+##### StandardSchemaV1.SuccessResult › value
 
 ```ts
 readonly value: TOutput;
@@ -537,7 +537,7 @@ Container carrying phantom input and output types.
 - `TInput` — Inferred input type.
 - `TOutput` — Inferred output type.
 
-##### input
+##### StandardSchemaV1.Types › input
 
 ```ts
 readonly input: TInput;
@@ -545,7 +545,7 @@ readonly input: TInput;
 
 Phantom input type.
 
-##### output
+##### StandardSchemaV1.Types › output
 
 ```ts
 readonly output: TOutput;
