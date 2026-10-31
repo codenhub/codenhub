@@ -1005,6 +1005,37 @@ describe("analyzeReference", () => {
     );
   });
 
+  it("keeps the error type a @throws tag names in braces", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-throws-type", {
+      "index.ts": [
+        "/**",
+        " * Parses a port.",
+        " * @param text - The port as text.",
+        " * @returns The port.",
+        " * @throws {TypeError} When `text` is not a string.",
+        " * @throws {RangeError} When the port is outside 1 through 65535.",
+        " * @throws When the platform rejects it.",
+        " */",
+        "export function parsePort(text: string): number {",
+        "  return Number(text);",
+        "}",
+        "",
+      ].join("\n"),
+    });
+
+    const { files } = await analyzeReference(workspacePackage, { prose: true });
+
+    expect(files[0]?.contents).toContain(
+      [
+        "**Throws**",
+        "",
+        "- `TypeError` — When `text` is not a string.",
+        "- `RangeError` — When the port is outside 1 through 65535.",
+        "- When the platform rejects it.",
+      ].join("\n"),
+    );
+  });
+
   it("lists unexported types that public declarations name as internal types", { timeout: 30_000 }, async () => {
     const workspacePackage = await createReferenceFixture("fixture-internal", {
       "index.ts": [
