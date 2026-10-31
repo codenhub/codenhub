@@ -47,6 +47,27 @@ const entries: SearchEntry[] = [
 const routesFor = (query: string) => searchDocumentation(entries, query).map((result) => result.entry.route);
 
 describe("searchDocumentation", () => {
+  it("ranks a member whose own name is the query above a longer symbol that starts with it", () => {
+    const members: SearchEntry[] = [
+      {
+        packageLabel: "ValidationKit",
+        route: "/validation/reference/interop/#tojsonschema",
+        section: "toJsonSchema",
+        text: "Converts a schema.",
+        title: "Interop",
+      },
+      {
+        packageLabel: "ErrorKit",
+        route: "/error/reference/#apperror--tojson",
+        section: "AppError.toJSON",
+        text: "Serializes the error.",
+        title: "@codenhub/error",
+      },
+    ];
+
+    expect(searchDocumentation(members, "toJSON")[0]?.entry.route).toBe("/error/reference/#apperror--tojson");
+  });
+
   it("returns nothing for a blank query", () => {
     expect(searchDocumentation(entries, "   ")).toEqual([]);
   });
