@@ -193,11 +193,11 @@ describe("analyzeReference pages", () => {
     (fixture.manifest.exports as Record<string, unknown>)["./target"] = { types: "./dist/target.d.ts" };
     const { files } = await analyzeReference(fixture, { prose: true, pages: { "./target": { label: "Foo" } } });
     const root = page(files, "index.md");
-    expect(root).toContain("[Foo](target.md#foo-2)");
-    expect(root).toContain("[foo](target.md#foo-1)");
-    expect(root).toContain("[Functions](target.md#functions-1)");
-    expect(root).toContain("[Err](target.md#err)");
-    expect(root).toContain("[err](target.md#err-1)");
+    expect(root).toContain("[`Foo`](target.md#foo-2)");
+    expect(root).toContain("[`foo`](target.md#foo-1)");
+    expect(root).toContain("[`Functions`](target.md#functions-1)");
+    expect(root).toContain("[`Err`](target.md#err)");
+    expect(root).toContain("[`err`](target.md#err-1)");
   });
 
   it("titles the main entrypoint's page with the package name", { timeout: 30_000 }, async () => {
@@ -274,14 +274,14 @@ describe("analyzeReference pages", () => {
     expect(index).toContain("### describe");
     expect(index).not.toContain("### circle");
     expect(index).not.toContain("## Internal types");
-    expect(index).toContain("[circle](shapes.md#circle)");
+    expect(index).toContain("[`circle`](shapes.md#circle)");
     expect(shapes).toContain('title: "Shapes"');
     expect(shapes).toContain("order: 1");
     expect(shapes).toContain("# Shapes");
     expect(shapes).toContain("### circle");
     expect(shapes).toContain("### square");
     expect(shapes).toContain("### Radius");
-    expect(shapes).toContain("[describe](index.md#describe)");
+    expect(shapes).toContain("[`describe`](index.md#describe)");
   });
 
   it("places a re-exported default class on the split page of its source", { timeout: 30_000 }, async () => {
@@ -318,7 +318,7 @@ describe("analyzeReference pages", () => {
       "index.ts": "/** Read {@link default}. */\nexport default class Service {\n  /** X. */\n  x = 1;\n}\n",
     });
     const { files } = await analyzeReference(workspacePackage, { prose: true });
-    expect(files[0]?.contents).toContain("Read [default](#service).");
+    expect(files[0]?.contents).toContain("Read [`default`](#service).");
   });
 
   it(
@@ -382,13 +382,13 @@ describe("analyzeReference pages", () => {
       };
 
       const whole = await analyzeReference(await createFixture(), { prose: true });
-      expect(page(whole.files, "extra.md")).toContain("[circle](#circle)");
+      expect(page(whole.files, "extra.md")).toContain("[`circle`](#circle)");
 
       const split = await analyzeReference(await createFixture(), {
         pages: { "./extra": { split: { shapes: { source: ["src/shapes/**"] } } } },
         prose: true,
       });
-      expect(page(split.files, "extra/index.md")).toContain("[circle](shapes.md#circle)");
+      expect(page(split.files, "extra/index.md")).toContain("[`circle`](shapes.md#circle)");
     },
   );
 
@@ -1119,7 +1119,7 @@ describe("analyzeReference", () => {
         "};",
         "```",
         "",
-        "What [wrap](#wrap) returns.",
+        "What [`wrap`](#wrap) returns.",
         "",
         "Not exported; declared in `src/index.ts`.",
       ].join("\n"),
