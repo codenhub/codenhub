@@ -75,7 +75,7 @@ const decodeEntities = (value: string) =>
 
 /* Inline elements join their text to the neighbouring text: highlighted code
    is one span per token, and `Readonly<ErrorFeedback>` must stay one string. */
-const INLINE_TAG = /<\/?(?:a|abbr|b|code|em|i|kbd|mark|s|small|span|strong|sub|sup|wbr)\b[^>]*>/g;
+const INLINE_TAG = /^<\/?(?:a|abbr|b|code|em|i|kbd|mark|s|small|span|strong|sub|sup|wbr)\b/;
 
 /** Strips markup and collapses whitespace so prose is searchable as one line. */
 export const toText = (html: string) =>
@@ -83,8 +83,9 @@ export const toText = (html: string) =>
     html
       // A code block's header holds its language label and copy button, not content.
       .replaceAll(/<figcaption\b[^>]*>[\s\S]*?<\/figcaption>/g, " ")
-      .replaceAll(INLINE_TAG, "")
-      .replaceAll(/<[^>]*>/g, " "),
+      // One pass over every tag: removing inline tags in a pass of their own
+      // can join `<` and the text after a tag into a new tag, as in `<<span>script`.
+      .replaceAll(/<[^>]*>/g, (tag) => (INLINE_TAG.test(tag) ? "" : " ")),
   )
     .replaceAll(/\s+/g, " ")
     .trim();

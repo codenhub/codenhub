@@ -214,4 +214,8 @@ describe("toText", () => {
   it("replaces invalid Unicode references without throwing", () => {
     expect(toText("<p>&#0; &#xD800; &#1114112;</p>")).toBe("� � �");
   });
+
+  it("never joins the text around a removed tag into a new tag", () => {
+    expect(toText("<<span>script alert(1)")).not.toContain("<script");
+  });
 });
