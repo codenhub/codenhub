@@ -22,6 +22,14 @@ describe("matchFuzzy", () => {
     expect(matchFuzzy("pt", "Presentation Tokens")?.positions).toEqual([0, 13]);
   });
 
+  it("lets a space in the query stand for any word separator", () => {
+    // A member heading reads `ArrayOptions › min`, but the index labels it `ArrayOptions.min`.
+    expect(matchFuzzy("ArrayOptions min", "ArrayOptions.min")?.positions).toEqual([
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+    ]);
+    expect(scoreOf("ArrayOptions min", "ArrayOptions.min")).toBe(scoreOf("ArrayOptions.min", "ArrayOptions.min"));
+  });
+
   it("finds camelCase word starts in a lowercase query", () => {
     expect(matchFuzzy("bw", "borderWidth")?.positions).toEqual([0, 6]);
   });

@@ -24,7 +24,7 @@ The value is the address as mail is delivered to it: the local part as written, 
 
 **Returns** — A validator that produces the address, its domain as the parser reads it.
 
-**Throws** — When `domain` or `local` is not a function, or `allowPlus` is not a boolean.
+**Throws** — `TypeError` — When `domain` or `local` is not a function, or `allowPlus` is not a boolean.
 
 **Example**
 
@@ -56,7 +56,7 @@ The parameters are read as `URLSearchParams` reads them, `+` as a space and esca
 
 **Returns** — A validator that produces what `validator` produces.
 
-**Throws** — When `validator` or a check is not a function, or `repeated` is not a boolean.
+**Throws** — `TypeError` — When `validator` or a check is not a function, or `repeated` is not a boolean.
 
 **Example**
 
@@ -84,7 +84,7 @@ The `credentials`, `host`, `port`, `path` and `query` options check those parts 
 
 **Returns** — A validator that produces the URL as the parser writes it.
 
-**Throws** — When `protocols` is not a non-empty list, a protocol is not a scheme name, for instance `"https:"` with its colon, or is `javascript`, `vbscript` or `data`, whose URLs run script, a part validator is not a function, or `repeated` is not a boolean.
+**Throws** — `TypeError` — When `protocols` is not a non-empty list, a protocol is not a scheme name, for instance `"https:"` with its colon, or is `javascript`, `vbscript` or `data`, whose URLs run script, a part validator is not a function, or `repeated` is not a boolean.
 
 **Example**
 
@@ -107,7 +107,7 @@ Options for [base64](#base64).
 
 #### Base64Options › message
 
-Inherited from [MessageOptions](index.md#messageoptions).
+Inherited from [MessageOptions](index.md#messageoptions--message).
 
 #### Base64Options › url
 
@@ -139,7 +139,7 @@ Also accepts a date-time without a zone, which names a time on a local clock rat
 
 #### DatetimeOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions).
+Inherited from [MessageOptions](index.md#messageoptions--message).
 
 #### DatetimeOptions › offset
 
@@ -195,7 +195,7 @@ Validates the local part, the text before the `@`, as written. Its failure is re
 
 #### EmailOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions).
+Inherited from [MessageOptions](index.md#messageoptions--message).
 
 ### IpOptions
 
@@ -207,7 +207,7 @@ Options for [ip](#ip).
 
 #### IpOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions).
+Inherited from [MessageOptions](index.md#messageoptions--message).
 
 #### IpOptions › version
 
@@ -227,7 +227,7 @@ Options for [searchParams](#searchparams).
 
 #### SearchParamsOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions).
+Inherited from [MessageOptions](index.md#messageoptions--message).
 
 #### SearchParamsOptions › repeated
 
@@ -249,7 +249,7 @@ Options for [time](#time).
 
 #### TimeOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions).
+Inherited from [MessageOptions](index.md#messageoptions--message).
 
 #### TimeOptions › precision
 
@@ -285,7 +285,7 @@ Validates the host instead of the default rule, that it is a public domain name.
 
 #### UrlOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions).
+Inherited from [MessageOptions](index.md#messageoptions--message).
 
 #### UrlOptions › path
 
@@ -341,7 +341,7 @@ Options for [uuid](#uuid).
 
 #### UuidOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions).
+Inherited from [MessageOptions](index.md#messageoptions--message).
 
 #### UuidOptions › version
 
@@ -361,7 +361,7 @@ export declare const base64: Factory<string, Base64Options>;
 
 Creates a validator for base64 as an encoder writes it: the bits past the last byte are zero, and the standard alphabet is correctly padded. Whitespace and line breaks are rejected, so base64 wrapped at 64 or 76 columns, as PEM and MIME write it, fails. An empty string, which encodes nothing, is rejected, as `hex` rejects one. The value is not modified.
 
-**Throws** — When `url` is not a boolean.
+**Throws** — `TypeError` — When `url` is not a boolean.
 
 **Example**
 
@@ -381,7 +381,7 @@ Creates a validator for IP address blocks in CIDR notation, an address and a pre
 
 Bits set past the prefix are accepted, as in `192.168.0.5/24`, which names an address and its network.
 
-**Throws** — When `version` is given and is not `"v4"` or `"v6"`.
+**Throws** — `TypeError` — When `version` is given and is not `"v4"` or `"v6"`.
 
 **Example**
 
@@ -433,8 +433,8 @@ Creates a validator for ISO 8601 date-times such as `2026-09-28T14:30:00Z`, on a
 
 **Throws**
 
-- When `offset` or `local` is not a boolean, or `precision` is not a number.
-- When `precision` is not an integer from 0 to 9.
+- `TypeError` — When `offset` or `local` is not a boolean, or `precision` is not a number.
+- `RangeError` — When `precision` is not an integer from 0 to 9.
 
 **Example**
 
@@ -518,7 +518,7 @@ Creates a validator for IPv4 and IPv6 addresses. The value is the canonical spel
 
 An IPv4-mapped address (`::ffff:0:0/96`) or one under the NAT64 well-known prefix (`64:ff9b::/96`) is written with its IPv4 part dotted, as RFC 5952 section 5 recommends, so `::ffff:c000:201` produces `::ffff:192.0.2.1`. Every other IPv6 address is written in hex groups, the deprecated IPv4-compatible ones such as `::1.2.3.4` included, which produce `::102:304`, since that range also holds `::1`.
 
-**Throws** — When `version` is given and is not `"v4"` or `"v6"`.
+**Throws** — `TypeError` — When `version` is given and is not `"v4"` or `"v6"`.
 
 **Example**
 
@@ -663,8 +663,8 @@ Creates a validator for ISO 8601 times of day without an offset, such as `14:30`
 
 **Throws**
 
-- When `precision` is not a number.
-- When `precision` is not an integer from 0 to 9.
+- `TypeError` — When `precision` is not a number.
+- `RangeError` — When `precision` is not an integer from 0 to 9.
 
 **Example**
 
@@ -700,8 +700,8 @@ Creates a validator for UUIDs of version 1 to 8 in hyphenated form, in any lette
 
 **Throws**
 
-- When `version` is not a number.
-- When `version` is not an integer from 1 to 8.
+- `TypeError` — When `version` is not a number.
+- `RangeError` — When `version` is not an integer from 1 to 8.
 
 **Example**
 

@@ -109,7 +109,7 @@ const copyRegistryEntries = (
  *
  * @param presets - Optional list of existing registries to merge during creation.
  * @returns A new, mutable ErrorRegistry instance.
- * @throws TypeError - If `presets` is not a list, if a preset does not implement the readable
+ * @throws {TypeError} If `presets` is not a list, if a preset does not implement the readable
  * registry interface, or if any preset contains an invalid identifier, pattern, or feedback field.
  */
 export const createErrorRegistry = (presets?: readonly (ErrorRegistry | ReadonlyErrorRegistry)[]): ErrorRegistry => {
@@ -187,7 +187,7 @@ export const getErrorRegistry = (): ErrorRegistry => {
  * Throws a TypeError if the provided value does not implement the mutable registry interface.
  *
  * @param registry - The ErrorRegistry instance to set as active.
- * @throws TypeError - If the parameter is not a valid ErrorRegistry.
+ * @throws {TypeError} If the parameter is not a valid ErrorRegistry.
  */
 export const setErrorRegistry = (registry: ErrorRegistry): void => {
   if (!isMutableErrorRegistry(registry)) {

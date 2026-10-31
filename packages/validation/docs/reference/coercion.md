@@ -19,7 +19,7 @@ Options for [coerceDate](#coercedate): the bounds of `date`, and how to read tex
 
 #### CoerceDateOptions › max
 
-Inherited from [DateOptions](primitives.md#dateoptions).
+Inherited from [DateOptions](primitives.md#dateoptions--max).
 
 #### CoerceDateOptions › message
 
@@ -27,7 +27,7 @@ Inherited from [DateOptions](primitives.md#dateoptions).
 
 #### CoerceDateOptions › min
 
-Inherited from [DateOptions](primitives.md#dateoptions).
+Inherited from [DateOptions](primitives.md#dateoptions--min).
 
 #### CoerceDateOptions › zoneless
 
@@ -53,8 +53,8 @@ Fractions, numbers beyond `Number.MAX_SAFE_INTEGER` (which have already lost pre
 
 **Throws**
 
-- When a bound is not a bigint, such as the number `0` where `0n` was meant.
-- When no bigint can satisfy the bounds together.
+- `TypeError` — When a bound is not a bigint, such as the number `0` where `0n` was meant.
+- `RangeError` — When no bigint can satisfy the bounds together.
 
 **Example**
 
@@ -97,8 +97,8 @@ Text is read as `YYYY-MM-DD`, alone or followed by `T` or a space, `HH:MM` or `H
 
 **Throws**
 
-- When `min` or `max` is not a `Date`, or `zoneless` is given and is not `"utc"`.
-- When `min` or `max` is an invalid `Date`, or `min` is after `max`.
+- `TypeError` — When `min` or `max` is not a `Date`, or `zoneless` is given and is not `"utc"`.
+- `RangeError` — When `min` or `max` is an invalid `Date`, or `min` is after `max`.
 
 **Example**
 
@@ -124,8 +124,8 @@ Surrounding whitespace, as `String.prototype.trim` reads it, is ignored, and a d
 
 **Throws**
 
-- When a bound is not a number, `int` or `safeInt` is not a boolean, or `clamp` is not a range with a number `min` and `max`.
-- When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound.
+- `TypeError` — When a bound is not a number, `int` or `safeInt` is not a boolean, or `clamp` is not a range with a number `min` and `max`.
+- `RangeError` — When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound.
 
 **Example**
 
@@ -150,8 +150,8 @@ Creates a validator for text that also accepts finite numbers, bigints and boole
 
 **Throws**
 
-- When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
-- When `min`, `max` or `length` is not a number, `case` is not `"lower"` or `"upper"`, or a check is not a function.
+- `RangeError` — When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
+- `TypeError` — When `min`, `max` or `length` is not a number, `case` is not `"lower"` or `"upper"`, or a check is not a function.
 
 **Example**
 

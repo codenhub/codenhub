@@ -29,7 +29,7 @@ Creates an isolated runtime-neutral translation manager.
 
 **Returns** — An uninitialized consumer-owned manager whose initial direction has already been resolved.
 
-**Throws** — When configuration or the initial direction is invalid. Exceptions from the initial direction callback propagate unchanged.
+**Throws** — `TypeError` — When configuration or the initial direction is invalid. Exceptions from the initial direction callback propagate unchanged.
 
 **Example**
 
@@ -180,10 +180,10 @@ Atomically loads and activates an explicit locale or the default locale.
 
 **Throws**
 
-- When the locale is unsupported.
-- When a loaded dictionary is invalid.
-- When direction resolution returns a value other than `ltr` or `rtl`.
-- When an injected locale loader rejects. Exceptions from the direction callback propagate unchanged.
+- `RangeError` — When the locale is unsupported.
+- `TypeError` — When a loaded dictionary is invalid.
+- `TypeError` — When direction resolution returns a value other than `ltr` or `rtl`.
+- `I18nError` — When an injected locale loader rejects. Exceptions from the direction callback propagate unchanged.
 
 #### I18n › loadLocale
 
@@ -201,9 +201,9 @@ Loads and caches an immutable dictionary without changing active state.
 
 **Throws**
 
-- When the locale is unsupported.
-- When the loaded dictionary is invalid.
-- When the injected locale loader rejects.
+- `RangeError` — When the locale is unsupported.
+- `TypeError` — When the loaded dictionary is invalid.
+- `I18nError` — When the injected locale loader rejects.
 
 #### I18n › matchLocale
 
@@ -221,7 +221,7 @@ Each preference, in order, tries an exact case-insensitive match, then the longe
 
 **Returns** — The canonical locale for the first preference that matches, or undefined when none does.
 
-**Throws** — When `preferences` is not an array.
+**Throws** — `TypeError` — When `preferences` is not an array.
 
 #### I18n › removeEventListener
 
@@ -262,11 +262,11 @@ Atomically changes the active locale after all required loads succeed.
 
 **Throws**
 
-- When called before successful initialization.
-- When the locale is unsupported.
-- When a loaded dictionary is invalid.
-- When direction resolution returns a value other than `ltr` or `rtl`.
-- When an injected locale loader rejects. Exceptions from the direction callback propagate unchanged.
+- `Error` — When called before successful initialization.
+- `RangeError` — When the locale is unsupported.
+- `TypeError` — When a loaded dictionary is invalid.
+- `TypeError` — When direction resolution returns a value other than `ltr` or `rtl`.
+- `I18nError` — When an injected locale loader rejects. Exceptions from the direction callback propagate unchanged.
 
 #### I18n › subscribe
 
@@ -309,8 +309,8 @@ When `params.count` is a number and the key is a group of plural forms rather th
 
 **Throws**
 
-- When called before successful initialization.
-- When the key is empty, not a string, longer than 1,000 characters, or contains ASCII controls.
+- `Error` — When called before successful initialization.
+- `TypeError` — When the key is empty, not a string, longer than 1,000 characters, or contains ASCII controls.
 
 **Example**
 

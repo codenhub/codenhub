@@ -129,7 +129,7 @@ const getCauseCandidate = (error: unknown): unknown[] => {
 
 /**
  * @internal
- * @throws TypeError - If `maxDepth` is not an integer from 0 through the supported maximum.
+ * @throws {TypeError} If `maxDepth` is not an integer from 0 through the supported maximum.
  */
 export const assertValidMaxDepth = (maxDepth: number): void => {
   if (!Number.isInteger(maxDepth) || maxDepth < 0 || maxDepth > ERROR_UNWRAP_MAX_DEPTH) {
@@ -144,7 +144,7 @@ export const assertValidMaxDepth = (maxDepth: number): void => {
  * looked into.
  *
  * @internal
- * @throws TypeError - If `maxDepth` is not an integer from 0 through the supported maximum.
+ * @throws {TypeError} If `maxDepth` is not an integer from 0 through the supported maximum.
  */
 export const getErrorCandidates = (
   error: unknown,

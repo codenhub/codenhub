@@ -28,8 +28,8 @@ The type a file declares is whatever the client said, so a `types` option alone 
 
 **Throws**
 
-- When `types` is not a list, holds a type the check does not know, or `message` is neither text nor a function.
-- When `types` is empty.
+- `TypeError` — When `types` is not a list, holds a type the check does not know, or `message` is neither text nor a function.
+- `RangeError` — When `types` is empty.
 
 **Example**
 
@@ -54,7 +54,7 @@ Requires a string to end with a suffix. It fails with `invalid_format` and `para
 
 **Returns** — A check of strings.
 
-**Throws** — When `value` is not text, such as a variable that is not set, or `message` is neither text nor a function.
+**Throws** — `TypeError` — When `value` is not text, such as a variable that is not set, or `message` is neither text nor a function.
 
 **Example**
 
@@ -77,7 +77,7 @@ Requires a string to contain a substring. It fails with `invalid_format` and `pa
 
 **Returns** — A check of strings.
 
-**Throws** — When `value` is not text, such as a variable that is not set, or `message` is neither text nor a function.
+**Throws** — `TypeError` — When `value` is not text, such as a variable that is not set, or `message` is neither text nor a function.
 
 **Example**
 
@@ -124,8 +124,8 @@ Both are compared as the decimals they are written as, so `0.3` is a multiple of
 
 **Throws**
 
-- When `step` is not a number.
-- When `step` is not a positive finite number.
+- `TypeError` — When `step` is not a number.
+- `RangeError` — When `step` is not a positive finite number.
 
 **Example**
 
@@ -190,7 +190,7 @@ The `g` and `y` flags are dropped, so the check gives the same answer on every c
 
 **Returns** — A check of strings.
 
-**Throws** — When `expression` is not a regular expression.
+**Throws** — `TypeError` — When `expression` is not a regular expression.
 
 **Example**
 
@@ -213,7 +213,7 @@ Requires a string to start with a prefix. It fails with `invalid_format` and `pa
 
 **Returns** — A check of strings.
 
-**Throws** — When `value` is not text, such as a variable that is not set, or `message` is neither text nor a function.
+**Throws** — `TypeError` — When `value` is not text, such as a variable that is not set, or `message` is neither text nor a function.
 
 **Example**
 
@@ -243,7 +243,7 @@ Without `by` it compares the validated items themselves; with it, the value `by`
 
 **Returns** — A check of arrays.
 
-**Throws** — When `by` is given and is not a function, such as a message in its place: a message alone is `unique(undefined, message)`, or `message` is neither text nor a function.
+**Throws** — `TypeError` — When `by` is given and is not a function, such as a message in its place: a message alone is `unique(undefined, message)`, or `message` is neither text nor a function.
 
 **Example**
 

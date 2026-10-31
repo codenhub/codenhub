@@ -94,12 +94,18 @@ describe("reference rule run", () => {
     return workspacePackage;
   }
 
+  // Fixtures rarely carry a `@packageDocumentation` summary; the one test that is about it calls `rule.run` directly.
+  async function runWithoutSummaryWarning(workspacePackage: WorkspacePackage) {
+    const findings = await rule.run({ package: workspacePackage, includePack: false });
+    return findings.filter((finding) => finding.code !== "reference/missing-description");
+  }
+
   it("reports an unresolved source dependency with build instructions", { timeout: 30_000 }, async () => {
     const workspacePackage = await createReferenceFixture("fixture-rule-dependency", {
       "index.ts": 'export { derived } from "./derive";',
       "derive.ts": 'import { result } from "dependency";\n/** Derived. */ export const derived = result();',
     });
-    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([
+    expect(await runWithoutSummaryWarning(workspacePackage)).toEqual([
       {
         code: "reference/entrypoint",
         location: "docs/reference",
@@ -115,7 +121,7 @@ describe("reference rule run", () => {
     const workspacePackage = await createReferenceFixture("fixture-rule-missing", {
       "index.ts": "/** A value. */\nexport const value = 1;\n",
     });
-    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([
+    expect(await runWithoutSummaryWarning(workspacePackage)).toEqual([
       { code: "reference/missing", location: "docs/reference", message: expect.any(String), severity: "error" },
     ]);
   });
@@ -125,7 +131,7 @@ describe("reference rule run", () => {
       "index.ts": "/** A value. */\nexport const value = 1;\n",
     });
     await writeFile(join(workspacePackage.directory, "docs/reference/index.md"), "# Stale reference\n");
-    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([
+    expect(await runWithoutSummaryWarning(workspacePackage)).toEqual([
       { code: "reference/drift", location: "docs/reference/index.md", message: expect.any(String), severity: "error" },
     ]);
   });
@@ -137,7 +143,7 @@ describe("reference rule run", () => {
     const path = join(workspacePackage.directory, "docs/reference/index.md");
     const contents = await readFile(path, "utf8");
     await writeFile(path, contents.replace(/\r?\n/g, "\r\n"));
-    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([]);
+    expect(await runWithoutSummaryWarning(workspacePackage)).toEqual([]);
   });
 
   it("reports unsupported exports from the analysis model", { timeout: 30_000 }, async () => {
@@ -149,7 +155,7 @@ describe("reference rule run", () => {
     analysis.model.unsupported.push({ name: "Guide", subpath: "." });
     const analyze = vi.spyOn(referenceGenerator, "analyzeReference").mockResolvedValueOnce(analysis);
     try {
-      expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([
+      expect(await runWithoutSummaryWarning(workspacePackage)).toEqual([
         {
           code: "reference/unsupported-export",
           location: "package.json (.)",
@@ -170,7 +176,7 @@ describe("reference rule run", () => {
       ".": { types: "./dist/index.d.ts" },
       "./missing": { types: "./dist/missing.d.ts" },
     };
-    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([
+    expect(await runWithoutSummaryWarning(workspacePackage)).toEqual([
       {
         code: "reference/entrypoint",
         location: "docs/reference",
@@ -189,7 +195,7 @@ describe("reference rule run", () => {
       writeFile(join(workspacePackage.directory, "docs/reference/nested/extra.txt"), "unexpected"),
       writeFile(join(workspacePackage.directory, "docs/reference/extra.md"), "# Unexpected\n"),
     ]);
-    const findings = await rule.run({ package: workspacePackage, includePack: false });
+    const findings = await runWithoutSummaryWarning(workspacePackage);
     expect(findings.map(({ code, location }) => ({ code, location }))).toEqual([
       { code: "reference/unexpected-file", location: "docs/reference/extra.md" },
       { code: "reference/unexpected-file", location: "docs/reference/nested/extra.txt" },
@@ -207,7 +213,7 @@ describe("reference rule run", () => {
       );
       await mkdir(join(workspacePackage.directory, "docs"), { recursive: true });
       await writeFile(join(workspacePackage.directory, "docs/reference.md"), "# Authored reference\n");
-      const findings = await rule.run({ package: workspacePackage, includePack: false });
+      const findings = await runWithoutSummaryWarning(workspacePackage);
       expect(findings.filter((finding) => finding.code === "reference/unexpected-file")).toEqual([
         {
           code: "reference/unexpected-file",
@@ -230,7 +236,7 @@ describe("reference rule run", () => {
       writeFile(join(workspacePackage.directory, "docs/reference/extra.txt"), "authored"),
     ]);
     expect(rule.appliesTo(workspacePackage)).toBe(false);
-    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([]);
+    expect(await runWithoutSummaryWarning(workspacePackage)).toEqual([]);
   });
 
   it("fails on a public signature that names a type the reference does not document", { timeout: 30_000 }, async () => {
@@ -249,7 +255,7 @@ describe("reference rule run", () => {
       ].join("\n"),
     });
 
-    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([
+    expect(await runWithoutSummaryWarning(workspacePackage)).toEqual([
       {
         code: "reference/unresolved-type",
         location: "docs/reference/index.md",
@@ -290,7 +296,7 @@ describe("reference rule run", () => {
       ].join("\n"),
     );
     expect(page).toContain("Not exported; declared in `src/widgets.ts`.");
-    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([]);
+    expect(await runWithoutSummaryWarning(workspacePackage)).toEqual([]);
   });
 
   it("reports ambient types included by a referenced source project", { timeout: 30_000 }, async () => {
@@ -310,7 +316,7 @@ describe("reference rule run", () => {
     const { files } = await analyzeReference(workspacePackage, { prose: true });
     await mkdir(join(workspacePackage.directory, "docs/reference"), { recursive: true });
     await writeFile(join(workspacePackage.directory, "docs/reference/index.md"), files[0]!.contents);
-    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([
+    expect(await runWithoutSummaryWarning(workspacePackage)).toEqual([
       {
         code: "reference/unresolved-type",
         location: "docs/reference/index.md",
@@ -357,7 +363,7 @@ describe("reference rule run", () => {
       }),
     );
 
-    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([
+    expect(await runWithoutSummaryWarning(workspacePackage)).toEqual([
       {
         code: "reference/unresolved-type",
         location: "docs/reference/shapes.md",
@@ -372,12 +378,33 @@ describe("reference rule run", () => {
       "index.ts": ["/** Reserved for later. */", "export declare namespace Reserved {}", ""].join("\n"),
     });
 
-    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([
+    expect(await runWithoutSummaryWarning(workspacePackage)).toEqual([
       {
         code: "reference/empty-section",
         location: "docs/reference/index.md",
         message: expect.stringContaining('"Reserved"'),
         severity: "error",
+      },
+    ]);
+  });
+
+  it("warns about an entrypoint page with no summary for its description", { timeout: 30_000 }, async () => {
+    const workspacePackage = await committedFixture("fixture-rule-summary", {
+      "index.ts": [
+        "/** Adds one. */",
+        "export function increment(value: number): number {",
+        "  return value + 1;",
+        "}",
+        "",
+      ].join("\n"),
+    });
+
+    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([
+      {
+        code: "reference/missing-description",
+        location: "docs/reference/index.md",
+        message: expect.stringContaining("@packageDocumentation"),
+        severity: "warning",
       },
     ]);
   });

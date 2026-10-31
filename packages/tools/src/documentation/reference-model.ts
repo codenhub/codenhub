@@ -247,7 +247,7 @@ interface CommentPart {
 
 interface Comment {
   summary?: CommentPart[];
-  blockTags?: { tag?: string; name?: string; content?: CommentPart[] }[];
+  blockTags?: { tag?: string; name?: string; content?: CommentPart[]; typeAnnotation?: string }[];
 }
 
 interface ReflectionFlags {
@@ -339,6 +339,21 @@ function blockTags(comment: Comment | undefined, tag: string): string[] {
     .filter((entry) => entry.tag === tag)
     .map((entry) => renderParts(entry.content))
     .filter((text) => text !== "");
+}
+
+// `@throws {TypeError} When ...` names the error type in braces, which TypeDoc keeps
+// apart from the text. The type is what a caller catches, so it leads the entry.
+function throwsTags(comment: Comment | undefined): string[] {
+  return (comment?.blockTags ?? [])
+    .filter((entry) => entry.tag === "@throws")
+    .flatMap((entry) => {
+      const text = renderParts(entry.content);
+      const type = entry.typeAnnotation?.replace(/^\{\s*|\s*\}$/g, "") ?? "";
+      if (type === "") {
+        return text === "" ? [] : [text];
+      }
+      return [text === "" ? `\`${type}\`` : `\`${type}\` — ${text}`];
+    });
 }
 
 function blockTagText(comment: Comment | undefined, tag: string): string {
@@ -631,7 +646,7 @@ function buildSymbol(
     see: blockTags(comment, "@see"),
     since: optionalBlockTagText(comment, "@since"),
     source: buildSource(declaration.sources ?? primary.exported.sources),
-    throws: blockTags(comment, "@throws"),
+    throws: throwsTags(comment),
     typeParameters: namedDocs(
       signatureParts(declaration, "typeParameters") ?? declaration.typeParameters,
       comment,
@@ -653,7 +668,7 @@ function proseOf(
     returns: optionalBlockTagText(comment, "@returns"),
     see: blockTags(comment, "@see"),
     since: optionalBlockTagText(comment, "@since"),
-    throws: blockTags(comment, "@throws"),
+    throws: throwsTags(comment),
     typeParameters: namedDocs(typeParameters, comment, "@typeParam"),
   };
 }

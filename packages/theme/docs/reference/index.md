@@ -28,7 +28,7 @@ Creates a theme preference manager. Nothing touches the DOM, storage, or listene
 
 **Returns** — A [Theme](#theme) whose methods are bound to it.
 
-**Throws** — When the options are invalid: an `options` value that is not an object, a `themes`, `systemTheme`, `tokenSchema`, or theme `tokens` value that is set but is not a plain, non-array object, an empty theme name or, while `className` is `true`, a class-unsafe one, an invalid `colorScheme`, a `defaultTheme`, `systemTheme`, or `pairedTheme` naming an unconfigured theme, theme tokens outside `tokenSchema` or whose value is not a string, a finite number, or `undefined`, a `tokenSchema` value that is not a custom property name such as `--color-primary` or that another key already maps to, a `className` that is neither a boolean nor a function, a non-boolean `darkClass`, an empty or invalid `attribute` or `storageKey`, or an `attribute` of `class` or `style`. An option set to `undefined` is treated as omitted.
+**Throws** — `Error` — When the options are invalid: an `options` value that is not an object, a `themes`, `systemTheme`, `tokenSchema`, or theme `tokens` value that is set but is not a plain, non-array object, an empty theme name or, while `className` is `true`, a class-unsafe one, an invalid `colorScheme`, a `defaultTheme`, `systemTheme`, or `pairedTheme` naming an unconfigured theme, theme tokens outside `tokenSchema` or whose value is not a string, a finite number, or `undefined`, a `tokenSchema` value that is not a custom property name such as `--color-primary` or that another key already maps to, a `className` that is neither a boolean nor a function, a non-boolean `darkClass`, an empty or invalid `attribute` or `storageKey`, or an `attribute` of `class` or `style`. An option set to `undefined` is treated as omitted.
 
 **Example**
 
@@ -169,7 +169,7 @@ Removes the explicit preference and activates the system theme, which then follo
 
 **Returns** — The activated theme.
 
-**Throws** — When a `className` resolver returns an invalid class.
+**Throws** — `Error` — When a `className` resolver returns an invalid class.
 
 #### Theme › destroy
 
@@ -205,7 +205,7 @@ Returns an inline script that applies the stored or system theme, its class, and
 
 **Returns** — Minified JavaScript, safe to place inside an inline `<script>` element.
 
-**Throws** — When a `className` resolver returns an invalid class.
+**Throws** — `Error` — When a `className` resolver returns an invalid class.
 
 #### Theme › init
 
@@ -217,7 +217,7 @@ Applies the stored preference, or the system theme when there is none, and start
 
 **Returns** — This manager.
 
-**Throws** — When a `className` resolver returns an empty or whitespace-containing class.
+**Throws** — `Error` — When a `className` resolver returns an empty or whitespace-containing class.
 
 #### Theme › readTokens
 
@@ -245,7 +245,7 @@ Activates a theme and stores it as the explicit preference.
 
 **Returns** — The activated theme.
 
-**Throws** — When `name` is not a configured theme, or a `className` resolver returns an invalid class.
+**Throws** — `Error` — When `name` is not a configured theme, or a `className` resolver returns an invalid class.
 
 #### Theme › setTokens
 
@@ -261,7 +261,7 @@ Replaces the runtime token overrides, which win over every theme's static tokens
 
 **Returns** — The active theme with the new overrides.
 
-**Throws** — When `tokens` is not an object, no `tokenSchema` is configured, a key is not in `tokenSchema`, or a value is not a string, a finite number, or `undefined`. An `undefined` or empty value counts as omitted.
+**Throws** — `Error` — When `tokens` is not an object, no `tokenSchema` is configured, a key is not in `tokenSchema`, or a value is not a string, a finite number, or `undefined`. An `undefined` or empty value counts as omitted.
 
 #### Theme › subscribe
 
@@ -287,7 +287,7 @@ Activates the active theme's `pairedTheme`, or else the `systemTheme` entry for 
 
 **Returns** — The activated theme.
 
-**Throws** — When a `className` resolver returns an invalid class.
+**Throws** — `Error` — When a `className` resolver returns an invalid class.
 
 ### ThemeChangeDetail
 

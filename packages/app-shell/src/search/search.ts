@@ -74,8 +74,13 @@ export function searchDocumentation(
   const needle = trimmed.toLowerCase();
   const results: SearchResult[] = [];
 
+  // A member is labelled `Owner.member`; typing the member's own name is as deliberate as typing the whole label.
+  const isExactLabel = (label: string) => {
+    const lower = label.toLowerCase();
+    return lower === needle || lower.slice(lower.lastIndexOf(".") + 1) === needle;
+  };
   const scoreLabel = (match: FuzzyMatch | undefined, label: string) =>
-    match === undefined ? 0 : match.score + (label.toLowerCase() === needle ? EXACT_LABEL_BONUS : 0);
+    match === undefined ? 0 : match.score + (isExactLabel(label) ? EXACT_LABEL_BONUS : 0);
 
   for (const entry of entries) {
     const label = entry.section ?? entry.title;

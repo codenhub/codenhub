@@ -215,6 +215,8 @@ async function convertProject(pkgDir: string, plans: readonly EntrypointPlan[], 
       // `ts` block, which breaks the one-line `**Default** — text` the reference renders.
       jsDocCompatibility: { defaultTag: false },
       logLevel: "Error",
+      // Keeps the `{TypeError}` in `@throws {TypeError} When ...`, which TypeDoc drops by default.
+      preservedTypeAnnotationTags: ["@throws"],
       // The package's own `pnpm typecheck` is the type gate; here a test file that
       // self-imports the not-yet-built package must not abort the whole run.
       skipErrorChecking: true,

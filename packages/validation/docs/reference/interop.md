@@ -30,7 +30,7 @@ The result is a validator that behaves exactly as the one you gave, plus the `~s
 
 **Returns** — A validator that is also a Standard Schema.
 
-**Throws** — When `validator` is not a function, or `messages` is not a message map. Validating throws one too when the entry of `messages` that words an issue is neither text nor a function that returns text.
+**Throws** — `TypeError` — When `validator` is not a function, or `messages` is not a message map. Validating throws one too when the entry of `messages` that words an issue is neither text nor a function that returns text.
 
 **Example**
 
@@ -64,7 +64,7 @@ It is an export of its own so that `standard`, which a form in the browser uses,
 
 **Returns** — A validator that is also a Standard Schema and a Standard JSON Schema.
 
-**Throws** — When `validator` is not a function, or `messages` is not a message map.
+**Throws** — `TypeError` — When `validator` is not a function, or `messages` is not a message map.
 
 **Example**
 
@@ -98,7 +98,7 @@ A recursive schema is written with `$ref` and one definition for each `lazy`, un
 
 **Returns** — The schema, as a new plain object.
 
-**Throws** — When a part cannot be written and `unrepresentable` is `"throw"`, naming the part and its place, or when an option is not one of its values.
+**Throws** — `TypeError` — When a part cannot be written and `unrepresentable` is `"throw"`, naming the part and its place, or when an option is not one of its values.
 
 **Example**
 

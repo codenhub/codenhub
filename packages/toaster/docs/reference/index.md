@@ -25,7 +25,7 @@ Each call returns a fresh instance. Consumers who want a singleton can use the d
 
 **Returns** — An independent Toaster instance controller.
 
-**Throws** — If duration, max-visible count, or token colors are invalid.
+**Throws** — `Error` — If duration, max-visible count, or token colors are invalid.
 
 ## Interfaces
 
@@ -295,7 +295,7 @@ Displays a blocking informational alert modal dialog.
 
 **Returns** — An interactive handle containing the acknowledgement promise.
 
-**Throws** — If the instance is destroyed, the message is empty, or no DOM is available.
+**Throws** — `Error` — If the instance is destroyed, the message is empty, or no DOM is available.
 
 #### DialogDispatcher › confirm
 
@@ -312,7 +312,7 @@ Displays a confirmation modal dialog with confirm and cancel buttons.
 
 **Returns** — An interactive handle containing the user decision promise.
 
-**Throws** — If the instance is destroyed, the message is empty, or no DOM is available.
+**Throws** — `Error` — If the instance is destroyed, the message is empty, or no DOM is available.
 
 #### DialogDispatcher › prompt
 
@@ -329,7 +329,7 @@ Displays a prompt input dialog requesting user text input.
 
 **Returns** — An interactive handle containing the input value promise.
 
-**Throws** — If the instance is destroyed, the message is empty, or no DOM is available.
+**Throws** — `Error` — If the instance is destroyed, the message is empty, or no DOM is available.
 
 ### DialogHandle
 
@@ -754,7 +754,7 @@ clear(): void;
 
 Clears all active and queued non-interactive toasts.
 
-**Throws** — If the toaster instance has been destroyed.
+**Throws** — `Error` — If the toaster instance has been destroyed.
 
 #### Toaster › configure
 
@@ -1080,7 +1080,7 @@ Patches the message, content, icon, severity, timing, styles, or classes of a to
 
 - `options` — Partial updates to apply.
 
-**Throws** — If `options.tokens` contains an invalid CSS color, `options.duration` is not a finite number &gt;= 0, `options.type` is not a recognized severity, or `options.content` resolves to nothing renderable.
+**Throws** — `Error` — If `options.tokens` contains an invalid CSS color, `options.duration` is not a finite number &gt;= 0, `options.type` is not a recognized severity, or `options.content` resolves to nothing renderable.
 
 ### ToastLabels
 
