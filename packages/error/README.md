@@ -1,6 +1,6 @@
 # @codenhub/error
 
-Typed error normalization, result helpers, and opt-in registry presets for TypeScript applications.
+Turn whatever your TypeScript code catches into one predictable `AppError`: a message that is safe to show, a translation key, a code to branch on, a flag that says whether retrying is safe, and the original value kept for your logs. You describe the failures you know about once, in a registry; opt-in presets cover common browser, Node.js, and Supabase failures. Result helpers are included for code that prefers returning failures to throwing them.
 
 ## Installation
 
@@ -10,54 +10,52 @@ pnpm add @codenhub/error
 
 ## Usage
 
-The default global registry starts empty. Register application mappings during initialization, then normalize unknown values into `AppError` instances.
+Describe your failures once, when the application starts, then normalize anything you catch:
 
 ```ts
 import { createAppError, getErrorRegistry } from "@codenhub/error";
+import { browserErrorRegistry } from "@codenhub/error/registries/browser";
 
-getErrorRegistry().codes.add("invalid_credentials", {
-  message: "We couldn't sign you in. The email or password is incorrect. Check them and try again.",
-  source: "my-app.auth",
+const registry = getErrorRegistry();
+
+registry.merge(browserErrorRegistry);
+registry.codes.add("cart.out_of_stock", {
+  message: "One of the items in your cart just sold out. Review your cart, then check out again.",
+  messageKey: "error.cart.outOfStock",
 });
 
-const error = createAppError({ code: "invalid_credentials" });
-console.log(error.type, error.message);
+try {
+  await checkout(cart);
+} catch (caught) {
+  const error = createAppError(caught);
+
+  showToast(error.message);
+}
 ```
 
-Unmatched values become `type: "unknown"` and use `"An unexpected error occurred."` unless `fallbackMessage` is provided.
+A failure nobody registered becomes `type: "unknown"` with the message `"An unexpected error occurred."`, never its raw text.
 
 ## Documentation
 
-- [Documentation overview](docs/index.md)
-- [API reference](docs/reference/index.md)
-- [Error normalization and registries](docs/error-normalization.md)
-- [Result helpers](docs/results.md)
+- [Overview](docs/index.md): what the package does and a five-minute tour.
+- [Getting started](docs/getting-started.md): set up a real application step by step.
+- [Recipes](docs/recipes.md): HTTP status codes, Supabase, retries, translations, and error reporting.
+- [Caveats and limitations](docs/caveats.md): what the package does not do, and the workarounds.
+- [API reference](docs/reference/index.md): every export, generated from the source.
 
 ## Requirements
 
-- Node.js 24 or newer, or an ES2022-compatible browser, worker, or edge runtime.
-- Native `Error` cause support.
-- ESM. CommonJS can load it through `require()` on runtimes that support requiring ES modules.
-- No runtime dependencies.
-
-Runtime code does not access browser or Node.js globals, making it suitable for browser, Node.js, SSR, worker, and edge environments that meet these requirements.
+- Node.js 24 or newer, or an ES2022-compatible browser, worker, or edge runtime with native `Error` `cause` support.
+- ESM. CommonJS can load it with `require()` on runtimes that support requiring ES modules.
+- No runtime dependencies, and no access to browser or Node.js globals.
 
 ## Notes
 
-- Registry presets are opt-in and do not mutate the global registry on import.
-- Configure the mutable global registry during application initialization.
-- Registry bucket contents are mutable, but bucket references cannot be replaced.
-- Batch registration and registry merging are atomic: invalid input leaves the target unchanged.
-- Result objects, read-only registry snapshots, and every value returned by a bucket are frozen. An `AppError`'s own properties cannot be changed or removed, but it accepts new ones, so a framework can annotate an error it catches.
-- An unmatched string never becomes the error message; supply `fallbackMessage` when user-facing text is needed.
-- JSON serialization is defined by `AppError.toJSON()` and includes `name`, `message`, `type`, `code`, `messageKey`, `source`, and `isRetryable`, omitting diagnostic `cause` and `originalError` values. `appErrorFromJSON()` rebuilds an `AppError` from that shape on the receiving side; use it only on data from a source you trust to word its errors. Send `error.toJSON()` across a worker, IPC, or IndexedDB boundary; a structured clone of the error itself can carry the raw `cause`.
-- `AppError.code` holds the registered code or name that matched, for branching on a specific failure. A message, prefix, or pattern match has no code; branch on its `messageKey`.
-- `isAppError` recognizes errors created by the current package runtime, not structurally similar values.
-- `isRetryable` describes the call that raised the matched failure, which can sit several wrappers down. Retry on it only where the code made that call itself.
-- Built-in preset `messageKey` values are stable integration keys for consumer-owned translations; the package does not yet ship a translation map.
-- Invalid registry entries and invalid `createAppError` options are programmer errors and throw `TypeError`.
-- Custom registry patterns run against arbitrary error text; keep them linear to avoid catastrophic backtracking.
+- Presets change nothing until you merge them, and the last mapping added for an identifier wins.
+- The global registry is shared module state: configure it once at startup, not per request.
+- `isRetryable` means the failed call cannot run twice if repeated, not that a retry will likely work. Retry only around the call that failed.
+- Built-in `messageKey` values are stable; the package ships English messages only.
 
 ## License
 
-Licensed under Apache-2.0.
+This project is licensed under the [Apache-2.0](LICENSE) license.

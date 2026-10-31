@@ -1,29 +1,34 @@
 # @codenhub/error
 
-> Typed error normalization, result helpers, and opt-in browser and Supabase
-> registry presets.
+> Normalizes any caught value into a typed `AppError` through a registry of
+> known failures, with opt-in browser, Node.js, and Supabase presets and
+> result helpers.
 
-Register application mappings explicitly. Deterministic registry matches become
-known errors, regex matches become heuristic errors, and unmatched values use
-the configured fallback message.
-
-`isAppError` recognizes errors created by the current package runtime.
-`AppError` values, result objects, read-only registry snapshots, and every value
-returned by a registry bucket are frozen. Strings are classified like any other
-value, but an unmatched string never becomes the message, so an explicit
-`fallbackMessage` is required for user-facing text.
-Mutable registry bucket contents can change, but bucket references cannot be replaced.
-`AppError.toJSON` defines serialization and omits diagnostic `cause` and
-`originalError` values. Built-in preset `messageKey` values are stable
-integration keys for consumer-owned translations; no translation map is
-currently bundled. Use `attempt` and `attemptAsync` to convert throwing code
-into results.
+Register known failures by code, name, exact message, message prefix, or
+regular expression, then call `createAppError(caught)`. Deterministic matches
+are `"known"`, regular-expression matches are `"heuristic"`, and anything else
+is `"unknown"` with a generic fallback message: raw error text never becomes
+the message. An `AppError`'s own fields cannot be changed, but it accepts new
+properties. `isRetryable` means the failed call is safe to repeat without
+running twice. `toJSON()` and `appErrorFromJSON()` carry an error across a
+network or worker boundary without its raw `cause`. Preset `messageKey` values
+are stable; no translations ship. `attempt` and `attemptAsync` turn throwing
+code into a `Result`.
 
 ## Documentation
 
-- [Documentation overview](docs/index.md): Scope, stability, entrypoints, and
-  navigation.
-- [Error normalization and registries](docs/error-normalization.md): AppError,
-  matching, registry APIs, presets, defaults, and failures.
-- [Result helpers](docs/results.md): Result types, combinators, and throwing
-  behavior.
+- [Overview](docs/index.md): The problem, the idea, entrypoints, and a tour.
+- [Getting started](docs/getting-started.md): Registry setup, normalizing at
+  boundaries, what to show and what to report.
+- [The AppError](docs/app-error.md): Every field, re-normalization rules,
+  serialization, and options.
+- [Registries](docs/registries.md): Buckets, identifier matching, match
+  priority, global versus isolated registries, and patterns.
+- [Presets](docs/presets.md): Every browser, Node.js, and Supabase mapping with
+  its `messageKey` and retry flag.
+- [Results](docs/results.md): `Result`, `attempt`, and the chaining helpers.
+- [Recipes](docs/recipes.md): HTTP status codes, Supabase calls, retries,
+  translations, error reporting, and tests.
+- [Caveats and limitations](docs/caveats.md): Surprising behavior and the
+  workaround for each.
+- [API reference](docs/reference/index.md): Every export with its signature.
