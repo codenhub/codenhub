@@ -1,7 +1,7 @@
 import { searchDocumentation } from "@codenhub/app-shell/search";
 import { describe, expect, it } from "vitest";
 
-import { buildSearchIndex, toText, type IndexablePackage } from "./build-index";
+import { buildSearchIndex, indexableHeadings, toText, type IndexablePackage } from "./build-index";
 
 const packages: IndexablePackage[] = [
   {
@@ -77,6 +77,22 @@ describe("buildSearchIndex", () => {
       section: "Theme.setTokens",
       text: "Details for setTokens.",
     });
+  });
+
+  it("labels a generated member heading by its dotted name without qualifying it again", () => {
+    const headings = [
+      { depth: 3, slug: "lookup", text: "Lookup" },
+      { depth: 4, slug: "lookup--get", text: "Lookup › get" },
+      { depth: 5, slug: "remarks", text: "Remarks" },
+      { depth: 4, slug: "lookup-index-signature", text: "Lookup index signature" },
+    ];
+
+    expect(indexableHeadings({ headings, relativePath: "reference/index.md" }).map(({ text }) => text)).toEqual([
+      "Lookup",
+      "Lookup.get",
+      "Lookup.get.Remarks",
+      "Lookup index signature",
+    ]);
   });
 
   it("keeps deeper guide headings in their parent section's search body", () => {
@@ -185,6 +201,14 @@ describe("toText", () => {
 
   it("decodes each reference only once", () => {
     expect(toText("<p>&amp;#x3C; &#38;lt; &#x26;#60;</p>")).toBe("&#x3C; &lt; &#60;");
+  });
+
+  it("keeps highlighted code contiguous so a signature fragment is searchable", () => {
+    const html =
+      '<figure class="code-block"><figcaption class="code-block-header">TypeScript<button aria-label="Copy TypeScript code"></button></figcaption>' +
+      '<pre><code><span class="line"><span>Readonly</span><span>&#x3C;</span><span>ErrorFeedback</span><span>></span>;</span></code></pre></figure>' +
+      "<p>Returns <code>AppError</code>.</p>";
+    expect(toText(html)).toBe("Readonly<ErrorFeedback>; Returns AppError.");
   });
 
   it("replaces invalid Unicode references without throwing", () => {

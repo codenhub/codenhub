@@ -40,7 +40,7 @@ export interface PostcssIconsOptions
 
 Options for configuring the PostCSS icons plugin.
 
-#### attribution
+#### PostcssIconsOptions › attribution
 
 ```ts
 attribution?: PostcssAttributionMode;
@@ -48,7 +48,7 @@ attribution?: PostcssAttributionMode;
 
 How license notices reach the output. `"auto"` prepends a preserved CSS comment; `"off"` emits nothing and warns when a used family still requires a notice. Defaults to `"auto"`.
 
-#### content
+#### PostcssIconsOptions › content
 
 ```ts
 content?: string[];
@@ -56,7 +56,7 @@ content?: string[];
 
 File paths and glob patterns, such as `src/**/*.{html,tsx}`, to scan for icon class names.
 
-#### defaultPrefix
+#### PostcssIconsOptions › defaultPrefix
 
 ```ts
 defaultPrefix?: string;
@@ -64,7 +64,7 @@ defaultPrefix?: string;
 
 Family prefix that unprefixed icon names resolve against.
 
-#### families
+#### PostcssIconsOptions › families
 
 ```ts
 families?: IconFamilyData[];
@@ -74,7 +74,7 @@ Icon families to make resolvable, such as the default export of `@codenhub/icons
 
 No family is bundled by default: a project declares the families it wants.
 
-#### injectBase
+#### PostcssIconsOptions › injectBase
 
 ```ts
 injectBase?: boolean;
@@ -82,7 +82,7 @@ injectBase?: boolean;
 
 Whether to inject the base icon rules (`.ic`). Defaults to `true`.
 
-#### prefix
+#### PostcssIconsOptions › prefix
 
 ```ts
 prefix?: string;
@@ -90,7 +90,7 @@ prefix?: string;
 
 Prefix for icon class names, as in `"ic"` for `.ic-close`. Defaults to `"ic"`.
 
-#### registry
+#### PostcssIconsOptions › registry
 
 ```ts
 registry?: IconRegistry;
@@ -98,7 +98,7 @@ registry?: IconRegistry;
 
 Registry to resolve icons with, replacing the one built from `PostcssIconsOptions.families`.
 
-#### strokeWidth
+#### PostcssIconsOptions › strokeWidth
 
 ```ts
 strokeWidth?: number | string;

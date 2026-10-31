@@ -105,11 +105,11 @@ export interface Base64Options extends MessageOptions
 
 Options for [base64](#base64).
 
-#### message
+#### Base64Options › message
 
 Inherited from [MessageOptions](index.md#messageoptions).
 
-#### url
+#### Base64Options › url
 
 ```ts
 url?: boolean | undefined;
@@ -127,7 +127,7 @@ export interface DatetimeOptions extends MessageOptions
 
 Options for [datetime](#datetime).
 
-#### local
+#### DatetimeOptions › local
 
 ```ts
 local?: boolean | undefined;
@@ -137,11 +137,11 @@ Also accepts a date-time without a zone, which names a time on a local clock rat
 
 **Default** — false
 
-#### message
+#### DatetimeOptions › message
 
 Inherited from [MessageOptions](index.md#messageoptions).
 
-#### offset
+#### DatetimeOptions › offset
 
 ```ts
 offset?: boolean | undefined;
@@ -151,7 +151,7 @@ Accepts a UTC offset such as `+02:00` instead of only `Z`.
 
 **Default** — false
 
-#### precision
+#### DatetimeOptions › precision
 
 ```ts
 precision?: number | undefined;
@@ -167,7 +167,7 @@ export interface EmailOptions extends MessageOptions
 
 Options for [email](#email).
 
-#### allowPlus
+#### EmailOptions › allowPlus
 
 ```ts
 allowPlus?: boolean | undefined;
@@ -177,7 +177,7 @@ Accepts `+` in the local part, as in `me+tag@example.com`.
 
 **Default** — true
 
-#### domain
+#### EmailOptions › domain
 
 ```ts
 domain?: AnyValidator | undefined;
@@ -185,7 +185,7 @@ domain?: AnyValidator | undefined;
 
 Validates the domain instead of the default rule, that it is a public domain name. It receives the domain as the URL parser reads it, lowercase ASCII with internationalized labels in punycode, and the domain must still be a hostname: `email({ domain: hostname() })` accepts `ada@localhost`, and `email({ domain: oneOf(["example.com"]) })` accepts that domain alone. Its failure is reported as the address's, with `params.part` `"domain"`.
 
-#### local
+#### EmailOptions › local
 
 ```ts
 local?: AnyValidator | undefined;
@@ -193,7 +193,7 @@ local?: AnyValidator | undefined;
 
 Validates the local part, the text before the `@`, as written. Its failure is reported as the address's, with `params.part` `"local"`.
 
-#### message
+#### EmailOptions › message
 
 Inherited from [MessageOptions](index.md#messageoptions).
 
@@ -205,11 +205,11 @@ export interface IpOptions extends MessageOptions
 
 Options for [ip](#ip).
 
-#### message
+#### IpOptions › message
 
 Inherited from [MessageOptions](index.md#messageoptions).
 
-#### version
+#### IpOptions › version
 
 ```ts
 version?: "v4" | "v6" | undefined;
@@ -225,11 +225,11 @@ export interface SearchParamsOptions extends MessageOptions
 
 Options for [searchParams](#searchparams).
 
-#### message
+#### SearchParamsOptions › message
 
 Inherited from [MessageOptions](index.md#messageoptions).
 
-#### repeated
+#### SearchParamsOptions › repeated
 
 ```ts
 repeated?: boolean | undefined;
@@ -247,11 +247,11 @@ export interface TimeOptions extends MessageOptions
 
 Options for [time](#time).
 
-#### message
+#### TimeOptions › message
 
 Inherited from [MessageOptions](index.md#messageoptions).
 
-#### precision
+#### TimeOptions › precision
 
 ```ts
 precision?: number | undefined;
@@ -267,7 +267,7 @@ export interface UrlOptions extends MessageOptions
 
 Options for [url](#url).
 
-#### credentials
+#### UrlOptions › credentials
 
 ```ts
 credentials?: AnyValidator | undefined;
@@ -275,7 +275,7 @@ credentials?: AnyValidator | undefined;
 
 Validates the credentials, a user and a password written before the host, as in `postgres://app:secret@db.example.com`, which are rejected without it. It receives `{ username, password }` as the parser writes them, percent-encoded, with `password` empty when only a user is written, or `undefined` when the URL names neither, so `credentials: optional(object({ username: string(), password: string() }))` accepts a URL with or without them. The URL produced keeps them. A URL without a host, `mailto`, `tel` or `urn`, never takes credentials. Its failure is reported as the URL's, with `params.part` `"credentials"`.
 
-#### host
+#### UrlOptions › host
 
 ```ts
 host?: AnyValidator | undefined;
@@ -283,11 +283,11 @@ host?: AnyValidator | undefined;
 
 Validates the host instead of the default rule, that it is a public domain name. It receives the host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets, spelled as `ip()` spells it, while the URL produced keeps the parser's spelling. For a scheme the parser has no rules for, such as `ssh`, it reads a name as written, and the host is that name with its letters in lowercase and its escapes in uppercase, as RFC 3986 normalizes them, and not read as an address, so `redis://2130706433/` gives `"2130706433"`, which a client may read as `127.0.0.1`: check it with `hostname()`, `domain()` or `ip()`, never a list of strings. So `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])` accepts IP addresses but not `localhost`. Its failure is reported as the URL's, with `params.part` `"host"`.
 
-#### message
+#### UrlOptions › message
 
 Inherited from [MessageOptions](index.md#messageoptions).
 
-#### path
+#### UrlOptions › path
 
 ```ts
 path?: AnyValidator | undefined;
@@ -295,7 +295,7 @@ path?: AnyValidator | undefined;
 
 Validates the path as the parser writes it: dot segments resolved and characters such as spaces percent-encoded, starting with `/`, or empty for a URL of a scheme the parser has no rules for, such as `ssh://example.com`, that names no path. A path holding an encoded `/` or `\`, `%2F` or `%5C`, fails before it runs, with `{ encodedSeparator: true }`, since a server that decodes it before routing would read another path than the validator saw, and so does one holding a segment `.` or `..` followed by `;` or `%3B`, such as `/api/..;/admin`, with `{ dotSegment: true }`, since a server that drops the parameters before resolving dot segments would read `..`. Write it as an allowlist, such as `string(startsWith("/api/"))`: a server may also decode an escape, merge `//` or drop `;` and its parameters from a segment, which a denylist such as "not under `/admin`" does not foresee. Its failure is reported as the URL's, with `params.part` `"path"`.
 
-#### port
+#### UrlOptions › port
 
 ```ts
 port?: AnyValidator | undefined;
@@ -303,7 +303,7 @@ port?: AnyValidator | undefined;
 
 Validates the port, a number, or `undefined` when the URL names none or names its scheme's default, which the parser drops. So `port: optional(port())` accepts either, and `port: literal(8080)` requires it. Without it, port 0, which nothing can connect to, is rejected; with it, the validator decides. Its failure is reported as the URL's, with `params.part` `"port"`.
 
-#### protocols
+#### UrlOptions › protocols
 
 ```ts
 protocols?: readonly string[] | undefined;
@@ -313,7 +313,7 @@ Accepted protocols, without the colon, in any letter case. Of the schemes withou
 
 **Default** — ["http", "https"]
 
-#### query
+#### UrlOptions › query
 
 ```ts
 query?: AnyValidator | undefined;
@@ -321,7 +321,7 @@ query?: AnyValidator | undefined;
 
 Validates the query, as an object of its decoded parameters: each key's value as a string, or with `repeated` every value of every key as an array. A key given twice fails at `[key]` inside the query unless `repeated` is set. Its failure is reported as the URL's, with `params.part` `"query"` and paths relative to the query in `params.issues`. To reject parameters it does not list, give it `object(shape, { unknownKeys: "strict" })`.
 
-#### repeated
+#### UrlOptions › repeated
 
 ```ts
 repeated?: boolean | undefined;
@@ -339,11 +339,11 @@ export interface UuidOptions extends MessageOptions
 
 Options for [uuid](#uuid).
 
-#### message
+#### UuidOptions › message
 
 Inherited from [MessageOptions](index.md#messageoptions).
 
-#### version
+#### UuidOptions › version
 
 ```ts
 version?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | undefined;

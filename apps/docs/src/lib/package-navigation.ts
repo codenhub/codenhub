@@ -66,7 +66,8 @@ export function buildNavigationTree(documents: readonly PublicDocument[]): NavNo
 /**
  * Re-labels a reference folder from its `index.md` page's title and drops that
  * prefix from every sibling, so `@codenhub/error`'s `/registries/browser` reads
- * as `/browser` under a `/registries` group and the folder index becomes `/`.
+ * as `/browser` under a `/registries` group and the folder index becomes
+ * "Overview", since a bare `/` names nothing.
  *
  * Unlabelled subpath titles are import subpaths the generator writes (`/registries`,
  * `/registries/browser`); this only changes how the sidebar shows them, and a
@@ -95,7 +96,7 @@ function reframeReferenceSubpaths(documents: readonly PublicDocument[]): PublicD
     }
     const isIndex = document.relativePath.slice(slash + 1) === "index.md";
     const stripped = document.title.startsWith(prefix) ? document.title.slice(prefix.length) : document.title;
-    return { ...document, group: isIndex ? prefix : document.group, title: stripped === "" ? "/" : stripped };
+    return { ...document, group: isIndex ? prefix : document.group, title: stripped === "" ? "Overview" : stripped };
   });
 }
 

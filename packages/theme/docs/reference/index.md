@@ -60,7 +60,7 @@ Frozen view of a configured theme with its name and its static and runtime token
 - `TName` — Names of every configured theme.
 - `TSchema` — Token schema from `ThemeOptions.tokenSchema`.
 
-#### colorScheme
+#### ActiveTheme › colorScheme
 
 ```ts
 readonly colorScheme: "light" | "dark";
@@ -68,7 +68,7 @@ readonly colorScheme: "light" | "dark";
 
 Browser color scheme of the theme.
 
-#### name
+#### ActiveTheme › name
 
 ```ts
 readonly name: TName;
@@ -76,7 +76,7 @@ readonly name: TName;
 
 Configured theme name.
 
-#### pairedTheme
+#### ActiveTheme › pairedTheme
 
 ```ts
 readonly pairedTheme?: TName;
@@ -84,7 +84,7 @@ readonly pairedTheme?: TName;
 
 Theme activated when calling `toggle()` from this theme, when configured.
 
-#### tokens
+#### ActiveTheme › tokens
 
 ```ts
 readonly tokens: Readonly<Partial<Record<keyof TSchema, string>>>;
@@ -104,7 +104,7 @@ Mapping from OS color-scheme preferences to configured theme names.
 
 - `TName` — Names of every configured theme.
 
-#### dark
+#### SystemThemeMap › dark
 
 ```ts
 dark: TName;
@@ -112,7 +112,7 @@ dark: TName;
 
 Theme used when the OS preference is dark, and the one `toggle()` selects from a light theme without `pairedTheme`.
 
-#### light
+#### SystemThemeMap › light
 
 ```ts
 light: TName;
@@ -135,7 +135,7 @@ Every member is safe to use without browser APIs: storage, DOM, and listener wor
 - `TName` — Names of every configured theme.
 - `TSchema` — Token schema from `ThemeOptions.tokenSchema`.
 
-#### name
+#### Theme › name
 
 ```ts
 readonly name: TName;
@@ -143,7 +143,7 @@ readonly name: TName;
 
 Active theme name. `defaultTheme` until `init()` or another change runs.
 
-#### preference
+#### Theme › preference
 
 ```ts
 readonly preference: TName | null;
@@ -151,7 +151,7 @@ readonly preference: TName | null;
 
 Explicit preference stored in `localStorage`, or `null` when none is stored, the stored name is not configured, or storage is unavailable.
 
-#### system
+#### Theme › system
 
 ```ts
 readonly system: TName;
@@ -159,7 +159,7 @@ readonly system: TName;
 
 Theme matching the current OS color-scheme preference, or `defaultTheme` when `matchMedia` is unavailable.
 
-#### clearPreference
+#### Theme › clearPreference
 
 ```ts
 clearPreference(): ActiveTheme<TName, TSchema>;
@@ -171,12 +171,12 @@ Removes the explicit preference and activates the system theme, which then follo
 
 **Throws** — When a `className` resolver returns an invalid class.
 
-#### destroy
+#### Theme › destroy
 
 ```ts
 destroy(options?: {
-        revertDom?: boolean | undefined;
-    }): void;
+    revertDom?: boolean | undefined;
+}): void;
 ```
 
 Stops following OS and cross-tab changes, removes every listener and runtime override, and resets `name` to `defaultTheme`, so `init()` can run again. The DOM and stored preference stay as they are unless `revertDom` is set.
@@ -185,7 +185,7 @@ Stops following OS and cross-tab changes, removes every listener and runtime ove
 
 - `options` — Set `revertDom: true` to also remove the attribute, classes, `color-scheme`, and custom properties this manager writes to `document.documentElement`.
 
-#### get
+#### Theme › get
 
 ```ts
 get(): ActiveTheme<TName, TSchema>;
@@ -195,7 +195,7 @@ Returns the active theme without reading the DOM.
 
 **Returns** — The same frozen object on every call until the next change, so it can serve as a store snapshot.
 
-#### getPrePaintScript
+#### Theme › getPrePaintScript
 
 ```ts
 getPrePaintScript(): string;
@@ -207,7 +207,7 @@ Returns an inline script that applies the stored or system theme, its class, and
 
 **Throws** — When a `className` resolver returns an invalid class.
 
-#### init
+#### Theme › init
 
 ```ts
 init(): Theme<TName, TSchema>;
@@ -219,7 +219,7 @@ Applies the stored preference, or the system theme when there is none, and start
 
 **Throws** — When a `className` resolver returns an empty or whitespace-containing class.
 
-#### readTokens
+#### Theme › readTokens
 
 ```ts
 readTokens(): Partial<Record<keyof TSchema, string>>;
@@ -231,7 +231,7 @@ Reading computed styles can force a synchronous layout. Prefer `get().tokens` wh
 
 **Returns** — Token values at the time of the call. Tokens with no value anywhere are omitted, and computed values are omitted without browser APIs or when reading them fails, which is logged with `console.error`.
 
-#### set
+#### Theme › set
 
 ```ts
 set(name: TName): ActiveTheme<TName, TSchema>;
@@ -247,7 +247,7 @@ Activates a theme and stores it as the explicit preference.
 
 **Throws** — When `name` is not a configured theme, or a `className` resolver returns an invalid class.
 
-#### setTokens
+#### Theme › setTokens
 
 ```ts
 setTokens(tokens: TokenValues<TSchema>): ActiveTheme<TName, TSchema>;
@@ -263,7 +263,7 @@ Replaces the runtime token overrides, which win over every theme's static tokens
 
 **Throws** — When `tokens` is not an object, no `tokenSchema` is configured, a key is not in `tokenSchema`, or a value is not a string, a finite number, or `undefined`. An `undefined` or empty value counts as omitted.
 
-#### subscribe
+#### Theme › subscribe
 
 ```ts
 subscribe(listener: ThemeChangeListener<TName, TSchema>): () => void;
@@ -277,7 +277,7 @@ Registers a listener called after every applied change. A listener that throws i
 
 **Returns** — A function that removes the listener.
 
-#### toggle
+#### Theme › toggle
 
 ```ts
 toggle(): ActiveTheme<TName, TSchema>;
@@ -302,7 +302,7 @@ Payload passed to subscribers and the browser `themechange` event after a theme 
 - `TName` — Names of every configured theme.
 - `TSchema` — Token schema from `ThemeOptions.tokenSchema`.
 
-#### name
+#### ThemeChangeDetail › name
 
 ```ts
 name: TName;
@@ -310,7 +310,7 @@ name: TName;
 
 Active theme name after the change.
 
-#### source
+#### ThemeChangeDetail › source
 
 ```ts
 source: ThemeChangeSource;
@@ -318,7 +318,7 @@ source: ThemeChangeSource;
 
 Operation or browser signal that caused the change notification.
 
-#### theme
+#### ThemeChangeDetail › theme
 
 ```ts
 theme: ActiveTheme<TName, TSchema>;
@@ -339,7 +339,7 @@ Configured theme, keyed by its name in `ThemeOptions.themes`.
 - `TName` — Names of every configured theme, used to type `pairedTheme`.
 - `TSchema` — Token schema from `ThemeOptions.tokenSchema`, used to type `tokens`.
 
-#### colorScheme
+#### ThemeDefinition › colorScheme
 
 ```ts
 colorScheme: "light" | "dark";
@@ -347,7 +347,7 @@ colorScheme: "light" | "dark";
 
 Browser color scheme applied to `document.documentElement.style.colorScheme`; also decides what `toggle()` falls back to and whether `darkClass` applies.
 
-#### pairedTheme
+#### ThemeDefinition › pairedTheme
 
 ```ts
 pairedTheme?: TName | undefined;
@@ -355,7 +355,7 @@ pairedTheme?: TName | undefined;
 
 Theme activated when calling `toggle()` from this theme, instead of the opposite `systemTheme` entry.
 
-#### tokens
+#### ThemeDefinition › tokens
 
 ```ts
 tokens?: TokenValues<TSchema> | undefined;
@@ -376,7 +376,7 @@ Configuration for theme definitions, persistence, DOM application, and system pr
 - `TName` — Names of every configured theme, inferred from the keys of `themes`.
 - `TSchema` — Token schema, inferred from `tokenSchema`.
 
-#### attribute
+#### ThemeOptions › attribute
 
 ```ts
 attribute?: string | undefined;
@@ -386,7 +386,7 @@ Attribute set on `document.documentElement` to the active theme name. It cannot 
 
 **Default** — `"data-theme"`
 
-#### className
+#### ThemeOptions › className
 
 ```ts
 className?: boolean | ThemeClassResolver<NoInfer<TName>, NoInfer<TSchema>> | undefined;
@@ -396,7 +396,7 @@ Class applied to `document.documentElement` for the active theme: `true` applies
 
 **Default** — `true`
 
-#### darkClass
+#### ThemeOptions › darkClass
 
 ```ts
 darkClass?: boolean | undefined;
@@ -406,7 +406,7 @@ Whether to add a `dark` class to `document.documentElement` while a theme with `
 
 **Default** — `false`
 
-#### defaultTheme
+#### ThemeOptions › defaultTheme
 
 ```ts
 defaultTheme?: NoInfer<TName> | undefined;
@@ -416,7 +416,7 @@ Theme used before initialization and when `matchMedia` is unavailable.
 
 **Default** — `"light"`
 
-#### storageKey
+#### ThemeOptions › storageKey
 
 ```ts
 storageKey?: string | undefined;
@@ -426,7 +426,7 @@ storageKey?: string | undefined;
 
 **Default** — `"app-theme-preference"`
 
-#### systemTheme
+#### ThemeOptions › systemTheme
 
 ```ts
 systemTheme?: SystemThemeMap<NoInfer<TName>> | undefined;
@@ -436,19 +436,19 @@ Themes selected for OS light and dark color-scheme preferences.
 
 **Default** — `{ light: "light", dark: "dark" }`
 
-#### themes
+#### ThemeOptions › themes
 
 ```ts
 themes?: {
-        readonly [K in TName]: ThemeDefinition<NoInfer<TName>, NoInfer<TSchema>>;
-    } | undefined;
+    readonly [K in TName]: ThemeDefinition<NoInfer<TName>, NoInfer<TSchema>>;
+} | undefined;
 ```
 
 Available themes keyed by name. Replaces the built-in list entirely. Names must be non-empty and, while `className` is `true`, usable in a class name.
 
 **Default** — `{ light: { colorScheme: "light" }, dark: { colorScheme: "dark" } }`
 
-#### tokenSchema
+#### ThemeOptions › tokenSchema
 
 ```ts
 tokenSchema?: TSchema | undefined;

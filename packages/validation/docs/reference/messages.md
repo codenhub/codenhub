@@ -89,7 +89,7 @@ export interface FlattenedErrors
 
 Issue messages grouped for display next to form fields.
 
-#### fieldErrors
+#### FlattenedErrors › fieldErrors
 
 ```ts
 fieldErrors: Record<string, string[]>;
@@ -97,7 +97,7 @@ fieldErrors: Record<string, string[]>;
 
 Messages grouped by [formatPath](#formatpath) notation, such as `user.email`.
 
-#### formErrors
+#### FlattenedErrors › formErrors
 
 ```ts
 formErrors: string[];

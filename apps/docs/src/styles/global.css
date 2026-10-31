@@ -179,6 +179,9 @@ html {
    than a mark that appears and disappears. */
 .toc-rail a {
   @apply text-text-secondary hover:text-text hover:border-border-hover block py-1.5 no-underline transition-[color,border-color] duration-(--motion-duration-fast) ease-(--motion-ease);
+  /* Reference identifiers such as `DEFAULT_APP_ERROR_MESSAGE` are one word
+     wider than the rail; without this the rail scrolls sideways. */
+  overflow-wrap: anywhere;
 }
 
 .toc-rail a[aria-current="true"] {
@@ -272,6 +275,17 @@ html {
 
 .markdown-content h4 {
   @apply text-label-lg mt-8;
+}
+
+/* A reference symbol's member headings are one step smaller than the symbol's
+   own, which alone does not show where one symbol ends and the next begins. A
+   rule above each symbol does; the first after its kind heading needs none. */
+.markdown-content h3.reference-symbol {
+  @apply border-border/60 mt-14 border-t pt-10;
+}
+
+.markdown-content h2 + h3.reference-symbol {
+  @apply mt-10 border-t-0 pt-0;
 }
 
 .markdown-content p,
@@ -381,6 +395,7 @@ html {
 
 .page-outline a {
   @apply text-text-secondary hover:text-text block py-2 no-underline;
+  overflow-wrap: anywhere;
 }
 
 .page-outline li.nested a {

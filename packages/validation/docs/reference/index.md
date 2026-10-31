@@ -183,7 +183,7 @@ export interface AssertOptions
 
 Options for [assert](#assert).
 
-#### messages
+#### AssertOptions › messages
 
 ```ts
 messages?: Messages | undefined;
@@ -193,7 +193,7 @@ Wording for issues that carry no message of their own, keyed by issue code, such
 
 **Default** — An empty map, which words such an issue as "Invalid value".
 
-#### subject
+#### AssertOptions › subject
 
 ```ts
 subject?: string | undefined;
@@ -209,11 +209,11 @@ export interface AsyncSchema<T, TInput = unknown> extends AsyncValidator<T, TInp
 
 An [AsyncValidator](#asyncvalidator) a factory of this package made, which is also a Standard Schema as it is, as a [Schema](#schema) is. Its `~standard` validates asynchronously when the validator waits.
 
-#### ~standard
+#### AsyncSchema › ~standard
 
 Inherited from [StandardSchemaV1](interop.md#standardschemav1).
 
-#### ~types
+#### AsyncSchema › ~types
 
 Inherited from [AsyncValidator](#asyncvalidator).
 
@@ -227,12 +227,12 @@ A validator that may finish later, for rules that need I/O such as checking a na
 
 Always `await` its result. It is a promise only when the validator actually had to wait: a composer holding an asynchronous rule still answers at once for input it can reject without running it, such as `undefined` for an optional value. `await` handles both.
 
-#### ~types
+#### AsyncValidator › ~types
 
 ```ts
 readonly "~types"?: {
-        readonly input: TInput;
-    };
+    readonly input: TInput;
+};
 ```
 
 Never set: it only carries `TInput`, as on [Validator](#validator).
@@ -245,7 +245,7 @@ export interface AuditFinding
 
 A place in a schema where input nobody controls is not bounded, as [audit](#audit) reports it.
 
-#### kind
+#### AuditFinding › kind
 
 ```ts
 readonly kind: string;
@@ -253,7 +253,7 @@ readonly kind: string;
 
 The kind of the part, as `describe` gives it, or `"unknown"` for a part that cannot be read.
 
-#### path
+#### AuditFinding › path
 
 ```ts
 readonly path: string;
@@ -261,7 +261,7 @@ readonly path: string;
 
 Where the part is in the schema: property names joined by `.`, `[]` for the items of an array or a set, `[0]` for an item of a tuple and `{}` for the keys and values of a record or a map, and `""` for the validator itself.
 
-#### rule
+#### AuditFinding › rule
 
 ```ts
 readonly rule: "unbounded_size" | "unbounded_text" | "raised_limit" | "unreadable";
@@ -279,7 +279,7 @@ What a factory of this package made, as plain data: a validator's kind, the opti
 
 The record and its options are frozen. A child is given as the validator itself, to be described in turn, so a recursive schema is described one level at a time.
 
-#### checks
+#### Description › checks
 
 ```ts
 readonly checks?: readonly AsyncCheck<never>[];
@@ -287,7 +287,7 @@ readonly checks?: readonly AsyncCheck<never>[];
 
 The checks given to the validator, each described in turn, for a validator that takes checks.
 
-#### kind
+#### Description › kind
 
 ```ts
 readonly kind: string;
@@ -295,7 +295,7 @@ readonly kind: string;
 
 What was made, such as `"string"`, `"object"`, `"format"` or `"check"`.
 
-#### options
+#### Description › options
 
 ```ts
 readonly options?: Readonly<Record<string, unknown>>;
@@ -303,7 +303,7 @@ readonly options?: Readonly<Record<string, unknown>>;
 
 The options the factory read, `message` included, for a validator that takes options.
 
-#### Index signature
+#### Description index signature
 
 ```ts
 readonly [part: string]: unknown;
@@ -327,7 +327,7 @@ export interface IssueInput
 
 An issue as a validator author writes it; [fail](#fail) fills in the rest.
 
-#### code
+#### IssueInput › code
 
 ```ts
 code?: ValidationIssueCode;
@@ -337,7 +337,7 @@ Failure category.
 
 **Default** — "custom"
 
-#### message
+#### IssueInput › message
 
 ```ts
 message?: string;
@@ -345,7 +345,7 @@ message?: string;
 
 Ready-made message text. Without it, `formatIssue` builds one from `code` and `params`.
 
-#### params
+#### IssueInput › params
 
 ```ts
 params?: Readonly<Record<string, unknown>>;
@@ -353,7 +353,7 @@ params?: Readonly<Record<string, unknown>>;
 
 Facts about the failure, for building messages or branching in callers. Must not contain the input.
 
-#### path
+#### IssueInput › path
 
 ```ts
 path?: readonly ValidationPathSegment[];
@@ -369,7 +369,7 @@ export interface MessageOptions
 
 The options every validator takes.
 
-#### message
+#### MessageOptions › message
 
 ```ts
 message?: Message | undefined;
@@ -387,11 +387,11 @@ A [Validator](#validator) a factory of this package made, which is also a Standa
 
 Accepted wherever a [Validator](#validator) is. A validator written by hand is a [Validator](#validator) and not a Schema, since it has no `~standard` of its own.
 
-#### ~standard
+#### Schema › ~standard
 
 Inherited from [StandardSchemaV1](interop.md#standardschemav1).
 
-#### ~types
+#### Schema › ~types
 
 Inherited from [Validator](#validator).
 
@@ -403,7 +403,7 @@ export interface ValidationErr
 
 Failed validation, carrying every issue found.
 
-#### error
+#### ValidationErr › error
 
 ```ts
 readonly error: ValidationFailure;
@@ -411,7 +411,7 @@ readonly error: ValidationFailure;
 
 What went wrong.
 
-#### ok
+#### ValidationErr › ok
 
 ```ts
 readonly ok: false;
@@ -425,7 +425,7 @@ export interface ValidationFailure
 
 Everything a failed validation found.
 
-#### issues
+#### ValidationFailure › issues
 
 ```ts
 readonly issues: readonly [ValidationIssue, ...ValidationIssue[]];
@@ -441,7 +441,7 @@ export interface ValidationIssue
 
 A single reason a value failed validation.
 
-#### code
+#### ValidationIssue › code
 
 ```ts
 readonly code: ValidationIssueCode;
@@ -449,7 +449,7 @@ readonly code: ValidationIssueCode;
 
 Stable failure category.
 
-#### message
+#### ValidationIssue › message
 
 ```ts
 readonly message?: string;
@@ -457,7 +457,7 @@ readonly message?: string;
 
 Ready-made message text. A built-in validator sets it only when given a `message` option, and a check only when given a message; a custom validator can set it too. `formatIssue` prefers it over every other source of text.
 
-#### params
+#### ValidationIssue › params
 
 ```ts
 readonly params?: Readonly<Record<string, unknown>>;
@@ -465,7 +465,7 @@ readonly params?: Readonly<Record<string, unknown>>;
 
 Facts a message can be built from, such as `{ minimum: 3, type: "string" }` for `too_small` or `{ expected: "string", received: "number" }` for `invalid_type`. Never contains an input value; the only input it can name is a key, as `unrecognized_key` does.
 
-#### path
+#### ValidationIssue › path
 
 ```ts
 readonly path: readonly ValidationPathSegment[];
@@ -481,13 +481,13 @@ export interface ValidationOk<T>
 
 Successful validation, carrying the validated value.
 
-#### ok
+#### ValidationOk › ok
 
 ```ts
 readonly ok: true;
 ```
 
-#### value
+#### ValidationOk › value
 
 ```ts
 readonly value: T;
@@ -507,12 +507,12 @@ Every validator in this package has this shape, and so does anything you write y
 
 It is called with any input, whatever `TInput` is: `TInput` is the type of input that can pass, which a form or a caller's types are written from, and never a limit on what may be given.
 
-#### ~types
+#### Validator › ~types
 
 ```ts
 readonly "~types"?: {
-        readonly input: TInput;
-    };
+    readonly input: TInput;
+};
 ```
 
 Never set: it only carries `TInput`, the type of input that can pass, for [InferInput](#inferinput). Being optional, it lets any function of the right shape be a validator. The type is held in an object, since read straight from an optional property, an input type that includes `undefined` would lose it.

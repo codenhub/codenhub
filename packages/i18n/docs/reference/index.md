@@ -54,7 +54,7 @@ export declare class I18nError extends Error
 
 Operational locale-loader failure named `I18nError`, with a stable code and deterministic message. The optional locale appears in the message and the original rejection remains available as `cause`.
 
-#### constructor
+#### I18nError › constructor
 
 ```ts
 constructor(options: I18nErrorOptions);
@@ -66,7 +66,7 @@ Creates a locale loading error.
 
 - `options` — Locale and original loader failure.
 
-#### cause
+#### I18nError › cause
 
 ```ts
 readonly cause?: unknown;
@@ -74,7 +74,7 @@ readonly cause?: unknown;
 
 Original loader failure retained for diagnostics and classification.
 
-#### code
+#### I18nError › code
 
 ```ts
 readonly code: I18nErrorCode;
@@ -82,7 +82,7 @@ readonly code: I18nErrorCode;
 
 Stable identifier for consumer classification.
 
-#### locale
+#### I18nError › locale
 
 ```ts
 readonly locale?: string;
@@ -107,7 +107,7 @@ Every method is bound to its manager, so a destructured method, such as `const {
 - `TLocale` — Union of supported canonical locale identifiers.
 - `TKey` — Union of accepted translation keys. Defaults to `string`; `createI18n()` sets it to `TranslationKey<TMessages>` for the loader's dictionary type.
 
-#### defaultLocale
+#### I18n › defaultLocale
 
 ```ts
 readonly defaultLocale: TLocale;
@@ -115,7 +115,7 @@ readonly defaultLocale: TLocale;
 
 Canonical fallback locale.
 
-#### direction
+#### I18n › direction
 
 ```ts
 readonly direction: LocaleDirection;
@@ -123,7 +123,7 @@ readonly direction: LocaleDirection;
 
 Rendering direction of the active locale.
 
-#### isReady
+#### I18n › isReady
 
 ```ts
 readonly isReady: boolean;
@@ -131,7 +131,7 @@ readonly isReady: boolean;
 
 Whether required dictionaries have been loaded and state applied.
 
-#### isSilent
+#### I18n › isSilent
 
 ```ts
 readonly isSilent: boolean;
@@ -139,7 +139,7 @@ readonly isSilent: boolean;
 
 Whether optional diagnostics are suppressed.
 
-#### locale
+#### I18n › locale
 
 ```ts
 readonly locale: TLocale;
@@ -147,7 +147,7 @@ readonly locale: TLocale;
 
 Currently active canonical locale.
 
-#### locales
+#### I18n › locales
 
 ```ts
 readonly locales: readonly TLocale[];
@@ -155,7 +155,7 @@ readonly locales: readonly TLocale[];
 
 Frozen copy of supported canonical locales.
 
-#### addEventListener
+#### I18n › addEventListener
 
 ```ts
 addEventListener<K extends keyof I18nEventMap<TLocale>>(type: K, callback: (this: I18n<TLocale, TKey>, event: I18nEventMap<TLocale>[K]) => void, options?: AddEventListenerOptions | boolean): void;
@@ -164,7 +164,7 @@ addEventListener(type: string, callback: EventListener | EventListenerObject | n
 
 Adds a typed lifecycle event listener.
 
-#### init
+#### I18n › init
 
 ```ts
 init(options?: I18nInitOptions<TLocale>): Promise<void>;
@@ -185,7 +185,7 @@ Atomically loads and activates an explicit locale or the default locale.
 - When direction resolution returns a value other than `ltr` or `rtl`.
 - When an injected locale loader rejects. Exceptions from the direction callback propagate unchanged.
 
-#### loadLocale
+#### I18n › loadLocale
 
 ```ts
 loadLocale(locale: TLocale): Promise<LocaleDictionary>;
@@ -205,7 +205,7 @@ Loads and caches an immutable dictionary without changing active state.
 - When the loaded dictionary is invalid.
 - When the injected locale loader rejects.
 
-#### matchLocale
+#### I18n › matchLocale
 
 ```ts
 matchLocale(preferences: readonly string[]): TLocale | undefined;
@@ -223,7 +223,7 @@ Each preference, in order, tries an exact case-insensitive match, then the longe
 
 **Throws** — When `preferences` is not an array.
 
-#### removeEventListener
+#### I18n › removeEventListener
 
 ```ts
 removeEventListener<K extends keyof I18nEventMap<TLocale>>(type: K, callback: (this: I18n<TLocale, TKey>, event: I18nEventMap<TLocale>[K]) => void, options?: EventListenerOptions | boolean): void;
@@ -232,7 +232,7 @@ removeEventListener(type: string, callback: EventListener | EventListenerObject 
 
 Removes a typed lifecycle event listener.
 
-#### resolveLocale
+#### I18n › resolveLocale
 
 ```ts
 resolveLocale(value: string): TLocale | undefined;
@@ -246,7 +246,7 @@ Canonicalizes an exact configured locale match.
 
 **Returns** — The canonical locale or undefined; language subtags are not matched, as `I18n.matchLocale` does.
 
-#### setLocale
+#### I18n › setLocale
 
 ```ts
 setLocale(locale: TLocale): Promise<void>;
@@ -268,7 +268,7 @@ Atomically changes the active locale after all required loads succeed.
 - When direction resolution returns a value other than `ltr` or `rtl`.
 - When an injected locale loader rejects. Exceptions from the direction callback propagate unchanged.
 
-#### subscribe
+#### I18n › subscribe
 
 ```ts
 subscribe(listener: () => void): () => void;
@@ -282,7 +282,7 @@ Calls a listener after every applied initialization and locale change, such as t
 
 **Returns** — A function that removes the listener; calling it again does nothing.
 
-#### t
+#### I18n › t
 
 ```ts
 t(key: TKey, params?: Readonly<Record<string, string | number>>): string;
@@ -290,7 +290,7 @@ t(key: TKey, params?: Readonly<Record<string, string | number>>): string;
 
 Short alias of `I18n.translate`, the same bound function.
 
-#### translate
+#### I18n › translate
 
 ```ts
 translate(key: TKey, params?: Readonly<Record<string, string | number>>): string;
@@ -331,7 +331,7 @@ Runtime-neutral dependencies and supported locale metadata.
 - `TLocale` — Union of supported canonical locale identifiers.
 - `TMessages` — Dictionary type returned by `loadLocale`; its flattened leaf paths type translation keys.
 
-#### defaultLocale
+#### I18nConfig › defaultLocale
 
 ```ts
 defaultLocale: NoInfer<TLocale>;
@@ -339,7 +339,7 @@ defaultLocale: NoInfer<TLocale>;
 
 Supported ASCII locale used initially and for missing-key fallback; matched after trimming, case-insensitively. Locale types are inferred from `locales` only, so a `string` here is a compile error rather than a reason to accept any string as a locale.
 
-#### dictionaryLimits
+#### I18nConfig › dictionaryLimits
 
 ```ts
 dictionaryLimits?: LocaleDictionaryLimits;
@@ -347,7 +347,7 @@ dictionaryLimits?: LocaleDictionaryLimits;
 
 Raises or lowers the resource limits applied to loaded dictionaries; unset limits keep their defaults.
 
-#### isSilent
+#### I18nConfig › isSilent
 
 ```ts
 isSilent?: boolean;
@@ -355,7 +355,7 @@ isSilent?: boolean;
 
 Suppresses optional diagnostics, including the default missing-key warning, without suppressing failures. Defaults to `false`.
 
-#### locales
+#### I18nConfig › locales
 
 ```ts
 locales: readonly TLocale[];
@@ -363,7 +363,7 @@ locales: readonly TLocale[];
 
 Non-empty, case-insensitively unique ASCII locale identifiers composed of alphanumeric hyphen-separated subtags.
 
-#### getLocaleDirection
+#### I18nConfig › getLocaleDirection
 
 ```ts
 getLocaleDirection?(locale: NoInfer<TLocale>): LocaleDirection;
@@ -373,7 +373,7 @@ Resolves `ltr` or `rtl`; called during creation and state changes, with failures
 
 **Default** — `rtl` for a right-to-left script subtag, such as `uz-Arab`, or, without a script subtag, a right-to-left language, such as `ar`, `he`, `fa`, or `ur`; otherwise `ltr`.
 
-#### loadLocale
+#### I18nConfig › loadLocale
 
 ```ts
 loadLocale(locale: NoInfer<TLocale>): TMessages | Promise<TMessages>;
@@ -381,7 +381,7 @@ loadLocale(locale: NoInfer<TLocale>): TMessages | Promise<TMessages>;
 
 Loads a flat or nested dictionary through a consumer-selected transport; callback failures become `I18nError`. Its declared return type, such as an `as const` object or an imported JSON module, types translation keys; an `unknown` or `any` return accepts any string key.
 
-#### onMissingKey
+#### I18nConfig › onMissingKey
 
 ```ts
 onMissingKey?(key: string, locale: NoInfer<TLocale>): void;
@@ -399,7 +399,7 @@ export interface I18nErrorOptions
 
 Consumer-provided context retained by an `I18nError`.
 
-#### cause
+#### I18nErrorOptions › cause
 
 ```ts
 readonly cause?: unknown;
@@ -407,7 +407,7 @@ readonly cause?: unknown;
 
 Original loader failure.
 
-#### locale
+#### I18nErrorOptions › locale
 
 ```ts
 readonly locale?: string;
@@ -423,7 +423,7 @@ export interface I18nEventMap<TLocale extends string = string>
 
 Typed lifecycle events dispatched by an i18n manager.
 
-#### locale-change
+#### I18nEventMap › locale-change
 
 ```ts
 "locale-change": CustomEvent<I18nLocaleChangeEventDetail<TLocale>>;
@@ -431,7 +431,7 @@ Typed lifecycle events dispatched by an i18n manager.
 
 Successful active locale change event.
 
-#### ready
+#### I18nEventMap › ready
 
 ```ts
 ready: CustomEvent<I18nReadyEventDetail<TLocale>>;
@@ -447,7 +447,7 @@ export interface I18nInitOptions<TLocale extends string = string>
 
 Locale selected explicitly during initialization.
 
-#### locale
+#### I18nInitOptions › locale
 
 ```ts
 locale?: TLocale;
@@ -463,7 +463,7 @@ export interface I18nLocaleChangeEventDetail<TLocale extends string = string>
 
 Payload emitted after a successful active locale change.
 
-#### locale
+#### I18nLocaleChangeEventDetail › locale
 
 ```ts
 locale: TLocale;
@@ -471,7 +471,7 @@ locale: TLocale;
 
 Newly active canonical locale.
 
-#### previousLocale
+#### I18nLocaleChangeEventDetail › previousLocale
 
 ```ts
 previousLocale: TLocale;
@@ -487,7 +487,7 @@ export interface I18nReadyEventDetail<TLocale extends string = string>
 
 Payload emitted after successful initialization is applied.
 
-#### locale
+#### I18nReadyEventDetail › locale
 
 ```ts
 locale: TLocale;
@@ -503,7 +503,7 @@ export interface LocaleDictionary
 
 Immutable flat translation keys and string values.
 
-#### Index signature
+#### LocaleDictionary index signature
 
 ```ts
 readonly [key: string]: string;
@@ -517,7 +517,7 @@ export interface LocaleDictionaryLimits
 
 Resource limits checked when a loaded dictionary is validated. Each must be a positive safe integer. The 1,000-character flattened-key limit is fixed, because `translate()` and DOM keys share it.
 
-#### maxDepth
+#### LocaleDictionaryLimits › maxDepth
 
 ```ts
 maxDepth?: number;
@@ -525,7 +525,7 @@ maxDepth?: number;
 
 Maximum nesting levels below the root object. Defaults to 100.
 
-#### maxProperties
+#### LocaleDictionaryLimits › maxProperties
 
 ```ts
 maxProperties?: number;
@@ -533,7 +533,7 @@ maxProperties?: number;
 
 Maximum traversed properties, counting translations and nested groups. Defaults to 20,000.
 
-#### maxTotalLength
+#### LocaleDictionaryLimits › maxTotalLength
 
 ```ts
 maxTotalLength?: number;
@@ -541,7 +541,7 @@ maxTotalLength?: number;
 
 Maximum characters across all translation values. Defaults to 5,000,000.
 
-#### maxTranslations
+#### LocaleDictionaryLimits › maxTranslations
 
 ```ts
 maxTranslations?: number;
@@ -549,7 +549,7 @@ maxTranslations?: number;
 
 Maximum string translations. Defaults to 10,000.
 
-#### maxValueLength
+#### LocaleDictionaryLimits › maxValueLength
 
 ```ts
 maxValueLength?: number;

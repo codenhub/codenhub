@@ -35,7 +35,8 @@ describe("documentation chrome", () => {
     const html = await readOutput("error/reference/index.html");
 
     expect(html).toContain("<title>@codenhub/error | ErrorKit | CodenHub</title>");
-    expect(html).toContain('<h1 id="codenhuberror">@codenhub/error</h1>');
+    // The `<wbr>` lets the specifier wrap after its slash rather than inside a word.
+    expect(html).toContain('<h1 id="codenhuberror">@codenhub/<wbr>error</h1>');
   });
 
   it("renders a generated reference page's description as a deck directly below the H1", async () => {

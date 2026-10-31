@@ -35,10 +35,19 @@ export function indexableHeadings(document: Pick<IndexableDocument, "headings" |
       owners.pop();
     }
     const owner = owners.at(-1);
+    // Generated headings already name their owner: a member as `Owner › member`,
+    // labelled `Owner.member` like the code that reads it, an index signature as
+    // `Owner index signature`, and a namespace member as `Owner.member`. Only
+    // prose headings inside a member still need their owner prefixed.
+    const separator = `${owner?.text} › `;
     const text =
-      heading.depth > 3 && owner !== undefined && !heading.text.startsWith(`${owner.text}.`)
-        ? `${owner.text}.${heading.text}`
-        : heading.text;
+      heading.depth <= 3 || owner === undefined
+        ? heading.text
+        : heading.text.startsWith(separator)
+          ? `${owner.text}.${heading.text.slice(separator.length)}`
+          : heading.text.startsWith(`${owner.text}.`) || heading.text.startsWith(`${owner.text} `)
+            ? heading.text
+            : `${owner.text}.${heading.text}`;
     const qualified = { ...heading, text };
     owners.push(qualified);
     return [qualified];
@@ -64,9 +73,19 @@ const decodeEntities = (value: string) =>
     },
   );
 
+/* Inline elements join their text to the neighbouring text: highlighted code
+   is one span per token, and `Readonly<ErrorFeedback>` must stay one string. */
+const INLINE_TAG = /<\/?(?:a|abbr|b|code|em|i|kbd|mark|s|small|span|strong|sub|sup|wbr)\b[^>]*>/g;
+
 /** Strips markup and collapses whitespace so prose is searchable as one line. */
 export const toText = (html: string) =>
-  decodeEntities(html.replaceAll(/<[^>]*>/g, " "))
+  decodeEntities(
+    html
+      // A code block's header holds its language label and copy button, not content.
+      .replaceAll(/<figcaption\b[^>]*>[\s\S]*?<\/figcaption>/g, " ")
+      .replaceAll(INLINE_TAG, "")
+      .replaceAll(/<[^>]*>/g, " "),
+  )
     .replaceAll(/\s+/g, " ")
     .trim();
 

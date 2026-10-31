@@ -38,7 +38,7 @@ export interface LocaleRouting<TLocale extends string>
 
 Pure operations for parsing and generating locale-prefixed application pathnames.
 
-#### localize
+#### LocaleRouting › localize
 
 ```ts
 localize(pathname: string, locale: TLocale): string;
@@ -58,7 +58,7 @@ Generates the canonical pathname for one supported locale.
 - When `pathname` is not a valid application pathname.
 - When `locale` is unsupported or is not a string at runtime.
 
-#### localizeAll
+#### LocaleRouting › localizeAll
 
 ```ts
 localizeAll(pathname: string): readonly LocalizedPath<TLocale>[];
@@ -74,7 +74,7 @@ Generates localized pathnames for every locale in configuration order.
 
 **Throws** — When `pathname` is not a valid application pathname.
 
-#### parse
+#### LocaleRouting › parse
 
 ```ts
 parse(pathname: string): ParsedLocalePath<TLocale> | undefined;
@@ -98,7 +98,7 @@ export interface LocaleRoutingConfig<TLocale extends string>
 
 Configuration snapshotted for locale-prefixed pathname parsing and generation.
 
-#### defaultLocale
+#### LocaleRoutingConfig › defaultLocale
 
 ```ts
 defaultLocale: NoInfer<TLocale>;
@@ -106,7 +106,7 @@ defaultLocale: NoInfer<TLocale>;
 
 The trimmed, case-insensitively matched locale used for unprefixed paths; its type is inferred from `locales` only.
 
-#### locales
+#### LocaleRoutingConfig › locales
 
 ```ts
 locales: readonly TLocale[];
@@ -114,7 +114,7 @@ locales: readonly TLocale[];
 
 ASCII locale identifiers with alphanumeric hyphen-separated subtags, preserved in `localizeAll` order.
 
-#### prefixDefaultLocale
+#### LocaleRoutingConfig › prefixDefaultLocale
 
 ```ts
 prefixDefaultLocale: boolean;
@@ -130,7 +130,7 @@ export interface LocalizedPath<TLocale extends string>
 
 A generated pathname paired with its canonical configured locale.
 
-#### locale
+#### LocalizedPath › locale
 
 ```ts
 locale: TLocale;
@@ -138,7 +138,7 @@ locale: TLocale;
 
 The trimmed canonical configured locale used to generate the pathname.
 
-#### pathname
+#### LocalizedPath › pathname
 
 ```ts
 pathname: string;
@@ -154,7 +154,7 @@ export interface ParsedLocalePath<TLocale extends string>
 
 A pathname resolved to its canonical configured locale.
 
-#### locale
+#### ParsedLocalePath › locale
 
 ```ts
 locale: TLocale;
@@ -162,7 +162,7 @@ locale: TLocale;
 
 The trimmed canonical configured locale identified by the pathname.
 
-#### pathname
+#### ParsedLocalePath › pathname
 
 ```ts
 pathname: string;

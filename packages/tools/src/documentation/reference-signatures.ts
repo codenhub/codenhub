@@ -81,6 +81,43 @@ function headerText(
     .join(" ");
 }
 
+/**
+ * A member's text with its continuation lines shifted left by the indentation
+ * of the line it starts on, so a multiline member reads as if declared at the
+ * top level. Lines that start inside a string or template literal keep their
+ * whitespace, since it is part of the type.
+ */
+function dedentMember(member: ts.Node, source: ts.SourceFile): string {
+  const start = member.getStart(source);
+  const text = member.getText(source);
+  const lineStart = source.getLineStarts()[source.getLineAndCharacterOfPosition(start).line] ?? start;
+  const indent = /^[ \t]*/.exec(source.text.slice(lineStart, start))?.[0].length ?? 0;
+  if (indent === 0 || !text.includes("\n")) {
+    return text;
+  }
+  const literals: { start: number; end: number }[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isStringLiteralLike(node) || ts.isTemplateLiteralToken(node)) {
+      literals.push({ start: node.getStart(source) - start, end: node.getEnd() - start });
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(member);
+  let offset = 0;
+  return text
+    .split("\n")
+    .map((line, index) => {
+      const lineOffset = offset;
+      offset += line.length + 1;
+      if (index === 0 || literals.some((literal) => lineOffset > literal.start && lineOffset < literal.end)) {
+        return line;
+      }
+      const leading = /^[ \t]*/.exec(line)?.[0].length ?? 0;
+      return line.slice(Math.min(leading, indent));
+    })
+    .join("\n");
+}
+
 function memberEntries(members: ts.NodeArray<ts.ClassElement | ts.TypeElement | ts.EnumMember>, source: ts.SourceFile) {
   const entries = new Map<string, string>();
   for (const member of members) {
@@ -100,7 +137,7 @@ function memberEntries(members: ts.NodeArray<ts.ClassElement | ts.TypeElement | 
       continue;
     }
     const key = typeof name === "string" ? name : name.text;
-    const text = member.getText(source);
+    const text = dedentMember(member, source);
     const existing = entries.get(key);
     // A repeated member name is a method overload set: one line per overload.
     entries.set(key, existing === undefined ? text : `${existing}\n${text}`);

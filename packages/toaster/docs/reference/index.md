@@ -37,7 +37,7 @@ export interface AlertOptions
 
 Customization settings for blocking alert dialogs.
 
-#### backdropDismiss
+#### AlertOptions › backdropDismiss
 
 ```ts
 backdropDismiss?: boolean;
@@ -45,7 +45,7 @@ backdropDismiss?: boolean;
 
 Whether clicking the backdrop overlay closes the alert. Defaults to true.
 
-#### className
+#### AlertOptions › className
 
 ```ts
 className?: string;
@@ -53,7 +53,7 @@ className?: string;
 
 Extra CSS class name.
 
-#### okLabel
+#### AlertOptions › okLabel
 
 ```ts
 okLabel?: string;
@@ -61,7 +61,7 @@ okLabel?: string;
 
 Label for the confirmation button. Defaults to "OK".
 
-#### title
+#### AlertOptions › title
 
 ```ts
 title?: string;
@@ -69,7 +69,7 @@ title?: string;
 
 Optional title to display above the message.
 
-#### tokens
+#### AlertOptions › tokens
 
 ```ts
 tokens?: ToastTokens;
@@ -77,7 +77,7 @@ tokens?: ToastTokens;
 
 Color token overrides.
 
-#### type
+#### AlertOptions › type
 
 ```ts
 type?: "primary" | "secondary" | "success" | "error";
@@ -93,7 +93,7 @@ export interface ConfirmOptions
 
 Customization settings for interactive confirmation dialogs.
 
-#### backdropDismiss
+#### ConfirmOptions › backdropDismiss
 
 ```ts
 backdropDismiss?: boolean;
@@ -101,7 +101,7 @@ backdropDismiss?: boolean;
 
 Whether clicking the backdrop overlay cancels the modal. Defaults to true.
 
-#### cancelLabel
+#### ConfirmOptions › cancelLabel
 
 ```ts
 cancelLabel?: string;
@@ -109,7 +109,7 @@ cancelLabel?: string;
 
 Label for the negative action button. Defaults to "Cancel".
 
-#### className
+#### ConfirmOptions › className
 
 ```ts
 className?: string;
@@ -117,7 +117,7 @@ className?: string;
 
 Extra CSS class name.
 
-#### confirmLabel
+#### ConfirmOptions › confirmLabel
 
 ```ts
 confirmLabel?: string;
@@ -125,7 +125,7 @@ confirmLabel?: string;
 
 Label for the positive action button. Defaults to "Confirm".
 
-#### title
+#### ConfirmOptions › title
 
 ```ts
 title?: string;
@@ -133,7 +133,7 @@ title?: string;
 
 Optional title to display above the message.
 
-#### tokens
+#### ConfirmOptions › tokens
 
 ```ts
 tokens?: ToastTokens;
@@ -141,7 +141,7 @@ tokens?: ToastTokens;
 
 Color token overrides.
 
-#### type
+#### ConfirmOptions › type
 
 ```ts
 type?: "primary" | "secondary" | "success" | "error";
@@ -157,7 +157,7 @@ export interface CustomDefaults
 
 Fallback defaults for custom toasts.
 
-#### autoDismiss
+#### CustomDefaults › autoDismiss
 
 ```ts
 autoDismiss?: boolean;
@@ -165,7 +165,7 @@ autoDismiss?: boolean;
 
 Whether custom toasts automatically dismiss after duration.
 
-#### dismissible
+#### CustomDefaults › dismissible
 
 ```ts
 dismissible?: boolean;
@@ -173,7 +173,7 @@ dismissible?: boolean;
 
 Whether custom toasts show a close button by default.
 
-#### duration
+#### CustomDefaults › duration
 
 ```ts
 duration?: number;
@@ -181,7 +181,7 @@ duration?: number;
 
 Default duration in milliseconds before auto-dismissal.
 
-#### position
+#### CustomDefaults › position
 
 ```ts
 position?: ToastPosition;
@@ -197,7 +197,7 @@ export interface CustomToastOptions
 
 Options for dispatching a custom layout toast.
 
-#### autoDismiss
+#### CustomToastOptions › autoDismiss
 
 ```ts
 autoDismiss?: boolean;
@@ -205,7 +205,7 @@ autoDismiss?: boolean;
 
 Whether to automatically close after duration. Defaults to toaster configuration.
 
-#### className
+#### CustomToastOptions › className
 
 ```ts
 className?: string;
@@ -213,7 +213,7 @@ className?: string;
 
 Extra CSS class name.
 
-#### content
+#### CustomToastOptions › content
 
 ```ts
 content: ToastContent;
@@ -221,7 +221,7 @@ content: ToastContent;
 
 The custom HTML string, DOM Node, or creator function.
 
-#### dismissible
+#### CustomToastOptions › dismissible
 
 ```ts
 dismissible?: boolean;
@@ -229,7 +229,7 @@ dismissible?: boolean;
 
 Whether to render a close button. Defaults to toaster configuration.
 
-#### duration
+#### CustomToastOptions › duration
 
 ```ts
 duration?: number;
@@ -237,18 +237,18 @@ duration?: number;
 
 Visibility duration in milliseconds. Defaults to toaster configuration.
 
-#### margin
+#### CustomToastOptions › margin
 
 ```ts
 margin?: string | {
-        x?: string;
-        y?: string;
-    };
+    x?: string;
+    y?: string;
+};
 ```
 
 Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object.
 
-#### position
+#### CustomToastOptions › position
 
 ```ts
 position?: ToastPosition;
@@ -256,7 +256,7 @@ position?: ToastPosition;
 
 Placement on the screen. Defaults to toaster configuration.
 
-#### role
+#### CustomToastOptions › role
 
 ```ts
 role?: ToastRole;
@@ -264,7 +264,7 @@ role?: ToastRole;
 
 Announcement role, see [ToastRole](#toastrole). Defaults to "status".
 
-#### tokens
+#### CustomToastOptions › tokens
 
 ```ts
 tokens?: ToastTokens;
@@ -280,7 +280,7 @@ export interface DialogDispatcher
 
 Dispatcher interface for displaying interactive browser-native modal dialogs.
 
-#### alert
+#### DialogDispatcher › alert
 
 ```ts
 alert(message: string, options?: AlertOptions): DialogHandle<void>;
@@ -297,7 +297,7 @@ Displays a blocking informational alert modal dialog.
 
 **Throws** — If the instance is destroyed, the message is empty, or no DOM is available.
 
-#### confirm
+#### DialogDispatcher › confirm
 
 ```ts
 confirm(message: string, options?: ConfirmOptions): DialogHandle<boolean>;
@@ -314,7 +314,7 @@ Displays a confirmation modal dialog with confirm and cancel buttons.
 
 **Throws** — If the instance is destroyed, the message is empty, or no DOM is available.
 
-#### prompt
+#### DialogDispatcher › prompt
 
 ```ts
 prompt(message: string, options?: PromptOptions): DialogHandle<string | null>;
@@ -339,7 +339,7 @@ export interface DialogHandle<T> extends PromiseLike<T>
 
 Control handle returned by interactive (confirm / prompt / alert) modals. Implements `PromiseLike<T>` so callers can directly `await dialog.confirm(...)` while retaining access to control methods (`dismiss`, `state`, `settled`).
 
-#### result
+#### DialogHandle › result
 
 ```ts
 readonly result: Promise<T>;
@@ -351,7 +351,7 @@ A promise that resolves with the user's input/decision:
 - `prompt`: resolves with `string` (input value) or `null` (canceled).
 - `alert`: resolves with `void` when acknowledged.
 
-#### settled
+#### DialogHandle › settled
 
 ```ts
 readonly settled: Promise<void>;
@@ -359,7 +359,7 @@ readonly settled: Promise<void>;
 
 Resolves after the dialog leaves the top layer and cleanup completes.
 
-#### state
+#### DialogHandle › state
 
 ```ts
 readonly state: ToastState;
@@ -367,7 +367,7 @@ readonly state: ToastState;
 
 Current queue and visibility state of the dialog.
 
-#### catch
+#### DialogHandle › catch
 
 ```ts
 catch<TResult = never>(onrejected?: ((reason: unknown) => TResult | PromiseLike<TResult>) | null): Promise<T | TResult>;
@@ -375,7 +375,7 @@ catch<TResult = never>(onrejected?: ((reason: unknown) => TResult | PromiseLike<
 
 Attaches a callback for only the rejection of the dialog result.
 
-#### dismiss
+#### DialogHandle › dismiss
 
 ```ts
 dismiss(): void;
@@ -383,7 +383,7 @@ dismiss(): void;
 
 Dismisses an active or queued dialog. Safe to call more than once.
 
-#### finally
+#### DialogHandle › finally
 
 ```ts
 finally(onfinally?: (() => void) | null): Promise<T>;
@@ -391,7 +391,7 @@ finally(onfinally?: (() => void) | null): Promise<T>;
 
 Attaches a callback that is executed when the dialog result is settled.
 
-#### then
+#### DialogHandle › then
 
 ```ts
 then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null, onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null): Promise<TResult1 | TResult2>;
@@ -407,7 +407,7 @@ export interface LoadingDefaults
 
 Fallback defaults for loading toasts.
 
-#### dismissible
+#### LoadingDefaults › dismissible
 
 ```ts
 dismissible?: boolean;
@@ -415,7 +415,7 @@ dismissible?: boolean;
 
 Whether loading toasts show a close button by default.
 
-#### position
+#### LoadingDefaults › position
 
 ```ts
 position?: ToastPosition;
@@ -431,7 +431,7 @@ export interface LoadingToastOptions
 
 Options for dispatching a loading toast notification.
 
-#### className
+#### LoadingToastOptions › className
 
 ```ts
 className?: string;
@@ -439,7 +439,7 @@ className?: string;
 
 Extra CSS class name.
 
-#### description
+#### LoadingToastOptions › description
 
 ```ts
 description?: string;
@@ -447,7 +447,7 @@ description?: string;
 
 Optional secondary description text below the progress message.
 
-#### dismissible
+#### LoadingToastOptions › dismissible
 
 ```ts
 dismissible?: boolean;
@@ -455,18 +455,18 @@ dismissible?: boolean;
 
 Whether the user can manually close it. Defaults to `ToasterConfig.loading.dismissible`, then the instance's `dismissible` (`false`).
 
-#### margin
+#### LoadingToastOptions › margin
 
 ```ts
 margin?: string | {
-        x?: string;
-        y?: string;
-    };
+    x?: string;
+    y?: string;
+};
 ```
 
 Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object.
 
-#### message
+#### LoadingToastOptions › message
 
 ```ts
 message?: string;
@@ -474,7 +474,7 @@ message?: string;
 
 The progress message.
 
-#### position
+#### LoadingToastOptions › position
 
 ```ts
 position?: ToastPosition;
@@ -482,7 +482,7 @@ position?: ToastPosition;
 
 Placement on the screen. Defaults to toaster configuration.
 
-#### title
+#### LoadingToastOptions › title
 
 ```ts
 title?: string;
@@ -490,7 +490,7 @@ title?: string;
 
 Optional title to display above the progress message.
 
-#### tokens
+#### LoadingToastOptions › tokens
 
 ```ts
 tokens?: ToastTokens;
@@ -506,7 +506,7 @@ export interface PromiseToastOptions<T>
 
 Options for binding toasts to promise lifecycles via `toast.promise()`.
 
-#### className
+#### PromiseToastOptions › className
 
 ```ts
 className?: string;
@@ -514,7 +514,7 @@ className?: string;
 
 Extra CSS classes.
 
-#### dismissible
+#### PromiseToastOptions › dismissible
 
 ```ts
 dismissible?: boolean;
@@ -522,7 +522,7 @@ dismissible?: boolean;
 
 Whether to render a close button, while pending and after. The resolved state defaults to `ToasterConfig.semantic.dismissible` when this is unset.
 
-#### duration
+#### PromiseToastOptions › duration
 
 ```ts
 duration?: number;
@@ -530,7 +530,7 @@ duration?: number;
 
 Visibility duration in milliseconds for the resolved state. Defaults to `ToasterConfig.semantic.duration`, then the instance's `duration`.
 
-#### error
+#### PromiseToastOptions › error
 
 ```ts
 error: string | ToastOptions | ((error: unknown) => string | ToastOptions);
@@ -538,7 +538,7 @@ error: string | ToastOptions | ((error: unknown) => string | ToastOptions);
 
 Content to display when the promise rejects.
 
-#### loading
+#### PromiseToastOptions › loading
 
 ```ts
 loading: string | LoadingToastOptions;
@@ -546,18 +546,18 @@ loading: string | LoadingToastOptions;
 
 Content to display while the promise is pending: a message, or the options a `loading()` toast takes.
 
-#### margin
+#### PromiseToastOptions › margin
 
 ```ts
 margin?: string | {
-        x?: string;
-        y?: string;
-    };
+    x?: string;
+    y?: string;
+};
 ```
 
 Viewport margin configurations.
 
-#### position
+#### PromiseToastOptions › position
 
 ```ts
 position?: ToastPosition;
@@ -565,7 +565,7 @@ position?: ToastPosition;
 
 Viewport position for the toast.
 
-#### success
+#### PromiseToastOptions › success
 
 ```ts
 success: string | ToastOptions | ((data: T) => string | ToastOptions);
@@ -573,7 +573,7 @@ success: string | ToastOptions | ((data: T) => string | ToastOptions);
 
 Content to display when the promise successfully resolves.
 
-#### tokens
+#### PromiseToastOptions › tokens
 
 ```ts
 tokens?: ToastTokens;
@@ -589,7 +589,7 @@ export interface PromptOptions
 
 Customization settings for interactive prompt input dialogs.
 
-#### backdropDismiss
+#### PromptOptions › backdropDismiss
 
 ```ts
 backdropDismiss?: boolean;
@@ -597,7 +597,7 @@ backdropDismiss?: boolean;
 
 Whether clicking the backdrop overlay cancels the modal. Defaults to true.
 
-#### cancelLabel
+#### PromptOptions › cancelLabel
 
 ```ts
 cancelLabel?: string;
@@ -605,7 +605,7 @@ cancelLabel?: string;
 
 Label for the cancel button. Defaults to "Cancel".
 
-#### className
+#### PromptOptions › className
 
 ```ts
 className?: string;
@@ -613,7 +613,7 @@ className?: string;
 
 Extra CSS class name.
 
-#### defaultValue
+#### PromptOptions › defaultValue
 
 ```ts
 defaultValue?: string;
@@ -621,7 +621,7 @@ defaultValue?: string;
 
 Initial value prefilled in the text input field.
 
-#### placeholder
+#### PromptOptions › placeholder
 
 ```ts
 placeholder?: string;
@@ -629,7 +629,7 @@ placeholder?: string;
 
 Placeholder text when the input field is empty.
 
-#### submitLabel
+#### PromptOptions › submitLabel
 
 ```ts
 submitLabel?: string;
@@ -637,7 +637,7 @@ submitLabel?: string;
 
 Label for the submit button. Defaults to "Submit".
 
-#### title
+#### PromptOptions › title
 
 ```ts
 title?: string;
@@ -645,7 +645,7 @@ title?: string;
 
 Optional title to display above the message.
 
-#### tokens
+#### PromptOptions › tokens
 
 ```ts
 tokens?: ToastTokens;
@@ -653,7 +653,7 @@ tokens?: ToastTokens;
 
 Color token overrides.
 
-#### type
+#### PromptOptions › type
 
 ```ts
 type?: "primary" | "secondary" | "success" | "error";
@@ -669,7 +669,7 @@ export interface SemanticDefaults
 
 Fallback defaults for semantic toasts.
 
-#### autoDismiss
+#### SemanticDefaults › autoDismiss
 
 ```ts
 autoDismiss?: boolean;
@@ -677,7 +677,7 @@ autoDismiss?: boolean;
 
 Whether semantic toasts automatically dismiss after duration.
 
-#### dismissible
+#### SemanticDefaults › dismissible
 
 ```ts
 dismissible?: boolean;
@@ -685,7 +685,7 @@ dismissible?: boolean;
 
 Whether semantic toasts show a close button by default.
 
-#### duration
+#### SemanticDefaults › duration
 
 ```ts
 duration?: number;
@@ -693,7 +693,7 @@ duration?: number;
 
 Default duration in milliseconds before auto-dismissal.
 
-#### position
+#### SemanticDefaults › position
 
 ```ts
 position?: ToastPosition;
@@ -709,7 +709,7 @@ export interface ToastAction
 
 Inline action button rendered inside a toast notification.
 
-#### label
+#### ToastAction › label
 
 ```ts
 label: string;
@@ -717,7 +717,7 @@ label: string;
 
 Text label displayed on the action button.
 
-#### onClick
+#### ToastAction › onClick
 
 ```ts
 onClick: (event: MouseEvent, handle: ToastHandle) => void;
@@ -738,7 +738,7 @@ Represents the Toaster instance controller.
 - `message` — Message text to display.
 - `options` — Scoped options including duration, position, dismissible, etc.
 
-#### dialog
+#### Toaster › dialog
 
 ```ts
 readonly dialog: DialogDispatcher;
@@ -746,7 +746,7 @@ readonly dialog: DialogDispatcher;
 
 Interactive native dialog dispatcher.
 
-#### clear
+#### Toaster › clear
 
 ```ts
 clear(): void;
@@ -756,7 +756,7 @@ Clears all active and queued non-interactive toasts.
 
 **Throws** — If the toaster instance has been destroyed.
 
-#### configure
+#### Toaster › configure
 
 ```ts
 configure(config: ToasterRuntimeConfig): void;
@@ -768,7 +768,7 @@ Reconfigures the toaster at runtime.
 
 - `config` — Runtime configuration to validate and apply.
 
-#### custom
+#### Toaster › custom
 
 ```ts
 custom(content: ToastContent, options?: Omit<CustomToastOptions, "content">): ToastHandle;
@@ -777,7 +777,7 @@ custom(options: CustomToastOptions): ToastHandle;
 
 Displays custom HTML or DOM node content.
 
-#### destroy
+#### Toaster › destroy
 
 ```ts
 destroy(): void;
@@ -785,7 +785,7 @@ destroy(): void;
 
 Fully tears down this toaster instance.
 
-#### dismiss
+#### Toaster › dismiss
 
 ```ts
 dismiss(handle?: ToastHandle): void;
@@ -797,7 +797,7 @@ Dismisses a specific toast handle, or all active toasts if handle is omitted.
 
 - `handle` — Optional handle of the toast to dismiss.
 
-#### error
+#### Toaster › error
 
 ```ts
 error(message: string, options?: ToastOptions): ToastHandle;
@@ -806,7 +806,7 @@ error(options: ToastOptions): ToastHandle;
 
 Displays an error notification.
 
-#### info
+#### Toaster › info
 
 ```ts
 info(message: string, options?: ToastOptions): ToastHandle;
@@ -815,7 +815,7 @@ info(options: ToastOptions): ToastHandle;
 
 Displays an informational notification.
 
-#### loading
+#### Toaster › loading
 
 ```ts
 loading(message: string, options?: LoadingToastOptions): ToastHandle;
@@ -824,7 +824,7 @@ loading(options?: LoadingToastOptions): ToastHandle;
 
 Displays a stateful progress loader toast. By default, loading toasts do not auto-dismiss.
 
-#### promise
+#### Toaster › promise
 
 ```ts
 promise<T>(promise: PromiseLike<T>, options: PromiseToastOptions<T>): Promise<T>;
@@ -839,7 +839,7 @@ Binds a notification to a Promise lifecycle, automatically managing transition s
 
 **Returns** — The original Promise result.
 
-#### success
+#### Toaster › success
 
 ```ts
 success(message: string, options?: ToastOptions): ToastHandle;
@@ -848,7 +848,7 @@ success(options: ToastOptions): ToastHandle;
 
 Displays a success notification.
 
-#### warning
+#### Toaster › warning
 
 ```ts
 warning(message: string, options?: ToastOptions): ToastHandle;
@@ -865,7 +865,7 @@ export interface ToasterConfig
 
 Global configuration settings for a Toaster manager instance.
 
-#### autoDismiss
+#### ToasterConfig › autoDismiss
 
 ```ts
 autoDismiss?: boolean;
@@ -873,7 +873,7 @@ autoDismiss?: boolean;
 
 Dismiss automatically when duration expires by default. Defaults to true.
 
-#### className
+#### ToasterConfig › className
 
 ```ts
 className?: string;
@@ -881,7 +881,7 @@ className?: string;
 
 Extra CSS class name applied to every toast and dialog dispatched from this instance.
 
-#### container
+#### ToasterConfig › container
 
 ```ts
 container?: HTMLElement;
@@ -889,7 +889,7 @@ container?: HTMLElement;
 
 Parent DOM element receiving container stacks. Defaults to document.body.
 
-#### custom
+#### ToasterConfig › custom
 
 ```ts
 custom?: CustomDefaults;
@@ -897,7 +897,7 @@ custom?: CustomDefaults;
 
 Defaults for `custom` toasts, over the instance-wide ones.
 
-#### dismissible
+#### ToasterConfig › dismissible
 
 ```ts
 dismissible?: boolean;
@@ -905,7 +905,7 @@ dismissible?: boolean;
 
 Render close button by default. Defaults to false.
 
-#### duration
+#### ToasterConfig › duration
 
 ```ts
 duration?: number;
@@ -913,7 +913,7 @@ duration?: number;
 
 Default timeout in milliseconds. Defaults to 4000.
 
-#### labels
+#### ToasterConfig › labels
 
 ```ts
 labels?: ToastLabels;
@@ -921,7 +921,7 @@ labels?: ToastLabels;
 
 Instance-level default labels for the dismiss button and dialog buttons.
 
-#### loading
+#### ToasterConfig › loading
 
 ```ts
 loading?: LoadingDefaults;
@@ -929,18 +929,18 @@ loading?: LoadingDefaults;
 
 Defaults for `loading` toasts and the loading phase of `promise`, over the instance-wide ones.
 
-#### margin
+#### ToasterConfig › margin
 
 ```ts
 margin?: string | {
-        x?: string;
-        y?: string;
-    };
+    x?: string;
+    y?: string;
+};
 ```
 
 Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object.
 
-#### maxVisible
+#### ToasterConfig › maxVisible
 
 ```ts
 maxVisible?: number;
@@ -948,7 +948,7 @@ maxVisible?: number;
 
 Maximum active toasts displayed simultaneously. Defaults to 5.
 
-#### nonce
+#### ToasterConfig › nonce
 
 ```ts
 nonce?: string;
@@ -956,7 +956,7 @@ nonce?: string;
 
 Nonce applied to the `<style>` element `tokens` are written through, for a host `style-src` Content Security Policy that requires one. Has no effect without `tokens`.
 
-#### position
+#### ToasterConfig › position
 
 ```ts
 position?: ToastPosition;
@@ -964,7 +964,7 @@ position?: ToastPosition;
 
 Default viewport position. Defaults to "top-right".
 
-#### semantic
+#### ToasterConfig › semantic
 
 ```ts
 semantic?: SemanticDefaults;
@@ -972,7 +972,7 @@ semantic?: SemanticDefaults;
 
 Defaults for `success`, `error`, `warning`, and `info` toasts and the outcome of `promise`, over the instance-wide ones.
 
-#### tokens
+#### ToasterConfig › tokens
 
 ```ts
 tokens?: ToastTokens;
@@ -988,7 +988,7 @@ export interface ToastHandle
 
 Control handle returned upon dispatching a toast notification. Allows programmatic lifecycle management.
 
-#### settled
+#### ToastHandle › settled
 
 ```ts
 readonly settled: Promise<void>;
@@ -996,7 +996,7 @@ readonly settled: Promise<void>;
 
 A promise that resolves when the toast has fully completed its exit animation and has been removed from the DOM.
 
-#### state
+#### ToastHandle › state
 
 ```ts
 readonly state: ToastState;
@@ -1004,7 +1004,7 @@ readonly state: ToastState;
 
 Current lifecycle state of the toast.
 
-#### dismiss
+#### ToastHandle › dismiss
 
 ```ts
 dismiss(): void;
@@ -1012,7 +1012,7 @@ dismiss(): void;
 
 Programmatically dismisses the toast. Triggers exit animations.
 
-#### onHidden
+#### ToastHandle › onHidden
 
 ```ts
 onHidden(subscriber: ToastLifecycleSubscriber): () => void;
@@ -1026,7 +1026,7 @@ Registers a callback to trigger when the toast is fully removed from DOM.
 
 **Returns** — Unsubscribe function.
 
-#### onHide
+#### ToastHandle › onHide
 
 ```ts
 onHide(subscriber: ToastLifecycleSubscriber): () => void;
@@ -1040,7 +1040,7 @@ Registers a callback to trigger when the toast begins to hide.
 
 **Returns** — Unsubscribe function.
 
-#### onShow
+#### ToastHandle › onShow
 
 ```ts
 onShow(subscriber: ToastLifecycleSubscriber): () => void;
@@ -1054,7 +1054,7 @@ Registers a callback to trigger when the toast is initially requested to show.
 
 **Returns** — Unsubscribe function.
 
-#### onShown
+#### ToastHandle › onShown
 
 ```ts
 onShown(subscriber: ToastLifecycleSubscriber): () => void;
@@ -1068,7 +1068,7 @@ Registers a callback to trigger when the entrance animation completes.
 
 **Returns** — Unsubscribe function.
 
-#### update
+#### ToastHandle › update
 
 ```ts
 update(options: ToastUpdateOptions): void;
@@ -1090,7 +1090,7 @@ export interface ToastLabels
 
 Instance-level default labels, letting a consumer localize every built-in piece of text this package renders without repeating the same override on every dialog call. A per-call label (`ConfirmOptions.confirmLabel`, etc.) still wins over its matching entry here, the same precedence `position` and `duration` already have between `ToasterConfig` and a per-call option.
 
-#### cancel
+#### ToastLabels › cancel
 
 ```ts
 cancel?: string;
@@ -1098,7 +1098,7 @@ cancel?: string;
 
 Default label for a confirm or prompt dialog's negative action button. Defaults to "Cancel".
 
-#### confirm
+#### ToastLabels › confirm
 
 ```ts
 confirm?: string;
@@ -1106,7 +1106,7 @@ confirm?: string;
 
 Default label for a confirm dialog's positive action button. Defaults to "Confirm".
 
-#### dismiss
+#### ToastLabels › dismiss
 
 ```ts
 dismiss?: string;
@@ -1114,7 +1114,7 @@ dismiss?: string;
 
 Accessible label for a toast's dismiss button. Defaults to "Dismiss toast".
 
-#### notifications
+#### ToastLabels › notifications
 
 ```ts
 notifications?: string;
@@ -1122,7 +1122,7 @@ notifications?: string;
 
 Accessible name of the region landmark each toast stack is. Defaults to "Notifications".
 
-#### ok
+#### ToastLabels › ok
 
 ```ts
 ok?: string;
@@ -1130,7 +1130,7 @@ ok?: string;
 
 Default label for an alert dialog's acknowledgement button. Defaults to "OK".
 
-#### submit
+#### ToastLabels › submit
 
 ```ts
 submit?: string;
@@ -1146,7 +1146,7 @@ export interface ToastOptions
 
 Options for dispatching standard toast notifications.
 
-#### action
+#### ToastOptions › action
 
 ```ts
 action?: ToastAction;
@@ -1154,7 +1154,7 @@ action?: ToastAction;
 
 Optional inline action button control.
 
-#### autoDismiss
+#### ToastOptions › autoDismiss
 
 ```ts
 autoDismiss?: boolean;
@@ -1162,7 +1162,7 @@ autoDismiss?: boolean;
 
 Whether to automatically close after the duration. Defaults to toaster configuration.
 
-#### className
+#### ToastOptions › className
 
 ```ts
 className?: string;
@@ -1170,7 +1170,7 @@ className?: string;
 
 Extra CSS class name.
 
-#### description
+#### ToastOptions › description
 
 ```ts
 description?: string;
@@ -1178,7 +1178,7 @@ description?: string;
 
 Optional secondary description text below the message or title.
 
-#### dismissible
+#### ToastOptions › dismissible
 
 ```ts
 dismissible?: boolean;
@@ -1186,7 +1186,7 @@ dismissible?: boolean;
 
 Whether to render a close button. Defaults to toaster configuration.
 
-#### duration
+#### ToastOptions › duration
 
 ```ts
 duration?: number;
@@ -1194,7 +1194,7 @@ duration?: number;
 
 Visibility duration in milliseconds. Defaults to toaster configuration.
 
-#### icon
+#### ToastOptions › icon
 
 ```ts
 icon?: ToastIcon | null;
@@ -1202,18 +1202,18 @@ icon?: ToastIcon | null;
 
 Icon glyph override, or `null` to render no icon.
 
-#### margin
+#### ToastOptions › margin
 
 ```ts
 margin?: string | {
-        x?: string;
-        y?: string;
-    };
+    x?: string;
+    y?: string;
+};
 ```
 
 Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. This is a property of the shared stack at this position, not of an individual toast: the most recent explicit value dispatched to a given position applies to every toast already showing there, and a dispatch that omits it leaves the stack's current margin unchanged. Toasts at the same position always share one margin.
 
-#### message
+#### ToastOptions › message
 
 ```ts
 message?: string;
@@ -1221,7 +1221,7 @@ message?: string;
 
 The message text to display.
 
-#### position
+#### ToastOptions › position
 
 ```ts
 position?: ToastPosition;
@@ -1229,7 +1229,7 @@ position?: ToastPosition;
 
 Placement on the screen. Defaults to toaster configuration.
 
-#### role
+#### ToastOptions › role
 
 ```ts
 role?: ToastRole;
@@ -1237,7 +1237,7 @@ role?: ToastRole;
 
 Announcement role, see [ToastRole](#toastrole). Defaults to the variant's role.
 
-#### title
+#### ToastOptions › title
 
 ```ts
 title?: string;
@@ -1245,7 +1245,7 @@ title?: string;
 
 Optional title to display above the message or as primary heading.
 
-#### tokens
+#### ToastOptions › tokens
 
 ```ts
 tokens?: ToastTokens;
@@ -1253,7 +1253,7 @@ tokens?: ToastTokens;
 
 Instance token overrides.
 
-#### type
+#### ToastOptions › type
 
 ```ts
 type?: SemanticType | "default";
@@ -1271,7 +1271,7 @@ Design tokens for overriding colors per toast or globally per instance.
 
 Every color here is final -- a background, a border, or a foreground exactly as it renders -- never an ingredient this package mixes further. Unset, each one already matches `@codenhub/styles`' own real, composed look (its `./palette` export when that package is around, this package's own generated defaults when it is not); setting one only replaces that single final value.
 
-#### border
+#### ToastTokens › border
 
 ```ts
 border?: string;
@@ -1279,7 +1279,7 @@ border?: string;
 
 Border color for the dialog container, cancel button, and input.
 
-#### defaultBg
+#### ToastTokens › defaultBg
 
 ```ts
 defaultBg?: string;
@@ -1287,7 +1287,7 @@ defaultBg?: string;
 
 Background color for the toast-default (no-severity) variant.
 
-#### defaultEdge
+#### ToastTokens › defaultEdge
 
 ```ts
 defaultEdge?: string;
@@ -1295,7 +1295,7 @@ defaultEdge?: string;
 
 Border color for the toast-default (no-severity) variant.
 
-#### defaultFg
+#### ToastTokens › defaultFg
 
 ```ts
 defaultFg?: string;
@@ -1303,7 +1303,7 @@ defaultFg?: string;
 
 Foreground (text/icon) color for the toast-default (no-severity) variant.
 
-#### errorBg
+#### ToastTokens › errorBg
 
 ```ts
 errorBg?: string;
@@ -1311,7 +1311,7 @@ errorBg?: string;
 
 Background color for the toast-error variant.
 
-#### errorBtnBg
+#### ToastTokens › errorBtnBg
 
 ```ts
 errorBtnBg?: string;
@@ -1319,7 +1319,7 @@ errorBtnBg?: string;
 
 Background color for the error dialog action button.
 
-#### errorBtnBgHover
+#### ToastTokens › errorBtnBgHover
 
 ```ts
 errorBtnBgHover?: string;
@@ -1327,7 +1327,7 @@ errorBtnBgHover?: string;
 
 Hover background color for the error dialog action button.
 
-#### errorBtnEdge
+#### ToastTokens › errorBtnEdge
 
 ```ts
 errorBtnEdge?: string;
@@ -1335,7 +1335,7 @@ errorBtnEdge?: string;
 
 Border color for the error dialog action button when `.edged` is active.
 
-#### errorBtnFg
+#### ToastTokens › errorBtnFg
 
 ```ts
 errorBtnFg?: string;
@@ -1343,7 +1343,7 @@ errorBtnFg?: string;
 
 Foreground color for the error dialog action button.
 
-#### errorEdge
+#### ToastTokens › errorEdge
 
 ```ts
 errorEdge?: string;
@@ -1351,7 +1351,7 @@ errorEdge?: string;
 
 Border color for the toast-error variant.
 
-#### errorFg
+#### ToastTokens › errorFg
 
 ```ts
 errorFg?: string;
@@ -1359,7 +1359,7 @@ errorFg?: string;
 
 Foreground (text/icon) color for the toast-error variant.
 
-#### infoBg
+#### ToastTokens › infoBg
 
 ```ts
 infoBg?: string;
@@ -1367,7 +1367,7 @@ infoBg?: string;
 
 Background color for the toast-info variant.
 
-#### infoEdge
+#### ToastTokens › infoEdge
 
 ```ts
 infoEdge?: string;
@@ -1375,7 +1375,7 @@ infoEdge?: string;
 
 Border color for the toast-info variant.
 
-#### infoFg
+#### ToastTokens › infoFg
 
 ```ts
 infoFg?: string;
@@ -1383,7 +1383,7 @@ infoFg?: string;
 
 Foreground (text/icon) color for the toast-info variant.
 
-#### primaryBg
+#### ToastTokens › primaryBg
 
 ```ts
 primaryBg?: string;
@@ -1391,7 +1391,7 @@ primaryBg?: string;
 
 Background color for the primary dialog action button.
 
-#### primaryBgHover
+#### ToastTokens › primaryBgHover
 
 ```ts
 primaryBgHover?: string;
@@ -1399,7 +1399,7 @@ primaryBgHover?: string;
 
 Hover background color for the primary dialog action button.
 
-#### primaryEdge
+#### ToastTokens › primaryEdge
 
 ```ts
 primaryEdge?: string;
@@ -1407,7 +1407,7 @@ primaryEdge?: string;
 
 Border color for the primary dialog action button when `.edged` is active.
 
-#### primaryFg
+#### ToastTokens › primaryFg
 
 ```ts
 primaryFg?: string;
@@ -1415,7 +1415,7 @@ primaryFg?: string;
 
 Foreground color for the primary dialog action button.
 
-#### secondaryBg
+#### ToastTokens › secondaryBg
 
 ```ts
 secondaryBg?: string;
@@ -1423,7 +1423,7 @@ secondaryBg?: string;
 
 Background color for the secondary dialog action button.
 
-#### secondaryBgHover
+#### ToastTokens › secondaryBgHover
 
 ```ts
 secondaryBgHover?: string;
@@ -1431,7 +1431,7 @@ secondaryBgHover?: string;
 
 Hover background color for the secondary dialog action button.
 
-#### secondaryEdge
+#### ToastTokens › secondaryEdge
 
 ```ts
 secondaryEdge?: string;
@@ -1439,7 +1439,7 @@ secondaryEdge?: string;
 
 Border color for the secondary dialog action button when `.edged` is active.
 
-#### secondaryFg
+#### ToastTokens › secondaryFg
 
 ```ts
 secondaryFg?: string;
@@ -1447,7 +1447,7 @@ secondaryFg?: string;
 
 Foreground color for the secondary dialog action button.
 
-#### successBg
+#### ToastTokens › successBg
 
 ```ts
 successBg?: string;
@@ -1455,7 +1455,7 @@ successBg?: string;
 
 Background color for the toast-success variant.
 
-#### successBtnBg
+#### ToastTokens › successBtnBg
 
 ```ts
 successBtnBg?: string;
@@ -1463,7 +1463,7 @@ successBtnBg?: string;
 
 Background color for the success dialog action button.
 
-#### successBtnBgHover
+#### ToastTokens › successBtnBgHover
 
 ```ts
 successBtnBgHover?: string;
@@ -1471,7 +1471,7 @@ successBtnBgHover?: string;
 
 Hover background color for the success dialog action button.
 
-#### successBtnEdge
+#### ToastTokens › successBtnEdge
 
 ```ts
 successBtnEdge?: string;
@@ -1479,7 +1479,7 @@ successBtnEdge?: string;
 
 Border color for the success dialog action button when `.edged` is active.
 
-#### successBtnFg
+#### ToastTokens › successBtnFg
 
 ```ts
 successBtnFg?: string;
@@ -1487,7 +1487,7 @@ successBtnFg?: string;
 
 Foreground color for the success dialog action button.
 
-#### successEdge
+#### ToastTokens › successEdge
 
 ```ts
 successEdge?: string;
@@ -1495,7 +1495,7 @@ successEdge?: string;
 
 Border color for the toast-success variant.
 
-#### successFg
+#### ToastTokens › successFg
 
 ```ts
 successFg?: string;
@@ -1503,7 +1503,7 @@ successFg?: string;
 
 Foreground (text/icon) color for the toast-success variant.
 
-#### surface
+#### ToastTokens › surface
 
 ```ts
 surface?: string;
@@ -1511,7 +1511,7 @@ surface?: string;
 
 Background color for the dialog container and cancel button.
 
-#### text
+#### ToastTokens › text
 
 ```ts
 text?: string;
@@ -1519,7 +1519,7 @@ text?: string;
 
 Text color for the dialog container and cancel button.
 
-#### warningBg
+#### ToastTokens › warningBg
 
 ```ts
 warningBg?: string;
@@ -1527,7 +1527,7 @@ warningBg?: string;
 
 Background color for the toast-warning variant.
 
-#### warningEdge
+#### ToastTokens › warningEdge
 
 ```ts
 warningEdge?: string;
@@ -1535,7 +1535,7 @@ warningEdge?: string;
 
 Border color for the toast-warning variant.
 
-#### warningFg
+#### ToastTokens › warningFg
 
 ```ts
 warningFg?: string;
@@ -1551,7 +1551,7 @@ export interface ToastUpdateOptions
 
 Options that can be dynamically updated on a live toast instance.
 
-#### action
+#### ToastUpdateOptions › action
 
 ```ts
 action?: ToastAction | null;
@@ -1559,7 +1559,7 @@ action?: ToastAction | null;
 
 Replaces or removes the inline action button (`null` removes it).
 
-#### autoDismiss
+#### ToastUpdateOptions › autoDismiss
 
 ```ts
 autoDismiss?: boolean;
@@ -1567,7 +1567,7 @@ autoDismiss?: boolean;
 
 Enables or disables automatic dismissal after `duration`.
 
-#### className
+#### ToastUpdateOptions › className
 
 ```ts
 className?: string;
@@ -1575,7 +1575,7 @@ className?: string;
 
 Extra CSS classes to append.
 
-#### content
+#### ToastUpdateOptions › content
 
 ```ts
 content?: ToastContent;
@@ -1583,7 +1583,7 @@ content?: ToastContent;
 
 Replaces the toast's content entirely. Follows the same rules as construction: a string is sanitized, a DOM node is trusted and used as-is. Supersedes `message` and `icon` in this same call, the same mutual exclusivity construction itself applies.
 
-#### description
+#### ToastUpdateOptions › description
 
 ```ts
 description?: string | null;
@@ -1591,7 +1591,7 @@ description?: string | null;
 
 Optional secondary description text below the message or title, or `null` to remove it.
 
-#### dismissible
+#### ToastUpdateOptions › dismissible
 
 ```ts
 dismissible?: boolean;
@@ -1599,7 +1599,7 @@ dismissible?: boolean;
 
 Enables or disables the dismiss button.
 
-#### duration
+#### ToastUpdateOptions › duration
 
 ```ts
 duration?: number;
@@ -1607,7 +1607,7 @@ duration?: number;
 
 New visibility duration in milliseconds, applied the next time an auto-dismiss timer would run.
 
-#### icon
+#### ToastUpdateOptions › icon
 
 ```ts
 icon?: ToastIcon | null;
@@ -1615,7 +1615,7 @@ icon?: ToastIcon | null;
 
 Swaps the icon glyph, or `null` to remove it. Ignored in a call that also gives `content`, and on a toast showing custom content. If `type` is given in the same call and `icon` is not, the icon matching that type is used automatically.
 
-#### message
+#### ToastUpdateOptions › message
 
 ```ts
 message?: string | null;
@@ -1623,7 +1623,7 @@ message?: string | null;
 
 The new message text. Ignored if `content` is also given in this same call; has no effect on a toast that was built from `content` rather than `message` (there is no message slot to write into). Pass `null` to remove it.
 
-#### title
+#### ToastUpdateOptions › title
 
 ```ts
 title?: string | null;
@@ -1631,7 +1631,7 @@ title?: string | null;
 
 Optional title to replace on the toast, or `null` to remove it.
 
-#### tokens
+#### ToastUpdateOptions › tokens
 
 ```ts
 tokens?: ToastTokens;
@@ -1639,7 +1639,7 @@ tokens?: ToastTokens;
 
 Scoped design token color overrides.
 
-#### type
+#### ToastUpdateOptions › type
 
 ```ts
 type?: SemanticType | "default";

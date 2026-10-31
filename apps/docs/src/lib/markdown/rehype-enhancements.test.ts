@@ -56,6 +56,44 @@ describe("heading anchors", () => {
     expect(heading.children).toEqual([text("Heading")]);
   });
 
+  it("offers a line break after each slash of a reference page's import specifier", () => {
+    const heading = element("h1", { id: "codenhuberrorregistriesbrowser" }, [
+      text("@codenhub/error/registries/browser"),
+    ]);
+    const tree: TestElement = { type: "root", children: [heading] };
+
+    rehypeMarkdownEnhancements()(tree, { path: "C:/repo/packages/error/docs/reference/registries/browser.md" });
+
+    expect(heading.children).toEqual([
+      text("@codenhub/"),
+      element("wbr", {}, []),
+      text("error/"),
+      element("wbr", {}, []),
+      text("registries/"),
+      element("wbr", {}, []),
+      text("browser"),
+    ]);
+  });
+
+  it("leaves slashes in a guide's title alone", () => {
+    const heading = element("h1", { id: "a-b" }, [text("Read/write")]);
+
+    transform([heading]);
+
+    expect(heading.children).toEqual([text("Read/write")]);
+  });
+
+  it("marks each reference H3 as a symbol section", () => {
+    const symbol = element("h3", { id: "apperror" }, [text("AppError")]);
+    const member = element("h4", { id: "code" }, [text("code")]);
+    const tree: TestElement = { type: "root", children: [symbol, member] };
+
+    rehypeMarkdownEnhancements()(tree, { path: "/repo/packages/error/docs/reference/index.md" });
+
+    expect(symbol.properties?.className).toEqual(["reference-symbol"]);
+    expect(member.properties?.className).toBeUndefined();
+  });
+
   it("leaves a heading without an id unchanged", () => {
     const heading = element("h2", {}, [text("Heading")]);
 

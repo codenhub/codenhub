@@ -185,7 +185,7 @@ describe("analyzeReference pages", () => {
         "/** First. */ export function Foo(): void {}",
         "/** Second. */ export function foo(): void {}",
         "/** Third. */ export function Functions(): void {}",
-        "/** Reader. */ export interface Reader { /** Earlier heading. */ err: string; }",
+        "/** Reader. */ export interface Reader { /** A member, qualified as Reader.err, so it takes no err slug. */ err: string; }",
         "/** Error type. */ export type Err = string;",
         "/** Error value. */ export const err = 1;",
       ].join("\n"),
@@ -196,8 +196,8 @@ describe("analyzeReference pages", () => {
     expect(root).toContain("[Foo](target.md#foo-2)");
     expect(root).toContain("[foo](target.md#foo-1)");
     expect(root).toContain("[Functions](target.md#functions-1)");
-    expect(root).toContain("[Err](target.md#err-1)");
-    expect(root).toContain("[err](target.md#err-2)");
+    expect(root).toContain("[Err](target.md#err)");
+    expect(root).toContain("[err](target.md#err-1)");
   });
 
   it("titles the main entrypoint's page with the package name", { timeout: 30_000 }, async () => {

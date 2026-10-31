@@ -49,7 +49,7 @@ export interface BrowserI18nBinding
 
 Browser effects exclusively owned for one i18n manager after successful initialization.
 
-#### disconnect
+#### BrowserI18nBinding › disconnect
 
 ```ts
 disconnect(): void;
@@ -71,7 +71,7 @@ Optional browser integrations applied around a consumer-owned i18n manager.
 
 - `TLocale` — Union of supported canonical locale identifiers.
 
-#### i18n
+#### BrowserI18nOptions › i18n
 
 ```ts
 i18n: I18n<TLocale>;
@@ -79,7 +79,7 @@ i18n: I18n<TLocale>;
 
 Manager to initialize; it must not have another initializing or active browser binding.
 
-#### locale
+#### BrowserI18nOptions › locale
 
 ```ts
 locale?: TLocale;
@@ -87,7 +87,7 @@ locale?: TLocale;
 
 Authoritative locale, which takes precedence over persisted and browser preferences. Only `undefined` omits this input; other non-string runtime values reject initialization.
 
-#### observe
+#### BrowserI18nOptions › observe
 
 ```ts
 observe?: boolean;
@@ -95,7 +95,7 @@ observe?: boolean;
 
 Whether additions and translation-key attribute changes below `root` are incrementally observed. Defaults to `false`.
 
-#### persistLocale
+#### BrowserI18nOptions › persistLocale
 
 ```ts
 persistLocale?: boolean;
@@ -103,7 +103,7 @@ persistLocale?: boolean;
 
 Whether a stored locale is read, and explicit or later application-made locales are written. A locale detected from navigator preferences or the default is not written. Defaults to `true`.
 
-#### root
+#### BrowserI18nOptions › root
 
 ```ts
 root?: ParentNode;
@@ -111,7 +111,7 @@ root?: ParentNode;
 
 Optional DOM boundary whose safe `data-i18n` leaves and allowlisted `data-i18n-<attribute>` attributes are translated.
 
-#### storageKey
+#### BrowserI18nOptions › storageKey
 
 ```ts
 storageKey?: string;
@@ -119,7 +119,7 @@ storageKey?: string;
 
 Local storage key used for the JSON locale preference. Defaults to `"i18n"`. Storage is best-effort: a failed read or write warns and is skipped.
 
-#### syncDocument
+#### BrowserI18nOptions › syncDocument
 
 ```ts
 syncDocument?: boolean;

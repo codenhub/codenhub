@@ -298,7 +298,7 @@ Holds icon families and resolves icon names against them.
 
 Families are registered either as loaded data or as loaders invoked the first time one of their icons is requested. Build-time consumers stay on the synchronous `IconRegistry.resolve`, because a build knows which families it needs before it starts; runtime consumers use `IconRegistry.resolveAsync`, which loads a family on demand.
 
-#### constructor
+#### IconRegistry › constructor
 
 ```ts
 constructor(options?: IconRegistryOptions);
@@ -310,7 +310,7 @@ Creates a registry holding no families.
 
 - `options` — Default prefix for unqualified names.
 
-#### getFamily
+#### IconRegistry › getFamily
 
 ```ts
 getFamily(prefix: string): IconFamilyData | undefined;
@@ -326,7 +326,7 @@ Consumers use it to read family metadata such as license and attribution.
 
 **Returns** — The family data, or `undefined` when it is not loaded.
 
-#### has
+#### IconRegistry › has
 
 ```ts
 has(name: string): boolean;
@@ -340,7 +340,7 @@ Reports whether an icon name resolves against the families already loaded.
 
 **Returns** — `true` when `IconRegistry.resolve` would return an icon.
 
-#### list
+#### IconRegistry › list
 
 ```ts
 list(prefix?: string): string[];
@@ -354,7 +354,7 @@ Lists the primary icon names of a loaded family, excluding aliases.
 
 **Returns** — Icon names in the order the family declares them, or an empty array when the family is not loaded.
 
-#### listFamilies
+#### IconRegistry › listFamilies
 
 ```ts
 listFamilies(): string[];
@@ -364,7 +364,7 @@ Lists the prefixes of every family currently loaded.
 
 **Returns** — Loaded family prefixes.
 
-#### load
+#### IconRegistry › load
 
 ```ts
 load(prefix: string): Promise<IconFamilyData>;
@@ -382,7 +382,7 @@ Concurrent calls for the same prefix share one load. An already-loaded family is
 
 **Throws** — When no family or loader is registered for the prefix.
 
-#### registerFamily
+#### IconRegistry › registerFamily
 
 ```ts
 registerFamily(family: IconFamilyData): void;
@@ -396,7 +396,7 @@ Registering a prefix that already holds a family replaces it, which is what lets
 
 - `family` — Family data to make resolvable.
 
-#### registerLoader
+#### IconRegistry › registerLoader
 
 ```ts
 registerLoader(prefix: string, loader: IconFamilyLoader): void;
@@ -411,7 +411,7 @@ The family stays absent from synchronous resolution until it is loaded, so a bui
 - `prefix` — Family prefix the loader provides.
 - `loader` — Function returning the family data, typically a dynamic import.
 
-#### resolve
+#### IconRegistry › resolve
 
 ```ts
 resolve(name: string): ResolvedIcon | undefined;
@@ -427,7 +427,7 @@ An unqualified name resolves against the configured default prefix, and against 
 
 **Returns** — The resolved icon, or `undefined` when it is not available.
 
-#### resolveAsync
+#### IconRegistry › resolveAsync
 
 ```ts
 resolveAsync(name: string): Promise<ResolvedIcon | undefined>;
@@ -451,7 +451,7 @@ export interface BaseCssOptions
 
 Options for generating base CSS icon rules.
 
-#### prefix
+#### BaseCssOptions › prefix
 
 ```ts
 prefix?: string;
@@ -467,7 +467,7 @@ export interface GenerateFamilyCssOptions extends BaseCssOptions
 
 Options for generating the complete stylesheet of one icon family.
 
-#### attribution
+#### GenerateFamilyCssOptions › attribution
 
 ```ts
 attribution?: boolean;
@@ -475,7 +475,7 @@ attribution?: boolean;
 
 Whether to open the stylesheet with the family's license notice as a preserved comment. Defaults to `true`.
 
-#### bareNames
+#### GenerateFamilyCssOptions › bareNames
 
 ```ts
 bareNames?: boolean;
@@ -485,7 +485,7 @@ Whether each rule also answers to the unqualified name, so that `ic-lucide-heart
 
 This is what gives a plugin-free stylesheet a default family: the bare name costs a selector rather than a second copy of the artwork, and the last family a project imports wins it by plain cascade.
 
-#### prefix
+#### GenerateFamilyCssOptions › prefix
 
 Inherited from [BaseCssOptions](#basecssoptions).
 
@@ -497,7 +497,7 @@ export interface GenerateIconSetCssOptions extends BaseCssOptions
 
 Options for generating CSS rules for a collection of icon class names.
 
-#### injectBase
+#### GenerateIconSetCssOptions › injectBase
 
 ```ts
 injectBase?: boolean;
@@ -505,11 +505,11 @@ injectBase?: boolean;
 
 Whether to include the base rules (`.ic`, the size axis). Defaults to `true`.
 
-#### prefix
+#### GenerateIconSetCssOptions › prefix
 
 Inherited from [BaseCssOptions](#basecssoptions).
 
-#### strokeWidth
+#### GenerateIconSetCssOptions › strokeWidth
 
 ```ts
 strokeWidth?: number | string;
@@ -525,7 +525,7 @@ export interface IconAlias
 
 An alternative name pointing at an icon in the same family.
 
-#### parent
+#### IconAlias › parent
 
 ```ts
 parent: string;
@@ -541,7 +541,7 @@ export interface IconData
 
 A single icon's artwork and its optional per-icon geometry.
 
-#### body
+#### IconData › body
 
 ```ts
 body: string;
@@ -551,7 +551,7 @@ Inner SVG markup, without the surrounding `<svg>` element.
 
 The wrapper is reconstructed at render time so size, color, and stroke width stay controllable by the consumer.
 
-#### color
+#### IconData › color
 
 ```ts
 color?: string;
@@ -559,7 +559,7 @@ color?: string;
 
 The icon's own color, as a hex value such as `#181717`. Brand families carry their mark's color here; it is the icon's default paint, and `--ic-color` overrides it (`--<prefix>-color` under a custom class prefix). A value that is not a hex color is ignored.
 
-#### height
+#### IconData › height
 
 ```ts
 height?: number;
@@ -567,7 +567,7 @@ height?: number;
 
 viewBox height, when it differs from the family default.
 
-#### left
+#### IconData › left
 
 ```ts
 left?: number;
@@ -575,7 +575,7 @@ left?: number;
 
 viewBox origin on the x axis, when it differs from the family default.
 
-#### tags
+#### IconData › tags
 
 ```ts
 tags?: string[];
@@ -583,7 +583,7 @@ tags?: string[];
 
 Search keywords for catalog and documentation surfaces.
 
-#### top
+#### IconData › top
 
 ```ts
 top?: number;
@@ -591,7 +591,7 @@ top?: number;
 
 viewBox origin on the y axis, when it differs from the family default.
 
-#### width
+#### IconData › width
 
 ```ts
 width?: number;
@@ -607,7 +607,7 @@ export interface IconFamilyAuthor
 
 Author or project credited for a family's artwork.
 
-#### name
+#### IconFamilyAuthor › name
 
 ```ts
 name: string;
@@ -615,7 +615,7 @@ name: string;
 
 Display name of the author or project.
 
-#### url
+#### IconFamilyAuthor › url
 
 ```ts
 url: string;
@@ -633,7 +633,7 @@ A complete icon family: its artwork, aliases, geometry, and metadata.
 
 The icon and geometry fields follow IconifyJSON's shape, so icon bodies authored for that format need no transformation, while this package depends on nothing from it. An IconifyJSON document still lacks the required `info`, so it loads through `adoptIconifySet`, not directly.
 
-#### aliases
+#### IconFamilyData › aliases
 
 ```ts
 aliases?: Record<string, IconAlias>;
@@ -641,7 +641,7 @@ aliases?: Record<string, IconAlias>;
 
 Alternative names by alias name.
 
-#### height
+#### IconFamilyData › height
 
 ```ts
 height?: number;
@@ -649,7 +649,7 @@ height?: number;
 
 Default viewBox height for icons that do not override it. Defaults to `24`.
 
-#### icons
+#### IconFamilyData › icons
 
 ```ts
 icons: Record<string, IconData>;
@@ -657,7 +657,7 @@ icons: Record<string, IconData>;
 
 Icons by primary name.
 
-#### info
+#### IconFamilyData › info
 
 ```ts
 info: IconFamilyInfo;
@@ -665,7 +665,7 @@ info: IconFamilyInfo;
 
 Provenance, licensing, and presentation metadata.
 
-#### left
+#### IconFamilyData › left
 
 ```ts
 left?: number;
@@ -673,7 +673,7 @@ left?: number;
 
 Default viewBox origin on the x axis. Defaults to `0`.
 
-#### prefix
+#### IconFamilyData › prefix
 
 ```ts
 prefix: string;
@@ -681,7 +681,7 @@ prefix: string;
 
 Namespace all icons in this family resolve under, such as `"lucide"`.
 
-#### top
+#### IconFamilyData › top
 
 ```ts
 top?: number;
@@ -691,7 +691,7 @@ Default viewBox origin on the y axis. Defaults to `0`.
 
 Families such as Material Symbols draw above the origin, so an icon that kept only its size would render blank.
 
-#### width
+#### IconFamilyData › width
 
 ```ts
 width?: number;
@@ -707,7 +707,7 @@ export interface IconFamilyInfo
 
 Provenance, licensing, and presentation metadata for an icon family.
 
-#### attribution
+#### IconFamilyInfo › attribution
 
 ```ts
 attribution: IconAttribution;
@@ -715,7 +715,7 @@ attribution: IconAttribution;
 
 What a consumer shipping these icons owes in their own output.
 
-#### author
+#### IconFamilyInfo › author
 
 ```ts
 author: IconFamilyAuthor;
@@ -723,7 +723,7 @@ author: IconFamilyAuthor;
 
 Author or project credited for the artwork.
 
-#### license
+#### IconFamilyInfo › license
 
 ```ts
 license: IconFamilyLicense;
@@ -731,7 +731,7 @@ license: IconFamilyLicense;
 
 License the artwork is distributed under.
 
-#### multicolor
+#### IconFamilyInfo › multicolor
 
 ```ts
 multicolor?: boolean;
@@ -741,7 +741,7 @@ Whether the artwork carries its own colors, as full-color logos do.
 
 A multicolor icon paints its artwork rather than one color, until `--ic-color` (`--<prefix>-color` under a custom class prefix) is set, which turns it into a one-color silhouette. Absent for one-color families.
 
-#### name
+#### IconFamilyInfo › name
 
 ```ts
 name: string;
@@ -749,7 +749,7 @@ name: string;
 
 Display name of the family, such as `"Lucide"`.
 
-#### strokeWidth
+#### IconFamilyInfo › strokeWidth
 
 ```ts
 strokeWidth?: number;
@@ -759,7 +759,7 @@ Authored stroke width, present only for stroke-based families.
 
 Its presence is what makes a family's icons stroke-configurable; families drawn as filled paths omit it and ignore stroke width requests.
 
-#### style
+#### IconFamilyInfo › style
 
 ```ts
 style?: string;
@@ -769,7 +769,7 @@ Descriptive style of the family, such as `"outlined"` or `"filled"`.
 
 Catalog and documentation metadata only. Styles are separate families with separate prefixes; this never participates in resolution.
 
-#### tier
+#### IconFamilyInfo › tier
 
 ```ts
 tier: IconFamilyTier;
@@ -777,7 +777,7 @@ tier: IconFamilyTier;
 
 Catalog tier the family belongs to.
 
-#### total
+#### IconFamilyInfo › total
 
 ```ts
 total: number;
@@ -785,7 +785,7 @@ total: number;
 
 Number of icons the family contains, excluding aliases.
 
-#### upstream
+#### IconFamilyInfo › upstream
 
 ```ts
 upstream: IconFamilyUpstream;
@@ -793,7 +793,7 @@ upstream: IconFamilyUpstream;
 
 Upstream package and version the committed data was generated from.
 
-#### weight
+#### IconFamilyInfo › weight
 
 ```ts
 weight?: string;
@@ -811,7 +811,7 @@ export interface IconFamilyLicense
 
 License a family's artwork is distributed under.
 
-#### spdx
+#### IconFamilyLicense › spdx
 
 ```ts
 spdx: string;
@@ -819,7 +819,7 @@ spdx: string;
 
 SPDX identifier, such as `"ISC"`.
 
-#### title
+#### IconFamilyLicense › title
 
 ```ts
 title: string;
@@ -827,7 +827,7 @@ title: string;
 
 Human-readable license name, such as `"ISC License"`.
 
-#### url
+#### IconFamilyLicense › url
 
 ```ts
 url: string;
@@ -843,7 +843,7 @@ export interface IconFamilyUpstream
 
 Upstream project a family's artwork was generated from.
 
-#### package
+#### IconFamilyUpstream › package
 
 ```ts
 package: string;
@@ -851,7 +851,7 @@ package: string;
 
 Package name the artwork was read from, such as `"lucide-static"`.
 
-#### version
+#### IconFamilyUpstream › version
 
 ```ts
 version: string;
@@ -867,7 +867,7 @@ export interface IconifyAdapterOptions
 
 Metadata an adopted third-party set cannot supply about itself.
 
-#### attribution
+#### IconifyAdapterOptions › attribution
 
 ```ts
 attribution?: IconFamilyInfo["attribution"];
@@ -875,7 +875,7 @@ attribution?: IconFamilyInfo["attribution"];
 
 Obligation the set's license places on distributed output. Defaults to `"notice"`, the safe reading for an unknown permissive license.
 
-#### strokeWidth
+#### IconifyAdapterOptions › strokeWidth
 
 ```ts
 strokeWidth?: number;
@@ -893,69 +893,69 @@ The subset of an IconifyJSON document this package reads.
 
 Declared here rather than imported: the shapes are compatible so third-party icon data loads unchanged, and the package depends on nothing from Iconify.
 
-#### aliases
+#### IconifyJson › aliases
 
 ```ts
 aliases?: Record<string, {
-        parent: string;
-    }>;
+    parent: string;
+}>;
 ```
 
-#### height
+#### IconifyJson › height
 
 ```ts
 height?: number;
 ```
 
-#### icons
+#### IconifyJson › icons
 
 ```ts
 icons: Record<string, {
-        body: string;
-        width?: number;
-        height?: number;
-        left?: number;
-        top?: number;
-    }>;
+    body: string;
+    width?: number;
+    height?: number;
+    left?: number;
+    top?: number;
+}>;
 ```
 
-#### info
+#### IconifyJson › info
 
 ```ts
 info?: {
+    name?: string;
+    total?: number;
+    author?: {
         name?: string;
-        total?: number;
-        author?: {
-            name?: string;
-            url?: string;
-        };
-        license?: {
-            title?: string;
-            spdx?: string;
-            url?: string;
-        };
+        url?: string;
     };
+    license?: {
+        title?: string;
+        spdx?: string;
+        url?: string;
+    };
+};
 ```
 
-#### left
+#### IconifyJson › left
 
 ```ts
 left?: number;
 ```
 
-#### prefix
+#### IconifyJson › prefix
 
 ```ts
 prefix: string;
 ```
 
-#### top
+#### IconifyJson › top
 
 ```ts
 top?: number;
 ```
 
-#### width
+#### IconifyJson › width
 
 ```ts
 width?: number;
@@ -969,7 +969,7 @@ export interface IconRegistryOptions
 
 Options for configuring an [IconRegistry](#iconregistry).
 
-#### defaultPrefix
+#### IconRegistryOptions › defaultPrefix
 
 ```ts
 defaultPrefix?: string;
@@ -987,7 +987,7 @@ export interface IconSetCssResult
 
 Generated icon CSS together with the families it drew from.
 
-#### css
+#### IconSetCssResult › css
 
 ```ts
 css: string;
@@ -995,7 +995,7 @@ css: string;
 
 The generated stylesheet.
 
-#### families
+#### IconSetCssResult › families
 
 ```ts
 families: IconFamilyData[];
@@ -1011,7 +1011,7 @@ export interface RenderSvgOptions
 
 Options for rendering a resolved icon into an SVG element.
 
-#### attributes
+#### RenderSvgOptions › attributes
 
 ```ts
 attributes?: Record<string, string>;
@@ -1019,7 +1019,7 @@ attributes?: Record<string, string>;
 
 Extra attributes to place on the `<svg>` element, such as `aria-hidden`.
 
-#### prefix
+#### RenderSvgOptions › prefix
 
 ```ts
 prefix?: string;
@@ -1027,7 +1027,7 @@ prefix?: string;
 
 Class prefix whose `--<prefix>-color` property overrides an icon's own color. Defaults to `"ic"`.
 
-#### strokeWidth
+#### RenderSvgOptions › strokeWidth
 
 ```ts
 strokeWidth?: number | string;
@@ -1043,7 +1043,7 @@ export interface ResolvedIcon
 
 An icon located in a loaded family, with the geometry needed to render it.
 
-#### body
+#### ResolvedIcon › body
 
 ```ts
 body: string;
@@ -1051,7 +1051,7 @@ body: string;
 
 Inner SVG markup, without the surrounding `<svg>` element.
 
-#### color
+#### ResolvedIcon › color
 
 ```ts
 color?: string;
@@ -1059,7 +1059,7 @@ color?: string;
 
 The icon's own color as a hex value, present only when its data declares a valid one.
 
-#### height
+#### ResolvedIcon › height
 
 ```ts
 height: number;
@@ -1067,7 +1067,7 @@ height: number;
 
 viewBox height to render the icon at.
 
-#### iconName
+#### ResolvedIcon › iconName
 
 ```ts
 iconName: string;
@@ -1075,7 +1075,7 @@ iconName: string;
 
 Primary icon name within the family, with aliases already resolved.
 
-#### left
+#### ResolvedIcon › left
 
 ```ts
 left: number;
@@ -1083,7 +1083,7 @@ left: number;
 
 viewBox origin on the x axis.
 
-#### multicolor
+#### ResolvedIcon › multicolor
 
 ```ts
 multicolor?: true;
@@ -1091,7 +1091,7 @@ multicolor?: true;
 
 Present only when the icon's family is multicolor, so its artwork carries its own colors. See `IconFamilyInfo.multicolor`.
 
-#### name
+#### ResolvedIcon › name
 
 ```ts
 name: string;
@@ -1099,7 +1099,7 @@ name: string;
 
 Fully qualified name, such as `"lucide:x"`.
 
-#### prefix
+#### ResolvedIcon › prefix
 
 ```ts
 prefix: string;
@@ -1107,7 +1107,7 @@ prefix: string;
 
 Family prefix the icon belongs to.
 
-#### strokeWidth
+#### ResolvedIcon › strokeWidth
 
 ```ts
 strokeWidth?: number;
@@ -1115,7 +1115,7 @@ strokeWidth?: number;
 
 Authored stroke width, present only when the icon's family is stroke-based and therefore accepts a different stroke width.
 
-#### top
+#### ResolvedIcon › top
 
 ```ts
 top: number;
@@ -1123,7 +1123,7 @@ top: number;
 
 viewBox origin on the y axis.
 
-#### width
+#### ResolvedIcon › width
 
 ```ts
 width: number;
@@ -1139,7 +1139,7 @@ export interface ScanIconClassesOptions
 
 Options for scanning content for icon class names.
 
-#### prefix
+#### ScanIconClassesOptions › prefix
 
 ```ts
 prefix?: string;

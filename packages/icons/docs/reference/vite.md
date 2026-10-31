@@ -37,7 +37,7 @@ export interface ViteIconsOptions
 
 Options for configuring the Vite icons plugin.
 
-#### attribution
+#### ViteIconsOptions › attribution
 
 ```ts
 attribution?: AttributionMode;
@@ -47,7 +47,7 @@ How license notices for the families used reach the build output.
 
 `"auto"` prepends a preserved CSS comment to the generated stylesheet, or, in svg mode, which has no stylesheet, emits `icons-attribution.txt` as an asset. `"file"` emits that asset in both modes, and `"off"` emits nothing and warns when a used family still requires a notice. Defaults to `"auto"`.
 
-#### content
+#### ViteIconsOptions › content
 
 ```ts
 content?: string[];
@@ -55,7 +55,7 @@ content?: string[];
 
 File paths or globs to scan for icon class names.
 
-#### defaultPrefix
+#### ViteIconsOptions › defaultPrefix
 
 ```ts
 defaultPrefix?: string;
@@ -63,7 +63,7 @@ defaultPrefix?: string;
 
 Family prefix that unqualified icon names resolve against.
 
-#### families
+#### ViteIconsOptions › families
 
 ```ts
 families?: IconFamilyData[];
@@ -73,7 +73,7 @@ Icon families to make resolvable, such as the default export of `@codenhub/icons
 
 No family is bundled by default: a project declares the families it wants, so nothing it did not ask for reaches its output.
 
-#### mode
+#### ViteIconsOptions › mode
 
 ```ts
 mode?: "css" | "svg";
@@ -83,7 +83,7 @@ Delivery mode.
 
 `"css"` serves generated mask rules through `virtual:icons.css`. `"svg"` replaces `<i class="ic-...">` tags with inline SVG at build time.
 
-#### prefix
+#### ViteIconsOptions › prefix
 
 ```ts
 prefix?: string;
@@ -91,7 +91,7 @@ prefix?: string;
 
 Prefix for icon class names, as in `"ic"` for `.ic-close`. Defaults to `"ic"`.
 
-#### registry
+#### ViteIconsOptions › registry
 
 ```ts
 registry?: IconRegistry;
@@ -99,7 +99,7 @@ registry?: IconRegistry;
 
 Registry to resolve icons with, replacing the one built from `ViteIconsOptions.families`.
 
-#### strokeWidth
+#### ViteIconsOptions › strokeWidth
 
 ```ts
 strokeWidth?: number | string;

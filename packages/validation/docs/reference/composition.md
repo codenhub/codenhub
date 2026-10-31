@@ -1195,19 +1195,19 @@ export interface ArrayOptions extends SizeOptions, MessageOptions
 
 Constraints for [array](#array). Every option is optional. Duplicates are rejected with the `unique()` check.
 
-#### length
+#### ArrayOptions › length
 
 Inherited from [SizeOptions](#sizeoptions).
 
-#### max
+#### ArrayOptions › max
 
 Inherited from [SizeOptions](#sizeoptions).
 
-#### message
+#### ArrayOptions › message
 
 Inherited from [MessageOptions](index.md#messageoptions).
 
-#### min
+#### ArrayOptions › min
 
 Inherited from [SizeOptions](#sizeoptions).
 
@@ -1224,7 +1224,7 @@ The two functions of a [codec](#codec): one that turns what `input` produced int
 - `TInput` — The validator of the value as it is sent.
 - `TOutput` — The validator of the value as a program uses it.
 
-#### decode
+#### Conversions › decode
 
 ```ts
 readonly decode: (value: Infer<TInput>) => InferInput<TOutput>;
@@ -1232,7 +1232,7 @@ readonly decode: (value: Infer<TInput>) => InferInput<TOutput>;
 
 From the value as it is sent, once `input` passed it, to the value `output` validates.
 
-#### encode
+#### Conversions › encode
 
 ```ts
 readonly encode: (value: Infer<TOutput>) => InferInput<TInput>;
@@ -1248,11 +1248,11 @@ export interface FormDataOptions extends MessageOptions
 
 Options for [formData](#formdata).
 
-#### message
+#### FormDataOptions › message
 
 Inherited from [MessageOptions](index.md#messageoptions).
 
-#### repeated
+#### FormDataOptions › repeated
 
 ```ts
 repeated?: boolean | undefined;
@@ -1270,7 +1270,7 @@ export interface LazyOptions extends MessageOptions
 
 Options for [lazy](#lazy).
 
-#### maxCalls
+#### LazyOptions › maxCalls
 
 ```ts
 maxCalls?: number | undefined;
@@ -1280,7 +1280,7 @@ The most calls this `lazy` may make in one validation, those made for the option
 
 **Default** — 10000
 
-#### maxDepth
+#### LazyOptions › maxDepth
 
 ```ts
 maxDepth?: number | undefined;
@@ -1290,7 +1290,7 @@ The most levels of `lazy` that may be open at once, counting every `lazy` valida
 
 **Default** — 128
 
-#### message
+#### LazyOptions › message
 
 Inherited from [MessageOptions](index.md#messageoptions).
 
@@ -1302,7 +1302,7 @@ export interface Meta
 
 What a validator is for, written for a reader: a person reading an API's documentation, or a language model choosing a tool and filling its arguments. Each key is the JSON Schema keyword of the same name.
 
-#### deprecated
+#### Meta › deprecated
 
 ```ts
 readonly deprecated?: boolean | undefined;
@@ -1310,7 +1310,7 @@ readonly deprecated?: boolean | undefined;
 
 Whether the value is on its way out, and should no longer be sent.
 
-#### description
+#### Meta › description
 
 ```ts
 readonly description?: string | undefined;
@@ -1318,7 +1318,7 @@ readonly description?: string | undefined;
 
 What the value is, and what it is for.
 
-#### examples
+#### Meta › examples
 
 ```ts
 readonly examples?: readonly unknown[] | undefined;
@@ -1326,7 +1326,7 @@ readonly examples?: readonly unknown[] | undefined;
 
 Values that show what is expected, each a JSON value: `null`, a boolean, a finite number, text, or a list or plain object of them. They are written as given, and not validated.
 
-#### title
+#### Meta › title
 
 ```ts
 readonly title?: string | undefined;
@@ -1342,11 +1342,11 @@ export interface ObjectOptions extends MessageOptions
 
 Options for [object](#object).
 
-#### message
+#### ObjectOptions › message
 
 Inherited from [MessageOptions](index.md#messageoptions).
 
-#### unknownKeys
+#### ObjectOptions › unknownKeys
 
 ```ts
 unknownKeys?: "strip" | "strict" | "passthrough" | undefined;
@@ -1364,7 +1364,7 @@ export interface SizeOptions
 
 Size constraints shared by arrays, sets, maps and records, where the size of a record is its number of keys. Every option is optional.
 
-#### length
+#### SizeOptions › length
 
 ```ts
 length?: number | undefined;
@@ -1372,7 +1372,7 @@ length?: number | undefined;
 
 Requires exactly this many items. A non-negative integer.
 
-#### max
+#### SizeOptions › max
 
 ```ts
 max?: number | undefined;
@@ -1380,7 +1380,7 @@ max?: number | undefined;
 
 Allows at most this many items. A non-negative integer.
 
-#### min
+#### SizeOptions › min
 
 ```ts
 min?: number | undefined;
@@ -1396,7 +1396,7 @@ export interface TupleOptions<TRest extends AnyValidator | undefined = undefined
 
 Options for [tuple](#tuple).
 
-#### max
+#### TupleOptions › max
 
 ```ts
 max?: (TRest extends AnyValidator ? number : never) | undefined;
@@ -1404,11 +1404,11 @@ max?: (TRest extends AnyValidator ? number : never) | undefined;
 
 The most items the array may hold, the fixed ones included, a non-negative integer no smaller than their number. Only with `rest`, since without it the length is fixed.
 
-#### message
+#### TupleOptions › message
 
 Inherited from [MessageOptions](index.md#messageoptions).
 
-#### rest
+#### TupleOptions › rest
 
 ```ts
 rest?: TRest | undefined;
