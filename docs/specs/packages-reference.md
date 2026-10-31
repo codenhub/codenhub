@@ -195,6 +195,7 @@ TypeDoc is a dependency rather than an in-house extractor because faithfully mod
 - `reference/unsupported-export` — `error` — a documented entrypoint exposes an export whose declaration kind the page model does not cover.
 - `reference/unresolved-type` — `error` — a documented declaration's emitted `.d.ts` names a type from this package that no page documents, either as a symbol or under **Internal types**. A global type from a hand-written `.d.ts` is one example: it has no emitted declaration to list.
 - `reference/empty-section` — `error` — a section would render nothing a reader can use: a symbol, overload, or declared member with no signature, or a namespace with no members. An inherited member is exempt, since it links to the type that declares it.
+- `reference/missing-description` — `warning` — an entrypoint's own page has no `description`, because its entry module carries no `@packageDocumentation` summary. The page still documents every symbol, so this does not fail the run; without a summary, the site's deck, link previews, and search results have nothing to say about the entrypoint. Making it an error was rejected because the summary is optional frontmatter (see "Frontmatter"); leaving it unreported was rejected because nothing else prompts an author to write one.
 
 Source JSDoc/TSDoc coverage is enforced by `undocumented-export/missing-jsdoc`, independently of reference opt-in and `prose`, as defined in `docs/specs/packages-documentation.md`. The `reference` rule owns generated-page correctness and does not duplicate that finding.
 
