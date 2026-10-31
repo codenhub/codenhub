@@ -44,6 +44,7 @@ describe("published package exports", () => {
         "browserErrorPatterns",
         "browserErrorRegistry",
         "nodeErrorCodes",
+        "nodeErrorNames",
         "nodeErrorPatterns",
         "nodeErrorRegistry",
         "supabaseErrorCodes",
@@ -55,7 +56,7 @@ describe("published package exports", () => {
       ["browserErrorNames", "browserErrorPatterns", "browserErrorRegistry"].sort(),
     );
     expect(Object.keys(nodeRegistries).sort()).toEqual(
-      ["nodeErrorCodes", "nodeErrorPatterns", "nodeErrorRegistry"].sort(),
+      ["nodeErrorCodes", "nodeErrorNames", "nodeErrorPatterns", "nodeErrorRegistry"].sort(),
     );
     expect(Object.keys(supabaseRegistries).sort()).toEqual(
       ["supabaseErrorCodes", "supabaseErrorNames", "supabaseErrorRegistry"].sort(),

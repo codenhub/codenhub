@@ -46,7 +46,8 @@
       "types": "./dist/registries/supabase.d.ts",
       "import": "./dist/registries/supabase.js",
       "default": "./dist/registries/supabase.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "publishConfig": {
     "access": "public"

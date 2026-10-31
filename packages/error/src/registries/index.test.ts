@@ -4,6 +4,7 @@ import { createAppError, createErrorRegistry } from "../index";
 import {
   browserErrorRegistry,
   nodeErrorCodes,
+  nodeErrorNames,
   nodeErrorPatterns,
   nodeErrorRegistry,
   supabaseErrorRegistry,
@@ -246,7 +247,7 @@ describe("ready registries", () => {
     for (const failure of failures) {
       const { message } = createAppError(failure, { registry });
 
-      expect(message).toMatch(/check whether it went through/i);
+      expect(message).toMatch(/check whether (?:it|this) went through/i);
       expect(message).not.toMatch(/couldn't reach the server/i);
     }
   });
@@ -287,6 +288,7 @@ describe("ready registries", () => {
       ...Object.values(browserErrorNames),
       ...browserErrorPatterns.map(([, feedback]) => feedback),
       ...Object.values(nodeErrorCodes),
+      ...Object.values(nodeErrorNames),
       ...nodeErrorPatterns.map(([, feedback]) => feedback),
       ...Object.values(supabaseErrorCodes),
       ...Object.values(supabaseErrorNames),

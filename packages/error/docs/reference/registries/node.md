@@ -1,6 +1,6 @@
 ---
 title: "/registries/node"
-description: "Node.js error preset: network failure codes from sockets, DNS, and `fetch` mapped to safe feedback."
+description: "Node.js error preset: network failures from sockets, DNS, `fetch`, and `AbortSignal` mapped to safe feedback."
 order: 3
 ---
 
@@ -20,6 +20,16 @@ Raw code mapping definitions for Node.js network failures.
 
 Covers the system codes raised by sockets and DNS lookups and the `UND_ERR_*` codes raised by the built-in `fetch`, which carries them on the `cause` of its `TypeError`. Only failures that happen before the request reaches the server are marked retryable; `ETIMEDOUT` is not, because it is also raised on a socket that already carried the request. Filesystem codes are left out: what `ENOENT` should tell a user depends on what the application was doing.
 
+### nodeErrorNames
+
+```ts
+export declare const nodeErrorNames: Readonly<Record<string, Readonly<ErrorFeedback>>>;
+```
+
+Raw name mapping definitions for the `DOMException` names an `AbortSignal` raises on Node.js.
+
+A `fetch` given `AbortSignal.timeout()` rejects with a `TimeoutError`, and one cancelled through an `AbortController` with an `AbortError`. Neither is retryable: a timeout can fire after the other side received the request. The messages speak about the call this side made, not the reader's connection.
+
 ### nodeErrorPatterns
 
 ```ts
@@ -38,6 +48,6 @@ export declare const nodeErrorRegistry: ReadonlyErrorRegistry;
 
 An opt-in, read-only error registry pre-populated with mappings for Node.js network failures.
 
-Includes code mappings for socket, DNS, and built-in `fetch` failures (e.g., `ECONNREFUSED`, `ENOTFOUND`, `UND_ERR_CONNECT_TIMEOUT`) and a pattern mapping for a failed `fetch` with no recognized cause.
+Includes code mappings for socket, DNS, and built-in `fetch` failures (e.g., `ECONNREFUSED`, `ENOTFOUND`, `UND_ERR_CONNECT_TIMEOUT`), name mappings for the `TimeoutError` and `AbortError` an `AbortSignal` raises, and a pattern mapping for a failed `fetch` with no recognized cause.
 
 Importing this preset does not access Node.js globals or built-in modules.

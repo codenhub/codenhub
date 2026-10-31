@@ -1,5 +1,5 @@
 /**
- * Node.js error preset: network failure codes from sockets, DNS, and `fetch` mapped to safe feedback.
+ * Node.js error preset: network failures from sockets, DNS, `fetch`, and `AbortSignal` mapped to safe feedback.
  *
  * @packageDocumentation
  */
@@ -92,6 +92,27 @@ export const nodeErrorCodes = freezeFeedbackMap({
   },
 });
 
+/**
+ * Raw name mapping definitions for the `DOMException` names an `AbortSignal` raises on Node.js.
+ *
+ * A `fetch` given `AbortSignal.timeout()` rejects with a `TimeoutError`, and one cancelled through
+ * an `AbortController` with an `AbortError`. Neither is retryable: a timeout can fire after the
+ * other side received the request. The messages speak about the call this side made, not the
+ * reader's connection.
+ */
+export const nodeErrorNames = freezeFeedbackMap({
+  TimeoutError: {
+    message: "A service this depends on took too long to respond. Check whether this went through before trying again.",
+    messageKey: "error.node.network.responseTimeout",
+    source: "node.network",
+  },
+  AbortError: {
+    message: "The request was cancelled before it finished.",
+    messageKey: "error.node.abort",
+    source: "node",
+  },
+});
+
 const nodeErrorPatternDefinitions: readonly (readonly [RegExp, ErrorFeedback])[] = [
   [
     // The whole message of a failed built-in fetch. It is reached only when the cause carries
@@ -120,14 +141,15 @@ export const nodeErrorPatterns: readonly (readonly [RegExp, Readonly<ErrorFeedba
 const registry = createErrorRegistry();
 
 registry.codes.addList(Object.entries(nodeErrorCodes));
+registry.names.addList(Object.entries(nodeErrorNames));
 registry.patterns.addList(nodeErrorPatterns);
 
 /**
  * An opt-in, read-only error registry pre-populated with mappings for Node.js network failures.
  *
  * Includes code mappings for socket, DNS, and built-in `fetch` failures (e.g., `ECONNREFUSED`,
- * `ENOTFOUND`, `UND_ERR_CONNECT_TIMEOUT`) and a pattern mapping for a failed `fetch` with no
- * recognized cause.
+ * `ENOTFOUND`, `UND_ERR_CONNECT_TIMEOUT`), name mappings for the `TimeoutError` and `AbortError` an
+ * `AbortSignal` raises, and a pattern mapping for a failed `fetch` with no recognized cause.
  *
  * Importing this preset does not access Node.js globals or built-in modules.
  */

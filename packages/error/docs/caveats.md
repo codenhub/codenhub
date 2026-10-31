@@ -40,9 +40,9 @@ Everything on this page is deliberate, but each item has surprised someone. Each
 
 ## Names match any error with that name
 
-**What happens:** with the browser preset merged, any error whose `name` is `NotFoundError` or `TimeoutError` is classified as the browser's, including errors from a library that happens to use the same class name.
+**What happens:** with the browser or Node.js preset merged, any error whose `name` is `TimeoutError` is classified as that preset's, including errors from a library that happens to use the same class name. The browser preset does the same for `NotFoundError` and its other names.
 
-**Instead:** classify that library's errors against a registry without the browser preset, or register a more specific code for them.
+**Instead:** classify that library's errors against a registry without the preset, or register a more specific code for them.
 
 ## Cancelled requests are errors too
 
@@ -81,8 +81,8 @@ Everything on this page is deliberate, but each item has surprised someone. Each
 ## Presets do not cover everything
 
 - The browser preset recognizes a failed `fetch` and a failed `import()` by the messages Chromium, Firefox, and Safari produce today. A browser that rewords them falls back to `"unknown"` until the preset catches up.
-- The Node.js preset covers network failures only, and was observed on Node.js 24. Other server runtimes may report the same failures differently.
-- The Supabase preset covers the Auth codes a person can act on, six PostgreSQL codes, and the client's own error names. Codes only a developer can fix are left unmapped on purpose, so they reach your error tracker as `"unknown"`.
+- The Node.js preset covers network failures and the errors an `AbortSignal` raises, and was observed on Node.js 24. Other server runtimes may report the same failures differently.
+- The Supabase preset covers the Auth codes a person can act on, six PostgreSQL codes, and the client's own error names. It maps the few developer faults a running application commonly hits, such as a missing table or column, to one shared message, so they are `"known"`: report them by `code`, not by type (see [Recipes](recipes.md#report-to-an-error-tracker)). Other codes only a developer can fix, such as `bad_jwt`, are left unmapped on purpose and reach your error tracker as `"unknown"`.
 
 Register your own mapping for anything a preset misses. [Presets](presets.md) lists exactly what each one covers.
 
@@ -98,4 +98,4 @@ Every preset mapping has a stable `messageKey`, but ErrorKit includes only the E
 
 ## Patterns you write can be slow
 
-A pattern runs against every message `createAppError` sees, and a message can be crafted by someone trying to slow your server down. A pattern with nested repetition, such as `/(a+)+$/`, can take seconds on the wrong input. Keep custom patterns anchored and simple; see [Registries](registries.md#writing-patterns). The built-in patterns are all anchored alternations.
+A pattern runs against every message `createAppError` sees, and a message can be crafted by someone trying to slow your server down. A pattern with nested repetition, such as `/(a+)+$/`, can take seconds on the wrong input. Keep custom patterns anchored and simple; see [Registries](registries.md#writing-patterns). The built-in patterns are all anchored, with no nested repetition.
