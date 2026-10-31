@@ -25,6 +25,18 @@ function transform(children: TestElement[], siteOrigin = "https://docs.example.c
 }
 
 describe("heading anchors", () => {
+  it.each(["h4", "h5", "h6"])("adds a permalink to reference member %s", (tagName) => {
+    const heading = element(tagName, { id: "settokens" }, [text("setTokens")]);
+    const tree: TestElement = { type: "root", children: [heading] };
+
+    rehypeMarkdownEnhancements()(tree, { path: "C:/repo/packages/theme/docs/reference/index.md" });
+
+    expect(heading.children.at(-1)).toMatchObject({
+      tagName: "a",
+      properties: { href: "#settokens", ariaLabel: "Link to setTokens", className: ["heading-anchor"] },
+    });
+  });
+
   it.each(["h2", "h3"])("adds an accessible anchor to %s", (tagName) => {
     const heading = element(tagName, { id: "install" }, [text("Install "), element("code", {}, [text("now")])]);
 
@@ -94,6 +106,47 @@ describe("external links", () => {
 });
 
 describe("code blocks", () => {
+  it("marks reference signatures and overloads for wrapping without changing code text", () => {
+    const signature = "export declare function ok(): Ok<void>;\n";
+    const overload = "export declare function ok<T>(value: T): Ok<T>;\n";
+    const pre = (value: string) => element("pre", { dataLanguage: "ts" }, [element("code", {}, [text(value)])]);
+    const first = pre(signature);
+    const second = pre(overload);
+    const example = pre("const result = ok(1);\n");
+    const tree: TestElement = {
+      type: "root",
+      children: [
+        element("h3", { id: "ok" }, [text("ok")]),
+        text("\n"),
+        first,
+        element("p", {}, [text("Creates a result.")]),
+        second,
+        element("p", {}, [element("strong", {}, [text("Example")])]),
+        example,
+      ],
+    };
+
+    rehypeMarkdownEnhancements()(tree, { path: "C:/repo/packages/error/docs/reference/index.md" });
+
+    expect(first.properties?.dataReferenceSignature).toBe("");
+    expect(second.properties?.dataReferenceSignature).toBe("");
+    expect(example.properties?.dataReferenceSignature).toBeUndefined();
+    expect(first.children[0]?.children).toEqual([text(signature)]);
+    expect(second.children[0]?.children).toEqual([text(overload)]);
+  });
+
+  it.each(["guides/setup.md", "reference.md"])("keeps code in %s horizontally scrollable", (relativePath) => {
+    const pre = element("pre", { dataLanguage: "ts" }, [element("code", {}, [text("export type Long = string;")])]);
+    const tree: TestElement = {
+      type: "root",
+      children: [element("h3", {}, [text("Long")]), pre],
+    };
+
+    rehypeMarkdownEnhancements()(tree, { path: `C:/repo/packages/error/docs/${relativePath}` });
+
+    expect(pre.properties?.dataReferenceSignature).toBeUndefined();
+  });
+
   it("wraps highlighted code with a labelled header and native copy button", () => {
     const code = element("code", {}, [text("const value = 1;\n")]);
     const pre = element("pre", { className: ["astro-code"], dataCodeLabel: "src/file.ts" }, [code]);

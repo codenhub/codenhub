@@ -25,8 +25,6 @@ export interface SearchOptions {
 }
 
 const DEFAULT_LIMIT = 8;
-const SECTION_WEIGHT = 0.92;
-const PACKAGE_WEIGHT = 0.8;
 const EXACT_LABEL_BONUS = 20;
 const BODY_SCORE = 12;
 
@@ -48,11 +46,13 @@ const MINIMUM_SCORE = BODY_SCORE;
  * fuzzy subsequence over a paragraph matches almost anything. An entry needs a
  * label match or a body hit to appear at all.
  *
- * The package name only lifts that package's documents, never its individual
- * sections. Typing a package name asks for its pages, and scoring every heading
- * inside it equally would bury them under their own contents. A query that
+ * The package name and document title only lift whole documents, never their
+ * individual sections. Typing either asks for pages, and scoring every heading
+ * inside them equally would bury them under their own contents. A query that
  * equals a label outright is a deliberate hit rather than a fuzzy guess, so it
  * takes a bonus that clears near-miss matches elsewhere.
+ * Package labels carry the same weight as headings so a package lookup still
+ * surfaces its pages among symbols that begin with the package name.
  *
  * A literal phrase found in prose outscores a scattered label match, because a
  * label the query only reaches by skipping most of it is the weaker signal of
@@ -81,16 +81,10 @@ export function searchDocumentation(
     const label = entry.section ?? entry.title;
     const labelMatch = matchFuzzy(trimmed, label);
     const isSection = entry.section !== undefined;
-    const titleMatch = isSection ? matchFuzzy(trimmed, entry.title) : undefined;
     const packageMatch = isSection ? undefined : matchFuzzy(trimmed, entry.packageLabel);
     const bodyScore = entry.text.toLowerCase().includes(needle) ? BODY_SCORE : 0;
 
-    const score = Math.max(
-      scoreLabel(labelMatch, label),
-      scoreLabel(titleMatch, entry.title) * SECTION_WEIGHT,
-      scoreLabel(packageMatch, entry.packageLabel) * PACKAGE_WEIGHT,
-      bodyScore,
-    );
+    const score = Math.max(scoreLabel(labelMatch, label), scoreLabel(packageMatch, entry.packageLabel), bodyScore);
 
     if (score >= MINIMUM_SCORE) {
       results.push({ entry, positions: labelMatch?.positions ?? [], score });

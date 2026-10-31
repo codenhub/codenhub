@@ -5,6 +5,21 @@ export interface HeadingPosition {
   top: number;
 }
 
+/** Wires the phone outline's disclosure and returns focus before hiding a selected link. */
+export function initializePageOutline(button: HTMLButtonElement, panel: HTMLElement): void {
+  const setExpanded = (expanded: boolean) => {
+    panel.hidden = !expanded;
+    button.setAttribute("aria-expanded", String(expanded));
+  };
+  button.addEventListener("click", () => setExpanded(Boolean(panel.hidden)));
+  for (const link of panel.querySelectorAll<HTMLAnchorElement>("a")) {
+    link.addEventListener("click", () => {
+      setExpanded(false);
+      button.focus({ preventScroll: true });
+    });
+  }
+}
+
 export interface ActiveHeadingInput {
   headings: readonly HeadingPosition[];
   /** Distance below the scroll position at which a heading counts as reached. */
@@ -57,4 +72,31 @@ export function findActiveHeadingId({
   }
 
   return activeId;
+}
+
+/** Reveals changed active links inside the rail, leaving deliberate rail browsing alone. */
+export function createTocRevealer(toc: HTMLElement): (link: HTMLElement | undefined) => void {
+  let activeLink: HTMLElement | undefined;
+
+  return (link) => {
+    if (toc.clientHeight === 0 || link === activeLink) {
+      return;
+    }
+
+    activeLink = link;
+    if (link === undefined || toc.matches(":hover, :focus-within")) {
+      return;
+    }
+
+    const railTop = toc.getBoundingClientRect().top;
+    const railBottom = railTop + toc.clientHeight;
+    const bounds = link.getBoundingClientRect();
+
+    // scrollIntoView can also move the document, even with block: "nearest".
+    if (bounds.top < railTop) {
+      toc.scrollTop += bounds.top - railTop;
+    } else if (bounds.bottom > railBottom) {
+      toc.scrollTop += bounds.bottom - railBottom;
+    }
+  };
 }

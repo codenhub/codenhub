@@ -2,6 +2,7 @@
 import BackToTop from "../components/back-to-top.astro";
 import LinkPreview from "../components/link-preview.astro";
 import PageActions from "../components/page-actions.astro";
+import PageOutline from "../components/page-outline.astro";
 import PackageNavigation from "../components/package-navigation.astro";
 import { isReferenceDocument, type PublicDocument, type PublicPackage } from "../lib/catalog";
 import BaseLayout from "./base-layout.astro";
@@ -43,6 +44,7 @@ const browserTitle =
 
     <main class="document-column" id="main-content">
       <div class="document-body">
+        {tocHeadings.length > 0 && <PageOutline headings={tocHeadings} />}
         <PageActions route={document.route} />
         <article class="markdown-content">
           <slot />
@@ -72,11 +74,12 @@ const browserTitle =
   <LinkPreview />
 
   <script>
-    import { findActiveHeadingId } from "../lib/toc-highlight";
+    import { createTocRevealer, findActiveHeadingId } from "../lib/toc-highlight";
 
-    const toc = document.querySelector("[data-toc]");
+    const toc = document.querySelector<HTMLElement>("[data-toc]");
 
     if (toc !== null) {
+      const revealActiveLink = createTocRevealer(toc);
       const links = [...toc.querySelectorAll<HTMLAnchorElement>("a[href^='#']")];
       const entries = links.flatMap((link) => {
         const id = decodeURIComponent(link.hash.slice(1));
@@ -114,6 +117,8 @@ const browserTitle =
             link.removeAttribute("aria-current");
           }
         }
+
+        revealActiveLink(entries.find(({ id }) => id === activeId)?.link);
       };
 
       let queued = false;

@@ -1,0 +1,35 @@
+---
+import type { MarkdownHeading } from "astro";
+
+interface Props {
+  headings: MarkdownHeading[];
+}
+
+const { headings } = Astro.props;
+---
+
+<div class="page-outline">
+  <button type="button" aria-expanded="false" aria-controls="page-outline-links">
+    On this page
+    <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" /></svg>
+  </button>
+  <nav id="page-outline-links" aria-label="On this page" hidden>
+    <ol>
+      {headings.map((heading) => (
+        <li class:list={{ nested: heading.depth === 3 }}>
+          <a href={`#${heading.slug}`}>{heading.text}</a>
+        </li>
+      ))}
+    </ol>
+  </nav>
+</div>
+
+<script>
+  import { initializePageOutline } from "../lib/toc-highlight";
+
+  const button = document.querySelector<HTMLButtonElement>(".page-outline button");
+  const panel = document.getElementById("page-outline-links");
+  if (button !== null && panel !== null) {
+    initializePageOutline(button, panel);
+  }
+</script>

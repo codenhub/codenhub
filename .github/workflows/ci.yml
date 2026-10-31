@@ -158,6 +158,8 @@ jobs:
           path: |
             packages/*/test-results/**
             packages/*/playwright-report/**
+            apps/*/test-results/**
+            apps/*/playwright-report/**
           if-no-files-found: ignore
           retention-days: 7
 

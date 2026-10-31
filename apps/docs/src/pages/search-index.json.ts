@@ -16,7 +16,7 @@ export const GET: APIRoute = () =>
       packages.map(({ documents, label }) => ({
         documents: documents
           .filter((document) => document.curated !== true)
-          .map(({ headings, html, route, title }) => ({ headings, html, route, title })),
+          .map(({ headings, html, relativePath, route, title }) => ({ headings, html, relativePath, route, title })),
         label,
       })),
     ),

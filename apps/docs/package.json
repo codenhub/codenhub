@@ -10,6 +10,8 @@
     "preview": "wrangler dev",
     "preview:deploy": "wrangler versions upload",
     "test": "vitest run",
+    "test:browser": "playwright test",
+    "test:browser:watch": "playwright test --ui",
     "test:watch": "vitest",
     "typecheck": "astro check"
   },
@@ -20,6 +22,7 @@
     "@codenhub/icons": "workspace:*",
     "@codenhub/styles": "workspace:*",
     "@codenhub/tools": "workspace:*",
+    "@playwright/test": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@types/node": "catalog:",
     "astro": "catalog:",

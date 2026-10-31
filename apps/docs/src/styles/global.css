@@ -199,6 +199,12 @@ html {
 
 .markdown-content {
   @apply w-full max-w-3xl;
+  /* Unlike `anywhere`, this preserves table columns' min-content widths. */
+  overflow-wrap: break-word;
+}
+
+.markdown-content :is(h1, h2, h3, h4, h5, h6) {
+  overflow-wrap: anywhere;
 }
 
 /* The page actions sit outside the article, which renders the Markdown as
@@ -322,6 +328,11 @@ html {
   @apply data-table;
 }
 
+/* The wrapper scrolls wide tables; code can keep its natural min-content width. */
+.markdown-content table code {
+  overflow-wrap: break-word;
+}
+
 .markdown-content hr {
   @apply divider my-10;
 }
@@ -346,6 +357,36 @@ html {
   @apply border-border max-h-[70dvh] overflow-y-auto border-t px-(--layout-gutter) py-5;
 }
 
+.page-outline {
+  @apply mb-6 hidden;
+}
+
+.page-outline button {
+  @apply text-label text-text flex cursor-pointer items-center gap-2 rounded-(--radius-control) py-2;
+}
+
+.page-outline button svg {
+  @apply size-3.5 fill-none stroke-current stroke-2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.page-outline button[aria-expanded="true"] svg {
+  @apply rotate-90;
+}
+
+.page-outline ol {
+  @apply m-0 max-h-[60dvh] list-none overflow-y-auto p-0;
+}
+
+.page-outline a {
+  @apply text-text-secondary hover:text-text block py-2 no-underline;
+}
+
+.page-outline li.nested a {
+  @apply pl-4;
+}
+
 @media (max-width: 74rem) {
   .docs-shell {
     @apply grid-cols-[var(--docs-rail-width)_minmax(0,1fr)];
@@ -353,6 +394,10 @@ html {
 
   .toc-rail {
     @apply hidden;
+  }
+
+  .page-outline {
+    @apply block;
   }
 }
 

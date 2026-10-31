@@ -1,4 +1,4 @@
-import { findSectionBounds, toText, type IndexableHeading } from "../search/build-index";
+import { findSectionBounds, indexableHeadings, toText, type IndexableHeading } from "../search/build-index";
 
 /** What a link preview shows about one page or one section of a page. */
 export interface LinkPreviewEntry {
@@ -8,13 +8,14 @@ export interface LinkPreviewEntry {
   summary?: string;
 }
 
-/** Previews keyed by route, and by `route#slug` for each `h2`/`h3` section. */
+/** Previews keyed by route and `route#slug`, including generated reference members. */
 export type LinkPreviewIndex = Record<string, LinkPreviewEntry>;
 
 export interface PreviewableDocument {
   description?: string;
   headings: readonly IndexableHeading[];
   html: string;
+  relativePath: string;
   route: string;
   /** Sidebar section the page sits in, such as `Guides`. */
   sectionLabel: string;
@@ -49,7 +50,7 @@ function firstParagraph(html: string): string | undefined {
 
 /**
  * Builds the data behind the docs site's link previews: one entry per page and
- * one per `h2`/`h3` section, the same units search indexes.
+ * one per section or reference member, the same units search indexes.
  *
  * A page's summary is its frontmatter `description`, written for exactly this,
  * and otherwise its first paragraph. A section's summary is the first paragraph
@@ -58,8 +59,8 @@ function firstParagraph(html: string): string | undefined {
 export function buildLinkPreviewIndex(packages: readonly PreviewablePackage[]): LinkPreviewIndex {
   const entries = packages.flatMap((packageEntry) =>
     packageEntry.documents.flatMap((document): [string, LinkPreviewEntry][] => {
-      const headings = document.headings.filter(({ depth }) => depth === 2 || depth === 3);
-      const bounds = findSectionBounds(document.html);
+      const headings = indexableHeadings(document);
+      const bounds = findSectionBounds(document.html, document.relativePath.startsWith("reference/"));
       const summary = document.description === undefined ? firstParagraph(document.html) : clip(document.description);
 
       const page: [string, LinkPreviewEntry] = [
