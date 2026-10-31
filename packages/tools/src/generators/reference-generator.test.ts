@@ -490,6 +490,26 @@ describe("analyzeReference", () => {
     expect(files[1]?.contents).toContain("export declare const b = 2;");
   });
 
+  it("expands an explicit wildcard entrypoint in its listed position", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-wildcard-explicit", {
+      "index.ts": "/** Root. */ export const root = 0;",
+      "parts/a.ts": "/** A. */ export const a = 1;",
+      "parts/b.ts": "/** B. */ export const b = 2;",
+      "parts/hidden.ts": "/** Private. */ export const hidden = 3;",
+    });
+    (workspacePackage.manifest as Record<string, unknown>).exports = {
+      ".": { types: "./dist/index.d.ts" },
+      "./parts/*": { types: "./dist/parts/*.d.ts" },
+      "./parts/b": { types: "./dist/parts/b.d.ts" },
+      "./parts/hidden": null,
+    };
+    const { model } = await analyzeReference(workspacePackage, {
+      prose: true,
+      entrypoints: ["./parts/b", "./parts/*", "."],
+    });
+    expect(model.entrypoints.map((entry) => entry.subpath)).toEqual(["./parts/b", "./parts/a", "."]);
+  });
+
   it("expands export patterns across nested source directories", { timeout: 30_000 }, async () => {
     const workspacePackage = await createReferenceFixture("fixture-wildcard-nested", {
       "parts/a.ts": "/** A. */ export const a = 1;",
