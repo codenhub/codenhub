@@ -24,7 +24,7 @@ Groups the messages of a failure for display: issues at the root go to `formErro
 
 **Returns** — The grouped messages.
 
-**Throws** — When `messages` is not a message map, such as `null`, or the entry that words an issue is neither text nor a function that returns text.
+**Throws** — `TypeError` — When `messages` is not a message map, such as `null`, or the entry that words an issue is neither text nor a function that returns text.
 
 ### formatIssue
 
@@ -43,7 +43,7 @@ The text comes from the first of these that exists: the issue's own `message`, a
 
 **Returns** — The message.
 
-**Throws** — When `messages` is not a message map, such as `null`, or the entry that words an issue is neither text nor a function that returns text.
+**Throws** — `TypeError` — When `messages` is not a message map, such as `null`, or the entry that words an issue is neither text nor a function that returns text.
 
 **Example**
 

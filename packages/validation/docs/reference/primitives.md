@@ -58,7 +58,7 @@ Creates a validator that accepts instances of a class, checked with `instanceof`
 
 **Returns** — A validator that produces the instance.
 
-**Throws** — When `target` is not a function `instanceof` can test against, such as an arrow function, or its `Symbol.hasInstance` is neither a function nor absent, which would make `instanceof` throw for every value.
+**Throws** — `TypeError` — When `target` is not a function `instanceof` can test against, such as an arrow function, or its `Symbol.hasInstance` is neither a function nor absent, which would make `instanceof` throw for every value.
 
 **Example**
 
@@ -90,8 +90,8 @@ Creates a validator that accepts exactly one value, compared with `===`. The typ
 
 **Throws**
 
-- When `value` is an object or a function, which equals only itself.
-- When `value` is `NaN`, which no value equals, so the literal would accept nothing.
+- `TypeError` — When `value` is an object or a function, which equals only itself.
+- `RangeError` — When `value` is `NaN`, which no value equals, so the literal would accept nothing.
 
 **Example**
 
@@ -125,8 +125,8 @@ Creates a validator that accepts any one value of a list or of a TypeScript `enu
 
 **Throws**
 
-- When `values` is neither a list nor an enum, such as text, which would be read as its characters, or a `Set`, the list has a hole, there is no value, so the validator would accept nothing, or a value is an object or a function, which equals only itself.
-- When a value is `NaN`, which no value equals.
+- `TypeError` — When `values` is neither a list nor an enum, such as text, which would be read as its characters, or a `Set`, the list has a hole, there is no value, so the validator would accept nothing, or a value is an object or a function, which equals only itself.
+- `RangeError` — When a value is `NaN`, which no value equals.
 
 **Example**
 
@@ -175,7 +175,7 @@ Requires a value of at most this.
 
 #### BigintOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions).
+Inherited from [MessageOptions](index.md#messageoptions--message).
 
 #### BigintOptions › min
 
@@ -203,7 +203,7 @@ Requires this moment or an earlier one. Must be a valid `Date`.
 
 #### DateOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions).
+Inherited from [MessageOptions](index.md#messageoptions--message).
 
 #### DateOptions › min
 
@@ -231,7 +231,7 @@ Allows at most this many bytes. A non-negative integer. A file is held in memory
 
 #### FileOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions).
+Inherited from [MessageOptions](index.md#messageoptions--message).
 
 #### FileOptions › minSize
 
@@ -304,7 +304,7 @@ Requires a value of at most this.
 
 #### NumberOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions).
+Inherited from [MessageOptions](index.md#messageoptions--message).
 
 #### NumberOptions › min
 
@@ -358,7 +358,7 @@ Allows at most this many characters. A non-negative integer.
 
 #### StringOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions).
+Inherited from [MessageOptions](index.md#messageoptions--message).
 
 #### StringOptions › min
 
@@ -424,8 +424,8 @@ Creates a validator for bigints. Numbers are rejected, including whole ones. A b
 
 **Throws**
 
-- When a bound is not a bigint, such as the number `0` where `0n` was meant.
-- When no bigint can satisfy the bounds together.
+- `TypeError` — When a bound is not a bigint, such as the number `0` where `0n` was meant.
+- `RangeError` — When no bigint can satisfy the bounds together.
 
 **Example**
 
@@ -463,8 +463,8 @@ Creates a validator for valid `Date` objects. An invalid `Date` such as `new Dat
 
 **Throws**
 
-- When `min` or `max` is not a `Date`.
-- When `min` or `max` is an invalid `Date`, or `min` is after `max`.
+- `TypeError` — When `min` or `max` is not a `Date`.
+- `RangeError` — When `min` or `max` is an invalid `Date`, or `min` is after `max`.
 
 **Example**
 
@@ -488,8 +488,8 @@ A `Blob` is no file, since a form sends a file with its name, and an object that
 
 **Throws**
 
-- When `minSize` or `maxSize` is not a non-negative integer, `minSize` is above `maxSize`, or `types` is empty.
-- When `minSize` or `maxSize` is not a number, `types` is not a list of media types, or a check is not a function.
+- `RangeError` — When `minSize` or `maxSize` is not a non-negative integer, `minSize` is above `maxSize`, or `types` is empty.
+- `TypeError` — When `minSize` or `maxSize` is not a number, `types` is not a list of media types, or a check is not a function.
 
 **Example**
 
@@ -526,8 +526,8 @@ Creates a validator for finite numbers. `NaN` and the infinities are always reje
 
 **Throws**
 
-- When a bound is not a number, `int` or `safeInt` is not a boolean, or `clamp` is not a range with a number `min` and `max`.
-- When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, or `clamp` has a `NaN` bound, a minimum of `Infinity` or a maximum of `-Infinity`, a minimum above its maximum, or a range whose every value breaks a bound. Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught here, and reject every input.
+- `TypeError` — When a bound is not a number, `int` or `safeInt` is not a boolean, or `clamp` is not a range with a number `min` and `max`.
+- `RangeError` — When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, or `clamp` has a `NaN` bound, a minimum of `Infinity` or a maximum of `-Infinity`, a minimum above its maximum, or a range whose every value breaks a bound. Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught here, and reject every input.
 
 **Example**
 
@@ -550,8 +550,8 @@ Creates a validator for strings.
 
 **Throws**
 
-- When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
-- When `min`, `max` or `length` is not a number, `case` is not `"lower"` or `"upper"`, `trim` is not a boolean, or a check is not a function.
+- `RangeError` — When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
+- `TypeError` — When `min`, `max` or `length` is not a number, `case` is not `"lower"` or `"upper"`, `trim` is not a boolean, or a check is not a function.
 
 **Example**
 

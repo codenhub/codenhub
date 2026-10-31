@@ -34,7 +34,7 @@ The error names the first issue only. The others are on the failure the error ca
 
 **Returns** — The value the validator produced, which is not the input when the validator trims, coerces or transforms.
 
-**Throws** — When the validator rejects the input, with the subject, the path of the first issue and its wording as the message, and the failure as the `cause`. Also when the validator turns out to be asynchronous, or returns no result or a failure without an issue, and, whatever the input, when `options` is not a plain object or holds a name other than `subject` and `messages`, `subject` is not text, or `messages` is not a message map.
+**Throws** — `TypeError` — When the validator rejects the input, with the subject, the path of the first issue and its wording as the message, and the failure as the `cause`. Also when the validator turns out to be asynchronous, or returns no result or a failure without an issue, and, whatever the input, when `options` is not a plain object or holds a name other than `subject` and `messages`, `subject` is not text, or `messages` is not a message map.
 
 **Example**
 
@@ -64,7 +64,7 @@ It reads the schema and never calls it. Whether a `max` is small enough is not i
 
 **Returns** — Every place a bound is missing, in the order the schema lists them; empty when there is none.
 
-**Throws** — When `validator` is not a function.
+**Throws** — `TypeError` — When `validator` is not a function.
 
 **Example**
 
@@ -117,7 +117,7 @@ Builds a failed result from one or more issues.
 
 **Returns** — A failed result holding every issue, in order.
 
-**Throws** — When called without an issue, with a `path` that is not a list of keys and indexes, such as `"confirm"`, which would be split into one segment per letter, or with a `code` or `message` that is not text. The types forbid all of them.
+**Throws** — `TypeError` — When called without an issue, with a `path` that is not a list of keys and indexes, such as `"confirm"`, which would be split into one segment per letter, or with a `code` or `message` that is not text. The types forbid all of them.
 
 ### is
 
@@ -136,7 +136,7 @@ It returns a `boolean` and narrows nothing. A type guard says two things, that a
 
 **Returns** — `true` when the validator accepts the input.
 
-**Throws** — When the validator turns out to be asynchronous, which the type system prevents unless the type was cast away. Use the validator directly and `await` it instead.
+**Throws** — `TypeError` — When the validator turns out to be asynchronous, which the type system prevents unless the type was cast away. Use the validator directly and `await` it instead.
 
 **Example**
 
@@ -211,11 +211,11 @@ An [AsyncValidator](#asyncvalidator) a factory of this package made, which is al
 
 #### AsyncSchema › ~standard
 
-Inherited from [StandardSchemaV1](interop.md#standardschemav1).
+Inherited from [StandardSchemaV1](interop.md#standardschemav1--standard).
 
 #### AsyncSchema › ~types
 
-Inherited from [AsyncValidator](#asyncvalidator).
+Inherited from [AsyncValidator](#asyncvalidator--types).
 
 ### AsyncValidator
 
@@ -389,11 +389,11 @@ Accepted wherever a [Validator](#validator) is. A validator written by hand is a
 
 #### Schema › ~standard
 
-Inherited from [StandardSchemaV1](interop.md#standardschemav1).
+Inherited from [StandardSchemaV1](interop.md#standardschemav1--standard).
 
 #### Schema › ~types
 
-Inherited from [Validator](#validator).
+Inherited from [Validator](#validator--types).
 
 ### ValidationErr
 

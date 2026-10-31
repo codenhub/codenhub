@@ -47,43 +47,43 @@ Registers or replaces a client.
 
 #### MemoryStore › consumeCode
 
-Inherited from [OidcStore](provider.md#oidcstore).
+Inherited from [OidcStore](provider.md#oidcstore--consumecode).
 
 #### MemoryStore › consumeInteraction
 
-Inherited from [OidcStore](provider.md#oidcstore).
+Inherited from [OidcStore](provider.md#oidcstore--consumeinteraction).
 
 #### MemoryStore › consumeRefreshToken
 
-Inherited from [OidcStore](provider.md#oidcstore).
+Inherited from [OidcStore](provider.md#oidcstore--consumerefreshtoken).
 
 #### MemoryStore › findAccessToken
 
-Inherited from [OidcStore](provider.md#oidcstore).
+Inherited from [OidcStore](provider.md#oidcstore--findaccesstoken).
 
 #### MemoryStore › findClient
 
-Inherited from [OidcStore](provider.md#oidcstore).
+Inherited from [OidcStore](provider.md#oidcstore--findclient).
 
 #### MemoryStore › revokeGrant
 
-Inherited from [OidcStore](provider.md#oidcstore).
+Inherited from [OidcStore](provider.md#oidcstore--revokegrant).
 
 #### MemoryStore › saveAccessToken
 
-Inherited from [OidcStore](provider.md#oidcstore).
+Inherited from [OidcStore](provider.md#oidcstore--saveaccesstoken).
 
 #### MemoryStore › saveCode
 
-Inherited from [OidcStore](provider.md#oidcstore).
+Inherited from [OidcStore](provider.md#oidcstore--savecode).
 
 #### MemoryStore › saveInteraction
 
-Inherited from [OidcStore](provider.md#oidcstore).
+Inherited from [OidcStore](provider.md#oidcstore--saveinteraction).
 
 #### MemoryStore › saveRefreshToken
 
-Inherited from [OidcStore](provider.md#oidcstore).
+Inherited from [OidcStore](provider.md#oidcstore--saverefreshtoken).
 
 ### MemoryStoreOptions
 

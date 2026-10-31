@@ -26,7 +26,7 @@ The factory trims locale identifiers and snapshots the validated configuration, 
 
 **Returns** — Pure parsing and generation operations bound to an immutable configuration snapshot.
 
-**Throws** — When `config` is not a plain object, locales are empty, invalid conservative ASCII identifiers, duplicated case-insensitively after trimming, the trimmed default locale is unsupported, or `prefixDefaultLocale` is not boolean.
+**Throws** — `TypeError` — When `config` is not a plain object, locales are empty, invalid conservative ASCII identifiers, duplicated case-insensitively after trimming, the trimmed default locale is unsupported, or `prefixDefaultLocale` is not boolean.
 
 ## Interfaces
 
@@ -55,8 +55,8 @@ Generates the canonical pathname for one supported locale.
 
 **Throws**
 
-- When `pathname` is not a valid application pathname.
-- When `locale` is unsupported or is not a string at runtime.
+- `TypeError` — When `pathname` is not a valid application pathname.
+- `RangeError` — When `locale` is unsupported or is not a string at runtime.
 
 #### LocaleRouting › localizeAll
 
@@ -72,7 +72,7 @@ Generates localized pathnames for every locale in configuration order.
 
 **Returns** — Localized pathnames paired with their canonical locales.
 
-**Throws** — When `pathname` is not a valid application pathname.
+**Throws** — `TypeError` — When `pathname` is not a valid application pathname.
 
 #### LocaleRouting › parse
 
@@ -88,7 +88,7 @@ Parses a pathname using configured, case-insensitive locale prefixes.
 
 **Returns** — The canonical locale and unprefixed pathname, or `undefined` when a required prefix is absent.
 
-**Throws** — When `pathname` is not a valid application pathname.
+**Throws** — `TypeError` — When `pathname` is not a valid application pathname.
 
 ### LocaleRoutingConfig
 
