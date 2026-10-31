@@ -20,7 +20,22 @@ This covers pull requests on GitHub, through the `gh` CLI. When the harness or t
 
 A round is one push of fixes. Repeat until the pull request is done, for at most 3 rounds; then stop and report. Reviewers that find something new after every push would otherwise keep the loop going forever.
 
-1. **Wait for the checks to finish.** Use the harness's pull request watcher when it has one. Otherwise run `gh pr checks <pr> --watch`.
+1. **Wait for the checks and the AI reviewers to finish.** Use the harness's pull request watcher when it has one. Otherwise run `gh pr checks <pr> --watch`.
+
+   AI reviewers often post minutes after the checks finish, so wait for each one you expect. Expect the bots that have reviewed or commented on this pull request before, and any AI reviewer the repository configures, such as one with a config file at its root. On the first push, none may have posted yet. Wait until each has reviewed the head commit. This lists who has:
+
+   ```sh
+   gh pr view <pr> --json headRefOid,reviews --jq '.headRefOid as $head | .reviews[] | select(.commit.oid == $head) | .author.login'
+   ```
+
+   A reviewer that only posts conversation comments has caught up when it has commented after the head commit. This lists who has:
+
+   ```sh
+   gh pr view <pr> --json commits,comments --jq '.commits[-1].committedDate as $head | .comments[] | select(.createdAt > $head) | .author.login'
+   ```
+
+   Stop waiting for one that has not caught up after about 15 minutes, and list it in the report.
+
 2. **Fix failing checks.** Read the failure before touching code:
 
    ```sh
@@ -51,10 +66,12 @@ A round is one push of fixes. Repeat until the pull request is done, for at most
 
    Also read review summaries and conversation comments with `gh pr view <pr> --comments`; they cannot be resolved, but they can ask for changes.
 
+   A thread with `isOutdated` set points at code a later push changed. Judge it against the current code: when the current code already does what it asks, reply saying where, and resolve it as Threads allows. Otherwise handle it like any other thread.
+
 4. **Judge each comment against the code.** AI reviewers are often wrong or out of date, and people sometimes are too. Fix what is right. Decline what is wrong, with the reason. When a comment needs a decision that changes behavior or scope, ask the user instead of choosing.
 5. **Push the fixes,** then reply to and resolve the threads (see Threads). Go back to step 1: a push reruns the checks, and many AI reviewers review again.
 
-The pull request is done when every check has passed, it has no merge conflict, no thread is left unresolved except those you leave open on purpose, no review requested on it is still pending, and no new comments have arrived since your last push. Check the merge state and reviews with `gh pr view <pr> --json mergeable,reviewDecision,reviewRequests`. A merge conflict or a missing required approval (`reviewDecision` of `REVIEW_REQUIRED` or `CHANGES_REQUESTED`) is not yours to settle: stop and report it.
+The pull request is done when every check has passed, it has no merge conflict and is not behind a base it must be up to date with, no thread is left unresolved except those you leave open on purpose, no review requested on it is still pending, and no new comments have arrived since your last push. Check the merge state and reviews with `gh pr view <pr> --json mergeable,mergeStateStatus,reviewDecision,reviewRequests`. A merge conflict (`mergeable` of `CONFLICTING`), a branch the repository requires to be up to date that has fallen behind (`mergeStateStatus` of `BEHIND`), or a missing required approval (`reviewDecision` of `REVIEW_REQUIRED` or `CHANGES_REQUESTED`) is not yours to settle: stop and report it.
 
 ## Threads
 
@@ -81,5 +98,6 @@ When you stop, report:
 
 - whether the pull request is ready to merge, and if not, what blocks it;
 - each check's final state, and any check you reran or could not fix;
+- any AI reviewer you stopped waiting for;
 - the threads you left open, with links, and what each one needs from the user;
 - the comments you declined, and why.
