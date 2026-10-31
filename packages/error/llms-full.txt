@@ -348,6 +348,7 @@ const output = match(doubled, {
 ## Fixed
 
 - The browser failed-fetch pattern and `TimeoutError`, the Node.js `fetch failed` pattern, and the Supabase `FunctionsFetchError` and `FunctionsHttpError` messages tell the reader to check whether the request went through before trying again. They said to try again, and the failed-fetch messages said the server was never reached, although each can follow a request the server already ran, as a CORS block or a dropped response does. The `messageKey` values are unchanged.
+- The Node.js preset messages speak about "a service this depends on" and no longer tell the reader to check their internet connection. The preset runs where the failing call was made, most often a server calling another service, so the reader's own connection was not the one that failed. The `messageKey` values are unchanged.
 
 - Normalizing a message is linear in its length. A long message with a run of `.`, `!` or `?` inside it took quadratic time, with or without registered mappings: 80 KB took over seven seconds.
 - `attempt` and `attemptAsync` reject an out-of-range `maxDepth` before running the callback. It used to surface only when the callback failed, replacing the real failure.

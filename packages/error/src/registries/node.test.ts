@@ -110,6 +110,16 @@ describe("node registry preset", () => {
     }
   });
 
+  // The preset runs where the failing call was made, most often a server calling another service,
+  // so the person reading the message is not the one whose connection failed.
+  it("should not blame the reader's internet connection", () => {
+    const presetFeedback = [...Object.values(nodeErrorCodes), ...nodeErrorPatterns.map(([, feedback]) => feedback)];
+
+    for (const feedback of presetFeedback) {
+      expect(feedback.message).not.toMatch(/your (?:internet )?connection/i);
+    }
+  });
+
   it("should deeply freeze the raw mappings and expose a read-only registry", () => {
     expect(Object.isFrozen(nodeErrorCodes)).toBe(true);
     expect(Object.isFrozen(nodeErrorCodes.ECONNREFUSED)).toBe(true);
