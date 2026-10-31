@@ -5,28 +5,36 @@ import { parseReferenceConfig } from "./reference-config.ts";
 const path = "packages/example/package.json";
 
 describe("parseReferenceConfig", () => {
-  it("returns null when the key is absent or false", () => {
+  it("returns null when the key is absent", () => {
     expect(parseReferenceConfig({ codenhub: { docs: {} } }, path)).toBeNull();
-    expect(parseReferenceConfig({ codenhub: { docs: { reference: false } } }, path)).toBeNull();
     expect(parseReferenceConfig({}, path)).toBeNull();
+  });
+
+  it("rejects false, which has no meaning while the reference is opt-in", () => {
+    expect(() => parseReferenceConfig({ codenhub: { docs: { reference: false } } }, path)).toThrow(
+      "expected an object",
+    );
+  });
+
+  it("rejects exclude, which the generator does not implement", () => {
+    expect(() =>
+      parseReferenceConfig({ codenhub: { docs: { reference: { exclude: ["src/internal/**"] } } } }, path),
+    ).toThrow('unknown key "exclude"');
   });
 
   it("defaults prose to true for an empty object", () => {
     expect(parseReferenceConfig({ codenhub: { docs: { reference: {} } } }, path)).toEqual({
       entrypoints: undefined,
-      exclude: undefined,
       prose: true,
     });
   });
 
-  it("reads entrypoints, exclude, and prose", () => {
+  it("reads entrypoints and prose", () => {
     const config = parseReferenceConfig(
-      {
-        codenhub: { docs: { reference: { entrypoints: [".", "./sub"], exclude: ["src/internal/**"], prose: false } } },
-      },
+      { codenhub: { docs: { reference: { entrypoints: [".", "./sub"], prose: false } } } },
       path,
     );
-    expect(config).toEqual({ entrypoints: [".", "./sub"], exclude: ["src/internal/**"], prose: false });
+    expect(config).toEqual({ entrypoints: [".", "./sub"], prose: false });
   });
 
   it.each([

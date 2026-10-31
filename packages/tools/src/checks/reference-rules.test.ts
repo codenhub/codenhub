@@ -30,15 +30,14 @@ describe("reference rule appliesTo", () => {
     expect(rule.appliesTo(fakePackage({}))).toBe(true);
   });
 
-  it("does not apply when the key is absent or false", () => {
+  it("does not apply when the key is absent", () => {
     const withoutKey = fakePackage(undefined);
     delete (withoutKey.manifest as { codenhub: { docs: Record<string, unknown> } }).codenhub.docs.reference;
     expect(rule.appliesTo(withoutKey)).toBe(false);
-    expect(rule.appliesTo(fakePackage(false))).toBe(false);
   });
 
-  it("applies to a malformed config so the run can report it", () => {
-    expect(rule.appliesTo(fakePackage("yes"))).toBe(true);
+  it.each(["yes", false])("applies to a malformed config (%s) so the run can report it", (reference) => {
+    expect(rule.appliesTo(fakePackage(reference))).toBe(true);
   });
 });
 
@@ -49,7 +48,7 @@ describe("reference rule run", () => {
       {
         code: "reference/entrypoint",
         location: "package.json",
-        message: expect.stringContaining("expected an object or false"),
+        message: expect.stringContaining("expected an object"),
         severity: "error",
       },
     ]);
@@ -225,11 +224,11 @@ describe("reference rule run", () => {
     },
   );
 
-  it.each([undefined, false])("leaves a non-opted-in package's reference files alone (%s)", async (reference) => {
+  it("leaves a non-opted-in package's reference files alone", async () => {
     const workspacePackage = await createReferenceFixture("fixture-rule-legacy", {
       "index.ts": "/** A value. */\nexport const value = 1;\n",
     });
-    (workspacePackage.manifest as { codenhub: { docs: { reference: unknown } } }).codenhub.docs.reference = reference;
+    delete (workspacePackage.manifest as { codenhub: { docs: { reference?: unknown } } }).codenhub.docs.reference;
     await mkdir(join(workspacePackage.directory, "docs/reference"), { recursive: true });
     await Promise.all([
       writeFile(join(workspacePackage.directory, "docs/reference.md"), "# Authored reference\n"),

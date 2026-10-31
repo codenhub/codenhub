@@ -39,23 +39,23 @@ A package opts in through `codenhub.docs.reference` in its `package.json`, neste
 }
 ```
 
-`codenhub.docs.reference` is one of:
+`codenhub.docs.reference` is either:
 
 - An **object** — the package opts in. Every field is OPTIONAL:
   - `entrypoints`: array of `package.json` `exports` subpath keys to document, such as `"."` or `"./registries/browser"`. Defaults to every `exports` subpath that resolves to a `types` target, expanding typed wildcard subpaths from matching source or declaration files, in nested directories too as `*` may contain `/`, before naming and validating pages; exact export keys take precedence over patterns, including `null` exclusions. A listed wildcard key expands the same way, its pages taking the key's place in the list; an exact key that a pattern also matches is documented only where it is itself listed. A key not present in `exports` is invalid. An explicitly empty array is invalid; omit the field to document every entrypoint.
-  - `exclude`: RESERVED. An array of repository-relative globs is accepted and its shape validated, but the generator does not yet honour it. The intent is to omit a public symbol whose declaration originates in a matched source file — for surfaces exported for tooling reasons that are not a consumer contract; until it is implemented, prefer not exporting such symbols at all.
   - `prose`: boolean, default `true`. When `false`, pages carry the signature manifest only (see "Page content") and no prose is compiled from TSDoc. This is the low-risk subset intended to be safe to enable widely before per-package TSDoc quality is known.
   - `pages`: object keyed by a documented `exports` subpath key, shaping that entrypoint's pages. A key that is not a documented entrypoint is invalid. Each value is an object whose fields are both OPTIONAL:
     - `label`: non-empty string. The entrypoint page's `title` and its H1, in place of the defaults in "Frontmatter" and "Page content".
     - `split`: object that moves part of the entrypoint's symbols onto pages of their own (see "Split pages"). Each key is a page name: one kebab-case segment, not `index`. Each value is an object with:
       - `source`: REQUIRED non-empty array of globs, relative to the package directory, such as `"src/composition/**"`.
       - `label`: OPTIONAL non-empty string. The split page's `title` and its H1. Defaults to the page name.
-- The literal **`false`** — the package explicitly opts out. Meaningful once the reference is default-on (see "Adoption"); until then, absence and `false` behave the same.
 - **Absent** — the package has no generated reference.
 
 A malformed `codenhub.docs.reference` value is invalid, the same way `docs/specs/packages-documentation.md` treats a malformed `codenhub.docs`. Only `private: false` packages, or private packages that already opt in to `docs/specs/packages-documentation.md`, may declare it.
 
 Unknown keys in the reference object, each `pages` value, and each `split` value are invalid and produce a `reference/entrypoint` finding naming the key and its configuration path. Ignoring unknown keys was previously accepted; that did not weigh a typo such as `labe` silently doing nothing. Alternatives weighed and rejected: ignoring unknown keys, because rejecting them catches typos and matches the closed public-document frontmatter schema.
+
+There is no `exclude` field. It was first reserved: its shape was validated, but the generator ignored it. That did not weigh that a package setting `exclude: ["src/internal/**"]` passed validation and still published every matching symbol, the same silent no-op that rejecting unknown keys exists to prevent. It is now an unknown key. A surface exported for tooling reasons is better not exported; when a real case needs exclusion, the field returns together with its implementation. There is also no literal `false` opt-out; see "Adoption" for why.
 
 ## Structure
 
@@ -188,7 +188,7 @@ TypeDoc is a dependency rather than an in-house extractor because faithfully mod
 
 ## Validation
 
-`pnpm check` (`hub check`) gains a `reference` rule, implementing `CheckRule` and registered in `packages/tools/src/checks/registry.ts`. It `appliesTo` a package whose `codenhub.docs.reference` is an object — one that has opted in. An absent value and the literal `false` are both outside the rule. When the reference flips to default-on (see "Adoption"), that predicate widens to "not `false`" in the same change. The rule reports:
+`pnpm check` (`hub check`) gains a `reference` rule, implementing `CheckRule` and registered in `packages/tools/src/checks/registry.ts`. It `appliesTo` a package that declares `codenhub.docs.reference`. An absent value is outside the rule; any other value is either an opt-in or malformed, and a malformed one is reported as `reference/entrypoint`. The rule reports:
 
 - `reference/missing` — `error` — opted in, but `docs/reference/` is absent.
 - `reference/drift` — `error` — a generated page differs from what the generator produces now. This is the compliance-report view of the `hub generate --dry-run` gate.
