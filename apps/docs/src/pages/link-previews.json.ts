@@ -18,6 +18,7 @@ export const GET: APIRoute = () =>
           description: document.description,
           headings: document.headings,
           html: document.html,
+          relativePath: document.relativePath,
           route: document.route,
           sectionLabel: SECTION_LABELS[sectionOf(document)],
           title: document.title,

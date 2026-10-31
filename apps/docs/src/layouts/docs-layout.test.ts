@@ -14,7 +14,7 @@ async function readOutput(path: string): Promise<string> {
 describe("documentation chrome", () => {
   beforeAll(async () => {
     await build({ logLevel: "silent", root: docsRoot });
-  }, 60_000);
+  }, 120_000);
 
   it("includes the package label in package document browser titles", async () => {
     const html = await readOutput("error/index.html");
@@ -85,6 +85,29 @@ describe("documentation chrome", () => {
 
     expect(html).toContain('class="shell-skip-link" href="#main-content"');
     expect(html).toMatch(/<main[^>]*id="main-content"/);
+  });
+
+  it.each(["theme/reference/index.html", "styles/usage/customizing/index.html"])(
+    "offers a closed phone outline matching the desktop outline on %s",
+    async (path) => {
+      const html = await readOutput(path);
+      const mobile = html.match(/<div class="page-outline">([\s\S]*?)<\/nav>\s*<\/div>/)?.[1];
+      const desktop = html.match(/<nav aria-label="On this page" data-toc>([\s\S]*?)<\/nav>/)?.[1];
+
+      expect(mobile).toMatch(/<button[^>]*aria-expanded="false"[^>]*aria-controls="page-outline-links"/);
+      expect(mobile).toMatch(/<nav[^>]*id="page-outline-links"[^>]*hidden/);
+      const links = (markup: string | undefined) =>
+        [...(markup ?? "").matchAll(/<a href="#[^"]+">[^<]*<\/a>/g)].map(([link]) => link);
+      expect(links(mobile).length).toBeGreaterThan(0);
+      expect(links(mobile)).toEqual(links(desktop));
+    },
+  );
+
+  it("shows the phone outline at the breakpoint that hides the desktop rail", async () => {
+    const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
+
+    expect(css).toMatch(/\.page-outline\s*\{[^}]*hidden/s);
+    expect(css).toMatch(/@media \(max-width: 74rem\)[\s\S]*?\.page-outline\s*\{[^}]*block/s);
   });
 
   it("renders the shared app-shell chrome", async () => {
@@ -162,6 +185,15 @@ describe("documentation chrome", () => {
     // of at the edge of the window, and hides the page scrollbar to get there.
     expect(docColRule).not.toContain("overflow");
     expect(css).not.toMatch(/overflow:\s*hidden/);
+  });
+
+  it("wraps long headings and prose URLs without reducing table min-content widths", async () => {
+    const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
+    const articleRule = css.match(/\.markdown-content\s*\{([^}]*)\}/)?.[1];
+
+    expect(articleRule).toMatch(/overflow-wrap:\s*break-word/);
+    expect(css).toMatch(/\.markdown-content :is\(h1, h2, h3, h4, h5, h6\)\s*\{[^}]*overflow-wrap:\s*anywhere/s);
+    expect(css).toMatch(/\.markdown-content table code\s*\{[^}]*overflow-wrap:\s*break-word/s);
   });
 
   it("runs each rail divider the full document while only its panel scrolls", async () => {

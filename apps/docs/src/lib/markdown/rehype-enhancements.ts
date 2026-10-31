@@ -7,6 +7,7 @@ interface MarkdownEnhancementOptions {
 
 interface TransformContext extends MarkdownEnhancementOptions {
   codeBlockCount: number;
+  isReference: boolean;
 }
 
 const SVG_PROPERTIES = {
@@ -29,8 +30,8 @@ function icon(path: string, className?: string): AstNode {
   ]);
 }
 
-function appendHeadingAnchor(node: AstNode): void {
-  if ((node.tagName !== "h2" && node.tagName !== "h3") || typeof node.properties?.id !== "string") {
+function appendHeadingAnchor(node: AstNode, isReference: boolean): void {
+  if (!(isReference ? /^h[2-6]$/ : /^h[23]$/).test(node.tagName ?? "") || typeof node.properties?.id !== "string") {
     return;
   }
   const headingText = getNodeText(node).trim();
@@ -144,12 +145,46 @@ function wrapTable(node: AstNode): AstNode {
 function transformChildren(node: AstNode, context: TransformContext): void {
   node.children = node.children?.map((child) => {
     transformChildren(child, context);
-    appendHeadingAnchor(child);
+    appendHeadingAnchor(child, context.isReference);
     enhanceExternalLink(child, context.siteOrigin);
     return wrapTable(wrapCodeBlock(child, context));
   });
 }
 
-export function rehypeMarkdownEnhancements(options: MarkdownEnhancementOptions = {}): (tree: unknown) => void {
-  return (tree) => transformChildren(tree as AstNode, { ...options, codeBlockCount: 0 });
+function markReferenceSignatures(tree: AstNode): void {
+  let heading = "";
+  let previousElement: AstNode | undefined;
+  for (const node of tree.children ?? []) {
+    if (node.type !== "element") {
+      continue;
+    }
+    if (/^h[3-6]$/.test(node.tagName ?? "")) {
+      heading = getNodeText(node).trim();
+    }
+    // Separate function overloads can follow prose instead of their heading.
+    const declaration = getNodeText(node);
+    const isOverload =
+      heading !== "" &&
+      (declaration.startsWith(`export declare function ${heading}(`) ||
+        declaration.startsWith(`export declare function ${heading}<`));
+    if (
+      node.tagName === "pre" &&
+      node.properties?.dataLanguage === "ts" &&
+      (/^h[3-6]$/.test(previousElement?.tagName ?? "") || isOverload)
+    ) {
+      node.properties.dataReferenceSignature = "";
+    }
+    previousElement = node;
+  }
+}
+
+export function rehypeMarkdownEnhancements(options: MarkdownEnhancementOptions = {}) {
+  return (tree: unknown, file?: { path?: string }): void => {
+    const root = tree as AstNode;
+    const isReference = file?.path !== undefined && /\/docs\/reference\//.test(file.path.replaceAll("\\", "/"));
+    if (isReference) {
+      markReferenceSignatures(root);
+    }
+    transformChildren(root, { ...options, codeBlockCount: 0, isReference });
+  };
 }
