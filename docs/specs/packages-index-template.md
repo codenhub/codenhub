@@ -40,12 +40,13 @@ Include another small workflow only when it helps readers choose or combine publ
 
 State runtime, framework, peer dependency, CSS, permission, storage, DOM, SSR, or build-tool constraints that affect adoption or first use. Omit this block when normal installation has no additional requirements. Move it before Setup when readers must understand prerequisites before following setup instructions.
 
-## Next steps
+## Reading path
 
-- [Focused guide](guide.md): Explain what task or decision this guide covers.
-- [Reference](reference.md): Describe the public entrypoints or behavior covered.
+1. [First guide](first-guide.md): Explain what this page teaches and why a reader starts here.
+2. [Next guide](next-guide.md): Explain what this page builds on top of the previous one.
+3. [Troubleshooting](troubleshooting.md): Explain which failures and workarounds this page covers.
 
-Use contextual link descriptions so readers can choose a destination without opening every page. Omit this block when the index is the package's only public document.
+List the pages in the order a first-time reader should read them, so reading them in order teaches the package end to end. Use contextual descriptions so readers can also jump straight to what they need. Link a generated reference separately, as the place to look things up, not as a step on the path. Omit this block when the index is the package's only public document.
 
 ## See also
 

@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-30
+last_updated: 2026-10-31
 scope: Documentation for public workspace packages.
 ---
 
@@ -23,7 +23,7 @@ docs/
   internal/
 ```
 
-All four documentation surfaces are required even for small packages. A small API or one clear use case MAY mean fewer pages, not thinner explanations on the pages that exist — see "Completeness over compactness" below. `docs/internal/` MAY be empty or absent until maintainer-only knowledge exists, but it is the required location for such knowledge.
+All four documentation surfaces are required even for small packages. A small API or one clear use case MAY mean fewer pages, not thinner explanations on the pages that exist — see "Completeness" below. `docs/internal/` MAY be empty or absent until maintainer-only knowledge exists, but it is the required location for such knowledge.
 
 ## Public documentation opt-in
 
@@ -60,9 +60,9 @@ Documentation work MUST start by reviewing the package's public surface. An expo
 
 Packages MUST export only values, types, files, and subpaths intended for consumer use. Implementation details that consumers should not access MUST stay unexported from package entrypoints and `package.json` `exports`. Do not preserve an accidental export merely to document it.
 
-Public docs MUST provide complete coverage at the public entrypoint and API surface level. Every supported import path and consumer-facing surface must be discoverable and explained. Source JSDoc/TSDoc remains responsible for detailed per-symbol behavior as required by `docs/guidelines/code.md`.
+Public docs MUST cover the whole package end to end, as defined under "Completeness" below. Source JSDoc/TSDoc remains responsible for detailed per-symbol behavior as required by `docs/guidelines/code.md`.
 
-Complete coverage here means every import path is introduced and every consumer-facing capability is explained. It does not mean every exported symbol is enumerated in hand-authored prose. When a package ships a generated API reference (`docs/specs/packages-reference.md`), that reference is the exhaustive per-symbol catalogue, and the hand-authored docs are not required to repeat it; they still MUST cover the concepts, tasks, domain, and failure modes a first-time consumer needs, and MUST NOT shrink to a stub that only links to the reference.
+Hand-authored docs and a reference do different jobs. A reference is where a consumer looks up deterministic, structured facts about one symbol, laid out the same way for every similar symbol; it should be generated (`docs/specs/packages-reference.md`). Hand-authored docs explain: what the package is for, how its parts fit together, how to use them, and everything that can go wrong. They do not enumerate symbols in a reference layout, and a reference page, generated or hand-authored, does not count toward the coverage they owe. Hand-authored docs MUST NOT shrink to a stub that links to the reference.
 
 For packages covered by this spec, `hub check` reports `undocumented-export/missing-jsdoc` errors when top-level declarations exposed through typed `exports` lack JSDoc/TSDoc, following re-exports to their original declarations; class and interface members remain outside this check's scope.
 
@@ -122,23 +122,48 @@ Public docs MUST:
 - Describe current supported consumer behavior rather than private implementation.
 - Match public exports, defaults, constraints, and observable failure behavior.
 - Use small, realistic, copyable examples.
-- Explain rather than assume: do not require prior familiarity with the package's domain or general ecosystem conventions it touches, per "Completeness over compactness" below.
+- Explain rather than assume: do not require prior familiarity with the package's domain or general ecosystem conventions it touches, per "Completeness" below.
 - Avoid stale TODOs, speculative promises, secrets, private URLs, and local machine paths.
 - Avoid linking to `docs/internal/`.
 
-### Completeness over compactness
+### Completeness
+
+A consumer MUST NOT need the package's source, tests, issues, or a maintainer to learn something the maintainers already know and the consumer could need. The hand-authored public docs, outside any reference page, MUST explain:
+
+- Every entrypoint and every consumer-facing export, in the context where a consumer uses it.
+- Every option and its default, and what changing it does.
+- Everything the package can do, including the combinations of features consumers are expected to use together.
+- Every constraint and limit: supported environments and runtimes, sizes, ordering, concurrency, lifecycle, and anything else that bounds correct use.
+- Every observable failure: what triggers it, how it surfaces, and how to fix or handle it, consistent with `docs/specs/errors.md`.
+- Every known limitation and, where one exists, its workaround.
+- What the package deliberately does not do, and what to use or do instead.
+- Security, accessibility, and performance responsibilities the package leaves to the consumer.
+
+Before writing or reviewing public docs, check the package's tests, `docs/internal/`, and scoped `AGENTS.md` files for behavior a consumer could hit. Such knowledge MUST also appear in public docs, explained for consumers. Maintainer reasoning, internal design, and planned work stay in `docs/internal/`.
 
 Write for a consumer using the package, or a package like it, for the first time. Do not assume familiarity with the package's domain or with general ecosystem conventions it touches — module resolution, semantic versioning, build tooling, and similar background — unless linking to an explanation. Prefer spelling out a step that looks obvious over omitting it: an experienced reader skips a sentence in a second, but an inexperienced one is blocked by its absence and comes away thinking the package, not the doc, is unfinished.
 
-Stop trusting that a reader will fill the gap correctly. Treat every consumer as if this is their first package of this kind, they do not know the surrounding conventions, and an unexplained assumption is a support request waiting to happen.
+Length follows the material. A fact needs as much explanation as a first-time reader needs to act on it correctly: what it is, why it is that way when the reason helps, an example when one helps, and what to do about it. Listing several behaviors in one sentence so each is mentioned is not explaining them. The README stays a concise entrypoint under `docs/specs/packages-readme.md`, and each fact keeps one canonical explanation, but returning to an earlier concept with a short reminder and a link is part of a reading path, not repetition.
 
-This does not license padding. The "avoid repeating the same explanation across these surfaces" rule above still applies, and the README stays a concise entrypoint under `docs/specs/packages-readme.md`. Completeness is about not leaving a gap a first-time reader would hit, not about length.
+This section replaces an earlier rule that measured completeness by entrypoint and capability, warned that completeness "does not license padding" and "is not about length", and left per-symbol behavior to source docs. Packages complied with that rule while their docs stayed unusable without the source: `@codenhub/router` mentioned each export, default, and failure once, compressing six distinct path failures into one sentence with no example or fix. The earlier rule did not weigh that compression was the easiest way to comply.
+
+### Reading path
+
+Public docs MUST read as a guided path through the package, not a collection of facts. A consumer who reads them in order learns the package end to end, each page building on the ones before it.
+
+- `docs/index.md` MUST introduce what the package is for and lay out the reading path: the pages in the order a first-time consumer should read them, each with a description of what it teaches.
+- Each page MUST open by saying what it covers and why a consumer would want it, and MUST end by pointing to the next page on the path, or to the pages a reader commonly needs next.
+- Each page SHOULD move from the common case to the edge cases: the smallest working example first, then realistic use, then limits, failures, and workarounds.
+
+How to build that path, including running examples and page order, is described in `docs/guidelines/public-docs-writing.md`.
 
 ### Tone
 
-Public docs MAY be playful, funny, or show personality where it fits the material and does not delay the reader from finding the fact they came for. A package with a distinctive voice is memorable; one that reads like a form is not.
+Public docs SHOULD have a playful voice: an aside, a pun, or a dry remark that earns a small smile, while the docs stay serious about the package. A package with a distinctive voice is memorable; one that reads like a form is not. `docs/guidelines/public-docs-writing.md` describes the voice and where it fits.
 
-Humor MUST NOT replace precision. A joke never substitutes for the exact behavior, constraint, or failure mode a consumer needs, and it MUST NOT obscure a warning. Marketing copy that does not help usage is still out of place here, the same as in the README under `docs/specs/packages-readme.md`: personality that helps a reader is not marketing copy, and marketing copy dressed up as personality is still marketing copy.
+Humor MUST NOT replace precision. A joke never substitutes for the exact behavior, constraint, or failure mode a consumer needs, it MUST NOT appear in warnings, security notes, or code meant to be copied, and it MUST NOT be aimed at the reader. Marketing copy that does not help usage is still out of place here, the same as in the README under `docs/specs/packages-readme.md`: personality that helps a reader is not marketing copy, and marketing copy dressed up as personality is still marketing copy.
+
+Tone was previously a MAY. An optional voice was rarely used, so the docs read like forms; the rule is now a SHOULD so that leaving it out is a choice an author makes for a reason.
 
 Every public package `docs/**/*.md` file outside `docs/internal/` MUST start with portable presentation frontmatter. Its schema is closed and contains only:
 
