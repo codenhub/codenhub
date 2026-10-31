@@ -1,58 +1,118 @@
 ---
 title: Results
+description: Return failures instead of throwing them, with Result, attempt, and the helpers that chain them.
+order: 5
 ---
 
-# Result Helpers
+# Results
 
-`Result<T>` is the union `Ok<T> | Err`. `Ok<T>` contains `{ ok: true, value }`; `Err` contains `{ ok: false, error: AppError }`.
+A thrown error is invisible in a function's type: `loadProject(id): Promise<Project>` says nothing about the ways it can fail, and every caller has to remember its own `try`/`catch`. A `Result` puts the failure in the type, so the compiler reminds the caller to handle it.
+
+```ts
+type Result<T> = Ok<T> | Err;
+
+interface Ok<T> {
+  readonly ok: true;
+  readonly value: T;
+}
+
+interface Err {
+  readonly ok: false;
+  readonly error: AppError;
+}
+```
+
+The failure side is always an `AppError`, normalized through the same registry as `createAppError`, so a `Result` is the same error handling in a different shape.
+
+## Making results
+
+`ok(value)` wraps a success, and `ok()` makes an `Ok<void>` for operations that return nothing. `err(error, options?)` normalizes a failure, exactly as `createAppError(error, options)` would:
 
 ```ts
 import { err, getErrorRegistry, ok, type Result } from "@codenhub/error";
 
-getErrorRegistry().codes.add("my-app.missing_name", {
-  message: "We couldn't save this because the name is empty. Enter a name and try again.",
-  source: "my-app",
+getErrorRegistry().codes.add("project.name_missing", {
+  message: "Give the project a name, then save again.",
+  source: "my-app.projects",
 });
 
-const loadName = (value: string | null): Result<string> => (value === null ? err({ code: "my-app.missing_name" }) : ok(value));
+function validateName(name: string): Result<string> {
+  const trimmed = name.trim();
+  return trimmed === "" ? err({ code: "project.name_missing" }) : ok(trimmed);
+}
 ```
 
-`ok(value)` wraps a success value, and `ok()` creates `Ok<void>`. `err(error, options?)` normalizes failures through the same pipeline as `createAppError`. Both return frozen result objects.
+Both return frozen objects.
 
-A string is treated as message text: it is matched against the `messages`, `prefixes`, and `patterns` buckets, at every wrapper depth, and never against `codes`. Pass `{ code: "..." }` to raise a failure by its registered code. The code has to be registered first: an unregistered one resolves to an unknown error whose `code` is `null`, whatever `fallbackMessage` says. An unmatched string never becomes the message, so raw diagnostic text is not surfaced to users; supply `fallbackMessage` when user-facing text is needed.
+Raise your own failures by code, as above, rather than by message. A string passed to `err` is matched as message text against the `messages`, `prefixes`, and `patterns` buckets, never against `codes`, and an unmatched string does not become the message: `err("Name is required")` gives you `"An unexpected error occurred."` unless that exact message is registered. That is the rule that keeps raw text off the screen, applied to your own strings too.
 
-Use `attempt` and `attemptAsync` at boundaries where existing code throws:
+## Reading results
+
+Check `ok` and TypeScript narrows the rest:
+
+```ts
+const name = validateName(input);
+
+if (!name.ok) {
+  showFieldError(name.error.message);
+  return;
+}
+
+save(name.value); // name.value is a string here
+```
+
+## Wrapping code that throws
+
+Most code you call throws instead of returning results: `JSON.parse`, `fetch`, database clients. `attempt` and `attemptAsync` run a callback and turn anything it throws into an `Err`:
 
 ```ts
 import { attempt, attemptAsync } from "@codenhub/error";
 
-const parsed = attempt(() => JSON.parse(payload) as Config);
-const loaded = await attemptAsync(() => fetch(url).then((response) => response.json()));
+const config = attempt(() => JSON.parse(text) as Config);
+const project = await attemptAsync(() => api.loadProject(id));
 ```
 
-Both run the supplied callback and convert anything it throws or rejects with into a normalized `Err`, so the returned promise from `attemptAsync` does not reject for callback failures. Invalid options are reported before the callback runs: `attempt` throws `TypeError`, and `attemptAsync` returns a promise rejected with it. `attempt` takes a synchronous callback; one that returns a promise is a type error, because its rejection would escape inside an `Ok`. Where the type checker cannot see the promise, such as a callback typed `any`, `attempt` throws `TypeError` instead of returning it. Both helpers throw `TypeError` for a callback that is not a function.
+Both take the same options as `createAppError` as their second argument, such as a `fallbackMessage` for this call or a `registry`.
 
-The remaining helpers operate only on the success branch unless stated:
+A few rules keep them honest:
 
-| Helper                         | Behavior                                                                                                                             |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `map(result, mapper)`          | Maps an `Ok` value and returns an existing `Err` unchanged. Mapper exceptions propagate.                                             |
-| `mapAsync(result, mapper)`     | Maps an `Ok` value with a mapper that may return a Promise. Existing `Err` values return unchanged as a resolved Promise.            |
-| `andThen(result, mapper)`      | Runs a mapper returning another `Result`, avoiding nested results. Existing `Err` values are unchanged; mapper exceptions propagate. |
-| `andThenAsync(result, mapper)` | Runs a mapper returning `Result<U>` or `Promise<Result<U>>`. Existing `Err` values return unchanged as a resolved Promise.           |
-| `match(result, callbacks)`     | Calls exactly one of `onOk(value)` or `onErr(error)` and returns its value. Callback exceptions propagate.                           |
-| `unwrap(result)`               | Returns an `Ok` value or throws the `AppError` held by `Err`.                                                                        |
-| `unwrapOr(result, fallback)`   | Returns an `Ok` value or the supplied fallback without throwing.                                                                     |
+- `attempt` is for synchronous callbacks only. A callback that returns a promise is a type error, and at runtime, where the type checker cannot see it (a callback typed `any`, or plain JavaScript), `attempt` throws `TypeError` instead of returning an `Ok` that holds a promise whose rejection nobody would catch. Use `attemptAsync` for anything asynchronous.
+- `attemptAsync` never rejects for something the callback did. Its promise always resolves to a `Result`.
+- Both check their arguments before running the callback. A callback that is not a function, or an invalid option, throws `TypeError` (for `attemptAsync`, rejects with it) without running anything.
+
+## Chaining results
+
+The remaining helpers work on the success side and pass an `Err` through untouched:
+
+| Helper                           | What it does                                                                                     |
+| -------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `map(result, mapper)`            | Transforms an `Ok` value. Returns the `Err` unchanged.                                           |
+| `mapAsync(result, mapper)`       | Like `map`, with a mapper that may return a promise. Always returns a promise.                   |
+| `andThen(result, mapper)`        | Runs a mapper that returns another `Result`, so you get `Result<U>`, not `Result<Result<U>>`.    |
+| `andThenAsync(result, mapper)`   | Like `andThen`, with a mapper that may return a promise of a `Result`. Always returns a promise. |
+| `match(result, { onOk, onErr })` | Calls exactly one of the two callbacks and returns what it returns.                              |
+| `unwrap(result)`                 | Returns the `Ok` value, or throws the `AppError`.                                                |
+| `unwrapOr(result, fallback)`     | Returns the `Ok` value, or `fallback`.                                                           |
+
+Put together, a small pipeline reads top to bottom:
 
 ```ts
-import { andThen, map, match, ok } from "@codenhub/error";
+import { andThen, attempt, err, map, match, ok } from "@codenhub/error";
 
-const result = andThen(ok("42"), (text) => ok(Number(text)));
-const doubled = map(result, (value) => value * 2);
-const output = match(doubled, {
-  onOk: String,
-  onErr: (error) => error.message,
-});
+const port = andThen(
+  attempt(() => JSON.parse(text) as { port?: unknown }),
+  (config) => (typeof config.port === "number" ? ok(config.port) : err({ code: "config.port_missing" })),
+);
+
+const label = match(
+  map(port, (value) => `Listening on ${value}`),
+  {
+    onOk: (text) => text,
+    onErr: (error) => error.message,
+  },
+);
 ```
 
-`map`, `mapAsync`, `andThen`, `andThenAsync`, and `match` do not catch callback errors. Use `attempt` or `attemptAsync` when thrown values should become normalized failures.
+The helpers do not catch: if a mapper or a `match` callback throws, the exception propagates as it would from any function. When a step can throw, wrap that step in `attempt` or `attemptAsync`.
+
+Use `unwrap` at the edge where your code goes back to throwing, such as a framework that expects a loader to throw, and keep `Result` everywhere in between.

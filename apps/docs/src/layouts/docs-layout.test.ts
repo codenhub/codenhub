@@ -25,7 +25,9 @@ describe("documentation chrome", () => {
   it("renders the authored Markdown heading without injecting the frontmatter title", async () => {
     const html = await readOutput("error/index.html");
 
-    expect(html).toContain('<h1 id="normalize-application-errors">Normalize application errors</h1>');
+    expect(html).toContain(
+      '<h1 id="turn-whatever-you-caught-into-an-error-you-can-use">Turn whatever you caught into an error you can use</h1>',
+    );
     expect(html).not.toContain("<h1>Overview</h1>");
   });
 
