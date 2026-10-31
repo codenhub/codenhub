@@ -33,8 +33,8 @@ A wrong size is reported at once, without validating the items, so a huge array 
 
 **Throws**
 
-- When `item` or a check is not a function, or `min`, `max` or `length` is not a number.
-- When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
+- `TypeError` — When `item` or a check is not a function, or `min`, `max` or `length` is not a number.
+- `RangeError` — When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
 
@@ -68,7 +68,7 @@ Nothing changes at run time. The validator is returned as it is, so it validates
 
 **Returns** — The same validator, typed as producing the marked type. It is a `Schema` when the validator given is one, and a plain validator when it was written by hand.
 
-**Throws** — When `validator` is not a function or `name` is not text.
+**Throws** — `TypeError` — When `validator` is not a function or `name` is not text.
 
 **Example**
 
@@ -110,7 +110,7 @@ An exception thrown by either function propagates, as a `transform`'s does: it i
 
 **Returns** — A validator that produces what `output` produces, from what `input` accepts.
 
-**Throws** — When `input` or `output` is not a function, `conversions` is not a plain object, or its `decode` or `encode` is not a function; and when validating, if `decode` returns a promise.
+**Throws** — `TypeError` — When `input` or `output` is not a function, `conversions` is not a plain object, or its `decode` or `encode` is not a function; and when validating, if `decode` returns a promise.
 
 **Example**
 
@@ -152,7 +152,7 @@ So a value the validator could not have produced fails with the issues it has, a
 
 **Returns** — The value as the validator accepts it, or every issue found.
 
-**Throws** — When `validator` is not a function, or a part of it cannot be written back.
+**Throws** — `TypeError` — When `validator` is not a function, or a part of it cannot be written back.
 
 **Example**
 
@@ -189,7 +189,7 @@ A module that exports an object validator, and not its shape, is extended with t
 
 **Returns** — A validator made by `object`, of the properties of both.
 
-**Throws** — When the validator was not made by `object` or has checks, or `shape` is not a plain object of validators.
+**Throws** — `TypeError` — When the validator was not made by `object` or has checks, or `shape` is not a plain object of validators.
 
 **Example**
 
@@ -220,7 +220,7 @@ The fallback is trusted and is not validated. A function is called with the issu
 
 **Returns** — A validator that produces the wrapped type and never fails.
 
-**Throws** — When `validator` is not a function, or `value` is an object or an array.
+**Throws** — `TypeError` — When `validator` is not a function, or `value` is an object or an array.
 
 **Example**
 
@@ -256,7 +256,7 @@ The form is read before it reaches the validator, by `request.formData()` or the
 
 **Returns** — A validator that produces what `validator` produces.
 
-**Throws** — When `validator` or a check is not a function, or `repeated` is not a boolean.
+**Throws** — `TypeError` — When `validator` or a check is not a function, or `repeated` is not a boolean.
 
 **Example**
 
@@ -290,7 +290,7 @@ Both validators receive the same input and both run, so the issues of each are r
 
 **Returns** — A validator that produces the merged outputs, typed as an intersection.
 
-**Throws** — When `left` or `right` is not a function.
+**Throws** — `TypeError` — When `left` or `right` is not a function.
 
 **Example**
 
@@ -312,7 +312,7 @@ A non-string fails with `invalid_type`, and text that is not valid JSON fails wi
 
 **Returns** — A validator that produces what `validator` produces, or `unknown` without one.
 
-**Throws** — When `validator` is given and is not a function, `undefined` included.
+**Throws** — `TypeError` — When `validator` is given and is not a function, `undefined` included.
 
 **Example**
 
@@ -332,7 +332,7 @@ A non-string fails with `invalid_type`, and text that is not valid JSON fails wi
 
 **Returns** — A validator that produces what `validator` produces, or `unknown` without one.
 
-**Throws** — When `validator` is given and is not a function, `undefined` included.
+**Throws** — `TypeError` — When `validator` is given and is not a function, `undefined` included.
 
 **Example**
 
@@ -360,7 +360,7 @@ A non-string fails with `invalid_type`, and text that is not valid JSON fails wi
 
 **Returns** — A validator that produces what `validator` produces, or `unknown` without one.
 
-**Throws** — When `validator` is given and is not a function, `undefined` included.
+**Throws** — `TypeError` — When `validator` is given and is not a function, `undefined` included.
 
 **Example**
 
@@ -388,7 +388,7 @@ A non-string fails with `invalid_type`, and text that is not valid JSON fails wi
 
 **Returns** — A validator that produces what `validator` produces, or `unknown` without one.
 
-**Throws** — When `validator` is given and is not a function, `undefined` included.
+**Throws** — `TypeError` — When `validator` is given and is not a function, `undefined` included.
 
 **Example**
 
@@ -426,8 +426,8 @@ Work can also grow faster than the input. A `union` tries every option, and an `
 
 **Throws**
 
-- When `getter` is not a function or `maxDepth` or `maxCalls` is not a number, and, from the returned validator on its first use, when `getter` returns something that is not a function.
-- When `maxDepth` or `maxCalls` is not a positive integer.
+- `TypeError` — When `getter` is not a function or `maxDepth` or `maxCalls` is not a number, and, from the returned validator on its first use, when `getter` returns something that is not a function.
+- `RangeError` — When `maxDepth` or `maxCalls` is not a positive integer.
 
 **Example**
 
@@ -469,8 +469,8 @@ A wrong size is reported at once, without validating the entries. An issue's pat
 
 **Throws**
 
-- When `key` or `value` is not a function, or `min`, `max` or `length` is not a number.
-- When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
+- `TypeError` — When `key` or `value` is not a function, or `min`, `max` or `length` is not a number.
+- `RangeError` — When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
 
@@ -502,7 +502,7 @@ Returns a new validator that validates exactly as the one given, and whose descr
 
 **Returns** — A validator that behaves as the one given.
 
-**Throws** — When `validator` is not a function, `given` is not a plain object, or a key of it is unknown or not of its type.
+**Throws** — `TypeError` — When `validator` is not a function, `given` is not a plain object, or a key of it is unknown or not of its type.
 
 **Example**
 
@@ -530,7 +530,7 @@ Wraps a validator so `null` is accepted and passed through, and every other valu
 
 **Returns** — A validator that produces the wrapped type, or `null`.
 
-**Throws** — When `validator` is not a function.
+**Throws** — `TypeError` — When `validator` is not a function.
 
 **Example**
 
@@ -559,7 +559,7 @@ Wraps a validator so `null` and `undefined` are accepted and passed through, and
 
 **Returns** — A validator that produces the wrapped type, `null` or `undefined`.
 
-**Throws** — When `validator` is not a function.
+**Throws** — `TypeError` — When `validator` is not a function.
 
 **Example**
 
@@ -591,7 +591,7 @@ Only own properties are read, a listed one whether or not it is enumerable and a
 
 **Returns** — A validator that produces an object.
 
-**Throws** — When `shape` is not a plain object, a property validator is not a function, or `unknownKeys` is not `"strip"`, `"strict"` or `"passthrough"`.
+**Throws** — `TypeError` — When `shape` is not a plain object, a property validator is not a function, or `unknownKeys` is not `"strip"`, `"strict"` or `"passthrough"`.
 
 **Example**
 
@@ -630,7 +630,7 @@ Every property is validated even when an earlier one failed. A property that thr
 
 **Returns** — A validator that produces a plain object.
 
-**Throws** — When `shape` is not a plain object or a property validator is not a function.
+**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a function.
 
 **Example**
 
@@ -664,7 +664,7 @@ The validator must be one `object` made, since its shape is read from what it de
 
 **Returns** — A validator made by `object`, of the other properties.
 
-**Throws** — When the validator was not made by `object`, has checks, or lacks one of the keys.
+**Throws** — `TypeError` — When the validator was not made by `object`, has checks, or lacks one of the keys.
 
 **Example**
 
@@ -694,7 +694,7 @@ Given a default, `undefined` is replaced by it instead, the output type no longe
 
 **Returns** — A validator that produces the wrapped type, and `undefined` or the default for `undefined`.
 
-**Throws** — When `validator` is not a function, or `value` is an object or an array.
+**Throws** — `TypeError` — When `validator` is not a function, or `value` is an object or an array.
 
 **Example**
 
@@ -727,7 +727,7 @@ Given a default, `undefined` is replaced by it instead, the output type no longe
 
 **Returns** — A validator that produces the wrapped type, and `undefined` or the default for `undefined`.
 
-**Throws** — When `validator` is not a function, or `value` is an object or an array.
+**Throws** — `TypeError` — When `validator` is not a function, or `value` is an object or an array.
 
 **Example**
 
@@ -761,7 +761,7 @@ An object validator with checks is refused, since a check may read a property th
 
 **Returns** — A shape whose every validator also accepts `undefined`, or an object validator of one.
 
-**Throws** — When `shape` is not a plain object or a property validator is not a function, or, for a validator, when it was not made by `object` or has checks.
+**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a function, or, for a validator, when it was not made by `object` or has checks.
 
 **Example**
 
@@ -790,7 +790,7 @@ An object validator with checks is refused, since a check may read a property th
 
 **Returns** — A shape whose every validator also accepts `undefined`, or an object validator of one.
 
-**Throws** — When `shape` is not a plain object or a property validator is not a function, or, for a validator, when it was not made by `object` or has checks.
+**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a function, or, for a validator, when it was not made by `object` or has checks.
 
 **Example**
 
@@ -819,7 +819,7 @@ An object validator with checks is refused, since a check may read a property th
 
 **Returns** — A shape whose every validator also accepts `undefined`, or an object validator of one.
 
-**Throws** — When `shape` is not a plain object or a property validator is not a function, or, for a validator, when it was not made by `object` or has checks.
+**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a function, or, for a validator, when it was not made by `object` or has checks.
 
 **Example**
 
@@ -854,7 +854,7 @@ The validator must be one `object` made, since its shape is read from what it de
 
 **Returns** — A validator made by `object`, of the named properties.
 
-**Throws** — When the validator was not made by `object`, has checks, or lacks one of the keys.
+**Throws** — `TypeError` — When the validator was not made by `object`, has checks, or lacks one of the keys.
 
 **Example**
 
@@ -884,7 +884,7 @@ The first failure stops the pipe, because a later step has nothing valid to work
 
 **Returns** — A validator that produces what the last one produces.
 
-**Throws** — When no validator is given or one is not a function.
+**Throws** — `TypeError` — When no validator is given or one is not a function.
 
 **Example**
 
@@ -921,7 +921,7 @@ A value is taken to be the caller's when it is the input itself. When a `transfo
 
 **Returns** — A validator that produces the same value, frozen, typed read-only.
 
-**Throws** — When `validator` is not a function.
+**Throws** — `TypeError` — When `validator` is not a function.
 
 **Example**
 
@@ -961,8 +961,8 @@ Each key passes `key` and each value passes `value`. An issue's path ends at the
 
 **Throws**
 
-- When `key` or `value` is not a function, or `min`, `max` or `length` is not a number, and, from the returned validator, when `key` produces something other than text.
-- When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
+- `TypeError` — When `key` or `value` is not a function, or `min`, `max` or `length` is not a number, and, from the returned validator, when `key` produces something other than text.
+- `RangeError` — When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
 
@@ -996,7 +996,7 @@ The validator must be one `object` made, and the new object keeps its options un
 
 **Returns** — A validator made by `object`, with every property required.
 
-**Throws** — When the validator was not made by `object` or has checks.
+**Throws** — `TypeError` — When the validator was not made by `object` or has checks.
 
 **Example**
 
@@ -1030,8 +1030,8 @@ A wrong size is reported at once, without validating the values. Otherwise every
 
 **Throws**
 
-- When `item` or a check is not a function, or `min`, `max` or `length` is not a number.
-- When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
+- `TypeError` — When `item` or a check is not a function, or `min`, `max` or `length` is not a number.
+- `RangeError` — When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
 
@@ -1064,7 +1064,7 @@ The input's tag must be one of the keys of `variants`, and the variant validates
 
 **Returns** — A validator that produces one of the variants' objects, tagged.
 
-**Throws** — When `key` is not text, `variants` is not a plain object, there is no variant or a variant is not a function, and, from the returned validator, when a variant produces something other than a plain object.
+**Throws** — `TypeError` — When `key` is not text, `variants` is not a plain object, there is no variant or a variant is not a function, and, from the returned validator, when a variant produces something other than a plain object.
 
 **Example**
 
@@ -1103,7 +1103,7 @@ The function runs only when the wrapped validator succeeded, and receives the va
 
 **Returns** — A validator that produces what `convert` returns.
 
-**Throws** — When `validator` or `convert` is not a function.
+**Throws** — `TypeError` — When `validator` or `convert` is not a function.
 
 **Example**
 
@@ -1139,8 +1139,8 @@ A wrong length is reported at once, without validating the items. With `rest`, t
 
 **Throws**
 
-- When `items` is not a list or is empty, an item or `rest` is not a function, `max` is not a number, or `max` is given without `rest`.
-- When `max` is not a non-negative integer, or is less than the number of fixed items.
+- `TypeError` — When `items` is not a list or is empty, an item or `rest` is not a function, `max` is not a number, or `max` is given without `rest`.
+- `RangeError` — When `max` is not a non-negative integer, or is less than the number of fixed items.
 
 **Example**
 
@@ -1174,7 +1174,7 @@ The validators are tried in order and the first that accepts the value wins, so 
 
 **Returns** — A validator that produces what the first accepting option produces.
 
-**Throws** — When `options` is not a list, is empty, or holds an option that is not a function.
+**Throws** — `TypeError` — When `options` is not a list, is empty, or holds an option that is not a function.
 
 **Example**
 
@@ -1197,19 +1197,19 @@ Constraints for [array](#array). Every option is optional. Duplicates are reject
 
 #### ArrayOptions › length
 
-Inherited from [SizeOptions](#sizeoptions).
+Inherited from [SizeOptions](#sizeoptions--length).
 
 #### ArrayOptions › max
 
-Inherited from [SizeOptions](#sizeoptions).
+Inherited from [SizeOptions](#sizeoptions--max).
 
 #### ArrayOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions).
+Inherited from [MessageOptions](index.md#messageoptions--message).
 
 #### ArrayOptions › min
 
-Inherited from [SizeOptions](#sizeoptions).
+Inherited from [SizeOptions](#sizeoptions--min).
 
 ### Conversions
 
@@ -1250,7 +1250,7 @@ Options for [formData](#formdata).
 
 #### FormDataOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions).
+Inherited from [MessageOptions](index.md#messageoptions--message).
 
 #### FormDataOptions › repeated
 
@@ -1292,7 +1292,7 @@ The most levels of `lazy` that may be open at once, counting every `lazy` valida
 
 #### LazyOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions).
+Inherited from [MessageOptions](index.md#messageoptions--message).
 
 ### Meta
 
@@ -1344,7 +1344,7 @@ Options for [object](#object).
 
 #### ObjectOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions).
+Inherited from [MessageOptions](index.md#messageoptions--message).
 
 #### ObjectOptions › unknownKeys
 
@@ -1406,7 +1406,7 @@ The most items the array may hold, the fixed ones included, a non-negative integ
 
 #### TupleOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions).
+Inherited from [MessageOptions](index.md#messageoptions--message).
 
 #### TupleOptions › rest
 

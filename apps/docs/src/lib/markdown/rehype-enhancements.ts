@@ -162,13 +162,18 @@ function breakAfterSlashes(node: AstNode): void {
 /* Every H3 on a reference page is a symbol: kinds are H2, and members and
    prose headings sit below their symbol. The class lets the site set each
    symbol apart from the member headings inside it. */
+function addClass(node: AstNode, className: string): void {
+  const properties = (node.properties ??= {});
+  const classNames = Array.isArray(properties.className) ? properties.className : [];
+  properties.className = [...classNames, className];
+}
+
 function markReferenceHeading(node: AstNode): void {
   if (node.tagName === "h1") {
     breakAfterSlashes(node);
+    addClass(node, "reference-title");
   } else if (node.tagName === "h3") {
-    const properties = (node.properties ??= {});
-    const classNames = Array.isArray(properties.className) ? properties.className : [];
-    properties.className = [...classNames, "reference-symbol"];
+    addClass(node, "reference-symbol");
   }
 }
 

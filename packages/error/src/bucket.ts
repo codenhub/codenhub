@@ -47,7 +47,7 @@ export const normalizeExactErrorIdentifier = (identifier: string): string => {
  * Stored entries are frozen at registration so read paths can share them instead of rebuilding
  * a defensive copy on every lookup.
  *
- * @throws TypeError - If feedback is missing or has invalid field types.
+ * @throws {TypeError} If feedback is missing or has invalid field types.
  * @internal
  */
 export const freezeFeedback = (feedback: ErrorFeedback): Readonly<ErrorFeedback> => {

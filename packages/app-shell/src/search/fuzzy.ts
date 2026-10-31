@@ -18,6 +18,20 @@ const isWordStart = (target: string, index: number) => {
   return WORD_BOUNDARY.test(previous) || (previous === previous.toLowerCase() && current !== current.toLowerCase());
 };
 
+// A space in the query stands for any separator, so `ArrayOptions min`, typed
+// from the heading `ArrayOptions › min`, finds the label `ArrayOptions.min`.
+const indexOfCharacter = (lowerTarget: string, character: string, from: number) => {
+  if (!/\s/.test(character)) {
+    return lowerTarget.indexOf(character, from);
+  }
+  for (let index = from; index < lowerTarget.length; index++) {
+    if (WORD_BOUNDARY.test(lowerTarget[index] ?? "")) {
+      return index;
+    }
+  }
+  return -1;
+};
+
 // `lowerTarget` drives the case-insensitive search while `target` drives the
 // boundary test, because a lowercased string has no camelCase transitions left.
 const collectPositions = (query: string, lowerTarget: string, target: string, preferWordStart: boolean) => {
@@ -25,12 +39,13 @@ const collectPositions = (query: string, lowerTarget: string, target: string, pr
   let cursor = 0;
 
   for (const character of query) {
-    let index = lowerTarget.indexOf(character, cursor);
+    let index = indexOfCharacter(lowerTarget, character, cursor);
     if (index === -1) {
       return undefined;
     }
 
-    while (preferWordStart && !isWordStart(target, index)) {
+    // A separator does not start a word, so preferring one would only skip ahead.
+    while (preferWordStart && !/\s/.test(character) && !isWordStart(target, index)) {
       const next = lowerTarget.indexOf(character, index + 1);
       if (next === -1) {
         break;
@@ -101,7 +116,8 @@ export function matchFuzzy(query: string, target: string): FuzzyMatch | undefine
     return { positions: [], score: 0 };
   }
 
-  const lowerQuery = query.toLowerCase();
+  // Each query space claims a separator in the target, so a doubled space would need two.
+  const lowerQuery = query.toLowerCase().replace(/\s+/g, " ");
   const lowerTarget = target.toLowerCase();
   const positions =
     collectPositions(lowerQuery, lowerTarget, target, true) ?? collectPositions(lowerQuery, lowerTarget, target, false);

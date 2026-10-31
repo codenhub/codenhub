@@ -32,12 +32,12 @@ Locale selection uses explicit input, valid persisted state, navigator preferenc
 
 **Throws**
 
-- When observation lacks a root, the manager was not created by `createI18n()`, or it already has a browser binding.
-- When an explicit locale is unsupported or is not a string at runtime.
-- When another core initialization supersedes this call before its locale becomes active.
-- When a required dictionary is invalid.
-- When direction resolution returns a value other than `ltr` or `rtl`.
-- When the loader rejects for an explicit locale or the default locale. Exceptions from the direction callback and required browser setup propagate unchanged.
+- `TypeError` — When observation lacks a root, the manager was not created by `createI18n()`, or it already has a browser binding.
+- `RangeError` — When an explicit locale is unsupported or is not a string at runtime.
+- `Error` — When another core initialization supersedes this call before its locale becomes active.
+- `TypeError` — When a required dictionary is invalid.
+- `TypeError` — When direction resolution returns a value other than `ltr` or `rtl`.
+- `I18nError` — When the loader rejects for an explicit locale or the default locale. Exceptions from the direction callback and required browser setup propagate unchanged.
 
 ## Interfaces
 

@@ -91,7 +91,7 @@ The callback must be synchronous: one that returns a promise is rejected by the 
 
 **Returns** — An Ok result holding the callback value, or an Err holding the normalized failure.
 
-**Throws** — TypeError - If `operation` is not a function or returns a promise or other thenable, or if `options` or any supplied option value is invalid.
+**Throws** — `TypeError` — If `operation` is not a function or returns a promise or other thenable, or if `options` or any supplied option value is invalid.
 
 ### attemptAsync
 
@@ -138,7 +138,7 @@ Ordinary unknown input never throws, including objects and proxies whose inspect
 
 **Returns** — An AppError whose own properties cannot be changed or removed. An existing AppError is returned as-is unless a `registry` is supplied and finds something that improves on it: only a heuristic match replaces an unknown error, and only a known match that differs replaces a classified one. A `fallbackMessage` or `maxDepth` alone never changes an AppError.
 
-**Throws** — TypeError - If `options` is not an object, `fallbackMessage` is not a non-empty string, `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer from 0 through 3.
+**Throws** — `TypeError` — If `options` is not an object, `fallbackMessage` is not a non-empty string, `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer from 0 through 3.
 
 ### createErrorRegistry
 
@@ -156,7 +156,7 @@ Optionally merges a list of preset registries into the newly created registry.
 
 **Returns** — A new, mutable ErrorRegistry instance.
 
-**Throws** — TypeError - If `presets` is not a list, if a preset does not implement the readable registry interface, or if any preset contains an invalid identifier, pattern, or feedback field.
+**Throws** — `TypeError` — If `presets` is not a list, if a preset does not implement the readable registry interface, or if any preset contains an invalid identifier, pattern, or feedback field.
 
 ### err
 
@@ -175,7 +175,7 @@ A raw string is matched against the registry like any other value. An unmatched 
 
 **Returns** — An Err result object.
 
-**Throws** — TypeError - If `options` or any supplied option value is invalid.
+**Throws** — `TypeError` — If `options` or any supplied option value is invalid.
 
 ### freezeRegistry
 
@@ -326,7 +326,7 @@ Allows consumers to replace the default registry at application initialization. 
 
 - `registry` — The ErrorRegistry instance to set as active.
 
-**Throws** — TypeError - If the parameter is not a valid ErrorRegistry.
+**Throws** — `TypeError` — If the parameter is not a valid ErrorRegistry.
 
 ### unwrap
 
@@ -346,7 +346,7 @@ Unwraps a Result, returning the value if successful, or throwing the normalized 
 
 **Returns** — The unwrapped success value.
 
-**Throws** — AppError - If the result is an Err.
+**Throws** — `AppError` — If the result is an Err.
 
 ### unwrapOr
 
@@ -547,15 +547,15 @@ Represents a registered regex pattern definition and its feedback mapping.
 
 #### ErrorPatternDefinition › isRetryable
 
-Inherited from [ErrorFeedback](#errorfeedback).
+Inherited from [ErrorFeedback](#errorfeedback--isretryable).
 
 #### ErrorPatternDefinition › message
 
-Inherited from [ErrorFeedback](#errorfeedback).
+Inherited from [ErrorFeedback](#errorfeedback--message).
 
 #### ErrorPatternDefinition › messageKey
 
-Inherited from [ErrorFeedback](#errorfeedback).
+Inherited from [ErrorFeedback](#errorfeedback--messagekey).
 
 #### ErrorPatternDefinition › pattern
 
@@ -567,7 +567,7 @@ The RegExp instance used to evaluate heuristic error matches.
 
 #### ErrorPatternDefinition › source
 
-Inherited from [ErrorFeedback](#errorfeedback).
+Inherited from [ErrorFeedback](#errorfeedback--source).
 
 ### ErrorPatternRegistryBucket
 
@@ -590,7 +590,7 @@ Adds or replaces a RegExp pattern and its feedback mapping.
 - `pattern` — The regular expression to evaluate against error messages.
 - `feedback` — The feedback metadata to attach on pattern match.
 
-**Throws** — TypeError - If the pattern is not a RegExp or feedback is invalid.
+**Throws** — `TypeError` — If the pattern is not a RegExp or feedback is invalid.
 
 #### ErrorPatternRegistryBucket › addList
 
@@ -604,7 +604,7 @@ Adds or replaces multiple RegExp pattern definitions from a list of tuples.
 
 - `entries` — List of tuples containing [pattern, feedback].
 
-**Throws** — TypeError - If any entry is invalid. No entries are added on failure.
+**Throws** — `TypeError` — If any entry is invalid. No entries are added on failure.
 
 #### ErrorPatternRegistryBucket › clear
 
@@ -628,7 +628,7 @@ Removes a RegExp pattern and its feedback mapping.
 
 **Returns** — True if the pattern existed and has been removed; otherwise, false.
 
-**Throws** — TypeError - If `pattern` is not a RegExp.
+**Throws** — `TypeError` — If `pattern` is not a RegExp.
 
 #### ErrorPatternRegistryBucket › values
 
@@ -652,15 +652,15 @@ Represents a registered message prefix definition and its feedback mapping.
 
 #### ErrorPrefixDefinition › isRetryable
 
-Inherited from [ErrorFeedback](#errorfeedback).
+Inherited from [ErrorFeedback](#errorfeedback--isretryable).
 
 #### ErrorPrefixDefinition › message
 
-Inherited from [ErrorFeedback](#errorfeedback).
+Inherited from [ErrorFeedback](#errorfeedback--message).
 
 #### ErrorPrefixDefinition › messageKey
 
-Inherited from [ErrorFeedback](#errorfeedback).
+Inherited from [ErrorFeedback](#errorfeedback--messagekey).
 
 #### ErrorPrefixDefinition › prefix
 
@@ -672,7 +672,7 @@ The message prefix matched after trimming trailing sentence punctuation.
 
 #### ErrorPrefixDefinition › source
 
-Inherited from [ErrorFeedback](#errorfeedback).
+Inherited from [ErrorFeedback](#errorfeedback--source).
 
 ### ErrorPrefixRegistryBucket
 
@@ -695,7 +695,7 @@ Adds or replaces feedback for a given message prefix. Strips trailing punctuatio
 - `prefix` — The message prefix to register (e.g., `"Upload failed:"`).
 - `feedback` — The feedback metadata to assign when matching this prefix.
 
-**Throws** — TypeError - If the prefix is empty or feedback is invalid.
+**Throws** — `TypeError` — If the prefix is empty or feedback is invalid.
 
 #### ErrorPrefixRegistryBucket › addList
 
@@ -709,7 +709,7 @@ Adds or replaces multiple prefix feedback definitions from a list of tuples.
 
 - `entries` — List of tuples containing [prefix, feedback].
 
-**Throws** — TypeError - If any entry is invalid. No entries are added on failure.
+**Throws** — `TypeError` — If any entry is invalid. No entries are added on failure.
 
 #### ErrorPrefixRegistryBucket › clear
 
@@ -733,7 +733,7 @@ Removes prefix-based feedback definition for the specified prefix. Strips traili
 
 **Returns** — True if the prefix definition existed and has been removed; otherwise, false.
 
-**Throws** — TypeError - If the prefix is not a non-empty string.
+**Throws** — `TypeError` — If the prefix is not a non-empty string.
 
 #### ErrorPrefixRegistryBucket › values
 
@@ -815,7 +815,7 @@ Merges all mappings from the source registry into this registry, overwriting mat
 
 - `registry` — The source registry to merge. Accepts both mutable and read-only registries.
 
-**Throws** — TypeError - If the source does not implement the readable registry interface or contains an invalid registry entry.
+**Throws** — `TypeError` — If the source does not implement the readable registry interface or contains an invalid registry entry.
 
 ### ErrorRegistryBucket
 
@@ -838,7 +838,7 @@ Adds or replaces error feedback for a given identifier. Code and name buckets tr
 - `identifier` — The exact identifier to match (e.g., `"23505"`, `"AbortError"`).
 - `feedback` — The feedback metadata to attach to this identifier.
 
-**Throws** — TypeError - If the identifier is empty or feedback is invalid.
+**Throws** — `TypeError` — If the identifier is empty or feedback is invalid.
 
 #### ErrorRegistryBucket › addList
 
@@ -852,7 +852,7 @@ Adds or replaces multiple feedback entries from a list of tuple definitions.
 
 - `entries` — List of tuples containing [identifier, feedback].
 
-**Throws** — TypeError - If any identifier or feedback in the list is invalid. No entries are added on failure.
+**Throws** — `TypeError` — If any identifier or feedback in the list is invalid. No entries are added on failure.
 
 #### ErrorRegistryBucket › clear
 
@@ -876,7 +876,7 @@ Removes error feedback mapped to the specified identifier. Uses the same bucket-
 
 **Returns** — True if an element in the bucket existed and has been removed, or false if the element does not exist.
 
-**Throws** — TypeError - If the identifier is not a non-empty string.
+**Throws** — `TypeError` — If the identifier is not a non-empty string.
 
 #### ErrorRegistryBucket › get
 

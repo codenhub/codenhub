@@ -135,6 +135,19 @@ async function run(workspacePackage: WorkspacePackage): Promise<Finding[]> {
     });
   }
 
+  // A warning, not an error: the page still documents every symbol, but without a
+  // summary the site and search have nothing to say about it.
+  for (const entrypoint of analysis.model.entrypoints) {
+    if (entrypoint.page === undefined && entrypoint.description === undefined) {
+      findings.push({
+        code: "reference/missing-description",
+        location: pageOf(entrypoint),
+        message: `Entrypoint "${entrypoint.subpath}" has no summary for its page description; add a \`@packageDocumentation\` comment to its entry module.`,
+        severity: "warning",
+      });
+    }
+  }
+
   return findings;
 }
 
@@ -145,7 +158,8 @@ async function run(workspacePackage: WorkspacePackage): Promise<Finding[]> {
  * regenerates that package's reference to compare it against what is committed:
  * a missing area, a stale or unexpected page, an unresolved or colliding
  * entrypoint, an unsupported export kind, a public signature naming a type the
- * reference documents nowhere, and a section that renders empty. Source documentation coverage is
+ * reference documents nowhere, and a section that renders empty, as errors; an
+ * entrypoint page with no `@packageDocumentation` summary, as a warning. Source documentation coverage is
  * owned by the `undocumented-export` rule.
  * @returns The `reference` rule, ready for registration.
  */

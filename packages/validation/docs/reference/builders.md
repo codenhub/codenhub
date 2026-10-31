@@ -31,7 +31,7 @@ Give it to a validator after its options. It runs once the value has its type an
 
 **Returns** — A check that reports the issue when `test` returns `false`.
 
-**Throws** — When `test` is not a function, or `issue` is neither a message nor an issue: one whose `code` and `message` are text when given, and whose `path` is a list.
+**Throws** — `TypeError` — When `test` is not a function, or `issue` is neither a message nor an issue: one whose `code` and `message` are text when given, and whose `path` is a list.
 
 **Example**
 
@@ -71,7 +71,7 @@ It takes the issue to report as `check` does: a message, a function that words t
 
 **Returns** — A check for an object with those properties.
 
-**Throws** — When `keys` is not a list of property names or is empty, `test` is not a function, or `issue` is not a message or an issue object.
+**Throws** — `TypeError` — When `keys` is not a list of property names or is empty, `test` is not a function, or `issue` is not a message or an issue object.
 
 **Example**
 
@@ -104,7 +104,7 @@ A value that is not a string fails with `invalid_type`, and a string the test re
 
 **Returns** — The factory of the validator.
 
-**Throws** — When `name` is not text or `test` is not a function, and, from the validator, when `test` returns a promise, which would accept every value: a rule that waits is a check.
+**Throws** — `TypeError` — When `name` is not text or `test` is not a function, and, from the validator, when `test` returns a promise, which would accept every value: a rule that waits is a check.
 
 **Example**
 
@@ -135,7 +135,7 @@ A value the guard rejects fails with `invalid_type` and `params.expected` set to
 
 **Returns** — The factory of the validator.
 
-**Throws** — When `expected` is not text or `accepts` is not a function, and, from the validator, when `accepts` returns a promise, which would accept every value: a rule that waits is a check.
+**Throws** — `TypeError` — When `expected` is not text or `accepts` is not a function, and, from the validator, when `accepts` returns a promise, which would accept every value: a rule that waits is a check.
 
 **Example**
 

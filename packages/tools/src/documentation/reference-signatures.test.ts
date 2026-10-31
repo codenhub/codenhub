@@ -219,7 +219,7 @@ describe("inherited member identity", () => {
     expect(model.entrypoints[0]?.symbols[0]?.members.find((member) => member.name === "field")?.inheritedFrom).toBe(
       "NS.Base",
     );
-    expect(files[0]?.contents).toContain("Inherited from [NS.Base](#nsbase).");
+    expect(files[0]?.contents).toContain("Inherited from [NS.Base](#nsbase--field).");
   });
 });
 

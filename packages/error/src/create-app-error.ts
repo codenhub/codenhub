@@ -116,7 +116,7 @@ Object.freeze(AppErrorImpl.prototype);
  * Reads each supplied option once and validates it before any traversal begins.
  *
  * @internal
- * @throws TypeError - If options or any supplied option value is invalid.
+ * @throws {TypeError} If options or any supplied option value is invalid.
  */
 export const resolveAppErrorOptions = (options: AppErrorOptions): ResolvedAppErrorOptions => {
   if (typeof options !== "object" || options === null) {
@@ -288,7 +288,7 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
  * returned as-is unless a `registry` is supplied and finds something that improves on it: only a
  * heuristic match replaces an unknown error, and only a known match that differs replaces a
  * classified one. A `fallbackMessage` or `maxDepth` alone never changes an AppError.
- * @throws TypeError - If `options` is not an object, `fallbackMessage` is not a non-empty string,
+ * @throws {TypeError} If `options` is not an object, `fallbackMessage` is not a non-empty string,
  * `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer
  * from 0 through 3.
  */

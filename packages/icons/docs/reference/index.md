@@ -487,7 +487,7 @@ This is what gives a plugin-free stylesheet a default family: the bare name cost
 
 #### GenerateFamilyCssOptions › prefix
 
-Inherited from [BaseCssOptions](#basecssoptions).
+Inherited from [BaseCssOptions](#basecssoptions--prefix).
 
 ### GenerateIconSetCssOptions
 
@@ -507,7 +507,7 @@ Whether to include the base rules (`.ic`, the size axis). Defaults to `true`.
 
 #### GenerateIconSetCssOptions › prefix
 
-Inherited from [BaseCssOptions](#basecssoptions).
+Inherited from [BaseCssOptions](#basecssoptions--prefix).
 
 #### GenerateIconSetCssOptions › strokeWidth
 

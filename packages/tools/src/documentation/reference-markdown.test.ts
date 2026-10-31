@@ -445,6 +445,66 @@ describe("renderReferencePage", () => {
     expect(linked).toContain("#### AppError › origin\n\nInherited from [ErrorFeedback](feedback.md#errorfeedback).");
   });
 
+  it("links an inherited member to the declaring type's member when that member is documented", () => {
+    const crossPage = renderReferencePage(entrypoint, {
+      title: "/",
+      heading: "@codenhub/error",
+      sourceRoot: "packages/error/src",
+      prose: true,
+      resolveLink: (name) =>
+        name === "ErrorFeedback › origin"
+          ? "feedback.md#errorfeedback--origin"
+          : name === "ErrorFeedback"
+            ? "feedback.md#errorfeedback"
+            : undefined,
+    });
+    expect(crossPage).toContain(
+      "#### AppError › origin\n\nInherited from [ErrorFeedback](feedback.md#errorfeedback--origin).",
+    );
+
+    const samePage = renderReferencePage(
+      {
+        ...entrypoint,
+        symbols: [
+          symbol({
+            name: "Base",
+            kind: "interface",
+            members: [member({ name: "origin", kind: "property", signature: "origin?: string;" })],
+          }),
+          symbol({
+            name: "Derived",
+            kind: "interface",
+            members: [member({ name: "origin", kind: "property", inheritedFrom: "Base" })],
+          }),
+        ],
+      },
+      { title: "/", heading: "Reference", sourceRoot: "src", prose: true },
+    );
+    expect(samePage).toContain("#### Derived › origin\n\nInherited from [Base](#base--origin).");
+  });
+
+  it("links an inherited index signature to the declaring type's index signature", () => {
+    const page = renderReferencePage(
+      {
+        ...entrypoint,
+        symbols: [
+          symbol({
+            name: "Base",
+            kind: "interface",
+            members: [member({ name: "__index", kind: "index-signature", signature: "[key: string]: string;" })],
+          }),
+          symbol({
+            name: "Derived",
+            kind: "interface",
+            members: [member({ name: "__index", kind: "index-signature", inheritedFrom: "Base" })],
+          }),
+        ],
+      },
+      { title: "/", heading: "Reference", sourceRoot: "src", prose: true },
+    );
+    expect(page).toContain("#### Derived index signature\n\nInherited from [Base](#base-index-signature).");
+  });
+
   it("omits an inherited member entirely when prose is false", () => {
     const bare = renderReferencePage(entrypoint, {
       title: "/",

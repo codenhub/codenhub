@@ -151,7 +151,7 @@ export interface ErrorRegistryBucket {
    *
    * @param identifier - The exact identifier to match (e.g., `"23505"`, `"AbortError"`).
    * @param feedback - The feedback metadata to attach to this identifier.
-   * @throws TypeError - If the identifier is empty or feedback is invalid.
+   * @throws {TypeError} If the identifier is empty or feedback is invalid.
    */
   add(identifier: string, feedback: ErrorFeedback): void;
 
@@ -159,7 +159,7 @@ export interface ErrorRegistryBucket {
    * Adds or replaces multiple feedback entries from a list of tuple definitions.
    *
    * @param entries - List of tuples containing [identifier, feedback].
-   * @throws TypeError - If any identifier or feedback in the list is invalid. No entries are added on failure.
+   * @throws {TypeError} If any identifier or feedback in the list is invalid. No entries are added on failure.
    */
   addList(entries: readonly (readonly [identifier: string, feedback: ErrorFeedback])[]): void;
 
@@ -182,7 +182,7 @@ export interface ErrorRegistryBucket {
    *
    * @param identifier - The exact identifier to delete.
    * @returns True if an element in the bucket existed and has been removed, or false if the element does not exist.
-   * @throws TypeError - If the identifier is not a non-empty string.
+   * @throws {TypeError} If the identifier is not a non-empty string.
    */
   delete(identifier: string): boolean;
 
@@ -226,7 +226,7 @@ export interface ErrorPrefixRegistryBucket {
    *
    * @param prefix - The message prefix to register (e.g., `"Upload failed:"`).
    * @param feedback - The feedback metadata to assign when matching this prefix.
-   * @throws TypeError - If the prefix is empty or feedback is invalid.
+   * @throws {TypeError} If the prefix is empty or feedback is invalid.
    */
   add(prefix: string, feedback: ErrorFeedback): void;
 
@@ -234,7 +234,7 @@ export interface ErrorPrefixRegistryBucket {
    * Adds or replaces multiple prefix feedback definitions from a list of tuples.
    *
    * @param entries - List of tuples containing [prefix, feedback].
-   * @throws TypeError - If any entry is invalid. No entries are added on failure.
+   * @throws {TypeError} If any entry is invalid. No entries are added on failure.
    */
   addList(entries: readonly (readonly [prefix: string, feedback: ErrorFeedback])[]): void;
 
@@ -249,7 +249,7 @@ export interface ErrorPrefixRegistryBucket {
    *
    * @param prefix - The message prefix to delete.
    * @returns True if the prefix definition existed and has been removed; otherwise, false.
-   * @throws TypeError - If the prefix is not a non-empty string.
+   * @throws {TypeError} If the prefix is not a non-empty string.
    */
   delete(prefix: string): boolean;
 
@@ -272,7 +272,7 @@ export interface ErrorPatternRegistryBucket {
    *
    * @param pattern - The regular expression to evaluate against error messages.
    * @param feedback - The feedback metadata to attach on pattern match.
-   * @throws TypeError - If the pattern is not a RegExp or feedback is invalid.
+   * @throws {TypeError} If the pattern is not a RegExp or feedback is invalid.
    */
   add(pattern: RegExp, feedback: ErrorFeedback): void;
 
@@ -280,7 +280,7 @@ export interface ErrorPatternRegistryBucket {
    * Adds or replaces multiple RegExp pattern definitions from a list of tuples.
    *
    * @param entries - List of tuples containing [pattern, feedback].
-   * @throws TypeError - If any entry is invalid. No entries are added on failure.
+   * @throws {TypeError} If any entry is invalid. No entries are added on failure.
    */
   addList(entries: readonly (readonly [pattern: RegExp, feedback: ErrorFeedback])[]): void;
 
@@ -294,7 +294,7 @@ export interface ErrorPatternRegistryBucket {
    *
    * @param pattern - The regular expression to remove.
    * @returns True if the pattern existed and has been removed; otherwise, false.
-   * @throws TypeError - If `pattern` is not a RegExp.
+   * @throws {TypeError} If `pattern` is not a RegExp.
    */
   delete(pattern: RegExp): boolean;
 
@@ -351,7 +351,7 @@ export interface ErrorRegistry {
    * Leaves this registry unchanged when reading or validating the source fails.
    *
    * @param registry - The source registry to merge. Accepts both mutable and read-only registries.
-   * @throws TypeError - If the source does not implement the readable registry interface or
+   * @throws {TypeError} If the source does not implement the readable registry interface or
    * contains an invalid registry entry.
    */
   merge(registry: ErrorRegistry | ReadonlyErrorRegistry): void;

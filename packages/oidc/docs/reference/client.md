@@ -27,7 +27,7 @@ The ID token's signature is checked against the provider's JWKS, which the clien
 
 **Returns** — A frozen client. Creating one makes no request.
 
-**Throws** — When `options` is invalid, such as a non-`https` endpoint, a `clientId` that is not a non-empty string, or an auth method the provider does not advertise. The message names the option and never its value.
+**Throws** — `TypeError` — When `options` is invalid, such as a non-`https` endpoint, a `clientId` that is not a non-empty string, or an auth method the provider does not advertise. The message names the option and never its value.
 
 **Example**
 
@@ -77,7 +77,7 @@ Failures of the network, the response, or the document come back as results and 
 - `issuer_mismatch` when the document's `issuer` is not the given issuer.
 - `invalid_metadata` for each member that is missing or invalid, with its path, such as `["metadata", "jwks_uri"]`. Every such issue is collected in one result.
 
-**Throws** — When `issuer` is not an `https` URL or has a query, when `options` is not an object, when `options.fetch` is not a function, or when `options.timeout` is not an integer from 1 through 60.
+**Throws** — `TypeError` — When `issuer` is not an `https` URL or has a query, when `options` is not an object, when `options.fetch` is not a function, or when `options.timeout` is not an integer from 1 through 60.
 
 **Example**
 
@@ -192,7 +192,7 @@ authorize(options?: AuthorizeOptions): Promise<AuthorizationStart>;
 
 Starts an authorization code flow with PKCE `S256`, a fresh `state`, and a fresh `nonce`.
 
-**Throws** — When `options` are invalid, such as a scope list without `openid`.
+**Throws** — `TypeError` — When `options` are invalid, such as a scope list without `openid`.
 
 #### Client › callback
 
@@ -214,7 +214,7 @@ Gets an access token for the client itself, with no user, through the `client_cr
 
 **Returns** — The tokens, or every issue found. An `id_token` or `refresh_token` in the response is dropped: nothing checks the one, and RFC 6749 §4.4.3 says the other SHOULD NOT be included. Never throws for any response; it rejects only for the caller errors listed below.
 
-**Throws** — When the client authenticates with `none`, when the provider metadata lists grant_types_supported without client_credentials, or when `scope` is given but is not a non-empty array of at most 100 scope tokens.
+**Throws** — `TypeError` — When the client authenticates with `none`, when the provider metadata lists grant_types_supported without client_credentials, or when `scope` is given but is not a non-empty array of at most 100 scope tokens.
 
 #### Client › endSessionUrl
 
@@ -226,7 +226,7 @@ Builds the URL to send the browser to so the provider ends the user's session th
 
 **Returns** — The logout request URL, with `client_id` always included.
 
-**Throws** — When the provider metadata has no end_session_endpoint, an option is invalid, or the URL would be longer than 8192 characters.
+**Throws** — `TypeError` — When the provider metadata has no end_session_endpoint, an option is invalid, or the URL would be longer than 8192 characters.
 
 #### Client › refresh
 
@@ -240,7 +240,7 @@ When the response carries an ID token that fails validation, the result is a fai
 
 **Returns** — The new tokens, or every issue found. Never throws for any response.
 
-**Throws** — When `options` is invalid, such as an empty `refreshToken` or a scope list that is not a non-empty array of scope tokens. The message names the option and never its value.
+**Throws** — `TypeError` — When `options` is invalid, such as an empty `refreshToken` or a scope list that is not a non-empty array of scope tokens. The message names the option and never its value.
 
 #### Client › revoke
 
@@ -252,7 +252,7 @@ Revokes an access or refresh token at the provider's revocation endpoint (RFC 70
 
 **Returns** — Success when the provider answered `200`, which it also does for a token that was unknown or already revoked, or every issue found. Never throws for any response; it rejects only for the caller errors listed below.
 
-**Throws** — When the provider metadata has no revocation_endpoint, or an option is invalid.
+**Throws** — `TypeError` — When the provider metadata has no revocation_endpoint, or an option is invalid.
 
 #### Client › userinfo
 
@@ -264,7 +264,7 @@ Fetches the user's claims from the userinfo endpoint. The access token must be g
 
 **Returns** — The claims, or every issue found. Never throws for any response; it rejects only for the caller errors listed below.
 
-**Throws** — When the provider metadata has no userinfo_endpoint, or an option is invalid.
+**Throws** — `TypeError` — When the provider metadata has no userinfo_endpoint, or an option is invalid.
 
 ### ClientCredentialsOptions
 

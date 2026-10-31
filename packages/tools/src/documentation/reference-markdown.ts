@@ -251,13 +251,15 @@ function heading(level: number, text: string): string {
 // unrelated member is added above it. The spaced separator survives in the slug
 // (`owner--member`), which no symbol name can produce; `Owner.member` slugs to
 // `ownermember` and takes the anchor of a symbol named `OwnerMember`.
+// The heading text doubles as the member's link target: `›` cannot appear in a
+// TypeScript name, so the key never shadows a symbol or namespace member.
 function memberBlocks(
   member: ReferenceMember,
   owner: string,
   prose: boolean,
   link: (text: string) => string,
   level: number,
-): string[] {
+): PageBlock[] {
   const name = member.kind === "index-signature" ? `${owner} index signature` : `${owner} › ${member.name}`;
   if (member.inheritedFrom !== undefined) {
     if (!prose) {
@@ -266,15 +268,13 @@ function memberBlocks(
       // type's signature, are how a reader finds it instead.
       return [];
     }
-    // An inherited member points at the type that declares it; that type's own
-    // section carries the signature and prose.
-    return [
-      heading(level, name),
-      member.inheritedFrom === "" ? "_Inherited._" : `Inherited from ${link(`{@link ${member.inheritedFrom}}`)}.`,
-    ];
+    // An inherited member points at the declaring type's member, whose section
+    // carries the signature and prose; at the type itself when that member has no
+    // section, as on an internal type.
+    return [heading(level, name), member.inheritedFrom === "" ? "_Inherited._" : inheritedNote(member, link)];
   }
 
-  const blocks = [heading(level, name)];
+  const blocks: PageBlock[] = [{ markdown: heading(level, name), target: name }];
   if (member.signature !== undefined) {
     blocks.push(codeBlock(member.signature));
   }
@@ -282,6 +282,14 @@ function memberBlocks(
     blocks.push(...proseBlocks(member, link, level, member.defaultValue));
   }
   return blocks;
+}
+
+function inheritedNote(member: ReferenceMember, link: (text: string) => string): string {
+  const from = member.inheritedFrom ?? "";
+  // The same key `memberBlocks` registers for the declaring type's own section.
+  const target = member.kind === "index-signature" ? `${from} index signature` : `${from} › ${member.name}`;
+  const toMember = link(`{@link ${target} | ${from}}`);
+  return `Inherited from ${toMember.startsWith("[") ? toMember : link(`{@link ${from}}`)}.`;
 }
 
 function deprecationNote(deprecated: string | true, link: (text: string) => string): string {

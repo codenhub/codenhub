@@ -240,6 +240,14 @@ html {
   @apply text-title-lg mb-8 break-words;
 }
 
+/* A reference page's H1 is an import specifier, one word a reader scans rather
+   than a headline. At the guide size, even `@codenhub/error` broke onto a
+   second line beside the page actions on a desktop; this size keeps every
+   package name on one line there. */
+.markdown-content h1.reference-title {
+  @apply text-4xl leading-[1.15] font-bold tracking-tight;
+}
+
 /* Deck under a generated reference page's H1: the entrypoint summary and the
    version it first shipped in, spliced in by the catalog. It tucks up against
    the H1, ahead of the first symbol group. */

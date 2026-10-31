@@ -25,7 +25,7 @@ The provider answers the discovery, JWKS, token, userinfo, and revocation endpoi
 
 **Returns** — A frozen provider. Its `metadata` is the discovery document it publishes.
 
-**Throws** — When an option is invalid, such as a non-`https` issuer, a store missing a method, two signing keys with the same `kid`, or a lifetime outside its range. The message names the option, never its value.
+**Throws** — `TypeError` — When an option is invalid, such as a non-`https` issuer, a store missing a method, two signing keys with the same `kid`, or a lifetime outside its range. The message names the option, never its value.
 
 **Example**
 
@@ -75,7 +75,7 @@ A single SHA-256 is enough here, and not a password hash such as bcrypt or scryp
 
 **Returns** — The base64url SHA-256 digest of the secret's UTF-8 bytes.
 
-**Throws** — When `secret` is not a non-empty string.
+**Throws** — `TypeError` — When `secret` is not a non-empty string.
 
 ## Interfaces
 
@@ -143,7 +143,7 @@ Why an authorization request failed, and how to answer it.
 
 #### AuthorizationFailure › issues
 
-Inherited from [OidcFailure](#oidcfailure).
+Inherited from [OidcFailure](#oidcfailure--issues).
 
 #### AuthorizationFailure › redirect
 
@@ -813,7 +813,7 @@ Finishes an interaction: issues a code, or sends the denial, as a `302` to the c
 
 **Returns** — The response, or `interaction_not_found` when the interaction does not exist, was already completed, or expired.
 
-**Throws** — When `outcome` is malformed, such as an empty `subject`, `scopes` that is not an array of strings, or a denial with other members; the interaction is left in place, so a corrected retry works. Also when a well-formed grant does not fit the request: scopes outside the request or without `openid`, an `authTime` before the interaction under `prompt=login`, an `authTime` in the future, or more than the requested `max_age` before the request. The interaction is consumed before these checks, so after one of these a retry gets `interaction_not_found` and the user must start over.
+**Throws** — `TypeError` — When `outcome` is malformed, such as an empty `subject`, `scopes` that is not an array of strings, or a denial with other members; the interaction is left in place, so a corrected retry works. Also when a well-formed grant does not fit the request: scopes outside the request or without `openid`, an `authTime` before the interaction under `prompt=login`, an `authTime` in the future, or more than the requested `max_age` before the request. The interaction is consumed before these checks, so after one of these a retry gets `interaction_not_found` and the user must start over.
 
 #### Provider › endSession
 

@@ -47,6 +47,42 @@ const entries: SearchEntry[] = [
 const routesFor = (query: string) => searchDocumentation(entries, query).map((result) => result.entry.route);
 
 describe("searchDocumentation", () => {
+  it("ranks a member whose own name is the query above a longer symbol that starts with it", () => {
+    const members: SearchEntry[] = [
+      {
+        packageLabel: "ValidationKit",
+        route: "/validation/reference/interop/#tojsonschema",
+        section: "toJsonSchema",
+        text: "Converts a schema.",
+        title: "Interop",
+      },
+      {
+        packageLabel: "ErrorKit",
+        route: "/error/reference/#apperror--tojson",
+        section: "AppError.toJSON",
+        text: "Serializes the error.",
+        title: "@codenhub/error",
+      },
+    ];
+
+    expect(searchDocumentation(members, "toJSON")[0]?.entry.route).toBe("/error/reference/#apperror--tojson");
+  });
+
+  it("gives the member-name bonus to a member label, not to prose ending in a dotted number", () => {
+    const heading: SearchEntry = {
+      packageLabel: "OIDC",
+      route: "/oidc/concepts/#what-openid-connect-adds-to-oauth-20",
+      section: "What OpenID Connect adds to OAuth 2.0",
+      text: "",
+      title: "Concepts",
+    };
+    const scoreOf = (section: string, query: string) =>
+      searchDocumentation([{ ...heading, section }], query)[0]?.score ?? 0;
+
+    expect(scoreOf("A.b", "b")).toBeGreaterThan(scoreOf("A b", "b"));
+    expect(scoreOf(heading.section ?? "", "0")).toBe(scoreOf("What OpenID Connect adds to OAuth 2 0", "0"));
+  });
+
   it("returns nothing for a blank query", () => {
     expect(searchDocumentation(entries, "   ")).toEqual([]);
   });

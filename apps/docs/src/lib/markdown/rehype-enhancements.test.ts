@@ -73,6 +73,7 @@ describe("heading anchors", () => {
       element("wbr", {}, []),
       text("browser"),
     ]);
+    expect(heading.properties?.className).toEqual(["reference-title"]);
   });
 
   it("leaves slashes in a guide's title alone", () => {
@@ -81,6 +82,7 @@ describe("heading anchors", () => {
     transform([heading]);
 
     expect(heading.children).toEqual([text("Read/write")]);
+    expect(heading.properties?.className).toBeUndefined();
   });
 
   it("marks each reference H3 as a symbol section", () => {
