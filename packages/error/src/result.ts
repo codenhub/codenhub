@@ -53,7 +53,7 @@ export function ok<T>(value?: T): Ok<T> {
  * @param error - The raw error value to normalize.
  * @param options - Configuration options for AppError normalization.
  * @returns An Err result object.
- * @throws TypeError - If `options` or any supplied option value is invalid.
+ * @throws {TypeError} If `options` or any supplied option value is invalid.
  */
 export const err = (error: unknown, options: AppErrorOptions = {}): Err =>
   Object.freeze({
@@ -93,7 +93,7 @@ const isThenable = (value: unknown): boolean => {
  * @param operation - The synchronous callback to run.
  * @param options - Configuration options for AppError normalization.
  * @returns An Ok result holding the callback value, or an Err holding the normalized failure.
- * @throws TypeError - If `operation` is not a function or returns a promise or other thenable, or
+ * @throws {TypeError} If `operation` is not a function or returns a promise or other thenable, or
  * if `options` or any supplied option value is invalid.
  */
 export const attempt = <T>(
@@ -159,7 +159,7 @@ export const attemptAsync = async <T>(
  * @typeParam T - The type of the value.
  * @param result - The Result instance to unwrap.
  * @returns The unwrapped success value.
- * @throws AppError - If the result is an Err.
+ * @throws {AppError} If the result is an Err.
  */
 export const unwrap = <T>(result: Result<T>): T => {
   if (!result.ok) {
