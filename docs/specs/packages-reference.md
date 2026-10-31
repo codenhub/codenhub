@@ -207,8 +207,8 @@ Source JSDoc/TSDoc coverage is enforced by `undocumented-export/missing-jsdoc`, 
 
 1. **Opt-in, one package.** Approve this spec, build the generator and the `reference` check, and opt `@codenhub/error` in with `prose: true`. `@codenhub/error` has four entrypoints, mixes functions, types, and classes, and is already required to carry rich TSDoc, so it exercises the generator without a migration.
 2. **Opt-in, by choice.** Other packages opt in as their TSDoc is brought to standard. No package is required to.
-3. **Signature manifest, wider.** Once the generator is proven, `prose: false` output MAY be enabled for packages that have not opted in, giving every public package a signature catalogue while prose stays opt-in. This step is a separate decision and a separate change; this spec only reserves the shape for it.
-4. **Default-on.** When the generator and the repo-wide TSDoc baseline hold up, the full reference flips to default-on for `private: false` packages, with `codenhub.docs.reference: false` as the opt-out. Flipping the default is a `docs/specs/packages-documentation.md` change and its own review.
+
+"Automatic" means a package that opts in gets its reference generated and kept current with no further work; it does not mean every package gets one by default. The reference stays opt-in. Earlier revisions planned two more steps: a `prose: false` signature catalogue for every package that had not opted in, then the full reference on by default with `codenhub.docs.reference: false` as the opt-out. That did not weigh that opting in costs one object in `package.json`, while a default needs an opt-out value no package uses, a wider check predicate, and every public package's TSDoc held to the reference standard before any of them chose it. Alternatives weighed and rejected: a default-on reference and a default-on signature catalogue, until opting in package by package becomes the cost; that is the point to revisit, in a change of its own.
 
 ## Exceptions
 
