@@ -99,6 +99,24 @@ describe("ready registries", () => {
     });
   });
 
+  it.each([
+    "error loading dynamically imported module: https://example.com/missing-chunk.js",
+    "Importing a module script failed.",
+  ])("should classify the failed import Firefox and Safari report as %j", (message) => {
+    expect(createAppError(new TypeError(message), { registry: browserErrorRegistry })).toMatchObject({
+      type: "heuristic",
+      messageKey: "error.browser.moduleLoadFailed",
+      isRetryable: false,
+    });
+  });
+
+  it("should not classify text that only mentions a module script failing", () => {
+    expect(
+      createAppError(new Error("Importing a module script failed. Retrying in 5s"), { registry: browserErrorRegistry })
+        .type,
+    ).toBe("unknown");
+  });
+
   it.each(["NotReadableError", "EncodingError"])("should classify the %s name", (name) => {
     expect(createAppError(new DOMException("raw", name), { registry: browserErrorRegistry })).toMatchObject({
       type: "known",

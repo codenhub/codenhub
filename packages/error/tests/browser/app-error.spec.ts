@@ -111,9 +111,8 @@ test("the browser preset classifies the errors this engine raises", async ({ pag
 
   expect(result.failedFetch).toMatchObject({ type: "heuristic", messageKey: "error.browser.requestFailed" });
   expect(result.abortedFetch).toMatchObject({ type: "known", code: "AbortError" });
-  expect(result.failedImport).not.toBeNull();
-  // Not asserted further: the timeout races the refusal, and only Chromium words a failed import
-  // the way the preset matches.
+  expect(result.failedImport).toMatchObject({ type: "heuristic", messageKey: "error.browser.moduleLoadFailed" });
+  // The timed-out fetch is not asserted: the timeout races the refusal.
 });
 
 test("appErrorFromJSON rebuilds a serialized AppError", async ({ page }) => {

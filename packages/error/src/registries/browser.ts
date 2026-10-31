@@ -105,9 +105,14 @@ const browserErrorPatternDefinitions: readonly (readonly [RegExp, ErrorFeedback]
     },
   ] as const,
   [
-    // What Chrome reports for a failed `import()`, followed by the module URL. Observed on
-    // Chromium; Firefox and Safari word it differently and are not matched.
-    /^failed to fetch dynamically imported module\b/i,
+    // What Chromium and Firefox report for a failed `import()`, followed by the module URL. The
+    // browser suite asserts each engine's wording.
+    /^(?:failed to fetch|error loading) dynamically imported module\b/i,
+    MODULE_LOAD_FAILED,
+  ] as const,
+  [
+    // What WebKit reports for a failed `import()`; it names no URL, so the whole message is matched.
+    /^importing a module script failed\.?$/i,
     MODULE_LOAD_FAILED,
   ] as const,
 ];
@@ -116,7 +121,7 @@ const browserErrorPatternDefinitions: readonly (readonly [RegExp, ErrorFeedback]
  * Read-only heuristic pattern mappings for common browser and Web API errors.
  *
  * Identifies a failed fetch by the whole message each browser engine produces for one, and a
- * failed dynamic import by the message Chrome produces.
+ * failed dynamic import by the message Chromium, Firefox, or WebKit produces.
  */
 export const browserErrorPatterns: readonly (readonly [RegExp, Readonly<ErrorFeedback>])[] = Object.freeze(
   browserErrorPatternDefinitions.map(([pattern, feedback]) =>

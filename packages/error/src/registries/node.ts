@@ -19,37 +19,41 @@ import type { ErrorFeedback } from "../types";
  */
 export const nodeErrorCodes = freezeFeedbackMap({
   ECONNREFUSED: {
-    message: "We couldn't connect to the server. It may be unavailable for a moment, so try again shortly.",
+    message:
+      "We couldn't connect to a service this depends on. It may be unavailable for a moment, so try again shortly.",
     messageKey: "error.node.network.connectionRefused",
     source: "node.network",
     isRetryable: true,
   },
   ENOTFOUND: {
-    message: "We couldn't find the server's address. Check your internet connection and try again.",
+    message:
+      "We couldn't find the address of a service this depends on. Try again shortly, and contact support if it keeps happening.",
     messageKey: "error.node.network.addressNotFound",
     source: "node.network",
     isRetryable: true,
   },
   UND_ERR_CONNECT_TIMEOUT: {
-    message: "The server took too long to accept the connection. Check your internet connection and try again.",
+    message: "A service this depends on took too long to accept the connection. Try again shortly.",
     messageKey: "error.node.network.connectionTimeout",
     source: "node.network",
     isRetryable: true,
   },
   EAI_AGAIN: {
-    message: "We couldn't look up the server's address just now. Check your internet connection and try again.",
+    message: "We couldn't look up the address of a service this depends on just now. Try again shortly.",
     messageKey: "error.node.network.addressLookupFailed",
     source: "node.network",
     isRetryable: true,
   },
   EHOSTUNREACH: {
-    message: "We couldn't reach the server from this network. Check your internet connection and try again.",
+    message:
+      "We couldn't reach a service this depends on. Try again shortly, and contact support if it keeps happening.",
     messageKey: "error.node.network.unreachable",
     source: "node.network",
     isRetryable: true,
   },
   ENETUNREACH: {
-    message: "We couldn't reach the server from this network. Check your internet connection and try again.",
+    message:
+      "We couldn't reach a service this depends on. Try again shortly, and contact support if it keeps happening.",
     messageKey: "error.node.network.unreachable",
     source: "node.network",
     isRetryable: true,
@@ -72,17 +76,17 @@ export const nodeErrorCodes = freezeFeedbackMap({
   // Not retryable: raised when a connection attempt times out and also on an established socket,
   // after the request was sent. The code alone does not say which.
   ETIMEDOUT: {
-    message: "The server took too long to respond. Check whether this went through before trying again.",
+    message: "A service this depends on took too long to respond. Check whether this went through before trying again.",
     messageKey: "error.node.network.responseTimeout",
     source: "node.network",
   },
   UND_ERR_HEADERS_TIMEOUT: {
-    message: "The server took too long to respond. Check whether this went through before trying again.",
+    message: "A service this depends on took too long to respond. Check whether this went through before trying again.",
     messageKey: "error.node.network.responseTimeout",
     source: "node.network",
   },
   UND_ERR_BODY_TIMEOUT: {
-    message: "The server took too long to respond. Check whether this went through before trying again.",
+    message: "A service this depends on took too long to respond. Check whether this went through before trying again.",
     messageKey: "error.node.network.responseTimeout",
     source: "node.network",
   },
@@ -95,7 +99,7 @@ const nodeErrorPatternDefinitions: readonly (readonly [RegExp, ErrorFeedback])[]
     /^fetch failed$/i,
     {
       message:
-        "We couldn't complete the request to the server. Check your internet connection, then check whether it went through before trying again.",
+        "We couldn't complete a request to a service this depends on. Check whether it went through before trying again.",
       messageKey: "error.node.network.requestFailed",
       source: "node.network",
     },
