@@ -824,7 +824,14 @@ describe("analyzeReference", () => {
     expect(page.match(/^### Schema$/gm)).toHaveLength(1);
     expect(page).not.toContain("## Namespaces");
     expect(page).toContain(
-      ["```ts", "export interface Schema<TOutput = unknown>", "export declare namespace Schema", "```"].join("\n"),
+      [
+        "```ts",
+        "export interface Schema<TOutput = unknown> {",
+        '    readonly "~meta": Schema.Props<TOutput>;',
+        "}",
+        "export declare namespace Schema",
+        "```",
+      ].join("\n"),
     );
     expect(page).toContain('readonly "~meta": Schema.Props<TOutput>;');
     expect(page).toContain("#### Schema.Props");
@@ -965,7 +972,18 @@ describe("analyzeReference", () => {
 
     expect(model.entrypoints[0]?.symbols[0]?.overloads).toEqual([]);
     expect(page).toContain(
-      ["### Notifier", "", "```ts", "export interface Notifier", "```", "", "Shows notifications."].join("\n"),
+      [
+        "### Notifier",
+        "",
+        "```ts",
+        "export interface Notifier {",
+        "  (message: string): void;",
+        "  (options: { message: string }): void;",
+        "}",
+        "```",
+        "",
+        "Shows notifications.",
+      ].join("\n"),
     );
   });
 

@@ -14,9 +14,9 @@ import type {
 export interface SymbolSignature {
   /**
    * The declaration text. A function keeps its full signature (a `.d.ts` function
-   * has no body); a class or interface keeps only its header — modifiers, name,
-   * type parameters, and heritage; a type alias, variable, or enum keeps the whole
-   * declaration.
+   * has no body); an interface keeps its whole declaration without its members'
+   * comments; a class or enum keeps only its header — modifiers, name, type
+   * parameters, and heritage; a type alias or variable keeps the whole declaration.
    */
   text: string;
   /** Extra overload declaration texts for a function, in source order; `text` is the first. */
@@ -87,12 +87,13 @@ function headerText(
  * top level. Lines that start inside a string or template literal keep their
  * whitespace, since it is part of the type.
  */
-function dedentMember(member: ts.Node, source: ts.SourceFile): string {
+function dedentMember(member: ts.Node, source: ts.SourceFile, dropLines: ReadonlySet<number> = new Set()): string {
   const start = member.getStart(source);
   const text = member.getText(source);
-  const lineStart = source.getLineStarts()[source.getLineAndCharacterOfPosition(start).line] ?? start;
+  const firstLine = source.getLineAndCharacterOfPosition(start).line;
+  const lineStart = source.getLineStarts()[firstLine] ?? start;
   const indent = /^[ \t]*/.exec(source.text.slice(lineStart, start))?.[0].length ?? 0;
-  if (indent === 0 || !text.includes("\n")) {
+  if ((indent === 0 && dropLines.size === 0) || !text.includes("\n")) {
     return text;
   }
   const literals: { start: number; end: number }[] = [];
@@ -106,16 +107,43 @@ function dedentMember(member: ts.Node, source: ts.SourceFile): string {
   let offset = 0;
   return text
     .split("\n")
-    .map((line, index) => {
+    .flatMap((line, index) => {
       const lineOffset = offset;
       offset += line.length + 1;
+      if (dropLines.has(firstLine + index)) {
+        return [];
+      }
       if (index === 0 || literals.some((literal) => lineOffset > literal.start && lineOffset < literal.end)) {
-        return line;
+        return [line];
       }
       const leading = /^[ \t]*/.exec(line)?.[0].length ?? 0;
-      return line.slice(Math.min(leading, indent));
+      return [line.slice(Math.min(leading, indent))];
     })
     .join("\n");
+}
+
+/**
+ * An interface's full declaration with its members' comments left out, so the block
+ * shows the type's shape at a glance; each member's prose has its own section.
+ * Only lines that hold nothing but a comment are dropped.
+ */
+function interfaceText(node: ts.InterfaceDeclaration, source: ts.SourceFile): string {
+  const dropLines = new Set<number>();
+  for (const member of node.members) {
+    for (const range of ts.getLeadingCommentRanges(source.text, member.pos) ?? []) {
+      const first = source.getLineAndCharacterOfPosition(range.pos).line;
+      const last = source.getLineAndCharacterOfPosition(range.end).line;
+      const lineStarts = source.getLineStarts();
+      const before = source.text.slice(lineStarts[first], range.pos);
+      const after = source.text.slice(range.end, lineStarts[last + 1] ?? source.text.length);
+      if (before.trim() === "" && after.trim() === "") {
+        for (let line = first; line <= last; line += 1) {
+          dropLines.add(line);
+        }
+      }
+    }
+  }
+  return dedentMember(node, source, dropLines);
 }
 
 function memberEntries(members: ts.NodeArray<ts.ClassElement | ts.TypeElement | ts.EnumMember>, source: ts.SourceFile) {
@@ -226,7 +254,10 @@ function collectStatements(statements: readonly ts.Statement[], source: ts.Sourc
       if (name !== undefined) {
         mergeSignature(index, name, {
           members: memberEntries(statement.members, source),
-          text: tidy(headerText(statement, source), false),
+          text: tidy(
+            ts.isInterfaceDeclaration(statement) ? interfaceText(statement, source) : headerText(statement, source),
+            false,
+          ),
         });
       }
       continue;
