@@ -116,7 +116,8 @@ export function matchFuzzy(query: string, target: string): FuzzyMatch | undefine
     return { positions: [], score: 0 };
   }
 
-  const lowerQuery = query.toLowerCase();
+  // Each query space claims a separator in the target, so a doubled space would need two.
+  const lowerQuery = query.toLowerCase().replace(/\s+/g, " ");
   const lowerTarget = target.toLowerCase();
   const positions =
     collectPositions(lowerQuery, lowerTarget, target, true) ?? collectPositions(lowerQuery, lowerTarget, target, false);

@@ -26,6 +26,8 @@ export interface SearchOptions {
 
 const DEFAULT_LIMIT = 8;
 const EXACT_LABEL_BONUS = 20;
+/** A member label such as `AppError.toJSON` or `NS.Base.field`: dot-joined identifiers, no spaces. */
+const MEMBER_LABEL = /^[\w$]+(?:\.[\w$]+)+$/;
 const BODY_SCORE = 12;
 
 /**
@@ -75,9 +77,10 @@ export function searchDocumentation(
   const results: SearchResult[] = [];
 
   // A member is labelled `Owner.member`; typing the member's own name is as deliberate as typing the whole label.
+  // Only a dotted name earns it: prose such as "OAuth 2.0" also ends in a dotted segment.
   const isExactLabel = (label: string) => {
     const lower = label.toLowerCase();
-    return lower === needle || lower.slice(lower.lastIndexOf(".") + 1) === needle;
+    return lower === needle || (MEMBER_LABEL.test(label) && lower.slice(lower.lastIndexOf(".") + 1) === needle);
   };
   const scoreLabel = (match: FuzzyMatch | undefined, label: string) =>
     match === undefined ? 0 : match.score + (isExactLabel(label) ? EXACT_LABEL_BONUS : 0);

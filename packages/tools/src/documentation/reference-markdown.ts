@@ -286,7 +286,9 @@ function memberBlocks(
 
 function inheritedNote(member: ReferenceMember, link: (text: string) => string): string {
   const from = member.inheritedFrom ?? "";
-  const toMember = link(`{@link ${from} › ${member.name} | ${from}}`);
+  // The same key `memberBlocks` registers for the declaring type's own section.
+  const target = member.kind === "index-signature" ? `${from} index signature` : `${from} › ${member.name}`;
+  const toMember = link(`{@link ${target} | ${from}}`);
   return `Inherited from ${toMember.startsWith("[") ? toMember : link(`{@link ${from}}`)}.`;
 }
 

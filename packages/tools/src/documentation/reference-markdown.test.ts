@@ -483,6 +483,28 @@ describe("renderReferencePage", () => {
     expect(samePage).toContain("#### Derived › origin\n\nInherited from [Base](#base--origin).");
   });
 
+  it("links an inherited index signature to the declaring type's index signature", () => {
+    const page = renderReferencePage(
+      {
+        ...entrypoint,
+        symbols: [
+          symbol({
+            name: "Base",
+            kind: "interface",
+            members: [member({ name: "__index", kind: "index-signature", signature: "[key: string]: string;" })],
+          }),
+          symbol({
+            name: "Derived",
+            kind: "interface",
+            members: [member({ name: "__index", kind: "index-signature", inheritedFrom: "Base" })],
+          }),
+        ],
+      },
+      { title: "/", heading: "Reference", sourceRoot: "src", prose: true },
+    );
+    expect(page).toContain("#### Derived index signature\n\nInherited from [Base](#base-index-signature).");
+  });
+
   it("omits an inherited member entirely when prose is false", () => {
     const bare = renderReferencePage(entrypoint, {
       title: "/",
