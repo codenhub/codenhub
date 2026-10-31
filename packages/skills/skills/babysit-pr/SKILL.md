@@ -22,13 +22,19 @@ A round is one push of fixes. Repeat until the pull request is done, for at most
 
 1. **Wait for the checks and the AI reviewers to finish.** Use the harness's pull request watcher when it has one. Otherwise run `gh pr checks <pr> --watch`.
 
-   AI reviewers often post minutes after the checks finish. When one has reviewed this pull request before, or the repository is set up to run one, wait until it has reviewed the head commit. This lists who has:
+   AI reviewers often post minutes after the checks finish, so wait for each one you expect. Expect the bots that have reviewed or commented on this pull request before, and any AI reviewer the repository configures, such as one with a config file at its root. On the first push, none may have posted yet. Wait until each has reviewed the head commit. This lists who has:
 
    ```sh
    gh pr view <pr> --json headRefOid,reviews --jq '.headRefOid as $head | .reviews[] | select(.commit.oid == $head) | .author.login'
    ```
 
-   A reviewer that only posts conversation comments has caught up when it has commented since your last push. Stop waiting for one that has not reviewed the head after about 15 minutes, and list it in the report.
+   A reviewer that only posts conversation comments has caught up when it has commented after the head commit. This lists who has:
+
+   ```sh
+   gh pr view <pr> --json commits,comments --jq '.commits[-1].committedDate as $head | .comments[] | select(.createdAt > $head) | .author.login'
+   ```
+
+   Stop waiting for one that has not caught up after about 15 minutes, and list it in the report.
 
 2. **Fix failing checks.** Read the failure before touching code:
 
