@@ -6,11 +6,11 @@ scope: How to write a package's hand-authored public documentation.
 
 # Writing public package docs
 
-`docs/specs/packages-documentation.md` sets what a package's public docs MUST contain: complete coverage, a reading path, and a playful voice. This guideline is about doing that well, which no checklist fully captures. It covers the hand-authored pages a consumer reads to learn the package. It does not cover a generated reference, which `docs/specs/packages-reference.md` governs, or `docs/internal/`, which stays for maintainers.
+`docs/specs/packages-documentation.md` requires a package's public docs to give complete coverage and follow a reading path, and says they SHOULD have a playful voice. This guideline is about doing that well, which no checklist fully captures. It covers the hand-authored pages a consumer reads to learn the package. It does not cover a generated reference, which `docs/specs/packages-reference.md` governs, or `docs/internal/`, which stays for maintainers.
 
 ## Start from an inventory
 
-Before writing, list what the docs owe the reader: each entrypoint and export, each option and default, each capability, constraint, failure, known limitation and workaround, and each thing the package deliberately does not do. Pull from the source, the tests, `docs/internal/`, and the package's `AGENTS.md`. Tests are the most reliable list of edge cases a consumer can hit, and an `AGENTS.md` trap that a consumer could fall into needs a consumer-facing explanation too.
+Before writing, list what the docs owe the reader: each entrypoint and export, each option and default, each capability, constraint, failure, known limitation and workaround, each thing the package deliberately does not do, and each security, accessibility, and performance responsibility it leaves to the consumer. Pull from the source, the tests, `docs/internal/`, and the package's `AGENTS.md`. Tests are the most reliable list of edge cases a consumer can hit, and an `AGENTS.md` trap that a consumer could fall into needs a consumer-facing explanation too.
 
 Then decide where each item is explained, and keep the inventory honest as the docs grow: when an item has no home, the docs are not finished. The inventory is a working aid. It does not need to be committed.
 
