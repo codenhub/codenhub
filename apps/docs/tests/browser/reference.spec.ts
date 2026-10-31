@@ -18,6 +18,33 @@ for (const width of [390, 1440]) {
   });
 }
 
+test("indents a wrapped signature line so each overload starts at the left edge", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto("/validation/reference/builders/");
+
+  const pre = page.locator("#checkfields ~ .code-block pre").first();
+  await expect(pre).toBeVisible();
+  const lines = pre.locator(".line");
+  const starts = await lines.evaluateAll((elements) =>
+    elements.map((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const rects = [...range.getClientRects()];
+      const top = rects[0]!.top;
+      return { first: rects[0]!.left, rest: rects.filter((rect) => rect.top > top).map((rect) => rect.left) };
+    }),
+  );
+  // Both overloads wrap at this width; every continuation sits right of where its line began.
+  expect(starts).toHaveLength(2);
+  expect(starts[1]!.first).toBeCloseTo(starts[0]!.first, 0);
+  for (const { first, rest } of starts) {
+    expect(rest.length).toBeGreaterThan(0);
+    for (const left of rest) {
+      expect(left).toBeGreaterThan(first);
+    }
+  }
+});
+
 test("keeps an ordinary guide example horizontally scrollable on phones", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto("/styles/usage/customizing/");
