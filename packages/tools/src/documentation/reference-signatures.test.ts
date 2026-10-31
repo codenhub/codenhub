@@ -317,6 +317,45 @@ describe("extractSignatures", () => {
     );
   });
 
+  it("puts each union member's comment on its own line, above that member", () => {
+    // Declaration emit leaves a member's comment between the previous member and its `|`.
+    const signatures = extractSignatures(
+      [
+        "export type Consumption<T> =",
+        "/** Consumed now. */",
+        "{",
+        "    readonly status: `a",
+        "  b`;",
+        "} | {",
+        '    readonly status: "missing";',
+        "}",
+        "/** Consumed before. */",
+        " | {",
+        "    readonly record: T;",
+        "};",
+        'export type Plain = { readonly a: 1; } | "b";',
+      ].join("\n"),
+    );
+    expect(signatures.get("Consumption")?.text).toBe(
+      [
+        "export type Consumption<T> =",
+        "    /** Consumed now. */",
+        "    | {",
+        "        readonly status: `a",
+        "  b`;",
+        "    }",
+        "    | {",
+        '        readonly status: "missing";',
+        "    }",
+        "    /** Consumed before. */",
+        "    | {",
+        "        readonly record: T;",
+        "    };",
+      ].join("\n"),
+    );
+    expect(signatures.get("Plain")?.text).toBe('export type Plain = { readonly a: 1; } | "b";');
+  });
+
   it('strips `import("...").` prefixes from a signature', () => {
     expect(index.get("browserErrorRegistry")?.text).toBe(
       "export declare const browserErrorRegistry: ReadonlyErrorRegistry;",

@@ -146,6 +146,57 @@ function interfaceText(node: ts.InterfaceDeclaration, source: ts.SourceFile): st
   return dedentMember(node, source, dropLines);
 }
 
+/**
+ * A type alias's declaration. When a union member carries a comment, declaration
+ * emit leaves it between the previous member and its `|`, so the comment reads as
+ * part of the wrong member; this lays the union out one member per line instead,
+ * each under its own comment.
+ */
+function typeAliasText(node: ts.TypeAliasDeclaration, source: ts.SourceFile): string {
+  const union = node.type;
+  if (!ts.isUnionTypeNode(union)) {
+    return node.getText(source);
+  }
+  const comments = union.types.map((_member, index) =>
+    (ts.getLeadingCommentRanges(source.text, index === 0 ? union.pos : union.types[index - 1]!.end) ?? []).map(
+      (range) => source.text.slice(range.pos, range.end),
+    ),
+  );
+  if (comments.every((list) => list.length === 0)) {
+    return node.getText(source);
+  }
+  const lines = [source.text.slice(node.getStart(source), union.pos).trim()];
+  union.types.forEach((member, index) => {
+    lines.push(...comments[index]!.map((comment) => `    ${comment}`));
+    lines.push(`    | ${indentContinuation(member, source)}`);
+  });
+  return lines.join("\n");
+}
+
+/** A node's text with continuation lines indented four spaces, except lines that start inside a literal. */
+function indentContinuation(node: ts.Node, source: ts.SourceFile): string {
+  const start = node.getStart(source);
+  const literals: { start: number; end: number }[] = [];
+  const visit = (child: ts.Node): void => {
+    if (ts.isStringLiteralLike(child) || ts.isTemplateLiteralToken(child)) {
+      literals.push({ start: child.getStart(source) - start, end: child.getEnd() - start });
+    }
+    ts.forEachChild(child, visit);
+  };
+  visit(node);
+  let offset = 0;
+  return node
+    .getText(source)
+    .split("\n")
+    .map((line, index) => {
+      const lineOffset = offset;
+      offset += line.length + 1;
+      const inLiteral = literals.some((literal) => lineOffset > literal.start && lineOffset < literal.end);
+      return index === 0 || inLiteral ? line : `    ${line}`;
+    })
+    .join("\n");
+}
+
 function memberEntries(members: ts.NodeArray<ts.ClassElement | ts.TypeElement | ts.EnumMember>, source: ts.SourceFile) {
   const entries = new Map<string, string>();
   for (const member of members) {
@@ -266,7 +317,7 @@ function collectStatements(statements: readonly ts.Statement[], source: ts.Sourc
     if (ts.isTypeAliasDeclaration(statement)) {
       index.set(statement.name.text, {
         ...(ts.isTypeLiteralNode(statement.type) ? { members: memberEntries(statement.type.members, source) } : {}),
-        text: tidy(statement.getText(source), true),
+        text: tidy(typeAliasText(statement, source), true),
       });
       continue;
     }
