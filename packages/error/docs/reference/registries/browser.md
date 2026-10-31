@@ -28,7 +28,7 @@ export declare const browserErrorPatterns: readonly (readonly [RegExp, Readonly<
 
 Read-only heuristic pattern mappings for common browser and Web API errors.
 
-Identifies a failed fetch by the whole message each browser engine produces for one, and a failed dynamic import by the message Chrome produces.
+Identifies a failed fetch by the whole message each browser engine produces for one, and a failed dynamic import by the message Chromium, Firefox, or WebKit produces.
 
 ### browserErrorRegistry
 
