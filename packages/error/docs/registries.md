@@ -61,7 +61,7 @@ Adding an identifier that already exists replaces its feedback. For patterns, "t
 
 `createAppError` collects the value you passed and every error wrapped inside it, starting with the outermost and working inward. It then picks one result in this order:
 
-1. A **known** match anywhere: a code, name, exact message, or prefix, or an `AppError` that is already `"known"`. The outermost one wins.
+1. A **known** match anywhere: a code, name, exact message, or prefix, or an `AppError` that is already `"known"`. The outermost one wins, with one exception: when you pass a `registry`, a known match from that registry wins over a known `AppError` found inside the value, however deep the match is, because passing a registry asks for its wording.
 2. Otherwise, a **heuristic** match anywhere: a pattern, or an `AppError` that is already `"heuristic"`.
 3. Otherwise, any `AppError` found inside the value.
 4. Otherwise, an `"unknown"` error with the fallback message.

@@ -482,7 +482,7 @@ Adding an identifier that already exists replaces its feedback. For patterns, "t
 
 `createAppError` collects the value you passed and every error wrapped inside it, starting with the outermost and working inward. It then picks one result in this order:
 
-1. A **known** match anywhere: a code, name, exact message, or prefix, or an `AppError` that is already `"known"`. The outermost one wins.
+1. A **known** match anywhere: a code, name, exact message, or prefix, or an `AppError` that is already `"known"`. The outermost one wins, with one exception: when you pass a `registry`, a known match from that registry wins over a known `AppError` found inside the value, however deep the match is, because passing a registry asks for its wording.
 2. Otherwise, a **heuristic** match anywhere: a pattern, or an `AppError` that is already `"heuristic"`.
 3. Otherwise, any `AppError` found inside the value.
 4. Otherwise, an `"unknown"` error with the fallback message.
@@ -566,12 +566,12 @@ getErrorRegistry().merge(browserErrorRegistry);
 
 Each preset also exports its raw mappings, frozen, for when you want to build something of your own from part of a preset:
 
-| Import path                           | Registry                | Raw mappings                                |
-| ------------------------------------- | ----------------------- | ------------------------------------------- |
-| `@codenhub/error/registries/browser`  | `browserErrorRegistry`  | `browserErrorNames`, `browserErrorPatterns` |
-| `@codenhub/error/registries/node`     | `nodeErrorRegistry`     | `nodeErrorCodes`, `nodeErrorPatterns`       |
-| `@codenhub/error/registries/supabase` | `supabaseErrorRegistry` | `supabaseErrorCodes`, `supabaseErrorNames`  |
-| `@codenhub/error/registries`          | All three               | All six                                     |
+| Import path                           | Registry                | Raw mappings                                            |
+| ------------------------------------- | ----------------------- | ------------------------------------------------------- |
+| `@codenhub/error/registries/browser`  | `browserErrorRegistry`  | `browserErrorNames`, `browserErrorPatterns`             |
+| `@codenhub/error/registries/node`     | `nodeErrorRegistry`     | `nodeErrorCodes`, `nodeErrorNames`, `nodeErrorPatterns` |
+| `@codenhub/error/registries/supabase` | `supabaseErrorRegistry` | `supabaseErrorCodes`, `supabaseErrorNames`              |
+| `@codenhub/error/registries`          | All three               | All seven                                               |
 
 ## How the messages are written
 
@@ -617,7 +617,7 @@ Notes:
 
 ## Node.js
 
-For server code. It recognizes network failures from sockets, DNS lookups, and the built-in `fetch`, which puts the real failure on the `cause` of its `TypeError: fetch failed`.
+For server code. It recognizes network failures from sockets, DNS lookups, and the built-in `fetch`, which puts the real failure on the `cause` of its `TypeError: fetch failed`, and the errors an `AbortSignal` raises.
 
 | Code                      | `messageKey`                             | Retryable |
 | ------------------------- | ---------------------------------------- | --------- |
@@ -634,6 +634,11 @@ For server code. It recognizes network failures from sockets, DNS lookups, and t
 | `UND_ERR_HEADERS_TIMEOUT` | `error.node.network.responseTimeout`     | No        |
 | `UND_ERR_BODY_TIMEOUT`    | `error.node.network.responseTimeout`     | No        |
 
+| Name           | `messageKey`                         | Retryable |
+| -------------- | ------------------------------------ | --------- |
+| `TimeoutError` | `error.node.network.responseTimeout` | No        |
+| `AbortError`   | `error.node.abort`                   | No        |
+
 | Message                             | `messageKey`                       | Retryable |
 | ----------------------------------- | ---------------------------------- | --------- |
 | `fetch failed`, with no known cause | `error.node.network.requestFailed` | No        |
@@ -642,7 +647,8 @@ Notes:
 
 - **The messages speak about "a service this depends on".** On a server, the failing call is your server calling something else, so the person reading the message is not the one whose connection failed, and the messages do not ask them to check it.
 - **Only failures before a connection is made are retryable**: refused, an address that did not resolve, an unreachable host, a connection timeout. A reset, a closed socket, or a response timeout can follow a request the other side already acted on. `ETIMEDOUT` is not retryable either, because Node.js raises it both for a connection attempt and for a socket that already carried the request.
-- **Not covered:** filesystem codes such as `ENOENT`, because the right message depends on what the application was doing, and TLS certificate codes, which only an operator can fix. `AbortError` and `TimeoutError` from an `AbortSignal` are `DOMException` names on Node.js too; merge the browser preset to classify them.
+- **Not covered:** filesystem codes such as `ENOENT`, because the right message depends on what the application was doing, and TLS certificate codes, which only an operator can fix.
+- **`TimeoutError` and `AbortError` are also browser preset names.** They are the `DOMException` names an `AbortSignal` raises, as in `fetch(url, { signal: AbortSignal.timeout(5000) })`. Server code should use this preset for them: the browser preset's `TimeoutError` message tells the reader to check their internet connection. When you merge both, the one merged last wins.
 - The codes were observed on Node.js 24. Other server runtimes, such as Deno or Bun, may report network failures differently.
 
 ## Supabase
@@ -797,6 +803,7 @@ Both take the same options as `createAppError` as their second argument, such as
 A few rules keep them honest:
 
 - `attempt` is for synchronous callbacks only. A callback that returns a promise is a type error, and at runtime, where the type checker cannot see it (a callback typed `any`, or plain JavaScript), `attempt` throws `TypeError` instead of returning an `Ok` that holds a promise whose rejection nobody would catch. Use `attemptAsync` for anything asynchronous.
+- That type check has to know what the callback returns, so inside a generic function a callback returning a value of the type parameter is a type error too: `attempt(() => JSON.parse(text) as T)` does not compile. Pass the type argument instead of casting the value, `attempt<T>(() => JSON.parse(text))`. For a callback that returns a `T` it got from elsewhere, cast its result to `never`, `attempt<T>(() => read() as never)`; the runtime check still rejects a promise.
 - `attemptAsync` never rejects for something the callback did. Its promise always resolves to a `Result`.
 - Both check their arguments before running the callback. A callback that is not a function, or an invalid option, throws `TypeError` (for `attemptAsync`, rejects with it) without running anything.
 
@@ -1046,9 +1053,9 @@ Everything on this page is deliberate, but each item has surprised someone. Each
 
 ## Names match any error with that name
 
-**What happens:** with the browser preset merged, any error whose `name` is `NotFoundError` or `TimeoutError` is classified as the browser's, including errors from a library that happens to use the same class name.
+**What happens:** with the browser or Node.js preset merged, any error whose `name` is `TimeoutError` is classified as that preset's, including errors from a library that happens to use the same class name. The browser preset does the same for `NotFoundError` and its other names.
 
-**Instead:** classify that library's errors against a registry without the browser preset, or register a more specific code for them.
+**Instead:** classify that library's errors against a registry without the preset, or register a more specific code for them.
 
 ## Cancelled requests are errors too
 
@@ -1087,8 +1094,8 @@ Everything on this page is deliberate, but each item has surprised someone. Each
 ## Presets do not cover everything
 
 - The browser preset recognizes a failed `fetch` and a failed `import()` by the messages Chromium, Firefox, and Safari produce today. A browser that rewords them falls back to `"unknown"` until the preset catches up.
-- The Node.js preset covers network failures only, and was observed on Node.js 24. Other server runtimes may report the same failures differently.
-- The Supabase preset covers the Auth codes a person can act on, six PostgreSQL codes, and the client's own error names. Codes only a developer can fix are left unmapped on purpose, so they reach your error tracker as `"unknown"`.
+- The Node.js preset covers network failures and the errors an `AbortSignal` raises, and was observed on Node.js 24. Other server runtimes may report the same failures differently.
+- The Supabase preset covers the Auth codes a person can act on, six PostgreSQL codes, and the client's own error names. It maps the few developer faults a running application commonly hits, such as a missing table or column, to one shared message, so they are `"known"`: report them by `code`, not by type (see [Recipes](docs/recipes.md#report-to-an-error-tracker)). Other codes only a developer can fix, such as `bad_jwt`, are left unmapped on purpose and reach your error tracker as `"unknown"`.
 
 Register your own mapping for anything a preset misses. [Presets](docs/presets.md) lists exactly what each one covers.
 
@@ -1104,7 +1111,7 @@ Every preset mapping has a stable `messageKey`, but ErrorKit includes only the E
 
 ## Patterns you write can be slow
 
-A pattern runs against every message `createAppError` sees, and a message can be crafted by someone trying to slow your server down. A pattern with nested repetition, such as `/(a+)+$/`, can take seconds on the wrong input. Keep custom patterns anchored and simple; see [Registries](docs/registries.md#writing-patterns). The built-in patterns are all anchored alternations.
+A pattern runs against every message `createAppError` sees, and a message can be crafted by someone trying to slow your server down. A pattern with nested repetition, such as `/(a+)+$/`, can take seconds on the wrong input. Keep custom patterns anchored and simple; see [Registries](docs/registries.md#writing-patterns). The built-in patterns are all anchored, with no nested repetition.
 
 <!-- Source: docs/changelog/0.3.0.md -->
 
@@ -1117,11 +1124,12 @@ A pattern runs against every message `createAppError` sees, and a message can be
 - A Node.js preset at `@codenhub/error/registries/node` classifies network failures from sockets, DNS, and the built-in `fetch`, such as `ECONNREFUSED`, `ENOTFOUND`, and `UND_ERR_CONNECT_TIMEOUT`. A failed `fetch` on Node.js used to resolve to an unknown error under every built-in preset.
 - `AppError.code` holds the registered code that classified the error, or the registered name when no code matched, and `toJSON()` includes it. Consumers can branch on a specific failure without comparing message text or a translation key.
 - Entries of an `errors` list, as on `AggregateError`, are classified. The first ten are inspected.
-- The Supabase preset maps the Auth codes a person using the application can run into and act on, 40 where it had 10: password rules, existing email and phone, ended sessions, expired links and invitations, two-step verification, suspended accounts, interrupted sign-in flows, and the request rate limit.
+- The Supabase preset maps the Auth codes a person using the application can run into and act on, 41 where it had 10: password rules, existing email and phone, ended sessions, expired links and invitations, two-step verification, suspended accounts, interrupted sign-in flows, and the request rate limit.
 - The browser preset classifies a code-split chunk that fails to load, by webpack's `ChunkLoadError` name and by the message Chromium, Firefox, and Safari each produce for a failed `import()`, and tells the reader to reload the page. It also maps the `NotReadableError` and `EncodingError` names.
-- The Node.js preset maps `EAI_AGAIN`, `EHOSTUNREACH`, `ENETUNREACH`, and `EPIPE`.
+- The Node.js preset maps `EAI_AGAIN`, `EHOSTUNREACH`, `ENETUNREACH`, and `EPIPE`, and the `TimeoutError` and `AbortError` names an `AbortSignal` raises, exported as `nodeErrorNames`. A `fetch` given `AbortSignal.timeout()` on a server resolved to an unknown error, and merging the browser preset for it told the reader to check their internet connection.
 - The Supabase preset classifies two errors the Supabase Auth client raises itself: `AuthSessionMissingError`, which carries no code and is what most calls return without a session, as an ended session, and `pkce_code_verifier_not_found`, from a sign-in link opened in another browser, as an interrupted sign-in. Both resolved to an unknown error.
 - `appErrorFromJSON` rebuilds an `AppError` from the shape `toJSON()` produces, so a failure a server sent as JSON can be held in a `Result` on the client. Passing the parsed object to `createAppError` lost every name, message, prefix, and pattern match. The sender chooses the message, so it is for sources the application trusts.
+- The `./package.json` subpath is exported, so tools that read the package's metadata can resolve it.
 - A `default` export condition, so CommonJS can `require()` the package on runtimes that support requiring ES modules.
 
 ## Changed

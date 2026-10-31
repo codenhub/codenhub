@@ -17,12 +17,12 @@ getErrorRegistry().merge(browserErrorRegistry);
 
 Each preset also exports its raw mappings, frozen, for when you want to build something of your own from part of a preset:
 
-| Import path                           | Registry                | Raw mappings                                |
-| ------------------------------------- | ----------------------- | ------------------------------------------- |
-| `@codenhub/error/registries/browser`  | `browserErrorRegistry`  | `browserErrorNames`, `browserErrorPatterns` |
-| `@codenhub/error/registries/node`     | `nodeErrorRegistry`     | `nodeErrorCodes`, `nodeErrorPatterns`       |
-| `@codenhub/error/registries/supabase` | `supabaseErrorRegistry` | `supabaseErrorCodes`, `supabaseErrorNames`  |
-| `@codenhub/error/registries`          | All three               | All six                                     |
+| Import path                           | Registry                | Raw mappings                                            |
+| ------------------------------------- | ----------------------- | ------------------------------------------------------- |
+| `@codenhub/error/registries/browser`  | `browserErrorRegistry`  | `browserErrorNames`, `browserErrorPatterns`             |
+| `@codenhub/error/registries/node`     | `nodeErrorRegistry`     | `nodeErrorCodes`, `nodeErrorNames`, `nodeErrorPatterns` |
+| `@codenhub/error/registries/supabase` | `supabaseErrorRegistry` | `supabaseErrorCodes`, `supabaseErrorNames`              |
+| `@codenhub/error/registries`          | All three               | All seven                                               |
 
 ## How the messages are written
 
@@ -68,7 +68,7 @@ Notes:
 
 ## Node.js
 
-For server code. It recognizes network failures from sockets, DNS lookups, and the built-in `fetch`, which puts the real failure on the `cause` of its `TypeError: fetch failed`.
+For server code. It recognizes network failures from sockets, DNS lookups, and the built-in `fetch`, which puts the real failure on the `cause` of its `TypeError: fetch failed`, and the errors an `AbortSignal` raises.
 
 | Code                      | `messageKey`                             | Retryable |
 | ------------------------- | ---------------------------------------- | --------- |
@@ -85,6 +85,11 @@ For server code. It recognizes network failures from sockets, DNS lookups, and t
 | `UND_ERR_HEADERS_TIMEOUT` | `error.node.network.responseTimeout`     | No        |
 | `UND_ERR_BODY_TIMEOUT`    | `error.node.network.responseTimeout`     | No        |
 
+| Name           | `messageKey`                         | Retryable |
+| -------------- | ------------------------------------ | --------- |
+| `TimeoutError` | `error.node.network.responseTimeout` | No        |
+| `AbortError`   | `error.node.abort`                   | No        |
+
 | Message                             | `messageKey`                       | Retryable |
 | ----------------------------------- | ---------------------------------- | --------- |
 | `fetch failed`, with no known cause | `error.node.network.requestFailed` | No        |
@@ -93,7 +98,8 @@ Notes:
 
 - **The messages speak about "a service this depends on".** On a server, the failing call is your server calling something else, so the person reading the message is not the one whose connection failed, and the messages do not ask them to check it.
 - **Only failures before a connection is made are retryable**: refused, an address that did not resolve, an unreachable host, a connection timeout. A reset, a closed socket, or a response timeout can follow a request the other side already acted on. `ETIMEDOUT` is not retryable either, because Node.js raises it both for a connection attempt and for a socket that already carried the request.
-- **Not covered:** filesystem codes such as `ENOENT`, because the right message depends on what the application was doing, and TLS certificate codes, which only an operator can fix. `AbortError` and `TimeoutError` from an `AbortSignal` are `DOMException` names on Node.js too; merge the browser preset to classify them.
+- **Not covered:** filesystem codes such as `ENOENT`, because the right message depends on what the application was doing, and TLS certificate codes, which only an operator can fix.
+- **`TimeoutError` and `AbortError` are also browser preset names.** They are the `DOMException` names an `AbortSignal` raises, as in `fetch(url, { signal: AbortSignal.timeout(5000) })`. Server code should use this preset for them: the browser preset's `TimeoutError` message tells the reader to check their internet connection. When you merge both, the one merged last wins.
 - The codes were observed on Node.js 24. Other server runtimes, such as Deno or Bun, may report network failures differently.
 
 ## Supabase

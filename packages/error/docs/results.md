@@ -77,6 +77,7 @@ Both take the same options as `createAppError` as their second argument, such as
 A few rules keep them honest:
 
 - `attempt` is for synchronous callbacks only. A callback that returns a promise is a type error, and at runtime, where the type checker cannot see it (a callback typed `any`, or plain JavaScript), `attempt` throws `TypeError` instead of returning an `Ok` that holds a promise whose rejection nobody would catch. Use `attemptAsync` for anything asynchronous.
+- That type check has to know what the callback returns, so inside a generic function a callback returning a value of the type parameter is a type error too: `attempt(() => JSON.parse(text) as T)` does not compile. Pass the type argument instead of casting the value, `attempt<T>(() => JSON.parse(text))`. For a callback that returns a `T` it got from elsewhere, cast its result to `never`, `attempt<T>(() => read() as never)`; the runtime check still rejects a promise.
 - `attemptAsync` never rejects for something the callback did. Its promise always resolves to a `Result`.
 - Both check their arguments before running the callback. A callback that is not a function, or an invalid option, throws `TypeError` (for `attemptAsync`, rejects with it) without running anything.
 

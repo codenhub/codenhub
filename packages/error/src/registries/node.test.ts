@@ -3,7 +3,7 @@ import { createServer } from "node:net";
 import { describe, expect, it } from "vitest";
 
 import { createAppError, getErrorRegistry } from "../index";
-import { nodeErrorCodes, nodeErrorPatterns, nodeErrorRegistry } from "./node";
+import { nodeErrorCodes, nodeErrorNames, nodeErrorPatterns, nodeErrorRegistry } from "./node";
 
 const getClosedPort = (): Promise<number> =>
   new Promise((resolve, reject) => {
@@ -67,6 +67,45 @@ describe("node registry preset", () => {
     });
   });
 
+  it("should classify a real fetch stopped by AbortSignal.timeout without blaming the reader's connection", async () => {
+    const server = createServer(() => {}).listen(0, "127.0.0.1");
+    await new Promise((resolve) => server.once("listening", resolve));
+    const address = server.address();
+    const port = address !== null && typeof address === "object" ? address.port : 0;
+
+    try {
+      const failure: unknown = await fetch(`http://127.0.0.1:${port}/`, { signal: AbortSignal.timeout(50) }).catch(
+        (error: unknown) => error,
+      );
+
+      expect(createAppError(failure, { registry: nodeErrorRegistry })).toMatchObject({
+        type: "known",
+        code: "TimeoutError",
+        messageKey: "error.node.network.responseTimeout",
+        source: "node.network",
+        isRetryable: false,
+      });
+    } finally {
+      server.close();
+    }
+  });
+
+  it("should classify a real fetch cancelled through an AbortController", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const failure: unknown = await fetch("http://127.0.0.1:1/", { signal: controller.signal }).catch(
+      (error: unknown) => error,
+    );
+
+    expect(createAppError(failure, { registry: nodeErrorRegistry })).toMatchObject({
+      type: "known",
+      code: "AbortError",
+      messageKey: "error.node.abort",
+      source: "node",
+      isRetryable: false,
+    });
+  });
+
   it("should not mark a timeout on an established socket as retryable", () => {
     const failure = Object.assign(new Error("read ETIMEDOUT"), { code: "ETIMEDOUT", syscall: "read" });
 
@@ -99,12 +138,16 @@ describe("node registry preset", () => {
   });
 
   it("should follow the repository's messageKey and source conventions with one message per key", () => {
-    const presetFeedback = [...Object.values(nodeErrorCodes), ...nodeErrorPatterns.map(([, feedback]) => feedback)];
+    const presetFeedback = [
+      ...Object.values(nodeErrorCodes),
+      ...Object.values(nodeErrorNames),
+      ...nodeErrorPatterns.map(([, feedback]) => feedback),
+    ];
     const messagesByKey = new Map<string, string>();
 
     for (const feedback of presetFeedback) {
       expect(feedback.messageKey).toMatch(/^error\.node(?:\.[a-z][A-Za-z0-9]*)+$/);
-      expect(feedback.source).toBe("node.network");
+      expect(feedback.source).toMatch(/^node(?:\.network)?$/);
       expect(messagesByKey.get(feedback.messageKey ?? "") ?? feedback.message).toBe(feedback.message);
       messagesByKey.set(feedback.messageKey ?? "", feedback.message);
     }
@@ -113,7 +156,11 @@ describe("node registry preset", () => {
   // The preset runs where the failing call was made, most often a server calling another service,
   // so the person reading the message is not the one whose connection failed.
   it("should not blame the reader's internet connection", () => {
-    const presetFeedback = [...Object.values(nodeErrorCodes), ...nodeErrorPatterns.map(([, feedback]) => feedback)];
+    const presetFeedback = [
+      ...Object.values(nodeErrorCodes),
+      ...Object.values(nodeErrorNames),
+      ...nodeErrorPatterns.map(([, feedback]) => feedback),
+    ];
 
     for (const feedback of presetFeedback) {
       expect(feedback.message).not.toMatch(/your (?:internet )?connection/i);
@@ -123,9 +170,12 @@ describe("node registry preset", () => {
   it("should deeply freeze the raw mappings and expose a read-only registry", () => {
     expect(Object.isFrozen(nodeErrorCodes)).toBe(true);
     expect(Object.isFrozen(nodeErrorCodes.ECONNREFUSED)).toBe(true);
+    expect(Object.isFrozen(nodeErrorNames)).toBe(true);
+    expect(Object.isFrozen(nodeErrorNames.TimeoutError)).toBe(true);
     expect(Object.isFrozen(nodeErrorPatterns)).toBe(true);
     expect(Object.isFrozen(nodeErrorPatterns[0][0])).toBe(true);
     expect(Object.isFrozen(nodeErrorPatterns[0][1])).toBe(true);
     expect(Reflect.has(nodeErrorRegistry.codes, "add")).toBe(false);
+    expect(Reflect.has(nodeErrorRegistry.names, "add")).toBe(false);
   });
 });
