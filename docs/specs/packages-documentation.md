@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-29
+last_updated: 2026-10-30
 scope: Documentation for public workspace packages.
 ---
 
@@ -80,7 +80,7 @@ Prefer focused documents over one oversized reference. Prefer grouping related A
 
 A package MAY additionally carry a generated API reference under `docs/reference/`, compiled from its TypeScript declarations and source TSDoc by `pnpm generate` and governed by `docs/specs/packages-reference.md`. That area is not the mechanical hand-authored split this section discourages: it is derived, never hand-edited, and regenerated in the same change as the code it documents. It supplements the hand-authored docs: it satisfies the per-symbol catalogue, while the hand-authored docs keep the concept, task, domain, and failure-mode coverage described above.
 
-These structures are examples, not required names or checklists:
+These structures are examples, not required names or checklists. The first is for a package that has not opted into generated reference; the second shows a package that has:
 
 ```text
 docs/
@@ -106,7 +106,7 @@ Packages SHOULD adapt their structure when another organization better matches t
 Public documentation paths MUST be deterministic and portable:
 
 - Markdown file and directory names MUST use kebab-case, except version-named files in a package `changelog/` folder, which follow `docs/specs/packages-changelog.md`.
-- A `docs/reference/` folder is a generated area owned end to end by `pnpm generate`, per `docs/specs/packages-reference.md`. Its pages MUST NOT be hand-authored or hand-edited, and no hand-authored `docs/reference.md` may stand in for it.
+- For a package opted into generated reference, `docs/reference/` is owned end to end by `pnpm generate`, per `docs/specs/packages-reference.md`. Its pages MUST NOT be hand-authored or hand-edited, and a sibling hand-authored `docs/reference.md` is invalid. A package that has not opted in MAY keep its hand-authored `docs/reference.md`; opting in is what transfers reference ownership to the generator. The reason and rejected immediate conversion are recorded in that spec's "Structure" section.
 - An `index.md` represents its containing documentation area.
 - Publishing tools MUST place the package-root `docs/index.md` before every other package page, and a folder's `index.md` before the other pages in that folder.
 - Sibling pages otherwise order by their frontmatter `order`, ascending, with pages that set none keeping their path order after those that do.

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { createReferenceFixture } from "../generators/reference-fixture.test-support.ts";
+import { analyzeReference } from "../generators/reference-generator.ts";
 import type { ReferenceModel } from "./reference-model.ts";
 import {
   attachSignatures,
@@ -31,8 +33,209 @@ export declare enum Level {
 export { somethingReexported } from "./other";
 `;
 
+describe("internal type resolution", () => {
+  it(
+    "lists unexported typeof values with their emitted declarations and source files",
+    { timeout: 30_000 },
+    async () => {
+      const fixture = await createReferenceFixture("hidden", {
+        "index.ts": `
+        type Mode = "test" | "live";
+        const config = { mode: "test" as Mode };
+        function read(): typeof config { return config; }
+        export type Config = typeof config;
+        export type Reader = typeof read;
+      `,
+      });
+      const { model, files } = await analyzeReference(fixture, { prose: true });
+      expect(model.unresolved).toEqual([]);
+      expect(model.entrypoints[0]?.internalTypes).toEqual([
+        { name: "config", signature: "declare const config: {\n    mode: Mode;\n};", declaredIn: ["src/index.ts"] },
+        { name: "Mode", signature: 'type Mode = "test" | "live";', declaredIn: ["src/index.ts"] },
+        { name: "read", signature: "declare function read(): typeof config;", declaredIn: ["src/index.ts"] },
+      ]);
+      expect(files[0]?.contents).toContain("declare const config:");
+      expect(files[0]?.contents).toContain("Not exported; declared in `src/index.ts`.");
+    },
+  );
+
+  it("reports an imported type from a hand-written declaration", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("handwritten-only-type", {
+      "index.ts": "import type {Hidden} from './types'; /** Makes. */ export function make():Hidden {return {x:1};}",
+      "types.d.ts": "/** Hidden. */ export interface Hidden {x:number;}",
+    });
+    const { model } = await analyzeReference(fixture, { prose: true });
+    expect(model.unresolved).toEqual([{ subpath: ".", symbol: "make", name: "Hidden", declaredIn: "src/types.d.ts" }]);
+  });
+
+  it("lists namespace-local types without losing lexical shadowing", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("namespace-internal", {
+      "index.ts": `
+        export namespace NS {
+          type Hidden = {x:number};
+          /** Public. */ export function make():Hidden {return {x:1};}
+          /** Generic. */ export function identity<Hidden>(value:Hidden):Hidden {return value;}
+        }
+      `,
+    });
+    const { model } = await analyzeReference(fixture, { prose: true });
+    expect(model.unresolved).toEqual([]);
+    expect(model.entrypoints[0]?.internalTypes.map(({ name }) => name)).toEqual(["Hidden"]);
+  });
+});
+
+describe("protected class members", () => {
+  it("shows subclass members with protected signatures and hides private members", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("protected-members", {
+      "index.ts": `
+        export class Base {
+          protected value = 1;
+          protected read(): number { return this.value; }
+          private secret = 2;
+          #hidden = 3;
+        }
+      `,
+    });
+    const { model, files } = await analyzeReference(fixture, { prose: true });
+    expect(model.entrypoints[0]?.symbols[0]?.members.map(({ name, signature }) => ({ name, signature }))).toEqual([
+      { name: "value", signature: "protected value: number;" },
+      { name: "read", signature: "protected read(): number;" },
+    ]);
+    expect(files[0]?.contents).toContain("protected value: number;");
+    expect(files[0]?.contents).toContain("protected read(): number;");
+  });
+});
+
+describe("special export bindings", () => {
+  it.each([
+    [
+      "named function",
+      "export default function original() {}",
+      "original",
+      "export default function original(): void;",
+    ],
+    ["named class", "export default class Original {}", "Original", "export default class Original"],
+    ["anonymous function", "export default function() {}", "default", "export default function (): void;"],
+    [
+      "export assignment",
+      "function original() {} export = original;",
+      "original",
+      "declare function original(): void;",
+    ],
+  ])(
+    "attaches the declaration name and signature for %s",
+    { timeout: 30_000 },
+    async (_case, source, name, signature) => {
+      const fixture = await createReferenceFixture("special-export", { "index.ts": source });
+      const { model } = await analyzeReference(fixture, { prose: true });
+      expect(
+        model.entrypoints[0]?.symbols.map((symbol) => ({ name: symbol.name, signature: symbol.signature })),
+      ).toEqual([{ name, signature }]);
+    },
+  );
+});
+
+describe("namespace export signatures", () => {
+  it("attaches target-module declarations to namespace export members", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("ns-only", {
+      "index.ts": 'export * as ns from "./leaf";',
+      "leaf.ts": "/** Reads. */ export function read(value: string): string { return value; }",
+    });
+    const { model } = await analyzeReference(fixture, { prose: true });
+    expect(model.entrypoints[0]?.symbols[0]?.namespaceMembers[0]?.signature).toBe(
+      "export declare function read(value: string): string;",
+    );
+  });
+});
+
+describe("index signature members", () => {
+  it("groups multiple index signatures under one readable heading", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("multiple-index-signatures", {
+      "index.ts": `export interface Lookup {
+        [key: string]: string | number;
+        [key: number]: number;
+      }`,
+    });
+    const { files } = await analyzeReference(fixture, { prose: true });
+    expect(files[0]?.contents.match(/^#### Index signature$/gm)).toHaveLength(1);
+    expect(files[0]?.contents).toContain("```ts\n[key: string]: string | number;\n[key: number]: number;\n```");
+  });
+
+  it.each([
+    ["interface", "export interface Lookup {\n /** Looks up a value. */\n [key: string]: number; }"],
+    ["class", "export class Lookup {\n /** Looks up a value. */\n [key: string]: number; }"],
+    ["type literal", "export type Lookup = {\n /** Looks up a value. */\n [key: string]: number; };"],
+  ])("keeps the declaration and prose of a %s index signature", { timeout: 30_000 }, async (_case, source) => {
+    const fixture = await createReferenceFixture("index-signatures", { "index.ts": source });
+    const { model, files } = await analyzeReference(fixture, { prose: true });
+    const member = model.entrypoints[0]?.symbols[0]?.members.find((member) => member.kind === "index-signature");
+    expect(member?.signature).toBe("[key: string]: number;");
+    expect(member?.doc).toBe("Looks up a value.");
+    expect(files[0]?.contents).toContain("Looks up a value.");
+  });
+});
+
+describe("overload documentation", () => {
+  it.each(["param", "typeParam"])(
+    "separates overloads whose only distinct prose is @%s",
+    { timeout: 30_000 },
+    async (tag) => {
+      const fixture = await createReferenceFixture("overload-params", {
+        "index.ts": `
+        /** Reads a value.
+         * @${tag} ${tag === "param" ? "value" : "T"} - The first description.
+         */
+        export function read<T extends string>(value: T): T;
+        /** Reads a value.
+         * @${tag} ${tag === "param" ? "value" : "T"} - The second description.
+         */
+        export function read<T extends number>(value: T): T;
+        export function read(value: unknown): unknown { return value; }
+      `,
+      });
+      const { model, files } = await analyzeReference(fixture, { prose: true });
+      const overloads = model.entrypoints[0]?.symbols[0]?.overloads ?? [];
+      expect(overloads).toHaveLength(2);
+      expect(overloads.every((overload) => overload.signature !== undefined)).toBe(true);
+      expect(files[0]?.contents).toContain("The first description.");
+      expect(files[0]?.contents).toContain("The second description.");
+    },
+  );
+});
+
+describe("inherited member identity", () => {
+  it("links an inherited member to its qualified declaring type", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("inherited-ns", {
+      "index.ts": `
+        export namespace NS {
+          /** Base. */ export class Base {
+            /** Field. */ field = 1;
+          }
+        }
+        /** Child. */ export class Child extends NS.Base {}
+      `,
+    });
+    const { model, files } = await analyzeReference(fixture, { prose: true });
+    expect(model.entrypoints[0]?.symbols[0]?.members.find((member) => member.name === "field")?.inheritedFrom).toBe(
+      "NS.Base",
+    );
+    expect(files[0]?.contents).toContain("Inherited from [NS.Base](#nsbase).");
+  });
+});
+
 describe("extractSignatures", () => {
   const index = extractSignatures(dts, "index.d.ts");
+
+  it("keeps every method overload across merged interfaces in source order", () => {
+    const signature = extractSignatures(`
+      export interface Reader { read(value: string): string; }
+      export interface Reader { read(value: number): number; }
+      export interface Reader { read(value: boolean): boolean; }
+    `).get("Reader");
+    expect(signature?.members?.get("read")).toBe(
+      "read(value: string): string;\nread(value: number): number;\nread(value: boolean): boolean;",
+    );
+  });
 
   it("captures a function signature as one line", () => {
     expect(index.get("createAppError")?.text).toBe(
@@ -91,6 +294,35 @@ describe("extractSignatures", () => {
     expect(index.get("browserErrorRegistry")?.text).toBe(
       "export declare const browserErrorRegistry: ReadonlyErrorRegistry;",
     );
+  });
+
+  it("preserves whitespace in member string and template literal types", () => {
+    const members = extractSignatures(
+      'export interface Format { readonly separator?: "a  b"; pattern: `a  ${string}  b`; }',
+    ).get("Format")?.members;
+    expect(members?.get("separator")).toBe('readonly separator?: "a  b";');
+    expect(members?.get("pattern")).toBe("pattern: `a  ${string}  b`;");
+  });
+
+  it("preserves newlines after line comments inside member declarations", () => {
+    const declaration = "read(\n    // The next token must remain a parameter.\n    value: string\n  ): void;";
+    expect(extractSignatures(`export interface Reader { ${declaration} }`).get("Reader")?.members?.get("read")).toBe(
+      declaration,
+    );
+  });
+
+  it("cleans actual import types without rewriting string or template literal contents", () => {
+    const declarations = [
+      "export declare const syntax: \"import('./types.js').Value\";",
+      'export type Pattern = `import("./types.js").Value  ${string}`;',
+      'export type Actual = import("./types.js").Value<import("./types.js").Other>;',
+      'export type Query = typeof import("./types.js").value;',
+    ];
+    const signatures = extractSignatures(declarations.join("\n"));
+    expect(signatures.get("syntax")?.text).toBe(declarations[0]);
+    expect(signatures.get("Pattern")?.text).toBe(declarations[1]);
+    expect(signatures.get("Actual")?.text).toBe("export type Actual = Value<Other>;");
+    expect(signatures.get("Query")?.text).toBe("export type Query = typeof value;");
   });
 
   it("captures an enum header and members", () => {

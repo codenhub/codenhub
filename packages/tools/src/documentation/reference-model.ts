@@ -10,6 +10,7 @@ const KIND_INTERFACE = 256;
 const KIND_CONSTRUCTOR = 512;
 const KIND_PROPERTY = 1024;
 const KIND_METHOD = 2048;
+const KIND_INDEX_SIGNATURE = 8192;
 const KIND_ACCESSOR = 262144;
 const KIND_TYPE_ALIAS = 2097152;
 const KIND_REFERENCE = 4194304;
@@ -39,7 +40,13 @@ const SYMBOL_KIND_ORDER: readonly ReferenceSymbolKind[] = [
 export type ReferenceSymbolKind = "function" | "class" | "interface" | "type-alias" | "enum" | "variable" | "namespace";
 
 /** A member kind inside a class, interface, or enum. */
-export type ReferenceMemberKind = "constructor" | "property" | "method" | "accessor" | "enum-member";
+export type ReferenceMemberKind =
+  | "constructor"
+  | "property"
+  | "method"
+  | "accessor"
+  | "enum-member"
+  | "index-signature";
 
 /** A named entry documented from a `@param` or `@typeParam` tag. */
 export interface ReferenceNamedDoc {
@@ -62,7 +69,7 @@ export interface ReferenceMember extends ReferenceProse {
   /** Whether the member is `static`. */
   isStatic: boolean;
   /**
-   * Bare name of the type this member is inherited from, when it is not declared
+   * Qualified name of the type this member is inherited from, when it is not declared
    * in place. Set for a member reached through `extends`; the empty string when
    * the member is inherited but the source type could not be named. An inherited
    * member carries no `signature` or prose — it is rendered as a link to the type
@@ -107,6 +114,13 @@ export interface ReferenceOverload extends ReferenceProse {
 export interface ReferenceSymbol extends ReferenceProse {
   /** Symbol name as exported. `default` for an anonymous default export. */
   name: string;
+  /**
+   * The binding the entrypoint exports, when `name` differs from it: `default` for a
+   * default export named after its declaration. Lookups by export use this name.
+   */
+  exportName?: string;
+  /** Whether the same declaration is also exported as `default` on this page. */
+  alsoExportedAsDefault?: boolean;
   /** Declaration kind. */
   kind: ReferenceSymbolKind;
   /** `@defaultValue` text for a variable or property, when present. */
@@ -263,6 +277,10 @@ interface Reflection {
   comment?: Comment;
   children?: Reflection[];
   signatures?: Reflection[];
+  getSignature?: Reflection;
+  setSignature?: Reflection;
+  indexSignatures?: Reflection[];
+  type?: { declaration?: Reflection };
   parameters?: Reflection[];
   typeParameters?: Reflection[];
   sources?: SourceReference[];
@@ -294,7 +312,8 @@ function renderParts(parts: CommentPart[] | undefined): string {
     .map((part) => {
       if (part.kind === "inline-tag") {
         const label = (part.text ?? "").trim();
-        return label === "" ? "" : `{@link ${label}}`;
+        const target = typeof part.target === "string" ? part.target : label;
+        return label === "" ? "" : `{@link ${target}${target === label ? "" : ` | ${label}`}}`;
       }
       return part.text ?? "";
     })
@@ -378,7 +397,10 @@ function namedDocs(declared: Reflection[] | undefined, comment: Comment | undefi
 
 /** Parameters or type parameters declared across every call signature, overloads included. */
 function signatureParts(reflection: Reflection, part: "parameters" | "typeParameters"): Reflection[] | undefined {
-  const signatures = reflection.signatures ?? [];
+  const signatures = [
+    ...(reflection.signatures ?? []),
+    ...[reflection.getSignature, reflection.setSignature].flatMap((signature) => signature ?? []),
+  ];
   return signatures.length === 0 ? undefined : signatures.flatMap((signature) => signature[part] ?? []);
 }
 
@@ -394,6 +416,8 @@ function memberKind(kind: number): ReferenceMemberKind | undefined {
       return "accessor";
     case KIND_ENUM_MEMBER:
       return "enum-member";
+    case KIND_INDEX_SIGNATURE:
+      return "index-signature";
     default:
       return undefined;
   }
@@ -401,11 +425,28 @@ function memberKind(kind: number): ReferenceMemberKind | undefined {
 
 /** The comment for a member or symbol: on the declaration, or on its first commented call signature. */
 function declarationComment(reflection: Reflection): Comment | undefined {
+  if (
+    reflection.comment === undefined &&
+    (reflection.getSignature !== undefined || reflection.setSignature !== undefined)
+  ) {
+    const comments = [reflection.getSignature?.comment, reflection.setSignature?.comment].flatMap((comment) =>
+      comment === undefined ? [] : [comment],
+    );
+    return comments.length === 0
+      ? undefined
+      : {
+          summary: comments.flatMap((comment, index) => [
+            ...(index === 0 ? [] : [{ kind: "text", text: "\n\n" }]),
+            ...(comment.summary ?? []),
+          ]),
+          blockTags: comments.flatMap((comment) => comment.blockTags ?? []),
+        };
+  }
   return reflection.comment ?? reflection.signatures?.find((signature) => signature.comment !== undefined)?.comment;
 }
 
 /**
- * The bare name of the type a member is inherited from, or `undefined` when the
+ * The qualified name of the type a member is inherited from, or `undefined` when the
  * member is declared in place. Returns the empty string when the member is
  * inherited but `inheritedFrom` carried no usable name.
  */
@@ -414,7 +455,11 @@ function inheritedTypeName(reflection: Reflection): string | undefined {
     return undefined;
   }
   const qualified = reflection.inheritedFrom?.name;
-  return typeof qualified === "string" && qualified !== "" ? (qualified.split(".")[0] ?? "") : "";
+  return typeof qualified === "string" && qualified !== ""
+    ? qualified.includes(".")
+      ? qualified.slice(0, qualified.lastIndexOf("."))
+      : qualified
+    : "";
 }
 
 function buildMember(reflection: Reflection): ReferenceMember | undefined {
@@ -467,9 +512,10 @@ function sortMembers(members: ReferenceMember[]): ReferenceMember[] {
     property: 2,
     accessor: 3,
     method: 4,
+    "index-signature": 5,
   };
   return [...members].sort(
-    (left, right) => order[left.kind] - order[right.kind] || left.name.localeCompare(right.name),
+    (left, right) => order[left.kind] - order[right.kind] || left.name.localeCompare(right.name, "en"),
   );
 }
 
@@ -542,8 +588,23 @@ function buildSymbol(
     .find((found) => found !== undefined);
   const members = sortMembers(
     ordered
-      .filter((candidate) => candidate.kind === "class" || candidate.kind === "interface" || candidate.kind === "enum")
-      .flatMap((candidate) => (candidate.declaration.children ?? []).flatMap((child) => buildMember(child) ?? [])),
+      .filter(
+        (candidate) =>
+          candidate.kind === "class" ||
+          candidate.kind === "interface" ||
+          candidate.kind === "enum" ||
+          candidate.kind === "type-alias",
+      )
+      .flatMap((candidate) => {
+        const declaration =
+          candidate.kind === "type-alias" ? candidate.declaration.type?.declaration : candidate.declaration;
+        const indexes = declaration?.indexSignatures ?? [];
+        const first = indexes[0];
+        return [
+          ...(candidate.kind === "type-alias" ? [] : (declaration?.children ?? [])),
+          ...(first === undefined ? [] : [{ ...first, signatures: indexes }]),
+        ].flatMap((child) => buildMember(child) ?? []);
+      }),
   );
   const namespaceMembers = buildSymbols(
     ordered
@@ -606,7 +667,13 @@ function proseOf(
 function overloadsOf(declaration: Reflection): ReferenceOverload[] {
   const signatures = declaration.signatures ?? [];
   const comments = new Set(
-    signatures.flatMap((signature) => (signature.comment === undefined ? [] : [JSON.stringify(signature.comment)])),
+    signatures.map((signature) =>
+      JSON.stringify({
+        comment: signature.comment,
+        parameters: (signature.parameters ?? []).flatMap((parameter) => parameter.comment ?? []),
+        typeParameters: (signature.typeParameters ?? []).flatMap((parameter) => parameter.comment ?? []),
+      }),
+    ),
   );
   if (comments.size < 2) {
     return [];
@@ -634,15 +701,33 @@ function buildSymbols(
   children: readonly Reflection[],
   resolve: (id: number) => Reflection | undefined,
 ): ReferenceSymbol[] {
-  const groups = groupChildren(children, resolve).values();
-  return sortSymbols([...groups].flatMap((declarations) => buildSymbol(declarations, resolve) ?? []));
+  const groups = groupChildren(children, resolve);
+  const defaultDeclaration = groups.get("default")?.[0]?.declaration;
+  const namedDefault =
+    defaultDeclaration === undefined
+      ? undefined
+      : [...groups].find(
+          ([name, declarations]) =>
+            name !== "default" && declarations.some(({ declaration }) => declaration === defaultDeclaration),
+        )?.[0];
+  return sortSymbols(
+    [...groups].flatMap(([name, declarations]) => {
+      if (name === "default" && namedDefault !== undefined) {
+        return [];
+      }
+      const symbol = buildSymbol(declarations, resolve);
+      return symbol === undefined
+        ? []
+        : [{ ...symbol, ...(name === namedDefault ? { alsoExportedAsDefault: true } : {}) }];
+    }),
+  );
 }
 
 function sortSymbols(symbols: ReferenceSymbol[]): ReferenceSymbol[] {
   return [...symbols].sort(
     (left, right) =>
       SYMBOL_KIND_ORDER.indexOf(left.kind) - SYMBOL_KIND_ORDER.indexOf(right.kind) ||
-      left.name.localeCompare(right.name),
+      left.name.localeCompare(right.name, "en"),
   );
 }
 
@@ -692,6 +777,75 @@ function sourceFileOf(target: Reflection): string | undefined {
   return typeof fileName === "string" ? stripLeadingDotSlash(fileName) : undefined;
 }
 
+/** Keeps resolved reflection identities in comment links before flattening their display text. */
+function withResolvedCommentTargets(project: Reflection): Reflection {
+  const resolve = indexReflections(project);
+  const byModule = new Map<Reflection, Map<number, string>>();
+  const allNames = new Map<number, string>();
+  const record = (
+    reflection: Reflection,
+    qualifier: string,
+    names: Map<number, string>,
+    seen: Set<Reflection>,
+  ): void => {
+    if (typeof reflection.name !== "string") {
+      return;
+    }
+    const declaration =
+      reflection.kind === KIND_REFERENCE && typeof reflection.target === "number"
+        ? (resolve(reflection.target) ?? reflection)
+        : reflection;
+    const qualified = qualifier === "" ? reflection.name : `${qualifier}.${reflection.name}`;
+    for (const target of [reflection, declaration, ...(declaration.signatures ?? [])]) {
+      if (typeof target.id === "number" && !names.has(target.id)) {
+        names.set(target.id, qualified);
+      }
+    }
+    if (!seen.has(declaration)) {
+      for (const child of declaration.children ?? []) {
+        record(child, qualified, names, new Set([...seen, declaration]));
+      }
+    }
+  };
+  for (const module of project.children ?? []) {
+    const names = new Map<number, string>();
+    for (const child of module.children ?? []) {
+      record(child, "", names, new Set());
+    }
+    byModule.set(module, names);
+    for (const [id, name] of names) {
+      if (!allNames.has(id)) {
+        allNames.set(id, name);
+      }
+    }
+  }
+  const rewrite = (value: unknown, names: ReadonlyMap<number, string>): unknown => {
+    if (Array.isArray(value)) {
+      return value.map((entry) => rewrite(entry, names));
+    }
+    if (!isRecord(value)) {
+      return value;
+    }
+    const copy = Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, rewrite(entry, names)]));
+    if (value.kind === "inline-tag" && typeof value.target === "number") {
+      copy.target = names.get(value.target) ?? value.target;
+    }
+    if (isRecord(value.inheritedFrom) && typeof value.inheritedFrom.target === "number") {
+      copy.inheritedFrom = {
+        ...value.inheritedFrom,
+        name: names.get(value.inheritedFrom.target) ?? value.inheritedFrom.name,
+      };
+    }
+    return copy;
+  };
+  return {
+    ...project,
+    children: project.children?.map(
+      (module) => rewrite(module, new Map([...allNames, ...(byModule.get(module) ?? [])])) as Reflection,
+    ),
+  };
+}
+
 /**
  * Transforms a TypeDoc JSON project into the presentation-neutral reference model.
  *
@@ -702,16 +856,16 @@ function sourceFileOf(target: Reflection): string | undefined {
  * dropped; members inherited from another type in the package are kept as a bare
  * reference to that type, without repeating its signature or prose.
  * @param project Parsed `typedoc --json` output.
- * @param subpathByModule Maps each TypeDoc module name to its `exports` subpath key.
+ * @param subpathByModule Maps each entry source path (or TypeDoc module name) to its `exports` subpath key.
  * @returns The reference model, with entrypoints in the order `subpathByModule` iterates.
- * @throws When `project` is not an object or names a module with no mapped subpath.
+ * @throws When `project` is not an object or an expected entrypoint module is missing.
  */
 export function buildReferenceModel(project: unknown, subpathByModule: Record<string, string>): ReferenceModel {
   if (!isRecord(project)) {
     throw new Error("Invalid TypeDoc project: expected an object.");
   }
 
-  const root = project as Reflection;
+  const root = withResolvedCommentTargets(project as Reflection);
   const resolve = indexReflections(root);
   const packageName = typeof root.name === "string" ? root.name : "";
 
@@ -720,7 +874,18 @@ export function buildReferenceModel(project: unknown, subpathByModule: Record<st
   const unsupported: UnsupportedExport[] = [];
 
   for (const [module, subpath] of Object.entries(subpathByModule)) {
-    const reflection = modules.find((candidate) => candidate.name === module);
+    const reflection = modules.find((candidate) =>
+      module.startsWith("src/")
+        ? candidate.sources?.some(
+            (source) =>
+              typeof source.fileName === "string" &&
+              source.fileName.replaceAll("\\", "/").replace(/^\.\//, "") === module,
+          )
+        : candidate.name === module,
+    );
+    if (reflection === undefined) {
+      throw new Error(`Reference entrypoint "${subpath}" has no TypeDoc module for "${module}".`);
+    }
     const children = reflection?.children ?? [];
     for (const name of unsupportedNames(children, resolve)) {
       unsupported.push({ name, subpath });

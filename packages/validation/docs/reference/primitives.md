@@ -1,5 +1,5 @@
 ---
-title: Primitives
+title: "Primitives"
 order: 8
 ---
 
@@ -260,7 +260,10 @@ Constraints and clean-up for [number](#number). Every option is optional. Rarer 
 #### clamp
 
 ```ts
-clamp?: { min: number; max: number; } | undefined;
+clamp?: {
+        min: number;
+        max: number;
+    } | undefined;
 ```
 
 Moves the value into this range instead of rejecting it, before the constraints run and in the output.
@@ -617,7 +620,7 @@ type GlobalFile = typeof globalThis extends {
 } ? TFile : FileLike;
 ```
 
-The runtime's own `File`, read from `globalThis` so that a public signature names no global, which a program compiled without the types of the DOM or of Node.js could not resolve; `FileLike` for one.
+The runtime's own `File`, read from `globalThis` so that a public signature names no global, which a program compiled without the types of the DOM or of Node.js could not resolve; [FileLike](#filelike) for one.
 
 Not exported; declared in `src/primitives/file.ts`.
 

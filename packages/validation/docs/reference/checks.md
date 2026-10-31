@@ -1,5 +1,5 @@
 ---
-title: Checks
+title: "Checks"
 order: 2
 ---
 
@@ -300,6 +300,6 @@ type GlobalFile = typeof globalThis extends {
 } ? TFile : FileLike;
 ```
 
-The runtime's own `File`, read from `globalThis` so that a public signature names no global, which a program compiled without the types of the DOM or of Node.js could not resolve; `FileLike` for one.
+The runtime's own `File`, read from `globalThis` so that a public signature names no global, which a program compiled without the types of the DOM or of Node.js could not resolve; [FileLike](#filelike) for one.
 
 Not exported; declared in `src/primitives/file.ts`.

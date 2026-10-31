@@ -1,19 +1,20 @@
 import { matchesGlob, posix } from "node:path";
 
 import { format, resolveConfig } from "prettier";
-import { Application, normalizePath, TSConfigReader } from "typedoc";
+import { Application, Converter, normalizePath, TSConfigReader } from "typedoc";
+import ts from "typescript";
 
 import { parseReferenceConfig, type ReferenceConfig } from "../documentation/reference-config.ts";
 import {
   emitDeclarations,
+  expandEntrypoint,
   readAmbientDeclarations,
   resolveEntrypoints,
   type EntrypointPlan,
 } from "../documentation/reference-declarations.ts";
-import { renderReferencePage, symbolSlug } from "../documentation/reference-markdown.ts";
+import { referencePageSlugs, renderReferencePage } from "../documentation/reference-markdown.ts";
 import {
   buildReferenceModel,
-  walkSymbols,
   type ReferenceEntrypoint,
   type ReferenceModel,
 } from "../documentation/reference-model.ts";
@@ -93,7 +94,9 @@ function splitEntrypoints(
       file === undefined
         ? undefined
         : split.find(([, page]) => page.source.some((glob) => matchesGlob(file, glob)))?.[0];
-    const bySplit = Map.groupBy(entrypoint.symbols, (symbol) => pageOf(declaredIn(entrypoint.subpath, symbol.name)));
+    const bySplit = Map.groupBy(entrypoint.symbols, (symbol) =>
+      pageOf(declaredIn(entrypoint.subpath, symbol.exportName ?? symbol.name)),
+    );
     return [
       { ...entrypoint, symbols: bySplit.get(undefined) ?? [] },
       ...split.map(([page]): ReferenceEntrypoint => {
@@ -115,15 +118,18 @@ function splitEntrypoints(
 }
 
 /** Builds a `{@link}` resolver: for a page, an href to another page's symbol, or `undefined`. */
-function linkResolverFor(pageRels: ReadonlyMap<ReferenceEntrypoint, string>) {
+function linkResolverFor(
+  pageRels: ReadonlyMap<ReferenceEntrypoint, string>,
+  slugsFor: (entrypoint: ReferenceEntrypoint) => ReadonlyMap<string, string>,
+) {
   // A symbol several entrypoints export is documented under each, so a name has a page per subpath.
-  const pagesBySymbol = new Map<string, Map<string, string>>();
+  const pagesBySymbol = new Map<string, Map<string, { path: string; anchor: string }>>();
   for (const [entrypoint, pageRel] of pageRels) {
-    for (const [qualifiedName] of walkSymbols(entrypoint.symbols)) {
-      const bySubpath = pagesBySymbol.get(qualifiedName) ?? new Map<string, string>();
+    for (const [qualifiedName, anchor] of slugsFor(entrypoint)) {
+      const bySubpath = pagesBySymbol.get(qualifiedName) ?? new Map<string, { path: string; anchor: string }>();
       pagesBySymbol.set(qualifiedName, bySubpath);
       if (!bySubpath.has(entrypoint.subpath)) {
-        bySubpath.set(entrypoint.subpath, pageRel);
+        bySubpath.set(entrypoint.subpath, { path: pageRel, anchor });
       }
     }
   }
@@ -132,12 +138,12 @@ function linkResolverFor(pageRels: ReadonlyMap<ReferenceEntrypoint, string>) {
     (name: string): string | undefined => {
       const bySubpath = pagesBySymbol.get(name);
       // The linking entrypoint's own copy first, then the first entrypoint that documents the name.
-      const toRel = bySubpath?.get(fromSubpath) ?? bySubpath?.values().next().value;
-      if (toRel === undefined || toRel === fromRel) {
+      const target = bySubpath?.get(fromSubpath) ?? bySubpath?.values().next().value;
+      if (target === undefined || target.path === fromRel) {
         return undefined;
       }
-      const relative = posix.relative(posix.dirname(fromRel), toRel);
-      return `${relative}#${symbolSlug(name)}`;
+      const relative = posix.relative(posix.dirname(fromRel), target.path);
+      return `${relative}#${target.anchor}`;
     };
 }
 
@@ -153,7 +159,46 @@ function assertKebabEntrypoints(plans: readonly EntrypointPlan[]): void {
   }
 }
 
-async function convertProject(pkgDir: string, plans: readonly EntrypointPlan[]): Promise<unknown> {
+function assertResolvedImports(program: ts.Program, entry: ts.SourceFile, packageName: string): void {
+  const checker = program.getTypeChecker();
+  const visited = new Set<ts.SourceFile>();
+  const visitFile = (file: ts.SourceFile): void => {
+    if (visited.has(file)) {
+      return;
+    }
+    visited.add(file);
+    const visit = (node: ts.Node): void => {
+      const specifier =
+        ts.isImportDeclaration(node) || ts.isExportDeclaration(node)
+          ? node.moduleSpecifier
+          : ts.isExternalModuleReference(node)
+            ? node.expression
+            : ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)
+              ? node.argument.literal
+              : ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword
+                ? node.arguments[0]
+                : undefined;
+      if (specifier !== undefined && ts.isStringLiteralLike(specifier)) {
+        const symbol = checker.getSymbolAtLocation(specifier);
+        if (symbol === undefined) {
+          throw new Error(
+            `Reference for ${packageName} cannot resolve module "${specifier.text}" imported by ${file.fileName}. Build dependencies first with \`pnpm build ${packageName}\`, then rerun.`,
+          );
+        }
+        for (const declaration of symbol.declarations ?? []) {
+          if (ts.isSourceFile(declaration) && !program.isSourceFileFromExternalLibrary(declaration)) {
+            visitFile(declaration);
+          }
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    ts.forEachChild(file, visit);
+  };
+  visitFile(entry);
+}
+
+async function convertProject(pkgDir: string, plans: readonly EntrypointPlan[], packageName: string): Promise<unknown> {
   const application = await Application.bootstrap(
     {
       // Without this, TypeDoc collapses a single entry point's exports onto the
@@ -161,7 +206,8 @@ async function convertProject(pkgDir: string, plans: readonly EntrypointPlan[]):
       // `root.children.filter(isModule)` finds nothing for it — every symbol on a
       // package with exactly one documented entrypoint would render as an empty page.
       alwaysCreateEntryPointModule: true,
-      entryPoints: plans.map((plan) => `${pkgDir}/src/${plan.sourceRel}`),
+      basePath: pkgDir,
+      entryPoints: [...new Set(plans.map((plan) => `${pkgDir}/src/${plan.sourceRel}`))],
       entryPointStrategy: "resolve",
       excludeInternal: true,
       // TSDoc reads `@defaultValue` as Markdown. TypeDoc's JSDoc compatibility instead
@@ -176,6 +222,16 @@ async function convertProject(pkgDir: string, plans: readonly EntrypointPlan[]):
     },
     [new TSConfigReader()],
   );
+  application.converter.on(Converter.EVENT_BEGIN, (context) => {
+    for (const program of context.programs) {
+      for (const plan of plans) {
+        const source = program.getSourceFile(`${pkgDir}/src/${plan.sourceRel}`);
+        if (source !== undefined) {
+          assertResolvedImports(program, source, packageName);
+        }
+      }
+    }
+  });
   const project = await application.convert();
   if (project === undefined) {
     throw new Error(`TypeDoc could not analyse ${pkgDir}.`);
@@ -213,23 +269,45 @@ export interface ReferenceAnalysis {
  * @param workspacePackage The package.
  * @param config Its parsed `codenhub.docs.reference`.
  * @returns The model and the rendered, formatted pages.
- * @throws When an entrypoint is unresolved, non-kebab-case, or collides with another.
+ * @throws When an entrypoint or its source imports cannot be resolved, a name is not kebab-case, or pages collide.
  */
 export async function analyzeReference(
   workspacePackage: WorkspacePackage,
   config: ReferenceConfig,
 ): Promise<ReferenceAnalysis> {
   const pkgDir = workspacePackage.directory.split("\\").join("/");
-  const plans = resolveEntrypoints(workspacePackage.manifest.exports, config);
+  const resolved = resolveEntrypoints(workspacePackage.manifest.exports, config, pkgDir);
+  const expanded = (
+    await Promise.all(
+      resolved.map(async (plan) =>
+        (await expandEntrypoint(pkgDir, plan, `dist/${plan.entryDts}`)).filter(
+          (entry) =>
+            entry.subpath === plan.subpath ||
+            !Object.hasOwn(workspacePackage.manifest.exports as object, entry.subpath),
+        ),
+      ),
+    )
+  ).flat();
+  const plans = expanded.map((plan) => ({
+    ...plan,
+    module: `src/${plan.sourceRel}`,
+  }));
   assertKebabEntrypoints(plans);
 
-  const subpathByModule = Object.fromEntries(plans.map((plan) => [plan.module, plan.subpath]));
   const declarations = emitDeclarations(pkgDir, plans);
   const entryDtsBySubpath = new Map(plans.map((plan) => [plan.subpath, plan.entryDts]));
   const resolver = buildDeclarationResolver(declarations);
+  const project = await convertProject(pkgDir, plans, workspacePackage.name);
+  const entryModels = plans.map((plan) => buildReferenceModel(project, { [plan.module]: plan.subpath }));
+  const converted: ReferenceModel = {
+    entrypoints: entryModels.flatMap((model) => model.entrypoints),
+    packageName: entryModels[0]?.packageName ?? workspacePackage.name,
+    unresolved: [],
+    unsupported: entryModels.flatMap((model) => model.unsupported),
+  };
   const model = attachInternalTypes(
     splitEntrypoints(
-      withSignatures(buildReferenceModel(await convertProject(pkgDir, plans), subpathByModule), plans, declarations),
+      withSignatures(converted, plans, declarations),
       config.pages,
       // The emitted declarations place a symbol where TypeDoc's source paths cannot: those are
       // relative to whatever directory the sources share, not to the package.
@@ -240,7 +318,7 @@ export async function analyzeReference(
     ),
     declarations,
     entryDtsBySubpath,
-    readAmbientDeclarations(pkgDir),
+    readAmbientDeclarations(pkgDir, plans),
   );
 
   const pageRels = new Map(
@@ -251,32 +329,40 @@ export async function analyzeReference(
     throw new Error(`Reference pages collide on page path: ${[...new Set(collisions)].join(", ")}.`);
   }
 
-  const resolveLinkFor = linkResolverFor(pageRels);
   const sourceRoot = `${workspacePackage.location}/src`;
+  const pageOptionsFor = (entrypoint: ReferenceEntrypoint, index: number) => {
+    const pageRel = pageRels.get(entrypoint) ?? referencePagePath(entrypoint, model.entrypoints);
+    const isIndex = pageRel === "index.md";
+    const pages = config.pages?.[entrypoint.subpath];
+    // A label is both the sidebar label and the H1. Without one, the sidebar label is
+    // the package name, then what a consumer appends to it (`/registries/browser`),
+    // and the H1 is the full specifier a consumer would `import` from.
+    const label =
+      entrypoint.page === undefined ? pages?.label : (pages?.split?.[entrypoint.page]?.label ?? entrypoint.page);
+    const suffix = entrypoint.subpath.slice(1);
+    const specifier = `${workspacePackage.name}${suffix}`;
+    return {
+      description: entrypoint.description,
+      group: isIndex ? REFERENCE_GROUP : undefined,
+      heading: label ?? specifier,
+      order: isIndex ? undefined : index,
+      prose: config.prose,
+      since: entrypoint.since,
+      sourceRoot,
+      title: label ?? (suffix === "" ? specifier : suffix),
+    };
+  };
+  const resolveLinkFor = linkResolverFor(pageRels, (entrypoint) =>
+    referencePageSlugs(entrypoint, pageOptionsFor(entrypoint, 0)),
+  );
 
   const files = await Promise.all(
     model.entrypoints.map(async (entrypoint, index) => {
       const pageRel = pageRels.get(entrypoint) ?? referencePagePath(entrypoint, model.entrypoints);
-      const isIndex = pageRel === "index.md";
-      const pages = config.pages?.[entrypoint.subpath];
-      // A label is both the sidebar label and the H1. Without one, the sidebar label is
-      // the package name, then what a consumer appends to it (`/registries/browser`),
-      // and the H1 is the full specifier a consumer would `import` from.
-      const label =
-        entrypoint.page === undefined ? pages?.label : (pages?.split?.[entrypoint.page]?.label ?? entrypoint.page);
-      const suffix = entrypoint.subpath.slice(1);
-      const specifier = `${workspacePackage.name}${suffix}`;
       const filepath = `${pkgDir}/${REFERENCE_DIR}/${pageRel}`;
       const rendered = renderReferencePage(entrypoint, {
-        description: entrypoint.description,
-        group: isIndex ? REFERENCE_GROUP : undefined,
-        heading: label ?? specifier,
-        order: isIndex ? undefined : index,
-        prose: config.prose,
+        ...pageOptionsFor(entrypoint, index),
         resolveLink: resolveLinkFor(entrypoint.subpath, pageRel),
-        since: entrypoint.since,
-        sourceRoot,
-        title: label ?? (suffix === "" ? specifier : suffix),
       });
       // Run the same formatter `pnpm format` applies — resolveConfig folds in the
       // docs/reference/ override — so a generated page is never reported as needing

@@ -1,5 +1,5 @@
 ---
-title: /client
+title: "/client"
 order: 1
 ---
 
@@ -458,7 +458,7 @@ readonly acr?: string;
 readonly amr?: readonly string[];
 ```
 
-#### at_hash
+#### at\_hash
 
 ```ts
 readonly at_hash?: string;
@@ -470,7 +470,7 @@ readonly at_hash?: string;
 readonly aud: string | readonly string[];
 ```
 
-#### auth_time
+#### auth\_time
 
 ```ts
 readonly auth_time?: number;
@@ -517,6 +517,14 @@ readonly nonce?: string;
 ```ts
 readonly sub: string;
 ```
+
+#### Index signature
+
+```ts
+readonly [claim: string]: unknown;
+```
+
+Any other claim the provider included.
 
 ### OidcErr
 
@@ -662,13 +670,13 @@ export interface ProviderMetadata
 
 An OpenID Provider's metadata (OpenID Connect Discovery 1.0 §3, RFC 8414 §2, RFC 9207 §3), as this package reads and publishes it. Members this package does not use are kept as they were received.
 
-#### authorization_endpoint
+#### authorization\_endpoint
 
 ```ts
 readonly authorization_endpoint: string;
 ```
 
-#### authorization_response_iss_parameter_supported
+#### authorization\_response\_iss\_parameter\_supported
 
 ```ts
 readonly authorization_response_iss_parameter_supported?: boolean;
@@ -676,25 +684,25 @@ readonly authorization_response_iss_parameter_supported?: boolean;
 
 Whether the provider sends `iss` in authorization responses (RFC 9207).
 
-#### claims_parameter_supported
+#### claims\_parameter\_supported
 
 ```ts
 readonly claims_parameter_supported?: boolean;
 ```
 
-#### claims_supported
+#### claims\_supported
 
 ```ts
 readonly claims_supported?: readonly string[];
 ```
 
-#### code_challenge_methods_supported
+#### code\_challenge\_methods\_supported
 
 ```ts
 readonly code_challenge_methods_supported?: readonly string[];
 ```
 
-#### end_session_endpoint
+#### end\_session\_endpoint
 
 ```ts
 readonly end_session_endpoint?: string;
@@ -702,13 +710,13 @@ readonly end_session_endpoint?: string;
 
 RP-Initiated Logout 1.0 §2.1.
 
-#### grant_types_supported
+#### grant\_types\_supported
 
 ```ts
 readonly grant_types_supported?: readonly string[];
 ```
 
-#### id_token_signing_alg_values_supported
+#### id\_token\_signing\_alg\_values\_supported
 
 ```ts
 readonly id_token_signing_alg_values_supported: readonly string[];
@@ -722,37 +730,37 @@ readonly issuer: string;
 
 The issuer identifier. Always equal, byte for byte, to the issuer the document was fetched for.
 
-#### jwks_uri
+#### jwks\_uri
 
 ```ts
 readonly jwks_uri: string;
 ```
 
-#### request_parameter_supported
+#### request\_parameter\_supported
 
 ```ts
 readonly request_parameter_supported?: boolean;
 ```
 
-#### request_uri_parameter_supported
+#### request\_uri\_parameter\_supported
 
 ```ts
 readonly request_uri_parameter_supported?: boolean;
 ```
 
-#### response_modes_supported
+#### response\_modes\_supported
 
 ```ts
 readonly response_modes_supported?: readonly string[];
 ```
 
-#### response_types_supported
+#### response\_types\_supported
 
 ```ts
 readonly response_types_supported: readonly string[];
 ```
 
-#### revocation_endpoint
+#### revocation\_endpoint
 
 ```ts
 readonly revocation_endpoint?: string;
@@ -760,53 +768,61 @@ readonly revocation_endpoint?: string;
 
 The token revocation endpoint (RFC 7009, RFC 8414 §2).
 
-#### revocation_endpoint_auth_methods_supported
+#### revocation\_endpoint\_auth\_methods\_supported
 
 ```ts
 readonly revocation_endpoint_auth_methods_supported?: readonly string[];
 ```
 
-#### revocation_endpoint_auth_signing_alg_values_supported
+#### revocation\_endpoint\_auth\_signing\_alg\_values\_supported
 
 ```ts
 readonly revocation_endpoint_auth_signing_alg_values_supported?: readonly string[];
 ```
 
-#### scopes_supported
+#### scopes\_supported
 
 ```ts
 readonly scopes_supported?: readonly string[];
 ```
 
-#### subject_types_supported
+#### subject\_types\_supported
 
 ```ts
 readonly subject_types_supported: readonly string[];
 ```
 
-#### token_endpoint
+#### token\_endpoint
 
 ```ts
 readonly token_endpoint: string;
 ```
 
-#### token_endpoint_auth_methods_supported
+#### token\_endpoint\_auth\_methods\_supported
 
 ```ts
 readonly token_endpoint_auth_methods_supported?: readonly string[];
 ```
 
-#### token_endpoint_auth_signing_alg_values_supported
+#### token\_endpoint\_auth\_signing\_alg\_values\_supported
 
 ```ts
 readonly token_endpoint_auth_signing_alg_values_supported?: readonly string[];
 ```
 
-#### userinfo_endpoint
+#### userinfo\_endpoint
 
 ```ts
 readonly userinfo_endpoint?: string;
 ```
+
+#### Index signature
+
+```ts
+readonly [member: string]: unknown;
+```
+
+Any other metadata member, unused by this package.
 
 ### Refreshed
 
@@ -905,7 +921,9 @@ The validated ID token's claims.
 #### tokens
 
 ```ts
-readonly tokens: TokenSet & { readonly idToken: string; };
+readonly tokens: TokenSet & {
+        readonly idToken: string;
+    };
 ```
 
 The tokens, with `idToken` always present.
@@ -975,6 +993,14 @@ readonly sub: string;
 ```
 
 Always equal to the ID token's `sub` the caller expected.
+
+#### Index signature
+
+```ts
+readonly [claim: string]: unknown;
+```
+
+Any other claim the provider released for the granted scopes.
 
 ### UserinfoOptions
 

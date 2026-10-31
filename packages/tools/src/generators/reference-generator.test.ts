@@ -1,3 +1,6 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { resolveEntrypoints } from "../documentation/reference-declarations.ts";
@@ -42,6 +45,32 @@ describe("resolveEntrypoints", () => {
       entrypoints: ["./registries/browser", "."],
     });
     expect(plans.map((plan) => plan.subpath)).toEqual(["./registries/browser", "."]);
+  });
+
+  it("resolves type targets nested in export conditions", () => {
+    const plans = resolveEntrypoints(
+      {
+        "./client": { import: { types: "./dist/client.d.ts", default: "./dist/client.js" } },
+        "./server": { types: { default: "./dist/server.d.ts" } },
+      },
+      { prose: true },
+    );
+    expect(plans.map(({ subpath, entryDts }) => ({ subpath, entryDts }))).toEqual([
+      { subpath: "./client", entryDts: "client.d.ts" },
+      { subpath: "./server", entryDts: "server.d.ts" },
+    ]);
+  });
+
+  it("selects only subpaths with type targets by default", () => {
+    const plans = resolveEntrypoints(
+      {
+        ".": { types: "./dist/index.d.ts" },
+        "./runtime": { import: "./dist/runtime.js" },
+        "./direct": "./dist/direct.d.ts",
+      },
+      { prose: true },
+    );
+    expect(plans.map((plan) => plan.subpath)).toEqual([".", "./direct"]);
   });
 
   it("throws for a configured entrypoint that is not exported", () => {
@@ -148,6 +177,29 @@ describe("analyzeReference pages", () => {
   const page = (files: { path: string; contents: string }[], name: string): string =>
     files.find((file) => file.path.endsWith(`docs/reference/${name}`))?.contents ?? "";
 
+  it("uses each destination page's allocated anchors for cross-page links", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("fixture-anchor-collisions", {
+      "index.ts":
+        "/** See {@link Foo}, {@link foo}, {@link Functions}, {@link Err}, {@link err}. */\nexport function use(): void {}",
+      "target.ts": [
+        "/** First. */ export function Foo(): void {}",
+        "/** Second. */ export function foo(): void {}",
+        "/** Third. */ export function Functions(): void {}",
+        "/** Reader. */ export interface Reader { /** Earlier heading. */ err: string; }",
+        "/** Error type. */ export type Err = string;",
+        "/** Error value. */ export const err = 1;",
+      ].join("\n"),
+    });
+    (fixture.manifest.exports as Record<string, unknown>)["./target"] = { types: "./dist/target.d.ts" };
+    const { files } = await analyzeReference(fixture, { prose: true, pages: { "./target": { label: "Foo" } } });
+    const root = page(files, "index.md");
+    expect(root).toContain("[Foo](target.md#foo-2)");
+    expect(root).toContain("[foo](target.md#foo-1)");
+    expect(root).toContain("[Functions](target.md#functions-1)");
+    expect(root).toContain("[Err](target.md#err-1)");
+    expect(root).toContain("[err](target.md#err-2)");
+  });
+
   it("titles the main entrypoint's page with the package name", { timeout: 30_000 }, async () => {
     const { files } = await analyzeReference(await createSingleEntrypointFixture(), { prose: true });
 
@@ -161,9 +213,47 @@ describe("analyzeReference pages", () => {
       prose: true,
     });
 
-    expect(files[0]?.contents).toContain("title: Overview");
+    expect(files[0]?.contents).toContain('title: "Overview"');
     expect(files[0]?.contents).toContain("# Overview");
   });
+
+  it.each([undefined, ["./extra", "."]])(
+    "keeps split pages after their entrypoint in the selected order (%s)",
+    { timeout: 30_000 },
+    async (entrypoints) => {
+      const fixture = await createReferenceFixture("fixture-page-order", {
+        "index.ts": "/** Root value. */ export const root = 1;",
+        "extra.ts": 'export { detail } from "./details/value";',
+        "details/value.ts": "/** Detail value. */ export const detail = 2;",
+      });
+      (fixture.manifest.exports as Record<string, unknown>)["./extra"] = { types: "./dist/extra.d.ts" };
+      const { files, model } = await analyzeReference(fixture, {
+        entrypoints,
+        pages: { "./extra": { split: { details: { source: ["src/details/**"] } } } },
+        prose: true,
+      });
+      const expected =
+        entrypoints === undefined
+          ? ["index.md", "extra/index.md", "extra/details.md"]
+          : ["extra/index.md", "extra/details.md", "index.md"];
+      expect(files.map((file) => file.path.split("docs/reference/")[1])).toEqual(expected);
+      expect(model.entrypoints.map((entry) => [entry.subpath, entry.page])).toEqual(
+        entrypoints === undefined
+          ? [
+              [".", undefined],
+              ["./extra", undefined],
+              ["./extra", "details"],
+            ]
+          : [
+              ["./extra", undefined],
+              ["./extra", "details"],
+              [".", undefined],
+            ],
+      );
+      expect(page(files, "extra/index.md")).toContain(`order: ${expected.indexOf("extra/index.md")}`);
+      expect(page(files, "extra/details.md")).toContain(`order: ${expected.indexOf("extra/details.md")}`);
+    },
+  );
 
   it("moves symbols declared in matching sources onto a split page", { timeout: 30_000 }, async () => {
     const { files } = await analyzeReference(await createSplitFixture(), {
@@ -185,13 +275,50 @@ describe("analyzeReference pages", () => {
     expect(index).not.toContain("### circle");
     expect(index).not.toContain("## Internal types");
     expect(index).toContain("[circle](shapes.md#circle)");
-    expect(shapes).toContain("title: Shapes");
+    expect(shapes).toContain('title: "Shapes"');
     expect(shapes).toContain("order: 1");
     expect(shapes).toContain("# Shapes");
     expect(shapes).toContain("### circle");
     expect(shapes).toContain("### square");
     expect(shapes).toContain("### Radius");
     expect(shapes).toContain("[describe](index.md#describe)");
+  });
+
+  it("places a re-exported default class on the split page of its source", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-default-split", {
+      "index.ts": 'export { default } from "./service.js";\n',
+      "service.ts": "/** Service. */\nexport default class Service {\n  /** Value. */\n  value = 1;\n}\n",
+    });
+    const { files } = await analyzeReference(workspacePackage, {
+      pages: { ".": { split: { service: { source: ["src/service.ts"] } } } },
+      prose: true,
+    });
+    const service = page(files, "service.md");
+    expect(service).toContain("### Service");
+    expect(service).toContain("export default class Service\n");
+    expect(service).not.toContain("## Internal types");
+  });
+
+  it("keeps a re-exported default class out of internal types", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-default-reexport", {
+      "index.ts": [
+        'export { default } from "./service.js";',
+        '/** Config. */ export type Config = typeof import("./service.js").default;',
+        "",
+      ].join("\n"),
+      "service.ts": "/** Service. */\nexport default class Service {\n  /** X. */\n  x = 1;\n}\n",
+    });
+    const { model } = await analyzeReference(workspacePackage, { prose: true });
+    expect(model.entrypoints[0]?.symbols.map((symbol) => symbol.name).toSorted()).toEqual(["Config", "Service"]);
+    expect(model.entrypoints[0]?.internalTypes).toEqual([]);
+  });
+
+  it("links a reference to the default export to its declaration", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-default-link", {
+      "index.ts": "/** Read {@link default}. */\nexport default class Service {\n  /** X. */\n  x = 1;\n}\n",
+    });
+    const { files } = await analyzeReference(workspacePackage, { prose: true });
+    expect(files[0]?.contents).toContain("Read [default](#service).");
   });
 
   it(
@@ -210,7 +337,7 @@ describe("analyzeReference pages", () => {
         prose: true,
       });
 
-      expect(page(files, "round.md")).toContain("title: round");
+      expect(page(files, "round.md")).toContain('title: "round"');
       expect(page(files, "round.md")).toContain("### circle");
       expect(page(files, "shapes.md")).not.toContain("### circle");
       expect(page(files, "shapes.md")).toContain("### square");
@@ -315,8 +442,336 @@ function createSingleEntrypointFixture(): Promise<WorkspacePackage> {
 }
 
 describe("analyzeReference", () => {
+  it("excludes exact null exports from wildcard entrypoints", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-wildcard-null", {
+      "parts/a.ts": "/** A. */ export const a = 1;",
+      "parts/hidden.ts": "/** Private. */ export const hidden = 2;",
+    });
+    (workspacePackage.manifest as Record<string, unknown>).exports = {
+      "./parts/*": { types: "./dist/parts/*.d.ts" },
+      "./parts/hidden": null,
+    };
+    const { model } = await analyzeReference(workspacePackage, { prose: true });
+    expect(model.entrypoints.map((entry) => entry.subpath)).toEqual(["./parts/a"]);
+  });
+
+  it("uses exact typed exports instead of wildcard targets", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-wildcard-override", {
+      "parts/a.ts": "/** A. */ export const a = 1;",
+      "parts/special.ts": "/** Old. */ export const old = 1;",
+      "override.ts": "/** New. */ export const current = 2;",
+    });
+    (workspacePackage.manifest as Record<string, unknown>).exports = {
+      "./parts/*": { types: "./dist/parts/*.d.ts" },
+      "./parts/special": { types: "./dist/override.d.ts" },
+    };
+    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    expect(model.entrypoints.map((entry) => entry.subpath)).toEqual(["./parts/a", "./parts/special"]);
+    expect(files.find((file) => file.path.endsWith("/parts/special.md"))?.contents).toContain(
+      "export declare const current = 2;",
+    );
+  });
+
+  it("expands typed wildcard exports from sources before naming pages", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-wildcard", {
+      "parts/a.ts": "/** A value. */\nexport const a = 1;\n",
+      "parts/b.tsx": "/** B value. */\nexport const b = 2;\n",
+    });
+    (workspacePackage.manifest as Record<string, unknown>).exports = {
+      "./parts/*": { types: "./dist/parts/*.d.ts" },
+    };
+    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    expect(model.entrypoints.map((entry) => entry.subpath)).toEqual(["./parts/a", "./parts/b"]);
+    expect(files.map((file) => file.path)).toEqual([
+      "fixture-wildcard/docs/reference/parts/a.md",
+      "fixture-wildcard/docs/reference/parts/b.md",
+    ]);
+    expect(files[0]?.contents).toContain("export declare const a = 1;");
+    expect(files[1]?.contents).toContain("export declare const b = 2;");
+  });
+
+  it("expands an explicit wildcard entrypoint in its listed position", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-wildcard-explicit", {
+      "index.ts": "/** Root. */ export const root = 0;",
+      "parts/a.ts": "/** A. */ export const a = 1;",
+      "parts/b.ts": "/** B. */ export const b = 2;",
+      "parts/hidden.ts": "/** Private. */ export const hidden = 3;",
+    });
+    (workspacePackage.manifest as Record<string, unknown>).exports = {
+      ".": { types: "./dist/index.d.ts" },
+      "./parts/*": { types: "./dist/parts/*.d.ts" },
+      "./parts/b": { types: "./dist/parts/b.d.ts" },
+      "./parts/hidden": null,
+    };
+    const { model } = await analyzeReference(workspacePackage, {
+      prose: true,
+      entrypoints: ["./parts/b", "./parts/*", "."],
+    });
+    expect(model.entrypoints.map((entry) => entry.subpath)).toEqual(["./parts/b", "./parts/a", "."]);
+  });
+
+  it("expands export patterns across nested source directories", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-wildcard-nested", {
+      "parts/a.ts": "/** A. */ export const a = 1;",
+      "parts/nested/b.ts": "/** B. */ export const b = 2;",
+    });
+    (workspacePackage.manifest as Record<string, unknown>).exports = {
+      "./parts/*": { types: "./dist/parts/*.d.ts" },
+    };
+    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    expect(model.entrypoints.map((entry) => entry.subpath)).toEqual(["./parts/a", "./parts/nested/b"]);
+    expect(files[1]?.path).toBe("fixture-wildcard-nested/docs/reference/parts/nested/b.md");
+    expect(files[1]?.contents).toContain("export declare const b = 2;");
+  });
+
+  it("rejects a nested wildcard segment that is not kebab-case", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-wildcard-nested-invalid", {
+      "parts/a.ts": "/** A. */ export const a = 1;",
+      "parts/notKebab/b.ts": "/** B. */ export const b = 2;",
+    });
+    (workspacePackage.manifest as Record<string, unknown>).exports = {
+      "./parts/*": { types: "./dist/parts/*.d.ts" },
+    };
+    await expect(analyzeReference(workspacePackage, { prose: true })).rejects.toThrow(/notKebab.*kebab-case/);
+  });
+
+  it("ignores ambient files belonging only to a referenced test project", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-solution-test-types", {
+      "index.ts": "/** Makes a map. */\nexport function make(): Map<string, string> { return new Map(); }\n",
+      "test.d.ts": "interface Map<K, V> { testOnly: K | V; }\n",
+    });
+    await writeFile(
+      join(workspacePackage.directory, "tsconfig.json"),
+      JSON.stringify({
+        files: [],
+        references: [{ path: "./tsconfig.src.json" }, { path: "./tsconfig.test.json" }],
+      }),
+    );
+    await Promise.all(
+      (
+        [
+          ["src", ["src/index.ts"]],
+          ["test", ["src/test.d.ts"]],
+        ] as const
+      ).map(([name, files]) =>
+        writeFile(
+          join(workspacePackage.directory, `tsconfig.${name}.json`),
+          JSON.stringify({
+            compilerOptions: { target: "ESNext", module: "Preserve", composite: true, noEmit: true },
+            files,
+          }),
+        ),
+      ),
+    );
+    const { model } = await analyzeReference(workspacePackage, { prose: true });
+    expect(model.unresolved).toEqual([]);
+  });
+
+  it("uses each entry source's owning project's path aliases", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-solution-paths", {
+      "index.ts": 'import { make } from "internal-helper";\n/** Derived number. */\nexport const derived = make();\n',
+      "internal.ts": "export function make(): number { return 123; }\n",
+      "client.ts": 'import { make } from "internal-helper";\n/** Derived string. */\nexport const derived = make();\n',
+      "client-helper.ts": 'export function make(): string { return "value"; }\n',
+    });
+    (workspacePackage.manifest as Record<string, unknown>).exports = {
+      ".": { types: "./dist/index.d.ts" },
+      "./client": { types: "./dist/client.d.ts" },
+    };
+    await writeFile(
+      join(workspacePackage.directory, "tsconfig.json"),
+      JSON.stringify({
+        files: [],
+        references: [{ path: "./tsconfig.src.json" }, { path: "./tsconfig.client.json" }],
+      }),
+    );
+    await Promise.all(
+      (
+        [
+          ["src", ["src/index.ts", "src/internal.ts"], "internal.ts"],
+          ["client", ["src/client.ts", "src/client-helper.ts"], "client-helper.ts"],
+        ] as const
+      ).map(([name, files, helper]) =>
+        writeFile(
+          join(workspacePackage.directory, `tsconfig.${name}.json`),
+          JSON.stringify({
+            compilerOptions: {
+              module: "Preserve",
+              moduleResolution: "bundler",
+              strict: true,
+              noEmit: true,
+              composite: true,
+              paths: { "internal-helper": [`./src/${helper}`] },
+            },
+            files,
+          }),
+        ),
+      ),
+    );
+    const { files } = await analyzeReference(workspacePackage, { prose: true });
+    expect(files[0]?.contents).toContain("export declare const derived: number;");
+    expect(files[1]?.contents).toContain("export declare const derived: string;");
+  });
+
+  it("uses the referenced project with the fewest files that includes an entry", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-solution-overlap", {
+      "index.ts": 'import { value } from "helper";\n/** A. */\nexport const a = value;\n',
+      "helper.ts": "export const value: number = 1;\n",
+      "test-helper.ts": 'export const value: string = "test";\n',
+    });
+    await writeFile(
+      join(workspacePackage.directory, "tsconfig.json"),
+      JSON.stringify({
+        files: [],
+        references: [{ path: "./tsconfig.test.json" }, { path: "./tsconfig.src.json" }],
+      }),
+    );
+    await Promise.all(
+      (
+        [
+          ["test", ["src/**/*"], "test-helper.ts"],
+          ["src", ["src/index.ts", "src/helper.ts"], "helper.ts"],
+        ] as const
+      ).map(([name, include, helper]) =>
+        writeFile(
+          join(workspacePackage.directory, `tsconfig.${name}.json`),
+          JSON.stringify({
+            compilerOptions: {
+              module: "Preserve",
+              moduleResolution: "bundler",
+              strict: true,
+              noEmit: true,
+              composite: true,
+              paths: { helper: [`./src/${helper}`] },
+            },
+            include,
+          }),
+        ),
+      ),
+    );
+    const { files } = await analyzeReference(workspacePackage, { prose: true });
+    expect(files[0]?.contents).toContain("export declare const a: number;");
+  });
+
+  it.each([false, true])(
+    "documents every subpath targeting one file, with another entrypoint=%s",
+    { timeout: 30_000 },
+    async (withOther) => {
+      const workspacePackage = await createReferenceFixture("fixture-alias", {
+        "index.ts": "/** The answer. */\nexport const answer = 42;\n",
+        "other.ts": "/** Another value. */\nexport const other = 1;\n",
+      });
+      (workspacePackage.manifest as Record<string, unknown>).exports = {
+        ".": { types: "./dist/index.d.ts" },
+        "./client": { types: "./dist/index.d.ts" },
+        ...(withOther ? { "./other": { types: "./dist/other.d.ts" } } : {}),
+      };
+      const { files } = await analyzeReference(workspacePackage, { prose: true });
+      expect(files.map((file) => file.path)).toEqual([
+        "fixture-alias/docs/reference/index.md",
+        "fixture-alias/docs/reference/client.md",
+        ...(withOther ? ["fixture-alias/docs/reference/other.md"] : []),
+      ]);
+      expect(files[0]?.contents).toContain("export declare const answer = 42;");
+      expect(files[1]?.contents).toContain("export declare const answer = 42;");
+    },
+  );
+
+  it("documents entrypoints sharing a nested source directory", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-nested", {
+      "nested/a.ts": "/** A value. */\nexport const a = 1;\n",
+      "nested/b/index.ts": "/** B value. */\nexport const b = 2;\n",
+    });
+    (workspacePackage.manifest as Record<string, unknown>).exports = {
+      "./a": { types: "./dist/nested/a.d.ts" },
+      "./b": { types: "./dist/nested/b/index.d.ts" },
+    };
+    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    expect(model.entrypoints.map((entry) => entry.symbols.map((symbol) => symbol.name))).toEqual([["a"], ["b"]]);
+    expect(files[0]?.contents).toContain("export declare const a = 1;");
+    expect(files[1]?.contents).toContain("export declare const b = 2;");
+  });
+
+  it.each(["tsx", "mts", "cts"])("documents the actual .%s entry source", { timeout: 30_000 }, async (extension) => {
+    const workspacePackage = await createReferenceFixture(`fixture-${extension}`, {
+      [`index.${extension}`]: "/** The answer. */\nexport const answer = 42;\n",
+    });
+    (workspacePackage.manifest.exports as Record<string, unknown>)["."] = {
+      types: `./dist/index.d.${extension === "tsx" ? "ts" : extension}`,
+    };
+    const { files } = await analyzeReference(workspacePackage, { prose: true });
+    expect(files[0]?.contents).toContain("export declare const answer = 42;");
+  });
+
   // A real TypeDoc run: a few seconds alone, past the five-second default when
   // it shares the machine with the rest of the suite.
+  it.each(["index.ts", "derive.ts"])(
+    "rejects an unbuilt dependency imported by %s in the documented source graph",
+    { timeout: 30_000 },
+    async (importer) => {
+      const sources = {
+        [importer]: 'import { result } from "dependency";\n/** Derived value. */ export const derived = result();',
+      };
+      if (importer !== "index.ts") {
+        sources["index.ts"] = 'export { derived } from "./derive";';
+      }
+      const fixture = await createReferenceFixture("fixture-unbuilt-dependency", sources);
+      const dependencyDir = join(fixture.directory, "node_modules/dependency");
+      await mkdir(join(dependencyDir, "src"), { recursive: true });
+      await writeFile(
+        join(dependencyDir, "package.json"),
+        JSON.stringify({
+          name: "dependency",
+          type: "module",
+          exports: { ".": { types: "./dist/index.d.ts", default: "./dist/index.js" } },
+        }),
+      );
+      await writeFile(join(dependencyDir, "src/index.ts"), "export function result(): number { return 123; }");
+      await expect(analyzeReference(fixture, { prose: true })).rejects.toThrow(
+        /@codenhub\/fixture-unbuilt-dependency.*dependency.*[Bb]uild dependencies first.*pnpm build @codenhub\/fixture-unbuilt-dependency/s,
+      );
+      await mkdir(join(dependencyDir, "dist"));
+      await writeFile(join(dependencyDir, "dist/index.d.ts"), "export declare function result(): number;");
+      const { files } = await analyzeReference(fixture, { prose: true });
+      expect(files[0]?.contents).toContain("export declare const derived: number;");
+    },
+  );
+
+  it("leaves installed dependency declaration checking to the package type gate", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("fixture-optional-dependency", {
+      "index.ts": 'import { result } from "dependency"; /** Derived value. */ export const derived = result();',
+    });
+    const dependencyDir = join(fixture.directory, "node_modules/dependency");
+    await mkdir(join(dependencyDir, "dist"), { recursive: true });
+    await writeFile(
+      join(dependencyDir, "package.json"),
+      JSON.stringify({
+        name: "dependency",
+        exports: { ".": { types: "./dist/index.d.ts" } },
+      }),
+    );
+    await writeFile(
+      join(dependencyDir, "dist/index.d.ts"),
+      [
+        'import type { Optional } from "missing-optional-peer";',
+        "export declare function result(): number;",
+        "export type Options = Optional;",
+      ].join("\n"),
+    );
+    const { files } = await analyzeReference(fixture, { prose: true });
+    expect(files[0]?.contents).toContain("export declare const derived: number;");
+  });
+
+  it("ignores unresolved imports outside the documented source graph", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("fixture-unrelated-imports", {
+      "index.ts": "/** Public value. */ export const value = 42;",
+      "index.test.ts": 'import { value } from "@codenhub/fixture-unrelated-imports"; export const testValue = value;',
+      "undocumented.ts": 'import { result } from "missing-dependency"; export const ignored = result();',
+    });
+    const { files } = await analyzeReference(fixture, { prose: true });
+    expect(files[0]?.contents).toContain("export declare const value = 42;");
+  });
+
   it("documents a package with exactly one entrypoint", { timeout: 30_000 }, async () => {
     const workspacePackage = await createSingleEntrypointFixture();
 

@@ -1,5 +1,5 @@
 ---
-title: Messages
+title: "Messages"
 order: 7
 ---
 

@@ -1,5 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { createReferenceFixture } from "../generators/reference-fixture.test-support.ts";
+import { analyzeReference } from "../generators/reference-generator.ts";
 import {
   buildReferenceModel,
   findEmptySections,
@@ -10,6 +12,193 @@ import {
 function textPart(text: string) {
   return { kind: "text", text };
 }
+
+it("rejects a missing expected entrypoint module", () => {
+  expect(() => buildReferenceModel({ name: "fixture", children: [] }, { "src/nested/a.ts": "./a" })).toThrow(
+    /entrypoint.*\.\/a.*src\/nested\/a\.ts/i,
+  );
+});
+
+it("associates modules by their source file even when display names differ", () => {
+  const model = buildReferenceModel(
+    {
+      name: "fixture",
+      children: [
+        { kind: 2, name: "a", sources: [{ fileName: "src/nested/a.ts" }], children: [{ kind: 32, name: "a" }] },
+      ],
+    },
+    { "src/nested/a.ts": "./a" },
+  );
+  expect(model.entrypoints[0]?.symbols.map((symbol) => symbol.name)).toEqual(["a"]);
+});
+
+describe("emitted constructors", () => {
+  it("omits synthetic constructors while retaining explicit public constructors", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("constructors", {
+      "index.ts": `
+        export class Implicit { value = 1; }
+        export class Explicit { constructor(value: number) {} }
+        export class Private { private constructor() {} }
+      `,
+    });
+    const { model } = await analyzeReference(fixture, { prose: true });
+    expect(
+      model.entrypoints[0]?.symbols.map((symbol) => [symbol.name, symbol.members.map((member) => member.name)]),
+    ).toEqual([
+      ["Explicit", ["constructor"]],
+      ["Implicit", ["value"]],
+      ["Private", []],
+    ]);
+    expect(findEmptySections(model)).toEqual([]);
+  });
+});
+
+describe("accessor documentation", () => {
+  it("renders getter and setter comments and the setter parameter", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("accessors", {
+      "index.ts": `
+        export class Box {
+          /** Value getter.
+           * @returns The value.
+           */
+          get value(): number { return 1; }
+          /** Value setter.
+           * @param input - The new value.
+           */
+          set value(input: number) {}
+        }
+      `,
+    });
+    const { model, files } = await analyzeReference(fixture, { prose: true });
+    const member = model.entrypoints[0]?.symbols[0]?.members[0];
+    expect(member?.doc).toBe("Value getter.\n\nValue setter.");
+    expect(member?.returns).toBe("The value.");
+    expect(member?.parameters).toEqual([{ name: "input", doc: "The new value." }]);
+    expect(files[0]?.contents).toContain("Value setter.");
+    expect(files[0]?.contents).toContain("The new value.");
+  });
+});
+
+describe("resolved comment links", () => {
+  it("keeps a resolved target apart from its display label", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("link-label", {
+      "index.ts": `
+        /** A token. */ export interface Token { value: string; }
+        /** Makes a token.
+         * @returns A {@link Token | token result}.
+         */
+        export function make(): Token { return { value: "" }; }
+      `,
+    });
+    const { model, files } = await analyzeReference(fixture, { prose: true });
+    expect(model.entrypoints[0]?.symbols[0]?.returns).toBe("A {@link Token | token result}.");
+    expect(files[0]?.contents).toContain("A [token result](#token).");
+  });
+
+  it("links an original declaration name to its renamed export", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("links", {
+      "index.ts": 'export { original as renamed, use } from "./leaf";',
+      "leaf.ts": `
+        /** Original. */ export function original(): void {}
+        /** Uses {@link original}. */ export function use(): void {}
+      `,
+    });
+    const { files } = await analyzeReference(fixture, { prose: true });
+    expect(files[0]?.contents).toContain("Uses [original](#renamed).");
+  });
+
+  it("qualifies a resolved namespace-local target", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("ns-reference", {
+      "index.ts": `
+        export namespace NS {
+          /** Shape. */ export interface Shape { value: number; }
+          /** Uses {@link Shape}. */ export function make(value: Shape): Shape { return value; }
+        }
+      `,
+    });
+    const { files } = await analyzeReference(fixture, { prose: true });
+    expect(files[0]?.contents).toContain("Uses [Shape](#nsshape).");
+  });
+});
+
+describe("default export aliases", () => {
+  it.each([
+    ["local", "/** Plugin. */ function original() {} export { original, original as default };", "original"],
+    ["renamed", "/** Plugin. */ function original() {} export { original as plugin, original as default };", "plugin"],
+    ["barrel", 'export { original, original as default } from "./leaf";', "original"],
+  ])("renders a %s default alias once and resolves both names", { timeout: 30_000 }, async (_case, source, name) => {
+    const fixture = await createReferenceFixture("default-alias", {
+      "index.ts": source + "\n/** Uses {@link default}. */ export function use() {}",
+      "leaf.ts": "/** Plugin. */ export function original() {}",
+    });
+    const { model, files } = await analyzeReference(fixture, { prose: true });
+    expect(model.entrypoints[0]?.symbols.map((symbol) => symbol.name)).toEqual([name, "use"]);
+    expect(files[0]?.contents.match(new RegExp(`^### ${name}$`, "gm"))).toHaveLength(1);
+    expect(files[0]?.contents).toContain("Also exported as `default`.");
+    expect(files[0]?.contents).toContain(`[default](#${name})`);
+  });
+
+  it("resolves cross-page links to a default alias's named section", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("default-alias-links", {
+      "index.ts":
+        'export { original, original as default } from "./leaf";\n/** Uses {@link original} and {@link default}. */ export function use() {}',
+      "leaf.ts": "/** Plugin. */ export function original() {}",
+    });
+    const { files } = await analyzeReference(fixture, {
+      prose: true,
+      pages: { ".": { split: { plugin: { source: ["src/leaf.ts"] } } } },
+    });
+    const root = files.find((file) => file.path.endsWith("/index.md"))?.contents;
+    expect(root).toContain("[original](plugin.md#original)");
+    expect(root).toContain("[default](plugin.md#original)");
+  });
+
+  it("keeps the default alias notice when prose is disabled", { timeout: 30_000 }, async () => {
+    const fixture = await createReferenceFixture("default-alias-manifest", {
+      "index.ts": "const plugin = 1; export { plugin, plugin as default };",
+    });
+    const { files } = await analyzeReference(fixture, { prose: false });
+    expect(files[0]?.contents.match(/^### plugin$/gm)).toHaveLength(1);
+    expect(files[0]?.contents).toContain("Also exported as `default`.");
+  });
+});
+
+describe("reference ordering", () => {
+  it(
+    "orders symbols, members, and internal types independently of the default locale",
+    { timeout: 30_000 },
+    async () => {
+      const fixture = await createReferenceFixture("fixed-order", {
+        "index.ts": `
+        type Älpha = { kind: "alpha" };
+        type Zebra = { kind: "zebra" };
+        export function make(): Älpha | Zebra { return { kind: "alpha" }; }
+        export function Äbc(): void {}
+        export function Zed(): void {}
+        export class Store { äbc = 1; zed = 2; }
+      `,
+      });
+      const original = String.prototype.localeCompare;
+      const comparison = vi.spyOn(String.prototype, "localeCompare").mockImplementation(function (
+        this: string,
+        other,
+        locales,
+        options,
+      ) {
+        return original.call(this, other, locales ?? "sv", options);
+      });
+      try {
+        const { model } = await analyzeReference(fixture, { prose: false });
+        const entrypoint = model.entrypoints[0];
+        expect(entrypoint?.symbols.map((symbol) => symbol.name)).toEqual(["Äbc", "make", "Zed", "Store"]);
+        expect(entrypoint?.symbols[3]?.members.map((member) => member.name)).toEqual(["äbc", "zed"]);
+        expect(entrypoint?.internalTypes.map((type) => type.name)).toEqual(["Älpha", "Zebra"]);
+      } finally {
+        comparison.mockRestore();
+      }
+    },
+  );
+});
 
 const browserRegistryVariable = {
   id: 900,

@@ -1,4 +1,4 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 
 import { parseReferenceConfig } from "../documentation/reference-config.ts";
@@ -24,15 +24,15 @@ function hasReferenceConfig(workspacePackage: WorkspacePackage): boolean {
   }
 }
 
-async function listMarkdown(root: string, prefix = ""): Promise<string[]> {
+async function listFiles(root: string, prefix = ""): Promise<string[]> {
   const entries = await readdir(join(root, prefix), { withFileTypes: true }).catch(() => []);
   const nested = await Promise.all(
     entries.map(async (entry) => {
       const relative = prefix === "" ? entry.name : `${prefix}/${entry.name}`;
       if (entry.isDirectory()) {
-        return listMarkdown(root, relative);
+        return listFiles(root, relative);
       }
-      return entry.name.endsWith(".md") ? [relative] : [];
+      return [relative];
     }),
   );
   return nested.flat();
@@ -57,7 +57,7 @@ async function run(workspacePackage: WorkspacePackage): Promise<Finding[]> {
   }
 
   const findings: Finding[] = [];
-  const onDisk = (await listMarkdown(join(workspacePackage.directory, REFERENCE_DIR))).map(
+  const onDisk = (await listFiles(join(workspacePackage.directory, REFERENCE_DIR))).map(
     (relative) => `${REFERENCE_DIR}/${relative}`,
   );
   const expected = new Map(
@@ -86,16 +86,20 @@ async function run(workspacePackage: WorkspacePackage): Promise<Finding[]> {
       }),
     );
     findings.push(...drift.filter((finding): finding is Finding => finding !== undefined));
+  }
 
-    for (const relative of onDisk) {
-      if (!expected.has(relative)) {
-        findings.push({
-          code: "reference/unexpected-file",
-          location: relative,
-          message: "Not produced by the reference generator; delete it or fix the entrypoint that should produce it.",
-          severity: "error",
-        });
-      }
+  const hasSibling = await stat(join(workspacePackage.directory, `${REFERENCE_DIR}.md`)).then(
+    (info) => info.isFile(),
+    () => false,
+  );
+  for (const relative of [...onDisk, ...(hasSibling ? [`${REFERENCE_DIR}.md`] : [])]) {
+    if (!expected.has(relative)) {
+      findings.push({
+        code: "reference/unexpected-file",
+        location: relative,
+        message: "Not produced by the reference generator; delete it or fix the entrypoint that should produce it.",
+        severity: "error",
+      });
     }
   }
 

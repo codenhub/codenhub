@@ -1,5 +1,5 @@
 ---
-title: /postcss
+title: "/postcss"
 order: 1
 ---
 
@@ -8,25 +8,6 @@ order: 1
 # @codenhub/icons/postcss
 
 ## Functions
-
-### default
-
-```ts
-export declare const postcssIcons: {
-    (options?: PostcssIconsOptions): PostcssIconsPluginObject;
-    postcss: boolean;
-};
-```
-
-PostCSS plugin that scans the stylesheet and the configured files for icon classes, then appends the base rules and the mask rules those classes need.
-
-It also carries the license notices required by the families the stylesheet actually used, unless attribution is turned off.
-
-**Parameters**
-
-- `options` — Families, scanning, class prefix, and attribution.
-
-**Returns** — The PostCSS plugin.
 
 ### postcssIcons
 
@@ -46,6 +27,8 @@ It also carries the license notices required by the families the stylesheet actu
 - `options` — Families, scanning, class prefix, and attribution.
 
 **Returns** — The PostCSS plugin.
+
+Also exported as `default`.
 
 ## Interfaces
 

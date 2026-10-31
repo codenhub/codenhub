@@ -85,7 +85,11 @@ function memberEntries(members: ts.NodeArray<ts.ClassElement | ts.TypeElement | 
   const entries = new Map<string, string>();
   for (const member of members) {
     // A constructor has no name node; the reference model names it `constructor`.
-    const name = ts.isConstructorDeclaration(member) ? "constructor" : member.name;
+    const name = ts.isConstructorDeclaration(member)
+      ? "constructor"
+      : ts.isIndexSignatureDeclaration(member)
+        ? "__index"
+        : member.name;
     if (name === undefined) {
       continue;
     }
@@ -96,7 +100,7 @@ function memberEntries(members: ts.NodeArray<ts.ClassElement | ts.TypeElement | 
       continue;
     }
     const key = typeof name === "string" ? name : name.text;
-    const text = member.getText(source).replace(/\s+/g, " ").trim();
+    const text = member.getText(source);
     const existing = entries.get(key);
     // A repeated member name is a method overload set: one line per overload.
     entries.set(key, existing === undefined ? text : `${existing}\n${text}`);
@@ -128,7 +132,11 @@ function mergeSignature(index: SignatureIndex, name: string, signature: SymbolSi
     existing.merged = [...(existing.merged ?? []), signature.text];
   }
   if (signature.members !== undefined) {
-    existing.members = new Map([...(existing.members ?? []), ...signature.members]);
+    existing.members ??= new Map();
+    for (const [name, text] of signature.members) {
+      const previous = existing.members.get(name);
+      existing.members.set(name, previous === undefined ? text : `${previous}\n${text}`);
+    }
   }
   if (signature.namespaceMembers !== undefined) {
     existing.namespaceMembers = new Map([...(existing.namespaceMembers ?? []), ...signature.namespaceMembers]);
@@ -137,7 +145,22 @@ function mergeSignature(index: SignatureIndex, name: string, signature: SymbolSi
 
 /** `import("../types").ReadonlyErrorRegistry` → `ReadonlyErrorRegistry`; adds a terminating `;`. */
 function tidy(text: string, terminate: boolean): string {
-  const stripped = text.replace(/import\((["'])[^"']*\1\)\./g, "").trim();
+  const source = ts.createSourceFile("signature.d.ts", text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const prefixes: { start: number; end: number }[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isImportTypeNode(node) && node.qualifier !== undefined) {
+      const keyword = node.getChildren(source).find((child) => child.kind === ts.SyntaxKind.ImportKeyword);
+      if (keyword !== undefined) {
+        prefixes.push({ start: keyword.getStart(source), end: node.qualifier.getStart(source) });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  for (const { start, end } of prefixes.sort((left, right) => right.start - left.start)) {
+    text = text.slice(0, start) + text.slice(end);
+  }
+  const stripped = text.trim();
   return terminate && !stripped.endsWith(";") ? `${stripped};` : stripped;
 }
 
@@ -173,7 +196,10 @@ function collectStatements(statements: readonly ts.Statement[], source: ts.Sourc
     }
 
     if (ts.isTypeAliasDeclaration(statement)) {
-      index.set(statement.name.text, { text: tidy(statement.getText(source), true) });
+      index.set(statement.name.text, {
+        ...(ts.isTypeLiteralNode(statement.type) ? { members: memberEntries(statement.type.members, source) } : {}),
+        text: tidy(statement.getText(source), true),
+      });
       continue;
     }
 
@@ -233,6 +259,8 @@ interface ReexportEdge {
   all: boolean;
   /** Exported name to the name it has in the target module, for `export { a, b as c } from`. */
   names: Map<string, string>;
+  /** Namespace binding for `export * as ns from`. */
+  namespace?: string;
 }
 
 /** An imported binding: `import { orig as local } from "./m"`. */
@@ -262,6 +290,13 @@ export function collectModuleGraph(source: ts.SourceFile): ModuleGraph {
   const imports = new Map<string, ImportBinding>();
 
   for (const statement of source.statements) {
+    if (
+      (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) &&
+      statement.name !== undefined &&
+      hasModifier(statement, ts.SyntaxKind.DefaultKeyword)
+    ) {
+      localAliases.set(DEFAULT_EXPORT_NAME, statement.name.text);
+    }
     if (ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier)) {
       const clause = statement.importClause;
       if (clause?.name !== undefined) {
@@ -277,8 +312,8 @@ export function collectModuleGraph(source: ts.SourceFile): ModuleGraph {
       continue;
     }
 
-    if (ts.isExportAssignment(statement) && !statement.isExportEquals && ts.isIdentifier(statement.expression)) {
-      localAliases.set(DEFAULT_EXPORT_NAME, statement.expression.text);
+    if (ts.isExportAssignment(statement) && ts.isIdentifier(statement.expression)) {
+      localAliases.set(statement.isExportEquals ? "export=" : DEFAULT_EXPORT_NAME, statement.expression.text);
       continue;
     }
 
@@ -302,6 +337,7 @@ export function collectModuleGraph(source: ts.SourceFile): ModuleGraph {
       continue;
     }
     if (!ts.isNamedExports(statement.exportClause)) {
+      reexports.push({ all: false, module, names: new Map(), namespace: statement.exportClause.name.text });
       continue;
     }
     const names = new Map<string, string>();
@@ -357,7 +393,10 @@ export interface SignatureResolver {
  * @returns A resolver whose `lookup` keys are those same paths.
  */
 export function buildSignatureResolver(files: ReadonlyMap<string, string>): SignatureResolver {
-  return buildModuleResolver(files, collectDeclarations, renameSignature);
+  return buildModuleResolver(files, collectDeclarations, renameSignature, (name, namespaceMembers) => ({
+    namespaceMembers,
+    text: `export namespace ${name}`,
+  }));
 }
 
 /**
@@ -516,8 +555,8 @@ function collectExportNames(source: ts.SourceFile): Set<string> {
         }
       }
     }
-    if (ts.isExportAssignment(statement) && !statement.isExportEquals) {
-      names.add(DEFAULT_EXPORT_NAME);
+    if (ts.isExportAssignment(statement)) {
+      names.add(statement.isExportEquals ? "export=" : DEFAULT_EXPORT_NAME);
     }
     if (ts.isExportDeclaration(statement) && statement.exportClause !== undefined) {
       const clause = statement.exportClause;
@@ -535,6 +574,7 @@ function buildModuleResolver<T>(
   files: ReadonlyMap<string, string>,
   collect: (source: ts.SourceFile) => Map<string, T>,
   rename: (value: T, from: string, to: string) => T,
+  namespace?: (name: string, members: Map<string, T>) => T,
 ) {
   const declarations = new Map<string, Map<string, T>>();
   const graphs = new Map<string, ModuleGraph>();
@@ -551,7 +591,7 @@ function buildModuleResolver<T>(
 
   // A value found under another name keeps its declared name; show the public one. A `default` export is never renamed to.
   const asPublic = (found: T | undefined, declaredName: string, publicName: string): T | undefined =>
-    found === undefined || declaredName === publicName || publicName === DEFAULT_EXPORT_NAME
+    found === undefined || declaredName === publicName || publicName === DEFAULT_EXPORT_NAME || publicName === "export="
       ? found
       : rename(found, declaredName, publicName);
 
@@ -601,6 +641,16 @@ function buildModuleResolver<T>(
       if (targetPath === undefined) {
         continue;
       }
+      if (edge.namespace === name && namespace !== undefined) {
+        const members = new Map<string, T>();
+        for (const exported of listExports(targetPath, new Set())) {
+          const found = lookup(targetPath, exported, new Set(seen));
+          if (found !== undefined) {
+            members.set(exported, found);
+          }
+        }
+        return namespace(name, members);
+      }
       if (edge.all && !listExports(targetPath, new Set()).has(name)) {
         continue;
       }
@@ -648,16 +698,29 @@ function withSignature(symbol: ReferenceSymbol, index: SignatureIndex | undefine
     return symbol;
   }
   const lines = [found.text, ...(found.overloads ?? [])];
+  const name =
+    symbol.name === DEFAULT_EXPORT_NAME || symbol.name === "export="
+      ? (collectDeclarationNodes(
+          ts.createSourceFile("signature.d.ts", found.text, ts.ScriptTarget.Latest, true).statements,
+        )
+          .keys()
+          .next().value ?? symbol.name)
+      : symbol.name;
   return {
     ...symbol,
+    name,
+    ...(name === symbol.name ? {} : { exportName: symbol.name }),
     // Overloads documented apart line up with the `.d.ts` overloads, both in source order.
     overloads:
       symbol.overloads.length === lines.length
         ? symbol.overloads.map((overload, index) => ({ ...overload, signature: lines[index] }))
         : symbol.overloads,
     namespaceMembers: symbol.namespaceMembers.map((member) => withSignature(member, found.namespaceMembers)),
-    members: symbol.members.map((member) => {
+    members: symbol.members.flatMap((member) => {
       const text = found.members?.get(member.name);
+      if (member.kind === "constructor" && text === undefined) {
+        return [];
+      }
       return text === undefined ? member : { ...member, signature: text };
     }),
     // Overloads and merged declarations join the signature block as separate lines.
@@ -686,6 +749,8 @@ export function attachSignatures(
 interface NamedType {
   name: string;
   module?: string;
+  declarations?: readonly ts.Node[];
+  isTypeQuery?: boolean;
 }
 
 function leftmostName(name: ts.EntityName | ts.Expression): string | undefined {
@@ -728,31 +793,43 @@ function boundNames(node: ts.Node): string[] {
 /**
  * Types a declaration names as its `.d.ts` text prints them, leaving out a name where
  * something binds it for its own use: a type parameter, a mapped-type key, an `infer`
- * binding in its conditional's true branch, or a namespace's own member.
+ * binding in its conditional's true branch. Namespace-local names carry their declarations.
  */
 function namedTypes(node: ts.Node): NamedType[] {
   const named: NamedType[] = [];
-  const add = (scope: ReadonlySet<string>, name: string | undefined, module?: string): void => {
+  const add = (current: ts.Node, scope: ReadonlySet<string>, name: string | undefined, module?: string): void => {
     if (name !== undefined && (module !== undefined || !scope.has(name))) {
-      named.push(module === undefined ? { name } : { module, name });
+      const isTypeQuery = ts.isTypeQueryNode(current) || (ts.isImportTypeNode(current) && current.isTypeOf);
+      if (module === undefined) {
+        for (let parent = current.parent; parent !== undefined; parent = parent.parent) {
+          const declarations = ts.isModuleBlock(parent)
+            ? collectDeclarationNodes(parent.statements).get(name)
+            : undefined;
+          if (declarations !== undefined) {
+            named.push({ declarations, isTypeQuery, name });
+            return;
+          }
+        }
+      }
+      named.push(module === undefined ? { isTypeQuery, name } : { isTypeQuery, module, name });
     }
   };
   const visit = (current: ts.Node, outer: ReadonlySet<string>): void => {
-    const bound = boundNames(current);
+    const bound = ts.isModuleBlock(current) ? [] : boundNames(current);
     const scope = bound.length === 0 ? outer : new Set([...outer, ...bound]);
     if (ts.isTypeReferenceNode(current)) {
-      add(scope, leftmostName(current.typeName));
+      add(current, scope, leftmostName(current.typeName));
     } else if (ts.isExpressionWithTypeArguments(current)) {
-      add(scope, leftmostName(current.expression));
+      add(current, scope, leftmostName(current.expression));
     } else if (ts.isTypeQueryNode(current)) {
-      add(scope, leftmostName(current.exprName));
+      add(current, scope, leftmostName(current.exprName));
     } else if (
       ts.isImportTypeNode(current) &&
       current.qualifier !== undefined &&
       ts.isLiteralTypeNode(current.argument) &&
       ts.isStringLiteral(current.argument.literal)
     ) {
-      add(scope, leftmostName(current.qualifier), current.argument.literal.text);
+      add(current, scope, leftmostName(current.qualifier), current.argument.literal.text);
     } else if (ts.isConditionalTypeNode(current)) {
       visit(current.checkType, scope);
       visit(current.extendsType, scope);
@@ -790,14 +867,23 @@ function ambientNames(ambient: ReadonlyMap<string, string>): Map<string, string>
   return names;
 }
 
-function isTypeDeclaration(
+function isInternalDeclaration(
   node: ts.Node,
-): node is ts.TypeAliasDeclaration | ts.InterfaceDeclaration | ts.EnumDeclaration | ts.ClassDeclaration {
+  isTypeQuery: boolean,
+): node is
+  | ts.TypeAliasDeclaration
+  | ts.InterfaceDeclaration
+  | ts.EnumDeclaration
+  | ts.ClassDeclaration
+  | ts.VariableDeclaration
+  | ts.FunctionDeclaration
+  | ts.ModuleDeclaration {
   return (
     ts.isTypeAliasDeclaration(node) ||
     ts.isInterfaceDeclaration(node) ||
     ts.isEnumDeclaration(node) ||
-    ts.isClassDeclaration(node)
+    ts.isClassDeclaration(node) ||
+    (isTypeQuery && (ts.isVariableDeclaration(node) || ts.isFunctionDeclaration(node) || ts.isModuleDeclaration(node)))
   );
 }
 
@@ -842,31 +928,84 @@ export function attachInternalTypes(
   entryDtsBySubpath: ReadonlyMap<string, string>,
   ambient: ReadonlyMap<string, string>,
 ): ReferenceModel {
-  const resolver = buildDeclarationResolver(files);
+  const handwritten = new Map([...ambient].map(([path, text]) => [path.replace(/^src\//, ""), text]));
+  const allFiles = new Map([...handwritten, ...files]);
+  const resolver = buildDeclarationResolver(allFiles);
   const globals = ambientNames(ambient);
+  // `export * as name` stands for its module's exports, so the types its members name are walked too.
+  const membersOf = (node: ts.Node, seen: Set<string>): readonly ts.Node[] => {
+    if (
+      !ts.isExportDeclaration(node) ||
+      node.exportClause === undefined ||
+      !ts.isNamespaceExport(node.exportClause) ||
+      node.moduleSpecifier === undefined ||
+      !ts.isStringLiteral(node.moduleSpecifier)
+    ) {
+      return [node];
+    }
+    const target = resolveDtsCandidates(node.getSourceFile().fileName, node.moduleSpecifier.text).find((candidate) =>
+      allFiles.has(candidate),
+    );
+    if (target === undefined || seen.has(target)) {
+      return [];
+    }
+    seen.add(target);
+    return resolver
+      .exports(target)
+      .flatMap((name) => resolver.lookup(target, name) ?? [])
+      .flatMap((member) => membersOf(member, seen));
+  };
   const declarationsOf = (subpath: string, name: string): readonly ts.Node[] => {
     const entryDts = entryDtsBySubpath.get(subpath);
-    return (entryDts === undefined ? undefined : resolver.lookup(entryDts, name)) ?? [];
+    const nodes = (entryDts === undefined ? undefined : resolver.lookup(entryDts, name)) ?? [];
+    return nodes.flatMap((node) => membersOf(node, new Set()));
   };
-  const documented = new Set(
-    model.entrypoints.flatMap((entrypoint) =>
-      entrypoint.symbols.flatMap((symbol) => declarationsOf(entrypoint.subpath, symbol.name)),
-    ),
-  );
+  const documented = new Set<ts.Node>();
+  const markDocumented = (symbol: ReferenceSymbol, nodes: readonly ts.Node[]): void => {
+    nodes.forEach((node) => documented.add(node));
+    const nested = nodes.flatMap((node) =>
+      ts.isModuleDeclaration(node) && node.body !== undefined && ts.isModuleBlock(node.body)
+        ? [...collectDeclarationNodes(node.body.statements).values()].flat()
+        : [],
+    );
+    for (const member of symbol.namespaceMembers) {
+      markDocumented(
+        member,
+        nested.filter((node) => (node as { name?: ts.Identifier }).name?.text === member.name),
+      );
+    }
+  };
+  for (const entrypoint of model.entrypoints) {
+    for (const symbol of entrypoint.symbols) {
+      const nodes = declarationsOf(entrypoint.subpath, symbol.exportName ?? symbol.name);
+      markDocumented(symbol, nodes);
+    }
+  }
 
   const resolve = (path: string, type: NamedType): Resolution => {
+    const resolved = (declarations: readonly ts.Node[] | undefined): Resolution => {
+      const handwrittenNode = declarations?.find((node) => !files.has(node.getSourceFile().fileName));
+      return handwrittenNode === undefined
+        ? declarations === undefined
+          ? undefined
+          : { declarations }
+        : { declaredIn: `src/${handwrittenNode.getSourceFile().fileName}`, missing: true };
+    };
+    if (type.declarations !== undefined) {
+      return resolved(type.declarations);
+    }
     if (type.module !== undefined) {
       if (!type.module.startsWith(".")) {
         return undefined;
       }
-      const target = resolveDtsCandidates(path, type.module).find((candidate) => files.has(candidate));
+      const target = resolveDtsCandidates(path, type.module).find((candidate) => allFiles.has(candidate));
       const declarations = target === undefined ? undefined : resolver.lookup(target, type.name);
-      return declarations === undefined ? undefined : { declarations };
+      return resolved(declarations);
     }
     // Follows the file's imports and re-exports too; a name it cannot place is a global.
     const declarations = resolver.lookup(path, type.name);
     if (declarations !== undefined) {
-      return { declarations };
+      return resolved(declarations);
     }
     const declaredIn = globals.get(type.name);
     return declaredIn === undefined ? undefined : { declaredIn, missing: true };
@@ -880,7 +1019,7 @@ export function attachInternalTypes(
     const listed = new Set<ts.Node>();
     // Symbols follow page order, so findings do too; each name is reported once per symbol.
     const queue = entrypoint.symbols.map((symbol) => ({
-      nodes: declarationsOf(subpath, symbol.name),
+      nodes: declarationsOf(subpath, symbol.exportName ?? symbol.name),
       symbol: symbol.name,
     }));
     for (let next = queue.shift(); next !== undefined; next = queue.shift()) {
@@ -906,7 +1045,9 @@ export function attachInternalTypes(
           if (found.declarations.some((declaration) => documented.has(declaration))) {
             continue;
           }
-          const types = found.declarations.filter(isTypeDeclaration);
+          const types = found.declarations.filter((declaration) =>
+            isInternalDeclaration(declaration, type.isTypeQuery === true),
+          );
           const [first] = types;
           if (first === undefined) {
             report(type.name, sourcePathOf(found.declarations[0]?.getSourceFile().fileName ?? path));
@@ -916,13 +1057,19 @@ export function attachInternalTypes(
             continue;
           }
           listed.add(first);
-          const name = first.name?.text ?? type.name;
+          const name = first.name !== undefined && ts.isIdentifier(first.name) ? first.name.text : type.name;
           const declaredIn = sourcePathOf(first.getSourceFile().fileName);
           // The reader cannot import it either way, so a module's `export` is left off.
           const signature = types
-            .map((declaration) =>
-              tidy(declaration.getText().replace(/^export (?:default )?/, ""), ts.isTypeAliasDeclaration(declaration)),
-            )
+            .map((declaration) => {
+              const statement = ts.isVariableDeclaration(declaration) ? declaration.parent.parent : declaration;
+              const text =
+                ts.isVariableDeclaration(declaration) && ts.isVariableStatement(statement)
+                  ? (collectStatements([statement], declaration.getSourceFile()).get(name)?.text ??
+                    declaration.getText())
+                  : declaration.getText();
+              return tidy(text.replace(/^export (?:default )?/, ""), ts.isTypeAliasDeclaration(declaration));
+            })
             .join("\n");
           // The same helper copied into two files is one entry that names both.
           const same = internal.find((entry) => entry.name === name && entry.signature === signature);
@@ -936,7 +1083,7 @@ export function attachInternalTypes(
         }
       }
     }
-    internal.sort((left, right) => left.name.localeCompare(right.name));
+    internal.sort((left, right) => left.name.localeCompare(right.name, "en"));
     for (const type of internal) {
       type.declaredIn.sort();
     }

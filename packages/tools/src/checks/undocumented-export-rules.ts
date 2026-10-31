@@ -1,9 +1,13 @@
-import { glob, readFile, stat } from "node:fs/promises";
-import { posix } from "node:path";
+import { readFile, stat } from "node:fs/promises";
 
 import ts from "typescript";
 
-import { emitDeclarations, resolveEntrypoints, type EntrypointPlan } from "../documentation/reference-declarations.ts";
+import {
+  emitDeclarations,
+  expandEntrypoint,
+  resolveEntrypoints,
+  type EntrypointPlan,
+} from "../documentation/reference-declarations.ts";
 import {
   buildDeclarationResolver,
   collectModuleGraph,
@@ -55,35 +59,7 @@ async function resolveTypedEntrypoints(workspacePackage: WorkspacePackage): Prom
           if (plan === undefined) {
             return [];
           }
-          if (!target.includes("*")) {
-            return [{ ...plan, target: posix.normalize(target) }];
-          }
-          const disk = await Array.fromAsync(glob(target, { cwd: workspacePackage.directory }));
-          const sources = await Array.fromAsync(glob(`src/${plan.sourceRel}`, { cwd: workspacePackage.directory }));
-          const matches = new Set([
-            ...disk.map((path) => path.replaceAll("\\", "/")),
-            ...sources.map(
-              (path) =>
-                `dist/${path
-                  .replaceAll("\\", "/")
-                  .slice(4)
-                  .replace(/\.([cm]?ts)$/, ".d.$1")}`,
-            ),
-          ]);
-          const pattern = posix.normalize(target);
-          const star = pattern.indexOf("*");
-          return matches.size === 0
-            ? [{ ...plan, target: pattern }]
-            : [...matches].sort().map((match) => {
-                const replacement = match.slice(star, match.length - (pattern.length - star - 1));
-                return {
-                  entryDts: plan.entryDts.replaceAll("*", replacement),
-                  module: plan.module.replaceAll("*", replacement),
-                  sourceRel: plan.sourceRel.replaceAll("*", replacement),
-                  subpath: subpath.replaceAll("*", replacement),
-                  target: match,
-                };
-              });
+          return expandEntrypoint(workspacePackage.directory, plan, target);
         }),
       );
       return targets.flat();

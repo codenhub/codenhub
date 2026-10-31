@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-29
+last_updated: 2026-10-30
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -443,6 +443,8 @@ A finding is waived only by a `Checks bypassed` bullet in `docs/specs/packages-e
 - `<package>/docs/reference/`, for a package that opts in through `codenhub.docs.reference` — one Markdown page per documented, type-resolvable `exports` subpath (every such subpath by default, or the `entrypoints` list when the config names one), plus the split pages its `pages` config declares, compiled from TypeDoc and the package's emitted declarations per `docs/specs/packages-reference.md`. Each page is run through Prettier as written, with `embeddedLanguageFormatting` off for `docs/reference/**` (in `.prettierrc.json`) so a signature block stays byte-for-byte what the compiler emitted.
 
 `llms.txt` stays hand-authored. It is a router whose value is the editorial summary a generator cannot write; `hub check` validates it like any other documentation surface.
+
+Reference generation and the `reference` check require resolvable imports throughout the documented entrypoints' source graph. If a dependency's declarations are missing, the error names the documented package and unresolved specifier and asks you to build dependencies first: run `pnpm build <package>`, then rerun generation or the check. That build includes workspace dependencies. Unrelated test-file self-import errors remain exempt. Workspace dependencies use their built declarations; CI builds before generating, so stale declarations become generated-page drift after rebuilding. The reason and rejected source-resolution alternative are recorded in `docs/specs/packages-reference.md` under "Generation".
 
 A generator specific to one package, rather than the same logic applied uniformly across every package, is not registered in `packages/tools/src/generators/`: it is that package's own `generate` script. `@codenhub/styles`' `./palette` export, `@codenhub/icons`' committed family data, and `@codenhub/toaster`'s own baked-in color defaults all work this way — `packages/styles/scripts/generate-palette.mjs`, `packages/icons/scripts/generate-icon-data.ts`, and `packages/toaster/scripts/generate-toast-defaults.mjs` each call `applyGenerated` on themselves, the same function `hub generate`'s own in-process generators go through. `@codenhub/toaster` reads another package's already-generated output directly (`packages/styles/src/palette.css`, plain text) rather than recomputing it, since the whole point of that file is to be a stable, checked-in source another package can read without taking `@codenhub/styles` as a build-time dependency. `hub generate` dispatches to a selected package's `generate` script the way `hub test` or `hub typecheck` dispatch to theirs, forwarding `--dry-run` as an argument rather than skipping the run the way a dry `build` does, since the script still has to run to know whether it would write anything.
 

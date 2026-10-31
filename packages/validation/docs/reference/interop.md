@@ -1,5 +1,5 @@
 ---
-title: Interop
+title: "Interop"
 order: 6
 ---
 
@@ -166,6 +166,14 @@ required?: string[];
 ```
 
 The properties an object must have.
+
+#### Index signature
+
+```ts
+[keyword: string]: unknown;
+```
+
+Every other keyword of JSON Schema, such as `type`, `items` or `anyOf`.
 
 ### JsonSchemaOptions
 

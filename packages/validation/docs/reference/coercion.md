@@ -1,5 +1,5 @@
 ---
-title: Coercion
+title: "Coercion"
 order: 3
 ---
 
