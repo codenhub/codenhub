@@ -12,22 +12,24 @@ order: 3
 ### CoerceDateOptions
 
 ```ts
-export interface CoerceDateOptions extends DateOptions
+export interface CoerceDateOptions extends DateOptions {
+    zoneless?: "utc" | undefined;
+}
 ```
 
-Options for [coerceDate](#coercedate): the bounds of `date`, and how to read text without a zone.
+Options for [`coerceDate`](#coercedate): the bounds of `date`, and how to read text without a zone.
 
 #### CoerceDateOptions › max
 
-Inherited from [DateOptions](primitives.md#dateoptions--max).
+Inherited from [`DateOptions`](primitives.md#dateoptions--max).
 
 #### CoerceDateOptions › message
 
-Inherited from [DateOptions](primitives.md#dateoptions).
+Inherited from [`DateOptions`](primitives.md#dateoptions).
 
 #### CoerceDateOptions › min
 
-Inherited from [DateOptions](primitives.md#dateoptions--min).
+Inherited from [`DateOptions`](primitives.md#dateoptions--min).
 
 #### CoerceDateOptions › zoneless
 
@@ -45,7 +47,7 @@ How to read a date-time written without a zone, such as `2026-09-28T14:30` from 
 export declare const coerceBigint: Factory<bigint, BigintOptions, bigint | number | string>;
 ```
 
-Creates a validator for bigints that also accepts safe integers and text holding a decimal integer, converting them, then applies the same constraints as [bigint](primitives.md#bigint).
+Creates a validator for bigints that also accepts safe integers and text holding a decimal integer, converting them, then applies the same constraints as [`bigint`](primitives.md#bigint).
 
 Fractions, numbers beyond `Number.MAX_SAFE_INTEGER` (which have already lost precision), other text, booleans and `null` are rejected. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
 
@@ -89,7 +91,7 @@ coerceBoolean()("maybe"); // { ok: false, ... }, code "invalid_type"
 export declare const coerceDate: Factory<Date, CoerceDateOptions, Date | number | string>;
 ```
 
-Creates a validator for dates that also accepts whole timestamps in milliseconds and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`, converting them to a `Date`, then applies the same bounds as [date](primitives.md#date).
+Creates a validator for dates that also accepts whole timestamps in milliseconds and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`, converting them to a `Date`, then applies the same bounds as [`date`](primitives.md#date).
 
 Text is read as `YYYY-MM-DD`, alone or followed by `T` or a space, `HH:MM` or `HH:MM:SS` with an optional fraction, and an optional zone: `Z`, or an offset written `+HH`, `+HHMM` or `+HH:MM`. That is wider than `datetime`, which checks one exact spelling. Free-form text such as `"yesterday"` or `"09/28/2026"` is rejected, because how it is read depends on the runtime, and so is a date or time that does not exist, such as `2026-02-30` or `25:00:00`. Fractions of a second beyond milliseconds are cut, not rounded. A date without a time is read as midnight UTC. A date-time without a zone, such as `2026-09-28T14:30` from an HTML `datetime-local` input, fails unless `zoneless: "utc"` says to read it as UTC: it names a time on some clock, and reading it in a zone the text does not name would give a moment hours off. Add the user's offset to such a value before converting it. The result never depends on the timezone of the machine. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
 
@@ -116,7 +118,7 @@ coerceDate({ zoneless: "utc" })("2026-09-28T14:30"); // { ok: true, value: Date 
 export declare const coerceNumber: Factory<number, NumberOptions, number | string>;
 ```
 
-Creates a validator for numbers that also accepts text holding a decimal number, converting it, then applies the same constraints as [number](primitives.md#number).
+Creates a validator for numbers that also accepts text holding a decimal number, converting it, then applies the same constraints as [`number`](primitives.md#number).
 
 Surrounding whitespace, as `String.prototype.trim` reads it, is ignored, and a dot with no digits on one side, as in `".5"` or `"5."`, is read as people type it. Empty strings, `"1e3"`, `"0x10"`, `"1,5"`, `"Infinity"` and `"NaN"` are rejected, and so is text holding a whole number beyond `Number.MAX_SAFE_INTEGER`, which could not be read exactly (use `coerceBigint` for those), or a decimal too small for a double, such as `"0." + "0".repeat(400) + "1"`, which would be read as `0`. A number is passed through as it is, `-0` included, as `number` does. Booleans, `null`, objects and arrays are rejected: `Number(true)` is `1`, and silently reading a flag as a count is how bugs hide. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
 
@@ -142,7 +144,7 @@ port("abc"); // { ok: false, ... }, code "invalid_type"
 export declare const coerceString: Factory<string, StringOptions, string | number | bigint | boolean>;
 ```
 
-Creates a validator for text that also accepts finite numbers, bigints and booleans, converting them to their string form, then applies the same constraints as [string](primitives.md#string).
+Creates a validator for text that also accepts finite numbers, bigints and booleans, converting them to their string form, then applies the same constraints as [`string`](primitives.md#string).
 
 `NaN` and `Infinity`, `null`, `undefined`, objects, arrays, functions and symbols are not converted: guessing what an object should look like as text would hide bugs. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
 

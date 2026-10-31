@@ -178,10 +178,13 @@ const even: Validator<number> = (input) =>
 ### AssertOptions
 
 ```ts
-export interface AssertOptions
+export interface AssertOptions {
+    subject?: string | undefined;
+    messages?: Messages | undefined;
+}
 ```
 
-Options for [assert](#assert).
+Options for [`assert`](#assert).
 
 #### AssertOptions › messages
 
@@ -204,23 +207,29 @@ What was being validated, written before the problem as it is, such as `"[I18n]"
 ### AsyncSchema
 
 ```ts
-export interface AsyncSchema<T, TInput = unknown> extends AsyncValidator<T, TInput>, StandardSchemaV1<TInput, T>
+export interface AsyncSchema<T, TInput = unknown> extends AsyncValidator<T, TInput>, StandardSchemaV1<TInput, T> {
+}
 ```
 
-An [AsyncValidator](#asyncvalidator) a factory of this package made, which is also a Standard Schema as it is, as a [Schema](#schema) is. Its `~standard` validates asynchronously when the validator waits.
+An [`AsyncValidator`](#asyncvalidator) a factory of this package made, which is also a Standard Schema as it is, as a [`Schema`](#schema) is. Its `~standard` validates asynchronously when the validator waits.
 
 #### AsyncSchema › ~standard
 
-Inherited from [StandardSchemaV1](interop.md#standardschemav1--standard).
+Inherited from [`StandardSchemaV1`](interop.md#standardschemav1--standard).
 
 #### AsyncSchema › ~types
 
-Inherited from [AsyncValidator](#asyncvalidator--types).
+Inherited from [`AsyncValidator`](#asyncvalidator--types).
 
 ### AsyncValidator
 
 ```ts
-export interface AsyncValidator<T, TInput = unknown>
+export interface AsyncValidator<T, TInput = unknown> {
+    (input: unknown): ValidationResult<T> | PromiseLike<ValidationResult<T>>;
+    readonly "~types"?: {
+        readonly input: TInput;
+    };
+}
 ```
 
 A validator that may finish later, for rules that need I/O such as checking a name is not taken.
@@ -235,15 +244,19 @@ readonly "~types"?: {
 };
 ```
 
-Never set: it only carries `TInput`, as on [Validator](#validator).
+Never set: it only carries `TInput`, as on [`Validator`](#validator).
 
 ### AuditFinding
 
 ```ts
-export interface AuditFinding
+export interface AuditFinding {
+    readonly rule: "unbounded_size" | "unbounded_text" | "raised_limit" | "unreadable";
+    readonly path: string;
+    readonly kind: string;
+}
 ```
 
-A place in a schema where input nobody controls is not bounded, as [audit](#audit) reports it.
+A place in a schema where input nobody controls is not bounded, as [`audit`](#audit) reports it.
 
 #### AuditFinding › kind
 
@@ -272,7 +285,12 @@ What is missing. `"unbounded_size"`: an array, a set, a map or a record without 
 ### Description
 
 ```ts
-export interface Description
+export interface Description {
+    readonly kind: string;
+    readonly options?: Readonly<Record<string, unknown>>;
+    readonly checks?: readonly AsyncCheck<never>[];
+    readonly [part: string]: unknown;
+}
 ```
 
 What a factory of this package made, as plain data: a validator's kind, the options it read, its checks, and whatever a validator of that kind is made of, such as the `shape` of an `object` or the `item` of an `array`. A built-in check has one too, of kind `"check"`, with the `code` and `params` of the issue it reports.
@@ -314,18 +332,28 @@ What a validator of this kind is made of.
 ### Factory
 
 ```ts
-export interface Factory<T, TOptions, TInput = T>
+export interface Factory<T, TOptions, TInput = T> {
+    (...checks: Check<T>[]): Schema<T, TInput>;
+    (options: TOptions, ...checks: Check<T>[]): Schema<T, TInput>;
+    (...checks: AsyncCheck<T>[]): AsyncSchema<T, TInput>;
+    (options: TOptions, ...checks: AsyncCheck<T>[]): AsyncSchema<T, TInput>;
+}
 ```
 
-The factory of a validator of `T` with options `TOptions`: options first and optional, then any checks. It makes a [Schema](#schema) while every check is a [Check](#check), and an [AsyncSchema](#asyncschema) as soon as one is an [AsyncCheck](#asynccheck).
+The factory of a validator of `T` with options `TOptions`: options first and optional, then any checks. It makes a [`Schema`](#schema) while every check is a [`Check`](#check), and an [`AsyncSchema`](#asyncschema) as soon as one is an [`AsyncCheck`](#asynccheck).
 
 ### IssueInput
 
 ```ts
-export interface IssueInput
+export interface IssueInput {
+    code?: ValidationIssueCode;
+    path?: readonly ValidationPathSegment[];
+    params?: Readonly<Record<string, unknown>>;
+    message?: string;
+}
 ```
 
-An issue as a validator author writes it; [fail](#fail) fills in the rest.
+An issue as a validator author writes it; [`fail`](#fail) fills in the rest.
 
 #### IssueInput › code
 
@@ -364,7 +392,9 @@ Location of the failure relative to the value being validated. Defaults to that 
 ### MessageOptions
 
 ```ts
-export interface MessageOptions
+export interface MessageOptions {
+    message?: Message | undefined;
+}
 ```
 
 The options every validator takes.
@@ -380,25 +410,29 @@ Wording for every issue this validator reports itself, and every issue one of it
 ### Schema
 
 ```ts
-export interface Schema<T, TInput = unknown> extends Validator<T, TInput>, StandardSchemaV1<TInput, T>
+export interface Schema<T, TInput = unknown> extends Validator<T, TInput>, StandardSchemaV1<TInput, T> {
+}
 ```
 
-A [Validator](#validator) a factory of this package made, which is also a Standard Schema as it is: a library that takes one, such as a form library or a router, takes it without a `standard` call, and words its issues in short English. `standard(validator, messages)` gives the full wording or another language.
+A [`Validator`](#validator) a factory of this package made, which is also a Standard Schema as it is: a library that takes one, such as a form library or a router, takes it without a `standard` call, and words its issues in short English. `standard(validator, messages)` gives the full wording or another language.
 
-Accepted wherever a [Validator](#validator) is. A validator written by hand is a [Validator](#validator) and not a Schema, since it has no `~standard` of its own.
+Accepted wherever a [`Validator`](#validator) is. A validator written by hand is a [`Validator`](#validator) and not a Schema, since it has no `~standard` of its own.
 
 #### Schema › ~standard
 
-Inherited from [StandardSchemaV1](interop.md#standardschemav1--standard).
+Inherited from [`StandardSchemaV1`](interop.md#standardschemav1--standard).
 
 #### Schema › ~types
 
-Inherited from [Validator](#validator--types).
+Inherited from [`Validator`](#validator--types).
 
 ### ValidationErr
 
 ```ts
-export interface ValidationErr
+export interface ValidationErr {
+    readonly ok: false;
+    readonly error: ValidationFailure;
+}
 ```
 
 Failed validation, carrying every issue found.
@@ -420,7 +454,9 @@ readonly ok: false;
 ### ValidationFailure
 
 ```ts
-export interface ValidationFailure
+export interface ValidationFailure {
+    readonly issues: readonly [ValidationIssue, ...ValidationIssue[]];
+}
 ```
 
 Everything a failed validation found.
@@ -436,7 +472,12 @@ Every issue found, in the order the validator encountered them. Never empty, and
 ### ValidationIssue
 
 ```ts
-export interface ValidationIssue
+export interface ValidationIssue {
+    readonly code: ValidationIssueCode;
+    readonly path: readonly ValidationPathSegment[];
+    readonly params?: Readonly<Record<string, unknown>>;
+    readonly message?: string;
+}
 ```
 
 A single reason a value failed validation.
@@ -476,7 +517,10 @@ Location of the invalid value, from the root of the validated data. Empty for th
 ### ValidationOk
 
 ```ts
-export interface ValidationOk<T>
+export interface ValidationOk<T> {
+    readonly ok: true;
+    readonly value: T;
+}
 ```
 
 Successful validation, carrying the validated value.
@@ -498,10 +542,15 @@ The validated value, after any transforms and defaults.
 ### Validator
 
 ```ts
-export interface Validator<T, TInput = unknown>
+export interface Validator<T, TInput = unknown> {
+    (input: unknown): ValidationResult<T>;
+    readonly "~types"?: {
+        readonly input: TInput;
+    };
+}
 ```
 
-A synchronous validator: a function that takes any input and returns a [ValidationResult](#validationresult).
+A synchronous validator: a function that takes any input and returns a [`ValidationResult`](#validationresult).
 
 Every validator in this package has this shape, and so does anything you write yourself.
 
@@ -515,7 +564,7 @@ readonly "~types"?: {
 };
 ```
 
-Never set: it only carries `TInput`, the type of input that can pass, for [InferInput](#inferinput). Being optional, it lets any function of the right shape be a validator. The type is held in an object, since read straight from an optional property, an input type that includes `undefined` would lose it.
+Never set: it only carries `TInput`, the type of input that can pass, for [`InferInput`](#inferinput). Being optional, it lets any function of the right shape be a validator. The type is held in an object, since read straight from an optional property, an input type that includes `undefined` would lose it.
 
 ## Type aliases
 
@@ -538,7 +587,7 @@ Any validator, synchronous or asynchronous.
 export type AsyncCheck<T> = (value: T) => readonly ValidationIssue[] | undefined | PromiseLike<readonly ValidationIssue[] | undefined>;
 ```
 
-A check that may finish later, such as one that asks a server whether a name is taken. A validator given one is an [AsyncValidator](#asyncvalidator).
+A check that may finish later, such as one that asks a server whether a name is taken. A validator given one is an [`AsyncValidator`](#asyncvalidator).
 
 **Type parameters**
 
@@ -550,7 +599,7 @@ A check that may finish later, such as one that asks a server whether a name is 
 export type AsyncRest<T, TOptions> = [options?: TOptions, ...checks: AsyncCheck<T>[]] | AsyncCheck<T>[];
 ```
 
-[Rest](#rest) where a check may be an [AsyncCheck](#asynccheck).
+[`Rest`](#rest) where a check may be an [`AsyncCheck`](#asynccheck).
 
 ### Check
 
@@ -641,7 +690,7 @@ Wording for the issues one validator reports itself: the text, or a function tha
 export type Rest<T, TOptions> = [options?: TOptions, ...checks: Check<T>[]] | Check<T>[];
 ```
 
-What follows a validator's own arguments, such as the value of `literal`: options, then checks, or checks alone. Every check is a [Check](#check).
+What follows a validator's own arguments, such as the value of `literal`: options, then checks, or checks alone. Every check is a [`Check`](#check).
 
 ### ValidationIssueCode
 

@@ -372,7 +372,23 @@ Unwraps a Result, returning the value if successful, or the provided fallback va
 ### AppError
 
 ```ts
-export interface AppError extends Error
+export interface AppError extends Error {
+    readonly type: AppErrorType;
+    readonly code: string | null;
+    readonly messageKey: string | null;
+    readonly source: AppErrorSource;
+    readonly originalError: unknown;
+    readonly isRetryable: boolean;
+    toJSON(): {
+        name: string;
+        message: string;
+        type: AppErrorType;
+        code: string | null;
+        messageKey: string | null;
+        source: AppErrorSource;
+        isRetryable: boolean;
+    };
+}
 ```
 
 A predictable, immutable error shape representing a normalized application error.
@@ -448,7 +464,11 @@ Produces the normalized fields used by `JSON.stringify`, excluding the diagnosti
 ### AppErrorOptions
 
 ```ts
-export interface AppErrorOptions
+export interface AppErrorOptions {
+    fallbackMessage?: string;
+    registry?: ErrorRegistry | ReadonlyErrorRegistry;
+    maxDepth?: number;
+}
 ```
 
 Options configuration for controlling how raw error values are normalized into `AppError` instances.
@@ -480,7 +500,10 @@ The specific error registry to query for classifications. Must expose the read-f
 ### Err
 
 ```ts
-export interface Err
+export interface Err {
+    readonly ok: false;
+    readonly error: AppError;
+}
 ```
 
 Represents a failed result value wrapping a normalized AppError.
@@ -500,7 +523,12 @@ readonly ok: false;
 ### ErrorFeedback
 
 ```ts
-export interface ErrorFeedback
+export interface ErrorFeedback {
+    message: string;
+    messageKey?: string;
+    source?: string;
+    isRetryable?: boolean;
+}
 ```
 
 The structured feedback returned when a registry matches an error. Defines the safe user-facing message and metadata to attach to the `AppError`.
@@ -540,22 +568,24 @@ An optional source label; any non-empty string. Built-in presets use dot-separat
 ### ErrorPatternDefinition
 
 ```ts
-export interface ErrorPatternDefinition extends ErrorFeedback
+export interface ErrorPatternDefinition extends ErrorFeedback {
+    pattern: RegExp;
+}
 ```
 
 Represents a registered regex pattern definition and its feedback mapping.
 
 #### ErrorPatternDefinition › isRetryable
 
-Inherited from [ErrorFeedback](#errorfeedback--isretryable).
+Inherited from [`ErrorFeedback`](#errorfeedback--isretryable).
 
 #### ErrorPatternDefinition › message
 
-Inherited from [ErrorFeedback](#errorfeedback--message).
+Inherited from [`ErrorFeedback`](#errorfeedback--message).
 
 #### ErrorPatternDefinition › messageKey
 
-Inherited from [ErrorFeedback](#errorfeedback--messagekey).
+Inherited from [`ErrorFeedback`](#errorfeedback--messagekey).
 
 #### ErrorPatternDefinition › pattern
 
@@ -567,12 +597,18 @@ The RegExp instance used to evaluate heuristic error matches.
 
 #### ErrorPatternDefinition › source
 
-Inherited from [ErrorFeedback](#errorfeedback--source).
+Inherited from [`ErrorFeedback`](#errorfeedback--source).
 
 ### ErrorPatternRegistryBucket
 
 ```ts
-export interface ErrorPatternRegistryBucket
+export interface ErrorPatternRegistryBucket {
+    add(pattern: RegExp, feedback: ErrorFeedback): void;
+    addList(entries: readonly (readonly [pattern: RegExp, feedback: ErrorFeedback])[]): void;
+    clear(): void;
+    delete(pattern: RegExp): boolean;
+    values(): readonly Readonly<ErrorPatternDefinition>[];
+}
 ```
 
 A registry bucket for storing and matching error classifications heuristically using RegExp patterns.
@@ -645,22 +681,24 @@ The returned list, its definitions, and their RegExp instances are frozen. Shari
 ### ErrorPrefixDefinition
 
 ```ts
-export interface ErrorPrefixDefinition extends ErrorFeedback
+export interface ErrorPrefixDefinition extends ErrorFeedback {
+    prefix: string;
+}
 ```
 
 Represents a registered message prefix definition and its feedback mapping.
 
 #### ErrorPrefixDefinition › isRetryable
 
-Inherited from [ErrorFeedback](#errorfeedback--isretryable).
+Inherited from [`ErrorFeedback`](#errorfeedback--isretryable).
 
 #### ErrorPrefixDefinition › message
 
-Inherited from [ErrorFeedback](#errorfeedback--message).
+Inherited from [`ErrorFeedback`](#errorfeedback--message).
 
 #### ErrorPrefixDefinition › messageKey
 
-Inherited from [ErrorFeedback](#errorfeedback--messagekey).
+Inherited from [`ErrorFeedback`](#errorfeedback--messagekey).
 
 #### ErrorPrefixDefinition › prefix
 
@@ -672,12 +710,18 @@ The message prefix matched after trimming trailing sentence punctuation.
 
 #### ErrorPrefixDefinition › source
 
-Inherited from [ErrorFeedback](#errorfeedback--source).
+Inherited from [`ErrorFeedback`](#errorfeedback--source).
 
 ### ErrorPrefixRegistryBucket
 
 ```ts
-export interface ErrorPrefixRegistryBucket
+export interface ErrorPrefixRegistryBucket {
+    add(prefix: string, feedback: ErrorFeedback): void;
+    addList(entries: readonly (readonly [prefix: string, feedback: ErrorFeedback])[]): void;
+    clear(): void;
+    delete(prefix: string): boolean;
+    values(): readonly Readonly<ErrorPrefixDefinition>[];
+}
 ```
 
 A registry bucket for storing and matching error classifications based on message prefixes.
@@ -750,7 +794,15 @@ The returned list and its definitions are frozen.
 ### ErrorRegistry
 
 ```ts
-export interface ErrorRegistry
+export interface ErrorRegistry {
+    readonly codes: ErrorRegistryBucket;
+    readonly names: ErrorRegistryBucket;
+    readonly messages: ErrorRegistryBucket;
+    readonly prefixes: ErrorPrefixRegistryBucket;
+    readonly patterns: ErrorPatternRegistryBucket;
+    clear(): void;
+    merge(registry: ErrorRegistry | ReadonlyErrorRegistry): void;
+}
 ```
 
 A collection of mutable exact and heuristic error buckets used to classify unknown errors. Bucket references are read-only and cannot be replaced.
@@ -820,7 +872,14 @@ Merges all mappings from the source registry into this registry, overwriting mat
 ### ErrorRegistryBucket
 
 ```ts
-export interface ErrorRegistryBucket
+export interface ErrorRegistryBucket {
+    add(identifier: string, feedback: ErrorFeedback): void;
+    addList(entries: readonly (readonly [identifier: string, feedback: ErrorFeedback])[]): void;
+    clear(): void;
+    get(identifier: string): Readonly<ErrorFeedback> | undefined;
+    delete(identifier: string): boolean;
+    values(): readonly (readonly [identifier: string, feedback: Readonly<ErrorFeedback>])[];
+}
 ```
 
 A registry bucket for storing and retrieving deterministic string-based error mappings (such as error codes, error names, or exact messages).
@@ -907,7 +966,10 @@ The returned list, its entries, and their feedback are frozen.
 ### Ok
 
 ```ts
-export interface Ok<T>
+export interface Ok<T> {
+    readonly ok: true;
+    readonly value: T;
+}
 ```
 
 Represents a successful result value holding the resolved data.
@@ -931,7 +993,13 @@ readonly value: T;
 ### ReadonlyErrorRegistry
 
 ```ts
-export interface ReadonlyErrorRegistry
+export interface ReadonlyErrorRegistry {
+    readonly codes: Pick<ErrorRegistryBucket, "get" | "values">;
+    readonly names: Pick<ErrorRegistryBucket, "get" | "values">;
+    readonly messages: Pick<ErrorRegistryBucket, "get" | "values">;
+    readonly prefixes: Pick<ErrorPrefixRegistryBucket, "values">;
+    readonly patterns: Pick<ErrorPatternRegistryBucket, "values">;
+}
 ```
 
 An immutable snapshot of an error registry returned by `freezeRegistry`.

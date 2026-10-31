@@ -144,10 +144,15 @@ oneOf(Status)("active"); // { ok: true, value: Status.Active }
 ### BigintOptions
 
 ```ts
-export interface BigintOptions extends MessageOptions
+export interface BigintOptions extends MessageOptions {
+    min?: bigint | undefined;
+    max?: bigint | undefined;
+    gt?: bigint | undefined;
+    lt?: bigint | undefined;
+}
 ```
 
-Constraints for [bigint](#bigint). Every option is optional.
+Constraints for [`bigint`](#bigint). Every option is optional.
 
 #### BigintOptions › gt
 
@@ -175,7 +180,7 @@ Requires a value of at most this.
 
 #### BigintOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions--message).
+Inherited from [`MessageOptions`](index.md#messageoptions--message).
 
 #### BigintOptions › min
 
@@ -188,10 +193,13 @@ Requires a value of at least this.
 ### DateOptions
 
 ```ts
-export interface DateOptions extends MessageOptions
+export interface DateOptions extends MessageOptions {
+    min?: Date | undefined;
+    max?: Date | undefined;
+}
 ```
 
-Bounds for [date](#date). Every option is optional.
+Bounds for [`date`](#date). Every option is optional.
 
 #### DateOptions › max
 
@@ -203,7 +211,7 @@ Requires this moment or an earlier one. Must be a valid `Date`.
 
 #### DateOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions--message).
+Inherited from [`MessageOptions`](index.md#messageoptions--message).
 
 #### DateOptions › min
 
@@ -216,10 +224,14 @@ Requires this moment or a later one. Must be a valid `Date`.
 ### FileOptions
 
 ```ts
-export interface FileOptions extends MessageOptions
+export interface FileOptions extends MessageOptions {
+    minSize?: number | undefined;
+    maxSize?: number | undefined;
+    types?: readonly string[] | undefined;
+}
 ```
 
-Options for [file](#file).
+Options for [`file`](#file).
 
 #### FileOptions › maxSize
 
@@ -231,7 +243,7 @@ Allows at most this many bytes. A non-negative integer. A file is held in memory
 
 #### FileOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions--message).
+Inherited from [`MessageOptions`](index.md#messageoptions--message).
 
 #### FileOptions › minSize
 
@@ -252,10 +264,21 @@ The media types the file may declare, such as `["image/png", "image/jpeg"]`, com
 ### NumberOptions
 
 ```ts
-export interface NumberOptions extends MessageOptions
+export interface NumberOptions extends MessageOptions {
+    min?: number | undefined;
+    max?: number | undefined;
+    gt?: number | undefined;
+    lt?: number | undefined;
+    int?: boolean | undefined;
+    safeInt?: boolean | undefined;
+    clamp?: {
+        min: number;
+        max: number;
+    } | undefined;
+}
 ```
 
-Constraints and clean-up for [number](#number). Every option is optional. Rarer constraints, such as `multipleOf` or `nonZero`, are checks given after the options.
+Constraints and clean-up for [`number`](#number). Every option is optional. Rarer constraints, such as `multipleOf` or `nonZero`, are checks given after the options.
 
 #### NumberOptions › clamp
 
@@ -304,7 +327,7 @@ Requires a value of at most this.
 
 #### NumberOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions--message).
+Inherited from [`MessageOptions`](index.md#messageoptions--message).
 
 #### NumberOptions › min
 
@@ -327,10 +350,16 @@ Requires a whole number that a double represents exactly, that is within `Number
 ### StringOptions
 
 ```ts
-export interface StringOptions extends MessageOptions
+export interface StringOptions extends MessageOptions {
+    min?: number | undefined;
+    max?: number | undefined;
+    length?: number | undefined;
+    trim?: boolean | undefined;
+    case?: "lower" | "upper" | undefined;
+}
 ```
 
-Constraints and clean-up for [string](#string). Every option is optional. Rarer constraints, such as a pattern or a prefix, are checks given after the options.
+Constraints and clean-up for [`string`](#string). Every option is optional. Rarer constraints, such as a pattern or a prefix, are checks given after the options.
 
 #### StringOptions › case
 
@@ -358,7 +387,7 @@ Allows at most this many characters. A non-negative integer.
 
 #### StringOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions--message).
+Inherited from [`MessageOptions`](index.md#messageoptions--message).
 
 #### StringOptions › min
 
@@ -620,7 +649,7 @@ type GlobalFile = typeof globalThis extends {
 } ? TFile : FileLike;
 ```
 
-The runtime's own `File`, read from `globalThis` so that a public signature names no global, which a program compiled without the types of the DOM or of Node.js could not resolve; [FileLike](#filelike) for one.
+The runtime's own `File`, read from `globalThis` so that a public signature names no global, which a program compiled without the types of the DOM or of Node.js could not resolve; [`FileLike`](#filelike) for one.
 
 Not exported; declared in `src/primitives/file.ts`.
 

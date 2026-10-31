@@ -35,7 +35,16 @@ Also exported as `default`.
 ### PostcssIconsOptions
 
 ```ts
-export interface PostcssIconsOptions
+export interface PostcssIconsOptions {
+    content?: string[];
+    prefix?: string;
+    injectBase?: boolean;
+    families?: IconFamilyData[];
+    defaultPrefix?: string;
+    registry?: IconRegistry;
+    strokeWidth?: number | string;
+    attribution?: PostcssAttributionMode;
+}
 ```
 
 Options for configuring the PostCSS icons plugin.
@@ -129,7 +138,7 @@ export declare const postcssIconsPlugin: {
 };
 ```
 
-Named alias for [postcssIcons](#postcssicons).
+Named alias for [`postcssIcons`](#postcssicons).
 
 ## Internal types
 

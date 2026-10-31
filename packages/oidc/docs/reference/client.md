@@ -17,13 +17,13 @@ export declare function createClient(options: ClientOptions): Client;
 
 Creates a relying party for one provider and one registered client.
 
-The client holds no per-user state. Between the redirect and the callback the app keeps the [PendingAuthorization](#pendingauthorization) that `Client.authorize` returned, in its own session. Every method validates its input first and throws only for a caller's mistake; a response from the provider, or a URL the browser was redirected to, comes back as a result, and never throws.
+The client holds no per-user state. Between the redirect and the callback the app keeps the [`PendingAuthorization`](#pendingauthorization) that `Client.authorize` returned, in its own session. Every method validates its input first and throws only for a caller's mistake; a response from the provider, or a URL the browser was redirected to, comes back as a result, and never throws.
 
 The ID token's signature is checked against the provider's JWKS, which the client fetches on first use and caches. Only the asymmetric algorithms this package supports, and that the provider advertises, are accepted. An ID token signed with `none`, or with an HMAC secret, is never accepted.
 
 **Parameters**
 
-- `options` — The provider metadata, the client's identifier, redirect URI, and authentication method. Use [discover](#discover) to get the metadata from the issuer.
+- `options` — The provider metadata, the client's identifier, redirect URI, and authentication method. Use [`discover`](#discover) to get the metadata from the issuer.
 
 **Returns** — A frozen client. Creating one makes no request.
 
@@ -97,7 +97,10 @@ if (!result.ok) {
 ### AuthorizationStart
 
 ```ts
-export interface AuthorizationStart
+export interface AuthorizationStart {
+    readonly url: string;
+    readonly pending: PendingAuthorization;
+}
 ```
 
 A started authorization: where to send the user, and what to keep for the callback.
@@ -121,7 +124,13 @@ The authorization request URL to redirect the user's browser to.
 ### AuthorizeOptions
 
 ```ts
-export interface AuthorizeOptions
+export interface AuthorizeOptions {
+    readonly scope?: readonly string[];
+    readonly prompt?: readonly Prompt[];
+    readonly maxAge?: number;
+    readonly loginHint?: string;
+    readonly uiLocales?: readonly string[];
+}
 ```
 
 What to ask for in one authorization request.
@@ -171,10 +180,19 @@ Preferred languages for the provider's pages, as BCP 47 tags.
 ### Client
 
 ```ts
-export interface Client
+export interface Client {
+    readonly metadata: ProviderMetadata;
+    authorize(options?: AuthorizeOptions): Promise<AuthorizationStart>;
+    callback(url: string | URL, pending: PendingAuthorization): Promise<OidcResult<SignIn>>;
+    refresh(options: RefreshOptions): Promise<OidcResult<Refreshed>>;
+    userinfo(options: UserinfoOptions): Promise<OidcResult<UserinfoClaims>>;
+    revoke(options: RevokeOptions): Promise<OidcResult<void>>;
+    clientCredentials(options?: ClientCredentialsOptions): Promise<OidcResult<TokenSet>>;
+    endSessionUrl(options?: EndSessionOptions): string;
+}
 ```
 
-A relying party for one provider and one registered client. It holds no per-user state: everything a sign-in needs between redirect and callback is in the [PendingAuthorization](#pendingauthorization) the app keeps.
+A relying party for one provider and one registered client. It holds no per-user state: everything a sign-in needs between redirect and callback is in the [`PendingAuthorization`](#pendingauthorization) the app keeps.
 
 #### Client › metadata
 
@@ -269,7 +287,9 @@ Fetches the user's claims from the userinfo endpoint. The access token must be g
 ### ClientCredentialsOptions
 
 ```ts
-export interface ClientCredentialsOptions
+export interface ClientCredentialsOptions {
+    readonly scope?: readonly string[];
+}
 ```
 
 What `Client.clientCredentials` asks for.
@@ -285,10 +305,19 @@ Scopes to request. Without it, the provider decides; this package's provider gra
 ### ClientOptions
 
 ```ts
-export interface ClientOptions
+export interface ClientOptions {
+    readonly metadata: ProviderMetadata;
+    readonly clientId: string;
+    readonly redirectUri?: string;
+    readonly auth: ClientAuth;
+    readonly fetch?: typeof fetch;
+    readonly timeout?: number;
+    readonly clockTolerance?: number;
+    readonly now?: () => number;
+}
 ```
 
-How [createClient](#createclient) talks to one provider. Invalid options throw `TypeError` at creation.
+How [`createClient`](#createclient) talks to one provider. Invalid options throw `TypeError` at creation.
 
 #### ClientOptions › auth
 
@@ -332,7 +361,7 @@ The `fetch` to call for the token, userinfo, revocation, and JWKS endpoints.
 readonly metadata: ProviderMetadata;
 ```
 
-The provider's metadata: what [discover](#discover) returned, or a document written by hand for a provider without discovery. It is checked as strictly as a fetched one.
+The provider's metadata: what [`discover`](#discover) returned, or a document written by hand for a provider without discovery. It is checked as strictly as a fetched one.
 
 #### ClientOptions › now
 
@@ -365,10 +394,13 @@ Seconds to wait for each response before failing. An integer from 1 through 60.
 ### DiscoverOptions
 
 ```ts
-export interface DiscoverOptions
+export interface DiscoverOptions {
+    readonly fetch?: typeof fetch;
+    readonly timeout?: number;
+}
 ```
 
-Options of [discover](#discover).
+Options of [`discover`](#discover).
 
 #### DiscoverOptions › fetch
 
@@ -393,7 +425,13 @@ Seconds to wait for the response before failing. An integer from 1 through 60.
 ### EndSessionOptions
 
 ```ts
-export interface EndSessionOptions
+export interface EndSessionOptions {
+    readonly idTokenHint?: string;
+    readonly postLogoutRedirectUri?: string;
+    readonly state?: string;
+    readonly logoutHint?: string;
+    readonly uiLocales?: readonly string[];
+}
 ```
 
 What `Client.endSessionUrl` puts in the logout request. Every member is optional.
@@ -441,7 +479,20 @@ Preferred languages for the provider's logout page, as BCP 47 tags.
 ### IdTokenClaims
 
 ```ts
-export interface IdTokenClaims
+export interface IdTokenClaims {
+    readonly iss: string;
+    readonly sub: string;
+    readonly aud: string | readonly string[];
+    readonly exp: number;
+    readonly iat: number;
+    readonly auth_time?: number;
+    readonly nonce?: string;
+    readonly acr?: string;
+    readonly amr?: readonly string[];
+    readonly azp?: string;
+    readonly at_hash?: string;
+    readonly [claim: string]: unknown;
+}
 ```
 
 Claims of a validated ID token (OpenID Connect Core §2). Frozen.
@@ -529,7 +580,10 @@ Any other claim the provider included.
 ### OidcErr
 
 ```ts
-export interface OidcErr<TFailure extends OidcFailure = OidcFailure>
+export interface OidcErr<TFailure extends OidcFailure = OidcFailure> {
+    readonly ok: false;
+    readonly error: TFailure;
+}
 ```
 
 Failed outcome, carrying every issue found.
@@ -551,7 +605,9 @@ readonly ok: false;
 ### OidcFailure
 
 ```ts
-export interface OidcFailure
+export interface OidcFailure {
+    readonly issues: readonly [OidcIssue, ...OidcIssue[]];
+}
 ```
 
 Everything a failed operation found.
@@ -567,12 +623,16 @@ Every issue found, in the order checks ran. Never empty.
 ### OidcIssue
 
 ```ts
-export interface OidcIssue
+export interface OidcIssue {
+    readonly code: OidcIssueCode;
+    readonly path?: readonly OidcPathSegment[];
+    readonly params?: Readonly<Record<string, string | number | boolean>>;
+}
 ```
 
 A single reason an operation failed.
 
-An issue never holds a value taken from untrusted input: no token, code, secret, verifier, claim value, or response body. It names which check failed and, where useful, a fact from the caller's own configuration, the package's limits, or a fixed vocabulary such as an [OAuthErrorCode](#oautherrorcode).
+An issue never holds a value taken from untrusted input: no token, code, secret, verifier, claim value, or response body. It names which check failed and, where useful, a fact from the caller's own configuration, the package's limits, or a fixed vocabulary such as an [`OAuthErrorCode`](#oautherrorcode).
 
 #### OidcIssue › code
 
@@ -588,7 +648,7 @@ Stable failure category.
 readonly params?: Readonly<Record<string, string | number | boolean>>;
 ```
 
-Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason` on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an [OAuthErrorCode](#oautherrorcode) or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and that issue's own params on `invalid_id_token`; `reason` on a provider `invalid_request` the app renders, and on `invalid_callback` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`.
+Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason` on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an [`OAuthErrorCode`](#oautherrorcode) or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and that issue's own params on `invalid_id_token`; `reason` on a provider `invalid_request` the app renders, and on `invalid_callback` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`.
 
 #### OidcIssue › path
 
@@ -601,7 +661,10 @@ Location the issue refers to, such as `["callback", "state"]` or `["id_token", "
 ### OidcOk
 
 ```ts
-export interface OidcOk<T>
+export interface OidcOk<T> {
+    readonly ok: true;
+    readonly value: T;
+}
 ```
 
 Successful outcome, carrying its value.
@@ -623,7 +686,13 @@ The frozen result.
 ### PendingAuthorization
 
 ```ts
-export interface PendingAuthorization
+export interface PendingAuthorization {
+    readonly state: string;
+    readonly nonce: string;
+    readonly codeVerifier: string;
+    readonly maxAge?: number;
+    readonly requestedAt?: number;
+}
 ```
 
 What the app keeps between the authorization request and its callback, typically in a server-side session or an encrypted, `HttpOnly` cookie. Plain JSON: it survives `JSON.stringify` and `structuredClone` unchanged. It holds the PKCE verifier, so treat it as a secret.
@@ -665,7 +734,32 @@ readonly state: string;
 ### ProviderMetadata
 
 ```ts
-export interface ProviderMetadata
+export interface ProviderMetadata {
+    readonly issuer: string;
+    readonly authorization_endpoint: string;
+    readonly token_endpoint: string;
+    readonly jwks_uri: string;
+    readonly userinfo_endpoint?: string;
+    readonly scopes_supported?: readonly string[];
+    readonly response_types_supported: readonly string[];
+    readonly response_modes_supported?: readonly string[];
+    readonly grant_types_supported?: readonly string[];
+    readonly subject_types_supported: readonly string[];
+    readonly id_token_signing_alg_values_supported: readonly string[];
+    readonly token_endpoint_auth_methods_supported?: readonly string[];
+    readonly token_endpoint_auth_signing_alg_values_supported?: readonly string[];
+    readonly claims_supported?: readonly string[];
+    readonly code_challenge_methods_supported?: readonly string[];
+    readonly revocation_endpoint?: string;
+    readonly end_session_endpoint?: string;
+    readonly revocation_endpoint_auth_methods_supported?: readonly string[];
+    readonly revocation_endpoint_auth_signing_alg_values_supported?: readonly string[];
+    readonly authorization_response_iss_parameter_supported?: boolean;
+    readonly claims_parameter_supported?: boolean;
+    readonly request_parameter_supported?: boolean;
+    readonly request_uri_parameter_supported?: boolean;
+    readonly [member: string]: unknown;
+}
 ```
 
 An OpenID Provider's metadata (OpenID Connect Discovery 1.0 §3, RFC 8414 §2, RFC 9207 §3), as this package reads and publishes it. Members this package does not use are kept as they were received.
@@ -827,7 +921,10 @@ Any other metadata member, unused by this package.
 ### Refreshed
 
 ```ts
-export interface Refreshed
+export interface Refreshed {
+    readonly tokens: TokenSet;
+    readonly claims?: IdTokenClaims;
+}
 ```
 
 A completed refresh. Frozen.
@@ -849,7 +946,11 @@ readonly tokens: TokenSet;
 ### RefreshOptions
 
 ```ts
-export interface RefreshOptions
+export interface RefreshOptions {
+    readonly refreshToken: string;
+    readonly subject: string;
+    readonly scope?: readonly string[];
+}
 ```
 
 What to refresh.
@@ -881,7 +982,10 @@ The `sub` of the original ID token. When the provider sends a new ID token, its 
 ### RevokeOptions
 
 ```ts
-export interface RevokeOptions
+export interface RevokeOptions {
+    readonly token: string;
+    readonly tokenTypeHint?: "access_token" | "refresh_token";
+}
 ```
 
 What `Client.revoke` revokes.
@@ -905,7 +1009,12 @@ Which kind of token it is, a hint the provider may use to find it faster (RFC 70
 ### SignIn
 
 ```ts
-export interface SignIn
+export interface SignIn {
+    readonly claims: IdTokenClaims;
+    readonly tokens: TokenSet & {
+        readonly idToken: string;
+    };
+}
 ```
 
 A completed sign-in. Frozen.
@@ -931,7 +1040,14 @@ The tokens, with `idToken` always present.
 ### TokenSet
 
 ```ts
-export interface TokenSet
+export interface TokenSet {
+    readonly accessToken: string;
+    readonly tokenType: "Bearer";
+    readonly expiresAt?: number;
+    readonly refreshToken?: string;
+    readonly idToken?: string;
+    readonly scope?: readonly string[];
+}
 ```
 
 Tokens the provider issued. Frozen.
@@ -981,7 +1097,10 @@ readonly tokenType: "Bearer";
 ### UserinfoClaims
 
 ```ts
-export interface UserinfoClaims
+export interface UserinfoClaims {
+    readonly sub: string;
+    readonly [claim: string]: unknown;
+}
 ```
 
 Claims returned by a userinfo endpoint (OpenID Connect Core §5.3). Frozen.
@@ -1005,7 +1124,10 @@ Any other claim the provider released for the granted scopes.
 ### UserinfoOptions
 
 ```ts
-export interface UserinfoOptions
+export interface UserinfoOptions {
+    readonly accessToken: string;
+    readonly subject: string;
+}
 ```
 
 What to ask the userinfo endpoint.
@@ -1029,25 +1151,28 @@ The `sub` of the ID token. The response's `sub` must equal it (OpenID Connect Co
 ### ClientAuth
 
 ```ts
-export type ClientAuth = {
-    readonly method: "none";
-} | {
-    readonly method: "client_secret_basic";
-    readonly secret: string;
-} | {
-    readonly method: "client_secret_post";
-    readonly secret: string;
-}
-/** An HS256 secret key from `importSecretKey`, which needs a secret of at least 32 bytes. */
- | {
-    readonly method: "client_secret_jwt";
-    readonly key: SecretKey;
-}
-/** A private key whose public half the provider has registered for this client. */
- | {
-    readonly method: "private_key_jwt";
-    readonly key: PrivateKey;
-};
+export type ClientAuth =
+    | {
+        readonly method: "none";
+    }
+    | {
+        readonly method: "client_secret_basic";
+        readonly secret: string;
+    }
+    | {
+        readonly method: "client_secret_post";
+        readonly secret: string;
+    }
+    /** An HS256 secret key from `importSecretKey`, which needs a secret of at least 32 bytes. */
+    | {
+        readonly method: "client_secret_jwt";
+        readonly key: SecretKey;
+    }
+    /** A private key whose public half the provider has registered for this client. */
+    | {
+        readonly method: "private_key_jwt";
+        readonly key: PrivateKey;
+    };
 ```
 
 How the client authenticates to the token endpoint (OpenID Connect Core §9).

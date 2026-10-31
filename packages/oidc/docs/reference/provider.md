@@ -55,7 +55,7 @@ export declare function generateClientSecret(): string;
 
 Generates a client secret for a confidential client.
 
-The secret is 256 bits from the Web Crypto random number generator, base64url-encoded. Give it to the client once, and store only [hashClientSecret](#hashclientsecret) of it: the provider never needs the plaintext again.
+The secret is 256 bits from the Web Crypto random number generator, base64url-encoded. Give it to the client once, and store only [`hashClientSecret`](#hashclientsecret) of it: the provider never needs the plaintext again.
 
 **Returns** — A new random secret of 43 characters.
 
@@ -65,9 +65,9 @@ The secret is 256 bits from the Web Crypto random number generator, base64url-en
 export declare function hashClientSecret(secret: string): Promise<string>;
 ```
 
-Hashes a client secret for storage in [ClientAuthentication](#clientauthentication)'s `secretHash`.
+Hashes a client secret for storage in [`ClientAuthentication`](#clientauthentication)'s `secretHash`.
 
-A single SHA-256 is enough here, and not a password hash such as bcrypt or scrypt, because the input is a 256-bit random value that cannot be guessed or brute-forced; a slow hash would add cost and buy nothing. That holds only for secrets from [generateClientSecret](#generateclientsecret). A human-chosen password must never be used as a client secret, because this hash would then be cheap to attack offline.
+A single SHA-256 is enough here, and not a password hash such as bcrypt or scrypt, because the input is a 256-bit random value that cannot be guessed or brute-forced; a slow hash would add cost and buy nothing. That holds only for secrets from [`generateClientSecret`](#generateclientsecret). A human-chosen password must never be used as a client secret, because this hash would then be cheap to attack offline.
 
 **Parameters**
 
@@ -82,7 +82,13 @@ A single SHA-256 is enough here, and not a password hash such as bcrypt or scryp
 ### AccessTokenRecord
 
 ```ts
-export interface AccessTokenRecord
+export interface AccessTokenRecord {
+    readonly grantId: string;
+    readonly clientId: string;
+    readonly subject: string;
+    readonly scopes: readonly string[];
+    readonly expiresAt: number;
+}
 ```
 
 What an access token stands for.
@@ -122,7 +128,9 @@ readonly subject: string;
 ### AuthorizationDenial
 
 ```ts
-export interface AuthorizationDenial
+export interface AuthorizationDenial {
+    readonly error: "access_denied" | "login_required" | "consent_required" | "interaction_required" | "account_selection_required";
+}
 ```
 
 Why the app is not granting the request. Sent to the client as the OAuth error.
@@ -136,14 +144,16 @@ readonly error: "access_denied" | "login_required" | "consent_required" | "inter
 ### AuthorizationFailure
 
 ```ts
-export interface AuthorizationFailure extends OidcFailure
+export interface AuthorizationFailure extends OidcFailure {
+    readonly redirect: Response | null;
+}
 ```
 
 Why an authorization request failed, and how to answer it.
 
 #### AuthorizationFailure › issues
 
-Inherited from [OidcFailure](#oidcfailure--issues).
+Inherited from [`OidcFailure`](#oidcfailure--issues).
 
 #### AuthorizationFailure › redirect
 
@@ -156,7 +166,13 @@ A `302` to the client's verified redirect URI carrying the error, to return as i
 ### AuthorizationGrant
 
 ```ts
-export interface AuthorizationGrant
+export interface AuthorizationGrant {
+    readonly subject: string;
+    readonly authTime: number;
+    readonly scopes: readonly string[];
+    readonly amr?: readonly string[];
+    readonly acr?: string;
+}
 ```
 
 A user the app authenticated, and what they granted.
@@ -202,7 +218,17 @@ readonly subject: string;
 ### AuthorizationInteraction
 
 ```ts
-export interface AuthorizationInteraction
+export interface AuthorizationInteraction {
+    readonly id: string;
+    readonly clientId: string;
+    readonly redirectUri: string;
+    readonly scopes: readonly string[];
+    readonly prompt: readonly Prompt[];
+    readonly maxAge?: number;
+    readonly loginHint?: string;
+    readonly uiLocales?: readonly string[];
+    readonly createdAt: number;
+}
 ```
 
 An authorization request the app now handles: who the client is, and what it asked for. Frozen and JSON-serializable. Keep the whole value for the login and consent pages; the provider has no lookup by `id`.
@@ -272,7 +298,12 @@ readonly uiLocales?: readonly string[];
 ### ClaimsRequest
 
 ```ts
-export interface ClaimsRequest
+export interface ClaimsRequest {
+    readonly subject: string;
+    readonly clientId: string;
+    readonly scopes: readonly string[];
+    readonly claims: readonly string[];
+}
 ```
 
 What the provider asks the app for when it releases claims about a user.
@@ -308,7 +339,14 @@ readonly subject: string;
 ### ClientRecord
 
 ```ts
-export interface ClientRecord
+export interface ClientRecord {
+    readonly clientId: string;
+    readonly redirectUris: readonly string[];
+    readonly scopes: readonly string[];
+    readonly grantTypes?: readonly GrantType[];
+    readonly auth: ClientAuthentication;
+    readonly postLogoutRedirectUris?: readonly string[];
+}
 ```
 
 A registered client, as the store returns it. A malformed record throws `TypeError` when used.
@@ -364,7 +402,20 @@ Scopes this client may request. Must include `openid` when the client may use `a
 ### CodeRecord
 
 ```ts
-export interface CodeRecord
+export interface CodeRecord {
+    readonly grantId: string;
+    readonly clientId: string;
+    readonly redirectUri: string;
+    readonly codeChallenge: string;
+    readonly nonce?: string;
+    readonly scopes: readonly string[];
+    readonly subject: string;
+    readonly authTime: number;
+    readonly amr?: readonly string[];
+    readonly acr?: string;
+    readonly maxAgeRequested: boolean;
+    readonly expiresAt: number;
+}
 ```
 
 What an authorization code stands for.
@@ -454,7 +505,13 @@ readonly subject: string;
 ### EndSession
 
 ```ts
-export interface EndSession
+export interface EndSession {
+    readonly clientId?: string;
+    readonly subject?: string;
+    readonly logoutHint?: string;
+    readonly uiLocales?: readonly string[];
+    readonly redirect: Response | null;
+}
 ```
 
 A validated logout request. Frozen. The provider keeps no sessions, so ending the user's session is the app's work; this says who asked and where to send the browser afterwards.
@@ -502,7 +559,20 @@ readonly uiLocales?: readonly string[];
 ### InteractionRecord
 
 ```ts
-export interface InteractionRecord
+export interface InteractionRecord {
+    readonly clientId: string;
+    readonly redirectUri: string;
+    readonly scopes: readonly string[];
+    readonly state?: string;
+    readonly nonce?: string;
+    readonly codeChallenge: string;
+    readonly prompt: readonly Prompt[];
+    readonly maxAge?: number;
+    readonly loginHint?: string;
+    readonly uiLocales?: readonly string[];
+    readonly createdAt: number;
+    readonly expiresAt: number;
+}
 ```
 
 A validated authorization request, saved between `Provider.beginAuthorization` and its completion.
@@ -590,7 +660,10 @@ readonly uiLocales?: readonly string[];
 ### OidcErr
 
 ```ts
-export interface OidcErr<TFailure extends OidcFailure = OidcFailure>
+export interface OidcErr<TFailure extends OidcFailure = OidcFailure> {
+    readonly ok: false;
+    readonly error: TFailure;
+}
 ```
 
 Failed outcome, carrying every issue found.
@@ -612,7 +685,9 @@ readonly ok: false;
 ### OidcFailure
 
 ```ts
-export interface OidcFailure
+export interface OidcFailure {
+    readonly issues: readonly [OidcIssue, ...OidcIssue[]];
+}
 ```
 
 Everything a failed operation found.
@@ -628,12 +703,16 @@ Every issue found, in the order checks ran. Never empty.
 ### OidcIssue
 
 ```ts
-export interface OidcIssue
+export interface OidcIssue {
+    readonly code: OidcIssueCode;
+    readonly path?: readonly OidcPathSegment[];
+    readonly params?: Readonly<Record<string, string | number | boolean>>;
+}
 ```
 
 A single reason an operation failed.
 
-An issue never holds a value taken from untrusted input: no token, code, secret, verifier, claim value, or response body. It names which check failed and, where useful, a fact from the caller's own configuration, the package's limits, or a fixed vocabulary such as an [OAuthErrorCode](#oautherrorcode).
+An issue never holds a value taken from untrusted input: no token, code, secret, verifier, claim value, or response body. It names which check failed and, where useful, a fact from the caller's own configuration, the package's limits, or a fixed vocabulary such as an [`OAuthErrorCode`](#oautherrorcode).
 
 #### OidcIssue › code
 
@@ -649,7 +728,7 @@ Stable failure category.
 readonly params?: Readonly<Record<string, string | number | boolean>>;
 ```
 
-Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason` on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an [OAuthErrorCode](#oautherrorcode) or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and that issue's own params on `invalid_id_token`; `reason` on a provider `invalid_request` the app renders, and on `invalid_callback` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`.
+Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason` on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an [`OAuthErrorCode`](#oautherrorcode) or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and that issue's own params on `invalid_id_token`; `reason` on a provider `invalid_request` the app renders, and on `invalid_callback` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`.
 
 #### OidcIssue › path
 
@@ -662,7 +741,10 @@ Location the issue refers to, such as `["callback", "state"]` or `["id_token", "
 ### OidcOk
 
 ```ts
-export interface OidcOk<T>
+export interface OidcOk<T> {
+    readonly ok: true;
+    readonly value: T;
+}
 ```
 
 Successful outcome, carrying its value.
@@ -684,7 +766,18 @@ The frozen result.
 ### OidcStore
 
 ```ts
-export interface OidcStore
+export interface OidcStore {
+    findClient(clientId: string): Promise<ClientRecord | undefined>;
+    saveInteraction(key: string, record: InteractionRecord): Promise<void>;
+    consumeInteraction(key: string): Promise<InteractionRecord | undefined>;
+    saveCode(key: string, record: CodeRecord): Promise<void>;
+    consumeCode(key: string): Promise<Consumption<CodeRecord> | undefined>;
+    saveAccessToken(key: string, record: AccessTokenRecord): Promise<void>;
+    findAccessToken(key: string): Promise<AccessTokenRecord | undefined>;
+    saveRefreshToken(key: string, record: RefreshTokenRecord): Promise<void>;
+    consumeRefreshToken(key: string): Promise<Consumption<RefreshTokenRecord> | undefined>;
+    revokeGrant(grantId: string): Promise<void>;
+}
 ```
 
 Persistence the provider needs. The app implements it over its database; `@codenhub/oidc/testing` has an in-memory reference, and `storeConformanceCases` there checks an adapter against this contract.
@@ -780,7 +873,13 @@ Saves a new refresh token.
 ### Provider
 
 ```ts
-export interface Provider
+export interface Provider {
+    readonly metadata: ProviderMetadata;
+    handle(request: Request): Promise<Response | null>;
+    beginAuthorization(request: Request): Promise<OidcResult<AuthorizationInteraction, AuthorizationFailure>>;
+    completeAuthorization(interactionId: string, outcome: AuthorizationGrant | AuthorizationDenial): Promise<OidcResult<Response>>;
+    endSession(request: Request): Promise<OidcResult<EndSession>>;
+}
 ```
 
 OpenID Provider endpoints on the Fetch API.
@@ -838,7 +937,12 @@ Answers the discovery, JWKS, token, userinfo, and revocation endpoints.
 ### ProviderDiagnostic
 
 ```ts
-export interface ProviderDiagnostic
+export interface ProviderDiagnostic {
+    readonly endpoint: "token" | "userinfo" | "revocation";
+    readonly reason: ProviderDiagnosticReason;
+    readonly status: number;
+    readonly clientId?: string;
+}
 ```
 
 One refused request, for the operator's logs. It never holds a value the request carried: no token, code, secret, verifier, or unverified client identifier.
@@ -874,7 +978,14 @@ The HTTP status the client was sent.
 ### ProviderEndpoints
 
 ```ts
-export interface ProviderEndpoints
+export interface ProviderEndpoints {
+    readonly authorization?: string;
+    readonly token?: string;
+    readonly userinfo?: string;
+    readonly jwks?: string;
+    readonly revocation?: string;
+    readonly endSession?: string;
+}
 ```
 
 Endpoint URLs, each an absolute `https` URL on any origin. A default appends its path to the issuer without the issuer's trailing `/`, so the issuer `https://id.example/` gives `https://id.example/token`.
@@ -934,7 +1045,32 @@ readonly userinfo?: string;
 ### ProviderMetadata
 
 ```ts
-export interface ProviderMetadata
+export interface ProviderMetadata {
+    readonly issuer: string;
+    readonly authorization_endpoint: string;
+    readonly token_endpoint: string;
+    readonly jwks_uri: string;
+    readonly userinfo_endpoint?: string;
+    readonly scopes_supported?: readonly string[];
+    readonly response_types_supported: readonly string[];
+    readonly response_modes_supported?: readonly string[];
+    readonly grant_types_supported?: readonly string[];
+    readonly subject_types_supported: readonly string[];
+    readonly id_token_signing_alg_values_supported: readonly string[];
+    readonly token_endpoint_auth_methods_supported?: readonly string[];
+    readonly token_endpoint_auth_signing_alg_values_supported?: readonly string[];
+    readonly claims_supported?: readonly string[];
+    readonly code_challenge_methods_supported?: readonly string[];
+    readonly revocation_endpoint?: string;
+    readonly end_session_endpoint?: string;
+    readonly revocation_endpoint_auth_methods_supported?: readonly string[];
+    readonly revocation_endpoint_auth_signing_alg_values_supported?: readonly string[];
+    readonly authorization_response_iss_parameter_supported?: boolean;
+    readonly claims_parameter_supported?: boolean;
+    readonly request_parameter_supported?: boolean;
+    readonly request_uri_parameter_supported?: boolean;
+    readonly [member: string]: unknown;
+}
 ```
 
 An OpenID Provider's metadata (OpenID Connect Discovery 1.0 §3, RFC 8414 §2, RFC 9207 §3), as this package reads and publishes it. Members this package does not use are kept as they were received.
@@ -1096,10 +1232,21 @@ Any other metadata member, unused by this package.
 ### ProviderOptions
 
 ```ts
-export interface ProviderOptions
+export interface ProviderOptions {
+    readonly issuer: string;
+    readonly signingKeys: readonly KeyPair[];
+    readonly store: OidcStore;
+    readonly claims: (request: ClaimsRequest) => Readonly<Record<string, unknown>> | Promise<Readonly<Record<string, unknown>>>;
+    readonly scopes?: Readonly<Record<string, readonly string[]>>;
+    readonly ttl?: ProviderTtl;
+    readonly accessToken?: AccessTokenFormat;
+    readonly endpoints?: ProviderEndpoints;
+    readonly now?: () => number;
+    readonly onDiagnostic?: (diagnostic: ProviderDiagnostic) => void;
+}
 ```
 
-How [createProvider](#createprovider) runs. Invalid options throw `TypeError` at creation.
+How [`createProvider`](#createprovider) runs. Invalid options throw `TypeError` at creation.
 
 #### ProviderOptions › accessToken
 
@@ -1192,7 +1339,13 @@ Token lifetimes.
 ### ProviderTtl
 
 ```ts
-export interface ProviderTtl
+export interface ProviderTtl {
+    readonly code?: number;
+    readonly interaction?: number;
+    readonly accessToken?: number;
+    readonly idToken?: number;
+    readonly refreshToken?: number;
+}
 ```
 
 Token lifetimes, in seconds.
@@ -1250,7 +1403,16 @@ A refresh token family, counted from the code exchange; rotation does not extend
 ### RefreshTokenRecord
 
 ```ts
-export interface RefreshTokenRecord
+export interface RefreshTokenRecord {
+    readonly grantId: string;
+    readonly clientId: string;
+    readonly subject: string;
+    readonly scopes: readonly string[];
+    readonly authTime: number;
+    readonly amr?: readonly string[];
+    readonly acr?: string;
+    readonly expiresAt: number;
+}
 ```
 
 What a refresh token stands for.
@@ -1310,14 +1472,15 @@ readonly subject: string;
 ### AccessTokenFormat
 
 ```ts
-export type AccessTokenFormat = {
-    readonly format: "opaque";
-}
-/** `audience` is the `aud` every access token carries: the resource server's identifier, usually its URL. */
- | {
-    readonly format: "jwt";
-    readonly audience: string;
-};
+export type AccessTokenFormat =
+    | {
+        readonly format: "opaque";
+    }
+    /** `audience` is the `aud` every access token carries: the resource server's identifier, usually its URL. */
+    | {
+        readonly format: "jwt";
+        readonly audience: string;
+    };
 ```
 
 How access tokens are issued. See `ProviderOptions.accessToken`.
@@ -1325,45 +1488,48 @@ How access tokens are issued. See `ProviderOptions.accessToken`.
 ### ClientAuthentication
 
 ```ts
-export type ClientAuthentication = {
-    readonly method: "none";
-} | {
-    readonly method: "client_secret_basic";
-    readonly secretHash: string;
-} | {
-    readonly method: "client_secret_post";
-    readonly secretHash: string;
-}
-/** The client's HS256 secret, from `importSecretKey`. */
- | {
-    readonly method: "client_secret_jwt";
-    readonly key: SecretKey;
-}
-/** The client's public keys, from `createKeySet`, `importKeySet`, or `createRemoteKeySet`. */
- | {
-    readonly method: "private_key_jwt";
-    readonly keys: KeySet;
-};
+export type ClientAuthentication =
+    | {
+        readonly method: "none";
+    }
+    | {
+        readonly method: "client_secret_basic";
+        readonly secretHash: string;
+    }
+    | {
+        readonly method: "client_secret_post";
+        readonly secretHash: string;
+    }
+    /** The client's HS256 secret, from `importSecretKey`. */
+    | {
+        readonly method: "client_secret_jwt";
+        readonly key: SecretKey;
+    }
+    /** The client's public keys, from `createKeySet`, `importKeySet`, or `createRemoteKeySet`. */
+    | {
+        readonly method: "private_key_jwt";
+        readonly keys: KeySet;
+    };
 ```
 
 How a registered client authenticates to the token endpoint, and what the provider checks it against.
 
-Secrets are never stored in plaintext: `secretHash` is what [hashClientSecret](#hashclientsecret) returns for the secret [generateClientSecret](#generateclientsecret) created. `client_secret_jwt` is the exception, because an HMAC can only be checked with the secret itself.
+Secrets are never stored in plaintext: `secretHash` is what [`hashClientSecret`](#hashclientsecret) returns for the secret [`generateClientSecret`](#generateclientsecret) created. `client_secret_jwt` is the exception, because an HMAC can only be checked with the secret itself.
 
 ### Consumption
 
 ```ts
 export type Consumption<TRecord> =
-/** This call consumed the value; no other call ever gets `consumed` for it. */
-{
-    readonly status: "consumed";
-    readonly record: TRecord;
-}
-/** The value had already been consumed; its grant is named so the provider can revoke it. */
- | {
-    readonly status: "replayed";
-    readonly grantId: string;
-};
+    /** This call consumed the value; no other call ever gets `consumed` for it. */
+    | {
+        readonly status: "consumed";
+        readonly record: TRecord;
+    }
+    /** The value had already been consumed; its grant is named so the provider can revoke it. */
+    | {
+        readonly status: "replayed";
+        readonly grantId: string;
+    };
 ```
 
 The outcome of consuming a single-use value.

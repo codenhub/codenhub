@@ -44,7 +44,9 @@ Locale selection uses explicit input, valid persisted state, navigator preferenc
 ### BrowserI18nBinding
 
 ```ts
-export interface BrowserI18nBinding
+export interface BrowserI18nBinding {
+    disconnect(): void;
+}
 ```
 
 Browser effects exclusively owned for one i18n manager after successful initialization.
@@ -62,7 +64,15 @@ Existing DOM text, document attributes, persisted state, and core i18n state are
 ### BrowserI18nOptions
 
 ```ts
-export interface BrowserI18nOptions<TLocale extends string>
+export interface BrowserI18nOptions<TLocale extends string> {
+    i18n: I18n<TLocale>;
+    locale?: TLocale;
+    storageKey?: string;
+    persistLocale?: boolean;
+    syncDocument?: boolean;
+    root?: ParentNode;
+    observe?: boolean;
+}
 ```
 
 Optional browser integrations applied around a consumer-owned i18n manager.

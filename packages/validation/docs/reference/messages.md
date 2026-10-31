@@ -15,12 +15,12 @@ order: 7
 export declare function flatten(failure: ValidationFailure, messages?: Messages): FlattenedErrors;
 ```
 
-Groups the messages of a failure for display: issues at the root go to `formErrors`, the rest are keyed by their [formatPath](#formatpath) notation in `fieldErrors`, an object with no prototype so that a field named like an `Object.prototype` member cannot collide with it. Test for a field with `in` or `Object.hasOwn`, since it has no `hasOwnProperty`.
+Groups the messages of a failure for display: issues at the root go to `formErrors`, the rest are keyed by their [`formatPath`](#formatpath) notation in `fieldErrors`, an object with no prototype so that a field named like an `Object.prototype` member cannot collide with it. Test for a field with `in` or `Object.hasOwn`, since it has no `hasOwnProperty`.
 
 **Parameters**
 
 - `failure` — The `error` of a failed result.
-- `messages` — Text for the codes it names, `englishMessages` unless given, as for [formatIssue](#formatissue).
+- `messages` — Text for the codes it names, `englishMessages` unless given, as for [`formatIssue`](#formatissue).
 
 **Returns** — The grouped messages.
 
@@ -84,7 +84,10 @@ formatPath(["a.b"]); // '["a.b"]'
 ### FlattenedErrors
 
 ```ts
-export interface FlattenedErrors
+export interface FlattenedErrors {
+    formErrors: string[];
+    fieldErrors: Record<string, string[]>;
+}
 ```
 
 Issue messages grouped for display next to form fields.
@@ -95,7 +98,7 @@ Issue messages grouped for display next to form fields.
 fieldErrors: Record<string, string[]>;
 ```
 
-Messages grouped by [formatPath](#formatpath) notation, such as `user.email`.
+Messages grouped by [`formatPath`](#formatpath) notation, such as `user.email`.
 
 #### FlattenedErrors › formErrors
 
@@ -129,7 +132,7 @@ export declare const englishMessages: Messages;
 
 The built-in English wording for every issue the validators can report, as a message map.
 
-`formatIssue`, `flatten` and `standard` use it when given no map, for text such as "Must be at least 18", and `assert` uses it when passed it. It is a separate value, so a program that never calls those three, such as one that checks its options with `assert` and its own wording, does not bundle it, and one that can report only a few codes takes the wording of each on its own, such as [invalidTypeMessage](#invalidtypemessage). To change some of the wording, spread it and override the codes you want: `{ ...englishMessages, too_small: "Too short" }`. It is frozen, so no code can reword the messages of every other user of it in the process. A custom validator's own codes are not in it; give them a `message` on the issue or an entry of your own.
+`formatIssue`, `flatten` and `standard` use it when given no map, for text such as "Must be at least 18", and `assert` uses it when passed it. It is a separate value, so a program that never calls those three, such as one that checks its options with `assert` and its own wording, does not bundle it, and one that can report only a few codes takes the wording of each on its own, such as [`invalidTypeMessage`](#invalidtypemessage). To change some of the wording, spread it and override the codes you want: `{ ...englishMessages, too_small: "Too short" }`. It is frozen, so no code can reword the messages of every other user of it in the process. A custom validator's own codes are not in it; give them a `message` on the issue or an entry of your own.
 
 **Example**
 
@@ -180,7 +183,7 @@ export declare const invalidTypeMessage: Wording;
 
 Words an `invalid_type` issue in English, such as "Expected string, received number".
 
-Each code's wording is a value of its own, so a program that can report only a few codes builds a map of those and bundles no other wording: `{ invalid_type: invalidTypeMessage }`. Pass the map wherever [englishMessages](#englishmessages) goes. A code the map lacks is worded "Invalid value".
+Each code's wording is a value of its own, so a program that can report only a few codes builds a map of those and bundles no other wording: `{ invalid_type: invalidTypeMessage }`. Pass the map wherever [`englishMessages`](#englishmessages) goes. A code the map lacks is worded "Invalid value".
 
 **Returns** — The wording, without the issue's path.
 
@@ -222,7 +225,7 @@ export declare const portugueseMessages: Messages;
 
 The built-in Portuguese wording for every issue the validators can report, as a message map.
 
-It is what [englishMessages](#englishmessages) is, in Portuguese as written in Brazil: pass it to `formatIssue`, `flatten`, `assert` or `standard` to get text such as "Deve ser no mínimo 18". It is a separate value, so a program bundles the wording of the languages it imports and no other. To change some of the wording, spread it and override the codes you want: `{ ...portugueseMessages, too_small: "Muito curto" }`. It is frozen. The names of types, such as `string` in "Esperado string, recebido number", are the ones the issue holds and are not translated, and a custom validator's own codes are not in it: one without a `message` on the issue or an entry of your own is worded "Valor inválido", by the entry `default`.
+It is what [`englishMessages`](#englishmessages) is, in Portuguese as written in Brazil: pass it to `formatIssue`, `flatten`, `assert` or `standard` to get text such as "Deve ser no mínimo 18". It is a separate value, so a program bundles the wording of the languages it imports and no other. To change some of the wording, spread it and override the codes you want: `{ ...portugueseMessages, too_small: "Muito curto" }`. It is frozen. The names of types, such as `string` in "Esperado string, recebido number", are the ones the issue holds and are not translated, and a custom validator's own codes are not in it: one without a `message` on the issue or an entry of your own is worded "Valor inválido", by the entry `default`.
 
 **Example**
 

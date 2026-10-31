@@ -100,14 +100,16 @@ url({ protocols: ["https"], path: string(startsWith("/api/")), query: object({ p
 ### Base64Options
 
 ```ts
-export interface Base64Options extends MessageOptions
+export interface Base64Options extends MessageOptions {
+    url?: boolean | undefined;
+}
 ```
 
-Options for [base64](#base64).
+Options for [`base64`](#base64).
 
 #### Base64Options › message
 
-Inherited from [MessageOptions](index.md#messageoptions--message).
+Inherited from [`MessageOptions`](index.md#messageoptions--message).
 
 #### Base64Options › url
 
@@ -122,10 +124,14 @@ Requires the URL-safe alphabet of RFC 4648, with `-` and `_` for `+` and `/` and
 ### DatetimeOptions
 
 ```ts
-export interface DatetimeOptions extends MessageOptions
+export interface DatetimeOptions extends MessageOptions {
+    offset?: boolean | undefined;
+    local?: boolean | undefined;
+    precision?: number | undefined;
+}
 ```
 
-Options for [datetime](#datetime).
+Options for [`datetime`](#datetime).
 
 #### DatetimeOptions › local
 
@@ -139,7 +145,7 @@ Also accepts a date-time without a zone, which names a time on a local clock rat
 
 #### DatetimeOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions--message).
+Inherited from [`MessageOptions`](index.md#messageoptions--message).
 
 #### DatetimeOptions › offset
 
@@ -162,10 +168,14 @@ Exact number of fractional-second digits, an integer from 0 to 9. `0` forbids th
 ### EmailOptions
 
 ```ts
-export interface EmailOptions extends MessageOptions
+export interface EmailOptions extends MessageOptions {
+    allowPlus?: boolean | undefined;
+    domain?: AnyValidator | undefined;
+    local?: AnyValidator | undefined;
+}
 ```
 
-Options for [email](#email).
+Options for [`email`](#email).
 
 #### EmailOptions › allowPlus
 
@@ -195,19 +205,21 @@ Validates the local part, the text before the `@`, as written. Its failure is re
 
 #### EmailOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions--message).
+Inherited from [`MessageOptions`](index.md#messageoptions--message).
 
 ### IpOptions
 
 ```ts
-export interface IpOptions extends MessageOptions
+export interface IpOptions extends MessageOptions {
+    version?: "v4" | "v6" | undefined;
+}
 ```
 
-Options for [ip](#ip).
+Options for [`ip`](#ip).
 
 #### IpOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions--message).
+Inherited from [`MessageOptions`](index.md#messageoptions--message).
 
 #### IpOptions › version
 
@@ -220,14 +232,16 @@ Restricts the address family. Both are accepted when omitted.
 ### SearchParamsOptions
 
 ```ts
-export interface SearchParamsOptions extends MessageOptions
+export interface SearchParamsOptions extends MessageOptions {
+    repeated?: boolean | undefined;
+}
 ```
 
-Options for [searchParams](#searchparams).
+Options for [`searchParams`](#searchparams).
 
 #### SearchParamsOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions--message).
+Inherited from [`MessageOptions`](index.md#messageoptions--message).
 
 #### SearchParamsOptions › repeated
 
@@ -242,14 +256,16 @@ Gives the validator every value of every key as an array, and accepts a key give
 ### TimeOptions
 
 ```ts
-export interface TimeOptions extends MessageOptions
+export interface TimeOptions extends MessageOptions {
+    precision?: number | undefined;
+}
 ```
 
-Options for [time](#time).
+Options for [`time`](#time).
 
 #### TimeOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions--message).
+Inherited from [`MessageOptions`](index.md#messageoptions--message).
 
 #### TimeOptions › precision
 
@@ -262,10 +278,18 @@ Exact number of fractional-second digits, an integer from 0 to 9, which also mak
 ### UrlOptions
 
 ```ts
-export interface UrlOptions extends MessageOptions
+export interface UrlOptions extends MessageOptions {
+    protocols?: readonly string[] | undefined;
+    host?: AnyValidator | undefined;
+    credentials?: AnyValidator | undefined;
+    port?: AnyValidator | undefined;
+    path?: AnyValidator | undefined;
+    query?: AnyValidator | undefined;
+    repeated?: boolean | undefined;
+}
 ```
 
-Options for [url](#url).
+Options for [`url`](#url).
 
 #### UrlOptions › credentials
 
@@ -285,7 +309,7 @@ Validates the host instead of the default rule, that it is a public domain name.
 
 #### UrlOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions--message).
+Inherited from [`MessageOptions`](index.md#messageoptions--message).
 
 #### UrlOptions › path
 
@@ -334,14 +358,16 @@ Gives `query` every value of every key as an array, and accepts a key given more
 ### UuidOptions
 
 ```ts
-export interface UuidOptions extends MessageOptions
+export interface UuidOptions extends MessageOptions {
+    version?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | undefined;
+}
 ```
 
-Options for [uuid](#uuid).
+Options for [`uuid`](#uuid).
 
 #### UuidOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions--message).
+Inherited from [`MessageOptions`](index.md#messageoptions--message).
 
 #### UuidOptions › version
 

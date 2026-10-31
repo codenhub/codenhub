@@ -446,7 +446,9 @@ Resolves an icon name, loading its family first when it is not yet available.
 ### BaseCssOptions
 
 ```ts
-export interface BaseCssOptions
+export interface BaseCssOptions {
+    prefix?: string;
+}
 ```
 
 Options for generating base CSS icon rules.
@@ -462,7 +464,10 @@ Class prefix for base icon styles. Defaults to `"ic"`.
 ### GenerateFamilyCssOptions
 
 ```ts
-export interface GenerateFamilyCssOptions extends BaseCssOptions
+export interface GenerateFamilyCssOptions extends BaseCssOptions {
+    bareNames?: boolean;
+    attribution?: boolean;
+}
 ```
 
 Options for generating the complete stylesheet of one icon family.
@@ -487,12 +492,15 @@ This is what gives a plugin-free stylesheet a default family: the bare name cost
 
 #### GenerateFamilyCssOptions › prefix
 
-Inherited from [BaseCssOptions](#basecssoptions--prefix).
+Inherited from [`BaseCssOptions`](#basecssoptions--prefix).
 
 ### GenerateIconSetCssOptions
 
 ```ts
-export interface GenerateIconSetCssOptions extends BaseCssOptions
+export interface GenerateIconSetCssOptions extends BaseCssOptions {
+    injectBase?: boolean;
+    strokeWidth?: number | string;
+}
 ```
 
 Options for generating CSS rules for a collection of icon class names.
@@ -507,7 +515,7 @@ Whether to include the base rules (`.ic`, the size axis). Defaults to `true`.
 
 #### GenerateIconSetCssOptions › prefix
 
-Inherited from [BaseCssOptions](#basecssoptions--prefix).
+Inherited from [`BaseCssOptions`](#basecssoptions--prefix).
 
 #### GenerateIconSetCssOptions › strokeWidth
 
@@ -520,7 +528,9 @@ Stroke width applied to icons of stroke-based families that carry no stroke modi
 ### IconAlias
 
 ```ts
-export interface IconAlias
+export interface IconAlias {
+    parent: string;
+}
 ```
 
 An alternative name pointing at an icon in the same family.
@@ -536,7 +546,15 @@ Name of the icon this alias resolves to. Never another alias.
 ### IconData
 
 ```ts
-export interface IconData
+export interface IconData {
+    body: string;
+    width?: number;
+    height?: number;
+    left?: number;
+    top?: number;
+    tags?: string[];
+    color?: string;
+}
 ```
 
 A single icon's artwork and its optional per-icon geometry.
@@ -602,7 +620,10 @@ viewBox width, when it differs from the family default.
 ### IconFamilyAuthor
 
 ```ts
-export interface IconFamilyAuthor
+export interface IconFamilyAuthor {
+    name: string;
+    url: string;
+}
 ```
 
 Author or project credited for a family's artwork.
@@ -626,7 +647,16 @@ URL of the author or project homepage.
 ### IconFamilyData
 
 ```ts
-export interface IconFamilyData
+export interface IconFamilyData {
+    prefix: string;
+    info: IconFamilyInfo;
+    width?: number;
+    height?: number;
+    left?: number;
+    top?: number;
+    icons: Record<string, IconData>;
+    aliases?: Record<string, IconAlias>;
+}
 ```
 
 A complete icon family: its artwork, aliases, geometry, and metadata.
@@ -702,7 +732,19 @@ Default viewBox width for icons that do not override it. Defaults to `24`.
 ### IconFamilyInfo
 
 ```ts
-export interface IconFamilyInfo
+export interface IconFamilyInfo {
+    name: string;
+    total: number;
+    author: IconFamilyAuthor;
+    license: IconFamilyLicense;
+    attribution: IconAttribution;
+    tier: IconFamilyTier;
+    upstream: IconFamilyUpstream;
+    strokeWidth?: number;
+    style?: string;
+    weight?: string;
+    multicolor?: boolean;
+}
 ```
 
 Provenance, licensing, and presentation metadata for an icon family.
@@ -806,7 +848,11 @@ Catalog and documentation metadata only, like `IconFamilyInfo.style`.
 ### IconFamilyLicense
 
 ```ts
-export interface IconFamilyLicense
+export interface IconFamilyLicense {
+    title: string;
+    spdx: string;
+    url: string;
+}
 ```
 
 License a family's artwork is distributed under.
@@ -838,7 +884,10 @@ URL of the license text.
 ### IconFamilyUpstream
 
 ```ts
-export interface IconFamilyUpstream
+export interface IconFamilyUpstream {
+    package: string;
+    version: string;
+}
 ```
 
 Upstream project a family's artwork was generated from.
@@ -862,7 +911,10 @@ Exact upstream version the committed data was generated from.
 ### IconifyAdapterOptions
 
 ```ts
-export interface IconifyAdapterOptions
+export interface IconifyAdapterOptions {
+    attribution?: IconFamilyInfo["attribution"];
+    strokeWidth?: number;
+}
 ```
 
 Metadata an adopted third-party set cannot supply about itself.
@@ -886,7 +938,36 @@ Authored stroke width, when the set is stroke-based and should accept stroke wid
 ### IconifyJson
 
 ```ts
-export interface IconifyJson
+export interface IconifyJson {
+    prefix: string;
+    icons: Record<string, {
+        body: string;
+        width?: number;
+        height?: number;
+        left?: number;
+        top?: number;
+    }>;
+    aliases?: Record<string, {
+        parent: string;
+    }>;
+    width?: number;
+    height?: number;
+    left?: number;
+    top?: number;
+    info?: {
+        name?: string;
+        total?: number;
+        author?: {
+            name?: string;
+            url?: string;
+        };
+        license?: {
+            title?: string;
+            spdx?: string;
+            url?: string;
+        };
+    };
+}
 ```
 
 The subset of an IconifyJSON document this package reads.
@@ -964,10 +1045,12 @@ width?: number;
 ### IconRegistryOptions
 
 ```ts
-export interface IconRegistryOptions
+export interface IconRegistryOptions {
+    defaultPrefix?: string;
+}
 ```
 
-Options for configuring an [IconRegistry](#iconregistry).
+Options for configuring an [`IconRegistry`](#iconregistry).
 
 #### IconRegistryOptions › defaultPrefix
 
@@ -982,7 +1065,10 @@ There is no built-in default: the package names no default family, so without th
 ### IconSetCssResult
 
 ```ts
-export interface IconSetCssResult
+export interface IconSetCssResult {
+    css: string;
+    families: IconFamilyData[];
+}
 ```
 
 Generated icon CSS together with the families it drew from.
@@ -1006,7 +1092,11 @@ Families the generated rules resolved icons from, so callers can emit the licens
 ### RenderSvgOptions
 
 ```ts
-export interface RenderSvgOptions
+export interface RenderSvgOptions {
+    strokeWidth?: number | string;
+    attributes?: Record<string, string>;
+    prefix?: string;
+}
 ```
 
 Options for rendering a resolved icon into an SVG element.
@@ -1038,7 +1128,19 @@ Stroke width to apply. Ignored for families that are not stroke-based.
 ### ResolvedIcon
 
 ```ts
-export interface ResolvedIcon
+export interface ResolvedIcon {
+    name: string;
+    prefix: string;
+    iconName: string;
+    body: string;
+    width: number;
+    height: number;
+    left: number;
+    top: number;
+    strokeWidth?: number;
+    color?: string;
+    multicolor?: true;
+}
 ```
 
 An icon located in a loaded family, with the geometry needed to render it.
@@ -1134,7 +1236,9 @@ viewBox width to render the icon at.
 ### ScanIconClassesOptions
 
 ```ts
-export interface ScanIconClassesOptions
+export interface ScanIconClassesOptions {
+    prefix?: string;
+}
 ```
 
 Options for scanning content for icon class names.
