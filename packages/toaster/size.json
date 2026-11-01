@@ -1,0 +1,10 @@
+{
+  "bundler": "rolldown@1.2.15",
+  "entrypoints": {
+    ".": {
+      "gzip": 12742,
+      "minified": 47079,
+      "sha256": "bb9d65434914d9aa01df0e7cba056c0a094abaf66f5259a59c9f564cabf23c8b"
+    }
+  }
+}
