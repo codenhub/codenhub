@@ -1128,6 +1128,42 @@ export function SaveButton() {
 }
 ```
 
+<!-- Source: docs/changelog/0.3.0.md -->
+
+# 0.3.0
+
+## Added
+
+- `labels.notifications` names each toast stack, which is now a region landmark that screen reader users can jump to.
+- Dialog handles are exported as `DialogHandle`.
+
+## Changed
+
+- Screen readers hear toasts through hidden polite and assertive live regions that exist before any toast text, instead of through the toast element. Toast elements no longer carry `role` or `aria-live`; code or tests that query toasts by those attributes need another selector, such as `.coden-toast`.
+- An actionable toast's announcement includes its action label.
+- While a toaster's dialog is open, that toaster's toast stacks move inside the dialog, so they stay above the backdrop, clickable, and announced. Toasts from other toaster instances are not announced while it is open.
+- `InteractiveToastHandle` is renamed `DialogHandle`.
+- `PromiseToastOptions.loading` is typed `string | LoadingToastOptions`. Toast-only fields such as `duration` no longer type-check there; set them on the call's other options.
+- An explicit `undefined` in toast options, `configure`, or dialog options is ignored instead of erasing the default. `configure({ tokens: undefined })` clears the instance's tokens.
+- `toast.promise` applies the call's options and the `semantic` defaults to its success and error toasts.
+- Every toast has the same 22.25rem width. The dialog panel is wider, its backdrop blur lighter, and its open and close animation runs on the panel instead of the `dialog` element, so styles that target the element's animation need to target the panel.
+- `configure({ nonce })` rewrites the token stylesheet under the new nonce, keeping the old one until the new one is ready.
+- `sideEffects` covers only CSS, and the default `toast` and `dialog` singletons are pure, so importing the package without using it adds nothing to a bundle.
+
+## Removed
+
+- The `closeButton` option. Use `dismissible`.
+- The `shouldBackdropDismiss` option. Use `backdropDismiss`.
+- The `"center"` toast position.
+
+## Fixed
+
+- A `toast.promise` success or error formatter that throws no longer leaves the loading toast on screen. The error is reported, the loader is dismissed, and the caller still gets the original result or rejection.
+- The fallback presentation styles sit in `@layer components`, so `@codenhub/styles` controls on the same page take precedence again.
+- A toast dispatched just before or while a dialog opens or closes is announced, instead of being lost in a live region the dialog made inert or removed.
+- Custom-content announcements keep their direct text and leave out nested button labels.
+- `update` on a custom-content toast no longer adds an icon.
+
 <!-- Source: docs/changelog/0.2.0.md -->
 
 # 0.2.0
