@@ -14,7 +14,9 @@ Root `docs/` contains durable repository knowledge. Package-specific consumer an
 | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | [Code](guidelines/code.md)                               | Coding conventions, architecture, TypeScript, testing practices, and source API documentation.           |
 | [Documentation](guidelines/documentation.md)             | Documentation ownership, metadata, status and authority, formatting, layout, and exception requirements. |
-| [Branding](guidelines/branding.md)                       | Package naming and visual identity conventions.                                                          |
+| [Branding](guidelines/branding.md)                       | Brand model, writing the name, and package naming conventions.                                           |
+| [Identity](guidelines/identity.md)                       | Logo, color, typography, iconography, graphic elements, motion, and print rules.                         |
+| [Voice](guidelines/voice.md)                             | Draft brand strategy, voice principles, tagline candidates, and messaging.                               |
 | [Public docs writing](guidelines/public-docs-writing.md) | Writing complete, story-shaped, playful public package docs.                                             |
 
 ## Repository references

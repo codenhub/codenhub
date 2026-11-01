@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-18
+last_updated: 2026-11-01
 scope: Naming and branding decisions across Coden, CodenHub, and their packages.
 ---
 
@@ -19,6 +19,12 @@ Coden is the agency. It builds apps and websites for clients, and also builds OS
 CodenHub is the project: the repository, the npm scope (`@codenhub/*`), and `codenhub.dev`, whose landing page presents the packages as one toolkit, made by Coden, that people can choose to adopt. The site names it as such, in its titles and its landing page. It is still not a prefix for package titles: those read "Coden [X]" or a neutral name, never "CodenHub [X]" — see the branding test below. A package's title says who authored its content; CodenHub says where the package lives and the project behind it.
 
 This reverses an earlier record that CodenHub was not a consumer-facing brand, only the workspace that gave Coden's internal tools one home. That record did not weigh the packages being adopted outside Coden: once `codenhub.dev` is where a visitor lands and decides whether to use a package, the site has to make the case for the project behind it, and an unnamed workspace cannot. Package titling did not depend on that framing, since the branding test is about authorship, so it is unchanged.
+
+## Writing the name
+
+The logo is lowercase, `code[n]`, and is always placed as a logo file, never typed. In running text the name is a proper noun: write "Coden" and "CodenHub", capitalized, including at the start of a sentence, in titles, and in legal text. Lowercase `coden` appears only where a system requires it, such as domains, package scopes, handles, and file names.
+
+This keeps the lowercase form for the one place it carries the brand, the logo, while text stays readable and the name stays recognizable as a name. Writing the name in lowercase in text too was considered and rejected: it reads as a typo at the start of a sentence, and editors and spell checkers correct it inconsistently. The visual rules for the logo are in [`identity.md`](identity.md).
 
 ## The branding test
 
