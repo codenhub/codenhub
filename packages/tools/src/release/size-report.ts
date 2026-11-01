@@ -1,6 +1,14 @@
 /** File at a package root recording the bundle size of the release it was cut for. */
 export const SIZE_FILE = "size.json";
 
+/** What importing one export alone costs, tree-shaken. */
+export interface ExportSize {
+  /** Byte length of the minified bundle. */
+  minified: number;
+  /** Byte length of the minified bundle gzipped at level 9. */
+  gzip: number;
+}
+
 /** One entrypoint's measured cost, as `docs/specs/packages-lifecycle.md` "Bundle size" defines it. */
 export interface EntrypointSize {
   /** Byte length of the minified bundle. */
@@ -9,6 +17,19 @@ export interface EntrypointSize {
   gzip: number;
   /** Hex SHA-256 of the minified bundle, which is what the publish check compares. */
   sha256: string;
+  /**
+   * Cost of each runtime export imported alone, keyed by export name. Absent
+   * from a release recorded before exports were measured.
+   */
+  exports?: Record<string, ExportSize>;
+  /**
+   * Minified bytes of the whole bundle by where they came from, largest first,
+   * summing to `minified`. Keys are package-relative source files, as far as
+   * the build's source maps reach, `node_modules/<name>` for a dependency, or
+   * `(unattributed)` for code the bundler added. Absent from a release
+   * recorded before files were measured.
+   */
+  files?: Record<string, number>;
 }
 
 /** What `size.json` holds. */
@@ -104,16 +125,42 @@ export function parseSizeReport(contents: string, source: string): SizeReport {
   }
   const sizes: Record<string, EntrypointSize> = {};
   for (const [subpath, size] of Object.entries(entrypoints)) {
-    const { gzip, minified, sha256 } = (size ?? {}) as Record<string, unknown>;
+    const { exports, files, gzip, minified, sha256 } = (size ?? {}) as Record<string, unknown>;
     if (!isNonNegativeInteger(minified) || !isNonNegativeInteger(gzip) || typeof sha256 !== "string") {
       return fail(`"${subpath}" needs integer "minified" and "gzip" and a "sha256" string`);
     }
     if (!SHA256.test(sha256)) {
       return fail(`"${subpath}" has a "sha256" that is not 64 lowercase hex digits`);
     }
-    sizes[subpath] = { gzip, minified, sha256 };
+    const entry: EntrypointSize = { gzip, minified, sha256 };
+    if (exports !== undefined) {
+      entry.exports = {};
+      for (const [name, value] of Object.entries(asRecord(exports, `"${subpath}" "exports"`, fail))) {
+        const { gzip: exportGzip, minified: exportMinified } = (value ?? {}) as Record<string, unknown>;
+        if (!isNonNegativeInteger(exportMinified) || !isNonNegativeInteger(exportGzip)) {
+          return fail(`"${subpath}" export "${name}" needs integer "minified" and "gzip"`);
+        }
+        entry.exports[name] = { gzip: exportGzip, minified: exportMinified };
+      }
+    }
+    if (files !== undefined) {
+      entry.files = {};
+      for (const [file, bytes] of Object.entries(asRecord(files, `"${subpath}" "files"`, fail))) {
+        if (!isNonNegativeInteger(bytes)) {
+          return fail(`"${subpath}" file "${file}" needs an integer byte count`);
+        }
+        entry.files[file] = bytes;
+      }
+    }
+    sizes[subpath] = entry;
   }
   return { bundler, entrypoints: sizes };
+}
+
+function asRecord(value: unknown, field: string, fail: (reason: string) => never): Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : fail(`${field} must be an object`);
 }
 
 /**
@@ -128,8 +175,13 @@ export function serializeSizeReport(report: SizeReport): string {
 /**
  * Lists how a measured report differs from a recorded one, in the fields the publish check compares.
  *
- * The gzipped length is not compared: identical bytes can gzip to different
+ * The gzipped lengths are not compared: identical bytes can gzip to different
  * lengths on different CPUs, and the hash already proves the bytes match.
+ * Export and file sizes are compared even when the whole bundle matches,
+ * because they can change without it: dropping a `@__PURE__` annotation
+ * changes what an export tree-shakes to, and moving code between files
+ * changes its attribution. A breakdown the release did not record is not
+ * compared.
  * @param recorded Report the release commit carries.
  * @param measured Report measured now.
  * @returns One line per difference, empty when they agree.
@@ -139,18 +191,46 @@ export function compareSizeReports(recorded: SizeReport, measured: SizeReport): 
   if (recorded.bundler !== measured.bundler) {
     differences.push(`measured with ${measured.bundler}, recorded with ${recorded.bundler}`);
   }
-  const subpaths = new Set([...Object.keys(recorded.entrypoints), ...Object.keys(measured.entrypoints)]);
-  for (const subpath of subpaths) {
-    const [before, now] = [recorded.entrypoints[subpath], measured.entrypoints[subpath]];
-    if (before === undefined || now === undefined) {
+  differences.push(
+    ...compareKeyed(recorded.entrypoints, measured.entrypoints, "", (subpath, before, now) => {
+      if (before.minified !== now.minified) {
+        return [`${subpath} is ${now.minified} bytes minified, recorded ${before.minified}`];
+      }
+      return before.sha256 === now.sha256 ? [] : [`${subpath} has the recorded length but different bytes`];
+    }),
+  );
+  for (const [subpath, before] of Object.entries(recorded.entrypoints)) {
+    const now = measured.entrypoints[subpath];
+    if (now !== undefined && before.exports !== undefined) {
       differences.push(
-        `${subpath} is ${before === undefined ? "measured but not recorded" : "recorded but not measured"}`,
+        ...compareKeyed(before.exports, now.exports ?? {}, `${subpath} export `, (name, was, is) =>
+          was.minified === is.minified ? [] : [`${name} is ${is.minified} bytes minified, recorded ${was.minified}`],
+        ),
       );
-    } else if (before.minified !== now.minified) {
-      differences.push(`${subpath} is ${now.minified} bytes minified, recorded ${before.minified}`);
-    } else if (before.sha256 !== now.sha256) {
-      differences.push(`${subpath} has the recorded length but different bytes`);
+    }
+    if (now !== undefined && before.files !== undefined) {
+      differences.push(
+        ...compareKeyed(before.files, now.files ?? {}, `${subpath} file `, (file, was, is) =>
+          was === is ? [] : [`${file} is ${is} bytes, recorded ${was}`],
+        ),
+      );
     }
   }
   return differences;
+}
+
+function compareKeyed<T>(
+  recorded: Record<string, T>,
+  measured: Record<string, T>,
+  prefix: string,
+  compare: (key: string, before: T, now: T) => string[],
+): string[] {
+  const keys = new Set([...Object.keys(recorded), ...Object.keys(measured)]);
+  return [...keys].flatMap((key) => {
+    const [before, now] = [recorded[key], measured[key]];
+    if (before === undefined || now === undefined) {
+      return [`${prefix}${key} is ${before === undefined ? "measured but not recorded" : "recorded but not measured"}`];
+    }
+    return compare(key, before, now).map((line) => `${prefix}${line}`);
+  });
 }
