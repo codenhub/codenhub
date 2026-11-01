@@ -1,5 +1,6 @@
 ---
 title: "@codenhub/toaster"
+description: "Accessible browser toasts and native dialogs, from ready-made `toast` and `dialog` singletons or instances made with `createToaster`."
 group: "Reference"
 ---
 

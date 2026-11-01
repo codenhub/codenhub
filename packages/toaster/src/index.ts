@@ -1,3 +1,9 @@
+/**
+ * Accessible browser toasts and native dialogs, from ready-made `toast` and `dialog` singletons or instances made with `createToaster`.
+ *
+ * @packageDocumentation
+ */
+
 export { createToaster, toast, dialog } from "./core";
 
 export type {
