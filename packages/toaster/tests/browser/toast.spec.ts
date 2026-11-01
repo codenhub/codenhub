@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 test("renders accessible toast controls within the viewport", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Dismiss Button").check();
+  await page.locator("#check-auto-dismiss").uncheck();
   await page.getByRole("button", { name: "Success Toast" }).click();
 
   const toast = page.locator(".coden-toast");
