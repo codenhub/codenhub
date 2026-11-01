@@ -12,6 +12,7 @@
   },
   "files": [
     "dist",
+    "!dist/**/*.map",
     "NOTICE",
     "docs",
     "llms.txt",
