@@ -199,7 +199,12 @@ function resolveLinks(
       }
       const ownSlug = ownSlugs.get(target);
       const href = ownSlug === undefined ? resolve?.(target) : `#${ownSlug}`;
-      return href === undefined ? `\`${label}\`` : `[${escapeMarkdown(label)}](${href})`;
+      if (href === undefined) {
+        return `\`${label}\``;
+      }
+      // A symbol name reads as code, as it does unlinked; a custom label such as "the docs" stays prose.
+      const isName = separator === -1 || ownSlugs.has(label) || resolve?.(label) !== undefined;
+      return `[${isName ? `\`${label}\`` : escapeMarkdown(label)}](${href})`;
     }),
   );
 }

@@ -148,7 +148,9 @@ describe("renderReferencePage", () => {
       },
       { title: "Foo", heading: "Foo", sourceRoot: "src", prose: true },
     );
-    expect(rendered).toContain("[Foo](#foo-1), [foo](#foo-2), [Functions](#functions-1), [Err](#err-1), [err](#err-2)");
+    expect(rendered).toContain(
+      "[`Foo`](#foo-1), [`foo`](#foo-2), [`Functions`](#functions-1), [`Err`](#err-1), [`err`](#err-2)",
+    );
   });
 
   it("keeps a member from taking the anchor of a symbol its qualified name spells", () => {
@@ -167,7 +169,7 @@ describe("renderReferencePage", () => {
       },
       { title: "Reference", heading: "Reference", sourceRoot: "src", prose: true },
     );
-    expect(rendered).toContain("[IssueCode](#issuecode)");
+    expect(rendered).toContain("[`IssueCode`](#issuecode)");
   });
 
   it("nests prose headings below their symbol or member and caps them at H6", () => {
@@ -330,7 +332,7 @@ describe("renderReferencePage", () => {
   });
 
   it("resolves an in-page {@link} to a heading anchor and leaves unknown targets as code", () => {
-    expect(page).toContain("Normalizes an unknown value into an [AppError](#apperror).");
+    expect(page).toContain("Normalizes an unknown value into an [`AppError`](#apperror).");
     expect(page).toContain("See {@link https://mdn}.".replace("{@link https://mdn}", "`https://mdn`"));
   });
 
@@ -341,7 +343,7 @@ describe("renderReferencePage", () => {
       { ...entrypoint, symbols: [symbol({ name: "__DEV__", kind: "variable", doc })] },
       { title: "Reference", heading: "Reference", sourceRoot: "src", prose: true },
     );
-    expect(rendered).toContain("See [\\_\\_DEV\\_\\_](#__dev__). Code: `{@link __DEV__}`.");
+    expect(rendered).toContain("See [`__DEV__`](#__dev__). Code: `{@link __DEV__}`.");
     expect(rendered).toContain('```ts\nconst doc = "{@link __DEV__}";\n```');
     expect(rendered).toContain("    {@link __DEV__}");
     expect(rendered).toContain("After [\\_\\_label\\_\\_](#__dev__).");
@@ -367,7 +369,7 @@ describe("renderReferencePage", () => {
       },
       { title: "Reference", heading: "Reference", sourceRoot: "src", prose: true },
     );
-    expect(rendered).toContain("See {@link broken, then [\\_\\_DEV\\_\\_](#__dev__).");
+    expect(rendered).toContain("See {@link broken, then [`__DEV__`](#__dev__).");
   });
 
   it("escapes generated identifiers and link labels so Markdown preserves their text", () => {
@@ -390,7 +392,7 @@ describe("renderReferencePage", () => {
     );
     expect(escaped).toContain("# \\[Reference\\] \\_\\_API\\_\\_");
     expect(escaped).toContain("### \\_\\_DEV\\_\\_");
-    expect(escaped).toContain("[\\_\\_DEV\\_\\_](#__dev__)");
+    expect(escaped).toContain("[`__DEV__`](#__dev__)");
     expect(escaped).toContain("#### \\_\\_DEV\\_\\_ › \\*value\\*");
     expect(escaped).toContain("### \\_\\_Internal\\_\\_");
   });
@@ -404,7 +406,7 @@ describe("renderReferencePage", () => {
       },
       { title: "Reference", heading: "Reference", sourceRoot: "src", prose: true },
     );
-    expect(rendered).toContain("Returns [Options](#options).");
+    expect(rendered).toContain("Returns [`Options`](#options).");
   });
 
   it("prefers a target documented on the current page over another page's copy", () => {
@@ -422,7 +424,7 @@ describe("renderReferencePage", () => {
         resolveLink: () => "other.md#options",
       },
     );
-    expect(rendered).toContain("Returns [Options](#options).");
+    expect(rendered).toContain("Returns [`Options`](#options).");
   });
 
   it("renders interface members with their own heading and signature block", () => {
@@ -442,7 +444,7 @@ describe("renderReferencePage", () => {
       prose: true,
       resolveLink: (name) => (name === "ErrorFeedback" ? "feedback.md#errorfeedback" : undefined),
     });
-    expect(linked).toContain("#### AppError › origin\n\nInherited from [ErrorFeedback](feedback.md#errorfeedback).");
+    expect(linked).toContain("#### AppError › origin\n\nInherited from [`ErrorFeedback`](feedback.md#errorfeedback).");
   });
 
   it("links an inherited member to the declaring type's member when that member is documented", () => {
@@ -459,7 +461,7 @@ describe("renderReferencePage", () => {
             : undefined,
     });
     expect(crossPage).toContain(
-      "#### AppError › origin\n\nInherited from [ErrorFeedback](feedback.md#errorfeedback--origin).",
+      "#### AppError › origin\n\nInherited from [`ErrorFeedback`](feedback.md#errorfeedback--origin).",
     );
 
     const samePage = renderReferencePage(
@@ -480,7 +482,7 @@ describe("renderReferencePage", () => {
       },
       { title: "/", heading: "Reference", sourceRoot: "src", prose: true },
     );
-    expect(samePage).toContain("#### Derived › origin\n\nInherited from [Base](#base--origin).");
+    expect(samePage).toContain("#### Derived › origin\n\nInherited from [`Base`](#base--origin).");
   });
 
   it("links an inherited index signature to the declaring type's index signature", () => {
@@ -502,7 +504,7 @@ describe("renderReferencePage", () => {
       },
       { title: "/", heading: "Reference", sourceRoot: "src", prose: true },
     );
-    expect(page).toContain("#### Derived index signature\n\nInherited from [Base](#base-index-signature).");
+    expect(page).toContain("#### Derived index signature\n\nInherited from [`Base`](#base-index-signature).");
   });
 
   it("omits an inherited member entirely when prose is false", () => {
@@ -532,7 +534,7 @@ describe("renderReferencePage", () => {
     const section = page.slice(page.indexOf("#### AppError › toJSON"), page.indexOf("## Type aliases"));
     expect(section).toContain(
       "> **Deprecated.** Use serialize instead.\n\nSerializes the error.\n\n**Parameters**\n\n" +
-        "- `space` — Indentation passed through.\n\n**Returns** — A plain [AppError](#apperror) snapshot.\n\n" +
+        "- `space` — Indentation passed through.\n\n**Returns** — A plain [`AppError`](#apperror) snapshot.\n\n" +
         "**Throws** — When the cause is circular.",
     );
   });

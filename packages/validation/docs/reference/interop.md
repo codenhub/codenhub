@@ -85,7 +85,7 @@ export declare function toJsonSchema(validator: AnyValidator, options?: JsonSche
 
 Writes a validator as a JSON Schema, draft 2020-12 unless `target` asks for draft-07, for whatever takes one: the body of an HTTP API, the arguments of a tool a language model calls, a form generator.
 
-The schema is read from what [describe](index.md#describe) gives, so only validators made by this package's factories can be written. It is written so that a value the validator accepts passes it, with the exceptions below, and it accepts some the validator refuses, since a validator checks more than a schema can say: a format's exact rules, such as which hosts of an `email` are public, are written as the nearest JSON Schema `format`.
+The schema is read from what [`describe`](index.md#describe) gives, so only validators made by this package's factories can be written. It is written so that a value the validator accepts passes it, with the exceptions below, and it accepts some the validator refuses, since a validator checks more than a schema can say: a format's exact rules, such as which hosts of an `email` are public, are written as the nearest JSON Schema `format`.
 
 The exceptions are where a validator cleans a value before it checks it, which is not written. `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no trimming; text with spaces around five letters passes the validator and not the schema. A `case`, and a `clamp` beside a limit, are the same. Lengths differ for a character outside the Basic Multilingual Plane, such as an emoji, which a string's `length` counts as two and JSON Schema as one.
 
@@ -122,7 +122,14 @@ toJsonSchema(user);
 ### JsonSchema
 
 ```ts
-export interface JsonSchema
+export interface JsonSchema {
+    $schema?: string;
+    $defs?: Record<string, JsonSchema>;
+    definitions?: Record<string, JsonSchema>;
+    properties?: Record<string, JsonSchema>;
+    required?: string[];
+    [keyword: string]: unknown;
+}
 ```
 
 A JSON Schema, draft 2020-12 or draft-07, as plain data ready for `JSON.stringify`.
@@ -178,10 +185,14 @@ Every other keyword of JSON Schema, such as `type`, `items` or `anyOf`.
 ### JsonSchemaOptions
 
 ```ts
-export interface JsonSchemaOptions
+export interface JsonSchemaOptions {
+    io?: "input" | "output" | undefined;
+    unrepresentable?: "throw" | "any" | undefined;
+    target?: "draft-2020-12" | "draft-07" | undefined;
+}
 ```
 
-Options for [toJsonSchema](#tojsonschema).
+Options for [`toJsonSchema`](#tojsonschema).
 
 #### JsonSchemaOptions › io
 
@@ -216,7 +227,9 @@ What to do with a part JSON Schema has no words for, such as a `date`, a `bigint
 ### StandardJSONSchemaV1
 
 ```ts
-export interface StandardJSONSchemaV1<TInput = unknown, TOutput = TInput>
+export interface StandardJSONSchemaV1<TInput = unknown, TOutput = TInput> {
+    readonly "~standard": StandardJSONSchemaV1.Props<TInput, TOutput>;
+}
 export declare namespace StandardJSONSchemaV1
 ```
 
@@ -238,7 +251,10 @@ The Standard JSON Schema properties.
 #### StandardJSONSchemaV1.Converter
 
 ```ts
-interface Converter
+interface Converter {
+    readonly input: (options: Options) => Record<string, unknown>;
+    readonly output: (options: Options) => Record<string, unknown>;
+}
 ```
 
 Writes a side of the schema as a JSON Schema. Each may throw when it cannot.
@@ -262,7 +278,10 @@ Writes the output type as a JSON Schema.
 #### StandardJSONSchemaV1.Options
 
 ```ts
-interface Options
+interface Options {
+    readonly target: Target;
+    readonly libraryOptions?: Record<string, unknown> | undefined;
+}
 ```
 
 Options a caller passes to `input` and `output`.
@@ -286,7 +305,12 @@ The draft of JSON Schema to write.
 #### StandardJSONSchemaV1.Props
 
 ```ts
-interface Props<TInput = unknown, TOutput = TInput>
+interface Props<TInput = unknown, TOutput = TInput> {
+    readonly version: 1;
+    readonly vendor: string;
+    readonly types?: Types<TInput, TOutput> | undefined;
+    readonly jsonSchema: Converter;
+}
 ```
 
 Properties defined on the `~standard` object of a schema that can be written as a JSON Schema.
@@ -358,7 +382,9 @@ The input and output types of a schema, as Standard Schema gives them.
 ### StandardSchemaV1
 
 ```ts
-export interface StandardSchemaV1<TInput = unknown, TOutput = TInput>
+export interface StandardSchemaV1<TInput = unknown, TOutput = TInput> {
+    readonly "~standard": StandardSchemaV1.Props<TInput, TOutput>;
+}
 export declare namespace StandardSchemaV1
 ```
 
@@ -382,7 +408,9 @@ The Standard Schema metadata and execution properties.
 #### StandardSchemaV1.FailureResult
 
 ```ts
-interface FailureResult
+interface FailureResult {
+    readonly issues: ReadonlyArray<Issue>;
+}
 ```
 
 Failed validation result containing accumulated issues.
@@ -398,7 +426,10 @@ List of validation issues encountered during validation.
 #### StandardSchemaV1.Issue
 
 ```ts
-interface Issue
+interface Issue {
+    readonly message: string;
+    readonly path?: ReadonlyArray<PropertyKey | PathSegment> | undefined;
+}
 ```
 
 A single validation issue produced by a standard schema validator.
@@ -422,7 +453,9 @@ Path segments pointing to the location of the invalid data.
 #### StandardSchemaV1.Options
 
 ```ts
-interface Options
+interface Options {
+    readonly libraryOptions?: Record<string, unknown> | undefined;
+}
 ```
 
 Options a caller can pass to `validate`.
@@ -438,7 +471,9 @@ Options specific to the library behind the schema.
 #### StandardSchemaV1.PathSegment
 
 ```ts
-interface PathSegment
+interface PathSegment {
+    readonly key: PropertyKey;
+}
 ```
 
 Structured path segment identifying an issue location.
@@ -454,7 +489,12 @@ The key or index segment.
 #### StandardSchemaV1.Props
 
 ```ts
-interface Props<TInput = unknown, TOutput = TInput>
+interface Props<TInput = unknown, TOutput = TInput> {
+    readonly version: 1;
+    readonly vendor: string;
+    readonly validate: (value: unknown, options?: Options | undefined) => Result<TOutput> | Promise<Result<TOutput>>;
+    readonly types?: Types<TInput, TOutput> | undefined;
+}
 ```
 
 Properties defined on the `~standard` object of a compliant schema.
@@ -499,7 +539,10 @@ The version number of the Standard Schema specification (always 1).
 #### StandardSchemaV1.SuccessResult
 
 ```ts
-interface SuccessResult<TOutput>
+interface SuccessResult<TOutput> {
+    readonly value: TOutput;
+    readonly issues?: undefined;
+}
 ```
 
 Successful validation result containing the validated or transformed value.
@@ -527,7 +570,10 @@ The validated and coerced output value.
 #### StandardSchemaV1.Types
 
 ```ts
-interface Types<TInput = unknown, TOutput = TInput>
+interface Types<TInput = unknown, TOutput = TInput> {
+    readonly input: TInput;
+    readonly output: TOutput;
+}
 ```
 
 Container carrying phantom input and output types.

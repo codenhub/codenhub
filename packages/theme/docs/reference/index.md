@@ -26,7 +26,7 @@ Creates a theme preference manager. Nothing touches the DOM, storage, or listene
 - `TName` — Names of every configured theme, inferred from the keys of `options.themes`.
 - `TSchema` — Token schema, inferred from `options.tokenSchema`.
 
-**Returns** — A [Theme](#theme) whose methods are bound to it.
+**Returns** — A [`Theme`](#theme) whose methods are bound to it.
 
 **Throws** — `Error` — When the options are invalid: an `options` value that is not an object, a `themes`, `systemTheme`, `tokenSchema`, or theme `tokens` value that is set but is not a plain, non-array object, an empty theme name or, while `className` is `true`, a class-unsafe one, an invalid `colorScheme`, a `defaultTheme`, `systemTheme`, or `pairedTheme` naming an unconfigured theme, theme tokens outside `tokenSchema` or whose value is not a string, a finite number, or `undefined`, a `tokenSchema` value that is not a custom property name such as `--color-primary` or that another key already maps to, a `className` that is neither a boolean nor a function, a non-boolean `darkClass`, an empty or invalid `attribute` or `storageKey`, or an `attribute` of `class` or `style`. An option set to `undefined` is treated as omitted.
 
@@ -50,7 +50,12 @@ document.querySelector("#theme-toggle")?.addEventListener("click", theme.toggle)
 ### ActiveTheme
 
 ```ts
-export interface ActiveTheme<TName extends string = string, TSchema extends Record<string, string> = Record<string, string>>
+export interface ActiveTheme<TName extends string = string, TSchema extends Record<string, string> = Record<string, string>> {
+    readonly name: TName;
+    readonly colorScheme: "light" | "dark";
+    readonly tokens: Readonly<Partial<Record<keyof TSchema, string>>>;
+    readonly pairedTheme?: TName;
+}
 ```
 
 Frozen view of a configured theme with its name and its static and runtime token values.
@@ -95,7 +100,10 @@ Static theme tokens merged with the runtime overrides from `setTokens()`, which 
 ### SystemThemeMap
 
 ```ts
-export interface SystemThemeMap<TName extends string = string>
+export interface SystemThemeMap<TName extends string = string> {
+    light: TName;
+    dark: TName;
+}
 ```
 
 Mapping from OS color-scheme preferences to configured theme names.
@@ -123,7 +131,23 @@ Theme used when the OS preference is light, and the one `toggle()` selects from 
 ### Theme
 
 ```ts
-export interface Theme<TName extends string = string, TSchema extends Record<string, string> = Record<string, string>>
+export interface Theme<TName extends string = string, TSchema extends Record<string, string> = Record<string, string>> {
+    readonly name: TName;
+    readonly preference: TName | null;
+    readonly system: TName;
+    init(): Theme<TName, TSchema>;
+    get(): ActiveTheme<TName, TSchema>;
+    set(name: TName): ActiveTheme<TName, TSchema>;
+    toggle(): ActiveTheme<TName, TSchema>;
+    clearPreference(): ActiveTheme<TName, TSchema>;
+    setTokens(tokens: TokenValues<TSchema>): ActiveTheme<TName, TSchema>;
+    readTokens(): Partial<Record<keyof TSchema, string>>;
+    subscribe(listener: ThemeChangeListener<TName, TSchema>): () => void;
+    getPrePaintScript(): string;
+    destroy(options?: {
+        revertDom?: boolean | undefined;
+    }): void;
+}
 ```
 
 Theme preference manager returned by `createTheme()`. Methods are bound, so they can be passed as callbacks.
@@ -292,7 +316,11 @@ Activates the active theme's `pairedTheme`, or else the `systemTheme` entry for 
 ### ThemeChangeDetail
 
 ```ts
-export interface ThemeChangeDetail<TName extends string = string, TSchema extends Record<string, string> = Record<string, string>>
+export interface ThemeChangeDetail<TName extends string = string, TSchema extends Record<string, string> = Record<string, string>> {
+    name: TName;
+    theme: ActiveTheme<TName, TSchema>;
+    source: ThemeChangeSource;
+}
 ```
 
 Payload passed to subscribers and the browser `themechange` event after a theme change.
@@ -329,7 +357,11 @@ Active theme after the change; the same object `get()` returns until the next ch
 ### ThemeDefinition
 
 ```ts
-export interface ThemeDefinition<TName extends string = string, TSchema extends Record<string, string> = Record<string, string>>
+export interface ThemeDefinition<TName extends string = string, TSchema extends Record<string, string> = Record<string, string>> {
+    colorScheme: "light" | "dark";
+    tokens?: TokenValues<TSchema> | undefined;
+    pairedTheme?: TName | undefined;
+}
 ```
 
 Configured theme, keyed by its name in `ThemeOptions.themes`.
@@ -366,7 +398,18 @@ Static token values written to the CSS custom properties named by `tokenSchema`,
 ### ThemeOptions
 
 ```ts
-export interface ThemeOptions<TName extends string = string, TSchema extends Record<string, string> = Record<string, string>>
+export interface ThemeOptions<TName extends string = string, TSchema extends Record<string, string> = Record<string, string>> {
+    themes?: {
+        readonly [K in TName]: ThemeDefinition<NoInfer<TName>, NoInfer<TSchema>>;
+    } | undefined;
+    defaultTheme?: NoInfer<TName> | undefined;
+    systemTheme?: SystemThemeMap<NoInfer<TName>> | undefined;
+    storageKey?: string | undefined;
+    attribute?: string | undefined;
+    darkClass?: boolean | undefined;
+    className?: boolean | ThemeClassResolver<NoInfer<TName>, NoInfer<TSchema>> | undefined;
+    tokenSchema?: TSchema | undefined;
+}
 ```
 
 Configuration for theme definitions, persistence, DOM application, and system preference mapping. An option set to `undefined` uses its default, as an omitted one does.
@@ -392,7 +435,7 @@ Attribute set on `document.documentElement` to the active theme name. It cannot 
 className?: boolean | ThemeClassResolver<NoInfer<TName>, NoInfer<TSchema>> | undefined;
 ```
 
-Class applied to `document.documentElement` for the active theme: `true` applies `theme-<name>`, `false` applies none, and a [ThemeClassResolver](#themeclassresolver) returns a custom one.
+Class applied to `document.documentElement` for the active theme: `true` applies `theme-<name>`, `false` applies none, and a [`ThemeClassResolver`](#themeclassresolver) returns a custom one.
 
 **Default** — `true`
 

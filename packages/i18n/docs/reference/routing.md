@@ -33,7 +33,11 @@ The factory trims locale identifiers and snapshots the validated configuration, 
 ### LocaleRouting
 
 ```ts
-export interface LocaleRouting<TLocale extends string>
+export interface LocaleRouting<TLocale extends string> {
+    parse(pathname: string): ParsedLocalePath<TLocale> | undefined;
+    localize(pathname: string, locale: TLocale): string;
+    localizeAll(pathname: string): readonly LocalizedPath<TLocale>[];
+}
 ```
 
 Pure operations for parsing and generating locale-prefixed application pathnames.
@@ -93,7 +97,11 @@ Parses a pathname using configured, case-insensitive locale prefixes.
 ### LocaleRoutingConfig
 
 ```ts
-export interface LocaleRoutingConfig<TLocale extends string>
+export interface LocaleRoutingConfig<TLocale extends string> {
+    defaultLocale: NoInfer<TLocale>;
+    locales: readonly TLocale[];
+    prefixDefaultLocale: boolean;
+}
 ```
 
 Configuration snapshotted for locale-prefixed pathname parsing and generation.
@@ -125,7 +133,10 @@ Whether paths require a default-locale prefix, snapshotted when routing is creat
 ### LocalizedPath
 
 ```ts
-export interface LocalizedPath<TLocale extends string>
+export interface LocalizedPath<TLocale extends string> {
+    locale: TLocale;
+    pathname: string;
+}
 ```
 
 A generated pathname paired with its canonical configured locale.
@@ -149,7 +160,10 @@ The absolute localized application pathname.
 ### ParsedLocalePath
 
 ```ts
-export interface ParsedLocalePath<TLocale extends string>
+export interface ParsedLocalePath<TLocale extends string> {
+    locale: TLocale;
+    pathname: string;
+}
 ```
 
 A pathname resolved to its canonical configured locale.

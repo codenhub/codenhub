@@ -219,7 +219,7 @@ describe("inherited member identity", () => {
     expect(model.entrypoints[0]?.symbols[0]?.members.find((member) => member.name === "field")?.inheritedFrom).toBe(
       "NS.Base",
     );
-    expect(files[0]?.contents).toContain("Inherited from [NS.Base](#nsbase--field).");
+    expect(files[0]?.contents).toContain("Inherited from [`NS.Base`](#nsbase--field).");
   });
 });
 
@@ -249,14 +249,41 @@ describe("extractSignatures", () => {
     expect(ok?.overloads).toEqual(["export declare function ok(): Ok<void>;"]);
   });
 
-  it("keeps only the interface header and lists its members", () => {
+  it("keeps the interface body and lists its members", () => {
     const appError = index.get("AppError");
-    expect(appError?.text).toBe("export interface AppError extends Error");
+    expect(appError?.text).toBe(
+      "export interface AppError extends Error {\n    readonly type: AppErrorType;\n    readonly messageKey?: string;\n    toJSON(): AppErrorJson;\n}",
+    );
     expect([...(appError?.members ?? [])]).toEqual([
       ["type", "readonly type: AppErrorType;"],
       ["messageKey", "readonly messageKey?: string;"],
       ["toJSON", "toJSON(): AppErrorJson;"],
     ]);
+  });
+
+  it("drops member comments from an interface body, keeping literals and nesting intact", () => {
+    const signatures = extractSignatures(
+      [
+        "export declare namespace Theme {",
+        "    /** Options. */",
+        "    interface Options {",
+        "        /**",
+        "         * The mode.",
+        "         */",
+        '        mode: "light" | "dark";',
+        "        // A note.",
+        "        label: `a",
+        "        b`;",
+        "    }",
+        "}",
+        "export interface Empty {",
+        "}",
+      ].join("\n"),
+    );
+    expect(signatures.get("Theme")?.namespaceMembers?.get("Options")?.text).toBe(
+      'interface Options {\n    mode: "light" | "dark";\n    label: `a\n        b`;\n}',
+    );
+    expect(signatures.get("Empty")?.text).toBe("export interface Empty {\n}");
   });
 
   it("keeps the class header with type parameters and heritage, and drops private members", () => {
@@ -288,6 +315,45 @@ describe("extractSignatures", () => {
     expect(index.get("DEFAULT_APP_ERROR_MESSAGE")?.text).toBe(
       'export declare const DEFAULT_APP_ERROR_MESSAGE: "Something went wrong";',
     );
+  });
+
+  it("puts each union member's comment on its own line, above that member", () => {
+    // Declaration emit leaves a member's comment between the previous member and its `|`.
+    const signatures = extractSignatures(
+      [
+        "export type Consumption<T> =",
+        "/** Consumed now. */",
+        "{",
+        "    readonly status: `a",
+        "  b`;",
+        "} | {",
+        '    readonly status: "missing";',
+        "}",
+        "/** Consumed before. */",
+        " | {",
+        "    readonly record: T;",
+        "};",
+        'export type Plain = { readonly a: 1; } | "b";',
+      ].join("\n"),
+    );
+    expect(signatures.get("Consumption")?.text).toBe(
+      [
+        "export type Consumption<T> =",
+        "    /** Consumed now. */",
+        "    | {",
+        "        readonly status: `a",
+        "  b`;",
+        "    }",
+        "    | {",
+        '        readonly status: "missing";',
+        "    }",
+        "    /** Consumed before. */",
+        "    | {",
+        "        readonly record: T;",
+        "    };",
+      ].join("\n"),
+    );
+    expect(signatures.get("Plain")?.text).toBe('export type Plain = { readonly a: 1; } | "b";');
   });
 
   it('strips `import("...").` prefixes from a signature', () => {
@@ -411,7 +477,9 @@ describe("attachSignatures", () => {
     const attached = attachSignatures(model, new Map([["index", extractSignatures(dts)]]));
     const appError = attached.entrypoints[0]?.symbols[0];
 
-    expect(appError?.signature).toBe("export interface AppError extends Error");
+    expect(appError?.signature).toBe(
+      "export interface AppError extends Error {\n    readonly type: AppErrorType;\n    readonly messageKey?: string;\n    toJSON(): AppErrorJson;\n}",
+    );
     expect(appError?.members[0]?.signature).toBe("readonly type: AppErrorType;");
     expect(appError?.members[1]?.signature).toBeUndefined();
     expect(model.entrypoints[0]?.symbols[0]?.signature).toBeUndefined();
@@ -534,7 +602,7 @@ describe("buildSignatureResolver renamed exports", () => {
     );
     expect(resolver.lookup("index.d.ts", "MAX")?.text).toBe("export declare const MAX: number;");
     expect(resolver.lookup("index.d.ts", "Api")?.text).toBe("export declare class Api<T> extends Base");
-    expect(resolver.lookup("index.d.ts", "Form")?.text).toBe("export interface Form");
+    expect(resolver.lookup("index.d.ts", "Form")?.text).toBe("export interface Form {\n  width: number;\n}");
     expect(resolver.lookup("index.d.ts", "Couple")?.text).toBe("export type Couple = [number, number];");
   });
 

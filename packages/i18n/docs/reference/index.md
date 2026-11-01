@@ -95,7 +95,26 @@ Locale whose loader rejected.
 ### I18n
 
 ```ts
-export interface I18n<TLocale extends string = string, TKey extends string = string>
+export interface I18n<TLocale extends string = string, TKey extends string = string> {
+    readonly defaultLocale: TLocale;
+    readonly locales: readonly TLocale[];
+    readonly isSilent: boolean;
+    readonly locale: TLocale;
+    readonly direction: LocaleDirection;
+    readonly isReady: boolean;
+    init(options?: I18nInitOptions<TLocale>): Promise<void>;
+    loadLocale(locale: TLocale): Promise<LocaleDictionary>;
+    setLocale(locale: TLocale): Promise<void>;
+    resolveLocale(value: string): TLocale | undefined;
+    matchLocale(preferences: readonly string[]): TLocale | undefined;
+    translate(key: TKey, params?: Readonly<Record<string, string | number>>): string;
+    t(key: TKey, params?: Readonly<Record<string, string | number>>): string;
+    subscribe(listener: () => void): () => void;
+    addEventListener<K extends keyof I18nEventMap<TLocale>>(type: K, callback: (this: I18n<TLocale, TKey>, event: I18nEventMap<TLocale>[K]) => void, options?: AddEventListenerOptions | boolean): void;
+    addEventListener(type: string, callback: EventListener | EventListenerObject | null, options?: AddEventListenerOptions | boolean): void;
+    removeEventListener<K extends keyof I18nEventMap<TLocale>>(type: K, callback: (this: I18n<TLocale, TKey>, event: I18nEventMap<TLocale>[K]) => void, options?: EventListenerOptions | boolean): void;
+    removeEventListener(type: string, callback: EventListener | EventListenerObject | null, options?: EventListenerOptions | boolean): void;
+}
 ```
 
 Consumer-owned runtime-neutral translation manager.
@@ -321,7 +340,15 @@ t("cart.items", { count: 3 }); // "3 items"
 ### I18nConfig
 
 ```ts
-export interface I18nConfig<TLocale extends string = string, TMessages = unknown>
+export interface I18nConfig<TLocale extends string = string, TMessages = unknown> {
+    defaultLocale: NoInfer<TLocale>;
+    locales: readonly TLocale[];
+    loadLocale(locale: NoInfer<TLocale>): TMessages | Promise<TMessages>;
+    getLocaleDirection?(locale: NoInfer<TLocale>): LocaleDirection;
+    onMissingKey?(key: string, locale: NoInfer<TLocale>): void;
+    isSilent?: boolean;
+    dictionaryLimits?: LocaleDictionaryLimits;
+}
 ```
 
 Runtime-neutral dependencies and supported locale metadata.
@@ -394,7 +421,10 @@ Called for every key missing from both the active and default dictionaries, in p
 ### I18nErrorOptions
 
 ```ts
-export interface I18nErrorOptions
+export interface I18nErrorOptions {
+    readonly locale?: string;
+    readonly cause?: unknown;
+}
 ```
 
 Consumer-provided context retained by an `I18nError`.
@@ -418,7 +448,10 @@ Locale whose translations could not be loaded.
 ### I18nEventMap
 
 ```ts
-export interface I18nEventMap<TLocale extends string = string>
+export interface I18nEventMap<TLocale extends string = string> {
+    ready: CustomEvent<I18nReadyEventDetail<TLocale>>;
+    "locale-change": CustomEvent<I18nLocaleChangeEventDetail<TLocale>>;
+}
 ```
 
 Typed lifecycle events dispatched by an i18n manager.
@@ -442,7 +475,9 @@ Successful initialization event.
 ### I18nInitOptions
 
 ```ts
-export interface I18nInitOptions<TLocale extends string = string>
+export interface I18nInitOptions<TLocale extends string = string> {
+    locale?: TLocale;
+}
 ```
 
 Locale selected explicitly during initialization.
@@ -458,7 +493,10 @@ Locale to activate; defaults to the configured default locale.
 ### I18nLocaleChangeEventDetail
 
 ```ts
-export interface I18nLocaleChangeEventDetail<TLocale extends string = string>
+export interface I18nLocaleChangeEventDetail<TLocale extends string = string> {
+    locale: TLocale;
+    previousLocale: TLocale;
+}
 ```
 
 Payload emitted after a successful active locale change.
@@ -482,7 +520,9 @@ Locale active before the change.
 ### I18nReadyEventDetail
 
 ```ts
-export interface I18nReadyEventDetail<TLocale extends string = string>
+export interface I18nReadyEventDetail<TLocale extends string = string> {
+    locale: TLocale;
+}
 ```
 
 Payload emitted after successful initialization is applied.
@@ -498,7 +538,9 @@ Active canonical locale.
 ### LocaleDictionary
 
 ```ts
-export interface LocaleDictionary
+export interface LocaleDictionary {
+    readonly [key: string]: string;
+}
 ```
 
 Immutable flat translation keys and string values.
@@ -512,7 +554,13 @@ readonly [key: string]: string;
 ### LocaleDictionaryLimits
 
 ```ts
-export interface LocaleDictionaryLimits
+export interface LocaleDictionaryLimits {
+    maxDepth?: number;
+    maxTranslations?: number;
+    maxProperties?: number;
+    maxValueLength?: number;
+    maxTotalLength?: number;
+}
 ```
 
 Resource limits checked when a loaded dictionary is validated. Each must be a positive safe integer. The 1,000-character flattened-key limit is fixed, because `translate()` and DOM keys share it.

@@ -12,7 +12,20 @@ group: "Reference"
 ### IdTokenClaims
 
 ```ts
-export interface IdTokenClaims
+export interface IdTokenClaims {
+    readonly iss: string;
+    readonly sub: string;
+    readonly aud: string | readonly string[];
+    readonly exp: number;
+    readonly iat: number;
+    readonly auth_time?: number;
+    readonly nonce?: string;
+    readonly acr?: string;
+    readonly amr?: readonly string[];
+    readonly azp?: string;
+    readonly at_hash?: string;
+    readonly [claim: string]: unknown;
+}
 ```
 
 Claims of a validated ID token (OpenID Connect Core §2). Frozen.
@@ -100,7 +113,10 @@ Any other claim the provider included.
 ### OidcErr
 
 ```ts
-export interface OidcErr<TFailure extends OidcFailure = OidcFailure>
+export interface OidcErr<TFailure extends OidcFailure = OidcFailure> {
+    readonly ok: false;
+    readonly error: TFailure;
+}
 ```
 
 Failed outcome, carrying every issue found.
@@ -122,7 +138,9 @@ readonly ok: false;
 ### OidcFailure
 
 ```ts
-export interface OidcFailure
+export interface OidcFailure {
+    readonly issues: readonly [OidcIssue, ...OidcIssue[]];
+}
 ```
 
 Everything a failed operation found.
@@ -138,12 +156,16 @@ Every issue found, in the order checks ran. Never empty.
 ### OidcIssue
 
 ```ts
-export interface OidcIssue
+export interface OidcIssue {
+    readonly code: OidcIssueCode;
+    readonly path?: readonly OidcPathSegment[];
+    readonly params?: Readonly<Record<string, string | number | boolean>>;
+}
 ```
 
 A single reason an operation failed.
 
-An issue never holds a value taken from untrusted input: no token, code, secret, verifier, claim value, or response body. It names which check failed and, where useful, a fact from the caller's own configuration, the package's limits, or a fixed vocabulary such as an [OAuthErrorCode](#oautherrorcode).
+An issue never holds a value taken from untrusted input: no token, code, secret, verifier, claim value, or response body. It names which check failed and, where useful, a fact from the caller's own configuration, the package's limits, or a fixed vocabulary such as an [`OAuthErrorCode`](#oautherrorcode).
 
 #### OidcIssue › code
 
@@ -159,7 +181,7 @@ Stable failure category.
 readonly params?: Readonly<Record<string, string | number | boolean>>;
 ```
 
-Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason` on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an [OAuthErrorCode](#oautherrorcode) or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and that issue's own params on `invalid_id_token`; `reason` on a provider `invalid_request` the app renders, and on `invalid_callback` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`.
+Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason` on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an [`OAuthErrorCode`](#oautherrorcode) or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and that issue's own params on `invalid_id_token`; `reason` on a provider `invalid_request` the app renders, and on `invalid_callback` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`.
 
 #### OidcIssue › path
 
@@ -172,7 +194,10 @@ Location the issue refers to, such as `["callback", "state"]` or `["id_token", "
 ### OidcOk
 
 ```ts
-export interface OidcOk<T>
+export interface OidcOk<T> {
+    readonly ok: true;
+    readonly value: T;
+}
 ```
 
 Successful outcome, carrying its value.
@@ -194,7 +219,32 @@ The frozen result.
 ### ProviderMetadata
 
 ```ts
-export interface ProviderMetadata
+export interface ProviderMetadata {
+    readonly issuer: string;
+    readonly authorization_endpoint: string;
+    readonly token_endpoint: string;
+    readonly jwks_uri: string;
+    readonly userinfo_endpoint?: string;
+    readonly scopes_supported?: readonly string[];
+    readonly response_types_supported: readonly string[];
+    readonly response_modes_supported?: readonly string[];
+    readonly grant_types_supported?: readonly string[];
+    readonly subject_types_supported: readonly string[];
+    readonly id_token_signing_alg_values_supported: readonly string[];
+    readonly token_endpoint_auth_methods_supported?: readonly string[];
+    readonly token_endpoint_auth_signing_alg_values_supported?: readonly string[];
+    readonly claims_supported?: readonly string[];
+    readonly code_challenge_methods_supported?: readonly string[];
+    readonly revocation_endpoint?: string;
+    readonly end_session_endpoint?: string;
+    readonly revocation_endpoint_auth_methods_supported?: readonly string[];
+    readonly revocation_endpoint_auth_signing_alg_values_supported?: readonly string[];
+    readonly authorization_response_iss_parameter_supported?: boolean;
+    readonly claims_parameter_supported?: boolean;
+    readonly request_parameter_supported?: boolean;
+    readonly request_uri_parameter_supported?: boolean;
+    readonly [member: string]: unknown;
+}
 ```
 
 An OpenID Provider's metadata (OpenID Connect Discovery 1.0 §3, RFC 8414 §2, RFC 9207 §3), as this package reads and publishes it. Members this package does not use are kept as they were received.
@@ -356,7 +406,10 @@ Any other metadata member, unused by this package.
 ### UserinfoClaims
 
 ```ts
-export interface UserinfoClaims
+export interface UserinfoClaims {
+    readonly sub: string;
+    readonly [claim: string]: unknown;
+}
 ```
 
 Claims returned by a userinfo endpoint (OpenID Connect Core §5.3). Frozen.

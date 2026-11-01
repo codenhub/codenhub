@@ -615,7 +615,7 @@ export declare function objectLike<TShape extends Shape>(shape: TShape, ...rest:
 
 Creates a validator for any object that has the given properties, such as a class instance.
 
-Where [object](#object) accepts plain objects and reads their own properties, this accepts every object that is not an array and reads each listed property as `input[key]`, so one that is inherited, not enumerable or computed by a getter counts. Use it for a value another program hands over as an instance, such as an `Error` or an object with methods, and `object` for data. To choose between instances by a property, put these validators in a `union`: `tagged` accepts plain objects only.
+Where [`object`](#object) accepts plain objects and reads their own properties, this accepts every object that is not an array and reads each listed property as `input[key]`, so one that is inherited, not enumerable or computed by a getter counts. Use it for a value another program hands over as an instance, such as an `Error` or an object with methods, and `object` for data. To choose between instances by a property, put these validators in a `union`: `tagged` accepts plain objects only.
 
 Every property is validated even when an earlier one failed. A property that throws while it is read, as a getter or a `Proxy` trap may, is reported as an `invalid_value` issue with `params.unreadable`, and never throws. The output is a new plain object holding the listed properties only, without the ones whose value is `undefined`; the input is never modified. It is synchronous when every property validator is, and asynchronous otherwise.
 
@@ -1190,34 +1190,38 @@ id(true); // { ok: false, ... }, code "invalid_union"
 ### ArrayOptions
 
 ```ts
-export interface ArrayOptions extends SizeOptions, MessageOptions
+export interface ArrayOptions extends SizeOptions, MessageOptions {
+}
 ```
 
-Constraints for [array](#array). Every option is optional. Duplicates are rejected with the `unique()` check.
+Constraints for [`array`](#array). Every option is optional. Duplicates are rejected with the `unique()` check.
 
 #### ArrayOptions › length
 
-Inherited from [SizeOptions](#sizeoptions--length).
+Inherited from [`SizeOptions`](#sizeoptions--length).
 
 #### ArrayOptions › max
 
-Inherited from [SizeOptions](#sizeoptions--max).
+Inherited from [`SizeOptions`](#sizeoptions--max).
 
 #### ArrayOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions--message).
+Inherited from [`MessageOptions`](index.md#messageoptions--message).
 
 #### ArrayOptions › min
 
-Inherited from [SizeOptions](#sizeoptions--min).
+Inherited from [`SizeOptions`](#sizeoptions--min).
 
 ### Conversions
 
 ```ts
-export interface Conversions<TInput extends AnyValidator, TOutput extends AnyValidator>
+export interface Conversions<TInput extends AnyValidator, TOutput extends AnyValidator> {
+    readonly decode: (value: Infer<TInput>) => InferInput<TOutput>;
+    readonly encode: (value: Infer<TOutput>) => InferInput<TInput>;
+}
 ```
 
-The two functions of a [codec](#codec): one that turns what `input` produced into what `output` reads, and one that turns what `output` produced back into what `input` reads.
+The two functions of a [`codec`](#codec): one that turns what `input` produced into what `output` reads, and one that turns what `output` produced back into what `input` reads.
 
 **Type parameters**
 
@@ -1243,14 +1247,16 @@ From the value as a program uses it, once `output` passed it, to the value `inpu
 ### FormDataOptions
 
 ```ts
-export interface FormDataOptions extends MessageOptions
+export interface FormDataOptions extends MessageOptions {
+    repeated?: boolean | undefined;
+}
 ```
 
-Options for [formData](#formdata).
+Options for [`formData`](#formdata).
 
 #### FormDataOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions--message).
+Inherited from [`MessageOptions`](index.md#messageoptions--message).
 
 #### FormDataOptions › repeated
 
@@ -1265,10 +1271,13 @@ Gives the validator every value of every key as an array, and accepts a key give
 ### LazyOptions
 
 ```ts
-export interface LazyOptions extends MessageOptions
+export interface LazyOptions extends MessageOptions {
+    maxDepth?: number | undefined;
+    maxCalls?: number | undefined;
+}
 ```
 
-Options for [lazy](#lazy).
+Options for [`lazy`](#lazy).
 
 #### LazyOptions › maxCalls
 
@@ -1292,12 +1301,17 @@ The most levels of `lazy` that may be open at once, counting every `lazy` valida
 
 #### LazyOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions--message).
+Inherited from [`MessageOptions`](index.md#messageoptions--message).
 
 ### Meta
 
 ```ts
-export interface Meta
+export interface Meta {
+    readonly title?: string | undefined;
+    readonly description?: string | undefined;
+    readonly examples?: readonly unknown[] | undefined;
+    readonly deprecated?: boolean | undefined;
+}
 ```
 
 What a validator is for, written for a reader: a person reading an API's documentation, or a language model choosing a tool and filling its arguments. Each key is the JSON Schema keyword of the same name.
@@ -1337,14 +1351,16 @@ A short name for the value.
 ### ObjectOptions
 
 ```ts
-export interface ObjectOptions extends MessageOptions
+export interface ObjectOptions extends MessageOptions {
+    unknownKeys?: "strip" | "strict" | "passthrough" | undefined;
+}
 ```
 
-Options for [object](#object).
+Options for [`object`](#object).
 
 #### ObjectOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions--message).
+Inherited from [`MessageOptions`](index.md#messageoptions--message).
 
 #### ObjectOptions › unknownKeys
 
@@ -1359,7 +1375,11 @@ What to do with input properties the shape does not list. `"strip"` drops them f
 ### SizeOptions
 
 ```ts
-export interface SizeOptions
+export interface SizeOptions {
+    min?: number | undefined;
+    max?: number | undefined;
+    length?: number | undefined;
+}
 ```
 
 Size constraints shared by arrays, sets, maps and records, where the size of a record is its number of keys. Every option is optional.
@@ -1391,10 +1411,13 @@ Requires at least this many items. A non-negative integer.
 ### TupleOptions
 
 ```ts
-export interface TupleOptions<TRest extends AnyValidator | undefined = undefined> extends MessageOptions
+export interface TupleOptions<TRest extends AnyValidator | undefined = undefined> extends MessageOptions {
+    rest?: TRest | undefined;
+    max?: (TRest extends AnyValidator ? number : never) | undefined;
+}
 ```
 
-Options for [tuple](#tuple).
+Options for [`tuple`](#tuple).
 
 #### TupleOptions › max
 
@@ -1406,7 +1429,7 @@ The most items the array may hold, the fixed ones included, a non-negative integ
 
 #### TupleOptions › message
 
-Inherited from [MessageOptions](index.md#messageoptions--message).
+Inherited from [`MessageOptions`](index.md#messageoptions--message).
 
 #### TupleOptions › rest
 
@@ -1744,7 +1767,7 @@ type GlobalFile = typeof globalThis extends {
 } ? TFile : FileLike;
 ```
 
-The runtime's own `File`, read from `globalThis` so that a public signature names no global, which a program compiled without the types of the DOM or of Node.js could not resolve; [FileLike](#filelike) for one.
+The runtime's own `File`, read from `globalThis` so that a public signature names no global, which a program compiled without the types of the DOM or of Node.js could not resolve; [`FileLike`](#filelike) for one.
 
 Not exported; declared in `src/primitives/file.ts`.
 
@@ -1758,7 +1781,7 @@ type GlobalFormData = typeof globalThis extends {
 } ? TFormData : Iterable<[string, string | GlobalFile]>;
 ```
 
-The runtime's own `FormData`, read from `globalThis` as [GlobalFile](#globalfile) is, or the entries it holds for a program compiled without the types of the DOM or of Node.js.
+The runtime's own `FormData`, read from `globalThis` as [`GlobalFile`](#globalfile) is, or the entries it holds for a program compiled without the types of the DOM or of Node.js.
 
 Not exported; declared in `src/composition/form-data.ts`.
 

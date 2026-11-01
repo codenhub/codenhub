@@ -18,11 +18,6 @@ export interface ReferenceEntrypointPages {
 export interface ReferenceConfig {
   /** `exports` subpath keys to document; when absent, every subpath with a type target is used. */
   entrypoints?: string[];
-  /**
-   * RESERVED. The shape is validated but the generator does not yet honour it. Intended to omit a
-   * public symbol whose declaration originates in a matched repo-relative glob.
-   */
-  exclude?: string[];
   /** Page shaping by `exports` subpath key; an entrypoint not named here has one page with the default labels. */
   pages?: Record<string, ReferenceEntrypointPages>;
   /** Whether to compile TSDoc prose. `false` renders the signature manifest only. Defaults to `true`. */
@@ -112,7 +107,7 @@ function parsePages(value: unknown, manifestPath: string): Record<string, Refere
 /**
  * Reads the `codenhub.docs.reference` opt-in from a package manifest.
  *
- * The key is an object to opt in, the literal `false` to opt out, or absent for
+ * The key is an object to opt in, or absent for
  * no generated reference; per `docs/specs/packages-reference.md`.
  * @param manifest Parsed package manifest.
  * @param manifestPath Manifest path, used in error messages.
@@ -125,14 +120,14 @@ export function parseReferenceConfig(manifest: unknown, manifestPath: string): R
   }
 
   const value = manifest.codenhub.docs.reference;
-  if (value === undefined || value === false) {
+  if (value === undefined) {
     return null;
   }
   if (!isRecord(value)) {
-    throw new Error(`Invalid codenhub.docs.reference in ${manifestPath}: expected an object or false.`);
+    throw new Error(`Invalid codenhub.docs.reference in ${manifestPath}: expected an object.`);
   }
 
-  assertKnownKeys(value, ["entrypoints", "exclude", "prose", "pages"], "codenhub.docs.reference", manifestPath);
+  assertKnownKeys(value, ["entrypoints", "prose", "pages"], "codenhub.docs.reference", manifestPath);
 
   const entrypoints = stringArray(value.entrypoints, "entrypoints", manifestPath);
   if (entrypoints?.length === 0) {
@@ -152,7 +147,6 @@ export function parseReferenceConfig(manifest: unknown, manifestPath: string): R
 
   return {
     entrypoints,
-    exclude: stringArray(value.exclude, "exclude", manifestPath),
     pages: parsePages(value.pages, manifestPath),
     prose: value.prose ?? true,
   };

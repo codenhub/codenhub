@@ -15,9 +15,9 @@ order: 3
 export declare function createMemoryStore(options?: MemoryStoreOptions): MemoryStore;
 ```
 
-Creates an in-memory [MemoryStore](#memorystore) that keeps everything in one process's memory.
+Creates an in-memory [`MemoryStore`](#memorystore) that keeps everything in one process's memory.
 
-Everything lives in this process's memory and is lost on restart. It is NOT for production: it exists for tests and examples, and it is the reference for the [OidcStore](provider.md#oidcstore) contract that other adapters are judged against.
+Everything lives in this process's memory and is lost on restart. It is NOT for production: it exists for tests and examples, and it is the reference for the [`OidcStore`](provider.md#oidcstore) contract that other adapters are judged against.
 
 Records are never purged. The store keeps every record for its lifetime, and the provider checks `expiresAt` itself, so memory grows with use; that is one more reason it is not for production. Saved and returned records are copies, so the caller can change its own objects without changing the store.
 
@@ -32,10 +32,12 @@ Records are never purged. The store keeps every record for its lifetime, and the
 ### MemoryStore
 
 ```ts
-export interface MemoryStore extends OidcStore
+export interface MemoryStore extends OidcStore {
+    addClient(client: ClientRecord): void;
+}
 ```
 
-An [OidcStore](provider.md#oidcstore) that also lets tests register clients.
+An [`OidcStore`](provider.md#oidcstore) that also lets tests register clients.
 
 #### MemoryStore › addClient
 
@@ -47,51 +49,53 @@ Registers or replaces a client.
 
 #### MemoryStore › consumeCode
 
-Inherited from [OidcStore](provider.md#oidcstore--consumecode).
+Inherited from [`OidcStore`](provider.md#oidcstore--consumecode).
 
 #### MemoryStore › consumeInteraction
 
-Inherited from [OidcStore](provider.md#oidcstore--consumeinteraction).
+Inherited from [`OidcStore`](provider.md#oidcstore--consumeinteraction).
 
 #### MemoryStore › consumeRefreshToken
 
-Inherited from [OidcStore](provider.md#oidcstore--consumerefreshtoken).
+Inherited from [`OidcStore`](provider.md#oidcstore--consumerefreshtoken).
 
 #### MemoryStore › findAccessToken
 
-Inherited from [OidcStore](provider.md#oidcstore--findaccesstoken).
+Inherited from [`OidcStore`](provider.md#oidcstore--findaccesstoken).
 
 #### MemoryStore › findClient
 
-Inherited from [OidcStore](provider.md#oidcstore--findclient).
+Inherited from [`OidcStore`](provider.md#oidcstore--findclient).
 
 #### MemoryStore › revokeGrant
 
-Inherited from [OidcStore](provider.md#oidcstore--revokegrant).
+Inherited from [`OidcStore`](provider.md#oidcstore--revokegrant).
 
 #### MemoryStore › saveAccessToken
 
-Inherited from [OidcStore](provider.md#oidcstore--saveaccesstoken).
+Inherited from [`OidcStore`](provider.md#oidcstore--saveaccesstoken).
 
 #### MemoryStore › saveCode
 
-Inherited from [OidcStore](provider.md#oidcstore--savecode).
+Inherited from [`OidcStore`](provider.md#oidcstore--savecode).
 
 #### MemoryStore › saveInteraction
 
-Inherited from [OidcStore](provider.md#oidcstore--saveinteraction).
+Inherited from [`OidcStore`](provider.md#oidcstore--saveinteraction).
 
 #### MemoryStore › saveRefreshToken
 
-Inherited from [OidcStore](provider.md#oidcstore--saverefreshtoken).
+Inherited from [`OidcStore`](provider.md#oidcstore--saverefreshtoken).
 
 ### MemoryStoreOptions
 
 ```ts
-export interface MemoryStoreOptions
+export interface MemoryStoreOptions {
+    readonly clients?: readonly ClientRecord[];
+}
 ```
 
-Options for [createMemoryStore](#creatememorystore).
+Options for [`createMemoryStore`](#creatememorystore).
 
 #### MemoryStoreOptions › clients
 
@@ -104,7 +108,10 @@ Clients to register.
 ### StoreConformanceCase
 
 ```ts
-export interface StoreConformanceCase
+export interface StoreConformanceCase {
+    readonly name: string;
+    readonly run: (createStore: (seed: StoreSeed) => OidcStore | Promise<OidcStore>) => Promise<void>;
+}
 ```
 
 One check of the OidcStore contract. `run` resolves when the store conforms and rejects with an Error naming the broken rule otherwise.
@@ -124,7 +131,9 @@ readonly run: (createStore: (seed: StoreSeed) => OidcStore | Promise<OidcStore>)
 ### StoreSeed
 
 ```ts
-export interface StoreSeed
+export interface StoreSeed {
+    readonly clients: readonly ClientRecord[];
+}
 ```
 
 What a case asks the store under test to hold before it runs. The `OidcStore` interface has no method that saves a client, so the factory registers these clients itself, the way the app's admin side would.

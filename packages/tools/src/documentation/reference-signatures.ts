@@ -14,9 +14,9 @@ import type {
 export interface SymbolSignature {
   /**
    * The declaration text. A function keeps its full signature (a `.d.ts` function
-   * has no body); a class or interface keeps only its header — modifiers, name,
-   * type parameters, and heritage; a type alias, variable, or enum keeps the whole
-   * declaration.
+   * has no body); an interface keeps its whole declaration without its members'
+   * comments; a class or enum keeps only its header — modifiers, name, type
+   * parameters, and heritage; a type alias or variable keeps the whole declaration.
    */
   text: string;
   /** Extra overload declaration texts for a function, in source order; `text` is the first. */
@@ -87,12 +87,13 @@ function headerText(
  * top level. Lines that start inside a string or template literal keep their
  * whitespace, since it is part of the type.
  */
-function dedentMember(member: ts.Node, source: ts.SourceFile): string {
+function dedentMember(member: ts.Node, source: ts.SourceFile, dropLines: ReadonlySet<number> = new Set()): string {
   const start = member.getStart(source);
   const text = member.getText(source);
-  const lineStart = source.getLineStarts()[source.getLineAndCharacterOfPosition(start).line] ?? start;
+  const firstLine = source.getLineAndCharacterOfPosition(start).line;
+  const lineStart = source.getLineStarts()[firstLine] ?? start;
   const indent = /^[ \t]*/.exec(source.text.slice(lineStart, start))?.[0].length ?? 0;
-  if (indent === 0 || !text.includes("\n")) {
+  if ((indent === 0 && dropLines.size === 0) || !text.includes("\n")) {
     return text;
   }
   const literals: { start: number; end: number }[] = [];
@@ -106,14 +107,92 @@ function dedentMember(member: ts.Node, source: ts.SourceFile): string {
   let offset = 0;
   return text
     .split("\n")
+    .flatMap((line, index) => {
+      const lineOffset = offset;
+      offset += line.length + 1;
+      if (dropLines.has(firstLine + index)) {
+        return [];
+      }
+      if (index === 0 || literals.some((literal) => lineOffset > literal.start && lineOffset < literal.end)) {
+        return [line];
+      }
+      const leading = /^[ \t]*/.exec(line)?.[0].length ?? 0;
+      return [line.slice(Math.min(leading, indent))];
+    })
+    .join("\n");
+}
+
+/**
+ * An interface's full declaration with its members' comments left out, so the block
+ * shows the type's shape at a glance; each member's prose has its own section.
+ * Only lines that hold nothing but a comment are dropped.
+ */
+function interfaceText(node: ts.InterfaceDeclaration, source: ts.SourceFile): string {
+  const dropLines = new Set<number>();
+  for (const member of node.members) {
+    for (const range of ts.getLeadingCommentRanges(source.text, member.pos) ?? []) {
+      const first = source.getLineAndCharacterOfPosition(range.pos).line;
+      const last = source.getLineAndCharacterOfPosition(range.end).line;
+      const lineStarts = source.getLineStarts();
+      const before = source.text.slice(lineStarts[first], range.pos);
+      const after = source.text.slice(range.end, lineStarts[last + 1] ?? source.text.length);
+      if (before.trim() === "" && after.trim() === "") {
+        for (let line = first; line <= last; line += 1) {
+          dropLines.add(line);
+        }
+      }
+    }
+  }
+  return dedentMember(node, source, dropLines);
+}
+
+/**
+ * A type alias's declaration. When a union member carries a comment, declaration
+ * emit leaves it between the previous member and its `|`, so the comment reads as
+ * part of the wrong member; this lays the union out one member per line instead,
+ * each under its own comment.
+ */
+function typeAliasText(node: ts.TypeAliasDeclaration, source: ts.SourceFile): string {
+  const union = node.type;
+  if (!ts.isUnionTypeNode(union)) {
+    return node.getText(source);
+  }
+  const comments = union.types.map((_member, index) =>
+    (ts.getLeadingCommentRanges(source.text, index === 0 ? union.pos : union.types[index - 1]!.end) ?? []).map(
+      (range) => source.text.slice(range.pos, range.end),
+    ),
+  );
+  if (comments.every((list) => list.length === 0)) {
+    return node.getText(source);
+  }
+  const lines = [source.text.slice(node.getStart(source), union.pos).trim()];
+  union.types.forEach((member, index) => {
+    lines.push(...comments[index]!.map((comment) => `    ${comment}`));
+    lines.push(`    | ${indentContinuation(member, source)}`);
+  });
+  return lines.join("\n");
+}
+
+/** A node's text with continuation lines indented four spaces, except lines that start inside a literal. */
+function indentContinuation(node: ts.Node, source: ts.SourceFile): string {
+  const start = node.getStart(source);
+  const literals: { start: number; end: number }[] = [];
+  const visit = (child: ts.Node): void => {
+    if (ts.isStringLiteralLike(child) || ts.isTemplateLiteralToken(child)) {
+      literals.push({ start: child.getStart(source) - start, end: child.getEnd() - start });
+    }
+    ts.forEachChild(child, visit);
+  };
+  visit(node);
+  let offset = 0;
+  return node
+    .getText(source)
+    .split("\n")
     .map((line, index) => {
       const lineOffset = offset;
       offset += line.length + 1;
-      if (index === 0 || literals.some((literal) => lineOffset > literal.start && lineOffset < literal.end)) {
-        return line;
-      }
-      const leading = /^[ \t]*/.exec(line)?.[0].length ?? 0;
-      return line.slice(Math.min(leading, indent));
+      const inLiteral = literals.some((literal) => lineOffset > literal.start && lineOffset < literal.end);
+      return index === 0 || inLiteral ? line : `    ${line}`;
     })
     .join("\n");
 }
@@ -226,7 +305,10 @@ function collectStatements(statements: readonly ts.Statement[], source: ts.Sourc
       if (name !== undefined) {
         mergeSignature(index, name, {
           members: memberEntries(statement.members, source),
-          text: tidy(headerText(statement, source), false),
+          text: tidy(
+            ts.isInterfaceDeclaration(statement) ? interfaceText(statement, source) : headerText(statement, source),
+            false,
+          ),
         });
       }
       continue;
@@ -235,7 +317,7 @@ function collectStatements(statements: readonly ts.Statement[], source: ts.Sourc
     if (ts.isTypeAliasDeclaration(statement)) {
       index.set(statement.name.text, {
         ...(ts.isTypeLiteralNode(statement.type) ? { members: memberEntries(statement.type.members, source) } : {}),
-        text: tidy(statement.getText(source), true),
+        text: tidy(typeAliasText(statement, source), true),
       });
       continue;
     }

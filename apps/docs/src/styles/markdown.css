@@ -117,6 +117,16 @@
   overflow-wrap: anywhere;
 }
 
+/* A hanging indent, so a wrapped overload or member does not read as the next
+   one. Inline-block keeps Shiki's newline between lines from adding a blank
+   row. 6ch clears the 2- or 4-space member indent of an interface body. */
+.markdown-content pre[data-reference-signature] .line {
+  display: inline-block;
+  width: 100%;
+  padding-left: 6ch;
+  text-indent: -6ch;
+}
+
 .code-copy-button {
   @apply grid size-8 shrink-0 cursor-pointer place-items-center rounded-(--radius-control) border-0 bg-transparent text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-neutral-50;
 }

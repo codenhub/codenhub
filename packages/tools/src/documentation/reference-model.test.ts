@@ -135,7 +135,7 @@ describe("default export aliases", () => {
     expect(model.entrypoints[0]?.symbols.map((symbol) => symbol.name)).toEqual([name, "use"]);
     expect(files[0]?.contents.match(new RegExp(`^### ${name}$`, "gm"))).toHaveLength(1);
     expect(files[0]?.contents).toContain("Also exported as `default`.");
-    expect(files[0]?.contents).toContain(`[default](#${name})`);
+    expect(files[0]?.contents).toContain(`[\`default\`](#${name})`);
   });
 
   it("resolves cross-page links to a default alias's named section", { timeout: 30_000 }, async () => {
@@ -149,8 +149,8 @@ describe("default export aliases", () => {
       pages: { ".": { split: { plugin: { source: ["src/leaf.ts"] } } } },
     });
     const root = files.find((file) => file.path.endsWith("/index.md"))?.contents;
-    expect(root).toContain("[original](plugin.md#original)");
-    expect(root).toContain("[default](plugin.md#original)");
+    expect(root).toContain("[`original`](plugin.md#original)");
+    expect(root).toContain("[`default`](plugin.md#original)");
   });
 
   it("keeps the default alias notice when prose is disabled", { timeout: 30_000 }, async () => {

@@ -32,7 +32,14 @@ Each call returns a fresh instance. Consumers who want a singleton can use the d
 ### AlertOptions
 
 ```ts
-export interface AlertOptions
+export interface AlertOptions {
+    title?: string;
+    okLabel?: string;
+    backdropDismiss?: boolean;
+    tokens?: ToastTokens;
+    className?: string;
+    type?: "primary" | "secondary" | "success" | "error";
+}
 ```
 
 Customization settings for blocking alert dialogs.
@@ -88,7 +95,15 @@ Color semantic type for the main action button.
 ### ConfirmOptions
 
 ```ts
-export interface ConfirmOptions
+export interface ConfirmOptions {
+    title?: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    backdropDismiss?: boolean;
+    tokens?: ToastTokens;
+    className?: string;
+    type?: "primary" | "secondary" | "success" | "error";
+}
 ```
 
 Customization settings for interactive confirmation dialogs.
@@ -152,7 +167,12 @@ Color semantic type for the main action button.
 ### CustomDefaults
 
 ```ts
-export interface CustomDefaults
+export interface CustomDefaults {
+    position?: ToastPosition;
+    duration?: number;
+    dismissible?: boolean;
+    autoDismiss?: boolean;
+}
 ```
 
 Fallback defaults for custom toasts.
@@ -192,7 +212,20 @@ Default screen placement for custom toasts.
 ### CustomToastOptions
 
 ```ts
-export interface CustomToastOptions
+export interface CustomToastOptions {
+    content: ToastContent;
+    position?: ToastPosition;
+    duration?: number;
+    dismissible?: boolean;
+    autoDismiss?: boolean;
+    tokens?: ToastTokens;
+    className?: string;
+    role?: ToastRole;
+    margin?: string | {
+        x?: string;
+        y?: string;
+    };
+}
 ```
 
 Options for dispatching a custom layout toast.
@@ -262,7 +295,7 @@ Placement on the screen. Defaults to toaster configuration.
 role?: ToastRole;
 ```
 
-Announcement role, see [ToastRole](#toastrole). Defaults to "status".
+Announcement role, see [`ToastRole`](#toastrole). Defaults to "status".
 
 #### CustomToastOptions › tokens
 
@@ -275,7 +308,11 @@ Color token overrides.
 ### DialogDispatcher
 
 ```ts
-export interface DialogDispatcher
+export interface DialogDispatcher {
+    confirm(message: string, options?: ConfirmOptions): DialogHandle<boolean>;
+    prompt(message: string, options?: PromptOptions): DialogHandle<string | null>;
+    alert(message: string, options?: AlertOptions): DialogHandle<void>;
+}
 ```
 
 Dispatcher interface for displaying interactive browser-native modal dialogs.
@@ -334,7 +371,15 @@ Displays a prompt input dialog requesting user text input.
 ### DialogHandle
 
 ```ts
-export interface DialogHandle<T> extends PromiseLike<T>
+export interface DialogHandle<T> extends PromiseLike<T> {
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null, onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null): Promise<TResult1 | TResult2>;
+    catch<TResult = never>(onrejected?: ((reason: unknown) => TResult | PromiseLike<TResult>) | null): Promise<T | TResult>;
+    finally(onfinally?: (() => void) | null): Promise<T>;
+    dismiss(): void;
+    readonly settled: Promise<void>;
+    readonly state: ToastState;
+    readonly result: Promise<T>;
+}
 ```
 
 Control handle returned by interactive (confirm / prompt / alert) modals. Implements `PromiseLike<T>` so callers can directly `await dialog.confirm(...)` while retaining access to control methods (`dismiss`, `state`, `settled`).
@@ -402,7 +447,10 @@ Attaches callbacks for the resolution and/or rejection of the dialog result.
 ### LoadingDefaults
 
 ```ts
-export interface LoadingDefaults
+export interface LoadingDefaults {
+    position?: ToastPosition;
+    dismissible?: boolean;
+}
 ```
 
 Fallback defaults for loading toasts.
@@ -426,7 +474,19 @@ Default screen placement for loading toasts.
 ### LoadingToastOptions
 
 ```ts
-export interface LoadingToastOptions
+export interface LoadingToastOptions {
+    title?: string;
+    message?: string;
+    description?: string;
+    position?: ToastPosition;
+    dismissible?: boolean;
+    tokens?: ToastTokens;
+    className?: string;
+    margin?: string | {
+        x?: string;
+        y?: string;
+    };
+}
 ```
 
 Options for dispatching a loading toast notification.
@@ -501,7 +561,20 @@ Color token overrides.
 ### PromiseToastOptions
 
 ```ts
-export interface PromiseToastOptions<T>
+export interface PromiseToastOptions<T> {
+    loading: string | LoadingToastOptions;
+    success: string | ToastOptions | ((data: T) => string | ToastOptions);
+    error: string | ToastOptions | ((error: unknown) => string | ToastOptions);
+    position?: ToastPosition;
+    duration?: number;
+    dismissible?: boolean;
+    tokens?: ToastTokens;
+    className?: string;
+    margin?: string | {
+        x?: string;
+        y?: string;
+    };
+}
 ```
 
 Options for binding toasts to promise lifecycles via `toast.promise()`.
@@ -584,7 +657,17 @@ Scoped design tokens.
 ### PromptOptions
 
 ```ts
-export interface PromptOptions
+export interface PromptOptions {
+    title?: string;
+    defaultValue?: string;
+    placeholder?: string;
+    submitLabel?: string;
+    cancelLabel?: string;
+    backdropDismiss?: boolean;
+    tokens?: ToastTokens;
+    className?: string;
+    type?: "primary" | "secondary" | "success" | "error";
+}
 ```
 
 Customization settings for interactive prompt input dialogs.
@@ -664,7 +747,12 @@ Color semantic type for the main action button.
 ### SemanticDefaults
 
 ```ts
-export interface SemanticDefaults
+export interface SemanticDefaults {
+    position?: ToastPosition;
+    duration?: number;
+    dismissible?: boolean;
+    autoDismiss?: boolean;
+}
 ```
 
 Fallback defaults for semantic toasts.
@@ -704,7 +792,10 @@ Default screen placement for semantic toasts.
 ### ToastAction
 
 ```ts
-export interface ToastAction
+export interface ToastAction {
+    label: string;
+    onClick: (event: MouseEvent, handle: ToastHandle) => void;
+}
 ```
 
 Inline action button rendered inside a toast notification.
@@ -728,7 +819,28 @@ Callback invoked when the user clicks the action button. To close the toast upon
 ### Toaster
 
 ```ts
-export interface Toaster
+export interface Toaster {
+    (message: string, options?: ToastOptions): ToastHandle;
+    (options: ToastOptions): ToastHandle;
+    success(message: string, options?: ToastOptions): ToastHandle;
+    success(options: ToastOptions): ToastHandle;
+    error(message: string, options?: ToastOptions): ToastHandle;
+    error(options: ToastOptions): ToastHandle;
+    warning(message: string, options?: ToastOptions): ToastHandle;
+    warning(options: ToastOptions): ToastHandle;
+    info(message: string, options?: ToastOptions): ToastHandle;
+    info(options: ToastOptions): ToastHandle;
+    loading(message: string, options?: LoadingToastOptions): ToastHandle;
+    loading(options?: LoadingToastOptions): ToastHandle;
+    custom(content: ToastContent, options?: Omit<CustomToastOptions, "content">): ToastHandle;
+    custom(options: CustomToastOptions): ToastHandle;
+    promise<T>(promise: PromiseLike<T>, options: PromiseToastOptions<T>): Promise<T>;
+    readonly dialog: DialogDispatcher;
+    clear(): void;
+    dismiss(handle?: ToastHandle): void;
+    configure(config: ToasterRuntimeConfig): void;
+    destroy(): void;
+}
 ```
 
 Represents the Toaster instance controller.
@@ -860,7 +972,25 @@ Displays a warning notification.
 ### ToasterConfig
 
 ```ts
-export interface ToasterConfig
+export interface ToasterConfig {
+    position?: ToastPosition;
+    container?: HTMLElement;
+    maxVisible?: number;
+    duration?: number;
+    dismissible?: boolean;
+    autoDismiss?: boolean;
+    labels?: ToastLabels;
+    tokens?: ToastTokens;
+    nonce?: string;
+    semantic?: SemanticDefaults;
+    loading?: LoadingDefaults;
+    custom?: CustomDefaults;
+    margin?: string | {
+        x?: string;
+        y?: string;
+    };
+    className?: string;
+}
 ```
 
 Global configuration settings for a Toaster manager instance.
@@ -983,7 +1113,16 @@ Dynamic CSS variables applied to all toasts inside this instance.
 ### ToastHandle
 
 ```ts
-export interface ToastHandle
+export interface ToastHandle {
+    dismiss(): void;
+    update(options: ToastUpdateOptions): void;
+    readonly settled: Promise<void>;
+    readonly state: ToastState;
+    onShow(subscriber: ToastLifecycleSubscriber): () => void;
+    onShown(subscriber: ToastLifecycleSubscriber): () => void;
+    onHide(subscriber: ToastLifecycleSubscriber): () => void;
+    onHidden(subscriber: ToastLifecycleSubscriber): () => void;
+}
 ```
 
 Control handle returned upon dispatching a toast notification. Allows programmatic lifecycle management.
@@ -1085,7 +1224,14 @@ Patches the message, content, icon, severity, timing, styles, or classes of a to
 ### ToastLabels
 
 ```ts
-export interface ToastLabels
+export interface ToastLabels {
+    dismiss?: string;
+    confirm?: string;
+    cancel?: string;
+    submit?: string;
+    ok?: string;
+    notifications?: string;
+}
 ```
 
 Instance-level default labels, letting a consumer localize every built-in piece of text this package renders without repeating the same override on every dialog call. A per-call label (`ConfirmOptions.confirmLabel`, etc.) still wins over its matching entry here, the same precedence `position` and `duration` already have between `ToasterConfig` and a per-call option.
@@ -1141,7 +1287,25 @@ Default label for a prompt dialog's submit button. Defaults to "Submit".
 ### ToastOptions
 
 ```ts
-export interface ToastOptions
+export interface ToastOptions {
+    title?: string;
+    message?: string;
+    description?: string;
+    action?: ToastAction;
+    position?: ToastPosition;
+    duration?: number;
+    dismissible?: boolean;
+    autoDismiss?: boolean;
+    tokens?: ToastTokens;
+    className?: string;
+    role?: ToastRole;
+    margin?: string | {
+        x?: string;
+        y?: string;
+    };
+    type?: SemanticType | "default";
+    icon?: ToastIcon | null;
+}
 ```
 
 Options for dispatching standard toast notifications.
@@ -1235,7 +1399,7 @@ Placement on the screen. Defaults to toaster configuration.
 role?: ToastRole;
 ```
 
-Announcement role, see [ToastRole](#toastrole). Defaults to the variant's role.
+Announcement role, see [`ToastRole`](#toastrole). Defaults to the variant's role.
 
 #### ToastOptions › title
 
@@ -1264,7 +1428,42 @@ Severity variant or "default" neutral.
 ### ToastTokens
 
 ```ts
-export interface ToastTokens
+export interface ToastTokens {
+    successBg?: string;
+    successFg?: string;
+    successEdge?: string;
+    errorBg?: string;
+    errorFg?: string;
+    errorEdge?: string;
+    warningBg?: string;
+    warningFg?: string;
+    warningEdge?: string;
+    infoBg?: string;
+    infoFg?: string;
+    infoEdge?: string;
+    defaultBg?: string;
+    defaultFg?: string;
+    defaultEdge?: string;
+    border?: string;
+    surface?: string;
+    text?: string;
+    primaryBg?: string;
+    primaryFg?: string;
+    primaryBgHover?: string;
+    primaryEdge?: string;
+    secondaryBg?: string;
+    secondaryFg?: string;
+    secondaryBgHover?: string;
+    secondaryEdge?: string;
+    successBtnBg?: string;
+    successBtnFg?: string;
+    successBtnBgHover?: string;
+    successBtnEdge?: string;
+    errorBtnBg?: string;
+    errorBtnFg?: string;
+    errorBtnBgHover?: string;
+    errorBtnEdge?: string;
+}
 ```
 
 Design tokens for overriding colors per toast or globally per instance.
@@ -1546,7 +1745,20 @@ Foreground (text/icon) color for the toast-warning variant.
 ### ToastUpdateOptions
 
 ```ts
-export interface ToastUpdateOptions
+export interface ToastUpdateOptions {
+    title?: string | null;
+    message?: string | null;
+    description?: string | null;
+    action?: ToastAction | null;
+    content?: ToastContent;
+    icon?: ToastIcon | null;
+    type?: SemanticType | "default";
+    duration?: number;
+    autoDismiss?: boolean;
+    dismissible?: boolean;
+    tokens?: ToastTokens;
+    className?: string;
+}
 ```
 
 Options that can be dynamically updated on a live toast instance.

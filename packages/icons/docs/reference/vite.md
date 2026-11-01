@@ -32,7 +32,16 @@ Also exported as `default`.
 ### ViteIconsOptions
 
 ```ts
-export interface ViteIconsOptions
+export interface ViteIconsOptions {
+    content?: string[];
+    prefix?: string;
+    families?: IconFamilyData[];
+    defaultPrefix?: string;
+    registry?: IconRegistry;
+    strokeWidth?: number | string;
+    mode?: "css" | "svg";
+    attribution?: AttributionMode;
+}
 ```
 
 Options for configuring the Vite icons plugin.
@@ -115,4 +124,4 @@ Stroke width applied to icons of stroke-based families that carry no stroke modi
 export declare const viteIconsPlugin: typeof viteIcons;
 ```
 
-Named alias for [viteIcons](#viteicons).
+Named alias for [`viteIcons`](#viteicons).
