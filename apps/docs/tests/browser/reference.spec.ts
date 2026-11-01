@@ -34,13 +34,25 @@ test("indents a wrapped signature line so each overload starts at the left edge"
       return { first: rects[0]!.left, rest: rects.filter((rect) => rect.top > top).map((rect) => rect.left) };
     }),
   );
-  // Both overloads wrap at this width; every continuation sits right of where its line began.
+  // One character's width in the signature font.
+  const ch = await pre.evaluate((element) => {
+    const probe = document.createElement("span");
+    probe.textContent = "0";
+    probe.style.position = "absolute";
+    probe.style.visibility = "hidden";
+    element.append(probe);
+    const width = probe.getBoundingClientRect().width;
+    probe.remove();
+    return width;
+  });
+  // Both overloads wrap at this width. Every continuation must clear an interface
+  // body's 4-space member indent, or a wrapped member would read as the next one.
   expect(starts).toHaveLength(2);
   expect(starts[1]!.first).toBeCloseTo(starts[0]!.first, 0);
   for (const { first, rest } of starts) {
     expect(rest.length).toBeGreaterThan(0);
     for (const left of rest) {
-      expect(left).toBeGreaterThan(first);
+      expect(left - first).toBeGreaterThan(4 * ch + 0.5);
     }
   }
 });
