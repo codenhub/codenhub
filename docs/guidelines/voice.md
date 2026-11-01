@@ -96,7 +96,7 @@ Recommendation: "Solve for n." for the website hero and social profiles, with "C
 ## Messaging
 
 - **One line:** Coden builds apps and websites on open-source tools it publishes itself.
-- **25 words:** Coden is a development agency that builds apps and websites for growing businesses, using CodenHub, its own open-source foundation, so every client starts from tested code.
+- **25 words:** Coden is a development agency that builds apps and websites for growing businesses, using CodenHub, its open-source foundation, so every client starts from tested code.
 - **60 words:** Coden builds apps and websites for businesses that need software done well and do not have engineers of their own. We start every project from CodenHub, the open-source toolkit we build and publish at codenhub.dev, so clients can inspect how we work before they hire us. Alongside development, we handle the hosting, search, and security that keep the software running.
 
 Key messages, each with the proof to show beside it:
