@@ -1128,6 +1128,14 @@ export function SaveButton() {
 }
 ```
 
+<!-- Source: docs/changelog/0.3.1.md -->
+
+# 0.3.1
+
+## Changed
+
+- Nothing a consumer imports has changed: the bundle is byte-identical to 0.3.0's, so upgrading needs no action. The release records its size for each export imported alone, and its bytes by source file, function, and class member, for the package index to show where they go.
+
 <!-- Source: docs/changelog/0.3.0.md -->
 
 # 0.3.0
