@@ -112,6 +112,26 @@ describe("parseSizeReport", () => {
     ).toThrow(`"." export "a" file "a.ts" needs an integer "bytes"`);
   });
 
+  it("keeps an export or declaration named __proto__ as its own key", () => {
+    const contents = JSON.stringify({
+      bundler: "rolldown@1.1.5",
+      entrypoints: {
+        ".": {
+          exports: { ["__proto__"]: { gzip: 1, minified: 2 } },
+          files: { "src/a.ts": { bytes: 3, declarations: { ["__proto__"]: 3 } } },
+          gzip: 1,
+          minified: 3,
+          sha256: HASH_A,
+        },
+      },
+    });
+
+    const entry = parseSizeReport(contents, "size.json").entrypoints["."];
+
+    expect(Object.keys(entry?.exports ?? {})).toEqual(["__proto__"]);
+    expect(Object.keys(entry?.files?.["src/a.ts"]?.declarations ?? {})).toEqual(["__proto__"]);
+  });
+
   it("reads a report recorded before exports and files were measured", () => {
     const contents = `{"bundler":"rolldown@1.1.5","entrypoints":{".":{"minified":1,"gzip":1,"sha256":"${HASH_A}"}}}`;
 

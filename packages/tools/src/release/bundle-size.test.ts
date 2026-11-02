@@ -58,6 +58,7 @@ async function createMappedPackage(): Promise<string> {
       `  describe(): string { return "${"h".repeat(40)}" + Math.random(); }`,
       `  static #secret = "${"p".repeat(30)}";`,
       `  reveal(): string { return Helper.#secret; }`,
+      `  "quoted"(): string { return "${"q".repeat(20)}" + Math.random(); }`,
       `}`,
       `interface Erased { value: number }`,
       "",
@@ -188,6 +189,20 @@ describe("measureEntrypoint", () => {
     expect(Object.keys(files ?? {}).some((file) => file.startsWith(".."))).toBe(false);
   });
 
+  it("does not break down a file outside the package that no package owns", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codenhub-size-outside-"));
+    const directory = join(workspace, "app");
+    await mkdir(join(directory, "dist"), { recursive: true });
+    await mkdir(join(workspace, "shared"));
+    await writeFile(join(workspace, "shared/far.js"), `export function far() { return "FAR" + Math.random(); }\n`);
+    await writeFile(join(directory, "dist/index.js"), `export { far } from "../../shared/far.js";\n`);
+
+    const { files } = await measureEntrypoint(join(directory, "dist/index.js"), [], directory);
+
+    expect(files?.["../shared/far.js"]?.bytes).toBeGreaterThan(0);
+    expect(files?.["../shared/far.js"]?.declarations).toBeUndefined();
+  });
+
   it("attributes bytes through the build's source maps to source files and their declarations", async () => {
     const directory = await createMappedPackage();
 
@@ -208,6 +223,8 @@ describe("measureEntrypoint", () => {
     expect(big?.declarations?.["Helper.describe"]).toBeGreaterThanOrEqual(40);
     expect(big?.declarations?.["Helper.#secret"]).toBeGreaterThanOrEqual(30);
     expect(big?.declarations?.["Helper.reveal"]).toBeGreaterThan(0);
+    // By the key's value, so changing quote style does not rename it.
+    expect(big?.declarations?.["Helper.quoted"]).toBeGreaterThanOrEqual(20);
     expect(big?.declarations?.Helper).toBeGreaterThan(0);
     expect(Object.values(big?.declarations ?? {}).reduce((sum, bytes) => sum + bytes, 0)).toBe(big?.bytes);
     // Reading the map changes what is attributed, never the measured bytes.

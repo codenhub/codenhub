@@ -153,7 +153,8 @@ export function parseSizeReport(contents: string, source: string): SizeReport {
     }
     const entry: EntrypointSize = { gzip, minified, sha256 };
     if (exports !== undefined) {
-      entry.exports = {};
+      // A null prototype, so an export named `__proto__` is kept as a key.
+      entry.exports = Object.create(null) as Record<string, ExportSize>;
       for (const [name, value] of Object.entries(asRecord(exports, `"${subpath}" "exports"`, fail))) {
         const {
           files: exportFiles,
@@ -187,15 +188,14 @@ function parseBreakdown(value: unknown, owner: string, fail: (reason: string) =>
     }
     const source: SourceSize = { bytes };
     if (declarations !== undefined) {
-      source.declarations = {};
-      for (const [name, count] of Object.entries(
-        asRecord(declarations, `${owner} file "${file}" "declarations"`, fail),
-      )) {
+      const counts = Object.entries(asRecord(declarations, `${owner} file "${file}" "declarations"`, fail));
+      for (const [name, count] of counts) {
         if (!isNonNegativeInteger(count)) {
           return fail(`${owner} file "${file}" declaration "${name}" needs an integer byte count`);
         }
-        source.declarations[name] = count;
       }
+      // Not assigned key by key: assigning `__proto__` sets the prototype instead.
+      source.declarations = Object.fromEntries(counts) as Record<string, number>;
     }
     breakdown[file] = source;
   }

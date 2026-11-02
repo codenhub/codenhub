@@ -71,8 +71,10 @@ function describeSource(source: string, packageDirectory: string): Source {
   }
   // Outside the package without a `node_modules` segment: a workspace
   // dependency, whose pnpm link the bundler resolved to its real path.
+  // Without an owner it is kept by path, but not broken down: only the
+  // package's own files are.
   const owner = owningPackage(dirname(source));
-  return owner === undefined ? { key, path: source } : { key: `node_modules/${owner}` };
+  return { key: owner === undefined ? key : `node_modules/${owner}` };
 }
 
 const owners = new Map<string, string | undefined>();
@@ -170,6 +172,10 @@ function memberName(member: Node, text: string): string {
   }
   if (key.type === "PrivateIdentifier") {
     return `#${key.name as string}`;
+  }
+  // `"render"()` and `'render'()` are both `render`.
+  if (member.computed !== true && key.type === "Literal" && typeof key.value === "string") {
+    return key.value;
   }
   return member.computed === true ? `[${text.slice(key.start, key.end).slice(0, 60)}]` : (nameOf(key, text) ?? "");
 }
