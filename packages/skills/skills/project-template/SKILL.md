@@ -37,6 +37,12 @@ Creating a repository, pushing, and opening a pull request or an issue are outwa
 
    For a local start, clone the template and note which files `git ls-files -s .githooks` shows as `100755`, then remove its `.git`, run `git init -b main`, and stage everything. Hooks staged from a Windows checkout lose their executable bit, and git on Linux and macOS then skips them, so stage each of those files again with `git add --chmod=+x .githooks/<hook>`, and only those. `git ls-files -s .githooks` must then match the template's modes.
 
+   Then turn on "Automatically delete head branches", so merged branches, starting with the bootstrap branch, do not pile up on the remote. It is part of creating the repository; for a repository that already existed, ask first:
+
+   ```sh
+   gh repo edit <owner>/<slug> --delete-branch-on-merge
+   ```
+
 3. **Record the template commit** as the full SHA in `manifest.json#synced`: the HEAD of a local clone, or for GitHub's creation the commit read before creating the repository.
 4. **Replace every placeholder** in seed files and project blocks. Leave `.template/README.md` alone, since it documents the placeholders, and leave GitHub Actions expressions such as `${{ github.ref }}` alone. This must print nothing:
 
