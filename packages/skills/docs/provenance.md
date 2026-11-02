@@ -21,6 +21,7 @@ This page records the origin and license context of skill assets shipped by `@co
 | `naming`                  | Original Coden Agency work             | Apache-2.0 |
 | `ponytail`                | Adapted from [DietrichGebert/ponytail] | MIT        |
 | `ponytail-review`         | Adapted from [DietrichGebert/ponytail] | MIT        |
+| `project-template`        | Original Coden Agency work             | Apache-2.0 |
 | `subagent-specialist`     | Adapted from [obra/superpowers]        | MIT        |
 | `test-driven-development` | Adapted from [obra/superpowers]        | MIT        |
 | `writing-skills`          | Adapted from [obra/superpowers]        | MIT        |
