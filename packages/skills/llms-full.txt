@@ -292,6 +292,7 @@ This page records the origin and license context of skill assets shipped by `@co
 | `naming`                  | Original Coden Agency work             | Apache-2.0 |
 | `ponytail`                | Adapted from [DietrichGebert/ponytail] | MIT        |
 | `ponytail-review`         | Adapted from [DietrichGebert/ponytail] | MIT        |
+| `project-template`        | Original Coden Agency work             | Apache-2.0 |
 | `subagent-specialist`     | Adapted from [obra/superpowers]        | MIT        |
 | `test-driven-development` | Adapted from [obra/superpowers]        | MIT        |
 | `writing-skills`          | Adapted from [obra/superpowers]        | MIT        |
@@ -410,6 +411,7 @@ The rest of the authoring guidance, such as how a description is phrased or whet
 | `naming`                  | Finds meaningful, memorable, ownable names for anything.                      |
 | `ponytail`                | Builds the simplest solution that works, nothing speculative.                 |
 | `ponytail-review`         | Finds over-engineering and ledgers deferred work.                             |
+| `project-template`        | Creates, syncs, and adopts projects built on the shared project template.     |
 | `subagent-specialist`     | Decides what to delegate, then briefs, reviews, and integrates subagent work. |
 | `test-driven-development` | Applies fail-first red-green-refactor development.                            |
 | `writing-skills`          | Authors, reviews, and evaluates skills against the rules.                     |

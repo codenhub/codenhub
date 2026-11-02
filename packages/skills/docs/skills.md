@@ -69,6 +69,7 @@ The rest of the authoring guidance, such as how a description is phrased or whet
 | `naming`                  | Finds meaningful, memorable, ownable names for anything.                      |
 | `ponytail`                | Builds the simplest solution that works, nothing speculative.                 |
 | `ponytail-review`         | Finds over-engineering and ledgers deferred work.                             |
+| `project-template`        | Creates, syncs, and adopts projects built on the shared project template.     |
 | `subagent-specialist`     | Decides what to delegate, then briefs, reviews, and integrates subagent work. |
 | `test-driven-development` | Applies fail-first red-green-refactor development.                            |
 | `writing-skills`          | Authors, reviews, and evaluates skills against the rules.                     |

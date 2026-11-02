@@ -1,0 +1,4 @@
+interface:
+  display_name: "Project Template"
+  short_description: "Create, sync, and adopt the shared project template"
+  default_prompt: "Use $project-template to bring this project in line with its template: sync it from the recorded commit, or adopt the template if it has none, keep project blocks untouched, propose seed changes instead of applying them, verify, and report what changed and what needs my decision."
