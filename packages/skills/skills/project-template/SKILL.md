@@ -44,7 +44,7 @@ Creating a repository, pushing, and opening a pull request or an issue are outwa
    A value the user has not decided yet, such as the license of a private repository, stays a placeholder only when the user says so, and goes in the report.
 
 5. **Install and verify:** `pnpm install`, which also points git at the hooks, then `pnpm verify`.
-6. **Commit** the untouched template first and the placeholder replacement second, so the second commit shows exactly what the project changed.
+6. **Commit** the untouched template first and the placeholder replacement second, so the second commit shows exactly what the project changed. For a local start, the untouched template is the first commit on `main`, and the placeholder replacement and any further setup go on a bootstrap branch, such as `chore/bootstrap`, merged by pull request.
 
 The template's pre-push hook refuses any push to `main`, including the first push into an empty repository. Tell the user; pushing with `--no-verify` is their decision, never yours.
 
@@ -103,6 +103,6 @@ When a task improves a `canonical` file or the template-owned part of a `blocks`
 
 - Prepare it on a branch in a checkout of the template, following the template's contributor guide. Pushing it and opening the pull request follow Approval.
 - Keep it brand-neutral: no project name, brand, or domain rule. An improvement that holds only for this project belongs in a project block or a project-owned file, not in the template.
-- When the task cannot wait for the template, a local edit lands only with the user's agreement, and the report names it as pending upstream.
+- When the task cannot wait for the template, a local edit lands only with the user's agreement, and the report names it as pending upstream. A user who asked for that fix in this project has agreed to the local edit; still propose the template change.
 
 Suggest a template improvement when there is evidence for it: the same change needed in two projects, a trap hit in a project that comes from a template-owned file, or a gap in the template that caused a mistake. Name the evidence; do not suggest changes on taste.
