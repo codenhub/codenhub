@@ -23,7 +23,6 @@ const WORKSPACE_WIDE_PATHS: readonly string[] = [
   ".oxfmtrc.json",
   ".prettierrc.json",
   ".prettierignore",
-  "assets/",
 ];
 
 /** One package selected for a run, with any narrowing paths it was given. */

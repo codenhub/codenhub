@@ -1,10 +1,10 @@
-import { copyFile, lstat, mkdir, readdir, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
-import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
+import { lstat, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { basename, dirname, join, relative, sep } from "node:path";
 
 import type { WorkspacePackage } from "../workspace/discover.ts";
+import { BrandUnreachableError, type BrandSource } from "./brand-source.ts";
 import { isValidRelativeAssetPath, parseAssetEntries } from "./manifest.ts";
 
-const ASSETS_DIRECTORY = "assets";
 const MANIFEST_LOCATION = "package.json";
 
 /** Name of the gitignored file a package's asset placements are tracked in. */
@@ -12,14 +12,6 @@ export const ASSET_STATE_FILE = ".codenhub-assets.json";
 
 interface AssetState {
   placed?: unknown;
-}
-
-async function isFile(path: string): Promise<boolean> {
-  try {
-    return (await stat(path)).isFile();
-  } catch {
-    return false;
-  }
 }
 
 async function pathExists(path: string): Promise<boolean> {
@@ -32,13 +24,6 @@ async function pathExists(path: string): Promise<boolean> {
     }
     throw error;
   }
-}
-
-function isWithin(root: string, candidate: string): boolean {
-  const relativePath = relative(root, candidate);
-  return (
-    relativePath === "" || (!isAbsolute(relativePath) && relativePath !== ".." && !relativePath.startsWith(`..${sep}`))
-  );
 }
 
 async function assertNoSymbolicLink(packageDirectory: string, destination: string): Promise<void> {
@@ -120,14 +105,20 @@ export interface AssetSyncResult {
   copied: string[];
   /** Previously placed destinations removed because they are no longer declared. */
   removed: string[];
+  /**
+   * Set when the brand could not be reached and every declared destination had been placed by an
+   * earlier run: those files were kept as they were, and nothing was copied or removed. Holds why.
+   */
+  keptBecause?: string;
 }
 
 /**
  * Places a package's declared `codenhub.assets` and removes what it no longer declares.
  *
- * This is the one place root `assets/` gets copied from — every consumer reuses it
- * rather than each carrying its own copy step, which is how the source stays the
- * only place the files are committed and every destination stays current with it.
+ * This is the one place Coden's brand files are fetched from — every consumer reuses
+ * it rather than each carrying its own download step. The source is the brand
+ * published at `coden.agency/brand`, read live: each file is checked against the
+ * brand index's size and SHA-256 before anything on disk changes.
  * Placement itself is untouched: `to` is read verbatim from the package's own
  * manifest, never derived or assumed here.
  *
@@ -135,51 +126,77 @@ export interface AssetSyncResult {
  * a file it placed apart from one it never touched — that is what lets a removed
  * entry's old file be deleted without risking anything this mechanism did not
  * itself place.
+ *
+ * When the brand cannot be reached, and every declared destination is a file an
+ * earlier run placed, the run keeps those files and reports why in `keptBecause`,
+ * so work can go on offline. A fresh checkout has nothing to keep, so it fails.
  * @param workspacePackage Package to sync.
- * @param root Absolute repository root.
- * @returns What was copied and removed.
- * @throws When a declared `from` does not resolve to a real file under `assets/`.
+ * @param source Where the brand is read from.
+ * @returns What was copied and removed, or why the placed files were kept.
+ * @throws When a declared `from` is not published, a download does not match the
+ * index, or the brand cannot be reached and a declared file was never placed.
  */
-export async function syncPackageAssets(workspacePackage: WorkspacePackage, root: string): Promise<AssetSyncResult> {
+export async function syncPackageAssets(
+  workspacePackage: WorkspacePackage,
+  source: BrandSource,
+): Promise<AssetSyncResult> {
   const manifestPath = join(workspacePackage.directory, MANIFEST_LOCATION);
   const entries = parseAssetEntries(workspacePackage.manifest, manifestPath);
-  const assetsRoot = join(root, ASSETS_DIRECTORY);
-  const resolvedAssetsRoot = await realpath(assetsRoot);
   const declared = [...new Set(entries.map((entry) => entry.to))];
 
   const previouslyPlaced = await readPlaced(workspacePackage.directory);
   const previouslyPlacedSet = new Set(previouslyPlaced);
   const removed = previouslyPlaced.filter((destination) => !declared.includes(destination));
 
-  const preparedEntries = await Promise.all(
-    entries.map(async (entry) => {
-      const source = join(assetsRoot, entry.from);
-      if (!(await isFile(source))) {
-        throw new Error(
-          `${workspacePackage.name} declares codenhub.assets "${entry.from}", which does not exist under ${ASSETS_DIRECTORY}/.`,
-        );
-      }
-      const resolvedSource = await realpath(source);
-      if (!isWithin(resolvedAssetsRoot, resolvedSource)) {
-        throw new Error(
-          `${workspacePackage.name} declares codenhub.assets "${entry.from}", which resolves outside ${ASSETS_DIRECTORY}/.`,
-        );
-      }
+  const prepare = async (): Promise<{ bytes: Uint8Array; destination: string; to: string }[]> => {
+    const prepared = await Promise.all(
+      entries.map(async (entry) => {
+        const file = await source.lookup(entry.from);
+        if (file === undefined) {
+          throw new Error(
+            `${workspacePackage.name} declares codenhub.assets "${entry.from}", which coden.agency/brand does not publish.`,
+          );
+        }
 
-      const destination = join(workspacePackage.directory, entry.to);
-      await assertNoSymbolicLink(workspacePackage.directory, destination);
-      if (
-        !previouslyPlacedSet.has(entry.to) &&
-        (await pathExists(destination)) &&
-        !(await isPlacedUnderOtherCase(destination, entry.to, previouslyPlaced))
-      ) {
-        throw new Error(
-          `${workspacePackage.name} declares codenhub.assets destination "${entry.to}", but the asset sync did not place the existing path.`,
-        );
-      }
-      return { destination, source: resolvedSource, to: entry.to };
-    }),
-  );
+        const destination = join(workspacePackage.directory, entry.to);
+        await assertNoSymbolicLink(workspacePackage.directory, destination);
+        if (
+          !previouslyPlacedSet.has(entry.to) &&
+          (await pathExists(destination)) &&
+          !(await isPlacedUnderOtherCase(destination, entry.to, previouslyPlaced))
+        ) {
+          throw new Error(
+            `${workspacePackage.name} declares codenhub.assets destination "${entry.to}", but the asset sync did not place the existing path.`,
+          );
+        }
+        return { destination, file, to: entry.to };
+      }),
+    );
+    // Every file is downloaded and checked before anything on disk changes.
+    return Promise.all(
+      prepared.map(async ({ destination, file, to }) => ({ bytes: await source.download(file), destination, to })),
+    );
+  };
+
+  let preparedEntries: Awaited<ReturnType<typeof prepare>>;
+  try {
+    preparedEntries = await prepare();
+  } catch (cause) {
+    if (!(cause instanceof BrandUnreachableError)) {
+      throw cause;
+    }
+    const kept = await Promise.all(
+      declared.map(async (to) => previouslyPlacedSet.has(to) && pathExists(join(workspacePackage.directory, to))),
+    );
+    const missing = declared.find((_to, index) => !kept[index]);
+    if (missing !== undefined) {
+      throw new BrandUnreachableError(
+        `${cause.message} ${workspacePackage.name} has no earlier copy of "${missing}" to keep, so it cannot build without the brand.`,
+        { cause },
+      );
+    }
+    return { copied: [], keptBecause: cause.message, removed: [] };
+  }
 
   await Promise.all(
     removed.map(async (destination) =>
@@ -192,9 +209,9 @@ export async function syncPackageAssets(workspacePackage: WorkspacePackage, root
     removed.map(async (destination) => rm(join(workspacePackage.directory, destination), { force: true })),
   );
   const copies = await Promise.allSettled(
-    preparedEntries.map(async ({ destination, source }) => {
+    preparedEntries.map(async ({ bytes, destination }) => {
       await mkdir(dirname(destination), { recursive: true });
-      await copyFile(source, destination);
+      await writeFile(destination, bytes);
     }),
   );
 

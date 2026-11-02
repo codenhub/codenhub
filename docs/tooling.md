@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-30
+last_updated: 2026-11-02
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -77,9 +77,9 @@ Only file paths are forwarded to the underlying tool, and only for commands that
 
 `--changed` narrows an explicit selection and replaces an empty one, so `hub test --changed` runs changed packages and `hub test error --changed` runs `error` only when it changed.
 
-A change to a workspace-wide file counts as a change to every package. The files are the root `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `package.json`, `tsconfig.json`, `.nvmrc`, `.npmrc`, `.oxlintrc.json`, `.oxfmtrc.json`, `.prettierrc.json`, `.prettierignore`, and anything under the root `assets/` directory; the list is the `WORKSPACE_WIDE_PATHS` constant in `packages/tools/src/workspace/select-packages.ts`. Only root files count, so `packages/error/package.json` changes `error` alone. An explicit selection still narrows the result, so `hub test error --changed` with a lockfile change runs `error`.
+A change to a workspace-wide file counts as a change to every package. The files are the root `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `package.json`, `tsconfig.json`, `.nvmrc`, `.npmrc`, `.oxlintrc.json`, `.oxfmtrc.json`, `.prettierrc.json`, and `.prettierignore`; the list is the `WORKSPACE_WIDE_PATHS` constant in `packages/tools/src/workspace/select-packages.ts`. Only root files count, so `packages/error/package.json` changes `error` alone. An explicit selection still narrows the result, so `hub test error --changed` with a lockfile change runs `error`.
 
-These files change what every package installs, compiles, lints, or copies, so a change to one is a change to all: before they widened the selection, a pull request that only bumped a dependency selected nothing and passed unverified. The root `assets/` directory is on the list because the `assets` compliance check reads it, so removing a file there can break a package that did not change. Two alternatives were rejected. Widening only in `.github/workflows/ci.yml`, as it does for a change to CI itself, leaves the gap in the local `pnpm verify --changed` that `CONTRIBUTING.md` requires before a pull request. Widening on any file no package owns makes a root README edit verify the whole workspace.
+These files change what every package installs, compiles, lints, or copies, so a change to one is a change to all: before they widened the selection, a pull request that only bumped a dependency selected nothing and passed unverified. The brand at `coden.agency/brand` is not on the list: it changes outside this repository, so no path here records the change, and a file it stops publishing surfaces when a package that declares the file next builds or is checked. Two alternatives were rejected. Widening only in `.github/workflows/ci.yml`, as it does for a change to CI itself, leaves the gap in the local `pnpm verify --changed` that `CONTRIBUTING.md` requires before a pull request. Widening on any file no package owns makes a root README edit verify the whole workspace.
 
 On Windows a workspace location matches a typed path regardless of case, because the file system does. `hub check Packages/error` runs `packages/error`. Other platforms compare case-sensitively.
 
@@ -196,7 +196,7 @@ A package opts in by declaring `@playwright/test`. Browsers are cached per Playw
 
 ## Asset placement
 
-Root `assets/` (`docs/assets.md`) catalogs Coden's brand artwork and fonts, but says nothing about where any consumer places a file — that stays each package's own decision, since a web app, a demo, and a future non-web consumer each place things differently. A package declares exactly which files it needs and exactly where in its own manifest:
+Coden's brand artwork and fonts are published at [coden.agency/brand](https://coden.agency/brand), which lists every file with its size and SHA-256 in `https://coden.agency/brand/index.json`. The brand says what each file is and how to use it, but nothing about where any consumer places a file — that stays each package's own decision, since a web app, a demo, and a future non-web consumer each place things differently. A package declares exactly which files it needs and exactly where in its own manifest:
 
 ```json
 "codenhub": {
@@ -207,14 +207,16 @@ Root `assets/` (`docs/assets.md`) catalogs Coden's brand artwork and fonts, but 
 }
 ```
 
-`from` is relative to root `assets/`; `to` is relative to the package's own directory. `pnpm hub assets` reads that declaration and syncs it:
+`from` is a path below the brand's `assets/`; `to` is relative to the package's own directory. `pnpm hub assets` reads that declaration and syncs it:
 
 ```sh
 pnpm hub assets
 pnpm hub assets demo
 ```
 
-It is the one place root `assets/` gets copied from, so every consumer reuses the same implementation instead of carrying its own copy script. `build` and `dev` run it automatically through their `prepare` step for any package that declares `codenhub.assets`, so a package's own scripts need no `predev`/`prebuild` step of their own. A destination is remembered per package (a gitignored `.codenhub-assets.json` beside its manifest), so a later run can tell a file it placed apart from one it never touched — that is what lets a dropped entry's old file be removed without risking anything the mechanism did not itself place. Sync fails before changing files when a destination already exists without that ownership record, a declared source is invalid, or a source or destination escapes its boundary through a symbolic link. `hub check` validates that every declared `from` resolves to a real file under `assets/`.
+It is the one place brand files are fetched from, so every consumer reuses the same implementation instead of carrying its own download script. `build` and `dev` run it automatically through their `prepare` step for any package that declares `codenhub.assets`, so a package's own scripts need no `predev`/`prebuild` step of their own. The brand is read live, never from a pinned copy: every declared file is downloaded and checked against the index's size and SHA-256 before anything on disk changes. A destination is remembered per package (a gitignored `.codenhub-assets.json` beside its manifest), so a later run can tell a file it placed apart from one it never touched — that is what lets a dropped entry's old file be removed without risking anything the mechanism did not itself place. Sync fails before changing files when a destination already exists without that ownership record, the brand does not publish a declared source, a download does not match the index, or a destination escapes the package through a symbolic link.
+
+When the brand cannot be reached, through a network failure, a timeout, or a server error, and every declared destination is a file an earlier run placed and still on disk, the sync keeps those files, warns, and succeeds, so work goes on offline. A fresh checkout has nothing to keep, so it fails: a package that declares `codenhub.assets` needs the network for its first build. Every other failure, such as a missing file, a malformed index, or a mismatched download, fails regardless, because waiting does not fix it. `hub check` validates that the brand publishes every declared `from`, and reports an unreachable brand as an `assets/brand-unreachable` warning.
 
 ## Creating a package
 
@@ -399,7 +401,7 @@ Findings carry a `<rule>/<detail>` code and a severity. Only `error` findings fa
 | `llms-full`           | `llms-full.txt` still matches the documents it compiles.                                                                |
 | `readme`              | README status notices agree with `codenhub.status`.                                                                     |
 | `changelog`           | An opted-in changelog documents, dates, describes, and links the version the manifest declares.                         |
-| `assets`              | `codenhub.assets` entries resolve to real files under root `assets/`.                                                   |
+| `assets`              | `codenhub.assets` entries name files `coden.agency/brand` publishes.                                                    |
 
 The `documentation` rule also reports `documentation/legacy-metadata` when a package declares identity (`label`, `status`, and the other fields `docs/specs/packages-metadata.md` lists) inside `codenhub.docs` instead of on `codenhub`, and `documentation/missing-logo` when `codenhub.logo` names no file in the package.
 

@@ -1,5 +1,6 @@
 import { relative } from "node:path";
 
+import { createBrandSource, type BrandSource } from "../assets/brand-source.ts";
 import { declaresAssets, syncPackageAssets } from "../assets/sync.ts";
 import { mapSeries } from "../process/concurrency.ts";
 import { formatDuration, type SummaryRow } from "../reporting/reporter.ts";
@@ -9,7 +10,7 @@ function toPosix(value: string): string {
   return value.replaceAll("\\", "/");
 }
 
-async function runAssetsCommand(context: CommandContext): Promise<number> {
+async function runAssetsCommand(context: CommandContext, source: BrandSource): Promise<number> {
   const { reporter, workspace } = context;
   const packages = context.selection.targets
     .map(({ package: workspacePackage }) => workspacePackage)
@@ -32,7 +33,11 @@ async function runAssetsCommand(context: CommandContext): Promise<number> {
     const label = toPosix(relative(workspace.root, workspacePackage.directory));
     const startedAt = performance.now();
     try {
-      const result = await syncPackageAssets(workspacePackage, workspace.root);
+      const result = await syncPackageAssets(workspacePackage, source);
+      if (result.keptBecause !== undefined) {
+        reporter.warn(`${label}: kept the files placed earlier, unchecked against the brand. ${result.keptBecause}`);
+        return { detail: "kept earlier files, brand unreachable", label, status: "passed" };
+      }
       return { detail: `${result.copied.length} placed, ${result.removed.length} removed`, label, status: "passed" };
     } catch (cause) {
       reporter.blank();
@@ -54,13 +59,14 @@ async function runAssetsCommand(context: CommandContext): Promise<number> {
  * Placement stays each package's own decision: this only copies `from` to `to` as
  * declared and removes what a package no longer declares. It never assumes where
  * a file belongs.
+ * @param createSource Creates the source the run reads the brand from; tests pass an in-memory one.
  * @returns Command definition ready for registration.
  */
-export function createAssetsCommand(): CommandDefinition {
+export function createAssetsCommand(createSource: () => BrandSource = createBrandSource): CommandDefinition {
   return {
     name: "assets",
-    run: runAssetsCommand,
-    summary: "Sync the selected packages' codenhub.assets from root assets/.",
+    run: async (context) => runAssetsCommand(context, createSource()),
+    summary: "Sync the selected packages' codenhub.assets from coden.agency/brand.",
     usage: "hub assets [targets...] [options]",
   };
 }

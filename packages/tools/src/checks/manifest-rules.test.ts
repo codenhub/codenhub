@@ -1,9 +1,10 @@
-import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { createMemoryBrand, type MemoryBrand } from "../assets/brand-source.test-support.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { createManifestRules } from "./manifest-rules.ts";
 import type { Finding } from "./rule.ts";
@@ -66,8 +67,11 @@ function createPackage(overrides: Partial<WorkspacePackage> = {}): WorkspacePack
   };
 }
 
-async function runRules(workspacePackage: WorkspacePackage, root = "/repo"): Promise<Finding[]> {
-  const applicable = createManifestRules(root).filter((rule) => rule.appliesTo(workspacePackage));
+async function runRules(
+  workspacePackage: WorkspacePackage,
+  brand: MemoryBrand = createMemoryBrand({ "favicon/favicon.ico": "" }),
+): Promise<Finding[]> {
+  const applicable = createManifestRules(brand.source).filter((rule) => rule.appliesTo(workspacePackage));
   const findings = await Promise.all(
     applicable.map(async (rule) => rule.run({ includePack: false, package: workspacePackage })),
   );
@@ -248,10 +252,7 @@ describe("manifest rules", () => {
     await expect(runRules(workspacePackage)).resolves.toEqual([]);
   });
 
-  it("shouldAcceptAssetEntriesThatResolveToRealFiles", async () => {
-    const root = await mkdtemp(join(tmpdir(), "codenhub-manifest-root-"));
-    await mkdir(join(root, "assets", "favicon"), { recursive: true });
-    await writeFile(join(root, "assets", "favicon", "favicon.ico"), "");
+  it("shouldAcceptAssetEntriesTheBrandPublishes", async () => {
     const workspacePackage = createPackage({
       directory: await createPackageDirectory([]),
       isPrivate: true,
@@ -261,11 +262,10 @@ describe("manifest rules", () => {
       },
     });
 
-    await expect(runRules(workspacePackage, root)).resolves.toEqual([]);
+    await expect(runRules(workspacePackage)).resolves.toEqual([]);
   });
 
-  it("shouldReportAnAssetEntryWhoseSourceDoesNotExist", async () => {
-    const root = await mkdtemp(join(tmpdir(), "codenhub-manifest-root-"));
+  it("shouldReportAnAssetEntryTheBrandDoesNotPublish", async () => {
     const workspacePackage = createPackage({
       directory: await createPackageDirectory([]),
       isPrivate: true,
@@ -275,25 +275,26 @@ describe("manifest rules", () => {
       },
     });
 
-    expect((await runRules(workspacePackage, root)).map(({ code }) => code)).toEqual(["assets/missing-source"]);
+    expect((await runRules(workspacePackage, createMemoryBrand({}))).map(({ code }) => code)).toEqual([
+      "assets/missing-source",
+    ]);
   });
 
-  it("shouldReportAnAssetSourceThatResolvesOutsideTheAssetsDirectory", async () => {
-    const root = await mkdtemp(join(tmpdir(), "codenhub-manifest-root-"));
-    const outsideDirectory = await mkdtemp(join(tmpdir(), "codenhub-manifest-outside-"));
-    await mkdir(join(root, "assets"), { recursive: true });
-    await writeFile(join(outsideDirectory, "secret.txt"), "secret");
-    await symlink(outsideDirectory, join(root, "assets", "linked"), "junction");
+  it("shouldWarnRatherThanFailWhenTheBrandIsUnreachable", async () => {
+    const brand = createMemoryBrand({ "favicon/favicon.ico": "" });
+    brand.isOffline = true;
     const workspacePackage = createPackage({
       directory: await createPackageDirectory([]),
       isPrivate: true,
       manifest: {
-        codenhub: { assets: [{ from: "linked/secret.txt", to: "public/secret.txt" }] },
+        codenhub: { assets: [{ from: "favicon/favicon.ico", to: "public/favicon.ico" }] },
         name: "@fixture/private",
       },
     });
 
-    expect((await runRules(workspacePackage, root)).map(({ code }) => code)).toEqual(["assets/missing-source"]);
+    expect((await runRules(workspacePackage, brand)).map(({ code, severity }) => ({ code, severity }))).toEqual([
+      { code: "assets/brand-unreachable", severity: "warning" },
+    ]);
   });
 
   it("shouldReportAMalformedAssetsField", async () => {
