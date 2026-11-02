@@ -42,6 +42,42 @@ async function createBuiltPackage(): Promise<string> {
   return directory;
 }
 
+/**
+ * Adds `src/` sources and builds them into `dist/mapped.js` with a source map
+ * beside it, the way a package build that writes maps leaves them.
+ */
+async function createMappedPackage(): Promise<string> {
+  const directory = await createBuiltPackage();
+  await mkdir(join(directory, "src"));
+  await writeFile(
+    join(directory, "src/big.ts"),
+    [
+      `export const big: string = "${"b".repeat(400)}";`,
+      // Not referring to `big`, which the minifier would fold into this class.
+      `export class Helper {`,
+      `  describe(): string { return "${"h".repeat(40)}" + Math.random(); }`,
+      `  static #secret = "${"p".repeat(30)}";`,
+      `  reveal(): string { return Helper.#secret; }`,
+      `}`,
+      `interface Erased { value: number }`,
+      "",
+    ].join("\n"),
+  );
+  await writeFile(join(directory, "src/small.ts"), `export const small = "${"s".repeat(40)}";\n`);
+  await writeFile(
+    join(directory, "src/index.ts"),
+    `export { big, Helper } from "./big.ts";\nexport { small } from "./small.ts";\n`,
+  );
+  const build = await rolldown({ input: join(directory, "src/index.ts"), logLevel: "silent" });
+  await build.write({ file: join(directory, "dist/mapped.js"), format: "esm", sourcemap: true });
+  await build.close();
+  return directory;
+}
+
+function sumBytes(files: Record<string, { bytes: number }> | undefined): number {
+  return Object.values(files ?? {}).reduce((sum, { bytes }) => sum + bytes, 0);
+}
+
 function createPackage(directory: string): WorkspacePackage {
   return {
     directory,
@@ -127,34 +163,58 @@ describe("measureEntrypoint", () => {
       "dist/lazy.js",
       "node_modules/dependency",
     ]);
-    expect(Object.values(files ?? {}).reduce((sum, bytes) => sum + bytes, 0)).toBe(minified);
+    expect(sumBytes(files)).toBe(minified);
+    // A dependency is one entry: its own files are not the package's to break down.
+    expect(files?.["node_modules/dependency"]?.declarations).toBeUndefined();
+    expect(files?.["(unattributed)"]?.declarations).toBeUndefined();
   });
 
-  it("attributes bytes through the build's source maps to the source files", async () => {
-    const directory = await createBuiltPackage();
-    await mkdir(join(directory, "src"));
-    await writeFile(join(directory, "src/big.ts"), `export const big = "${"b".repeat(400)}";\n`);
-    await writeFile(join(directory, "src/small.ts"), `export const small = "${"s".repeat(40)}";\n`);
-    await writeFile(
-      join(directory, "src/index.ts"),
-      `export { big } from "./big.ts";\nexport { small } from "./small.ts";\n`,
-    );
-    const build = await rolldown({ input: join(directory, "src/index.ts"), logLevel: "silent" });
-    await build.write({ file: join(directory, "dist/mapped.js"), format: "esm", sourcemap: true });
-    await build.close();
+  it("attributes bytes through the build's source maps to source files and their declarations", async () => {
+    const directory = await createMappedPackage();
 
-    const { files, minified, sha256 } = await measureEntrypoint(join(directory, "dist/mapped.js"), []);
+    const { exports, files, minified, sha256 } = await measureEntrypoint(join(directory, "dist/mapped.js"), []);
     await rm(join(directory, "dist/mapped.js.map"));
     const unmapped = await measureEntrypoint(join(directory, "dist/mapped.js"), []);
 
-    expect(files?.["src/big.ts"]).toBeGreaterThanOrEqual(400);
-    expect(files?.["src/small.ts"]).toBeGreaterThanOrEqual(40);
-    expect(files?.["src/small.ts"]).toBeLessThan(400);
+    const big = files?.["src/big.ts"];
     expect(Object.keys(files ?? {})[0]).toBe("src/big.ts");
-    expect(Object.values(files ?? {}).reduce((sum, bytes) => sum + bytes, 0)).toBe(minified);
+    expect(big?.bytes).toBeGreaterThanOrEqual(440);
+    expect(files?.["src/small.ts"]?.bytes).toBeGreaterThanOrEqual(40);
+    expect(files?.["src/small.ts"]?.bytes).toBeLessThan(400);
+    expect(sumBytes(files)).toBe(minified);
+    // Every byte of a file belongs to one of its declarations or to its top level.
+    expect(Object.keys(big?.declarations ?? {})[0]).toBe("big");
+    expect(big?.declarations?.big).toBeGreaterThanOrEqual(400);
+    // A class is broken down by member, and keeps what lies between members.
+    expect(big?.declarations?.["Helper.describe"]).toBeGreaterThanOrEqual(40);
+    expect(big?.declarations?.["Helper.#secret"]).toBeGreaterThanOrEqual(30);
+    expect(big?.declarations?.["Helper.reveal"]).toBeGreaterThan(0);
+    expect(big?.declarations?.Helper).toBeGreaterThan(0);
+    expect(Object.values(big?.declarations ?? {}).reduce((sum, bytes) => sum + bytes, 0)).toBe(big?.bytes);
     // Reading the map changes what is attributed, never the measured bytes.
     expect(unmapped.sha256).toBe(sha256);
     expect(Object.keys(unmapped.files ?? {})).not.toContain("src/big.ts");
+    expect(Object.keys(unmapped.files?.["dist/mapped.js"]?.declarations ?? {})).toContain("big");
+    // An export alone is attributed the same way, to only what it pulls in.
+    expect(Object.keys(exports?.small?.files ?? {})).not.toContain("src/big.ts");
+    expect(exports?.small?.files?.["src/small.ts"]?.declarations?.small).toBeGreaterThanOrEqual(40);
+    expect(sumBytes(exports?.small?.files)).toBe(exports?.small?.minified);
+  });
+
+  it("names source files the same from any working directory", async () => {
+    const directory = await createMappedPackage();
+    const elsewhere = await mkdtemp(join(tmpdir(), "codenhub-size-cwd-"));
+    const original = process.cwd();
+
+    const here = await measureEntrypoint(join(directory, "dist/mapped.js"), []);
+    process.chdir(elsewhere);
+    try {
+      const there = await measureEntrypoint(join(directory, "dist/mapped.js"), []);
+      expect(there.files).toEqual(here.files);
+    } finally {
+      process.chdir(original);
+    }
+    expect(Object.keys(here.files ?? {})).toContain("src/small.ts");
   });
 });
 

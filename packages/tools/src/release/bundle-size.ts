@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { isBuiltin } from "node:module";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 
 import { rolldown, VERSION, type OutputChunk, type Plugin } from "rolldown";
@@ -9,6 +9,7 @@ import { rolldown, VERSION, type OutputChunk, type Plugin } from "rolldown";
 import { execute } from "../process/execute.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import type { ReadinessCheck } from "./readiness.ts";
+import { attributeBytes } from "./size-attribution.ts";
 import {
   compareSizeReports,
   listMeasuredEntrypoints,
@@ -28,8 +29,6 @@ function isExternal(id: string, peers: readonly string[]): boolean {
 
 const VIRTUAL_ENTRY = "\0codenhub-size-export";
 const IDENTIFIER = /^[\p{ID_Start}$_][\p{ID_Continue}$‌‍]*$/u;
-const UNATTRIBUTED = "(unattributed)";
-const BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 /** Hands rolldown the source map a built file has beside it, so its output map reaches the sources. */
 const readSourceMaps: Plugin = {
@@ -73,85 +72,14 @@ async function bundleMinified(input: string, peers: readonly string[], plugins: 
       format: "esm",
       minify: true,
       sourcemap: "hidden",
+      // Absolute sources, so attribution never depends on the working
+      // directory rolldown would otherwise make them relative to.
+      sourcemapPathTransform: (source, sourcemapPath) => resolve(dirname(sourcemapPath), source),
     });
     return output[0];
   } finally {
     await bundle.close();
   }
-}
-
-function decodeVlq(segment: string): number[] {
-  const values: number[] = [];
-  let shift = 0;
-  let value = 0;
-  for (const character of segment) {
-    const digit = BASE64.indexOf(character);
-    value += (digit & 31) << shift;
-    if ((digit & 32) === 0) {
-      values.push((value & 1) === 1 ? -(value >>> 1) : value >>> 1);
-      shift = 0;
-      value = 0;
-    } else {
-      shift += 5;
-    }
-  }
-  return values;
-}
-
-/** Names where a source came from: a dependency by package name, anything else by package-relative path. */
-function describeSource(source: string, directory: string, packageDirectory: string): string {
-  const path = resolve(directory, source).replaceAll("\\", "/");
-  const dependency = /\/node_modules\/((?:@[^/]+\/)?[^/]+)\/(?!.*\/node_modules\/)/u.exec(path);
-  return dependency === null
-    ? relative(packageDirectory, path).replaceAll("\\", "/")
-    : `node_modules/${dependency[1] ?? ""}`;
-}
-
-/**
- * Attributes every byte of a chunk to the source its map points it at.
- *
- * A byte belongs to the mapping segment that starts at or before it on its
- * line. Bytes before a line's first segment, in a segment with no source, and
- * the line breaks themselves are unattributed, so the counts sum to the
- * chunk's byte length.
- */
-function attributeBytes(chunk: OutputChunk, directory: string, packageDirectory: string): Record<string, number> {
-  const sources = (chunk.map?.sources ?? []).map((source) => describeSource(source, directory, packageDirectory));
-  const lines = chunk.code.split("\n");
-  const mappings = chunk.map?.mappings.split(";") ?? [];
-  const bytes = new Map<string, number>();
-  const add = (key: string, text: string): void => {
-    bytes.set(key, (bytes.get(key) ?? 0) + Buffer.byteLength(text, "utf8"));
-  };
-  let sourceIndex = 0;
-  lines.forEach((text, lineIndex) => {
-    const segments: { column: number; source: string }[] = [];
-    let column = 0;
-    for (const segment of mappings[lineIndex]?.split(",") ?? []) {
-      if (segment === "") {
-        continue;
-      }
-      const [columnDelta = 0, sourceDelta] = decodeVlq(segment);
-      column += columnDelta;
-      if (sourceDelta !== undefined) {
-        sourceIndex += sourceDelta;
-      }
-      segments.push({
-        column,
-        source: sourceDelta === undefined ? UNATTRIBUTED : (sources[sourceIndex] ?? UNATTRIBUTED),
-      });
-    }
-    add(UNATTRIBUTED, text.slice(0, segments[0]?.column ?? text.length));
-    segments.forEach(({ column: start, source }, index) => {
-      add(source, text.slice(start, segments[index + 1]?.column ?? text.length));
-    });
-    if (lineIndex < lines.length - 1) {
-      add(UNATTRIBUTED, "\n");
-    }
-  });
-  return Object.fromEntries(
-    [...bytes].filter(([, count]) => count > 0).sort(([a, x], [b, y]) => y - x || (a < b ? -1 : a > b ? 1 : 0)),
-  );
 }
 
 function sizeOf(chunk: OutputChunk): { code: Buffer; gzip: number; minified: number } {
@@ -167,8 +95,9 @@ function sizeOf(chunk: OutputChunk): { code: Buffer; gzip: number; minified: num
  * imports inlined so the result is one file. An import that does not resolve
  * fails the measurement instead of being left external, which would understate
  * the size. Each runtime export is then bundled alone, the way a consumer
- * importing only it would get it, and the whole bundle's bytes are attributed
- * to their sources through any source maps the build wrote beside its files.
+ * importing only it would get it. Every bundle's bytes are attributed to the
+ * files and top-level declarations they came from, through any source maps the
+ * build wrote beside its files.
  * @param file Absolute path of the built entrypoint.
  * @param peers Peer dependency names to leave external.
  * @param packageDirectory Directory source files are named relative to, defaulting to the one above the entrypoint's.
@@ -192,15 +121,17 @@ export async function measureEntrypoint(
             name: "codenhub-size-export",
             resolveId: (id) => (id === VIRTUAL_ENTRY ? id : null),
           },
+          readSourceMaps,
         ]);
         const { gzip: exportGzip, minified: exportMinified } = sizeOf(alone);
-        return [name, { gzip: exportGzip, minified: exportMinified }] as const;
+        const exportFiles = await attributeBytes(alone, packageDirectory);
+        return [name, { files: exportFiles, gzip: exportGzip, minified: exportMinified }] as const;
       }),
     ),
   );
   return {
     exports,
-    files: attributeBytes(whole, dirname(file), packageDirectory),
+    files: await attributeBytes(whole, packageDirectory),
     gzip,
     minified,
     sha256: createHash("sha256").update(code).digest("hex"),

@@ -14,8 +14,16 @@ const REPORT: SizeReport = {
   bundler: "rolldown@1.1.5",
   entrypoints: {
     ".": {
-      exports: { create: { gzip: 300, minified: 700 }, helper: { gzip: 20, minified: 50 } },
-      files: { "(unattributed)": 10, "node_modules/dependency": 90, "src/core.ts": 600, "src/helper.ts": 300 },
+      exports: {
+        create: { files: { "src/core.ts": { bytes: 690, declarations: { create: 690 } } }, gzip: 300, minified: 700 },
+        helper: { gzip: 20, minified: 50 },
+      },
+      files: {
+        "(unattributed)": { bytes: 10 },
+        "node_modules/dependency": { bytes: 90 },
+        "src/core.ts": { bytes: 600, declarations: { "(top level)": 20, create: 580 } },
+        "src/helper.ts": { bytes: 300, declarations: { helper: 300 } },
+      },
       gzip: 400,
       minified: 1000,
       sha256: HASH_A,
@@ -87,9 +95,21 @@ describe("parseSizeReport", () => {
     expect(() =>
       parseSizeReport(`{"bundler":"r","entrypoints":{".":{${entry},"exports":{"a":{"minified":1}}}}}`, "x"),
     ).toThrow(`"." export "a" needs integer "minified" and "gzip"`);
-    expect(() => parseSizeReport(`{"bundler":"r","entrypoints":{".":{${entry},"files":{"a.ts":-1}}}}`, "x")).toThrow(
-      `"." file "a.ts" needs an integer byte count`,
-    );
+    expect(() =>
+      parseSizeReport(`{"bundler":"r","entrypoints":{".":{${entry},"files":{"a.ts":{"bytes":-1}}}}}`, "x"),
+    ).toThrow(`"." file "a.ts" needs an integer "bytes"`);
+    expect(() =>
+      parseSizeReport(
+        `{"bundler":"r","entrypoints":{".":{${entry},"files":{"a.ts":{"bytes":1,"declarations":{"f":"1"}}}}}}`,
+        "x",
+      ),
+    ).toThrow(`"." file "a.ts" declaration "f" needs an integer byte count`);
+    expect(() =>
+      parseSizeReport(
+        `{"bundler":"r","entrypoints":{".":{${entry},"exports":{"a":{"minified":1,"gzip":1,"files":{"a.ts":{}}}}}}}`,
+        "x",
+      ),
+    ).toThrow(`"." export "a" file "a.ts" needs an integer "bytes"`);
   });
 
   it("reads a report recorded before exports and files were measured", () => {
@@ -108,6 +128,8 @@ describe("compareSizeReports", () => {
     const root = measured.entrypoints["."]!;
     root.gzip = 401;
     root.exports!.create!.gzip = 301;
+    // Keys are compared by name, never by order.
+    root.files = Object.fromEntries(Object.entries(root.files!).reverse());
 
     expect(compareSizeReports(REPORT, measured)).toEqual([]);
   });
@@ -120,8 +142,8 @@ describe("compareSizeReports", () => {
     root.exports!.helper!.minified = 750;
     delete root.exports!.create;
     root.exports!.extra = { gzip: 1, minified: 1 };
-    root.files!["src/core.ts"] = 500;
-    root.files!["src/moved.ts"] = 100;
+    root.files!["src/core.ts"]!.bytes = 500;
+    root.files!["src/moved.ts"] = { bytes: 100 };
 
     expect(compareSizeReports(REPORT, measured)).toEqual([
       ". export create is recorded but not measured",
@@ -129,6 +151,21 @@ describe("compareSizeReports", () => {
       ". export extra is measured but not recorded",
       ". file src/core.ts is 500 bytes, recorded 600",
       ". file src/moved.ts is measured but not recorded",
+    ]);
+  });
+
+  it("reports declarations and an export's files that moved while their totals held", () => {
+    // Moving code between two declarations of one file keeps the file's total.
+    const measured = structuredClone(REPORT);
+    const root = measured.entrypoints["."]!;
+    root.files!["src/core.ts"]!.declarations = { "(top level)": 30, create: 570 };
+    root.exports!.create!.files = { "src/core.ts": { bytes: 690, declarations: { renamed: 690 } } };
+
+    expect(compareSizeReports(REPORT, measured)).toEqual([
+      ". export create file src/core.ts declaration create is recorded but not measured",
+      ". export create file src/core.ts declaration renamed is measured but not recorded",
+      ". file src/core.ts declaration (top level) is 30 bytes, recorded 20",
+      ". file src/core.ts declaration create is 570 bytes, recorded 580",
     ]);
   });
 
