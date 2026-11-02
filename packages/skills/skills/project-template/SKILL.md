@@ -24,17 +24,20 @@ Creating a repository, pushing, and opening a pull request or an issue are outwa
 ## New Project
 
 1. **Collect the placeholder values** listed in `.template/README.md`. Derive what you can, use the current year for `{{year}}`, and ask for the rest, including the GitHub owner and the repository's visibility. Never guess the copyright holder.
-2. **Create the repository.** Prefer GitHub's template creation, which keeps the hooks' executable bits:
+2. **Create the repository.** Prefer GitHub's template creation, which keeps the hooks' executable bits. Read the template's commit first, then create the repository with the visibility the user chose, `--private` or `--public`:
 
    ```sh
-   gh repo create <owner>/<slug> --template codenhub/template --private --clone
+   git ls-remote https://github.com/codenhub/template refs/heads/main
+   gh repo create <owner>/<slug> --template codenhub/template --<visibility> --clone
    ```
+
+   The order matters. Read after creation, the commit can be newer than the copy GitHub made, and the next sync then skips that change without a trace. Read before, it can only be older, and the next sync re-applies a change the project already has, which the three-way merge shows.
 
    It fails when `<owner>/<slug>` already exists. Check what is there: an empty repository takes the local start below, and one with content is an existing project to sync or adopt.
 
    For a local start, clone the template and note which files `git ls-files -s .githooks` shows as `100755`, then remove its `.git`, run `git init -b main`, and stage everything. Hooks staged from a Windows checkout lose their executable bit, and git on Linux and macOS then skips them, so stage each of those files again with `git add --chmod=+x .githooks/<hook>`, and only those. `git ls-files -s .githooks` must then match the template's modes.
 
-3. **Record the template commit** as the full SHA in `manifest.json#synced`: the HEAD of a local clone, or for GitHub's creation `git ls-remote https://github.com/codenhub/template refs/heads/main`.
+3. **Record the template commit** as the full SHA in `manifest.json#synced`: the HEAD of a local clone, or for GitHub's creation the commit read before creating the repository.
 4. **Replace every placeholder** in seed files and project blocks. Leave `.template/README.md` alone, since it documents the placeholders, and leave GitHub Actions expressions such as `${{ github.ref }}` alone. This must print nothing:
 
    ```sh
@@ -59,12 +62,14 @@ Start from a clean working tree on a branch. When `synced` is `null`, nothing re
    git diff --stat <synced> FETCH_HEAD
    ```
 
-2. **Take the classes from the template now:** copy the `files` map of `git show FETCH_HEAD:.template/manifest.json` into the project's manifest, keeping its own `template` and `synced`. Handle a file whose class changed under its new class, and report it.
+2. **Take the classes from the template now:** keep a copy of the project's current `files` map, then copy the `files` map of `git show FETCH_HEAD:.template/manifest.json` into the project's manifest, keeping its own `template` and `synced`. Handle a file whose class changed under its new class, and report it. A file the old map lists and the new one does not was removed or renamed by the template.
 3. **Apply `canonical` and `blocks` changes** with a three-way merge, which also adds, deletes, and sets the mode of files:
 
    ```sh
-   git diff --full-index --binary <synced> FETCH_HEAD -- <canonical and blocks paths> | git apply --3way
+   git diff --full-index --binary <synced> FETCH_HEAD -- <canonical and blocks paths from the old map and the new one> | git apply --3way
    ```
+
+   Taking the paths from both maps is what deletes a `canonical` or `blocks` file the template removed; the new map alone no longer lists it. A removed `seed` file belongs to the project: propose deleting it, never delete it. Report every removed file.
 
    - A conflict in a `canonical` file is a local edit. The template's version wins; show the user the local change first, since it may be worth taking upstream.
    - A conflict in a `blocks` file: keep the text inside every project block exactly as it was, and take the template's text outside them.
