@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { extname, relative } from "node:path";
+import { dirname, extname, isAbsolute, join, relative } from "node:path";
 
 import type { OutputChunk } from "rolldown";
 import { parseAst } from "rolldown/parseAst";
@@ -60,10 +61,38 @@ function describeSource(source: string, packageDirectory: string): Source {
     return { key: UNATTRIBUTED };
   }
   const path = source.replaceAll("\\", "/");
-  const dependency = DEPENDENCY.exec(path);
-  return dependency === null
-    ? { key: relative(packageDirectory, source).replaceAll("\\", "/"), path: source }
-    : { key: `node_modules/${dependency[1] ?? ""}` };
+  const dependency = DEPENDENCY.exec(path)?.[1];
+  if (dependency !== undefined) {
+    return { key: `node_modules/${dependency}` };
+  }
+  const key = relative(packageDirectory, source).replaceAll("\\", "/");
+  if (!key.startsWith("../") && !isAbsolute(key)) {
+    return { key, path: source };
+  }
+  // Outside the package without a `node_modules` segment: a workspace
+  // dependency, whose pnpm link the bundler resolved to its real path.
+  const owner = owningPackage(dirname(source));
+  return owner === undefined ? { key, path: source } : { key: `node_modules/${owner}` };
+}
+
+const owners = new Map<string, string | undefined>();
+
+/** Names the package whose directory holds `directory`, from the nearest `package.json` that has a name. */
+function owningPackage(directory: string): string | undefined {
+  if (owners.has(directory)) {
+    return owners.get(directory);
+  }
+  let name: string | undefined;
+  try {
+    const manifest = JSON.parse(readFileSync(join(directory, "package.json"), "utf8")) as { name?: unknown };
+    name = typeof manifest.name === "string" ? manifest.name : undefined;
+  } catch {
+    name = undefined;
+  }
+  const parent = dirname(directory);
+  name ??= parent === directory ? undefined : owningPackage(parent);
+  owners.set(directory, name);
+  return name;
 }
 
 /** A top-level declaration's name and the span of source text it covers. */

@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -169,6 +169,25 @@ describe("measureEntrypoint", () => {
     expect(files?.["(unattributed)"]?.declarations).toBeUndefined();
   });
 
+  it("names a workspace-linked dependency by its package, though its real path has no node_modules", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codenhub-size-workspace-"));
+    const directory = join(workspace, "packages/app");
+    const linked = join(workspace, "packages/icons");
+    await mkdir(join(directory, "dist"), { recursive: true });
+    await mkdir(join(directory, "node_modules/@scope"), { recursive: true });
+    await mkdir(join(linked, "dist"), { recursive: true });
+    await writeFile(join(linked, "package.json"), JSON.stringify({ exports: "./dist/index.js", name: "@scope/icons" }));
+    await writeFile(join(linked, "dist/index.js"), `export function icon() { return "ICON" + Math.random(); }\n`);
+    // How pnpm links a `workspace:*` dependency; a junction needs no privilege on Windows.
+    await symlink(linked, join(directory, "node_modules/@scope/icons"), "junction");
+    await writeFile(join(directory, "dist/index.js"), `export { icon } from "@scope/icons";\n`);
+
+    const { files } = await measureEntrypoint(join(directory, "dist/index.js"), [], directory);
+
+    expect(Object.keys(files ?? {})).toContain("node_modules/@scope/icons");
+    expect(Object.keys(files ?? {}).some((file) => file.startsWith(".."))).toBe(false);
+  });
+
   it("attributes bytes through the build's source maps to source files and their declarations", async () => {
     const directory = await createMappedPackage();
 
@@ -221,20 +240,25 @@ describe("measureEntrypoint", () => {
 describe("measurePackage", () => {
   it("builds first and measures every JavaScript entrypoint", async () => {
     const directory = await createBuiltPackage();
+    const workspacePackage = createPackage(directory);
     const order: string[] = [];
+    // Typed to admit `undefined`, so a dropped argument fails the assertion.
+    const packageDirectories: (string | undefined)[] = [];
 
-    const report = await measurePackage(createPackage(directory), {
+    const report = await measurePackage(workspacePackage, {
       build: async () => {
         order.push("build");
         return { isSuccess: true, output: "" };
       },
-      measure: async (file, peers) => {
+      measure: async (file, peers, packageDirectory) => {
         order.push(`measure ${file.endsWith(join("dist", "index.js"))} ${peers.join(",")}`);
+        packageDirectories.push(packageDirectory);
         return { gzip: 1, minified: 2, sha256: "aa" };
       },
     });
 
     expect(order).toEqual(["build", "measure true peer"]);
+    expect(packageDirectories).toEqual([workspacePackage.directory]);
     expect(report).toEqual({ bundler: BUNDLER, entrypoints: { ".": { gzip: 1, minified: 2, sha256: "aa" } } });
   });
 
