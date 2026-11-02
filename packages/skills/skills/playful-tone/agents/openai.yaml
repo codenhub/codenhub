@@ -1,0 +1,4 @@
+interface:
+  display_name: "Playful Tone"
+  short_description: "Write docs and public text with real, natural humor"
+  default_prompt: "Use $playful-tone to give this text a relaxed, funny tone in its own language: humor a tired senior developer would actually say, drawn from the subject itself, every fact intact, and nothing playful in warnings, errors, or commitments."

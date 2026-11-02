@@ -67,6 +67,7 @@ The rest of the authoring guidance, such as how a description is phrased or whet
 | `logo-design`             | Designs logos and marks from concept to outlined SVG files and usage rules.   |
 | `motion-graphics`         | Storyboards, animates, and renders motion graphics frame by frame.            |
 | `naming`                  | Finds meaningful, memorable, ownable names for anything.                      |
+| `playful-tone`            | Gives docs and public text a natural, playful tone in any language.           |
 | `ponytail`                | Builds the simplest solution that works, nothing speculative.                 |
 | `ponytail-review`         | Finds over-engineering and ledgers deferred work.                             |
 | `project-template`        | Creates, syncs, and adopts projects built on the shared project template.     |

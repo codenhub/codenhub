@@ -19,6 +19,7 @@ This page records the origin and license context of skill assets shipped by `@co
 | `logo-design`             | Original Coden Agency work             | Apache-2.0 |
 | `motion-graphics`         | Original Coden Agency work             | Apache-2.0 |
 | `naming`                  | Original Coden Agency work             | Apache-2.0 |
+| `playful-tone`            | Original Coden Agency work             | Apache-2.0 |
 | `ponytail`                | Adapted from [DietrichGebert/ponytail] | MIT        |
 | `ponytail-review`         | Adapted from [DietrichGebert/ponytail] | MIT        |
 | `project-template`        | Original Coden Agency work             | Apache-2.0 |
