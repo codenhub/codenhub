@@ -30,7 +30,7 @@ playwright-report
 /apps/www/.codenhub-published/
 /apps/www/public/logos/
 
-# Build-time copies of root assets/ (docs/specs/packages-demo.md)
+# Build-time copies of the brand at coden.agency/brand (docs/specs/packages-demo.md)
 **/.codenhub-assets.json
 /apps/www/public/assets/
 /apps/www/public/favicon.ico

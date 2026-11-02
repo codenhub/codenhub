@@ -1,10 +1,10 @@
-import { copyFile, lstat, mkdir, readdir, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
-import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
+import { lstat, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { basename, dirname, join, relative, sep } from "node:path";
 
 import type { WorkspacePackage } from "../workspace/discover.ts";
+import { BrandUnreachableError, type BrandSource } from "./brand-source.ts";
 import { isValidRelativeAssetPath, parseAssetEntries } from "./manifest.ts";
 
-const ASSETS_DIRECTORY = "assets";
 const MANIFEST_LOCATION = "package.json";
 
 /** Name of the gitignored file a package's asset placements are tracked in. */
@@ -12,14 +12,13 @@ export const ASSET_STATE_FILE = ".codenhub-assets.json";
 
 interface AssetState {
   placed?: unknown;
+  /** The `from` each placed destination was written from, so an offline run keeps only an unchanged entry. */
+  sources?: unknown;
 }
 
-async function isFile(path: string): Promise<boolean> {
-  try {
-    return (await stat(path)).isFile();
-  } catch {
-    return false;
-  }
+interface PlacedState {
+  placed: string[];
+  sources: Map<string, string>;
 }
 
 async function pathExists(path: string): Promise<boolean> {
@@ -32,13 +31,6 @@ async function pathExists(path: string): Promise<boolean> {
     }
     throw error;
   }
-}
-
-function isWithin(root: string, candidate: string): boolean {
-  const relativePath = relative(root, candidate);
-  return (
-    relativePath === "" || (!isAbsolute(relativePath) && relativePath !== ".." && !relativePath.startsWith(`..${sep}`))
-  );
 }
 
 async function assertNoSymbolicLink(packageDirectory: string, destination: string): Promise<void> {
@@ -64,17 +56,24 @@ async function assertNoSymbolicLink(packageDirectory: string, destination: strin
   );
 }
 
-async function readPlaced(packageDirectory: string): Promise<string[]> {
+async function readPlaced(packageDirectory: string): Promise<PlacedState> {
   try {
     const raw = JSON.parse(await readFile(join(packageDirectory, ASSET_STATE_FILE), "utf8")) as AssetState;
     // Validated the same as a manifest's own `to`: cleanup below joins these
     // straight onto `packageDirectory` and deletes the result, so a corrupted
     // or hand-edited state file must not be able to smuggle a traversal path in.
-    return Array.isArray(raw.placed)
+    const placed = Array.isArray(raw.placed)
       ? raw.placed.filter((entry): entry is string => typeof entry === "string" && isValidRelativeAssetPath(entry))
       : [];
+    // A state file written before sources were recorded has none; its files are then not kept offline.
+    const sources = new Map(
+      typeof raw.sources === "object" && raw.sources !== null
+        ? Object.entries(raw.sources).filter((entry): entry is [string, string] => typeof entry[1] === "string")
+        : [],
+    );
+    return { placed, sources };
   } catch {
-    return [];
+    return { placed: [], sources: new Map() };
   }
 }
 
@@ -120,14 +119,20 @@ export interface AssetSyncResult {
   copied: string[];
   /** Previously placed destinations removed because they are no longer declared. */
   removed: string[];
+  /**
+   * Set when the brand could not be reached and every declared destination had been placed by an
+   * earlier run: those files were kept as they were and nothing was copied. Holds why.
+   */
+  keptBecause?: string;
 }
 
 /**
  * Places a package's declared `codenhub.assets` and removes what it no longer declares.
  *
- * This is the one place root `assets/` gets copied from — every consumer reuses it
- * rather than each carrying its own copy step, which is how the source stays the
- * only place the files are committed and every destination stays current with it.
+ * This is the one place Coden's brand files are fetched from — every consumer reuses
+ * it rather than each carrying its own download step. The source is the brand
+ * published at `coden.agency/brand`, read live: each file is checked against the
+ * brand index's size and SHA-256 before anything on disk changes.
  * Placement itself is untouched: `to` is read verbatim from the package's own
  * manifest, never derived or assumed here.
  *
@@ -135,51 +140,93 @@ export interface AssetSyncResult {
  * a file it placed apart from one it never touched — that is what lets a removed
  * entry's old file be deleted without risking anything this mechanism did not
  * itself place.
+ *
+ * When the brand cannot be reached, and every declared destination is a file an
+ * earlier run placed, the run keeps those files and reports why in `keptBecause`,
+ * so work can go on offline; an entry no longer declared is still removed. A fresh
+ * checkout has nothing to keep, so it fails.
  * @param workspacePackage Package to sync.
- * @param root Absolute repository root.
- * @returns What was copied and removed.
- * @throws When a declared `from` does not resolve to a real file under `assets/`.
+ * @param source Where the brand is read from.
+ * @returns What was copied and removed, or why the placed files were kept.
+ * @throws When a declared `from` is not published, a download does not match the
+ * index, or the brand cannot be reached and a declared file was never placed.
  */
-export async function syncPackageAssets(workspacePackage: WorkspacePackage, root: string): Promise<AssetSyncResult> {
+export async function syncPackageAssets(
+  workspacePackage: WorkspacePackage,
+  source: BrandSource,
+): Promise<AssetSyncResult> {
   const manifestPath = join(workspacePackage.directory, MANIFEST_LOCATION);
   const entries = parseAssetEntries(workspacePackage.manifest, manifestPath);
-  const assetsRoot = join(root, ASSETS_DIRECTORY);
-  const resolvedAssetsRoot = await realpath(assetsRoot);
   const declared = [...new Set(entries.map((entry) => entry.to))];
 
-  const previouslyPlaced = await readPlaced(workspacePackage.directory);
+  const { placed: previouslyPlaced, sources: previousSources } = await readPlaced(workspacePackage.directory);
   const previouslyPlacedSet = new Set(previouslyPlaced);
   const removed = previouslyPlaced.filter((destination) => !declared.includes(destination));
 
-  const preparedEntries = await Promise.all(
-    entries.map(async (entry) => {
-      const source = join(assetsRoot, entry.from);
-      if (!(await isFile(source))) {
-        throw new Error(
-          `${workspacePackage.name} declares codenhub.assets "${entry.from}", which does not exist under ${ASSETS_DIRECTORY}/.`,
-        );
-      }
-      const resolvedSource = await realpath(source);
-      if (!isWithin(resolvedAssetsRoot, resolvedSource)) {
-        throw new Error(
-          `${workspacePackage.name} declares codenhub.assets "${entry.from}", which resolves outside ${ASSETS_DIRECTORY}/.`,
-        );
-      }
+  const prepare = async (): Promise<{ bytes: Uint8Array; destination: string; from: string; to: string }[]> => {
+    const prepared = await Promise.all(
+      entries.map(async (entry) => {
+        const file = await source.lookup(entry.from);
+        if (file === undefined) {
+          throw new Error(
+            `${workspacePackage.name} declares codenhub.assets "${entry.from}", which coden.agency/brand does not publish.`,
+          );
+        }
 
-      const destination = join(workspacePackage.directory, entry.to);
-      await assertNoSymbolicLink(workspacePackage.directory, destination);
-      if (
-        !previouslyPlacedSet.has(entry.to) &&
-        (await pathExists(destination)) &&
-        !(await isPlacedUnderOtherCase(destination, entry.to, previouslyPlaced))
-      ) {
-        throw new Error(
-          `${workspacePackage.name} declares codenhub.assets destination "${entry.to}", but the asset sync did not place the existing path.`,
-        );
-      }
-      return { destination, source: resolvedSource, to: entry.to };
-    }),
-  );
+        const destination = join(workspacePackage.directory, entry.to);
+        await assertNoSymbolicLink(workspacePackage.directory, destination);
+        if (
+          !previouslyPlacedSet.has(entry.to) &&
+          (await pathExists(destination)) &&
+          !(await isPlacedUnderOtherCase(destination, entry.to, previouslyPlaced))
+        ) {
+          throw new Error(
+            `${workspacePackage.name} declares codenhub.assets destination "${entry.to}", but the asset sync did not place the existing path.`,
+          );
+        }
+        return { destination, file, from: entry.from, to: entry.to };
+      }),
+    );
+    // Every file is downloaded and checked before anything on disk changes.
+    return Promise.all(
+      prepared.map(async ({ destination, file, from, to }) => ({
+        bytes: await source.download(file),
+        destination,
+        from,
+        to,
+      })),
+    );
+  };
+
+  let preparedEntries: Awaited<ReturnType<typeof prepare>>;
+  let keptBecause: string | undefined;
+  try {
+    preparedEntries = await prepare();
+  } catch (cause) {
+    if (!(cause instanceof BrandUnreachableError)) {
+      throw cause;
+    }
+    // A file is kept only when an earlier run placed it from the `from` declared now: a changed
+    // source under the same destination would otherwise ship the old file.
+    const kept = await Promise.all(
+      entries.map(
+        async ({ from, to }) =>
+          previouslyPlacedSet.has(to) &&
+          previousSources.get(to) === from &&
+          pathExists(join(workspacePackage.directory, to)),
+      ),
+    );
+    const missing = entries.find((_entry, index) => !kept[index]);
+    if (missing !== undefined) {
+      throw new BrandUnreachableError(
+        `${cause.message} ${workspacePackage.name} has no earlier copy of "${missing.to}" from "${missing.from}" to keep, so it cannot build without the brand.`,
+        { cause },
+      );
+    }
+    // Every declared file stays as placed, but a dropped entry is still removed: that needs no network.
+    preparedEntries = [];
+    keptBecause = cause.message;
+  }
 
   await Promise.all(
     removed.map(async (destination) =>
@@ -192,9 +239,9 @@ export async function syncPackageAssets(workspacePackage: WorkspacePackage, root
     removed.map(async (destination) => rm(join(workspacePackage.directory, destination), { force: true })),
   );
   const copies = await Promise.allSettled(
-    preparedEntries.map(async ({ destination, source }) => {
+    preparedEntries.map(async ({ bytes, destination }) => {
       await mkdir(dirname(destination), { recursive: true });
-      await copyFile(source, destination);
+      await writeFile(destination, bytes);
     }),
   );
 
@@ -202,9 +249,12 @@ export async function syncPackageAssets(workspacePackage: WorkspacePackage, root
   // disk is still the one the sync placed. A removal that failed keeps its file, so it stays recorded too.
   const declaredSet = new Set(declared);
   const placed = new Set(previouslyPlaced.filter((destination) => declaredSet.has(destination)));
-  preparedEntries.forEach(({ to }, index) => {
+  // A destination whose rewrite failed keeps the source it was last written from.
+  const sources = new Map([...previousSources].filter(([to]) => placed.has(to)));
+  preparedEntries.forEach(({ from, to }, index) => {
     if (copies[index].status === "fulfilled") {
       placed.add(to);
+      sources.set(to, from);
     }
   });
   removed.forEach((destination, index) => {
@@ -217,7 +267,10 @@ export async function syncPackageAssets(workspacePackage: WorkspacePackage, root
   if (placed.size === 0) {
     await rm(stateFile, { force: true });
   } else {
-    await writeFile(stateFile, `${JSON.stringify({ placed: [...placed].toSorted() }, null, 2)}\n`);
+    await writeFile(
+      stateFile,
+      `${JSON.stringify({ placed: [...placed].toSorted(), sources: Object.fromEntries([...sources].toSorted()) }, null, 2)}\n`,
+    );
   }
 
   const failure = [...removals, ...copies].find((result) => result.status === "rejected");
@@ -225,5 +278,5 @@ export async function syncPackageAssets(workspacePackage: WorkspacePackage, root
     throw failure.reason;
   }
 
-  return { copied: declared, removed };
+  return keptBecause === undefined ? { copied: declared, removed } : { copied: [], keptBecause, removed };
 }

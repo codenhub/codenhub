@@ -1,3 +1,4 @@
+import { createBrandSource } from "../assets/brand-source.ts";
 import type { Workspace } from "../workspace/discover.ts";
 import { createChangelogRules } from "./changelog-rules.ts";
 import { createDependencyRules, createReleaseSources } from "./dependency-rules.ts";
@@ -21,7 +22,7 @@ import { createUndocumentedExportRules } from "./undocumented-export-rules.ts";
  */
 export function createCheckRules(workspace: Workspace): CheckRule[] {
   return [
-    ...createManifestRules(workspace.root),
+    ...createManifestRules(createBrandSource()),
     ...createEnginesRules(workspace.root),
     ...createDependencyRules(workspace.packages, createReleaseSources(workspace.root)),
     ...createExportsRules(),

@@ -1,6 +1,6 @@
 /* The landing page at `/`. Monochrome like the rest of the system. Sections
    are told apart by alternating grounds, not by rules between them. Monomaniac
-   One is the brand display face (docs/assets.md, "Fonts"), used only for
+   One is the brand display face (https://coden.agency/brand/assets/, "Fonts"), used only for
    display text. */
 
 @font-face {

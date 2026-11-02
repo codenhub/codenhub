@@ -1,6 +1,6 @@
-/** One file a package pulls from root `assets/` and where it places it. */
+/** One file a package pulls from the brand published at `coden.agency/brand` and where it places it. */
 export interface AssetEntry {
-  /** Path relative to root `assets/`, forward-slashed. */
+  /** Path relative to the brand's `assets/`, such as `logo/logo-dark.svg`, forward-slashed. */
   from: string;
   /** Path relative to the package directory, forward-slashed — the package's own choice. */
   to: string;
@@ -78,7 +78,7 @@ function checkNoDuplicateDestinations(entries: readonly AssetEntry[], manifestPa
 /**
  * Reads the `codenhub.assets` entries a package declares.
  *
- * Each entry names a file under root `assets/` and where this package places it —
+ * Each entry names a file under the published brand's `assets/` and where this package places it —
  * placement is the package's own decision, not something the mechanism assumes.
  * @param value Parsed package manifest.
  * @param manifestPath Manifest path used in error messages.

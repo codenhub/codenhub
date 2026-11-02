@@ -1,9 +1,10 @@
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { createMemoryBrand, type MemoryBrand } from "../assets/brand-source.test-support.ts";
 import { parseArguments } from "../cli/parse-arguments.ts";
 import { createReporter } from "../reporting/reporter.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
@@ -11,10 +12,7 @@ import { createAssetsCommand } from "./assets-command.ts";
 import { EXIT_FAILURE, EXIT_SUCCESS, type CommandContext } from "./definition.ts";
 
 async function createWorkspaceFixture(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), "codenhub-assets-command-"));
-  await mkdir(join(root, "assets", "favicon"), { recursive: true });
-  await writeFile(join(root, "assets", "favicon", "favicon.ico"), "favicon-bytes");
-  return root;
+  return mkdtemp(join(tmpdir(), "codenhub-assets-command-"));
 }
 
 function createPackage(root: string, location: string, manifest: Record<string, unknown>): WorkspacePackage {
@@ -41,6 +39,7 @@ async function runAssets(
   root: string,
   packages: readonly WorkspacePackage[],
   argv: readonly string[],
+  brand: MemoryBrand = createMemoryBrand({ "favicon/favicon.ico": "favicon-bytes" }),
 ): Promise<RunResult> {
   const lines: string[] = [];
   const parsed = parseArguments(["assets", ...argv]);
@@ -61,7 +60,7 @@ async function runAssets(
     workspace: { packages, root },
   };
 
-  return { exitCode: await createAssetsCommand().run(context), output: lines.join("\n") };
+  return { exitCode: await createAssetsCommand(() => brand.source).run(context), output: lines.join("\n") };
 }
 
 describe("hub assets", () => {
@@ -115,7 +114,25 @@ describe("hub assets", () => {
 
     const result = await runAssets(root, packages, []);
 
-    expect(result.output).toContain("does not exist under assets/");
+    expect(result.output).toContain("which coden.agency/brand does not publish");
     expect(result.exitCode).toBe(EXIT_FAILURE);
+  });
+
+  it("warns and succeeds when the brand is unreachable but every file was placed before", async () => {
+    const root = await createWorkspaceFixture();
+    const packages = [
+      createPackage(root, "apps/demo", {
+        codenhub: { assets: [{ from: "favicon/favicon.ico", to: "public/favicon.ico" }] },
+      }),
+    ];
+    await mkdir(packages[0]!.directory, { recursive: true });
+    await runAssets(root, packages, []);
+    const offline = createMemoryBrand({ "favicon/favicon.ico": "favicon-bytes" });
+    offline.isOffline = true;
+
+    const result = await runAssets(root, packages, [], offline);
+
+    expect(result.exitCode).toBe(EXIT_SUCCESS);
+    expect(result.output).toContain("kept the files placed earlier");
   });
 });

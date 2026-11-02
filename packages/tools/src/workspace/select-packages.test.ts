@@ -185,12 +185,6 @@ describe("selectPackages", () => {
     ]);
   });
 
-  it("shouldSelectEveryPackageWhenAFileUnderRootAssetsChanged", async () => {
-    const selection = await select([], root, ["assets/logo.svg"]);
-
-    expect(selection.targets).toHaveLength(4);
-  });
-
   it("shouldSelectOnlyTheOwnerWhenAPackageManifestChanged", async () => {
     const selection = await select([], root, ["packages/alpha/package.json"]);
 

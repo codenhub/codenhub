@@ -1,6 +1,7 @@
-import { realpath, stat } from "node:fs/promises";
-import { isAbsolute, join, relative, sep } from "node:path";
+import { stat } from "node:fs/promises";
+import { join } from "node:path";
 
+import { BrandUnreachableError, type BrandSource } from "../assets/brand-source.ts";
 import { parseAssetEntries } from "../assets/manifest.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { hasDocumentationMetadata } from "../workspace/package-policy.ts";
@@ -8,7 +9,6 @@ import type { CheckRule, Finding } from "./rule.ts";
 
 const MANIFEST_LOCATION = "package.json";
 const LICENSE_LOCATION = "LICENSE";
-const ASSETS_DIRECTORY = "assets";
 const REQUIRED_STRING_FIELDS = ["name", "version", "main", "module", "types"];
 const REQUIRED_SCRIPTS = [
   "build",
@@ -47,21 +47,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 async function isFile(path: string): Promise<boolean> {
   try {
     return (await stat(path)).isFile();
-  } catch {
-    return false;
-  }
-}
-
-async function isFileWithin(root: string, path: string): Promise<boolean> {
-  if (!(await isFile(path))) {
-    return false;
-  }
-  try {
-    const relativePath = relative(await realpath(root), await realpath(path));
-    return (
-      relativePath === "" ||
-      (!isAbsolute(relativePath) && relativePath !== ".." && !relativePath.startsWith(`..${sep}`))
-    );
   } catch {
     return false;
   }
@@ -219,15 +204,17 @@ function declaresAssetsField(workspacePackage: WorkspacePackage): boolean {
 }
 
 /**
- * Checks that a package's `codenhub.assets` entries resolve to real files.
+ * Checks that a package's `codenhub.assets` entries name files the brand publishes.
  *
- * A `from` that does not exist would otherwise fail silently at build time, deep
- * inside `hub assets`, on whichever machine happens to run it next.
+ * A `from` the brand does not publish would otherwise fail at build time, deep
+ * inside `hub assets`, on whichever machine happens to run it next. When the brand
+ * cannot be reached the entries are reported unchecked, as a warning, the same
+ * way `hub assets` keeps working from files it placed before.
  * @param workspacePackage Package to inspect.
- * @param root Absolute repository root.
- * @returns Findings for malformed entries or a missing source file.
+ * @param brand Where the brand is read from.
+ * @returns Findings for malformed entries, an unpublished source, or a brand that could not be read.
  */
-async function checkAssets(workspacePackage: WorkspacePackage, root: string): Promise<Finding[]> {
+async function checkAssets(workspacePackage: WorkspacePackage, brand: BrandSource): Promise<Finding[]> {
   const manifestPath = join(workspacePackage.directory, MANIFEST_LOCATION);
   let entries: ReturnType<typeof parseAssetEntries>;
   try {
@@ -238,28 +225,40 @@ async function checkAssets(workspacePackage: WorkspacePackage, root: string): Pr
     ];
   }
 
-  const missing = await Promise.all(
-    entries.map(async (entry) => ({
-      entry,
-      exists: await isFileWithin(join(root, ASSETS_DIRECTORY), join(root, ASSETS_DIRECTORY, entry.from)),
-    })),
-  );
-  return missing
-    .filter(({ exists }) => !exists)
+  let lookups: { entry: (typeof entries)[number]; isPublished: boolean }[];
+  try {
+    lookups = await Promise.all(
+      entries.map(async (entry) => ({ entry, isPublished: (await brand.lookup(entry.from)) !== undefined })),
+    );
+  } catch (cause) {
+    const isUnreachable = cause instanceof BrandUnreachableError;
+    return [
+      {
+        code: isUnreachable ? "assets/brand-unreachable" : "assets/brand-invalid",
+        location: MANIFEST_LOCATION,
+        message: isUnreachable
+          ? `codenhub.assets could not be checked: ${(cause as Error).message}`
+          : (cause as Error).message,
+        severity: isUnreachable ? "warning" : "error",
+      },
+    ];
+  }
+  return lookups
+    .filter(({ isPublished }) => !isPublished)
     .map(({ entry }) => ({
       code: "assets/missing-source",
       location: MANIFEST_LOCATION,
-      message: `codenhub.assets references "${entry.from}", which does not exist under ${ASSETS_DIRECTORY}/.`,
+      message: `codenhub.assets references "${entry.from}", which coden.agency/brand does not publish.`,
       severity: "error" as const,
     }));
 }
 
 /**
  * Creates the rules that check package manifests against the lifecycle spec.
- * @param root Absolute repository root, used to resolve `codenhub.assets` sources.
+ * @param brand Where `codenhub.assets` sources are looked up.
  * @returns Manifest rules ready for registration.
  */
-export function createManifestRules(root: string): CheckRule[] {
+export function createManifestRules(brand: BrandSource): CheckRule[] {
   return [
     {
       appliesTo: (workspacePackage) => !workspacePackage.isPrivate,
@@ -279,8 +278,8 @@ export function createManifestRules(root: string): CheckRule[] {
     {
       appliesTo: declaresAssetsField,
       name: "assets",
-      run: async ({ package: workspacePackage }) => checkAssets(workspacePackage, root),
-      summary: "codenhub.assets entries resolve to real files under root assets/.",
+      run: async ({ package: workspacePackage }) => checkAssets(workspacePackage, brand),
+      summary: "codenhub.assets entries name files coden.agency/brand publishes.",
     },
   ];
 }

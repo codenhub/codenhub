@@ -1,30 +1,18 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-01
-scope: Naming and branding decisions across Coden, CodenHub, and their packages.
+last_updated: 2026-11-02
+scope: How CodenHub's packages are named and titled under the Coden brand.
 ---
 
-# Branding and naming
+# Package naming
 
-This document explains the Coden and CodenHub brand model and how to name and title things that sit under it: packages, package titles, and the words used to describe them in READMEs, `package.json`, and the docs site. It is a guide for making and recording naming decisions, not a compliance checklist — structural README and metadata requirements stay in `docs/specs/packages-readme.md` and `docs/specs/packages-lifecycle.md`. This document only governs the words and brand attribution used within them.
+This document explains how to name and title CodenHub's packages, and the words used to describe them in READMEs, `package.json`, and the docs site. It is a guide for making and recording naming decisions, not a compliance checklist — structural README and metadata requirements stay in `docs/specs/packages-readme.md` and `docs/specs/packages-lifecycle.md`. This document only governs the words and brand attribution used within them.
 
-## Brand model
+The Coden brand itself, including the brand model, how to write "Coden" and "CodenHub", the visual identity, and the voice, is published at [coden.agency/brand](https://coden.agency/brand), which leaves package naming to this repository.
 
-Coden is the agency. It builds apps and websites for clients, and also builds OSS projects and internal tooling for its own workflow. Coden owns three domains, each scoped differently:
+## CodenHub in package titles
 
-- `coden.agency`: general agency presence — what Coden does, how it can help, and the client solutions it has already built.
-- `coden.dev`: Coden's software specifically. The agency also does marketing, SEO, infrastructure, and cybersecurity work; `coden.dev` is scoped to software development and OSS, separate from that broader agency work.
-- `codenhub.dev`: CodenHub, this project. It centralizes the tools and packages that are the foundation of Coden's own work.
-
-CodenHub is the project: the repository, the npm scope (`@codenhub/*`), and `codenhub.dev`, whose landing page presents the packages as one toolkit, made by Coden, that people can choose to adopt. The site names it as such, in its titles and its landing page. It is still not a prefix for package titles: those read "Coden [X]" or a neutral name, never "CodenHub [X]" — see the branding test below. A package's title says who authored its content; CodenHub says where the package lives and the project behind it.
-
-This reverses an earlier record that CodenHub was not a consumer-facing brand, only the workspace that gave Coden's internal tools one home. That record did not weigh the packages being adopted outside Coden: once `codenhub.dev` is where a visitor lands and decides whether to use a package, the site has to make the case for the project behind it, and an unnamed workspace cannot. Package titling did not depend on that framing, since the branding test is about authorship, so it is unchanged.
-
-## Writing the name
-
-The logo is lowercase, `code[n]`, and is always placed as a logo file, never typed. In running text the name is a proper noun: write "Coden" and "CodenHub", capitalized, including at the start of a sentence, in titles, and in legal text. Lowercase `coden` appears only where a system requires it, such as domains, package scopes, handles, and file names.
-
-This keeps the lowercase form for the one place it carries the brand, the logo, while text stays readable and the name stays recognizable as a name. Writing the name in lowercase in text too was considered and rejected: it reads as a typo at the start of a sentence, and editors and spell checkers correct it inconsistently. The visual rules for the logo are in [`identity.md`](identity.md).
+CodenHub is the project: the repository, the npm scope (`@codenhub/*`), and `codenhub.dev`, whose landing page presents the packages as one toolkit, made by Coden. It is not a prefix for package titles: those read "Coden [X]" or a neutral name, never "CodenHub [X]" — see the branding test below. A package's title says who authored its content; CodenHub says where the package lives and the project behind it.
 
 ## The branding test
 
@@ -68,9 +56,9 @@ This governs every site that presents the package: set `codenhub.label` in `pack
 
 This does not govern the README title. `docs/specs/packages-readme.md` requires the README's first heading to be the package name exactly as published (e.g. `# @codenhub/icons`), and that rule is unaffected by this document — a resolved display name and a published npm name are allowed to differ, the same way they already differ for install commands (see the note in [Existing packages](#existing-packages)). The display name MAY still appear naturally in the README's opening description sentence as ordinary prose ("IconKit combines several icon families into one registry..."), but that is a writing choice, not a requirement.
 
-Typography and layout on the docs site should not visually distinguish branded from neutral packages beyond the words themselves — the Coden agency mark (defined in `docs/assets.md`) can appear on both, since CodenHub itself is a Coden project regardless of how any individual package is named.
+Typography and layout on the docs site should not visually distinguish branded from neutral packages beyond the words themselves — the Coden agency mark (published at [coden.agency/brand](https://coden.agency/brand/assets/)) can appear on both, since CodenHub itself is a Coden project regardless of how any individual package is named.
 
-The agency mark is a default, not a ceiling. A package may use its own dedicated logo, favicon and branding instead, when one exists, and doing so does not require reclassifying the package as branded — this document's branded vs. neutral test governs the words used to describe a package, not the artwork used to represent it. Dedicated package artwork is out of scope for `docs/assets.md`, which only covers repository-wide assets under root `assets/`; a package-specific logo lives with the package itself.
+The agency mark is a default, not a ceiling. A package may use its own dedicated logo, favicon and branding instead, when one exists, and doing so does not require reclassifying the package as branded — this document's branded vs. neutral test governs the words used to describe a package, not the artwork used to represent it. Dedicated package artwork is out of scope for the Coden brand, which only covers Coden's own artwork; a package-specific logo lives with the package itself.
 
 ## Existing packages
 

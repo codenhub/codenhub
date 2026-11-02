@@ -1,12 +1,12 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-17
+last_updated: 2026-11-02
 scope: Index of repository-wide documentation.
 ---
 
 # Repository documentation
 
-Root `docs/` contains durable repository knowledge. Package-specific consumer and maintainer documentation lives with each workspace package. [Contributing](../CONTRIBUTING.md) contains the contributor workflow; [agent instructions](../AGENTS.md) contain agent behavior guidance.
+Root `docs/` contains durable repository knowledge. Package-specific consumer and maintainer documentation lives with each workspace package. [Contributing](../CONTRIBUTING.md) contains the contributor workflow; [agent instructions](../AGENTS.md) contain agent behavior guidance. Coden's brand, its visual identity, voice, and assets, is published at [coden.agency/brand](https://coden.agency/brand).
 
 ## Guidelines
 
@@ -14,9 +14,7 @@ Root `docs/` contains durable repository knowledge. Package-specific consumer an
 | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | [Code](guidelines/code.md)                               | Coding conventions, architecture, TypeScript, testing practices, and source API documentation.           |
 | [Documentation](guidelines/documentation.md)             | Documentation ownership, metadata, status and authority, formatting, layout, and exception requirements. |
-| [Branding](guidelines/branding.md)                       | Brand model, writing the name, and package naming conventions.                                           |
-| [Identity](guidelines/identity.md)                       | Logo, color, typography, iconography, graphic elements, motion, and print rules.                         |
-| [Voice](guidelines/voice.md)                             | Draft brand strategy, voice principles, tagline candidates, and messaging.                               |
+| [Package naming](guidelines/package-naming.md)           | The branding test, naming vocabulary, title presentation, and each package's display name.               |
 | [Public docs writing](guidelines/public-docs-writing.md) | Writing complete, story-shaped, playful public package docs.                                             |
 
 ## Repository references
@@ -25,7 +23,6 @@ Root `docs/` contains durable repository knowledge. Package-specific consumer an
 | --------------------- | ------------------------------------------------------------------------------------------ |
 | [Tooling](tooling.md) | Root scripts, selectors, options, execution, reporting, compliance checks, and generators. |
 | [CI](ci.md)           | Pinned toolchain, verification jobs, deployment, previews, and publishing workflows.       |
-| [Assets](assets.md)   | Shared asset ownership, placement, and distribution.                                       |
 | [Roadmap](roadmap.md) | Repository-level intended direction.                                                       |
 
 ## Specifications
