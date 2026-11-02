@@ -131,7 +131,7 @@ it("should reject an unquoted multiword name rather than silently truncate it", 
 });
 
 it.each(["inter/Inter-Variable.ttf", "monomaniac-one/MonomaniacOne-Regular.ttf"])(
-  "should outline a repository font through the installed HarfBuzz: %s",
+  "should outline a real font through the installed HarfBuzz: %s",
   (font) => {
     const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "outline-wordmark-font-"));
     try {
@@ -140,7 +140,7 @@ it.each(["inter/Inter-Variable.ttf", "monomaniac-one/MonomaniacOne-Regular.ttf"]
         process.execPath,
         [
           fileURLToPath(new URL("../../skills/logo-design/scripts/outline-wordmark.mjs", import.meta.url)),
-          fileURLToPath(new URL(`../../../../assets/fonts/${font}`, import.meta.url)),
+          fileURLToPath(new URL(`../fixtures/fonts/${font}`, import.meta.url)),
           "AVIVA",
           "--out",
           output,
