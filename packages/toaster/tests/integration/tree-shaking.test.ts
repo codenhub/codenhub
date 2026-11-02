@@ -66,4 +66,10 @@ describe("tree shaking", { timeout: 30_000 }, () => {
     const output = await bundle("used", `import { toast } from "DIST"; export const show = () => toast("Saved");`);
     expect(output.length).toBeGreaterThan(10_000);
   });
+
+  // The map is for size attribution only, and `files` leaves it out of the
+  // tarball, so a reference to it would point consumers' tools at nothing.
+  it("ships the entrypoint without a source map reference", () => {
+    expect(readFileSync(distEntry, "utf8")).not.toContain("sourceMappingURL");
+  });
 });

@@ -1,12 +1,37 @@
 /** File at a package root recording the bundle size of the release it was cut for. */
 export const SIZE_FILE = "size.json";
 
+/** The minified bytes one source contributed to a bundle. */
+export interface SourceSize {
+  /** Byte count. */
+  bytes: number;
+  /**
+   * The same bytes by the top-level declaration they came from, largest
+   * first, summing to `bytes`: a function or variable by name, a class
+   * member as `Class.member` (`Class.#name` when private) with the class's
+   * own heading and braces under `Class`, `default` for an anonymous default
+   * export, and `(top level)` for anything outside a declaration. Absent for a dependency, for `(unattributed)`, and
+   * for a file that could not be parsed.
+   */
+  declarations?: Record<string, number>;
+}
+
+/**
+ * Minified bytes of a bundle by where they came from, largest first, summing
+ * to the bundle's minified length. Keys are package-relative source files, as
+ * far as the build's source maps reach, `node_modules/<name>` for a
+ * dependency, or `(unattributed)` for code the bundler added.
+ */
+export type SourceBreakdown = Record<string, SourceSize>;
+
 /** What importing one export alone costs, tree-shaken. */
 export interface ExportSize {
   /** Byte length of the minified bundle. */
   minified: number;
   /** Byte length of the minified bundle gzipped at level 9. */
   gzip: number;
+  /** Where the bundle's bytes came from. Absent from a release recorded before it was measured. */
+  files?: SourceBreakdown;
 }
 
 /** One entrypoint's measured cost, as `docs/specs/packages-lifecycle.md` "Bundle size" defines it. */
@@ -22,14 +47,8 @@ export interface EntrypointSize {
    * from a release recorded before exports were measured.
    */
   exports?: Record<string, ExportSize>;
-  /**
-   * Minified bytes of the whole bundle by where they came from, largest first,
-   * summing to `minified`. Keys are package-relative source files, as far as
-   * the build's source maps reach, `node_modules/<name>` for a dependency, or
-   * `(unattributed)` for code the bundler added. Absent from a release
-   * recorded before files were measured.
-   */
-  files?: Record<string, number>;
+  /** Where the whole bundle's bytes came from. Absent from a release recorded before files were measured. */
+  files?: SourceBreakdown;
 }
 
 /** What `size.json` holds. */
@@ -134,27 +153,53 @@ export function parseSizeReport(contents: string, source: string): SizeReport {
     }
     const entry: EntrypointSize = { gzip, minified, sha256 };
     if (exports !== undefined) {
-      entry.exports = {};
+      // A null prototype, so an export named `__proto__` is kept as a key.
+      entry.exports = Object.create(null) as Record<string, ExportSize>;
       for (const [name, value] of Object.entries(asRecord(exports, `"${subpath}" "exports"`, fail))) {
-        const { gzip: exportGzip, minified: exportMinified } = (value ?? {}) as Record<string, unknown>;
+        const {
+          files: exportFiles,
+          gzip: exportGzip,
+          minified: exportMinified,
+        } = (value ?? {}) as Record<string, unknown>;
         if (!isNonNegativeInteger(exportMinified) || !isNonNegativeInteger(exportGzip)) {
           return fail(`"${subpath}" export "${name}" needs integer "minified" and "gzip"`);
         }
-        entry.exports[name] = { gzip: exportGzip, minified: exportMinified };
+        const exportSize: ExportSize = { gzip: exportGzip, minified: exportMinified };
+        if (exportFiles !== undefined) {
+          exportSize.files = parseBreakdown(exportFiles, `"${subpath}" export "${name}"`, fail);
+        }
+        entry.exports[name] = exportSize;
       }
     }
     if (files !== undefined) {
-      entry.files = {};
-      for (const [file, bytes] of Object.entries(asRecord(files, `"${subpath}" "files"`, fail))) {
-        if (!isNonNegativeInteger(bytes)) {
-          return fail(`"${subpath}" file "${file}" needs an integer byte count`);
-        }
-        entry.files[file] = bytes;
-      }
+      entry.files = parseBreakdown(files, `"${subpath}"`, fail);
     }
     sizes[subpath] = entry;
   }
   return { bundler, entrypoints: sizes };
+}
+
+function parseBreakdown(value: unknown, owner: string, fail: (reason: string) => never): SourceBreakdown {
+  const breakdown: SourceBreakdown = {};
+  for (const [file, size] of Object.entries(asRecord(value, `${owner} "files"`, fail))) {
+    const { bytes, declarations } = (size ?? {}) as Record<string, unknown>;
+    if (!isNonNegativeInteger(bytes)) {
+      return fail(`${owner} file "${file}" needs an integer "bytes"`);
+    }
+    const source: SourceSize = { bytes };
+    if (declarations !== undefined) {
+      const counts = Object.entries(asRecord(declarations, `${owner} file "${file}" "declarations"`, fail));
+      for (const [name, count] of counts) {
+        if (!isNonNegativeInteger(count)) {
+          return fail(`${owner} file "${file}" declaration "${name}" needs an integer byte count`);
+        }
+      }
+      // Not assigned key by key: assigning `__proto__` sets the prototype instead.
+      source.declarations = Object.fromEntries(counts) as Record<string, number>;
+    }
+    breakdown[file] = source;
+  }
+  return breakdown;
 }
 
 function asRecord(value: unknown, field: string, fail: (reason: string) => never): Record<string, unknown> {
@@ -177,11 +222,11 @@ export function serializeSizeReport(report: SizeReport): string {
  *
  * The gzipped lengths are not compared: identical bytes can gzip to different
  * lengths on different CPUs, and the hash already proves the bytes match.
- * Export and file sizes are compared even when the whole bundle matches,
- * because they can change without it: dropping a `@__PURE__` annotation
- * changes what an export tree-shakes to, and moving code between files
- * changes its attribution. A breakdown the release did not record is not
- * compared.
+ * Export, file, and declaration sizes are compared even when the whole bundle
+ * matches, because they can change without it: dropping a `@__PURE__`
+ * annotation changes what an export tree-shakes to, and moving code between
+ * files or declarations changes its attribution. A breakdown the release did
+ * not record is not compared.
  * @param recorded Report the release commit carries.
  * @param measured Report measured now.
  * @returns One line per difference, empty when they agree.
@@ -203,20 +248,33 @@ export function compareSizeReports(recorded: SizeReport, measured: SizeReport): 
     const now = measured.entrypoints[subpath];
     if (now !== undefined && before.exports !== undefined) {
       differences.push(
-        ...compareKeyed(before.exports, now.exports ?? {}, `${subpath} export `, (name, was, is) =>
-          was.minified === is.minified ? [] : [`${name} is ${is.minified} bytes minified, recorded ${was.minified}`],
-        ),
+        ...compareKeyed(before.exports, now.exports ?? {}, `${subpath} export `, (name, was, is) => [
+          ...(was.minified === is.minified
+            ? []
+            : [`${name} is ${is.minified} bytes minified, recorded ${was.minified}`]),
+          ...compareBreakdowns(was.files, is.files).map((line) => `${name} ${line}`),
+        ]),
       );
     }
-    if (now !== undefined && before.files !== undefined) {
-      differences.push(
-        ...compareKeyed(before.files, now.files ?? {}, `${subpath} file `, (file, was, is) =>
-          was === is ? [] : [`${file} is ${is} bytes, recorded ${was}`],
-        ),
-      );
+    if (now !== undefined) {
+      differences.push(...compareBreakdowns(before.files, now.files).map((line) => `${subpath} ${line}`));
     }
   }
   return differences;
+}
+
+function compareBreakdowns(recorded: SourceBreakdown | undefined, measured: SourceBreakdown | undefined): string[] {
+  if (recorded === undefined) {
+    return [];
+  }
+  return compareKeyed(recorded, measured ?? {}, "file ", (file, was, is) => [
+    ...(was.bytes === is.bytes ? [] : [`${file} is ${is.bytes} bytes, recorded ${was.bytes}`]),
+    ...(was.declarations === undefined
+      ? []
+      : compareKeyed(was.declarations, is.declarations ?? {}, `${file} declaration `, (name, bytesWas, bytesIs) =>
+          bytesWas === bytesIs ? [] : [`${name} is ${bytesIs} bytes, recorded ${bytesWas}`],
+        )),
+  ]);
 }
 
 function compareKeyed<T>(

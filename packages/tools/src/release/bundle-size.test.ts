@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -40,6 +40,43 @@ async function createBuiltPackage(): Promise<string> {
     `export function inlined() { return "INLINED_TEXT" + Math.random(); }\n`,
   );
   return directory;
+}
+
+/**
+ * Adds `src/` sources and builds them into `dist/mapped.js` with a source map
+ * beside it, the way a package build that writes maps leaves them.
+ */
+async function createMappedPackage(): Promise<string> {
+  const directory = await createBuiltPackage();
+  await mkdir(join(directory, "src"));
+  await writeFile(
+    join(directory, "src/big.ts"),
+    [
+      `export const big: string = "${"b".repeat(400)}";`,
+      // Not referring to `big`, which the minifier would fold into this class.
+      `export class Helper {`,
+      `  describe(): string { return "${"h".repeat(40)}" + Math.random(); }`,
+      `  static #secret = "${"p".repeat(30)}";`,
+      `  reveal(): string { return Helper.#secret; }`,
+      `  "quoted"(): string { return "${"q".repeat(20)}" + Math.random(); }`,
+      `}`,
+      `interface Erased { value: number }`,
+      "",
+    ].join("\n"),
+  );
+  await writeFile(join(directory, "src/small.ts"), `export const small = "${"s".repeat(40)}";\n`);
+  await writeFile(
+    join(directory, "src/index.ts"),
+    `export { big, Helper } from "./big.ts";\nexport { small } from "./small.ts";\n`,
+  );
+  const build = await rolldown({ input: join(directory, "src/index.ts"), logLevel: "silent" });
+  await build.write({ file: join(directory, "dist/mapped.js"), format: "esm", sourcemap: true });
+  await build.close();
+  return directory;
+}
+
+function sumBytes(files: Record<string, { bytes: number }> | undefined): number {
+  return Object.values(files ?? {}).reduce((sum, { bytes }) => sum + bytes, 0);
 }
 
 function createPackage(directory: string): WorkspacePackage {
@@ -127,54 +164,118 @@ describe("measureEntrypoint", () => {
       "dist/lazy.js",
       "node_modules/dependency",
     ]);
-    expect(Object.values(files ?? {}).reduce((sum, bytes) => sum + bytes, 0)).toBe(minified);
+    expect(sumBytes(files)).toBe(minified);
+    // A dependency is one entry: its own files are not the package's to break down.
+    expect(files?.["node_modules/dependency"]?.declarations).toBeUndefined();
+    expect(files?.["(unattributed)"]?.declarations).toBeUndefined();
   });
 
-  it("attributes bytes through the build's source maps to the source files", async () => {
-    const directory = await createBuiltPackage();
-    await mkdir(join(directory, "src"));
-    await writeFile(join(directory, "src/big.ts"), `export const big = "${"b".repeat(400)}";\n`);
-    await writeFile(join(directory, "src/small.ts"), `export const small = "${"s".repeat(40)}";\n`);
-    await writeFile(
-      join(directory, "src/index.ts"),
-      `export { big } from "./big.ts";\nexport { small } from "./small.ts";\n`,
-    );
-    const build = await rolldown({ input: join(directory, "src/index.ts"), logLevel: "silent" });
-    await build.write({ file: join(directory, "dist/mapped.js"), format: "esm", sourcemap: true });
-    await build.close();
+  it("names a workspace-linked dependency by its package, though its real path has no node_modules", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codenhub-size-workspace-"));
+    const directory = join(workspace, "packages/app");
+    const linked = join(workspace, "packages/icons");
+    await mkdir(join(directory, "dist"), { recursive: true });
+    await mkdir(join(directory, "node_modules/@scope"), { recursive: true });
+    await mkdir(join(linked, "dist"), { recursive: true });
+    await writeFile(join(linked, "package.json"), JSON.stringify({ exports: "./dist/index.js", name: "@scope/icons" }));
+    await writeFile(join(linked, "dist/index.js"), `export function icon() { return "ICON" + Math.random(); }\n`);
+    // How pnpm links a `workspace:*` dependency; a junction needs no privilege on Windows.
+    await symlink(linked, join(directory, "node_modules/@scope/icons"), "junction");
+    await writeFile(join(directory, "dist/index.js"), `export { icon } from "@scope/icons";\n`);
 
-    const { files, minified, sha256 } = await measureEntrypoint(join(directory, "dist/mapped.js"), []);
+    const { files } = await measureEntrypoint(join(directory, "dist/index.js"), [], directory);
+
+    expect(Object.keys(files ?? {})).toContain("node_modules/@scope/icons");
+    expect(Object.keys(files ?? {}).some((file) => file.startsWith(".."))).toBe(false);
+  });
+
+  it("does not break down a file outside the package that no package owns", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codenhub-size-outside-"));
+    const directory = join(workspace, "app");
+    await mkdir(join(directory, "dist"), { recursive: true });
+    await mkdir(join(workspace, "shared"));
+    await writeFile(join(workspace, "shared/far.js"), `export function far() { return "FAR" + Math.random(); }\n`);
+    await writeFile(join(directory, "dist/index.js"), `export { far } from "../../shared/far.js";\n`);
+
+    const { files } = await measureEntrypoint(join(directory, "dist/index.js"), [], directory);
+
+    expect(files?.["../shared/far.js"]?.bytes).toBeGreaterThan(0);
+    expect(files?.["../shared/far.js"]?.declarations).toBeUndefined();
+  });
+
+  it("attributes bytes through the build's source maps to source files and their declarations", async () => {
+    const directory = await createMappedPackage();
+
+    const { exports, files, minified, sha256 } = await measureEntrypoint(join(directory, "dist/mapped.js"), []);
     await rm(join(directory, "dist/mapped.js.map"));
     const unmapped = await measureEntrypoint(join(directory, "dist/mapped.js"), []);
 
-    expect(files?.["src/big.ts"]).toBeGreaterThanOrEqual(400);
-    expect(files?.["src/small.ts"]).toBeGreaterThanOrEqual(40);
-    expect(files?.["src/small.ts"]).toBeLessThan(400);
+    const big = files?.["src/big.ts"];
     expect(Object.keys(files ?? {})[0]).toBe("src/big.ts");
-    expect(Object.values(files ?? {}).reduce((sum, bytes) => sum + bytes, 0)).toBe(minified);
+    expect(big?.bytes).toBeGreaterThanOrEqual(440);
+    expect(files?.["src/small.ts"]?.bytes).toBeGreaterThanOrEqual(40);
+    expect(files?.["src/small.ts"]?.bytes).toBeLessThan(400);
+    expect(sumBytes(files)).toBe(minified);
+    // Every byte of a file belongs to one of its declarations or to its top level.
+    expect(Object.keys(big?.declarations ?? {})[0]).toBe("big");
+    expect(big?.declarations?.big).toBeGreaterThanOrEqual(400);
+    // A class is broken down by member, and keeps what lies between members.
+    expect(big?.declarations?.["Helper.describe"]).toBeGreaterThanOrEqual(40);
+    expect(big?.declarations?.["Helper.#secret"]).toBeGreaterThanOrEqual(30);
+    expect(big?.declarations?.["Helper.reveal"]).toBeGreaterThan(0);
+    // By the key's value, so changing quote style does not rename it.
+    expect(big?.declarations?.["Helper.quoted"]).toBeGreaterThanOrEqual(20);
+    expect(big?.declarations?.Helper).toBeGreaterThan(0);
+    expect(Object.values(big?.declarations ?? {}).reduce((sum, bytes) => sum + bytes, 0)).toBe(big?.bytes);
     // Reading the map changes what is attributed, never the measured bytes.
     expect(unmapped.sha256).toBe(sha256);
     expect(Object.keys(unmapped.files ?? {})).not.toContain("src/big.ts");
+    expect(Object.keys(unmapped.files?.["dist/mapped.js"]?.declarations ?? {})).toContain("big");
+    // An export alone is attributed the same way, to only what it pulls in.
+    expect(Object.keys(exports?.small?.files ?? {})).not.toContain("src/big.ts");
+    expect(exports?.small?.files?.["src/small.ts"]?.declarations?.small).toBeGreaterThanOrEqual(40);
+    expect(sumBytes(exports?.small?.files)).toBe(exports?.small?.minified);
+  });
+
+  it("names source files the same from any working directory", async () => {
+    const directory = await createMappedPackage();
+    const elsewhere = await mkdtemp(join(tmpdir(), "codenhub-size-cwd-"));
+    const original = process.cwd();
+
+    const here = await measureEntrypoint(join(directory, "dist/mapped.js"), []);
+    process.chdir(elsewhere);
+    try {
+      const there = await measureEntrypoint(join(directory, "dist/mapped.js"), []);
+      expect(there.files).toEqual(here.files);
+    } finally {
+      process.chdir(original);
+    }
+    expect(Object.keys(here.files ?? {})).toContain("src/small.ts");
   });
 });
 
 describe("measurePackage", () => {
   it("builds first and measures every JavaScript entrypoint", async () => {
     const directory = await createBuiltPackage();
+    const workspacePackage = createPackage(directory);
     const order: string[] = [];
+    // Typed to admit `undefined`, so a dropped argument fails the assertion.
+    const packageDirectories: (string | undefined)[] = [];
 
-    const report = await measurePackage(createPackage(directory), {
+    const report = await measurePackage(workspacePackage, {
       build: async () => {
         order.push("build");
         return { isSuccess: true, output: "" };
       },
-      measure: async (file, peers) => {
+      measure: async (file, peers, packageDirectory) => {
         order.push(`measure ${file.endsWith(join("dist", "index.js"))} ${peers.join(",")}`);
+        packageDirectories.push(packageDirectory);
         return { gzip: 1, minified: 2, sha256: "aa" };
       },
     });
 
     expect(order).toEqual(["build", "measure true peer"]);
+    expect(packageDirectories).toEqual([workspacePackage.directory]);
     expect(report).toEqual({ bundler: BUNDLER, entrypoints: { ".": { gzip: 1, minified: 2, sha256: "aa" } } });
   });
 
