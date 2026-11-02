@@ -297,6 +297,33 @@ describe("syncPackageAssets", () => {
     await expect(readJsonState(packageDirectory)).resolves.toEqual({ placed: ["public/logo.svg"] });
   });
 
+  it("shouldRemoveADroppedDestinationWhenTheBrandIsUnreachable", async () => {
+    const { brand, packageDirectory, source } = await createFixture();
+    await syncPackageAssets(
+      createPackage(packageDirectory, {
+        codenhub: {
+          assets: [
+            { from: "logo/logo-dark.svg", to: "public/logo.svg" },
+            { from: "favicon/favicon.ico", to: "public/favicon.ico" },
+          ],
+        },
+        name: "@fixture/example",
+      }),
+      source,
+    );
+    brand.isOffline = true;
+    const withoutFavicon = createPackage(packageDirectory, {
+      codenhub: { assets: [{ from: "logo/logo-dark.svg", to: "public/logo.svg" }] },
+      name: "@fixture/example",
+    });
+
+    const result = await syncPackageAssets(withoutFavicon, source);
+
+    expect(result).toEqual({ copied: [], keptBecause: expect.any(String), removed: ["public/favicon.ico"] });
+    await expect(readdir(join(packageDirectory, "public"))).resolves.toEqual(["logo.svg"]);
+    await expect(readJsonState(packageDirectory)).resolves.toEqual({ placed: ["public/logo.svg"] });
+  });
+
   it("shouldFailWhenTheBrandIsUnreachableAndAFileWasNeverPlaced", async () => {
     const { brand, packageDirectory, source } = await createFixture();
     await syncPackageAssets(

@@ -124,21 +124,52 @@ export function createBrandSource(options: BrandSourceOptions = {}): BrandSource
     return response;
   }
 
-  async function readBytes(url: string, response: Response): Promise<Uint8Array> {
+  /**
+   * Reads a body, stopping as soon as it passes `limit` rather than buffering all of it first.
+   * @returns The bytes, or `undefined` when the body is larger than `limit`.
+   */
+  async function readBytes(url: string, response: Response, limit: number): Promise<Uint8Array | undefined> {
+    if (response.body === null) {
+      return new Uint8Array();
+    }
+    if (Number(response.headers.get("content-length") ?? 0) > limit) {
+      await response.body.cancel();
+      return undefined;
+    }
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
     try {
-      return new Uint8Array(await response.arrayBuffer());
+      while (total <= limit) {
+        // oxlint-disable-next-line no-await-in-loop -- a stream is read one chunk at a time.
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        total += value.byteLength;
+        chunks.push(value);
+      }
     } catch (cause) {
       throw new BrandUnreachableError(`Could not read ${url}: ${(cause as Error).message}`, { cause });
     }
+    if (total > limit) {
+      await reader.cancel();
+      return undefined;
+    }
+    const bytes = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return bytes;
   }
 
   async function loadIndex(): Promise<Map<string, BrandFile>> {
     const url = new URL("index.json", baseUrl).href;
-    const bytes = await readBytes(url, await request(url));
-    if (bytes.byteLength > MAX_INDEX_BYTES) {
-      throw new Error(
-        `The brand index at ${url} is ${bytes.byteLength} bytes, over the ${MAX_INDEX_BYTES}-byte limit.`,
-      );
+    const bytes = await readBytes(url, await request(url), MAX_INDEX_BYTES);
+    if (bytes === undefined) {
+      throw new Error(`The brand index at ${url} is over the ${MAX_INDEX_BYTES}-byte limit.`);
     }
     let parsed: unknown;
     try {
@@ -161,7 +192,10 @@ export function createBrandSource(options: BrandSourceOptions = {}): BrandSource
     },
     async download(file) {
       const url = new URL(file.path, baseUrl).href;
-      const bytes = await readBytes(url, await request(url));
+      const bytes = await readBytes(url, await request(url), file.size);
+      if (bytes === undefined) {
+        throw new Error(`${url} does not match the brand index: it is larger than the ${file.size} bytes listed.`);
+      }
       const sha256 = createHash("sha256").update(bytes).digest("hex");
       if (bytes.byteLength !== file.size || sha256 !== file.sha256) {
         throw new Error(

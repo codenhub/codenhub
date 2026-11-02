@@ -49,6 +49,20 @@ describe("createBrandSource", () => {
     await expect(brand.source.download(file!)).rejects.toThrow(/does not match the brand index/);
   });
 
+  it("shouldStopReadingAFileLargerThanTheIndexLists", async () => {
+    const brand = createMemoryBrand({ "a.svg": "served-and-much-longer" });
+    brand.listed.set("a.svg", "short");
+    const file = await brand.source.lookup("a.svg");
+
+    await expect(brand.source.download(file!)).rejects.toThrow(/larger than the 5 bytes listed/);
+  });
+
+  it("shouldRefuseAnIndexOverTheSizeLimit", async () => {
+    await expect(sourceAnswering(200, " ".repeat(1024 * 1024 + 1)).lookup("a.svg")).rejects.toThrow(
+      /over the 1048576-byte limit/,
+    );
+  });
+
   it("shouldTreatAServerErrorAsUnreachable", async () => {
     await expect(sourceAnswering(503, "down").lookup("a.svg")).rejects.toBeInstanceOf(BrandUnreachableError);
   });

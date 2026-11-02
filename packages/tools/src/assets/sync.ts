@@ -107,7 +107,7 @@ export interface AssetSyncResult {
   removed: string[];
   /**
    * Set when the brand could not be reached and every declared destination had been placed by an
-   * earlier run: those files were kept as they were, and nothing was copied or removed. Holds why.
+   * earlier run: those files were kept as they were and nothing was copied. Holds why.
    */
   keptBecause?: string;
 }
@@ -129,7 +129,8 @@ export interface AssetSyncResult {
  *
  * When the brand cannot be reached, and every declared destination is a file an
  * earlier run placed, the run keeps those files and reports why in `keptBecause`,
- * so work can go on offline. A fresh checkout has nothing to keep, so it fails.
+ * so work can go on offline; an entry no longer declared is still removed. A fresh
+ * checkout has nothing to keep, so it fails.
  * @param workspacePackage Package to sync.
  * @param source Where the brand is read from.
  * @returns What was copied and removed, or why the placed files were kept.
@@ -179,6 +180,7 @@ export async function syncPackageAssets(
   };
 
   let preparedEntries: Awaited<ReturnType<typeof prepare>>;
+  let keptBecause: string | undefined;
   try {
     preparedEntries = await prepare();
   } catch (cause) {
@@ -195,7 +197,9 @@ export async function syncPackageAssets(
         { cause },
       );
     }
-    return { copied: [], keptBecause: cause.message, removed: [] };
+    // Every declared file stays as placed, but a dropped entry is still removed: that needs no network.
+    preparedEntries = [];
+    keptBecause = cause.message;
   }
 
   await Promise.all(
@@ -242,5 +246,5 @@ export async function syncPackageAssets(
     throw failure.reason;
   }
 
-  return { copied: declared, removed };
+  return keptBecause === undefined ? { copied: declared, removed } : { copied: [], keptBecause, removed };
 }
