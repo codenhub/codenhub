@@ -31,6 +31,16 @@ describe("describeEntrypoints", () => {
       { gzip: 30, minified: 50, name: "createAppError", share: 0.5 },
       { gzip: 10, minified: 20, name: "getErrorRegistry", share: 0.2 },
     ]);
+    expect(root?.size).toEqual({ gzip: 40, minified: 100 });
+  });
+
+  it("caps an export's share at the whole entrypoint", () => {
+    const [root] = describeEntrypoints(["."], {
+      bundler: "r@1",
+      entrypoints: { ".": { ...entry, exports: { all: { gzip: 41, minified: 102 } } } },
+    });
+
+    expect(root?.exports?.[0]?.share).toBe(1);
   });
 
   it("reads an entrypoint or export with no runtime code as 0 B gzipped", () => {

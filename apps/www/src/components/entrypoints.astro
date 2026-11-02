@@ -85,7 +85,7 @@ const toSpecifier = (subpath: string): string => (subpath === "." ? packageName 
             </ul>
           )}
           {exports !== undefined && exports.length === 0 && (
-            <p class="bundle-line bundle-muted">Exports no names; importing it runs it for its effects.</p>
+            <p class="bundle-line bundle-muted">Exports no runtime values.</p>
           )}
         </section>
       );

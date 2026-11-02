@@ -53,7 +53,8 @@ export function describeEntrypoints(subpaths: readonly string[], size: SizeRepor
                 gzip: emptyGzip(minified, gzip),
                 minified,
                 name,
-                share: fraction(minified, entry.minified),
+                // An export bundled alone can come out a few bytes larger than the whole entrypoint.
+                share: Math.min(1, fraction(minified, entry.minified)),
               }))
               .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)),
       size: { gzip: emptyGzip(entry.minified, entry.gzip), minified: entry.minified },
