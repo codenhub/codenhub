@@ -1,7 +1,8 @@
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { rolldown } from "rolldown";
 import { describe, expect, it } from "vitest";
 
 import type { WorkspacePackage } from "../workspace/discover.ts";
@@ -32,7 +33,12 @@ async function createBuiltPackage(): Promise<string> {
     join(directory, "node_modules/dependency/package.json"),
     JSON.stringify({ exports: { import: "./index.js" }, name: "dependency", type: "module" }),
   );
-  await writeFile(join(directory, "node_modules/dependency/index.js"), `export const inlined = "INLINED_TEXT";\n`);
+  // A function, unlike a constant, is not folded into the code that uses it,
+  // so its bytes stay attributable to the dependency.
+  await writeFile(
+    join(directory, "node_modules/dependency/index.js"),
+    `export function inlined() { return "INLINED_TEXT" + Math.random(); }\n`,
+  );
   return directory;
 }
 
@@ -91,6 +97,64 @@ describe("measureEntrypoint", () => {
     );
 
     expect(measured[0]).toEqual(measured[1]);
+  });
+
+  it("measures each export alone, tree-shaken", async () => {
+    const directory = await createBuiltPackage();
+    const entry = join(directory, "dist/index.js");
+
+    const before = await measureEntrypoint(entry, ["peer"]);
+    const contents = await readFile(join(directory, "dist/lazy.js"), "utf8");
+    await writeFile(join(directory, "dist/lazy.js"), contents.replace("lazily", `lazily${"x".repeat(100)}`));
+    const after = await measureEntrypoint(entry, ["peer"]);
+
+    expect(Object.keys(before.exports ?? {})).toEqual(["answer", "later"]);
+    // Only `later` reaches the lazy module, so only it grows.
+    expect(after.exports?.later?.minified).toBe((before.exports?.later?.minified ?? 0) + 100);
+    expect(after.exports?.answer).toEqual(before.exports?.answer);
+    expect(before.exports?.answer?.minified).toBeLessThan(before.minified);
+    expect(before.exports?.answer?.gzip).toBeGreaterThan(0);
+  });
+
+  it("attributes every byte to a file, the dependency it came from, or neither", async () => {
+    const directory = await createBuiltPackage();
+
+    const { files, minified } = await measureEntrypoint(join(directory, "dist/index.js"), ["peer"]);
+
+    expect(Object.keys(files ?? {}).sort()).toEqual([
+      "(unattributed)",
+      "dist/index.js",
+      "dist/lazy.js",
+      "node_modules/dependency",
+    ]);
+    expect(Object.values(files ?? {}).reduce((sum, bytes) => sum + bytes, 0)).toBe(minified);
+  });
+
+  it("attributes bytes through the build's source maps to the source files", async () => {
+    const directory = await createBuiltPackage();
+    await mkdir(join(directory, "src"));
+    await writeFile(join(directory, "src/big.ts"), `export const big = "${"b".repeat(400)}";\n`);
+    await writeFile(join(directory, "src/small.ts"), `export const small = "${"s".repeat(40)}";\n`);
+    await writeFile(
+      join(directory, "src/index.ts"),
+      `export { big } from "./big.ts";\nexport { small } from "./small.ts";\n`,
+    );
+    const build = await rolldown({ input: join(directory, "src/index.ts"), logLevel: "silent" });
+    await build.write({ file: join(directory, "dist/mapped.js"), format: "esm", sourcemap: true });
+    await build.close();
+
+    const { files, minified, sha256 } = await measureEntrypoint(join(directory, "dist/mapped.js"), []);
+    await rm(join(directory, "dist/mapped.js.map"));
+    const unmapped = await measureEntrypoint(join(directory, "dist/mapped.js"), []);
+
+    expect(files?.["src/big.ts"]).toBeGreaterThanOrEqual(400);
+    expect(files?.["src/small.ts"]).toBeGreaterThanOrEqual(40);
+    expect(files?.["src/small.ts"]).toBeLessThan(400);
+    expect(Object.keys(files ?? {})[0]).toBe("src/big.ts");
+    expect(Object.values(files ?? {}).reduce((sum, bytes) => sum + bytes, 0)).toBe(minified);
+    // Reading the map changes what is attributed, never the measured bytes.
+    expect(unmapped.sha256).toBe(sha256);
+    expect(Object.keys(unmapped.files ?? {})).not.toContain("src/big.ts");
   });
 });
 
