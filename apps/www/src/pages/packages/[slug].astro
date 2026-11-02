@@ -9,10 +9,12 @@ import StatusBadge from "@codenhub/app-shell/components/status-badge.astro";
 import type { GetStaticPaths } from "astro";
 
 import CopyButton from "../../components/copy-button.astro";
+import Entrypoints from "../../components/entrypoints.astro";
 import InstallTabs from "../../components/install-tabs.astro";
+import { describeEntrypoints } from "../../lib/bundle-breakdown";
 import { catalogPackages, type CatalogPackage } from "../../lib/catalog";
 import { formatDate } from "../../lib/format";
-import { describeRootSize, formatBytes, npmTarballUrl } from "../../lib/package-facts";
+import { describeRootSize, npmTarballUrl } from "../../lib/package-facts";
 import { renderReadme } from "../../lib/readme";
 import { headerConfig } from "../../site-config";
 import "../../styles/global.css";
@@ -81,12 +83,8 @@ const facts: { icon: string; term: string; value: string }[] = [
     : [{ icon: "ic-lucide-boxes", term: "Bundles", value: properties.bundled.join(", ") }]),
 ];
 
-// Every entrypoint the manifest exports, with its size when the release measured it.
-const entrypoints = properties.entrypoints.map((subpath) => ({
-  size: size?.entrypoints[subpath],
-  specifier: subpath === "." ? entry.name : `${entry.name}${subpath.slice(1)}`,
-}));
-const hasSizes = entrypoints.some((entrypoint) => entrypoint.size !== undefined);
+// Every entrypoint the manifest exports, with as much of its cost as the release measured.
+const entrypoints = describeEntrypoints(properties.entrypoints, size);
 
 const readmeHtml = entry.readme === undefined ? undefined : await renderReadme(entry.readme.source, entry.readme);
 
@@ -220,36 +218,7 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
               id="package-panel-entrypoints"
               role="tabpanel"
             >
-              <div class="package-table-wrap">
-                <table class="package-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Import</th>
-                      {hasSizes && <th scope="col">Minified</th>}
-                      {hasSizes && <th scope="col">Gzipped</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {entrypoints.map(({ size: entrySize, specifier }) => (
-                      <tr>
-                        <td>
-                          <span class="package-inline-copy">
-                            <code>{specifier}</code>
-                            <CopyButton label="Copy import path" text={specifier} />
-                          </span>
-                        </td>
-                        {hasSizes && <td>{entrySize === undefined ? "—" : formatBytes(entrySize.minified)}</td>}
-                        {hasSizes && (
-                          <td>
-                            {entrySize === undefined ? "—" : formatBytes(entrySize.minified === 0 ? 0 : entrySize.gzip)}
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {hasSizes && <p class="package-note">Measured at release, with peer dependencies left out.</p>}
+              <Entrypoints bundler={size?.bundler} packageName={entry.name} rows={entrypoints} />
             </div>
           )
         }

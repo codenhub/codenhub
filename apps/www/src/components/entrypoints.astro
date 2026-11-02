@@ -1,0 +1,104 @@
+---
+/**
+ * Every entrypoint a package exports, what it costs, and every name it exports
+ * with what importing that name alone costs. Every row shares one grid, so
+ * names, bars, and figures line up across entrypoints.
+ */
+import { type EntrypointRow } from "../lib/bundle-breakdown";
+import { formatBytes } from "../lib/package-facts";
+import CopyButton from "./copy-button.astro";
+
+interface Props {
+  /** Bundler that measured, such as `rolldown@1.2.15`, absent when nothing was. */
+  bundler?: string;
+  packageName: string;
+  rows: EntrypointRow[];
+}
+
+const { bundler, packageName, rows } = Astro.props;
+const hasSizes = rows.some((row) => row.size !== undefined);
+const hasExports = rows.some((row) => row.exports !== undefined && row.exports.length > 0);
+const isMissingExports = rows.some((row) => row.size !== undefined && row.exports === undefined);
+const toSpecifier = (subpath: string): string => (subpath === "." ? packageName : `${packageName}${subpath.slice(1)}`);
+---
+
+<div class="bundle">
+  {
+    hasSizes && (
+      <div aria-hidden="true" class="bundle-line bundle-columns">
+        <span>Import</span>
+        <span />
+        <span class="bundle-figure">Minified</span>
+        <span class="bundle-figure">Gzipped</span>
+      </div>
+    )
+  }
+
+  {
+    rows.map(({ exports, size, subpath }) => {
+      const specifier = toSpecifier(subpath);
+      return (
+        <section aria-label={specifier} class="bundle-entry">
+          <div class="bundle-line bundle-entry-line">
+            <span class="bundle-name">
+              <code>{specifier}</code>
+              <CopyButton label="Copy import path" text={specifier} />
+            </span>
+            {hasSizes && <span />}
+            {hasSizes && (
+              <span class="bundle-figure">
+                {size === undefined ? "—" : formatBytes(size.minified)}
+                <span class="visually-hidden"> minified</span>
+              </span>
+            )}
+            {hasSizes && (
+              <span class="bundle-figure">
+                {size === undefined ? "—" : formatBytes(size.gzip)}
+                <span class="visually-hidden"> gzipped</span>
+              </span>
+            )}
+          </div>
+
+          {exports !== undefined && exports.length > 0 && (
+            <ul aria-label={`Exports of ${specifier}`} class="bundle-list">
+              {exports.map((row) => (
+                <li class="bundle-line">
+                  <span class="bundle-name">
+                    <code>{row.name}</code>
+                  </span>
+                  <span
+                    aria-label={`${Math.round(row.share * 100)}% of the entry point`}
+                    class="bundle-bar"
+                    role="img"
+                    style={`--share: ${row.share}`}
+                  />
+                  <span class="bundle-figure">
+                    {formatBytes(row.minified)}
+                    <span class="visually-hidden"> minified</span>
+                  </span>
+                  <span class="bundle-figure">
+                    {formatBytes(row.gzip)}
+                    <span class="visually-hidden"> gzipped</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {exports !== undefined && exports.length === 0 && (
+            <p class="bundle-line bundle-muted">Exports no names; importing it runs it for its effects.</p>
+          )}
+        </section>
+      );
+    })
+  }
+
+  {
+    hasSizes && (
+      <p class="package-note">
+        Measured at release{bundler === undefined ? "" : ` with ${bundler}`}, peer dependencies left out.
+        {hasExports && " An export's size is what importing it alone costs after tree-shaking."}
+        {isMissingExports && " This release was cut before each entry point's exports were recorded."}
+      </p>
+    )
+  }
+</div>
