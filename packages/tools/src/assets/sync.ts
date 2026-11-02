@@ -12,6 +12,13 @@ export const ASSET_STATE_FILE = ".codenhub-assets.json";
 
 interface AssetState {
   placed?: unknown;
+  /** The `from` each placed destination was written from, so an offline run keeps only an unchanged entry. */
+  sources?: unknown;
+}
+
+interface PlacedState {
+  placed: string[];
+  sources: Map<string, string>;
 }
 
 async function pathExists(path: string): Promise<boolean> {
@@ -49,17 +56,24 @@ async function assertNoSymbolicLink(packageDirectory: string, destination: strin
   );
 }
 
-async function readPlaced(packageDirectory: string): Promise<string[]> {
+async function readPlaced(packageDirectory: string): Promise<PlacedState> {
   try {
     const raw = JSON.parse(await readFile(join(packageDirectory, ASSET_STATE_FILE), "utf8")) as AssetState;
     // Validated the same as a manifest's own `to`: cleanup below joins these
     // straight onto `packageDirectory` and deletes the result, so a corrupted
     // or hand-edited state file must not be able to smuggle a traversal path in.
-    return Array.isArray(raw.placed)
+    const placed = Array.isArray(raw.placed)
       ? raw.placed.filter((entry): entry is string => typeof entry === "string" && isValidRelativeAssetPath(entry))
       : [];
+    // A state file written before sources were recorded has none; its files are then not kept offline.
+    const sources = new Map(
+      typeof raw.sources === "object" && raw.sources !== null
+        ? Object.entries(raw.sources).filter((entry): entry is [string, string] => typeof entry[1] === "string")
+        : [],
+    );
+    return { placed, sources };
   } catch {
-    return [];
+    return { placed: [], sources: new Map() };
   }
 }
 
@@ -145,11 +159,11 @@ export async function syncPackageAssets(
   const entries = parseAssetEntries(workspacePackage.manifest, manifestPath);
   const declared = [...new Set(entries.map((entry) => entry.to))];
 
-  const previouslyPlaced = await readPlaced(workspacePackage.directory);
+  const { placed: previouslyPlaced, sources: previousSources } = await readPlaced(workspacePackage.directory);
   const previouslyPlacedSet = new Set(previouslyPlaced);
   const removed = previouslyPlaced.filter((destination) => !declared.includes(destination));
 
-  const prepare = async (): Promise<{ bytes: Uint8Array; destination: string; to: string }[]> => {
+  const prepare = async (): Promise<{ bytes: Uint8Array; destination: string; from: string; to: string }[]> => {
     const prepared = await Promise.all(
       entries.map(async (entry) => {
         const file = await source.lookup(entry.from);
@@ -170,12 +184,17 @@ export async function syncPackageAssets(
             `${workspacePackage.name} declares codenhub.assets destination "${entry.to}", but the asset sync did not place the existing path.`,
           );
         }
-        return { destination, file, to: entry.to };
+        return { destination, file, from: entry.from, to: entry.to };
       }),
     );
     // Every file is downloaded and checked before anything on disk changes.
     return Promise.all(
-      prepared.map(async ({ destination, file, to }) => ({ bytes: await source.download(file), destination, to })),
+      prepared.map(async ({ destination, file, from, to }) => ({
+        bytes: await source.download(file),
+        destination,
+        from,
+        to,
+      })),
     );
   };
 
@@ -187,13 +206,20 @@ export async function syncPackageAssets(
     if (!(cause instanceof BrandUnreachableError)) {
       throw cause;
     }
+    // A file is kept only when an earlier run placed it from the `from` declared now: a changed
+    // source under the same destination would otherwise ship the old file.
     const kept = await Promise.all(
-      declared.map(async (to) => previouslyPlacedSet.has(to) && pathExists(join(workspacePackage.directory, to))),
+      entries.map(
+        async ({ from, to }) =>
+          previouslyPlacedSet.has(to) &&
+          previousSources.get(to) === from &&
+          pathExists(join(workspacePackage.directory, to)),
+      ),
     );
-    const missing = declared.find((_to, index) => !kept[index]);
+    const missing = entries.find((_entry, index) => !kept[index]);
     if (missing !== undefined) {
       throw new BrandUnreachableError(
-        `${cause.message} ${workspacePackage.name} has no earlier copy of "${missing}" to keep, so it cannot build without the brand.`,
+        `${cause.message} ${workspacePackage.name} has no earlier copy of "${missing.to}" from "${missing.from}" to keep, so it cannot build without the brand.`,
         { cause },
       );
     }
@@ -223,9 +249,12 @@ export async function syncPackageAssets(
   // disk is still the one the sync placed. A removal that failed keeps its file, so it stays recorded too.
   const declaredSet = new Set(declared);
   const placed = new Set(previouslyPlaced.filter((destination) => declaredSet.has(destination)));
-  preparedEntries.forEach(({ to }, index) => {
+  // A destination whose rewrite failed keeps the source it was last written from.
+  const sources = new Map([...previousSources].filter(([to]) => placed.has(to)));
+  preparedEntries.forEach(({ from, to }, index) => {
     if (copies[index].status === "fulfilled") {
       placed.add(to);
+      sources.set(to, from);
     }
   });
   removed.forEach((destination, index) => {
@@ -238,7 +267,10 @@ export async function syncPackageAssets(
   if (placed.size === 0) {
     await rm(stateFile, { force: true });
   } else {
-    await writeFile(stateFile, `${JSON.stringify({ placed: [...placed].toSorted() }, null, 2)}\n`);
+    await writeFile(
+      stateFile,
+      `${JSON.stringify({ placed: [...placed].toSorted(), sources: Object.fromEntries([...sources].toSorted()) }, null, 2)}\n`,
+    );
   }
 
   const failure = [...removals, ...copies].find((result) => result.status === "rejected");

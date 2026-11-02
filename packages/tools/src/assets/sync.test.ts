@@ -183,6 +183,7 @@ describe("syncPackageAssets", () => {
     await expect(readFile(join(packageDirectory, "public/logo.svg"), "utf8")).resolves.toBe("logo-bytes");
     await expect(readJsonState(packageDirectory)).resolves.toEqual({
       placed: ["public/favicon.ico", "public/logo.svg"],
+      sources: { "public/favicon.ico": "favicon/favicon.ico", "public/logo.svg": "logo/logo-dark.svg" },
     });
 
     await chmod(join(packageDirectory, "public/favicon.ico"), 0o644);
@@ -218,7 +219,10 @@ describe("syncPackageAssets", () => {
       ),
     ).rejects.toMatchObject({ code: expect.stringMatching(/^(EPERM|EACCES)$/) });
 
-    await expect(readJsonState(packageDirectory)).resolves.toEqual({ placed: ["public/favicon.ico"] });
+    await expect(readJsonState(packageDirectory)).resolves.toEqual({
+      placed: ["public/favicon.ico"],
+      sources: { "public/favicon.ico": "favicon/favicon.ico" },
+    });
     await expect(readFile(join(packageDirectory, "public/logo.svg"), "utf8")).rejects.toThrow("ENOENT");
     await chmod(join(packageDirectory, "public/favicon.ico"), 0o644);
   });
@@ -294,7 +298,10 @@ describe("syncPackageAssets", () => {
 
     expect(result).toEqual({ copied: [], keptBecause: expect.stringMatching(/Could not reach/), removed: [] });
     await expect(readFile(join(packageDirectory, "public/logo.svg"), "utf8")).resolves.toBe("logo-bytes");
-    await expect(readJsonState(packageDirectory)).resolves.toEqual({ placed: ["public/logo.svg"] });
+    await expect(readJsonState(packageDirectory)).resolves.toEqual({
+      placed: ["public/logo.svg"],
+      sources: { "public/logo.svg": "logo/logo-dark.svg" },
+    });
   });
 
   it("shouldRemoveADroppedDestinationWhenTheBrandIsUnreachable", async () => {
@@ -321,7 +328,44 @@ describe("syncPackageAssets", () => {
 
     expect(result).toEqual({ copied: [], keptBecause: expect.any(String), removed: ["public/favicon.ico"] });
     await expect(readdir(join(packageDirectory, "public"))).resolves.toEqual(["logo.svg"]);
-    await expect(readJsonState(packageDirectory)).resolves.toEqual({ placed: ["public/logo.svg"] });
+    await expect(readJsonState(packageDirectory)).resolves.toEqual({
+      placed: ["public/logo.svg"],
+      sources: { "public/logo.svg": "logo/logo-dark.svg" },
+    });
+  });
+
+  it("shouldFailWhenTheBrandIsUnreachableAndAPlacedFileCameFromAnotherSource", async () => {
+    const { brand, packageDirectory, source } = await createFixture();
+    await syncPackageAssets(
+      createPackage(packageDirectory, {
+        codenhub: { assets: [{ from: "logo/logo-dark.svg", to: "public/logo.svg" }] },
+        name: "@fixture/example",
+      }),
+      source,
+    );
+    brand.isOffline = true;
+    const withOtherSource = createPackage(packageDirectory, {
+      codenhub: { assets: [{ from: "favicon/favicon.ico", to: "public/logo.svg" }] },
+      name: "@fixture/example",
+    });
+
+    await expect(syncPackageAssets(withOtherSource, source)).rejects.toThrow(
+      /no earlier copy of "public\/logo.svg" from "favicon\/favicon.ico"/,
+    );
+    await expect(readFile(join(packageDirectory, "public/logo.svg"), "utf8")).resolves.toBe("logo-bytes");
+  });
+
+  it("shouldFailWhenTheBrandIsUnreachableAndTheStateRecordsNoSources", async () => {
+    const { brand, packageDirectory, source } = await createFixture();
+    const workspacePackage = createPackage(packageDirectory, {
+      codenhub: { assets: [{ from: "logo/logo-dark.svg", to: "public/logo.svg" }] },
+      name: "@fixture/example",
+    });
+    await syncPackageAssets(workspacePackage, source);
+    await writeFile(join(packageDirectory, ASSET_STATE_FILE), JSON.stringify({ placed: ["public/logo.svg"] }));
+    brand.isOffline = true;
+
+    await expect(syncPackageAssets(workspacePackage, source)).rejects.toThrow(/no earlier copy/);
   });
 
   it("shouldFailWhenTheBrandIsUnreachableAndAFileWasNeverPlaced", async () => {
@@ -398,7 +442,10 @@ describe("syncPackageAssets", () => {
     // must be removed before the new one is copied.
     await expect(readdir(join(packageDirectory, "public"))).resolves.toEqual(["Logo.svg"]);
     await expect(readFile(join(packageDirectory, "public/Logo.svg"), "utf8")).resolves.toBe("logo-bytes");
-    await expect(readJsonState(packageDirectory)).resolves.toEqual({ placed: ["public/Logo.svg"] });
+    await expect(readJsonState(packageDirectory)).resolves.toEqual({
+      placed: ["public/Logo.svg"],
+      sources: { "public/Logo.svg": "logo/logo-dark.svg" },
+    });
   });
 
   it.skipIf(caseInsensitiveFileSystem)("shouldStillRefuseACaseVariantThatIsNotThePlacedFile", async () => {
