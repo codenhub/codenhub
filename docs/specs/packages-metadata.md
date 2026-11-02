@@ -28,7 +28,7 @@ The shared reader is `parsePackageMetadata` in `@codenhub/tools/documentation` (
 }
 ```
 
-- `label`: REQUIRED human-readable package name, used for navigation, catalogs, and page titles. `docs/guidelines/branding.md` says how to choose it.
+- `label`: REQUIRED human-readable package name, used for navigation, catalogs, and page titles. `docs/guidelines/package-naming.md` says how to choose it.
 - `status`: REQUIRED. One of `active`, `experimental`, or `deprecated`, with the meanings below.
 - `description`: OPTIONAL catalog description. It defaults to the package `description`.
 - `logo`: OPTIONAL package-relative path to an SVG file, such as `assets/logo.svg`. It MUST NOT be absolute, MUST NOT contain `.` or `..` segments or backslashes, and MUST name a file that exists in the package. Sites read it from the package's release tag, so it does not need to be listed in `files`.
