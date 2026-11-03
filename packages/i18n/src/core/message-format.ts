@@ -332,8 +332,14 @@ export const parseCachedMessage = (message: string): Message | MessageSyntaxErro
   return parsed;
 };
 
-/** Whether a message can only be plain text, so it needs no parsing. @internal */
-export const isPlainMessage = (message: string): boolean => !message.includes("{") && !message.includes("'");
+/**
+ * Whether a message can only be plain text, so it needs no parsing. A `}` is parsed too, so a stray one is reported
+ * whether or not the text also has an apostrophe.
+ *
+ * @internal
+ */
+export const isPlainMessage = (message: string): boolean =>
+  !message.includes("{") && !message.includes("}") && !message.includes("'");
 
 const MAX_CACHED_FORMATTERS = 500;
 const formatters = new Map<string, Intl.NumberFormat | Intl.DateTimeFormat | Intl.PluralRules | undefined>();

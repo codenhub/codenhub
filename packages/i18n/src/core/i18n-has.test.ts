@@ -61,14 +61,42 @@ describe("has", () => {
     }
   });
 
-  it("should be bound and validate keys as t() does", async () => {
+  it("should be bound and require initialization", async () => {
     const { i18n } = create();
     const { has } = i18n;
 
     expect(() => has("greeting")).toThrow("[I18n] has() requires successful initialization.");
     await i18n.init();
     expect(has("greeting")).toBe(true);
-    expect(() => has("")).toThrow(TypeError);
-    expect(() => has("a\u0000b")).toThrow(TypeError);
+  });
+
+  it("should return false for a string no dictionary can hold, silently", async () => {
+    const { i18n, onMissingKey } = create();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    await i18n.init();
+
+    // Codes from a response or a query string, as in `errors.${code}`.
+    for (const key of ["", "   ", "errors.\n", "a\u0000b", `errors.${"x".repeat(1_000)}`]) {
+      expect(i18n.has(key)).toBe(false);
+    }
+    expect(onMissingKey).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("should find a loaded key of exactly 1,000 characters", async () => {
+    const key = "x".repeat(1_000);
+    const i18n = createI18n({ defaultLocale: "en", locales: ["en"], loadLocale: () => ({ [key]: "Long" }) });
+    await i18n.init();
+
+    expect(i18n.has(key)).toBe(true);
+    expect(i18n.t(key)).toBe("Long");
+  });
+
+  it("should still throw for a key that is not a string", async () => {
+    const { i18n } = create();
+    await i18n.init();
+
+    expect(() => i18n.has(42 as unknown as string)).toThrow(TypeError);
   });
 });

@@ -37,6 +37,10 @@ const MAX_MESSAGE_DIAGNOSTICS = 1_000;
 const MAX_TRANSLATION_KEY_LENGTH = 1_000;
 const PLACEHOLDER_PATTERN = /{([A-Za-z0-9_]+)}/g;
 
+/** Whether a string can name a dictionary entry: not blank, within the length limit, and free of ASCII controls. */
+const isValidTranslationKey = (key: string): boolean =>
+  key.trim().length > 0 && key.length <= MAX_TRANSLATION_KEY_LENGTH && !hasAsciiControlCharacter(key);
+
 /** A translation found in the fallback chain, with the locale of the dictionary that has it. */
 interface FoundTranslation<TLocale extends string> {
   readonly text: string;
@@ -184,6 +188,16 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   }
 
   has(key: string): key is TKey {
+    if (!this.isReadyState) {
+      throw new Error("[I18n] has() requires successful initialization.");
+    }
+    if (typeof key !== "string") {
+      throw new TypeError("[I18n] A translation key must be a non-empty string.");
+    }
+    // A key built from outside input, such as `errors.${code}`, can be one no dictionary holds; that is a miss.
+    if (!isValidTranslationKey(key)) {
+      return false;
+    }
     // Any count finds a plural group, since every group has an `other` form to fall back to.
     return this.lookup("has", key, 0) !== undefined;
   }
@@ -193,8 +207,10 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   }
 
   formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string {
-    const { timeZone } = this.config;
-    return getDateTimeFormat(this.currentLocale, timeZone === undefined ? options : { timeZone, ...options }).format(
+    // `timeZone: undefined`, as forwarded options often carry, names no zone, so the configured one still applies. The
+    // zone is copied as an own property, which the formatter cache's key sees, even when the options inherit it.
+    const timeZone = options?.timeZone ?? this.config.timeZone;
+    return getDateTimeFormat(this.currentLocale, timeZone === undefined ? options : { ...options, timeZone }).format(
       value,
     );
   }
@@ -318,21 +334,17 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       throw new Error(`[I18n] ${caller}() requires successful initialization.`);
     }
 
-    if (typeof key !== "string" || key.length === 0) {
+    if (typeof key !== "string" || key.trim().length === 0) {
       throw new TypeError("[I18n] A translation key must be a non-empty string.");
     }
 
-    if (key.length > MAX_TRANSLATION_KEY_LENGTH || hasAsciiControlCharacter(key)) {
+    if (!isValidTranslationKey(key)) {
       throw new TypeError(
         `[I18n] A translation key must not contain ASCII control characters or exceed ${MAX_TRANSLATION_KEY_LENGTH} characters.`,
       );
     }
 
     const normalizedKey = key.trim();
-
-    if (normalizedKey.length === 0) {
-      throw new TypeError("[I18n] A translation key must be a non-empty string.");
-    }
 
     for (const { locale, dictionary } of this.dictionaries) {
       const translation = this.findTranslation(dictionary, locale, normalizedKey, count);

@@ -138,8 +138,8 @@ Escape both values as you would any text in HTML, or let your framework create t
 A server sends a visitor who arrives at `/` to their language from `Accept-Language`, as in [Read the locale from a path](#read-the-locale-from-a-path). A static site with `localePrefix: "except-default"` has no server to see that header: the default locale's pages are the unprefixed ones, and the browser has to do the redirect. That brings constraints of its own:
 
 - **It runs before first paint.** A deferred script redirects after the page has shown in the default language, so the visitor sees it flash. Put the redirect in an inline script in `<head>`. An inline script cannot `import`, so neither `matchLocale()` nor `routing` is there: compute what it needs at build time and pass it in.
-- **The visitor's choice wins.** Save the language a visitor picks in your language switcher and check it before `navigator.languages`. Otherwise a Portuguese browser that picks English is sent straight back to Portuguese.
-- **A link on your own site never redirects.** Where storage is blocked, the choice can't be saved, so an arrival from your own site, a same-origin `document.referrer`, keeps the page it asked for.
+- **The visitor's choice wins.** Check the saved language before `navigator.languages`. Otherwise a Portuguese browser that picks English is sent straight back to Portuguese. The browser binding, set up as in [Read the locale on the client](#read-the-locale-on-the-client), already saves it: it stores `{"locale":"en"}` under the key `"i18n"`, or your `storageKey`, on every page it starts on. Since switching language is a navigation, that is the language of the last page the visitor read, including the one their switch led to.
+- **A link on your own site never redirects.** Where storage is blocked, the choice can't be saved, so an arrival from your own site, a same-origin `document.referrer`, keeps the page it asked for. That needs the browser to send the referrer: a link with `rel="noreferrer"`, or a page served with `Referrer-Policy: no-referrer`, sends none, and its visit is redirected like one from elsewhere, so a switch to the default language can be sent straight back. Leave both off your own links, including the language switcher.
 - **A prefixed URL never redirects.** Render the script only on the default locale's pages, so a shared `/pt/about` link always opens in Portuguese. Keep `search` and `hash` when redirecting.
 
 At build time, compute this page's path in every other locale with `localize()`, and a table from each language subtag to its locale:
@@ -150,7 +150,7 @@ const locales = ["en", "pt", "es"] as const;
 const defaultLocale = "en";
 
 const config = {
-  storageKey: "locale", // the key your language switcher saves the visitor's choice under
+  storageKey: "i18n", // the browser binding's storageKey
   locales,
   languages: Object.fromEntries(locales.map((locale) => [new Intl.Locale(locale).language, locale])),
   targets: Object.fromEntries(locales.filter((locale) => locale !== defaultLocale).map((locale) => [locale, routing.localize(pathname, locale)])),
@@ -172,10 +172,11 @@ Then render, on the default locale's pages only:
 
     let target;
     try {
-      const saved = localStorage.getItem(config.storageKey);
+      // The binding saves `{"locale":"pt"}`.
+      const saved = JSON.parse(localStorage.getItem(config.storageKey) ?? "null")?.locale;
       if (config.locales.includes(saved)) target = saved;
     } catch {
-      // Storage blocked: fall back to the browser's languages.
+      // Storage blocked or unreadable: fall back to the browser's languages.
     }
 
     if (target === undefined) {
@@ -333,12 +334,15 @@ Feed it your page list to get every page a static build needs, then render each 
 
 Routing works on the path of a URL only. Give it `url.pathname`, not the full URL, and handle the query string and fragment yourself.
 
-To keep a crafted URL from reaching a different page than the one checked, every method throws a `TypeError` for a path that:
+To keep a crafted URL from reaching a different page than the one checked, routing refuses a path that:
 
-- does not start with `/`, or is a full or protocol-relative URL, such as `https://…` or `//host`;
-- contains `?`, `#`, `\`, `//`, or a control character;
+- is protocol-relative, such as `//host`, or contains `\`, `//`, or a control character;
 - contains a `.` or `..` segment, or encodes one, a slash, a backslash, a `%`, or a control character with `%`;
 - has a malformed `%` escape, or is longer than 8,192 characters.
+
+A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links rather than read requests, so they throw a `TypeError` for such a path.
+
+Every method throws a `TypeError` for a value that is not a URL's pathname at all: one that does not start with `/`, such as a full URL `https://…`, or one that contains `?` or `#`, such as a path with its query string. That is a mistake in the calling code, not a request to answer.
 
 Ordinary escapes, such as `%20`, are fine, and a trailing slash is kept: `/pt/sobre/` parses to `/about/`.
 

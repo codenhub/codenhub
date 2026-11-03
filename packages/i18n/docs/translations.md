@@ -191,7 +191,7 @@ An apostrophe before `{` or `}` quotes text up to the next apostrophe, and two a
 
 Inside a plural, `#` stands for the number; write `'#'` for a literal `#`.
 
-Text that is not valid syntax, such as an unclosed `{`, logs a warning once, unless the manager is silent, and is shown with only its `{name}` placeholders filled. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
+Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning once, unless the manager is silent, and is shown with only its `{name}` placeholders filled. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
 
 ## Plurals
 
@@ -291,7 +291,7 @@ const key = `errors.${code}`;
 const message = i18n.has(key) ? i18n.t(key) : i18n.t("errors.unknown");
 ```
 
-`has()` looks through the same dictionaries `t()` does, and a plural group counts as a key. A miss neither calls `onMissingKey` nor warns, since a key you expect to be missing sometimes is not a gap in the translations.
+`has()` looks through the same dictionaries `t()` does, and a plural group counts as a key. A miss neither calls `onMissingKey` nor warns, since a key you expect to be missing sometimes is not a gap in the translations. A string no dictionary can hold, such as one with a line break or longer than 1,000 characters, is a miss too, so `code` can come from a response or a query string.
 
 When you know the keys are there, cast it instead:
 

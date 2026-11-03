@@ -44,6 +44,32 @@ describe("timeZone", () => {
     expect(i18n.formatDate(when, { dateStyle: "long", timeZone: "UTC" })).toBe("November 2, 2026");
   });
 
+  it("should keep the configured time zone when options pass timeZone: undefined", async () => {
+    // At `when`, it is 1 November in Pago Pago (UTC-11) and 2 November in Kiritimati (UTC+14); pick the one whose day
+    // differs from the runtime's, so falling back to the runtime's zone shows.
+    const runtimeDay = new Intl.DateTimeFormat("en", { dateStyle: "long" }).format(when);
+    const [timeZone, expected] =
+      runtimeDay === "November 1, 2026"
+        ? ["Pacific/Kiritimati", "November 2, 2026"]
+        : ["Pacific/Pago_Pago", "November 1, 2026"];
+    const i18n = create(timeZone);
+    await i18n.init();
+    const forwarded: { readonly timeZone?: string | undefined } = {};
+
+    expect(i18n.formatDate(when, { dateStyle: "long", timeZone: forwarded.timeZone })).toBe(expected);
+  });
+
+  it("should not reuse a formatter across inherited time zones", async () => {
+    const i18n = create("UTC");
+    await i18n.init();
+    // Intl reads options through the prototype chain, as from a class instance's defaults.
+    const inherit = (timeZone: string): Intl.DateTimeFormatOptions =>
+      Object.assign(Object.create({ timeZone }) as Intl.DateTimeFormatOptions, { dateStyle: "long" as const });
+
+    expect(i18n.formatDate(when, inherit("Pacific/Pago_Pago"))).toBe("November 1, 2026");
+    expect(i18n.formatDate(when, inherit("Pacific/Kiritimati"))).toBe("November 2, 2026");
+  });
+
   it("should use the runtime's time zone when unset", async () => {
     const i18n = create();
     await i18n.init();

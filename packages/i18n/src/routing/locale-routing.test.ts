@@ -134,19 +134,28 @@ describe("createLocaleRouting", () => {
     });
   });
 
-  it("should reject malformed application pathnames", () => {
+  it("should throw from parse for values a URL's pathname never is", () => {
     const routing = createLocaleRouting({
       defaultLocale: "en-US",
       locales: LOCALES,
       localePrefix: "always",
     });
-    const invalidPathnames = [
-      "",
-      "about",
-      "https://example.com/about",
+
+    for (const pathname of ["", "about", "https://example.com/about", "/about?tab=details", "/about#details"]) {
+      expect(() => routing.parse(pathname)).toThrow(TypeError);
+    }
+    expect(() => routing.parse(42 as unknown as string)).toThrow(TypeError);
+  });
+
+  it("should return undefined from parse for request paths it refuses, which localize still rejects", () => {
+    const routing = createLocaleRouting({
+      defaultLocale: "en-US",
+      locales: LOCALES,
+      localePrefix: "except-default",
+    });
+    const refusedPathnames = [
       "//example.com/about",
-      "/about?tab=details",
-      "/about#details",
+      "//wp-login.php",
       "/about//team",
       "/about/./team",
       "/about/../team",
@@ -170,22 +179,14 @@ describe("createLocaleRouting", () => {
       "/about%252fadmin",
       "/about%250ateam",
       "/sale%25off",
+      `/${"a".repeat(8_192)}`,
     ];
 
-    for (const pathname of invalidPathnames) {
-      expect(() => routing.parse(pathname)).toThrow(TypeError);
+    for (const pathname of refusedPathnames) {
+      expect(routing.parse(pathname)).toBeUndefined();
+      expect(() => routing.localize(pathname, "en-US")).toThrow(TypeError);
     }
-  });
-
-  it("should reject pathnames longer than 8,192 characters", () => {
-    const routing = createLocaleRouting({
-      defaultLocale: "en-US",
-      locales: LOCALES,
-      localePrefix: "always",
-    });
-
-    expect(() => routing.parse(`/${"a".repeat(8_191)}`)).not.toThrow();
-    expect(() => routing.parse(`/${"a".repeat(8_192)}`)).toThrow(TypeError);
+    expect(routing.parse(`/${"a".repeat(8_191)}`)).toBeDefined();
   });
 
   it("should throw a RangeError when the locale prefix makes a valid path too long", () => {
@@ -210,7 +211,7 @@ describe("createLocaleRouting", () => {
     });
 
     expect(() => routing.parse("about")).toThrow(/^\[I18n\] /);
-    expect(() => routing.parse("/../admin")).toThrow(/^\[I18n\] /);
+    expect(() => routing.localize("/../admin", "en-US")).toThrow(/^\[I18n\] /);
     expect(() => routing.localize("/about", "fr" as (typeof LOCALES)[number])).toThrow(/^\[I18n\] /);
   });
 

@@ -395,7 +395,7 @@ An apostrophe before `{` or `}` quotes text up to the next apostrophe, and two a
 
 Inside a plural, `#` stands for the number; write `'#'` for a literal `#`.
 
-Text that is not valid syntax, such as an unclosed `{`, logs a warning once, unless the manager is silent, and is shown with only its `{name}` placeholders filled. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
+Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning once, unless the manager is silent, and is shown with only its `{name}` placeholders filled. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
 
 ## Plurals
 
@@ -495,7 +495,7 @@ const key = `errors.${code}`;
 const message = i18n.has(key) ? i18n.t(key) : i18n.t("errors.unknown");
 ```
 
-`has()` looks through the same dictionaries `t()` does, and a plural group counts as a key. A miss neither calls `onMissingKey` nor warns, since a key you expect to be missing sometimes is not a gap in the translations.
+`has()` looks through the same dictionaries `t()` does, and a plural group counts as a key. A miss neither calls `onMissingKey` nor warns, since a key you expect to be missing sometimes is not a gap in the translations. A string no dictionary can hold, such as one with a line break or longer than 1,000 characters, is a miss too, so `code` can come from a response or a query string.
 
 When you know the keys are there, cast it instead:
 
@@ -1057,8 +1057,8 @@ Escape both values as you would any text in HTML, or let your framework create t
 A server sends a visitor who arrives at `/` to their language from `Accept-Language`, as in [Read the locale from a path](#read-the-locale-from-a-path). A static site with `localePrefix: "except-default"` has no server to see that header: the default locale's pages are the unprefixed ones, and the browser has to do the redirect. That brings constraints of its own:
 
 - **It runs before first paint.** A deferred script redirects after the page has shown in the default language, so the visitor sees it flash. Put the redirect in an inline script in `<head>`. An inline script cannot `import`, so neither `matchLocale()` nor `routing` is there: compute what it needs at build time and pass it in.
-- **The visitor's choice wins.** Save the language a visitor picks in your language switcher and check it before `navigator.languages`. Otherwise a Portuguese browser that picks English is sent straight back to Portuguese.
-- **A link on your own site never redirects.** Where storage is blocked, the choice can't be saved, so an arrival from your own site, a same-origin `document.referrer`, keeps the page it asked for.
+- **The visitor's choice wins.** Check the saved language before `navigator.languages`. Otherwise a Portuguese browser that picks English is sent straight back to Portuguese. The browser binding, set up as in [Read the locale on the client](#read-the-locale-on-the-client), already saves it: it stores `{"locale":"en"}` under the key `"i18n"`, or your `storageKey`, on every page it starts on. Since switching language is a navigation, that is the language of the last page the visitor read, including the one their switch led to.
+- **A link on your own site never redirects.** Where storage is blocked, the choice can't be saved, so an arrival from your own site, a same-origin `document.referrer`, keeps the page it asked for. That needs the browser to send the referrer: a link with `rel="noreferrer"`, or a page served with `Referrer-Policy: no-referrer`, sends none, and its visit is redirected like one from elsewhere, so a switch to the default language can be sent straight back. Leave both off your own links, including the language switcher.
 - **A prefixed URL never redirects.** Render the script only on the default locale's pages, so a shared `/pt/about` link always opens in Portuguese. Keep `search` and `hash` when redirecting.
 
 At build time, compute this page's path in every other locale with `localize()`, and a table from each language subtag to its locale:
@@ -1069,7 +1069,7 @@ const locales = ["en", "pt", "es"] as const;
 const defaultLocale = "en";
 
 const config = {
-  storageKey: "locale", // the key your language switcher saves the visitor's choice under
+  storageKey: "i18n", // the browser binding's storageKey
   locales,
   languages: Object.fromEntries(locales.map((locale) => [new Intl.Locale(locale).language, locale])),
   targets: Object.fromEntries(locales.filter((locale) => locale !== defaultLocale).map((locale) => [locale, routing.localize(pathname, locale)])),
@@ -1091,10 +1091,11 @@ Then render, on the default locale's pages only:
 
     let target;
     try {
-      const saved = localStorage.getItem(config.storageKey);
+      // The binding saves `{"locale":"pt"}`.
+      const saved = JSON.parse(localStorage.getItem(config.storageKey) ?? "null")?.locale;
       if (config.locales.includes(saved)) target = saved;
     } catch {
-      // Storage blocked: fall back to the browser's languages.
+      // Storage blocked or unreadable: fall back to the browser's languages.
     }
 
     if (target === undefined) {
@@ -1252,12 +1253,15 @@ Feed it your page list to get every page a static build needs, then render each 
 
 Routing works on the path of a URL only. Give it `url.pathname`, not the full URL, and handle the query string and fragment yourself.
 
-To keep a crafted URL from reaching a different page than the one checked, every method throws a `TypeError` for a path that:
+To keep a crafted URL from reaching a different page than the one checked, routing refuses a path that:
 
-- does not start with `/`, or is a full or protocol-relative URL, such as `https://…` or `//host`;
-- contains `?`, `#`, `\`, `//`, or a control character;
+- is protocol-relative, such as `//host`, or contains `\`, `//`, or a control character;
 - contains a `.` or `..` segment, or encodes one, a slash, a backslash, a `%`, or a control character with `%`;
 - has a malformed `%` escape, or is longer than 8,192 characters.
+
+A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links rather than read requests, so they throw a `TypeError` for such a path.
+
+Every method throws a `TypeError` for a value that is not a URL's pathname at all: one that does not start with `/`, such as a full URL `https://…`, or one that contains `?` or `#`, such as a path with its query string. That is a mistake in the calling code, not a request to answer.
 
 Ordinary escapes, such as `%20`, are fine, and a trailing slash is kept: `/pt/sobre/` parses to `/about/`.
 
@@ -1345,7 +1349,9 @@ The same goes for `localePrefix` in a routing configuration kept in a variable, 
 
 ## A routing method throws `TypeError`
 
-The path is not an absolute path or contains something routing refuses, such as `?`, `#`, `//`, or a dot segment. Pass `url.pathname` rather than the full URL. [Paths it accepts](docs/localized-urls.md#paths-it-accepts) has the full list.
+From `parse()`, the value is not a URL's pathname: it doesn't start with `/`, or it contains `?` or `#`. Pass `url.pathname` rather than the full URL or a path with its query string, such as Node's `request.url`. A path that is a pathname but contains something routing refuses, such as `//` or a dot segment, makes `parse()` return `undefined` instead.
+
+From `localize()` or `localizeAll()`, the path is one of those, or contains something routing refuses. [Paths it accepts](docs/localized-urls.md#paths-it-accepts) has the full list.
 
 ## `localize()` throws `RangeError`: "would be read as"
 
@@ -1368,6 +1374,25 @@ The path you passed is valid, but the locale prefix or the translated words make
 - **"Skipping translation on <style> because the element can activate or hide translated content"**: a `data-i18n` key is on a `<script>`, `<style>`, `<noscript>`, or `<template>` element, whose text runs as code or decides what shows. Move the key to an ordinary element.
 - **`data-i18n` text shows `{name}`**: HTML translation can't fill placeholders. Render that text with `t()` and pass the values.
 - **A `data-i18n-href` attribute does nothing**: only text attributes can be translated. See [Translate HTML without a framework](docs/browser.md#translate-html-without-a-framework).
+
+<!-- Source: docs/changelog/0.2.1.md -->
+
+# 0.2.1
+
+## Added
+
+- A guide to [detecting the visitor's language on a static site](docs/localized-urls.md#detect-the-language-on-a-static-site), where no server sees `Accept-Language`: an inline redirect that runs before first paint, honors the language the browser binding saved, and never redirects a prefixed URL or a link from your own site that sends its referrer.
+
+## Changed
+
+- `parse()` returns `undefined` for a path routing refuses, such as `//wp-login.php`, a dot segment, an encoded slash, or one longer than 8,192 characters, where it threw a `TypeError`. A request can carry any of these, and the guide's handlers, which call `parse(url.pathname)` without a catch, answered them with a 500; they now get the 404 every other path that is no page gets. `parse()` still throws for a value that is not a URL's pathname, such as a full URL or a path with its query string, and `localize()` and `localizeAll()` still throw for every refused path. A `try` around `parse()` that answered 400 can go, or stay: it now only catches mistakes in the calling code.
+- `has()` returns `false` for a string no dictionary can hold, such as one with a line break or longer than 1,000 characters, where it threw a `TypeError`, so ``has(`errors.${code}`)`` is safe with a `code` from a response or a query string. It still throws for a non-string, and `t()` still throws for an invalid key.
+- A text with a stray `}` and no `{` or `'`, such as `a } b`, now logs the invalid-syntax warning that `it's a } b` already logged. The text shown is unchanged. Quote a literal brace as `'}'`.
+- The package's npm homepage is its page on codenhub.dev.
+
+## Fixed
+
+- `formatDate(value, { timeZone: undefined })`, as options forwarded from a property often are, used the runtime's time zone instead of the manager's `timeZone`, so a server could show its own calendar day. A `timeZone` the options inherit, as from a class instance's defaults, no longer reuses a formatter made for another zone.
 
 <!-- Source: docs/changelog/0.2.0.md -->
 
