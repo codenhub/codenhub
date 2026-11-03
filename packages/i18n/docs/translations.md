@@ -291,7 +291,7 @@ const key = `errors.${code}`;
 const message = i18n.has(key) ? i18n.t(key) : i18n.t("errors.unknown");
 ```
 
-`has()` looks through the same dictionaries `t()` does, and a plural group counts as a key. A miss neither calls `onMissingKey` nor warns, since a key you expect to be missing sometimes is not a gap in the translations.
+`has()` looks through the same dictionaries `t()` does, and a plural group counts as a key. A miss neither calls `onMissingKey` nor warns, since a key you expect to be missing sometimes is not a gap in the translations. A string no dictionary can hold, such as one with a line break or longer than 1,000 characters, is a miss too, so `code` can come from a response or a query string.
 
 When you know the keys are there, cast it instead:
 

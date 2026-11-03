@@ -247,12 +247,12 @@ Whether a key has a text, or is a plural group, in a dictionary the active local
 
 - `key` — Translation key, trimmed as `t()` trims it.
 
-**Returns** — `true` when `t(key)` would find a text, or `t(key, { count })` a plural form.
+**Returns** — `true` when `t(key)` would find a text, or `t(key, { count })` a plural form, and `false` otherwise, including for a string no dictionary can hold, such as one that is blank, longer than 1,000 characters, or contains ASCII controls.
 
 **Throws**
 
 - `Error` — When called before successful initialization.
-- `TypeError` — When the key is invalid, as for `t()`.
+- `TypeError` — When the key is not a string.
 
 **Example**
 
