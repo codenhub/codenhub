@@ -174,7 +174,7 @@ await settings.patch({ theme: "dark", nickname: "Ada" });
 const current = await settings.get();
 ```
 
-Every method returns a promise. Each instance serializes reads and writes, including read-modify-write operations, through its own queue. A rejected operation does not block later operations. `set`, `patch`, and `setItem` clone their inputs at call time, before queueing, so later caller mutations do not change queued writes. Cloning at call time can throw synchronously.
+Every method returns a promise. Each instance serializes reads and writes, including read-modify-write operations, through its own queue. A rejected operation does not block later operations. `set`, `patch`, and `setItem` clone their inputs at call time, before queueing, so later caller mutations do not change queued writes. A value that cannot be cloned rejects the returned promise without reaching the driver or `onError`.
 
 The queue coordinates one instance only. Separate stores and external writers can still overwrite each other. It cannot make an eventually consistent backend return a fresh read; see the [Cloudflare KV limits](docs/storage-drivers.md#cloudflare-workers).
 
