@@ -1207,9 +1207,9 @@ describe("createAppError — details", () => {
   it("should drop keys whose value is undefined, as JSON does", () => {
     const appError = createAppError("x", { details: { field: undefined, nested: { step: undefined, kept: 1 } } });
 
-    expect(appError.details).toEqual({ nested: { kept: 1 } });
+    expect(appError.details).toStrictEqual({ nested: { kept: 1 } });
     expect(Object.hasOwn(appError.details as object, "field")).toBe(false);
-    expect(appError.toJSON().details).toEqual(JSON.parse(JSON.stringify({ nested: { kept: 1 } })));
+    expect(appError.toJSON().details).toStrictEqual(JSON.parse(JSON.stringify({ nested: { kept: 1 } })));
   });
 
   it("should reject details nested too deeply, including a cycle", () => {
