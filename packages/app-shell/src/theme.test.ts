@@ -37,4 +37,10 @@ describe("themeToggleAria", () => {
   it("reports unchecked and the next-theme label for light", () => {
     expect(themeToggleAria("light")).toEqual({ checked: false, label: "Switch to dark theme" });
   });
+
+  it("takes each label from the given messages", () => {
+    const labels = { toDark: "Mudar para o tema escuro", toLight: "Mudar para o tema claro" };
+    expect(themeToggleAria("light", labels).label).toBe("Mudar para o tema escuro");
+    expect(themeToggleAria("dark", labels).label).toBe("Mudar para o tema claro");
+  });
 });

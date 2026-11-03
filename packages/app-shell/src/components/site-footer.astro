@@ -3,12 +3,18 @@
  * Shared footer. `base-layout.astro` fills the year on load; the markup ships a
  * static fallback so the line reads before hydration and without scripts.
  */
+interface Props {
+  /** The credit before the link to coden, in the page's language. */
+  builtBy?: string;
+}
+
+const { builtBy = "Built by" } = Astro.props;
 const currentYear = new Date().getFullYear();
 ---
 
 <footer class="shell-footer">
   <div class="shell-footer-content">
     <p>&copy; <span data-footer-year>{currentYear}</span> Coden</p>
-    <p>Built by <a href="https://coden.agency/" rel="noopener noreferrer" target="_blank">coden</a>.</p>
+    <p>{builtBy} <a href="https://coden.agency/" rel="noopener noreferrer" target="_blank">coden</a>.</p>
   </div>
 </footer>

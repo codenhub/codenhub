@@ -4,32 +4,37 @@
  * release. The page is a stack of sections so a package can later contribute
  * its own (docs/roadmap.md, "Package-provided sections").
  */
-import BaseLayout from "../../layouts/base-layout.astro";
 import StatusBadge from "@codenhub/app-shell/components/status-badge.astro";
 import type { GetStaticPaths } from "astro";
 
-import CopyButton from "../../components/copy-button.astro";
-import Entrypoints from "../../components/entrypoints.astro";
-import InstallTabs from "../../components/install-tabs.astro";
-import { describeEntrypoints } from "../../lib/bundle-breakdown";
-import { catalogPackages, type CatalogPackage } from "../../lib/catalog";
-import { formatDate } from "../../lib/format";
-import { describeRootSize, npmTarballUrl } from "../../lib/package-facts";
-import { renderReadme } from "../../lib/readme";
-import { headerConfig } from "../../site-config";
-import "../../styles/global.css";
+import CopyButton from "../../../components/copy-button.astro";
+import Entrypoints from "../../../components/entrypoints.astro";
+import InstallTabs from "../../../components/install-tabs.astro";
+import { getTranslator, localeStaticPaths, routing, shellMessages, type Locale } from "../../../i18n";
+import BaseLayout from "../../../layouts/base-layout.astro";
+import { describeEntrypoints } from "../../../lib/bundle-breakdown";
+import { catalogPackages, type CatalogPackage } from "../../../lib/catalog";
+import { formatDate } from "../../../lib/format";
+import { describeRootSize, npmTarballUrl } from "../../../lib/package-facts";
+import { renderReadme } from "../../../lib/readme";
+import { headerConfig } from "../../../site-config";
+import "../../../styles/global.css";
 
 export const getStaticPaths = (() =>
-  catalogPackages.map((entry) => ({ params: { slug: entry.slug }, props: { entry } }))) satisfies GetStaticPaths;
+  localeStaticPaths().flatMap(({ params, props }) =>
+    catalogPackages.map((entry) => ({ params: { ...params, slug: entry.slug }, props: { ...props, entry } })),
+  )) satisfies GetStaticPaths;
 
 interface Props {
   entry: CatalogPackage;
+  locale: Locale;
 }
 
-const { entry } = Astro.props;
+const { entry, locale } = Astro.props;
+const { t } = await getTranslator(locale);
 const { links, properties, releases, size } = entry;
 const latest = releases.latest;
-const rootSize = describeRootSize(size);
+const rootSize = describeRootSize(size, locale);
 
 // The header's GitHub and npm marks open this package rather than the monorepo and the org.
 const packageHeaderConfig = {
@@ -46,9 +51,9 @@ interface Link {
 }
 
 const linkCandidates: (Link | undefined)[] = [
-  links.docs === undefined ? undefined : { href: links.docs, label: "Documentation", icon: "ic-lucide-book-open", external: false },
-  links.changelog === undefined ? undefined : { href: links.changelog, label: "Changelog", icon: "ic-lucide-history", external: false },
-  links.demo === undefined ? undefined : { href: links.demo, label: "Demo", icon: "ic-lucide-play", external: false },
+  links.docs === undefined ? undefined : { href: links.docs, label: t("package.links.documentation"), icon: "ic-lucide-book-open", external: false },
+  links.changelog === undefined ? undefined : { href: links.changelog, label: t("package.links.changelog"), icon: "ic-lucide-history", external: false },
+  links.demo === undefined ? undefined : { href: links.demo, label: t("package.links.demo"), icon: "ic-lucide-play", external: false },
   links.llms === undefined ? undefined : { href: links.llms, label: "llms.txt", icon: "ic-lucide-bot", external: true },
 ];
 // The first link is the page's main action and keeps its label; the rest are icons with a tooltip.
@@ -57,30 +62,47 @@ const [primaryLink, ...secondaryLinks] = linkCandidates.filter((link): link is L
 const facts: { icon: string; term: string; value: string }[] = [
   {
     icon: "ic-lucide-tag",
-    term: "Latest version",
-    value: latest !== undefined ? latest.version : releases.history.length === 0 ? "Unreleased" : "No stable release",
+    term: t("package.facts.latestVersion"),
+    value:
+      latest !== undefined
+        ? latest.version
+        : releases.history.length === 0
+          ? t("package.facts.unreleased")
+          : t("package.facts.noStable"),
   },
   ...(releases.lastPublished === undefined
     ? []
-    : [{ icon: "ic-lucide-calendar", term: "Last published", value: formatDate(releases.lastPublished.date) }]),
-  ...(entry.license === undefined ? [] : [{ icon: "ic-lucide-scale", term: "License", value: entry.license }]),
-  ...(rootSize === undefined ? [] : [{ icon: "ic-lucide-package", term: "Bundle size", value: rootSize }]),
+    : [{ icon: "ic-lucide-calendar", term: t("package.facts.lastPublished"), value: formatDate(releases.lastPublished.date, locale) }]),
+  ...(entry.license === undefined ? [] : [{ icon: "ic-lucide-scale", term: t("package.facts.license"), value: entry.license }]),
+  ...(rootSize === undefined ? [] : [{ icon: "ic-lucide-package", term: t("package.facts.bundleSize"), value: rootSize }]),
   {
     icon: "ic-lucide-network",
-    term: "Dependencies",
-    value: properties.dependencyCount === 0 ? "None" : String(properties.dependencyCount),
+    term: t("package.facts.dependencies"),
+    value: properties.dependencyCount === 0 ? t("package.facts.none") : String(properties.dependencyCount),
   },
   {
     icon: "ic-lucide-plug",
-    term: "Peer dependencies",
-    value: properties.peerDependencies.length === 0 ? "None" : properties.peerDependencies.join(", "),
+    term: t("package.facts.peerDependencies"),
+    value: properties.peerDependencies.length === 0 ? t("package.facts.none") : properties.peerDependencies.join(", "),
   },
-  { icon: "ic-lucide-file-code", term: "Module format", value: properties.isEsmOnly ? "ESM only" : "ESM and CommonJS" },
-  { icon: "ic-lucide-file-type", term: "TypeScript types", value: properties.shipsTypes ? "Included" : "Not included" },
-  { icon: "ic-lucide-leaf", term: "Side-effect free", value: properties.isSideEffectFree ? "Yes" : "No" },
+  {
+    icon: "ic-lucide-file-code",
+    term: t("package.facts.moduleFormat"),
+    value: properties.isEsmOnly ? t("package.facts.esmOnly") : t("package.facts.esmAndCjs"),
+  },
+  {
+    icon: "ic-lucide-file-type",
+    term: t("package.facts.types"),
+    value: properties.shipsTypes ? t("package.facts.included") : t("package.facts.notIncluded"),
+  },
+  {
+    icon: "ic-lucide-leaf",
+    term: t("package.facts.sideEffectFree"),
+    value: properties.isSideEffectFree ? t("package.facts.yes") : t("package.facts.no"),
+  },
   ...(properties.bundled.length === 0
     ? []
-    : [{ icon: "ic-lucide-boxes", term: "Bundles", value: properties.bundled.join(", ") }]),
+    : [{ icon: "ic-lucide-boxes", term: t("package.facts.bundles"), value: properties.bundled.join(", ") }]),
 ];
 
 // Every entrypoint the manifest exports, with as much of its cost as the release measured.
@@ -89,24 +111,27 @@ const entrypoints = describeEntrypoints(properties.entrypoints, size);
 const readmeHtml = entry.readme === undefined ? undefined : await renderReadme(entry.readme.source, entry.readme);
 
 const detailTabs = [
-  ...(readmeHtml === undefined ? [] : [{ icon: "ic-lucide-book-text", id: "readme", label: "README" }]),
-  ...(entrypoints.length === 0 ? [] : [{ icon: "ic-lucide-package-open", id: "entrypoints", label: "Entry points" }]),
-  { icon: "ic-lucide-tags", id: "releases", label: "Releases" },
+  ...(readmeHtml === undefined ? [] : [{ icon: "ic-lucide-book-text", id: "readme", label: t("package.tabs.readme") }]),
+  ...(entrypoints.length === 0 ? [] : [{ icon: "ic-lucide-package-open", id: "entrypoints", label: t("package.tabs.entrypoints") }]),
+  { icon: "ic-lucide-tags", id: "releases", label: t("package.tabs.releases") },
 ];
 // The first tab shows without JavaScript; the others wait for a click.
 const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
 ---
 
 <BaseLayout
-  description={entry.description ?? `${entry.name} on CodenHub.`}
-  githubLabel={links.github === undefined ? undefined : `${entry.name} on GitHub`}
-  npmLabel={`${entry.name} on npm`}
+  description={entry.description ?? t("package.description", { name: entry.name })}
+  githubLabel={links.github === undefined ? undefined : t("packages.card.github", { name: entry.name })}
+  locale={locale}
+  npmLabel={t("packages.card.npm", { name: entry.name })}
   siteConfig={packageHeaderConfig}
   title={entry.label}
 >
   <main class="www-main" id="main-content">
     <div class="shell-content package-page">
-      <a class="package-back" href="/packages/"><i aria-hidden="true" class="ic-lucide-arrow-left"></i>All packages</a>
+      <a class="package-back" href={routing.localize("/packages/", locale)}>
+        <i aria-hidden="true" class="ic-lucide-arrow-left"></i>{t("package.back")}
+      </a>
 
       <header class="package-header">
         <div class="package-header-main">
@@ -114,17 +139,17 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
             {entry.logoUrl !== undefined && <img alt="" class="package-logo" src={entry.logoUrl} />}
             <h1>{entry.label}</h1>
             {latest !== undefined && <span class="badge secondary soft">v{latest.version}</span>}
-            {entry.status !== undefined && <StatusBadge status={entry.status} />}
+            {entry.status !== undefined && <StatusBadge labels={shellMessages(t).status} status={entry.status} />}
           </div>
           <div class="package-name">
             <code>{entry.name}</code>
-            <CopyButton label="Copy package name" text={entry.name} />
+            <CopyButton label={t("package.copyName")} locale={locale} text={entry.name} />
           </div>
         </div>
         {
           // Secondary links exist only beside a primary one, so this covers both.
           primaryLink !== undefined && (
-            <nav aria-label={`${entry.label} links`} class="package-links">
+            <nav aria-label={t("package.linksNav", { name: entry.label })} class="package-links">
               {
                 secondaryLinks.map((link, index) => (
                   <span class="tooltip" data-tooltip-position="bottom">
@@ -158,7 +183,7 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
         {entry.description !== undefined && <p class="package-description">{entry.description}</p>}
       </header>
 
-      <dl aria-label="At a glance" class="package-facts">
+      <dl aria-label={t("package.facts.label")} class="package-facts">
         {
           facts.map(({ icon, term, value }) => (
             <div class="card soft edgeless p-sm">
@@ -173,12 +198,12 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
       </dl>
 
       <section aria-labelledby="install-title" class="package-section">
-        <h2 id="install-title">Install</h2>
-        <InstallTabs packageName={entry.name} />
+        <h2 id="install-title">{t("package.install.title")}</h2>
+        <InstallTabs locale={locale} packageName={entry.name} />
       </section>
 
-      <section aria-label="Package details" class="package-section" data-package-tabs>
-        <div aria-label="Package details" class="www-tablist" role="tablist">
+      <section aria-label={t("package.details")} class="package-section" data-package-tabs>
+        <div aria-label={t("package.details")} class="www-tablist" role="tablist">
           {
             detailTabs.map(({ icon, id, label }, index) => (
               <button
@@ -218,7 +243,7 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
               id="package-panel-entrypoints"
               role="tabpanel"
             >
-              <Entrypoints bundler={size?.bundler} packageName={entry.name} rows={entrypoints} />
+              <Entrypoints bundler={size?.bundler} locale={locale} packageName={entry.name} rows={entrypoints} />
             </div>
           )
         }
@@ -232,16 +257,16 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
         >
           {
             releases.history.length === 0 ? (
-              <p class="package-note">No release yet.</p>
+              <p class="package-note">{t("package.releases.none")}</p>
             ) : (
               <div class="package-table-wrap">
                 <table class="package-table">
                   <thead>
                     <tr>
-                      <th scope="col">Version</th>
-                      <th scope="col">Published</th>
+                      <th scope="col">{t("package.releases.version")}</th>
+                      <th scope="col">{t("package.releases.published")}</th>
                       <th scope="col">
-                        <span class="visually-hidden">Actions</span>
+                        <span class="visually-hidden">{t("package.releases.actions")}</span>
                       </th>
                     </tr>
                   </thead>
@@ -251,24 +276,25 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
                         <td>
                           <span class="package-release-version">
                             <code>{release.version}</code>
-                            {release === latest && <span class="badge primary soft">Latest</span>}
-                            {release.isPrerelease && <span class="badge warning soft">Pre-release</span>}
+                            {release === latest && <span class="badge primary soft">{t("package.releases.latest")}</span>}
+                            {release.isPrerelease && <span class="badge warning soft">{t("package.releases.prerelease")}</span>}
                           </span>
                         </td>
                         <td>
-                          <time datetime={release.date}>{formatDate(release.date)}</time>
+                          <time datetime={release.date}>{formatDate(release.date, locale)}</time>
                         </td>
                         <td>
                           <span class="package-release-actions">
                             <CopyButton
-                              label={`Copy install command for ${release.version}`}
+                              label={t("package.releases.copyInstall", { version: release.version })}
+                              locale={locale}
                               text={`npm install ${entry.name}@${release.version}`}
                             />
                             <a
-                              aria-label={`Download ${release.version} tarball`}
+                              aria-label={t("package.releases.download", { version: release.version })}
                               class="btn secondary ghost icon sm"
                               href={npmTarballUrl(entry.name, release.version)}
-                              title={`Download ${release.version} tarball`}
+                              title={t("package.releases.download", { version: release.version })}
                             >
                               <i aria-hidden="true" class="ic-lucide-download" />
                             </a>
@@ -298,7 +324,7 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
 </BaseLayout>
 
 <script>
-  import { bindTabs } from "../../lib/tabs";
+  import { bindTabs } from "../../../lib/tabs";
 
   for (const root of document.querySelectorAll<HTMLElement>("[data-package-tabs]")) {
     bindTabs(root);

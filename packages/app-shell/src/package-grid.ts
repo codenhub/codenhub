@@ -16,7 +16,8 @@ export interface PackageGridElementIds {
  * Expects each grid item to carry `data-search` (the lowercased haystack a
  * query matches against) and `data-label` (the value sorted on), and the sort
  * button to carry a `data-sort-direction` attribute plus `[data-sort-icon]`
- * descendants. No-ops for any element that is missing, so a page without one
+ * descendants, and optionally `data-label-asc` and `data-label-desc`, its label
+ * for each direction in the page's language. No-ops for any element that is missing, so a page without one
  * of the pieces (e.g. no sort control) still gets filtering.
  *
  * @param ids - Overrides for the default element ids/selectors.
@@ -77,7 +78,11 @@ export function initPackageGrid(ids: PackageGridElementIds = {}): void {
     }
 
     const nextDirection = sortButton.dataset.sortDirection === "desc" ? "asc" : "desc";
-    const label = nextDirection === "desc" ? "Sort by name, descending" : "Sort by name, ascending";
+    // The markup carries each direction's label in the page's language.
+    const label =
+      nextDirection === "desc"
+        ? (sortButton.dataset.labelDesc ?? "Sort by name, descending")
+        : (sortButton.dataset.labelAsc ?? "Sort by name, ascending");
     sortButton.dataset.sortDirection = nextDirection;
     sortButton.setAttribute("aria-pressed", String(nextDirection === "desc"));
     sortButton.setAttribute("aria-label", label);

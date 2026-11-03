@@ -5,17 +5,31 @@
  * @param text - What the button copies.
  * @param label - Accessible name and tooltip at rest, such as `Copy command`.
  * @param class - Extra button classes, such as `pill`.
+ * @param locale - The page's locale, for the copied and failed feedback.
  */
+import { getTranslator, type Locale } from "../i18n";
+
 interface Props {
   text: string;
   label: string;
   class?: string;
+  locale: Locale;
 }
 
-const { text, label, class: className } = Astro.props;
+const { text, label, class: className, locale } = Astro.props;
+const { t } = await getTranslator(locale);
 ---
 
-<button aria-label={label} class:list={["btn secondary ghost icon sm", className]} data-copy={text} title={label} type="button">
+<button
+  aria-label={label}
+  class:list={["btn secondary ghost icon sm", className]}
+  data-copied-label={t("shell.copy.copied")}
+  data-copy={text}
+  data-failed-label={t("shell.copy.failed")}
+  data-retry-label={t("shell.copy.retry")}
+  title={label}
+  type="button"
+>
   <i aria-hidden="true" class="ic-lucide-copy" data-copy-icon="idle"></i>
   <i aria-hidden="true" class="ic-lucide-check" data-copy-icon="copied"></i>
   <i aria-hidden="true" class="ic-lucide-x" data-copy-icon="failed"></i>

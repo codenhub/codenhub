@@ -78,9 +78,16 @@ export function createCopyController(): CopyController {
 
   const showResult = (button: CopyButtonControl, status: CopyStatusControl, isCopied: boolean): void => {
     button.dataset.copyState = isCopied ? "copied" : "failed";
-    button.title = isCopied ? "Copied" : "Copy failed";
-    button.setAttribute("aria-label", isCopied ? "Copied" : "Copy failed. Try again");
-    status.textContent = isCopied ? "Copied" : "Copy failed";
+    // A button may carry these texts in its page's language as
+    // `data-copied-label`, `data-failed-label`, and `data-retry-label`.
+    const {
+      copiedLabel = "Copied",
+      failedLabel = "Copy failed",
+      retryLabel = "Copy failed. Try again",
+    } = button.dataset;
+    button.title = isCopied ? copiedLabel : failedLabel;
+    button.setAttribute("aria-label", isCopied ? copiedLabel : retryLabel);
+    status.textContent = isCopied ? copiedLabel : failedLabel;
 
     resetTimers.set(
       button,

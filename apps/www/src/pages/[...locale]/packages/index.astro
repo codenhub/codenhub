@@ -1,0 +1,75 @@
+---
+import type { GetStaticPaths } from "astro";
+
+import PackageCard from "../../../components/package-card.astro";
+import { getTranslator, localeStaticPaths, type Locale } from "../../../i18n";
+import BaseLayout from "../../../layouts/base-layout.astro";
+import { catalogPackages } from "../../../lib/catalog";
+import { headerConfig } from "../../../site-config";
+import "../../../styles/global.css";
+
+export const getStaticPaths = (() => localeStaticPaths()) satisfies GetStaticPaths;
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const { t } = await getTranslator(locale);
+---
+
+<BaseLayout
+  description={t("packages.description")}
+  locale={locale}
+  siteConfig={headerConfig}
+  title={t("packages.title")}
+>
+  <main class="www-main" id="main-content">
+    <div class="shell-content">
+      <section aria-labelledby="packages-title">
+        <div class="packages-toolbar">
+          <div>
+            <h1 id="packages-title">{t("packages.title")}</h1>
+            <p>{t("packages.description")}</p>
+          </div>
+          <div class="packages-toolbar-controls">
+            <div class="input-group package-search">
+              <i aria-hidden="true" class="ic-lucide-search"></i>
+              <input
+                aria-label={t("packages.search")}
+                id="package-search"
+                placeholder={t("packages.searchPlaceholder")}
+                type="search"
+              />
+            </div>
+            <button
+              aria-label={t("packages.sortAsc")}
+              aria-pressed="false"
+              class="package-sort"
+              data-label-asc={t("packages.sortAsc")}
+              data-label-desc={t("packages.sortDesc")}
+              data-sort-direction="asc"
+              id="package-sort"
+              title={t("packages.sortAsc")}
+              type="button"
+            >
+              <i aria-hidden="true" class="ic-lucide-arrow-down-a-z" data-sort-icon="asc"></i>
+              <i aria-hidden="true" class="ic-lucide-arrow-down-z-a" data-sort-icon="desc" hidden></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="package-grid" id="package-grid" role="list">
+          {catalogPackages.map((entry) => <PackageCard entry={entry} locale={locale} />)}
+        </div>
+        <p class="packages-empty" data-empty-filtered hidden>{t("packages.empty")}</p>
+      </section>
+    </div>
+  </main>
+</BaseLayout>
+
+<script>
+  import { initPackageGrid } from "@codenhub/app-shell/package-grid";
+
+  initPackageGrid();
+</script>

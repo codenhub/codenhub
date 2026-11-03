@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-29
+last_updated: 2026-11-03
 scope: "@codenhub/app-shell: what it provides to the three deploy surfaces and the contract each host must satisfy."
 ---
 
@@ -70,3 +70,9 @@ Any host consuming the shell — Astro or not — must:
 ## Theme
 
 One `localStorage` key, `codenhub-theme` (`THEME_STORAGE_KEY` from `./theme`), shared by name across the surfaces (each origin has its own storage). The inline bootstrap sets `data-theme` before first paint; the deferred script wires the switch, mirrors the active theme onto its `role="switch"` `aria-checked`, and writes the key — both using `./theme`'s `resolveInitialTheme`/`nextTheme`/`themeToggleAria`, which compute values only and never touch `document`, `window`, or `localStorage` themselves. `base-layout.astro` writes that glue for Astro hosts; a non-Astro host writes the same kind of glue itself, against its own elements (`docs/internal/vanilla-host-markup.md`). The switch itself is a sliding pill (`theme-toggle.astro`) whose knob carries the icon of the theme in effect. A surface that wants a theme package later swaps the two scripts in `base-layout.astro` and nothing else.
+
+## Language
+
+The shell's text is English unless a host passes a `ShellMessages` set (`./messages`): the base layout takes `messages` and `lang`, and the components a host renders itself take their part, `messages` on the search palette and `labels` on the status badge. Text the client scripts write after load rides on the markup in the page's language, so the bundled scripts stay language-free: the theme switch's `data-label-dark`/`data-label-light`, a copy button's `data-copied-label`/`data-failed-label`/`data-retry-label`, the package grid's sort button `data-label-asc`/`data-label-desc`, and the palette's `data-messages`. Each falls back to English when absent, so a host that translates nothing changes nothing.
+
+The shell takes plain strings rather than depending on `@codenhub/i18n`: a `{name}` placeholder is filled by `fillMessage`, and the palette's result count picks `count.one` or `count.other` with `Intl.PluralRules` for `<html lang>`. A host building the set with `@codenhub/i18n` leaves those placeholders unfilled, which that package does for a placeholder given no value. `apps/www` is the host that translates today (`apps/www/src/i18n`).

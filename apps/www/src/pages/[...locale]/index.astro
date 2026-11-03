@@ -4,13 +4,26 @@
  * groups and recent releases come from the catalog, so the page never names a
  * package or version that has not been released.
  */
-import AsciiField from "../components/ascii-field.astro";
-import BaseLayout from "../layouts/base-layout.astro";
-import { catalogPackages } from "../lib/catalog";
-import { formatDate } from "../lib/format";
-import { headerConfig } from "../site-config";
-import "../styles/global.css";
-import "../styles/landing.css";
+import type { GetStaticPaths } from "astro";
+
+import AsciiField from "../../components/ascii-field.astro";
+import { getTranslator, localeStaticPaths, routing, type Locale } from "../../i18n";
+import BaseLayout from "../../layouts/base-layout.astro";
+import { catalogPackages } from "../../lib/catalog";
+import { formatDate } from "../../lib/format";
+import { headerConfig } from "../../site-config";
+import "../../styles/global.css";
+import "../../styles/landing.css";
+
+export const getStaticPaths = (() => localeStaticPaths()) satisfies GetStaticPaths;
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const { t } = await getTranslator(locale);
+const href = (path: string) => routing.localize(path, locale);
 
 interface Area {
   title: string;
@@ -26,23 +39,23 @@ const named =
 
 const areaCandidates: Area[] = [
   {
-    title: "Interface",
-    body: "Design tokens, icons, themes, toasts, and shortcuts for browser UIs that load fast and stay accessible.",
+    title: t("home.areas.interface.title"),
+    body: t("home.areas.interface.body"),
     includes: named("styles", "icons", "theme", "toaster", "kbd", "components", "ui-kit"),
   },
   {
-    title: "Application",
-    body: "Routing, state, and translations, without a framework to adopt first.",
+    title: t("home.areas.application.title"),
+    body: t("home.areas.application.body"),
     includes: named("router", "store", "i18n"),
   },
   {
-    title: "Trust boundaries",
-    body: "Validate untrusted input, verify tokens, and speak OpenID Connect on Web Crypto and the Fetch API.",
+    title: t("home.areas.trust.title"),
+    body: t("home.areas.trust.body"),
     includes: named("validation", "error", "jwt", "oidc"),
   },
   {
-    title: "Tooling",
-    body: "Vite and Tauri plugins, and the agent skills Coden works with every day.",
+    title: t("home.areas.tooling.title"),
+    body: t("home.areas.tooling.body"),
     includes: (slug) => slug === "skills" || slug.startsWith("vite-plugin-") || slug.startsWith("tauri-plugin-"),
   },
 ];
@@ -53,7 +66,7 @@ const ungrouped = catalogPackages.filter((entry) => !areaCandidates.some((area) 
 // gets listed, under "More", rather than silently missing from the page.
 const areas = [
   ...areaCandidates.map((area) => ({ ...area, packages: catalogPackages.filter((entry) => area.includes(entry.slug)) })),
-  { title: "More", body: "Everything else the workspace publishes.", packages: ungrouped },
+  { title: t("home.areas.more.title"), body: t("home.areas.more.body"), packages: ungrouped },
 ].filter((area) => area.packages.length > 0);
 
 const recentReleases = catalogPackages
@@ -64,46 +77,45 @@ const recentReleases = catalogPackages
 const principles = [
   {
     icon: "ic-lucide-globe",
-    title: "Built on the platform",
-    body: "Web Crypto, the Fetch API, native Web Components, and plain CSS. The packages lean on what browsers and runtimes already ship instead of reimplementing it.",
+    title: t("home.principles.platform.title"),
+    body: t("home.principles.platform.body"),
   },
   {
     icon: "ic-lucide-gauge",
-    title: "Measured at every release",
-    body: "Each release records every entrypoint's minified, gzipped size, and publishing refuses a build that does not match it.",
+    title: t("home.principles.measured.title"),
+    body: t("home.principles.measured.body"),
   },
   {
     icon: "ic-lucide-book-open",
-    title: "Documented for people and agents",
-    body: "Guides, API reference, and changelogs, searchable in one place, plus llms.txt files your coding agent can read.",
+    title: t("home.principles.documented.title"),
+    body: t("home.principles.documented.body"),
   },
   {
     icon: "ic-lucide-tag",
-    title: "Exactly what is on npm",
-    body: "This site and the docs are built from release tags, not the main branch. What you read here is what the published version does.",
+    title: t("home.principles.published.title"),
+    body: t("home.principles.published.body"),
   },
 ];
 ---
 
-<BaseLayout siteConfig={headerConfig}>
+<BaseLayout locale={locale} siteConfig={headerConfig}>
   <main class="landing" id="main-content">
     <section aria-labelledby="landing-title" class="landing-hero">
       <AsciiField class="landing-hero-field" />
       <div class="shell-content landing-hero-content">
         <div class="landing-hero-copy">
-          <h1 class="landing-display" id="landing-title">Foundations,<br />not frameworks.</h1>
-          <p class="landing-lede">
-            Small, focused packages for building on the web platform: styles, icons, validation, auth, routing, and more.
-            Take the one you need and skip the rest.
-          </p>
+          <h1 class="landing-display" id="landing-title">
+            {t("home.hero.title")}<br />{t("home.hero.titleEnd")}
+          </h1>
+          <p class="landing-lede">{t("home.hero.lede")}</p>
           <div class="landing-actions">
-            <a class="btn primary landing-cta" href="/packages/">
-              Browse packages
+            <a class="btn primary landing-cta" href={href("/packages/")}>
+              {t("home.browse")}
               <i aria-hidden="true" class="ic-lucide-arrow-right"></i>
             </a>
             <button class="btn ghost edged landing-cta" data-open-search type="button">
               <i aria-hidden="true" class="ic-lucide-search"></i>
-              Search the docs
+              {t("home.searchDocs")}
             </button>
           </div>
         </div>
@@ -112,7 +124,9 @@ const principles = [
 
     <section aria-labelledby="principles-title" class="landing-section landing-band">
       <div class="shell-content">
-        <h2 class="landing-heading" id="principles-title">Small on purpose.<br />Checked on every release.</h2>
+        <h2 class="landing-heading" id="principles-title">
+          {t("home.principles.title")}<br />{t("home.principles.titleEnd")}
+        </h2>
         <ul class="landing-principles">
           {
             principles.map((principle) => (
@@ -131,7 +145,9 @@ const principles = [
 
     <section aria-labelledby="areas-title" class="landing-section">
       <div class="shell-content">
-        <h2 class="landing-heading" id="areas-title">One toolkit,<br />every layer of the app.</h2>
+        <h2 class="landing-heading" id="areas-title">
+          {t("home.areas.title")}<br />{t("home.areas.titleEnd")}
+        </h2>
         <div class="landing-areas">
           {
             areas.map((area) => (
@@ -141,7 +157,7 @@ const principles = [
                 <ul class="landing-area-packages">
                   {area.packages.map((entry) => (
                     <li>
-                      <a href={`/packages/${entry.slug}/`} title={entry.description}>
+                      <a href={href(`/packages/${entry.slug}/`)} title={entry.description}>
                         {entry.label}
                       </a>
                     </li>
@@ -160,24 +176,24 @@ const principles = [
           <div class="shell-content landing-releases">
             <div class="landing-releases-intro">
               <h2 class="landing-heading" id="releases-title">
-                Recently
+                {t("home.releases.title")}
                 <br />
-                released.
+                {t("home.releases.titleEnd")}
               </h2>
-              <a class="landing-link" href="/packages/">
-                All packages
+              <a class="landing-link" href={href("/packages/")}>
+                {t("home.releases.all")}
                 <i aria-hidden="true" class="ic-lucide-arrow-right" />
               </a>
             </div>
             <ol class="landing-release-list">
               {recentReleases.map(({ entry, release }) => (
                 <li>
-                  <a class="landing-release" href={`/packages/${entry.slug}/`}>
+                  <a class="landing-release" href={href(`/packages/${entry.slug}/`)}>
                     <span class="landing-release-label">{entry.label}</span>
                     <span class="landing-release-name">{entry.name}</span>
                     <span class="landing-release-version">v{release.version}</span>
                     <time class="landing-release-date" datetime={release.date}>
-                      {formatDate(release.date)}
+                      {formatDate(release.date, locale)}
                     </time>
                   </a>
                 </li>
@@ -190,16 +206,16 @@ const principles = [
 
     <section aria-labelledby="cta-title" class="landing-closing">
       <div class="shell-content landing-closing-content">
-        <h2 class="landing-display" id="cta-title">Start with one package.</h2>
-        <p>Every package installs on its own, with its own docs and release history.</p>
+        <h2 class="landing-display" id="cta-title">{t("home.closing.title")}</h2>
+        <p>{t("home.closing.body")}</p>
         <div class="landing-actions">
-          <a class="btn primary landing-cta" href="/packages/">
-            Browse packages
+          <a class="btn primary landing-cta" href={href("/packages/")}>
+            {t("home.browse")}
             <i aria-hidden="true" class="ic-lucide-arrow-right"></i>
           </a>
           <button class="btn ghost edged landing-cta" data-open-search type="button">
             <i aria-hidden="true" class="ic-lucide-search"></i>
-            Search the docs
+            {t("home.searchDocs")}
             <kbd class="kbd landing-cta-kbd" data-landing-shortcut>Ctrl + K</kbd>
           </button>
         </div>

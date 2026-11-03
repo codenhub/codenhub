@@ -1,6 +1,7 @@
 ---
 import "virtual:icons.css";
 
+import { defaultShellMessages, type ShellMessages } from "../messages.ts";
 import type { SiteConfig } from "../site-config.ts";
 import SiteFooter from "../components/site-footer.astro";
 import SiteHeader, { type ShellLocalLink } from "../components/site-header.astro";
@@ -20,6 +21,10 @@ interface Props {
   npmLabel?: string;
   /** Passed through to the header: links within this surface. */
   localLinks?: ShellLocalLink[];
+  /** The page's language, as a BCP 47 tag for `<html lang>`. Defaults to `en`. */
+  lang?: string;
+  /** The shell's text in that language. Defaults to English. */
+  messages?: ShellMessages;
 }
 
 const {
@@ -31,6 +36,8 @@ const {
   githubLabel,
   npmLabel,
   localLinks,
+  lang = "en",
+  messages = defaultShellMessages,
 } = Astro.props;
 
 const pageTitle =
@@ -42,7 +49,7 @@ const pageTitle =
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={lang}>
   <head>
     <meta charset="UTF-8" />
     <meta content="width=device-width" name="viewport" />
@@ -73,18 +80,19 @@ const pageTitle =
     <title>{pageTitle}</title>
   </head>
   <body class="shell-body">
-    <a class="shell-skip-link" href="#main-content">Skip to main content</a>
+    <a class="shell-skip-link" href="#main-content">{messages.skipToContent}</a>
     <SiteHeader
       githubLabel={githubLabel}
       homeHref={homeHref}
       localLinks={localLinks}
+      messages={messages}
       npmLabel={npmLabel}
       siteConfig={siteConfig}
     >
       <slot name="actions" slot="actions" />
     </SiteHeader>
     <slot />
-    <SiteFooter />
+    <SiteFooter builtBy={messages.builtBy} />
     <script>
       import { nextTheme, themeToggleAria, THEME_STORAGE_KEY } from "../theme.ts";
 
@@ -100,7 +108,11 @@ const pageTitle =
           return;
         }
         const current = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
-        const { checked, label } = themeToggleAria(current);
+        const { labelDark, labelLight } = themeToggle.dataset;
+        const { checked, label } = themeToggleAria(current, {
+          toDark: labelDark ?? "Switch to dark theme",
+          toLight: labelLight ?? "Switch to light theme",
+        });
         themeToggle.setAttribute("aria-checked", String(checked));
         themeToggle.setAttribute("aria-label", label);
         themeToggle.title = label;

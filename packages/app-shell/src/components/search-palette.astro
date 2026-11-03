@@ -1,4 +1,6 @@
 ---
+import { defaultShellMessages, type ShellMessages } from "../messages.ts";
+
 interface Props {
   /**
    * Where the search index lives. `apps/docs` serves it and passes its own
@@ -7,25 +9,33 @@ interface Props {
    * index are relative to its own origin, so they resolve against this URL.
    */
   indexUrl: string;
+  /** The palette's text in the page's language. Defaults to English. */
+  messages?: ShellMessages["search"];
 }
 
-const { indexUrl } = Astro.props;
+const { indexUrl, messages = defaultShellMessages.search } = Astro.props;
 ---
 
 <!-- The label names the button where its text is hidden on narrow screens. -->
 <button
   aria-keyshortcuts="Control+K"
-  aria-label="Search documentation"
+  aria-label={messages.label}
   class="shell-search-trigger"
   data-search-trigger
   type="button"
 >
   <i aria-hidden="true" class="ic-lucide-search shell-search-icon"></i>
-  <span class="shell-search-trigger-label">Search</span>
+  <span class="shell-search-trigger-label">{messages.trigger}</span>
   <kbd class="kbd shell-search-trigger-shortcut" data-search-shortcut>Ctrl + K</kbd>
 </button>
 
-<dialog aria-label="Search documentation" class="shell-search-dialog" data-index-url={indexUrl} data-search-dialog>
+<dialog
+  aria-label={messages.label}
+  class="shell-search-dialog"
+  data-index-url={indexUrl}
+  data-messages={JSON.stringify(messages)}
+  data-search-dialog
+>
   <div class="shell-search-field">
     <i aria-hidden="true" class="ic-lucide-search shell-search-icon"></i>
     <input
@@ -35,21 +45,28 @@ const { indexUrl } = Astro.props;
       autocomplete="off"
       class="shell-search-input"
       data-search-input
-      placeholder="Search documentation"
+      placeholder={messages.label}
       role="combobox"
       spellcheck="false"
       type="text"
     />
   </div>
 
-  <ul aria-label="Search results" class="shell-search-results" data-search-results id="shell-search-results" role="listbox"></ul>
+  <ul
+    aria-label={messages.results}
+    class="shell-search-results"
+    data-search-results
+    id="shell-search-results"
+    role="listbox"
+  ></ul>
 
-  <p class="shell-search-status" data-search-status role="status">Type to search every package document.</p>
+  <p class="shell-search-status" data-search-status role="status">{messages.idle}</p>
 </dialog>
 
 <script>
   import { KEYS, keyboard } from "@codenhub/kbd";
 
+  import { defaultShellMessages, fillMessage, type ShellMessages } from "../messages.ts";
   import { toHighlightSegments } from "../search/highlight.ts";
   import { searchDocumentation, type SearchEntry, type SearchResult } from "../search/search.ts";
 
@@ -69,6 +86,9 @@ const { indexUrl } = Astro.props;
     }
 
     const indexUrl = new URL(dialog.dataset.indexUrl ?? "/search-index.json", location.href);
+    const messages: ShellMessages["search"] =
+      dialog.dataset.messages === undefined ? defaultShellMessages.search : JSON.parse(dialog.dataset.messages);
+    const pluralRules = new Intl.PluralRules(document.documentElement.lang || "en");
 
     let loading: Promise<SearchEntry[]> | undefined;
     let results: SearchResult[] = [];
@@ -175,7 +195,7 @@ const { indexUrl } = Astro.props;
       if (query.trim().length === 0) {
         results = [];
         render();
-        status.textContent = "Type to search every package document.";
+        status.textContent = messages.idle;
 
         return;
       }
@@ -187,7 +207,7 @@ const { indexUrl } = Astro.props;
         if (token === latestQuery) {
           results = [];
           render();
-          status.textContent = "Search is unavailable right now. Try again in a moment.";
+          status.textContent = messages.unavailable;
         }
 
         return;
@@ -204,8 +224,10 @@ const { indexUrl } = Astro.props;
       render();
       status.textContent =
         results.length === 0
-          ? `No documentation matches “${query}”.`
-          : `${results.length} ${results.length === 1 ? "result" : "results"}. Use the arrow keys to choose one.`;
+          ? fillMessage(messages.empty, { query })
+          : fillMessage(pluralRules.select(results.length) === "one" ? messages.count.one : messages.count.other, {
+              count: results.length,
+            });
     };
 
     const open = () => {

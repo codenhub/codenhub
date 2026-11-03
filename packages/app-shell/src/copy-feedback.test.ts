@@ -41,6 +41,33 @@ describe("createCopyController", () => {
     expect(status.textContent).toBe("Copied");
   });
 
+  it("announces the result in the labels the button carries", async () => {
+    const button = createCopyButton();
+    Object.assign(button.dataset, {
+      copiedLabel: "Copiado",
+      failedLabel: "Falha ao copiar",
+      retryLabel: "Tente de novo",
+    });
+    const status = { textContent: "" };
+
+    await createCopyController().copy({ button, clipboard: undefined, status, text: "x" });
+
+    expect(button.title).toBe("Falha ao copiar");
+    expect(button.getAttribute("aria-label")).toBe("Tente de novo");
+    expect(status.textContent).toBe("Falha ao copiar");
+
+    await createCopyController().copy({
+      button,
+      clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
+      status,
+      text: "x",
+    });
+
+    expect(status.textContent).toBe("Copiado");
+    expect(button.title).toBe("Copiado");
+    expect(button.getAttribute("aria-label")).toBe("Copiado");
+  });
+
   it("announces a denied clipboard write while retaining the failed button state", async () => {
     const writeText = vi.fn().mockRejectedValue(new DOMException("Denied", "NotAllowedError"));
     const button = createCopyButton();

@@ -1,22 +1,134 @@
 ---
 /**
- * The shell layout with the documentation search in the header's actions and
- * a Packages link in its nav. The index lives on the documentation site, which
- * serves it cross-origin.
+ * The shell layout with the documentation search and the language menu in the
+ * header's actions and a Packages link in its nav. The index lives on the
+ * documentation site, which serves it cross-origin.
+ *
+ * A page built per locale passes its `locale`; the shell's text, `<html lang>`,
+ * the language menu, and the `hreflang` alternates follow it. A page without
+ * one, such as the 404, renders in English with neither the menu nor the
+ * alternates, since it has no URL in another language.
  */
 import type { ComponentProps } from "astro/types";
+import { defaultShellMessages } from "@codenhub/app-shell/messages";
 import SearchPalette from "@codenhub/app-shell/components/search-palette.astro";
 import ShellLayout from "@codenhub/app-shell/layouts/base-layout.astro";
 
+import LanguageMenu from "../components/language-menu.astro";
+import {
+  defaultLocale,
+  getTranslator,
+  LOCALE_STORAGE_KEY,
+  locales,
+  localesByLanguage,
+  routing,
+  shellMessages,
+  type Locale,
+} from "../i18n";
 import { siteConfig } from "../site-config";
 
-type Props = ComponentProps<typeof ShellLayout>;
+type Props = Omit<ComponentProps<typeof ShellLayout>, "lang" | "messages"> & { locale?: Locale };
 
-const localLinks = [{ href: "/packages/", label: "Packages", current: /^\/packages(\/|$)/.test(Astro.url.pathname) }];
+const { locale, ...shellProps } = Astro.props;
+const translator = locale === undefined ? undefined : await getTranslator(locale);
+const messages = translator === undefined ? defaultShellMessages : shellMessages(translator.t);
+
+// The path the site routes on, the same in every locale, such as `/packages/`.
+const pathname = routing.parse(Astro.url.pathname)?.pathname ?? Astro.url.pathname;
+const href = (path: string) => routing.localize(path, locale ?? defaultLocale);
+
+const localLinks = [
+  {
+    href: href("/packages/"),
+    label: translator?.t("shell.nav.packages") ?? "Packages",
+    current: /^\/packages(\/|$)/.test(pathname),
+  },
+];
+
+const alternates =
+  locale === undefined
+    ? []
+    : [
+        ...routing.localizeAll(pathname).map((page) => ({ hreflang: page.locale, pathname: page.pathname })),
+        { hreflang: "x-default", pathname: routing.localize(pathname, defaultLocale) },
+      ];
+
+// This page in every other locale, for the inline redirect on English pages.
+const redirectTargets = Object.fromEntries(
+  locales.filter((target) => target !== defaultLocale).map((target) => [target, routing.localize(pathname, target)]),
+);
 ---
 
-<ShellLayout {...Astro.props} localLinks={localLinks}>
-  <SearchPalette indexUrl={`${siteConfig.docsUrl}/search-index.json`} slot="actions" />
+<ShellLayout
+  {...shellProps}
+  description={shellProps.description ?? translator?.t("site.description")}
+  homeHref={href("/")}
+  lang={locale ?? defaultLocale}
+  localLinks={localLinks}
+  messages={messages}
+>
+  <!--
+    Sends a visitor arriving at an English page to the same page in their
+    language: the one they chose in the language menu, else the first of their
+    browser's languages the site has. Inline in the head so it runs before
+    first paint, which is also why it mirrors `detectLocale` (`../i18n`)
+    rather than importing it. It never runs on a prefixed URL, so a shared
+    `/pt-BR/` link always opens in Portuguese, and never after a link on this
+    site, so choosing English stays English even where storage is blocked.
+  -->
+  {
+    locale === defaultLocale && (
+      <script
+        define:vars={{ languages: localesByLanguage, locales, storageKey: LOCALE_STORAGE_KEY, targets: redirectTargets }}
+        is:inline
+        slot="head"
+      >
+        (() => {
+          try {
+            if (document.referrer !== "" && new URL(document.referrer).origin === location.origin) {
+              return;
+            }
+          } catch {
+            // An unreadable referrer counts as arriving from elsewhere.
+          }
+
+          let chosen = null;
+          try {
+            chosen = localStorage.getItem(storageKey);
+          } catch {
+            // Storage blocked: fall back to the browser's languages.
+          }
+
+          let target = locales.includes(chosen) ? chosen : undefined;
+          if (target === undefined) {
+            const preferences = navigator.languages.length > 0 ? navigator.languages : [navigator.language];
+            for (const preference of preferences) {
+              const language = (preference ?? "").split("-")[0].toLowerCase();
+              if (Object.hasOwn(languages, language)) {
+                target = languages[language];
+                break;
+              }
+            }
+          }
+
+          if (target !== undefined && Object.hasOwn(targets, target)) {
+            location.replace(targets[target] + location.search + location.hash);
+          }
+        })();
+      </script>
+    )
+  }
+  {
+    alternates.map((alternate) => (
+      <link href={new URL(alternate.pathname, siteConfig.siteUrl).href} hreflang={alternate.hreflang} rel="alternate" slot="head" />
+    ))
+  }
+  <SearchPalette indexUrl={`${siteConfig.docsUrl}/search-index.json`} messages={messages.search} slot="actions" />
+  {
+    locale !== undefined && translator !== undefined && (
+      <LanguageMenu label={translator.t("language.label")} locale={locale} pathname={pathname} slot="actions" />
+    )
+  }
   <!--
     The header is see-through while the page sits at its top, so the landing
     hero's glyph field runs up behind it, and takes its fill and rule once the

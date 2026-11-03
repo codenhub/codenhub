@@ -82,6 +82,12 @@ describe("formatBytes", () => {
     expect(formatBytes(999_960)).toBe("1.0 MB");
     expect(formatBytes(949)).toBe("949 B");
   });
+
+  it("writes the figure in the page's locale", () => {
+    expect(formatBytes(27_598, "pt-BR")).toBe("27,6 kB");
+    expect(formatBytes(16_550_509, "es")).toBe("16,6 MB");
+    expect(formatBytes(840, "pt-BR")).toBe("840 B");
+  });
 });
 
 describe("describeRootSize", () => {
@@ -91,6 +97,7 @@ describe("describeRootSize", () => {
     const size = { bundler: "rolldown@1.1.5", entrypoints: { ".": entry(82_538, 27_598), "./x": entry(1, 1) } };
 
     expect(describeRootSize(size)).toBe("27.6 kB gzip");
+    expect(describeRootSize(size, "pt-BR")).toBe("27,6 kB gzip");
   });
 
   it("shows a root with no runtime code as costing nothing", () => {
