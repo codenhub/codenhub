@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { check } from "../builders/check";
+import { format } from "../builders/format";
 import { guard } from "../builders/guard";
 import { endsWith } from "../checks/ends-with";
 import { includes } from "../checks/includes";
@@ -15,9 +16,11 @@ import { coerceBigint } from "../coercion/coerce-bigint";
 import { coerceBoolean } from "../coercion/coerce-boolean";
 import { coerceDate } from "../coercion/coerce-date";
 import { coerceNumber } from "../coercion/coerce-number";
+import { coerceString } from "../coercion/coerce-string";
 import { array } from "../composition/array";
 import { codec } from "../composition/codec";
 import { fallback } from "../composition/fallback";
+import { formData } from "../composition/form-data";
 import { intersection } from "../composition/intersection";
 import { json } from "../composition/json";
 import { lazy } from "../composition/lazy";
@@ -36,16 +39,22 @@ import { union } from "../composition/union";
 import type { AnyValidator, Validator } from "../core/types";
 import { base64 } from "../formats/base64";
 import { datetime } from "../formats/datetime";
+import { domain } from "../formats/domain";
+import { duration } from "../formats/duration";
 import { email } from "../formats/email";
+import { hostname } from "../formats/hostname";
 import { ip } from "../formats/ip";
+import { isoDate } from "../formats/iso-date";
 import { port } from "../formats/port";
 import { searchParams } from "../formats/search-params";
 import { slug } from "../formats/slug";
+import { time } from "../formats/time";
 import { url } from "../formats/url";
 import { uuid } from "../formats/uuid";
 import { bigint } from "../primitives/bigint";
 import { boolean } from "../primitives/boolean";
 import { date } from "../primitives/date";
+import { file as fileOf } from "../primitives/file";
 import { literal } from "../primitives/literal";
 import { never } from "../primitives/never";
 import { number } from "../primitives/number";
@@ -71,7 +80,7 @@ describe("toJsonSchema", () => {
       type: "object",
       properties: {
         name: { type: "string", minLength: 2 },
-        email: { type: "string", format: "email" },
+        email: { type: "string" },
         age: { type: "integer" },
       },
       required: ["name", "email"],
@@ -97,7 +106,7 @@ describe("toJsonSchema", () => {
     expect(schemaOf(string(startsWith("a.b"), endsWith("/z"), includes("-"), nonBlank()))).toEqual({
       type: "string",
       pattern: String.raw`^a\.b`,
-      allOf: [{ pattern: String.raw`\/z$` }, { pattern: String.raw`\-` }, { pattern: String.raw`\S` }],
+      allOf: [{ pattern: String.raw`\/z$` }, { pattern: "-" }, { pattern: String.raw`\S` }],
     });
     expect(schemaOf(number(multipleOf(5), nonZero()))).toEqual({ type: "number", multipleOf: 5, not: { const: 0 } });
     expect(schemaOf(array(string(), { min: 1, max: 3 }, unique()))).toEqual({
@@ -115,6 +124,32 @@ describe("toJsonSchema", () => {
     expect(new RegExp(written as string, "u").test("axb")).toBe(false);
   });
 
+  it("should write the text of a prefix so a reader in Unicode mode compiles it and matches that text", () => {
+    const punctuation = String.raw`^$\.*+?()[]{}|/-!"#%&',:;<=>@_~` + "`";
+    for (const text of ["sk-", punctuation]) {
+      const { pattern: written } = schemaOf(string(startsWith(text)));
+      expect(new RegExp(written as string, "u").test(`${text}!`)).toBe(true);
+    }
+  });
+
+  it("should write a pattern without the u flag as it is when Unicode mode reads it alike, and refuse it otherwise", () => {
+    expect(schemaOf(string(pattern(/^[a-z]+-\d$/)))).toEqual({ type: "string", pattern: String.raw`^[a-z]+-\d$` });
+    expect(schemaOf(string(pattern(/^\p{L}+$/u)))).toEqual({ type: "string", pattern: String.raw`^\p{L}+$` });
+    // An escape Unicode mode does not allow, and escapes that mean other text without it.
+    for (const written of [String.raw`^\@x$`, String.raw`^\p{L}$`, String.raw`^\u{41}$`].map(
+      (source) => new RegExp(source),
+    )) {
+      expect(() => toJsonSchema(string(pattern(written)))).toThrow(
+        "a pattern Unicode mode reads otherwise at the root",
+      );
+      expect(schemaOf(string(pattern(written)), { unrepresentable: "any" })).toEqual({ type: "string" });
+    }
+  });
+
+  it("should refuse a pattern with the v flag, which reads a class otherwise than a schema does", () => {
+    expect(() => toJsonSchema(string(pattern(new RegExp("^[a]$", "v"))))).toThrow("a pattern with flags at the root");
+  });
+
   it("should write fixed values", () => {
     expect(schemaOf(literal("a"))).toEqual({ const: "a" });
     expect(schemaOf(literal(null))).toEqual({ const: null });
@@ -122,19 +157,42 @@ describe("toJsonSchema", () => {
   });
 
   it("should write formats under the name JSON Schema gives them, and any other under its own", () => {
-    expect(schemaOf(url())).toEqual({ type: "string", format: "uri" });
     expect(schemaOf(uuid())).toEqual({ type: "string", format: "uuid" });
     expect(schemaOf(datetime())).toEqual({ type: "string", format: "date-time" });
+    expect(schemaOf(datetime({ offset: true, precision: 3 }))).toEqual({ type: "string", format: "date-time" });
+    expect(schemaOf(isoDate())).toEqual({ type: "string", format: "date" });
+    expect(schemaOf(hostname())).toEqual({ type: "string", format: "hostname" });
     expect(schemaOf(slug())).toEqual({ type: "string", format: "slug" });
-    expect(schemaOf(ip({ version: "v6" }))).toEqual({ type: "string", format: "ipv6" });
-    expect(schemaOf(ip())).toEqual({ type: "string", anyOf: [{ format: "ipv4" }, { format: "ipv6" }] });
+    expect(schemaOf(ip({ version: "v4" }))).toEqual({ type: "string", format: "ipv4" });
     expect(schemaOf(base64({ url: true }))).toEqual({ type: "string", contentEncoding: "base64url" });
     expect(schemaOf(port())).toEqual({ type: "integer", minimum: 1, maximum: 65_535 });
-    expect(schemaOf(email(pattern(/@example\.com$/)))).toEqual({
+    expect(schemaOf(email(pattern(/@example\.com$/)), { io: "output" })).toEqual({
       type: "string",
       format: "email",
       pattern: String.raw`@example\.com$`,
     });
+  });
+
+  it("should write no format for the input of a format whose input may be Unicode, and the ASCII one for its output", () => {
+    expect(schemaOf(email())).toEqual({ type: "string" });
+    expect(schemaOf(email(), { io: "output" })).toEqual({ type: "string", format: "email" });
+    expect(schemaOf(domain())).toEqual({ type: "string" });
+    expect(schemaOf(domain(), { io: "output" })).toEqual({ type: "string", format: "hostname" });
+  });
+
+  it("should write no format where the one JSON Schema names refuses text the validator accepts", () => {
+    // `12:00` has no seconds and no offset, `PT0.5S` a fraction and `P1W1D` weeks beside days, a local
+    // date-time no offset, an IPv6 address a zone such as `%eth0`, and a URL `|` or `"`, which a URI
+    // and an IRI may not hold.
+    for (const validator of [time(), duration(), datetime({ local: true }), ip({ version: "v6" }), ip(), url()]) {
+      expect(schemaOf(validator)).toEqual({ type: "string" });
+      expect(schemaOf(validator, { io: "output" })).toEqual({ type: "string" });
+    }
+  });
+
+  it("should write a format made with format under its own name, whatever the name", () => {
+    expect(schemaOf(format("constructor", () => true)())).toEqual({ type: "string", format: "constructor" });
+    expect(schemaOf(format("toString", () => true)())).toEqual({ type: "string", format: "toString" });
   });
 
   it("should write collections", () => {
@@ -336,14 +394,24 @@ describe("toJsonSchema", () => {
     });
 
     it("should write what a coercion accepts on the input side and what it produces on the output side", () => {
-      expect(schemaOf(coerceNumber({ int: true }))).toEqual({ type: ["number", "string"] });
+      expect(schemaOf(coerceNumber({ int: true }))).toEqual({ anyOf: [{ type: "integer" }, { type: "string" }] });
       expect(schemaOf(coerceNumber({ int: true }), { io: "output" })).toEqual({ type: "integer" });
-      expect(schemaOf(coerceBoolean())).toEqual({ type: ["boolean", "string", "number"] });
+      expect(schemaOf(coerceBoolean())).toEqual({ anyOf: [{ type: "boolean" }, { type: ["string", "number"] }] });
+      expect(schemaOf(coerceString({ max: 3 }))).toEqual({
+        anyOf: [{ type: "string", maxLength: 3 }, { type: ["number", "boolean"] }],
+      });
       expect(schemaOf(coerceDate())).toEqual({ type: ["string", "integer"] });
+      expect(schemaOf(coerceBigint())).toEqual({ type: ["integer", "string"] });
       // What a coercion to a date or a bigint produces has no JSON Schema, so the output side says so.
       expect(() => toJsonSchema(coerceDate(), { io: "output" })).toThrow(TypeError);
       expect(() => toJsonSchema(coerceBigint(), { io: "output" })).toThrow(TypeError);
       expect(schemaOf(coerceDate(), { io: "output", unrepresentable: "any" })).toEqual({});
+    });
+
+    it("should keep the bounds of a coercion for a value given as the type it produces", () => {
+      expect(schemaOf(coerceNumber({ min: 5, max: 10 }))).toEqual({
+        anyOf: [{ type: "number", minimum: 5, maximum: 10 }, { type: "string" }],
+      });
     });
 
     it("should write a transform and a pipe by the side asked for", () => {
@@ -430,6 +498,8 @@ describe("toJsonSchema", () => {
         "a check that cannot be read",
       ],
       ["a variant that is no object", tagged("type", { a: lazy(() => object({})) }), "a variant that is not an object"],
+      ["a file", object({ avatar: fileOf() }), 'a validator of kind "file" at avatar'],
+      ["a form", formData(object({ name: string() })), 'a validator of kind "formData" at the root'],
     ])("should throw for %s, naming it and its place", (_, validator, message) => {
       expect(() => toJsonSchema(validator as AnyValidator)).toThrow(TypeError);
       expect(() => toJsonSchema(validator as AnyValidator)).toThrow(message);
@@ -443,6 +513,14 @@ describe("toJsonSchema", () => {
         required: ["at", "name"],
       });
       expect(schemaOf(object({ own: byHand }), any)).toEqual({ type: "object", properties: { own: {} } });
+    });
+
+    it("should write a variant it cannot write as an object with its tag, so the other variants match only their own", () => {
+      const event = tagged("type", { a: lazy(() => object({})), b: object({ x: number() }) });
+      expect(schemaOf(event, { unrepresentable: "any" })["oneOf"]).toEqual([
+        { type: "object", properties: { type: { const: "a" } }, required: ["type"] },
+        { type: "object", properties: { type: { const: "b" }, x: { type: "number" } }, required: ["type", "x"] },
+      ]);
     });
   });
 
@@ -515,6 +593,11 @@ describe("toJsonSchema", () => {
     expect(() => toJsonSchema(string(), { unrepresentable: "skip" as never })).toThrow("unrepresentable must be");
     expect(() => toJsonSchema(string(), [] as never)).toThrow("options must be an object");
     expect(() => toJsonSchema(undefined as never)).toThrow(TypeError);
+  });
+
+  it("should reject an option it does not know, as a factory does, and read null as no options", () => {
+    expect(() => toJsonSchema(string(), { draft: "draft-07" } as never)).toThrow(new TypeError("Unknown option draft"));
+    expect(toJsonSchema(string(), null as never)).toEqual(toJsonSchema(string()));
   });
 
   it("should give a schema JSON can hold, and a new one each time", () => {
