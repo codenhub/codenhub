@@ -1,6 +1,3 @@
-// Workaround for codenhub/codenhub#451: an icon tag in a frontmatter string
-// breaks the build, so data-driven icons come from per-icon modules instead.
-
 /** A `virtual:@codenhub/icons/…` module, imported as a namespace. */
 export interface IconModule {
   svg: string;

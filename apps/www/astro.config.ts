@@ -27,8 +27,7 @@ export default defineConfig({
       // Inline SVG mode: every literal `<i class="ic-…">` tag in this app's
       // templates and the shared shell becomes an `<svg>` at build time. A
       // class built from data cannot be seen by the plugin and would render
-      // nothing, and a whole tag in a frontmatter string breaks the build
-      // (codenhub/codenhub#451), so an icon picked from data comes from its
+      // nothing, so an icon picked from data comes from its
       // `virtual:@codenhub/icons/…` module through `decorative`
       // (`src/lib/icon.ts`).
       viteIcons({

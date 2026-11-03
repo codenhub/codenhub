@@ -35,7 +35,7 @@ function createPlugin(options: Parameters<typeof viteIcons>[0] = {}) {
     load: plugin.load as (id: string) => string | null,
     plugin,
     resolveId: plugin.resolveId as (id: string) => string | null,
-    transform: plugin.transform as (code: string, id: string) => { code: string } | null,
+    transform: (plugin.transform as { handler: (code: string, id: string) => { code: string } | null }).handler,
     transformIndexHtml: plugin.transformIndexHtml as (
       html: string,
       ctx: { filename?: string; server?: unknown },
