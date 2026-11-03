@@ -62,6 +62,7 @@ import {
   unrecognizedKeyMessage,
 } from "./english-messages";
 import { flatten, formatIssue as formatWith, formatPath, type Messages } from "./format-issue";
+import { portugueseMessages } from "./portuguese-messages";
 
 const formatIssue = (issue: ValidationIssue, messages: Messages = englishMessages): string =>
   formatWith(issue, messages);
@@ -462,6 +463,16 @@ describe("formatIssue", () => {
   it("should quote an unrecognized key as a string literal, so quotes and line breaks in it stay inside", () => {
     expect(formatIssue(issue({ code: "unrecognized_key", params: { key: 'a"b\nc' } }))).toBe(
       String.raw`Unrecognized key "a\"b\nc"`,
+    );
+  });
+
+  it("should escape line separators and C1 controls in an unrecognized key, as formatPath does", () => {
+    const key = "a\u2028b\u2029c\u0085d\u007f";
+    expect(formatIssue(issue({ code: "unrecognized_key", params: { key } }))).toBe(
+      String.raw`Unrecognized key "a\u2028b\u2029c\u0085d\u007f"`,
+    );
+    expect(formatIssue(issue({ code: "unrecognized_key", params: { key } }), portugueseMessages)).toBe(
+      String.raw`Chave não reconhecida "a\u2028b\u2029c\u0085d\u007f"`,
     );
   });
 

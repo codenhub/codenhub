@@ -4,7 +4,7 @@
  */
 import { timeOf } from "../core/objects";
 import type { ValidationIssue } from "../core/types";
-import { formatPath, wordIssue, type Messages } from "./word";
+import { formatPath, quoteText, wordIssue, type Messages } from "./word";
 
 /** Reads an entry of a table of words, so a name such as `constructor` is no entry of `Object.prototype`. */
 export const entryOf = <T>(table: Readonly<Record<string, T>>, key: string): T | undefined =>
@@ -37,9 +37,12 @@ export const quote = (found: ValidationIssue, messages: Messages): string =>
 /** Reads a parameter as text, so a missing or unusual one degrades to a readable message and not a crash. */
 export const param = (issue: ValidationIssue, name: string): string => String(issue.params?.[name]);
 
-/** Writes a literal value the way it would appear in code, so `"a"` and `a` are not confused. */
+/**
+ * Writes a literal value the way it would appear in code, so `"a"` and `a` are not confused, and text with
+ * its line breaks escaped, as `formatPath` writes a key.
+ */
 export const formatValue = (value: unknown): string =>
-  typeof value === "string" ? JSON.stringify(value) : typeof value === "bigint" ? `${value}n` : String(value);
+  typeof value === "string" ? quoteText(value) : typeof value === "bigint" ? `${value}n` : String(value);
 
 /**
  * The moment a limit of a date is written as, or `undefined` for a limit of anything else. A `Date` of
