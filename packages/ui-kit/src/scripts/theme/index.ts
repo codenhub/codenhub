@@ -1,6 +1,6 @@
 import { createTheme } from "@codenhub/theme";
 
-const themeManager = createTheme({ isTailwindCss: true });
+const themeManager = createTheme({ darkClass: true });
 
 /** Window event name emitted after the shared theme manager applies a theme. */
 export const THEME_CHANGE_EVENT = "themechange";
@@ -11,12 +11,12 @@ export type Theme = (typeof THEMES)[number];
 
 /** Returns the theme matching the system color scheme, with light as the non-browser fallback. */
 export const getSystemTheme = (): Theme => {
-  return themeManager.getSystem().name as Theme;
+  return themeManager.system as Theme;
 };
 
 /** Returns a valid explicit preference from local storage, or null when absent or unavailable. */
 export const getStoredTheme = (): Theme | null => {
-  return themeManager.getStored() as Theme | null;
+  return themeManager.preference as Theme | null;
 };
 
 /** Returns the active in-memory theme, which is light before initialization. */

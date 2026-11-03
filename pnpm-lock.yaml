@@ -211,8 +211,8 @@ catalogs:
       specifier: ^0.6.0
       version: 0.6.0
     '@codenhub/theme':
-      specifier: ^0.1.2
-      version: 0.1.2
+      specifier: ^0.2.2
+      version: 0.2.2
     '@playwright/test':
       specifier: ~1.63.0
       version: 1.63.0
@@ -1297,7 +1297,7 @@ importers:
         version: 0.6.0(tailwindcss@4.3.3)
       '@codenhub/theme':
         specifier: 'catalog:'
-        version: 0.1.2
+        version: 0.2.2
     devDependencies:
       '@tailwindcss/cli':
         specifier: 'catalog:'
@@ -1657,8 +1657,8 @@ packages:
       tailwindcss:
         optional: true
 
-  '@codenhub/theme@0.1.2':
-    resolution: {integrity: sha512-IaRD4hKv7PVijJNj4mHLC1JkwJxtQtXbDioa3v+kmxFur9XqmiDiuvSXWiIKVvnwVMPhbl1VL22D2SSPvu+7Ng==}
+  '@codenhub/theme@0.2.2':
+    resolution: {integrity: sha512-m9RSzvpB/DOG+U2MZDEKGOlF+zvuyD7hUWYZf/PQttrMk85pP4PAUGh5UZrnX6JDB6c5b4fxRfYblLd2pgbpZQ==}
 
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -5331,7 +5331,7 @@ snapshots:
     optionalDependencies:
       tailwindcss: 4.3.3
 
-  '@codenhub/theme@0.1.2': {}
+  '@codenhub/theme@0.2.2': {}
 
   '@cspotcode/source-map-support@0.8.1':
     dependencies:
