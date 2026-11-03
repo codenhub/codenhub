@@ -113,10 +113,11 @@ const parsePattern = (pathname: string, path: string, isLocale: (segment: string
   const names = new Set<string>();
   const segments = splitPathname(pathname).segments.map((segment, index): PatternSegment => {
     if (!segment.startsWith(":")) {
-      if (index === 0 && isLocale(segment)) {
+      const value = normalizeSegment(segment);
+      if (index === 0 && isLocale(value)) {
         fail(path, "Must not start with a locale");
       }
-      return { kind: "static", value: normalizeSegment(segment) };
+      return { kind: "static", value };
     }
 
     const name = segment.slice(1);

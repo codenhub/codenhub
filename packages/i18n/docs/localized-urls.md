@@ -47,13 +47,14 @@ routing.parse("/PT/about"); // { locale: "pt", pathname: "/about" }
 
 The `pathname` it returns is the **canonical path**: the path your application routes on, the same in every language. Hold on to that idea; it matters once paths are translated.
 
-With `localePrefix: "always"`, a path without a locale returns `undefined`, so you can redirect it:
+With `localePrefix: "always"`, a path without a locale returns `undefined`, so you can redirect it. Add the chosen locale's prefix before calling `localize()`, so a path in that locale's words, such as `/sobre`, is read as one:
 
 ```ts
 const route = routing.parse(url.pathname);
 if (route === undefined) {
+  const locale = pickLocale(i18n, request);
   const target = new URL(url);
-  target.pathname = routing.localize(url.pathname, pickLocale(i18n, request));
+  target.pathname = routing.localize(`/${locale}${url.pathname}`, locale);
   return Response.redirect(target, 302);
 }
 ```
@@ -118,9 +119,10 @@ Going through `parse()` matters once paths are translated: `/sobre` is a Portugu
 Use the same call for the `<link rel="alternate" hreflang>` tags that tell search engines about each language, and add an `x-default` tag for readers whose language you don't offer, pointing at the default locale's page:
 
 ```ts
+const defaultLocale = "en"; // the defaultLocale you configured
 const link = (hreflang: string, pathname: string) => `<link rel="alternate" hreflang="${escapeHtml(hreflang)}" href="${escapeHtml(new URL(pathname, "https://example.com").href)}">`;
 
-const alternates = [...routing.localizeAll(route.pathname).map((page) => link(page.locale, page.pathname)), link("x-default", routing.localize(route.pathname, "en"))];
+const alternates = [...routing.localizeAll(route.pathname).map((page) => link(page.locale, page.pathname)), link("x-default", routing.localize(route.pathname, defaultLocale))];
 ```
 
 Escape both values as you would any text in HTML, or let your framework create the tags. A path can contain characters, such as `"` or `&`, that are allowed in a URL but not raw inside an attribute.
@@ -195,6 +197,8 @@ for (const { locale, pathname } of routing.localizeAll("/products/:id")) {
   router.on(pathname, ({ params }) => renderProduct(params["id"], locale));
 }
 ```
+
+`@codenhub/router` takes the first route that matches, in the order you register them. When two of a locale's paths can match the same URL, such as `/pt/produtos/novo` and `/pt/produtos/:id`, register the one with fixed words first.
 
 ## Drop the prefix
 

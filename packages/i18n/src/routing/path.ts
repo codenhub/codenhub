@@ -59,7 +59,16 @@ export const normalizeSegment = (segment: string): string => {
   try {
     return encodeURI(decodeURIComponent(segment)).replaceAll("?", "%3F").replaceAll("#", "%23");
   } catch {
-    // Escapes that are not UTF-8, such as a lone `%C3`, can't be decoded; compare them as written, in one letter case.
-    return segment.replace(PERCENT_ESCAPE_PATTERN, (escape) => escape.toUpperCase());
+    // Escapes that are not UTF-8, such as a lone `%C3`, can't be decoded; keep them, in one letter case, and encode
+    // the rest as a browser would.
+    return segment
+      .replace(PERCENT_ESCAPE_PATTERN, (escape) => escape.toUpperCase())
+      .replace(/[^%]/gu, (character) => {
+        try {
+          return encodeURI(character).replace("?", "%3F").replace("#", "%23");
+        } catch {
+          return character; // A lone surrogate can't be encoded.
+        }
+      });
   }
 };

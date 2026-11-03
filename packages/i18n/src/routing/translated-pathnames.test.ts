@@ -182,6 +182,24 @@ describe("translated pathnames", () => {
       expect(routing.localize("/about", "pt")).toBe("/pt/sobre");
       expect(routing.parse("/sobre")).toBeUndefined();
     });
+
+    it("should redirect a path without a prefix by reading it in the chosen locale", () => {
+      const routing = create({ localePrefix: "always" });
+
+      expect(routing.localize("/pt/sobre", "pt")).toBe("/pt/sobre");
+      expect(routing.localize("/pt/about", "pt")).toBe("/pt/sobre");
+      expect(routing.localize("/en/about", "en")).toBe("/en/about");
+    });
+
+    it("should match a translated segment that mixes Unicode with an escape that isn't UTF-8", () => {
+      const routing = create({ pathnames: { "/about": { pt: "/café%C3" } } });
+
+      expect(routing.parse("/pt/caf%C3%A9%C3")).toEqual({
+        locale: "pt",
+        pathname: "/about",
+      });
+      expect(routing.localize("/about", "pt")).toBe("/pt/caf%C3%A9%C3");
+    });
   });
 
   describe("with `when-ambiguous`", () => {
@@ -257,6 +275,21 @@ describe("translated pathnames", () => {
         locale: "en",
         pathname: "/rojo",
       });
+    });
+
+    it("should drop the prefix from a translated path that starts with a parameter", () => {
+      const routing = create({
+        localePrefix: "when-ambiguous",
+        pathnames: { "/items/:slug/details": { pt: "/:slug/artigo/itens" } },
+      });
+
+      expect(routing.localize("/items/mesa/details", "pt")).toBe("/mesa/artigo/itens");
+      expect(routing.parse("/mesa/artigo/itens")).toEqual({
+        locale: "pt",
+        pathname: "/items/mesa/details",
+      });
+      // A slug that is a locale would make the path read as that locale's.
+      expect(() => routing.localize("/items/en/details", "pt")).toThrow(RangeError);
     });
 
     it("should still accept the prefixed form of an unprefixed path", () => {
@@ -340,6 +373,9 @@ describe("translated pathnames", () => {
         'pathnames["/pt/about"]: Must not start with a locale',
       );
       expect(invalid({ "/about": { es: "/PT/acerca" } })).toThrow(
+        'pathnames["/about"].es: Must not start with a locale',
+      );
+      expect(invalid({ "/about": { es: "/%70t/acerca" } })).toThrow(
         'pathnames["/about"].es: Must not start with a locale',
       );
     });
