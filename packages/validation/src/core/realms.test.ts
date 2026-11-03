@@ -122,6 +122,8 @@ describe("a value that is one of the kinds but has lost its prototype", () => {
   });
 
   it("should not be taken for one when it only claims the prototype", () => {
+    expect(timeOf(Object.create(Date.prototype))).toBeUndefined();
+    expect(date()(Object.create(Date.prototype)).ok).toBe(false);
     expect(issuesOf(searchParams(unknown())(Object.create(URLSearchParams.prototype)))[0]?.code).toBe("invalid_type");
   });
 
@@ -129,6 +131,19 @@ describe("a value that is one of the kinds but has lost its prototype", () => {
     expect(date({ min: new Date(5) })(bare(new Date(0))).ok).toBe(false);
     expect(map(string(), number(), { max: 0 })(bare(new Map([["a", 1]]))).ok).toBe(false);
     expect(set(number(), { min: 3 })(bare(new Set([1]))).ok).toBe(false);
+  });
+});
+
+describe("a date of a class of its own", () => {
+  it("should be read as a date, even when its class names itself with a tag", () => {
+    class Moment extends Date {
+      get [Symbol.toStringTag](): string {
+        return "Moment";
+      }
+    }
+    class Plain extends Date {}
+    expect([timeOf(new Moment(5)), timeOf(new Plain(6))]).toEqual([5, 6]);
+    expect(date()(new Moment(5)).ok).toBe(true);
   });
 });
 
