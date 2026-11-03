@@ -103,7 +103,8 @@ export interface AppErrorOptions {
   /**
    * Structured data to attach to the error as `details`, such as `{ field: "email" }`. Must be a
    * plain object holding only JSON values (strings, finite numbers, booleans, `null`, lists, and
-   * plain objects), nested at most 8 levels deep. It is copied and frozen. An existing AppError
+   * plain objects), nested at most 8 levels deep. A key whose value is `undefined` is dropped, as
+   * `JSON.stringify` drops it. It is copied and frozen. An existing AppError
    * keeps the details it has and gains only the keys it lacks.
    */
   details?: Readonly<Record<string, unknown>>;

@@ -375,7 +375,7 @@ const result = err({ code: "signup.email_taken" }, { details: { field: "email" }
 result.error.details; // { field: "email" }
 ```
 
-It holds JSON values only: strings, finite numbers, booleans, `null`, lists, and plain objects, nested at most eight levels deep. Anything else, such as a `Date` or `undefined`, throws `TypeError`. It is copied and frozen, so changing the object you passed changes nothing.
+It holds JSON values only: strings, finite numbers, booleans, `null`, lists, and plain objects, nested at most eight levels deep. A key whose value is `undefined` is dropped, as `JSON.stringify` drops it, so an optional field does not have to be checked first. Anything else, such as a `Date` or an `undefined` list entry, throws `TypeError`. It is copied and frozen, so changing the object you passed changes nothing.
 
 Unlike the raw error, `details` is part of `toJSON()`, so it reaches a client. It is never read from the value being normalized, only from the option, so nothing gets into it that your code did not put there. Keep anything secret out of it.
 
@@ -1350,7 +1350,7 @@ A pattern runs against every message `createAppError` sees, and a message can be
 - `orElse` and `orElseAsync` recover from a failed `Result`, and `all` combines a list of results into one. Falling back on a specific failure, or collecting the results of parallel calls, took a hand-written `match` or `if` at every call site.
 - An HTTP preset at `@codenhub/error/registries/http` maps twelve client and server error statuses, none retryable, for classifying a failed response by its status. Every application that used `fetch` copied the status registry from the recipe.
 - Error-boundary adapters: `AppErrorBoundary` at `@codenhub/error/react` and `createAppErrorBoundary` at `@codenhub/error/svelte` hand a React or Svelte fallback a normalized `AppError` and report each caught error once. React 18 or newer and Svelte 5.3 or newer are optional peer dependencies; the core entrypoints still have no dependencies. A fallback written by hand showed the raw thrown message unless every application remembered to normalize it.
-- `AppError.details` carries structured data the code attached with the new `details` option, such as the form field that failed, and `toJSON()` and `appErrorFromJSON` carry it across a boundary. It accepts JSON values only and is never read from the raw error. Data like that had nowhere to go but `originalError`, which never leaves the process.
+- `AppError.details` carries structured data the code attached with the new `details` option, such as the form field that failed, and `toJSON()` and `appErrorFromJSON` carry it across a boundary. It accepts JSON values only, dropping a key whose value is `undefined` as `JSON.stringify` does, and is never read from the raw error. Data like that had nowhere to go but `originalError`, which never leaves the process.
 - A generated API reference ships with the package, covering every `exports` subpath.
 - A Node.js preset at `@codenhub/error/registries/node` classifies network failures from sockets, DNS, and the built-in `fetch`, such as `ECONNREFUSED`, `ENOTFOUND`, and `UND_ERR_CONNECT_TIMEOUT`. A failed `fetch` on Node.js used to resolve to an unknown error under every built-in preset.
 - `AppError.code` holds the registered code that classified the error, or the registered name when no code matched, and `toJSON()` includes it. Consumers can branch on a specific failure without comparing message text or a translation key.
