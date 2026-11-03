@@ -10,6 +10,7 @@ import { startsWith } from "../checks/starts-with";
 import { unique } from "../checks/unique";
 import { coerceDate } from "../coercion/coerce-date";
 import { array } from "../composition/array";
+import { fallback } from "../composition/fallback";
 import { intersection } from "../composition/intersection";
 import { map } from "../composition/map";
 import { object } from "../composition/object";
@@ -294,6 +295,29 @@ describe("a factory given where its validator belongs", () => {
     );
     expect(() => object({ list: array(object({ name: factory })) })({ list: [{}, { name: {} }] })).toThrow(
       'The validator at ["list",0,"name"] returned no result',
+    );
+  });
+
+  it("should name the validator of a fallback, which substitutes for a failure and not for no result", async () => {
+    expect(() => fallback(factory, "x")({})).toThrow(
+      new TypeError("The validator given to fallback returned no result. A factory is called first, as in string()"),
+    );
+    const forgetful = (() => undefined) as unknown as Validator<number>;
+    expect(() => fallback(forgetful, 1)(5)).toThrow("The validator given to fallback returned no result");
+    const later = (async () => undefined) as unknown as Validator<number>;
+    await expect(fallback(later, 1)(5) as unknown as Promise<unknown>).rejects.toThrow(
+      "The validator given to fallback returned no result",
+    );
+  });
+
+  it("should name the key validator of a record or a map", () => {
+    const forgetful = (() => undefined) as unknown as Validator<string>;
+    expect(() => record(forgetful, number())({ a: 1 })).toThrow(
+      new TypeError("The key validator of record returned no result. A factory is called first, as in string()"),
+    );
+    const objectFactory = object as unknown as Validator<object>;
+    expect(() => map(objectFactory, number())(new Map([[{}, 1]]))).toThrow(
+      new TypeError("The key validator of map returned no result. A factory is called first, as in string()"),
     );
   });
 

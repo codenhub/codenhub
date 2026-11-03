@@ -4,7 +4,7 @@ import { described } from "../core/describe";
 import { cap, countIssues, runItems } from "../core/limit";
 import { append, below, call, composed } from "../core/nesting";
 import { entriesOf, sizeOfMap } from "../core/objects";
-import { assertFunction, failWith, issue, nested, repeatedKey, typeIssue } from "../core/result";
+import { assertFunction, failWith, isResult, issue, nested, notResult, repeatedKey, typeIssue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -67,6 +67,14 @@ export function map(key: AnyValidator, value: AnyValidator, ...rest: unknown[]):
     SIZE_OPTIONS,
   );
   assertSizeOptions(options);
+  // A key's issues stay relative to the key, so it is not called with a place, and its result is checked here.
+  const readKey = (name: unknown): Maybe<ValidationResult<unknown>> =>
+    chain(key(name), (result: ValidationResult<unknown>) => {
+      if (!isResult(result)) {
+        throw notResult("The key validator of map");
+      }
+      return result;
+    });
   return described(
     composed((input, place): Maybe<ValidationResult<unknown>> => {
       const size = sizeOfMap(input);
@@ -84,7 +92,7 @@ export function map(key: AnyValidator, value: AnyValidator, ...rest: unknown[]):
         entries.length,
         (index) => {
           const [name, item] = entries[index] as [unknown, unknown];
-          return chain(key(name), (keyResult) =>
+          return chain(readKey(name), (keyResult) =>
             chain(call(value, item, below(place, segments[index] as ValidationPathSegment)), (valueResult) => ({
               keyResult,
               valueResult,
