@@ -44,7 +44,7 @@ export function localStorageDriver<TSchema extends object>(storageKey?: string):
   let key = storageKey;
 
   const getKey = (): string => {
-    if (!key) {
+    if (key === undefined) {
       throw new Error(
         "Storage key not initialized in driver. Ensure storageKey is provided in options or store creation.",
       );
@@ -73,7 +73,7 @@ export function localStorageDriver<TSchema extends object>(storageKey?: string):
       }
     },
     [SET_STORAGE_KEY](k: string) {
-      if (key && key !== k) {
+      if (key !== undefined && key !== k) {
         throw new Error(
           `Driver instance cannot be shared across stores with different keys (already bound to "${key}", tried to bind to "${k}").`,
         );

@@ -70,7 +70,7 @@ export function nodeJsonFileDriver<TSchema extends object>(options: NodeJsonFile
       }
     },
     [SET_STORAGE_KEY](k: string) {
-      if (key && key !== k) {
+      if (key !== undefined && key !== k) {
         throw new Error(
           `Driver instance cannot be shared across stores with different keys (already bound to "${key}", tried to bind to "${k}").`,
         );
@@ -138,7 +138,7 @@ export function nodeAsyncJsonFileDriver<TSchema extends object>(
       }
     },
     [SET_STORAGE_KEY](k: string) {
-      if (key && key !== k) {
+      if (key !== undefined && key !== k) {
         throw new Error(
           `Driver instance cannot be shared across stores with different keys (already bound to "${key}", tried to bind to "${k}").`,
         );

@@ -20,6 +20,10 @@ When a driver throws or rejects during a read, `patch`, `setItem`, and `removeIt
 
 Rejected: overwrite with fallback plus changes after an access failure, because that wipes unrelated fields after a transient failure. A full `set` remains an explicit replacement and does not read first.
 
+## Empty storage keys are valid keys
+
+Drivers treat a key as unbound only when it is `undefined`. localStorage accepts `""` as a key; the previous truthiness check made every operation under `""` fail as unbound.
+
 ## Package-owned `store.*` error codes
 
 Recoverable failures use `store.read_failed`, `store.write_failed`, `store.clear_failed`, `store.parse_failed`, and `store.validation_failed`, plus `store.clear_unsupported`. The prefix follows the repository's flat error-code namespace so applications can register errors from several packages without collisions.

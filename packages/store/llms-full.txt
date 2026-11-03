@@ -387,5 +387,6 @@ Return to [Core stores](docs/core-stores.md#validation-and-failures) for validat
 ## Fixed
 
 - The Node JSON file drivers write to a temporary file and rename it into place, so a crash or a full disk no longer leaves a half-written file in place of the previous value.
+- An empty `storageKey` works with the localStorage and Cloudflare drivers. It used to fail every operation as if no key had been bound.
 - `cloudflareDoDriver` accepts a Durable Object's `state.storage` as it is, whose `delete` resolves to a boolean.
 - An error object the store reports is no longer changed, so a frozen error no longer causes a `TypeError`, and two stores that see the same error both report it.

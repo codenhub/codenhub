@@ -56,7 +56,7 @@ export function cloudflareKvDriver<TSchema extends object>(
   let key = options.storageKey;
 
   const getKey = (): string => {
-    if (!key) {
+    if (key === undefined) {
       throw new Error(
         "Storage key not initialized in driver. Ensure storageKey is provided in options or store creation.",
       );
@@ -80,7 +80,7 @@ export function cloudflareKvDriver<TSchema extends object>(
       await kvNamespace.delete(getKey());
     },
     [SET_STORAGE_KEY](k: string) {
-      if (key && key !== k) {
+      if (key !== undefined && key !== k) {
         throw new Error(
           `Driver instance cannot be shared across stores with different keys (already bound to "${key}", tried to bind to "${k}").`,
         );
@@ -144,7 +144,7 @@ export function cloudflareDoDriver<TSchema extends object>(
   let key = options.storageKey;
 
   const getKey = (): string => {
-    if (!key) {
+    if (key === undefined) {
       throw new Error(
         "Storage key not initialized in driver. Ensure storageKey is provided in options or store creation.",
       );
@@ -168,7 +168,7 @@ export function cloudflareDoDriver<TSchema extends object>(
       await storage.delete(getKey());
     },
     [SET_STORAGE_KEY](k: string) {
-      if (key && key !== k) {
+      if (key !== undefined && key !== k) {
         throw new Error(
           `Driver instance cannot be shared across stores with different keys (already bound to "${key}", tried to bind to "${k}").`,
         );

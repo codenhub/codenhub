@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { cloudflareKvDriver } from "../cloudflare";
 import { asyncMemoryDriver, createAsyncStore, createStore, localStorageDriver } from "../index";
 
 interface Settings {
@@ -156,6 +157,28 @@ describe.each([false, true])("failure recovery (async: %s)", (isAsync) => {
     expect(onError).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ code: `store.${failure}_failed` }));
   });
 });
+
+describe.each([false, true])("empty storage key (async: %s)", (isAsync) => {
+  it("reads and writes under the empty key", async () => {
+    const onError = vi.fn();
+    const options = { storageKey: "", initialState, onError };
+    const store = isAsync
+      ? createAsyncStore({ ...options, driver: cloudflareKvDriver<Settings>({ kvNamespace: kvNamespace() }) })
+      : createStore({ ...options, driver: localStorageDriver<Settings>() });
+    expect(await store.patch({ count: 3 })).toEqual({ ...initialState, count: 3 });
+    expect(await store.get()).toEqual({ ...initialState, count: 3 });
+    expect(onError).not.toHaveBeenCalled();
+  });
+});
+
+function kvNamespace() {
+  const records = new Map<string, string>();
+  return {
+    get: async (key: string) => records.get(key) ?? null,
+    put: async (key: string, value: string) => void records.set(key, value),
+    delete: async (key: string) => void records.delete(key),
+  };
+}
 
 describe("async input snapshots", () => {
   it.each(["set", "patch", "setItem"] as const)("snapshots %s inputs before the queue runs", async (method) => {
