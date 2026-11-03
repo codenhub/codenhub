@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-30
+last_updated: 2026-11-02
 scope: Internal engine architecture, invariants, and implementation design for @codenhub/toaster.
 ---
 
@@ -10,38 +10,37 @@ This document records the internal architecture, DOM isolation strategies, lifec
 
 ## Architectural Overview
 
-`@codenhub/toaster` coordinates two independent presentation layers in the browser while maintaining zero external runtime dependencies and full strict Content Security Policy (CSP) compliance:
+`@codenhub/toaster` coordinates two independent presentation layers in the browser while maintaining zero external runtime dependencies and full strict Content Security Policy (CSP) compliance, with no injected `<style>` element and no HTML-parsing sink:
 
 1. **Floating Toast Stacks (Light DOM)**: Asynchronous, transient notifications rendered into position-anchored container elements attached to `document.body` or a scoped consumer-provided container element. Managed by `ToastManager` and rendered by `Toast`, `SemanticToast`, and `LoadingToast`.
-2. **Interactive Modal Dialogs (Top Layer)**: Modal confirmation, prompt, and alert dialogs rendered as native `<dialog>` elements displayed via `HTMLDialogElement.showModal()`. Managed by `ModalController`.
+2. **Interactive Modal Dialogs (Top Layer)**: Modal confirmation, prompt, and alert dialogs rendered as native `<dialog>` elements displayed via `HTMLDialogElement.showModal()`. Managed by `ModalController`, behind `createDialogs()` in the separate `@codenhub/toaster/dialog` entry point.
 
 ```
-                ┌──────────────────────────────────────────────┐
-                │          Public Entrypoint (@codenhub/toaster) │
-                │          - toast singleton                   │
-                │          - dialog singleton                  │
-                │          - createToaster()                   │
-                └──────────────────────┬───────────────────────┘
-                                       │
-                                       ▼
-                        ┌──────────────────────────────┐
-                        │         ToastManager         │
-                        └──────┬────────────────┬──────┘
-                               │                │
-             ┌─────────────────┴────┐      ┌────┴─────────────────┐
-             │   Floating Stacks    │      │   Top Layer Modals   │
-             │   - Toast            │      │   - ModalController  │
-             │   - SemanticToast    │      │   - <dialog> element │
-             │   - LoadingToast     │      │   - showModal()      │
-             └──────────────────────┘      └──────────────────────┘
+  ┌─────────────────────────────┐      ┌─────────────────────────────┐
+  │ @codenhub/toaster           │      │ @codenhub/toaster/dialog    │
+  │ - toast singleton           │      │ - dialog singleton          │
+  │ - createToaster()           │      │ - createDialogs()           │
+  └──────────────┬──────────────┘      └──────────────┬──────────────┘
+                 ▼                                    ▼
+  ┌─────────────────────────────┐      ┌─────────────────────────────┐
+  │ ToastManager                │      │ ModalController             │
+  │ - Toast, SemanticToast,     │      │ - <dialog> + showModal()    │
+  │   LoadingToast              │      │                             │
+  └──────────────┬──────────────┘      └──────────────┬──────────────┘
+                 └──── layer-host.ts (DOM attribute) ─┘
 ```
+
+The two entries share helpers (ids, `layer-host.ts`) but neither imports the other's manager, so each bundles alone.
 
 ## Core Subsystems and Invariants
 
 ### 1. Dual-Layer Isolation
 
 - **Floating Toasts**: Toast containers are `<div>` elements tagged with `[data-toast-container]` and `[data-toast-instance]`. Each instance owns its own container hierarchy at each used `ToastPosition`. Toasts within a container stack vertically, automatically responding to safe-area insets (`env(safe-area-inset-*)`) and viewport bounds.
-- **Top-Layer Modals**: Native `<dialog>` elements are rendered into the browser's top layer. Because `showModal()` makes the rest of the document inert according to the HTML specification, the toaster moves its own toast stacks and live regions into its dialog while the dialog is open, and back once it starts closing. Toasts from another instance, or under a modal dialog the application opened, stay inert and unannounced until it closes.
+- **Top-Layer Modals**: Native `<dialog>` elements are rendered into the browser's top layer. Because `showModal()` makes the rest of the document inert according to the HTML specification, the toast stacks and live regions of every toaster rendering into the dialog's parent element move into the dialog while it is open, and back once it starts closing. A toaster with a different container, or under a modal dialog the application opened, stays inert and unannounced until it closes.
+- **Layer-host protocol**: An open dialog marks itself with `data-toast-layer-host="<n>"`, where `n` grows with each dialog opened on the page. A toaster renders its stacks and live regions into the parent's child with the highest `n`, or into the parent when there is none. Opening a dialog moves the existing stacks from the previous host into it; releasing one moves them to the next-highest host. Both sides live in `layer-host.ts`.
+  - **Why**: dialogs live in their own entry point so toast-only bundles do not carry them (about 7 KB minified, 2 KB gzipped, measured 2026-11-02), and dialogs have no owning toaster any more, so the handoff cannot be a method call between objects. An attribute on the DOM costs neither entry any code from the other, keeps working when a page loads two copies of the package, and needs no module state shared between entries.
+  - **Rejected**: a registry the dialog module writes and the toast module reads, which breaks when a bundler duplicates the shared chunk or a page loads two copies, and leaves a toast-only bundle carrying the hook; keeping dialogs a property of the toaster, which no bundler can drop; moving only one owner's toasts, which no longer has an owner to name and left every other toaster's toasts inert and unannounced behind the dialog.
 - **Independence**: Two separate `Toaster` instances configured to the same position render independent, isolated DOM trees. They do not synchronize stacks or share admission queues.
 
 ### 2. Admission Control, Capacity, and Eviction Safety
@@ -72,19 +71,23 @@ This document records the internal architecture, DOM isolation strategies, lifec
 - **Zero-Dependency Styling**: CSS rules in `@codenhub/toaster/styles` read semantic intent colors (`--color-success`, `--color-error`, etc.) and UI axes (`--ui-fill`, `--ui-border`, `--ui-clip`, `--ui-elevation`).
 - **Live Peer Composition**: When `@codenhub/styles >=0.3.0` is present on the page, toaster elements compose against its shared theme variables. Changes to custom properties or active classes (`.solid`, `.soft`, `.ghost`, `.edged`, `.edgeless`) update rendered toasts automatically.
 - **Standalone Fallback**: When `@codenhub/styles` is absent, toaster falls back to pre-calculated, uncomposed static defaults in `generated-defaults.css`, generated by `scripts/generate-toast-defaults.mjs`.
-- **Precedence**: An explicit property in `ToastTokens` always overrides the composed color for that specific property.
+- **Precedence**: A `--toast-color-*` custom property a consumer sets always overrides the composed color for that specific property. The package never sets these properties itself; a consumer sets them in CSS, globally, on a container, or on a class passed through `className`.
+  - **Why**: the stylesheet already read these properties, so they were the styling contract; the runtime `tokens` option only wrote them through an injected `<style>` element and inline styles, which cost a toast-only bundle about 2.8 KB minified and 870 bytes gzipped (measured 2026-11-02), needed a CSP nonce, and duplicated what plain CSS does.
+  - **Rejected**: keeping the runtime `tokens` and `nonce` options, which validated colors and managed an owned `<style>` element per instance for values a consumer can set in CSS with no package code.
 
 ### 6. Security and Content Boundaries
 
-- **Sanitized HTML Strings**: Custom content passed as a string is parsed into a temporary template and sanitized through an allowlist of tags (`a`, `b`, `br`, `code`, `div`, `em`, `h1`-`h6`, `i`, `li`, `ol`, `p`, `pre`, `span`, `strong`, `ul`) and attributes (`href`, `target`, `rel`).
-- **Trusted Types Sink**: String parsing passes through `Element.innerHTML`. Under strict CSP `require-trusted-types-for 'script'`, applications providing strings must define a Trusted Types default policy.
-- **Trusted DOM Nodes**: An explicit `Node` or node factory function passed to `toast.custom()` is trusted and inserted directly without sanitization, placing full responsibility for event cleanup and security on the author.
-- **Strict CSP Nonce**: If a Content Security Policy restricts unnonced inline stylesheets, `ToasterConfig.nonce` supplies a nonce applied to the injected `<style>` element used for custom token overrides.
+- **Text Strings**: Custom content passed as a string becomes one text node, never parsed as HTML, so markup in it renders literally. An empty or whitespace-only string throws.
+  - **Why**: no HTML parsing of strings means no sanitizer to trust or keep current, and no `Element.innerHTML` sink for Trusted Types to guard. Dropping the allowlist sanitizer also cut about 1.35 KB minified and 450 bytes gzipped from a toast-only bundle (measured 2026-11-02).
+  - **Rejected**: keeping the allowlist sanitizer for strings, which every toast bundle paid for whether or not it passed markup, and which made a string look safe for untrusted HTML only as long as the allowlist had no gap.
+- **No HTML Sinks**: The package assigns to no HTML-parsing sink (`innerHTML`, `insertAdjacentHTML`, and the like); toasts, icons, and dialogs are built with DOM APIs, so a `require-trusted-types-for 'script'` policy needs no Trusted Types policy for it.
+- **Trusted DOM Nodes**: An explicit `Node` or node factory function passed to `toast.custom()` is trusted and inserted as it is, placing full responsibility for event cleanup and security on the author.
+- **No Injected Stylesheets**: The package injects no `<style>` element and writes styles only as individual CSSOM properties (`element.style.setProperty`), which a `style-src` policy does not block, so a strict Content Security Policy needs no nonce for it.
 
 ### 7. Teardown and Resource Cleanup
 
 - Calling `toaster.destroy()` is idempotent and executes synchronous cleanup:
   - All active toasts settle immediately (`state` becomes `"hidden"` and `settled` resolves), canceling pending animations.
-  - All active modal dialogs are closed and removed from the top layer.
-  - Owned container elements, event listeners, resize observers, and token `<style>` nodes are removed from the DOM.
+  - Owned container elements, event listeners, and resize observers are removed from the DOM.
   - Any subsequent API call on a destroyed instance throws synchronously.
+- Calling `dialogs.destroy()` on a dialogs instance closes its open dialog and drops queued ones, settling each with its cancel value, removes its `<dialog>` element, and makes later calls throw. Destroying a toaster leaves dialogs alone, and the reverse.

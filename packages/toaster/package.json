@@ -30,6 +30,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./dialog": {
+      "types": "./dist/dialog.d.ts",
+      "import": "./dist/dialog.js"
+    },
     "./styles": "./dist/styles/index.css"
   },
   "publishConfig": {
@@ -39,7 +43,7 @@
     "dev": "pnpm --filter=@codenhub/toaster-dev dev",
     "debug": "pnpm build && pnpm --filter=@codenhub/toaster-debug dev",
     "build": "pnpm build:scripts && pnpm build:styles",
-    "build:scripts": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
+    "build:scripts": "tsdown src/index.ts src/dialog.ts --format esm --dts --clean --no-fixed-extension",
     "build:styles": "tailwindcss -i ./src/styles/index.css -o ./dist/styles/index.css --minify",
     "generate": "node scripts/generate-toast-defaults.mjs",
     "prepublishOnly": "pnpm build && pnpm typecheck",
@@ -78,7 +82,8 @@
     "docs": {
       "reference": {
         "entrypoints": [
-          "."
+          ".",
+          "./dialog"
         ],
         "prose": true
       }

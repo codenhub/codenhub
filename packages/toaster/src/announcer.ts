@@ -1,4 +1,4 @@
-import { getToastLayerHost } from "./dom";
+import { getToastLayerHost } from "./layer-host";
 import type { ToastRole } from "./types";
 
 /**
@@ -84,7 +84,7 @@ export function announce(params: AnnounceParams): void {
     return;
   }
   const politeness: Politeness = role === "alert" ? "assertive" : "polite";
-  const host = getToastLayerHost(parent, instanceId);
+  const host = getToastLayerHost(parent);
   const existing = findRegion(host, instanceId, politeness);
   if (existing) {
     const pending = pendingLines.get(existing);
@@ -104,7 +104,7 @@ export function announce(params: AnnounceParams): void {
     // The host changes when a dialog opens, which makes a region outside it
     // inert, and when the dialog starts closing, which is when it stops
     // being modal and its own region is about to be cleared.
-    const isCurrent = getToastLayerHost(parent, instanceId) === host;
+    const isCurrent = getToastLayerHost(parent) === host;
     if (region.isConnected && isCurrent) {
       pending.forEach((line) => appendLine(region, line));
     } else if (region.isConnected || (host !== parent && host.isConnected)) {

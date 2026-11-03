@@ -14,7 +14,7 @@ Modern applications frequently balance transient notifications (build status, sy
 `@codenhub/toaster` coordinates both feedback models through specialized browser primitives:
 
 - **Dual-layer architecture**: Floating toast stacks render in light DOM containers with FLIP animations and FIFO eviction, while confirmation and prompt dialogs render into the browser's native top layer using HTML5 `<dialog>`.
-- **Zero-boilerplate singletons**: Import `toast` and `dialog` directly for application-wide notifications, or use `createToaster()` for isolated containers and micro-frontends.
+- **Zero-boilerplate singletons**: Import `toast` from `@codenhub/toaster` and `dialog` from `@codenhub/toaster/dialog` for application-wide notifications and dialogs, or use `createToaster()` and `createDialogs()` for isolated instances. An app that only shows toasts does not bundle the dialog code.
 - **First-class Promise workflows**: `toast.promise` coordinates pending, success, and error transitions with automatic timer re-arming; dialog methods return `DialogHandle<T>` implementing `PromiseLike<T>` so you can `await dialog.confirm(...)` directly.
 - **Live token composition**: Toast colors, presentation axes (`.solid`, `.soft`, `.ghost`, `.edged`), and dark mode compose live with `@codenhub/styles` or fall back to standalone generated defaults.
 
@@ -33,7 +33,8 @@ pnpm add @codenhub/toaster
 Import the required global stylesheet once in your client entrypoint, then use the pre-configured singletons anywhere in your application:
 
 ```ts
-import { toast, dialog } from "@codenhub/toaster";
+import { toast } from "@codenhub/toaster";
+import { dialog } from "@codenhub/toaster/dialog";
 import "@codenhub/toaster/styles";
 
 // 1. Plain neutral or semantic notifications
@@ -76,7 +77,7 @@ Explore the focused guides below to master every aspect of the package:
 | [Toasts](toasts.md)                 | Complete guide to dispatching neutral, semantic, loading, structured, and promise-driven notifications.                   |
 | [Dialogs](dialogs.md)               | Deep dive into native modal confirmations, prompts, alerts, thenable handles, and label localization.                     |
 | [Styling](styling.md)               | CSS custom property composition with `@codenhub/styles`, presentation classes, standalone fallback, dark mode, and CSP.   |
-| [Accessibility](accessibility.md)   | Screen reader announcements, native dialog focus trapping, reduced motion, and content sanitization.                      |
+| [Accessibility](accessibility.md)   | Screen reader announcements, native dialog focus trapping, reduced motion, and custom content boundaries.                 |
 | [Scoped Instances](instances.md)    | Creating isolated instances with `createToaster()`, custom DOM containers, micro-frontends, and SSR safety.               |
 | [API Reference](reference/index.md) | Complete TypeScript API catalogue generated automatically from package declarations.                                      |
 | [Changelog](changelog/index.md)     | Release history, breaking changes, and migration notes across versions.                                                   |
@@ -87,4 +88,4 @@ Explore the focused guides below to master every aspect of the package:
 - **Native `<dialog>`**: Interactive dialogs require browser support for `HTMLDialogElement.showModal()`.
 - **CSS Import**: `@codenhub/toaster/styles` must be loaded once in the application to render layout, positioning, and animation rules.
 - **Styles Integration**: `@codenhub/styles >=0.3.0` is an optional peer dependency. When present, toaster colors and presentation axes compose live; when absent, toaster renders using built-in standalone palette defaults.
-- **Content Security Policy**: Applications with strict CSP `style-src` restrictions can pass a `nonce` in `ToasterConfig` to authorize token `<style>` injection.
+- **Content Security Policy**: The package injects no `<style>` element and uses no HTML-parsing sink, so a strict `style-src` or Trusted Types policy needs no nonce or policy for it.

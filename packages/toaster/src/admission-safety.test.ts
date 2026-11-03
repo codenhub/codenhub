@@ -281,100 +281,6 @@ describe("rendering failure rollback", () => {
   });
 });
 
-describe("token stylesheet CSP compatibility", () => {
-  it("applies a configured nonce to the owned token stylesheet", () => {
-    const toaster = createToaster({ tokens: { successBg: "red" }, nonce: "abc123" });
-    const styleElement = document.head.querySelector<HTMLStyleElement>("style[data-toast-token-owner]");
-
-    expect(styleElement?.nonce).toBe("abc123");
-    toaster.destroy();
-  });
-
-  it("rewrites the token stylesheet with a nonce passed to configure()", () => {
-    const toaster = createToaster({ tokens: { successBg: "red" }, nonce: "first" });
-    toaster.configure({ nonce: "second" });
-    const styleElements = document.head.querySelectorAll<HTMLStyleElement>("style[data-toast-token-owner]");
-
-    // A new element, since a browser checks a nonce when a stylesheet is inserted, not when its attribute changes.
-    expect(styleElements).toHaveLength(1);
-    expect(styleElements[0]!.nonce).toBe("second");
-    toaster.destroy();
-  });
-
-  it("rewrites the token stylesheet when configure() changes tokens and nonce together", () => {
-    const toaster = createToaster({ tokens: { successBg: "red" }, nonce: "first" });
-    toaster.configure({ tokens: { successBg: "blue" }, nonce: "second" });
-    const styleElements = document.head.querySelectorAll<HTMLStyleElement>("style[data-toast-token-owner]");
-
-    expect(styleElements).toHaveLength(1);
-    expect(styleElements[0]!.nonce).toBe("second");
-    toaster.destroy();
-  });
-
-  it("removes the owned node and rejects construction if the stylesheet cannot initialize", () => {
-    const sheetSpy = vi.spyOn(HTMLStyleElement.prototype, "sheet", "get").mockReturnValue(null);
-
-    expect(() => createToaster({ tokens: { successBg: "red" } })).toThrow(/could not be initialized/);
-    expect(document.head.querySelector("style[data-toast-token-owner]")).toBeNull();
-
-    sheetSpy.mockRestore();
-  });
-
-  it("does not partially apply a configure() call when its token stylesheet fails", () => {
-    const toaster = createToaster({ maxVisible: 3, autoDismiss: false });
-    const first = toaster.info("A");
-    const second = toaster.info("B");
-    const third = toaster.info("C");
-    expect([first.state, second.state, third.state]).toEqual(["visible", "visible", "visible"]);
-
-    const sheetSpy = vi.spyOn(HTMLStyleElement.prototype, "sheet", "get").mockReturnValue(null);
-    expect(() => toaster.configure({ maxVisible: 1, tokens: { successBg: "red" } })).toThrow(
-      /could not be initialized/,
-    );
-    sheetSpy.mockRestore();
-
-    // The rejected token application must not have let `maxVisible` (bundled
-    // in the same call) take effect: capacity reconciliation never ran.
-    expect([first.state, second.state, third.state]).toEqual(["visible", "visible", "visible"]);
-
-    toaster.destroy();
-  });
-
-  it("keeps a previously working token stylesheet intact when a later update fails", () => {
-    const toaster = createToaster({ tokens: { successBg: "red" } });
-    const styleElement = document.head.querySelector<HTMLStyleElement>("style[data-toast-token-owner]");
-    expect(styleElement).not.toBeNull();
-
-    const sheetSpy = vi.spyOn(HTMLStyleElement.prototype, "sheet", "get").mockReturnValue(null);
-    expect(() => toaster.configure({ tokens: { successBg: "blue" } })).toThrow(/could not be initialized/);
-    sheetSpy.mockRestore();
-
-    // The failed replacement must not have torn down the element that was
-    // already working before this call.
-    expect(document.head.querySelector("style[data-toast-token-owner]")).toBe(styleElement);
-    const rule = styleElement!.sheet!.cssRules[0] as CSSStyleRule;
-    expect(rule.style.getPropertyValue("--toast-color-success-bg")).toBe("red");
-
-    toaster.destroy();
-  });
-
-  it("keeps the working token stylesheet when its replacement for a new nonce fails", () => {
-    const toaster = createToaster({ tokens: { successBg: "red" }, nonce: "first" });
-    const styleElement = document.head.querySelector<HTMLStyleElement>("style[data-toast-token-owner]");
-
-    const sheetSpy = vi.spyOn(HTMLStyleElement.prototype, "sheet", "get").mockReturnValue(null);
-    expect(() => toaster.configure({ nonce: "second" })).toThrow(/could not be initialized/);
-    sheetSpy.mockRestore();
-
-    expect(Array.from(document.head.querySelectorAll("style[data-toast-token-owner]"))).toEqual([styleElement]);
-    const rule = styleElement!.sheet!.cssRules[0] as CSSStyleRule;
-    expect(rule.style.getPropertyValue("--toast-color-success-bg")).toBe("red");
-
-    toaster.destroy();
-    expect(document.head.querySelector("style[data-toast-token-owner]")).toBeNull();
-  });
-});
-
 describe("queued toast updates", () => {
   it("applies an update sent while queued once the toast is admitted", () => {
     const toaster = createToaster({ maxVisible: 1, autoDismiss: false });
@@ -400,7 +306,7 @@ describe("queued toast updates", () => {
     toaster.info("First");
     const queued = toaster.info("Second");
 
-    expect(() => queued.update({ tokens: { successBg: "red; } body { display: none" } })).toThrow(/color/);
+    expect(() => queued.update({ duration: -1 })).toThrow(/duration/);
     toaster.destroy();
   });
 
@@ -437,26 +343,12 @@ describe("queued toast updates", () => {
 });
 
 describe("option mutation safety", () => {
-  it("is not affected by mutating the caller's token object after dispatch", () => {
-    const toaster = createToaster();
-    const tokens = { successBg: "red" };
-    toaster.success("Snapshot test", { tokens });
-
-    tokens.successBg = "blue";
-
-    const element = document.body.querySelector<HTMLDivElement>(".coden-toast");
-    expect(element?.style.getPropertyValue("--toast-color-success-bg")).toBe("red");
-    toaster.destroy();
-  });
-
-  it("does not apply a partial update when token validation fails", () => {
+  it("does not apply a partial update when validation fails", () => {
     const toaster = createToaster();
     const handle = toaster.success("Original message");
     const element = document.body.querySelector(".coden-toast");
 
-    expect(() =>
-      handle.update({ message: "Changed message", tokens: { successBg: "red; } body { display: none" } }),
-    ).toThrow(/color/);
+    expect(() => handle.update({ message: "Changed message", duration: -1 })).toThrow(/duration/);
 
     expect(element?.textContent).toContain("Original message");
     expect(element?.textContent).not.toContain("Changed message");

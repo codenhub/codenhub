@@ -284,7 +284,7 @@
   pointer-events: auto;
 }
 
-/* A consumer's own ToastTokens value always wins over the composed result --
+/* A consumer's own --toast-color-* value always wins over the composed result --
    the same precedence this package has always given an explicit override,
    now sitting in front of a live formula instead of a baked palette cell. */
 :where([data-toast-instance].coden-toast-success) {
@@ -574,7 +574,7 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
 /* Reuses the primary action button's own token/live/generated-default chain
    rather than inventing a separate "ring" concept or a hand-picked literal:
    a focus ring is the same brand-primary accent a real .btn.primary already
-   renders, so a consumer who customizes tokens.primaryBg gets a matching
+   renders, so a consumer who sets --toast-color-primary-bg gets a matching
    ring for free. */
 :where(dialog[data-toast-instance] .toast-dialog-input:focus-visible) {
   border-color: var(--toast-color-primary-bg, var(--color-primary, var(--toast-default-color-btn-primary)));

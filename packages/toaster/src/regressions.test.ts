@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createToaster } from "./core";
-import { flushAnimations, installAnimateMock, installDialogMocks } from "./test-utils";
+import { createDialogs } from "./dialogs";
+import { animations, flushAnimations, installAnimateMock, installDialogMocks } from "./test-utils";
 
 beforeEach(() => {
   document.body.innerHTML = "";
@@ -199,43 +200,21 @@ describe("toast lifecycle", () => {
   });
 });
 
-describe("content and token security", () => {
-  it("should reject token values that are not CSS colors", () => {
-    expect(() => createToaster({ tokens: { successBg: "red; } body { display: none" } })).toThrow(/color/);
-  });
-
-  it("should reject invalid per-toast and dialog token colors", () => {
+describe("content security", () => {
+  it("should render an HTML-looking string as text instead of a link", () => {
     const toaster = createToaster();
-    const tokens = { successBg: "red; } body { display: none" };
+    const markup = '<a style="position:fixed" target="_BLANK" href="https://example.com">Open</a>';
+    toaster.custom(markup);
 
-    expect(() => toaster.success("Unsafe", { tokens })).toThrow(/color/);
-    expect(() => toaster.dialog.confirm("Unsafe", { tokens })).toThrow(/color/);
+    expect(document.body.querySelector("a")).toBeNull();
+    expect(document.body.textContent).toContain(markup);
     toaster.destroy();
   });
 
-  it("should reject invalid token colors during updates", () => {
-    const toaster = createToaster();
-    const handle = toaster.success("Safe");
-
-    expect(() => handle.update({ tokens: { successBg: "red; } body { display: none" } })).toThrow(/color/);
-    toaster.destroy();
-  });
-
-  it("should remove active styling and enforce safe blank links in HTML content", () => {
-    const toaster = createToaster();
-    toaster.custom('<a id="unsafe" style="position:fixed" target="_BLANK" href="https://example.com">Open</a>');
-    const link = document.body.querySelector("a")!;
-
-    expect(link.hasAttribute("id")).toBe(false);
-    expect(link.hasAttribute("style")).toBe(false);
-    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
-    toaster.destroy();
-  });
-
-  it("should reject content that sanitization empties out entirely, rather than rendering a blank toast", () => {
+  it("should reject whitespace-only string content, rather than rendering a blank toast", () => {
     const toaster = createToaster({ maxVisible: 1, autoDismiss: false });
 
-    expect(() => toaster.custom("<script>alert(1)</script>")).toThrow(/empty/);
+    expect(() => toaster.custom("   ")).toThrow(/empty/);
     expect(() => toaster.success("Still available")).not.toThrow();
     expect(document.body.textContent).toContain("Still available");
     toaster.destroy();
@@ -282,18 +261,18 @@ describe("content and token security", () => {
 
 describe("interactive dialogs", () => {
   it("should expose an honest interactive handle", () => {
-    const toaster = createToaster();
-    const handle = toaster.dialog.confirm("Continue?");
+    const dialogs = createDialogs();
+    const handle = dialogs.confirm("Continue?");
 
     expect(handle.state).toBe("visible");
     expect(Object.keys(handle).sort()).toEqual(["catch", "dismiss", "finally", "result", "settled", "state", "then"]);
     handle.dismiss();
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("should associate dialog text and prompt labels", () => {
-    const toaster = createToaster();
-    const handle = toaster.dialog.prompt("Project name", { title: "Create project" });
+    const dialogs = createDialogs();
+    const handle = dialogs.prompt("Project name", { title: "Create project" });
     const dialog = document.body.querySelector("dialog")!;
     const input = dialog.querySelector("input")!;
 
@@ -301,7 +280,7 @@ describe("interactive dialogs", () => {
     expect(dialog.getAttribute("aria-describedby")).toBeTruthy();
     expect(input.getAttribute("aria-labelledby")).toBeTruthy();
     handle.dismiss();
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("should reject a failed modal and continue its queue", async () => {
@@ -313,36 +292,36 @@ describe("interactive dialogs", () => {
       .mockImplementation(function (this: HTMLDialogElement) {
         this.setAttribute("open", "");
       });
-    const toaster = createToaster();
-    const failed = toaster.dialog.confirm("First");
-    const next = toaster.dialog.confirm("Second");
+    const dialogs = createDialogs();
+    const failed = dialogs.confirm("First");
+    const next = dialogs.confirm("Second");
 
     await expect(failed.result).rejects.toThrow("Detached");
     expect(showModal).toHaveBeenCalledTimes(2);
     expect(document.body.textContent).toContain("Second");
     next.dismiss();
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("should ignore Enter while prompt input is composing", () => {
-    const toaster = createToaster();
-    const handle = toaster.dialog.prompt("Name");
+    const dialogs = createDialogs();
+    const handle = dialogs.prompt("Name");
     const input = document.body.querySelector("input")!;
 
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", isComposing: true, bubbles: true }));
 
     expect(handle.state).toBe("visible");
     handle.dismiss();
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("should restore the original focus after a queued dialog sequence", async () => {
     const opener = document.createElement("button");
     document.body.appendChild(opener);
     opener.focus();
-    const toaster = createToaster();
-    const first = toaster.dialog.alert("First");
-    const second = toaster.dialog.alert("Second");
+    const dialogs = createDialogs();
+    const first = dialogs.alert("First");
+    const second = dialogs.alert("Second");
 
     first.dismiss();
     await first.settled;
@@ -350,7 +329,7 @@ describe("interactive dialogs", () => {
     await second.settled;
 
     expect(document.activeElement).toBe(opener);
-    toaster.destroy();
+    dialogs.destroy();
   });
 });
 
@@ -367,24 +346,24 @@ describe("explicit undefined options", () => {
   });
 
   it("keeps instance dialog labels when a per-call label is undefined", async () => {
-    const toaster = createToaster({ labels: { confirm: "Confirmar", cancel: "Cancelar", submit: "Enviar", ok: "Ok" } });
+    const dialogs = createDialogs({ labels: { confirm: "Confirmar", cancel: "Cancelar", submit: "Enviar", ok: "Ok" } });
 
-    const confirm = toaster.dialog.confirm("Sure?", { confirmLabel: undefined, cancelLabel: undefined });
+    const confirm = dialogs.confirm("Sure?", { confirmLabel: undefined, cancelLabel: undefined });
     expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Confirmar");
     expect(document.body.querySelector(".toast-dialog-btn-cancel")?.textContent).toBe("Cancelar");
     confirm.dismiss();
     await confirm.settled;
 
-    const prompt = toaster.dialog.prompt("Name?", { submitLabel: undefined });
+    const prompt = dialogs.prompt("Name?", { submitLabel: undefined });
     expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Enviar");
     prompt.dismiss();
     await prompt.settled;
 
-    const alert = toaster.dialog.alert("Done", { okLabel: undefined });
+    const alert = dialogs.alert("Done", { okLabel: undefined });
     expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Ok");
     alert.dismiss();
     await alert.settled;
-    toaster.destroy();
+    dialogs.destroy();
   });
 });
 
@@ -423,17 +402,6 @@ describe("promise outcome defaults", () => {
   });
 });
 
-describe("clearing instance tokens", () => {
-  it("removes the token stylesheet when configure sets tokens to undefined", () => {
-    const toaster = createToaster({ tokens: { successBg: "red" } });
-    expect(document.head.querySelectorAll("style[data-toast-token-owner]")).toHaveLength(1);
-
-    toaster.configure({ tokens: undefined });
-    expect(document.head.querySelectorAll("style[data-toast-token-owner]")).toHaveLength(0);
-    toaster.destroy();
-  });
-});
-
 describe("custom content updates", () => {
   it("does not insert an icon into custom content when its type changes", () => {
     const toaster = createToaster();
@@ -448,5 +416,166 @@ describe("custom content updates", () => {
     handle.update({ icon: "info" });
     expect(element.querySelector(".coden-toast-icon")).toBeNull();
     toaster.destroy();
+  });
+});
+
+describe("toast layers under queued dialogs", () => {
+  it("keeps toasts inside the open dialog when a queued dialog is dismissed", () => {
+    const toaster = createToaster();
+    const dialogs = createDialogs();
+    void dialogs.confirm("Discard?");
+    const queued = dialogs.alert("Later");
+    const dialog = document.querySelector("dialog")!;
+
+    queued.dismiss();
+    toaster.error("Save failed", { autoDismiss: false });
+    flushAnimations();
+
+    expect(document.querySelector(".coden-toast")!.closest("dialog")).toBe(dialog);
+    dialogs.destroy();
+    toaster.destroy();
+  });
+});
+
+describe("focus across updates", () => {
+  it("keeps focus on the action button when a message update arrives", () => {
+    const toaster = createToaster();
+    const handle = toaster("Uploading 1%", { autoDismiss: false, action: { label: "Cancel", onClick: () => {} } });
+    flushAnimations();
+    const action = document.querySelector<HTMLButtonElement>("[data-toast-action]")!;
+    action.focus();
+
+    handle.update({ message: "Uploading 42%" });
+
+    expect(document.activeElement).toBe(action);
+    expect(document.querySelector("[data-toast-message]")!.textContent).toBe("Uploading 42%");
+    toaster.destroy();
+  });
+
+  it("moves focus to the new action button when the action itself changes", () => {
+    const toaster = createToaster();
+    const handle = toaster("Uploading", { autoDismiss: false, action: { label: "Cancel", onClick: () => {} } });
+    flushAnimations();
+    document.querySelector<HTMLButtonElement>("[data-toast-action]")!.focus();
+
+    handle.update({ action: { label: "Retry", onClick: () => {} } });
+
+    const action = document.querySelector<HTMLButtonElement>("[data-toast-action]")!;
+    expect(action.textContent).toBe("Retry");
+    expect(document.activeElement).toBe(action);
+    toaster.destroy();
+  });
+
+  it("does not take back focus that moved elsewhere during the exit animation", () => {
+    const trigger = document.createElement("button");
+    const editor = document.createElement("input");
+    document.body.append(trigger, editor);
+    trigger.focus();
+    const toaster = createToaster();
+    toaster("Deleted", { autoDismiss: false, dismissible: true });
+    flushAnimations();
+    document.querySelector<HTMLButtonElement>(".coden-toast-dismiss")!.focus();
+
+    document.querySelector<HTMLButtonElement>(".coden-toast-dismiss")!.click();
+    editor.focus();
+    flushAnimations();
+
+    expect(document.activeElement).toBe(editor);
+    toaster.destroy();
+  });
+});
+
+describe("prompt submission", () => {
+  it("prevents the default action of the Enter key that submits it", () => {
+    const dialogs = createDialogs();
+    void dialogs.prompt("Name?");
+    const input = document.querySelector<HTMLInputElement>("dialog input")!;
+
+    const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    input.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    dialogs.destroy();
+  });
+});
+
+describe("updates from an onShow subscriber", () => {
+  it("renders a queued toast's content once when onShow updates it", () => {
+    const toaster = createToaster({ maxVisible: 1 });
+    const first = toaster("First", { autoDismiss: false });
+    flushAnimations();
+    const queued = toaster("Second", { autoDismiss: false, dismissible: true });
+    queued.onShow((handle) => handle.update({ description: "More detail" }));
+
+    first.dismiss();
+    flushAnimations();
+
+    const toasts = Array.from(document.querySelectorAll(".coden-toast"));
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0]!.querySelectorAll("[data-toast-main]")).toHaveLength(1);
+    expect(toasts[0]!.querySelectorAll(".coden-toast-dismiss")).toHaveLength(1);
+    expect(toasts[0]!.querySelector("[data-toast-description]")!.textContent).toBe("More detail");
+    toaster.destroy();
+  });
+});
+
+describe("dialogs after the page changes", () => {
+  it("opens a dialog again after the body it was attached to is replaced", async () => {
+    const dialogs = createDialogs();
+    const first = dialogs.alert("One");
+    first.dismiss();
+    await first.settled;
+
+    document.body.replaceWith(document.createElement("body"));
+    const second = dialogs.alert("Two");
+
+    const dialog = document.querySelector("dialog")!;
+    expect(dialog.parentElement).toBe(document.body);
+    expect(dialog.open).toBe(true);
+    second.dismiss();
+    dialogs.destroy();
+  });
+
+  it("opens a dialog again after its element was removed", async () => {
+    const dialogs = createDialogs();
+    const first = dialogs.alert("One");
+    first.dismiss();
+    await first.settled;
+
+    document.querySelector("dialog")!.remove();
+    void dialogs.alert("Two");
+
+    expect(document.querySelector("dialog")?.open).toBe(true);
+    dialogs.destroy();
+  });
+});
+
+describe("teardown after clear", () => {
+  it("settles toasts that are still leaving when destroy follows clear", () => {
+    const toaster = createToaster();
+    const handle = toaster("Bye", { autoDismiss: false });
+    flushAnimations();
+    const onHidden = vi.fn();
+    handle.onHidden(onHidden);
+
+    toaster.clear();
+    toaster.destroy();
+
+    expect(handle.state).toBe("hidden");
+    expect(onHidden).toHaveBeenCalledOnce();
+  });
+
+  it("cancels the exit animation of a toast dismissed during its entrance", () => {
+    const toaster = createToaster();
+    const handle = toaster("Quick", { autoDismiss: false });
+    const entrance = animations[0]!;
+
+    handle.dismiss();
+    const exit = animations.at(-1)!;
+    const cancel = vi.spyOn(exit, "cancel");
+    entrance.onfinish?.();
+    toaster.destroy();
+
+    expect(cancel).toHaveBeenCalled();
   });
 });

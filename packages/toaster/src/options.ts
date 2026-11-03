@@ -1,14 +1,11 @@
-import { assertValidTokens, replaceTokens } from "./tokens";
 import type {
   SemanticType,
   ToastAction,
   ToastContent,
   ToastHandle,
   ToastIcon,
-  ToastLabels,
   ToastPosition,
   ToastRole,
-  ToastTokens,
 } from "./types";
 
 /** Built-in text this package renders with no per-call override of its own -- see `ToastLabels.dismiss`. */
@@ -35,20 +32,15 @@ export interface ResolvedToastConfig {
   readonly maxVisible: number;
   /** Viewport margin configurations. */
   readonly margin?: string | { x?: string; y?: string };
-  /** Extra CSS class name applied to every toast and dialog from this instance. */
+  /** Extra CSS class name applied to every toast from this instance. */
   readonly className?: string;
   /** Accessible label for a toast's dismiss button. */
   readonly dismissLabel: string;
   /** Accessible name of each toast stack's region landmark. */
   readonly regionLabel: string;
-  /** Instance-level default labels for dialog buttons (confirm/cancel/submit/ok). */
-  readonly dialogLabels: ToastLabels;
 }
 
-export const DEFAULT_CONFIG: Omit<
-  ResolvedToastConfig,
-  "instanceId" | "margin" | "dismissLabel" | "regionLabel" | "dialogLabels"
-> = {
+export const DEFAULT_CONFIG: Omit<ResolvedToastConfig, "instanceId" | "margin" | "dismissLabel" | "regionLabel"> = {
   position: "top-right",
   duration: 4000,
   dismissible: false,
@@ -148,9 +140,8 @@ export interface NormalizedToastOptions {
   readonly className?: string;
   /** The instance-level `ToasterConfig.className` alone, kept separate so an
    *  `update()` can re-append it instead of dropping it (see
-   *  `applyUpdateToElement`). */
+   *  `applyClassNameUpdate`). */
   readonly instanceClassName?: string;
-  readonly tokens: ToastTokens | null;
   readonly margin?: string | { x?: string; y?: string };
   /** Accessible label for this toast's dismiss button, from `ResolvedToastConfig.dismissLabel`. */
   readonly dismissLabel: string;
@@ -182,92 +173,6 @@ export function joinClassNames(...classNames: Array<string | undefined>): string
   return classNames.filter((c): c is string => hasNonEmptyString(c)).join(" ");
 }
 
-const SAFE_TAGS = new Set([
-  "a",
-  "b",
-  "br",
-  "code",
-  "div",
-  "em",
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
-  "i",
-  "li",
-  "ol",
-  "p",
-  "pre",
-  "span",
-  "strong",
-  "ul",
-]);
-
-const SAFE_ATTRIBUTES = new Set(["target", "rel"]);
-
-const URL_ATTRIBUTES = new Set(["href"]);
-
-function sanitizeElement(el: Element): void {
-  const tagName = el.tagName.toLowerCase();
-
-  if (!SAFE_TAGS.has(tagName)) {
-    if (["script", "style", "iframe", "object", "embed"].includes(tagName)) {
-      el.remove();
-      return;
-    }
-    const parent = el.parentNode;
-    if (parent) {
-      Array.from(el.children).forEach(sanitizeElement);
-      while (el.firstChild) {
-        parent.insertBefore(el.firstChild, el);
-      }
-      el.remove();
-    }
-    return;
-  }
-
-  const attrs = Array.from(el.attributes);
-  for (const attr of attrs) {
-    const attrName = attr.name.toLowerCase();
-
-    if (URL_ATTRIBUTES.has(attrName)) {
-      // Strip control characters and unicode spaces to prevent javascript: protocol bypasses
-      // eslint-disable-next-line no-control-regex
-      const controlRegex = /[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u200D\u2028\u2029\u202F\u205F\u3000\uFEFF]/g;
-      const val = attr.value.replace(controlRegex, "").toLowerCase();
-
-      const protocolMatch = val.match(/^[a-z0-9+.-]+:/);
-      if (protocolMatch) {
-        const protocol = protocolMatch[0];
-        if (!["http:", "https:", "mailto:", "tel:"].includes(protocol)) {
-          el.removeAttribute(attr.name);
-        }
-      }
-    } else if (attrName === "target") {
-      const target = attr.value.toLowerCase();
-      if (!["_blank", "_self"].includes(target)) {
-        el.removeAttribute(attr.name);
-      } else {
-        el.setAttribute("target", target);
-      }
-    } else if (!SAFE_ATTRIBUTES.has(attrName)) {
-      el.removeAttribute(attr.name);
-    }
-  }
-
-  if (tagName === "a" && el.getAttribute("target")?.toLowerCase() === "_blank") {
-    el.setAttribute("rel", "noopener noreferrer");
-  }
-
-  Array.from(el.children).forEach(sanitizeElement);
-}
-
-function sanitizeFragment(fragment: DocumentFragment): void {
-  Array.from(fragment.children).forEach(sanitizeElement);
-}
-
 export function resolveToastContent(
   content: ToastContent,
   documentRef: Document,
@@ -279,20 +184,7 @@ export function resolveToastContent(
     if (!hasNonEmptyString(resolved)) {
       throw new Error("Toast content must not be an empty string.");
     }
-    const template = documentRef.createElement("template");
-    template.innerHTML = resolved;
-
-    sanitizeFragment(template.content);
-
-    // The input string was non-empty, but sanitization (e.g. a script-only
-    // string with every element stripped) can still leave nothing behind.
-    // Treated the same as an originally-empty string rather than silently
-    // rendering a blank toast.
-    if (template.content.childNodes.length === 0) {
-      throw new Error("Toast content must not be an empty string.");
-    }
-
-    return Object.freeze(Array.from(template.content.childNodes));
+    return Object.freeze([documentRef.createTextNode(resolved)]);
   }
 
   if (typeof resolved !== "object" || resolved === null || !("nodeType" in resolved)) {
@@ -333,7 +225,6 @@ export interface RawToastOptions {
   duration?: number;
   dismissible?: boolean;
   autoDismiss?: boolean;
-  tokens?: ToastTokens;
   className?: string;
   role?: ToastRole;
   margin?: string | { x?: string; y?: string };
@@ -358,21 +249,13 @@ export function normalizeToastOptions(params: {
   }
 
   assertDuration(options.duration);
-  assertValidTokens(options.tokens, documentRef);
   if (options.type !== undefined) {
     assertSemanticType(options.type);
   }
 
-  const typePreset = options.type
-    ? {
-        role: SEMANTIC_ROLES[options.type],
-        icon: SEMANTIC_ICONS[options.type],
-        rootClassName: SEMANTIC_ROOT_CLASS_NAMES[options.type],
-      }
-    : null;
-
+  const { type } = options;
   const position = options.position ?? config.position;
-  const role = options.role ?? preset?.role ?? typePreset?.role ?? DEFAULT_ROLE;
+  const role = options.role ?? preset?.role ?? (type ? SEMANTIC_ROLES[type] : DEFAULT_ROLE);
   assertToastPosition(position);
   assertToastRole(role);
 
@@ -380,66 +263,42 @@ export function normalizeToastOptions(params: {
   const dismissible = options.dismissible ?? config.dismissible;
   const autoDismiss = options.autoDismiss ?? preset?.autoDismiss ?? config.autoDismiss;
 
-  const resolvedTitle = hasNonEmptyString(title) ? title : null;
-  const resolvedMessage = hasNonEmptyString(message) ? message : null;
-  const resolvedDescription = hasNonEmptyString(description) ? description : null;
+  // Content and message/icon are mutually exclusive.
+  const isMessageToast = content === undefined;
 
   return Object.freeze({
     instanceId: config.instanceId,
     autoDismiss,
-    content: content === undefined ? null : resolveToastContent(content, documentRef, handle),
+    content: isMessageToast ? null : resolveToastContent(content, documentRef, handle),
     duration: options.duration ?? config.duration,
-    icon:
-      content === undefined
-        ? options.icon !== undefined
-          ? options.icon
-          : (preset?.icon ?? typePreset?.icon ?? null)
-        : null,
+    icon: !isMessageToast
+      ? null
+      : options.icon !== undefined
+        ? options.icon
+        : (preset?.icon ?? (type ? SEMANTIC_ICONS[type] : null)),
     dismissible,
-    title: content === undefined ? resolvedTitle : null,
-    message: content === undefined ? resolvedMessage : null,
-    description: content === undefined ? resolvedDescription : null,
-    action: content === undefined ? (action ?? null) : null,
+    title: isMessageToast && hasNonEmptyString(title) ? title : null,
+    message: isMessageToast && hasNonEmptyString(message) ? message : null,
+    description: isMessageToast && hasNonEmptyString(description) ? description : null,
+    action: isMessageToast ? (action ?? null) : null,
     position,
     role,
-    rootClassName: preset?.rootClassName ?? typePreset?.rootClassName ?? DEFAULT_TOAST_CLASS,
+    rootClassName: preset?.rootClassName ?? (type ? SEMANTIC_ROOT_CLASS_NAMES[type] : DEFAULT_TOAST_CLASS),
     className: joinClassNames(config.className, options.className),
     instanceClassName: config.className,
-    tokens: options.tokens ? { ...options.tokens } : null,
     margin: typeof margin === "object" && margin !== null ? { ...margin } : margin,
     dismissLabel: config.dismissLabel,
     regionLabel: config.regionLabel,
   });
 }
 
-/** A scoped token and/or extra-class update to apply to a live toast element. */
-export interface LiveStyleUpdate {
-  tokens?: ToastTokens;
-  className?: string;
-}
-
 /**
- * Applies a scoped token and/or extra-class update to an already-rendered
- * toast element. Message, content, icon, and severity updates are handled
- * directly by `Toast` itself (see `toast-base.ts`), since they need to read
- * and mutate the toast's own current-state fields, not just the DOM.
+ * Applies an `update({ className })` to an already-rendered toast element,
+ * replacing only the per-call class portion: the root class and the
+ * instance-level config default stay, so `update()` cannot drop them.
  */
-export function applyUpdateToElement(element: HTMLDivElement, update: LiveStyleUpdate): void {
-  // Validate everything before mutating anything: a rejected update must be
-  // atomic, not leave an earlier field in this same call already applied.
-  if (update.tokens !== undefined) {
-    assertValidTokens(update.tokens, element.ownerDocument);
-  }
-
-  if (update.tokens !== undefined) {
-    replaceTokens(element.style, update.tokens);
-  }
-
-  if (update.className !== undefined) {
-    // Replace only the per-call class portion — keep the root class and the
-    // instance-level config default intact, so update() can't drop it.
-    const dataClass = element.getAttribute("data-root-class") ?? "";
-    const instanceClass = element.getAttribute("data-instance-class") ?? "";
-    element.className = joinClassNames(dataClass, instanceClass, update.className);
-  }
+export function applyClassNameUpdate(element: HTMLDivElement, className: string): void {
+  const dataClass = element.getAttribute("data-root-class") ?? "";
+  const instanceClass = element.getAttribute("data-instance-class") ?? "";
+  element.className = joinClassNames(dataClass, instanceClass, className);
 }

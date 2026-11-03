@@ -52,6 +52,9 @@ export function createPromptRenderer(
       "keydown",
       (event) => {
         if (event.key === "Enter" && !event.isComposing) {
+          // Closing returns focus to the control that opened the prompt, and
+          // without this the same Enter press would activate it again.
+          event.preventDefault();
           close(input.value);
         }
       },

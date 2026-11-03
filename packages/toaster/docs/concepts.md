@@ -17,7 +17,7 @@ Modern web applications need two fundamentally different kinds of feedback: peri
 | **Floating Toasts**     | Light DOM stack containers (`[data-toast-container]`) | Background job completion, copy confirmation, system alerts, promise states | Auto-dismiss timer, close button, or programmatic dismissal         |
 | **Interactive Dialogs** | Browser Top Layer (`<dialog>` + `showModal()`)        | Destructive confirmations, user prompts, mandatory alerts                   | Explicit action button click, Escape key, or programmatic dismissal |
 
-Because modal dialogs use the platform's native `<dialog>` element and `showModal()`, the browser marks the rest of the document as `inert`. So while one of its dialogs is open, a toaster places its toast stacks inside that dialog: they stay in their viewport corner, above the backdrop, and can still be clicked, focused, and heard by screen readers. They move back out as soon as the dialog starts closing. Toasts from another toaster instance stay behind the backdrop, inert, until the dialog closes.
+Because modal dialogs use the platform's native `<dialog>` element and `showModal()`, the browser marks the rest of the document as `inert`. So while a dialog from `@codenhub/toaster/dialog` is open, every toaster rendering into the same parent element places its toast stacks inside that dialog: they stay in their viewport corner, above the backdrop, and can still be clicked, focused, and heard by screen readers. They move back out as soon as the dialog starts closing. A toaster with a different container, such as one scoped to a panel, stays behind the backdrop, inert, until the dialog closes.
 
 ### Your own modal dialogs
 
@@ -64,7 +64,7 @@ A major flaw in traditional toast and dialog libraries is the "truthy object" tr
 `@codenhub/toaster` resolves this by making `DialogHandle<T>` implement `PromiseLike<T>`:
 
 ```ts
-import { dialog } from "@codenhub/toaster";
+import { dialog } from "@codenhub/toaster/dialog";
 
 // 1. Direct await resolves to the primitive boolean value:
 if (await dialog.confirm("Permanently delete this project?")) {
@@ -103,7 +103,7 @@ When running standalone without `@codenhub/styles`, the required stylesheet (`@c
 
 - [Toast notifications](toasts.md): Comprehensive guide to dispatching, updating, and queueing toasts.
 - [Interactive dialogs](dialogs.md): Deep dive into confirmations, prompts, alerts, and label localization.
-- [Styling and theming](styling.md): Presentation axes, token customization, dark mode, and CSP configuration.
-- [Accessibility and security](accessibility.md): ARIA announcements, focus restoration, and sanitization boundaries.
+- [Styling and theming](styling.md): Presentation axes, color custom properties, dark mode, and CSP.
+- [Accessibility and security](accessibility.md): ARIA announcements, focus restoration, and custom content boundaries.
 - [Scoped instances](instances.md): Multi-instance coordination, custom containers, and lifecycle teardown.
 - [API reference](reference/index.md): Complete signature catalogue generated from TypeScript declarations.

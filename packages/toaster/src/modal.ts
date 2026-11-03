@@ -1,11 +1,10 @@
-import { setToastLayerHost } from "./dom";
+import { hostToastLayers, releaseToastLayers } from "./layer-host";
 import { createAlertRenderer, createConfirmRenderer, createPromptRenderer } from "./modal-renderers";
 import type { ModalRenderContext, ModalRenderResult } from "./modal-renderers";
 import { DIALOG_CLASS, buildDialogContent } from "./modal-templates";
 import { closeDialog } from "./modal-transition";
 import { joinClassNames, withoutUndefined } from "./options";
-import { assertValidTokens } from "./tokens";
-import type { AlertOptions, ConfirmOptions, DialogHandle, PromptOptions, ToastLabels, ToastState } from "./types";
+import type { AlertOptions, ConfirmOptions, DialogHandle, PromptOptions, DialogLabels, ToastState } from "./types";
 
 interface ModalJob {
   run(): void;
@@ -16,7 +15,6 @@ interface ModalJob {
 interface ModalOptions {
   title?: string;
   backdropDismiss?: boolean;
-  tokens?: ConfirmOptions["tokens"];
   className?: string;
 }
 
@@ -37,10 +35,10 @@ export class ModalController {
   private jobCounter = 0;
 
   public constructor(
-    private readonly parent: HTMLElement,
+    private readonly getParent: () => HTMLElement,
     private readonly instanceId: string,
     private readonly getDefaultClassName: () => string | undefined = () => undefined,
-    private readonly getLabels: () => ToastLabels = () => ({}),
+    private readonly getLabels: () => DialogLabels = () => ({}),
   ) {}
 
   public confirm(message: string, options: ConfirmOptions = {}): DialogHandle<boolean> {
@@ -122,10 +120,9 @@ export class ModalController {
     const options: ModalOptions = {
       title: params.options.title,
       backdropDismiss: params.options.backdropDismiss,
-      tokens: params.options.tokens ? { ...params.options.tokens } : undefined,
       className: params.options.className,
     };
-    assertValidTokens(options.tokens, this.parent.ownerDocument);
+    let parent = this.getParent();
 
     let resolveResult!: (value: T) => void;
     let rejectResult!: (reason: unknown) => void;
@@ -138,7 +135,7 @@ export class ModalController {
       resolveSettled = resolve;
     });
 
-    const documentRef = this.parent.ownerDocument;
+    const documentRef = parent.ownerDocument;
     if (!this.activeJob && this.jobs.length === 0) {
       const activeElement = documentRef.activeElement;
       this.restoreTarget = activeElement instanceof documentRef.defaultView!.HTMLElement ? activeElement : null;
@@ -164,6 +161,14 @@ export class ModalController {
       }
     };
 
+    // Only a dialog that opened holds the toasts; one still queued must not
+    // pull them out of whichever dialog is open right now.
+    const releaseLayers = (): void => {
+      if (dialog) {
+        releaseToastLayers(parent, dialog);
+      }
+    };
+
     const finishCleanup = (): void => {
       if (isCleanupSettled) {
         return;
@@ -173,7 +178,7 @@ export class ModalController {
         documentRef.defaultView?.cancelAnimationFrame(focusFrame);
       }
       abortController.abort();
-      this.releaseToastLayers();
+      releaseLayers();
       state = "hidden";
       // Cleared as soon as this dialog is done with, not left sitting until
       // the next open reuses the element: a prompt's draft input value, or
@@ -198,7 +203,7 @@ export class ModalController {
       state = "hiding";
       // Toasts leave as soon as the dialog starts closing, so one dispatched
       // during its exit transition is not hidden with it.
-      this.releaseToastLayers();
+      releaseLayers();
       abortController.abort();
       if (!dialog || isForced) {
         if (dialog?.open) {
@@ -212,7 +217,7 @@ export class ModalController {
 
     const fail = (error: unknown): void => {
       settleResult(params.cancelValue, error);
-      this.releaseToastLayers();
+      releaseLayers();
       if (dialog?.open) {
         dialog.close();
       }
@@ -226,14 +231,14 @@ export class ModalController {
           return;
         }
         hasStarted = true;
-        dialog = this.ensureDialog();
+        parent = this.getParent();
+        dialog = this.ensureDialog(parent);
         const idBase = `${this.instanceId}-dialog-${++this.jobCounter}`;
         const messageId = `${idBase}-message`;
         const container = buildDialogContent({
           dialog,
           message: params.message,
           title: options.title,
-          tokens: options.tokens,
           className: joinClassNames(this.getDefaultClassName(), options.className),
           titleId: `${idBase}-title`,
           messageId,
@@ -288,7 +293,7 @@ export class ModalController {
         dialog.showModal();
         // Everything outside a modal dialog is inert, so this instance's
         // toasts live inside it while it is open.
-        setToastLayerHost(this.parent, this.instanceId, dialog);
+        hostToastLayers(parent, dialog);
         state = "visible";
         if (rendered.shouldDeferFocus) {
           focusFrame = documentRef.defaultView!.requestAnimationFrame(() => {
@@ -370,16 +375,18 @@ export class ModalController {
     this.restoreTarget = null;
   }
 
-  private releaseToastLayers(): void {
-    setToastLayerHost(this.parent, this.instanceId, null);
-  }
-
-  private ensureDialog(): HTMLDialogElement {
+  private ensureDialog(parent: HTMLElement): HTMLDialogElement {
+    // Recreated when the page removed it, or replaced the element it lived
+    // in, as client-side navigation that swaps <body> does.
+    if (this.dialog && this.dialog.parentElement !== parent) {
+      this.dialog.remove();
+      this.dialog = null;
+    }
     if (!this.dialog) {
-      this.dialog = this.parent.ownerDocument.createElement("dialog");
+      this.dialog = parent.ownerDocument.createElement("dialog");
       this.dialog.className = DIALOG_CLASS;
       this.dialog.setAttribute("data-toast-instance", this.instanceId);
-      this.parent.appendChild(this.dialog);
+      parent.appendChild(this.dialog);
     } else {
       this.dialog.replaceChildren();
     }
