@@ -1,5 +1,6 @@
 ---
 title: "/postcss"
+description: "Generate CSS for the icon classes in your source files through PostCSS."
 order: 1
 ---
 
