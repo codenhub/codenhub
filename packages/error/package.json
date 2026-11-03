@@ -88,7 +88,7 @@
     "jsdom": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "svelte": "^5.3.0",
+    "svelte": "^5.57.3",
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
