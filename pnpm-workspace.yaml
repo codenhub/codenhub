@@ -45,6 +45,12 @@ catalog:
   vitest: ^4.1.10
   wrangler: ^4.156.0
 
+# TypeDoc still requires minimatch 10, which is affected by GHSA-g3hv-75wg-m249.
+# The TypeDoc patch adapts its glob walker to minimatch 11. Remove both once
+# TypeDoc requires minimatch >=11.0.1.
+overrides:
+  "typedoc>minimatch": ^11.0.4
+
 blockExoticSubdeps: true
 trustPolicy: no-downgrade
 # @astrojs/check needs chokidar ^4.0.3. chokidar 4.0.1 shipped with provenance;
@@ -67,3 +73,5 @@ minimumReleaseAgeExclude:
   - "@codenhub/validation@0.3.0"
   - "@codenhub/jwt@0.0.1"
   - "@codenhub/error@0.3.0"
+patchedDependencies:
+  typedoc@0.28.20: patches/typedoc@0.28.20.patch
