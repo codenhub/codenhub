@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Store browser tests</title>
+  </head>
+  <body>
+    <script type="module">
+      import { createStore, localStorageDriver } from "/dist/index.js";
+
+      const errors = [];
+      const store = createStore({
+        storageKey: "settings",
+        initialState: { theme: "light", count: 0 },
+        driver: localStorageDriver(),
+        onError: (event) => errors.push(event),
+      });
+      window.storeTest = { store, errors };
+      document.documentElement.dataset.ready = "true";
+    </script>
+  </body>
+</html>
