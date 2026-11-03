@@ -1,7 +1,5 @@
-// Workaround for codenhub/codenhub#451: an icon tag in a frontmatter string
-// breaks the build, so data-driven icons come from per-icon modules instead.
-// Workaround for codenhub/codenhub#452: those modules render with no icon class
-// and no `aria-hidden`, which `decorative` adds back.
+// Workaround for codenhub/codenhub#452: per-icon modules render with no icon
+// class and no `aria-hidden`, which `decorative` adds back.
 
 /** A `virtual:@codenhub/icons/…` module, imported as a namespace. */
 export interface IconModule {
