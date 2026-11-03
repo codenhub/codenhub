@@ -5,8 +5,9 @@
     "module": "Preserve",
     "moduleResolution": "bundler",
     "noEmit": true,
+    "skipLibCheck": true,
     "types": ["node"]
   },
   "extends": "../../tsconfig.json",
-  "include": ["src/**/*"]
+  "include": ["vitest*.config.ts", "playwright.config.ts", "src/**/*", "tests/**/*.ts"]
 }

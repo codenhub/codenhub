@@ -29,6 +29,10 @@ vi.mock("node:fs", () => {
     writeFileSync: vi.fn((p: string, data: string) => {
       mockFiles.set(p, data);
     }),
+    renameSync: vi.fn((from: string, to: string) => {
+      mockFiles.set(to, mockFiles.get(from)!);
+      mockFiles.delete(from);
+    }),
     rmSync: vi.fn((p: string) => {
       mockFiles.delete(p);
     }),
@@ -48,6 +52,13 @@ vi.mock("node:fs", () => {
       writeFile: vi.fn(async (p: string, data: string) => {
         mockFiles.set(p, data);
       }),
+      rename: vi.fn(async (from: string, to: string) => {
+        mockFiles.set(to, mockFiles.get(from)!);
+        mockFiles.delete(from);
+      }),
+      rm: vi.fn(async (p: string) => {
+        mockFiles.delete(p);
+      }),
       unlink: vi.fn(async (p: string) => {
         if (!mockFiles.has(p)) {
           throw createEnoentError(`ENOENT: no such file or directory, unlink '${p}'`);
@@ -65,6 +76,44 @@ describe("Node Drivers", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  describe.each([false, true])("atomic file replacement (async: %s)", (isAsync) => {
+    it.each(["write", "rename"])(
+      "preserves the previous file and cleans temporary files after %s fails",
+      async (failure) => {
+        const previous = JSON.stringify({ value: "previous" });
+        mockFiles.set(tempFile, previous);
+        const cause = new Error("disk failure");
+        if (isAsync) {
+          if (failure === "rename") {
+            vi.mocked(fs.promises.rename).mockRejectedValueOnce(cause);
+          } else {
+            vi.mocked(fs.promises.writeFile).mockImplementationOnce(async (file) => {
+              mockFiles.set(String(file), "partial");
+              throw cause;
+            });
+          }
+        } else {
+          if (failure === "rename") {
+            vi.mocked(fs.renameSync).mockImplementationOnce(() => {
+              throw cause;
+            });
+          } else {
+            vi.mocked(fs.writeFileSync).mockImplementationOnce((file) => {
+              mockFiles.set(String(file), "partial");
+              throw cause;
+            });
+          }
+        }
+        const driver = isAsync
+          ? nodeAsyncJsonFileDriver({ filePath: tempFile })
+          : nodeJsonFileDriver({ filePath: tempFile });
+        await expect((async () => driver.set({ value: "next" }))()).rejects.toBe(cause);
+        expect(mockFiles.get(tempFile)).toBe(previous);
+        expect([...mockFiles.keys()]).toEqual([tempFile]);
+      },
+    );
   });
 
   describe("nodeJsonFileDriver (Sync)", () => {
@@ -92,7 +141,7 @@ describe("Node Drivers", () => {
       expect(store.get()).toEqual({ value: "default" });
     });
 
-    it("should fall back to initialState and report storage-parse-failed when JSON is malformed", () => {
+    it("should fall back to initialState and report store.parse_failed when JSON is malformed", () => {
       const onError = vi.fn();
       mockFiles.set(tempFile, "{invalid json}");
 
@@ -106,7 +155,7 @@ describe("Node Drivers", () => {
 
       expect(store.get()).toEqual({ value: "default" });
       expect(onError).toHaveBeenCalledWith({
-        code: "storage-parse-failed",
+        code: "store.parse_failed",
         message: 'Failed to parse stored JSON for key "node-sync-store-malformed".',
         storageKey: "node-sync-store-malformed",
         cause: expect.any(SyntaxError),
@@ -158,7 +207,7 @@ describe("Node Drivers", () => {
       expect(await store.get()).toEqual({ value: "default" });
     });
 
-    it("should fall back to initialState and report storage-parse-failed when JSON is malformed", async () => {
+    it("should fall back to initialState and report store.parse_failed when JSON is malformed", async () => {
       const onError = vi.fn();
       mockFiles.set(tempFile, "{invalid json}");
 
@@ -172,7 +221,7 @@ describe("Node Drivers", () => {
 
       expect(await store.get()).toEqual({ value: "default" });
       expect(onError).toHaveBeenCalledWith({
-        code: "storage-parse-failed",
+        code: "store.parse_failed",
         message: 'Failed to parse stored JSON for key "node-async-store-malformed".',
         storageKey: "node-async-store-malformed",
         cause: expect.any(SyntaxError),

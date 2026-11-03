@@ -1,9 +1,41 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, expectTypeOf, it, vi } from "vitest";
 
 import { cloudflareDoDriver, cloudflareKvDriver } from "./cloudflare";
+import type { CloudflareDurableObjectStorage } from "./cloudflare";
 import { createAsyncStore, SET_STORAGE_KEY } from "./index";
 
 describe("Cloudflare Drivers", () => {
+  it("accepts Durable Object delete returning Promise<boolean>", () => {
+    const binding = {
+      get: async (_key: string): Promise<unknown> => undefined,
+      put: async (_key: string, _value: unknown): Promise<void> => {},
+      delete: async (_key: string): Promise<boolean> => true,
+    };
+    const accepted: CloudflareDurableObjectStorage = binding;
+    expectTypeOf(accepted.delete).returns.toEqualTypeOf<Promise<unknown>>();
+    cloudflareDoDriver({ storage: binding });
+  });
+
+  it("documents the KV limitation: stale reads lose rapid read-modify-write changes even within one store", async () => {
+    const stale = JSON.stringify({ theme: "light", enabled: false });
+    let persisted = stale;
+    const store = createAsyncStore({
+      storageKey: "settings",
+      initialState: { theme: "light", enabled: false },
+      driver: cloudflareKvDriver<{ theme: string; enabled: boolean }>({
+        kvNamespace: {
+          get: async () => stale,
+          put: async (_key, value) => {
+            persisted = value;
+          },
+          delete: async () => {},
+        },
+      }),
+    });
+    await store.patch({ theme: "dark" });
+    await store.setItem("enabled", true);
+    expect(JSON.parse(persisted)).toEqual({ theme: "light", enabled: true });
+  });
   describe("cloudflareKvDriver", () => {
     it("should get, put, and delete keys using mock KVNamespace", async () => {
       const kvData = new Map<string, string>();
@@ -40,7 +72,7 @@ describe("Cloudflare Drivers", () => {
       expect(await store.get()).toEqual({ api: "https://default.api" });
     });
 
-    it("should fall back to initialState and report storage-parse-failed when KV JSON is malformed", async () => {
+    it("should fall back to initialState and report store.parse_failed when KV JSON is malformed", async () => {
       const onError = vi.fn();
       const mockKvNamespace = {
         get: vi.fn().mockResolvedValue("{invalid json}"),
@@ -62,7 +94,7 @@ describe("Cloudflare Drivers", () => {
 
       expect(await store.get()).toEqual({ api: "https://default.api" });
       expect(onError).toHaveBeenCalledWith({
-        code: "storage-parse-failed",
+        code: "store.parse_failed",
         message: 'Failed to parse stored JSON for key "my-config".',
         storageKey: "my-config",
         cause: expect.any(SyntaxError),

@@ -1,8 +1,28 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { asyncMemoryDriver, createAsyncStore } from "./index";
+import { asyncMemoryDriver, createAsyncStore } from "../index";
 
 describe("AsyncStore", () => {
+  it("rejects instead of throwing when an input cannot be cloned", async () => {
+    const store = createAsyncStore<{ value?: unknown }>({
+      storageKey: "uncloneable",
+      initialState: {},
+      driver: asyncMemoryDriver(),
+    });
+    const value = () => undefined;
+    let set: Promise<boolean> | undefined;
+    let patch: Promise<{ value?: unknown }> | undefined;
+    let setItem: Promise<{ value?: unknown }> | undefined;
+    expect(() => {
+      set = store.set({ value });
+      patch = store.patch({ value });
+      setItem = store.setItem("value", value);
+    }).not.toThrow();
+    await expect(set).rejects.toThrow(/could not be cloned/);
+    await expect(patch).rejects.toThrow(/could not be cloned/);
+    await expect(setItem).rejects.toThrow(/could not be cloned/);
+    await expect(store.get()).resolves.toEqual({});
+  });
   it("should initialize with initial state and get/set values asynchronously", async () => {
     const driver = asyncMemoryDriver<{ count: number }>();
     const store = createAsyncStore({
@@ -38,7 +58,10 @@ describe("AsyncStore", () => {
     });
 
     expect(await store.getItem("count")).toBe(0);
-    expect(await store.setItem("count", 42)).toEqual({ count: 42, name: "test" });
+    expect(await store.setItem("count", 42)).toEqual({
+      count: 42,
+      name: "test",
+    });
     expect(await store.getItem("count")).toBe(42);
 
     expect(await store.removeItem("name")).toEqual({ count: 42 });
@@ -62,7 +85,7 @@ describe("AsyncStore", () => {
 
     expect(await store.get()).toEqual({ count: 10 });
     expect(onError).toHaveBeenCalledWith({
-      code: "storage-read-failed",
+      code: "store.read_failed",
       message: 'Driver failed to read value for key "failing-store".',
       storageKey: "failing-store",
       cause: expect.any(Error),
@@ -70,7 +93,7 @@ describe("AsyncStore", () => {
 
     expect(await store.set({ count: 20 })).toBe(false);
     expect(onError).toHaveBeenCalledWith({
-      code: "storage-write-failed",
+      code: "store.write_failed",
       message: 'Driver failed to write value for key "failing-store".',
       storageKey: "failing-store",
       cause: expect.any(Error),
@@ -78,7 +101,7 @@ describe("AsyncStore", () => {
 
     await store.clear();
     expect(onError).toHaveBeenCalledWith({
-      code: "storage-clear-failed",
+      code: "store.clear_failed",
       message: 'Driver failed to clear storage for key "failing-store".',
       storageKey: "failing-store",
       cause: expect.any(Error),
@@ -160,7 +183,10 @@ describe("AsyncStore", () => {
     });
 
     it("should clone the object returned by removeItem", async () => {
-      const driver = asyncMemoryDriver<{ config?: { theme: string }; other: number }>();
+      const driver = asyncMemoryDriver<{
+        config?: { theme: string };
+        other: number;
+      }>();
       const store = createAsyncStore({
         storageKey: "async-removeitem-clone-test",
         initialState: { config: { theme: "light" }, other: 1 },
