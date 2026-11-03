@@ -1,6 +1,6 @@
 import type { SiteConfig } from "@codenhub/app-shell/site-config";
 
-export const siteConfig: SiteConfig = {
+export const siteConfig = {
   siteUrl: "https://docs.codenhub.dev",
   title: "CodenHub",
   description: "Shared packages, apps, and project standards for and by coden.agency.",
@@ -8,4 +8,4 @@ export const siteConfig: SiteConfig = {
   wwwUrl: "https://codenhub.dev",
   demoUrl: "https://demo.codenhub.dev",
   npmUrl: "https://www.npmjs.com/org/codenhub",
-};
+} satisfies SiteConfig;

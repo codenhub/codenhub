@@ -145,6 +145,14 @@ describe("documentation chrome", () => {
     }
   });
 
+  it("sends the header logo and its one nav link to codenhub.dev", async () => {
+    const html = await readOutput("toaster/index.html");
+    const nav = html.match(/<nav aria-label="Sites" class="shell-nav">(.*?)<\/nav>/)?.[1];
+
+    expect(html).toContain('class="shell-brand" href="https://codenhub.dev/"');
+    expect(nav).toBe('<a class="shell-nav-link" href="https://codenhub.dev/packages/">Packages</a>');
+  });
+
   it("groups a package's folder pages into collapsible sections, open on the active one", async () => {
     const html = await readOutput("styles/usage/buttons/index.html");
 
