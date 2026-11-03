@@ -59,8 +59,10 @@ const isPlainObject = (value: object): boolean => {
   );
 };
 
-// Copies a JSON value into frozen plain data, throwing for anything JSON cannot carry. The depth
-// limit also ends a cycle. Keys are defined rather than assigned, so a `__proto__` key stays data.
+// Copies a JSON value into frozen plain data, throwing for anything JSON cannot carry. A key whose
+// value is `undefined` is dropped, as `JSON.stringify` drops it, so an optional field read in a
+// `catch` does not replace the error being reported. The depth limit also ends a cycle. Keys are
+// defined rather than assigned, so a `__proto__` key stays data.
 const copyJsonValue = (value: unknown, depth: number): unknown => {
   if (value === null || typeof value === "string" || typeof value === "boolean") {
     return value;
@@ -94,8 +96,14 @@ const copyJsonValue = (value: unknown, depth: number): unknown => {
   const copy: Record<string, unknown> = {};
 
   for (const key of Object.keys(value)) {
+    const entry = (value as Record<string, unknown>)[key];
+
+    if (entry === undefined) {
+      continue;
+    }
+
     Object.defineProperty(copy, key, {
-      value: copyJsonValue((value as Record<string, unknown>)[key], depth + 1),
+      value: copyJsonValue(entry, depth + 1),
       enumerable: true,
       writable: true,
       configurable: true,

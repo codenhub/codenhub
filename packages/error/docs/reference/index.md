@@ -30,7 +30,7 @@ A tuple keeps each position's type, so `all([ok(1), ok("a")] as const)` is a `Re
 
 **Returns** — An Ok holding a frozen list of the values, or the first Err in the list.
 
-**Throws** — `TypeError` — If `results` is not a list.
+**Throws** — `TypeError` — If `results` is not a list, or an entry of it is not a Result.
 
 ### andThen
 
@@ -557,7 +557,7 @@ Options configuration for controlling how raw error values are normalized into `
 details?: Readonly<Record<string, unknown>>;
 ```
 
-Structured data to attach to the error as `details`, such as `{ field: "email" }`. Must be a plain object holding only JSON values (strings, finite numbers, booleans, `null`, lists, and plain objects), nested at most 8 levels deep. It is copied and frozen. An existing AppError keeps the details it has and gains only the keys it lacks.
+Structured data to attach to the error as `details`, such as `{ field: "email" }`. Must be a plain object holding only JSON values (strings, finite numbers, booleans, `null`, lists, and plain objects), nested at most 8 levels deep. A key whose value is `undefined` is dropped, as `JSON.stringify` drops it. It is copied and frozen. An existing AppError keeps the details it has and gains only the keys it lacks.
 
 #### AppErrorOptions › fallbackMessage
 

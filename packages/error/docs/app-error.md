@@ -77,7 +77,7 @@ const result = err({ code: "signup.email_taken" }, { details: { field: "email" }
 result.error.details; // { field: "email" }
 ```
 
-It holds JSON values only: strings, finite numbers, booleans, `null`, lists, and plain objects, nested at most eight levels deep. Anything else, such as a `Date` or `undefined`, throws `TypeError`. It is copied and frozen, so changing the object you passed changes nothing.
+It holds JSON values only: strings, finite numbers, booleans, `null`, lists, and plain objects, nested at most eight levels deep. A key whose value is `undefined` is dropped, as `JSON.stringify` drops it, so an optional field does not have to be checked first. Anything else, such as a `Date` or an `undefined` list entry, throws `TypeError`. It is copied and frozen, so changing the object you passed changes nothing.
 
 Unlike the raw error, `details` is part of `toJSON()`, so it reaches a client. It is never read from the value being normalized, only from the option, so nothing gets into it that your code did not put there. Keep anything secret out of it.
 
