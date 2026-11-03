@@ -1,6 +1,6 @@
 {
   "name": "@codenhub/icons",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": false,
   "description": "Zero-runtime CSS icons from Lucide, Phosphor, Material Symbols, and Simple Icons, for Tailwind v4, Vite, PostCSS, or plain CSS.",
   "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/icons",
@@ -39,6 +39,11 @@
       "import": "./dist/tw/plugin.js",
       "default": "./dist/tw/plugin.js"
     },
+    "./play": {
+      "types": "./dist/play.d.ts",
+      "import": "./dist/play.js",
+      "default": "./dist/play.js"
+    },
     "./postcss": {
       "types": "./dist/postcss.d.ts",
       "import": "./dist/postcss.js",
@@ -53,6 +58,11 @@
       "types": "./dist/data/*.d.ts",
       "import": "./dist/data/*.js",
       "default": "./dist/data/*.js"
+    },
+    "./line-md": {
+      "style": "./dist/css/line-md.css",
+      "import": "./dist/css/line-md.css",
+      "default": "./dist/css/line-md.css"
     },
     "./logos": {
       "style": "./dist/css/logos.css",
@@ -128,13 +138,18 @@
       "style": "./dist/css/simple-icons.css",
       "import": "./dist/css/simple-icons.css",
       "default": "./dist/css/simple-icons.css"
+    },
+    "./svg-spinners": {
+      "style": "./dist/css/svg-spinners.css",
+      "import": "./dist/css/svg-spinners.css",
+      "default": "./dist/css/svg-spinners.css"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsdown src/index.ts src/postcss.ts src/vite.ts src/tailwind.ts --format esm --dts --clean --no-fixed-extension --unbundle && node scripts/build-data.mjs && node scripts/build-tailwind.mjs && node scripts/build-style.mjs && node scripts/build-css.mjs",
+    "build": "tsdown src/index.ts src/postcss.ts src/vite.ts src/tailwind.ts src/play.ts --format esm --dts --clean --no-fixed-extension --unbundle && node scripts/build-data.mjs && node scripts/build-tailwind.mjs && node scripts/build-style.mjs && node scripts/build-css.mjs",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "dev": "pnpm --filter=@codenhub/icons-dev dev",
     "debug": "pnpm build && pnpm --filter=@codenhub/icons-debug dev",
@@ -155,9 +170,11 @@
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "gilbarbara-logos": "github:gilbarbara/logos#dafdf2df1334b2327497bfff40111aff0713c992",
+    "line-md": "3.0.5",
     "lucide-static": "1.66.0",
     "postcss": "^8.5.32",
     "simple-icons": "16.36.0",
+    "svg-spinners": "github:n3r4zzurr0/svg-spinners#abfa05c49acf005b8b1e0ef8eb25a67a7057eb20",
     "svgo": "4.1.0",
     "tailwindcss": "catalog:",
     "tsdown": "catalog:",
@@ -192,6 +209,7 @@
         "entrypoints": [
           ".",
           "./postcss",
+          "./play",
           "./vite"
         ],
         "prose": true

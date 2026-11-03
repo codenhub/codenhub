@@ -17,6 +17,8 @@ export interface IconFamilyDefinition {
   upstreamRepository?: string;
   /** Directory of SVG files inside the upstream package. */
   iconsDirectory: string;
+  /** Directory of matching static SVG files, using the animated files' names and viewBoxes. */
+  staticIconsDirectory?: string;
   /** License file inside the upstream package, copied verbatim. */
   licenseFile: string;
   /** License the artwork is distributed under. */
@@ -93,13 +95,14 @@ export const RESERVED_SIZE_TOKENS: readonly string[] = ["xs", "sm", "md", "lg", 
  * Prefixes a family may not use.
  *
  * `ic-xs` through `ic-xl` are the size axis, so a family named after one would
- * produce classes the base rules read as a size rather than an icon. Stroke
+ * produce classes the base rules read as a size rather than an icon. `anim`
+ * belongs to whole-element motion utilities (`ic-anim-*`). Stroke
  * width is not among them because it is written as a modifier on the icon class
  * itself, as in `ic-heart/1.5`, and so claims no prefix of its own; `after` and
  * `bg` are no longer reserved since the package dropped its `::after` and
  * form-control forms.
  */
-export const RESERVED_PREFIXES: readonly string[] = [...RESERVED_SIZE_TOKENS];
+export const RESERVED_PREFIXES: readonly string[] = [...RESERVED_SIZE_TOKENS, "anim"];
 
 /** Obligations a `core` family may place on a consumer. */
 export const CORE_TIER_OBLIGATIONS: readonly IconAttribution[] = ["none", "notice"];
@@ -118,6 +121,31 @@ export const BRAND_TIER_OBLIGATIONS: readonly IconAttribution[] = ["none"];
  * humans.
  */
 export const ICON_FAMILIES: readonly IconFamilyDefinition[] = [
+  {
+    author: { name: "Vjacheslav Trushkin", url: "https://github.com/cyberalien/line-md" },
+    iconsDirectory: "svg",
+    staticIconsDirectory: "svg-static",
+    license: { spdx: "MIT", title: "MIT License", url: "https://github.com/cyberalien/line-md/blob/main/license.txt" },
+    licenseFile: "license.txt",
+    name: "Line MD",
+    prefix: "line-md",
+    strokeWidth: 2,
+    style: "animated",
+    tier: "core",
+    upstreamPackage: "line-md",
+  },
+  {
+    author: { name: "Utkarsh Verma", url: "https://github.com/n3r4zzurr0/svg-spinners" },
+    iconsDirectory: "svg-smil",
+    license: { spdx: "MIT", title: "MIT License", url: "https://github.com/n3r4zzurr0/svg-spinners/blob/main/LICENSE" },
+    licenseFile: "LICENSE",
+    name: "SVG Spinners",
+    prefix: "svg-spinners",
+    style: "animated",
+    tier: "core",
+    upstreamPackage: "svg-spinners",
+    upstreamRepository: "n3r4zzurr0/svg-spinners",
+  },
   {
     author: { name: "Lucide Contributors", url: "https://lucide.dev" },
     iconsDirectory: "icons",

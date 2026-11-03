@@ -13,7 +13,7 @@ setting satisfies.
 
 211 upstream icon(s) carry a license of their own that places an obligation, or is not on the accepted list, and are not included.
 
-Not included because the ic-xs–ic-xl size axis reserves the name: `lg`.
+Not included because the ic-xs–ic-xl size axis or a motion utility (ic-anim-*, ic-on-hover, ic-trigger) reserves the name: `lg`.
 
 The full license text is in `LICENSE` beside this file. It is redistributed
 with the artwork and must stay with it.

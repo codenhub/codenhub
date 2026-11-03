@@ -45,7 +45,7 @@ ${list}
 const declaration = `/**
  * Tailwind CSS v4 plugin with every bundled icon family except brand families
  * available by default.
- * Registers icon utilities and license notices for the icons matched in content.
+ * Registers icon and reduced-motion-aware animation utilities, plus license notices for the icons matched in content.
  * Accepts TailwindIconsOptions; invalid family or default selections throw.
  */
 declare const plugin: ReturnType<typeof import("../tailwind.js").createIconsTailwindPlugin>;

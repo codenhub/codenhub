@@ -32,6 +32,24 @@ function run(options: Parameters<typeof postcssIcons>[0], css: string): string {
 }
 
 describe("postcssIcons", () => {
+  it("emits motion utilities without treating them as artwork or attributing a family", () => {
+    const css = run({}, "/* ic-xs ic-anim-spin ic-on-hover ic-trigger */");
+
+    expect(css).toContain("@keyframes ic-anim-spin");
+    expect(css).toContain(".ic-on-hover:not(:hover)");
+    expect(css).not.toContain("--ic-uri: url(");
+    expect(css).not.toContain("Icon artwork in this build");
+  });
+
+  it("emits static masks for reduced motion, including stroke modifiers", () => {
+    const family = createFamily();
+    family.icons.search.staticBody = '<path stroke-width="2" d="static" />';
+    const css = run({ families: [family] }, "/* ic-search/1.5 */");
+
+    expect(css).toContain("--ic-static-mask: url(");
+    expect(css).toContain("d=%22static%22");
+  });
+
   it("appends the base rules and a rule for each scanned class", () => {
     const appended = run({}, ".button { color: red; } /* ic-search */");
 

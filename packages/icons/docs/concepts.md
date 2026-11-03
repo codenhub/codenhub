@@ -21,13 +21,15 @@ Available families:
 
 | Prefix                                                           | Icons     | Style                       | License    |
 | ---------------------------------------------------------------- | --------- | --------------------------- | ---------- |
-| `lucide`                                                         | 2159      | outlined, stroke-based      | ISC        |
+| `line-md`                                                        | 1222      | animated, stroke-based      | MIT        |
+| `svg-spinners`                                                   | 46        | animated loading indicators | MIT        |
+| `lucide`                                                         | 2171      | outlined, stroke-based      | ISC        |
 | `phosphor`                                                       | 1512      | outlined                    | MIT        |
 | `phosphor-thin`, `phosphor-light`, `phosphor-bold`               | 1512 each | outlined, other weights     | MIT        |
 | `phosphor-fill`                                                  | 1512      | filled                      | MIT        |
 | `phosphor-duotone`                                               | 1512      | duotone                     | MIT        |
-| `material-symbols-outlined`, `-rounded`, `-sharp`                | 3929 each | outlined                    | Apache-2.0 |
-| `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3929 each | filled                      | Apache-2.0 |
+| `material-symbols-outlined`, `-rounded`, `-sharp`                | 3932 each | outlined                    | Apache-2.0 |
+| `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3932 each | filled                      | Apache-2.0 |
 | `simple-icons` (brand)                                           | 3254      | filled logos, brand-colored | CC0-1.0    |
 | `logos` (brand)                                                  | 2016      | full-color logos            | CC0-1.0    |
 
@@ -36,6 +38,33 @@ Variants such as filled or duotone are separate families rather than options on 
 `simple-icons` and `logos` are brand families. `simple-icons` draws each logo in one brand color, as in `ic-simple-icons-github` and `ic-simple-icons-npm`. `logos` draws them in full color, as in `ic-logos-google-icon` and `ic-logos-slack-icon`, for brands that one color cannot show, such as Google's four-color G. The two complement each other: most brands are in only one of them.
 
 A full-color logo weighs more than a one-color icon. With the plugins, a project pays only for the logos it uses: about 2 KB of CSS for a typical one, and under 8 KB for 95% of them. A few traced, highly detailed logos are much heavier, from about 60 KB to 150 KB each: `lerna` (149 KB), `effector` (120 KB), `composer` (88 KB), `hugo` (85 KB), `tastejs` (69 KB), `matplotlib` (66 KB), `matplotlib-icon` (65 KB), and `chalk` (60 KB). A gzipped or Brotli-compressed stylesheet transfers several times smaller than these figures. Where weight matters, prefer a lighter mark, such as a brand's `-icon` variant, or the brand's `simple-icons` icon when it has one. Brand families are opt-in everywhere — `@codenhub/icons/tw` never resolves them, and a declared `@plugin` resolves them only when its `families` option names them — and their marks are trademarks of their owners. See [Licensing](licensing.md#brand-families).
+
+### Animated families
+
+`line-md` provides 1,222 animated icons from Line MD 3.0.5 by Vjacheslav Trushkin. `svg-spinners` provides 46 loading indicators by Utkarsh Verma, generated from the upstream SMIL artwork at commit `abfa05c49acf005b8b1e0ef8eb25a67a7057eb20`. Both are MIT-licensed core families, available through `@import "@codenhub/icons/tw"` by default, through the `@codenhub/icons/line-md` and `@codenhub/icons/svg-spinners` family stylesheets, or as `@codenhub/icons/data/line-md` and `@codenhub/icons/data/svg-spinners` for a configured plugin or registry.
+
+```html
+<i class="ic-line-md-heart/1.5" aria-hidden="true"></i>
+<i class="ic-line-md-loading-loop" aria-hidden="true"></i>
+<i class="ic-svg-spinners-90-ring" aria-hidden="true"></i>
+```
+
+These animations live inside the SVG artwork and use SMIL. Line MD's `-loop` icons animate continuously, and its other icons draw in once. Without a [motion trigger](#motion), an icon plays the first time the page displays it. Chrome is verified; Firefox and Safari are untested, so do not infer animated-mask support from static-mask support.
+
+Add `ic-on-hover` to show the static artwork at rest and play it while the trigger is hovered or focused, as described in [Motion](#motion):
+
+```html
+<button>
+  <i class="ic-line-md-loading-loop ic-on-hover" aria-hidden="true"></i>
+  Refresh
+</button>
+```
+
+Loops work on every hover with CSS alone. A one-shot icon such as `ic-line-md-heart` plays on the first hover only with CSS alone, because a browser does not restart an image it has already shown. To replay it on every hover, call [`bindIconPlayback`](javascript-api.md#playing-icons-from-code) from `@codenhub/icons/play` once. Icons without static artwork keep their usual mask at rest.
+
+For `prefers-reduced-motion: reduce`, Line MD CSS masks always paint the upstream static artwork, including during hover. This applies to full family stylesheets, Tailwind, Vite and PostCSS CSS mode, and stroke modifiers such as `/1.5`. Each icon carries its optional static artwork in `--ic-static-mask`; the base rules choose it for reduced motion and hover rest. SVG Spinners have no static fallback; provide an accessible loading label independently of their motion.
+
+Inline SVG from Vite's `mode: "svg"`, virtual modules, and `renderSvg` keeps the animated `body`. CSS cannot stop SMIL, so `ic-on-hover` cannot hold that inline artwork at rest, and those paths do not swap artwork for reduced motion. `playIcon` restarts an inline SVG, but skips the restart under reduced motion; it does not stop a running timeline. Use CSS mode for the automatic swap, or select the resolved icon's `staticBody` before calling `renderSvg` when you need static inline artwork. `staticBody` shares the animated body's viewBox. `getIconMaskUrl` returns the animated artwork; `getIconCssProps` also includes the static-mask property when available.
 
 ## Names
 
@@ -76,19 +105,21 @@ registry.resolve("close"); // undefined -- lucide calls it "x"
 
 An icon's name is the one its upstream project gives it, so browse the family's own site and write the name you find there:
 
-| Family                 | Browse at                                                | Example class                                   |
-| ---------------------- | -------------------------------------------------------- | ----------------------------------------------- |
-| `lucide`               | [lucide.dev/icons](https://lucide.dev/icons)             | `ic-lucide-circle-check`                        |
-| `phosphor`, variants   | [phosphoricons.com](https://phosphoricons.com)           | `ic-phosphor-fill-check-circle`                 |
-| `material-symbols-*`   | [fonts.google.com/icons](https://fonts.google.com/icons) | `ic-material-symbols-rounded-check_circle`      |
-| `simple-icons` (brand) | [simpleicons.org](https://simpleicons.org)               | `ic-simple-icons-github`, `ic-simple-icons-npm` |
-| `logos` (brand)        | [svgporn.com](https://svgporn.com)                       | `ic-logos-google`, `ic-logos-google-icon`       |
+| Family                 | Browse at                                                                        | Example class                                   |
+| ---------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `line-md`              | [github.com/cyberalien/line-md](https://github.com/cyberalien/line-md)           | `ic-line-md-heart`, `ic-line-md-loading-loop`   |
+| `svg-spinners`         | [github.com/n3r4zzurr0/svg-spinners](https://github.com/n3r4zzurr0/svg-spinners) | `ic-svg-spinners-90-ring`                       |
+| `lucide`               | [lucide.dev/icons](https://lucide.dev/icons)                                     | `ic-lucide-circle-check`                        |
+| `phosphor`, variants   | [phosphoricons.com](https://phosphoricons.com)                                   | `ic-phosphor-fill-check-circle`                 |
+| `material-symbols-*`   | [fonts.google.com/icons](https://fonts.google.com/icons)                         | `ic-material-symbols-rounded-check_circle`      |
+| `simple-icons` (brand) | [simpleicons.org](https://simpleicons.org)                                       | `ic-simple-icons-github`, `ic-simple-icons-npm` |
+| `logos` (brand)        | [svgporn.com](https://svgporn.com)                                               | `ic-logos-google`, `ic-logos-google-icon`       |
 
 Material Symbols names keep Google's underscores: `check_circle`, not `check-circle`. A Simple Icons name is the icon's slug, with any `_` written as `-`. A `logos` name is the upstream file name, lowercased, with any `_` or `.` written as `-`: `socket.io` is `ic-logos-socket-io`. Some brands come as a full logo, often a wordmark, and as a symbol with `-icon` appended; some add `-dark` or `-alt` variants. A misspelled name is not an error: the class resolves to nothing, and the element renders as a solid square with the base rules loaded, or as nothing without them, so check the name against the family when an icon does not appear. Each family module also lists its names, as the keys of its `icons` object.
 
 ## Reserved names
 
-`ic-xs` through `ic-xl` are the [size axis](#size), so `xs`, `sm`, `md`, `lg`, and `xl` cannot be family prefixes or icon names. Generation refuses a family that claims one. Stroke width is written on the icon class itself, so it claims no prefix.
+`ic-xs` through `ic-xl` are the [size axis](#size), so `xs`, `sm`, `md`, `lg`, and `xl` cannot be family prefixes or icon names. Generation refuses a family that claims one. `anim` is reserved for the [motion utilities](#motion): a family cannot use it as a prefix or ship an icon named `anim` or starting with `anim-`. The exact icon names `on-hover` and `trigger` are reserved the same way; names that only start with them remain available, as does `animation`. Stroke width is written on the icon class itself, so it claims no prefix.
 
 ## Markup
 
@@ -191,7 +222,7 @@ In [inline SVG mode](delivery/vite.md#inline-svg-mode) the attributes you put on
 
 ## Stroke width
 
-Stroke width is a modifier on the icon class, and only families drawn with strokes answer to it. Of the bundled families, Lucide is the only one; the rest are drawn as filled paths and ignore it.
+Stroke width is a modifier on the icon class, and only families drawn with strokes answer to it. Of the bundled families, Lucide and Line MD support it; the other families ignore it.
 
 ```html
 <!-- a thinner stroke -->
@@ -224,3 +255,55 @@ The default size is `1em`. Set `--ic-size` on the icon or any ancestor to change
 Each class does one thing — set `--ic-size` to a rem value — so it composes with a stroke modifier and needs no knowledge of the element it lands on. Unlike stroke width, a size is not baked into the artwork, so the axis is part of the base rules and works in every delivery method: the plugin-free family stylesheets, and [inline SVG mode](delivery/vite.md#inline-svg-mode), where the base rules size the rewritten `<svg>` as long as `@import "@codenhub/icons"` is present. The `.ic` form itself is CSS-based methods only, as above.
 
 The five classes are always emitted, so `xs`, `sm`, `md`, `lg`, and `xl` are [reserved](#reserved-names): a family may not ship an icon or take a prefix by one of those names.
+
+## Motion
+
+Icons move in two ways. Motion classes move the whole glyph, any icon from any family. [Animated families](#animated-families) move their own artwork, with no class. Three controls apply to both:
+
+| Question      | Control                                                                           | Default                                    |
+| ------------- | --------------------------------------------------------------------------------- | ------------------------------------------ |
+| What moves    | an `ic-anim-*` class, or an animated family's icon                                | nothing                                    |
+| When it plays | always, `ic-on-hover`, or [`playIcon`](javascript-api.md#playing-icons-from-code) | always                                     |
+| How often     | `--ic-anim-iterations`                                                            | forever; once per hover with `ic-on-hover` |
+
+| Class            | Motion                                         | Default duration |
+| ---------------- | ---------------------------------------------- | ---------------- |
+| `ic-anim-spin`   | A full turn at a constant speed                | `1s`             |
+| `ic-anim-pulse`  | Opacity fades between 1 and 0.55               | `2s`             |
+| `ic-anim-beat`   | Two small heartbeats, up to 1.1 times its size | `1s`             |
+| `ic-anim-bounce` | A vertical bounce, 15% of the icon's height    | `1s`             |
+| `ic-anim-wiggle` | Rotation back and forth by 6 degrees           | `1s`             |
+
+Spin uses linear timing; the others ease in and out. Set `--ic-anim-duration` on the icon or an ancestor to change the length of a cycle. Choose one motion class per element: it replaces the element's CSS `animation`, and the transform motions also replace its `transform` while running.
+
+**Always.** With no other class, the motion runs for as long as the class is present. A loading indicator spins; an app adds `ic-anim-spin` to a reload icon while a request runs and removes it when the request ends:
+
+```html
+<i class="ic-lucide-loader-circle ic-anim-spin" aria-hidden="true"></i>
+```
+
+**On hover.** `ic-on-hover` plays the motion while its trigger is hovered or has `:focus-visible`, and rests otherwise. The trigger is the icon itself, its parent element, or any ancestor with `ic-trigger`, such as a card, or a button whose icon sits in a wrapper. Each hover starts from the beginning, and by default plays once:
+
+```html
+<button>
+  <i class="ic-lucide-refresh-cw ic-anim-spin ic-on-hover" aria-hidden="true"></i>
+  Reload
+</button>
+
+<a class="card ic-trigger" href="/inbox">
+  <span class="card-icon"><i class="ic-lucide-bell ic-anim-wiggle ic-on-hover" aria-hidden="true"></i></span>
+  Notifications
+</a>
+```
+
+**How often.** `--ic-anim-iterations` sets the number of cycles: any number, or `infinite`. Set `--ic-anim-iterations: infinite` for an icon that keeps moving while hovered, such as a fan. It inherits, so one declaration on a toolbar applies to every icon in it. Animated artwork repeats as drawn and ignores it: Line MD `-loop` icons loop, and the others play once.
+
+**From code.** For feedback on an event, such as a copy icon turning into a check or a like that pops, call `playIcon(element)` from the opt-in [`@codenhub/icons/play`](javascript-api.md#playing-icons-from-code) entry. It restarts glyph motion and artwork alike.
+
+The base import, `@import "@codenhub/icons"`, includes the keyframes and motion classes, so they work with plain CSS family stylesheets, Vite, PostCSS, and inline SVG mode. Tailwind also registers them as utilities, so variants such as `group-hover:ic-anim-spin` remain available. With a custom class `prefix`, every class, custom property, and keyframe name changes together: `ux-anim-spin`, `ux-on-hover`, `ux-trigger`, `--ux-anim-duration`, and `--ux-anim-iterations` under `prefix: "ux"`.
+
+When the user's device requests reduced motion, motion classes stop, Line MD shows its static artwork even while hovered, and `playIcon` does nothing. SVG Spinners keep moving, because they have no static artwork. Keep loading or status information available in text; movement should never be the only way to understand a state.
+
+The motion classes move the icon element. In CSS-mask mode the artwork is an image, so the page cannot target or animate individual paths inside it. `ic-on-hover` needs complex `:not()` selectors and `:focus-visible`, supported together in Chrome 88+, Firefox 85+, and Safari 15.4+. Motion was verified in Chrome; Firefox and Safari are untested.
+
+Next, choose a [delivery method](delivery/index.md) for your build.

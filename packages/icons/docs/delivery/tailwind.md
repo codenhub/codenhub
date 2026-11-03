@@ -37,6 +37,29 @@ To pass options, declare the plugin yourself instead of importing `/tw`, which a
 
 `families` does not make the build cheaper. A Tailwind plugin handler has to be synchronous — utilities registered after an `await` are dropped — so every family is already loaded by the time the options are read. It decides which names resolve, and which notices the output can carry.
 
+## Motion
+
+Motion classes and `ic-on-hover` are utilities, used as in [Motion](../concepts.md#motion): `ic-on-hover` plays the motion while the icon, its parent, or an `ic-trigger` ancestor is hovered or focused, once per hover unless `--ic-anim-iterations` says otherwise, and it also controls animated artwork.
+
+```html
+<button>
+  <i class="ic-lucide-refresh-cw ic-anim-spin ic-on-hover" aria-hidden="true"></i>
+  Reload
+</button>
+```
+
+Tailwind's ordinary variants remain available for other conditions, since the motion classes are real utilities. A variant replaces `ic-on-hover` for glyph motion, and repeats until the condition ends:
+
+```html
+<button class="group">
+  <i class="ic-lucide-loader-circle group-hover:ic-anim-spin" aria-hidden="true"></i>
+  Refresh
+</button>
+<i class="ic-lucide-bell hover:ic-anim-wiggle" aria-hidden="true"></i>
+```
+
+With variants, add `group-focus-visible:ic-anim-spin` beside `group-hover:ic-anim-spin` to give keyboard users the same cue; `ic-on-hover` covers focus already. Reduced-motion preferences disable the animations even when a variant is active. Animated artwork has no variant form: use `ic-on-hover` beside the icon class. See [Motion](../concepts.md#motion) for all five classes, defaults, custom prefixes, and the limits of animating a CSS mask.
+
 ## Attribution
 
 `@import "@codenhub/icons/tw"` inlines a static file, so it carries an ordinary `/*! … */` banner naming every family it resolves — a superset notice, which is always safe. Declaring the plugin yourself with `@plugin` narrows resolution, and there the notice is a `--ic-attribution-<family>` custom property on `:root` instead, one per family the build actually used. See [Licensing](../licensing.md).

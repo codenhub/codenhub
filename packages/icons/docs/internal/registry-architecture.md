@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-26
+last_updated: 2026-11-03
 scope: Icon data model, family catalog, generation pipeline, and resolution core of `@codenhub/icons`.
 ---
 
@@ -67,6 +67,7 @@ interface IconFamilyData {
 
 interface IconData {
   body: string; // inner SVG markup only
+  staticBody?: string; // static reduced-motion artwork, same viewBox
   width?: number; // per-icon override
   height?: number;
   tags?: string[];
@@ -81,7 +82,7 @@ interface IconAlias {
 Rules:
 
 - `body` holds inner markup only. The `<svg>` wrapper is reconstructed at render time from `width`/`height`, so size, color, and stroke stay controllable.
-- Every field Iconify defines and we do not use is simply absent; every family-level field we add lives under `info`, which Iconify treats as opaque. The per-icon `tags` and `color` are additions Iconify readers ignore. A third-party IconifyJSON set therefore loads through `adapters/iconify` with no transformation of icon bodies.
+- Every field Iconify defines and we do not use is simply absent; every family-level field we add lives under `info`, which Iconify treats as opaque. The per-icon `staticBody`, `tags`, and `color` are additions Iconify readers ignore. A third-party IconifyJSON set therefore loads through `adapters/iconify` with no transformation of icon bodies.
 - Icon names are the upstream project's own, unique within a prefix. An alias never points at another alias.
 
 Names are not normalised to kebab-case. Material Symbols writes `check_circle`, the name a consumer finds on fonts.google.com, and those names shipped in 0.2.x; rewriting them to `check-circle` would break every published class for consistency alone, and send a reader looking the name up upstream to a form that is not there. Simple Icons is the exception, its `_` mapped to `-` (see [Brand families](#brand-families)), because its slugs are not the brand's displayed name either way. Rejected: hyphenating every family, for the break above.
@@ -116,9 +117,11 @@ The alternative — a variant axis inside a family — would add a dimension to 
 
 ### Reserved prefixes
 
-`xs`, `sm`, `md`, `lg`, and `xl` are words the utility classes own: `ic-xs` through `ic-xl` are the size axis, each a base rule setting `--ic-size`, so a family that took one as a prefix — or shipped an icon by that name — would produce a class the base rules read as a size and the generated set reads as an icon. Generation refuses such a family (`RESERVED_PREFIXES` for the prefix, an icon-name check in `build-family.ts`) rather than leaving the collision to be discovered as an icon that silently renders at the wrong size.
+`xs`, `sm`, `md`, `lg`, and `xl` are words the utility classes own: `ic-xs` through `ic-xl` are the size axis, each a base rule setting `--ic-size`, so a family that took one as a prefix — or shipped an icon by that name — would produce a class the base rules read as a size and the generated set reads as an icon. `anim` belongs to the motion utilities (`ic-anim-*`), so it also cannot be a family prefix, and icon names equal to `anim` or starting with `anim-` are refused, as are the exact names `on-hover` and `trigger`; [Icon motion](./motion.md) records why. Generation refuses such a family (`RESERVED_PREFIXES` for the prefix, an icon-name check in `build-family.ts`) rather than leaving the collision to be discovered as an icon that silently renders at the wrong size.
 
 `after` and `bg` were reserved the same way until the `::after` and form-control forms were dropped and the package narrowed to the `<i>` and `.ic` element forms; `stroke` was reserved until 0.2.0, when `ic-heart ic-stroke-1.5` became `ic-heart/1.5`. Writing the width as a modifier on the icon class rather than as a class beside it freed the word, and removed the cross-product the old form forced: the generator had to emit a rule for every scanned icon paired with every scanned width, because the two classes were independent. One token addressing one icon at one width is one rule.
+
+Motion utilities live in the base stylesheet and are also registered through Tailwind's `addUtilities`, because only real utilities participate in variants. CSS and Tailwind share the motion definitions (`src/generator/motion.ts`) so their keyframes, defaults, and rest selector agree. [Icon motion](./motion.md) owns the motion design.
 
 ## Family data layout
 
@@ -129,7 +132,7 @@ packages/icons/data/<prefix>/
   ATTRIBUTION.md     generated notice naming author, license, upstream version
 ```
 
-All three are committed and generated. `icons.json` is the reviewable unit: one file per family, so an upstream bump is one diff, not thousands. Fifteen families currently occupy about 27 MB, 5.8 MB of it `logos`, which git stores compressed and which churns only when an upstream version moves.
+All three are committed and generated. `icons.json` is the reviewable unit: one file per family, so an upstream bump is one diff, not thousands. Seventeen families currently occupy about 30 MB, 5.8 MB of it `logos`, which git stores compressed and which churns only when an upstream version moves.
 
 The build compiles each family into `dist/data/<prefix>.js` plus declarations, exposed as:
 
@@ -153,7 +156,7 @@ Family data is produced by a generator registered in `packages/tools/src/generat
 
 Sources are the families' own official npm packages, added to `packages/icons` as devDependencies and read from `node_modules` at generation time. Versions are pinned by the lockfile; generation is offline, reproducible, and adds nothing to what a consumer installs. No Iconify package participates.
 
-An upstream that publishes no npm package is installed from its repository as a git devDependency pinned to a full commit hash, under an alias (`"gilbarbara-logos": "github:gilbarbara/logos#<commit>"`), and the family records the repository and that commit as its upstream. This is `logos`: gilbarbara/logos is not on npm and tags no releases. The lockfile pins the tarball, so generation stays reproducible; the cost is that an upgrade is a hand-edited commit hash, and installing the workspace fetches from GitHub. Rejected: `@iconify-json/logos`, which is versioned on npm, because it is a repackaging rather than the upstream, renames the artwork's ids, and lists logos absent from upstream's own tree (2,255 against 2,018 files at the pinned commit).
+An upstream that ships no raw SVG artwork on npm is installed from its repository as a git devDependency pinned to a full commit hash, under an alias (`"gilbarbara-logos": "github:gilbarbara/logos#<commit>"`), and the family records the repository and that commit as its upstream. This applies to `logos` (gilbarbara/logos is not on npm and tags no releases) and `svg-spinners` (npm ships Iconify JSON rather than the upstream SVG files). The lockfile pins the tarball, so generation stays reproducible; the cost is that an upgrade is a hand-edited commit hash, and installing the workspace fetches from GitHub. Rejected: `@iconify-json/logos`, which is versioned on npm, because it is a repackaging rather than the upstream, renames the artwork's ids, and lists logos absent from upstream's own tree (2,255 against 2,018 files at the pinned commit).
 
 Per family the generator:
 
@@ -167,6 +170,16 @@ Per family the generator:
 A brand family's source adapter also filters icons by their own upstream license and maps their names, as described under [Brand families](#brand-families).
 
 Output must be deterministic: no timestamps, no generation dates, stable key order. A generator whose output changes without an input change breaks the CI drift gate.
+
+### Animated families and reduced motion
+
+`line-md` reads all 1,222 animated files from `line-md@3.0.5/svg`, with matching static files from `svg-static`, and `license.txt`. It is core tier, MIT/notice, authored at stroke width 2. `svg-spinners` reads 46 files from `svg-smil` and `LICENSE` in `n3r4zzurr0/svg-spinners`, pinned to `abfa05c49acf005b8b1e0ef8eb25a67a7057eb20`; it is also core tier, MIT/notice. The `svg-css` copies are not used because the SMIL files carry animation inside a self-contained SVG image without stylesheet dependencies. Both follow the existing core-family defaults, data export, and per-family stylesheet conventions.
+
+An optional `IconData.staticBody` holds normalized static inner markup. Generation requires a matching file for each animated icon when `staticIconsDirectory` is declared, and rejects a mismatched viewBox, because both bodies share one geometry. `ResolvedIcon` preserves it. Full-family and scanned CSS generation, Tailwind's matched utilities, and `getIconCssProps` emit `--ic-static-mask` beside the animated mask, at the same stroke width. Rule grouping includes static artwork so identical animated bodies cannot merge different fallbacks. Base rules select `var(--ic-static-mask, var(--ic-mask))` under reduced motion and at `ic-on-hover` rest; a reduced-motion mask takes precedence even while hovered. This replaces per-icon media rules because the same static artwork also serves hover rest, without another copy of its data URI.
+
+SVG Spinners deliberately have no fallback; consumers must label loading independently of movement. Inline SVG, including Vite SVG mode and virtual modules, keeps the animated body. CSS cannot stop SMIL, and selecting an operating-system preference at build time would be incorrect. `getIconMaskUrl` also returns animated artwork; a flat URL cannot express a fallback.
+
+When artwork plays, and how one-shot artwork replays, is part of [Icon motion](./motion.md). Consumer guidance lives in [Animated families](../concepts.md#animated-families).
 
 ## License and attribution
 

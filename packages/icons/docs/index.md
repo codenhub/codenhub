@@ -5,7 +5,7 @@ description: Zero-runtime icon system for the web — icon classes in your marku
 
 # Icons through CSS, with no runtime
 
-`@codenhub/icons` turns an icon class such as `ic-lucide-heart` into a CSS mask rule. There is no component layer, no icon library in your bundle, and nothing to import per icon. The package ships 13 generated icon families totalling over 34,000 icons, each carrying the license notices its artwork requires, plus two opt-in brand families: over 3,000 one-color logos and over 2,000 full-color ones.
+`@codenhub/icons` turns an icon class such as `ic-lucide-heart` into a CSS mask rule. There is no component layer, no icon library in your bundle, and nothing to import per icon. The package ships 15 generated core icon families totalling over 36,000 icons, each carrying the license notices its artwork requires, plus two opt-in brand families: over 3,000 one-color logos and over 2,000 full-color ones.
 
 ## Setup
 
@@ -48,7 +48,7 @@ Four delivery methods understand the same classes — plain CSS, Tailwind CSS v4
 
 ## Next steps
 
-- [Concepts](concepts.md): families, finding icon names, name resolution, color, stroke width, size, and accessibility.
+- [Concepts](concepts.md): families, finding icon names, name resolution, color, stroke width, size, motion, and accessibility.
 - [Delivery methods](delivery/index.md): the four ways icons reach your CSS and how to choose.
 - [Frameworks](frameworks/index.md): setup for Astro, Next.js, and SvelteKit.
 - [JavaScript API](javascript-api.md): the registry, renderers, and third-party set adapter.

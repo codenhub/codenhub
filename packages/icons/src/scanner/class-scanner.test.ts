@@ -7,6 +7,15 @@ import { describe, expect, it } from "vitest";
 import { scanFiles, scanIconClasses } from "./class-scanner.js";
 
 describe("class-scanner", () => {
+  it("collects motion utilities like size utilities, including custom prefixes", () => {
+    expect([...scanIconClasses('<i class="ux-heart ux-xs ux-anim-spin ux-on-hover"></i>', { prefix: "ux" })]).toEqual([
+      "ux-heart",
+      "ux-xs",
+      "ux-anim-spin",
+      "ux-on-hover",
+    ]);
+  });
+
   it("should extract ic-* classes from HTML string", () => {
     const html = '<button class="btn ic-close ic-search"></button>';
     const found = scanIconClasses(html);

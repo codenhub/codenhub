@@ -160,6 +160,14 @@ export interface IconData {
   body: string;
 
   /**
+   * Non-animated inner SVG markup sharing this icon's viewBox. CSS-mask
+   * generators use it under `prefers-reduced-motion: reduce`, with the same
+   * stroke width as the animated artwork. Inline SVG keeps {@link body}.
+   * When absent, the artwork is unchanged for reduced motion.
+   */
+  staticBody?: string;
+
+  /**
    * viewBox width, when it differs from the family default.
    */
   width?: number;
@@ -300,6 +308,12 @@ export interface ResolvedIcon {
    * Inner SVG markup, without the surrounding `<svg>` element.
    */
   body: string;
+
+  /**
+   * Static reduced-motion artwork, when supplied by {@link IconData.staticBody}.
+   * It uses the resolved icon's geometry and stroke width.
+   */
+  staticBody?: string;
 
   /**
    * viewBox width to render the icon at.

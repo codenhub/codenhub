@@ -4,6 +4,24 @@ import type { ResolvedIcon } from "./types.js";
 const STROKE_MODIFIER = /^[0-9]+(?:\.[0-9]+)?$/;
 
 /**
+ * Icon names the motion utilities own exactly, as `ic-on-hover` and `ic-trigger`.
+ * @internal
+ */
+export const RESERVED_MOTION_NAMES: readonly string[] = ["on-hover", "trigger"];
+
+/**
+ * Whether an icon name, or a `prefix:name` reference, belongs to the motion
+ * utilities rather than to an icon: `anim`, `anim-*`, `anim:*`, or one of
+ * {@link RESERVED_MOTION_NAMES}. See docs/internal/motion.md.
+ * @param name - Icon part of a class, with the utility prefix stripped.
+ * @returns Whether the name is reserved for motion.
+ * @internal
+ */
+export function isMotionName(name: string): boolean {
+  return /^anim(?:$|[-:])/.test(name) || RESERVED_MOTION_NAMES.includes(name);
+}
+
+/**
  * An icon utility class taken apart into the parts that address an icon.
  */
 export interface ParsedIconClass {
@@ -59,6 +77,9 @@ export function parseIconClass(name: string): ParsedIconClass {
  * @returns The resolved icon, or `undefined` when no reading of the name resolves.
  */
 export function resolveIconClassName(registry: IconRegistry, name: string): ResolvedIcon | undefined {
+  if (isMotionName(name)) {
+    return undefined;
+  }
   const direct = registry.resolve(name);
   if (direct) {
     return direct;

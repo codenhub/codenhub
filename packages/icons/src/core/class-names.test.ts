@@ -45,6 +45,23 @@ describe("parseIconClass", () => {
 });
 
 describe("resolveIconClassName", () => {
+  it.each(["anim", "anim-spin", "anim-custom", "on-hover", "trigger"])(
+    "keeps utility %s out of icon resolution",
+    (name) => {
+      const registry = new IconRegistry({ defaultPrefix: "test" });
+      registry.registerFamily(createFamily("test", [name]));
+      registry.registerFamily(createFamily("anim", ["spin", "custom"]));
+
+      expect(resolveIconClassName(registry, name)).toBeUndefined();
+    },
+  );
+
+  it.each(["animation", "play", "play-hover", "on-hover-alt", "triggers"])("keeps %s available as an icon", (name) => {
+    const registry = new IconRegistry({ defaultPrefix: "test" });
+    registry.registerFamily(createFamily("test", [name]));
+    expect(resolveIconClassName(registry, name)?.name).toBe(`test:${name}`);
+  });
+
   it("resolves a dashed family prefix a class name cannot write with a colon", () => {
     const registry = new IconRegistry();
     registry.registerFamily(createFamily("lucide", ["arrow-right"]));
