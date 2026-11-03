@@ -2254,6 +2254,16 @@ A validator is still called with any value at all. The input type says what can 
 
 The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, `Check<T>` and `AsyncCheck<T>`, `Infer`, `InferInput`, `ValidationResult<T>`, `ValidationIssue`, `Message`, `Messages` and the options interface of each validator, such as `StringOptions` or `UrlOptions`. The others exported, such as `Composed`, `Factory`, `Rest`, `InferShape` and `InferTagged`, are the machinery of the signatures: they are exported so that a validator you export from a library of your own can be named in its declarations. Each is documented in the source and listed in the [API reference](docs/reference/index.md).
 
+<!-- Source: docs/changelog/0.4.1.md -->
+
+# 0.4.1
+
+## Changed
+
+- Nothing a consumer imports has changed: the code is the same as 0.4.0's, so upgrading needs no action. The release records its size for each export imported alone, and its bytes by source file, function, and class member, for the package index to show where they go.
+- The `homepage` of the manifest, which npm links, is the package page on codenhub.dev, where it was the package's directory on GitHub.
+- The reference pages describe index signatures, overloads, and the block tags of members more fully, and their anchors no longer change between builds.
+
 <!-- Source: docs/changelog/0.4.0.md -->
 
 # 0.4.0
