@@ -51,6 +51,8 @@ In `css` mode, a build with HTML entries writes the stylesheet as a CSS asset na
 
 `mode: "svg"` replaces `<i class="ic-...">` tags with inline SVG at build time and emits no stylesheet at all. It rewrites those tags and nothing else, so a class left on any other element — or `.ic` on a `<span>` — renders nothing in this mode: there is no stylesheet to carry its mask. The plugin warns at build time when it finds an icon class on an element it will not rewrite, naming the class and the file.
 
+Animated SVG artwork keeps its SMIL animation in this mode, including when reduced motion is requested: CSS cannot stop SMIL. The static Line MD fallback, and `ic-on-hover` holding artwork at rest, apply only in CSS mode; glyph motion classes work in both. The optional `@codenhub/icons/play` helper restarts an inline SVG with `setCurrentTime(0)`; it skips restarts under reduced motion but does not stop existing SMIL animation. See [Animated families](../concepts.md#animated-families) for timing and browser limits.
+
 Switching an existing project from CSS mode is not only a config change, because the element that reaches the browser is no longer the one you wrote. Two things the `<i>` had need attention:
 
 - **Size.** The rendered `<svg>` carries a `1em` box as a presentation attribute, so an icon renders at text size with no stylesheet at all. CSS still wins over that: keep `@import "@codenhub/icons"` in a stylesheet and the base rules size the inlined `<svg>` from `--ic-size` exactly as they size an `<i>`, so setting `--ic-size` on an ancestor and the `ic-xs`–`ic-xl` classes both work. Without that import an icon is fixed at `1em`.

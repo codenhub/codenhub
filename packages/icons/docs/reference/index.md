@@ -67,17 +67,19 @@ export declare function generateBaseCss(options?: BaseCssOptions): string;
 
 Generates the base rules every icon class builds on.
 
-An icon is an element that carries an icon class: an `<i>` (or `.${p}` on any element you own) rendered as a mask, or an inlined `<svg>` sized and coloured from the same custom properties. There is no `::before`, `::after`, or form-control form — an icon beside a label is a real `<i>` inside the control — so the base rules are just those two element forms plus the `${p}-xs`–`${p}-xl` size axis.
+An icon is an element that carries an icon class: an `<i>` (or `.${p}` on any element you own) rendered as a mask, or an inlined `<svg>` sized and coloured from the same custom properties. There is no `::before`, `::after`, or form-control form — an icon beside a label is a real `<i>` inside the control — so the base rules are just those two element forms plus the `${p}-xs`–`${p}-xl` size axis and whole-element motion utilities.
 
 The size axis is five one-line rules that each set `--${p}-size` to a rem value. Both forms above already read `var(--${p}-size, 1em)`, so a size class needs no knowledge of the element it lands on and the unclassed default stays `1em`. The classes are always emitted because they cost almost nothing and a scanner cannot know a project is about to use one. `xs`, `sm`, `md`, `lg`, and `xl` are reserved names for this reason — no family may ship an icon or take a prefix by one.
 
 An icon paints in `--${p}-color` when one is set on it or an ancestor, else in its own artwork when it is multicolor (which its icon rule sets as `--${p}-brand-paint`), else in its own color when it has one (a brand mark's, set as `--${p}-brand-color`), else in `currentColor`. The `background` shorthand carries all four, because the artwork is an image and the rest are colors.
 
+Motion classes `${p}-anim-spin`, `pulse`, `beat`, `bounce`, and `wiggle` move the glyph; `--${p}-anim-duration` sets their speed and `--${p}-anim-iterations` their repeat count, `infinite` by default. `${p}-on-hover` plays glyph motion and animated artwork only while the icon, its parent, or a `${p}-trigger` ancestor is hovered or has visible focus, once per hover by default; at rest, artwork shows `--${p}-static-mask`. Reduced-motion preferences stop glyph motion and show static artwork. Class names, custom properties, and keyframes all follow the class prefix; docs/internal/motion.md records the design.
+
 **Parameters**
 
 - `options` — Class prefix.
 
-**Returns** — The base stylesheet.
+**Returns** — The base stylesheet, including motion keyframes and utilities.
 
 ### generateFamilyCss
 
@@ -87,7 +89,7 @@ export declare function generateFamilyCss(family: IconFamilyData, options?: Gene
 
 Generates the complete stylesheet for one icon family.
 
-Every icon is written out, because this is the plugin-free path: nothing is scanning the consumer's markup, so nothing can narrow the family down. A project chooses its cost one family at a time, by choosing which families it imports.
+Every icon is written out, because this is the plugin-free path: nothing is scanning the consumer's markup, so nothing can narrow the family down. A project chooses its cost one family at a time, by choosing which families it imports. Icons with static artwork include `--<prefix>-static-mask` for the same selectors; the base rules select it for hover and reduced motion.
 
 Stroke width cannot be varied here. It is baked into the artwork each rule carries, and a stylesheet with no build step behind it has no way to know which widths a project wants, so `ic-heart/1.5` needs one of the plugins.
 
@@ -106,9 +108,9 @@ export declare function generateIconSetCss(classes: Iterable<string>, registry: 
 
 Generates the stylesheet for a set of scanned icon classes.
 
-Icons sharing identical markup are grouped into one rule, so a class and its aliases cost a selector rather than a second copy of the artwork. Classes that resolve to no icon are skipped silently, because a scanner reports every prefixed class it sees, including ones that are not icons.
+Icons sharing identical animated and static artwork are grouped into one rule, so a class and its aliases cost a selector rather than a second copy of the artwork. Classes that resolve to no icon are skipped silently, because a scanner reports every prefixed class it sees, including ones that are not icons.
 
-A class carrying a stroke modifier, as in `ic-heart/1.5`, renders at that width. One class is one rule: the width is part of the artwork the rule carries, so only the widths the markup actually asked for are generated.
+A class carrying a stroke modifier, as in `ic-heart/1.5`, renders at that width. One class is one rule: the width is part of the artwork the rule carries, so only the widths the markup actually asked for are generated. Icons with static artwork include `--<prefix>-static-mask` at the same stroke width and for the same selectors; the base rules select it for reduced motion.
 
 **Parameters**
 
@@ -127,7 +129,7 @@ export declare function getIconCssProps(iconNameOrSvg: string, registry?: IconRe
 }): Record<string, string> | undefined;
 ```
 
-Resolves an icon into the custom properties an inline `style` attribute or a CSS-in-JS object needs to render it, its own color or multicolor artwork included when it has one.
+Resolves an icon into the custom properties an inline `style` attribute or a CSS-in-JS object needs to render it, its own color or multicolor artwork included when it has one. Includes static artwork as `--<prefix>-static-mask` when the icon provides it, so the base stylesheet can select it for hover and reduced motion.
 
 **Parameters**
 
@@ -193,7 +195,7 @@ export declare function renderSvg(icon: ResolvedIcon, options?: RenderSvgOptions
 
 Renders a resolved icon as a complete, self-contained SVG element.
 
-The element carries a namespace, a viewBox, a `1em` box, and `fill="currentColor"`, leaving color to CSS. The fill is for bodies that set none of their own, such as Material Symbols and Simple Icons paths, which SVG would otherwise paint black whatever `color` says; a body that sets its own fill, as Lucide's `fill="none"` does, still wins. The `1em` box is a floor for an icon inlined with no stylesheet behind it, which a bare `viewBox` renders at 0×0. It is a presentation attribute, so CSS `width`/`height` still wins — including the base stylesheet's `svg[class^="ic-"]` rule, which reads `--ic-size` and `--ic-color` and so carries the `ic-xs`–`ic-xl` size axis and the colour custom property onto an inlined icon the same as onto an `<i>`. Passing `width`, `height`, or `fill` in `RenderSvgOptions.attributes` replaces the default. The viewBox keeps the icon's own origin, because families such as Material Symbols draw above it. A stroke width is applied only when the icon's family is stroke-based.
+The element carries a namespace, a viewBox, a `1em` box, and `fill="currentColor"`, leaving color to CSS. The fill is for bodies that set none of their own, such as Material Symbols and Simple Icons paths, which SVG would otherwise paint black whatever `color` says; a body that sets its own fill, as Lucide's `fill="none"` does, still wins. The `1em` box is a floor for an icon inlined with no stylesheet behind it, which a bare `viewBox` renders at 0×0. It is a presentation attribute, so CSS `width`/`height` still wins — including the base stylesheet's `svg[class^="ic-"]` rule, which reads `--ic-size` and `--ic-color` and so carries the `ic-xs`–`ic-xl` size axis and the colour custom property onto an inlined icon the same as onto an `<i>`. Passing `width`, `height`, or `fill` in `RenderSvgOptions.attributes` replaces the default. The viewBox keeps the icon's own origin, because families such as Material Symbols draw above it. A stroke width is applied only when the icon's family is stroke-based. An icon's `staticBody` is not selected automatically: inline SVG keeps the animated `body`, whose SMIL animation cannot be stopped by CSS.
 
 An icon with a color of its own, such as a brand mark, is painted in it unless `--ic-color` is set on the element or an ancestor. The color sits on a `<g>` around the body rather than on the `<svg>`, so it never collides with a `style` attribute a caller or the markup puts on the element. The `<g>` also carries the color as a presentation attribute: a Content Security Policy that blocks style attributes drops the `style`, and the icon keeps its own color, though `--ic-color` no longer reaches it.
 
@@ -549,6 +551,7 @@ Name of the icon this alias resolves to. Never another alias.
 ```ts
 export interface IconData {
     body: string;
+    staticBody?: string;
     width?: number;
     height?: number;
     left?: number;
@@ -593,6 +596,14 @@ left?: number;
 ```
 
 viewBox origin on the x axis, when it differs from the family default.
+
+#### IconData › staticBody
+
+```ts
+staticBody?: string;
+```
+
+Non-animated inner SVG markup sharing this icon's viewBox. CSS-mask generators use it under `prefers-reduced-motion: reduce`, with the same stroke width as the animated artwork. Inline SVG keeps `body`. When absent, the artwork is unchanged for reduced motion.
 
 #### IconData › tags
 
@@ -1134,6 +1145,7 @@ export interface ResolvedIcon {
     prefix: string;
     iconName: string;
     body: string;
+    staticBody?: string;
     width: number;
     height: number;
     left: number;
@@ -1209,6 +1221,14 @@ prefix: string;
 ```
 
 Family prefix the icon belongs to.
+
+#### ResolvedIcon › staticBody
+
+```ts
+staticBody?: string;
+```
+
+Static reduced-motion artwork, when supplied by `IconData.staticBody`. It uses the resolved icon's geometry and stroke width.
 
 #### ResolvedIcon › strokeWidth
 

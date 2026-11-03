@@ -26,6 +26,19 @@ function readStylesheet(family: IconFamilyData): string {
 // a build; the suite is skipped rather than failed when they are absent.
 describe.skipIf(!existsSync(cssDirectory))("dist/css family stylesheets", () => {
   const families = readFamilies();
+  it("exports every generated family stylesheet through the package manifest", () => {
+    const manifest = JSON.parse(readFileSync(resolve(packageDirectory, "package.json"), "utf8")) as {
+      exports: Record<string, { style?: string; import?: string; default?: string }>;
+    };
+    for (const family of families) {
+      const stylesheet = `./dist/css/${family.prefix}.css`;
+      expect(manifest.exports[`./${family.prefix}`]).toEqual({
+        style: stylesheet,
+        import: stylesheet,
+        default: stylesheet,
+      });
+    }
+  });
   const firstIcon = (family: IconFamilyData): string => Object.keys(family.icons)[0];
 
   it("gives a core family's icons their bare names", () => {

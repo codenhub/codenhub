@@ -20,7 +20,9 @@ The brand families are the exception. `@codenhub/icons/simple-icons` and `@coden
 
 ## Cost
 
-The family stylesheets are large by construction — every icon, because nothing is narrowing them. Lucide is about 1.3 MB, Material Symbols Rounded about 3.9 MB, the full-color `logos` about 6.5 MB, all 15 families about 36 MB. A project chooses its cost by choosing which families it imports. If that is too much, use a plugin method or Tailwind, which emit only what your markup asked for.
+The family stylesheets are large by construction — every icon, because nothing is narrowing them. Lucide is about 1.3 MB, Material Symbols Rounded about 3.9 MB, the full-color `logos` about 6.5 MB, Line MD about 3.0 MB including its static reduced-motion artwork, all 17 families about 39 MB. A project chooses its cost by choosing which families it imports. If that is too much, use a plugin method or Tailwind, which emit only what your markup asked for.
+
+Line MD carries static artwork for reduced motion and for `ic-on-hover` at rest. Add that class to play the artwork on hover with CSS alone; replaying one-shot artwork on every hover, not only the first, needs the optional `@codenhub/icons/play` helper. SVG Spinners retain loading animation. See [Animated families](../concepts.md#animated-families) for one-shot timing and browser limits.
 
 ## Limitations
 

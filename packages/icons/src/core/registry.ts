@@ -233,6 +233,7 @@ export class IconRegistry {
 
     return {
       body: icon.body,
+      ...(icon.staticBody === undefined ? {} : { staticBody: icon.staticBody }),
       height: icon.height ?? family.height ?? DEFAULT_VIEWBOX_SIZE,
       iconName,
       left: icon.left ?? family.left ?? DEFAULT_VIEWBOX_ORIGIN,

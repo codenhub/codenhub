@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { buildFamily } from "./build-family.ts";
 import type { IconFamilyDefinition } from "./family-definitions.ts";
+import { ICON_FAMILIES } from "./family-definitions.ts";
 
 const ICON =
   '<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>T</title><path d="M0 0"/></svg>';
@@ -48,6 +49,74 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await rm(upstream, { force: true, recursive: true });
+});
+
+describe("buildFamily with static artwork", () => {
+  const definition: IconFamilyDefinition = {
+    ...BRAND,
+    staticIconsDirectory: "static",
+  };
+
+  beforeEach(async () => {
+    await mkdir(join(upstream, "static"));
+    await Promise.all(
+      ["github", "hive_chain", "dotnet"].map((name) =>
+        writeFile(join(upstream, "static", `${name}.svg`), ICON.replace("M0 0", "M1 1"), "utf8"),
+      ),
+    );
+  });
+
+  it("normalizes matching static files under the animated icon's name", async () => {
+    const { document } = await buildFamily(definition, upstream, "1");
+
+    expect(document.icons["hive-chain"]?.staticBody).toBe('<path d="M1 1"/>');
+    expect(document.icons["hive-chain"]?.body).toBe('<path d="M0 0"/>');
+  });
+
+  it("refuses missing static artwork instead of shipping a partial fallback", async () => {
+    await rm(join(upstream, "static", "github.svg"));
+
+    await expect(buildFamily(definition, upstream, "1")).rejects.toThrow("github.svg");
+  });
+
+  it("refuses static artwork whose viewBox differs from its animated counterpart", async () => {
+    await writeFile(join(upstream, "static", "github.svg"), ICON.replace("0 0 24 24", "1 0 24 24"), "utf8");
+
+    await expect(buildFamily(definition, upstream, "1")).rejects.toThrow("viewBox");
+  });
+});
+
+describe("animated family source layouts", () => {
+  it.each([
+    { prefix: "line-md", directory: "svg", license: "license.txt", staticDirectory: "svg-static" },
+    { prefix: "svg-spinners", directory: "svg-smil", license: "LICENSE", staticDirectory: undefined },
+  ])(
+    "reads $prefix artwork and its license from the upstream layout",
+    async ({ prefix, directory, license, staticDirectory }) => {
+      const definition = ICON_FAMILIES.find((family) => family.prefix === prefix);
+      expect(definition).toBeDefined();
+      if (!definition) {
+        return;
+      }
+      await mkdir(join(upstream, directory));
+      const animated = ICON.replace(
+        '<path d="M0 0"/>',
+        '<path d="M0 0"><animate attributeName="opacity" values="0;1" dur="1s"/></path>',
+      );
+      await writeFile(join(upstream, directory, "draw.svg"), animated, "utf8");
+      await writeFile(join(upstream, license), "MIT", "utf8");
+      if (staticDirectory) {
+        await mkdir(join(upstream, staticDirectory));
+        await writeFile(join(upstream, staticDirectory, "draw.svg"), ICON, "utf8");
+      }
+      const { document, licenseText } = await buildFamily(definition, upstream, "pinned");
+
+      expect(document.icons.draw.body).toContain("<animate");
+      expect(document.icons.draw.staticBody).toBe(staticDirectory ? '<path d="M0 0"/>' : undefined);
+      expect(document.info).toMatchObject({ attribution: "notice", tier: "core" });
+      expect(licenseText).toBe("MIT");
+    },
+  );
 });
 
 describe("buildFamily for a brand family", () => {
@@ -115,6 +184,34 @@ describe("buildFamily for an extended family", () => {
     const definition = { ...EXTENDED, license: { ...EXTENDED.license, spdx: "MIT" } };
 
     await expect(buildFamily(definition, upstream, "1.0.0")).rejects.toThrow("extended tier");
+  });
+});
+
+describe("buildFamily reserved motion names", () => {
+  it("refuses the anim family prefix", async () => {
+    await expect(buildFamily({ ...BRAND, prefix: "anim" }, upstream, "1.0.0")).rejects.toThrow(
+      'Family prefix "anim" is reserved',
+    );
+  });
+
+  it.each(["anim", "anim-spin", "anim-custom", "on-hover", "trigger"])("refuses an icon named %s", async (name) => {
+    await rm(join(upstream, "icons", "lg.svg"));
+    await writeFile(join(upstream, "icons", `${name}.svg`), ICON, "utf8");
+    const definition = { ...BRAND, iconColorsFile: undefined, iconLicensesFile: undefined, tier: "core" as const };
+
+    await expect(buildFamily(definition, upstream, "1.0.0")).rejects.toThrow(
+      "reserved by the ic-xs–ic-xl size axis or the motion utilities (ic-anim-*, ic-on-hover, ic-trigger)",
+    );
+  });
+
+  it("drops reserved motion names in brand families and records their exclusion", async () => {
+    await writeFile(join(upstream, "icons", "anim-spin.svg"), ICON, "utf8");
+
+    const { attributionText, document } = await buildFamily(BRAND, upstream, "1.0.0");
+
+    expect(document.icons["anim-spin"]).toBeUndefined();
+    expect(attributionText).toContain("`anim-spin`");
+    expect(attributionText).toContain("ic-anim-*");
   });
 });
 

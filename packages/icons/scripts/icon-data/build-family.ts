@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
+import { isMotionName } from "../../src/core/class-names.ts";
 import type { IconAttribution, IconData, IconFamilyData } from "../../src/core/types.ts";
 import { mapConcurrent } from "./concurrency.ts";
 import {
@@ -152,7 +153,7 @@ function readViewBoxKey(viewBox: ViewBox): string {
 }
 
 /** An upstream file read, or the markup that keeps it out of a multicolor family. */
-type ReadIcon = { iconName: string } & ({ icon: NormalizedIcon } | { reason: string });
+type ReadIcon = { iconName: string } & ({ icon: NormalizedIcon & { staticBody?: string } } | { reason: string });
 
 interface Exclusions {
   /** Upstream icons left out because their own license could not be passed on. */
@@ -172,7 +173,7 @@ function renderExclusions(exclusions: Exclusions): string {
   }
   if (exclusions.reserved.length > 0) {
     lines.push(
-      `Not included because the ic-xs–ic-xl size axis reserves the name: ${exclusions.reserved.map((name) => `\`${name}\``).join(", ")}.`,
+      `Not included because the ic-xs–ic-xl size axis or a motion utility (ic-anim-*, ic-on-hover, ic-trigger) reserves the name: ${exclusions.reserved.map((name) => `\`${name}\``).join(", ")}.`,
     );
   }
   if (exclusions.unsupported.length > 0) {
@@ -246,7 +247,7 @@ export async function buildFamily(
     const iconName = definition.kebabCaseNames ? upstreamName.toLowerCase().replace(/[._]/g, "-") : upstreamName;
     // A brand family is opt-in and outside the core promise, so one reserved
     // name costs that icon rather than the whole family.
-    if (definition.tier === "brand" && RESERVED_SIZE_TOKENS.includes(iconName)) {
+    if (definition.tier === "brand" && (RESERVED_SIZE_TOKENS.includes(iconName) || isMotionName(iconName))) {
       exclusions.reserved.push(iconName);
       return [];
     }
@@ -273,7 +274,16 @@ export async function buildFamily(
     const source = await readFile(resolve(iconsDirectory, fileName), "utf8");
     const origin = `${definition.upstreamPackage}/${definition.iconsDirectory}/${fileName}`;
     if (!definition.multicolor) {
-      return { icon: normalizeSvg(source, origin), iconName };
+      const icon = normalizeSvg(source, origin);
+      if (definition.staticIconsDirectory) {
+        const staticPath = resolve(packageDirectory, definition.staticIconsDirectory, fileName);
+        const staticIcon = normalizeSvg(await readFile(staticPath, "utf8"), staticPath);
+        if (readViewBoxKey(staticIcon) !== readViewBoxKey(icon)) {
+          throw new Error(`Static artwork in ${staticPath} has a different viewBox from ${origin}.`);
+        }
+        return { icon: { ...icon, staticBody: staticIcon.body }, iconName };
+      }
+      return { icon, iconName };
     }
     const reason = findUnsupportedMarkup(source);
     if (reason !== undefined) {
@@ -296,12 +306,16 @@ export async function buildFamily(
     throw new Error(`Family "${definition.prefix}" produced no icons from ${definition.upstreamPackage}.`);
   }
 
-  const reservedNames = [...normalized.keys()].filter((name) => RESERVED_SIZE_TOKENS.includes(name));
+  const reservedNames = [...normalized.keys()].filter(
+    (name) => RESERVED_SIZE_TOKENS.includes(name) || isMotionName(name),
+  );
   if (reservedNames.length > 0) {
     throw new Error(
       `Family "${definition.prefix}" ships ${reservedNames
         .map((name) => `"${name}"`)
-        .join(", ")}, reserved by the ic-xs–ic-xl size axis. Rename or drop the icon(s) upstream.`,
+        .join(
+          ", ",
+        )}, reserved by the ic-xs–ic-xl size axis or the motion utilities (ic-anim-*, ic-on-hover, ic-trigger). Rename or drop the icon(s) upstream.`,
     );
   }
 
@@ -313,6 +327,7 @@ export async function buildFamily(
     const color = colorsByIcon.get(iconName);
     icons[iconName] = {
       body: icon.body,
+      ...(icon.staticBody === undefined ? {} : { staticBody: icon.staticBody }),
       ...(icon.width === familyViewBox.width ? {} : { width: icon.width }),
       ...(icon.height === familyViewBox.height ? {} : { height: icon.height }),
       ...(icon.left === familyViewBox.left ? {} : { left: icon.left }),

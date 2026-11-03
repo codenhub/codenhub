@@ -134,6 +134,65 @@ describe("generateBaseCss", () => {
   });
 });
 
+describe("generateBaseCss motion", () => {
+  it.each([
+    ["spin", "1s", "linear"],
+    ["pulse", "2s", "ease-in-out"],
+    ["beat", "1s", "ease-in-out"],
+    ["bounce", "1s", "ease-in-out"],
+    ["wiggle", "1s", "ease-in-out"],
+  ])("emits %s motion with an overridable duration and repeat count", (name, duration, easing) => {
+    const css = generateBaseCss();
+
+    expect(css).toContain(`@keyframes ic-anim-${name}`);
+    expect(css).toContain(
+      `.ic-anim-${name} {\n  animation: ic-anim-${name} var(--ic-anim-duration, ${duration}) ${easing} var(--ic-anim-iterations, infinite);\n}`,
+    );
+  });
+
+  it("disables each animation when reduced motion is requested", () => {
+    const css = generateBaseCss();
+    const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
+
+    for (const name of ["spin", "pulse", "beat", "bounce", "wiggle"]) {
+      expect(reduced).toContain(`.ic-anim-${name}`);
+    }
+    expect(reduced).toContain("animation: none !important;");
+  });
+
+  const rest =
+    ":not(:hover):not(:hover > *):not(:focus-visible > *):not(.ic-trigger:hover *):not(.ic-trigger:focus-visible *)";
+
+  it("removes on-hover motion at rest, outside the icon, its parent, and any ic-trigger ancestor", () => {
+    expect(generateBaseCss()).toContain(`.ic-on-hover${rest} {\n  animation: none;\n}`);
+  });
+
+  it("plays on-hover motion once per hover unless --ic-anim-iterations says otherwise", () => {
+    expect(generateBaseCss()).toContain(
+      '.ic-on-hover[class*="ic-anim-"] {\n  animation-iteration-count: var(--ic-anim-iterations, 1);\n}',
+    );
+  });
+
+  it("shows static artwork for on-hover icons at rest", () => {
+    expect(generateBaseCss()).toContain(
+      `i.ic-on-hover${rest},\n.ic.ic-on-hover${rest} {\n  mask-image: var(--ic-static-mask, var(--ic-mask));`,
+    );
+  });
+
+  it("namespaces motion classes, properties, and keyframes with the custom prefix", () => {
+    const css = generateBaseCss({ prefix: "ux" });
+
+    expect(css).toContain("@keyframes ux-anim-spin");
+    expect(css).toContain(
+      "animation: ux-anim-spin var(--ux-anim-duration, 1s) linear var(--ux-anim-iterations, infinite);",
+    );
+    expect(css).toContain(".ux-on-hover:not(:hover)");
+    expect(css).toContain(":not(.ux-trigger:hover *)");
+    expect(css).not.toContain("ic-anim-");
+    expect(css).not.toContain("ic-trigger");
+  });
+});
+
 describe("generateBaseCss colors", () => {
   it("paints with --ic-color first, then multicolor artwork, then an icon's brand color, then currentColor", () => {
     expect(generateBaseCss()).toContain(

@@ -1,3 +1,4 @@
+import { compile } from "tailwindcss";
 import { describe, expect, it } from "vitest";
 
 import type { IconFamilyData } from "../core/types.js";
@@ -44,6 +45,7 @@ function runPlugin(families: IconFamilyData[], options?: TailwindIconsOptions) {
 
   created(options).handler({
     addBase: (rules: Record<string, Record<string, string>>) => base.push(rules),
+    addUtilities: () => undefined,
     matchUtilities: (
       utilities: Record<string, (value: string, extra?: { modifier?: string | null }) => UtilityResult>,
       config: { values: Record<string, string> },
@@ -61,6 +63,26 @@ function runPlugin(families: IconFamilyData[], options?: TailwindIconsOptions) {
 }
 
 describe("createIconsTailwindPlugin", () => {
+  it("keeps motion candidates out of icon values even with colliding third-party names", () => {
+    const family = createFamily("alpha", { icons: { "anim-spin": { body: '<path d="collision" />' } } });
+    const { resolve, values } = runPlugin([family], { default: "alpha" });
+
+    expect(values["anim-spin"]).toBeUndefined();
+    expect(resolve("anim-spin")).toBeNull();
+  });
+
+  it("swaps to static artwork under reduced motion at the requested stroke width", () => {
+    const family = createFamily("animated", {
+      icons: { draw: { body: '<path d="animated" />', staticBody: '<path stroke-width="2" d="static" />' } },
+    });
+    const { resolve } = runPlugin([family]);
+    const rule = resolve("animated:draw", "1.5");
+
+    expect(rule?.["--ic-static-mask"]).toContain("stroke-width=%221.5%22");
+    expect(rule?.["@media (prefers-reduced-motion: reduce)"]).toBeUndefined();
+    expect(rule?.["--ic-uri"]).toContain("d=%22animated%22");
+  });
+
   it("offers every qualified name of every family it was given", () => {
     const { values } = runPlugin([createFamily("alpha"), createFamily("beta")]);
 
@@ -191,6 +213,7 @@ describe("createIconsTailwindPlugin", () => {
     let key = "";
     created({ prefix: "icon" }).handler({
       addBase: () => undefined,
+      addUtilities: () => undefined,
       matchUtilities: (utilities: Record<string, unknown>) => {
         key = Object.keys(utilities)[0];
       },
@@ -234,5 +257,49 @@ describe("createIconsTailwindPlugin", () => {
     resolve("alpha:heart");
 
     expect(base).toEqual([]);
+  });
+});
+
+describe("Tailwind motion utilities", () => {
+  it.each(["ic", "ux"])("registers %s-on-hover for static rest and reduced motion", async (prefix) => {
+    const compiler = await compileMotion(prefix);
+    const css = compiler.build([`${prefix}-on-hover`]);
+    expect(css).toContain(`.${prefix}-on-hover`);
+    expect(css).toContain(":not(:focus-visible > *)");
+    expect(css).toContain(`:not(.${prefix}-trigger:hover *)`);
+    expect(css).toContain(`animation-iteration-count: var(--${prefix}-anim-iterations, 1)`);
+    expect(css).toContain(`var(--${prefix}-static-mask, var(--${prefix}-mask))`);
+    expect(css).toContain("@media (prefers-reduced-motion: reduce)");
+  });
+
+  async function compileMotion(prefix = "ic") {
+    return compile(`@plugin "icons" { prefix: ${prefix}; } @tailwind utilities;`, {
+      loadModule: async () => ({ path: "icons", base: "", module: createIconsTailwindPlugin([]) }),
+    });
+  }
+
+  it.each(["spin", "pulse", "beat", "bounce", "wiggle"])(
+    "supports hover and group-hover variants for %s",
+    async (name) => {
+      const compiler = await compileMotion();
+      const css = compiler.build([`hover:ic-anim-${name}`, `group-hover:ic-anim-${name}`]);
+
+      expect(css).toContain(`.hover\\:ic-anim-${name}`);
+      expect(css).toContain(`.group-hover\\:ic-anim-${name}`);
+      expect(css).toContain(`@keyframes ic-anim-${name}`);
+      expect(css).toContain("@media (prefers-reduced-motion: reduce)");
+      expect(css).toContain("animation: none !important;");
+    },
+  );
+
+  it("registers the hover trigger and motion with a custom prefix and repeat count", async () => {
+    const compiler = await compileMotion("ux");
+    const css = compiler.build(["ux-on-hover", "ux-anim-spin"]);
+
+    expect(css).toContain(".ux-on-hover");
+    expect(css).toContain(":not(.ux-trigger:focus-visible *)");
+    expect(css).toContain("@keyframes ux-anim-spin");
+    expect(css).toContain("var(--ux-anim-duration, 1s)");
+    expect(css).toContain("var(--ux-anim-iterations, infinite)");
   });
 });

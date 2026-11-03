@@ -1,10 +1,11 @@
 import plugin from "tailwindcss/plugin";
 
 import { carriesNotice, describeFamilyNotice } from "../catalog/attribution.js";
-import { parseIconClass, resolveIconClassName } from "../core/class-names.js";
+import { isMotionName, parseIconClass, resolveIconClassName } from "../core/class-names.js";
 import { IconRegistry } from "../core/registry.js";
 import type { IconFamilyData } from "../core/types.js";
 import { getIconCssProps } from "../generator/css-generator.js";
+import { ICON_MOTIONS, motionRestSelector } from "../generator/motion.js";
 
 /**
  * How the Tailwind plugin emits the license notices of the families it used.
@@ -140,6 +141,11 @@ function buildValues(families: readonly IconFamilyData[], defaultPrefix: string 
     }
   }
 
+  for (const name of Object.keys(values)) {
+    if (isMotionName(name)) {
+      delete values[name];
+    }
+  }
   return values;
 }
 
@@ -160,7 +166,7 @@ function buildValues(families: readonly IconFamilyData[], defaultPrefix: string 
  */
 export function createIconsTailwindPlugin(availableFamilies: readonly IconFamilyData[]): IconsTailwindPlugin {
   return plugin.withOptions((options: TailwindIconsOptions = {}) => {
-    return ({ addBase, matchUtilities }) => {
+    return ({ addBase, addUtilities, matchUtilities }) => {
       const prefix = options.prefix ?? "ic";
       const attribution = options.attribution ?? "auto";
       const strokeWidth = options.strokeWidth ?? options["stroke-width"];
@@ -182,6 +188,31 @@ export function createIconsTailwindPlugin(availableFamilies: readonly IconFamily
       for (const family of families) {
         registry.registerFamily(family);
       }
+
+      addUtilities({
+        ...Object.fromEntries(
+          Object.entries(ICON_MOTIONS).map(([name, motion]) => [
+            `.${prefix}-anim-${name}`,
+            {
+              animation: `${prefix}-anim-${name} var(--${prefix}-anim-duration, ${motion.duration}) ${motion.easing} var(--${prefix}-anim-iterations, infinite)`,
+              [`@keyframes ${prefix}-anim-${name}`]: motion.keyframes,
+              "@media (prefers-reduced-motion: reduce)": { animation: "none !important" },
+            },
+          ]),
+        ),
+        [`.${prefix}-on-hover`]: {
+          [`&[class*="${prefix}-anim-"]`]: { "animation-iteration-count": `var(--${prefix}-anim-iterations, 1)` },
+          [`&${motionRestSelector(prefix)}`]: { animation: "none" },
+          [`&:is(i, .${prefix})${motionRestSelector(prefix)}`]: {
+            "mask-image": `var(--${prefix}-static-mask, var(--${prefix}-mask))`,
+            "-webkit-mask-image": `var(--${prefix}-static-mask, var(--${prefix}-mask))`,
+          },
+          "@media (prefers-reduced-motion: reduce)": {
+            "mask-image": `var(--${prefix}-static-mask, var(--${prefix}-mask)) !important`,
+            "-webkit-mask-image": `var(--${prefix}-static-mask, var(--${prefix}-mask)) !important`,
+          },
+        },
+      });
 
       const values = buildValues(families, options.default);
       const noticed = new Set<string>();

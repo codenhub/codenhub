@@ -63,6 +63,29 @@ function createBundleContext() {
 }
 
 describe("viteIcons", () => {
+  it("serves motion utilities without looking them up as icon artwork", () => {
+    const { load, transform } = createPlugin({ prefix: "ux" });
+    transform('<i class="ux-xs ux-anim-spin ux-on-hover ux-trigger"></i>', "app.tsx");
+
+    const css = load("\0virtual:icons.css");
+
+    expect(css).toContain("@keyframes ux-anim-spin");
+    expect(css).toContain(".ux-on-hover:not(:hover)");
+    expect(css).not.toContain("--ux-uri: url(");
+    expect(css).not.toContain("Icon artwork in this build");
+  });
+
+  it("emits static masks for reduced motion in CSS mode, including stroke modifiers", () => {
+    const family = createFamily();
+    family.icons.user.staticBody = '<path stroke-width="2" d="static" />';
+    const { load, transform } = createPlugin({ families: [family] });
+    transform('<i class="ic-user/1.5"></i>', "page.html");
+    const css = load("\0virtual:icons.css");
+
+    expect(css).toContain("--ic-static-mask: url(");
+    expect(css).toContain("d=%22static%22");
+  });
+
   it("resolves the virtual stylesheet module", () => {
     const { plugin, resolveId } = createPlugin();
 
@@ -246,6 +269,20 @@ describe("viteIcons virtual icon modules", () => {
 });
 
 describe("viteIcons in svg mode", () => {
+  it("preserves motion classes and does not warn about utilities left on other elements", () => {
+    const { transformIndexHtml, generateBundle } = createPlugin({ mode: "svg" });
+    const html = transformIndexHtml(
+      '<button class="ic-trigger"><span><i class="ic-anim-spin ic-on-hover ic-user"></i></span></button>',
+      {},
+    ) as string;
+    const { context, warnings } = createBundleContext();
+
+    generateBundle.call(context);
+
+    expect(html).toContain('<svg class="ic-anim-spin ic-on-hover ic-user"');
+    expect(warnings).toEqual([]);
+  });
+
   it("replaces an icon tag with inline SVG in markup", () => {
     const { transformIndexHtml } = createPlugin({ mode: "svg" });
 

@@ -131,6 +131,8 @@ function overridePaint(body: string, prefix: string): string {
  * replaces the default. The viewBox keeps the icon's own origin, because families such as
  * Material Symbols draw above it. A stroke width is applied only when the icon's
  * family is stroke-based.
+ * An icon's `staticBody` is not selected automatically: inline SVG keeps the
+ * animated `body`, whose SMIL animation cannot be stopped by CSS.
  *
  * An icon with a color of its own, such as a brand mark, is painted in it unless
  * `--ic-color` is set on the element or an ancestor. The color sits on a `<g>`

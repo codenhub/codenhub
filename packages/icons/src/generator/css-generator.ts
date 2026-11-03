@@ -4,6 +4,7 @@ import { IconRegistry as IconRegistryConstructor } from "../core/registry.js";
 import type { IconRegistry } from "../core/registry.js";
 import { renderSvg } from "../core/render.js";
 import type { IconFamilyData, ResolvedIcon } from "../core/types.js";
+import { ICON_MOTIONS, motionRestSelector } from "./motion.js";
 import { svgToDataUri } from "./svg-encoder.js";
 
 const DEFAULT_PREFIX = "ic";
@@ -22,6 +23,8 @@ export interface BaseCssOptions {
  * Options for generating the CSS rule of a single icon.
  */
 export interface GenerateIconCssOptions {
+  /** Complete static SVG artwork for hover and reduced-motion masks, when available. */
+  staticSvg?: string;
   /**
    * Class prefix for base icon styles. Defaults to `"ic"`.
    */
@@ -141,7 +144,7 @@ function renderBrandPaint(prefix: string): string {
  * from the same custom properties. There is no `::before`, `::after`, or
  * form-control form — an icon beside a label is a real `<i>` inside the control
  * — so the base rules are just those two element forms plus the
- * `${p}-xs`–`${p}-xl` size axis.
+ * `${p}-xs`–`${p}-xl` size axis and whole-element motion utilities.
  *
  * The size axis is five one-line rules that each set `--${p}-size` to a rem
  * value. Both forms above already read `var(--${p}-size, 1em)`, so a size class
@@ -158,11 +161,37 @@ function renderBrandPaint(prefix: string): string {
  * shorthand carries all four, because the artwork is an image and the rest are
  * colors.
  *
+ * Motion classes `${p}-anim-spin`, `pulse`, `beat`, `bounce`, and `wiggle`
+ * move the glyph; `--${p}-anim-duration` sets their speed and
+ * `--${p}-anim-iterations` their repeat count, `infinite` by default.
+ * `${p}-on-hover` plays glyph motion and animated artwork only while the icon,
+ * its parent, or a `${p}-trigger` ancestor is hovered or has visible focus,
+ * once per hover by default; at rest, artwork shows `--${p}-static-mask`.
+ * Reduced-motion preferences stop glyph motion and show static artwork.
+ * Class names, custom properties, and keyframes all follow the class prefix;
+ * docs/internal/motion.md records the design.
+ *
  * @param options - Class prefix.
- * @returns The base stylesheet.
+ * @returns The base stylesheet, including motion keyframes and utilities.
  */
 export function generateBaseCss(options?: BaseCssOptions): string {
   const p = options?.prefix ?? DEFAULT_PREFIX;
+  const motions = Object.entries(ICON_MOTIONS);
+  const keyframes = motions.map(([name, motion]) => {
+    const frames = Object.entries(motion.keyframes).map(([step, properties]) => {
+      const declarations = Object.entries(properties)
+        .map(([property, value]) => `    ${property}: ${value};`)
+        .join("\n");
+      return `  ${step} {\n${declarations}\n  }`;
+    });
+    return `@keyframes ${p}-anim-${name} {\n${frames.join("\n")}\n}`;
+  });
+  const utilities = motions.map(
+    ([name, motion]) =>
+      `.${p}-anim-${name} {\n  animation: ${p}-anim-${name} var(--${p}-anim-duration, ${motion.duration}) ${motion.easing} var(--${p}-anim-iterations, infinite);\n}`,
+  );
+  const reducedSelectors = motions.map(([name]) => `  .${p}-anim-${name}`).join(",\n");
+  const rest = motionRestSelector(p);
   return `i[class^="${p}-"],
 i[class*=" ${p}-"],
 .${p} {
@@ -208,6 +237,36 @@ svg[class*=" ${p}-"] {
 
 .${p}-xl {
   --${p}-size: 1.5rem;
+}
+
+${keyframes.join("\n\n")}
+
+${utilities.join("\n\n")}
+
+.${p}-on-hover[class*="${p}-anim-"] {
+  animation-iteration-count: var(--${p}-anim-iterations, 1);
+}
+
+.${p}-on-hover${rest} {
+  animation: none;
+}
+
+i.${p}-on-hover${rest},
+.${p}.${p}-on-hover${rest} {
+  mask-image: var(--${p}-static-mask, var(--${p}-mask));
+  -webkit-mask-image: var(--${p}-static-mask, var(--${p}-mask));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  i[class^="${p}-"],
+  i[class*=" ${p}-"],
+  .${p} {
+    mask-image: var(--${p}-static-mask, var(--${p}-mask)) !important;
+    -webkit-mask-image: var(--${p}-static-mask, var(--${p}-mask)) !important;
+  }
+${reducedSelectors} {
+    animation: none !important;
+  }
 }`;
 }
 
@@ -216,8 +275,8 @@ svg[class*=" ${p}-"] {
  *
  * @param selectors - Selector or selectors the rule applies to.
  * @param svg - Complete SVG markup for the icon.
- * @param options - Class prefix, the icon's own color, and whether its artwork
- * is multicolor.
+ * @param options - Class prefix, paint metadata, and optional static artwork
+ * for hover and reduced-motion masks.
  * @returns The generated rule.
  */
 export function generateIconCss(selectors: string | string[], svg: string, options?: GenerateIconCssOptions): string {
@@ -225,16 +284,18 @@ export function generateIconCss(selectors: string | string[], svg: string, optio
   const prefix = options?.prefix ?? DEFAULT_PREFIX;
   const color = options?.color === undefined ? "" : `\n  --${prefix}-brand-color: ${options.color};`;
   const paint = options?.multicolor ? `\n  --${prefix}-brand-paint: ${renderBrandPaint(prefix)};` : "";
+  const staticMask =
+    options?.staticSvg === undefined ? "" : `\n  --${prefix}-static-mask: url("${svgToDataUri(options.staticSvg)}");`;
   return `${selectorList} {
   --${prefix}-uri: url("${svgToDataUri(svg)}");
-  --${prefix}-mask: var(--${prefix}-uri);${color}${paint}
+  --${prefix}-mask: var(--${prefix}-uri);${staticMask}${color}${paint}
 }`;
 }
 
 /**
  * Generates the stylesheet for a set of scanned icon classes.
  *
- * Icons sharing identical markup are grouped into one rule, so a class and its
+ * Icons sharing identical animated and static artwork are grouped into one rule, so a class and its
  * aliases cost a selector rather than a second copy of the artwork. Classes
  * that resolve to no icon are skipped silently, because a scanner reports every
  * prefixed class it sees, including ones that are not icons.
@@ -242,6 +303,8 @@ export function generateIconCss(selectors: string | string[], svg: string, optio
  * A class carrying a stroke modifier, as in `ic-heart/1.5`, renders at that
  * width. One class is one rule: the width is part of the artwork the rule
  * carries, so only the widths the markup actually asked for are generated.
+ * Icons with static artwork include `--<prefix>-static-mask` at the same stroke
+ * width and for the same selectors; the base rules select it for reduced motion.
  *
  * @param classes - Scanned class names, stroke modifiers included.
  * @param registry - Registry holding the loaded families.
@@ -258,11 +321,17 @@ export function generateIconSetCss(
   const prefixDash = `${prefix}-`;
 
   // Keyed by artwork and paint together: two brand marks can share a shape.
-  const rules = new Map<string, { svg: string; color?: string; multicolor?: true; selectors: string[] }>();
+  const rules = new Map<
+    string,
+    { svg: string; staticSvg?: string; color?: string; multicolor?: true; selectors: string[] }
+  >();
   const usedPrefixes = new Set<string>();
 
-  function addRule(svg: string, icon: ResolvedIcon, selector: string): void {
-    const key = `${icon.color ?? ""}\n${icon.multicolor ?? ""}\n${svg}`;
+  function addRule(icon: ResolvedIcon, selector: string, strokeWidth?: number | string): void {
+    const svg = renderMaskSvg(icon, strokeWidth);
+    const staticSvg =
+      icon.staticBody === undefined ? undefined : renderMaskSvg({ ...icon, body: icon.staticBody }, strokeWidth);
+    const key = `${icon.color ?? ""}\n${icon.multicolor ?? ""}\n${svg}\n${staticSvg ?? ""}`;
     const rule = rules.get(key);
     if (rule) {
       rule.selectors.push(selector);
@@ -270,6 +339,7 @@ export function generateIconSetCss(
     }
     rules.set(key, {
       svg,
+      ...(staticSvg === undefined ? {} : { staticSvg }),
       selectors: [selector],
       ...(icon.color === undefined ? {} : { color: icon.color }),
       ...(icon.multicolor ? { multicolor: true } : {}),
@@ -288,7 +358,7 @@ export function generateIconSetCss(
     usedPrefixes.add(icon.prefix);
 
     const strokeWidth = parsed.strokeWidth ?? options?.strokeWidth;
-    addRule(renderMaskSvg(icon, strokeWidth), icon, `.${escapeSelectorClass(className)}`);
+    addRule(icon, `.${escapeSelectorClass(className)}`, strokeWidth);
   }
 
   const chunks = injectBase ? [generateBaseCss({ prefix })] : [];
@@ -336,6 +406,8 @@ export function getIconMaskUrl(
  * Resolves an icon into the custom properties an inline `style` attribute or a
  * CSS-in-JS object needs to render it, its own color or multicolor artwork
  * included when it has one.
+ * Includes static artwork as `--<prefix>-static-mask` when the icon provides it,
+ * so the base stylesheet can select it for hover and reduced motion.
  *
  * @param iconNameOrSvg - Icon name, class-style name, or complete SVG markup.
  * @param registry - Registry used when a name has to be resolved.
@@ -358,6 +430,11 @@ export function getIconCssProps(
   return {
     [`--${prefix}-mask`]: `var(--${prefix}-uri)`,
     [`--${prefix}-uri`]: maskUrl,
+    ...(icon?.staticBody === undefined
+      ? {}
+      : {
+          [`--${prefix}-static-mask`]: `url("${svgToDataUri(renderMaskSvg({ ...icon, body: icon.staticBody }, options?.strokeWidth))}")`,
+        }),
     ...(icon?.color === undefined ? {} : { [`--${prefix}-brand-color`]: icon.color }),
     ...(icon?.multicolor ? { [`--${prefix}-brand-paint`]: renderBrandPaint(prefix) } : {}),
   };
@@ -391,6 +468,8 @@ export interface GenerateFamilyCssOptions extends BaseCssOptions {
  * scanning the consumer's markup, so nothing can narrow the family down. A
  * project chooses its cost one family at a time, by choosing which families it
  * imports.
+ * Icons with static artwork include `--<prefix>-static-mask` for the same
+ * selectors; the base rules select it for hover and reduced motion.
  *
  * Stroke width cannot be varied here. It is baked into the artwork each rule
  * carries, and a stylesheet with no build step behind it has no way to know
@@ -421,6 +500,7 @@ export function generateFamilyCss(family: IconFamilyData, options?: GenerateFami
     rules.push(
       generateIconCss(selectors, renderMaskSvg(icon), {
         prefix,
+        ...(icon.staticBody === undefined ? {} : { staticSvg: renderMaskSvg({ ...icon, body: icon.staticBody }) }),
         ...(icon.color === undefined ? {} : { color: icon.color }),
         ...(icon.multicolor ? { multicolor: true } : {}),
       }),

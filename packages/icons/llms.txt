@@ -6,9 +6,12 @@
 - Families are data, imported from `@codenhub/icons/data/<prefix>` and passed to a plugin. Nothing is bundled by default.
 - Variants such as filled or duotone are separate families with their own prefixes, never options on one family.
 - Stroke width is a modifier on the class, `ic-lucide-heart/1.5`. It applies only to families drawn with strokes, and needs one of the plugin delivery methods.
+- Whole-glyph motion: `ic-anim-spin`, `ic-anim-pulse`, `ic-anim-beat`, `ic-anim-bounce`, `ic-anim-wiggle`; they run always. `ic-on-hover` plays motion and animated artwork only while the icon, its parent, or an `ic-trigger` ancestor is hovered or has visible focus, once per hover by default. `--ic-anim-iterations` sets the repeat count (`infinite` by default, `1` under `ic-on-hover`), `--ic-anim-duration` the speed. `playIcon` from `@codenhub/icons/play` plays an icon from code. Reduced-motion preferences disable motion; see [Motion](docs/concepts.md#motion).
+- `anim` is reserved for motion utilities; no family prefix `anim` or icon name equal to `anim` or starting with `anim-`. The exact icon names `on-hover` and `trigger` are reserved too.
 - `xs`, `sm`, `md`, `lg`, and `xl` are reserved for the `ic-xs`–`ic-xl` size classes: no family may use one as a prefix or icon name.
 - Icons paint in `--ic-color` if set on them or an ancestor, else in their own artwork (full-color `logos` icons), else in their own color (`simple-icons` icons), else in `currentColor`.
 - The brand families `simple-icons` and `logos` are opt-in: `@codenhub/icons/tw` never resolves them, and the other methods resolve them only when named.
+- Animated core families: `line-md` (1,222, MIT) and `svg-spinners` (46, MIT). Line MD CSS masks use `staticBody?: string` for reduced motion; inline SVG keeps SMIL animation. One-shot draw-ins play at page load, not on hover or later insertion; `-loop` icons loop. Animated masks tested in Chromium; Firefox and Safari untested. See [Animated families](docs/concepts.md#animated-families).
 - The build emits the license notices required by the families it used, controlled by the `attribution` option.
 
 ## Documentation
