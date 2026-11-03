@@ -1,5 +1,6 @@
 ---
 title: "/play"
+description: "Plays icon motion from code: on an event, or on every hover for one-shot artwork."
 order: 2
 ---
 

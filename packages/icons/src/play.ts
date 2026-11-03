@@ -1,3 +1,9 @@
+/**
+ * Plays icon motion from code: on an event, or on every hover for one-shot artwork.
+ *
+ * @packageDocumentation
+ */
+
 let replayCount = 0;
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
