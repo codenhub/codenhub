@@ -335,7 +335,7 @@ type OkValues<R extends readonly Result<unknown>[]> = {
  * @typeParam R - The list of Results to combine.
  * @param results - The Results to combine.
  * @returns An Ok holding a frozen list of the values, or the first Err in the list.
- * @throws {TypeError} If `results` is not a list.
+ * @throws {TypeError} If `results` is not a list, or an entry of it is not a Result.
  */
 export const all = <const R extends readonly Result<unknown>[]>(results: R): Result<OkValues<R>> => {
   if (!Array.isArray(results)) {
@@ -345,6 +345,9 @@ export const all = <const R extends readonly Result<unknown>[]>(results: R): Res
   const values: unknown[] = [];
 
   for (const result of results as readonly Result<unknown>[]) {
+    if (typeof result !== "object" || result === null || typeof result.ok !== "boolean") {
+      throw new TypeError("all expects a list of Results.");
+    }
     if (!result.ok) {
       return result;
     }

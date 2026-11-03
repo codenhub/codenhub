@@ -530,4 +530,13 @@ describe("all", () => {
   it("should throw TypeError for a value that is not a list", () => {
     expect(() => all(ok(1) as never)).toThrow(TypeError);
   });
+
+  it.each([
+    ["a number", 1],
+    ["null", null],
+    ["an object without ok", { value: 1 }],
+  ])("should throw TypeError for a list holding %s", (_label, item) => {
+    expect(() => all([item, ok(2)] as never)).toThrow(TypeError);
+    expect(() => all([ok(1), item] as never)).toThrow(TypeError);
+  });
 });

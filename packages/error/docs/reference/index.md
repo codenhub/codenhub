@@ -30,7 +30,7 @@ A tuple keeps each position's type, so `all([ok(1), ok("a")] as const)` is a `Re
 
 **Returns** — An Ok holding a frozen list of the values, or the first Err in the list.
 
-**Throws** — `TypeError` — If `results` is not a list.
+**Throws** — `TypeError` — If `results` is not a list, or an entry of it is not a Result.
 
 ### andThen
 
