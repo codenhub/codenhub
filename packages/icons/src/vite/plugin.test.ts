@@ -239,6 +239,18 @@ describe("viteIcons virtual icon modules", () => {
     expect(code).toContain('viewBox=\\"0 0 24 24\\"');
   });
 
+  // codenhub/codenhub#452: the base rules reach an inlined `<svg>` only through
+  // its `ic-` class, so without one `--ic-size` and `--ic-color` miss it.
+  it("puts the icon's qualified class on its markup, under the configured prefix", () => {
+    const { load } = createPlugin({ prefix: "ux" });
+
+    const code = load("\0virtual:@codenhub/icons/cancel") ?? "";
+
+    expect(code).toContain('export const svg = "<svg xmlns=');
+    expect(code).toContain('class=\\"ux-test-x\\"');
+    expect(code).not.toContain("aria-hidden");
+  });
+
   it("resolves a bare name through aliases and the default prefix", () => {
     const { load } = createPlugin();
 

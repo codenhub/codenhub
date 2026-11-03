@@ -73,7 +73,7 @@ const { svg } = await import("virtual:@codenhub/icons/lucide/heart");
 element.innerHTML = svg;
 ```
 
-The module exports the rendered markup as `svg` and its default export, and the resolved icon as `icon`. Each import is its own module, so the bundler splits and tree-shakes at icon granularity. A name with no prefix — `virtual:@codenhub/icons/close` — resolves like any other unqualified name. An unknown icon fails the build rather than resolving to nothing.
+The module exports the rendered markup as `svg` and its default export, and the resolved icon as `icon`. The `<svg>` carries the icon's qualified class, such as `ic-lucide-heart` under the configured `prefix`, as an `<svg>` svg mode inlines does, so the base rules size and color it from `--ic-size`, `--ic-color`, and the `ic-xs`–`ic-xl` classes. It carries no `aria-hidden`: add it for a decorative icon, or give a meaningful one `role="img"` and a label. Each import is its own module, so the bundler splits and tree-shakes at icon granularity. A name with no prefix — `virtual:@codenhub/icons/close` — resolves like any other unqualified name. An unknown icon fails the build rather than resolving to nothing.
 
 ## See also
 
