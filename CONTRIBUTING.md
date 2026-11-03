@@ -156,13 +156,13 @@ The human directing the work stays the commit author. The trailer is an addition
 
 Run scripts from the repository root. Root tooling owns dependency build ordering, so use its selectors rather than `pnpm --filter` or commands run from a package directory. Narrow development checks to the affected package or paths; [tooling](docs/tooling.md#targets) documents selector resolution and options.
 
-Run `pnpm verify` after changes. A targeted run covers the affected package during development; the final verification before delivery covers the workspace. `--skip=test:browser` is appropriate when the change cannot affect browser suites; report any skipped steps.
-
-Before opening a pull request, also verify the branch selection:
+Run `pnpm verify` after changes. A targeted run covers the affected package during development. The final verification before delivery is the branch selection:
 
 ```sh
 pnpm verify --changed
 ```
+
+It selects every package the branch changed, and every package when the branch changes a workspace-wide file ([tooling](docs/tooling.md#targets) lists them). Run the whole workspace, `pnpm verify` with no selector, only when the change reaches packages that selection cannot see: a change to `packages/tools`, which every package builds and checks with, or to `.github/`. Otherwise a workspace run repeats what CI already runs in full on every merge (`docs/ci.md`, "Triggers and selection"), and for a change to one package's prose it costs minutes to verify packages nothing touched. `--skip=test:browser` is appropriate when the change cannot affect browser suites; report any skipped steps.
 
 Regenerate derived files if the change touched a package README or anything under a package's `docs/`, and commit the result — CI fails on drift rather than fixing it:
 
