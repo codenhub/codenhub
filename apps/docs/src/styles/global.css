@@ -1,4 +1,5 @@
 @import "@codenhub/styles/tw";
+@import "@codenhub/icons";
 @import "@codenhub/app-shell/styles.css";
 @import "./catalog.css";
 @import "./markdown.css";
@@ -8,9 +9,9 @@
 @source "../../../../packages/app-shell/src/components";
 
 /* Header, footer, theme toggle, and skip link come from `@codenhub/app-shell`.
-   The icon base rules and generated masks arrive through `virtual:icons.css`,
-   imported by the shell's base layout, so this app does not `@import
-   "@codenhub/icons"` itself. */
+   Icons are inlined as SVG at build time (see `astro.config.ts`), so the
+   shell's `virtual:icons.css` import is empty here; the `@codenhub/icons` base
+   rules above are what size every inlined `<svg>` from `--ic-size`. */
 
 :root {
   --docs-header-height: var(--shell-header-height, 4rem);
@@ -27,8 +28,9 @@ html {
   scroll-padding-top: calc(var(--docs-header-height) + 1.5rem);
 }
 
-/* At this width the shared header wraps its nav links onto a second row, so it
-   stands taller; keep in-page anchor jumps clearing the sticky header. */
+/* At this width the shared header drops its actions to a second row below the
+   brand and nav link, so it stands taller; keep in-page anchor jumps and the
+   sticky rails clearing it. */
 @media (max-width: 40rem) {
   :root {
     --docs-header-height: calc(var(--shell-header-height, 4rem) + 3rem);
@@ -67,9 +69,13 @@ html {
 }
 
 .package-tab-icon {
-  @apply size-4 shrink-0 fill-none stroke-current stroke-2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  @apply shrink-0;
+  --ic-size: 1rem;
+}
+
+.package-tab-outbound {
+  @apply ml-auto shrink-0;
+  --ic-size: 0.875rem;
 }
 
 /* `flex-1` so the grid fills the space between the sticky header and the footer
@@ -503,7 +509,7 @@ html {
 }
 
 .link-preview .link-preview-copied-icon,
-.link-preview .link-preview-action[data-copy-state="copied"] > i:first-child {
+.link-preview .link-preview-action[data-copy-state="copied"] > svg:first-child {
   @apply hidden;
 }
 
@@ -560,7 +566,7 @@ html {
   --ic-size: 1.125rem;
 }
 
-.page-actions-item > i {
+.page-actions-item > svg {
   @apply text-text-secondary mt-0.5 shrink-0;
 }
 

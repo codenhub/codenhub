@@ -1,8 +1,11 @@
 import type { LinkPreviewIndex } from "./build-index";
 
+/** A Lucide icon name; the card renders each from its own `virtual:@codenhub/icons/lucide/…` module. */
+export type LinkPreviewIcon = "arrow-right" | "copy" | "external-link" | "mail" | "phone";
+
 export type LinkPreviewAction =
-  | { kind: "copy"; icon: string; label: string; text: string }
-  | { kind: "open"; href: string; icon: string; label: string; isNewTab: boolean };
+  | { kind: "copy"; icon: LinkPreviewIcon; label: string; text: string }
+  | { kind: "open"; href: string; icon: LinkPreviewIcon; label: string; isNewTab: boolean };
 
 /** Everything a link preview card shows for one link. */
 export interface LinkPreview {
@@ -21,7 +24,7 @@ export interface DescribeLinkContext {
   previews: LinkPreviewIndex;
 }
 
-const COPY_ICON = "ic-lucide-copy";
+const COPY_ICON = "copy";
 
 function decode(value: string): string {
   try {
@@ -34,8 +37,8 @@ function decode(value: string): string {
 function navigationActions(url: URL): LinkPreviewAction[] {
   return [
     { icon: COPY_ICON, kind: "copy", label: "Copy link", text: url.href },
-    { href: url.href, icon: "ic-lucide-external-link", isNewTab: true, kind: "open", label: "New tab" },
-    { href: url.href, icon: "ic-lucide-arrow-right", isNewTab: false, kind: "open", label: "Open" },
+    { href: url.href, icon: "external-link", isNewTab: true, kind: "open", label: "New tab" },
+    { href: url.href, icon: "arrow-right", isNewTab: false, kind: "open", label: "Open" },
   ];
 }
 
@@ -68,7 +71,7 @@ function describeEmailLink(url: URL): LinkPreview {
   return {
     actions: [
       { icon: COPY_ICON, kind: "copy", label: "Copy address", text: address },
-      { href: url.href, icon: "ic-lucide-mail", isNewTab: false, kind: "open", label: "Send email" },
+      { href: url.href, icon: "mail", isNewTab: false, kind: "open", label: "Send email" },
     ],
     summary: subject === undefined ? undefined : `Subject: ${subject}`,
     title: address,
@@ -81,7 +84,7 @@ function describePhoneLink(url: URL): LinkPreview {
   return {
     actions: [
       { icon: COPY_ICON, kind: "copy", label: "Copy number", text: number },
-      { href: url.href, icon: "ic-lucide-phone", isNewTab: false, kind: "open", label: "Call" },
+      { href: url.href, icon: "phone", isNewTab: false, kind: "open", label: "Call" },
     ],
     title: number,
     trail: ["Phone"],

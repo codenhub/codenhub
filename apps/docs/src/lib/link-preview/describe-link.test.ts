@@ -14,17 +14,17 @@ describe("describeLink", () => {
   it("describes a page on this site from the preview index", () => {
     expect(describeLink("../concepts/", context)).toEqual({
       actions: [
-        { icon: "ic-lucide-copy", kind: "copy", label: "Copy link", text: "https://docs.example.dev/kit/concepts/" },
+        { icon: "copy", kind: "copy", label: "Copy link", text: "https://docs.example.dev/kit/concepts/" },
         {
           href: "https://docs.example.dev/kit/concepts/",
-          icon: "ic-lucide-external-link",
+          icon: "external-link",
           isNewTab: true,
           kind: "open",
           label: "New tab",
         },
         {
           href: "https://docs.example.dev/kit/concepts/",
-          icon: "ic-lucide-arrow-right",
+          icon: "arrow-right",
           isNewTab: false,
           kind: "open",
           label: "Open",
@@ -69,10 +69,10 @@ describe("describeLink", () => {
   it("offers to copy or write to an email address", () => {
     expect(describeLink("mailto:team@example.dev?subject=Hello%20there", context)).toEqual({
       actions: [
-        { icon: "ic-lucide-copy", kind: "copy", label: "Copy address", text: "team@example.dev" },
+        { icon: "copy", kind: "copy", label: "Copy address", text: "team@example.dev" },
         {
           href: "mailto:team@example.dev?subject=Hello%20there",
-          icon: "ic-lucide-mail",
+          icon: "mail",
           isNewTab: false,
           kind: "open",
           label: "Send email",

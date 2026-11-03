@@ -130,7 +130,43 @@ describe("documentation chrome", () => {
     const chromeLabels = html.match(/class="package-navigation-title"[^>]*>.*?ValidationKit.*?Experimental.*?<\/div>/g);
 
     expect(chromeLabels).toHaveLength(2);
-    expect(html).toContain('<i aria-hidden="true" class="ic-lucide-flask-conical status-badge-icon"></i>Experimental');
+    expect(html).toMatch(
+      /<svg aria-hidden="true" class="ic-lucide-flask-conical status-badge-icon"[^>]*>.*?<\/svg>Experimental/,
+    );
+  });
+
+  it("inlines every icon as SVG, leaving no icon tag the plugin did not rewrite", async () => {
+    // In svg mode an unrewritten `<i class="ic-…">` has no stylesheet behind it
+    // and renders as nothing.
+    const pages = await Promise.all(["error/index.html", "toaster/index.html", "404.html"].map(readOutput));
+
+    for (const html of pages) {
+      expect(html).not.toMatch(/<i [^>]*class="[^"]*ic-/);
+    }
+  });
+
+  it("sends the header logo and its one nav link to codenhub.dev", async () => {
+    const html = await readOutput("toaster/index.html");
+    const nav = html.match(/<nav aria-label="Sites" class="shell-nav">(.*?)<\/nav>/)?.[1];
+
+    expect(html).toContain('class="shell-brand" href="https://codenhub.dev/"');
+    expect(nav).toBe('<a class="shell-nav-link" href="https://codenhub.dev/packages/">Packages</a>');
+  });
+
+  it("ends the section strip with the package demo when it has one", async () => {
+    const html = await readOutput("toaster/index.html");
+    const strip = html.match(/<ul class="package-tabs">(.*?)<\/ul>/)?.[1] ?? "";
+    const tabs = [...strip.matchAll(/<a class="package-tab"[^>]*href="([^"]+)"/g)].map((match) => match[1]);
+
+    expect(tabs.at(-1)).toBe("https://demo.codenhub.dev/toaster/");
+    expect(strip).toContain('href="https://demo.codenhub.dev/toaster/" rel="noopener noreferrer" target="_blank"');
+  });
+
+  it("shows no demo tab for a package without a demo", async () => {
+    const html = await readOutput("error/index.html");
+
+    expect(html).toContain('class="package-tabs"');
+    expect(html).not.toContain("demo.codenhub.dev");
   });
 
   it("groups a package's folder pages into collapsible sections, open on the active one", async () => {

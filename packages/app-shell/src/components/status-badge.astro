@@ -22,8 +22,8 @@ interface Props {
 const { compact = false, labels = defaultShellMessages.status, status } = Astro.props;
 
 const badges = {
-  deprecated: { icon: "ic-lucide-ban", label: labels.deprecated, tone: "destructive" },
-  experimental: { icon: "ic-lucide-flask-conical", label: labels.experimental, tone: "warning" },
+  deprecated: { label: labels.deprecated, tone: "destructive" },
+  experimental: { label: labels.experimental, tone: "warning" },
 } as const;
 
 const badge = status === "active" ? undefined : badges[status];
@@ -37,7 +37,15 @@ const badge = status === "active" ? undefined : badges[status];
       role={compact ? "img" : undefined}
       title={compact ? badge.label : undefined}
     >
-      <i aria-hidden="true" class:list={[badge.icon, "status-badge-icon"]} />
+      {/* One literal tag per status: an app in the icons plugin's svg mode rewrites
+          only `<i>` tags whose class is written out in full. */}
+      {
+        status === "deprecated" ? (
+          <i aria-hidden="true" class="ic-lucide-ban status-badge-icon" />
+        ) : (
+          <i aria-hidden="true" class="ic-lucide-flask-conical status-badge-icon" />
+        )
+      }
       {!compact && badge.label}
     </span>
   )
