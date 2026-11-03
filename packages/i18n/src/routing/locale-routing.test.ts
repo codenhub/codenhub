@@ -7,12 +7,19 @@ const LOCALES = ["en-US", "pt-BR"] as const;
 
 describe("createLocaleRouting", () => {
   it("should type locales from `locales` and reject a widened default locale", () => {
-    const config = { defaultLocale: "en-US", locales: LOCALES, prefixDefaultLocale: false };
+    const config = {
+      defaultLocale: "en-US",
+      locales: LOCALES,
+      localePrefix: "except-default" as const,
+    };
 
     // @ts-expect-error - a `string` default locale would otherwise make `localize()` accept any string
     expect(createLocaleRouting(config).localize("/", "en-US")).toBe("/");
 
-    const routing = createLocaleRouting({ ...config, defaultLocale: "en-US" as const });
+    const routing = createLocaleRouting({
+      ...config,
+      defaultLocale: "en-US" as const,
+    });
     // @ts-expect-error - "fr" is not a configured locale
     expect(() => routing.localize("/", "fr")).toThrow(RangeError);
   });
@@ -21,7 +28,7 @@ describe("createLocaleRouting", () => {
     const routing = createLocaleRouting({
       defaultLocale: "en-US",
       locales: LOCALES,
-      prefixDefaultLocale: true,
+      localePrefix: "always",
     });
 
     expect(routing.parse("/PT-br/about/")).toEqual({
@@ -33,18 +40,26 @@ describe("createLocaleRouting", () => {
 
   it("should reject invalid locale routing configuration", () => {
     const invalidConfigs: LocaleRoutingConfig<string>[] = [
-      { defaultLocale: "en", locales: [], prefixDefaultLocale: true },
-      { defaultLocale: "en", locales: ["en", "  "], prefixDefaultLocale: true },
-      { defaultLocale: "en", locales: ["en", "EN"], prefixDefaultLocale: true },
-      { defaultLocale: "en", locales: ["en", " EN "], prefixDefaultLocale: true },
-      { defaultLocale: "en", locales: ["en", "../admin"], prefixDefaultLocale: true },
-      { defaultLocale: "en", locales: ["en", "pt BR"], prefixDefaultLocale: true },
-      { defaultLocale: "en", locales: ["en", "fr?admin"], prefixDefaultLocale: true },
-      { defaultLocale: "pt", locales: ["en"], prefixDefaultLocale: true },
+      { defaultLocale: "en", locales: [], localePrefix: "always" },
+      { defaultLocale: "en", locales: ["en", "  "], localePrefix: "always" },
+      { defaultLocale: "en", locales: ["en", "EN"], localePrefix: "always" },
+      { defaultLocale: "en", locales: ["en", " EN "], localePrefix: "always" },
+      {
+        defaultLocale: "en",
+        locales: ["en", "../admin"],
+        localePrefix: "always",
+      },
+      { defaultLocale: "en", locales: ["en", "pt BR"], localePrefix: "always" },
+      {
+        defaultLocale: "en",
+        locales: ["en", "fr?admin"],
+        localePrefix: "always",
+      },
+      { defaultLocale: "pt", locales: ["en"], localePrefix: "always" },
       {
         defaultLocale: "en",
         locales: ["en"],
-        prefixDefaultLocale: "yes" as unknown as boolean,
+        localePrefix: "yes" as unknown as "always",
       },
     ];
 
@@ -55,7 +70,12 @@ describe("createLocaleRouting", () => {
 
   it("should name the property and the problem when the configuration is invalid", () => {
     const create = (overrides: object) => () =>
-      createLocaleRouting({ defaultLocale: "en", locales: ["en", "pt"], prefixDefaultLocale: true, ...overrides });
+      createLocaleRouting({
+        defaultLocale: "en",
+        locales: ["en", "pt"],
+        localePrefix: "always",
+        ...overrides,
+      });
 
     expect(create({ locales: [] })).toThrow(
       "[I18n] Invalid locale routing configuration: locales: Must contain at least 1 item",
@@ -63,15 +83,22 @@ describe("createLocaleRouting", () => {
     expect(create({ locales: ["en", "EN"] })).toThrow("locales[1]: Must be unique, ignoring letter case");
     expect(create({ locales: ["en", "../admin"] })).toThrow("locales[1]: Must be an ASCII locale identifier");
     expect(create({ defaultLocale: "fr" })).toThrow("defaultLocale: Must match a configured locale");
-    expect(create({ prefixDefaultLocale: "yes" })).toThrow("prefixDefaultLocale: Expected boolean, received string");
+    expect(create({ localePrefix: "yes" })).toThrow(
+      'localePrefix: Expected "always", "except-default", or "when-ambiguous", received string',
+    );
+    expect(create({ localePrefix: undefined })).toThrow("localePrefix: Expected");
   });
 
   it("should require a plain object, reading only its own properties", () => {
-    const inherited = Object.create({ defaultLocale: "en", locales: ["en"], prefixDefaultLocale: true }) as object;
+    const inherited = Object.create({
+      defaultLocale: "en",
+      locales: ["en"],
+      localePrefix: "always",
+    }) as object;
     class RoutingConfig {
       readonly defaultLocale = "en";
       readonly locales = ["en"];
-      readonly prefixDefaultLocale = true;
+      readonly localePrefix = "always";
     }
 
     expect(() => createLocaleRouting(inherited as Parameters<typeof createLocaleRouting>[0])).toThrow(
@@ -84,12 +111,12 @@ describe("createLocaleRouting", () => {
     const requiredPrefix = createLocaleRouting({
       defaultLocale: "en-US",
       locales: LOCALES,
-      prefixDefaultLocale: true,
+      localePrefix: "always",
     });
     const optionalDefaultPrefix = createLocaleRouting({
       defaultLocale: "EN-us" as (typeof LOCALES)[number],
       locales: LOCALES,
-      prefixDefaultLocale: false,
+      localePrefix: "except-default",
     });
 
     expect(requiredPrefix.parse("/about")).toBeUndefined();
@@ -111,7 +138,7 @@ describe("createLocaleRouting", () => {
     const routing = createLocaleRouting({
       defaultLocale: "en-US",
       locales: LOCALES,
-      prefixDefaultLocale: true,
+      localePrefix: "always",
     });
     const invalidPathnames = [
       "",
@@ -154,18 +181,32 @@ describe("createLocaleRouting", () => {
     const routing = createLocaleRouting({
       defaultLocale: "en-US",
       locales: LOCALES,
-      prefixDefaultLocale: true,
+      localePrefix: "always",
     });
 
     expect(() => routing.parse(`/${"a".repeat(8_191)}`)).not.toThrow();
     expect(() => routing.parse(`/${"a".repeat(8_192)}`)).toThrow(TypeError);
   });
 
+  it("should throw a RangeError when the locale prefix makes a valid path too long", () => {
+    const routing = createLocaleRouting({
+      defaultLocale: "en-US",
+      locales: LOCALES,
+      localePrefix: "always",
+    });
+    const pathname = `/${"a".repeat(8_191)}`;
+
+    expect(() => routing.localize(pathname, "pt-BR")).toThrow(RangeError);
+    expect(() => routing.localize(pathname, "pt-BR")).toThrow(
+      '[I18n] the path in "pt-BR" would be longer than 8,192 characters',
+    );
+  });
+
   it("should prefix its errors with the package name", () => {
     const routing = createLocaleRouting({
       defaultLocale: "en-US",
       locales: LOCALES,
-      prefixDefaultLocale: true,
+      localePrefix: "always",
     });
 
     expect(() => routing.parse("about")).toThrow(/^\[I18n\] /);
@@ -177,7 +218,7 @@ describe("createLocaleRouting", () => {
     const routing = createLocaleRouting({
       defaultLocale: "en-US",
       locales: LOCALES,
-      prefixDefaultLocale: true,
+      localePrefix: "always",
     });
 
     expect(routing.localize("/", "pt-BR")).toBe("/pt-BR");
@@ -189,7 +230,7 @@ describe("createLocaleRouting", () => {
     const routing = createLocaleRouting({
       defaultLocale: "en-US",
       locales: LOCALES,
-      prefixDefaultLocale: true,
+      localePrefix: "always",
     });
 
     expect(routing.localize("/about", "PT-br" as (typeof LOCALES)[number])).toBe("/pt-BR/about");
@@ -200,7 +241,7 @@ describe("createLocaleRouting", () => {
     const routing = createLocaleRouting({
       defaultLocale: "EN-us" as (typeof LOCALES)[number],
       locales: LOCALES,
-      prefixDefaultLocale: false,
+      localePrefix: "except-default",
     });
 
     expect(routing.localize("/", "en-US")).toBe("/");
@@ -212,7 +253,7 @@ describe("createLocaleRouting", () => {
     const routing = createLocaleRouting({
       defaultLocale: "en-US",
       locales: LOCALES,
-      prefixDefaultLocale: false,
+      localePrefix: "except-default",
     });
 
     expect(routing.localize("/PT-br/about/", "pt-BR")).toBe("/pt-BR/about/");
@@ -225,7 +266,7 @@ describe("createLocaleRouting", () => {
     const routing = createLocaleRouting({
       defaultLocale: "en-US",
       locales: ["pt-BR", "en-US"] as const,
-      prefixDefaultLocale: false,
+      localePrefix: "except-default",
     });
 
     expect(routing.localizeAll("/en-US/about/")).toEqual([
@@ -239,16 +280,19 @@ describe("createLocaleRouting", () => {
     const config: LocaleRoutingConfig<string> = {
       defaultLocale: "en",
       locales,
-      prefixDefaultLocale: true,
+      localePrefix: "always",
     };
     const routing = createLocaleRouting(config);
 
     locales[0] = "fr";
     locales.push("es");
     config.defaultLocale = "pt";
-    config.prefixDefaultLocale = false;
+    config.localePrefix = "except-default";
 
-    expect(routing.parse("/en/about")).toEqual({ locale: "en", pathname: "/about" });
+    expect(routing.parse("/en/about")).toEqual({
+      locale: "en",
+      pathname: "/about",
+    });
     expect(routing.parse("/fr/about")).toBeUndefined();
     expect(routing.localize("/about", "en")).toBe("/en/about");
     expect(routing.localizeAll("/about")).toEqual([
@@ -261,11 +305,17 @@ describe("createLocaleRouting", () => {
     const routing = createLocaleRouting<string>({
       defaultLocale: " EN-us ",
       locales: [" en-US ", " pt-BR "],
-      prefixDefaultLocale: false,
+      localePrefix: "except-default",
     });
 
-    expect(routing.parse("/about")).toEqual({ locale: "en-US", pathname: "/about" });
-    expect(routing.parse("/PT-br/about")).toEqual({ locale: "pt-BR", pathname: "/about" });
+    expect(routing.parse("/about")).toEqual({
+      locale: "en-US",
+      pathname: "/about",
+    });
+    expect(routing.parse("/PT-br/about")).toEqual({
+      locale: "pt-BR",
+      pathname: "/about",
+    });
     expect(routing.localize("/about", " PT-br ")).toBe("/pt-BR/about");
     expect(routing.localizeAll("/about")).toEqual([
       { locale: "en-US", pathname: "/about" },
@@ -277,7 +327,7 @@ describe("createLocaleRouting", () => {
     const routing = createLocaleRouting({
       defaultLocale: "en-US",
       locales: LOCALES,
-      prefixDefaultLocale: true,
+      localePrefix: "always",
     });
     const invalidLocales = [undefined, null, 1, { locale: "en-US" }];
 

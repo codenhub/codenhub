@@ -44,7 +44,7 @@ t("home.titel"); // compile error: there is no such key
 Two optional entry points cover what differs by environment:
 
 - `@codenhub/i18n/browser` detects the visitor's language, remembers the one they choose, keeps `<html lang>` and `dir` in step, and can translate HTML marked with `data-i18n`.
-- `@codenhub/i18n/routing` reads and builds locale-prefixed paths, such as `/pt/about`.
+- `@codenhub/i18n/routing` reads and builds localized paths, such as `/pt/about`, `/pt/sobre`, or `/sobre`.
 
 ## Documentation
 
@@ -81,7 +81,7 @@ Licensed under Apache-2.0.
 It works the same in a browser, a Web Worker, a Node.js server, or a static site build. Two optional extras handle the jobs that differ by environment:
 
 - **`@codenhub/i18n/browser`** picks the visitor's language, remembers their choice, and keeps the page's `lang` and `dir` attributes in step.
-- **`@codenhub/i18n/routing`** puts the language in the URL, as in `/pt/about`.
+- **`@codenhub/i18n/routing`** puts the language in the URL, as in `/pt/about`, and can translate the path itself, as in `/pt/sobre` or `/sobre`.
 
 ## Four ideas
 
@@ -303,7 +303,7 @@ A few details:
 
 - A placeholder with no matching value stays as written, so a missing value shows up as `{name}` on screen rather than disappearing.
 - Without a second argument, the text comes back unchanged. Text containing literal braces, such as a code sample, is safe as long as you don't pass a value with the same name.
-- Numbers are inserted as JavaScript writes them: `1234.5`, not `1,234.50`. To format a number or date for the reader, use `Intl.NumberFormat` or `Intl.DateTimeFormat` with `i18n.locale` and pass the result as a string.
+- Numbers are inserted as JavaScript writes them: `1234.5`, not `1,234.50`. To format a number or date for the reader, use `Intl.NumberFormat` or `Intl.DateTimeFormat` with `i18n.locale` and pass the result as a string. For a count in a plural, see [Show a formatted count](#show-a-formatted-count).
 
 ## Plurals
 
@@ -346,6 +346,31 @@ Two things to watch for:
 
 - `count` must be a number. A string such as `"5"` does not select a form; the group is then treated as a missing key.
 - A plain string under the same key wins over forms. If `cart.items` is a string, `count` only fills `{count}`.
+
+### Show a formatted count
+
+`count` does two jobs: it picks the form, and it fills `{count}`. That second job writes the number as JavaScript does, so 1234 items reads "1234 items" rather than "1,234 items", or "1.234 itens" in Portuguese. Passing the formatted string as `count` doesn't help, because a string can't pick a form.
+
+Split the jobs. Keep `count` a number for choosing, and show the formatted number through a placeholder of its own:
+
+```json
+{
+  "cart": {
+    "items": {
+      "one": "{n} item",
+      "other": "{n} items"
+    }
+  }
+}
+```
+
+```ts
+const format = new Intl.NumberFormat(i18n.locale);
+
+t("cart.items", { count: 1234, n: format.format(1234) }); // "1,234 items"
+```
+
+Create the formatter for the current locale, and again when the locale changes.
 
 ## Typed keys
 
@@ -684,10 +709,10 @@ import { createAppI18n } from "./i18n";
 const routing = createLocaleRouting({
   locales: ["en", "pt"] as const,
   defaultLocale: "en",
-  prefixDefaultLocale: false,
+  localePrefix: "except-default",
 });
 
-// Your pages, keyed by their path without a locale.
+// Your pages, keyed by their canonical path: the path without a locale, in the words your code routes on.
 const pages = { "/": renderHome, "/about": renderAbout };
 
 const builds = Object.entries(pages).flatMap(([page, render]) => routing.localizeAll(page).map(({ locale, pathname }) => ({ locale, pathname, render })));
@@ -718,7 +743,7 @@ On a localized site, read it from the URL with `routing.parse()` instead, as [Lo
 
 # Localized URLs
 
-Giving each language its own URL, such as `/about` and `/pt/about`, lets people share a link in the language they read, and lets search engines index every language. `@codenhub/i18n/routing` handles the part that is the same in every framework: reading the locale from a path, and building the path for another locale.
+Giving each language its own URL, such as `/about` and `/pt/about`, lets people share a link in the language they read, and lets search engines index every language. `@codenhub/i18n/routing` handles the part that is the same in every framework: reading the locale from a path, and building the path for another locale. It can also translate the path itself, so the Portuguese about page is `/pt/sobre`, or even just `/sobre`.
 
 ## Set up routing
 
@@ -729,20 +754,23 @@ import { createLocaleRouting } from "@codenhub/i18n/routing";
 export const routing = createLocaleRouting({
   locales: ["en", "pt"] as const,
   defaultLocale: "en",
-  prefixDefaultLocale: false,
+  localePrefix: "except-default",
 });
 ```
 
-`prefixDefaultLocale` decides how your default language looks:
+`localePrefix` decides which paths start with their locale:
 
-| `prefixDefaultLocale` | English about page | Portuguese about page |
-| --------------------- | ------------------ | --------------------- |
-| `false`               | `/about`           | `/pt/about`           |
-| `true`                | `/en/about`        | `/pt/about`           |
+| `localePrefix`     | English about page | Portuguese about page                                                             |
+| ------------------ | ------------------ | --------------------------------------------------------------------------------- |
+| `"except-default"` | `/about`           | `/pt/about`                                                                       |
+| `"always"`         | `/en/about`        | `/pt/about`                                                                       |
+| `"when-ambiguous"` | `/about`           | `/pt/about`, or `/sobre` once translated; see [Drop the prefix](#drop-the-prefix) |
 
-`false` keeps your existing URLs when you add a language. `true` makes every URL name its language, so `/about` is not a page, which suits a site that redirects `/` to the visitor's language.
+`"except-default"` keeps your existing URLs when you add a language. `"always"` makes every URL name its language, so `/about` is not a page, which suits a site that redirects `/` to the visitor's language.
 
 Use the same `locales` and `defaultLocale` as your manager. Routing is separate from the manager, so it also works where no translation happens, such as in a server's redirect logic.
+
+If you keep the configuration in a variable before passing it in, write `localePrefix: "except-default" as const`. Without `as const`, TypeScript widens the value to `string`, and `createLocaleRouting` rejects it at compile time.
 
 ## Read the locale from a path
 
@@ -754,13 +782,16 @@ routing.parse("/about"); // { locale: "en", pathname: "/about" }
 routing.parse("/PT/about"); // { locale: "pt", pathname: "/about" }
 ```
 
-With `prefixDefaultLocale: true`, a path without a locale returns `undefined`, so you can redirect it:
+The `pathname` it returns is the **canonical path**: the path your application routes on, the same in every language. Hold on to that idea; it matters once paths are translated.
+
+With `localePrefix: "always"`, a path without a locale returns `undefined`, so you can redirect it. Add the chosen locale's prefix before calling `localize()`, so a path in that locale's words, such as `/sobre`, is read as one:
 
 ```ts
 const route = routing.parse(url.pathname);
 if (route === undefined) {
+  const locale = pickLocale(i18n, request);
   const target = new URL(url);
-  target.pathname = routing.localize(url.pathname, pickLocale(i18n, request));
+  target.pathname = routing.localize(`/${locale}${url.pathname}`, locale);
   return Response.redirect(target, 302);
 }
 ```
@@ -780,37 +811,180 @@ const route = routing.parse(window.location.pathname);
 await initializeBrowserI18n({ i18n, locale: route?.locale });
 ```
 
+### Redirect to the canonical URL
+
+`parse()` is forgiving: `/PT/about` and `/en/about` are read as well as `/pt/about` and `/about`. That is friendly to someone typing a URL, but a search engine that finds one page at several addresses splits its ranking between them. Send every other spelling to the one `localize()` builds:
+
+```ts
+const route = routing.parse(url.pathname);
+if (route !== undefined) {
+  const canonical = routing.localize(route.pathname, route.locale);
+  if (canonical !== url.pathname) {
+    const target = new URL(url);
+    target.pathname = canonical;
+    return Response.redirect(target, 301);
+  }
+}
+```
+
 ## Link to another language
 
-`localize()` builds the path for a locale. It replaces the locale already in the path, if any:
+`localize()` builds the path of a page in a locale. Give it the canonical path:
 
 ```ts
 routing.localize("/about", "pt"); // "/pt/about"
+routing.localize("/about", "en"); // "/about"
+```
+
+A path that already starts with a locale is read as that locale's URL, so the prefix is replaced:
+
+```ts
 routing.localize("/pt/about", "en"); // "/about"
-routing.localize("/pt/about", "pt"); // "/pt/about"
 ```
 
-On a localized site, switching language is a navigation, not just `setLocale()`: `setLocale()` changes the text but never the URL. Build the new path, keep the query string and fragment, and let your router go there:
+On a localized site, switching language is a navigation, not just `setLocale()`: `setLocale()` changes the text but never the URL. Read the current page with `parse()`, build its path in the new language, keep the query string and fragment, and let your router go there:
 
 ```ts
-await navigate(routing.localize(window.location.pathname, "pt") + window.location.search + window.location.hash);
+const route = routing.parse(window.location.pathname);
+if (route !== undefined) {
+  await navigate(routing.localize(route.pathname, "pt") + window.location.search + window.location.hash);
+}
 ```
 
-Use the same call for the `<link rel="alternate" hreflang>` tags that tell search engines about each language:
+Going through `parse()` matters once paths are translated: `/sobre` is a Portuguese URL, not a canonical path, and only `parse()` knows to read it as `/about`.
+
+Use the same call for the `<link rel="alternate" hreflang>` tags that tell search engines about each language, and add an `x-default` tag for readers whose language you don't offer, pointing at the default locale's page:
 
 ```ts
-const alternates = routing.localizeAll(pathname).map((page) => `<link rel="alternate" hreflang="${escapeHtml(page.locale)}" href="${escapeHtml(new URL(page.pathname, "https://example.com").href)}">`);
+const defaultLocale = "en"; // the defaultLocale you configured
+const link = (hreflang: string, pathname: string) => `<link rel="alternate" hreflang="${escapeHtml(hreflang)}" href="${escapeHtml(new URL(pathname, "https://example.com").href)}">`;
+
+const alternates = [...routing.localizeAll(route.pathname).map((page) => link(page.locale, page.pathname)), link("x-default", routing.localize(route.pathname, defaultLocale))];
 ```
 
 Escape both values as you would any text in HTML, or let your framework create the tags. A path can contain characters, such as `"` or `&`, that are allowed in a URL but not raw inside an attribute.
 
+## Translate paths
+
+`/pt/about` is a Portuguese page with an English address. To give it Portuguese words, list the translated paths in `pathnames`, keyed by canonical path:
+
+```ts
+export const routing = createLocaleRouting({
+  locales: ["en", "pt", "es"] as const,
+  defaultLocale: "en",
+  localePrefix: "except-default",
+  pathnames: {
+    "/about": { pt: "/sobre", es: "/acerca" },
+    "/products/:id": { pt: "/produtos/:id" },
+    "/products/:id/reviews/:reviewId": { pt: "/avaliacoes/:reviewId/produto/:id" },
+  },
+});
+```
+
+```ts
+routing.localize("/about", "pt"); // "/pt/sobre"
+routing.localize("/products/42", "pt"); // "/pt/produtos/42"
+routing.parse("/pt/produtos/42"); // { locale: "pt", pathname: "/products/42" }
+```
+
+Your application keeps routing on `/products/42`, whatever the language. Only the URL changes.
+
+How the table reads:
+
+- **Parameters** are segments that start with `:`, such as `:id`. They match any one segment, and the value is copied across unchanged. Every form must use the same parameters as the canonical path, but in any order, because languages don't agree on word order: `/products/42/reviews/7` is `/pt/avaliacoes/7/produto/42`.
+- **Anything the table doesn't list keeps its words.** `/blog` is `/pt/blog`, and `/products/42` in Spanish is `/es/products/42`, since only Portuguese translates it.
+- **Fixed segments match case-sensitively**, as URLs do, so `/pt/Sobre` is not the about page. Only the locale prefix ignores case.
+- **Write words as you would read them.** `"/configurações"` matches the `/configura%C3%A7%C3%B5es` that browsers send, and `localize()` returns the encoded form.
+- **A fixed segment beats a parameter.** With both `/products/new` and `/products/:id` listed, `/products/new` is the new-product page, whichever order the table lists them in.
+- **The default locale can be translated too.** A Portuguese-first site with English code can use `defaultLocale: "pt"` and `{ "/about": { pt: "/sobre" } }`, so `/sobre` is the Portuguese page and `/en/about` the English one.
+
+### Mistakes it catches
+
+`createLocaleRouting` checks the table when you create it, so a mistake fails at startup instead of on some unlucky click. Each of these throws a `TypeError` that names the entry:
+
+- **Two pages with the same path in one locale.** `{ "/about": { pt: "/sobre" }, "/company": { pt: "/sobre" } }` gives Portuguese two pages at `/pt/sobre`. Give one of them other words. The same goes for a form that takes words another page keeps: if `/contact` is `/about` in Spanish, the Spanish `/about` would be two pages.
+- **Two canonical paths with the same shape.** `/products/:id` and `/products/:slug` match the same paths. Keep one.
+- **Parameters that differ from the canonical path's.** `{ "/products/:id": { pt: "/produtos/:slug" } }` loses `:id`. Rename it, or move it, but keep it.
+- **A path that starts with a locale**, such as `/pt/about` as a canonical path. The prefix would be read as the locale. List `/about` instead.
+- **A locale that isn't configured**, or one listed twice in different letter case.
+- **A path `parse()` would reject**, as listed under [Paths it accepts](#paths-it-accepts).
+
+### Register translated routes
+
+Routing reads and builds paths; your framework still has to send `/pt/sobre` to the about page. There are two ways to do that, and both work with any framework.
+
+**Rewrite to the canonical path.** If your framework or server can change the path it routes on, as server middleware and request hooks usually can, register only the canonical routes and route on `parse()`'s result:
+
+```ts
+const route = routing.parse(url.pathname);
+// Route on `route.pathname`, such as "/about" for "/pt/sobre", and render in `route.locale`.
+```
+
+**Register one route per locale.** A route pattern is a path, so `localizeAll()` translates it:
+
+```ts
+routing.localizeAll("/products/:id");
+// [{ locale: "en", pathname: "/products/:id" }, { locale: "pt", pathname: "/pt/produtos/:id" }, { locale: "es", pathname: "/es/products/:id" }]
+```
+
+Register each one with its locale. With `@codenhub/router`, that is:
+
+```ts
+for (const { locale, pathname } of routing.localizeAll("/products/:id")) {
+  router.on(pathname, ({ params }) => renderProduct(params["id"], locale));
+}
+```
+
+`@codenhub/router` takes the first route that matches, in the order you register them. When two of a locale's paths can match the same URL, such as `/pt/produtos/novo` and `/pt/produtos/:id`, register the one with fixed words first.
+
+## Drop the prefix
+
+`/pt/sobre` already says Portuguese twice. With `localePrefix: "when-ambiguous"`, a translated path drops the prefix when its words can only be Portuguese:
+
+```ts
+export const routing = createLocaleRouting({
+  locales: ["en", "pt"] as const,
+  defaultLocale: "en",
+  localePrefix: "when-ambiguous",
+  pathnames: { "/about": { pt: "/sobre" } },
+});
+
+routing.localize("/about", "pt"); // "/sobre"
+routing.parse("/sobre"); // { locale: "pt", pathname: "/about" }
+routing.localize("/", "pt"); // "/pt"
+routing.localize("/blog", "pt"); // "/pt/blog"
+```
+
+The prefix stays wherever the path alone can't say which language it is in:
+
+- **Paths with the same words in two languages.** `/` and `/blog` exist in English too, so Portuguese keeps `/pt` and `/pt/blog`. Two languages translating to the same words, such as `/contato` in both Portuguese and Spanish, keep the prefix as well.
+- **Paths another language's parameter could match.** If Spanish lists `/:tag`, every one-segment path could be a Spanish tag, so `/sobre` keeps its prefix.
+- **Paths made only of parameters**, such as `/:tag`, which could be anything.
+
+The default locale never has a prefix in this mode, and `parse()` still accepts `/pt/sobre`, so redirect it as in [Redirect to the canonical URL](#redirect-to-the-canonical-url).
+
+### The risk you take on
+
+Routing only knows the paths in your table. A path it doesn't list is taken to be the default locale's, so it can't see a clash with a page it was never told about. Say your English blog has a post at `/sobre`, a slug that came from your CMS. `/sobre` now opens the Portuguese about page, and the post can't be reached.
+
+`localize()` catches this when it builds a path, and throws a `RangeError` rather than link to the wrong page:
+
+```ts
+routing.localize("/sobre", "en");
+// RangeError: [I18n] "/sobre" in "en" would be read as "/about" in "pt"; …
+```
+
+A static build that localizes every page it renders finds every clash at build time. A server only finds one when it builds that page's links, so if your URLs come from anywhere outside the table, such as a CMS, check new slugs against `parse()`, or keep the prefix with `"except-default"`.
+
+The same error tells you when you passed a URL where `localize()` wants a canonical path, such as `localize("/sobre", "en")` when you meant the page at `/sobre`. Pass `parse("/sobre").pathname` instead.
+
 ## Generate every localized page
 
-`localizeAll()` returns a path for every locale, in the order of `locales`:
+`localizeAll()` returns a path for every locale, in the order of `locales`. With the table from [Translate paths](#translate-paths):
 
 ```ts
 routing.localizeAll("/about");
-// [{ locale: "en", pathname: "/about" }, { locale: "pt", pathname: "/pt/about" }]
+// [{ locale: "en", pathname: "/about" }, { locale: "pt", pathname: "/pt/sobre" }, { locale: "es", pathname: "/es/acerca" }]
 ```
 
 Feed it your page list to get every page a static build needs, then render each one with its own manager, as in [Build a static site](docs/server-rendering.md#build-a-static-site).
@@ -826,13 +1000,15 @@ To keep a crafted URL from reaching a different page than the one checked, every
 - contains a `.` or `..` segment, or encodes one, a slash, a backslash, a `%`, or a control character with `%`;
 - has a malformed `%` escape, or is longer than 8,192 characters.
 
-Ordinary escapes, such as `%20`, are fine, and a trailing slash is kept: `/pt/about/` localizes to `/about/`.
+Ordinary escapes, such as `%20`, are fine, and a trailing slash is kept: `/pt/sobre/` parses to `/about/`.
+
+`localize()` throws a `RangeError` instead when the path it builds would be longer than 8,192 characters, as a path just under the limit can be once its prefix or translated words are added.
 
 ## What routing leaves to your framework
 
 Routing reads and builds paths. Your framework or server still registers the routes, redirects, navigates, and renders. It also doesn't know about a base path: if your site lives under `/docs`, remove that before calling `parse()` and add it back after `localize()`.
 
-Paths keep the same words in every language: `/pt/about`, not `/pt/sobre`. Translated path segments are planned for a later version.
+The table covers your application's own routes. Content slugs, such as a blog post's title in its URL, belong to wherever the content lives, such as your CMS, which knows each post's slug in each language.
 
 <!-- Source: docs/troubleshooting.md -->
 
@@ -896,7 +1072,7 @@ The configuration is invalid. Check that:
 - `loadLocale` is a function.
 - The configuration is a plain object. A class instance, or an object that inherits its options, is rejected so that inherited values can't slip in.
 
-`createLocaleRouting()` follows the same rules, and `prefixDefaultLocale` must be `true` or `false`.
+`createLocaleRouting()` follows the same rules, and `localePrefix` must be `"always"`, `"except-default"`, or `"when-ambiguous"`. A problem in `pathnames` names its entry, such as `pathnames["/about"].pt`; [Mistakes it catches](docs/localized-urls.md#mistakes-it-catches) explains each one and its fix.
 
 ## TypeScript says `string` is not assignable to the locale type
 
@@ -906,9 +1082,22 @@ Type 'string' is not assignable to type '"en" | "pt"'.
 
 The default locale lost its exact type, usually because the configuration lives in a separate variable. Mark it `as const`, as in [Typed keys](docs/translations.md#typed-keys). Locales are taken from `locales` only, so a plain `string` default can't widen them.
 
+The same goes for `localePrefix` in a routing configuration kept in a variable, where the message names `"always" | "except-default" | "when-ambiguous"`: write `localePrefix: "except-default" as const`.
+
 ## A routing method throws `TypeError`
 
 The path is not an absolute path or contains something routing refuses, such as `?`, `#`, `//`, or a dot segment. Pass `url.pathname` rather than the full URL. [Paths it accepts](docs/localized-urls.md#paths-it-accepts) has the full list.
+
+## `localize()` throws `RangeError`: "would be read as"
+
+The path `localize()` would build opens a different page, or the same page in another language. There are two usual causes:
+
+- **You passed a URL, not a canonical path.** `localize("/sobre", "en")` takes `/sobre` as the canonical path of an English page. If `/sobre` is the Portuguese about page's URL, read it first: `localize(routing.parse("/sobre").pathname, "en")`.
+- **A page the table doesn't list has another page's translated path.** With `localePrefix: "when-ambiguous"`, an English page at `/sobre` clashes with a Portuguese `/sobre`. Rename one of them, list the page in `pathnames`, or keep the prefix with `"except-default"`. [The risk you take on](docs/localized-urls.md#the-risk-you-take-on) explains why routing can't catch this sooner.
+
+## `localize()` throws `RangeError`: "would be longer than 8,192 characters"
+
+The path you passed is valid, but the locale prefix or the translated words make the result longer than `parse()` accepts. Shorten the path; a link that long is also likely to be cut off by servers and proxies.
 
 ## The browser binding warns or rejects
 
@@ -934,6 +1123,8 @@ The path is not an absolute path or contains something routing refuses, such as 
 - **`matchLocale(preferences)`** picks the best supported locale for a list of language tags, such as `pt` for `pt-BR`. Servers can now resolve `Accept-Language` the way the browser binding resolves `navigator.languages`.
 - **`subscribe(listener)`** calls `listener` after every language change and returns a function that stops it, for framework stores such as React's `useSyncExternalStore`.
 - **`onMissingKey(key, locale)`** receives every key missing from all dictionaries, in place of the default warning. Throw from it to fail tests on missing keys.
+- **Translated paths.** `pathnames` on `createLocaleRouting` gives each locale its own words, so the about page can be `/pt/sobre`: `{ "/about": { pt: "/sobre" }, "/products/:id": { pt: "/produtos/:id" } }`. `parse()` reads a translated path back to the canonical path your app routes on, and `localize()` builds it. Mistakes in the table, such as two pages with the same path in one language, throw when routing is created. See [Translate paths](docs/localized-urls.md#translate-paths).
+- **`localePrefix: "when-ambiguous"`** drops the locale prefix from a translated path whose words belong to one language only, so the about page can be just `/sobre`, while `/pt` and `/pt/blog` keep theirs. `localize()` throws a `RangeError` when the path it builds would open another page, such as an English page the table doesn't list at `/sobre`. See [Drop the prefix](docs/localized-urls.md#drop-the-prefix).
 - **A default text direction.** `getLocaleDirection` is now optional; without it, Arabic, Hebrew, Persian, Urdu, and other right-to-left languages and scripts get `rtl`.
 - Guides for writing translations, browser apps, server rendering and static builds, localized URLs, and troubleshooting, and a generated API reference.
 
@@ -944,10 +1135,14 @@ The path is not an absolute path or contains something routing refuses, such as 
 - **Breaking, types only.** When `loadLocale` returns a typed dictionary, `t()` accepts only its keys, so a key built at runtime, such as ``t(`errors.${code}`)``, no longer compiles.
 - **Breaking, types only.** Only `locales` sets the locale type; `defaultLocale` and a callback parameter typed `string`, such as `loadLocale: (locale: string) => …`, no longer widen it. A configuration kept in a variable without `as const` on `defaultLocale` is now a compile error, where before it silently accepted any string as a locale.
 
+- **Breaking.** `createLocaleRouting` takes `localePrefix` instead of `prefixDefaultLocale`: `"always"` for `true`, `"except-default"` for `false`, or the new `"when-ambiguous"`.
+- **Breaking.** `localize()` and `localizeAll()` throw a `RangeError` when the path they build would be longer than 8,192 characters, where they returned a path that `parse()` rejects.
+
 ## Migrating from 0.1.0
 
 1. **Remove the fallbacks after `t()`.** `t(key) ?? ""` and `t(key) ?? key` still work but are no longer needed. Code that checked `t(key) === undefined` to detect a missing key never matches now; use `onMissingKey` instead.
 2. **Stop reading `init()`'s result.** Replace `if (await i18n.init()) { … }` with `await i18n.init(); if (i18n.isReady) { … }`. A stale `init()`, superseded by a later call, resolves without applying, so compare `i18n.locale` when the outcome matters.
 3. **Cast keys built at runtime.** Where TypeScript now rejects a computed key you know exists, cast it with `as TranslationKey<typeof en>`, as in [Typed keys](docs/translations.md#typed-keys).
 4. **Mark a separate configuration's default locale `as const`.** Fix `Type 'string' is not assignable to type '"en" | "pt"'` at `createI18n(config)` or `createLocaleRouting(config)` with `defaultLocale: "en" as const`.
-5. **Optionally, drop `getLocaleDirection: () => "ltr"`.** The default gets right-to-left languages right; keep the option only to override it.
+5. **Replace `prefixDefaultLocale`.** In `createLocaleRouting`, `prefixDefaultLocale: true` becomes `localePrefix: "always"`, and `false` becomes `localePrefix: "except-default"`. In a configuration kept in a variable, add `as const`.
+6. **Optionally, drop `getLocaleDirection: () => "ltr"`.** The default gets right-to-left languages right; keep the option only to override it.

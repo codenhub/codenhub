@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-29
+last_updated: 2026-11-02
 scope: Why `@codenhub/i18n` behaves as it does, with the alternatives each decision rejected, for whoever changes it next.
 ---
 
@@ -73,6 +73,29 @@ When the loader rejects for a stored or detected locale, the binding warns and s
 
 ## Routing
 
-### Translated path segments wait for 0.3.0
+### Translated path segments ship in 0.2.0 (2026-11-02)
 
-Paths such as `/sobre` for `/about` are feasible and mostly framework-neutral: a table from canonical paths to localized ones, with `:param` segments, is enough to `parse` and `localize`. It was deferred rather than shipped in 0.2.0 because it adds public surface that needs its own design and tests, and it is additive, so nothing in 0.2.0 has to change for it. The sketch is in [roadmap.md](roadmap.md).
+Paths such as `/sobre` for `/about` ship with 0.2.0, before 1.0, as `docs/specs/packages-lifecycle.md`, "Versioning", asks of planned features. Rejected: deferring to 0.3.0, as first recorded. That reasoning, that the feature is additive and needs its own design, was true, but nothing made deferring the only plausible option.
+
+- **A table keyed by canonical path**, the path the app routes on, with each locale's form. A locale or path the table doesn't list keeps the canonical words. `parse` returns the canonical path, so the result shape did not change.
+- **Fixed segments and `:name` parameters**, as in `@codenhub/router`, so a route pattern translates with `localizeAll` and can be registered once per locale. Forms use the canonical path's parameters in any order, because word order differs between languages.
+- **Fixed segments match case-sensitively**, like router routes and URL paths. Only the locale prefix ignores case, as before. Unicode entries match their percent-encoding.
+- **A fixed segment wins over a parameter** at the first segment where two patterns differ. Rejected: first match in table order, as `@codenhub/router` does, because the order of an object's keys is easy to change without noticing.
+- **Mistakes are rejected at creation**: invalid paths, unconfigured locales, a path starting with a locale, parameters that differ between forms, and two pages with the same path in one locale.
+- **`localize` reads an unprefixed path as canonical, and a prefixed one as that locale's URL.** Reading every input as a URL first, which would let `localize(location.pathname, …)` switch language from `/sobre`, was rejected: it can't tell the canonical English page `/sobre` from the Portuguese URL `/sobre`, so the clash check below could never fire. Switching language goes through `parse` instead, as the guide shows.
+- **`localize` throws a `RangeError` when its result would be parsed as another page or locale.** This is the net for pages the table doesn't list. A static build that localizes its page list finds every clash at build time.
+
+### The locale prefix is dropped only where a path is unambiguous (2026-11-02)
+
+An earlier sketch kept the locale prefix on every translated path, because a path shared by two languages, such as `/` or a brand name, can't tell which language it is in. That holds for removing the prefix everywhere, but it did not weigh removing it only from paths that belong to one locale. `/sobre` is only Portuguese, so it needs no prefix, while `/pt` and `/pt/blog` keep it. So an opt-in mode serves a translated path without a prefix when no other locale's path overlaps it, and keeps the prefix otherwise. A form made only of parameters, such as `/:tag`, always keeps it: it overlaps every path of its length, including the default locale's pages the table doesn't list.
+
+The remaining risk is a route the routing table doesn't list, such as a CMS slug `/sobre` in the default language: routing assumes an unlisted path belongs to the default locale and can't see the clash. The mode is opt-in and the guide warns about this.
+
+Rejected:
+
+- Prefix always, the earlier sketch, because it rules out `example.com/sobre` for no reason on paths that are unambiguous.
+- Never prefix, because `/` and every path with the same words in each language would carry no locale.
+
+### One `localePrefix` option replaces `prefixDefaultLocale` (2026-11-02)
+
+The prefix policy has three values: `"always"`, `"except-default"`, and `"when-ambiguous"`. That makes it one option rather than `prefixDefaultLocale: boolean` plus a second flag whose combinations overlap. The change breaks the API, and it is made in 0.2.0 because before 1.0 is the cheapest time. Rejected: keeping `prefixDefaultLocale` and adding a flag later, which avoids the break but leaves two settings that interact.

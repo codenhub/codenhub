@@ -10,7 +10,7 @@ description: What @codenhub/i18n does, the four ideas behind it, and a five-minu
 It works the same in a browser, a Web Worker, a Node.js server, or a static site build. Two optional extras handle the jobs that differ by environment:
 
 - **`@codenhub/i18n/browser`** picks the visitor's language, remembers their choice, and keeps the page's `lang` and `dir` attributes in step.
-- **`@codenhub/i18n/routing`** puts the language in the URL, as in `/pt/about`.
+- **`@codenhub/i18n/routing`** puts the language in the URL, as in `/pt/about`, and can translate the path itself, as in `/pt/sobre` or `/sobre`.
 
 ## Four ideas
 

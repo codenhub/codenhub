@@ -64,7 +64,7 @@ The configuration is invalid. Check that:
 - `loadLocale` is a function.
 - The configuration is a plain object. A class instance, or an object that inherits its options, is rejected so that inherited values can't slip in.
 
-`createLocaleRouting()` follows the same rules, and `prefixDefaultLocale` must be `true` or `false`.
+`createLocaleRouting()` follows the same rules, and `localePrefix` must be `"always"`, `"except-default"`, or `"when-ambiguous"`. A problem in `pathnames` names its entry, such as `pathnames["/about"].pt`; [Mistakes it catches](localized-urls.md#mistakes-it-catches) explains each one and its fix.
 
 ## TypeScript says `string` is not assignable to the locale type
 
@@ -74,9 +74,22 @@ Type 'string' is not assignable to type '"en" | "pt"'.
 
 The default locale lost its exact type, usually because the configuration lives in a separate variable. Mark it `as const`, as in [Typed keys](translations.md#typed-keys). Locales are taken from `locales` only, so a plain `string` default can't widen them.
 
+The same goes for `localePrefix` in a routing configuration kept in a variable, where the message names `"always" | "except-default" | "when-ambiguous"`: write `localePrefix: "except-default" as const`.
+
 ## A routing method throws `TypeError`
 
 The path is not an absolute path or contains something routing refuses, such as `?`, `#`, `//`, or a dot segment. Pass `url.pathname` rather than the full URL. [Paths it accepts](localized-urls.md#paths-it-accepts) has the full list.
+
+## `localize()` throws `RangeError`: "would be read as"
+
+The path `localize()` would build opens a different page, or the same page in another language. There are two usual causes:
+
+- **You passed a URL, not a canonical path.** `localize("/sobre", "en")` takes `/sobre` as the canonical path of an English page. If `/sobre` is the Portuguese about page's URL, read it first: `localize(routing.parse("/sobre").pathname, "en")`.
+- **A page the table doesn't list has another page's translated path.** With `localePrefix: "when-ambiguous"`, an English page at `/sobre` clashes with a Portuguese `/sobre`. Rename one of them, list the page in `pathnames`, or keep the prefix with `"except-default"`. [The risk you take on](localized-urls.md#the-risk-you-take-on) explains why routing can't catch this sooner.
+
+## `localize()` throws `RangeError`: "would be longer than 8,192 characters"
+
+The path you passed is valid, but the locale prefix or the translated words make the result longer than `parse()` accepts. Shorten the path; a link that long is also likely to be cut off by servers and proxies.
 
 ## The browser binding warns or rejects
 

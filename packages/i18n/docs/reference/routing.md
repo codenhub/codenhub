@@ -16,17 +16,17 @@ order: 2
 export declare const createLocaleRouting: <TLocale extends string>(config: LocaleRoutingConfig<TLocale>) => LocaleRouting<TLocale>;
 ```
 
-Creates runtime-neutral locale-prefixed pathname operations.
+Creates runtime-neutral operations for localized pathnames: a locale prefix, translated paths, or both.
 
 The factory trims locale identifiers and snapshots the validated configuration, so later caller mutations do not affect routing behavior.
 
 **Parameters**
 
-- `config` — Supported locales, default locale, and default-prefix policy.
+- `config` — Supported locales, default locale, locale-prefix policy, and optional translated paths.
 
 **Returns** — Pure parsing and generation operations bound to an immutable configuration snapshot.
 
-**Throws** — `TypeError` — When `config` is not a plain object, locales are empty, invalid conservative ASCII identifiers, duplicated case-insensitively after trimming, the trimmed default locale is unsupported, or `prefixDefaultLocale` is not boolean.
+**Throws** — `TypeError` — When `config` is not a plain object, locales are empty, invalid conservative ASCII identifiers, duplicated case-insensitively after trimming, the trimmed default locale is unsupported, `localePrefix` is not a supported policy, or `pathnames` has an invalid path, an unsupported locale, a path that starts with a locale, parameters that differ from the canonical path's, or two pages with the same path in one locale.
 
 ## Interfaces
 
@@ -40,7 +40,7 @@ export interface LocaleRouting<TLocale extends string> {
 }
 ```
 
-Pure operations for parsing and generating locale-prefixed application pathnames.
+Pure operations for parsing and generating localized application pathnames.
 
 #### LocaleRouting › localize
 
@@ -48,19 +48,19 @@ Pure operations for parsing and generating locale-prefixed application pathnames
 localize(pathname: string, locale: TLocale): string;
 ```
 
-Generates the canonical pathname for one supported locale.
+Generates the canonical URL pathname of a page for one supported locale.
 
 **Parameters**
 
-- `pathname` — An absolute application pathname of at most 8,192 characters without a URL, query, or fragment.
+- `pathname` — A canonical application pathname of at most 8,192 characters without a URL, query, or fragment. A path that starts with a locale is read as that locale's URL, as `parse` reads it.
 - `locale` — A supported locale, trimmed and matched case-insensitively.
 
-**Returns** — The pathname with the configured locale-prefix policy applied.
+**Returns** — The pathname in the locale's words, with the configured locale-prefix policy applied.
 
 **Throws**
 
 - `TypeError` — When `pathname` is not a valid application pathname.
-- `RangeError` — When `locale` is unsupported or is not a string at runtime.
+- `RangeError` — When `locale` is unsupported or is not a string at runtime, when the result would be longer than 8,192 characters, or when the result would be parsed as another page or locale, such as a page the table doesn't list whose path is another locale's translated path.
 
 #### LocaleRouting › localizeAll
 
@@ -72,11 +72,14 @@ Generates localized pathnames for every locale in configuration order.
 
 **Parameters**
 
-- `pathname` — An absolute application pathname of at most 8,192 characters without a URL, query, or fragment.
+- `pathname` — A canonical application pathname, read as `localize` reads it.
 
 **Returns** — Localized pathnames paired with their canonical locales.
 
-**Throws** — `TypeError` — When `pathname` is not a valid application pathname.
+**Throws**
+
+- `TypeError` — When `pathname` is not a valid application pathname.
+- `RangeError` — When a result would be too long or be parsed as another page or locale, as with `localize`.
 
 #### LocaleRouting › parse
 
@@ -84,13 +87,13 @@ Generates localized pathnames for every locale in configuration order.
 parse(pathname: string): ParsedLocalePath<TLocale> | undefined;
 ```
 
-Parses a pathname using configured, case-insensitive locale prefixes.
+Parses a URL's pathname into its locale and canonical pathname. Locale prefixes match case-insensitively, and a prefixed path is accepted even where the canonical URL has none, such as `/en/about` for `/about`.
 
 **Parameters**
 
 - `pathname` — An absolute application pathname of at most 8,192 characters without a URL, query, or fragment.
 
-**Returns** — The canonical locale and unprefixed pathname, or `undefined` when a required prefix is absent.
+**Returns** — The locale and canonical pathname, or `undefined` when a required prefix is absent.
 
 **Throws** — `TypeError` — When `pathname` is not a valid application pathname.
 
@@ -100,11 +103,12 @@ Parses a pathname using configured, case-insensitive locale prefixes.
 export interface LocaleRoutingConfig<TLocale extends string> {
     defaultLocale: NoInfer<TLocale>;
     locales: readonly TLocale[];
-    prefixDefaultLocale: boolean;
+    localePrefix: "always" | "except-default" | "when-ambiguous";
+    pathnames?: Readonly<Record<string, Readonly<Partial<Record<NoInfer<TLocale>, string>>>>> | undefined;
 }
 ```
 
-Configuration snapshotted for locale-prefixed pathname parsing and generation.
+Configuration snapshotted for parsing and generating localized pathnames.
 
 #### LocaleRoutingConfig › defaultLocale
 
@@ -114,6 +118,14 @@ defaultLocale: NoInfer<TLocale>;
 
 The trimmed, case-insensitively matched locale used for unprefixed paths; its type is inferred from `locales` only.
 
+#### LocaleRoutingConfig › localePrefix
+
+```ts
+localePrefix: "always" | "except-default" | "when-ambiguous";
+```
+
+Which paths start with their locale: `"always"` every path; `"except-default"` every path but the default locale's; `"when-ambiguous"` like `"except-default"`, except that a translated path with a fixed segment that no other locale's path could match drops the prefix, such as `/sobre`. A path the table doesn't list is read as the default locale's, so with `"when-ambiguous"`, `localize` throws when such a path would be read as another page.
+
 #### LocaleRoutingConfig › locales
 
 ```ts
@@ -122,13 +134,13 @@ locales: readonly TLocale[];
 
 ASCII locale identifiers with alphanumeric hyphen-separated subtags, preserved in `localizeAll` order.
 
-#### LocaleRoutingConfig › prefixDefaultLocale
+#### LocaleRoutingConfig › pathnames
 
 ```ts
-prefixDefaultLocale: boolean;
+pathnames?: Readonly<Record<string, Readonly<Partial<Record<NoInfer<TLocale>, string>>>>> | undefined;
 ```
 
-Whether paths require a default-locale prefix, snapshotted when routing is created.
+Translated paths, keyed by the canonical path the application routes on, with each locale's form, such as `{ "/products/:id": { pt: "/produtos/:id" } }`. Paths have fixed segments and `:name` parameters, and every form uses the canonical path's parameters, in any order. Fixed segments match case-sensitively, Unicode matches its percent-encoding, and a fixed segment wins over a parameter. A locale or path the table doesn't list keeps the canonical words.
 
 ### LocalizedPath
 
@@ -182,4 +194,4 @@ The trimmed canonical configured locale identified by the pathname.
 pathname: string;
 ```
 
-The absolute application pathname with the recognized locale prefix removed.
+The canonical application pathname: the locale prefix removed and translated segments read back.

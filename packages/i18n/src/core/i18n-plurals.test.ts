@@ -37,6 +37,19 @@ const createPluralI18n = (onMissingKey?: (key: string) => void) =>
   });
 
 describe("plural selection", () => {
+  it("should select by `count` while another placeholder shows the formatted number", async () => {
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en"] as const,
+      loadLocale: () => ({ cart: { items: { one: "{n} item", other: "{n} items" } } }),
+    });
+    await i18n.init();
+    const format = new Intl.NumberFormat(i18n.locale);
+
+    expect(i18n.t("cart.items", { count: 1234, n: format.format(1234) })).toBe("1,234 items");
+    expect(i18n.t("cart.items", { count: 1, n: format.format(1) })).toBe("1 item");
+  });
+
   it("should pick the plural form for `count` with the active locale's rules", async () => {
     const i18n = createPluralI18n();
     await i18n.init();

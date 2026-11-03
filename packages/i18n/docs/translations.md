@@ -99,7 +99,7 @@ A few details:
 
 - A placeholder with no matching value stays as written, so a missing value shows up as `{name}` on screen rather than disappearing.
 - Without a second argument, the text comes back unchanged. Text containing literal braces, such as a code sample, is safe as long as you don't pass a value with the same name.
-- Numbers are inserted as JavaScript writes them: `1234.5`, not `1,234.50`. To format a number or date for the reader, use `Intl.NumberFormat` or `Intl.DateTimeFormat` with `i18n.locale` and pass the result as a string.
+- Numbers are inserted as JavaScript writes them: `1234.5`, not `1,234.50`. To format a number or date for the reader, use `Intl.NumberFormat` or `Intl.DateTimeFormat` with `i18n.locale` and pass the result as a string. For a count in a plural, see [Show a formatted count](#show-a-formatted-count).
 
 ## Plurals
 
@@ -142,6 +142,31 @@ Two things to watch for:
 
 - `count` must be a number. A string such as `"5"` does not select a form; the group is then treated as a missing key.
 - A plain string under the same key wins over forms. If `cart.items` is a string, `count` only fills `{count}`.
+
+### Show a formatted count
+
+`count` does two jobs: it picks the form, and it fills `{count}`. That second job writes the number as JavaScript does, so 1234 items reads "1234 items" rather than "1,234 items", or "1.234 itens" in Portuguese. Passing the formatted string as `count` doesn't help, because a string can't pick a form.
+
+Split the jobs. Keep `count` a number for choosing, and show the formatted number through a placeholder of its own:
+
+```json
+{
+  "cart": {
+    "items": {
+      "one": "{n} item",
+      "other": "{n} items"
+    }
+  }
+}
+```
+
+```ts
+const format = new Intl.NumberFormat(i18n.locale);
+
+t("cart.items", { count: 1234, n: format.format(1234) }); // "1,234 items"
+```
+
+Create the formatter for the current locale, and again when the locale changes.
 
 ## Typed keys
 
