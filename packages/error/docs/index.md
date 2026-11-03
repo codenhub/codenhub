@@ -30,15 +30,18 @@ On top of that sit result helpers (`ok`, `err`, `attempt`, `attemptAsync`, and f
 pnpm add @codenhub/error
 ```
 
-The package is ESM and has no runtime dependencies. It has five entrypoints:
+The package is ESM and has no runtime dependencies. It has eight entrypoints:
 
-| Import path                           | What it holds                                                |
-| ------------------------------------- | ------------------------------------------------------------ |
-| `@codenhub/error`                     | `createAppError`, the registry functions, the result helpers |
-| `@codenhub/error/registries/browser`  | The browser and Web API preset                               |
-| `@codenhub/error/registries/node`     | The Node.js network preset                                   |
-| `@codenhub/error/registries/supabase` | The Supabase preset                                          |
-| `@codenhub/error/registries`          | All three presets from one import                            |
+| Import path                           | What it holds                                                                     |
+| ------------------------------------- | --------------------------------------------------------------------------------- |
+| `@codenhub/error`                     | `createAppError`, the registry functions, the result helpers                      |
+| `@codenhub/error/registries/browser`  | The browser and Web API preset                                                    |
+| `@codenhub/error/registries/node`     | The Node.js network preset                                                        |
+| `@codenhub/error/registries/http`     | The HTTP response status preset                                                   |
+| `@codenhub/error/registries/supabase` | The Supabase preset                                                               |
+| `@codenhub/error/registries`          | All four presets from one import                                                  |
+| `@codenhub/error/react`               | `AppErrorBoundary`, a React error boundary; see [Error boundaries](frameworks.md) |
+| `@codenhub/error/svelte`              | `createAppErrorBoundary`, for a Svelte `<svelte:boundary>`                        |
 
 ## A five-minute tour
 

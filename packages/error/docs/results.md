@@ -83,17 +83,20 @@ A few rules keep them honest:
 
 ## Chaining results
 
-The remaining helpers work on the success side and pass an `Err` through untouched:
+Most of the remaining helpers work on the success side and pass an `Err` through untouched; `orElse` and `orElseAsync` work on the failure side:
 
-| Helper                           | What it does                                                                                     |
-| -------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `map(result, mapper)`            | Transforms an `Ok` value. Returns the `Err` unchanged.                                           |
-| `mapAsync(result, mapper)`       | Like `map`, with a mapper that may return a promise. Always returns a promise.                   |
-| `andThen(result, mapper)`        | Runs a mapper that returns another `Result`, so you get `Result<U>`, not `Result<Result<U>>`.    |
-| `andThenAsync(result, mapper)`   | Like `andThen`, with a mapper that may return a promise of a `Result`. Always returns a promise. |
-| `match(result, { onOk, onErr })` | Calls exactly one of the two callbacks and returns what it returns.                              |
-| `unwrap(result)`                 | Returns the `Ok` value, or throws the `AppError`.                                                |
-| `unwrapOr(result, fallback)`     | Returns the `Ok` value, or `fallback`.                                                           |
+| Helper                           | What it does                                                                                      |
+| -------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `map(result, mapper)`            | Transforms an `Ok` value. Returns the `Err` unchanged.                                            |
+| `mapAsync(result, mapper)`       | Like `map`, with a mapper that may return a promise. Always returns a promise.                    |
+| `andThen(result, mapper)`        | Runs a mapper that returns another `Result`, so you get `Result<U>`, not `Result<Result<U>>`.     |
+| `andThenAsync(result, mapper)`   | Like `andThen`, with a mapper that may return a promise of a `Result`. Always returns a promise.  |
+| `orElse(result, recover)`        | Runs `recover` on an `Err` and returns the `Result` it returns. Returns the `Ok` unchanged.       |
+| `orElseAsync(result, recover)`   | Like `orElse`, with a recovery that may return a promise of a `Result`. Always returns a promise. |
+| `all(results)`                   | One `Ok` holding every value in order, or the first `Err`.                                        |
+| `match(result, { onOk, onErr })` | Calls exactly one of the two callbacks and returns what it returns.                               |
+| `unwrap(result)`                 | Returns the `Ok` value, or throws the `AppError`.                                                 |
+| `unwrapOr(result, fallback)`     | Returns the `Ok` value, or `fallback`.                                                            |
 
 Put together, a small pipeline reads top to bottom:
 
@@ -112,6 +115,24 @@ const label = match(
     onErr: (error) => error.message,
   },
 );
+```
+
+`orElse` handles the failures you can do something about and passes the rest on. Return `err(error)` for every failure the recovery does not handle; it is already an `AppError`, so it comes back as it is:
+
+```ts
+import { all, attemptAsync, err, ok, orElse } from "@codenhub/error";
+
+const projects = orElse(await attemptAsync(() => api.listProjects()), (error) => (error.messageKey === "error.browser.requestFailed" ? ok(cache.projects) : err(error)));
+```
+
+`all` turns several results into one, keeping each position's type when you pass a tuple. For calls that run in parallel, await them together first:
+
+```ts
+const loaded = all(await Promise.all([attemptAsync(() => api.user(id)), attemptAsync(() => api.projects(id))]));
+
+if (loaded.ok) {
+  const [user, projects] = loaded.value;
+}
 ```
 
 The helpers do not catch: if a mapper or a `match` callback throws, the exception propagates as it would from any function. When a step can throw, wrap that step in `attempt` or `attemptAsync`.

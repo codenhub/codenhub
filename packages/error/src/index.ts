@@ -7,6 +7,7 @@
 export { appErrorFromJSON, createAppError, isAppError, DEFAULT_APP_ERROR_MESSAGE } from "./create-app-error";
 export { createErrorRegistry, getErrorRegistry, setErrorRegistry, freezeRegistry } from "./registry";
 export {
+  all,
   andThen,
   andThenAsync,
   attempt,
@@ -16,6 +17,8 @@ export {
   mapAsync,
   match,
   ok,
+  orElse,
+  orElseAsync,
   unwrap,
   unwrapOr,
   type Err,

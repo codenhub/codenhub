@@ -1,12 +1,12 @@
 ---
 title: Presets
-description: Every failure the browser, Node.js, and Supabase presets recognize, with its translation key, and what each preset leaves out.
+description: Every failure the browser, Node.js, HTTP, and Supabase presets recognize, with its translation key, and what each preset leaves out.
 order: 4
 ---
 
 # Presets
 
-A preset is a ready-made, read-only registry for failures that come from a platform or a service rather than from your own code. There are three: browser, Node.js, and Supabase. Each is a separate import, so an application only loads the ones it uses, and importing one changes nothing until you merge it:
+A preset is a ready-made, read-only registry for failures that come from a platform or a service rather than from your own code. There are four: browser, Node.js, HTTP, and Supabase. Each is a separate import, so an application only loads the ones it uses, and importing one changes nothing until you merge it:
 
 ```ts
 import { getErrorRegistry } from "@codenhub/error";
@@ -21,8 +21,9 @@ Each preset also exports its raw mappings, frozen, for when you want to build so
 | ------------------------------------- | ----------------------- | ------------------------------------------------------- |
 | `@codenhub/error/registries/browser`  | `browserErrorRegistry`  | `browserErrorNames`, `browserErrorPatterns`             |
 | `@codenhub/error/registries/node`     | `nodeErrorRegistry`     | `nodeErrorCodes`, `nodeErrorNames`, `nodeErrorPatterns` |
+| `@codenhub/error/registries/http`     | `httpErrorRegistry`     | `httpErrorCodes`                                        |
 | `@codenhub/error/registries/supabase` | `supabaseErrorRegistry` | `supabaseErrorCodes`, `supabaseErrorNames`              |
-| `@codenhub/error/registries`          | All three               | All seven                                               |
+| `@codenhub/error/registries`          | All four                | All eight                                               |
 
 ## How the messages are written
 
@@ -101,6 +102,42 @@ Notes:
 - **Not covered:** filesystem codes such as `ENOENT`, because the right message depends on what the application was doing, and TLS certificate codes, which only an operator can fix.
 - **`TimeoutError` and `AbortError` are also browser preset names.** They are the `DOMException` names an `AbortSignal` raises, as in `fetch(url, { signal: AbortSignal.timeout(5000) })`. Server code should use this preset for them: the browser preset's `TimeoutError` message tells the reader to check their internet connection. When you merge both, the one merged last wins.
 - The codes were observed on Node.js 24. Other server runtimes, such as Deno or Bun, may report network failures differently.
+
+## HTTP
+
+For the status of a failed response. `fetch` resolves on a `404` or a `500`, so a status is not something `createAppError` finds by itself: pass it as the `code`, and pass this preset as the `registry` for that call rather than merging it into the global one. Statuses are short numbers that only mean something for a response, and could collide with another service's codes.
+
+```ts
+import { err } from "@codenhub/error";
+import { httpErrorRegistry } from "@codenhub/error/registries/http";
+
+if (!response.ok) {
+  return err({ code: response.status }, { registry: httpErrorRegistry });
+}
+```
+
+| Code  | `messageKey`                 | Retryable |
+| ----- | ---------------------------- | --------- |
+| `400` | `error.http.badRequest`      | No        |
+| `401` | `error.http.unauthorized`    | No        |
+| `403` | `error.http.forbidden`       | No        |
+| `404` | `error.http.notFound`        | No        |
+| `409` | `error.http.conflict`        | No        |
+| `413` | `error.http.payloadTooLarge` | No        |
+| `422` | `error.http.unprocessable`   | No        |
+| `429` | `error.http.rateLimited`     | No        |
+| `500` | `error.http.serverError`     | No        |
+| `502` | `error.http.badGateway`      | No        |
+| `503` | `error.http.unavailable`     | No        |
+| `504` | `error.http.gatewayTimeout`  | No        |
+
+Notes:
+
+- **Nothing is retryable.** A status is the server's answer, so the request reached it; even a `503` or `504` can follow a request the server, or a service behind it, already acted on. A `429` needs a wait the flag cannot express.
+- **The messages are generic.** A `401` from a sign-in form means a wrong password, and a `404` from a search means no results. Where a status means something specific, register your own mapping for that call in a registry of its own.
+- **`500` carries the shared developer-fault message**, and should reach your error tracker; see [Recipes](recipes.md#report-to-an-error-tracker).
+- **Not covered:** `1xx`, `2xx`, and `3xx` statuses, which are not failures, and the rarer `4xx` and `5xx` statuses. They resolve to `"unknown"`.
+- **When your server sends `error.toJSON()`**, rebuild that error with `appErrorFromJSON` instead; it says more than the status.
 
 ## Supabase
 

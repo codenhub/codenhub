@@ -17,7 +17,10 @@ interface AppErrorResolution {
   source: AppErrorSource;
   originalError: unknown;
   isRetryable: boolean;
+  details: AppErrorDetails | null;
 }
+
+type AppErrorDetails = Readonly<Record<string, unknown>>;
 
 /** The exact field set produced by `AppError.toJSON()`. */
 interface SerializedAppError {
@@ -28,6 +31,7 @@ interface SerializedAppError {
   messageKey: string | null;
   source: AppErrorSource;
   isRetryable: boolean;
+  details: AppErrorDetails | null;
 }
 
 interface ResolvedAppErrorOptions {
@@ -35,12 +39,100 @@ interface ResolvedAppErrorOptions {
   registry: ErrorRegistry | ReadonlyErrorRegistry;
   maxDepth: number | undefined;
   hasCustomRegistry: boolean;
+  details: AppErrorDetails | null;
 }
 
 /** Default message used when no registry entry or fallback message can describe an error. */
 export const DEFAULT_APP_ERROR_MESSAGE = "An unexpected error occurred.";
 
 const APP_ERROR_INSTANCES = new WeakSet<object>();
+
+const DETAILS_MAX_DEPTH = 8;
+
+const isPlainObject = (value: object): boolean => {
+  const prototype: unknown = Object.getPrototypeOf(value);
+
+  // A prototype whose own prototype is null is `Object.prototype` from any realm.
+  return (
+    (prototype === null || Object.getPrototypeOf(prototype) === null) &&
+    Object.prototype.toString.call(value) === "[object Object]"
+  );
+};
+
+// Copies a JSON value into frozen plain data, throwing for anything JSON cannot carry. The depth
+// limit also ends a cycle. Keys are defined rather than assigned, so a `__proto__` key stays data.
+const copyJsonValue = (value: unknown, depth: number): unknown => {
+  if (value === null || typeof value === "string" || typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value !== "object" || depth >= DETAILS_MAX_DEPTH) {
+    throw new TypeError("Not a JSON value.");
+  }
+
+  if (Array.isArray(value)) {
+    const copy: unknown[] = [];
+
+    for (let index = 0; index < value.length; index += 1) {
+      if (!(index in value)) {
+        throw new TypeError("Not a JSON value.");
+      }
+      copy.push(copyJsonValue(value[index], depth + 1));
+    }
+
+    return Object.freeze(copy);
+  }
+
+  if (!isPlainObject(value)) {
+    throw new TypeError("Not a JSON value.");
+  }
+
+  const copy: Record<string, unknown> = {};
+
+  for (const key of Object.keys(value)) {
+    Object.defineProperty(copy, key, {
+      value: copyJsonValue((value as Record<string, unknown>)[key], depth + 1),
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+  }
+
+  return Object.freeze(copy);
+};
+
+/** Returns a frozen copy of valid details, or `null` for anything else. */
+const readDetails = (value: unknown): AppErrorDetails | null => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+
+  try {
+    return copyJsonValue(value, 0) as AppErrorDetails;
+  } catch {
+    return null;
+  }
+};
+
+// An existing AppError keeps the details it has; a later layer only adds keys it lacks, so no
+// layer loses what an inner one recorded.
+const mergeDetails = (inherited: AppErrorDetails | null, supplied: AppErrorDetails | null): AppErrorDetails | null => {
+  if (supplied === null) {
+    return inherited;
+  }
+
+  if (inherited === null) {
+    return supplied;
+  }
+
+  return Object.keys(supplied).every((key) => Object.hasOwn(inherited, key))
+    ? inherited
+    : Object.freeze({ ...supplied, ...inherited });
+};
 
 // Freezing would also stop new properties, and frameworks add their own to every error they catch:
 // Koa assigns `status` and hapi's Boom assigns `isBoom`, and on a non-extensible error that
@@ -50,6 +142,13 @@ const lockOwnProperties = (target: object): void => {
   const descriptors = Object.getOwnPropertyDescriptors(target);
 
   for (const key of Reflect.ownKeys(descriptors)) {
+    // V8 gives each error an own `stack`, which `Error.captureStackTrace` redefines; libraries call
+    // it on errors they rethrow, and on a locked stack that call throws. The stack is diagnostic,
+    // not part of the classification.
+    if (key === "stack") {
+      continue;
+    }
+
     const descriptor = descriptors[key as keyof typeof descriptors];
 
     if ("value" in descriptor) {
@@ -68,6 +167,7 @@ class AppErrorImpl extends Error implements AppError {
   readonly source: AppErrorSource;
   declare readonly originalError: unknown;
   readonly isRetryable: boolean;
+  readonly details: AppErrorDetails | null;
 
   constructor(resolved: AppErrorResolution) {
     super(resolved.message, { cause: resolved.originalError });
@@ -80,6 +180,7 @@ class AppErrorImpl extends Error implements AppError {
     this.messageKey = resolved.messageKey;
     this.source = resolved.source;
     this.isRetryable = resolved.isRetryable;
+    this.details = resolved.details;
     Object.defineProperty(this, "originalError", {
       value: resolved.originalError,
       enumerable: false,
@@ -101,6 +202,7 @@ class AppErrorImpl extends Error implements AppError {
       messageKey: this.messageKey,
       source: this.source,
       isRetryable: this.isRetryable,
+      details: this.details,
     };
   }
 }
@@ -123,7 +225,7 @@ export const resolveAppErrorOptions = (options: AppErrorOptions): ResolvedAppErr
     throw new TypeError("AppError options must be an object.");
   }
 
-  const { fallbackMessage, registry, maxDepth } = options;
+  const { fallbackMessage, registry, maxDepth, details } = options;
 
   if (fallbackMessage !== undefined && (typeof fallbackMessage !== "string" || fallbackMessage.trim().length === 0)) {
     throw new TypeError("AppError options.fallbackMessage must be a non-empty string when provided.");
@@ -137,11 +239,20 @@ export const resolveAppErrorOptions = (options: AppErrorOptions): ResolvedAppErr
     assertValidMaxDepth(maxDepth);
   }
 
+  const copiedDetails = details === undefined ? null : readDetails(details);
+
+  if (details !== undefined && copiedDetails === null) {
+    throw new TypeError(
+      `AppError options.details must be a plain object holding only JSON values, nested at most ${DETAILS_MAX_DEPTH} levels deep.`,
+    );
+  }
+
   return {
     fallbackMessage: fallbackMessage ?? DEFAULT_APP_ERROR_MESSAGE,
     registry: registry ?? getErrorRegistry(),
     maxDepth,
     hasCustomRegistry: registry !== undefined,
+    details: copiedDetails,
   };
 };
 
@@ -153,6 +264,7 @@ const resolveFromAppError = (appError: AppError, originalError: unknown): AppErr
   source: appError.source,
   originalError,
   isRetryable: appError.isRetryable,
+  details: appError.details,
 });
 
 const isSameClassification = (resolution: AppErrorResolution, appError: AppError): boolean =>
@@ -161,17 +273,33 @@ const isSameClassification = (resolution: AppErrorResolution, appError: AppError
   resolution.message === appError.message &&
   resolution.messageKey === appError.messageKey &&
   resolution.source === appError.source &&
-  resolution.isRetryable === appError.isRetryable;
+  resolution.isRetryable === appError.isRetryable &&
+  resolution.details === appError.details;
 
 /** @internal */
 const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError => {
-  const { fallbackMessage, registry, maxDepth, hasCustomRegistry } = resolveAppErrorOptions(options);
+  const { fallbackMessage, registry, maxDepth, hasCustomRegistry, details } = resolveAppErrorOptions(options);
+
+  // An unknown error still carrying the default message was never worded by any layer, so the
+  // first layer that supplies a fallback words it. After that its message stays, so it never
+  // alternates as the error passes through layers that each supply one.
+  const withFallbackMessage = (resolution: AppErrorResolution): AppErrorResolution =>
+    resolution.type === "unknown" && resolution.message === DEFAULT_APP_ERROR_MESSAGE
+      ? { ...resolution, message: fallbackMessage }
+      : resolution;
+
+  const finish = (resolution: AppErrorResolution, inherited: AppErrorDetails | null): AppErrorResolution => ({
+    ...withFallbackMessage(resolution),
+    details: mergeDetails(inherited, details),
+  });
 
   // Only a supplied registry asks for an AppError to be classified again. The registry that
   // classified it may not be the global one, so a layer that passes a fallbackMessage alone
   // must not have the global registry replace what the error already says.
   if (isAppError(error) && !hasCustomRegistry) {
-    return error;
+    const reworded = finish(resolveFromAppError(error, error), error.details);
+
+    return isSameClassification(reworded, error) ? error : new AppErrorImpl(reworded);
   }
 
   // An AppError given a registry is classified again from the raw value it started from.
@@ -195,9 +323,13 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
   let nestedKnownResult: AppErrorResolution | null = null;
   let heuristicResult: AppErrorResolution | null = null;
   let appErrorFallback: AppErrorResolution | null = null;
+  // The shallowest nested AppError's details, kept whichever candidate wins.
+  let nestedDetails: AppErrorDetails | null = null;
 
   for (const candidate of errorCandidates) {
     if (isAppError(candidate)) {
+      nestedDetails ??= candidate.details;
+
       if (candidate.type === "known") {
         // A supplied registry is asked for its wording, so a nested known AppError must not end
         // the search before the raw value inside it has been classified. It stands when the
@@ -223,41 +355,46 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
       shouldMatchPatterns: heuristicResult === null,
     });
     if (classification?.type === "known") {
-      knownResult = { ...classification, originalError: error };
+      knownResult = { ...classification, originalError: error, details: null };
       break;
     }
 
     if (classification?.type === "heuristic" && heuristicResult === null) {
-      heuristicResult = { ...classification, originalError: error };
+      heuristicResult = { ...classification, originalError: error, details: null };
     }
   }
 
   // Re-normalization only ever upgrades: a heuristic match replaces an unknown error, a known
   // match replaces anything it differs from, and nothing else changes what the error already says.
   if (existingAppError !== null) {
-    const replacement =
-      knownResult ?? nestedKnownResult ?? (existingAppError.type === "unknown" ? heuristicResult : null);
+    const replacement = finish(
+      knownResult ??
+        nestedKnownResult ??
+        (existingAppError.type === "unknown" ? heuristicResult : null) ??
+        resolveFromAppError(existingAppError, error),
+      existingAppError.details,
+    );
 
-    if (replacement === null || isSameClassification(replacement, existingAppError)) {
-      return existingAppError;
-    }
-
-    return new AppErrorImpl(replacement);
+    return isSameClassification(replacement, existingAppError) ? existingAppError : new AppErrorImpl(replacement);
   }
 
   return new AppErrorImpl(
-    knownResult ??
-      nestedKnownResult ??
-      heuristicResult ??
-      appErrorFallback ?? {
-        type: "unknown",
-        code: null,
-        message: fallbackMessage,
-        messageKey: null,
-        source: null,
-        originalError: error,
-        isRetryable: false,
-      },
+    finish(
+      knownResult ??
+        nestedKnownResult ??
+        heuristicResult ??
+        appErrorFallback ?? {
+          type: "unknown",
+          code: null,
+          message: fallbackMessage,
+          messageKey: null,
+          source: null,
+          originalError: error,
+          isRetryable: false,
+          details: null,
+        },
+      nestedDetails,
+    ),
   );
 };
 
@@ -287,7 +424,8 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
  * @returns An AppError whose own properties cannot be changed or removed. An existing AppError is
  * returned as-is unless a `registry` is supplied and finds something that improves on it: only a
  * heuristic match replaces an unknown error, and only a known match that differs replaces a
- * classified one. A `fallbackMessage` or `maxDepth` alone never changes an AppError.
+ * classified one. A `fallbackMessage` or `maxDepth` alone never changes a classification; a
+ * `fallbackMessage` only words an unknown AppError that still carries the default message.
  * @throws {TypeError} If `options` is not an object, `fallbackMessage` is not a non-empty string,
  * `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer
  * from 0 through 3.
@@ -310,13 +448,14 @@ const readSerializedAppError = (value: unknown): AppErrorResolution | null => {
   let fields: Record<keyof SerializedAppError, unknown>;
 
   try {
-    const { name, message, type, code, messageKey, source, isRetryable } = value as Record<string, unknown>;
-    fields = { name, message, type, code, messageKey, source, isRetryable };
+    const { name, message, type, code, messageKey, source, isRetryable, details } = value as Record<string, unknown>;
+    fields = { name, message, type, code, messageKey, source, isRetryable, details };
   } catch {
     return null;
   }
 
-  const { name, message, type, code, messageKey, source, isRetryable } = fields;
+  const { name, message, type, code, messageKey, source, isRetryable, details } = fields;
+  const copiedDetails = readDetails(details);
 
   if (
     name !== "AppError" ||
@@ -326,7 +465,8 @@ const readSerializedAppError = (value: unknown): AppErrorResolution | null => {
     !isNonEmptyStringOrNull(code) ||
     !isNonEmptyStringOrNull(messageKey) ||
     !isNonEmptyStringOrNull(source) ||
-    typeof isRetryable !== "boolean"
+    typeof isRetryable !== "boolean" ||
+    (details !== null && copiedDetails === null)
   ) {
     return null;
   }
@@ -342,7 +482,16 @@ const readSerializedAppError = (value: unknown): AppErrorResolution | null => {
 
   // The flag describes a call the sender made, such as its own database call, not the request that
   // carried the error back, which may already have run on the sender.
-  return { type: type as AppErrorType, code, message, messageKey, source, originalError: value, isRetryable: false };
+  return {
+    type: type as AppErrorType,
+    code,
+    message,
+    messageKey,
+    source,
+    originalError: value,
+    isRetryable: false,
+    details: copiedDetails,
+  };
 };
 
 /**

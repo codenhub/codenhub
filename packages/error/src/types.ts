@@ -52,6 +52,14 @@ export interface AppError extends Error {
   readonly isRetryable: boolean;
 
   /**
+   * Structured data a caller attached with the `details` option, such as the form field that
+   * failed, or `null`. It holds only JSON values, is frozen, and is included in `toJSON()`, so it
+   * crosses a boundary with the error. Never read from the raw error, so nothing reaches it that
+   * the code did not put there on purpose.
+   */
+  readonly details: Readonly<Record<string, unknown>> | null;
+
+  /**
    * Produces the normalized fields used by `JSON.stringify`, excluding the diagnostic
    * `cause` and `originalError` values.
    *
@@ -65,6 +73,7 @@ export interface AppError extends Error {
     messageKey: string | null;
     source: AppErrorSource;
     isRetryable: boolean;
+    details: Readonly<Record<string, unknown>> | null;
   };
 }
 
@@ -90,6 +99,14 @@ export interface AppErrorOptions {
    * further, to a depth of 8; a lower value stops every field at that depth.
    */
   maxDepth?: number;
+
+  /**
+   * Structured data to attach to the error as `details`, such as `{ field: "email" }`. Must be a
+   * plain object holding only JSON values (strings, finite numbers, booleans, `null`, lists, and
+   * plain objects), nested at most 8 levels deep. It is copied and frozen. An existing AppError
+   * keeps the details it has and gains only the keys it lacks.
+   */
+  details?: Readonly<Record<string, unknown>>;
 }
 
 /**

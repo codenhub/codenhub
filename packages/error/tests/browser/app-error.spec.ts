@@ -41,7 +41,17 @@ test("an AppError keeps its classification and accepts new properties", async ({
     const error = createAppError({ code: "23505" }, { registry }) as Error & Record<string, unknown>;
 
     const rejectedWrites: string[] = [];
-    for (const field of ["message", "name", "type", "code", "messageKey", "source", "isRetryable", "originalError"]) {
+    for (const field of [
+      "message",
+      "name",
+      "type",
+      "code",
+      "messageKey",
+      "source",
+      "isRetryable",
+      "details",
+      "originalError",
+    ]) {
       // The page function is not strict code, where a rejected assignment would be silent.
       if (!Reflect.set(error, field, "changed") && !Reflect.deleteProperty(error, field)) {
         rejectedWrites.push(field);
@@ -71,6 +81,7 @@ test("an AppError keeps its classification and accepts new properties", async ({
     "messageKey",
     "source",
     "isRetryable",
+    "details",
     "originalError",
   ]);
   expect(result.status).toBe(500);
@@ -83,6 +94,7 @@ test("an AppError keeps its classification and accepts new properties", async ({
     messageKey: null,
     source: "app.db",
     isRetryable: false,
+    details: null,
   });
 });
 
