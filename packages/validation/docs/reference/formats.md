@@ -440,7 +440,7 @@ creditCard()("4242 4242 4242 4241"); // { ok: false, ... }: the checksum fails
 export declare const cuid2: Factory<string, MessageOptions, string>;
 ```
 
-Creates a validator for CUID2 identifiers. The value is not modified.
+Creates a validator for CUID2 identifiers: 24 to 32 lowercase ASCII letters and digits, the first a letter. 24 is the length CUID2 makes by default, and 32 the longest it makes; an identifier in uppercase is rejected, not lowercased. The value is not modified.
 
 **Example**
 
@@ -479,7 +479,7 @@ export declare const domain: Factory<string, MessageOptions, string>;
 
 Creates a validator for public domain names, such as `example.com` or `münchen.de`: at least two labels, a last label of 2 to 63 letters or a punycode label, and none of the special-use names that never name a public host, such as `localhost`, `.local`, `.internal`, `.test`, `.arpa`, `.home`, `.corp`, `.mail`, `.localdomain`, Kubernetes' `.svc` and `.cluster`, or an IDN test top-level domain such as `.テスト`. Whether the top-level domain exists is not checked, so a name under any other label passes, private ones in common use such as `nas.lan`, `a.private` or `a.intranet` included: block those with a check of your own when they matter, and remember that a public name can still resolve to a private address. A name written with more than 759 characters, three for each one a name can have, is rejected before the parser reads it. An absolute name, `example.com.`, is rejected: it names the same host as `example.com`, and a second spelling of one host would let it past a check that compares the value as a string, such as a list of blocked hosts. This is the rule `email` and `url` apply to their host by default. The value is the domain as the URL parser reads it, lowercase ASCII with an internationalized label in punycode, so `München.DE` is `xn--mnchen-3ya.de`.
 
-To accept any hostname, such as `localhost` or `intranet`, use `hostname`. Whether the domain resolves, or is registered, is not checked.
+To accept a name that is not public, such as `localhost` or `intranet`, use `hostname`, which takes labels of ASCII letters, digits and hyphens, internationalized ones only in punycode, so it rejects `münchen.de` and accepts `xn--mnchen-3ya.de`. To accept both, use `union([domain(), hostname()])`. Whether the domain resolves, or is registered, is not checked.
 
 **Example**
 

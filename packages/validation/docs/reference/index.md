@@ -56,7 +56,9 @@ Finds where a schema accepts input of a size nothing bounds, so a test can hold 
 
 Input that passes a validator is validated in full, so a body of a million items, or of text a gigabyte long, costs what its size costs. Each array, set, map, record and text needs a `max` or a `length`, and a tuple with `rest` a `max`, and a `file` a `maxSize`, unless something before it bounds it: text read by `json` or `searchParams` inside `pipe(string({ max }), ...)`, and everything inside it, is bounded by that `max`. A tuple without `rest` has its length already. Formats whose input is bounded by what they accept, such as `email`, `uuid` and `ip`, need none; others, such as `url`, `hex` and `jwt`, are text like any other.
 
-It reads the schema and never calls it. Whether a `max` is small enough is not its to judge: any number says someone decided. A check is not read, since it runs on a value that already passed.
+Text read by `coerceBigint` needs a bound on each side, since converting it takes longer than linear time in its length, and a bound limits the digits converted.
+
+It reads the schema and never calls it. Whether a `max` is small enough is not its to judge: any number says someone decided. A check is not read, since it runs on a value that already passed. It lists the bounds an option can set, so it does not report the keys an `object` with `unknownKeys: "passthrough"` keeps, nor what `unknown()` accepts: neither has an option that bounds it. Use `"strip"` or `"strict"` for keys the schema does not name, and a validator of the type you expect in place of `unknown()`.
 
 **Parameters**
 
@@ -64,7 +66,7 @@ It reads the schema and never calls it. Whether a `max` is small enough is not i
 
 **Returns** — Every place a bound is missing, in the order the schema lists them; empty when there is none.
 
-**Throws** — `TypeError` — When `validator` is not a function.
+**Throws** — `TypeError` — When `validator` is not a function, or when a recursive schema is built anew at every level, as `lazy(() => build())` builds it, so that its parts never repeat: build it once and refer to it.
 
 **Example**
 
@@ -136,7 +138,7 @@ It returns a `boolean` and narrows nothing. A type guard says two things, that a
 
 **Returns** — `true` when the validator accepts the input.
 
-**Throws** — `TypeError` — When the validator turns out to be asynchronous, which the type system prevents unless the type was cast away. Use the validator directly and `await` it instead.
+**Throws** — `TypeError` — When the validator turns out to be asynchronous, which the type system prevents unless the type was cast away. Use the validator directly and `await` it instead. Also when it returns no result, or a failure without an issue, which only a validator written by hand can do.
 
 **Example**
 
@@ -280,7 +282,7 @@ Where the part is in the schema: property names joined by `.`, `[]` for the item
 readonly rule: "unbounded_size" | "unbounded_text" | "raised_limit" | "unreadable";
 ```
 
-What is missing. `"unbounded_size"`: an array, a set, a map or a record without a `max` or `length`, a tuple with `rest` and no `max`, or a `file` without a `maxSize`. `"unbounded_text"`: text without a `max` or `length`, a format that does not bound its own text, or `json` or `searchParams` given text no step before them bounded. `"raised_limit"`: a `lazy` whose `maxDepth` or `maxCalls` is above its default. `"unreadable"`: a validator that has no description, such as one written by hand, so whether it bounds its input cannot be told.
+What is missing. `"unbounded_size"`: an array, a set, a map or a record without a `max` or `length`, a tuple with `rest` and no `max`, or a `file` without a `maxSize`. `"unbounded_text"`: text without a `max` or `length`, a format that does not bound its own text, `json` or `searchParams` given text no step before them bounded, or a `coerceBigint` without a bound on each side, `min` or `gt` and `max` or `lt`, which limit the digits it converts. `"raised_limit"`: a `lazy` whose `maxDepth` or `maxCalls` is above its default. `"unreadable"`: a validator that has no description, such as one written by hand, so whether it bounds its input cannot be told.
 
 ### Description
 

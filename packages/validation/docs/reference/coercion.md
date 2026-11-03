@@ -49,7 +49,7 @@ export declare const coerceBigint: Factory<bigint, BigintOptions, bigint | numbe
 
 Creates a validator for bigints that also accepts safe integers and text holding a decimal integer, converting them, then applies the same constraints as [`bigint`](primitives.md#bigint).
 
-Fractions, numbers beyond `Number.MAX_SAFE_INTEGER` (which have already lost precision), other text, booleans and `null` are rejected. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
+Fractions, numbers beyond `Number.MAX_SAFE_INTEGER` (which have already lost precision), other text, booleans and `null` are rejected. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`. Text with more digits than every bound has is refused by the bound on its side before it is converted, since converting takes longer than linear time in the length of the text.
 
 **Returns** — A validator that produces a bigint.
 

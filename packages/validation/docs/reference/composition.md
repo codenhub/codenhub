@@ -93,7 +93,7 @@ export declare function codec<TInput extends AnyValidator, TOutput extends AnyVa
 
 Creates a validator that reads a value as it is sent, such as text, into the value a program uses, such as a `Date`, and that `encode` can write back.
 
-It validates with `input`, gives what that produced to `decode`, and validates the result with `output`, so both ends are checked: `"2026-02-30"` fails the input, and a `decode` that returns an invalid date fails the output. `encode(validator, value)` runs the other way, through `encode`: it validates the value with `output`, gives what that produced to `encode`, and checks `input` accepts the result. Each function is written for one direction, and a pair of them is what lets a value go back.
+It validates with `input`, gives what that produced to `decode`, and validates the result with `output`, so both ends are checked: `"2026-02-30"` fails the input, and a `decode` that returns an invalid date fails the output. `encode(validator, value)` runs the other way, through `encode`: it writes the value back through `output`, so a codec inside it writes its part first, or checks it with `output` when that cannot be written back, such as a validator written by hand, gives the result to `encode`, and checks `input` accepts what it returns. Each function is written for one direction, and a pair of them is what lets a value go back.
 
 An exception thrown by either function propagates, as a `transform`'s does: it is a bug, not invalid input. Return a value the other validator refuses instead, to fail. Both functions are synchronous: one that returns a promise throws a `TypeError`, since the validator would wait while typed as not waiting, so a rule that waits goes in a check. It is synchronous when both validators are.
 
@@ -133,13 +133,13 @@ Writes a value back to what a validator accepts: a `Date` back to the text a `co
 
 The validator is read with `describe`, and each part written back as its kind says:
 
-- A `codec` validates the value with its output, runs its `encode`, and checks its input accepts the result.
+- A `codec` writes the value back through its output, so a codec inside that writes its part first, or checks it with its output when that cannot be written back, such as a validator written by hand, runs its `encode` on the result, and checks its input accepts what that returns.
 - A part that produces what it accepts, such as `string`, a format or a coercion, validates the value and gives what it produced, so `email()` gives the address as the parser reads it.
 - A composer, such as `object`, `array` or `union`, writes back each of its parts and keeps its options, and runs its checks on the value once its parts passed. A `pipe` writes its steps back from the last.
 - `json` and `searchParams` write the text: JSON, and a query string of each value as text, which they then read back, so text they would refuse fails. JSON holds less than JavaScript does: `NaN` is written as `null`, and a property that is `undefined` is left out, as `JSON.stringify` writes them.
 - `optional` with a default writes the default back as `undefined` when its inner part refuses it, since only `undefined` produced it. A `fallback` value its inner part refuses fails: every input its inner part refuses produces it, and which one was given is not known.
 
-So a value the validator could not have produced fails with the issues it has, at their paths. A part that cannot be written back throws a `TypeError` naming its place: a `transform`, whose function goes one way, and a validator written by hand; use a `codec` there. A coercion writes back the value it produced, which it accepts, so inside `json` a `bigint` from `coerceBigint` cannot be written as JSON: use a codec that writes it as text.
+So a value the validator could not have produced fails with the issues it has, at their paths. A part that cannot be written back throws a `TypeError` naming its place: a `transform`, whose function goes one way, and a validator written by hand; use a `codec` there. A coercion writes back the value it produced, which it accepts, so inside `json` a `bigint` from `coerceBigint` cannot be written as JSON, and throws a `TypeError` naming its place: use a codec that writes it as text.
 
 **Parameters**
 
@@ -152,7 +152,7 @@ So a value the validator could not have produced fails with the issues it has, a
 
 **Returns** — The value as the validator accepts it, or every issue found.
 
-**Throws** — `TypeError` — When `validator` is not a function, or a part of it cannot be written back.
+**Throws** — `TypeError` — When `validator` is not a function, a part of it cannot be written back, or `json` is given a `bigint` to write.
 
 **Example**
 
@@ -174,13 +174,13 @@ export declare function extend<TValidator extends AnyValidator<object>, TShape e
 
 Creates an object validator with the properties of another and those given, as spreading the shape of one into another does for an object made from shapes.
 
-A module that exports an object validator, and not its shape, is extended with this. A property of the same name as one the object has replaces it, in its place. The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, unless options are given here. One with checks is refused: a check reads the whole object and may read a property that is replaced, so give the checks the new object needs here instead.
+A module that exports an object validator, and not its shape, is extended with this. A property of the same name as one the object has replaces it, in its place. The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, and each option given here replaces the one of its name, so a strict object stays strict given only a `message`. One with checks is refused: a check reads the whole object and may read a property that is replaced, so give the checks the new object needs here instead.
 
 **Parameters**
 
 - `validator` — A validator made by `object`, without checks.
 - `shape` — Validator of each property added or replaced.
-- `rest` — Options, replacing those of the object, then checks on the new object.
+- `rest` — Options, each replacing the one of its name in the object, then checks on the new object.
 
 **Type parameters**
 
@@ -649,13 +649,13 @@ export declare function omit<TValidator extends AnyValidator<object>, const TKey
 
 Creates an object validator without the named properties of another.
 
-The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, unless options are given here. One with checks is refused: a check reads the whole object and may read a property that is left out, so give the checks the smaller object needs here instead.
+The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, and each option given here replaces the one of its name, so a strict object stays strict given only a `message`. One with checks is refused: a check reads the whole object and may read a property that is left out, so give the checks the smaller object needs here instead.
 
 **Parameters**
 
 - `validator` — A validator made by `object`, without checks.
 - `keys` — The properties to leave out, each of which the object has.
-- `rest` — Options, replacing those of the object, then checks on the new object.
+- `rest` — Options, each replacing the one of its name in the object, then checks on the new object.
 
 **Type parameters**
 
@@ -747,7 +747,7 @@ const tags = optional(array(string()), () => []);
 export declare function partial<TShape extends Shape>(shape: TShape): PartialShape<TShape>;
 ```
 
-Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object` made, it returns a new object validator, with the same options unless options are given here.
+Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object` made, it returns a new object validator with the same options, each option given here replacing the one of its name.
 
 An object validator with checks is refused, since a check may read a property that is now absent: give the checks the new object needs here instead. What was given is unchanged either way.
 
@@ -776,13 +776,13 @@ const patch = partial(create); // the same, from the validator
 export declare function partial<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: Rest<AllOptional<Infer<TValidator>>, ObjectOptions>): Reshaped<TValidator, AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
 ```
 
-Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object` made, it returns a new object validator, with the same options unless options are given here.
+Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object` made, it returns a new object validator with the same options, each option given here replacing the one of its name.
 
 An object validator with checks is refused, since a check may read a property that is now absent: give the checks the new object needs here instead. What was given is unchanged either way.
 
 **Parameters**
 
-- `rest` — For a validator only: options, replacing those of the object, then checks on the new object.
+- `rest` — For a validator only: options, each replacing the one of its name in the object, then checks on the new object.
 
 **Type parameters**
 
@@ -805,13 +805,13 @@ const patch = partial(create); // the same, from the validator
 export declare function partial<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: AsyncRest<AllOptional<Infer<TValidator>>, ObjectOptions>): AsyncSchema<AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
 ```
 
-Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object` made, it returns a new object validator, with the same options unless options are given here.
+Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object` made, it returns a new object validator with the same options, each option given here replacing the one of its name.
 
 An object validator with checks is refused, since a check may read a property that is now absent: give the checks the new object needs here instead. What was given is unchanged either way.
 
 **Parameters**
 
-- `rest` — For a validator only: options, replacing those of the object, then checks on the new object.
+- `rest` — For a validator only: options, each replacing the one of its name in the object, then checks on the new object.
 
 **Type parameters**
 
@@ -839,13 +839,13 @@ export declare function pick<TValidator extends AnyValidator<object>, const TKey
 
 Creates an object validator with only the named properties of another.
 
-The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, unless options are given here. One with checks is refused: a check reads the whole object and may read a property that is left out, so give the checks the smaller object needs here instead.
+The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, and each option given here replaces the one of its name, so a strict object stays strict given only a `message`. One with checks is refused: a check reads the whole object and may read a property that is left out, so give the checks the smaller object needs here instead.
 
 **Parameters**
 
 - `validator` — A validator made by `object`, without checks.
 - `keys` — The properties to keep, each of which the object has.
-- `rest` — Options, replacing those of the object, then checks on the new object.
+- `rest` — Options, each replacing the one of its name in the object, then checks on the new object.
 
 **Type parameters**
 
@@ -907,7 +907,7 @@ It freezes the value itself and not what is inside it, as `Object.freeze` does a
 - **What a `Map` and a `Set` hold.** A new one is frozen as any other value is, which does not stop `set` or `add`, so only the type keeps them from being changed.
 - **A typed array or a `DataView`.** A typed array cannot be frozen, and freezing a `DataView` would not stop it writing to its buffer.
 
-A value is taken to be the caller's when it is the input itself. When a `transform` or a validator written by hand returns a value from inside the input, such as `(value) => value.tags`, that value is not the input and is frozen: copy it there, `[...value.tags]`, when the caller must keep it changeable.
+A value is taken to be the caller's when it is the input itself. When a `transform` or a validator written by hand returns a value from inside the input, such as `(value) => value.tags`, that value is not the input and is frozen: copy it there, `[...value.tags]`, when the caller must keep it changeable. So is an object it returns from your own data, such as `(key) => cache[key]`, which freezes the entry in `cache`: return a copy there too.
 
 `pick`, `omit`, `required` and `partial` read an `object`, so reshape first and wrap after.
 
@@ -983,12 +983,12 @@ Creates an object validator whose properties are all required, from one where so
 
 A property made with `optional` becomes the validator it wrapped, so its default is gone with it, and one made with `nullish` becomes `nullable`, which still accepts `null`. Any other property is kept as it is: one that accepts `undefined` some other way, such as `unknown()` or a `union` with `literal(undefined)`, still does, though the type says otherwise.
 
-The validator must be one `object` made, and the new object keeps its options unless options are given here. One with checks is refused, since a check may rely on a property being absent: give the checks the new object needs here instead.
+The validator must be one `object` made, and the new object keeps its options, each option given here replacing the one of its name. One with checks is refused, since a check may rely on a property being absent: give the checks the new object needs here instead.
 
 **Parameters**
 
 - `validator` — A validator made by `object`, without checks.
-- `rest` — Options, replacing those of the object, then checks on the new object.
+- `rest` — Options, each replacing the one of its name in the object, then checks on the new object.
 
 **Type parameters**
 
@@ -1217,7 +1217,7 @@ Inherited from [`SizeOptions`](#sizeoptions--min).
 ```ts
 export interface Conversions<TInput extends AnyValidator, TOutput extends AnyValidator> {
     readonly decode: (value: Infer<TInput>) => InferInput<TOutput>;
-    readonly encode: (value: Infer<TOutput>) => InferInput<TInput>;
+    readonly encode: (value: InferInput<TOutput>) => InferInput<TInput>;
 }
 ```
 
@@ -1239,10 +1239,10 @@ From the value as it is sent, once `input` passed it, to the value `output` vali
 #### Conversions › encode
 
 ```ts
-readonly encode: (value: Infer<TOutput>) => InferInput<TInput>;
+readonly encode: (value: InferInput<TOutput>) => InferInput<TInput>;
 ```
 
-From the value as a program uses it, once `output` passed it, to the value `input` validates.
+From the value as `output` writes it back, which is the value a program uses unless `output` holds a codec, to the value `input` validates.
 
 ### FormDataOptions
 
