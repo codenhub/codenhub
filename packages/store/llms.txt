@@ -1,17 +1,13 @@
 # @codenhub/store
 
-> Typed synchronous and asynchronous object stores for browser, Node.js, and
-> Cloudflare persistence. The package and its driver contracts are experimental.
+> Small typed records persisted to key-value backends. One typed object per storage key, with whole-object reads and writes. The package and driver contracts are experimental.
 
-Stores clone state and recover from storage failures through initial-state
-fallbacks and optional error events. Choose a driver appropriate to the runtime;
-only the synchronous browser store has a default driver.
+Use for small records with last-write-wins semantics. Queries, transactions, and cross-process coordination belong in a database. Stores clone state; failed driver reads skip read-modify-write writes, while parse and validation failures can be overwritten with fallback plus changes. Recoverable failures use `store.*` events reported only through the store's `onError`; callback exceptions propagate. `storeErrors` provides optional user-facing registry feedback for every `StoreErrorCode`.
+
+Node.js requires version 24 or newer. Portable values must survive a JSON round-trip. Only sync stores have a default (localStorage) driver. Cloudflare KV can return stale reads even after writes and permits about one write per key per second; prefer Durable Objects for read-modify-write.
 
 ## Documentation
 
-- [Documentation overview](docs/index.md): Scope, stability, entrypoints, and
-  navigation.
-- [Core stores](docs/core-stores.md): Store methods, validation, concurrency,
-  defaults, and failures.
-- [Storage drivers](docs/storage-drivers.md): Browser, memory, Node.js, and
-  Cloudflare driver behavior.
+- [Documentation overview](docs/index.md): Scope, requirements, guarantees boundary, and reading path.
+- [Core stores](docs/core-stores.md): Sync and async methods, snapshots, validation, every error code, and failure handling.
+- [Storage drivers](docs/storage-drivers.md): JSON portability, browser, memory, atomic single-process Node files, Cloudflare limits, and custom drivers.

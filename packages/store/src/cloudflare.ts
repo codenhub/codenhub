@@ -1,5 +1,5 @@
-import { SET_STORAGE_KEY } from "./index";
-import type { AsyncStorageDriver } from "./index";
+import { SET_STORAGE_KEY } from "./core/types";
+import type { AsyncStorageDriver } from "./core/types";
 
 /**
  * Minimal interface representing a Cloudflare KV namespace binding.
@@ -35,6 +35,11 @@ export interface CloudflareKvDriverOptions {
 
 /**
  * An asynchronous storage driver that persists data to a Cloudflare Workers KV namespace.
+ *
+ * KV is eventually consistent: reads can be stale even at the location that just wrote.
+ * Rapid or concurrent `patch`/`setItem` calls can lose updates. KV permits about one write
+ * per key per second; prefer the Durable Object driver for read-modify-write.
+ * Records must survive a JSON round-trip. The store provides no transactions.
  *
  * If KV read/write operations fail or the retrieved string contains invalid JSON,
  * the driver throws or rejects with an error (e.g., `SyntaxError` for malformed JSON),
@@ -102,7 +107,7 @@ export interface CloudflareDurableObjectStorage {
   /**
    * Deletes a key from the transactional storage.
    */
-  delete(key: string): Promise<void>;
+  delete(key: string): Promise<unknown>;
 }
 
 /**
@@ -123,6 +128,8 @@ export interface CloudflareDoDriverOptions {
  * An asynchronous storage driver that persists data to Cloudflare Durable Object storage.
  *
  * Stored state is persisted natively (as a parsed object) instead of stringified JSON.
+ * Prefer this driver over KV for read-modify-write, but coordinate access in your Durable
+ * Object: the store does not wrap operations in a transaction or coordinate other instances.
  * If the transactional storage operations fail, the driver rejects with an error,
  * which is caught and handled by the store.
  *

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createStore, localStorageDriver, memoryDriver } from "./index";
-import type { RemovableStoreKey } from "./index";
+import { createStore, localStorageDriver, memoryDriver } from "../index";
+import type { RemovableStoreKey } from "../index";
 
 describe("Store", () => {
   beforeEach(() => {
@@ -69,7 +69,7 @@ describe("Store", () => {
       const store = createStore({ storageKey: "key-get-malformed", initialState: { name: "fallback" }, onError });
       expect(store.get()).toEqual({ name: "fallback" });
       expect(onError).toHaveBeenCalledWith({
-        code: "storage-parse-failed",
+        code: "store.parse_failed",
         message: 'Failed to parse stored JSON for key "key-get-malformed".',
         storageKey: "key-get-malformed",
         cause: expect.anything(),
@@ -78,8 +78,10 @@ describe("Store", () => {
     });
 
     it("should fall back to initialState without error when localStorage is inaccessible (e.g. SecurityError)", () => {
-      vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-        throw new Error("SecurityError");
+      vi.stubGlobal("localStorage", {
+        getItem() {
+          throw new Error("SecurityError");
+        },
       });
 
       const onError = vi.fn();
@@ -126,8 +128,8 @@ describe("Store", () => {
       const didWrite = store.set({ count: 1 });
       expect(didWrite).toBe(false);
       expect(onError).toHaveBeenCalledWith({
-        code: "storage-write-failed",
-        message: 'Failed to write to localStorage for key "key-set-fail".',
+        code: "store.write_failed",
+        message: 'Driver failed to write value for key "key-set-fail".',
         storageKey: "key-set-fail",
         cause: error,
       });
@@ -137,9 +139,15 @@ describe("Store", () => {
     it("should return false when localStorage is unavailable", () => {
       vi.stubGlobal("localStorage", undefined);
 
-      const store = createStore({ storageKey: "key-set-unavailable", initialState: { count: 0 } });
+      const onError = vi.fn();
+      const store = createStore({ storageKey: "key-set-unavailable", initialState: { count: 0 }, onError });
 
       expect(store.set({ count: 1 })).toBe(false);
+      expect(onError).toHaveBeenCalledExactlyOnceWith({
+        code: "store.write_failed",
+        message: 'Driver failed to write value for key "key-set-unavailable".',
+        storageKey: "key-set-unavailable",
+      });
     });
   });
 
@@ -185,7 +193,7 @@ describe("Store", () => {
 
       const result = store.patch({ b: 99 });
       expect(result).toEqual({ a: 1, b: 99 });
-      expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: "storage-write-failed" }));
+      expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: "store.write_failed" }));
     });
   });
 
@@ -246,7 +254,7 @@ describe("Store", () => {
 
       const result = store.setItem("a", 99);
       expect(result).toEqual({ a: 99, b: 2 });
-      expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: "storage-write-failed" }));
+      expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: "store.write_failed" }));
     });
   });
 
@@ -327,7 +335,7 @@ describe("Store", () => {
 
       const result = store.removeItem("b");
       expect(result).toEqual({ a: 1 });
-      expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: "storage-write-failed" }));
+      expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: "store.write_failed" }));
     });
   });
 
@@ -350,8 +358,8 @@ describe("Store", () => {
       const store = createStore({ storageKey: "key-clear-throws", initialState: { value: "x" }, onError });
       expect(() => store.clear()).not.toThrow();
       expect(onError).toHaveBeenCalledWith({
-        code: "storage-clear-failed",
-        message: 'Failed to clear localStorage for key "key-clear-throws".',
+        code: "store.clear_failed",
+        message: 'Driver failed to clear storage for key "key-clear-throws".',
         storageKey: "key-clear-throws",
         cause: error,
       });
@@ -395,7 +403,7 @@ describe("Store", () => {
       });
       expect(store.get()).toEqual({ name: "default" });
       expect(onError).toHaveBeenCalledWith({
-        code: "storage-validation-failed",
+        code: "store.validation_failed",
         message: 'Stored value for key "key-validate-fail" failed schema validation.',
         storageKey: "key-validate-fail",
       });
@@ -502,14 +510,14 @@ describe("Store", () => {
       store.set({ count: 1 });
       expect(onError).toHaveBeenCalledTimes(1);
       expect(onError).toHaveBeenCalledWith({
-        code: "storage-write-failed",
-        message: 'Failed to write to localStorage for key "key-set-fail-once".',
+        code: "store.write_failed",
+        message: 'Driver failed to write value for key "key-set-fail-once".',
         storageKey: "key-set-fail-once",
         cause: error,
       });
     });
 
-    it("should propagate error to store onError when driver has no onError", () => {
+    it("should report errors to store onError with an explicit driver", () => {
       const error = new DOMException("QuotaExceededError");
       const onError = vi.fn();
       vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
@@ -525,7 +533,7 @@ describe("Store", () => {
       store.set({ count: 1 });
       expect(onError).toHaveBeenCalledTimes(1);
       expect(onError).toHaveBeenCalledWith({
-        code: "storage-write-failed",
+        code: "store.write_failed",
         message: 'Driver failed to write value for key "key-set-fail-manual-driver".',
         storageKey: "key-set-fail-manual-driver",
         cause: error,
