@@ -494,6 +494,6 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
  */
 export function createI18n<TLocale extends string, TMessages = unknown>(
   config: I18nConfig<TLocale, TMessages>,
-): I18n<TLocale, TranslationKey<TMessages>> {
+): I18n<TLocale, TranslationKey<TMessages>, TMessages> {
   return new I18nInstance(config);
 }

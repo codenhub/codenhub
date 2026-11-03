@@ -17,7 +17,9 @@ Durable direction for `@codenhub/i18n`. The repo-wide roadmap is `docs/roadmap.m
 - **Regional fallback (0.2.0).** `pt-BR` falls back to `pt`. Design in [decisions.md](decisions.md#regional-locales-fall-back-to-their-parents-020).
 - **Catch-all route parameters (0.2.0).** `:name*`. Design in [decisions.md](decisions.md#catch-all-parameters-2026-11-02).
 - **ICU messages and formatters (0.2.0).** Design in [decisions.md](decisions.md#icu-messages-and-formatters-020).
+- **Typed values (0.2.0).** From literal dictionaries. Design in [decisions.md](decisions.md#values-are-typed-from-literal-messages-020).
 
 ## Planned
 
 - **Explicit fallback locales**, such as `es-MX` to `es-419`, if an application needs a chain subtags can't express.
+- **A dictionary type generator** for typed values from JSON, if keeping the default language in TypeScript proves impractical.

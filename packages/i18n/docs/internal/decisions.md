@@ -77,6 +77,14 @@ Every text is read as an ICU message: `{name}`, `number` (`integer`, `percent`),
 - **A `Date` is a value**, formatted as `{name, date}`, so a plain `{when}` shows a readable date rather than `Date.prototype.toString()`.
 - **Plural groups stay**: they keep each form an ordinary key, which some translation tools need.
 
+### Values are typed from literal messages (0.2.0)
+
+`t(key, values)` requires the arguments of the message at `key` when the loader's type has the text as a literal, as an `as const` dictionary does, and takes the type each format needs. The message is read at the type level, so it needs no build step.
+
+- **No generator.** TypeScript types JSON string values as `string`, so a JSON default dictionary checks keys only. A `.d.ts` generator, as a CLI or bundler plugin, would cover it, but needs a watch step in every app. Deferred, not rejected: it can be added later without changing these types, since it would only produce a literal dictionary type.
+- **Loose where the type can't know**: a key union, a `string` message, a message the types can't read, and an `I18n` typed without its third type argument accept any values, as before.
+- **Every typed dictionary that has the key contributes**, so a translation that uses another argument requires it too. Extra values are allowed.
+
 ## Browser
 
 ### Detected locales are not persisted

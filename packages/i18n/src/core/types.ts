@@ -1,3 +1,5 @@
+import type { TranslateParams } from "./message-params";
+
 /** Text direction used when rendering a locale. */
 export type LocaleDirection = "ltr" | "rtl";
 
@@ -132,8 +134,10 @@ export interface I18nEventMap<TLocale extends string = string> {
  * @typeParam TLocale - Union of supported canonical locale identifiers.
  * @typeParam TKey - Union of accepted translation keys. Defaults to `string`; `createI18n()` sets it to
  * `TranslationKey<TMessages>` for the loader's dictionary type.
+ * @typeParam TMessages - Dictionary type returned by `loadLocale`. Defaults to `unknown`, which accepts any values;
+ * `createI18n()` sets it, so a literal message, such as one in an `as const` dictionary, requires its arguments.
  */
-export interface I18n<TLocale extends string = string, TKey extends string = string> {
+export interface I18n<TLocale extends string = string, TKey extends string = string, TMessages = unknown> {
   /** Canonical fallback locale. */
   readonly defaultLocale: TLocale;
   /** Frozen copy of supported canonical locales. */
@@ -245,10 +249,10 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * @throws {Error} When called before successful initialization.
    * @throws {TypeError} When the key is empty, not a string, longer than 1,000 characters, or contains ASCII controls.
    */
-  translate(key: TKey, params?: Readonly<Record<string, string | number | Date>>): string;
+  translate<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
 
   /** Short alias of {@link I18n.translate}, the same bound function. */
-  t(key: TKey, params?: Readonly<Record<string, string | number | Date>>): string;
+  t<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
 
   /**
    * Formats a number for the active locale with `Intl.NumberFormat`.

@@ -34,7 +34,9 @@ describe("interpolation", () => {
     const i18n = createTypedI18n();
     await i18n.init();
 
+    // @ts-expect-error -- a literal message requires its values; untyped callers can still omit one.
     expect(i18n.t("cart.count", { count: 3 })).toBe("3 items for {name}");
+    // @ts-expect-error -- as above.
     expect(i18n.t("plain")).toBe("Plain {text}");
   });
 
@@ -43,7 +45,7 @@ describe("interpolation", () => {
     await i18n.init();
     const params = Object.create({ name: "Inherited" }) as Record<string, string>;
 
-    expect(i18n.t("greeting", params)).toBe("Hello, {name}!");
+    expect(i18n.t("greeting", params as unknown as { name: string })).toBe("Hello, {name}!");
   });
 });
 

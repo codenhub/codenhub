@@ -284,6 +284,38 @@ t(`errors.${code}` as Key);
 
 `TranslationKey` is also useful for typing a component prop or helper that takes a key.
 
+### Typed values
+
+When the default dictionary is an `as const` object in a `.ts` file, TypeScript sees each message's text, and `t()` also checks its values:
+
+```ts
+// locales/en.ts
+export default {
+  welcome: "Welcome back, {name}.",
+  total: "Total: {amount, number}",
+  cart: { items: { one: "{count} item", other: "{count} items" } },
+} as const;
+```
+
+```ts
+t("welcome", { name: "Ana" }); // ok
+t("welcome"); // compile error: name is required
+t("total", { amount: "3" }); // compile error: {amount, number} needs a number
+t("cart.items", { count: 2 }); // ok: a plural group requires a numeric count
+```
+
+`number`, `plural`, and `selectordinal` arguments take a number, `date` and `time` take a `Date` or a timestamp, `select` takes a string or number, and a plain `{name}` takes any of these. Extra values are allowed. When several dictionaries are typed, a key needs the values of every one that has it.
+
+A JSON import types every text as `string`, since TypeScript doesn't keep JSON string values, so a JSON dictionary checks keys but accepts any values. To check values, write the default language as `as const` TypeScript and keep the other languages in JSON, typed as the default:
+
+```ts
+import en from "./locales/en";
+
+const loadLocale = async (locale: Locale): Promise<typeof en> => (locale === "en" ? en : (await import(`./locales/${locale}.json`)).default);
+```
+
+The loader's return type is what types `t()`, so a translation must use the same arguments as the default text; the compiler can't check the JSON files. A key chosen at runtime, a message TypeScript can't read, such as one with broken syntax, and a manager typed by hand as `I18n<"en" | "pt", Key>` accept any values. Pass the dictionary type as a third type argument, `I18n<"en" | "pt", Key, typeof en>`, to keep them checked.
+
 If you write the manager's type yourself, as in `let i18n: I18n<"en" | "pt">`, pass the key type too: `I18n<"en" | "pt", Key>`. The second type argument defaults to `string`, which accepts any key. `createI18n()` fills it in for you.
 
 Let TypeScript infer the manager's types from the configuration. Passing some type arguments yourself, such as `createI18n<"en" | "pt">(...)`, turns off inference for the rest, and keys go back to plain `string`.
