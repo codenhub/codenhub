@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   appErrorFromJSON,
+  attempt,
   createAppError,
+  err,
   isAppError,
   DEFAULT_APP_ERROR_MESSAGE,
   createErrorRegistry,
@@ -71,6 +73,7 @@ describe("createAppError — basic normalization", () => {
       messageKey: null,
       source: null,
       isRetryable: false,
+      details: null,
     });
   });
 
@@ -85,24 +88,35 @@ describe("createAppError — basic normalization", () => {
       messageKey: null,
       source: null,
       isRetryable: false,
+      details: null,
     });
     expect(Object.keys(appError.toJSON())).not.toContain("stack");
     // The same projection is what crosses a worker, IPC, or IndexedDB boundary.
     expect(structuredClone(appError.toJSON())).toEqual(appError.toJSON());
   });
 
-  it("should lock every own property of an AppError", () => {
+  it("should lock every own property of an AppError except its stack", () => {
     const appError = createAppError("internal detail");
 
     const changeable = Object.entries(Object.getOwnPropertyDescriptors(appError))
       .filter(([, descriptor]) => descriptor.configurable || descriptor.writable === true)
-      .map(([key]) => key);
+      .map(([key]) => key)
+      .filter((key) => key !== "stack");
 
     expect(changeable).toEqual([]);
     expect(() => {
       (appError as { message: string }).message = "Changed";
     }).toThrow(TypeError);
     expect(Reflect.deleteProperty(appError, "type")).toBe(false);
+  });
+
+  it("should let a library recapture the stack of a caught AppError", () => {
+    // Libraries that rethrow from their own frame call Error.captureStackTrace on the caught
+    // error, which redefines `stack`; a locked stack makes that call throw.
+    const appError = createAppError("internal detail");
+
+    expect(() => Error.captureStackTrace(appError)).not.toThrow();
+    expect(typeof appError.stack).toBe("string");
   });
 
   it("should let a framework annotate a thrown AppError", () => {
@@ -573,6 +587,34 @@ describe("createAppError — re-normalization with options", () => {
     }
   });
 
+  it("should give an unknown AppError the first fallback message a later layer supplies", () => {
+    // An inner layer that names no fallback leaves the default, and an outer layer that knows
+    // the context words it. Once worded, the message stays, so it never alternates.
+    const inner = createAppError(new Error("boom"));
+    const outer = createAppError(inner, { fallbackMessage: "Couldn't load the project." });
+
+    expect(outer.message).toBe("Couldn't load the project.");
+    expect(outer.type).toBe("unknown");
+    expect(outer.originalError).toBe(inner);
+    expect(createAppError(outer, { fallbackMessage: "Something else." })).toBe(outer);
+    expect(createAppError(inner, { fallbackMessage: DEFAULT_APP_ERROR_MESSAGE })).toBe(inner);
+  });
+
+  it("should give a nested unknown AppError the outer fallback message", () => {
+    const inner = createAppError(new Error("boom"));
+    const outer = createAppError(new Error("wrapped", { cause: inner }), { fallbackMessage: "Couldn't save." });
+
+    expect(outer.message).toBe("Couldn't save.");
+    expect(outer.type).toBe("unknown");
+  });
+
+  it("should apply an outer fallback message when a supplied registry matches nothing", () => {
+    const inner = createAppError(new Error("boom"));
+    const outer = createAppError(inner, { registry: createErrorRegistry(), fallbackMessage: "Couldn't save." });
+
+    expect(outer.message).toBe("Couldn't save.");
+  });
+
   it("should return the same AppError when the same registry classifies it again", () => {
     const registry = createErrorRegistry();
     registry.codes.add("code1", { message: "Match" });
@@ -646,7 +688,10 @@ describe("createAppError — re-normalization keeps an existing classification",
 
     expect(createAppError(known, { fallbackMessage: "Login failed." })).toBe(known);
     expect(createAppError(known, { maxDepth: 2 })).toBe(known);
-    expect(createAppError(unknown, { fallbackMessage: "Login failed." })).toBe(unknown);
+    expect(createAppError(unknown, { fallbackMessage: "Login failed." })).toMatchObject({
+      type: "unknown",
+      message: "Login failed.",
+    });
     expect(createAppError(known, { registry: getErrorRegistry() }).message).toBe("Global match.");
   });
 
@@ -957,6 +1002,7 @@ describe("appErrorFromJSON", () => {
       messageKey: null,
       source: null,
       isRetryable: false,
+      details: null,
     });
 
     expect(rebuilt.message).toBe("Sender wording.");
@@ -994,6 +1040,7 @@ describe("appErrorFromJSON", () => {
     messageKey: null,
     source: null,
     isRetryable: true,
+    details: null,
   };
 
   it.each([
@@ -1007,6 +1054,9 @@ describe("appErrorFromJSON", () => {
     ["an empty code", { ...serialized, code: "" }],
     ["an empty messageKey", { ...serialized, messageKey: " " }],
     ["an empty source", { ...serialized, source: "" }],
+    ["a missing details field", { ...serialized, details: undefined }],
+    ["details that are a list", { ...serialized, details: [1] }],
+    ["details that are a string", { ...serialized, details: "field" }],
     ["a code on a heuristic match", { ...serialized, type: "heuristic" }],
     ["a code on an unknown error", { ...serialized, type: "unknown", isRetryable: false }],
     [
@@ -1103,5 +1153,125 @@ describe("createAppError — a supplied registry and a nested AppError", () => {
     const result = createAppError(new Error("layer", { cause: nested }), { registry: createErrorRegistry() });
 
     expect(result.message).toBe("First wording.");
+  });
+});
+
+describe("createAppError — details", () => {
+  it("should carry the supplied details on the error and in its JSON", () => {
+    const appError = createAppError(new Error("invalid"), { details: { field: "email", limits: [1, 2] } });
+
+    expect(appError.details).toEqual({ field: "email", limits: [1, 2] });
+    expect(appError.toJSON().details).toEqual({ field: "email", limits: [1, 2] });
+  });
+
+  it("should default details to null", () => {
+    expect(createAppError("x").details).toBeNull();
+  });
+
+  it("should copy and freeze the details so the caller's object cannot change them", () => {
+    const supplied = { field: "email", nested: { list: ["a"] } };
+    const appError = createAppError("x", { details: supplied });
+
+    supplied.field = "changed";
+    supplied.nested.list.push("b");
+
+    expect(appError.details).toEqual({ field: "email", nested: { list: ["a"] } });
+    expect(Object.isFrozen(appError.details)).toBe(true);
+    expect(Object.isFrozen((appError.details as { nested: object }).nested)).toBe(true);
+  });
+
+  it("should keep a __proto__ key as data without changing the prototype", () => {
+    const supplied = JSON.parse('{"__proto__": {"polluted": true}}') as Record<string, unknown>;
+    const appError = createAppError("x", { details: supplied });
+
+    expect(Object.getPrototypeOf(appError.details)).toBe(Object.prototype);
+    expect(Object.hasOwn(appError.details as object, "__proto__")).toBe(true);
+    expect(({} as { polluted?: boolean }).polluted).toBeUndefined();
+  });
+
+  it.each([
+    ["a list", [1]],
+    ["a string", "email"],
+    ["null", null],
+    ["a class instance", new Date()],
+    ["a function value", { run: () => {} }],
+    ["an undefined value", { field: undefined }],
+    ["a non-finite number", { count: Number.NaN }],
+    ["a bigint", { count: 1n }],
+    ["a nested class instance", { at: new Map() }],
+    ["a sparse list", { list: Object.assign([], { 2: 3 }) }],
+  ])("should reject details that are %s", (_label, details) => {
+    expect(() => createAppError("x", { details } as never)).toThrow(TypeError);
+  });
+
+  it("should reject details nested too deeply, including a cycle", () => {
+    const cyclic: Record<string, unknown> = {};
+    cyclic.self = cyclic;
+    let deep: Record<string, unknown> = {};
+    for (let index = 0; index < 20; index += 1) {
+      deep = { deep };
+    }
+
+    expect(() => createAppError("x", { details: cyclic })).toThrow(TypeError);
+    expect(() => createAppError("x", { details: deep })).toThrow(TypeError);
+  });
+
+  it("should reject invalid details before attempt runs the callback", () => {
+    let ran = false;
+
+    expect(() =>
+      attempt(
+        () => {
+          ran = true;
+        },
+        { details: [1] } as never,
+      ),
+    ).toThrow(TypeError);
+    expect(ran).toBe(false);
+  });
+
+  it("should add new keys to an existing AppError's details and keep the ones it has", () => {
+    const inner = createAppError("x", { details: { field: "email" } });
+    const outer = createAppError(inner, { details: { field: "name", step: "signup" } });
+
+    expect(outer.details).toEqual({ field: "email", step: "signup" });
+    expect(outer.originalError).toBe(inner);
+  });
+
+  it("should return the same AppError when the details add nothing", () => {
+    const inner = createAppError("x", { details: { field: "email" } });
+
+    expect(createAppError(inner, { details: { field: "other" } })).toBe(inner);
+    expect(createAppError(inner, {})).toBe(inner);
+  });
+
+  it("should keep the details when a supplied registry reclassifies the error", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("taken", { message: "That email is taken." });
+    const inner = createAppError({ code: "taken" }, { details: { field: "email" } });
+
+    const outer = createAppError(inner, { registry });
+
+    expect(outer.message).toBe("That email is taken.");
+    expect(outer.details).toEqual({ field: "email" });
+  });
+
+  it("should take the details of a nested AppError", () => {
+    const inner = createAppError("x", { details: { field: "email" } });
+
+    expect(createAppError(new Error("wrapped", { cause: inner })).details).toEqual({ field: "email" });
+  });
+
+  it("should round-trip details through appErrorFromJSON", () => {
+    const sent = createAppError("x", { details: { field: "email", retryAfterSeconds: 30 } });
+    const rebuilt = appErrorFromJSON(JSON.parse(JSON.stringify(sent)));
+
+    expect(isAppError(rebuilt)).toBe(true);
+    expect(rebuilt.details).toEqual({ field: "email", retryAfterSeconds: 30 });
+    expect(Object.isFrozen(rebuilt.details)).toBe(true);
+  });
+
+  it("should carry details through err", () => {
+    expect(err("x", { details: { field: "email" } }).error.details).toEqual({ field: "email" });
   });
 });

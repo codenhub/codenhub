@@ -50,3 +50,6 @@ playwright-report
 .gemini
 .opencode
 docs/plans
+
+# Svelte components the @codenhub/error tests compile
+**/.svelte-test

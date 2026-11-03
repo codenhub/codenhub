@@ -21,6 +21,8 @@ catalog:
   # it raises to ^1.63 still resolves to 1.64, as on #352.
   "@playwright/test": ~1.63.0
   "@types/node": ^26.1.0
+  "@types/react": ^19.0.0
+  "@types/react-dom": ^19.0.0
   "@vitest/coverage-v8": ^4.1.10
   astro: ^7.4.2
   esbuild: ^0.28.1
@@ -32,6 +34,8 @@ catalog:
   oxfmt: ^0.74.0
   oxlint: ^1.89.0
   prettier: ^3.6.0
+  react: ^19.0.0
+  react-dom: ^19.0.0
   tailwindcss: ^4.3.2
   tsdown: ^0.23.2
   typedoc: ^0.28.20

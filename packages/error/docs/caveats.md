@@ -1,7 +1,7 @@
 ---
 title: Caveats and limitations
 description: What ErrorKit does not do, the surprises it can cause, and how to work around each one.
-order: 7
+order: 8
 ---
 
 # Caveats and limitations
@@ -15,6 +15,14 @@ Everything on this page is deliberate, but each item has surprised someone. Each
 **Why:** raw error messages are written for developers and often contain table names, file paths, query fragments, or other people's data. ErrorKit only shows text that someone registered on purpose.
 
 **Instead:** raise your own failures with a registered code, `err({ code: "signup.email_missing" })`, or pass a `fallbackMessage` that fits the place you are in.
+
+## A code nobody registered is lost
+
+**What happens:** `createAppError({ code: "project.name_missing" })` is an `"unknown"` error with `code: null` until that code is registered. A typo in the code, or a mapping added in a file that never ran, fails silently.
+
+**Why:** `code` names the mapping that classified the error, so a branch on it only ever sees codes someone described. Keeping the raw code would also send whatever code a database or service produced to the client in `toJSON()`.
+
+**Instead:** raise your own errors through one object of codes, so a typo is a type error, or check the codes in a test; see [Recipes](recipes.md#raise-your-own-errors).
 
 ## The global registry is shared state
 

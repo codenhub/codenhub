@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  all,
   andThen,
   andThenAsync,
   attempt,
@@ -11,6 +12,8 @@ import {
   mapAsync,
   match,
   ok,
+  orElse,
+  orElseAsync,
   unwrap,
   unwrapOr,
   type Err,
@@ -432,5 +435,99 @@ describe("unwrapOr", () => {
 
   it("should return the fallback value from a failed result", () => {
     expect(unwrapOr(err("failed"), "fallback")).toBe("fallback");
+  });
+});
+
+describe("orElse", () => {
+  it("should run the recovery for an Err and return its Result", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("offline", { message: "You are offline." });
+    const failed: Result<string> = err({ code: "offline" }, { registry });
+
+    const recovered = orElse(failed, (error) => (error.code === "offline" ? ok("cached") : err(error)));
+
+    expect(recovered).toEqual(ok("cached"));
+  });
+
+  it("should pass an Ok through without running the recovery", () => {
+    const success = ok(1);
+    let called = false;
+
+    expect(
+      orElse(success, () => {
+        called = true;
+        return ok(2);
+      }),
+    ).toBe(success);
+    expect(called).toBe(false);
+  });
+
+  it("should return the Err the recovery returns", () => {
+    const first = err(new Error("boom"));
+    const second = err(new Error("other"));
+
+    expect(orElse(first, () => second)).toBe(second);
+  });
+
+  it("should let a recovery throw without normalizing it", () => {
+    expect(() =>
+      orElse(err("x"), () => {
+        throw new Error("recovery failed");
+      }),
+    ).toThrow("recovery failed");
+  });
+});
+
+describe("orElseAsync", () => {
+  it("should await a recovery that returns a promise", async () => {
+    await expect(orElseAsync(err("x"), async () => ok("fresh"))).resolves.toEqual(ok("fresh"));
+  });
+
+  it("should accept a recovery that returns a plain Result", async () => {
+    await expect(orElseAsync(err("x"), () => ok("plain"))).resolves.toEqual(ok("plain"));
+  });
+
+  it("should resolve an Ok as it is", async () => {
+    const success = ok(1);
+    await expect(orElseAsync(success, async () => ok(2))).resolves.toBe(success);
+  });
+
+  it("should reject when the recovery rejects", async () => {
+    await expect(orElseAsync(err("x"), () => Promise.reject(new Error("nope")))).rejects.toThrow("nope");
+  });
+});
+
+describe("all", () => {
+  it("should collect every Ok value in order", () => {
+    const result = all([ok(1), ok("two"), ok(true)] as const);
+
+    expect(result).toEqual(ok([1, "two", true]));
+    if (!result.ok) {
+      throw new Error("Expected an Ok result.");
+    }
+    const [count, label, flag]: readonly [number, string, boolean] = result.value;
+    expect([count, label, flag]).toEqual([1, "two", true]);
+    expect(Object.isFrozen(result.value)).toBe(true);
+  });
+
+  it("should return the first Err", () => {
+    const first = err(new Error("first"));
+    const second = err(new Error("second"));
+
+    expect(all([ok(1), first, second])).toBe(first);
+  });
+
+  it("should return an empty Ok for an empty list", () => {
+    expect(all([])).toEqual(ok([]));
+  });
+
+  it("should combine the results of parallel async calls", async () => {
+    const results = await Promise.all([attemptAsync(async () => 1), attemptAsync(async () => "a")]);
+
+    expect(all(results)).toEqual(ok([1, "a"]));
+  });
+
+  it("should throw TypeError for a value that is not a list", () => {
+    expect(() => all(ok(1) as never)).toThrow(TypeError);
   });
 });

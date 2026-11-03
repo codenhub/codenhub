@@ -278,3 +278,78 @@ export const andThenAsync = async <T, U>(
   }
   return mapper(result.value);
 };
+
+/**
+ * Recovers from a failed Result by running a callback that returns another Result. An `Ok` passes
+ * through untouched.
+ *
+ * Use it to fall back on a specific failure, such as reading a cache when `error.code` says the
+ * reader is offline, and return `err(error)` from the callback for every failure it does not handle.
+ *
+ * @typeParam T - The type of the original success value.
+ * @typeParam U - The type of the recovered success value.
+ * @param result - The Result instance to recover.
+ * @param recover - The function that receives the AppError and returns a new Result.
+ * @returns The original Ok, or the Result returned by `recover`.
+ * @throws The exception thrown by `recover`; callback failures are not normalized.
+ */
+export const orElse = <T, U = T>(result: Result<T>, recover: (error: AppError) => Result<U>): Result<T | U> => {
+  if (result.ok) {
+    return result;
+  }
+  return recover(result.error);
+};
+
+/**
+ * Recovers from a failed Result with a callback that returns another Result or a Promise of one.
+ *
+ * @typeParam T - The type of the original success value.
+ * @typeParam U - The type of the recovered success value.
+ * @param result - The Result instance to recover.
+ * @param recover - The function that receives the AppError and returns a new Result or a Promise of one.
+ * @returns A Promise resolving to the original Ok or the Result returned by `recover`. The promise
+ * rejects if `recover` throws or rejects; callback failures are not normalized.
+ */
+export const orElseAsync = async <T, U = T>(
+  result: Result<T>,
+  recover: (error: AppError) => Result<U> | Promise<Result<U>>,
+): Promise<Result<T | U>> => {
+  if (result.ok) {
+    return result;
+  }
+  return recover(result.error);
+};
+
+/** The success values of a list of Results, position by position. */
+type OkValues<R extends readonly Result<unknown>[]> = {
+  readonly [K in keyof R]: R[K] extends Result<infer V> ? V : never;
+};
+
+/**
+ * Combines a list of Results into one: an `Ok` holding every value in order, or the first `Err`.
+ *
+ * A tuple keeps each position's type, so `all([ok(1), ok("a")] as const)` is a
+ * `Result<readonly [number, string]>`. For calls that run in parallel, await them first:
+ * `all(await Promise.all([attemptAsync(a), attemptAsync(b)]))`.
+ *
+ * @typeParam R - The list of Results to combine.
+ * @param results - The Results to combine.
+ * @returns An Ok holding a frozen list of the values, or the first Err in the list.
+ * @throws {TypeError} If `results` is not a list.
+ */
+export const all = <const R extends readonly Result<unknown>[]>(results: R): Result<OkValues<R>> => {
+  if (!Array.isArray(results)) {
+    throw new TypeError("all expects a list of Results.");
+  }
+
+  const values: unknown[] = [];
+
+  for (const result of results as readonly Result<unknown>[]) {
+    if (!result.ok) {
+      return result;
+    }
+    values.push(result.value);
+  }
+
+  return ok(Object.freeze(values) as unknown as OkValues<R>);
+};

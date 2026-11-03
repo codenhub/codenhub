@@ -5,5 +5,6 @@
  */
 
 export { browserErrorRegistry, browserErrorNames, browserErrorPatterns } from "./browser";
+export { httpErrorRegistry, httpErrorCodes } from "./http";
 export { nodeErrorRegistry, nodeErrorCodes, nodeErrorNames, nodeErrorPatterns } from "./node";
 export { supabaseErrorRegistry, supabaseErrorCodes, supabaseErrorNames } from "./supabase";

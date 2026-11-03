@@ -20,6 +20,7 @@ error.code; // "invalid_credentials"
 error.messageKey; // "error.supabase.auth.invalidCredentials"
 error.source; // "supabase.auth"
 error.isRetryable; // false
+error.details; // null
 error.originalError; // { code: "invalid_credentials" }
 ```
 
@@ -64,13 +65,31 @@ Two consequences are easy to miss:
 - **The flag describes the call that failed, which can sit several wrappers down.** A `publish()` function that uploads a file and then fails to save a record with `ECONNREFUSED` produces a retryable error. That is true of the save, not of `publish()`: repeating `publish()` uploads the file again. Retry on the flag only where your code made the failing call itself.
 - **The flag is about an error your own runtime raised.** A server that forwards its upstream failure as `{ "code": "ECONNREFUSED" }` in a response body matches the same mapping, but that request did reach the server. Classify response bodies against a registry that holds that service's codes and no network preset; see [Recipes](recipes.md#classify-http-responses).
 
+### `details`
+
+Data your code attached on purpose, such as the form field that failed, or `null`. Pass it with the `details` option of `createAppError`, `err`, `attempt`, or `attemptAsync`:
+
+```ts
+getErrorRegistry().codes.add("signup.email_taken", { message: "That email is already registered." });
+
+const result = err({ code: "signup.email_taken" }, { details: { field: "email" } });
+
+result.error.details; // { field: "email" }
+```
+
+It holds JSON values only: strings, finite numbers, booleans, `null`, lists, and plain objects, nested at most eight levels deep. Anything else, such as a `Date` or `undefined`, throws `TypeError`. It is copied and frozen, so changing the object you passed changes nothing.
+
+Unlike the raw error, `details` is part of `toJSON()`, so it reaches a client. It is never read from the value being normalized, only from the option, so nothing gets into it that your code did not put there. Keep anything secret out of it.
+
+When an error passes through several layers, each one can add keys. A key the error already has keeps its value, so a layer never overwrites what an inner one recorded.
+
 ### `originalError` and `cause`
 
 The value you passed to `createAppError`, untouched, for logs and debugging. It is also the error's standard `cause`, so error trackers and Node.js's `console.error` show it without extra work. It is non-enumerable and left out of `JSON.stringify`, so raw details do not leak into a response by accident.
 
 ## An AppError cannot be changed
 
-None of an `AppError`'s own fields can be changed or deleted; trying throws in strict mode. The error stays open to new properties, though, because some frameworks add their own to every error they catch: Koa sets `status`, and hapi's `Boom.boomify` sets `isBoom`. A fully frozen error would make those frameworks throw inside their own error handler.
+None of an `AppError`'s own fields can be changed or deleted; trying throws in strict mode. The `stack` is the one exception: it describes where the error was made, not what it means, and libraries that rethrow an error they caught call `Error.captureStackTrace` on it, which would throw on a locked stack. The error stays open to new properties, though, because some frameworks add their own to every error they catch: Koa sets `status`, and hapi's `Boom.boomify` sets `isBoom`. A fully frozen error would make those frameworks throw inside their own error handler.
 
 `createAppError` and `appErrorFromJSON` are the only ways to make one. Use `isAppError(value)` to check for one; it recognizes only errors made by this copy of the package, not objects that merely look similar.
 
@@ -82,20 +101,29 @@ Code often passes an error through several layers, and each one may call `create
 const first = createAppError(caught, { registry: billingRegistry });
 const again = createAppError(first, { fallbackMessage: "Checkout failed." });
 
-again === first; // true
+again === first; // true, when billingRegistry matched `caught`
 ```
 
-Passing an `AppError` returns the same object, and `fallbackMessage` and `maxDepth` never change it. The one exception is when you pass a `registry`: then the raw value inside is classified again, and the result can only get better. A pattern match replaces an `"unknown"` error, and a known match replaces anything it differs from. Everything else returns the same object.
+Passing an `AppError` returns the same object, and `fallbackMessage` and `maxDepth` never change its classification. A `fallbackMessage` words an `"unknown"` error that still carries the default message, because no layer before it chose any wording; once one has, its message stays:
+
+```ts
+const inner = await attemptAsync(() => db.loadProject(id)); // no fallback here
+const outer = await attemptAsync(() => unwrap(inner), { fallbackMessage: "Couldn't load the project." });
+
+outer.ok || outer.error.message; // "Couldn't load the project."
+```
+
+The one exception to keeping the classification is when you pass a `registry`: then the raw value inside is classified again, and the result can only get better. A pattern match replaces an `"unknown"` error, and a known match replaces anything it differs from. Everything else returns the same object.
 
 An `AppError` wrapped in another error, as in `new Error("checkout failed", { cause: appError })`, follows the same rule: its classification is used as it stands unless you pass a `registry`.
 
 ## Sending an error across a boundary
 
-An `AppError` serializes to exactly seven fields, on every JavaScript engine:
+An `AppError` serializes to exactly eight fields, on every JavaScript engine:
 
 ```ts
 JSON.stringify(error);
-// {"name":"AppError","message":"…","type":"known","code":"23505","messageKey":"…","source":"…","isRetryable":false}
+// {"name":"AppError","message":"…","type":"known","code":"23505","messageKey":"…","source":"…","isRetryable":false,"details":null}
 ```
 
 `originalError` and `cause` are left out on purpose: they can hold secrets, personal data, or cyclic objects.
@@ -124,6 +152,7 @@ To pass an error to a worker, through `postMessage`, `structuredClone`, or Index
 | `fallbackMessage` | `"An unexpected error occurred."` | The message when nothing matches. Must be a non-empty string. |
 | `registry`        | The global registry               | Where to look for matches. See [Registries](registries.md).   |
 | `maxDepth`        | `3`                               | How deep to look inside wrapped errors, from `0` to `3`.      |
+| `details`         | None                              | Data to attach as `details`. See [`details`](#details).       |
 
 At the default depth, a `cause` chain alone is followed further, to a depth of `8`, because a failure wrapped once per layer of an application often sits deeper than three. A lower `maxDepth` stops every field, `cause` included, at that depth.
 

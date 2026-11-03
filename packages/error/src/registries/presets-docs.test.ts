@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { browserErrorNames } from "./browser";
+import { httpErrorCodes } from "./http";
 import { nodeErrorCodes, nodeErrorNames } from "./node";
 import { supabaseErrorCodes, supabaseErrorNames } from "./supabase";
 
@@ -26,6 +27,7 @@ for (const line of presetsPage.split("\n")) {
 describe("presets documentation", () => {
   it.each([
     ...Object.entries(browserErrorNames),
+    ...Object.entries(httpErrorCodes),
     ...Object.entries(nodeErrorCodes),
     ...Object.entries(nodeErrorNames),
     ...Object.entries(supabaseErrorCodes),

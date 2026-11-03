@@ -39,6 +39,7 @@ A failure nobody registered becomes `type: "unknown"` with the message `"An unex
 
 - [Overview](docs/index.md): what the package does and a five-minute tour.
 - [Getting started](docs/getting-started.md): set up a real application step by step.
+- [Error boundaries](docs/frameworks.md): React and Svelte fallbacks that show a normalized error.
 - [Recipes](docs/recipes.md): HTTP status codes, Supabase, retries, translations, and error reporting.
 - [Caveats and limitations](docs/caveats.md): what the package does not do, and the workarounds.
 - [API reference](docs/reference/index.md): every export, generated from the source.
@@ -47,7 +48,7 @@ A failure nobody registered becomes `type: "unknown"` with the message `"An unex
 
 - Node.js 24 or newer, or an ES2022-compatible browser, worker, or edge runtime with native `Error` `cause` support.
 - ESM. CommonJS can load it with `require()` on runtimes that support requiring ES modules.
-- No runtime dependencies, and no access to browser or Node.js globals.
+- No runtime dependencies, and no access to browser or Node.js globals. The React and Svelte adapters need their framework, an optional peer dependency.
 
 ## Notes
 

@@ -1,6 +1,6 @@
 ---
 status: DRAFT
-last_updated: 2026-10-18
+last_updated: 2026-11-03
 scope: `@codenhub/error` direction.
 ---
 
@@ -13,4 +13,3 @@ Durable direction for `@codenhub/error`. The repo-wide roadmap is `docs/roadmap.
 ## Planned
 
 - **Canonical translation map** for the built-in presets' message keys.
-- **Framework error-boundary adapters.**

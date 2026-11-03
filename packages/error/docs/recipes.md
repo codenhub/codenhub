@@ -1,7 +1,7 @@
 ---
 title: Recipes
-description: Worked examples for fetch and HTTP status codes, Supabase calls, safe retries, translations, error reporting, and tests.
-order: 6
+description: Worked examples for fetch and HTTP status codes, Supabase calls, your own error codes, safe retries, translations, error reporting, and tests.
+order: 7
 ---
 
 # Recipes
@@ -12,19 +12,11 @@ Each recipe here solves one problem from start to finish. Copy the parts you nee
 
 `fetch` only rejects when the request could not be made at all. A response with status `404` or `500` resolves normally, so `createAppError(response)` has nothing to recognize and returns an `"unknown"` error. Status codes need a mapping of their own.
 
-A numeric `code` is compared as text, so a registry keyed by status works directly. Keep it separate from the global registry: status codes are short numbers that could collide with other services' codes, and they only mean something for responses.
+Pass the status as the `code` and classify it against the HTTP preset. Keep that preset out of the global registry: status codes are short numbers that could collide with other services' codes, and they only mean something for responses.
 
 ```ts
-import { attemptAsync, createErrorRegistry, err, type Result } from "@codenhub/error";
-
-const httpRegistry = createErrorRegistry();
-
-httpRegistry.codes.addList([
-  ["401", { message: "Your session has ended. Sign in again to continue.", messageKey: "error.http.unauthorized" }],
-  ["403", { message: "You don't have access to this.", messageKey: "error.http.forbidden" }],
-  ["404", { message: "We couldn't find what you were looking for.", messageKey: "error.http.notFound" }],
-  ["429", { message: "Too many requests. Wait a minute, then try again.", messageKey: "error.http.rateLimited" }],
-]);
+import { attemptAsync, err, type Result } from "@codenhub/error";
+import { httpErrorRegistry } from "@codenhub/error/registries/http";
 
 export async function getJson<T>(url: string): Promise<Result<T>> {
   const sent = await attemptAsync(() => fetch(url));
@@ -37,14 +29,14 @@ export async function getJson<T>(url: string): Promise<Result<T>> {
 
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null);
-    return err({ code: response.status, cause: body }, { registry: httpRegistry });
+    return err({ code: response.status, cause: body }, { registry: httpErrorRegistry });
   }
 
   return attemptAsync(() => response.json() as Promise<T>);
 }
 ```
 
-Passing the body as `cause` keeps it on `originalError` for your logs. An unmapped status, such as `500`, resolves to the fallback message.
+Passing the body as `cause` keeps it on `originalError` for your logs. A status the preset does not map, such as `418`, resolves to the fallback message. [Presets](presets.md#http) lists what it maps. To word a status for one endpoint, such as a `401` from a sign-in form, build a registry from the preset and add your own: `createErrorRegistry([httpErrorRegistry])`, then `.codes.add("401", …)`.
 
 When the server is your own and sends `error.toJSON()`, rebuild its error instead: `appErrorFromJSON(body.error)`. See [The AppError](app-error.md#sending-an-error-across-a-boundary).
 
@@ -73,6 +65,31 @@ if (!result.ok && result.error.code === "email_not_confirmed") {
 ```
 
 Database errors work the same way: `supabase.from("projects").insert(row)` returns an `error` whose `code` is a PostgreSQL code such as `"23505"`.
+
+## Raise your own errors
+
+An error you raise with a code is only as good as its registration: `err({ code: "project.name_mising" })`, with a typo or a mapping nobody added, is an `"unknown"` error whose `code` is `null`, and a check for `error.code === "project.name_missing"` never fires. Nothing warns you.
+
+Keep your codes and their feedback in one object, register it from there, and raise errors through a function that only accepts its keys. A typo is then a type error, and every code you can raise is registered:
+
+```ts
+import { err, getErrorRegistry, type ErrorFeedback } from "@codenhub/error";
+
+export const projectErrors = {
+  "project.name_missing": { message: "Give the project a name, then save again.", source: "my-app.projects" },
+  "project.not_found": { message: "We couldn't find that project.", source: "my-app.projects" },
+} satisfies Record<string, ErrorFeedback>;
+
+export type ProjectErrorCode = keyof typeof projectErrors;
+
+getErrorRegistry().codes.addList(Object.entries(projectErrors));
+
+export const projectError = (code: ProjectErrorCode, details?: Record<string, unknown>) => err({ code }, { details });
+```
+
+Then `projectError("project.name_missing", { field: "name" })` reads like what it is, and `error.code` can be compared with a `ProjectErrorCode`.
+
+When codes are registered in more than one place, check them in a test instead; see [Set up errors in tests](#set-up-errors-in-tests).
 
 ## Retry safely
 
@@ -172,3 +189,18 @@ beforeEach(() => {
 ```
 
 Assert on `code`, `messageKey`, or `type` rather than on `message`. Messages are written for people and get reworded; codes and keys are the stable part.
+
+To catch a code your application raises but never registered, list them and check each one against the registry your application builds at startup:
+
+```ts
+import { getErrorRegistry } from "@codenhub/error";
+import { expect, it } from "vitest";
+
+import { RAISED_CODES } from "../src/errors";
+import { setUpErrors } from "../src/setup-errors";
+
+it.each(RAISED_CODES)("registers %s", (code) => {
+  setUpErrors();
+  expect(getErrorRegistry().codes.get(code)).toBeDefined();
+});
+```
