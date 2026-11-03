@@ -12,9 +12,18 @@ const UNITS: Readonly<Record<string, string>> = {
   set: " items",
   map: " items",
   record: " keys",
+  depth: " levels deep",
 };
 
 const limit = (params: Readonly<Record<string, unknown>>, isMin: boolean): string => {
+  const bound = params[isMin ? "minimum" : "maximum"];
+  const type = String(params["type"]);
+  // A date is written as its moment in UTC, so the text does not depend on the clock of the machine.
+  const shown = bound instanceof Date ? bound.toISOString() : String(bound);
+  if (type === "issues") {
+    // The limit of what a collection reports is the package's, not a size of the input.
+    return `Stopped after ${shown} problems`;
+  }
   const wording =
     params["exact"] === true
       ? "exactly"
@@ -25,8 +34,7 @@ const limit = (params: Readonly<Record<string, unknown>>, isMin: boolean): strin
         : isMin
           ? "at least"
           : "at most";
-  const type = String(params["type"]);
-  return `Must be ${wording} ${String(params[isMin ? "minimum" : "maximum"])}${Object.hasOwn(UNITS, type) ? UNITS[type] : ""}`;
+  return `Must be ${wording} ${shown}${Object.hasOwn(UNITS, type) ? UNITS[type] : ""}`;
 };
 
 /**
@@ -48,9 +56,16 @@ export function brief(issue: ValidationIssue): string {
     case "invalid_format":
       return `Invalid ${String(params["format"])}`;
     case "invalid_value":
-      return params["format"] === "int" || params["format"] === "safeInt" ? "Must be an integer" : "Invalid value";
+      return params["format"] === "multipleOf"
+        ? `Must be a multiple of ${String(params["value"])}`
+        : params["format"] === "int" || params["format"] === "safeInt"
+          ? "Must be an integer"
+          : "Invalid value";
+    case "invalid_key":
+      return "Invalid key";
     case "unrecognized_key":
-      return `Unrecognized key ${JSON.stringify(params["key"])}`;
+      // The key is the last segment of the path, where a reader of a Standard Schema shows it.
+      return "Unrecognized key";
     case "invalid_union":
       return "Does not match any allowed type";
     default:

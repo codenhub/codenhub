@@ -29,8 +29,26 @@ describe("brief", () => {
     [at("invalid_value", { type: "number", format: "int" }), "Must be an integer"],
     [at("invalid_value", { type: "number", format: "safeInt" }), "Must be an integer"],
     [at("invalid_value", { expected: "a" }), "Invalid value"],
-    [at("unrecognized_key", { key: "role" }), 'Unrecognized key "role"'],
+    // The key is the last segment of the path, so the message holds no text the sender chose.
+    [at("unrecognized_key", { key: "role" }), "Unrecognized key"],
+    [at("unrecognized_key", { key: "a\u2028b\u0085c\nd" }), "Unrecognized key"],
     [at("invalid_union", { issues: [] }), "Does not match any allowed type"],
+    // A check is named by its format; what it asks is worded by englishMessages, which no validator carries.
+    [at("invalid_format", { format: "startsWith", value: "ab" }), "Invalid startsWith"],
+    [at("invalid_format", { format: "constructor" }), "Invalid constructor"],
+    [at("invalid_value", { type: "number", format: "multipleOf", value: 5 }), "Must be a multiple of 5"],
+    [at("invalid_key", { issues: [] }), "Invalid key"],
+    [at("too_big", { maximum: 1000, type: "issues" }), "Stopped after 1000 problems"],
+    [at("too_big", { maximum: 128, type: "depth" }), "Must be at most 128 levels deep"],
+    // A date is written in UTC, so the text is the same on every machine.
+    [
+      at("too_small", { minimum: new Date(0), inclusive: true, type: "date" }),
+      "Must be at least 1970-01-01T00:00:00.000Z",
+    ],
+    [
+      at("too_big", { maximum: "2026-01-01T00:00:00.000Z", inclusive: true, type: "date" }),
+      "Must be at most 2026-01-01T00:00:00.000Z",
+    ],
     [at("custom"), "Invalid value"],
     [at("a code of its own"), "Invalid value"],
   ])("should word %j as %j", (issue, worded) => {
