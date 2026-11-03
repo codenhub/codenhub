@@ -1,3 +1,8 @@
+/**
+ * Serve OpenID Connect endpoints and issue tokens through the Fetch API.
+ *
+ * @packageDocumentation
+ */
 export { createProvider } from "./provider/create-provider";
 export { generateClientSecret, hashClientSecret } from "./provider/secrets";
 export type {

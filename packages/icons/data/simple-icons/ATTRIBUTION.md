@@ -1,7 +1,7 @@
 # Simple Icons
 
 Icon artwork in `simple-icons` comes from Simple Icons, generated from
-`simple-icons@16.35.0`.
+`simple-icons@16.36.0`.
 
 - Author: [Simple Icons Collaborators](https://simpleicons.org)
 - License: [CC0 1.0 Universal (CC0-1.0)](https://github.com/simple-icons/simple-icons/blob/develop/LICENSE.md)

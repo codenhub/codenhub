@@ -1,5 +1,6 @@
 ---
 title: "@codenhub/oidc"
+description: "Shared result, claim, and protocol types for OpenID Connect clients and providers."
 group: "Reference"
 ---
 

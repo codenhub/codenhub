@@ -176,7 +176,7 @@ describe("jwt", () => {
   });
 
   it("should reject a header whose text starts with a byte order mark, which a JSON parser reads as text", () => {
-    const withMark = "77u_eyJhbGciOiJhIn0"; // ﻿{"alg":"a"}
+    const withMark = "77u_eyJhbGciOiJhIn0"; // \uFEFF{"alg":"a"}
     expect(accepts(jwt(), `${withMark}.${payload}.c2ln`, `eyJhbGciOiJhIn0.${payload}.c2ln`)).toEqual([false, true]);
   });
 

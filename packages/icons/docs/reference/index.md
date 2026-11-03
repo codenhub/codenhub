@@ -1,5 +1,6 @@
 ---
 title: "@codenhub/icons"
+description: "Resolve icon families and render their artwork as SVG or CSS masks."
 group: "Reference"
 ---
 

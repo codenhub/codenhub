@@ -1,5 +1,6 @@
 ---
 title: "/vite"
+description: "Deliver the icons your Vite app uses as CSS masks or inline SVG."
 order: 2
 ---
 

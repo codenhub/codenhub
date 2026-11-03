@@ -1,3 +1,8 @@
+/**
+ * Resolve icon families and render their artwork as SVG or CSS masks.
+ *
+ * @packageDocumentation
+ */
 export { IconRegistry } from "./core/registry.js";
 export { resolveIconClassName } from "./core/class-names.js";
 export { renderSvg, setStrokeWidth } from "./core/render.js";

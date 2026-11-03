@@ -7,13 +7,13 @@ packages:
 
 catalog:
   "@astrojs/check": ^0.9.12
-  "@astrojs/markdown-remark": 7.3.4
+  "@astrojs/markdown-remark": 7.3.5
   "@cloudflare/workers-types": ^5.20261019.1
   "@codenhub/error": ^0.3.0
   "@codenhub/jwt": ^0.0.1
   "@codenhub/store": ^0.0.2
   "@codenhub/styles": ^0.6.0
-  "@codenhub/theme": ^0.1.2
+  "@codenhub/theme": ^0.2.2
   "@codenhub/validation": ^0.3.0
   "@tauri-apps/api": ^2.0.0
   "@tailwindcss/cli": ^4.3.2
@@ -21,29 +21,35 @@ catalog:
   # Tilde, not caret: Dependabot holds the target below 1.64 (`.github/dependabot.yml`), but a caret range
   # it raises to ^1.63 still resolves to 1.64, as on #352.
   "@playwright/test": ~1.63.0
-  "@types/node": ^26.1.0
+  "@types/node": ^26.6.6
   "@types/react": ^19.0.0
   "@types/react-dom": ^19.0.0
   "@vitest/coverage-v8": ^4.1.10
-  astro: ^7.4.2
+  astro: ^7.4.4
   esbuild: ^0.28.1
-  jose: ^6.2.13
-  oidc-provider: ^9.13.0
+  jose: ^6.2.14
+  oidc-provider: ^9.13.3
   openid-client: ^6.8.8
   jsdom: ^30.1.3
-  miniflare: ^5.20261012.1-beta
-  oxfmt: ^0.74.0
-  oxlint: ^1.89.0
+  miniflare: ^5.20261023.3-beta
+  oxfmt: ^0.75.0
+  oxlint: ^1.90.0
   prettier: ^3.6.0
   react: ^19.0.0
   react-dom: ^19.0.0
   tailwindcss: ^4.3.2
-  tsdown: ^0.23.2
+  tsdown: ^0.23.4
   typedoc: ^0.28.20
   typescript: ^6.0.3
   vite: ^8.3.5
   vitest: ^4.1.10
-  wrangler: ^4.152.0
+  wrangler: ^4.156.0
+
+# TypeDoc still requires minimatch 10, which is affected by GHSA-g3hv-75wg-m249.
+# The TypeDoc patch adapts its glob walker to minimatch 11. Remove both once
+# TypeDoc requires minimatch >=11.0.1.
+overrides:
+  "typedoc>minimatch": ^11.0.4
 
 blockExoticSubdeps: true
 trustPolicy: no-downgrade
@@ -67,3 +73,6 @@ minimumReleaseAgeExclude:
   - "@codenhub/validation@0.3.0"
   - "@codenhub/jwt@0.0.1"
   - "@codenhub/error@0.3.0"
+  - "@codenhub/theme@0.2.2"
+patchedDependencies:
+  typedoc@0.28.20: patches/typedoc@0.28.20.patch
