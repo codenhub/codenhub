@@ -23,7 +23,8 @@ type ExtendedInput<T, TShape extends Shape> = Simplify<Omit<T, keyof TShape> & I
  * A module that exports an object validator, and not its shape, is extended with this. A property of the
  * same name as one the object has replaces it, in its place. The validator must be one `object` made,
  * since its shape is read from what it describes itself with. The new object keeps its options,
- * `unknownKeys` and `message`, unless options are given here. One with checks is refused: a check reads
+ * `unknownKeys` and `message`, and each option given here replaces the one of its name, so a strict object
+ * stays strict given only a `message`. One with checks is refused: a check reads
  * the whole object and may read a property that is replaced, so give the checks the new object needs here
  * instead.
  *
@@ -38,7 +39,7 @@ type ExtendedInput<T, TShape extends Shape> = Simplify<Omit<T, keyof TShape> & I
  * @typeParam TShape - The validators of the properties added.
  * @param validator - A validator made by `object`, without checks.
  * @param shape - Validator of each property added or replaced.
- * @param rest - Options, replacing those of the object, then checks on the new object.
+ * @param rest - Options, each replacing the one of its name in the object, then checks on the new object.
  * @returns A validator made by `object`, of the properties of both.
  * @throws {TypeError} When the validator was not made by `object` or has checks, or `shape` is not a plain
  * object of validators.

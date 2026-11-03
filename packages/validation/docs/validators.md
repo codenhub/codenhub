@@ -666,7 +666,7 @@ const admin = extend(user, { admin: boolean() }); // every property of user, and
 - `extend(validator, shape)` adds the properties of `shape`, as spreading one shape into another does: a property the object has is replaced by the one given, in its place.
 - `required(validator)` makes every property required: one made with `optional` becomes the validator it wrapped, so its default is removed too and a missing property fails, and one made with `nullish` becomes `nullable`, which still accepts `null`. A property that accepts `undefined` some other way, such as `unknown()`, is kept as it is.
 
-The new object keeps the options of the one it came from, `unknownKeys` and `message`, and takes options and checks of its own after its arguments, as `object` does: `pick(user, ["name"], { unknownKeys: "strict" }, check(...))`.
+The new object keeps the options of the one it came from, `unknownKeys` and `message`, and takes options and checks of its own after its arguments, as `object` does: `pick(user, ["name"], { unknownKeys: "strict" }, check(...))`. Each option given replaces the one of its name and leaves the others, so a strict object picked from with only a `message` stays strict.
 
 An object with checks is refused with a `TypeError`. A check reads the whole object, so it may read a property the new object lacks: kept, it could fail every value, and dropped without a word, the new object would accept what the first was written to refuse. Make the object without its checks, derive from that, and give each result the checks it needs.
 
