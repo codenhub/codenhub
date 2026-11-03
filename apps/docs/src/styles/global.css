@@ -68,9 +68,8 @@ html {
 }
 
 .package-tab-icon {
-  @apply size-4 shrink-0 fill-none stroke-current stroke-2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  @apply shrink-0;
+  --ic-size: 1rem;
 }
 
 .package-tab-outbound {
