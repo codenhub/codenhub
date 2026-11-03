@@ -45,14 +45,15 @@ export default defineConfig({
   vite: {
     plugins: [
       tailwindcss(),
-      /* Chrome icons for the shared shell. CSS mode: the shell's `<i class="ic-…">`
-         markup resolves under node_modules, which the plugin's scan skips, so its
-         classes reach the generated stylesheet through the `content` glob. */
+      /* Inline SVG mode: every literal `<i class="ic-…">` tag in this app and the
+         shared shell becomes an `<svg>` at build time. CSS mode generated its
+         stylesheet before Astro bundled the client scripts, so icons only those
+         scripts named got no mask rule and rendered as solid squares. An icon
+         chosen at runtime comes from a `virtual:@codenhub/icons/…` module. */
       viteIcons({
-        mode: "css",
+        mode: "svg",
         families: [lucide, simpleIcons],
         defaultPrefix: "lucide",
-        content: [path.join(packagesRoot, "app-shell/src/**/*.astro")],
       }),
     ],
   },

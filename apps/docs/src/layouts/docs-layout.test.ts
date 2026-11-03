@@ -130,7 +130,19 @@ describe("documentation chrome", () => {
     const chromeLabels = html.match(/class="package-navigation-title"[^>]*>.*?ValidationKit.*?Experimental.*?<\/div>/g);
 
     expect(chromeLabels).toHaveLength(2);
-    expect(html).toContain('<i aria-hidden="true" class="ic-lucide-flask-conical status-badge-icon"></i>Experimental');
+    expect(html).toMatch(
+      /<svg aria-hidden="true" class="ic-lucide-flask-conical status-badge-icon"[^>]*>.*?<\/svg>Experimental/,
+    );
+  });
+
+  it("inlines every icon as SVG, leaving no icon tag the plugin did not rewrite", async () => {
+    // In svg mode an unrewritten `<i class="ic-…">` has no stylesheet behind it
+    // and renders as nothing.
+    const pages = await Promise.all(["error/index.html", "toaster/index.html", "404.html"].map(readOutput));
+
+    for (const html of pages) {
+      expect(html).not.toMatch(/<i [^>]*class="[^"]*ic-/);
+    }
   });
 
   it("groups a package's folder pages into collapsible sections, open on the active one", async () => {

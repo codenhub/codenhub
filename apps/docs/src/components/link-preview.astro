@@ -22,16 +22,51 @@
 
 <script>
   import { createCopyController } from "@codenhub/app-shell/copy-feedback";
+  import arrowRight from "virtual:@codenhub/icons/lucide/arrow-right";
+  import check from "virtual:@codenhub/icons/lucide/check";
+  import chevronRight from "virtual:@codenhub/icons/lucide/chevron-right";
+  import copy from "virtual:@codenhub/icons/lucide/copy";
+  import externalLink from "virtual:@codenhub/icons/lucide/external-link";
+  import mail from "virtual:@codenhub/icons/lucide/mail";
+  import phone from "virtual:@codenhub/icons/lucide/phone";
 
   import { placeFloating } from "../lib/floating-position";
   import type { LinkPreviewIndex } from "../lib/link-preview/build-index";
-  import { describeLink, type LinkPreview, type LinkPreviewAction } from "../lib/link-preview/describe-link";
+  import {
+    describeLink,
+    type LinkPreview,
+    type LinkPreviewAction,
+    type LinkPreviewIcon,
+  } from "../lib/link-preview/describe-link";
 
   /** Hover intent: long enough that sweeping the pointer across a paragraph opens nothing. */
   const OPEN_DELAY_MS = 450;
   /** Grace period to cross the gap from the link into the card. */
   const CLOSE_DELAY_MS = 200;
   const LINK_SELECTOR = ".markdown-content a[href]:not(.heading-anchor)";
+
+  // The card builds its markup at runtime, which the icons plugin's svg mode
+  // cannot see, so each icon arrives as its own rendered module.
+  const ICONS: Record<LinkPreviewIcon | "check" | "chevron-right", string> = {
+    "arrow-right": arrowRight,
+    check,
+    "chevron-right": chevronRight,
+    copy,
+    "external-link": externalLink,
+    mail,
+    phone,
+  };
+
+  const renderIcon = (name: keyof typeof ICONS, className?: string): Element => {
+    const template = document.createElement("template");
+    template.innerHTML = ICONS[name];
+    const icon = template.content.firstElementChild!;
+    icon.setAttribute("aria-hidden", "true");
+    if (className !== undefined) {
+      icon.classList.add(className);
+    }
+    return icon;
+  };
 
   const card = document.querySelector<HTMLElement>("[data-link-preview]");
   const supportsPopover = typeof HTMLElement.prototype.showPopover === "function";
@@ -83,13 +118,9 @@
           control.rel = "noopener";
         }
       }
-      const icon = document.createElement("i");
-      icon.setAttribute("aria-hidden", "true");
-      icon.className = action.icon;
-      const copiedIcon = document.createElement("i");
-      copiedIcon.setAttribute("aria-hidden", "true");
-      copiedIcon.className = "ic-lucide-check link-preview-copied-icon";
-      control.append(icon, ...(action.kind === "copy" ? [copiedIcon] : []), action.label);
+      const icon = renderIcon(action.icon);
+      const copiedIcon = action.kind === "copy" ? [renderIcon("check", "link-preview-copied-icon")] : [];
+      control.append(icon, ...copiedIcon, action.label);
       return control;
     };
 
@@ -101,10 +132,7 @@
           if (index === 0) {
             return [label];
           }
-          const separator = document.createElement("i");
-          separator.setAttribute("aria-hidden", "true");
-          separator.className = "ic-lucide-chevron-right";
-          return [separator, label];
+          return [renderIcon("chevron-right"), label];
         }),
       );
       title.textContent = preview.title;
