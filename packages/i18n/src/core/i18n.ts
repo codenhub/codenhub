@@ -1,7 +1,18 @@
+import { createFallbackChains } from "../locale/fallback";
 import { createLocaleLoader, type LocaleLoader } from "../locale/loader";
 import { matchConfiguredLocale } from "../locale/matching";
 import { validateI18nConfig, type ValidatedI18nConfig } from "../locale/resolution";
 import { registerI18nInternals } from "./internals";
+import {
+  formatMessage,
+  getDateTimeFormat,
+  getNumberFormat,
+  intlLocale,
+  isPlainMessage,
+  MessageSyntaxError,
+  type MessageValues,
+  parseCachedMessage,
+} from "./message-format";
 import { hasAsciiControlCharacter } from "./string-validation";
 import type {
   I18n,
@@ -15,18 +26,25 @@ import type {
   TranslationKey,
 } from "./types";
 
-interface RequiredDictionaries {
-  readonly current: LocaleDictionary;
-  readonly fallback: LocaleDictionary;
+/** A dictionary in the fallback chain, with the locale whose plural rules it uses. */
+interface ChainDictionary<TLocale extends string> {
+  readonly locale: TLocale;
+  readonly dictionary: LocaleDictionary;
 }
 
 const MAX_MISSING_KEY_DIAGNOSTICS = 1_000;
+const MAX_MESSAGE_DIAGNOSTICS = 1_000;
 const MAX_TRANSLATION_KEY_LENGTH = 1_000;
 const PLACEHOLDER_PATTERN = /{([A-Za-z0-9_]+)}/g;
 
-type TranslationParams = Readonly<Record<string, string | number>>;
+/** A translation found in the fallback chain, with the locale of the dictionary that has it. */
+interface FoundTranslation<TLocale extends string> {
+  readonly text: string;
+  readonly locale: TLocale;
+}
 
-const interpolate = (text: string, params: TranslationParams): string =>
+/** Fills only `{name}` placeholders, as a message that is not valid ICU syntax is shown. */
+const interpolate = (text: string, params: MessageValues): string =>
   text.replace(PLACEHOLDER_PATTERN, (placeholder, name: string) => {
     const value: unknown = Object.hasOwn(params, name) ? params[name] : undefined;
     return typeof value === "string" || typeof value === "number" ? String(value) : placeholder;
@@ -68,8 +86,8 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
   private currentLocale: TLocale;
   private currentDirection: LocaleDirection;
   private isReadyState = false;
-  private currentDictionary: LocaleDictionary | undefined;
-  private defaultDictionary: LocaleDictionary | undefined;
+  private dictionaries: readonly ChainDictionary<TLocale>[] | undefined;
+  private readonly fallbackChains: ReadonlyMap<TLocale, readonly TLocale[]>;
   private requestId = 0;
   private readonly warnedMissingKeys = new Map<string, undefined>();
   private readonly pluralRules = new Map<TLocale, Intl.PluralRules | undefined>();
@@ -77,7 +95,8 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
   private readonly config: ValidatedI18nConfig<TLocale>;
   private readonly loader: LocaleLoader<TLocale>;
 
-  readonly t: (key: string, params?: TranslationParams) => string;
+  readonly t: (key: string, params?: MessageValues) => string;
+  private readonly warnedMessages = new Set<string>();
 
   constructor(config: I18nConfig<TLocale>) {
     super();
@@ -89,6 +108,10 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     this.matchLocale = this.matchLocale.bind(this);
     this.translate = this.translate.bind(this);
     this.subscribe = this.subscribe.bind(this);
+    this.formatNumber = this.formatNumber.bind(this);
+    this.formatDate = this.formatDate.bind(this);
+    this.formatRelativeTime = this.formatRelativeTime.bind(this);
+    this.formatList = this.formatList.bind(this);
     this.addEventListener = this.addEventListener.bind(this) as I18nInstance<TLocale>["addEventListener"];
     this.removeEventListener = this.removeEventListener.bind(this) as I18nInstance<TLocale>["removeEventListener"];
     this.t = this.translate;
@@ -99,13 +122,17 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     this.currentLocale = this.defaultLocale;
     this.currentDirection = this.resolveLocaleDirection(this.defaultLocale);
     this.localeLookup = new Map(this.locales.map((locale) => [locale.toLowerCase(), locale]));
+    this.fallbackChains = createFallbackChains(this.locales, this.defaultLocale);
     this.loader = createLocaleLoader({
       loadLocale: this.config.loadLocale,
       dictionaryLimits: this.config.dictionaryLimits,
     });
     registerI18nInternals(this, {
       init: (options) => this.applyInit(options as I18nInitOptions<TLocale>),
-      lookup: (key) => this.lookup(key),
+      lookup: (key) => {
+        const found = this.lookup(key);
+        return found === undefined ? undefined : this.format(key, found, {});
+      },
     });
   }
 
@@ -145,15 +172,63 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     await this.applyInit(options);
   }
 
-  translate(key: string, params?: TranslationParams): string {
+  translate(key: string, params?: MessageValues): string {
     const count = params !== undefined && Object.hasOwn(params, "count") ? params["count"] : undefined;
-    const translation = this.lookup(key, typeof count === "number" ? count : undefined);
+    const found = this.lookup(key, typeof count === "number" ? count : undefined);
 
-    if (translation === undefined) {
-      return key.trim();
+    return found === undefined ? key.trim() : this.format(key, found, params ?? {});
+  }
+
+  formatNumber(value: number | bigint, options?: Intl.NumberFormatOptions): string {
+    return getNumberFormat(this.currentLocale, options).format(value);
+  }
+
+  formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string {
+    return getDateTimeFormat(this.currentLocale, options).format(value);
+  }
+
+  formatRelativeTime(
+    value: number,
+    unit: Intl.RelativeTimeFormatUnit,
+    options?: Intl.RelativeTimeFormatOptions,
+  ): string {
+    return new Intl.RelativeTimeFormat(intlLocale(this.currentLocale), options).format(value, unit);
+  }
+
+  formatList(values: Iterable<string>, options?: Intl.ListFormatOptions): string {
+    return new Intl.ListFormat(intlLocale(this.currentLocale), options).format(values);
+  }
+
+  /** Formats a found text as an ICU message in its dictionary's locale, falling back to `{name}` for invalid syntax. */
+  private format(key: string, found: FoundTranslation<TLocale>, params: MessageValues): string {
+    if (isPlainMessage(found.text)) {
+      return found.text;
     }
 
-    return params === undefined ? translation : interpolate(translation, params);
+    const message = parseCachedMessage(found.text);
+    if (message instanceof MessageSyntaxError) {
+      this.reportInvalidMessage(key, found, message);
+      return interpolate(found.text, params);
+    }
+
+    return formatMessage(message, params, found.locale);
+  }
+
+  private reportInvalidMessage(key: string, found: FoundTranslation<TLocale>, error: MessageSyntaxError): void {
+    const warningKey = `${found.locale}\0${found.text}`;
+
+    if (this.isSilent || this.warnedMessages.has(warningKey)) {
+      return;
+    }
+    if (this.warnedMessages.size >= MAX_MESSAGE_DIAGNOSTICS) {
+      this.warnedMessages.delete(this.warnedMessages.values().next().value!);
+    }
+    this.warnedMessages.add(warningKey);
+    console.warn(
+      `[I18n] Invalid message for "${key.trim()}" in locale "${found.locale}": ${error.message}; only {name} ` +
+        "placeholders are filled. " +
+        JSON.stringify(found.text.slice(0, 200)),
+    );
   }
 
   subscribe(listener: () => void): () => void {
@@ -185,8 +260,7 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
 
     this.currentLocale = locale;
     this.currentDirection = direction;
-    this.currentDictionary = dictionaries.current;
-    this.defaultDictionary = dictionaries.fallback;
+    this.dictionaries = dictionaries;
     this.isReadyState = true;
     this.dispatchEvent(createCustomEvent<I18nReadyEventDetail<TLocale>>("ready", { locale }));
     return true;
@@ -214,8 +288,7 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     const previousLocale = this.currentLocale;
     this.currentLocale = nextLocale;
     this.currentDirection = direction;
-    this.currentDictionary = dictionaries.current;
-    this.defaultDictionary = dictionaries.fallback;
+    this.dictionaries = dictionaries;
     this.dispatchEvent(
       createCustomEvent<I18nLocaleChangeEventDetail<TLocale>>("locale-change", {
         locale: nextLocale,
@@ -224,8 +297,8 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     );
   }
 
-  private lookup(key: string, count?: number): string | undefined {
-    if (!this.isReadyState || this.currentDictionary === undefined || this.defaultDictionary === undefined) {
+  private lookup(key: string, count?: number): FoundTranslation<TLocale> | undefined {
+    if (!this.isReadyState || this.dictionaries === undefined) {
       throw new Error("[I18n] translate() requires successful initialization.");
     }
 
@@ -245,12 +318,12 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
       throw new TypeError("[I18n] A translation key must be a non-empty string.");
     }
 
-    const translation =
-      this.findTranslation(this.currentDictionary, this.currentLocale, normalizedKey, count) ??
-      this.findTranslation(this.defaultDictionary, this.defaultLocale, normalizedKey, count);
+    for (const { locale, dictionary } of this.dictionaries) {
+      const translation = this.findTranslation(dictionary, locale, normalizedKey, count);
 
-    if (translation !== undefined) {
-      return translation;
+      if (translation !== undefined) {
+        return { text: translation, locale };
+      }
     }
 
     this.reportMissingKey(normalizedKey);
@@ -259,7 +332,7 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
 
   /**
    * Finds the exact key, or with a count, the plural form of the group at `key`. The form is chosen with the rules of
-   * the locale whose dictionary is read, since a fallback text is in the default locale's language.
+   * the locale whose dictionary is read, since a fallback text is in that locale's language.
    */
   private findTranslation(
     dictionary: LocaleDictionary,
@@ -378,17 +451,11 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     return direction;
   }
 
-  private async loadRequiredDictionaries(locale: TLocale): Promise<RequiredDictionaries> {
-    if (locale === this.defaultLocale) {
-      const dictionary = await this.loader.loadLocale(locale);
-      return { current: dictionary, fallback: dictionary };
-    }
-
-    const [current, fallback] = await Promise.all([
-      this.loader.loadLocale(locale),
-      this.loader.loadLocale(this.defaultLocale),
-    ]);
-    return { current, fallback };
+  /** Loads the locale and every locale it falls back to, together, such as `pt-BR`, `pt`, and the default. */
+  private async loadRequiredDictionaries(locale: TLocale): Promise<readonly ChainDictionary<TLocale>[]> {
+    const chain = this.fallbackChains.get(locale)!;
+    const dictionaries = await Promise.all(chain.map((chainLocale) => this.loader.loadLocale(chainLocale)));
+    return chain.map((chainLocale, index) => ({ locale: chainLocale, dictionary: dictionaries[index]! }));
   }
 
   private createRequest(): number {
@@ -427,6 +494,6 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
  */
 export function createI18n<TLocale extends string, TMessages = unknown>(
   config: I18nConfig<TLocale, TMessages>,
-): I18n<TLocale, TranslationKey<TMessages>> {
+): I18n<TLocale, TranslationKey<TMessages>, TMessages> {
   return new I18nInstance(config);
 }

@@ -332,6 +332,75 @@ describe("translated pathnames", () => {
     });
   });
 
+  describe("when no URL leads to the path read", () => {
+    it("should return undefined for a path whose remainder is another locale's URL", () => {
+      for (const localePrefix of ["always", "except-default", "when-ambiguous"] as const) {
+        const routing = create({ localePrefix });
+
+        expect(routing.parse("/pt/en/sobre")).toBeUndefined();
+        expect(routing.parse("/es/pt/acerca")).toBeUndefined();
+      }
+    });
+
+    it("should return undefined for a default-locale path that is another locale's translated path", () => {
+      const routing = create({ localePrefix: "when-ambiguous" });
+
+      expect(routing.parse("/en/sobre")).toBeUndefined();
+      expect(routing.parse("/en/acerca")).toBeUndefined();
+    });
+
+    it("should return undefined for a path that would start with a locale once its prefix is removed", () => {
+      const routing = create();
+
+      // localize() reads a leading locale as a prefix, so no canonical path starts with one.
+      expect(routing.parse("/pt/en/about")).toBeUndefined();
+      expect(routing.parse("/en/pt")).toBeUndefined();
+      expect(routing.parse("/pt/about")).toEqual({
+        locale: "pt",
+        pathname: "/about",
+      });
+    });
+
+    it("should return undefined for a path whose canonical URL would be longer than 8,192 characters", () => {
+      const routing = create({ pathnames: { "/settings/:id": { pt: "/configurações/:id" } } });
+      // The canonical URL writes the table's words percent-encoded, 10 characters longer than "configurações".
+      const id = (length: number) => "x".repeat(length - "/pt/configurações/".length);
+
+      expect(routing.parse(`/pt/configurações/${id(8_192)}`)).toBeUndefined();
+      expect(routing.parse(`/pt/configurações/${id(8_182)}`)?.pathname).toBe(`/settings/${id(8_182)}`);
+    });
+
+    it("should give every parsed path a canonical URL that localize builds", () => {
+      const words = ["about", "sobre", "acerca", "products", "produtos", "42", "reviews", "en", "pt", "es", "PT", "x"];
+      const paths = ["/"];
+      for (const a of words) {
+        paths.push(`/${a}`);
+        for (const b of words) {
+          paths.push(`/${a}/${b}`);
+          for (const c of words) {
+            paths.push(`/${a}/${b}/${c}`);
+          }
+        }
+      }
+
+      for (const localePrefix of ["always", "except-default", "when-ambiguous"] as const) {
+        const routing = create({ localePrefix });
+        const failures = paths.filter((path) => {
+          const route = routing.parse(path);
+          try {
+            if (route !== undefined) {
+              routing.localize(route.pathname, route.locale);
+            }
+            return false;
+          } catch {
+            return true;
+          }
+        });
+        expect({ localePrefix, failures }).toEqual({ localePrefix, failures: [] });
+      }
+    });
+  });
+
   describe("with a large table", () => {
     it("should build and read 2,000 routes in well under a second", () => {
       const pathnames: Record<string, Partial<Record<Locale, string>>> = {};
@@ -352,6 +421,98 @@ describe("translated pathnames", () => {
       }
 
       expect(performance.now() - start).toBeLessThan(1_000);
+    });
+  });
+
+  describe("catch-all parameters", () => {
+    const docs = {
+      "/docs": { pt: "/documentos" },
+      "/docs/:path*": { pt: "/documentos/:path*" },
+      "/docs/intro": { pt: "/documentos/introducao" },
+    };
+
+    it("should match one or more segments and copy them across", () => {
+      const routing = create({ pathnames: docs });
+
+      expect(routing.localize("/docs/guides/setup", "pt")).toBe("/pt/documentos/guides/setup");
+      expect(routing.parse("/pt/documentos/guides/setup")).toEqual({ locale: "pt", pathname: "/docs/guides/setup" });
+      expect(routing.parse("/pt/documentos/a")).toEqual({ locale: "pt", pathname: "/docs/a" });
+      expect(routing.parse("/pt/documentos/a/b/")).toEqual({ locale: "pt", pathname: "/docs/a/b/" });
+    });
+
+    it("should not match zero segments", () => {
+      const routing = create({ pathnames: { "/docs/:path*": { pt: "/documentos/:path*" } } });
+
+      expect(routing.localize("/docs", "pt")).toBe("/pt/docs");
+      expect(routing.parse("/pt/documentos")).toEqual({ locale: "pt", pathname: "/documentos" });
+    });
+
+    it("should rank a fixed segment, then a parameter, ahead of a catch-all", () => {
+      const routing = create({
+        pathnames: { ...docs, "/docs/:section/:page": { pt: "/documentos/secao/:section/:page" } },
+      });
+
+      expect(routing.localize("/docs/intro", "pt")).toBe("/pt/documentos/introducao");
+      expect(routing.localize("/docs/a/b", "pt")).toBe("/pt/documentos/secao/a/b");
+      expect(routing.localize("/docs/a/b/c", "pt")).toBe("/pt/documentos/a/b/c");
+      expect(routing.parse("/pt/documentos/introducao")?.pathname).toBe("/docs/intro");
+    });
+
+    it("should rank a fixed first segment ahead of a parameter, whatever comes after", () => {
+      const routing = create({
+        pathnames: { "/:a/:b": { pt: "/x/:a/:b" }, "/docs/:path*": { pt: "/documentos/:path*" } },
+      });
+
+      expect(routing.localize("/docs/a", "pt")).toBe("/pt/documentos/a");
+      expect(routing.localize("/blog/a", "pt")).toBe("/pt/x/blog/a");
+    });
+
+    it("should translate a route pattern with a catch-all", () => {
+      const routing = create({ pathnames: docs });
+
+      expect(routing.localizeAll("/docs/:path*")).toEqual([
+        { locale: "en", pathname: "/docs/:path*" },
+        { locale: "pt", pathname: "/pt/documentos/:path*" },
+        { locale: "es", pathname: "/es/docs/:path*" },
+      ]);
+    });
+
+    it("should drop the prefix with `when-ambiguous` when no other locale's path overlaps", () => {
+      const routing = create({ localePrefix: "when-ambiguous", pathnames: docs });
+
+      expect(routing.localize("/docs/a/b", "pt")).toBe("/documentos/a/b");
+      expect(routing.parse("/documentos/a/b")).toEqual({ locale: "pt", pathname: "/docs/a/b" });
+      expect(routing.parse("/docs/a/b")).toEqual({ locale: "en", pathname: "/docs/a/b" });
+    });
+
+    it("should keep the prefix with `when-ambiguous` when another locale's path overlaps", () => {
+      const routing = create({
+        localePrefix: "when-ambiguous",
+        pathnames: {
+          "/docs/:path*": { pt: "/documentos/:path*" },
+          "/files/:id/:name": { es: "/documentos/:id/:name" },
+        },
+      });
+
+      // The prefix is kept for the whole route, since its URLs of three segments could be Spanish.
+      expect(routing.localize("/docs/a", "pt")).toBe("/pt/documentos/a");
+      expect(routing.localize("/docs/a/b", "pt")).toBe("/pt/documentos/a/b");
+      expect(routing.localize("/files/1/x", "es")).toBe("/es/documentos/1/x");
+    });
+
+    it("should reject a catch-all that is not last, or that differs between forms", () => {
+      const invalid = (pathnames: unknown) => () =>
+        create({ pathnames: pathnames as LocaleRoutingConfig<Locale>["pathnames"] });
+
+      expect(invalid({ "/docs/:path*/edit": {} })).toThrow('pathnames["/docs/:path*/edit"]: Must put a catch-all last');
+      expect(invalid({ "/docs/:path*": { pt: "/documentos/:path" } })).toThrow(
+        'pathnames["/docs/:path*"].pt: Must use the parameters :path*',
+      );
+      expect(invalid({ "/docs/:path": { pt: "/documentos/:path*" } })).toThrow("Must use the parameters :path");
+      expect(invalid({ "/docs/:a*": {}, "/docs/:b*": {} })).toThrow(
+        'Must not have the same path as "/docs/:a*" in "en"',
+      );
+      expect(invalid({ "/docs/:*": {} })).toThrow("Must name each parameter");
     });
   });
 

@@ -47,14 +47,20 @@ routing.parse("/PT/about"); // { locale: "pt", pathname: "/about" }
 
 The `pathname` it returns is the **canonical path**: the path your application routes on, the same in every language. Hold on to that idea; it matters once paths are translated.
 
-With `localePrefix: "always"`, a path without a locale returns `undefined`, so you can redirect it. Add the chosen locale's prefix before calling `localize()`, so a path in that locale's words, such as `/sobre`, is read as one:
+`parse()` returns `undefined` for a path that is not a page in any locale, such as `/pt/en/about`: once its prefix is removed it starts with another locale, so no link ever leads there. Answer it with a 404.
+
+With `localePrefix: "always"`, a path without a locale returns `undefined` too, so you can redirect it. Add the chosen locale's prefix and parse that, so a path in that locale's words, such as `/sobre`, is read as one, and a path that is no page in that locale either gets its 404:
 
 ```ts
 const route = routing.parse(url.pathname);
 if (route === undefined) {
   const locale = pickLocale(i18n, request);
+  const guess = routing.parse(`/${locale}${url.pathname === "/" ? "" : url.pathname}`);
+  if (guess === undefined) {
+    return new Response("Not found", { status: 404 });
+  }
   const target = new URL(url);
-  target.pathname = routing.localize(`/${locale}${url.pathname}`, locale);
+  target.pathname = routing.localize(guess.pathname, guess.locale);
   return Response.redirect(target, 302);
 }
 ```
@@ -76,7 +82,7 @@ await initializeBrowserI18n({ i18n, locale: route?.locale });
 
 ### Redirect to the canonical URL
 
-`parse()` is forgiving: `/PT/about` and `/en/about` are read as well as `/pt/about` and `/about`. That is friendly to someone typing a URL, but a search engine that finds one page at several addresses splits its ranking between them. Send every other spelling to the one `localize()` builds:
+`parse()` is forgiving: `/PT/about` and `/en/about` are read as well as `/pt/about` and `/about`. That is friendly to someone typing a URL, but a search engine that finds one page at several addresses splits its ranking between them. Send every other spelling to the one `localize()` builds. Every path `parse()` returns has one, so this never throws:
 
 ```ts
 const route = routing.parse(url.pathname);
@@ -155,10 +161,11 @@ Your application keeps routing on `/products/42`, whatever the language. Only th
 How the table reads:
 
 - **Parameters** are segments that start with `:`, such as `:id`. They match any one segment, and the value is copied across unchanged. Every form must use the same parameters as the canonical path, but in any order, because languages don't agree on word order: `/products/42/reviews/7` is `/pt/avaliacoes/7/produto/42`.
+- **A catch-all** is a last segment written `:name*`, such as `"/docs/:path*": { pt: "/documentos/:path*" }`. It matches one or more segments and copies them across, so `/docs/guides/setup` is `/pt/documentos/guides/setup`. It does not match zero segments: list `/docs` itself as its own entry.
 - **Anything the table doesn't list keeps its words.** `/blog` is `/pt/blog`, and `/products/42` in Spanish is `/es/products/42`, since only Portuguese translates it.
 - **Fixed segments match case-sensitively**, as URLs do, so `/pt/Sobre` is not the about page. Only the locale prefix ignores case.
 - **Write words as you would read them.** `"/configurações"` matches the `/configura%C3%A7%C3%B5es` that browsers send, and `localize()` returns the encoded form.
-- **A fixed segment beats a parameter.** With both `/products/new` and `/products/:id` listed, `/products/new` is the new-product page, whichever order the table lists them in.
+- **A fixed segment beats a parameter, and a parameter beats a catch-all.** With both `/products/new` and `/products/:id` listed, `/products/new` is the new-product page, whichever order the table lists them in. With `/docs/intro` and `/docs/:path*`, `/docs/intro` is the intro page and every other `/docs/…` path goes to the catch-all.
 - **The default locale can be translated too.** A Portuguese-first site with English code can use `defaultLocale: "pt"` and `{ "/about": { pt: "/sobre" } }`, so `/sobre` is the Portuguese page and `/en/about` the English one.
 
 ### Mistakes it catches
@@ -167,7 +174,8 @@ How the table reads:
 
 - **Two pages with the same path in one locale.** `{ "/about": { pt: "/sobre" }, "/company": { pt: "/sobre" } }` gives Portuguese two pages at `/pt/sobre`. Give one of them other words. The same goes for a form that takes words another page keeps: if `/contact` is `/about` in Spanish, the Spanish `/about` would be two pages.
 - **Two canonical paths with the same shape.** `/products/:id` and `/products/:slug` match the same paths. Keep one.
-- **Parameters that differ from the canonical path's.** `{ "/products/:id": { pt: "/produtos/:slug" } }` loses `:id`. Rename it, or move it, but keep it.
+- **Parameters that differ from the canonical path's.** `{ "/products/:id": { pt: "/produtos/:slug" } }` loses `:id`. Rename it, or move it, but keep it. A catch-all must stay a catch-all in every form.
+- **A catch-all that isn't last**, such as `/docs/:path*/edit`.
 - **A path that starts with a locale**, such as `/pt/about` as a canonical path. The prefix would be read as the locale. List `/about` instead.
 - **A locale that isn't configured**, or one listed twice in different letter case.
 - **A path `parse()` would reject**, as listed under [Paths it accepts](#paths-it-accepts).
@@ -199,6 +207,8 @@ for (const { locale, pathname } of routing.localizeAll("/products/:id")) {
 ```
 
 `@codenhub/router` takes the first route that matches, in the order you register them. When two of a locale's paths can match the same URL, such as `/pt/produtos/novo` and `/pt/produtos/:id`, register the one with fixed words first.
+
+`localizeAll()` writes a catch-all as `:name*`. Translate that into your framework's own syntax when you register it, such as `[...path]` in a file-based router. `@codenhub/router` has no catch-all, so with it, route such paths by rewriting to the canonical path instead.
 
 ## Drop the prefix
 

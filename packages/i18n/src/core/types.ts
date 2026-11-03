@@ -1,3 +1,5 @@
+import type { TranslateParams } from "./message-params";
+
 /** Text direction used when rendering a locale. */
 export type LocaleDirection = "ltr" | "rtl";
 
@@ -82,7 +84,8 @@ export interface I18nConfig<TLocale extends string = string, TMessages = unknown
    */
   getLocaleDirection?(locale: NoInfer<TLocale>): LocaleDirection;
   /**
-   * Called for every key missing from both the active and default dictionaries, in place of the default warning.
+   * Called for every key missing from every dictionary the active locale falls back to, in place of the default
+   * warning.
    * Exceptions propagate from the lookup, so a test can throw here to fail on a missing key.
    *
    * @defaultValue A `console.warn` once for each of the 1,000 most recent locale/key pairs, unless `isSilent`.
@@ -131,8 +134,10 @@ export interface I18nEventMap<TLocale extends string = string> {
  * @typeParam TLocale - Union of supported canonical locale identifiers.
  * @typeParam TKey - Union of accepted translation keys. Defaults to `string`; `createI18n()` sets it to
  * `TranslationKey<TMessages>` for the loader's dictionary type.
+ * @typeParam TMessages - Dictionary type returned by `loadLocale`. Defaults to `unknown`, which accepts any values;
+ * `createI18n()` sets it, so a literal message, such as one in an `as const` dictionary, requires its arguments.
  */
-export interface I18n<TLocale extends string = string, TKey extends string = string> {
+export interface I18n<TLocale extends string = string, TKey extends string = string, TMessages = unknown> {
   /** Canonical fallback locale. */
   readonly defaultLocale: TLocale;
   /** Frozen copy of supported canonical locales. */
@@ -211,9 +216,20 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   matchLocale(preferences: readonly string[]): TLocale | undefined;
 
   /**
-   * Resolves a trimmed key against active and default dictionaries and fills its `{name}` placeholders.
+   * Resolves a trimmed key against the active locale's dictionary, then each configured parent locale's, such as `pt`
+   * for `pt-BR`, then the default locale's, and formats it as an ICU message.
    *
    * @remarks
+   * A parent is made by dropping subtags and is skipped when its likely script differs, so `zh-Hant` never falls back to
+   * `zh`, which is Simplified Chinese.
+   *
+   * Messages use ICU syntax: `{name}`, `{n, number}` with an optional `integer` or `percent` style, `{d, date}` and
+   * `{d, time}` with an optional `short`, `medium` (the default), `long`, or `full` style, `{n, plural, …}` and
+   * `{n, selectordinal, …}` with `=N` and CLDR category options, an optional `offset:N`, and `#` for the number, and
+   * `{v, select, …}`. Plural categories and every format use the locale of the dictionary that has the text. An
+   * apostrophe before `{`, `}`, or, in a plural, `#` quotes them, and `''` is one apostrophe. A message that is not
+   * valid syntax warns once, unless silent, and only its `{name}` placeholders are filled.
+   *
    * When `params.count` is a number and the key is a group of plural forms rather than a text, such as
    * `{ one: "{count} item", other: "{count} items" }`, the form is chosen with `Intl.PluralRules` for the locale of the
    * dictionary that has the group, falling back to its `other` form. Forms are named by CLDR plural category: `zero`,
@@ -225,17 +241,52 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * ```
    *
    * @param key - Translation key, or the key of a plural group when `params.count` is a number.
-   * @param params - Values for `{name}` placeholders, read from own properties. A placeholder without a value is left
-   * as written; without `params`, the text is returned unchanged. A numeric `count` also selects a plural form.
-   * @returns The translated text, or the trimmed key when neither dictionary has it. A miss calls `onMissingKey`, or
+   * @param params - Argument values, read from own properties. An argument without a usable value, such as a string
+   * for `{n, number}`, is left as written. A string or number in `{name}` is inserted as JavaScript writes it, and a
+   * date as `{name, date}` would format it. A numeric `count` also selects a plural form.
+   * @returns The translated text, or the trimmed key when no dictionary has it. A miss calls `onMissingKey`, or
    * warns once per recent locale/key pair unless silent.
    * @throws {Error} When called before successful initialization.
    * @throws {TypeError} When the key is empty, not a string, longer than 1,000 characters, or contains ASCII controls.
    */
-  translate(key: TKey, params?: Readonly<Record<string, string | number>>): string;
+  translate<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
 
   /** Short alias of {@link I18n.translate}, the same bound function. */
-  t(key: TKey, params?: Readonly<Record<string, string | number>>): string;
+  t<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
+
+  /**
+   * Formats a number for the active locale with `Intl.NumberFormat`.
+   *
+   * @throws {RangeError} When `options` is out of range, as `Intl.NumberFormat` throws.
+   * @throws {TypeError} When `options` is incomplete, such as a currency style without `currency`.
+   */
+  formatNumber(value: number | bigint, options?: Intl.NumberFormatOptions): string;
+
+  /**
+   * Formats a date, or a timestamp in milliseconds, for the active locale with `Intl.DateTimeFormat`.
+   *
+   * @throws {RangeError} When `options` or the date is invalid, as `Intl.DateTimeFormat` throws.
+   */
+  formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
+
+  /**
+   * Formats a relative time, such as `-1, "day"` for "1 day ago", for the active locale with `Intl.RelativeTimeFormat`.
+   *
+   * @throws {RangeError} When `value`, `unit`, or `options` is invalid, as `Intl.RelativeTimeFormat` throws.
+   */
+  formatRelativeTime(
+    value: number,
+    unit: Intl.RelativeTimeFormatUnit,
+    options?: Intl.RelativeTimeFormatOptions,
+  ): string;
+
+  /**
+   * Joins strings into a list, such as "a, b, and c", for the active locale with `Intl.ListFormat`.
+   *
+   * @throws {RangeError} When `options` is invalid, as `Intl.ListFormat` throws.
+   * @throws {TypeError} When a value is not a string, as `Intl.ListFormat` throws.
+   */
+  formatList(values: Iterable<string>, options?: Intl.ListFormatOptions): string;
 
   /**
    * Calls a listener after every applied initialization and locale change, such as to re-render a framework.

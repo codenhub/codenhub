@@ -1,6 +1,6 @@
 ---
 title: "/routing"
-description: "Locale-prefixed URL paths: read the locale from a path and build the same path for another locale."
+description: "Localized URL paths: read the locale and canonical path from a URL, and build a page's path in another locale, with a locale prefix, translated words, or both."
 order: 2
 ---
 
@@ -26,7 +26,7 @@ The factory trims locale identifiers and snapshots the validated configuration, 
 
 **Returns** — Pure parsing and generation operations bound to an immutable configuration snapshot.
 
-**Throws** — `TypeError` — When `config` is not a plain object, locales are empty, invalid conservative ASCII identifiers, duplicated case-insensitively after trimming, the trimmed default locale is unsupported, `localePrefix` is not a supported policy, or `pathnames` has an invalid path, an unsupported locale, a path that starts with a locale, parameters that differ from the canonical path's, or two pages with the same path in one locale.
+**Throws** — `TypeError` — When `config` is not a plain object, locales are empty, invalid conservative ASCII identifiers, duplicated case-insensitively after trimming, the trimmed default locale is unsupported, `localePrefix` is not a supported policy, or `pathnames` has an invalid path, an unsupported locale, a path that starts with a locale, a catch-all that is not last, parameters that differ from the canonical path's, or two pages with the same path in one locale.
 
 ## Interfaces
 
@@ -93,7 +93,7 @@ Parses a URL's pathname into its locale and canonical pathname. Locale prefixes 
 
 - `pathname` — An absolute application pathname of at most 8,192 characters without a URL, query, or fragment.
 
-**Returns** — The locale and canonical pathname, or `undefined` when a required prefix is absent.
+**Returns** — The locale and canonical pathname, or `undefined` when a required prefix is absent or no URL leads to the path read, such as `/pt/en/sobre`, or `/en/sobre` when `/sobre` is the Portuguese about page. A result always has a canonical URL that `localize` builds.
 
 **Throws** — `TypeError` — When `pathname` is not a valid application pathname.
 
@@ -140,7 +140,7 @@ ASCII locale identifiers with alphanumeric hyphen-separated subtags, preserved i
 pathnames?: Readonly<Record<string, Readonly<Partial<Record<NoInfer<TLocale>, string>>>>> | undefined;
 ```
 
-Translated paths, keyed by the canonical path the application routes on, with each locale's form, such as `{ "/products/:id": { pt: "/produtos/:id" } }`. Paths have fixed segments and `:name` parameters, and every form uses the canonical path's parameters, in any order. Fixed segments match case-sensitively, Unicode matches its percent-encoding, and a fixed segment wins over a parameter. A locale or path the table doesn't list keeps the canonical words.
+Translated paths, keyed by the canonical path the application routes on, with each locale's form, such as `{ "/products/:id": { pt: "/produtos/:id" } }`. Paths have fixed segments, `:name` parameters, and a last `:name*` catch-all that matches one or more segments, and every form uses the canonical path's parameters, in any order. Fixed segments match case-sensitively, Unicode matches its percent-encoding, and a fixed segment wins over a parameter, which wins over a catch-all. A locale or path the table doesn't list keeps the canonical words.
 
 ### LocalizedPath
 

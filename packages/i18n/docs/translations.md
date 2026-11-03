@@ -73,10 +73,30 @@ Your loader owns everything about transport: URLs, caching headers, retries, tim
 ### How loading behaves
 
 - The manager loads a locale the first time it needs it and keeps the result, so switching back to a language does not call your loader again.
-- Starting or switching to a non-default locale loads that locale and the default locale together, because the default is the fallback.
+- Starting or switching to a non-default locale loads that locale, the locales it falls back to, and the default locale together, as [Regional variants](#regional-variants) explains.
 - If your loader throws or rejects, the call that needed it rejects with an `I18nError`, and the manager keeps its current language. The next call tries the loader again.
 - Returning the same object every time, such as a module-level import, lets every manager share one checked copy. That matters on a server, which [creates a manager per request](server-rendering.md).
 - Treat a dictionary as read-only once loaded: the manager keeps a frozen, checked copy, shared by every manager that loads the same object, so later changes to the object do nothing.
+
+### Regional variants
+
+A regional locale only needs the words that differ. With `pt` and `pt-BR` both in `locales`, `pt-BR.json` can hold just the Brazilian words, and every other key comes from `pt.json`:
+
+```ts
+export const i18n = createI18n({
+  locales: ["en", "pt", "pt-BR"] as const,
+  defaultLocale: "en",
+  loadLocale: (locale) => dictionaries[locale],
+});
+// pt-BR: { "greeting": "Oi" }   pt: { "greeting": "Olá", "farewell": "Tchau" }
+await i18n.init({ locale: "pt-BR" });
+t("greeting"); // "Oi"
+t("farewell"); // "Tchau", from pt
+```
+
+A key is looked up in the active locale, then in each configured locale made by dropping its last subtags, such as `zh-Hant` for `zh-Hant-TW`, then in the default locale. A parent written in another script is skipped: `zh` is Simplified Chinese, so a `zh-Hant` page falls back to the default rather than mixing scripts. A plural group uses the rules of the locale whose dictionary has it.
+
+Every locale in that chain loads with the active one, so starting in `pt-BR` loads `pt-BR`, `pt`, and `en`. If one of them fails, the call rejects as for any locale.
 
 ## Put values into text
 
@@ -91,15 +111,74 @@ t("welcome", { name: "Ana", count: 4 });
 // "Welcome back, Ana. You have 4 new messages."
 ```
 
-Placeholder names use letters, digits, and `_`. Values can be strings or numbers.
+Placeholder names use letters, digits, and `_`. Values can be strings, numbers, or dates.
 
 Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs.
 
 A few details:
 
 - A placeholder with no matching value stays as written, so a missing value shows up as `{name}` on screen rather than disappearing.
-- Without a second argument, the text comes back unchanged. Text containing literal braces, such as a code sample, is safe as long as you don't pass a value with the same name.
-- Numbers are inserted as JavaScript writes them: `1234.5`, not `1,234.50`. To format a number or date for the reader, use `Intl.NumberFormat` or `Intl.DateTimeFormat` with `i18n.locale` and pass the result as a string. For a count in a plural, see [Show a formatted count](#show-a-formatted-count).
+- Numbers in a plain `{name}` are inserted as JavaScript writes them: `1234.5`. Write `{name, number}` to format them for the reader, as the next section shows.
+- Braces and apostrophes are message syntax, so text that shows them literally needs quoting; see [Literal braces and apostrophes](#literal-braces-and-apostrophes).
+
+### Format numbers and dates in the text
+
+Messages use [ICU MessageFormat](https://unicode-org.github.io/icu/userguide/format_parse/messages/) syntax, so a translation can say how each value is written:
+
+```json
+{
+  "total": "Total: {amount, number}",
+  "progress": "{ratio, number, percent} done",
+  "shipped": "Shipped on {date, date, long} at {date, time, short}"
+}
+```
+
+```ts
+t("total", { amount: 1234.5 }); // "Total: 1,234.5", or "Total: 1.234,5" from the Portuguese text
+t("shipped", { date: new Date() });
+```
+
+| Argument                | Styles                                                             | Value                 |
+| ----------------------- | ------------------------------------------------------------------ | --------------------- |
+| `{n, number}`           | none, `integer`, `percent`                                         | number                |
+| `{d, date}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp |
+| `{d, time}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp |
+| `{n, plural, …}`        | see [Plurals](#plurals)                                            | number                |
+| `{n, selectordinal, …}` | ordinal forms, such as `one {#st} two {#nd} few {#rd} other {#th}` | number                |
+| `{v, select, …}`        | any words, plus `other`                                            | string or number      |
+
+Formatting uses the language of the dictionary the text came from, so English text that fills in for a missing Portuguese key is written the English way. An argument whose value has the wrong type, such as a string for `{n, number}`, stays as written. Skeletons such as `{n, number, ::currency/EUR}` are not supported; format such values in code, as below, and pass the string.
+
+A `select` picks text by a value, such as a pronoun, and needs an `other` option:
+
+```json
+{ "replied": "{gender, select, female {She} male {He} other {They}} replied" }
+```
+
+To format a value in code, use the manager's formatters. They follow the active locale:
+
+```ts
+i18n.formatNumber(9.99, { style: "currency", currency: "EUR" }); // "€9.99"
+i18n.formatDate(new Date(), { dateStyle: "long" }); // "November 2, 2026"
+i18n.formatRelativeTime(-1, "day", { numeric: "auto" }); // "yesterday"
+i18n.formatList(["Ana", "Bia", "Caio"]); // "Ana, Bia, and Caio"
+```
+
+They take the same options as `Intl.NumberFormat`, `Intl.DateTimeFormat`, `Intl.RelativeTimeFormat`, and `Intl.ListFormat`, and throw what those throw for invalid options.
+
+### Literal braces and apostrophes
+
+An apostrophe before `{` or `}` quotes text up to the next apostrophe, and two apostrophes make one. An apostrophe anywhere else is an ordinary apostrophe, so "Don't" needs nothing:
+
+| Written in the dictionary | Shown                   |
+| ------------------------- | ----------------------- |
+| `Don't forget {name}`     | `Don't forget Ana`      |
+| `Type '{name}' to insert` | `Type {name} to insert` |
+| `It''s '{'here'}'`        | `It's {here}`           |
+
+Inside a plural, `#` stands for the number; write `'#'` for a literal `#`.
+
+Text that is not valid syntax, such as an unclosed `{`, logs a warning once, unless the manager is silent, and is shown with only its `{name}` placeholders filled. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
 
 ## Plurals
 
@@ -145,28 +224,39 @@ Two things to watch for:
 
 ### Show a formatted count
 
-`count` does two jobs: it picks the form, and it fills `{count}`. That second job writes the number as JavaScript does, so 1234 items reads "1234 items" rather than "1,234 items", or "1.234 itens" in Portuguese. Passing the formatted string as `count` doesn't help, because a string can't pick a form.
-
-Split the jobs. Keep `count` a number for choosing, and show the formatted number through a placeholder of its own:
+A plain `{count}` writes the number as JavaScript does, so 1234 items reads "1234 items" rather than "1,234 items", or "1.234 itens" in Portuguese. Write `{count, number}` in the forms instead:
 
 ```json
 {
   "cart": {
     "items": {
-      "one": "{n} item",
-      "other": "{n} items"
+      "one": "{count, number} item",
+      "other": "{count, number} items"
     }
   }
 }
 ```
 
 ```ts
-const format = new Intl.NumberFormat(i18n.locale);
-
-t("cart.items", { count: 1234, n: format.format(1234) }); // "1,234 items"
+t("cart.items", { count: 1234 }); // "1,234 items"
 ```
 
-Create the formatter for the current locale, and again when the locale changes.
+### Plurals inside a sentence
+
+A plural group chooses the whole text. To choose only part of a sentence, or to give `0` its own wording, write an ICU plural in a single string. `#` is the number, formatted for the language, and `=N` matches an exact number before the forms are asked:
+
+```json
+{
+  "inbox": "Hi {name}, {count, plural, =0 {you have no messages} one {you have # message} other {you have # messages}}."
+}
+```
+
+```ts
+t("inbox", { name: "Ana", count: 0 }); // "Hi Ana, you have no messages."
+t("inbox", { name: "Ana", count: 1200 }); // "Hi Ana, you have 1,200 messages."
+```
+
+`offset:N` subtracts from the number before choosing a form and filling `#`, but not before matching `=N`, as in `{count, plural, offset:1 =0 {Nobody} =1 {{name}} other {{name} and # others}}`. Both ways of writing plurals are supported; plural groups keep each form an ordinary key, which some translation tools handle better.
 
 ## Typed keys
 
@@ -193,6 +283,38 @@ t(`errors.${code}` as Key);
 ```
 
 `TranslationKey` is also useful for typing a component prop or helper that takes a key.
+
+### Typed values
+
+When the default dictionary is an `as const` object in a `.ts` file, TypeScript sees each message's text, and `t()` also checks its values:
+
+```ts
+// locales/en.ts
+export default {
+  welcome: "Welcome back, {name}.",
+  total: "Total: {amount, number}",
+  cart: { items: { one: "{count} item", other: "{count} items" } },
+} as const;
+```
+
+```ts
+t("welcome", { name: "Ana" }); // ok
+t("welcome"); // compile error: name is required
+t("total", { amount: "3" }); // compile error: {amount, number} needs a number
+t("cart.items", { count: 2 }); // ok: a plural group requires a numeric count
+```
+
+`number`, `plural`, and `selectordinal` arguments take a number, `date` and `time` take a `Date` or a timestamp, `select` takes a string or number, and a plain `{name}` takes any of these. Extra values are allowed. When several dictionaries are typed, a key needs the values of every one that has it.
+
+A JSON import types every text as `string`, since TypeScript doesn't keep JSON string values, so a JSON dictionary checks keys but accepts any values. To check values, write the default language as `as const` TypeScript and keep the other languages in JSON, typed as the default:
+
+```ts
+import en from "./locales/en";
+
+const loadLocale = async (locale: Locale): Promise<typeof en> => (locale === "en" ? en : (await import(`./locales/${locale}.json`)).default);
+```
+
+The loader's return type is what types `t()`, so a translation must use the same arguments as the default text; the compiler can't check the JSON files. A key chosen at runtime, a message TypeScript can't read, such as one with broken syntax, and a manager typed by hand as `I18n<"en" | "pt", Key>` accept any values. Pass the dictionary type as a third type argument, `I18n<"en" | "pt", Key, typeof en>`, to keep them checked.
 
 If you write the manager's type yourself, as in `let i18n: I18n<"en" | "pt">`, pass the key type too: `I18n<"en" | "pt", Key>`. The second type argument defaults to `string`, which accepts any key. `createI18n()` fills it in for you.
 
@@ -234,6 +356,28 @@ test("every locale has every key", async () => {
     const missing = reference.filter((key) => !(key in dictionary));
     expect(missing, `missing in ${locale}`).toEqual([]);
   }
+});
+```
+
+To catch a message with broken syntax, such as an unclosed `{` a translator left, look up every key in every locale and fail on the warning. The manager must not be silent for this:
+
+```ts
+import { expect, test, vi } from "vitest";
+import { i18n } from "./i18n";
+
+test("every message is valid", async () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  await i18n.init();
+
+  for (const locale of i18n.locales) {
+    await i18n.setLocale(locale);
+    for (const key of Object.keys(await i18n.loadLocale(locale))) {
+      i18n.t(key as Parameters<typeof i18n.t>[0]);
+    }
+  }
+
+  expect(warn.mock.calls.filter(([text]) => String(text).startsWith("[I18n] Invalid message"))).toEqual([]);
+  warn.mockRestore();
 });
 ```
 

@@ -2,7 +2,7 @@
 
 # @codenhub/i18n
 
-Translate your app's text with typed keys, plurals, and a fallback language, in the browser, on a server, or at build time.
+Translate your app's text with typed keys, ICU messages, plurals, and fallback languages, in the browser, on a server, or at build time.
 
 ## Installation
 
@@ -49,7 +49,7 @@ Two optional entry points cover what differs by environment:
 ## Documentation
 
 - [Overview](docs/index.md): the ideas behind the package and a walkthrough.
-- [Write your translations](docs/translations.md): JSON files, placeholders, plurals, and typed keys.
+- [Write your translations](docs/translations.md): JSON files, ICU messages, plurals, regional variants, and typed keys and values.
 - [Translate a browser app](docs/browser.md)
 - [Render on a server or at build time](docs/server-rendering.md)
 - [Localized URLs](docs/localized-urls.md)
@@ -66,7 +66,7 @@ Two optional entry points cover what differs by environment:
 ## Notes
 
 - On a server or in a static build, create one manager per request or page, not a shared one.
-- The package does not format numbers or dates, render HTML from translations, or support the ICU message format.
+- The package does not render HTML from translations. ICU messages cover `number`, `date`, `time`, `plural`, `selectordinal`, and `select`, without number skeletons.
 
 ## License
 
@@ -277,10 +277,30 @@ Your loader owns everything about transport: URLs, caching headers, retries, tim
 ### How loading behaves
 
 - The manager loads a locale the first time it needs it and keeps the result, so switching back to a language does not call your loader again.
-- Starting or switching to a non-default locale loads that locale and the default locale together, because the default is the fallback.
+- Starting or switching to a non-default locale loads that locale, the locales it falls back to, and the default locale together, as [Regional variants](#regional-variants) explains.
 - If your loader throws or rejects, the call that needed it rejects with an `I18nError`, and the manager keeps its current language. The next call tries the loader again.
 - Returning the same object every time, such as a module-level import, lets every manager share one checked copy. That matters on a server, which [creates a manager per request](docs/server-rendering.md).
 - Treat a dictionary as read-only once loaded: the manager keeps a frozen, checked copy, shared by every manager that loads the same object, so later changes to the object do nothing.
+
+### Regional variants
+
+A regional locale only needs the words that differ. With `pt` and `pt-BR` both in `locales`, `pt-BR.json` can hold just the Brazilian words, and every other key comes from `pt.json`:
+
+```ts
+export const i18n = createI18n({
+  locales: ["en", "pt", "pt-BR"] as const,
+  defaultLocale: "en",
+  loadLocale: (locale) => dictionaries[locale],
+});
+// pt-BR: { "greeting": "Oi" }   pt: { "greeting": "Olá", "farewell": "Tchau" }
+await i18n.init({ locale: "pt-BR" });
+t("greeting"); // "Oi"
+t("farewell"); // "Tchau", from pt
+```
+
+A key is looked up in the active locale, then in each configured locale made by dropping its last subtags, such as `zh-Hant` for `zh-Hant-TW`, then in the default locale. A parent written in another script is skipped: `zh` is Simplified Chinese, so a `zh-Hant` page falls back to the default rather than mixing scripts. A plural group uses the rules of the locale whose dictionary has it.
+
+Every locale in that chain loads with the active one, so starting in `pt-BR` loads `pt-BR`, `pt`, and `en`. If one of them fails, the call rejects as for any locale.
 
 ## Put values into text
 
@@ -295,15 +315,74 @@ t("welcome", { name: "Ana", count: 4 });
 // "Welcome back, Ana. You have 4 new messages."
 ```
 
-Placeholder names use letters, digits, and `_`. Values can be strings or numbers.
+Placeholder names use letters, digits, and `_`. Values can be strings, numbers, or dates.
 
 Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs.
 
 A few details:
 
 - A placeholder with no matching value stays as written, so a missing value shows up as `{name}` on screen rather than disappearing.
-- Without a second argument, the text comes back unchanged. Text containing literal braces, such as a code sample, is safe as long as you don't pass a value with the same name.
-- Numbers are inserted as JavaScript writes them: `1234.5`, not `1,234.50`. To format a number or date for the reader, use `Intl.NumberFormat` or `Intl.DateTimeFormat` with `i18n.locale` and pass the result as a string. For a count in a plural, see [Show a formatted count](#show-a-formatted-count).
+- Numbers in a plain `{name}` are inserted as JavaScript writes them: `1234.5`. Write `{name, number}` to format them for the reader, as the next section shows.
+- Braces and apostrophes are message syntax, so text that shows them literally needs quoting; see [Literal braces and apostrophes](#literal-braces-and-apostrophes).
+
+### Format numbers and dates in the text
+
+Messages use [ICU MessageFormat](https://unicode-org.github.io/icu/userguide/format_parse/messages/) syntax, so a translation can say how each value is written:
+
+```json
+{
+  "total": "Total: {amount, number}",
+  "progress": "{ratio, number, percent} done",
+  "shipped": "Shipped on {date, date, long} at {date, time, short}"
+}
+```
+
+```ts
+t("total", { amount: 1234.5 }); // "Total: 1,234.5", or "Total: 1.234,5" from the Portuguese text
+t("shipped", { date: new Date() });
+```
+
+| Argument                | Styles                                                             | Value                 |
+| ----------------------- | ------------------------------------------------------------------ | --------------------- |
+| `{n, number}`           | none, `integer`, `percent`                                         | number                |
+| `{d, date}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp |
+| `{d, time}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp |
+| `{n, plural, …}`        | see [Plurals](#plurals)                                            | number                |
+| `{n, selectordinal, …}` | ordinal forms, such as `one {#st} two {#nd} few {#rd} other {#th}` | number                |
+| `{v, select, …}`        | any words, plus `other`                                            | string or number      |
+
+Formatting uses the language of the dictionary the text came from, so English text that fills in for a missing Portuguese key is written the English way. An argument whose value has the wrong type, such as a string for `{n, number}`, stays as written. Skeletons such as `{n, number, ::currency/EUR}` are not supported; format such values in code, as below, and pass the string.
+
+A `select` picks text by a value, such as a pronoun, and needs an `other` option:
+
+```json
+{ "replied": "{gender, select, female {She} male {He} other {They}} replied" }
+```
+
+To format a value in code, use the manager's formatters. They follow the active locale:
+
+```ts
+i18n.formatNumber(9.99, { style: "currency", currency: "EUR" }); // "€9.99"
+i18n.formatDate(new Date(), { dateStyle: "long" }); // "November 2, 2026"
+i18n.formatRelativeTime(-1, "day", { numeric: "auto" }); // "yesterday"
+i18n.formatList(["Ana", "Bia", "Caio"]); // "Ana, Bia, and Caio"
+```
+
+They take the same options as `Intl.NumberFormat`, `Intl.DateTimeFormat`, `Intl.RelativeTimeFormat`, and `Intl.ListFormat`, and throw what those throw for invalid options.
+
+### Literal braces and apostrophes
+
+An apostrophe before `{` or `}` quotes text up to the next apostrophe, and two apostrophes make one. An apostrophe anywhere else is an ordinary apostrophe, so "Don't" needs nothing:
+
+| Written in the dictionary | Shown                   |
+| ------------------------- | ----------------------- |
+| `Don't forget {name}`     | `Don't forget Ana`      |
+| `Type '{name}' to insert` | `Type {name} to insert` |
+| `It''s '{'here'}'`        | `It's {here}`           |
+
+Inside a plural, `#` stands for the number; write `'#'` for a literal `#`.
+
+Text that is not valid syntax, such as an unclosed `{`, logs a warning once, unless the manager is silent, and is shown with only its `{name}` placeholders filled. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
 
 ## Plurals
 
@@ -349,28 +428,39 @@ Two things to watch for:
 
 ### Show a formatted count
 
-`count` does two jobs: it picks the form, and it fills `{count}`. That second job writes the number as JavaScript does, so 1234 items reads "1234 items" rather than "1,234 items", or "1.234 itens" in Portuguese. Passing the formatted string as `count` doesn't help, because a string can't pick a form.
-
-Split the jobs. Keep `count` a number for choosing, and show the formatted number through a placeholder of its own:
+A plain `{count}` writes the number as JavaScript does, so 1234 items reads "1234 items" rather than "1,234 items", or "1.234 itens" in Portuguese. Write `{count, number}` in the forms instead:
 
 ```json
 {
   "cart": {
     "items": {
-      "one": "{n} item",
-      "other": "{n} items"
+      "one": "{count, number} item",
+      "other": "{count, number} items"
     }
   }
 }
 ```
 
 ```ts
-const format = new Intl.NumberFormat(i18n.locale);
-
-t("cart.items", { count: 1234, n: format.format(1234) }); // "1,234 items"
+t("cart.items", { count: 1234 }); // "1,234 items"
 ```
 
-Create the formatter for the current locale, and again when the locale changes.
+### Plurals inside a sentence
+
+A plural group chooses the whole text. To choose only part of a sentence, or to give `0` its own wording, write an ICU plural in a single string. `#` is the number, formatted for the language, and `=N` matches an exact number before the forms are asked:
+
+```json
+{
+  "inbox": "Hi {name}, {count, plural, =0 {you have no messages} one {you have # message} other {you have # messages}}."
+}
+```
+
+```ts
+t("inbox", { name: "Ana", count: 0 }); // "Hi Ana, you have no messages."
+t("inbox", { name: "Ana", count: 1200 }); // "Hi Ana, you have 1,200 messages."
+```
+
+`offset:N` subtracts from the number before choosing a form and filling `#`, but not before matching `=N`, as in `{count, plural, offset:1 =0 {Nobody} =1 {{name}} other {{name} and # others}}`. Both ways of writing plurals are supported; plural groups keep each form an ordinary key, which some translation tools handle better.
 
 ## Typed keys
 
@@ -397,6 +487,38 @@ t(`errors.${code}` as Key);
 ```
 
 `TranslationKey` is also useful for typing a component prop or helper that takes a key.
+
+### Typed values
+
+When the default dictionary is an `as const` object in a `.ts` file, TypeScript sees each message's text, and `t()` also checks its values:
+
+```ts
+// locales/en.ts
+export default {
+  welcome: "Welcome back, {name}.",
+  total: "Total: {amount, number}",
+  cart: { items: { one: "{count} item", other: "{count} items" } },
+} as const;
+```
+
+```ts
+t("welcome", { name: "Ana" }); // ok
+t("welcome"); // compile error: name is required
+t("total", { amount: "3" }); // compile error: {amount, number} needs a number
+t("cart.items", { count: 2 }); // ok: a plural group requires a numeric count
+```
+
+`number`, `plural`, and `selectordinal` arguments take a number, `date` and `time` take a `Date` or a timestamp, `select` takes a string or number, and a plain `{name}` takes any of these. Extra values are allowed. When several dictionaries are typed, a key needs the values of every one that has it.
+
+A JSON import types every text as `string`, since TypeScript doesn't keep JSON string values, so a JSON dictionary checks keys but accepts any values. To check values, write the default language as `as const` TypeScript and keep the other languages in JSON, typed as the default:
+
+```ts
+import en from "./locales/en";
+
+const loadLocale = async (locale: Locale): Promise<typeof en> => (locale === "en" ? en : (await import(`./locales/${locale}.json`)).default);
+```
+
+The loader's return type is what types `t()`, so a translation must use the same arguments as the default text; the compiler can't check the JSON files. A key chosen at runtime, a message TypeScript can't read, such as one with broken syntax, and a manager typed by hand as `I18n<"en" | "pt", Key>` accept any values. Pass the dictionary type as a third type argument, `I18n<"en" | "pt", Key, typeof en>`, to keep them checked.
 
 If you write the manager's type yourself, as in `let i18n: I18n<"en" | "pt">`, pass the key type too: `I18n<"en" | "pt", Key>`. The second type argument defaults to `string`, which accepts any key. `createI18n()` fills it in for you.
 
@@ -438,6 +560,28 @@ test("every locale has every key", async () => {
     const missing = reference.filter((key) => !(key in dictionary));
     expect(missing, `missing in ${locale}`).toEqual([]);
   }
+});
+```
+
+To catch a message with broken syntax, such as an unclosed `{` a translator left, look up every key in every locale and fail on the warning. The manager must not be silent for this:
+
+```ts
+import { expect, test, vi } from "vitest";
+import { i18n } from "./i18n";
+
+test("every message is valid", async () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  await i18n.init();
+
+  for (const locale of i18n.locales) {
+    await i18n.setLocale(locale);
+    for (const key of Object.keys(await i18n.loadLocale(locale))) {
+      i18n.t(key as Parameters<typeof i18n.t>[0]);
+    }
+  }
+
+  expect(warn.mock.calls.filter(([text]) => String(text).startsWith("[I18n] Invalid message"))).toEqual([]);
+  warn.mockRestore();
 });
 ```
 
@@ -784,14 +928,20 @@ routing.parse("/PT/about"); // { locale: "pt", pathname: "/about" }
 
 The `pathname` it returns is the **canonical path**: the path your application routes on, the same in every language. Hold on to that idea; it matters once paths are translated.
 
-With `localePrefix: "always"`, a path without a locale returns `undefined`, so you can redirect it. Add the chosen locale's prefix before calling `localize()`, so a path in that locale's words, such as `/sobre`, is read as one:
+`parse()` returns `undefined` for a path that is not a page in any locale, such as `/pt/en/about`: once its prefix is removed it starts with another locale, so no link ever leads there. Answer it with a 404.
+
+With `localePrefix: "always"`, a path without a locale returns `undefined` too, so you can redirect it. Add the chosen locale's prefix and parse that, so a path in that locale's words, such as `/sobre`, is read as one, and a path that is no page in that locale either gets its 404:
 
 ```ts
 const route = routing.parse(url.pathname);
 if (route === undefined) {
   const locale = pickLocale(i18n, request);
+  const guess = routing.parse(`/${locale}${url.pathname === "/" ? "" : url.pathname}`);
+  if (guess === undefined) {
+    return new Response("Not found", { status: 404 });
+  }
   const target = new URL(url);
-  target.pathname = routing.localize(`/${locale}${url.pathname}`, locale);
+  target.pathname = routing.localize(guess.pathname, guess.locale);
   return Response.redirect(target, 302);
 }
 ```
@@ -813,7 +963,7 @@ await initializeBrowserI18n({ i18n, locale: route?.locale });
 
 ### Redirect to the canonical URL
 
-`parse()` is forgiving: `/PT/about` and `/en/about` are read as well as `/pt/about` and `/about`. That is friendly to someone typing a URL, but a search engine that finds one page at several addresses splits its ranking between them. Send every other spelling to the one `localize()` builds:
+`parse()` is forgiving: `/PT/about` and `/en/about` are read as well as `/pt/about` and `/about`. That is friendly to someone typing a URL, but a search engine that finds one page at several addresses splits its ranking between them. Send every other spelling to the one `localize()` builds. Every path `parse()` returns has one, so this never throws:
 
 ```ts
 const route = routing.parse(url.pathname);
@@ -892,10 +1042,11 @@ Your application keeps routing on `/products/42`, whatever the language. Only th
 How the table reads:
 
 - **Parameters** are segments that start with `:`, such as `:id`. They match any one segment, and the value is copied across unchanged. Every form must use the same parameters as the canonical path, but in any order, because languages don't agree on word order: `/products/42/reviews/7` is `/pt/avaliacoes/7/produto/42`.
+- **A catch-all** is a last segment written `:name*`, such as `"/docs/:path*": { pt: "/documentos/:path*" }`. It matches one or more segments and copies them across, so `/docs/guides/setup` is `/pt/documentos/guides/setup`. It does not match zero segments: list `/docs` itself as its own entry.
 - **Anything the table doesn't list keeps its words.** `/blog` is `/pt/blog`, and `/products/42` in Spanish is `/es/products/42`, since only Portuguese translates it.
 - **Fixed segments match case-sensitively**, as URLs do, so `/pt/Sobre` is not the about page. Only the locale prefix ignores case.
 - **Write words as you would read them.** `"/configurações"` matches the `/configura%C3%A7%C3%B5es` that browsers send, and `localize()` returns the encoded form.
-- **A fixed segment beats a parameter.** With both `/products/new` and `/products/:id` listed, `/products/new` is the new-product page, whichever order the table lists them in.
+- **A fixed segment beats a parameter, and a parameter beats a catch-all.** With both `/products/new` and `/products/:id` listed, `/products/new` is the new-product page, whichever order the table lists them in. With `/docs/intro` and `/docs/:path*`, `/docs/intro` is the intro page and every other `/docs/…` path goes to the catch-all.
 - **The default locale can be translated too.** A Portuguese-first site with English code can use `defaultLocale: "pt"` and `{ "/about": { pt: "/sobre" } }`, so `/sobre` is the Portuguese page and `/en/about` the English one.
 
 ### Mistakes it catches
@@ -904,7 +1055,8 @@ How the table reads:
 
 - **Two pages with the same path in one locale.** `{ "/about": { pt: "/sobre" }, "/company": { pt: "/sobre" } }` gives Portuguese two pages at `/pt/sobre`. Give one of them other words. The same goes for a form that takes words another page keeps: if `/contact` is `/about` in Spanish, the Spanish `/about` would be two pages.
 - **Two canonical paths with the same shape.** `/products/:id` and `/products/:slug` match the same paths. Keep one.
-- **Parameters that differ from the canonical path's.** `{ "/products/:id": { pt: "/produtos/:slug" } }` loses `:id`. Rename it, or move it, but keep it.
+- **Parameters that differ from the canonical path's.** `{ "/products/:id": { pt: "/produtos/:slug" } }` loses `:id`. Rename it, or move it, but keep it. A catch-all must stay a catch-all in every form.
+- **A catch-all that isn't last**, such as `/docs/:path*/edit`.
 - **A path that starts with a locale**, such as `/pt/about` as a canonical path. The prefix would be read as the locale. List `/about` instead.
 - **A locale that isn't configured**, or one listed twice in different letter case.
 - **A path `parse()` would reject**, as listed under [Paths it accepts](#paths-it-accepts).
@@ -936,6 +1088,8 @@ for (const { locale, pathname } of routing.localizeAll("/products/:id")) {
 ```
 
 `@codenhub/router` takes the first route that matches, in the order you register them. When two of a locale's paths can match the same URL, such as `/pt/produtos/novo` and `/pt/produtos/:id`, register the one with fixed words first.
+
+`localizeAll()` writes a catch-all as `:name*`. Translate that into your framework's own syntax when you register it, such as `[...path]` in a file-based router. `@codenhub/router` has no catch-all, so with it, route such paths by rewriting to the canonical path instead.
 
 ## Drop the prefix
 
@@ -1116,14 +1270,16 @@ The path you passed is valid, but the locale prefix or the translated words make
 
 ## Added
 
-- **Placeholders.** `t("welcome", { name: "Ana" })` fills `{name}` in the text. A placeholder without a value is left as written.
+- **ICU messages.** `t("welcome", { name: "Ana" })` fills `{name}` in the text, and a text can format its values: `{amount, number}`, `{when, date, long}`, `{count, plural, =0 {…} one {# item} other {# items}}`, `{n, selectordinal, …}`, and `{gender, select, …}`. Formatting follows the language of the text. An argument without a value is left as written. See [Put values into text](docs/translations.md#put-values-into-text).
+- **Formatters.** `formatNumber`, `formatDate`, `formatRelativeTime`, and `formatList` format values for the active locale with `Intl`.
+- **Regional fallback.** A key missing from `pt-BR` comes from `pt` before the default locale, when both are configured. See [Regional variants](docs/translations.md#regional-variants).
 - **Plurals.** A key can hold CLDR plural forms, such as `{ one: "{count} item", other: "{count} items" }`, and `t(key, { count })` picks the right one for the language with `Intl.PluralRules`. See [Plurals](docs/translations.md#plurals).
-- **Typed keys.** Keys are inferred from what `loadLocale` returns, so a misspelled key fails to compile. `TranslationKey<typeof en>` names the key type for your own helpers.
+- **Typed keys.** Keys are inferred from what `loadLocale` returns, so a misspelled key fails to compile. `TranslationKey<typeof en>` names the key type for your own helpers. With an `as const` dictionary, `t()` also requires each message's values with the type its format needs. See [Typed values](docs/translations.md#typed-values).
 - **`t`**, a short alias of `translate`, and every manager method keeps working when pulled off the manager, as in `export const { t } = i18n`.
 - **`matchLocale(preferences)`** picks the best supported locale for a list of language tags, such as `pt` for `pt-BR`. Servers can now resolve `Accept-Language` the way the browser binding resolves `navigator.languages`.
 - **`subscribe(listener)`** calls `listener` after every language change and returns a function that stops it, for framework stores such as React's `useSyncExternalStore`.
 - **`onMissingKey(key, locale)`** receives every key missing from all dictionaries, in place of the default warning. Throw from it to fail tests on missing keys.
-- **Translated paths.** `pathnames` on `createLocaleRouting` gives each locale its own words, so the about page can be `/pt/sobre`: `{ "/about": { pt: "/sobre" }, "/products/:id": { pt: "/produtos/:id" } }`. `parse()` reads a translated path back to the canonical path your app routes on, and `localize()` builds it. Mistakes in the table, such as two pages with the same path in one language, throw when routing is created. See [Translate paths](docs/localized-urls.md#translate-paths).
+- **Translated paths.** `pathnames` on `createLocaleRouting` gives each locale its own words, so the about page can be `/pt/sobre`: `{ "/about": { pt: "/sobre" }, "/products/:id": { pt: "/produtos/:id" } }`. `parse()` reads a translated path back to the canonical path your app routes on, and `localize()` builds it. Mistakes in the table, such as two pages with the same path in one language, throw when routing is created. A last `:name*` segment matches the rest of the path, such as `/docs/:path*`. See [Translate paths](docs/localized-urls.md#translate-paths).
 - **`localePrefix: "when-ambiguous"`** drops the locale prefix from a translated path whose words belong to one language only, so the about page can be just `/sobre`, while `/pt` and `/pt/blog` keep theirs. `localize()` throws a `RangeError` when the path it builds would open another page, such as an English page the table doesn't list at `/sobre`. See [Drop the prefix](docs/localized-urls.md#drop-the-prefix).
 - **A default text direction.** `getLocaleDirection` is now optional; without it, Arabic, Hebrew, Persian, Urdu, and other right-to-left languages and scripts get `rtl`.
 - Guides for writing translations, browser apps, server rendering and static builds, localized URLs, and troubleshooting, and a generated API reference.
@@ -1137,6 +1293,8 @@ The path you passed is valid, but the locale prefix or the translated words make
 
 - **Breaking.** `createLocaleRouting` takes `localePrefix` instead of `prefixDefaultLocale`: `"always"` for `true`, `"except-default"` for `false`, or the new `"when-ambiguous"`.
 - **Breaking.** `localize()` and `localizeAll()` throw a `RangeError` when the path they build would be longer than 8,192 characters, where they returned a path that `parse()` rejects.
+- **Breaking.** `parse()` returns `undefined` for a path no link leads to, such as `/pt/en/about`, so it can answer 404 and `localize(parse(path).pathname, …)` never throws.
+- **Breaking.** An apostrophe before `{` or `}`, and `''`, now quote text, as ICU does, and a text with invalid ICU syntax, such as an unclosed `{`, logs a warning. A literal brace is written `'{'`.
 
 ## Migrating from 0.1.0
 
@@ -1145,4 +1303,5 @@ The path you passed is valid, but the locale prefix or the translated words make
 3. **Cast keys built at runtime.** Where TypeScript now rejects a computed key you know exists, cast it with `as TranslationKey<typeof en>`, as in [Typed keys](docs/translations.md#typed-keys).
 4. **Mark a separate configuration's default locale `as const`.** Fix `Type 'string' is not assignable to type '"en" | "pt"'` at `createI18n(config)` or `createLocaleRouting(config)` with `defaultLocale: "en" as const`.
 5. **Replace `prefixDefaultLocale`.** In `createLocaleRouting`, `prefixDefaultLocale: true` becomes `localePrefix: "always"`, and `false` becomes `localePrefix: "except-default"`. In a configuration kept in a variable, add `as const`.
-6. **Optionally, drop `getLocaleDirection: () => "ltr"`.** The default gets right-to-left languages right; keep the option only to override it.
+6. **Quote literal braces.** A text that shows `{` or `}` without meaning a value, such as a code sample, needs `'{'` and `'}'`. Run the message check in [Find untranslated keys](docs/translations.md#find-untranslated-keys) to find them.
+7. **Optionally, drop `getLocaleDirection: () => "ltr"`.** The default gets right-to-left languages right; keep the option only to override it.
