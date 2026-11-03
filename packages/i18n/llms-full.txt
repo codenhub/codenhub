@@ -1057,7 +1057,7 @@ Escape both values as you would any text in HTML, or let your framework create t
 A server sends a visitor who arrives at `/` to their language from `Accept-Language`, as in [Read the locale from a path](#read-the-locale-from-a-path). A static site with `localePrefix: "except-default"` has no server to see that header: the default locale's pages are the unprefixed ones, and the browser has to do the redirect. That brings constraints of its own:
 
 - **It runs before first paint.** A deferred script redirects after the page has shown in the default language, so the visitor sees it flash. Put the redirect in an inline script in `<head>`. An inline script cannot `import`, so neither `matchLocale()` nor `routing` is there: compute what it needs at build time and pass it in.
-- **The visitor's choice wins.** Save the language a visitor picks in your language switcher and check it before `navigator.languages`. Otherwise a Portuguese browser that picks English is sent straight back to Portuguese.
+- **The visitor's choice wins.** Check the saved language before `navigator.languages`. Otherwise a Portuguese browser that picks English is sent straight back to Portuguese. The browser binding, set up as in [Read the locale on the client](#read-the-locale-on-the-client), already saves it: it stores `{"locale":"en"}` under the key `"i18n"`, or your `storageKey`, on every page it starts on. Since switching language is a navigation, that is the language of the last page the visitor read, including the one their switch led to.
 - **A link on your own site never redirects.** Where storage is blocked, the choice can't be saved, so an arrival from your own site, a same-origin `document.referrer`, keeps the page it asked for.
 - **A prefixed URL never redirects.** Render the script only on the default locale's pages, so a shared `/pt/about` link always opens in Portuguese. Keep `search` and `hash` when redirecting.
 
@@ -1069,7 +1069,7 @@ const locales = ["en", "pt", "es"] as const;
 const defaultLocale = "en";
 
 const config = {
-  storageKey: "locale", // the key your language switcher saves the visitor's choice under
+  storageKey: "i18n", // the browser binding's storageKey
   locales,
   languages: Object.fromEntries(locales.map((locale) => [new Intl.Locale(locale).language, locale])),
   targets: Object.fromEntries(locales.filter((locale) => locale !== defaultLocale).map((locale) => [locale, routing.localize(pathname, locale)])),
@@ -1091,10 +1091,11 @@ Then render, on the default locale's pages only:
 
     let target;
     try {
-      const saved = localStorage.getItem(config.storageKey);
+      // The binding saves `{"locale":"pt"}`.
+      const saved = JSON.parse(localStorage.getItem(config.storageKey) ?? "null")?.locale;
       if (config.locales.includes(saved)) target = saved;
     } catch {
-      // Storage blocked: fall back to the browser's languages.
+      // Storage blocked or unreadable: fall back to the browser's languages.
     }
 
     if (target === undefined) {
