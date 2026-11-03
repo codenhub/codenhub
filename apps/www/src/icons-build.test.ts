@@ -49,7 +49,10 @@ describe("icon delivery", () => {
       }
     }
 
-    const missing = [...used].filter((name) => !new RegExp(`\\.${name}(?![a-z0-9-])`).test(css));
+    // The generated rule names the class alone in its selector list and sets
+    // `--ic-uri`; a sizing rule such as `.card .ic-lucide-x` does not count.
+    const hasMaskRule = (name: string) => new RegExp(`(?:^|[},])\\s*\\.${name}\\s*[,{][^}]*--ic-uri`).test(css);
+    const missing = [...used].filter((name) => !hasMaskRule(name));
 
     expect(used.size).toBeGreaterThan(0);
     expect(missing).toEqual([]);
