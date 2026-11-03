@@ -24,14 +24,15 @@ export default defineConfig({
   ],
   vite: {
     plugins: [
+      // Inline SVG mode: every literal `<i class="ic-…">` tag in this app and
+      // the shared shell becomes an `<svg>` at build time, frontmatter strings
+      // included. An icon picked from data is written as a whole tag in the
+      // frontmatter and rendered with `set:html`, since a class built at
+      // runtime cannot be seen by the plugin and would render nothing.
       viteIcons({
-        mode: "css",
+        mode: "svg",
         families: [lucide, simpleIcons, logos],
         defaultPrefix: "lucide",
-        // The shared shell's `<i class="ic-…">` markup resolves under
-        // node_modules, which the plugin's own scan skips; this glob is how its
-        // classes reach the generated stylesheet.
-        content: [path.join(packagesRoot, "app-shell/src/**/*.astro")],
       }),
     ],
   },

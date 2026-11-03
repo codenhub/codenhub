@@ -5,6 +5,24 @@
  * its own (docs/roadmap.md, "Package-provided sections").
  */
 import StatusBadge from "@codenhub/app-shell/components/status-badge.astro";
+import * as bookOpenIcon from "virtual:@codenhub/icons/lucide/book-open";
+import * as bookTextIcon from "virtual:@codenhub/icons/lucide/book-text";
+import * as botIcon from "virtual:@codenhub/icons/lucide/bot";
+import * as boxesIcon from "virtual:@codenhub/icons/lucide/boxes";
+import * as calendarIcon from "virtual:@codenhub/icons/lucide/calendar";
+import * as fileCodeIcon from "virtual:@codenhub/icons/lucide/file-code";
+import * as fileTypeIcon from "virtual:@codenhub/icons/lucide/file-type";
+import * as historyIcon from "virtual:@codenhub/icons/lucide/history";
+import * as leafIcon from "virtual:@codenhub/icons/lucide/leaf";
+import * as networkIcon from "virtual:@codenhub/icons/lucide/network";
+import * as packageIcon from "virtual:@codenhub/icons/lucide/package";
+import * as packageOpenIcon from "virtual:@codenhub/icons/lucide/package-open";
+import * as playIcon from "virtual:@codenhub/icons/lucide/play";
+import * as plugIcon from "virtual:@codenhub/icons/lucide/plug";
+import * as scaleIcon from "virtual:@codenhub/icons/lucide/scale";
+import * as tagIcon from "virtual:@codenhub/icons/lucide/tag";
+import * as tagsIcon from "virtual:@codenhub/icons/lucide/tags";
+import { decorative } from "../../../lib/icon";
 import type { GetStaticPaths } from "astro";
 
 import CopyButton from "../../../components/copy-button.astro";
@@ -51,17 +69,17 @@ interface Link {
 }
 
 const linkCandidates: (Link | undefined)[] = [
-  links.docs === undefined ? undefined : { href: links.docs, label: t("package.links.documentation"), icon: "ic-lucide-book-open", external: false },
-  links.changelog === undefined ? undefined : { href: links.changelog, label: t("package.links.changelog"), icon: "ic-lucide-history", external: false },
-  links.demo === undefined ? undefined : { href: links.demo, label: t("package.links.demo"), icon: "ic-lucide-play", external: false },
-  links.llms === undefined ? undefined : { href: links.llms, label: "llms.txt", icon: "ic-lucide-bot", external: true },
+  links.docs === undefined ? undefined : { href: links.docs, label: t("package.links.documentation"), icon: decorative(bookOpenIcon), external: false },
+  links.changelog === undefined ? undefined : { href: links.changelog, label: t("package.links.changelog"), icon: decorative(historyIcon), external: false },
+  links.demo === undefined ? undefined : { href: links.demo, label: t("package.links.demo"), icon: decorative(playIcon), external: false },
+  links.llms === undefined ? undefined : { href: links.llms, label: "llms.txt", icon: decorative(botIcon), external: true },
 ];
 // The first link is the page's main action and keeps its label; the rest are icons with a tooltip.
 const [primaryLink, ...secondaryLinks] = linkCandidates.filter((link): link is Link => link !== undefined);
 
 const facts: { icon: string; term: string; value: string }[] = [
   {
-    icon: "ic-lucide-tag",
+    icon: decorative(tagIcon),
     term: t("package.facts.latestVersion"),
     value:
       latest !== undefined
@@ -72,37 +90,37 @@ const facts: { icon: string; term: string; value: string }[] = [
   },
   ...(releases.lastPublished === undefined
     ? []
-    : [{ icon: "ic-lucide-calendar", term: t("package.facts.lastPublished"), value: formatDate(releases.lastPublished.date, locale) }]),
-  ...(entry.license === undefined ? [] : [{ icon: "ic-lucide-scale", term: t("package.facts.license"), value: entry.license }]),
-  ...(rootSize === undefined ? [] : [{ icon: "ic-lucide-package", term: t("package.facts.bundleSize"), value: rootSize }]),
+    : [{ icon: decorative(calendarIcon), term: t("package.facts.lastPublished"), value: formatDate(releases.lastPublished.date, locale) }]),
+  ...(entry.license === undefined ? [] : [{ icon: decorative(scaleIcon), term: t("package.facts.license"), value: entry.license }]),
+  ...(rootSize === undefined ? [] : [{ icon: decorative(packageIcon), term: t("package.facts.bundleSize"), value: rootSize }]),
   {
-    icon: "ic-lucide-network",
+    icon: decorative(networkIcon),
     term: t("package.facts.dependencies"),
     value: properties.dependencyCount === 0 ? t("package.facts.none") : String(properties.dependencyCount),
   },
   {
-    icon: "ic-lucide-plug",
+    icon: decorative(plugIcon),
     term: t("package.facts.peerDependencies"),
     value: properties.peerDependencies.length === 0 ? t("package.facts.none") : properties.peerDependencies.join(", "),
   },
   {
-    icon: "ic-lucide-file-code",
+    icon: decorative(fileCodeIcon),
     term: t("package.facts.moduleFormat"),
     value: properties.isEsmOnly ? t("package.facts.esmOnly") : t("package.facts.esmAndCjs"),
   },
   {
-    icon: "ic-lucide-file-type",
+    icon: decorative(fileTypeIcon),
     term: t("package.facts.types"),
     value: properties.shipsTypes ? t("package.facts.included") : t("package.facts.notIncluded"),
   },
   {
-    icon: "ic-lucide-leaf",
+    icon: decorative(leafIcon),
     term: t("package.facts.sideEffectFree"),
     value: properties.isSideEffectFree ? t("package.facts.yes") : t("package.facts.no"),
   },
   ...(properties.bundled.length === 0
     ? []
-    : [{ icon: "ic-lucide-boxes", term: t("package.facts.bundles"), value: properties.bundled.join(", ") }]),
+    : [{ icon: decorative(boxesIcon), term: t("package.facts.bundles"), value: properties.bundled.join(", ") }]),
 ];
 
 // Every entrypoint the manifest exports, with as much of its cost as the release measured.
@@ -111,9 +129,9 @@ const entrypoints = describeEntrypoints(properties.entrypoints, size);
 const readmeHtml = entry.readme === undefined ? undefined : await renderReadme(entry.readme.source, entry.readme);
 
 const detailTabs = [
-  ...(readmeHtml === undefined ? [] : [{ icon: "ic-lucide-book-text", id: "readme", label: t("package.tabs.readme") }]),
-  ...(entrypoints.length === 0 ? [] : [{ icon: "ic-lucide-package-open", id: "entrypoints", label: t("package.tabs.entrypoints") }]),
-  { icon: "ic-lucide-tags", id: "releases", label: t("package.tabs.releases") },
+  ...(readmeHtml === undefined ? [] : [{ icon: decorative(bookTextIcon), id: "readme", label: t("package.tabs.readme") }]),
+  ...(entrypoints.length === 0 ? [] : [{ icon: decorative(packageOpenIcon), id: "entrypoints", label: t("package.tabs.entrypoints") }]),
+  { icon: decorative(tagsIcon), id: "releases", label: t("package.tabs.releases") },
 ];
 // The first tab shows without JavaScript; the others wait for a click.
 const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
@@ -160,7 +178,7 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
                       rel={link.external ? "noopener noreferrer" : undefined}
                       target={link.external ? "_blank" : undefined}
                     >
-                      <i aria-hidden="true" class={link.icon} />
+                      <Fragment set:html={link.icon} />
                     </a>
                     <span class="tooltip-bubble" id={`package-link-tip-${index}`} role="tooltip">
                       {link.label}
@@ -174,7 +192,7 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
                 rel={primaryLink.external ? "noopener noreferrer" : undefined}
                 target={primaryLink.external ? "_blank" : undefined}
               >
-                <i aria-hidden="true" class={primaryLink.icon} />
+                <Fragment set:html={primaryLink.icon} />
                 {primaryLink.label}
               </a>
             </nav>
@@ -188,7 +206,7 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
           facts.map(({ icon, term, value }) => (
             <div class="card soft edgeless p-sm">
               <dt>
-                <i aria-hidden="true" class={icon} />
+                <Fragment set:html={icon} />
                 {term}
               </dt>
               <dd>{value}</dd>
@@ -215,7 +233,7 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
                 tabindex={index === 0 ? 0 : -1}
                 type="button"
               >
-                <i aria-hidden="true" class={icon} />
+                <Fragment set:html={icon} />
                 {label}
               </button>
             ))

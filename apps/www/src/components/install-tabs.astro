@@ -8,6 +8,11 @@
  * @param locale - The page's locale.
  */
 import { getTranslator, type Locale } from "../i18n";
+import * as bunIcon from "virtual:@codenhub/icons/logos/bun";
+import * as npmIcon from "virtual:@codenhub/icons/logos/npm-icon";
+import * as pnpmIcon from "virtual:@codenhub/icons/logos/pnpm";
+import * as yarnIcon from "virtual:@codenhub/icons/logos/yarn";
+import { decorative } from "../lib/icon";
 import CopyButton from "./copy-button.astro";
 
 interface Props {
@@ -20,13 +25,13 @@ const { t } = await getTranslator(locale);
 
 // Full-color `logos` marks: `simple-icons` has no Yarn mark (upstream records
 // it under CC-BY-4.0, which the family leaves out), and `logos` has all four
-// under CC0. Each class is written out in full so the icons plugin finds it at
-// build time.
+// under CC0. Each is its own icon module, since svg mode inlines only literal
+// `<i>` tags (`../lib/icon`).
 const managers = [
-  { brand: "npm", command: `npm install ${packageName}`, icon: "ic-logos-npm-icon" },
-  { brand: "pnpm", command: `pnpm add ${packageName}`, icon: "ic-logos-pnpm" },
-  { brand: "yarn", command: `yarn add ${packageName}`, icon: "ic-logos-yarn" },
-  { brand: "bun", command: `bun add ${packageName}`, icon: "ic-logos-bun" },
+  { brand: "npm", command: `npm install ${packageName}`, icon: decorative(npmIcon) },
+  { brand: "pnpm", command: `pnpm add ${packageName}`, icon: decorative(pnpmIcon) },
+  { brand: "yarn", command: `yarn add ${packageName}`, icon: decorative(yarnIcon) },
+  { brand: "bun", command: `bun add ${packageName}`, icon: decorative(bunIcon) },
 ];
 ---
 
@@ -44,7 +49,7 @@ const managers = [
           tabindex={index === 0 ? 0 : -1}
           type="button"
         >
-          <i aria-hidden="true" class:list={[icon, "install-tab-icon"]} />
+          <Fragment set:html={icon} />
           {brand}
         </button>
       ))

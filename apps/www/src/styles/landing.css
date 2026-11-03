@@ -181,7 +181,7 @@
   background: var(--color-background);
 }
 
-.landing-principle-icon i {
+.landing-principle-icon svg {
   --ic-size: 1.25rem;
 }
 

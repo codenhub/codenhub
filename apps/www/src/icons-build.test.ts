@@ -7,7 +7,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 const appRoot = fileURLToPath(new URL("../", import.meta.url));
 const distRoot = fileURLToPath(new URL("../dist/", import.meta.url));
 
-const ICON_CLASS = /\bic-(?:lucide|simple-icons|logos)-[a-z0-9-]+/g;
+const ICON_CLASS = /\bic-(?:lucide|simple-icons|logos)-[a-z0-9-]+/;
 
 async function readAll(extension: string): Promise<string[]> {
   const entries = await readdir(distRoot, { recursive: true, withFileTypes: true });
@@ -22,39 +22,27 @@ describe("icon delivery", () => {
     await build({ logLevel: "silent", root: appRoot });
   }, 120_000);
 
-  // CSS mode builds its stylesheet before Astro bundles client scripts, so a
-  // class named only in a `<script>` gets no rule and renders as a solid square
-  // (apps/docs hit this in its link preview). Nothing in the build reports it.
-  it("generates a mask rule for every icon class the pages or their scripts use", async () => {
-    const [html, scripts, styles] = await Promise.all([readAll(".html"), readAll(".js"), readAll(".css")]);
-    const css = styles.join("\n");
+  // Svg mode inlines only literal `<i class="ic-…">` tags and emits no
+  // stylesheet, so an icon class that reaches the page on any other element,
+  // such as an `<i>` whose class was built from data, renders nothing. The
+  // plugin cannot see such a class at build time, so nothing else reports it.
+  it("inlines every icon the pages use as an svg", async () => {
+    const html = await readAll(".html");
 
-    const used = new Set<string>();
-    const inlineScripts: string[] = [];
-    // Only real `class` attributes and scripts: a README's code sample spells
-    // icon classes as text. Astro inlines a small client script into the page.
+    const icons: string[] = [];
+    const missed: string[] = [];
     for (const page of html) {
-      for (const [, value] of page.matchAll(/\sclass="([^"]*)"/g)) {
-        for (const [name] of value.matchAll(ICON_CLASS)) {
-          used.add(name);
+      // Only real tags: a README's code sample spells icon classes as escaped text.
+      for (const [tag, name] of page.matchAll(/<([a-z][a-z0-9-]*)\s[^>]*\bclass="[^"]*"[^>]*>/gi)) {
+        const icon = tag.match(ICON_CLASS)?.[0];
+        if (icon === undefined) {
+          continue;
         }
-      }
-      for (const [, body] of page.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script[^>]*>/gi)) {
-        inlineScripts.push(body);
-      }
-    }
-    for (const script of [...scripts, ...inlineScripts]) {
-      for (const [name] of script.matchAll(ICON_CLASS)) {
-        used.add(name);
+        (name.toLowerCase() === "svg" ? icons : missed).push(`${name} ${icon}`);
       }
     }
 
-    // The generated rule names the class alone in its selector list and sets
-    // `--ic-uri`; a sizing rule such as `.card .ic-lucide-x` does not count.
-    const hasMaskRule = (name: string) => new RegExp(`(?:^|[},])\\s*\\.${name}\\s*[,{][^}]*--ic-uri`).test(css);
-    const missing = [...used].filter((name) => !hasMaskRule(name));
-
-    expect(used.size).toBeGreaterThan(0);
-    expect(missing).toEqual([]);
+    expect(icons.length).toBeGreaterThan(0);
+    expect([...new Set(missed)]).toEqual([]);
   });
 });
