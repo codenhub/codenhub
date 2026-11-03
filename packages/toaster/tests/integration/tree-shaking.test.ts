@@ -24,7 +24,7 @@ const DIALOG_MARKER = "toast-dialog";
 const TOAST_MARKER = "data-toast-message";
 
 // Gzipped bytes a bundle calling only `toast("…")` may reach; see docs/internal/roadmap.md.
-const TOAST_BUDGET_GZIP_BYTES = 11_000;
+const TOAST_BUDGET_GZIP_BYTES = 9_500;
 
 // Created in `beforeAll`, so a run filtered to other tests leaves no directory behind.
 let workspace: string;

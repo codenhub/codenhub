@@ -10,26 +10,23 @@ scope: `@codenhub/toaster` direction.
 
 Durable direction for `@codenhub/toaster`. The repo-wide roadmap is `docs/roadmap.md`.
 
-## Current Focus
-
-- **A trimmed toast core**, against the budget below. The toast lifecycle and DOM code carry most of the weight. Changes that keep behavior come first; the larger savings left, each a behavior or API change decided on its own, are simplifying the FLIP stack animation and narrowing the argument forms.
-
 ## Size budget
 
-A bundle that calls only `toast("…")` may cost at most **11 KB gzipped** (11,000 bytes), and the target is **about 9.5 KB**. `tests/integration/tree-shaking.test.ts` enforces the ceiling on every test run, bundling with tsdown and gzipping at Node's default level, which lands within 1% of the `toast` export in `size.json`.
+A bundle that calls only `toast("…")` may cost at most **9.5 KB gzipped** (9,500 bytes). `tests/integration/tree-shaking.test.ts` enforces the ceiling on every test run, bundling with tsdown and gzipping at Node's default level, which lands within 1% of the `toast` export in `size.json`. It measured 9,086 bytes on 2026-11-02.
 
-- **Why a ceiling at the current size**: the package was 10.9 KB at the time, so the ceiling stops growth without blocking work; lower it as trims land. The target is a direction, not a gate.
-- **Why about 9.5 KB, not 8 KB**: the first target, about 8 KB, did not weigh what reaching it takes. Measured against the remaining options on 2026-11-02, getting to 8 KB also needed dropping focus restoration on dismiss and the auto-dismiss pause in background tabs, accessibility and behavior the package keeps. About 9.5 KB is reachable without them.
+- **Why 9.5 KB**: it was the target while the core was trimmed from 10.9 KB, and the trims reached it without giving up behavior the package keeps. The ceiling sits at the target rather than at the measured size so that a fix or small feature does not need a budget change; it stops a regression of more than about 400 bytes.
+- **Why not 8 KB**: the first target, about 8 KB, did not weigh what reaching it takes. Measured against the remaining options on 2026-11-02, getting to 8 KB also needed dropping focus restoration on dismiss and the auto-dismiss pause in background tabs, accessibility and behavior the package keeps.
 - **Why a test, not the publish check**: `hub publish` compares `size.json` with a fresh measurement but has no limits, and a per-package limit there would be new tooling surface. A test fails where the regression is made, not at release.
-
-## Planned
-
-- **Stacking and position controls** for the container.
-- **Richer interactions and animation.**
 
 ## Later / Possible
 
-- **A composable API**, standalone functions or opt-in features, so a consumer bundles only the toast kinds it calls. This is a breaking redesign, worth it only if the budget cannot be met by trimming the core.
+- **Stacking and position controls** for the container. An idea from use, with no design yet; deferred until a consumer needs it.
+- **Richer interactions and animation.** Same: no design yet, and no current need.
+- **A composable API**, standalone functions or opt-in features, so a consumer bundles only the toast kinds it calls. This is a breaking redesign, worth it only if the budget stops being reachable by trimming the core.
+
+## Not Planned
+
+- **A single argument form** (only `toast(message, options)` or only `toast(options)`). Estimated to save about 150 gzipped bytes, which the budget no longer needs. Both forms are what consumers of toast libraries expect: the string form for the common case, and the object form for toasts built from data or carrying a title without a message. Removing either breaks every caller who uses it for no gain they would notice.
 
 ## Notes
 
