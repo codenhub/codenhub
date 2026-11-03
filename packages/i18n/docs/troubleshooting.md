@@ -78,7 +78,9 @@ The same goes for `localePrefix` in a routing configuration kept in a variable, 
 
 ## A routing method throws `TypeError`
 
-The path is not an absolute path or contains something routing refuses, such as `?`, `#`, `//`, or a dot segment. Pass `url.pathname` rather than the full URL. [Paths it accepts](localized-urls.md#paths-it-accepts) has the full list.
+From `parse()`, the value is not a URL's pathname: it doesn't start with `/`, or it contains `?` or `#`. Pass `url.pathname` rather than the full URL or a path with its query string, such as Node's `request.url`. A path that is a pathname but contains something routing refuses, such as `//` or a dot segment, makes `parse()` return `undefined` instead.
+
+From `localize()` or `localizeAll()`, the path is one of those, or contains something routing refuses. [Paths it accepts](localized-urls.md#paths-it-accepts) has the full list.
 
 ## `localize()` throws `RangeError`: "would be read as"
 

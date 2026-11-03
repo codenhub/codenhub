@@ -168,3 +168,16 @@ Rejected:
 - Catching the `RangeError` in the guide's examples, because every application would have to remember it, and a forgotten catch is a 500 on any typed URL.
 - Reading such a path as the nearest page, such as `/pt/en/sobre` as the about page, because it gives one page more addresses and hides broken links.
 - A `hasLocalePrefix` helper to tell the two `undefined` cases apart under `"always"`, because the guide's second `parse` does it without new API.
+
+### `parse` returns `undefined` for a request path routing refuses (0.2.1)
+
+`parse` threw a `TypeError` for any path routing refuses, including ones a request carries: `new URL("https://example.com//wp-login.php").pathname` is `//wp-login.php`, and scanners send such paths all day. The guide's handlers call `parse(url.pathname)` without a catch, so each answered 500. The decision above rejected catching in the guide because a forgotten catch is a 500 on any typed URL; it weighed only the `RangeError`, and the same reasoning holds for this `TypeError`.
+
+- **`undefined` for what a request can carry**: `//`, `\`, control characters, dot segments, encoded slashes, backslashes, `%` and controls, malformed escapes, and paths over 8,192 characters. Every caller already answers `undefined` with a 404, so code written for 0.2.0 keeps working.
+- **Still a `TypeError` for what `url.pathname` never is**: a non-string, a value not starting with `/`, such as a full URL, or one with `?` or `#`, such as Node's `request.url` with its query. Returning `undefined` there would turn a mistake in the calling code into a 404 on every URL with a query string.
+- **`localize` and `localizeAll` still throw** for every refused path, since they build links from the application's own paths.
+
+Rejected:
+
+- Adding a catch that answers 400 to every guide example, for the reason above.
+- Returning `undefined` for every invalid value, including a full URL, for the `request.url` case.

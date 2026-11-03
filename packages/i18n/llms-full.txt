@@ -1253,12 +1253,15 @@ Feed it your page list to get every page a static build needs, then render each 
 
 Routing works on the path of a URL only. Give it `url.pathname`, not the full URL, and handle the query string and fragment yourself.
 
-To keep a crafted URL from reaching a different page than the one checked, every method throws a `TypeError` for a path that:
+To keep a crafted URL from reaching a different page than the one checked, routing refuses a path that:
 
-- does not start with `/`, or is a full or protocol-relative URL, such as `https://…` or `//host`;
-- contains `?`, `#`, `\`, `//`, or a control character;
+- is protocol-relative, such as `//host`, or contains `\`, `//`, or a control character;
 - contains a `.` or `..` segment, or encodes one, a slash, a backslash, a `%`, or a control character with `%`;
 - has a malformed `%` escape, or is longer than 8,192 characters.
+
+A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links rather than read requests, so they throw a `TypeError` for such a path.
+
+Every method throws a `TypeError` for a value that is not a URL's pathname at all: one that does not start with `/`, such as a full URL `https://…`, or one that contains `?` or `#`, such as a path with its query string. That is a mistake in the calling code, not a request to answer.
 
 Ordinary escapes, such as `%20`, are fine, and a trailing slash is kept: `/pt/sobre/` parses to `/about/`.
 
@@ -1346,7 +1349,9 @@ The same goes for `localePrefix` in a routing configuration kept in a variable, 
 
 ## A routing method throws `TypeError`
 
-The path is not an absolute path or contains something routing refuses, such as `?`, `#`, `//`, or a dot segment. Pass `url.pathname` rather than the full URL. [Paths it accepts](docs/localized-urls.md#paths-it-accepts) has the full list.
+From `parse()`, the value is not a URL's pathname: it doesn't start with `/`, or it contains `?` or `#`. Pass `url.pathname` rather than the full URL or a path with its query string, such as Node's `request.url`. A path that is a pathname but contains something routing refuses, such as `//` or a dot segment, makes `parse()` return `undefined` instead.
+
+From `localize()` or `localizeAll()`, the path is one of those, or contains something routing refuses. [Paths it accepts](docs/localized-urls.md#paths-it-accepts) has the full list.
 
 ## `localize()` throws `RangeError`: "would be read as"
 

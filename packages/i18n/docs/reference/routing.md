@@ -91,11 +91,11 @@ Parses a URL's pathname into its locale and canonical pathname. Locale prefixes 
 
 **Parameters**
 
-- `pathname` — An absolute application pathname of at most 8,192 characters without a URL, query, or fragment.
+- `pathname` — A URL's pathname, such as `url.pathname`: it starts with `/` and has no query or fragment.
 
-**Returns** — The locale and canonical pathname, or `undefined` when a required prefix is absent or no URL leads to the path read, such as `/pt/en/sobre`, or `/en/sobre` when `/sobre` is the Portuguese about page. A result always has a canonical URL that `localize` builds.
+**Returns** — The locale and canonical pathname, or `undefined` when a required prefix is absent, when no URL leads to the path read, such as `/pt/en/sobre`, or `/en/sobre` when `/sobre` is the Portuguese about page, or when the path is one routing refuses, such as `//wp-login.php`, a dot segment, an encoded slash, or one longer than 8,192 characters. A result always has a canonical URL that `localize` builds.
 
-**Throws** — `TypeError` — When `pathname` is not a valid application pathname.
+**Throws** — `TypeError` — When `pathname` is not a string, does not start with `/`, or contains `?` or `#`, which a URL's pathname never does.
 
 ### LocaleRoutingConfig
 
