@@ -88,8 +88,9 @@ export function initPackageGrid(ids: PackageGridElementIds = {}): void {
     sortButton.setAttribute("aria-label", label);
     sortButton.title = label;
 
-    for (const icon of sortButton.querySelectorAll<HTMLElement>("[data-sort-icon]")) {
-      icon.hidden = icon.dataset.sortIcon !== nextDirection;
+    // The attribute, not `.hidden`: an icon inlined as `<svg>` has no such property.
+    for (const icon of sortButton.querySelectorAll<HTMLElement | SVGElement>("[data-sort-icon]")) {
+      icon.toggleAttribute("hidden", icon.dataset.sortIcon !== nextDirection);
     }
 
     applySort();
