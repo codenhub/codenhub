@@ -33,6 +33,7 @@ Recoverable failures use initial-state fallbacks or return `false` and report th
 - [Documentation overview](docs/index.md)
 - [Core stores](docs/core-stores.md)
 - [Storage drivers](docs/storage-drivers.md)
+- [Changelog](docs/changelog/index.md)
 
 ## Requirements
 

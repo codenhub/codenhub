@@ -1,6 +1,6 @@
 {
   "name": "@codenhub/store",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "private": false,
   "description": "Small typed records persisted to key-value backends.",
   "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/store",
