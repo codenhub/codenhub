@@ -705,11 +705,11 @@ A label passed directly to a dialog call (`ConfirmOptions.confirmLabel`, etc.) a
 
 `createDialogs()` returns an independent instance with the same `confirm`, `prompt`, and `alert` methods as the `dialog` singleton. Each instance opens its dialogs one at a time, queuing later calls until the open one closes.
 
-| Option      | Type           | Default          | Description                                                                     |
-| :---------- | :------------- | :--------------- | :------------------------------------------------------------------------------ |
-| `container` | `HTMLElement`  | `document.body`  | Element the dialogs are appended to. Cannot be changed after construction.      |
-| `labels`    | `DialogLabels` | English defaults | Default button labels: `confirm`, `cancel`, `submit`, `ok`.                     |
-| `className` | `string`       | `undefined`      | Class appended to every dialog in this instance.                                |
+| Option      | Type           | Default          | Description                                                                |
+| :---------- | :------------- | :--------------- | :------------------------------------------------------------------------- |
+| `container` | `HTMLElement`  | `document.body`  | Element the dialogs are appended to. Cannot be changed after construction. |
+| `labels`    | `DialogLabels` | English defaults | Default button labels: `confirm`, `cancel`, `submit`, `ok`.                |
+| `className` | `string`       | `undefined`      | Class appended to every dialog in this instance.                           |
 
 `dialogs.configure({...})` changes any option except `container`. `dialogs.destroy()` closes the open dialog and drops queued ones, settling each with its cancel value, and removes the instance's `<dialog>` element; later calls throw. To recolor dialogs, set the `--toast-color-*` custom properties in CSS (see [Styling](docs/styling.md#color-overrides)).
 
@@ -838,27 +838,27 @@ toast.error("Critical storage alert", { className: "storage-alert" });
 
 ### Available properties
 
-| Property                     | What it colors                                                             |
-| ---------------------------- | -------------------------------------------------------------------------- |
-| `--toast-color-default-bg`   | Background of a default (no-severity) toast.                               |
-| `--toast-color-default-fg`   | Text and icon color of a default toast.                                    |
-| `--toast-color-default-edge` | Border of a default toast.                                                 |
-| `--toast-color-success-bg`   | Background of a success toast.                                             |
-| `--toast-color-success-fg`   | Text and icon color of a success toast.                                    |
-| `--toast-color-success-edge` | Border of a success toast.                                                 |
-| `--toast-color-error-bg`     | Background of an error toast.                                              |
-| `--toast-color-error-fg`     | Text and icon color of an error toast.                                     |
-| `--toast-color-error-edge`   | Border of an error toast.                                                  |
-| `--toast-color-warning-bg`   | Background of a warning toast.                                             |
-| `--toast-color-warning-fg`   | Text and icon color of a warning toast.                                    |
-| `--toast-color-warning-edge` | Border of a warning toast.                                                 |
-| `--toast-color-info-bg`      | Background of an info toast.                                               |
-| `--toast-color-info-fg`      | Text and icon color of an info toast.                                      |
-| `--toast-color-info-edge`    | Border of an info toast.                                                   |
-| `--toast-color-surface`      | Background of the dialog container and its cancel button.                  |
-| `--toast-color-text`         | Text color of the dialog container and its cancel button.                  |
+| Property                     | What it colors                                                                            |
+| ---------------------------- | ----------------------------------------------------------------------------------------- |
+| `--toast-color-default-bg`   | Background of a default (no-severity) toast.                                              |
+| `--toast-color-default-fg`   | Text and icon color of a default toast.                                                   |
+| `--toast-color-default-edge` | Border of a default toast.                                                                |
+| `--toast-color-success-bg`   | Background of a success toast.                                                            |
+| `--toast-color-success-fg`   | Text and icon color of a success toast.                                                   |
+| `--toast-color-success-edge` | Border of a success toast.                                                                |
+| `--toast-color-error-bg`     | Background of an error toast.                                                             |
+| `--toast-color-error-fg`     | Text and icon color of an error toast.                                                    |
+| `--toast-color-error-edge`   | Border of an error toast.                                                                 |
+| `--toast-color-warning-bg`   | Background of a warning toast.                                                            |
+| `--toast-color-warning-fg`   | Text and icon color of a warning toast.                                                   |
+| `--toast-color-warning-edge` | Border of a warning toast.                                                                |
+| `--toast-color-info-bg`      | Background of an info toast.                                                              |
+| `--toast-color-info-fg`      | Text and icon color of an info toast.                                                     |
+| `--toast-color-info-edge`    | Border of an info toast.                                                                  |
+| `--toast-color-surface`      | Background of the dialog container and its cancel button.                                 |
+| `--toast-color-text`         | Text color of the dialog container and its cancel button.                                 |
 | `--toast-color-border`       | Border of the dialog container and cancel button under `.edged`, and of the prompt input. |
-| `--toast-color-primary-bg`   | Focus ring and focused border of the prompt input.                         |
+| `--toast-color-primary-bg`   | Focus ring and focused border of the prompt input.                                        |
 
 Every value is final, a background, border, or foreground exactly as it renders, never an ingredient the package mixes further. Unset, each one matches the composed `@codenhub/styles` look, or the package's generated defaults without it.
 
