@@ -327,12 +327,17 @@ test("scrolls an overflowing stack instead of running off-screen, keeping the ne
   // Dispatched one at a time, in order: each click must be its own
   // sequential toast dispatch for the "newest is first" assertion below
   // to mean anything, so this can't be parallelized.
+  //
+  // `dispatchEvent` rather than `click()`: at this viewport the top-right
+  // stack lands over the trigger, so a real click's hit test finds a toast
+  // and Playwright retries until the test times out. What is under test is
+  // the stack, not the pointer reaching the button.
   const trigger = page.getByRole("button", { name: "Success Toast" });
-  await trigger.click();
-  await trigger.click();
-  await trigger.click();
-  await trigger.click();
-  await trigger.click();
+  await trigger.dispatchEvent("click");
+  await trigger.dispatchEvent("click");
+  await trigger.dispatchEvent("click");
+  await trigger.dispatchEvent("click");
+  await trigger.dispatchEvent("click");
 
   const stack = page.locator("[data-toast-container]");
   await expect.poll(() => stack.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
@@ -357,12 +362,13 @@ test("hides the stack's own scrollbar chrome while still allowing it to scroll",
   await page.locator("#select-position").selectOption("top-right");
   await page.locator("#check-auto-dismiss").uncheck();
 
+  // `dispatchEvent` for the reason the test above gives.
   const trigger = page.getByRole("button", { name: "Success Toast" });
-  await trigger.click();
-  await trigger.click();
-  await trigger.click();
-  await trigger.click();
-  await trigger.click();
+  await trigger.dispatchEvent("click");
+  await trigger.dispatchEvent("click");
+  await trigger.dispatchEvent("click");
+  await trigger.dispatchEvent("click");
+  await trigger.dispatchEvent("click");
 
   const stack = page.locator("[data-toast-container]");
   await expect.poll(() => stack.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
