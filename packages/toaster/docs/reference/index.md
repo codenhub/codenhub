@@ -84,7 +84,6 @@ export interface CustomToastOptions {
     duration?: number;
     dismissible?: boolean;
     autoDismiss?: boolean;
-    tokens?: ToastTokens;
     className?: string;
     role?: ToastRole;
     margin?: string | {
@@ -163,14 +162,6 @@ role?: ToastRole;
 
 Announcement role, see [`ToastRole`](#toastrole). Defaults to "status".
 
-#### CustomToastOptions › tokens
-
-```ts
-tokens?: ToastTokens;
-```
-
-Color token overrides.
-
 ### LoadingDefaults
 
 ```ts
@@ -207,7 +198,6 @@ export interface LoadingToastOptions {
     description?: string;
     position?: ToastPosition;
     dismissible?: boolean;
-    tokens?: ToastTokens;
     className?: string;
     margin?: string | {
         x?: string;
@@ -277,14 +267,6 @@ title?: string;
 
 Optional title to display above the progress message.
 
-#### LoadingToastOptions › tokens
-
-```ts
-tokens?: ToastTokens;
-```
-
-Color token overrides.
-
 ### PromiseToastOptions
 
 ```ts
@@ -295,7 +277,6 @@ export interface PromiseToastOptions<T> {
     position?: ToastPosition;
     duration?: number;
     dismissible?: boolean;
-    tokens?: ToastTokens;
     className?: string;
     margin?: string | {
         x?: string;
@@ -372,14 +353,6 @@ success: string | ToastOptions | ((data: T) => string | ToastOptions);
 ```
 
 Content to display when the promise successfully resolves.
-
-#### PromiseToastOptions › tokens
-
-```ts
-tokens?: ToastTokens;
-```
-
-Scoped design tokens.
 
 ### SemanticDefaults
 
@@ -608,8 +581,6 @@ export interface ToasterConfig {
     dismissible?: boolean;
     autoDismiss?: boolean;
     labels?: ToastLabels;
-    tokens?: ToastTokens;
-    nonce?: string;
     semantic?: SemanticDefaults;
     loading?: LoadingDefaults;
     custom?: CustomDefaults;
@@ -706,14 +677,6 @@ maxVisible?: number;
 
 Maximum active toasts displayed simultaneously. Defaults to 5.
 
-#### ToasterConfig › nonce
-
-```ts
-nonce?: string;
-```
-
-Nonce applied to the `<style>` element `tokens` are written through, for a host `style-src` Content Security Policy that requires one. Has no effect without `tokens`.
-
 #### ToasterConfig › position
 
 ```ts
@@ -729,14 +692,6 @@ semantic?: SemanticDefaults;
 ```
 
 Defaults for `success`, `error`, `warning`, and `info` toasts and the outcome of `promise`, over the instance-wide ones.
-
-#### ToasterConfig › tokens
-
-```ts
-tokens?: ToastTokens;
-```
-
-Dynamic CSS variables applied to all toasts inside this instance.
 
 ### ToastHandle
 
@@ -841,13 +796,13 @@ Registers a callback to trigger when the entrance animation completes.
 update(options: ToastUpdateOptions): void;
 ```
 
-Patches the message, content, icon, severity, timing, styles, or classes of a toast. Applied immediately when the toast is visible; if it is still queued, the update is stored and applied once a slot opens rather than discarded. Has no effect once the toast has settled.
+Patches the message, content, icon, severity, timing, or classes of a toast. Applied immediately when the toast is visible; if it is still queued, the update is stored and applied once a slot opens rather than discarded. Has no effect once the toast has settled.
 
 **Parameters**
 
 - `options` — Partial updates to apply.
 
-**Throws** — `Error` — If `options.tokens` contains an invalid CSS color, `options.duration` is not a finite number &gt;= 0, `options.type` is not a recognized severity, or `options.content` resolves to nothing renderable.
+**Throws** — `Error` — If `options.duration` is not a finite number &gt;= 0, `options.type` is not a recognized severity, or `options.content` resolves to nothing renderable.
 
 ### ToastLabels
 
@@ -888,7 +843,6 @@ export interface ToastOptions {
     duration?: number;
     dismissible?: boolean;
     autoDismiss?: boolean;
-    tokens?: ToastTokens;
     className?: string;
     role?: ToastRole;
     margin?: string | {
@@ -1001,14 +955,6 @@ title?: string;
 
 Optional title to display above the message or as primary heading.
 
-#### ToastOptions › tokens
-
-```ts
-tokens?: ToastTokens;
-```
-
-Instance token overrides.
-
 #### ToastOptions › type
 
 ```ts
@@ -1016,323 +962,6 @@ type?: SemanticType | "default";
 ```
 
 Severity variant or "default" neutral.
-
-### ToastTokens
-
-```ts
-export interface ToastTokens {
-    successBg?: string;
-    successFg?: string;
-    successEdge?: string;
-    errorBg?: string;
-    errorFg?: string;
-    errorEdge?: string;
-    warningBg?: string;
-    warningFg?: string;
-    warningEdge?: string;
-    infoBg?: string;
-    infoFg?: string;
-    infoEdge?: string;
-    defaultBg?: string;
-    defaultFg?: string;
-    defaultEdge?: string;
-    border?: string;
-    surface?: string;
-    text?: string;
-    primaryBg?: string;
-    primaryFg?: string;
-    primaryBgHover?: string;
-    primaryEdge?: string;
-    secondaryBg?: string;
-    secondaryFg?: string;
-    secondaryBgHover?: string;
-    secondaryEdge?: string;
-    successBtnBg?: string;
-    successBtnFg?: string;
-    successBtnBgHover?: string;
-    successBtnEdge?: string;
-    errorBtnBg?: string;
-    errorBtnFg?: string;
-    errorBtnBgHover?: string;
-    errorBtnEdge?: string;
-}
-```
-
-Design tokens for overriding colors per toast or globally per instance.
-
-Every color here is final -- a background, a border, or a foreground exactly as it renders -- never an ingredient this package mixes further. Unset, each one already matches `@codenhub/styles`' own real, composed look (its `./palette` export when that package is around, this package's own generated defaults when it is not); setting one only replaces that single final value.
-
-#### ToastTokens › border
-
-```ts
-border?: string;
-```
-
-Border color for the dialog container, cancel button, and input.
-
-#### ToastTokens › defaultBg
-
-```ts
-defaultBg?: string;
-```
-
-Background color for the toast-default (no-severity) variant.
-
-#### ToastTokens › defaultEdge
-
-```ts
-defaultEdge?: string;
-```
-
-Border color for the toast-default (no-severity) variant.
-
-#### ToastTokens › defaultFg
-
-```ts
-defaultFg?: string;
-```
-
-Foreground (text/icon) color for the toast-default (no-severity) variant.
-
-#### ToastTokens › errorBg
-
-```ts
-errorBg?: string;
-```
-
-Background color for the toast-error variant.
-
-#### ToastTokens › errorBtnBg
-
-```ts
-errorBtnBg?: string;
-```
-
-Background color for the error dialog action button.
-
-#### ToastTokens › errorBtnBgHover
-
-```ts
-errorBtnBgHover?: string;
-```
-
-Hover background color for the error dialog action button.
-
-#### ToastTokens › errorBtnEdge
-
-```ts
-errorBtnEdge?: string;
-```
-
-Border color for the error dialog action button when `.edged` is active.
-
-#### ToastTokens › errorBtnFg
-
-```ts
-errorBtnFg?: string;
-```
-
-Foreground color for the error dialog action button.
-
-#### ToastTokens › errorEdge
-
-```ts
-errorEdge?: string;
-```
-
-Border color for the toast-error variant.
-
-#### ToastTokens › errorFg
-
-```ts
-errorFg?: string;
-```
-
-Foreground (text/icon) color for the toast-error variant.
-
-#### ToastTokens › infoBg
-
-```ts
-infoBg?: string;
-```
-
-Background color for the toast-info variant.
-
-#### ToastTokens › infoEdge
-
-```ts
-infoEdge?: string;
-```
-
-Border color for the toast-info variant.
-
-#### ToastTokens › infoFg
-
-```ts
-infoFg?: string;
-```
-
-Foreground (text/icon) color for the toast-info variant.
-
-#### ToastTokens › primaryBg
-
-```ts
-primaryBg?: string;
-```
-
-Background color for the primary dialog action button.
-
-#### ToastTokens › primaryBgHover
-
-```ts
-primaryBgHover?: string;
-```
-
-Hover background color for the primary dialog action button.
-
-#### ToastTokens › primaryEdge
-
-```ts
-primaryEdge?: string;
-```
-
-Border color for the primary dialog action button when `.edged` is active.
-
-#### ToastTokens › primaryFg
-
-```ts
-primaryFg?: string;
-```
-
-Foreground color for the primary dialog action button.
-
-#### ToastTokens › secondaryBg
-
-```ts
-secondaryBg?: string;
-```
-
-Background color for the secondary dialog action button.
-
-#### ToastTokens › secondaryBgHover
-
-```ts
-secondaryBgHover?: string;
-```
-
-Hover background color for the secondary dialog action button.
-
-#### ToastTokens › secondaryEdge
-
-```ts
-secondaryEdge?: string;
-```
-
-Border color for the secondary dialog action button when `.edged` is active.
-
-#### ToastTokens › secondaryFg
-
-```ts
-secondaryFg?: string;
-```
-
-Foreground color for the secondary dialog action button.
-
-#### ToastTokens › successBg
-
-```ts
-successBg?: string;
-```
-
-Background color for the toast-success variant.
-
-#### ToastTokens › successBtnBg
-
-```ts
-successBtnBg?: string;
-```
-
-Background color for the success dialog action button.
-
-#### ToastTokens › successBtnBgHover
-
-```ts
-successBtnBgHover?: string;
-```
-
-Hover background color for the success dialog action button.
-
-#### ToastTokens › successBtnEdge
-
-```ts
-successBtnEdge?: string;
-```
-
-Border color for the success dialog action button when `.edged` is active.
-
-#### ToastTokens › successBtnFg
-
-```ts
-successBtnFg?: string;
-```
-
-Foreground color for the success dialog action button.
-
-#### ToastTokens › successEdge
-
-```ts
-successEdge?: string;
-```
-
-Border color for the toast-success variant.
-
-#### ToastTokens › successFg
-
-```ts
-successFg?: string;
-```
-
-Foreground (text/icon) color for the toast-success variant.
-
-#### ToastTokens › surface
-
-```ts
-surface?: string;
-```
-
-Background color for the dialog container and cancel button.
-
-#### ToastTokens › text
-
-```ts
-text?: string;
-```
-
-Text color for the dialog container and cancel button.
-
-#### ToastTokens › warningBg
-
-```ts
-warningBg?: string;
-```
-
-Background color for the toast-warning variant.
-
-#### ToastTokens › warningEdge
-
-```ts
-warningEdge?: string;
-```
-
-Border color for the toast-warning variant.
-
-#### ToastTokens › warningFg
-
-```ts
-warningFg?: string;
-```
-
-Foreground (text/icon) color for the toast-warning variant.
 
 ### ToastUpdateOptions
 
@@ -1348,7 +977,6 @@ export interface ToastUpdateOptions {
     duration?: number;
     autoDismiss?: boolean;
     dismissible?: boolean;
-    tokens?: ToastTokens;
     className?: string;
 }
 ```
@@ -1434,14 +1062,6 @@ title?: string | null;
 ```
 
 Optional title to replace on the toast, or `null` to remove it.
-
-#### ToastUpdateOptions › tokens
-
-```ts
-tokens?: ToastTokens;
-```
-
-Scoped design token color overrides.
 
 #### ToastUpdateOptions › type
 

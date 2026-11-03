@@ -98,20 +98,6 @@ describe("Toast rendering", () => {
     expect(element.className).toContain("custom-toast");
   });
 
-  it("should apply tokens option as inline styles on the root element", () => {
-    const element = renderToast(
-      makeToast({
-        message: "Custom styled",
-        tokens: {
-          successBg: "rgb(255, 0, 0)",
-          successFg: "rgb(0, 255, 0)",
-        },
-      }),
-    );
-    expect(element.style.getPropertyValue("--toast-color-success-bg")).toBe("rgb(255, 0, 0)");
-    expect(element.style.getPropertyValue("--toast-color-success-fg")).toBe("rgb(0, 255, 0)");
-  });
-
   it("should render markup in string content as literal text, creating no elements", () => {
     const markup = '<div><a href="javascript:alert(1)">Link</a><script>alert("nested")</script></div>';
     const toast = makeToast({ content: markup });

@@ -149,15 +149,13 @@ A label passed directly to a dialog call (`ConfirmOptions.confirmLabel`, etc.) a
 
 `createDialogs()` returns an independent instance with the same `confirm`, `prompt`, and `alert` methods as the `dialog` singleton. Each instance opens its dialogs one at a time, queuing later calls until the open one closes.
 
-| Option      | Type           | Default          | Description                                                                     |
-| :---------- | :------------- | :--------------- | :------------------------------------------------------------------------------ |
-| `container` | `HTMLElement`  | `document.body`  | Element the dialogs are appended to. Cannot be changed after construction.      |
-| `labels`    | `DialogLabels` | English defaults | Default button labels: `confirm`, `cancel`, `submit`, `ok`.                     |
-| `className` | `string`       | `undefined`      | Class appended to every dialog in this instance.                                |
-| `tokens`    | `ToastTokens`  | `undefined`      | Color overrides for this instance, as on a toaster (see [Styling](styling.md)). |
-| `nonce`     | `string`       | `undefined`      | CSP nonce for the `<style>` element that carries `tokens`.                      |
+| Option      | Type           | Default          | Description                                                                |
+| :---------- | :------------- | :--------------- | :------------------------------------------------------------------------- |
+| `container` | `HTMLElement`  | `document.body`  | Element the dialogs are appended to. Cannot be changed after construction. |
+| `labels`    | `DialogLabels` | English defaults | Default button labels: `confirm`, `cancel`, `submit`, `ok`.                |
+| `className` | `string`       | `undefined`      | Class appended to every dialog in this instance.                           |
 
-`dialogs.configure({...})` changes any option except `container`. `dialogs.destroy()` closes the open dialog and drops queued ones, settling each with its cancel value, and removes the instance's token styles; later calls throw.
+`dialogs.configure({...})` changes any option except `container`. `dialogs.destroy()` closes the open dialog and drops queued ones, settling each with its cancel value, and removes the instance's `<dialog>` element; later calls throw. To recolor dialogs, set the `--toast-color-*` custom properties in CSS (see [Styling](styling.md#color-overrides)).
 
 ## Toasts while a dialog is open
 

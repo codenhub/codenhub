@@ -1,6 +1,6 @@
 # @codenhub/toaster
 
-Instance-based browser toasts and native interactive dialogs with isolated DOM, configuration, queues, and token styles.
+Instance-based browser toasts and native interactive dialogs with isolated DOM, configuration, queues, and CSS custom property styles.
 
 > [!WARNING]
 >
@@ -71,7 +71,7 @@ scopedToaster.destroy();
 - [Concepts](docs/concepts.md): Dual-layer architecture, lifecycle handles, and thenables.
 - [Toasts guide](docs/toasts.md): Neutral, semantic, loading, structured, and promise notifications.
 - [Dialogs guide](docs/dialogs.md): Confirmations, prompts, alerts, and label localization.
-- [Styling guide](docs/styling.md): Design tokens, `@codenhub/styles` live composition, presentation classes, and CSP.
+- [Styling guide](docs/styling.md): `--toast-color-*` color overrides, `@codenhub/styles` live composition, presentation classes, and CSP.
 - [Accessibility and security](docs/accessibility.md): ARIA live regions, focus restoration, reduced motion, and custom content boundaries.
 - [Scoped instances](docs/instances.md): Multi-instance coordination, custom containers, and lifecycle teardown.
 - [API reference](docs/reference/index.md): Complete TypeScript symbol catalogue compiled from declarations.
@@ -84,11 +84,11 @@ scopedToaster.destroy();
 - `@codenhub/styles >=0.3.0` is an optional peer. When present, toasts and dialogs compose live with its color, presentation, and aesthetic tokens; without it, the package's own defaults apply. See the [styling guide](docs/styling.md).
 - If you use `@codenhub/styles`' native-element stylesheet, import it before `@codenhub/toaster/styles`. See [stylesheet ordering](docs/styling.md#classless-native-button-stylesheet-ordering).
 - Dark mode follows a `.dark` class or `data-theme="dark"` attribute on an ancestor, as `@codenhub/theme` sets. See [dark mode](docs/styling.md#dark-mode-support).
-- A strict `style-src` Content Security Policy needs `ToasterConfig.nonce`. See [CSP](docs/styling.md#content-security-policy-csp).
+- Colors are overridden with `--toast-color-*` CSS custom properties, set in your own CSS. The package injects no `<style>` element, so a strict `style-src` Content Security Policy needs no nonce. See [color overrides](docs/styling.md#color-overrides).
 
 ## Notes
 
-Configuration, messages, durations, positions, and color tokens are validated and may throw synchronously. Calls after `destroy()` throw.
+Configuration, messages, durations, and positions are validated and may throw synchronously. Calls after `destroy()` throw.
 
 ## License
 

@@ -20,87 +20,6 @@ export type ToastIcon = "success" | "error" | "warning" | "info" | "loader";
 export type ToastState = "queued" | "visible" | "hiding" | "hidden";
 
 /**
- * Design tokens for overriding colors per toast or globally per instance.
- *
- * Every color here is final -- a background, a border, or a foreground exactly
- * as it renders -- never an ingredient this package mixes further. Unset, each
- * one already matches `@codenhub/styles`' own real, composed look (its
- * `./palette` export when that package is around, this package's own
- * generated defaults when it is not); setting one only replaces that single
- * final value.
- */
-export interface ToastTokens {
-  /** Background color for the toast-success variant. */
-  successBg?: string;
-  /** Foreground (text/icon) color for the toast-success variant. */
-  successFg?: string;
-  /** Border color for the toast-success variant. */
-  successEdge?: string;
-  /** Background color for the toast-error variant. */
-  errorBg?: string;
-  /** Foreground (text/icon) color for the toast-error variant. */
-  errorFg?: string;
-  /** Border color for the toast-error variant. */
-  errorEdge?: string;
-  /** Background color for the toast-warning variant. */
-  warningBg?: string;
-  /** Foreground (text/icon) color for the toast-warning variant. */
-  warningFg?: string;
-  /** Border color for the toast-warning variant. */
-  warningEdge?: string;
-  /** Background color for the toast-info variant. */
-  infoBg?: string;
-  /** Foreground (text/icon) color for the toast-info variant. */
-  infoFg?: string;
-  /** Border color for the toast-info variant. */
-  infoEdge?: string;
-  /** Background color for the toast-default (no-severity) variant. */
-  defaultBg?: string;
-  /** Foreground (text/icon) color for the toast-default (no-severity) variant. */
-  defaultFg?: string;
-  /** Border color for the toast-default (no-severity) variant. */
-  defaultEdge?: string;
-  /** Border color for the dialog container, cancel button, and input. */
-  border?: string;
-  /** Background color for the dialog container and cancel button. */
-  surface?: string;
-  /** Text color for the dialog container and cancel button. */
-  text?: string;
-  /** Background color for the primary dialog action button. */
-  primaryBg?: string;
-  /** Foreground color for the primary dialog action button. */
-  primaryFg?: string;
-  /** Hover background color for the primary dialog action button. */
-  primaryBgHover?: string;
-  /** Border color for the primary dialog action button when `.edged` is active. */
-  primaryEdge?: string;
-  /** Background color for the secondary dialog action button. */
-  secondaryBg?: string;
-  /** Foreground color for the secondary dialog action button. */
-  secondaryFg?: string;
-  /** Hover background color for the secondary dialog action button. */
-  secondaryBgHover?: string;
-  /** Border color for the secondary dialog action button when `.edged` is active. */
-  secondaryEdge?: string;
-  /** Background color for the success dialog action button. */
-  successBtnBg?: string;
-  /** Foreground color for the success dialog action button. */
-  successBtnFg?: string;
-  /** Hover background color for the success dialog action button. */
-  successBtnBgHover?: string;
-  /** Border color for the success dialog action button when `.edged` is active. */
-  successBtnEdge?: string;
-  /** Background color for the error dialog action button. */
-  errorBtnBg?: string;
-  /** Foreground color for the error dialog action button. */
-  errorBtnFg?: string;
-  /** Hover background color for the error dialog action button. */
-  errorBtnBgHover?: string;
-  /** Border color for the error dialog action button when `.edged` is active. */
-  errorBtnEdge?: string;
-}
-
-/**
  * Inline action button rendered inside a toast notification.
  */
 export interface ToastAction {
@@ -156,8 +75,6 @@ export interface ToastUpdateOptions {
   autoDismiss?: boolean;
   /** Enables or disables the dismiss button. */
   dismissible?: boolean;
-  /** Scoped design token color overrides. */
-  tokens?: ToastTokens;
   /** Extra CSS classes to append. */
   className?: string;
 }
@@ -178,16 +95,15 @@ export interface ToastHandle {
   dismiss(): void;
 
   /**
-   * Patches the message, content, icon, severity, timing, styles, or
-   * classes of a toast. Applied immediately when the toast is visible; if
+   * Patches the message, content, icon, severity, timing, or classes
+   * of a toast. Applied immediately when the toast is visible; if
    * it is still queued, the update is stored and applied once a slot
    * opens rather than discarded. Has no effect once the toast has settled.
    *
    * @param options Partial updates to apply.
-   * @throws {Error} If `options.tokens` contains an invalid CSS color,
-   *   `options.duration` is not a finite number >= 0, `options.type` is
-   *   not a recognized severity, or `options.content` resolves to nothing
-   *   renderable.
+   * @throws {Error} If `options.duration` is not a finite number >= 0,
+   *   `options.type` is not a recognized severity, or `options.content`
+   *   resolves to nothing renderable.
    */
   update(options: ToastUpdateOptions): void;
 
@@ -307,8 +223,6 @@ export interface ToastOptions {
   dismissible?: boolean;
   /** Whether to automatically close after the duration. Defaults to toaster configuration. */
   autoDismiss?: boolean;
-  /** Instance token overrides. */
-  tokens?: ToastTokens;
   /** Extra CSS class name. */
   className?: string;
   /** Announcement role, see {@link ToastRole}. Defaults to the variant's role. */
@@ -352,8 +266,6 @@ export interface LoadingToastOptions {
   position?: ToastPosition;
   /** Whether the user can manually close it. Defaults to `ToasterConfig.loading.dismissible`, then the instance's `dismissible` (`false`). */
   dismissible?: boolean;
-  /** Color token overrides. */
-  tokens?: ToastTokens;
   /** Extra CSS class name. */
   className?: string;
   /**
@@ -377,8 +289,6 @@ export interface CustomToastOptions {
   dismissible?: boolean;
   /** Whether to automatically close after duration. Defaults to toaster configuration. */
   autoDismiss?: boolean;
-  /** Color token overrides. */
-  tokens?: ToastTokens;
   /** Extra CSS class name. */
   className?: string;
   /** Announcement role, see {@link ToastRole}. Defaults to "status". */
@@ -402,8 +312,6 @@ export interface ConfirmOptions {
   cancelLabel?: string;
   /** Whether clicking the backdrop overlay cancels the modal. Defaults to true. */
   backdropDismiss?: boolean;
-  /** Color token overrides. */
-  tokens?: ToastTokens;
   /** Extra CSS class name. */
   className?: string;
   /** Color semantic type for the main action button. */
@@ -426,8 +334,6 @@ export interface PromptOptions {
   cancelLabel?: string;
   /** Whether clicking the backdrop overlay cancels the modal. Defaults to true. */
   backdropDismiss?: boolean;
-  /** Color token overrides. */
-  tokens?: ToastTokens;
   /** Extra CSS class name. */
   className?: string;
   /** Color semantic type for the main action button. */
@@ -444,8 +350,6 @@ export interface AlertOptions {
   okLabel?: string;
   /** Whether clicking the backdrop overlay closes the alert. Defaults to true. */
   backdropDismiss?: boolean;
-  /** Color token overrides. */
-  tokens?: ToastTokens;
   /** Extra CSS class name. */
   className?: string;
   /** Color semantic type for the main action button. */
@@ -532,8 +436,6 @@ export interface PromiseToastOptions<T> {
   duration?: number;
   /** Whether to render a close button, while pending and after. The resolved state defaults to `ToasterConfig.semantic.dismissible` when this is unset. */
   dismissible?: boolean;
-  /** Scoped design tokens. */
-  tokens?: ToastTokens;
   /** Extra CSS classes. */
   className?: string;
   /** Viewport margin configurations. */
@@ -579,14 +481,13 @@ export interface Dialogs {
    * Reconfigures the instance. Applies to dialogs that open afterwards.
    *
    * @param config Runtime configuration to validate and apply.
-   * @throws {Error} If the instance is destroyed, `container` is given, or token colors are invalid.
+   * @throws {Error} If the instance is destroyed or `container` is given.
    */
   configure(config: DialogsRuntimeConfig): void;
 
   /**
    * Closes every open and queued dialog, settling each with its cancel value,
-   * and removes the instance's dialog element and token stylesheet. Calling
-   * it again does nothing.
+   * and removes the instance's dialog element. Calling it again does nothing.
    */
   destroy(): void;
 }
@@ -599,14 +500,6 @@ export interface DialogsConfig {
   container?: HTMLElement;
   /** Instance-level default button labels. */
   labels?: DialogLabels;
-  /** Color token overrides applied to every dialog from this instance. */
-  tokens?: ToastTokens;
-  /**
-   * Nonce applied to the `<style>` element `tokens` are written through, for
-   * a host `style-src` Content Security Policy that requires one. Has no
-   * effect without `tokens`.
-   */
-  nonce?: string;
   /** Extra CSS class name applied to every dialog from this instance. */
   className?: string;
 }
@@ -723,14 +616,6 @@ export interface ToasterConfig {
   autoDismiss?: boolean;
   /** Instance-level text for the dismiss button and the stack's region name. */
   labels?: ToastLabels;
-  /** Dynamic CSS variables applied to all toasts inside this instance. */
-  tokens?: ToastTokens;
-  /**
-   * Nonce applied to the `<style>` element `tokens` are written through, for
-   * a host `style-src` Content Security Policy that requires one. Has no
-   * effect without `tokens`.
-   */
-  nonce?: string;
   /** Defaults for `success`, `error`, `warning`, and `info` toasts and the outcome of `promise`, over the instance-wide ones. */
   semantic?: SemanticDefaults;
   /** Defaults for `loading` toasts and the loading phase of `promise`, over the instance-wide ones. */

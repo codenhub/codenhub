@@ -53,8 +53,6 @@ panelToaster.success("Panel settings saved");
 | `margin`      | `string \| { x?, y? }` | safe-area inset  | Spacing between the stack container and the viewport/container edge.                                                          |
 | `className`   | `string`               | `undefined`      | Custom CSS class appended to every toast in this instance.                                                                    |
 | `labels`      | `ToastLabels`          | English defaults | Default text labels: `dismiss` for close buttons and `notifications` for stacks.                                              |
-| `tokens`      | `ToastTokens`          | `undefined`      | Design token color overrides applied across this instance.                                                                    |
-| `nonce`       | `string`               | `undefined`      | Content Security Policy nonce applied to the injected token `<style>` element.                                                |
 
 ## Dynamic reconfiguration (`toaster.configure`)
 
@@ -93,7 +91,7 @@ function mountWidget(containerEl: HTMLElement) {
 Calling `destroy()` is synchronous, deterministic, and idempotent:
 
 1. **Immediate handle settlement**: All visible and queued toast handles settle immediately, transitioning to state `"hidden"` and resolving their `settled` promises without waiting for exit animations.
-2. **DOM cleanup**: All stack containers and token `<style>` nodes owned by the instance are detached from the DOM.
+2. **DOM cleanup**: All stack containers owned by the instance are detached from the DOM.
 3. **Listener teardown**: All internal event listeners, timers, and window observers are cleared.
 4. **Guard activation**: Any subsequent call to the destroyed instance throws an error synchronously.
 
@@ -115,8 +113,8 @@ Because both instances maintain separate admission queues, they will render on t
 
 `@codenhub/toaster` is designed to be SSR-safe:
 
-- Calling `createToaster()` or importing `toast` on the server does not throw, provided tokens are not initialized against the DOM.
-- Any operation requiring the browser DOM—such as dispatching toasts, opening dialogs, or applying color tokens—checks for `document` and throws an error if called in a server environment.
+- Calling `createToaster()` or importing `toast` on the server does not throw.
+- Any operation requiring the browser DOM—such as dispatching toasts or opening dialogs—checks for `document` and throws an error if called in a server environment.
 
 In frameworks like Next.js, Remix, SvelteKit, or Astro, ensure toast dispatches happen within client event handlers, lifecycle hooks (`useEffect`, `onMount`), or browser-only entrypoints:
 

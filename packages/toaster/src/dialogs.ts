@@ -1,21 +1,12 @@
 import { generateInstanceId } from "./instance-id";
 import { ModalController } from "./modal";
-import { applyGlobalTokens, assertValidTokens, removeGlobalTokens } from "./tokens";
 import type { Dialogs, DialogsConfig, DialogsRuntimeConfig } from "./types";
 
 function copyConfig(config: DialogsConfig): DialogsConfig {
   return {
     ...config,
     labels: config.labels ? { ...config.labels } : undefined,
-    tokens: config.tokens ? { ...config.tokens } : undefined,
   };
-}
-
-function validateConfig(config: DialogsConfig): void {
-  assertValidTokens(
-    config.tokens,
-    config.container?.ownerDocument ?? (typeof document === "undefined" ? undefined : document),
-  );
 }
 
 function resolveParentElement(config: DialogsConfig): HTMLElement {
@@ -40,24 +31,16 @@ function resolveParentElement(config: DialogsConfig): HTMLElement {
  *
  * @param config Optional initial configuration.
  * @returns An independent dialogs instance.
- * @throws {Error} If token colors are invalid.
  */
 export function createDialogs(config: DialogsConfig = {}): Dialogs {
   const instanceId = generateInstanceId();
-  validateConfig(config);
   let current = copyConfig(config);
   let controller: ModalController | null = null;
   let isDestroyed = false;
 
   // Resolved on every dialog, not once, so a page that replaces <body>
   // still gets its dialogs.
-  const getParent = (): HTMLElement => {
-    const parent = resolveParentElement(current);
-    if (current.tokens) {
-      applyGlobalTokens(current.tokens, instanceId, parent.ownerDocument, current.nonce);
-    }
-    return parent;
-  };
+  const getParent = (): HTMLElement => resolveParentElement(current);
 
   const getController = (): ModalController => {
     if (isDestroyed) {
@@ -83,14 +66,7 @@ export function createDialogs(config: DialogsConfig = {}): Dialogs {
       if ("container" in runtimeConfig) {
         throw new Error("Dialogs container cannot be changed after construction.");
       }
-      const merged = { ...current, ...runtimeConfig };
-      validateConfig(merged);
-      const next = copyConfig(merged);
-      // Keyed on presence, not value: `tokens: undefined` clears them.
-      if ("tokens" in runtimeConfig || "nonce" in runtimeConfig) {
-        applyGlobalTokens(next.tokens, instanceId, resolveParentElement(next).ownerDocument, next.nonce);
-      }
-      current = next;
+      current = copyConfig({ ...current, ...runtimeConfig });
     },
     destroy: () => {
       if (isDestroyed) {
@@ -99,7 +75,6 @@ export function createDialogs(config: DialogsConfig = {}): Dialogs {
       isDestroyed = true;
       controller?.destroy();
       controller = null;
-      removeGlobalTokens(instanceId);
     },
   };
 }

@@ -4,7 +4,6 @@ import type { ModalRenderContext, ModalRenderResult } from "./modal-renderers";
 import { DIALOG_CLASS, buildDialogContent } from "./modal-templates";
 import { closeDialog } from "./modal-transition";
 import { joinClassNames, withoutUndefined } from "./options";
-import { assertValidTokens } from "./tokens";
 import type { AlertOptions, ConfirmOptions, DialogHandle, PromptOptions, DialogLabels, ToastState } from "./types";
 
 interface ModalJob {
@@ -16,7 +15,6 @@ interface ModalJob {
 interface ModalOptions {
   title?: string;
   backdropDismiss?: boolean;
-  tokens?: ConfirmOptions["tokens"];
   className?: string;
 }
 
@@ -122,11 +120,9 @@ export class ModalController {
     const options: ModalOptions = {
       title: params.options.title,
       backdropDismiss: params.options.backdropDismiss,
-      tokens: params.options.tokens ? { ...params.options.tokens } : undefined,
       className: params.options.className,
     };
     let parent = this.getParent();
-    assertValidTokens(options.tokens, parent.ownerDocument);
 
     let resolveResult!: (value: T) => void;
     let rejectResult!: (reason: unknown) => void;
@@ -243,7 +239,6 @@ export class ModalController {
           dialog,
           message: params.message,
           title: options.title,
-          tokens: options.tokens,
           className: joinClassNames(this.getDefaultClassName(), options.className),
           titleId: `${idBase}-title`,
           messageId,

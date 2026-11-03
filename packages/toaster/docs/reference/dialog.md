@@ -28,8 +28,6 @@ While one of its dialogs is open, the toasts of every toaster rendering into the
 
 **Returns** — An independent dialogs instance.
 
-**Throws** — `Error` — If token colors are invalid.
-
 ## Interfaces
 
 ### AlertOptions
@@ -39,7 +37,6 @@ export interface AlertOptions {
     title?: string;
     okLabel?: string;
     backdropDismiss?: boolean;
-    tokens?: ToastTokens;
     className?: string;
     type?: "primary" | "secondary" | "success" | "error";
 }
@@ -79,14 +76,6 @@ title?: string;
 
 Optional title to display above the message.
 
-#### AlertOptions › tokens
-
-```ts
-tokens?: ToastTokens;
-```
-
-Color token overrides.
-
 #### AlertOptions › type
 
 ```ts
@@ -103,7 +92,6 @@ export interface ConfirmOptions {
     confirmLabel?: string;
     cancelLabel?: string;
     backdropDismiss?: boolean;
-    tokens?: ToastTokens;
     className?: string;
     type?: "primary" | "secondary" | "success" | "error";
 }
@@ -150,14 +138,6 @@ title?: string;
 ```
 
 Optional title to display above the message.
-
-#### ConfirmOptions › tokens
-
-```ts
-tokens?: ToastTokens;
-```
-
-Color token overrides.
 
 #### ConfirmOptions › type
 
@@ -331,7 +311,7 @@ Reconfigures the instance. Applies to dialogs that open afterwards.
 
 - `config` — Runtime configuration to validate and apply.
 
-**Throws** — `Error` — If the instance is destroyed, `container` is given, or token colors are invalid.
+**Throws** — `Error` — If the instance is destroyed or `container` is given.
 
 #### Dialogs › confirm
 
@@ -356,7 +336,7 @@ Displays a confirmation modal dialog with confirm and cancel buttons.
 destroy(): void;
 ```
 
-Closes every open and queued dialog, settling each with its cancel value, and removes the instance's dialog element and token stylesheet. Calling it again does nothing.
+Closes every open and queued dialog, settling each with its cancel value, and removes the instance's dialog element. Calling it again does nothing.
 
 #### Dialogs › prompt
 
@@ -381,8 +361,6 @@ Displays a prompt input dialog requesting user text input.
 export interface DialogsConfig {
     container?: HTMLElement;
     labels?: DialogLabels;
-    tokens?: ToastTokens;
-    nonce?: string;
     className?: string;
 }
 ```
@@ -413,22 +391,6 @@ labels?: DialogLabels;
 
 Instance-level default button labels.
 
-#### DialogsConfig › nonce
-
-```ts
-nonce?: string;
-```
-
-Nonce applied to the `<style>` element `tokens` are written through, for a host `style-src` Content Security Policy that requires one. Has no effect without `tokens`.
-
-#### DialogsConfig › tokens
-
-```ts
-tokens?: ToastTokens;
-```
-
-Color token overrides applied to every dialog from this instance.
-
 ### PromptOptions
 
 ```ts
@@ -439,7 +401,6 @@ export interface PromptOptions {
     submitLabel?: string;
     cancelLabel?: string;
     backdropDismiss?: boolean;
-    tokens?: ToastTokens;
     className?: string;
     type?: "primary" | "secondary" | "success" | "error";
 }
@@ -502,14 +463,6 @@ title?: string;
 ```
 
 Optional title to display above the message.
-
-#### PromptOptions › tokens
-
-```ts
-tokens?: ToastTokens;
-```
-
-Color token overrides.
 
 #### PromptOptions › type
 

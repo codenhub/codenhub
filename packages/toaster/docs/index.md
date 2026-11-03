@@ -88,4 +88,4 @@ Explore the focused guides below to master every aspect of the package:
 - **Native `<dialog>`**: Interactive dialogs require browser support for `HTMLDialogElement.showModal()`.
 - **CSS Import**: `@codenhub/toaster/styles` must be loaded once in the application to render layout, positioning, and animation rules.
 - **Styles Integration**: `@codenhub/styles >=0.3.0` is an optional peer dependency. When present, toaster colors and presentation axes compose live; when absent, toaster renders using built-in standalone palette defaults.
-- **Content Security Policy**: Applications with strict CSP `style-src` restrictions can pass a `nonce` in `ToasterConfig` to authorize token `<style>` injection.
+- **Content Security Policy**: The package injects no `<style>` element and uses no HTML-parsing sink, so a strict `style-src` or Trusted Types policy needs no nonce or policy for it.

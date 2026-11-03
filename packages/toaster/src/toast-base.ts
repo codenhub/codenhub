@@ -15,23 +15,15 @@ import {
   SEMANTIC_ICONS,
   SEMANTIC_ROLES,
   SEMANTIC_ROOT_CLASS_NAMES,
-  applyUpdateToElement,
+  applyClassNameUpdate,
   assertDuration,
   assertSemanticType,
   hasNonEmptyString,
   normalizeToastOptions,
   resolveToastContent,
-  withoutUndefined,
 } from "./options";
-import type {
-  LiveStyleUpdate,
-  NormalizedToastOptions,
-  RawToastOptions,
-  ResolvedToastConfig,
-  ToastPresetOptions,
-} from "./options";
+import type { NormalizedToastOptions, RawToastOptions, ResolvedToastConfig, ToastPresetOptions } from "./options";
 import { releaseSlot, removeToastElement, requestSlot, retryQueue, toastByElement } from "./toast-helpers";
-import { assertValidTokens } from "./tokens";
 import type {
   SemanticType,
   ToastAction,
@@ -55,7 +47,6 @@ interface NormalizedUpdate {
   duration?: number;
   autoDismiss?: boolean;
   dismissible?: boolean;
-  tokens?: LiveStyleUpdate["tokens"];
   className?: string;
 }
 
@@ -115,8 +106,8 @@ export class Toast {
   private isFocused = false;
   /** Whether render() has shown the shell but not yet filled it, while onShow subscribers run. */
   private isAwaitingContent = false;
-  /** Deferred tokens/className from an `update()` call sent while still queued; message, content, icon, and type updates go through the `current*` fields below instead, applied automatically since `render()` reads them directly. */
-  private pendingStyleUpdate: LiveStyleUpdate | null = null;
+  /** Deferred className from an `update()` call sent while still queued; message, content, icon, and type updates go through the `current*` fields below instead, applied automatically since `render()` reads them directly. */
+  private pendingClassName: string | undefined;
   private currentIcon: ToastIcon | null;
   private currentRootClassName: string;
   private currentRole: ToastRole;
@@ -217,10 +208,9 @@ export class Toast {
    * discarded. This is a no-op once the toast has settled.
    *
    * @param updateOpts Scoped updates to apply to the toast.
-   * @throws {Error} If `updateOpts.tokens` contains an invalid CSS color,
-   *   `updateOpts.duration` is not a finite number >= 0, `updateOpts.type`
-   *   is not a recognized severity, or `updateOpts.content` resolves to
-   *   nothing renderable.
+   * @throws {Error} If `updateOpts.duration` is not a finite number >= 0,
+   *   `updateOpts.type` is not a recognized severity, or
+   *   `updateOpts.content` resolves to nothing renderable.
    */
   public update(updateOpts: ToastUpdateOptions): void {
     if (this.internalState !== "queued" && (this.internalState !== "visible" || this.element === null)) {
@@ -294,11 +284,8 @@ export class Toast {
     }
 
     if (this.internalState === "queued" || this.isAwaitingContent) {
-      if (normalized.tokens !== undefined || normalized.className !== undefined) {
-        this.pendingStyleUpdate = {
-          ...this.pendingStyleUpdate,
-          ...withoutUndefined({ tokens: normalized.tokens, className: normalized.className }),
-        };
+      if (normalized.className !== undefined) {
+        this.pendingClassName = normalized.className;
       }
       // Everything else above already lives in the `current*` fields render()
       // reads once this toast is admitted -- nothing further to defer.
@@ -315,9 +302,6 @@ export class Toast {
    * field from the same call already applied.
    */
   private normalizeUpdate(update: ToastUpdateOptions): NormalizedUpdate {
-    if (update.tokens !== undefined) {
-      assertValidTokens(update.tokens, this.parent.ownerDocument);
-    }
     if (update.duration !== undefined) {
       assertDuration(update.duration);
     }
@@ -336,10 +320,6 @@ export class Toast {
         update.content !== undefined
           ? resolveToastContent(update.content, this.parent.ownerDocument, this.handle)
           : undefined,
-      // Snapshotted rather than referenced: the same boundary
-      // normalizeToastOptions draws for construction-time tokens, so a
-      // caller mutation after this call cannot change what gets applied.
-      tokens: update.tokens ? { ...update.tokens } : update.tokens,
     };
   }
 
@@ -393,8 +373,8 @@ export class Toast {
     }
     this.announceIfChanged(element);
 
-    if (normalized.tokens !== undefined || normalized.className !== undefined) {
-      applyUpdateToElement(element, { tokens: normalized.tokens, className: normalized.className });
+    if (normalized.className !== undefined) {
+      applyClassNameUpdate(element, normalized.className);
     }
 
     if (normalized.duration !== undefined || normalized.autoDismiss !== undefined || transitionedFromLoader) {
@@ -506,7 +486,7 @@ export class Toast {
   /** `createToastShell`'s input, reading the mutable rootClassName field `update()` can change instead of the frozen construction-time baseline. */
   private get shellOptions(): Pick<
     NormalizedToastOptions,
-    "className" | "instanceClassName" | "instanceId" | "rootClassName" | "tokens"
+    "className" | "instanceClassName" | "instanceId" | "rootClassName"
   > {
     return { ...this.options, rootClassName: this.currentRootClassName };
   }
@@ -668,9 +648,9 @@ export class Toast {
 
     try {
       populateToastContent(element, this.contentOptions, () => this.hide(), documentRef, this.handle);
-      if (this.pendingStyleUpdate) {
-        applyUpdateToElement(element, this.pendingStyleUpdate);
-        this.pendingStyleUpdate = null;
+      if (this.pendingClassName !== undefined) {
+        applyClassNameUpdate(element, this.pendingClassName);
+        this.pendingClassName = undefined;
       }
     } catch (error) {
       this.failRender(element, error);

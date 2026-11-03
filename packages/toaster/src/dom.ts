@@ -1,6 +1,5 @@
 import { getToastLayerHost } from "./layer-host";
 import type { NormalizedToastOptions } from "./options";
-import { applyTokens } from "./tokens";
 import type { ToastHandle, ToastIcon, ToastPosition } from "./types";
 
 type ToastElementOptions = Pick<
@@ -16,7 +15,6 @@ type ToastElementOptions = Pick<
   | "rootClassName"
   | "className"
   | "instanceClassName"
-  | "tokens"
   | "instanceId"
 >;
 
@@ -249,7 +247,7 @@ export function applyRootClassChange(
  * this element.
  */
 export function createToastShell(
-  options: Pick<ToastElementOptions, "className" | "instanceClassName" | "instanceId" | "rootClassName" | "tokens">,
+  options: Pick<ToastElementOptions, "className" | "instanceClassName" | "instanceId" | "rootClassName">,
   documentRef: Document,
 ): HTMLDivElement {
   const container = documentRef.createElement("div");
@@ -258,7 +256,6 @@ export function createToastShell(
   container.setAttribute("data-root-class", options.rootClassName);
   container.setAttribute("data-instance-class", options.instanceClassName ?? "");
   container.setAttribute("data-toast-instance", options.instanceId);
-  applyTokens(container.style, options.tokens);
 
   return container;
 }

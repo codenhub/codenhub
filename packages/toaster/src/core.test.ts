@@ -31,36 +31,6 @@ describe("createToaster", () => {
     t1.destroy();
     t2.destroy();
   });
-
-  it("should inject a per-instance style element for token overrides", () => {
-    const toaster = createToaster({ tokens: { successBg: "rgb(0, 0, 255)" } });
-    const styleElements = document.head.querySelectorAll("style[data-toast-token-owner]");
-    expect(styleElements.length).toBeGreaterThan(0);
-    const content = Array.from(styleElements)
-      .map((el) =>
-        Array.from((el as HTMLStyleElement).sheet?.cssRules ?? [])
-          .map((rule) => rule.cssText)
-          .join(""),
-      )
-      .join("");
-    expect(content).toContain("--toast-color-success-bg: rgb(0, 0, 255);");
-    toaster.destroy();
-  });
-
-  it("two instances should use separate style elements that do not clobber each other", () => {
-    const t1 = createToaster({ tokens: { successBg: "red" } });
-    const t2 = createToaster({ tokens: { successBg: "blue" } });
-    const styles = document.head.querySelectorAll("style[data-toast-token-owner]");
-    const texts = Array.from(styles).map((el) =>
-      Array.from((el as HTMLStyleElement).sheet?.cssRules ?? [])
-        .map((rule) => rule.cssText)
-        .join(""),
-    );
-    expect(texts.some((t) => t.includes("red"))).toBe(true);
-    expect(texts.some((t) => t.includes("blue"))).toBe(true);
-    t1.destroy();
-    t2.destroy();
-  });
 });
 
 describe("deterministic destroy", () => {
@@ -124,21 +94,6 @@ describe("deterministic destroy", () => {
 });
 
 describe("configure", () => {
-  it("should update token overrides at runtime", () => {
-    const toaster = createToaster({ tokens: { successBg: "red" } });
-    toaster.configure({ tokens: { successBg: "green" } });
-    const styles = document.head.querySelectorAll("style[data-toast-token-owner]");
-    const content = Array.from(styles)
-      .map((el) =>
-        Array.from((el as HTMLStyleElement).sheet?.cssRules ?? [])
-          .map((rule) => rule.cssText)
-          .join(""),
-      )
-      .join("");
-    expect(content).toContain("green");
-    toaster.destroy();
-  });
-
   it("should propagate configure duration updates to new toasts", () => {
     vi.useFakeTimers();
     const toaster = createToaster({ duration: 1000 });
@@ -682,14 +637,6 @@ describe("destroy()", () => {
     expect(document.body.querySelector("[data-toast-container]")).toBeNull();
   });
 
-  it("removes the instance style element", () => {
-    const toaster = createToaster({ tokens: { successBg: "purple" } });
-    const before = document.head.querySelectorAll("style[data-toast-token-owner]").length;
-    toaster.destroy();
-    const after = document.head.querySelectorAll("style[data-toast-token-owner]").length;
-    expect(after).toBe(before - 1);
-  });
-
   it("subsequent calls after destroy() throw", () => {
     const toaster = createToaster();
     toaster.destroy();
@@ -1064,21 +1011,6 @@ describe("Toast update", () => {
     handle.update({ message: "Updated message" });
     expect(element?.textContent).toContain("Updated message");
     expect(element?.textContent).not.toContain("Initial message");
-
-    toaster.destroy();
-  });
-
-  it("should update token overrides dynamically", () => {
-    const toaster = createToaster();
-    const handle = toaster.success("Tokens test", {
-      tokens: { successBg: "red" },
-    });
-
-    const element = document.body.querySelector<HTMLDivElement>(".coden-toast");
-    expect(element?.style.getPropertyValue("--toast-color-success-bg")).toBe("red");
-
-    handle.update({ tokens: { successBg: "blue" } });
-    expect(element?.style.getPropertyValue("--toast-color-success-bg")).toBe("blue");
 
     toaster.destroy();
   });

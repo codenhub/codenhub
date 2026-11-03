@@ -28,6 +28,5 @@ export type {
   ToastRole,
   ToasterRuntimeConfig,
   ToastState,
-  ToastTokens,
   ToastUpdateOptions,
 } from "./types";

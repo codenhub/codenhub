@@ -103,7 +103,7 @@ When running standalone without `@codenhub/styles`, the required stylesheet (`@c
 
 - [Toast notifications](toasts.md): Comprehensive guide to dispatching, updating, and queueing toasts.
 - [Interactive dialogs](dialogs.md): Deep dive into confirmations, prompts, alerts, and label localization.
-- [Styling and theming](styling.md): Presentation axes, token customization, dark mode, and CSP configuration.
+- [Styling and theming](styling.md): Presentation axes, color custom properties, dark mode, and CSP.
 - [Accessibility and security](accessibility.md): ARIA announcements, focus restoration, and custom content boundaries.
 - [Scoped instances](instances.md): Multi-instance coordination, custom containers, and lifecycle teardown.
 - [API reference](reference/index.md): Complete signature catalogue generated from TypeScript declarations.

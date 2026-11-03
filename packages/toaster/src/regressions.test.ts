@@ -200,30 +200,7 @@ describe("toast lifecycle", () => {
   });
 });
 
-describe("content and token security", () => {
-  it("should reject token values that are not CSS colors", () => {
-    expect(() => createToaster({ tokens: { successBg: "red; } body { display: none" } })).toThrow(/color/);
-  });
-
-  it("should reject invalid per-toast and dialog token colors", () => {
-    const toaster = createToaster();
-    const dialogs = createDialogs();
-    const tokens = { successBg: "red; } body { display: none" };
-
-    expect(() => toaster.success("Unsafe", { tokens })).toThrow(/color/);
-    expect(() => dialogs.confirm("Unsafe", { tokens })).toThrow(/color/);
-    dialogs.destroy();
-    toaster.destroy();
-  });
-
-  it("should reject invalid token colors during updates", () => {
-    const toaster = createToaster();
-    const handle = toaster.success("Safe");
-
-    expect(() => handle.update({ tokens: { successBg: "red; } body { display: none" } })).toThrow(/color/);
-    toaster.destroy();
-  });
-
+describe("content security", () => {
   it("should render an HTML-looking string as text instead of a link", () => {
     const toaster = createToaster();
     const markup = '<a style="position:fixed" target="_BLANK" href="https://example.com">Open</a>';
@@ -421,17 +398,6 @@ describe("promise outcome defaults", () => {
     vi.advanceTimersByTime(20000);
     flushAnimations();
     expect(document.body.querySelector(".coden-toast")).not.toBeNull();
-    toaster.destroy();
-  });
-});
-
-describe("clearing instance tokens", () => {
-  it("removes the token stylesheet when configure sets tokens to undefined", () => {
-    const toaster = createToaster({ tokens: { successBg: "red" } });
-    expect(document.head.querySelectorAll("style[data-toast-token-owner]")).toHaveLength(1);
-
-    toaster.configure({ tokens: undefined });
-    expect(document.head.querySelectorAll("style[data-toast-token-owner]")).toHaveLength(0);
     toaster.destroy();
   });
 });

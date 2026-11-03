@@ -1,6 +1,6 @@
 ---
 title: Styling
-description: Guide to CSS styling, design tokens, live composition with @codenhub/styles, presentation axes, dark mode, and CSP.
+description: Guide to CSS styling, color custom properties, live composition with @codenhub/styles, presentation axes, dark mode, and CSP.
 order: 4
 ---
 
@@ -84,68 +84,76 @@ Theme resolution is computed locally. If your application embeds a `.light` or `
 </html>
 ```
 
-## Custom token overrides (`ToastTokens`)
+## Color overrides
 
-When you need specific colors that deviate from the active theme, you can pass custom color tokens either globally via `ToasterConfig.tokens` or per notification via `ToastOptions.tokens`. A custom token always supersedes the composed formula for that specific property:
+When you need colors that deviate from the active theme, set the package's `--toast-color-*` CSS custom properties in your own stylesheet. The stylesheet reads each one ahead of the composed formula, so a property you set always supersedes the composed color for that specific value. Custom properties inherit, so where you set one decides what it reaches:
+
+```css
+/* Globally: every toast and dialog on the page. */
+:root {
+  --toast-color-success-bg: #0f2e1b;
+  --toast-color-success-fg: #4ade80;
+  --toast-color-success-edge: #166534;
+}
+
+/* Scoped: only toasts rendered inside this container. */
+#billing-panel {
+  --toast-color-error-bg: #450a0a;
+  --toast-color-error-fg: #fca5a5;
+  --toast-color-error-edge: #991b1b;
+}
+
+/* Per toast: a class passed through `className`. */
+.storage-alert {
+  --toast-color-error-bg: #7f1d1d;
+}
+```
 
 ```ts
 import { toast, createToaster } from "@codenhub/toaster";
 
-// Per-instance token configuration:
-const brandedToaster = createToaster({
-  tokens: {
-    successBg: "#0f2e1b",
-    successFg: "#4ade80",
-    successEdge: "#166534",
-    primaryBg: "#6366f1",
-    primaryFg: "#ffffff",
-  },
-});
+// Scoped: a toaster whose stacks render inside #billing-panel.
+const billingToaster = createToaster({ container: document.querySelector<HTMLElement>("#billing-panel")! });
 
-// Per-toast override:
-toast.error("Critical storage alert", {
-  tokens: {
-    errorBg: "#450a0a",
-    errorFg: "#fca5a5",
-    errorEdge: "#991b1b",
-  },
-});
+// Per toast:
+toast.error("Critical storage alert", { className: "storage-alert" });
 ```
 
-### Available token properties
+`ToasterConfig.className` applies a class to every toast of an instance, and `DialogsConfig.className` or a dialog's own `className` applies one to the `<dialog>` element. The package sets these properties nowhere itself, so it injects no `<style>` element for them.
 
-| Category              | Properties                                                                                                                   |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| **Default (neutral)** | `defaultBg`, `defaultFg`, `defaultEdge`                                                                                      |
-| **Success**           | `successBg`, `successFg`, `successEdge`, `successBtnBg`, `successBtnFg`, `successBtnBgHover`, `successBtnEdge`               |
-| **Error**             | `errorBg`, `errorFg`, `errorEdge`, `errorBtnBg`, `errorBtnFg`, `errorBtnBgHover`, `errorBtnEdge`                             |
-| **Warning**           | `warningBg`, `warningFg`, `warningEdge`                                                                                      |
-| **Info**              | `infoBg`, `infoFg`, `infoEdge`                                                                                               |
-| **Dialog surfaces**   | `surface`, `border`, `text`                                                                                                  |
-| **Dialog buttons**    | `primaryBg`, `primaryFg`, `primaryBgHover`, `primaryEdge`, `secondaryBg`, `secondaryFg`, `secondaryBgHover`, `secondaryEdge` |
+### Available properties
+
+| Property                     | What it colors                                                                            |
+| ---------------------------- | ----------------------------------------------------------------------------------------- |
+| `--toast-color-default-bg`   | Background of a default (no-severity) toast.                                              |
+| `--toast-color-default-fg`   | Text and icon color of a default toast.                                                   |
+| `--toast-color-default-edge` | Border of a default toast.                                                                |
+| `--toast-color-success-bg`   | Background of a success toast.                                                            |
+| `--toast-color-success-fg`   | Text and icon color of a success toast.                                                   |
+| `--toast-color-success-edge` | Border of a success toast.                                                                |
+| `--toast-color-error-bg`     | Background of an error toast.                                                             |
+| `--toast-color-error-fg`     | Text and icon color of an error toast.                                                    |
+| `--toast-color-error-edge`   | Border of an error toast.                                                                 |
+| `--toast-color-warning-bg`   | Background of a warning toast.                                                            |
+| `--toast-color-warning-fg`   | Text and icon color of a warning toast.                                                   |
+| `--toast-color-warning-edge` | Border of a warning toast.                                                                |
+| `--toast-color-info-bg`      | Background of an info toast.                                                              |
+| `--toast-color-info-fg`      | Text and icon color of an info toast.                                                     |
+| `--toast-color-info-edge`    | Border of an info toast.                                                                  |
+| `--toast-color-surface`      | Background of the dialog container and its cancel button.                                 |
+| `--toast-color-text`         | Text color of the dialog container and its cancel button.                                 |
+| `--toast-color-border`       | Border of the dialog container and cancel button under `.edged`, and of the prompt input. |
+| `--toast-color-primary-bg`   | Focus ring and focused border of the prompt input.                                        |
+
+Every value is final, a background, border, or foreground exactly as it renders, never an ingredient the package mixes further. Unset, each one matches the composed `@codenhub/styles` look, or the package's generated defaults without it.
 
 ## Content Security Policy (CSP)
 
-When applying token overrides, `@codenhub/toaster` writes CSS variables through an instance-managed `<style>` element. If your application enforces a strict Content Security Policy that blocks unnonced inline styles:
+`@codenhub/toaster` injects no `<style>` element: the stylesheet is one you load, and the package writes only individual inline properties through the CSSOM (`element.style.setProperty`), which a `style-src` policy does not block. A strict policy such as the following needs no nonce for the package:
 
 ```http
-Content-Security-Policy: style-src 'self' 'nonce-rAnd0m123';
+Content-Security-Policy: style-src 'self';
 ```
-
-Pass the nonce to your toaster configuration:
-
-```ts
-import { createToaster } from "@codenhub/toaster";
-
-const toaster = createToaster({
-  nonce: "rAnd0m123",
-  tokens: {
-    primaryBg: "indigo",
-  },
-});
-```
-
-Changing the nonce with `configure({ nonce })` writes the token stylesheet again under the new nonce, because a browser checks a nonce only when a stylesheet is inserted.
 
 ## Classless native button stylesheet ordering
 

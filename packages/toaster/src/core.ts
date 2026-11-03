@@ -10,7 +10,6 @@ import {
 import type { RawToastOptions, ResolvedToastConfig } from "./options";
 import { Toast, reportUncaughtError } from "./toast-base";
 import { reconcileCapacity } from "./toast-helpers";
-import { applyGlobalTokens, assertValidTokens, removeGlobalTokens } from "./tokens";
 import type {
   CustomToastOptions,
   LoadingToastOptions,
@@ -30,7 +29,6 @@ import { SemanticToast } from "./variants/semantic";
 function copyConfig(config: ToasterConfig): ToasterConfig {
   return {
     ...config,
-    tokens: config.tokens ? { ...config.tokens } : undefined,
     semantic: config.semantic ? { ...config.semantic } : undefined,
     loading: config.loading ? { ...config.loading } : undefined,
     custom: config.custom ? { ...config.custom } : undefined,
@@ -107,7 +105,6 @@ function toStructuredPromiseUpdate(
     duration: options.duration ?? defaults.duration,
     dismissible: options.dismissible ?? defaults.dismissible,
     className: options.className,
-    tokens: options.tokens,
   };
 }
 
@@ -123,15 +120,6 @@ class ToastManager {
     this.validateConfig(config);
     this.config = copyConfig(config);
     this.resolved = this.buildResolvedConfig(this.config);
-
-    if (this.config.tokens && typeof document !== "undefined") {
-      applyGlobalTokens(
-        this.config.tokens,
-        this.instanceId,
-        this.config.container?.ownerDocument ?? document,
-        this.config.nonce,
-      );
-    }
   }
 
   public show(messageOrOptions: string | ToastOptions, options?: ToastOptions): ToastHandle {
@@ -230,19 +218,7 @@ class ToastManager {
     }
     const merged = { ...this.config, ...config };
     this.validateConfig(merged);
-    const nextConfig = copyConfig(merged);
-
-    // Keyed on presence, not value: `tokens: undefined` clears them.
-    if ("tokens" in config || "nonce" in config) {
-      applyGlobalTokens(
-        nextConfig.tokens,
-        this.instanceId,
-        this.resolveParentElement().ownerDocument,
-        nextConfig.nonce,
-      );
-    }
-
-    this.config = nextConfig;
+    this.config = copyConfig(merged);
     this.resolved = this.buildResolvedConfig(this.config);
 
     if (config.maxVisible !== undefined) {
@@ -279,7 +255,6 @@ class ToastManager {
       const parent = this.getParent();
       removeInstanceContainers({ parent, instanceId: this.instanceId });
     }
-    removeGlobalTokens(this.instanceId);
   }
 
   /**
@@ -312,7 +287,7 @@ class ToastManager {
     return toast.handle;
   }
 
-  private resolveParentElement(): HTMLElement {
+  private getParent(): HTMLElement {
     if (this.config.container) {
       return this.config.container;
     }
@@ -320,14 +295,6 @@ class ToastManager {
       return document.body ?? document.documentElement;
     }
     throw new Error("DOM document is not available. Toaster operations require a browser environment.");
-  }
-
-  private getParent(): HTMLElement {
-    const parent = this.resolveParentElement();
-    if (this.config.tokens) {
-      applyGlobalTokens(this.config.tokens, this.instanceId, parent.ownerDocument, this.config.nonce);
-    }
-    return parent;
   }
 
   private buildResolvedConfig(config: ToasterConfig): ResolvedToastConfig {
@@ -364,10 +331,6 @@ class ToastManager {
         throw new Error("Toaster nested duration must be a finite number greater than or equal to 0.");
       }
     }
-    assertValidTokens(
-      config.tokens,
-      config.container?.ownerDocument ?? (typeof document === "undefined" ? undefined : document),
-    );
   }
 
   private async removeWhenSettled(toast: Toast, bucket: Set<Toast>): Promise<void> {

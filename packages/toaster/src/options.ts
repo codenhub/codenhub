@@ -1,4 +1,3 @@
-import { assertValidTokens, replaceTokens } from "./tokens";
 import type {
   SemanticType,
   ToastAction,
@@ -7,7 +6,6 @@ import type {
   ToastIcon,
   ToastPosition,
   ToastRole,
-  ToastTokens,
 } from "./types";
 
 /** Built-in text this package renders with no per-call override of its own -- see `ToastLabels.dismiss`. */
@@ -142,9 +140,8 @@ export interface NormalizedToastOptions {
   readonly className?: string;
   /** The instance-level `ToasterConfig.className` alone, kept separate so an
    *  `update()` can re-append it instead of dropping it (see
-   *  `applyUpdateToElement`). */
+   *  `applyClassNameUpdate`). */
   readonly instanceClassName?: string;
-  readonly tokens: ToastTokens | null;
   readonly margin?: string | { x?: string; y?: string };
   /** Accessible label for this toast's dismiss button, from `ResolvedToastConfig.dismissLabel`. */
   readonly dismissLabel: string;
@@ -228,7 +225,6 @@ export interface RawToastOptions {
   duration?: number;
   dismissible?: boolean;
   autoDismiss?: boolean;
-  tokens?: ToastTokens;
   className?: string;
   role?: ToastRole;
   margin?: string | { x?: string; y?: string };
@@ -253,7 +249,6 @@ export function normalizeToastOptions(params: {
   }
 
   assertDuration(options.duration);
-  assertValidTokens(options.tokens, documentRef);
   if (options.type !== undefined) {
     assertSemanticType(options.type);
   }
@@ -291,40 +286,19 @@ export function normalizeToastOptions(params: {
     rootClassName: preset?.rootClassName ?? (type ? SEMANTIC_ROOT_CLASS_NAMES[type] : DEFAULT_TOAST_CLASS),
     className: joinClassNames(config.className, options.className),
     instanceClassName: config.className,
-    tokens: options.tokens ? { ...options.tokens } : null,
     margin: typeof margin === "object" && margin !== null ? { ...margin } : margin,
     dismissLabel: config.dismissLabel,
     regionLabel: config.regionLabel,
   });
 }
 
-/** A scoped token and/or extra-class update to apply to a live toast element. */
-export interface LiveStyleUpdate {
-  tokens?: ToastTokens;
-  className?: string;
-}
-
 /**
- * Applies a scoped token and/or extra-class update to an already-rendered
- * toast element. Message, content, icon, and severity updates are handled
- * directly by `Toast` itself (see `toast-base.ts`), since they need to read
- * and mutate the toast's own current-state fields, not just the DOM.
+ * Applies an `update({ className })` to an already-rendered toast element,
+ * replacing only the per-call class portion: the root class and the
+ * instance-level config default stay, so `update()` cannot drop them.
  */
-export function applyUpdateToElement(element: HTMLDivElement, update: LiveStyleUpdate): void {
-  // Validate everything before mutating anything: a rejected update must be
-  // atomic, not leave an earlier field in this same call already applied.
-  // Only the tokens can be rejected, so validating them first keeps a
-  // rejected update from applying anything.
-  if (update.tokens !== undefined) {
-    assertValidTokens(update.tokens, element.ownerDocument);
-    replaceTokens(element.style, update.tokens);
-  }
-
-  if (update.className !== undefined) {
-    // Replace only the per-call class portion — keep the root class and the
-    // instance-level config default intact, so update() can't drop it.
-    const dataClass = element.getAttribute("data-root-class") ?? "";
-    const instanceClass = element.getAttribute("data-instance-class") ?? "";
-    element.className = joinClassNames(dataClass, instanceClass, update.className);
-  }
+export function applyClassNameUpdate(element: HTMLDivElement, className: string): void {
+  const dataClass = element.getAttribute("data-root-class") ?? "";
+  const instanceClass = element.getAttribute("data-instance-class") ?? "";
+  element.className = joinClassNames(dataClass, instanceClass, className);
 }
