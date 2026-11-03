@@ -1,3 +1,5 @@
+import { defaultShellMessages, type ShellMessages } from "./messages.ts";
+
 /** Resolved light/dark theme value stored and applied across the shell. */
 export type ShellTheme = "dark" | "light";
 
@@ -49,9 +51,12 @@ export interface ShellThemeToggleAria {
  * (`aria-checked`, `aria-label`, `title`) — this computes values only, it
  * never touches the DOM.
  * @param theme The theme currently applied.
+ * @param labels The label for each theme a press switches to.
  * @returns `checked` and `label` to apply to the toggle control.
  */
-export function themeToggleAria(theme: ShellTheme): ShellThemeToggleAria {
-  const next = nextTheme(theme);
-  return { checked: theme === "dark", label: `Switch to ${next} theme` };
+export function themeToggleAria(
+  theme: ShellTheme,
+  labels: Pick<ShellMessages["theme"], "toDark" | "toLight"> = defaultShellMessages.theme,
+): ShellThemeToggleAria {
+  return { checked: theme === "dark", label: nextTheme(theme) === "dark" ? labels.toDark : labels.toLight };
 }

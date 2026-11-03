@@ -16,6 +16,7 @@
     "./copy-feedback": "./src/copy-feedback.ts",
     "./remark-alerts": "./src/remark-alerts.ts",
     "./search": "./src/search/search.ts",
+    "./messages": "./src/messages.ts",
     "./nav": "./src/nav.ts",
     "./theme": "./src/theme.ts",
     "./site-config": "./src/site-config.ts",

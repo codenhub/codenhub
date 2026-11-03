@@ -1,4 +1,5 @@
 ---
+import { defaultShellMessages, fillMessage, type ShellMessages } from "../messages.ts";
 import { resolveNavLinks, type ShellNavLink } from "../nav.ts";
 import type { SiteConfig } from "../site-config.ts";
 import ThemeToggle from "./theme-toggle.astro";
@@ -13,6 +14,8 @@ interface Props {
   npmLabel?: string;
   /** Links within this surface, shown before the cross-surface links. They open in the same tab, with no outbound arrow. */
   localLinks?: ShellLocalLink[];
+  /** The header's text in the page's language. Defaults to English. */
+  messages?: ShellMessages;
 }
 
 /**
@@ -24,13 +27,8 @@ export interface ShellLocalLink extends ShellNavLink {
   current?: boolean;
 }
 
-const {
-  siteConfig,
-  homeHref = "/",
-  githubLabel = "CodenHub on GitHub",
-  npmLabel = "CodenHub on npm",
-  localLinks = [],
-} = Astro.props;
+const { siteConfig, homeHref = "/", localLinks = [], messages = defaultShellMessages } = Astro.props;
+const { githubLabel = messages.github, npmLabel = messages.npm } = Astro.props;
 
 const withoutTrailingSlash = (path: string) => path.replace(/\/+$/, "");
 const ariaCurrent = (link: ShellLocalLink) => {
@@ -53,12 +51,12 @@ const ariaCurrent = (link: ShellLocalLink) => {
  * in that order, and the narrow layout keeps the links on the brand's row and
  * drops the actions below, so keyboard focus always follows the visible order.
  */
-const navLinks = resolveNavLinks(siteConfig);
+const navLinks = resolveNavLinks(siteConfig, messages.nav);
 ---
 
 <header class="shell-header">
   <div class="shell-header-content">
-    <a aria-label={`${siteConfig.title} home`} class="shell-brand" href={homeHref}>
+    <a aria-label={fillMessage(messages.home, { site: siteConfig.title })} class="shell-brand" href={homeHref}>
       <img
         alt=""
         aria-hidden="true"
@@ -78,7 +76,7 @@ const navLinks = resolveNavLinks(siteConfig);
     </a>
     {
       localLinks.length + navLinks.length > 0 && (
-        <nav aria-label="Sites" class="shell-nav">
+        <nav aria-label={messages.sitesNav} class="shell-nav">
           {localLinks.map((link) => (
             <a aria-current={ariaCurrent(link)} class="shell-nav-link" href={link.href}>
               {link.label}
@@ -117,7 +115,7 @@ const navLinks = resolveNavLinks(siteConfig);
           </a>
         )
       }
-      <ThemeToggle />
+      <ThemeToggle labels={messages.theme} />
     </div>
   </div>
 </header>

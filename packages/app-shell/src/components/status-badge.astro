@@ -6,19 +6,24 @@
  *
  * @param status - The package's lifecycle status.
  * @param compact - Show the icon alone, with the label as its accessible name and native tooltip.
+ * @param labels - Each status's label in the page's language.
  */
 import type { PackageStatus } from "@codenhub/tools/documentation";
+
+import { defaultShellMessages, type ShellMessages } from "../messages.ts";
 
 interface Props {
   status: PackageStatus;
   compact?: boolean;
+  /** Each status's label in the page's language. Defaults to English. */
+  labels?: ShellMessages["status"];
 }
 
-const { compact = false, status } = Astro.props;
+const { compact = false, labels = defaultShellMessages.status, status } = Astro.props;
 
 const badges = {
-  deprecated: { icon: "ic-lucide-ban", label: "Deprecated", tone: "destructive" },
-  experimental: { icon: "ic-lucide-flask-conical", label: "Experimental", tone: "warning" },
+  deprecated: { icon: "ic-lucide-ban", label: labels.deprecated, tone: "destructive" },
+  experimental: { icon: "ic-lucide-flask-conical", label: labels.experimental, tone: "warning" },
 } as const;
 
 const badge = status === "active" ? undefined : badges[status];

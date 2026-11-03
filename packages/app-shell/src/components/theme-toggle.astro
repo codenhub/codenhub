@@ -8,14 +8,24 @@
  * `aria-checked` ships as `false` (the light-theme resting state) so the switch
  * is never announced without a state; the deferred script in `base-layout.astro`
  * corrects it to the active theme, which the inline head bootstrap has already
- * resolved before first paint.
+ * resolved before first paint. Its labels for each theme ride on
+ * `data-label-dark` and `data-label-light`, so they are in the page's language.
  */
+import { defaultShellMessages, type ShellMessages } from "../messages.ts";
+
+interface Props {
+  labels?: ShellMessages["theme"];
+}
+
+const { labels = defaultShellMessages.theme } = Astro.props;
 ---
 
 <button
   aria-checked="false"
-  aria-label="Switch theme"
+  aria-label={labels.toggle}
   class="shell-theme-switch"
+  data-label-dark={labels.toDark}
+  data-label-light={labels.toLight}
   data-theme-toggle
   role="switch"
   type="button"

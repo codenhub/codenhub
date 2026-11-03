@@ -424,10 +424,18 @@
   color: var(--color-text-secondary);
 }
 
+/* The geometry is stated whole: a styles foundation that maps bare text inputs
+   onto its own control (`@codenhub/styles/native` applies `.ipt`) would
+   otherwise leave its fixed control height and inline padding on the field,
+   squeezing it to a form input's size inside the palette. */
 .shell-search-input {
   width: 100%;
-  padding-block: 1.25rem;
+  height: auto;
+  min-height: 0;
+  padding: 1.25rem 0;
   border: 0;
+  border-radius: 0;
+  box-shadow: none;
   outline: none;
   background: transparent;
   color: var(--color-text);
