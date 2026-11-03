@@ -17,10 +17,10 @@ export interface LocaleRoutingConfig<TLocale extends string> {
   localePrefix: "always" | "except-default" | "when-ambiguous";
   /**
    * Translated paths, keyed by the canonical path the application routes on, with each locale's form, such as
-   * `{ "/products/:id": { pt: "/produtos/:id" } }`. Paths have fixed segments and `:name` parameters, and every form
-   * uses the canonical path's parameters, in any order. Fixed segments match case-sensitively, Unicode matches its
-   * percent-encoding, and a fixed segment wins over a parameter. A locale or path the table doesn't list keeps the
-   * canonical words.
+   * `{ "/products/:id": { pt: "/produtos/:id" } }`. Paths have fixed segments, `:name` parameters, and a last
+   * `:name*` catch-all that matches one or more segments, and every form uses the canonical path's parameters, in any
+   * order. Fixed segments match case-sensitively, Unicode matches its percent-encoding, and a fixed segment wins over a
+   * parameter, which wins over a catch-all. A locale or path the table doesn't list keeps the canonical words.
    */
   pathnames?: Readonly<Record<string, Readonly<Partial<Record<NoInfer<TLocale>, string>>>>> | undefined;
 }
@@ -90,8 +90,8 @@ export interface LocaleRouting<TLocale extends string> {
  * @returns Pure parsing and generation operations bound to an immutable configuration snapshot.
  * @throws {TypeError} When `config` is not a plain object, locales are empty, invalid conservative ASCII identifiers, duplicated
  * case-insensitively after trimming, the trimmed default locale is unsupported, `localePrefix` is not a supported policy, or `pathnames` has an
- * invalid path, an unsupported locale, a path that starts with a locale, parameters that differ from the canonical
- * path's, or two pages with the same path in one locale.
+ * invalid path, an unsupported locale, a path that starts with a locale, a catch-all that is not last, parameters that
+ * differ from the canonical path's, or two pages with the same path in one locale.
  */
 export const createLocaleRouting = <TLocale extends string>(
   config: LocaleRoutingConfig<TLocale>,

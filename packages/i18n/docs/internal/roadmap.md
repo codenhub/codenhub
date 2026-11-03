@@ -14,6 +14,7 @@ Durable direction for `@codenhub/i18n`. The repo-wide roadmap is `docs/roadmap.m
 
 - **Plural selection (0.2.0).** Plural groups with CLDR forms, selected by a numeric `count`. Design in [decisions.md](decisions.md#plurals-020).
 - **Translated path segments (0.2.0).** A `pathnames` table and `localePrefix: "when-ambiguous"`. Design in [decisions.md](decisions.md#translated-path-segments-ship-in-020-2026-11-02); consumer docs in `localized-urls.md`.
+- **Catch-all route parameters (0.2.0).** `:name*`. Design in [decisions.md](decisions.md#catch-all-parameters-2026-11-02).
 
 ## Planned
 

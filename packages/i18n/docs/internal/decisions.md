@@ -85,6 +85,17 @@ Paths such as `/sobre` for `/about` ship with 0.2.0, before 1.0, as `docs/specs/
 - **`localize` reads an unprefixed path as canonical, and a prefixed one as that locale's URL.** Reading every input as a URL first, which would let `localize(location.pathname, …)` switch language from `/sobre`, was rejected: it can't tell the canonical English page `/sobre` from the Portuguese URL `/sobre`, so the clash check below could never fire. Switching language goes through `parse` instead, as the guide shows.
 - **`localize` throws a `RangeError` when its result would be parsed as another page or locale.** This is the net for pages the table doesn't list. A static build that localizes its page list finds every clash at build time.
 
+### Catch-all parameters (2026-11-02)
+
+A table without them can't translate a tree of pages, such as documentation or CMS pages under `/docs/…`, without listing every page. A last segment written `:name*` matches one or more segments and copies them across.
+
+- **`:name*`**, the `path-to-regexp` spelling, rather than a bare `*`: it names the value like every other parameter, so the check that forms use the canonical path's parameters covers it. `*` used to be a literal segment and still is everywhere else.
+- **Last only, one or more segments.** A catch-all in the middle would need backtracking, and zero segments would make `/docs/:path*` and `/docs` the same page in two entries. `/docs` is listed separately.
+- **A parameter beats a catch-all**, extending the rule that a fixed segment beats a parameter, at the first segment where two patterns differ.
+- **The prefix decision stays per route**: under `"when-ambiguous"`, a catch-all form keeps the prefix for all its URLs when any other locale's path overlaps any of them.
+
+`@codenhub/router` has no catch-all, so `localizeAll` output with one is for frameworks that have their own syntax for it.
+
 ### The locale prefix is dropped only where a path is unambiguous (2026-11-02)
 
 An earlier sketch kept the locale prefix on every translated path, because a path shared by two languages, such as `/` or a brand name, can't tell which language it is in. That holds for removing the prefix everywhere, but it did not weigh removing it only from paths that belong to one locale. `/sobre` is only Portuguese, so it needs no prefix, while `/pt` and `/pt/blog` keep it. So an opt-in mode serves a translated path without a prefix when no other locale's path overlaps it, and keeps the prefix otherwise. A form made only of parameters, such as `/:tag`, always keeps it: it overlaps every path of its length, including the default locale's pages the table doesn't list.
