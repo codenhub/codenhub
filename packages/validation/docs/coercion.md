@@ -29,7 +29,7 @@ There is one for each type that commonly arrives as text. Each takes exactly the
 | `coerceBigint(options?)` | bigint   | Bigints, safe integers, and strings holding a decimal integer.                                                                                           | `bigint`       |
 | `coerceDate(options?)`   | `Date`   | `Date`s, whole timestamps in milliseconds, and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`.                                          | `date`         |
 
-Surrounding whitespace is ignored in the text `coerceNumber`, `coerceBigint`, `coerceBoolean` and `coerceDate` accept. It is whitespace as JavaScript's `trim` reads it, which includes a no-break space and a byte order mark, so text pasted with either is read too. `coerceString` passes a string through as it is; trim it with `pipe(coerceString(), string({ trim: true }))`.
+Surrounding whitespace is ignored in the text `coerceNumber`, `coerceBigint`, `coerceBoolean` and `coerceDate` accept. It is whitespace as JavaScript's `trim` reads it, which includes a no-break space and a byte order mark, so text pasted with either is read too. `coerceString` passes a string through as it is; trim it with `coerceString({ trim: true })`.
 
 ## What is not converted
 
