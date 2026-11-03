@@ -13,7 +13,7 @@ group: "Reference"
 ### createI18n
 
 ```ts
-export declare function createI18n<TLocale extends string, TMessages = unknown>(config: I18nConfig<TLocale, TMessages>): I18n<TLocale, TranslationKey<TMessages>>;
+export declare function createI18n<TLocale extends string, TMessages = unknown>(config: I18nConfig<TLocale, TMessages>): I18n<TLocale, TranslationKey<TMessages>, TMessages>;
 ```
 
 Creates an isolated runtime-neutral translation manager.
@@ -95,7 +95,7 @@ Locale whose loader rejected.
 ### I18n
 
 ```ts
-export interface I18n<TLocale extends string = string, TKey extends string = string> {
+export interface I18n<TLocale extends string = string, TKey extends string = string, TMessages = unknown> {
     readonly defaultLocale: TLocale;
     readonly locales: readonly TLocale[];
     readonly isSilent: boolean;
@@ -107,8 +107,12 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
     setLocale(locale: TLocale): Promise<void>;
     resolveLocale(value: string): TLocale | undefined;
     matchLocale(preferences: readonly string[]): TLocale | undefined;
-    translate(key: TKey, params?: Readonly<Record<string, string | number>>): string;
-    t(key: TKey, params?: Readonly<Record<string, string | number>>): string;
+    translate<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
+    t<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
+    formatNumber(value: number | bigint, options?: Intl.NumberFormatOptions): string;
+    formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
+    formatRelativeTime(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string;
+    formatList(values: Iterable<string>, options?: Intl.ListFormatOptions): string;
     subscribe(listener: () => void): () => void;
     addEventListener<K extends keyof I18nEventMap<TLocale>>(type: K, callback: (this: I18n<TLocale, TKey>, event: I18nEventMap<TLocale>[K]) => void, options?: AddEventListenerOptions | boolean): void;
     addEventListener(type: string, callback: EventListener | EventListenerObject | null, options?: AddEventListenerOptions | boolean): void;
@@ -125,6 +129,7 @@ Every method is bound to its manager, so a destructured method, such as `const {
 
 - `TLocale` — Union of supported canonical locale identifiers.
 - `TKey` — Union of accepted translation keys. Defaults to `string`; `createI18n()` sets it to `TranslationKey<TMessages>` for the loader's dictionary type.
+- `TMessages` — Dictionary type returned by `loadLocale`. Defaults to `unknown`, which accepts any values; `createI18n()` sets it, so a literal message, such as one in an `as const` dictionary, requires its arguments.
 
 #### I18n › defaultLocale
 
@@ -182,6 +187,52 @@ addEventListener(type: string, callback: EventListener | EventListenerObject | n
 ```
 
 Adds a typed lifecycle event listener.
+
+#### I18n › formatDate
+
+```ts
+formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
+```
+
+Formats a date, or a timestamp in milliseconds, for the active locale with `Intl.DateTimeFormat`.
+
+**Throws** — `RangeError` — When `options` or the date is invalid, as `Intl.DateTimeFormat` throws.
+
+#### I18n › formatList
+
+```ts
+formatList(values: Iterable<string>, options?: Intl.ListFormatOptions): string;
+```
+
+Joins strings into a list, such as "a, b, and c", for the active locale with `Intl.ListFormat`.
+
+**Throws**
+
+- `RangeError` — When `options` is invalid, as `Intl.ListFormat` throws.
+- `TypeError` — When a value is not a string, as `Intl.ListFormat` throws.
+
+#### I18n › formatNumber
+
+```ts
+formatNumber(value: number | bigint, options?: Intl.NumberFormatOptions): string;
+```
+
+Formats a number for the active locale with `Intl.NumberFormat`.
+
+**Throws**
+
+- `RangeError` — When `options` is out of range, as `Intl.NumberFormat` throws.
+- `TypeError` — When `options` is incomplete, such as a currency style without `currency`.
+
+#### I18n › formatRelativeTime
+
+```ts
+formatRelativeTime(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string;
+```
+
+Formats a relative time, such as `-1, "day"` for "1 day ago", for the active locale with `Intl.RelativeTimeFormat`.
+
+**Throws** — `RangeError` — When `value`, `unit`, or `options` is invalid, as `Intl.RelativeTimeFormat` throws.
 
 #### I18n › init
 
@@ -304,7 +355,7 @@ Calls a listener after every applied initialization and locale change, such as t
 #### I18n › t
 
 ```ts
-t(key: TKey, params?: Readonly<Record<string, string | number>>): string;
+t<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
 ```
 
 Short alias of `I18n.translate`, the same bound function.
@@ -312,19 +363,23 @@ Short alias of `I18n.translate`, the same bound function.
 #### I18n › translate
 
 ```ts
-translate(key: TKey, params?: Readonly<Record<string, string | number>>): string;
+translate<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
 ```
 
-Resolves a trimmed key against active and default dictionaries and fills its `{name}` placeholders.
+Resolves a trimmed key against the active locale's dictionary, then each configured parent locale's, such as `pt` for `pt-BR`, then the default locale's, and formats it as an ICU message.
+
+A parent is made by dropping subtags and is skipped when its likely script differs, so `zh-Hant` never falls back to `zh`, which is Simplified Chinese.
+
+Messages use ICU syntax: `{name}`, `{n, number}` with an optional `integer` or `percent` style, `{d, date}` and `{d, time}` with an optional `short`, `medium` (the default), `long`, or `full` style, `{n, plural, …}` and `{n, selectordinal, …}` with `=N` and CLDR category options, an optional `offset:N`, and `#` for the number, and `{v, select, …}`. Plural categories and every format use the locale of the dictionary that has the text. An apostrophe before `{`, `}`, or, in a plural, `#` quotes them, and `''` is one apostrophe. A message that is not valid syntax warns once, unless silent, and only its `{name}` placeholders are filled.
 
 When `params.count` is a number and the key is a group of plural forms rather than a text, such as `{ one: "{count} item", other: "{count} items" }`, the form is chosen with `Intl.PluralRules` for the locale of the dictionary that has the group, falling back to its `other` form. Forms are named by CLDR plural category: `zero`, `one`, `two`, `few`, `many`, and `other`.
 
 **Parameters**
 
 - `key` — Translation key, or the key of a plural group when `params.count` is a number.
-- `params` — Values for `{name}` placeholders, read from own properties. A placeholder without a value is left as written; without `params`, the text is returned unchanged. A numeric `count` also selects a plural form.
+- `params` — Argument values, read from own properties. An argument without a usable value, such as a string for `{n, number}`, is left as written. A string or number in `{name}` is inserted as JavaScript writes it, and a date as `{name, date}` would format it. A numeric `count` also selects a plural form.
 
-**Returns** — The translated text, or the trimmed key when neither dictionary has it. A miss calls `onMissingKey`, or warns once per recent locale/key pair unless silent.
+**Returns** — The translated text, or the trimmed key when no dictionary has it. A miss calls `onMissingKey`, or warns once per recent locale/key pair unless silent.
 
 **Throws**
 
@@ -414,7 +469,7 @@ Loads a flat or nested dictionary through a consumer-selected transport; callbac
 onMissingKey?(key: string, locale: NoInfer<TLocale>): void;
 ```
 
-Called for every key missing from both the active and default dictionaries, in place of the default warning. Exceptions propagate from the lookup, so a test can throw here to fail on a missing key.
+Called for every key missing from every dictionary the active locale falls back to, in place of the default warning. Exceptions propagate from the lookup, so a test can throw here to fail on a missing key.
 
 **Default** — A `console.warn` once for each of the 1,000 most recent locale/key pairs, unless `isSilent`.
 
@@ -662,6 +717,14 @@ Safe consumer feedback keyed by stable i18n error code. Each entry provides a fa
 
 ## Internal types
 
+### AnyValues
+
+```ts
+type AnyValues = Readonly<Record<string, MessageValue>>;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
 ### FlattenedKey
 
 ```ts
@@ -672,6 +735,94 @@ type FlattenedKey<TMessages> = TMessages extends string ? never : {
 
 Not exported; declared in `src/core/types.ts`.
 
+### FormArguments
+
+```ts
+type FormArguments<V> = {
+    [K in keyof V]-?: MessageArguments<V[K]>;
+}[keyof V];
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### Frame
+
+```ts
+type Frame = "m" | "o";
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### IsName
+
+```ts
+type IsName<N extends string> = N extends "" | `${string}${Space | "{" | "}" | ","}${string}` ? false : true;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### IsUnion
+
+```ts
+type IsUnion<T, U = T> = T extends unknown ? ([U] extends [T] ? false : true) : never;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### MessageArguments
+
+```ts
+type MessageArguments<S> = S extends string ? string extends S ? Unreadable : Scan<StripQuotes<S>, ["m"], {}> : Unreadable;
+```
+
+The arguments of one message, `Unreadable` when it can't be read, or `{}` when it has none.
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### MessageValue
+
+```ts
+type MessageValue = string | number | Date;
+```
+
+Type-level reading of ICU messages, so `t()` can require the values a literal message uses. A message TypeScript sees only as `string`, such as one from a JSON import, or one these types can't read, accepts any values, as before.
+
+Each step handles one brace or apostrophe, so a message stays well under TypeScript's 1,000-step limit for tail-recursive types.
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### Narrow
+
+```ts
+type Narrow<T> = [T] extends [number] ? number : [T] extends [Date | number] ? Date | number : [T] extends [string | number] ? string | number : T;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### NextBrace
+
+```ts
+type NextBrace<S extends string> = S extends `${infer A}{${infer B}` ? A extends `${infer A1}}${infer A2}` ? ["}", A1, `${A2}{${B}`] : ["{", A, B] : S extends `${infer A}}${infer B}` ? ["}", A, B] : undefined;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### ParamsFor
+
+```ts
+type ParamsFor<U> = Unreadable extends U ? [params?: AnyValues] : ParamsOf<UnionToIntersection<U>>;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### ParamsOf
+
+```ts
+type ParamsOf<A> = keyof A extends never ? [params?: AnyValues] : [params: Readonly<Simplify<A>> & AnyValues];
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
 ### PropertyKeyPath
 
 ```ts
@@ -681,3 +832,149 @@ type PropertyKeyPath<K extends string, TValue> = TValue extends string ? K : TVa
 ```
 
 Not exported; declared in `src/core/types.ts`.
+
+### ReadArgument
+
+```ts
+type ReadArgument<S extends string, Stack extends readonly Frame[], Acc> = S extends `${infer N}}${infer After}` ? N extends `${string},${string}` ? ReadTypedArgument<S, Stack, Acc> : IsName<Trim<N>> extends true ? Scan<After, Stack, Acc & {
+    readonly [P in Trim<N>]: MessageValue;
+}> : Unreadable : Unreadable;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### ReadTypedArgument
+
+```ts
+type ReadTypedArgument<S extends string, Stack extends readonly Frame[], Acc> = S extends `${infer N},${infer R}` ? IsName<Trim<N>> extends true ? R extends `${infer T}}${infer After}` ? T extends `${string}${"," | "{"}${string}` ? R extends `${infer T2},${infer Style}` ? ValueOfType<Trim<T2>> extends Unreadable ? Unreadable : Trim<T2> extends "plural" | "selectordinal" | "select" ? Scan<Style, [...Stack, "o"], Acc & {
+    readonly [P in Trim<N>]: ValueOfType<Trim<T2>>;
+}> : Style extends `${string}}${infer After2}` ? Scan<After2, Stack, Acc & {
+    readonly [P in Trim<N>]: ValueOfType<Trim<T2>>;
+}> : Unreadable : Unreadable : ValueOfType<Trim<T>> extends Unreadable ? Unreadable : Scan<After, Stack, Acc & {
+    readonly [P in Trim<N>]: ValueOfType<Trim<T>>;
+}> : Unreadable : Unreadable : Unreadable;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### Scan
+
+```ts
+type Scan<S extends string, Stack extends readonly Frame[], Acc> = NextBrace<S> extends [infer Brace, string, infer Rest extends string] ? Stack extends readonly [...infer Up extends readonly Frame[], infer Top] ? Brace extends "{" ? Top extends "m" ? ReadArgument<Rest, Stack, Acc> : Scan<Rest, [...Stack, "m"], Acc> : Up extends readonly [] ? Unreadable : Scan<Rest, Up, Acc> : Unreadable : Stack extends readonly ["m"] ? Acc : Unreadable;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### Simplify
+
+```ts
+type Simplify<T> = {
+    readonly [K in keyof T]: Narrow<T[K]>;
+} & {};
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### Space
+
+```ts
+type Space = " " | "\n" | "\t" | "\r";
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### StripQuotes
+
+```ts
+type StripQuotes<S extends string, Out extends string = ""> = S extends `${infer A}'${infer B}` ? B extends `'${infer C}` ? StripQuotes<C, `${Out}${A}`> : B extends `{${string}` | `}${string}` ? B extends `${string}'${infer C}` ? StripQuotes<C, `${Out}${A}`> : `${Out}${A}` : StripQuotes<B, `${Out}${A}`> : `${Out}${S}`;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### TranslateParams
+
+```ts
+type TranslateParams<TMessages, TKey extends string> = unknown extends TMessages ? [params?: AnyValues] : IsUnion<TKey> extends true ? [params?: AnyValues] : string extends TKey ? [params?: AnyValues] : ParamsFor<ValueArguments<ValueAt<TMessages, TKey>>>;
+```
+
+The parameters `t(key, …)` takes: required values when every dictionary type's message at `key` is a literal with arguments, otherwise optional values of any name.
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### Trim
+
+```ts
+type Trim<S extends string> = TrimEnd<TrimStart<S>>;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### TrimEnd
+
+```ts
+type TrimEnd<S extends string> = S extends `${infer R}${Space}` ? TrimEnd<R> : S;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### TrimStart
+
+```ts
+type TrimStart<S extends string> = S extends `${Space}${infer R}` ? TrimStart<R> : S;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### UnionToIntersection
+
+```ts
+type UnionToIntersection<U> = (U extends unknown ? (value: U) => void : never) extends (value: infer I) => void ? I : never;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### unreadable
+
+```ts
+declare const unreadable: unique symbol;
+```
+
+Marks a message these types can't read.
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### Unreadable
+
+```ts
+type Unreadable = typeof unreadable;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### ValueArguments
+
+```ts
+type ValueArguments<V> = V extends string ? MessageArguments<V> : V extends {
+    readonly other: string;
+} ? Unreadable extends FormArguments<V> ? Unreadable : UnionToIntersection<FormArguments<V>> & {
+    readonly count: number;
+} : Unreadable;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### ValueAt
+
+```ts
+type ValueAt<T, K extends string> = T extends object ? K extends keyof T ? T[K] : K extends `${infer Head}.${infer Rest}` ? Head extends keyof T ? ValueAt<T[Head], Rest> : never : never : never;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### ValueOfType
+
+```ts
+type ValueOfType<T extends string> = T extends "number" | "plural" | "selectordinal" ? number : T extends "date" | "time" ? Date | number : T extends "select" ? string | number : Unreadable;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
