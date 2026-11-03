@@ -62,6 +62,9 @@
     template.innerHTML = ICONS[name];
     const icon = template.content.firstElementChild!;
     icon.setAttribute("aria-hidden", "true");
+    // A module's markup carries no icon class, and without one the base rules
+    // never size it from `--ic-size`.
+    icon.classList.add(`ic-lucide-${name}`);
     if (className !== undefined) {
       icon.classList.add(className);
     }
