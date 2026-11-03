@@ -6,47 +6,43 @@
         "createToaster": {
           "files": {
             "src/toast-base.ts": {
-              "bytes": 12413,
+              "bytes": 12067,
               "declarations": {
-                "Toast.render": 1882,
-                "Toast.update": 1537,
-                "Toast.constructor": 1011,
-                "Toast.destroyImmediately": 938,
-                "Toast.applyVisibleUpdate": 930,
-                "Toast.hide": 636,
-                "Toast.normalizeUpdate": 609,
-                "Toast.finishHide": 395,
-                "Toast.failRender": 375,
+                "Toast.render": 1988,
+                "Toast.update": 1428,
+                "Toast.constructor": 1045,
+                "Toast.applyVisibleUpdate": 868,
+                "Toast.destroyImmediately": 703,
+                "Toast.rebuildContent": 658,
+                "Toast.hide": 535,
+                "Toast.finishHide": 378,
                 "Toast.scheduleAutoDismiss": 361,
                 "Toast.show": 351,
                 "Toast.contentOptions": 268,
-                "Toast.announceIfChanged": 246,
-                "Toast.shellOptions": 211,
-                "Toast.restartAutoDismissIfShown": 205,
+                "Toast.normalizeUpdate": 249,
+                "Toast.announceIfChanged": 245,
+                "Toast.releaseSlotAndListener": 196,
                 "Toast.retryQueueIfUnprotected": 181,
-                "Toast.resumeAutoDismiss": 170,
+                "Toast.restartAutoDismissIfShown": 180,
+                "Toast.failRender": 166,
+                "Toast.resumeAutoDismiss": 145,
                 "Toast.subscribe": 145,
                 "Toast.pauseAutoDismiss": 141,
                 "createLifecycleSubscribers": 141,
                 "Toast.clearAutoDismiss": 140,
                 "Toast.notify": 139,
+                "Toast.notifyHideAndHidden": 118,
+                "Toast.handleFocusLeft": 108,
                 "Toast.clearQueuedShow": 101,
                 "reportUncaughtError": 92,
                 "Toast.isProtected": 85,
+                "Toast.shellOptions": 83,
                 "convertToPublicState": 75,
-                "Toast.callSubscriber": 65,
-                "Toast.publicState": 48,
-                "Toast.onHidden": 46,
-                "Toast.onShown": 44,
-                "Toast.onHide": 42,
-                "Toast.onShow": 42,
+                "Toast.callSubscriber": 52,
+                "normalizeUpdateText": 51,
                 "Toast.getPresetOptions": 39,
                 "Toast.reachedEvents": 38,
-                "Toast.settled": 35,
-                "Toast.handle": 33,
                 "Toast.removeVisibilityListener": 30,
-                "Toast.setHandle": 28,
-                "Toast.pendingStyleUpdate": 24,
                 "Toast.currentAnimation": 22,
                 "Toast.dismissTimeoutId": 22,
                 "Toast.queuedSlotCancel": 22,
@@ -54,7 +50,7 @@
                 "Toast.currentRootClassName": 21,
                 "Toast.dismissDeadline": 21,
                 "Toast.internalState": 21,
-                "Toast.visiblePosition": 21,
+                "Toast.isAwaitingContent": 21,
                 "Toast.announcedRole": 19,
                 "Toast.announcedText": 19,
                 "Toast.currentAutoDismiss": 19,
@@ -62,6 +58,7 @@
                 "Toast.currentDismissible": 19,
                 "Toast.restoreTarget": 19,
                 "Toast.remainingDuration": 18,
+                "Toast.pendingClassName": 17,
                 "Toast.subscribers": 17,
                 "Toast.isPageHidden": 16,
                 "Toast.currentContent": 15,
@@ -69,7 +66,6 @@
                 "Toast.settledResolve": 15,
                 "Toast": 14,
                 "Toast.currentAction": 14,
-                "Toast._handle": 13,
                 "Toast.currentTitle": 13,
                 "Toast.element": 13,
                 "Toast.isFocused": 13,
@@ -77,162 +73,115 @@
                 "Toast.currentIcon": 12,
                 "Toast.currentRole": 12,
                 "Toast.maxVisible": 11,
-                "Toast._settled": 9,
                 "Toast.options": 8,
+                "Toast.settled": 8,
+                "Toast.handle": 7,
                 "Toast.parent": 7
               }
             },
             "src/dom.ts": {
-              "bytes": 9371,
+              "bytes": 7198,
               "declarations": {
-                "populateToastContent": 1482,
-                "ICON_SPECS": 1049,
-                "updateToastIcon": 434,
-                "getOrCreateContainer": 425,
+                "populateToastContent": 1072,
+                "ICON_SPECS": 479,
+                "getOrCreateContainer": 436,
                 "buildSvg": 393,
-                "POSITION_CONTAINER_CLASSES": 382,
-                "getKeyframes": 358,
-                "getToastAnnouncementText": 355,
-                "runAnimation": 334,
-                "findToastIcon": 331,
-                "createToastShell": 314,
+                "getToastAnnouncementText": 354,
+                "updateToastIcon": 322,
                 "playStackShift": 297,
-                "setContainerMargin": 235,
-                "setToastLayerHost": 235,
-                "readAnimationDuration": 218,
-                "getContainer": 199,
-                "applyRootClassChange": 192,
-                "createDismissButton": 192,
-                "readAnimationEasing": 162,
-                "applyInstanceRegionLabel": 158,
-                "createIcon": 155,
+                "createToastShell": 294,
+                "findToastIcon": 253,
+                "createDismissButton": 193,
+                "runAnimation": 193,
+                "getKeyframes": 192,
+                "applyRootClassChange": 191,
+                "setContainerMargin": 175,
+                "getContainer": 173,
+                "removeInstanceContainers": 166,
+                "readAnimationDuration": 149,
                 "captureStackRects": 144,
-                "removeInstanceContainers": 143,
-                "applyInstanceMargin": 136,
-                "getTextOutsideButtons": 130,
-                "getToastLayerHost": 122,
-                "CLOSE_ICON_SPEC": 114,
+                "getTextOutsideButtons": 128,
+                "createToastPart": 122,
                 "STROKE_ICON_ATTRIBUTES": 108,
-                "animateOut": 93,
-                "animateIn": 76,
+                "getInstanceContainers": 99,
+                "readCustomProperty": 99,
+                "prefersReducedMotion": 93,
+                "applyInstanceRegionLabel": 89,
+                "createIcon": 89,
+                "animateOut": 85,
+                "strokeIcon": 82,
+                "animateIn": 73,
+                "readAnimationEasing": 72,
                 "TOP_ANCHORED_POSITIONS": 66,
-                "getContainerKey": 64,
+                "applyInstanceMargin": 66,
+                "CLOSE_ICON_SPEC": 65,
                 "createSingleRunCallback": 63,
                 "getAnimationOptions": 60,
+                "OUTLINE_CIRCLE": 53,
+                "svgPath": 50,
                 "animateStackChange": 39,
+                "getContainerKey": 34,
                 "isTopAnchoredPosition": 32,
                 "SVG_NAMESPACE": 31,
-                "LAYER_HOST_ATTRIBUTE": 26,
                 "(top level)": 24
               }
             },
             "src/core.ts": {
-              "bytes": 7459,
+              "bytes": 5210,
               "declarations": {
-                "ToastManager.validateConfig": 703,
-                "ToastManager.configure": 668,
+                "ToastManager.configure": 554,
                 "ToastManager.promise": 552,
-                "toStructuredPromiseUpdate": 412,
-                "ToastManager.buildResolvedConfig": 407,
-                "createToaster": 384,
-                "ToastManager.destroy": 312,
-                "copyConfig": 294,
-                "ToastManager.constructor": 275,
-                "ToastManager.resolveParentElement": 243,
-                "ToastManager.success": 230,
-                "ToastManager.warning": 230,
-                "ToastManager.dialog": 228,
-                "ToastManager.error": 226,
-                "ToastManager.info": 224,
-                "ToastManager.loading": 216,
-                "ToastManager.show": 211,
-                "ToastManager.custom": 199,
+                "ToastManager.validateConfig": 517,
+                "createToaster": 412,
+                "ToastManager.buildResolvedConfig": 381,
+                "toStructuredPromiseUpdate": 323,
+                "copyConfig": 258,
+                "ToastManager.destroy": 232,
+                "ToastManager.getParent": 232,
                 "parseCustomArgs": 180,
-                "ToastManager.getModalController": 172,
-                "generateInstanceId": 148,
-                "ToastManager.getParent": 147,
+                "ToastManager.dispatch": 178,
+                "ToastManager.showMessage": 164,
+                "ToastManager.loading": 147,
+                "ToastManager.constructor": 131,
                 "ToastManager.assertAlive": 130,
+                "ToastManager.custom": 130,
                 "parseLoadingArgs": 129,
-                "ToastManager.registerToast": 111,
-                "parseToastArgs": 98,
-                "ToastManager.clear": 92,
+                "parseToastArgs": 99,
+                "ToastManager.semantic": 71,
+                "ToastManager.clear": 66,
+                "isInvalidDuration": 61,
                 "ToastManager.dismiss": 57,
                 "ToastManager.removeWhenSettled": 57,
+                "ToastManager.show": 55,
                 "ToastManager.activeToasts": 37,
-                "ToastManager.modalController": 21,
                 "ToastManager": 15,
                 "ToastManager.isDestroyed": 15,
                 "ToastManager.instanceId": 11,
                 "ToastManager.resolved": 9,
-                "ToastManager.config": 7,
-                "instanceCounter": 5,
-                "(top level)": 4
+                "ToastManager.config": 7
               }
             },
             "src/options.ts": {
-              "bytes": 4583,
+              "bytes": 2926,
               "declarations": {
-                "normalizeToastOptions": 1277,
-                "sanitizeElement": 910,
-                "resolveToastContent": 745,
-                "applyUpdateToElement": 234,
+                "normalizeToastOptions": 1093,
+                "resolveToastContent": 579,
                 "SEMANTIC_ROOT_CLASS_NAMES": 169,
                 "assertDuration": 139,
-                "SAFE_TAGS": 136,
+                "applyClassNameUpdate": 114,
                 "assertSemanticType": 94,
-                "TOAST_POSITIONS": 86,
                 "withoutUndefined": 86,
-                "assertToastPosition": 85,
+                "TOAST_POSITIONS": 85,
+                "assertToastPosition": 84,
                 "SEMANTIC_ROLES": 82,
-                "assertToastRole": 82,
                 "DEFAULT_CONFIG": 81,
+                "assertToastRole": 80,
                 "SEMANTIC_ICONS": 79,
                 "hasNonEmptyString": 59,
-                "joinClassNames": 52,
-                "sanitizeFragment": 49,
-                "SAFE_ATTRIBUTES": 45,
-                "URL_ATTRIBUTES": 37,
-                "TOAST_ROLES": 22,
-                "(top level)": 18,
-                "TOAST_SHAPE_CLASS": 16
-              }
-            },
-            "src/modal.ts": {
-              "bytes": 4066,
-              "declarations": {
-                "ModalController.createModal": 2224,
-                "ModalController.ensureDialog": 265,
-                "ModalController.destroy": 242,
-                "ModalController.confirm": 170,
-                "ModalController.prompt": 169,
-                "ModalController.constructor": 165,
-                "ModalController.next": 145,
-                "ModalController.restoreFocusIfIdle": 143,
-                "ModalController.alert": 137,
-                "ModalController.enqueue": 130,
-                "ModalController.complete": 121,
-                "ModalController.releaseToastLayers": 58,
-                "ModalController.restoreTarget": 19,
-                "ModalController": 15,
-                "ModalController.activeJob": 15,
-                "ModalController.isDestroyed": 15,
-                "ModalController.jobCounter": 13,
-                "ModalController.dialog": 12,
-                "ModalController.jobs": 8
-              }
-            },
-            "src/tokens.ts": {
-              "bytes": 2616,
-              "declarations": {
-                "TOKEN_MAP": 1345,
-                "applyGlobalTokens": 663,
-                "assertColor": 286,
-                "applyTokens": 96,
-                "replaceTokens": 72,
-                "assertValidTokens": 69,
-                "removeGlobalTokens": 53,
-                "ownedStyleElements": 26,
-                "(top level)": 6
+                "joinClassNames": 53,
+                "TOAST_ROLES": 21,
+                "TOAST_SHAPE_CLASS": 16,
+                "(top level)": 12
               }
             },
             "src/toast-helpers.ts": {
@@ -240,9 +189,9 @@
               "declarations": {
                 "requestSlot": 300,
                 "getStackState": 261,
-                "removeToastElement": 261,
+                "removeToastElement": 260,
                 "evictForQueue": 244,
-                "releaseSlot": 240,
+                "releaseSlot": 241,
                 "promoteQueued": 178,
                 "reconcileCapacity": 147,
                 "retryQueue": 85,
@@ -253,41 +202,15 @@
                 "(top level)": 6
               }
             },
-            "src/modal-renderers.ts": {
-              "bytes": 1622,
-              "declarations": {
-                "createPromptRenderer": 786,
-                "createConfirmRenderer": 512,
-                "createAlertRenderer": 324
-              }
-            },
             "src/announcer.ts": {
-              "bytes": 1152,
+              "bytes": 1143,
               "declarations": {
-                "announce": 407,
+                "announce": 399,
                 "createRegion": 258,
                 "VISUALLY_HIDDEN": 174,
                 "findRegion": 153,
-                "appendLine": 124,
+                "appendLine": 123,
                 "pendingLines": 30,
-                "(top level)": 6
-              }
-            },
-            "src/modal-transition.ts": {
-              "bytes": 868,
-              "declarations": {
-                "closeDialog": 571,
-                "parseTransitionDuration": 199,
-                "countTransitionProperties": 98
-              }
-            },
-            "src/modal-templates.ts": {
-              "bytes": 660,
-              "declarations": {
-                "buildDialogContent": 532,
-                "createHTMLElement": 80,
-                "ACTIONS_CLASS": 25,
-                "DIALOG_CLASS": 17,
                 "(top level)": 6
               }
             },
@@ -301,380 +224,75 @@
                 "(top level)": 6
               }
             },
+            "src/instance-id.ts": {
+              "bytes": 154,
+              "declarations": {
+                "generateInstanceId": 146,
+                "(top level)": 4,
+                "instanceCounter": 4
+              }
+            },
             "src/variants/semantic.ts": {
-              "bytes": 148,
+              "bytes": 149,
               "declarations": {
                 "SemanticToast.getPresetOptions": 104,
                 "SemanticToast.constructor": 24,
-                "SemanticToast": 20
+                "SemanticToast": 21
+              }
+            },
+            "src/layer-host.ts": {
+              "bytes": 135,
+              "declarations": {
+                "getToastLayerHost": 135
               }
             },
             "(unattributed)": {
               "bytes": 28
             }
           },
-          "gzip": 12717,
-          "minified": 47011
-        },
-        "dialog": {
-          "files": {
-            "src/toast-base.ts": {
-              "bytes": 12413,
-              "declarations": {
-                "Toast.render": 1882,
-                "Toast.update": 1537,
-                "Toast.constructor": 1011,
-                "Toast.destroyImmediately": 938,
-                "Toast.applyVisibleUpdate": 930,
-                "Toast.hide": 636,
-                "Toast.normalizeUpdate": 609,
-                "Toast.finishHide": 395,
-                "Toast.failRender": 375,
-                "Toast.scheduleAutoDismiss": 361,
-                "Toast.show": 351,
-                "Toast.contentOptions": 268,
-                "Toast.announceIfChanged": 246,
-                "Toast.shellOptions": 211,
-                "Toast.restartAutoDismissIfShown": 205,
-                "Toast.retryQueueIfUnprotected": 181,
-                "Toast.resumeAutoDismiss": 170,
-                "Toast.subscribe": 145,
-                "Toast.pauseAutoDismiss": 141,
-                "createLifecycleSubscribers": 141,
-                "Toast.clearAutoDismiss": 140,
-                "Toast.notify": 139,
-                "Toast.clearQueuedShow": 101,
-                "reportUncaughtError": 92,
-                "Toast.isProtected": 85,
-                "convertToPublicState": 75,
-                "Toast.callSubscriber": 65,
-                "Toast.publicState": 48,
-                "Toast.onHidden": 46,
-                "Toast.onShown": 44,
-                "Toast.onHide": 42,
-                "Toast.onShow": 42,
-                "Toast.getPresetOptions": 39,
-                "Toast.reachedEvents": 38,
-                "Toast.settled": 35,
-                "Toast.handle": 33,
-                "Toast.removeVisibilityListener": 30,
-                "Toast.setHandle": 28,
-                "Toast.pendingStyleUpdate": 24,
-                "Toast.currentAnimation": 22,
-                "Toast.dismissTimeoutId": 22,
-                "Toast.queuedSlotCancel": 22,
-                "Toast.shouldRestoreFocus": 22,
-                "Toast.currentRootClassName": 21,
-                "Toast.dismissDeadline": 21,
-                "Toast.internalState": 21,
-                "Toast.visiblePosition": 21,
-                "Toast.announcedRole": 19,
-                "Toast.announcedText": 19,
-                "Toast.currentAutoDismiss": 19,
-                "Toast.currentDescription": 19,
-                "Toast.currentDismissible": 19,
-                "Toast.restoreTarget": 19,
-                "Toast.remainingDuration": 18,
-                "Toast.subscribers": 17,
-                "Toast.isPageHidden": 16,
-                "Toast.currentContent": 15,
-                "Toast.currentMessage": 15,
-                "Toast.settledResolve": 15,
-                "Toast": 14,
-                "Toast.currentAction": 14,
-                "Toast._handle": 13,
-                "Toast.currentTitle": 13,
-                "Toast.element": 13,
-                "Toast.isFocused": 13,
-                "Toast.isHovered": 13,
-                "Toast.currentIcon": 12,
-                "Toast.currentRole": 12,
-                "Toast.maxVisible": 11,
-                "Toast._settled": 9,
-                "Toast.options": 8,
-                "Toast.parent": 7
-              }
-            },
-            "src/dom.ts": {
-              "bytes": 9371,
-              "declarations": {
-                "populateToastContent": 1482,
-                "ICON_SPECS": 1049,
-                "updateToastIcon": 434,
-                "getOrCreateContainer": 425,
-                "buildSvg": 393,
-                "POSITION_CONTAINER_CLASSES": 382,
-                "getKeyframes": 358,
-                "getToastAnnouncementText": 355,
-                "runAnimation": 334,
-                "findToastIcon": 331,
-                "createToastShell": 314,
-                "playStackShift": 297,
-                "setContainerMargin": 235,
-                "setToastLayerHost": 235,
-                "readAnimationDuration": 218,
-                "getContainer": 199,
-                "applyRootClassChange": 192,
-                "createDismissButton": 192,
-                "readAnimationEasing": 162,
-                "applyInstanceRegionLabel": 158,
-                "createIcon": 155,
-                "captureStackRects": 144,
-                "removeInstanceContainers": 143,
-                "applyInstanceMargin": 136,
-                "getTextOutsideButtons": 130,
-                "getToastLayerHost": 122,
-                "CLOSE_ICON_SPEC": 114,
-                "STROKE_ICON_ATTRIBUTES": 108,
-                "animateOut": 93,
-                "animateIn": 76,
-                "TOP_ANCHORED_POSITIONS": 66,
-                "getContainerKey": 64,
-                "createSingleRunCallback": 63,
-                "getAnimationOptions": 60,
-                "animateStackChange": 39,
-                "isTopAnchoredPosition": 32,
-                "SVG_NAMESPACE": 31,
-                "LAYER_HOST_ATTRIBUTE": 26,
-                "(top level)": 24
-              }
-            },
-            "src/core.ts": {
-              "bytes": 7498,
-              "declarations": {
-                "ToastManager.validateConfig": 703,
-                "ToastManager.configure": 668,
-                "ToastManager.promise": 552,
-                "toStructuredPromiseUpdate": 412,
-                "ToastManager.buildResolvedConfig": 407,
-                "createToaster": 384,
-                "ToastManager.destroy": 312,
-                "copyConfig": 294,
-                "ToastManager.constructor": 275,
-                "ToastManager.resolveParentElement": 243,
-                "ToastManager.success": 230,
-                "ToastManager.warning": 230,
-                "ToastManager.dialog": 228,
-                "ToastManager.error": 226,
-                "ToastManager.info": 224,
-                "ToastManager.loading": 216,
-                "ToastManager.show": 211,
-                "ToastManager.custom": 199,
-                "parseCustomArgs": 180,
-                "ToastManager.getModalController": 172,
-                "generateInstanceId": 148,
-                "ToastManager.getParent": 147,
-                "ToastManager.assertAlive": 130,
-                "parseLoadingArgs": 129,
-                "ToastManager.registerToast": 111,
-                "parseToastArgs": 98,
-                "ToastManager.clear": 92,
-                "ToastManager.dismiss": 57,
-                "ToastManager.removeWhenSettled": 57,
-                "ToastManager.activeToasts": 37,
-                "dialog": 30,
-                "ToastManager.modalController": 21,
-                "ToastManager": 15,
-                "ToastManager.isDestroyed": 15,
-                "ToastManager.instanceId": 11,
-                "(top level)": 10,
-                "ToastManager.resolved": 9,
-                "ToastManager.config": 7,
-                "instanceCounter": 5,
-                "toast": 3
-              }
-            },
-            "src/options.ts": {
-              "bytes": 4583,
-              "declarations": {
-                "normalizeToastOptions": 1277,
-                "sanitizeElement": 910,
-                "resolveToastContent": 745,
-                "applyUpdateToElement": 234,
-                "SEMANTIC_ROOT_CLASS_NAMES": 169,
-                "assertDuration": 139,
-                "SAFE_TAGS": 136,
-                "assertSemanticType": 94,
-                "TOAST_POSITIONS": 86,
-                "withoutUndefined": 86,
-                "assertToastPosition": 85,
-                "SEMANTIC_ROLES": 82,
-                "assertToastRole": 82,
-                "DEFAULT_CONFIG": 81,
-                "SEMANTIC_ICONS": 79,
-                "hasNonEmptyString": 59,
-                "joinClassNames": 52,
-                "sanitizeFragment": 49,
-                "SAFE_ATTRIBUTES": 45,
-                "URL_ATTRIBUTES": 37,
-                "TOAST_ROLES": 22,
-                "(top level)": 18,
-                "TOAST_SHAPE_CLASS": 16
-              }
-            },
-            "src/modal.ts": {
-              "bytes": 4066,
-              "declarations": {
-                "ModalController.createModal": 2224,
-                "ModalController.ensureDialog": 265,
-                "ModalController.destroy": 242,
-                "ModalController.confirm": 170,
-                "ModalController.prompt": 169,
-                "ModalController.constructor": 165,
-                "ModalController.next": 145,
-                "ModalController.restoreFocusIfIdle": 143,
-                "ModalController.alert": 137,
-                "ModalController.enqueue": 130,
-                "ModalController.complete": 121,
-                "ModalController.releaseToastLayers": 58,
-                "ModalController.restoreTarget": 19,
-                "ModalController": 15,
-                "ModalController.activeJob": 15,
-                "ModalController.isDestroyed": 15,
-                "ModalController.jobCounter": 13,
-                "ModalController.dialog": 12,
-                "ModalController.jobs": 8
-              }
-            },
-            "src/tokens.ts": {
-              "bytes": 2616,
-              "declarations": {
-                "TOKEN_MAP": 1345,
-                "applyGlobalTokens": 663,
-                "assertColor": 286,
-                "applyTokens": 96,
-                "replaceTokens": 72,
-                "assertValidTokens": 69,
-                "removeGlobalTokens": 53,
-                "ownedStyleElements": 26,
-                "(top level)": 6
-              }
-            },
-            "src/toast-helpers.ts": {
-              "bytes": 1846,
-              "declarations": {
-                "requestSlot": 300,
-                "getStackState": 261,
-                "removeToastElement": 261,
-                "evictForQueue": 244,
-                "releaseSlot": 240,
-                "promoteQueued": 178,
-                "reconcileCapacity": 147,
-                "retryQueue": 85,
-                "getStackKey": 34,
-                "dismissingElements": 30,
-                "stackStates": 30,
-                "toastByElement": 30,
-                "(top level)": 6
-              }
-            },
-            "src/modal-renderers.ts": {
-              "bytes": 1622,
-              "declarations": {
-                "createPromptRenderer": 786,
-                "createConfirmRenderer": 512,
-                "createAlertRenderer": 324
-              }
-            },
-            "src/announcer.ts": {
-              "bytes": 1152,
-              "declarations": {
-                "announce": 407,
-                "createRegion": 258,
-                "VISUALLY_HIDDEN": 174,
-                "findRegion": 153,
-                "appendLine": 124,
-                "pendingLines": 30,
-                "(top level)": 6
-              }
-            },
-            "src/modal-transition.ts": {
-              "bytes": 868,
-              "declarations": {
-                "closeDialog": 571,
-                "parseTransitionDuration": 199,
-                "countTransitionProperties": 98
-              }
-            },
-            "src/modal-templates.ts": {
-              "bytes": 660,
-              "declarations": {
-                "buildDialogContent": 532,
-                "createHTMLElement": 80,
-                "ACTIONS_CLASS": 25,
-                "DIALOG_CLASS": 17,
-                "(top level)": 6
-              }
-            },
-            "src/variants/loading.ts": {
-              "bytes": 179,
-              "declarations": {
-                "LoadingToast.getPresetOptions": 94,
-                "LOADING_ROOT_CLASS": 30,
-                "LoadingToast": 25,
-                "LoadingToast.constructor": 24,
-                "(top level)": 6
-              }
-            },
-            "src/variants/semantic.ts": {
-              "bytes": 148,
-              "declarations": {
-                "SemanticToast.getPresetOptions": 104,
-                "SemanticToast.constructor": 24,
-                "SemanticToast": 20
-              }
-            },
-            "(unattributed)": {
-              "bytes": 21
-            }
-          },
-          "gzip": 12729,
-          "minified": 47043
+          "gzip": 9044,
+          "minified": 31035
         },
         "toast": {
           "files": {
             "src/toast-base.ts": {
-              "bytes": 12413,
+              "bytes": 12067,
               "declarations": {
-                "Toast.render": 1882,
-                "Toast.update": 1537,
-                "Toast.constructor": 1011,
-                "Toast.destroyImmediately": 938,
-                "Toast.applyVisibleUpdate": 930,
-                "Toast.hide": 636,
-                "Toast.normalizeUpdate": 609,
-                "Toast.finishHide": 395,
-                "Toast.failRender": 375,
+                "Toast.render": 1988,
+                "Toast.update": 1428,
+                "Toast.constructor": 1045,
+                "Toast.applyVisibleUpdate": 868,
+                "Toast.destroyImmediately": 703,
+                "Toast.rebuildContent": 658,
+                "Toast.hide": 535,
+                "Toast.finishHide": 378,
                 "Toast.scheduleAutoDismiss": 361,
                 "Toast.show": 351,
                 "Toast.contentOptions": 268,
-                "Toast.announceIfChanged": 246,
-                "Toast.shellOptions": 211,
-                "Toast.restartAutoDismissIfShown": 205,
+                "Toast.normalizeUpdate": 249,
+                "Toast.announceIfChanged": 245,
+                "Toast.releaseSlotAndListener": 196,
                 "Toast.retryQueueIfUnprotected": 181,
-                "Toast.resumeAutoDismiss": 170,
+                "Toast.restartAutoDismissIfShown": 180,
+                "Toast.failRender": 166,
+                "Toast.resumeAutoDismiss": 145,
                 "Toast.subscribe": 145,
                 "Toast.pauseAutoDismiss": 141,
                 "createLifecycleSubscribers": 141,
                 "Toast.clearAutoDismiss": 140,
                 "Toast.notify": 139,
+                "Toast.notifyHideAndHidden": 118,
+                "Toast.handleFocusLeft": 108,
                 "Toast.clearQueuedShow": 101,
                 "reportUncaughtError": 92,
                 "Toast.isProtected": 85,
+                "Toast.shellOptions": 83,
                 "convertToPublicState": 75,
-                "Toast.callSubscriber": 65,
-                "Toast.publicState": 48,
-                "Toast.onHidden": 46,
-                "Toast.onShown": 44,
-                "Toast.onHide": 42,
-                "Toast.onShow": 42,
+                "Toast.callSubscriber": 52,
+                "normalizeUpdateText": 51,
                 "Toast.getPresetOptions": 39,
                 "Toast.reachedEvents": 38,
-                "Toast.settled": 35,
-                "Toast.handle": 33,
                 "Toast.removeVisibilityListener": 30,
-                "Toast.setHandle": 28,
-                "Toast.pendingStyleUpdate": 24,
                 "Toast.currentAnimation": 22,
                 "Toast.dismissTimeoutId": 22,
                 "Toast.queuedSlotCancel": 22,
@@ -682,7 +300,7 @@
                 "Toast.currentRootClassName": 21,
                 "Toast.dismissDeadline": 21,
                 "Toast.internalState": 21,
-                "Toast.visiblePosition": 21,
+                "Toast.isAwaitingContent": 21,
                 "Toast.announcedRole": 19,
                 "Toast.announcedText": 19,
                 "Toast.currentAutoDismiss": 19,
@@ -690,6 +308,7 @@
                 "Toast.currentDismissible": 19,
                 "Toast.restoreTarget": 19,
                 "Toast.remainingDuration": 18,
+                "Toast.pendingClassName": 17,
                 "Toast.subscribers": 17,
                 "Toast.isPageHidden": 16,
                 "Toast.currentContent": 15,
@@ -697,7 +316,6 @@
                 "Toast.settledResolve": 15,
                 "Toast": 14,
                 "Toast.currentAction": 14,
-                "Toast._handle": 13,
                 "Toast.currentTitle": 13,
                 "Toast.element": 13,
                 "Toast.isFocused": 13,
@@ -705,163 +323,117 @@
                 "Toast.currentIcon": 12,
                 "Toast.currentRole": 12,
                 "Toast.maxVisible": 11,
-                "Toast._settled": 9,
                 "Toast.options": 8,
+                "Toast.settled": 8,
+                "Toast.handle": 7,
                 "Toast.parent": 7
               }
             },
             "src/dom.ts": {
-              "bytes": 9371,
+              "bytes": 7198,
               "declarations": {
-                "populateToastContent": 1482,
-                "ICON_SPECS": 1049,
-                "updateToastIcon": 434,
-                "getOrCreateContainer": 425,
+                "populateToastContent": 1072,
+                "ICON_SPECS": 479,
+                "getOrCreateContainer": 436,
                 "buildSvg": 393,
-                "POSITION_CONTAINER_CLASSES": 382,
-                "getKeyframes": 358,
-                "getToastAnnouncementText": 355,
-                "runAnimation": 334,
-                "findToastIcon": 331,
-                "createToastShell": 314,
+                "getToastAnnouncementText": 354,
+                "updateToastIcon": 322,
                 "playStackShift": 297,
-                "setContainerMargin": 235,
-                "setToastLayerHost": 235,
-                "readAnimationDuration": 218,
-                "getContainer": 199,
-                "applyRootClassChange": 192,
-                "createDismissButton": 192,
-                "readAnimationEasing": 162,
-                "applyInstanceRegionLabel": 158,
-                "createIcon": 155,
+                "createToastShell": 294,
+                "findToastIcon": 253,
+                "createDismissButton": 193,
+                "runAnimation": 193,
+                "getKeyframes": 192,
+                "applyRootClassChange": 191,
+                "setContainerMargin": 175,
+                "getContainer": 173,
+                "removeInstanceContainers": 166,
+                "readAnimationDuration": 149,
                 "captureStackRects": 144,
-                "removeInstanceContainers": 143,
-                "applyInstanceMargin": 136,
-                "getTextOutsideButtons": 130,
-                "getToastLayerHost": 122,
-                "CLOSE_ICON_SPEC": 114,
+                "getTextOutsideButtons": 128,
+                "createToastPart": 122,
                 "STROKE_ICON_ATTRIBUTES": 108,
-                "animateOut": 93,
-                "animateIn": 76,
+                "getInstanceContainers": 99,
+                "readCustomProperty": 99,
+                "prefersReducedMotion": 93,
+                "applyInstanceRegionLabel": 89,
+                "createIcon": 89,
+                "animateOut": 85,
+                "strokeIcon": 82,
+                "animateIn": 73,
+                "readAnimationEasing": 72,
                 "TOP_ANCHORED_POSITIONS": 66,
-                "getContainerKey": 64,
+                "applyInstanceMargin": 66,
+                "CLOSE_ICON_SPEC": 65,
                 "createSingleRunCallback": 63,
                 "getAnimationOptions": 60,
+                "OUTLINE_CIRCLE": 53,
+                "svgPath": 50,
                 "animateStackChange": 39,
+                "getContainerKey": 34,
                 "isTopAnchoredPosition": 32,
                 "SVG_NAMESPACE": 31,
-                "LAYER_HOST_ATTRIBUTE": 26,
                 "(top level)": 24
               }
             },
             "src/core.ts": {
-              "bytes": 7489,
+              "bytes": 5240,
               "declarations": {
-                "ToastManager.validateConfig": 703,
-                "ToastManager.configure": 668,
+                "ToastManager.configure": 554,
                 "ToastManager.promise": 552,
-                "toStructuredPromiseUpdate": 412,
-                "ToastManager.buildResolvedConfig": 407,
-                "createToaster": 384,
-                "ToastManager.destroy": 312,
-                "copyConfig": 294,
-                "ToastManager.constructor": 275,
-                "ToastManager.resolveParentElement": 243,
-                "ToastManager.success": 230,
-                "ToastManager.warning": 230,
-                "ToastManager.dialog": 228,
-                "ToastManager.error": 226,
-                "ToastManager.info": 224,
-                "ToastManager.loading": 216,
-                "ToastManager.show": 211,
-                "ToastManager.custom": 199,
+                "ToastManager.validateConfig": 517,
+                "createToaster": 412,
+                "ToastManager.buildResolvedConfig": 381,
+                "toStructuredPromiseUpdate": 323,
+                "copyConfig": 258,
+                "ToastManager.destroy": 232,
+                "ToastManager.getParent": 232,
                 "parseCustomArgs": 180,
-                "ToastManager.getModalController": 172,
-                "generateInstanceId": 148,
-                "ToastManager.getParent": 147,
+                "ToastManager.dispatch": 178,
+                "ToastManager.showMessage": 164,
+                "ToastManager.loading": 147,
+                "ToastManager.constructor": 131,
                 "ToastManager.assertAlive": 130,
+                "ToastManager.custom": 130,
                 "parseLoadingArgs": 129,
-                "ToastManager.registerToast": 111,
-                "parseToastArgs": 98,
-                "ToastManager.clear": 92,
+                "parseToastArgs": 99,
+                "ToastManager.semantic": 71,
+                "ToastManager.clear": 66,
+                "isInvalidDuration": 61,
                 "ToastManager.dismiss": 57,
                 "ToastManager.removeWhenSettled": 57,
+                "ToastManager.show": 55,
                 "ToastManager.activeToasts": 37,
                 "toast": 24,
-                "ToastManager.modalController": 21,
                 "ToastManager": 15,
                 "ToastManager.isDestroyed": 15,
                 "ToastManager.instanceId": 11,
-                "(top level)": 10,
                 "ToastManager.resolved": 9,
                 "ToastManager.config": 7,
-                "instanceCounter": 5
+                "(top level)": 6
               }
             },
             "src/options.ts": {
-              "bytes": 4583,
+              "bytes": 2926,
               "declarations": {
-                "normalizeToastOptions": 1277,
-                "sanitizeElement": 910,
-                "resolveToastContent": 745,
-                "applyUpdateToElement": 234,
+                "normalizeToastOptions": 1093,
+                "resolveToastContent": 579,
                 "SEMANTIC_ROOT_CLASS_NAMES": 169,
                 "assertDuration": 139,
-                "SAFE_TAGS": 136,
+                "applyClassNameUpdate": 114,
                 "assertSemanticType": 94,
-                "TOAST_POSITIONS": 86,
                 "withoutUndefined": 86,
-                "assertToastPosition": 85,
+                "TOAST_POSITIONS": 85,
+                "assertToastPosition": 84,
                 "SEMANTIC_ROLES": 82,
-                "assertToastRole": 82,
                 "DEFAULT_CONFIG": 81,
+                "assertToastRole": 80,
                 "SEMANTIC_ICONS": 79,
                 "hasNonEmptyString": 59,
-                "joinClassNames": 52,
-                "sanitizeFragment": 49,
-                "SAFE_ATTRIBUTES": 45,
-                "URL_ATTRIBUTES": 37,
-                "TOAST_ROLES": 22,
-                "(top level)": 18,
-                "TOAST_SHAPE_CLASS": 16
-              }
-            },
-            "src/modal.ts": {
-              "bytes": 4066,
-              "declarations": {
-                "ModalController.createModal": 2224,
-                "ModalController.ensureDialog": 265,
-                "ModalController.destroy": 242,
-                "ModalController.confirm": 170,
-                "ModalController.prompt": 169,
-                "ModalController.constructor": 165,
-                "ModalController.next": 145,
-                "ModalController.restoreFocusIfIdle": 143,
-                "ModalController.alert": 137,
-                "ModalController.enqueue": 130,
-                "ModalController.complete": 121,
-                "ModalController.releaseToastLayers": 58,
-                "ModalController.restoreTarget": 19,
-                "ModalController": 15,
-                "ModalController.activeJob": 15,
-                "ModalController.isDestroyed": 15,
-                "ModalController.jobCounter": 13,
-                "ModalController.dialog": 12,
-                "ModalController.jobs": 8
-              }
-            },
-            "src/tokens.ts": {
-              "bytes": 2616,
-              "declarations": {
-                "TOKEN_MAP": 1345,
-                "applyGlobalTokens": 663,
-                "assertColor": 286,
-                "applyTokens": 96,
-                "replaceTokens": 72,
-                "assertValidTokens": 69,
-                "removeGlobalTokens": 53,
-                "ownedStyleElements": 26,
-                "(top level)": 6
+                "joinClassNames": 53,
+                "TOAST_ROLES": 21,
+                "TOAST_SHAPE_CLASS": 16,
+                "(top level)": 12
               }
             },
             "src/toast-helpers.ts": {
@@ -869,9 +441,9 @@
               "declarations": {
                 "requestSlot": 300,
                 "getStackState": 261,
-                "removeToastElement": 261,
+                "removeToastElement": 260,
                 "evictForQueue": 244,
-                "releaseSlot": 240,
+                "releaseSlot": 241,
                 "promoteQueued": 178,
                 "reconcileCapacity": 147,
                 "retryQueue": 85,
@@ -882,41 +454,15 @@
                 "(top level)": 6
               }
             },
-            "src/modal-renderers.ts": {
-              "bytes": 1622,
-              "declarations": {
-                "createPromptRenderer": 786,
-                "createConfirmRenderer": 512,
-                "createAlertRenderer": 324
-              }
-            },
             "src/announcer.ts": {
-              "bytes": 1152,
+              "bytes": 1143,
               "declarations": {
-                "announce": 407,
+                "announce": 399,
                 "createRegion": 258,
                 "VISUALLY_HIDDEN": 174,
                 "findRegion": 153,
-                "appendLine": 124,
+                "appendLine": 123,
                 "pendingLines": 30,
-                "(top level)": 6
-              }
-            },
-            "src/modal-transition.ts": {
-              "bytes": 868,
-              "declarations": {
-                "closeDialog": 571,
-                "parseTransitionDuration": 199,
-                "countTransitionProperties": 98
-              }
-            },
-            "src/modal-templates.ts": {
-              "bytes": 660,
-              "declarations": {
-                "buildDialogContent": 532,
-                "createHTMLElement": 80,
-                "ACTIONS_CLASS": 25,
-                "DIALOG_CLASS": 17,
                 "(top level)": 6
               }
             },
@@ -930,65 +476,75 @@
                 "(top level)": 6
               }
             },
+            "src/instance-id.ts": {
+              "bytes": 154,
+              "declarations": {
+                "generateInstanceId": 146,
+                "(top level)": 4,
+                "instanceCounter": 4
+              }
+            },
             "src/variants/semantic.ts": {
-              "bytes": 148,
+              "bytes": 149,
               "declarations": {
                 "SemanticToast.getPresetOptions": 104,
                 "SemanticToast.constructor": 24,
-                "SemanticToast": 20
+                "SemanticToast": 21
+              }
+            },
+            "src/layer-host.ts": {
+              "bytes": 135,
+              "declarations": {
+                "getToastLayerHost": 135
               }
             },
             "(unattributed)": {
               "bytes": 20
             }
           },
-          "gzip": 12724,
-          "minified": 47033
+          "gzip": 9052,
+          "minified": 31057
         }
       },
       "files": {
         "src/toast-base.ts": {
-          "bytes": 12413,
+          "bytes": 12066,
           "declarations": {
-            "Toast.render": 1882,
-            "Toast.update": 1537,
-            "Toast.constructor": 1011,
-            "Toast.destroyImmediately": 938,
-            "Toast.applyVisibleUpdate": 930,
-            "Toast.hide": 636,
-            "Toast.normalizeUpdate": 609,
-            "Toast.finishHide": 395,
-            "Toast.failRender": 375,
+            "Toast.render": 1988,
+            "Toast.update": 1428,
+            "Toast.constructor": 1045,
+            "Toast.applyVisibleUpdate": 868,
+            "Toast.destroyImmediately": 703,
+            "Toast.rebuildContent": 658,
+            "Toast.hide": 535,
+            "Toast.finishHide": 378,
             "Toast.scheduleAutoDismiss": 361,
             "Toast.show": 351,
             "Toast.contentOptions": 268,
-            "Toast.announceIfChanged": 246,
-            "Toast.shellOptions": 211,
-            "Toast.restartAutoDismissIfShown": 205,
+            "Toast.normalizeUpdate": 248,
+            "Toast.announceIfChanged": 245,
+            "Toast.releaseSlotAndListener": 196,
             "Toast.retryQueueIfUnprotected": 181,
-            "Toast.resumeAutoDismiss": 170,
+            "Toast.restartAutoDismissIfShown": 180,
+            "Toast.failRender": 166,
+            "Toast.resumeAutoDismiss": 145,
             "Toast.subscribe": 145,
             "Toast.pauseAutoDismiss": 141,
             "createLifecycleSubscribers": 141,
             "Toast.clearAutoDismiss": 140,
             "Toast.notify": 139,
+            "Toast.notifyHideAndHidden": 118,
+            "Toast.handleFocusLeft": 108,
             "Toast.clearQueuedShow": 101,
             "reportUncaughtError": 92,
             "Toast.isProtected": 85,
+            "Toast.shellOptions": 83,
             "convertToPublicState": 75,
-            "Toast.callSubscriber": 65,
-            "Toast.publicState": 48,
-            "Toast.onHidden": 46,
-            "Toast.onShown": 44,
-            "Toast.onHide": 42,
-            "Toast.onShow": 42,
+            "Toast.callSubscriber": 52,
+            "normalizeUpdateText": 51,
             "Toast.getPresetOptions": 39,
             "Toast.reachedEvents": 38,
-            "Toast.settled": 35,
-            "Toast.handle": 33,
             "Toast.removeVisibilityListener": 30,
-            "Toast.setHandle": 28,
-            "Toast.pendingStyleUpdate": 24,
             "Toast.currentAnimation": 22,
             "Toast.dismissTimeoutId": 22,
             "Toast.queuedSlotCancel": 22,
@@ -996,7 +552,7 @@
             "Toast.currentRootClassName": 21,
             "Toast.dismissDeadline": 21,
             "Toast.internalState": 21,
-            "Toast.visiblePosition": 21,
+            "Toast.isAwaitingContent": 21,
             "Toast.announcedRole": 19,
             "Toast.announcedText": 19,
             "Toast.currentAutoDismiss": 19,
@@ -1004,6 +560,7 @@
             "Toast.currentDismissible": 19,
             "Toast.restoreTarget": 19,
             "Toast.remainingDuration": 18,
+            "Toast.pendingClassName": 17,
             "Toast.subscribers": 17,
             "Toast.isPageHidden": 16,
             "Toast.currentContent": 15,
@@ -1011,7 +568,6 @@
             "Toast.settledResolve": 15,
             "Toast": 14,
             "Toast.currentAction": 14,
-            "Toast._handle": 13,
             "Toast.currentTitle": 13,
             "Toast.element": 13,
             "Toast.isFocused": 13,
@@ -1019,164 +575,117 @@
             "Toast.currentIcon": 12,
             "Toast.currentRole": 12,
             "Toast.maxVisible": 11,
-            "Toast._settled": 9,
             "Toast.options": 8,
+            "Toast.settled": 8,
+            "Toast.handle": 7,
             "Toast.parent": 7
           }
         },
         "src/dom.ts": {
-          "bytes": 9371,
+          "bytes": 7204,
           "declarations": {
-            "populateToastContent": 1482,
-            "ICON_SPECS": 1049,
-            "updateToastIcon": 434,
-            "getOrCreateContainer": 425,
+            "populateToastContent": 1072,
+            "ICON_SPECS": 479,
+            "getOrCreateContainer": 436,
             "buildSvg": 393,
-            "POSITION_CONTAINER_CLASSES": 382,
-            "getKeyframes": 358,
-            "getToastAnnouncementText": 355,
-            "runAnimation": 334,
-            "findToastIcon": 331,
-            "createToastShell": 314,
+            "getToastAnnouncementText": 354,
+            "updateToastIcon": 322,
             "playStackShift": 297,
-            "setContainerMargin": 235,
-            "setToastLayerHost": 235,
-            "readAnimationDuration": 218,
-            "getContainer": 199,
-            "applyRootClassChange": 192,
-            "createDismissButton": 192,
-            "readAnimationEasing": 162,
-            "applyInstanceRegionLabel": 158,
-            "createIcon": 155,
+            "createToastShell": 294,
+            "findToastIcon": 253,
+            "createDismissButton": 193,
+            "getKeyframes": 193,
+            "runAnimation": 193,
+            "applyRootClassChange": 191,
+            "setContainerMargin": 175,
+            "getContainer": 173,
+            "removeInstanceContainers": 166,
+            "readAnimationDuration": 149,
             "captureStackRects": 144,
-            "removeInstanceContainers": 143,
-            "applyInstanceMargin": 136,
-            "getTextOutsideButtons": 130,
-            "getToastLayerHost": 122,
-            "CLOSE_ICON_SPEC": 114,
+            "getTextOutsideButtons": 128,
+            "createToastPart": 122,
             "STROKE_ICON_ATTRIBUTES": 108,
-            "animateOut": 93,
-            "animateIn": 76,
+            "getInstanceContainers": 100,
+            "readCustomProperty": 99,
+            "prefersReducedMotion": 93,
+            "applyInstanceRegionLabel": 90,
+            "createIcon": 89,
+            "animateOut": 86,
+            "strokeIcon": 82,
+            "animateIn": 74,
+            "readAnimationEasing": 72,
+            "applyInstanceMargin": 67,
             "TOP_ANCHORED_POSITIONS": 66,
-            "getContainerKey": 64,
+            "CLOSE_ICON_SPEC": 65,
             "createSingleRunCallback": 63,
             "getAnimationOptions": 60,
+            "OUTLINE_CIRCLE": 53,
+            "svgPath": 50,
             "animateStackChange": 39,
+            "getContainerKey": 34,
             "isTopAnchoredPosition": 32,
             "SVG_NAMESPACE": 31,
-            "LAYER_HOST_ATTRIBUTE": 26,
             "(top level)": 24
           }
         },
         "src/core.ts": {
-          "bytes": 7503,
+          "bytes": 5240,
           "declarations": {
-            "ToastManager.validateConfig": 703,
-            "ToastManager.configure": 669,
+            "ToastManager.configure": 554,
             "ToastManager.promise": 552,
-            "toStructuredPromiseUpdate": 412,
-            "ToastManager.buildResolvedConfig": 407,
-            "createToaster": 384,
-            "ToastManager.destroy": 312,
-            "copyConfig": 295,
-            "ToastManager.constructor": 276,
-            "ToastManager.resolveParentElement": 243,
-            "ToastManager.success": 230,
-            "ToastManager.warning": 230,
-            "ToastManager.dialog": 228,
-            "ToastManager.error": 226,
-            "ToastManager.info": 224,
-            "ToastManager.loading": 216,
-            "ToastManager.show": 211,
-            "ToastManager.custom": 199,
+            "ToastManager.validateConfig": 517,
+            "createToaster": 412,
+            "ToastManager.buildResolvedConfig": 381,
+            "toStructuredPromiseUpdate": 323,
+            "copyConfig": 258,
+            "ToastManager.destroy": 232,
+            "ToastManager.getParent": 232,
             "parseCustomArgs": 180,
-            "ToastManager.getModalController": 172,
-            "generateInstanceId": 148,
-            "ToastManager.getParent": 147,
+            "ToastManager.dispatch": 178,
+            "ToastManager.showMessage": 164,
+            "ToastManager.loading": 147,
+            "ToastManager.constructor": 131,
             "ToastManager.assertAlive": 130,
+            "ToastManager.custom": 130,
             "parseLoadingArgs": 129,
-            "ToastManager.registerToast": 111,
-            "parseToastArgs": 98,
-            "ToastManager.clear": 92,
+            "parseToastArgs": 99,
+            "ToastManager.semantic": 71,
+            "ToastManager.clear": 66,
+            "isInvalidDuration": 61,
             "ToastManager.dismiss": 57,
             "ToastManager.removeWhenSettled": 57,
+            "ToastManager.show": 55,
             "ToastManager.activeToasts": 37,
-            "toast": 23,
-            "ToastManager.modalController": 21,
+            "toast": 24,
             "ToastManager": 15,
             "ToastManager.isDestroyed": 15,
-            "dialog": 12,
             "ToastManager.instanceId": 11,
-            "(top level)": 10,
             "ToastManager.resolved": 9,
             "ToastManager.config": 7,
-            "instanceCounter": 5
+            "(top level)": 6
           }
         },
         "src/options.ts": {
-          "bytes": 4583,
+          "bytes": 2921,
           "declarations": {
-            "normalizeToastOptions": 1277,
-            "sanitizeElement": 910,
-            "resolveToastContent": 745,
-            "applyUpdateToElement": 234,
+            "normalizeToastOptions": 1091,
+            "resolveToastContent": 578,
             "SEMANTIC_ROOT_CLASS_NAMES": 169,
             "assertDuration": 139,
-            "SAFE_TAGS": 136,
+            "applyClassNameUpdate": 113,
             "assertSemanticType": 94,
-            "TOAST_POSITIONS": 86,
             "withoutUndefined": 86,
-            "assertToastPosition": 85,
+            "TOAST_POSITIONS": 85,
+            "assertToastPosition": 84,
             "SEMANTIC_ROLES": 82,
-            "assertToastRole": 82,
             "DEFAULT_CONFIG": 81,
+            "assertToastRole": 80,
             "SEMANTIC_ICONS": 79,
             "hasNonEmptyString": 59,
             "joinClassNames": 52,
-            "sanitizeFragment": 49,
-            "SAFE_ATTRIBUTES": 45,
-            "URL_ATTRIBUTES": 37,
-            "TOAST_ROLES": 22,
-            "(top level)": 18,
-            "TOAST_SHAPE_CLASS": 16
-          }
-        },
-        "src/modal.ts": {
-          "bytes": 4066,
-          "declarations": {
-            "ModalController.createModal": 2224,
-            "ModalController.ensureDialog": 265,
-            "ModalController.destroy": 242,
-            "ModalController.confirm": 170,
-            "ModalController.prompt": 169,
-            "ModalController.constructor": 165,
-            "ModalController.next": 145,
-            "ModalController.restoreFocusIfIdle": 143,
-            "ModalController.alert": 137,
-            "ModalController.enqueue": 130,
-            "ModalController.complete": 121,
-            "ModalController.releaseToastLayers": 58,
-            "ModalController.restoreTarget": 19,
-            "ModalController": 15,
-            "ModalController.activeJob": 15,
-            "ModalController.isDestroyed": 15,
-            "ModalController.jobCounter": 13,
-            "ModalController.dialog": 12,
-            "ModalController.jobs": 8
-          }
-        },
-        "src/tokens.ts": {
-          "bytes": 2616,
-          "declarations": {
-            "TOKEN_MAP": 1345,
-            "applyGlobalTokens": 663,
-            "assertColor": 286,
-            "applyTokens": 96,
-            "replaceTokens": 72,
-            "assertValidTokens": 69,
-            "removeGlobalTokens": 53,
-            "ownedStyleElements": 26,
-            "(top level)": 6
+            "TOAST_ROLES": 21,
+            "TOAST_SHAPE_CLASS": 16,
+            "(top level)": 12
           }
         },
         "src/toast-helpers.ts": {
@@ -1184,9 +693,9 @@
           "declarations": {
             "requestSlot": 300,
             "getStackState": 261,
-            "removeToastElement": 261,
+            "removeToastElement": 260,
             "evictForQueue": 244,
-            "releaseSlot": 240,
+            "releaseSlot": 241,
             "promoteQueued": 178,
             "reconcileCapacity": 147,
             "retryQueue": 85,
@@ -1197,41 +706,15 @@
             "(top level)": 6
           }
         },
-        "src/modal-renderers.ts": {
-          "bytes": 1622,
-          "declarations": {
-            "createPromptRenderer": 786,
-            "createConfirmRenderer": 512,
-            "createAlertRenderer": 324
-          }
-        },
         "src/announcer.ts": {
-          "bytes": 1152,
+          "bytes": 1143,
           "declarations": {
-            "announce": 407,
+            "announce": 399,
             "createRegion": 258,
             "VISUALLY_HIDDEN": 174,
             "findRegion": 153,
-            "appendLine": 124,
+            "appendLine": 123,
             "pendingLines": 30,
-            "(top level)": 6
-          }
-        },
-        "src/modal-transition.ts": {
-          "bytes": 868,
-          "declarations": {
-            "closeDialog": 571,
-            "parseTransitionDuration": 199,
-            "countTransitionProperties": 98
-          }
-        },
-        "src/modal-templates.ts": {
-          "bytes": 660,
-          "declarations": {
-            "buildDialogContent": 532,
-            "createHTMLElement": 80,
-            "ACTIONS_CLASS": 25,
-            "DIALOG_CLASS": 17,
             "(top level)": 6
           }
         },
@@ -1245,21 +728,321 @@
             "(top level)": 6
           }
         },
+        "src/instance-id.ts": {
+          "bytes": 154,
+          "declarations": {
+            "generateInstanceId": 146,
+            "(top level)": 4,
+            "instanceCounter": 4
+          }
+        },
         "src/variants/semantic.ts": {
-          "bytes": 148,
+          "bytes": 149,
           "declarations": {
             "SemanticToast.getPresetOptions": 104,
             "SemanticToast.constructor": 24,
-            "SemanticToast": 20
+            "SemanticToast": 21
+          }
+        },
+        "src/layer-host.ts": {
+          "bytes": 135,
+          "declarations": {
+            "getToastLayerHost": 135
           }
         },
         "(unattributed)": {
-          "bytes": 52
+          "bytes": 40
         }
       },
-      "gzip": 12742,
-      "minified": 47079,
-      "sha256": "bb9d65434914d9aa01df0e7cba056c0a094abaf66f5259a59c9f564cabf23c8b"
+      "gzip": 9058,
+      "minified": 31077,
+      "sha256": "3e7051791e7697c926484e82b7287976eb83d3ba68c715122ec596d970d42e77"
+    },
+    "./dialog": {
+      "exports": {
+        "createDialogs": {
+          "files": {
+            "src/modal.ts": {
+              "bytes": 3916,
+              "declarations": {
+                "ModalController.createModal": 2065,
+                "ModalController.ensureDialog": 330,
+                "ModalController.destroy": 242,
+                "ModalController.constructor": 171,
+                "ModalController.confirm": 169,
+                "ModalController.prompt": 168,
+                "ModalController.next": 145,
+                "ModalController.restoreFocusIfIdle": 143,
+                "ModalController.alert": 136,
+                "ModalController.enqueue": 130,
+                "ModalController.complete": 121,
+                "ModalController.restoreTarget": 19,
+                "ModalController.activeJob": 15,
+                "ModalController.isDestroyed": 15,
+                "ModalController": 14,
+                "ModalController.jobCounter": 13,
+                "ModalController.dialog": 12,
+                "ModalController.jobs": 8
+              }
+            },
+            "src/modal-renderers.ts": {
+              "bytes": 1640,
+              "declarations": {
+                "createPromptRenderer": 806,
+                "createConfirmRenderer": 511,
+                "createAlertRenderer": 323
+              }
+            },
+            "src/modal-transition.ts": {
+              "bytes": 863,
+              "declarations": {
+                "closeDialog": 568,
+                "parseTransitionDuration": 198,
+                "countTransitionProperties": 97
+              }
+            },
+            "src/dialogs.ts": {
+              "bytes": 855,
+              "declarations": {
+                "createDialogs": 588,
+                "resolveParentElement": 203,
+                "copyConfig": 64
+              }
+            },
+            "src/modal-templates.ts": {
+              "bytes": 637,
+              "declarations": {
+                "buildDialogContent": 509,
+                "createHTMLElement": 80,
+                "ACTIONS_CLASS": 25,
+                "DIALOG_CLASS": 17,
+                "(top level)": 6
+              }
+            },
+            "src/layer-host.ts": {
+              "bytes": 616,
+              "declarations": {
+                "moveStacks": 277,
+                "getToastLayerHost": 113,
+                "hostToastLayers": 100,
+                "releaseToastLayers": 94,
+                "LAYER_HOST_ATTRIBUTE": 26,
+                "(top level)": 6
+              }
+            },
+            "src/options.ts": {
+              "bytes": 197,
+              "declarations": {
+                "withoutUndefined": 86,
+                "hasNonEmptyString": 59,
+                "joinClassNames": 52
+              }
+            },
+            "src/instance-id.ts": {
+              "bytes": 154,
+              "declarations": {
+                "generateInstanceId": 146,
+                "(top level)": 4,
+                "instanceCounter": 4
+              }
+            },
+            "(unattributed)": {
+              "bytes": 27
+            }
+          },
+          "gzip": 3267,
+          "minified": 8905
+        },
+        "dialog": {
+          "files": {
+            "src/modal.ts": {
+              "bytes": 3916,
+              "declarations": {
+                "ModalController.createModal": 2065,
+                "ModalController.ensureDialog": 330,
+                "ModalController.destroy": 242,
+                "ModalController.constructor": 171,
+                "ModalController.confirm": 169,
+                "ModalController.prompt": 168,
+                "ModalController.next": 145,
+                "ModalController.restoreFocusIfIdle": 143,
+                "ModalController.alert": 136,
+                "ModalController.enqueue": 130,
+                "ModalController.complete": 121,
+                "ModalController.restoreTarget": 19,
+                "ModalController.activeJob": 15,
+                "ModalController.isDestroyed": 15,
+                "ModalController": 14,
+                "ModalController.jobCounter": 13,
+                "ModalController.dialog": 12,
+                "ModalController.jobs": 8
+              }
+            },
+            "src/modal-renderers.ts": {
+              "bytes": 1640,
+              "declarations": {
+                "createPromptRenderer": 806,
+                "createConfirmRenderer": 511,
+                "createAlertRenderer": 323
+              }
+            },
+            "src/dialogs.ts": {
+              "bytes": 883,
+              "declarations": {
+                "createDialogs": 588,
+                "resolveParentElement": 203,
+                "copyConfig": 64,
+                "dialog": 22,
+                "(top level)": 6
+              }
+            },
+            "src/modal-transition.ts": {
+              "bytes": 863,
+              "declarations": {
+                "closeDialog": 568,
+                "parseTransitionDuration": 198,
+                "countTransitionProperties": 97
+              }
+            },
+            "src/modal-templates.ts": {
+              "bytes": 637,
+              "declarations": {
+                "buildDialogContent": 509,
+                "createHTMLElement": 80,
+                "ACTIONS_CLASS": 25,
+                "DIALOG_CLASS": 17,
+                "(top level)": 6
+              }
+            },
+            "src/layer-host.ts": {
+              "bytes": 616,
+              "declarations": {
+                "moveStacks": 277,
+                "getToastLayerHost": 113,
+                "hostToastLayers": 100,
+                "releaseToastLayers": 94,
+                "LAYER_HOST_ATTRIBUTE": 26,
+                "(top level)": 6
+              }
+            },
+            "src/options.ts": {
+              "bytes": 197,
+              "declarations": {
+                "withoutUndefined": 86,
+                "hasNonEmptyString": 59,
+                "joinClassNames": 52
+              }
+            },
+            "src/instance-id.ts": {
+              "bytes": 154,
+              "declarations": {
+                "generateInstanceId": 146,
+                "(top level)": 4,
+                "instanceCounter": 4
+              }
+            },
+            "(unattributed)": {
+              "bytes": 20
+            }
+          },
+          "gzip": 3277,
+          "minified": 8926
+        }
+      },
+      "files": {
+        "src/modal.ts": {
+          "bytes": 3916,
+          "declarations": {
+            "ModalController.createModal": 2065,
+            "ModalController.ensureDialog": 330,
+            "ModalController.destroy": 242,
+            "ModalController.constructor": 171,
+            "ModalController.confirm": 169,
+            "ModalController.prompt": 168,
+            "ModalController.next": 145,
+            "ModalController.restoreFocusIfIdle": 143,
+            "ModalController.alert": 136,
+            "ModalController.enqueue": 130,
+            "ModalController.complete": 121,
+            "ModalController.restoreTarget": 19,
+            "ModalController.activeJob": 15,
+            "ModalController.isDestroyed": 15,
+            "ModalController": 14,
+            "ModalController.jobCounter": 13,
+            "ModalController.dialog": 12,
+            "ModalController.jobs": 8
+          }
+        },
+        "src/modal-renderers.ts": {
+          "bytes": 1640,
+          "declarations": {
+            "createPromptRenderer": 806,
+            "createConfirmRenderer": 511,
+            "createAlertRenderer": 323
+          }
+        },
+        "src/dialogs.ts": {
+          "bytes": 883,
+          "declarations": {
+            "createDialogs": 588,
+            "resolveParentElement": 203,
+            "copyConfig": 64,
+            "dialog": 22,
+            "(top level)": 6
+          }
+        },
+        "src/modal-transition.ts": {
+          "bytes": 863,
+          "declarations": {
+            "closeDialog": 568,
+            "parseTransitionDuration": 198,
+            "countTransitionProperties": 97
+          }
+        },
+        "src/modal-templates.ts": {
+          "bytes": 637,
+          "declarations": {
+            "buildDialogContent": 509,
+            "createHTMLElement": 80,
+            "ACTIONS_CLASS": 25,
+            "DIALOG_CLASS": 17,
+            "(top level)": 6
+          }
+        },
+        "src/layer-host.ts": {
+          "bytes": 616,
+          "declarations": {
+            "moveStacks": 277,
+            "getToastLayerHost": 113,
+            "hostToastLayers": 100,
+            "releaseToastLayers": 94,
+            "LAYER_HOST_ATTRIBUTE": 26,
+            "(top level)": 6
+          }
+        },
+        "src/options.ts": {
+          "bytes": 197,
+          "declarations": {
+            "withoutUndefined": 86,
+            "hasNonEmptyString": 59,
+            "joinClassNames": 52
+          }
+        },
+        "src/instance-id.ts": {
+          "bytes": 154,
+          "declarations": {
+            "generateInstanceId": 146,
+            "(top level)": 4,
+            "instanceCounter": 4
+          }
+        },
+        "(unattributed)": {
+          "bytes": 39
+        }
+      },
+      "gzip": 3282,
+      "minified": 8945,
+      "sha256": "bdd8648722cb4c93c8650b183c165d9c8b12fca70472949c86d013359be5e21a"
     }
   }
 }
