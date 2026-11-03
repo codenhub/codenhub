@@ -57,6 +57,15 @@ A key whose value is a group with an `other` form is a plural group. `t(key, { c
 
 DOM translation passes no `count`, since HTML has nowhere to supply one.
 
+### Regional locales fall back to their parents (0.2.0)
+
+A key used to be read from the active dictionary, then the default one, so with `en`, `pt`, and `pt-BR`, a key missing from `pt-BR` showed English although `pt` had it. Each locale now reads, in order, itself, each configured locale made by dropping its last subtags, then the default. The chains are computed once, at creation, and every locale in the active chain loads with it.
+
+- **No option.** The parent of `pt-BR` is `pt` in every application that configures both. An explicit `fallbackLocales` map was deferred, not rejected: it serves chains that subtags can't express, such as `es-MX` to `es-419`, and can be added later without changing this default.
+- **A parent with another likely script is skipped**, by the same likely-script comparison `matchLocale` uses, so `zh-Hant` never falls back to `zh`, which is Simplified Chinese, and `sr-Latn` never to Cyrillic `sr`. Mixing scripts on one page reads worse than the default language.
+- **Plural rules still come from the dictionary's locale**, as for the default; see [Plurals](#plurals-020).
+- **A failing parent fails the request**, as the default always has, rather than being skipped, so a page never silently loses half its text.
+
 ## Browser
 
 ### Detected locales are not persisted

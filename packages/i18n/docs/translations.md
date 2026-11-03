@@ -73,10 +73,30 @@ Your loader owns everything about transport: URLs, caching headers, retries, tim
 ### How loading behaves
 
 - The manager loads a locale the first time it needs it and keeps the result, so switching back to a language does not call your loader again.
-- Starting or switching to a non-default locale loads that locale and the default locale together, because the default is the fallback.
+- Starting or switching to a non-default locale loads that locale, the locales it falls back to, and the default locale together, as [Regional variants](#regional-variants) explains.
 - If your loader throws or rejects, the call that needed it rejects with an `I18nError`, and the manager keeps its current language. The next call tries the loader again.
 - Returning the same object every time, such as a module-level import, lets every manager share one checked copy. That matters on a server, which [creates a manager per request](server-rendering.md).
 - Treat a dictionary as read-only once loaded: the manager keeps a frozen, checked copy, shared by every manager that loads the same object, so later changes to the object do nothing.
+
+### Regional variants
+
+A regional locale only needs the words that differ. With `pt` and `pt-BR` both in `locales`, `pt-BR.json` can hold just the Brazilian words, and every other key comes from `pt.json`:
+
+```ts
+export const i18n = createI18n({
+  locales: ["en", "pt", "pt-BR"] as const,
+  defaultLocale: "en",
+  loadLocale: (locale) => dictionaries[locale],
+});
+// pt-BR: { "greeting": "Oi" }   pt: { "greeting": "Olá", "farewell": "Tchau" }
+await i18n.init({ locale: "pt-BR" });
+t("greeting"); // "Oi"
+t("farewell"); // "Tchau", from pt
+```
+
+A key is looked up in the active locale, then in each configured locale made by dropping its last subtags, such as `zh-Hant` for `zh-Hant-TW`, then in the default locale. A parent written in another script is skipped: `zh` is Simplified Chinese, so a `zh-Hant` page falls back to the default rather than mixing scripts. A plural group uses the rules of the locale whose dictionary has it.
+
+Every locale in that chain loads with the active one, so starting in `pt-BR` loads `pt-BR`, `pt`, and `en`. If one of them fails, the call rejects as for any locale.
 
 ## Put values into text
 

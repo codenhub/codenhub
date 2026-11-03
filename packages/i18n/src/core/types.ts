@@ -82,7 +82,8 @@ export interface I18nConfig<TLocale extends string = string, TMessages = unknown
    */
   getLocaleDirection?(locale: NoInfer<TLocale>): LocaleDirection;
   /**
-   * Called for every key missing from both the active and default dictionaries, in place of the default warning.
+   * Called for every key missing from every dictionary the active locale falls back to, in place of the default
+   * warning.
    * Exceptions propagate from the lookup, so a test can throw here to fail on a missing key.
    *
    * @defaultValue A `console.warn` once for each of the 1,000 most recent locale/key pairs, unless `isSilent`.
@@ -211,9 +212,13 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   matchLocale(preferences: readonly string[]): TLocale | undefined;
 
   /**
-   * Resolves a trimmed key against active and default dictionaries and fills its `{name}` placeholders.
+   * Resolves a trimmed key against the active locale's dictionary, then each configured parent locale's, such as `pt`
+   * for `pt-BR`, then the default locale's, and fills its `{name}` placeholders.
    *
    * @remarks
+   * A parent is made by dropping subtags and is skipped when its likely script differs, so `zh-Hant` never falls back to
+   * `zh`, which is Simplified Chinese.
+   *
    * When `params.count` is a number and the key is a group of plural forms rather than a text, such as
    * `{ one: "{count} item", other: "{count} items" }`, the form is chosen with `Intl.PluralRules` for the locale of the
    * dictionary that has the group, falling back to its `other` form. Forms are named by CLDR plural category: `zero`,
@@ -227,7 +232,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * @param key - Translation key, or the key of a plural group when `params.count` is a number.
    * @param params - Values for `{name}` placeholders, read from own properties. A placeholder without a value is left
    * as written; without `params`, the text is returned unchanged. A numeric `count` also selects a plural form.
-   * @returns The translated text, or the trimmed key when neither dictionary has it. A miss calls `onMissingKey`, or
+   * @returns The translated text, or the trimmed key when no dictionary has it. A miss calls `onMissingKey`, or
    * warns once per recent locale/key pair unless silent.
    * @throws {Error} When called before successful initialization.
    * @throws {TypeError} When the key is empty, not a string, longer than 1,000 characters, or contains ASCII controls.

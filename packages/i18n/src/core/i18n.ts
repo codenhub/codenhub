@@ -1,3 +1,4 @@
+import { createFallbackChains } from "../locale/fallback";
 import { createLocaleLoader, type LocaleLoader } from "../locale/loader";
 import { matchConfiguredLocale } from "../locale/matching";
 import { validateI18nConfig, type ValidatedI18nConfig } from "../locale/resolution";
@@ -15,9 +16,10 @@ import type {
   TranslationKey,
 } from "./types";
 
-interface RequiredDictionaries {
-  readonly current: LocaleDictionary;
-  readonly fallback: LocaleDictionary;
+/** A dictionary in the fallback chain, with the locale whose plural rules it uses. */
+interface ChainDictionary<TLocale extends string> {
+  readonly locale: TLocale;
+  readonly dictionary: LocaleDictionary;
 }
 
 const MAX_MISSING_KEY_DIAGNOSTICS = 1_000;
@@ -68,8 +70,8 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
   private currentLocale: TLocale;
   private currentDirection: LocaleDirection;
   private isReadyState = false;
-  private currentDictionary: LocaleDictionary | undefined;
-  private defaultDictionary: LocaleDictionary | undefined;
+  private dictionaries: readonly ChainDictionary<TLocale>[] | undefined;
+  private readonly fallbackChains: ReadonlyMap<TLocale, readonly TLocale[]>;
   private requestId = 0;
   private readonly warnedMissingKeys = new Map<string, undefined>();
   private readonly pluralRules = new Map<TLocale, Intl.PluralRules | undefined>();
@@ -99,6 +101,7 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     this.currentLocale = this.defaultLocale;
     this.currentDirection = this.resolveLocaleDirection(this.defaultLocale);
     this.localeLookup = new Map(this.locales.map((locale) => [locale.toLowerCase(), locale]));
+    this.fallbackChains = createFallbackChains(this.locales, this.defaultLocale);
     this.loader = createLocaleLoader({
       loadLocale: this.config.loadLocale,
       dictionaryLimits: this.config.dictionaryLimits,
@@ -185,8 +188,7 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
 
     this.currentLocale = locale;
     this.currentDirection = direction;
-    this.currentDictionary = dictionaries.current;
-    this.defaultDictionary = dictionaries.fallback;
+    this.dictionaries = dictionaries;
     this.isReadyState = true;
     this.dispatchEvent(createCustomEvent<I18nReadyEventDetail<TLocale>>("ready", { locale }));
     return true;
@@ -214,8 +216,7 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     const previousLocale = this.currentLocale;
     this.currentLocale = nextLocale;
     this.currentDirection = direction;
-    this.currentDictionary = dictionaries.current;
-    this.defaultDictionary = dictionaries.fallback;
+    this.dictionaries = dictionaries;
     this.dispatchEvent(
       createCustomEvent<I18nLocaleChangeEventDetail<TLocale>>("locale-change", {
         locale: nextLocale,
@@ -225,7 +226,7 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
   }
 
   private lookup(key: string, count?: number): string | undefined {
-    if (!this.isReadyState || this.currentDictionary === undefined || this.defaultDictionary === undefined) {
+    if (!this.isReadyState || this.dictionaries === undefined) {
       throw new Error("[I18n] translate() requires successful initialization.");
     }
 
@@ -245,12 +246,12 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
       throw new TypeError("[I18n] A translation key must be a non-empty string.");
     }
 
-    const translation =
-      this.findTranslation(this.currentDictionary, this.currentLocale, normalizedKey, count) ??
-      this.findTranslation(this.defaultDictionary, this.defaultLocale, normalizedKey, count);
+    for (const { locale, dictionary } of this.dictionaries) {
+      const translation = this.findTranslation(dictionary, locale, normalizedKey, count);
 
-    if (translation !== undefined) {
-      return translation;
+      if (translation !== undefined) {
+        return translation;
+      }
     }
 
     this.reportMissingKey(normalizedKey);
@@ -259,7 +260,7 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
 
   /**
    * Finds the exact key, or with a count, the plural form of the group at `key`. The form is chosen with the rules of
-   * the locale whose dictionary is read, since a fallback text is in the default locale's language.
+   * the locale whose dictionary is read, since a fallback text is in that locale's language.
    */
   private findTranslation(
     dictionary: LocaleDictionary,
@@ -378,17 +379,11 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     return direction;
   }
 
-  private async loadRequiredDictionaries(locale: TLocale): Promise<RequiredDictionaries> {
-    if (locale === this.defaultLocale) {
-      const dictionary = await this.loader.loadLocale(locale);
-      return { current: dictionary, fallback: dictionary };
-    }
-
-    const [current, fallback] = await Promise.all([
-      this.loader.loadLocale(locale),
-      this.loader.loadLocale(this.defaultLocale),
-    ]);
-    return { current, fallback };
+  /** Loads the locale and every locale it falls back to, together, such as `pt-BR`, `pt`, and the default. */
+  private async loadRequiredDictionaries(locale: TLocale): Promise<readonly ChainDictionary<TLocale>[]> {
+    const chain = this.fallbackChains.get(locale)!;
+    const dictionaries = await Promise.all(chain.map((chainLocale) => this.loader.loadLocale(chainLocale)));
+    return chain.map((chainLocale, index) => ({ locale: chainLocale, dictionary: dictionaries[index]! }));
   }
 
   private createRequest(): number {
