@@ -131,8 +131,8 @@ export interface ToastUpdateOptions {
   action?: ToastAction | null;
   /**
    * Replaces the toast's content entirely. Follows the same rules as
-   * construction: a string is sanitized, a DOM node is trusted and used
-   * as-is. Supersedes `message` and `icon` in this same call, the same
+   * construction: a string renders as plain text, a DOM node is trusted
+   * and used as-is. Supersedes `message` and `icon` in this same call, the same
    * mutual exclusivity construction itself applies.
    */
   content?: ToastContent;
@@ -280,8 +280,9 @@ export interface DialogHandle<T> extends PromiseLike<T> {
 }
 
 /**
- * Supported custom content. Strings are sanitized by the package. DOM nodes
- * are trusted application-owned content and are inserted without sanitizing.
+ * Supported custom content. A string renders as plain text, never parsed as
+ * HTML, so markup in it shows literally. For markup, pass a DOM node: nodes
+ * are trusted application-owned content and are inserted as they are.
  * Can also be a function that returns content; it receives the toast's `ToastHandle`.
  */
 export type ToastContent = string | Node | ((handle: ToastHandle) => string | Node);
@@ -366,7 +367,7 @@ export interface LoadingToastOptions {
  * Options for dispatching a custom layout toast.
  */
 export interface CustomToastOptions {
-  /** The custom HTML string, DOM Node, or creator function. */
+  /** The custom text, DOM Node, or creator function. */
   content: ToastContent;
   /** Placement on the screen. Defaults to toaster configuration. */
   position?: ToastPosition;
@@ -662,7 +663,7 @@ export interface Toaster {
   loading(options?: LoadingToastOptions): ToastHandle;
 
   /**
-   * Displays custom HTML or DOM node content.
+   * Displays custom content: a string as plain text, or a DOM node as is.
    */
   custom(content: ToastContent, options?: Omit<CustomToastOptions, "content">): ToastHandle;
   custom(options: CustomToastOptions): ToastHandle;

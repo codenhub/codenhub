@@ -224,21 +224,20 @@ describe("content and token security", () => {
     toaster.destroy();
   });
 
-  it("should remove active styling and enforce safe blank links in HTML content", () => {
+  it("should render an HTML-looking string as text instead of a link", () => {
     const toaster = createToaster();
-    toaster.custom('<a id="unsafe" style="position:fixed" target="_BLANK" href="https://example.com">Open</a>');
-    const link = document.body.querySelector("a")!;
+    const markup = '<a style="position:fixed" target="_BLANK" href="https://example.com">Open</a>';
+    toaster.custom(markup);
 
-    expect(link.hasAttribute("id")).toBe(false);
-    expect(link.hasAttribute("style")).toBe(false);
-    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(document.body.querySelector("a")).toBeNull();
+    expect(document.body.textContent).toContain(markup);
     toaster.destroy();
   });
 
-  it("should reject content that sanitization empties out entirely, rather than rendering a blank toast", () => {
+  it("should reject whitespace-only string content, rather than rendering a blank toast", () => {
     const toaster = createToaster({ maxVisible: 1, autoDismiss: false });
 
-    expect(() => toaster.custom("<script>alert(1)</script>")).toThrow(/empty/);
+    expect(() => toaster.custom("   ")).toThrow(/empty/);
     expect(() => toaster.success("Still available")).not.toThrow();
     expect(document.body.textContent).toContain("Still available");
     toaster.destroy();

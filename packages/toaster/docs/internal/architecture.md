@@ -75,9 +75,11 @@ The two entries share helpers (tokens, ids, `layer-host.ts`) but neither imports
 
 ### 6. Security and Content Boundaries
 
-- **Sanitized HTML Strings**: Custom content passed as a string is parsed into a temporary template and sanitized through an allowlist of tags (`a`, `b`, `br`, `code`, `div`, `em`, `h1`-`h6`, `i`, `li`, `ol`, `p`, `pre`, `span`, `strong`, `ul`) and attributes (`href`, `target`, `rel`).
-- **Trusted Types Sink**: String parsing passes through `Element.innerHTML`. Under strict CSP `require-trusted-types-for 'script'`, applications providing strings must define a Trusted Types default policy.
-- **Trusted DOM Nodes**: An explicit `Node` or node factory function passed to `toast.custom()` is trusted and inserted directly without sanitization, placing full responsibility for event cleanup and security on the author.
+- **Text Strings**: Custom content passed as a string becomes one text node, never parsed as HTML, so markup in it renders literally. An empty or whitespace-only string throws.
+  - **Why**: no HTML parsing of strings means no sanitizer to trust or keep current, and no `Element.innerHTML` sink for Trusted Types to guard. Dropping the allowlist sanitizer also cut about 1.35 KB minified and 450 bytes gzipped from a toast-only bundle (measured 2026-11-02).
+  - **Rejected**: keeping the allowlist sanitizer for strings, which every toast bundle paid for whether or not it passed markup, and which made a string look safe for untrusted HTML only as long as the allowlist had no gap.
+- **No HTML Sinks**: The package assigns to no HTML-parsing sink (`innerHTML`, `insertAdjacentHTML`, and the like); toasts, icons, and dialogs are built with DOM APIs, so a `require-trusted-types-for 'script'` policy needs no Trusted Types policy for it.
+- **Trusted DOM Nodes**: An explicit `Node` or node factory function passed to `toast.custom()` is trusted and inserted as it is, placing full responsibility for event cleanup and security on the author.
 - **Strict CSP Nonce**: If a Content Security Policy restricts unnonced inline stylesheets, `ToasterConfig.nonce` (or `DialogsConfig.nonce`) supplies a nonce applied to the injected `<style>` element used for custom token overrides.
 
 ### 7. Teardown and Resource Cleanup

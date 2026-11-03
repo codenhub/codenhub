@@ -609,13 +609,13 @@ describe("toaster.custom", () => {
     toaster.destroy();
   });
 
-  it("sanitizes dangerous scripts and event attributes", () => {
+  it("renders markup in string content as literal text", () => {
     const toaster = createToaster();
-    const h = toaster.custom('<span onclick="alert(1)">Custom!</span><script>alert(2)</script>');
-    const html = document.body.innerHTML;
-    expect(html).toContain("<span>Custom!</span>");
-    expect(html).not.toContain("onclick");
-    expect(html).not.toContain("<script>");
+    const markup = '<span onclick="alert(1)">Custom!</span><script>alert(2)</script>';
+    const h = toaster.custom(markup);
+    const element = document.body.querySelector(".coden-toast")!;
+    expect(element.textContent).toContain(markup);
+    expect(element.querySelector("script, [onclick]")).toBeNull();
     h.dismiss();
     toaster.destroy();
   });
@@ -1239,14 +1239,15 @@ describe("Toast update", () => {
     toaster.destroy();
   });
 
-  it("rejects update({ content }) that sanitization empties out entirely", () => {
+  it("renders markup in update({ content }) as literal text", () => {
     const toaster = createToaster();
     const handle = toaster.success("Original");
     flushAnimations();
     const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
 
-    expect(() => handle.update({ content: "<script>alert(1)</script>" })).toThrow(/empty/);
-    expect(element.textContent).toContain("Original");
+    handle.update({ content: "<script>alert(1)</script>" });
+    expect(element.textContent).toContain("<script>alert(1)</script>");
+    expect(element.querySelector("script")).toBeNull();
 
     toaster.destroy();
   });

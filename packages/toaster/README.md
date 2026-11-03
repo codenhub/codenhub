@@ -72,7 +72,7 @@ scopedToaster.destroy();
 - [Toasts guide](docs/toasts.md): Neutral, semantic, loading, structured, and promise notifications.
 - [Dialogs guide](docs/dialogs.md): Confirmations, prompts, alerts, and label localization.
 - [Styling guide](docs/styling.md): Design tokens, `@codenhub/styles` live composition, presentation classes, and CSP.
-- [Accessibility and security](docs/accessibility.md): ARIA live regions, focus restoration, reduced motion, and content sanitization.
+- [Accessibility and security](docs/accessibility.md): ARIA live regions, focus restoration, reduced motion, and custom content boundaries.
 - [Scoped instances](docs/instances.md): Multi-instance coordination, custom containers, and lifecycle teardown.
 - [API reference](docs/reference/index.md): Complete TypeScript symbol catalogue compiled from declarations.
 - [Changelog](docs/changelog/index.md): Version history, breaking changes, and migration notes.

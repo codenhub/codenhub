@@ -112,35 +112,11 @@ describe("Toast rendering", () => {
     expect(element.style.getPropertyValue("--toast-color-success-fg")).toBe("rgb(0, 255, 0)");
   });
 
-  it("should sanitize nested script elements inside invalid elements", () => {
-    const toast = makeToast({
-      content: '<div><invalid-tag><script>alert("nested")</script></invalid-tag></div>',
-    });
+  it("should render markup in string content as literal text, creating no elements", () => {
+    const markup = '<div><a href="javascript:alert(1)">Link</a><script>alert("nested")</script></div>';
+    const toast = makeToast({ content: markup });
     const element = renderToast(toast);
-    expect(element.innerHTML).not.toContain("<script>");
-    expect(element.innerHTML).not.toContain("alert");
-  });
-
-  it("should strip unsafe URL protocols and zero-width spaces in href", () => {
-    const toast = makeToast({
-      content: `<div>
-        <a id="link-js" href="javascript:alert(1)">JS Link</a>
-        <a id="link-js-zw" href="java\u200Bscript:alert(1)">JS Zero Width Link</a>
-        <a id="link-data" href="data:text/html,alert(1)">Data Link</a>
-        <a id="link-file" href="file:///etc/passwd">File Link</a>
-        <a id="link-http" href="https://example.com">HTTPS Link</a>
-        <a id="link-mail" href="mailto:test@example.com">Mail Link</a>
-        <a id="link-tel" href="tel:+12345">Tel Link</a>
-        <a id="link-rel" href="/dashboard">Relative Link</a>
-      </div>`,
-    });
-    const element = renderToast(toast);
-
-    const links = Array.from(element.querySelectorAll("a"));
-    expect(links.slice(0, 4).every((link) => !link.hasAttribute("href"))).toBe(true);
-    expect(links[4]?.getAttribute("href")).toBe("https://example.com");
-    expect(links[5]?.getAttribute("href")).toBe("mailto:test@example.com");
-    expect(links[6]?.getAttribute("href")).toBe("tel:+12345");
-    expect(links[7]?.getAttribute("href")).toBe("/dashboard");
+    expect(element.textContent).toContain(markup);
+    expect(element.querySelector("a, script")).toBeNull();
   });
 });

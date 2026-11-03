@@ -176,92 +176,6 @@ export function joinClassNames(...classNames: Array<string | undefined>): string
   return classNames.filter((c): c is string => hasNonEmptyString(c)).join(" ");
 }
 
-const SAFE_TAGS = new Set([
-  "a",
-  "b",
-  "br",
-  "code",
-  "div",
-  "em",
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
-  "i",
-  "li",
-  "ol",
-  "p",
-  "pre",
-  "span",
-  "strong",
-  "ul",
-]);
-
-const SAFE_ATTRIBUTES = new Set(["target", "rel"]);
-
-const URL_ATTRIBUTES = new Set(["href"]);
-
-function sanitizeElement(el: Element): void {
-  const tagName = el.tagName.toLowerCase();
-
-  if (!SAFE_TAGS.has(tagName)) {
-    if (["script", "style", "iframe", "object", "embed"].includes(tagName)) {
-      el.remove();
-      return;
-    }
-    const parent = el.parentNode;
-    if (parent) {
-      Array.from(el.children).forEach(sanitizeElement);
-      while (el.firstChild) {
-        parent.insertBefore(el.firstChild, el);
-      }
-      el.remove();
-    }
-    return;
-  }
-
-  const attrs = Array.from(el.attributes);
-  for (const attr of attrs) {
-    const attrName = attr.name.toLowerCase();
-
-    if (URL_ATTRIBUTES.has(attrName)) {
-      // Strip control characters and unicode spaces to prevent javascript: protocol bypasses
-      // eslint-disable-next-line no-control-regex
-      const controlRegex = /[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u200D\u2028\u2029\u202F\u205F\u3000\uFEFF]/g;
-      const val = attr.value.replace(controlRegex, "").toLowerCase();
-
-      const protocolMatch = val.match(/^[a-z0-9+.-]+:/);
-      if (protocolMatch) {
-        const protocol = protocolMatch[0];
-        if (!["http:", "https:", "mailto:", "tel:"].includes(protocol)) {
-          el.removeAttribute(attr.name);
-        }
-      }
-    } else if (attrName === "target") {
-      const target = attr.value.toLowerCase();
-      if (!["_blank", "_self"].includes(target)) {
-        el.removeAttribute(attr.name);
-      } else {
-        el.setAttribute("target", target);
-      }
-    } else if (!SAFE_ATTRIBUTES.has(attrName)) {
-      el.removeAttribute(attr.name);
-    }
-  }
-
-  if (tagName === "a" && el.getAttribute("target")?.toLowerCase() === "_blank") {
-    el.setAttribute("rel", "noopener noreferrer");
-  }
-
-  Array.from(el.children).forEach(sanitizeElement);
-}
-
-function sanitizeFragment(fragment: DocumentFragment): void {
-  Array.from(fragment.children).forEach(sanitizeElement);
-}
-
 export function resolveToastContent(
   content: ToastContent,
   documentRef: Document,
@@ -273,20 +187,7 @@ export function resolveToastContent(
     if (!hasNonEmptyString(resolved)) {
       throw new Error("Toast content must not be an empty string.");
     }
-    const template = documentRef.createElement("template");
-    template.innerHTML = resolved;
-
-    sanitizeFragment(template.content);
-
-    // The input string was non-empty, but sanitization (e.g. a script-only
-    // string with every element stripped) can still leave nothing behind.
-    // Treated the same as an originally-empty string rather than silently
-    // rendering a blank toast.
-    if (template.content.childNodes.length === 0) {
-      throw new Error("Toast content must not be an empty string.");
-    }
-
-    return Object.freeze(Array.from(template.content.childNodes));
+    return Object.freeze([documentRef.createTextNode(resolved)]);
   }
 
   if (typeof resolved !== "object" || resolved === null || !("nodeType" in resolved)) {

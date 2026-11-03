@@ -90,11 +90,8 @@ const STROKE_ICON_ATTRIBUTES = {
  * is constructed with `createElementNS` below, never parsed from an HTML/SVG
  * string. `Element.innerHTML` is a Trusted-Types-guarded sink -- even a
  * hardcoded, trusted string reaches it and throws under a host policy that
- * requires a `TrustedHTML` assignment, which stranded these otherwise-safe
- * built-in icons alongside genuinely untrusted custom content. Constructing
- * the DOM directly sidesteps that sink entirely, so a security policy that
- * blocks the custom-content path (see `options.ts`) does not also block a
- * plain semantic toast.
+ * requires a `TrustedHTML` assignment. Constructing the DOM directly
+ * sidesteps that sink entirely.
  */
 function svgPath(d: string): SvgChildSpec {
   return { tag: "path", attributes: { d } };

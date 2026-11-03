@@ -1,12 +1,12 @@
 ---
 title: Accessibility
-description: Accessibility guarantees, ARIA live regions, focus management, reduced motion, and content sanitization in @codenhub/toaster.
+description: Accessibility guarantees, ARIA live regions, focus management, reduced motion, and custom content boundaries in @codenhub/toaster.
 order: 5
 ---
 
 # Accessibility and security
 
-`@codenhub/toaster` is designed to be accessible to assistive technologies by default and enforces strict security boundaries around custom markup.
+`@codenhub/toaster` is designed to be accessible to assistive technologies by default and renders custom string content as plain text, never as HTML.
 
 ## Toast announcements and ARIA live regions
 
@@ -68,51 +68,39 @@ Users with vestibular disorders or motion sensitivities often enable reduced mot
 
 ## Custom content security boundaries
 
-When presenting custom user interface content, choose the appropriate trust boundary:
+`toast.custom()` takes either a string or a DOM node, and each has its own trust boundary:
 
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                      toast.custom()                      │
 ├─────────────────────────────┬────────────────────────────┤
-│     Sanitized HTML String   │      Trusted DOM Node      │
-│  - Allowlist filtered       │  - Unmodified insertion    │
-│  - Strips scripts/styles    │  - Full developer control  │
-│  - Guarded by Trusted Types │  - Developer owns security │
+│         Text String         │      Trusted DOM Node      │
+│  - Rendered as plain text   │  - Unmodified insertion    │
+│  - Never parsed as HTML     │  - Full developer control  │
+│  - Safe for untrusted text  │  - Developer owns security │
 └─────────────────────────────┴────────────────────────────┘
 ```
 
-### Sanitized HTML strings
+### Text strings
 
-Passing an HTML string to `toast.custom()` passes it through a strict DOM-based sanitizer:
+A string passed to `toast.custom()`, or as `content` to a toast or an `update()`, is inserted as a text node. It is never parsed as HTML, so markup in it shows literally and creates no elements:
 
 ```ts
 import { toast } from "@codenhub/toaster";
 
-toast.custom('Documentation updated. <a href="/docs">Read the guide</a>');
+// Shows the characters `<b>Saved</b>`, not bold text.
+toast.custom("<b>Saved</b>");
 ```
 
-The sanitizer enforces the following security rules:
-
-- **Allowed elements**: `a`, `b`, `br`, `code`, `div`, `em`, `h1`, `h2`, `h3`, `h4`, `h5`, `h6`, `i`, `li`, `ol`, `p`, `pre`, `span`, `strong`, `ul`.
-- **Allowed attributes**: Only `href`, `target`, and `rel` are permitted on anchor elements. All other attributes (including `onclick`, `style`, and `id`) are stripped.
-- **Protocol restrictions**: Anchor `href` attributes are restricted to `http:`, `https:`, `mailto:`, `tel:`, and relative paths. Dangerous protocols like `javascript:` or `data:` are stripped.
-- **External link protection**: Anchors with `target="_blank"` automatically receive `rel="noopener noreferrer"`.
-- **Active script stripping**: `<script>`, `<style>`, `<iframe>`, `<object>`, and `<embed>` elements are completely removed alongside their contents.
-- **Empty content guard**: If a string sanitizes down to zero renderable text or tags (e.g. `<script>alert(1)</script>`), `toast.custom()` throws an error rather than rendering a blank notification.
+This makes strings safe for untrusted text such as user names or server messages. A string that is empty or only whitespace throws an error rather than rendering a blank notification.
 
 ### Trusted Types and Content Security Policy
 
-HTML strings are parsed via `Element.innerHTML`. If your site enforces a Content Security Policy with:
-
-```http
-Content-Security-Policy: require-trusted-types-for 'script';
-```
-
-You must provide a default Trusted Types policy in your application, or pass trusted DOM nodes instead of strings. Built-in semantic toasts and dialogs do not use `innerHTML` and are unaffected by Trusted Types policies.
+The package never assigns to `innerHTML` or any other HTML-parsing sink: strings become text nodes, and built-in toasts, icons, and dialogs are built with DOM APIs. A Content Security Policy with `require-trusted-types-for 'script'` needs no Trusted Types policy for it.
 
 ### Trusted DOM nodes
 
-If you need buttons with event listeners, custom SVG icons, or complex layouts, pass a DOM `Node` or a node factory function:
+If you need formatting, links, buttons with event listeners, custom SVG icons, or complex layouts, pass a DOM `Node` or a node factory function:
 
 ```ts
 import { toast } from "@codenhub/toaster";
@@ -136,4 +124,4 @@ toast.custom((handle) => {
 });
 ```
 
-Application-supplied DOM nodes bypass string sanitization. The caller is responsible for ensuring the node's accessible names, event listeners, and memory cleanup.
+Application-supplied DOM nodes are inserted as they are. The caller is responsible for their content's safety, for example by building it with DOM APIs and `textContent` rather than parsing untrusted HTML, and for their accessible names, event listeners, and memory cleanup.

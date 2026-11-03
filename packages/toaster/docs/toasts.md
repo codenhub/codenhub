@@ -245,13 +245,15 @@ When text formatting, custom icons, or complex controls are required, use `toast
 ```ts
 import { toast } from "@codenhub/toaster";
 
-// 1. Sanitized HTML string:
-toast.custom('<p>Visit our <a href="/changelog">new release notes</a>!</p>');
+// 1. Plain text: a string is never parsed as HTML, so markup in it shows literally.
+toast.custom("Release notes are ready.");
 
-// 2. Direct DOM node:
-const container = document.createElement("div");
-container.className = "flex items-center gap-2";
-container.textContent = "Custom node layout";
+// 2. Direct DOM node, for markup such as a link:
+const container = document.createElement("p");
+const link = document.createElement("a");
+link.href = "/changelog";
+link.textContent = "new release notes";
+container.append("Visit our ", link, "!");
 toast.custom(container);
 
 // 3. Node factory receiving the active handle:
@@ -263,4 +265,4 @@ toast.custom((handle) => {
 });
 ```
 
-Read [Accessibility and security](accessibility.md) for full details on the string sanitization allowlist and Trusted Types boundaries.
+A DOM node is trusted and inserted as it is. Read [Accessibility and security](accessibility.md) for the trust boundaries of strings and nodes.

@@ -220,7 +220,7 @@ export class Toast {
    * @throws {Error} If `updateOpts.tokens` contains an invalid CSS color,
    *   `updateOpts.duration` is not a finite number >= 0, `updateOpts.type`
    *   is not a recognized severity, or `updateOpts.content` resolves to
-   *   nothing renderable (including a string emptied entirely by sanitization).
+   *   nothing renderable.
    */
   public update(updateOpts: ToastUpdateOptions): void {
     if (this.internalState !== "queued" && (this.internalState !== "visible" || this.element === null)) {

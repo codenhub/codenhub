@@ -77,7 +77,7 @@ Explore the focused guides below to master every aspect of the package:
 | [Toasts](toasts.md)                 | Complete guide to dispatching neutral, semantic, loading, structured, and promise-driven notifications.                   |
 | [Dialogs](dialogs.md)               | Deep dive into native modal confirmations, prompts, alerts, thenable handles, and label localization.                     |
 | [Styling](styling.md)               | CSS custom property composition with `@codenhub/styles`, presentation classes, standalone fallback, dark mode, and CSP.   |
-| [Accessibility](accessibility.md)   | Screen reader announcements, native dialog focus trapping, reduced motion, and content sanitization.                      |
+| [Accessibility](accessibility.md)   | Screen reader announcements, native dialog focus trapping, reduced motion, and custom content boundaries.                 |
 | [Scoped Instances](instances.md)    | Creating isolated instances with `createToaster()`, custom DOM containers, micro-frontends, and SSR safety.               |
 | [API Reference](reference/index.md) | Complete TypeScript API catalogue generated automatically from package declarations.                                      |
 | [Changelog](changelog/index.md)     | Release history, breaking changes, and migration notes across versions.                                                   |
