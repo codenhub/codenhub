@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-01
+last_updated: 2026-11-02
 scope: Public workspace packages.
 ---
 
@@ -240,6 +240,8 @@ Breaking changes MUST update the package README and any relevant `docs/` files i
 Pre-1.0 packages may move faster, but breaking changes MUST still be documented.
 
 Every release SHOULD aim to be the last before its next breaking change, whatever its version. Before publishing, settle what is known to need changing, and put no known change off to a later version: a public surface people have started to depend on costs more to change with every release. Moving to the next minor before 1.0, such as from 0.0.x to 0.1.0, is a judgment that the package is ready for what it was built for, not a date by which its surface may still be fixed. An experimental notice therefore names what has not been proven, such as an API no real consumer has used yet, and does not promise changes before a version. Rejected: treating 0.0.x releases as drafts whose surface is settled before 0.1, which defers known changes to a point that arrives only after consumers have adopted the earlier shape.
+
+The same holds for planned features. Every release is an attempt at 1.0, so a feature on the package's roadmap ships in the release being prepared rather than in a later one. Deferring it is the exception, for when shipping it now is not a plausible option, such as a feature that waits on a runtime, a dependency, or a decision outside the package. The package's roadmap then says what it waits on, so the deferral can be judged and lifted when that changes. Rejected: deferring a feature because it is additive or needs its own design, which is true of most features and would leave a 1.0 short of what its consumers were promised. `@codenhub/i18n` translated route segments were deferred to 0.3.0 on that reasoning, then shipped in 0.2.0.
 
 Packages are also encouraged to track release history following `docs/specs/packages-changelog.md`; it's recommended, not required, and does not replace the README and `docs/` updates required above. A package that has opted in MUST keep its changelog in step with its version, which `hub check` enforces.
 
