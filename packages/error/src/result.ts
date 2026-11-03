@@ -345,7 +345,16 @@ export const all = <const R extends readonly Result<unknown>[]>(results: R): Res
   const values: unknown[] = [];
 
   for (const result of results as readonly Result<unknown>[]) {
-    if (typeof result !== "object" || result === null || typeof result.ok !== "boolean") {
+    // An Err's error is checked as an object, not with isAppError, which recognizes only errors
+    // this copy of the package built; a second installed copy builds Results too.
+    const isResult =
+      typeof result === "object" &&
+      result !== null &&
+      (result.ok === true
+        ? "value" in result
+        : result.ok === false && typeof result.error === "object" && result.error !== null);
+
+    if (!isResult) {
       throw new TypeError("all expects a list of Results.");
     }
   }

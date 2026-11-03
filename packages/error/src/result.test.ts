@@ -535,6 +535,9 @@ describe("all", () => {
     ["a number", 1],
     ["null", null],
     ["an object without ok", { value: 1 }],
+    ["an Ok without a value", { ok: true }],
+    ["an Err without an error", { ok: false }],
+    ["an Err whose error is not an object", { ok: false, error: "raw" }],
   ])("should throw TypeError for a list holding %s", (_label, item) => {
     expect(() => all([item, ok(2)] as never)).toThrow(TypeError);
     expect(() => all([ok(1), item] as never)).toThrow(TypeError);
