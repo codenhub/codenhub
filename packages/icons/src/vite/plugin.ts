@@ -817,51 +817,60 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
       return [{ tag: "style", attrs: { id: "codenhub-icons" }, children: generateCssFromContent(), injectTo: "head" }];
     },
 
-    transform(code, id) {
-      if (mode === "svg") {
-        if (id && !id.includes("node_modules") && !id.startsWith("\0") && MARKUP_FILE.test(id)) {
-          // `.astro` arrives here as its own source rather than as compiled
-          // output, because this plugin is `enforce: "pre"` and so runs ahead of
-          // Astro's compiler. It is the only markup file that is part JavaScript
-          // and part template, so it is the only one that cannot take a single
-          // escaping rule. Astro never calls `transformIndexHtml` for its pages,
-          // which is why this hook is the whole of svg mode's reach into them.
-          const replaceOptions = {
-            onFamilyUsed: rememberFamily,
-            prefix,
-            strokeWidth: options.strokeWidth,
-          };
-          const replaced = ASTRO_FILE.test(id)
-            ? replaceIconTagsInAstro(code, registry, replaceOptions)
-            : replaceIconTagsWithSvg(code, registry, {
-                ...replaceOptions,
-                isJsContext: true,
-                isJsx: JSX_FILE.test(id),
-              });
-          collectUnreplacedClasses(removeIconTags(code, registry, prefix), id);
-          if (replaced !== code) {
-            return { code: replaced, map: null };
+    // `order: "pre"` puts this handler ahead of every other plugin's ordinary
+    // `transform`, not just of the plugins listed after this one. Astro's
+    // compiler is an ordinary `transform` on an `enforce: "pre"` plugin that
+    // Astro lists before the user's own, so `enforce` alone ran it first, and
+    // this hook received compiled JavaScript in which a frontmatter string had
+    // been re-quoted (codenhub/codenhub#451).
+    transform: {
+      order: "pre",
+      handler(code, id) {
+        if (mode === "svg") {
+          if (id && !id.includes("node_modules") && !id.startsWith("\0") && MARKUP_FILE.test(id)) {
+            // `.astro` arrives here as its own source rather than as compiled
+            // output, because this handler is `order: "pre"` and so runs ahead of
+            // Astro's compiler. It is the only markup file that is part JavaScript
+            // and part template, so it is the only one that cannot take a single
+            // escaping rule. Astro never calls `transformIndexHtml` for its pages,
+            // which is why this hook is the whole of svg mode's reach into them.
+            const replaceOptions = {
+              onFamilyUsed: rememberFamily,
+              prefix,
+              strokeWidth: options.strokeWidth,
+            };
+            const replaced = ASTRO_FILE.test(id)
+              ? replaceIconTagsInAstro(code, registry, replaceOptions)
+              : replaceIconTagsWithSvg(code, registry, {
+                  ...replaceOptions,
+                  isJsContext: true,
+                  isJsx: JSX_FILE.test(id),
+                });
+            collectUnreplacedClasses(removeIconTags(code, registry, prefix), id);
+            if (replaced !== code) {
+              return { code: replaced, map: null };
+            }
           }
+          return null;
         }
+
+        const knownClasses = inMemoryClasses.size;
+        const knownFiles = scannedFiles.size;
+
+        for (const cls of scanIconClasses(code, { prefix })) {
+          inMemoryClasses.add(cls);
+        }
+
+        if (id && !id.includes("node_modules") && !id.startsWith("\0") && SOURCE_FILE.test(id)) {
+          scannedFiles.add(id);
+        }
+
+        if (inMemoryClasses.size !== knownClasses || scannedFiles.size !== knownFiles) {
+          invalidateStylesheet();
+        }
+
         return null;
-      }
-
-      const knownClasses = inMemoryClasses.size;
-      const knownFiles = scannedFiles.size;
-
-      for (const cls of scanIconClasses(code, { prefix })) {
-        inMemoryClasses.add(cls);
-      }
-
-      if (id && !id.includes("node_modules") && !id.startsWith("\0") && SOURCE_FILE.test(id)) {
-        scannedFiles.add(id);
-      }
-
-      if (inMemoryClasses.size !== knownClasses || scannedFiles.size !== knownFiles) {
-        invalidateStylesheet();
-      }
-
-      return null;
+      },
     },
 
     generateBundle(_outputOptions, bundle) {
