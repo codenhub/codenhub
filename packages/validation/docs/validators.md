@@ -732,14 +732,14 @@ encode(event, { name: "Launch", at: new Date(0) });
 // { ok: true, value: { name: "Launch", at: "1970-01-01T00:00:00.000Z" } }
 ```
 
-- **A `codec`** validates the value with its output, runs its `encode`, and checks its input accepts the result.
+- **A `codec`** writes the value back through its output, so a codec inside that writes its part first, or checks it with its output when that cannot be written back, such as a validator written by hand, runs its `encode` on the result, and checks its input accepts what that returns.
 - **A part that produces what it accepts**, such as `string`, `number`, a format or a coercion, validates the value and gives what it produced: `email()` gives the address as the parser reads it, and `coerceNumber()` gives the number, which it accepts.
 - **A composer**, such as `object`, `array`, `tuple`, `record`, `map`, `set`, `union` or `tagged`, writes back each of its parts with its own options, and runs its checks on the value once its parts passed. `optional`, `nullable` and `nullish` keep what they let through, and a `pipe` writes its steps back from the last.
 - **`json` and `searchParams`** write text: `JSON.stringify` of what their validator wrote back, and a query string with each value as text and each item of a list as a repeated key. The text is then read back by the validator it came from, so text it would refuse fails: a list written as a repeated key, which `searchParams` reads only with `repeated: true`, and `undefined`, which is no JSON. JSON holds less than JavaScript, so what `JSON.stringify` changes is changed: `NaN` is written as `null`, and a property that is `undefined` is left out.
 - **`optional` with a default** writes the default back as `undefined` when its inner part refuses it, since only `undefined` produced it: `optional(string({ min: 3 }), "")` writes `""` back as `undefined`. A default made by a function cannot be compared, and a `fallback` value its inner part refuses fails, since every input its inner part refuses produces it, and which one was given is not known.
 - **What cannot go back throws** a `TypeError` naming its place: a `transform`, whose function goes one way, and a validator written by hand. Use a `codec` there.
 
-So a value the validator could not have produced fails with the issues it has, at their paths: `encode(timestamp, new Date(Number.NaN))` fails as `date()` would. It is synchronous unless a part waits. A coercion writes back the value it produced, which it accepts, so inside `json` a `bigint` from `coerceBigint()` cannot be written as JSON: use a codec that writes it as text, as `amount` above does.
+So a value the validator could not have produced fails with the issues it has, at their paths: `encode(timestamp, new Date(Number.NaN))` fails as `date()` would. It is synchronous unless a part waits. A coercion writes back the value it produced, which it accepts, so inside `json` a `bigint` from `coerceBigint()` cannot be written as JSON, and throws a `TypeError` naming its place: use a codec that writes it as text, as `amount` above does.
 
 `encode` builds, on each call, a validator of each part of the schema the other way, from the same factories, so it bundles every composer: about 8 kB gzipped with an object and a codec.
 
