@@ -17,6 +17,7 @@
     "@astrojs/check": "catalog:",
     "@astrojs/markdown-remark": "catalog:",
     "@codenhub/app-shell": "workspace:*",
+    "@codenhub/i18n": "workspace:*",
     "@codenhub/icons": "workspace:*",
     "@codenhub/styles": "workspace:*",
     "@codenhub/tools": "workspace:*",

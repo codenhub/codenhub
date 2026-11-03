@@ -4,6 +4,7 @@
  * with what importing that name alone costs. Every row shares one grid, so
  * names, bars, and figures line up across entrypoints.
  */
+import { getTranslator, type Locale } from "../i18n";
 import { type EntrypointRow } from "../lib/bundle-breakdown";
 import { formatBytes } from "../lib/package-facts";
 import CopyButton from "./copy-button.astro";
@@ -13,9 +14,13 @@ interface Props {
   bundler?: string;
   packageName: string;
   rows: EntrypointRow[];
+  locale: Locale;
 }
 
-const { bundler, packageName, rows } = Astro.props;
+const { bundler, packageName, rows, locale } = Astro.props;
+const { t } = await getTranslator(locale);
+const minified = t("package.entrypoints.minified").toLowerCase();
+const gzipped = t("package.entrypoints.gzipped").toLowerCase();
 const hasSizes = rows.some((row) => row.size !== undefined);
 const hasExports = rows.some((row) => row.exports !== undefined && row.exports.length > 0);
 const isMissingExports = rows.some((row) => row.size !== undefined && row.exports === undefined);
@@ -26,10 +31,10 @@ const toSpecifier = (subpath: string): string => (subpath === "." ? packageName 
   {
     hasSizes && (
       <div aria-hidden="true" class="bundle-line bundle-columns">
-        <span>Import</span>
+        <span>{t("package.entrypoints.import")}</span>
         <span />
-        <span class="bundle-figure">Minified</span>
-        <span class="bundle-figure">Gzipped</span>
+        <span class="bundle-figure">{t("package.entrypoints.minified")}</span>
+        <span class="bundle-figure">{t("package.entrypoints.gzipped")}</span>
       </div>
     )
   }
@@ -42,50 +47,50 @@ const toSpecifier = (subpath: string): string => (subpath === "." ? packageName 
           <div class="bundle-line bundle-entry-line">
             <span class="bundle-name">
               <code>{specifier}</code>
-              <CopyButton label="Copy import path" text={specifier} />
+              <CopyButton label={t("package.entrypoints.copyImport")} locale={locale} text={specifier} />
             </span>
             {hasSizes && <span />}
             {hasSizes && (
               <span class="bundle-figure">
                 {size === undefined ? "—" : formatBytes(size.minified)}
-                <span class="visually-hidden"> minified</span>
+                <span class="visually-hidden"> {minified}</span>
               </span>
             )}
             {hasSizes && (
               <span class="bundle-figure">
                 {size === undefined ? "—" : formatBytes(size.gzip)}
-                <span class="visually-hidden"> gzipped</span>
+                <span class="visually-hidden"> {gzipped}</span>
               </span>
             )}
           </div>
 
           {exports !== undefined && exports.length > 0 && (
-            <ul aria-label={`Exports of ${specifier}`} class="bundle-list">
+            <ul aria-label={t("package.entrypoints.exportsOf", { specifier })} class="bundle-list">
               {exports.map((row) => (
                 <li class="bundle-line">
                   <span class="bundle-name">
                     <code>{row.name}</code>
                   </span>
                   <span
-                    aria-label={`${Math.round(row.share * 100)}% of the entry point`}
+                    aria-label={t("package.entrypoints.share", { share: row.share })}
                     class="bundle-bar"
                     role="img"
                     style={`--share: ${row.share}`}
                   />
                   <span class="bundle-figure">
                     {formatBytes(row.minified)}
-                    <span class="visually-hidden"> minified</span>
+                    <span class="visually-hidden"> {minified}</span>
                   </span>
                   <span class="bundle-figure">
                     {formatBytes(row.gzip)}
-                    <span class="visually-hidden"> gzipped</span>
+                    <span class="visually-hidden"> {gzipped}</span>
                   </span>
                 </li>
               ))}
             </ul>
           )}
           {exports !== undefined && exports.length === 0 && (
-            <p class="bundle-line bundle-muted">Exports no runtime values.</p>
+            <p class="bundle-line bundle-muted">{t("package.entrypoints.noRuntime")}</p>
           )}
         </section>
       );
@@ -95,9 +100,13 @@ const toSpecifier = (subpath: string): string => (subpath === "." ? packageName 
   {
     hasSizes && (
       <p class="package-note">
-        Measured at release{bundler === undefined ? "" : ` with ${bundler}`}, peer dependencies left out.
-        {hasExports && " An export's size is what importing it alone costs after tree-shaking."}
-        {isMissingExports && " This release was cut before each entry point's exports were recorded."}
+        {
+          bundler === undefined
+            ? t("package.entrypoints.measured")
+            : t("package.entrypoints.measuredWith", { bundler })
+        }
+        {hasExports && ` ${t("package.entrypoints.exportCost")}`}
+        {isMissingExports && ` ${t("package.entrypoints.missingExports")}`}
       </p>
     )
   }

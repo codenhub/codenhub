@@ -1,0 +1,113 @@
+---
+/**
+ * The header's language menu: this page in every locale. Plain links in a
+ * `<details>`, so it works without JavaScript; the script animates its close,
+ * closes it on an outside click or Escape, and saves the chosen language.
+ *
+ * @param locale - The page's locale.
+ * @param pathname - The page's canonical path, the same in every locale.
+ * @param label - The menu's accessible name, in the page's language.
+ */
+import { localeNames, locales, routing, type Locale } from "../i18n";
+
+interface Props {
+  locale: Locale;
+  pathname: string;
+  label: string;
+}
+
+const { label, locale, pathname } = Astro.props;
+---
+
+<details class="www-language" data-language-menu>
+  <summary aria-label={label} class="shell-action www-language-trigger" title={label}>
+    <i aria-hidden="true" class="ic-lucide-languages"></i>
+    <i aria-hidden="true" class="ic-lucide-chevron-down www-language-chevron"></i>
+  </summary>
+  <ul class="www-language-list">
+    {
+      locales.map((target) => (
+        <li>
+          <a
+            aria-current={target === locale ? "true" : undefined}
+            class="www-language-option"
+            href={routing.localize(pathname, target)}
+            hreflang={target}
+            lang={target}
+          >
+            {localeNames[target]}
+            {target === locale && <i aria-hidden="true" class="ic-lucide-check" />}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</details>
+
+<script>
+  import { LOCALE_STORAGE_KEY } from "../i18n/storage-key";
+
+  // Removing `open` hides the list at once, so a close first plays the list's
+  // out animation (`data-closing`, `global.css`) and removes `open` after it.
+  for (const menu of document.querySelectorAll<HTMLDetailsElement>("[data-language-menu]")) {
+    const summary = menu.querySelector("summary");
+    const list = menu.querySelector<HTMLElement>(".www-language-list");
+
+    const finish = () => {
+      if (menu.hasAttribute("data-closing")) {
+        menu.removeAttribute("data-closing");
+        menu.open = false;
+      }
+    };
+
+    const close = () => {
+      if (!menu.open || menu.hasAttribute("data-closing")) {
+        return;
+      }
+      menu.setAttribute("data-closing", "");
+      // Reduced motion turns the animation off, and then no `animationend` comes.
+      if (list === null || getComputedStyle(list).animationName === "none") {
+        finish();
+      }
+    };
+
+    list?.addEventListener("animationend", finish);
+
+    // The choice outranks the browser's languages in the base layout's redirect.
+    for (const option of menu.querySelectorAll<HTMLAnchorElement>("a[hreflang]")) {
+      option.addEventListener("click", () => {
+        try {
+          localStorage.setItem(LOCALE_STORAGE_KEY, option.hreflang);
+        } catch {
+          // Storage blocked: the redirect skips arrivals from this site anyway.
+        }
+      });
+    }
+
+    summary?.addEventListener("click", (event) => {
+      if (!menu.open) {
+        return;
+      }
+      event.preventDefault();
+      if (menu.hasAttribute("data-closing")) {
+        // Pressed again mid-close: stay open.
+        menu.removeAttribute("data-closing");
+      } else {
+        close();
+      }
+    });
+
+    document.addEventListener("click", (event) => {
+      if (event.target instanceof Node && !menu.contains(event.target)) {
+        close();
+      }
+    });
+
+    menu.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && menu.open) {
+        close();
+        summary?.focus();
+      }
+    });
+  }
+</script>

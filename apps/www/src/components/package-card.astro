@@ -7,24 +7,28 @@
  * published, which is a release of any kind, pre-releases included.
  *
  * @param entry - The package as the catalog describes it.
+ * @param locale - The page's locale.
  */
 import StatusBadge from "@codenhub/app-shell/components/status-badge.astro";
 
+import { getTranslator, routing, shellMessages, type Locale } from "../i18n";
 import { formatDate } from "../lib/format";
 import type { CatalogPackage } from "../lib/catalog";
 
 interface Props {
   entry: CatalogPackage;
+  locale: Locale;
 }
 
-const { entry } = Astro.props;
+const { entry, locale } = Astro.props;
+const { t } = await getTranslator(locale);
 const latest = entry.releases.latest;
 const lastRelease = entry.releases.lastPublished;
 const haystack = `${entry.label} ${entry.name} ${entry.description ?? ""}`.toLowerCase();
 ---
 
 <div class="package-card" data-label={entry.label} data-search={haystack} role="listitem">
-  <a class="package-card-open" href={`/packages/${entry.slug}/`}>
+  <a class="package-card-open" href={routing.localize(`/packages/${entry.slug}/`, locale)}>
     <div class="package-card-heading">
       <div class="package-card-title">
         {entry.logoUrl !== undefined && <img alt="" class="package-card-logo" src={entry.logoUrl} />}
@@ -32,7 +36,7 @@ const haystack = `${entry.label} ${entry.name} ${entry.description ?? ""}`.toLow
       </div>
       <div class="package-card-badges">
         {latest !== undefined && <span class="badge secondary soft package-card-version">v{latest.version}</span>}
-        {entry.status !== undefined && <StatusBadge compact status={entry.status} />}
+        {entry.status !== undefined && <StatusBadge compact labels={shellMessages(t).status} status={entry.status} />}
       </div>
     </div>
     <p>{entry.description ?? entry.name}</p>
@@ -41,7 +45,7 @@ const haystack = `${entry.label} ${entry.name} ${entry.description ?? ""}`.toLow
     {
       entry.links.github !== undefined && (
         <a
-          aria-label={`${entry.label} on GitHub`}
+          aria-label={t("packages.card.github", { name: entry.label })}
           class="package-card-link"
           href={entry.links.github}
           rel="noopener noreferrer"
@@ -52,7 +56,7 @@ const haystack = `${entry.label} ${entry.name} ${entry.description ?? ""}`.toLow
       )
     }
     <a
-      aria-label={`${entry.label} on npm`}
+      aria-label={t("packages.card.npm", { name: entry.label })}
       class="package-card-link"
       href={entry.links.npm}
       rel="noopener noreferrer"
@@ -62,8 +66,8 @@ const haystack = `${entry.label} ${entry.name} ${entry.description ?? ""}`.toLow
     </a>
     {
       lastRelease !== undefined && (
-        <time class="package-card-updated" datetime={lastRelease.date} title="Last published">
-          {formatDate(lastRelease.date)}
+        <time class="package-card-updated" datetime={lastRelease.date} title={t("packages.card.lastPublished")}>
+          {formatDate(lastRelease.date, locale)}
         </time>
       )
     }

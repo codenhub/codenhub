@@ -422,6 +422,9 @@ importers:
       '@codenhub/app-shell':
         specifier: workspace:*
         version: link:../../packages/app-shell
+      '@codenhub/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@codenhub/icons':
         specifier: workspace:*
         version: link:../../packages/icons

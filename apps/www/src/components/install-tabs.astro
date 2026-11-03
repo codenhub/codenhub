@@ -5,14 +5,18 @@
  * Without JavaScript the first tab's command still shows.
  *
  * @param packageName - Full npm name, such as `@codenhub/validation`.
+ * @param locale - The page's locale.
  */
+import { getTranslator, type Locale } from "../i18n";
 import CopyButton from "./copy-button.astro";
 
 interface Props {
   packageName: string;
+  locale: Locale;
 }
 
-const { packageName } = Astro.props;
+const { packageName, locale } = Astro.props;
+const { t } = await getTranslator(locale);
 
 // Full-color `logos` marks: `simple-icons` has no Yarn mark (upstream records
 // it under CC-BY-4.0, which the family leaves out), and `logos` has all four
@@ -27,7 +31,7 @@ const managers = [
 ---
 
 <div class="install-tabs" data-install-tabs>
-  <div aria-label="Package manager" class="www-tablist" role="tablist">
+  <div aria-label={t("package.install.packageManager")} class="www-tablist" role="tablist">
     {
       managers.map(({ brand, icon }, index) => (
         <button
@@ -56,7 +60,7 @@ const managers = [
         role="tabpanel"
       >
         <code>{command}</code>
-        <CopyButton class="pill" label="Copy command" text={command} />
+        <CopyButton class="pill" label={t("package.install.copy")} locale={locale} text={command} />
       </div>
     ))
   }
