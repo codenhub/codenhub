@@ -97,7 +97,14 @@ function resolveIconModule(registry: IconRegistry, request: string): ResolvedIco
 }
 
 function renderIconModule(icon: ResolvedIcon, strokeWidth: number | string | undefined, prefix: string): string {
-  const svg = renderSvg(icon, { prefix, strokeWidth });
+  // The qualified class, as svg mode keeps on an `<svg>` it inlines: the base
+  // stylesheet reaches an inlined icon only through `svg[class^="ic-"]` and
+  // `svg[class*=" ic-"]`, so without it `--ic-size` and `--ic-color` miss.
+  const svg = renderSvg(icon, {
+    attributes: { class: `${prefix}-${icon.prefix}-${icon.iconName}` },
+    prefix,
+    strokeWidth,
+  });
   return `export const icon = ${JSON.stringify(icon)};
 export const svg = ${JSON.stringify(svg)};
 export default svg;

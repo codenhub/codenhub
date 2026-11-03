@@ -684,7 +684,7 @@ const { svg } = await import("virtual:@codenhub/icons/lucide/heart");
 element.innerHTML = svg;
 ```
 
-The module exports the rendered markup as `svg` and its default export, and the resolved icon as `icon`. Each import is its own module, so the bundler splits and tree-shakes at icon granularity. A name with no prefix — `virtual:@codenhub/icons/close` — resolves like any other unqualified name. An unknown icon fails the build rather than resolving to nothing.
+The module exports the rendered markup as `svg` and its default export, and the resolved icon as `icon`. The `<svg>` carries the icon's qualified class, such as `ic-lucide-heart` under the configured `prefix`, as an `<svg>` svg mode inlines does, so the base rules size and color it from `--ic-size`, `--ic-color`, and the `ic-xs`–`ic-xl` classes. It carries no `aria-hidden`: add it for a decorative icon, or give a meaningful one `role="img"` and a label. Each import is its own module, so the bundler splits and tree-shakes at icon granularity. A name with no prefix — `virtual:@codenhub/icons/close` — resolves like any other unqualified name. An unknown icon fails the build rather than resolving to nothing.
 
 ## See also
 
@@ -1163,6 +1163,7 @@ A minifier configured with `legalComments: "none"` strips `/*! … */` comments.
 
 ## Changed
 
+- **Breaking.** The `<svg>` a `virtual:@codenhub/icons/<family>/<name>` module exports carries the icon's qualified class, such as `class="ic-lucide-tag"`, so the base rules size and color it from `--ic-size`, `--ic-color`, and the `ic-xs`–`ic-xl` classes, as they do an `<svg>` that svg mode inlines. Code that adds its own `class` attribute to that markup as a string now produces a second one; add to the existing attribute, or use `classList`. [codenhub/codenhub#452](https://github.com/codenhub/codenhub/issues/452)
 - **Breaking.** `anim` is reserved for the motion utilities, as `xs`–`xl` are for size. A class `ic-anim` or `ic-anim-*` never resolves as an icon, including from a family adopted with `adoptIconifySet`, and the generator refuses a family prefix or icon named that way, or leaves the icon out of a brand family. The exact names `on-hover` and `trigger` are reserved the same way. No icon in a shipped family is affected.
 - The package is larger: the tarball unpacks to about 72 MB, up from 67 MB, and the full `line-md` stylesheet is about 3 MB, a third of it the static fallback. CSS from the plugins still carries only the icons a project uses.
 
