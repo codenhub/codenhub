@@ -39,7 +39,7 @@ describe("icon delivery", () => {
           used.add(name);
         }
       }
-      for (const [, body] of page.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script\s*>/gi)) {
+      for (const [, body] of page.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script[^>]*>/gi)) {
         inlineScripts.push(body);
       }
     }
