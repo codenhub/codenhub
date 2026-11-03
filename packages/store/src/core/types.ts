@@ -73,6 +73,8 @@ export interface Store<TSchema extends object> {
   /**
    * Returns the full persisted state.
    *
+   * Fields missing from a stored plain object are filled from the initial state, one level deep,
+   * before `validate` runs. Arrays and other non-plain objects are returned as stored.
    * When storage is empty, unavailable, unreadable, invalid JSON, or rejected by `validate`,
    * the store falls back to a clone of the initial state. Recoverable read, parse, and validation
    * failures are reported through `CreateStoreOptions.onError` when provided.
@@ -137,6 +139,8 @@ export interface Store<TSchema extends object> {
 
   /**
    * Deletes an optional field from the store state and attempts to persist the changes.
+   * The persisted record omits the field; the returned state, like later reads, carries the field's
+   * initial value when the initial state has one.
    *
    * Only optional keys can be removed to prevent producing a state object that violates the schema.
    * If writing to the storage driver fails, the updated state is still returned by the method call,
@@ -183,8 +187,9 @@ export interface CreateStoreOptions<TSchema extends object> {
   driver?: StorageDriver<TSchema>;
 
   /**
-   * Optional runtime validator for parsed JSON. A stored value that is not an object is
-   * rejected as `store.validation_failed` before this runs.
+   * Optional runtime validator for stored values. It receives the record after missing fields
+   * are filled from the initial state. A stored value that is not an object is rejected as
+   * `store.validation_failed` before this runs.
    *
    * @param raw - The parsed value (typed as `unknown`).
    * @returns `true` if the value matches the expected schema.
@@ -228,6 +233,8 @@ export interface AsyncStore<TSchema extends object> {
   /**
    * Retrieves the full persisted state asynchronously.
    *
+   * Fields missing from a stored plain object are filled from the initial state, one level deep,
+   * before `validate` runs. Arrays and other non-plain objects are returned as stored.
    * Falls back to a clone of the initial state if storage is empty, corrupt, or unreadable.
    * Failure to read, parse, or validate is reported to `CreateAsyncStoreOptions.onError`.
    *
@@ -293,6 +300,8 @@ export interface AsyncStore<TSchema extends object> {
 
   /**
    * Deletes an optional field from the store state asynchronously and attempts to persist the changes.
+   * The persisted record omits the field; the returned state, like later reads, carries the field's
+   * initial value when the initial state has one.
    *
    * Only optional keys can be removed. If the write operation fails, the updated state is still returned,
    * and the failure is reported to `CreateAsyncStoreOptions.onError`.
@@ -339,8 +348,9 @@ export interface CreateAsyncStoreOptions<TSchema extends object> {
   driver: AsyncStorageDriver<TSchema>;
 
   /**
-   * Optional runtime validator for parsed JSON. A stored value that is not an object is
-   * rejected as `store.validation_failed` before this runs.
+   * Optional runtime validator for stored values. It receives the record after missing fields
+   * are filled from the initial state. A stored value that is not an object is rejected as
+   * `store.validation_failed` before this runs.
    *
    * @param raw - The parsed value (typed as `unknown`).
    * @returns `true` if the value matches the expected schema.

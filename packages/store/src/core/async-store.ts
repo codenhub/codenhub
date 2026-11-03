@@ -1,5 +1,5 @@
 import { captureAsync, failureEvent } from "./errors";
-import { applyPatch } from "./record";
+import { applyPatch, withDefaults } from "./record";
 import { SET_STORAGE_KEY } from "./types";
 import type { AsyncStore, CreateAsyncStoreOptions, RemovableStoreKey } from "./types";
 
@@ -71,11 +71,16 @@ export function createAsyncStore<TSchema extends object>(
     if (parsed === null || parsed === undefined) {
       return { state: structuredClone(initialState), readFailed: false };
     }
-    if (typeof parsed !== "object" || (options.validate !== undefined && !options.validate(parsed))) {
+    if (typeof parsed !== "object") {
       options.onError?.(failureEvent("store.validation_failed", storageKey));
       return { state: structuredClone(initialState), readFailed: false };
     }
-    return { state: structuredClone(parsed as TSchema), readFailed: false };
+    const record = withDefaults(initialState, parsed);
+    if (options.validate !== undefined && !options.validate(record)) {
+      options.onError?.(failureEvent("store.validation_failed", storageKey));
+      return { state: structuredClone(initialState), readFailed: false };
+    }
+    return { state: structuredClone(record as TSchema), readFailed: false };
   };
 
   const writeState = async (state: TSchema): Promise<boolean> => {
@@ -131,7 +136,7 @@ export function createAsyncStore<TSchema extends object>(
         }
         delete state[key];
         await writeState(state);
-        return structuredClone(state);
+        return structuredClone(withDefaults(initialState, state) as TSchema);
       });
     },
     clear(): Promise<void> {

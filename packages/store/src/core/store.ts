@@ -1,6 +1,6 @@
 import { capture, failureEvent } from "./errors";
 import { localStorageDriver } from "./local-storage-driver";
-import { applyPatch } from "./record";
+import { applyPatch, withDefaults } from "./record";
 import { SET_STORAGE_KEY } from "./types";
 import type { CreateStoreOptions, RemovableStoreKey, Store } from "./types";
 
@@ -31,11 +31,16 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
     if (parsed === null || parsed === undefined) {
       return { state: structuredClone(initialState), readFailed: false };
     }
-    if (typeof parsed !== "object" || (options.validate !== undefined && !options.validate(parsed))) {
+    if (typeof parsed !== "object") {
       options.onError?.(failureEvent("store.validation_failed", storageKey));
       return { state: structuredClone(initialState), readFailed: false };
     }
-    return { state: structuredClone(parsed as TSchema), readFailed: false };
+    const record = withDefaults(initialState, parsed);
+    if (options.validate !== undefined && !options.validate(record)) {
+      options.onError?.(failureEvent("store.validation_failed", storageKey));
+      return { state: structuredClone(initialState), readFailed: false };
+    }
+    return { state: structuredClone(record as TSchema), readFailed: false };
   };
 
   const writeState = (state: TSchema): boolean => {
@@ -82,7 +87,7 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
       }
       delete state[key];
       writeState(state);
-      return structuredClone(state);
+      return structuredClone(withDefaults(initialState, state) as TSchema);
     },
     clear(): void {
       if (!driver.clear) {

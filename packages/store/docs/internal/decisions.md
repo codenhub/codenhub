@@ -20,6 +20,14 @@ When a driver throws or rejects during a read, `patch`, `setItem`, and `removeIt
 
 Rejected: overwrite with fallback plus changes after an access failure, because that wipes unrelated fields after a transient failure. A full `set` remains an explicit replacement and does not read first.
 
+## Reads fill missing fields from initial state
+
+A stored plain object reads as `{ ...initialState, ...stored }`, one level deep, before `validate` runs. The most common shape a settings record fails is not corruption but a valid record saved before the application added a field. Without filling, a consumer without `validate` read the new field as `undefined` despite its type, and a consumer with `validate` lost the user's saved fields: validation failed, the store fell back, and the next `patch` replaced the record with fallback plus change. zustand's `persist` merges the same way by default.
+
+`removeItem` returns `withDefaults(initialState, record)`, so it matches the next read: an optional field with an initial value is reset to it, and one without is absent. The persisted record omits the field so a later change to the initial value applies.
+
+Rejected: merging only when `validate` rejects the stored value, because records without a validator would still read new fields as missing; a `migrate(raw)` option, because it adds public surface and the common case is an added field, which needs no consumer code; and a deep merge, because it would fill arrays and nested objects whose shape the record owns. Fields removed from the schema stay in the record until a `set`; renamed and retyped fields still need a validator and fallback. Cost accepted: an optional field cannot be absent while `initialState` gives it a value.
+
 ## `patch` skips `undefined` values
 
 `patch` ignores fields whose value is `undefined`. `Partial<TSchema>` admits `undefined` for required fields unless a consumer enables `exactOptionalPropertyTypes`, so `patch({ token: maybeToken })` type-checked and then dropped `token` on JSON drivers while memory drivers kept it as `undefined`. Skipping the value keeps the guarantee `RemovableStoreKey` gives `removeItem` and makes every driver store the same record.

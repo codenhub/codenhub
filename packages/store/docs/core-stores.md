@@ -30,17 +30,19 @@ settings.removeItem("nickname");
 
 `CreateStoreOptions` requires `storageKey` and `initialState`. The `driver` defaults to `localStorageDriver`; the example uses memory so it can run without browser storage. The fallback is a snapshot taken at creation, so changing your original `initialState` later does not change it. Reads and state returned from updates are deep clones.
 
-| Method                | What the caller receives                                                                                       |
-| --------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `get()`               | A clone of the stored record, or initial state for an empty, unreadable, or invalid value.                     |
-| `set(state)`          | `true` after a successful whole-record replacement, otherwise `false`. It does not read first.                 |
-| `patch(partial)`      | A clone of the shallow merge of the current record and the supplied fields, skipping `undefined` values.       |
-| `getItem(key)`        | One property from a full-record read, or `undefined` if absent.                                                |
-| `setItem(key, value)` | A clone of the record with one property replaced.                                                              |
-| `removeItem(key)`     | A clone of the record without an optional property; `RemovableStoreKey<TSchema>` excludes required properties. |
-| `clear()`             | No value; asks the driver to remove the persisted record.                                                      |
+| Method                | What the caller receives                                                                                                                                                      |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get()`               | A clone of the stored record with missing fields filled from initial state, or initial state for an empty, unreadable, or invalid value.                                      |
+| `set(state)`          | `true` after a successful whole-record replacement, otherwise `false`. It does not read first.                                                                                |
+| `patch(partial)`      | A clone of the shallow merge of the current record and the supplied fields, skipping `undefined` values.                                                                      |
+| `getItem(key)`        | One property from a full-record read, or `undefined` if absent.                                                                                                               |
+| `setItem(key, value)` | A clone of the record with one property replaced.                                                                                                                             |
+| `removeItem(key)`     | A clone of the record with an optional property reset to its initial value, or absent when initial state has none; `RemovableStoreKey<TSchema>` excludes required properties. |
+| `clear()`             | No value; asks the driver to remove the persisted record.                                                                                                                     |
 
 `patch` skips fields whose value is `undefined`, so `patch({ token: maybeToken })` cannot drop a required field when `maybeToken` is missing; use `removeItem` to delete an optional field. `patch`, `setItem`, and `removeItem` read before writing. A driver read failure reports `store.read_failed`, skips the write, and returns a clone of initial state without applying the requested change. This prevents a transient read failure from wiping unrelated fields. Parse and validation failures still permit replacing a corrupt value with fallback plus the requested change. A failed write returns the computed record from these methods, but it has not been persisted. A later read uses whatever remains in the backend.
+
+Reads fill fields missing from a stored object with their initial values, one level deep. A record saved before your application added `fontSize` to `initialState` reads with the initial `fontSize`, and keeps every field it had. Fields you removed from the schema stay in the record until it is replaced with `set`. Arrays and other non-plain objects are not filled. Because of this, `removeItem` resets an optional field that has an initial value: the stored record omits it, and the returned and later read records carry the initial value. Leave a field out of `initialState` when its absence matters.
 
 Every field read parses (on a JSON driver) and clones the whole record. This is suitable for small records; read once when you need several fields, and batch several changes in one `patch`. There is no per-field storage or cache. A small settings drawer is welcome; an entire warehouse is going to be cramped.
 
@@ -69,7 +71,7 @@ The queue coordinates one instance only. Separate stores and external writers ca
 
 ## Validation and failures
 
-TypeScript does not validate persisted values. A stored value that is not an object, such as a string another script wrote under the same key, always reports `store.validation_failed`. Without `validate`, any other non-null driver value is trusted as `TSchema` after cloning. Supply a predicate when old versions, user edits, or another writer may have stored a different shape:
+TypeScript does not validate persisted values. A stored value that is not an object, such as a string another script wrote under the same key, always reports `store.validation_failed`. Without `validate`, any other non-null driver value is trusted as `TSchema` after cloning. `validate` receives the record after missing fields are filled from initial state, so a record from an older version passes when the initial values complete it. Supply a predicate when old versions, user edits, or another writer may have stored a different shape:
 
 ```ts
 import { createStore, type StoreErrorEvent } from "@codenhub/store";

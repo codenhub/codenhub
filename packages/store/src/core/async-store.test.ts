@@ -53,11 +53,12 @@ describe("AsyncStore", () => {
     const driver = asyncMemoryDriver<{ count: number; name?: string }>();
     const store = createAsyncStore({
       storageKey: "test-async-store",
-      initialState: { count: 0, name: "test" },
+      initialState: { count: 0 } as { count: number; name?: string },
       driver,
     });
 
     expect(await store.getItem("count")).toBe(0);
+    expect(await store.setItem("name", "test")).toEqual({ count: 0, name: "test" });
     expect(await store.setItem("count", 42)).toEqual({
       count: 42,
       name: "test",

@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { cloudflareKvDriver } from "../cloudflare";
-import { asyncMemoryDriver, createAsyncStore, createStore, localStorageDriver } from "../index";
+import { asyncMemoryDriver, createAsyncStore, createStore, localStorageDriver, memoryDriver } from "../index";
 
 interface Settings {
   count: number;
@@ -185,13 +185,56 @@ describe.each([false, true])("record shape (async: %s)", (isAsync) => {
     expect(await store.patch({ count: 2 })).toEqual({ ...initialState, count: 2 });
     expect(stored()).toEqual({ ...initialState, count: 2 });
   });
+
   it("ignores undefined values in patch so required fields stay present", async () => {
     const { store, stored } = setup({ count: 1, nested: { enabled: true } });
     const count: number | undefined = undefined;
     const result = await store.patch({ count, nested: { enabled: false } });
-    expect(result).toEqual({ count: 1, nested: { enabled: false } });
+    expect(result).toEqual({ count: 1, nested: { enabled: false }, nickname: "initial" });
     expect(Object.hasOwn(result, "count")).toBe(true);
-    expect(stored()).toEqual({ count: 1, nested: { enabled: false } });
+    expect(stored()).toEqual({ count: 1, nested: { enabled: false }, nickname: "initial" });
+  });
+
+  it("fills fields added since the record was stored from initial state", async () => {
+    const { store } = setup({ count: 4 });
+    expect(await store.get()).toEqual({ count: 4, nested: { enabled: false }, nickname: "initial" });
+    expect(await store.getItem("nested")).toEqual({ enabled: false });
+  });
+
+  it("validates the filled record, so an older record keeps its fields through patch", async () => {
+    const isSettings = (raw: unknown): raw is Settings =>
+      typeof raw === "object" && raw !== null && "nested" in raw && typeof raw.nested === "object";
+    const { store, onError, stored } = setup({ count: 4 }, vi.fn(), isSettings);
+    expect(await store.patch({ nickname: "Ada" })).toEqual({ count: 4, nested: { enabled: false }, nickname: "Ada" });
+    expect(stored()).toEqual({ count: 4, nested: { enabled: false }, nickname: "Ada" });
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("removeItem resets a field to its initial value, matching the next read", async () => {
+    const { store, stored } = setup({ count: 1, nested: { enabled: true }, nickname: "Ada" });
+    const result = await store.removeItem("nickname");
+    expect(result).toEqual({ count: 1, nested: { enabled: true }, nickname: "initial" });
+    expect(stored()).toEqual({ count: 1, nested: { enabled: true } });
+    expect(await store.get()).toEqual(result);
+  });
+
+  it("removeItem removes a field that has no initial value", async () => {
+    const onError = vi.fn();
+    const options = { storageKey: "settings", initialState: { count: 0 } as { count: number; tag?: string }, onError };
+    const store = isAsync
+      ? createAsyncStore({ ...options, driver: asyncMemoryDriver<{ count: number; tag?: string }>() })
+      : createStore({ ...options, driver: memoryDriver<{ count: number; tag?: string }>() });
+    await store.set({ count: 1, tag: "x" });
+    expect(await store.removeItem("tag")).toEqual({ count: 1 });
+    expect(await store.get()).toEqual({ count: 1 });
+  });
+
+  it("does not merge arrays into an array initial state", async () => {
+    const options = { storageKey: "list", initialState: ["x", "y"] };
+    const store = isAsync
+      ? createAsyncStore({ ...options, driver: { get: async () => ["a"], set: async () => true } })
+      : createStore({ ...options, driver: { get: () => ["a"], set: () => true } });
+    expect(await store.get()).toEqual(["a"]);
   });
 });
 
