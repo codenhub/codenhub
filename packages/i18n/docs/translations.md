@@ -191,7 +191,7 @@ An apostrophe before `{` or `}` quotes text up to the next apostrophe, and two a
 
 Inside a plural, `#` stands for the number; write `'#'` for a literal `#`.
 
-Text that is not valid syntax, such as an unclosed `{`, logs a warning once, unless the manager is silent, and is shown with only its `{name}` placeholders filled. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
+Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning once, unless the manager is silent, and is shown with only its `{name}` placeholders filled. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
 
 ## Plurals
 

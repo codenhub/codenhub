@@ -154,6 +154,25 @@ describe("ICU messages", () => {
     }
   });
 
+  it("should warn for a stray closing brace whether or not the text has an apostrophe", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const i18n = createI18n({
+        defaultLocale: "en",
+        locales: ["en"],
+        loadLocale: () => ({ stray: "a } b", strayApostrophe: "it's a } b" }),
+      });
+      await i18n.init();
+
+      expect(i18n.t("stray")).toBe("a } b");
+      expect(i18n.t("strayApostrophe")).toBe("it's a } b");
+      expect(warn).toHaveBeenCalledTimes(2);
+      expect(String(warn.mock.calls[0]?.[0])).toContain(`"stray" in locale "en"`);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it("should not warn for a malformed message when silent", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
