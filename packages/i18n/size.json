@@ -22,9 +22,9 @@
         "createI18n": {
           "files": {
             "dist/index.js": {
-              "bytes": 17067,
+              "bytes": 17246,
               "declarations": {
-                "I18nInstance": 6294,
+                "I18nInstance": 6411,
                 "Parser": 3187,
                 "normalizeDictionary": 2026,
                 "formatNodes": 1033,
@@ -33,7 +33,7 @@
                 "createLocaleLoader": 437,
                 "createFallbackChains": 329,
                 "CoreCustomEvent": 200,
-                "getDefaultLocaleDirection": 192,
+                "getDefaultLocaleDirection": 193,
                 "fitsLimits": 176,
                 "parseCachedMessage": 155,
                 "interpolate": 128,
@@ -41,7 +41,7 @@
                 "likelyScript": 119,
                 "cachedFormatter": 111,
                 "DEFAULT_DICTIONARY_LIMITS": 108,
-                "RTL_SCRIPTS": 106,
+                "RTL_SCRIPTS": 107,
                 "createCustomEvent": 99,
                 "isValidKey": 94,
                 "isDateValue": 91,
@@ -51,8 +51,9 @@
                 "getNumberFormat": 81,
                 "intlLocale": 75,
                 "PLURAL_KEYWORDS": 69,
+                "isPlainMessage": 58,
                 "(top level)": 48,
-                "isPlainMessage": 41,
+                "isValidTranslationKey": 43,
                 "getLanguageAndScript": 39,
                 "DATE_STYLES": 35,
                 "createI18n": 32,
@@ -73,10 +74,10 @@
               }
             },
             "dist/config-validators-Cgx8SyXy.js": {
-              "bytes": 2860,
+              "bytes": 2862,
               "declarations": {
                 "readLocales": 512,
-                "i18nConfig": 467,
+                "i18nConfig": 468,
                 "readDictionaryLimits": 310,
                 "readTimeZone": 231,
                 "isPlainObject": 185,
@@ -89,7 +90,7 @@
                 "ConfigIssue": 67,
                 "readFunction": 59,
                 "expectType": 50,
-                "readBoolean": 48,
+                "readBoolean": 49,
                 "own": 40,
                 "LOCALE_IDENTIFIER_PATTERN": 37,
                 "isValidLocaleIdentifier": 31,
@@ -117,8 +118,8 @@
               "bytes": 25
             }
           },
-          "gzip": 6588,
-          "minified": 20373
+          "gzip": 6629,
+          "minified": 20554
         },
         "i18nErrors": {
           "files": {
@@ -139,9 +140,9 @@
       },
       "files": {
         "dist/index.js": {
-          "bytes": 17068,
+          "bytes": 17247,
           "declarations": {
-            "I18nInstance": 6294,
+            "I18nInstance": 6411,
             "Parser": 3187,
             "normalizeDictionary": 2026,
             "formatNodes": 1033,
@@ -150,7 +151,7 @@
             "createLocaleLoader": 436,
             "createFallbackChains": 329,
             "CoreCustomEvent": 200,
-            "getDefaultLocaleDirection": 192,
+            "getDefaultLocaleDirection": 193,
             "fitsLimits": 177,
             "parseCachedMessage": 155,
             "interpolate": 128,
@@ -158,7 +159,7 @@
             "likelyScript": 119,
             "cachedFormatter": 111,
             "DEFAULT_DICTIONARY_LIMITS": 108,
-            "RTL_SCRIPTS": 106,
+            "RTL_SCRIPTS": 107,
             "createCustomEvent": 99,
             "isValidKey": 94,
             "isDateValue": 91,
@@ -168,8 +169,9 @@
             "getNumberFormat": 81,
             "intlLocale": 75,
             "PLURAL_KEYWORDS": 69,
+            "isPlainMessage": 58,
             "(top level)": 48,
-            "isPlainMessage": 41,
+            "isValidTranslationKey": 43,
             "getLanguageAndScript": 39,
             "DATE_STYLES": 35,
             "createI18n": 32,
@@ -190,10 +192,10 @@
           }
         },
         "dist/config-validators-Cgx8SyXy.js": {
-          "bytes": 2861,
+          "bytes": 2863,
           "declarations": {
-            "readLocales": 511,
-            "i18nConfig": 468,
+            "readLocales": 512,
+            "i18nConfig": 469,
             "readDictionaryLimits": 311,
             "readTimeZone": 231,
             "isPlainObject": 185,
@@ -235,9 +237,9 @@
           "bytes": 56
         }
       },
-      "gzip": 6645,
-      "minified": 20551,
-      "sha256": "bf938cc0e862799ac4b2e9a549697903e6d6434ade3e2e458c490630ff9ce89d"
+      "gzip": 6691,
+      "minified": 20732,
+      "sha256": "e536a25b73b010796dcc0858bca36b1cc6adde88363c5a94527c4a079f87e20d"
     },
     "./browser": {
       "exports": {
@@ -351,9 +353,9 @@
         "createLocaleRouting": {
           "files": {
             "dist/routing.js": {
-              "bytes": 7514,
+              "bytes": 7614,
               "declarations": {
-                "createLocaleRouting": 2356,
+                "createLocaleRouting": 2456,
                 "compilePathnames": 1538,
                 "indexByShape": 901,
                 "parsePattern": 602,
@@ -410,15 +412,15 @@
               "bytes": 33
             }
           },
-          "gzip": 3872,
-          "minified": 10033
+          "gzip": 3894,
+          "minified": 10133
         }
       },
       "files": {
         "dist/routing.js": {
-          "bytes": 7514,
+          "bytes": 7614,
           "declarations": {
-            "createLocaleRouting": 2356,
+            "createLocaleRouting": 2456,
             "compilePathnames": 1538,
             "indexByShape": 901,
             "parsePattern": 602,
@@ -475,9 +477,9 @@
           "bytes": 33
         }
       },
-      "gzip": 3872,
-      "minified": 10033,
-      "sha256": "24bf5f4a618ecf162d3bf956e5bfe84f395f2805e3eeeb9171139aa4e90eab44"
+      "gzip": 3894,
+      "minified": 10133,
+      "sha256": "35990000c3777b3c5a683f3654b8381236d4dbae70d0676037af490d20f751f7"
     }
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@codenhub/i18n",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": false,
   "description": "Runtime-neutral translations with optional browser and locale-path integrations.",
   "homepage": "https://codenhub.dev/packages/i18n/",
