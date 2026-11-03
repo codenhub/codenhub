@@ -32,7 +32,8 @@ const describeType = (value: unknown): string => {
   return typeof value;
 };
 
-const fail = (path: string, message: string): never => {
+/** Throws a configuration problem at `path`, for `assertConfig` to word. @internal */
+export const fail = (path: string, message: string): never => {
   throw new ConfigIssue(path, message);
 };
 
@@ -114,6 +115,51 @@ const readDefaultLocale = (value: unknown, locales: readonly string[]): string =
   return value;
 };
 
+/** One locale's form of a translated path, with the key as written for messages. @internal */
+export interface CheckedPathnameForm {
+  readonly locale: string;
+  readonly path: string;
+  readonly pathname: string;
+}
+
+/** A canonical path and its locales' forms, as written. @internal */
+export interface CheckedPathnameEntry {
+  readonly path: string;
+  readonly pathname: string;
+  readonly forms: readonly CheckedPathnameForm[];
+}
+
+/** The table's shape and locales; the paths themselves are checked by routing. */
+const readPathnames = (value: unknown, locales: readonly string[]): CheckedPathnameEntry[] => {
+  if (value === undefined) {
+    return [];
+  }
+
+  const table = readObject("pathnames", value);
+  return Object.keys(table).map((pathname) => {
+    const path = `pathnames[${JSON.stringify(pathname)}]`;
+    const entry = readObject(path, table[pathname]);
+    const seen = new Set<string>();
+    const forms = Object.keys(entry).map((key): CheckedPathnameForm => {
+      const formPath = `${path}.${key}`;
+      const form = entry[key];
+      if (typeof form !== "string") {
+        return expectType(formPath, "string", form);
+      }
+      const locale = resolveConfiguredLocale(locales, key);
+      if (locale === undefined) {
+        return fail(formPath, "Must match a configured locale");
+      }
+      if (seen.has(locale)) {
+        fail(formPath, "Must be unique, ignoring letter case");
+      }
+      seen.add(locale);
+      return { locale, path: formPath, pathname: form };
+    });
+    return { path, pathname, forms };
+  });
+};
+
 const readDictionaryLimits = (value: unknown): Record<string, number> | undefined => {
   if (value === undefined) {
     return undefined;
@@ -149,11 +195,22 @@ export interface CheckedI18nConfig {
   readonly dictionaryLimits?: Record<string, number>;
 }
 
+/** Where locale routing puts the locale prefix. @internal */
+export type LocalePrefix = "always" | "except-default" | "when-ambiguous";
+
+const LOCALE_PREFIXES: readonly unknown[] = ["always", "except-default", "when-ambiguous"];
+
+const readLocalePrefix = (value: unknown): LocalePrefix =>
+  LOCALE_PREFIXES.includes(value)
+    ? (value as LocalePrefix)
+    : expectType("localePrefix", '"always", "except-default", or "when-ambiguous"', value);
+
 /** The checked configuration of locale routing, with locales trimmed. @internal */
 export interface CheckedLocaleRoutingConfig {
   readonly locales: string[];
   readonly defaultLocale: string;
-  readonly prefixDefaultLocale: boolean;
+  readonly localePrefix: LocalePrefix;
+  readonly pathnames: readonly CheckedPathnameEntry[];
 }
 
 /**
@@ -186,7 +243,8 @@ export const i18nConfig = (input: unknown): CheckedI18nConfig => {
 };
 
 /**
- * Checks the configuration of locale routing: the locales, the default locale and the default-prefix policy.
+ * Checks the configuration of locale routing: the locales, the default locale, the locale-prefix policy, and the shape of the
+ * translated-path table.
  *
  * @internal
  */
@@ -197,7 +255,8 @@ export const localeRoutingConfig = (input: unknown): CheckedLocaleRoutingConfig 
   return {
     locales,
     defaultLocale: readDefaultLocale(own(config, "defaultLocale"), locales),
-    prefixDefaultLocale: readBoolean("prefixDefaultLocale", own(config, "prefixDefaultLocale")),
+    localePrefix: readLocalePrefix(own(config, "localePrefix")),
+    pathnames: readPathnames(own(config, "pathnames"), locales),
   };
 };
 

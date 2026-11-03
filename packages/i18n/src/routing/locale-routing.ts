@@ -1,23 +1,35 @@
-import { hasAsciiControlCharacter } from "../core/string-validation";
 import { assertConfig, localeRoutingConfig } from "../locale/config-validators";
+import { findPathnameProblem, joinPathname, normalizeSegment, splitPathname } from "./path";
+import { buildPattern, compilePathnames, matchPattern, type Route } from "./pathnames";
 
-const MAX_PATHNAME_LENGTH = 8_192;
-
-/** Configuration snapshotted for locale-prefixed pathname parsing and generation. */
+/** Configuration snapshotted for parsing and generating localized pathnames. */
 export interface LocaleRoutingConfig<TLocale extends string> {
   /** The trimmed, case-insensitively matched locale used for unprefixed paths; its type is inferred from `locales` only. */
   defaultLocale: NoInfer<TLocale>;
   /** ASCII locale identifiers with alphanumeric hyphen-separated subtags, preserved in `localizeAll` order. */
   locales: readonly TLocale[];
-  /** Whether paths require a default-locale prefix, snapshotted when routing is created. */
-  prefixDefaultLocale: boolean;
+  /**
+   * Which paths start with their locale: `"always"` every path; `"except-default"` every path but the default
+   * locale's; `"when-ambiguous"` like `"except-default"`, except that a translated path with a fixed segment that no
+   * other locale's path could match drops the prefix, such as `/sobre`. A path the table doesn't list is read as the
+   * default locale's, so with `"when-ambiguous"`, `localize` throws when such a path would be read as another page.
+   */
+  localePrefix: "always" | "except-default" | "when-ambiguous";
+  /**
+   * Translated paths, keyed by the canonical path the application routes on, with each locale's form, such as
+   * `{ "/products/:id": { pt: "/produtos/:id" } }`. Paths have fixed segments and `:name` parameters, and every form
+   * uses the canonical path's parameters, in any order. Fixed segments match case-sensitively, Unicode matches its
+   * percent-encoding, and a fixed segment wins over a parameter. A locale or path the table doesn't list keeps the
+   * canonical words.
+   */
+  pathnames?: Readonly<Record<string, Readonly<Partial<Record<NoInfer<TLocale>, string>>>>> | undefined;
 }
 
 /** A pathname resolved to its canonical configured locale. */
 export interface ParsedLocalePath<TLocale extends string> {
   /** The trimmed canonical configured locale identified by the pathname. */
   locale: TLocale;
-  /** The absolute application pathname with the recognized locale prefix removed. */
+  /** The canonical application pathname: the locale prefix removed and translated segments read back. */
   pathname: string;
 }
 
@@ -29,95 +41,145 @@ export interface LocalizedPath<TLocale extends string> {
   pathname: string;
 }
 
-/** Pure operations for parsing and generating locale-prefixed application pathnames. */
+/** Pure operations for parsing and generating localized application pathnames. */
 export interface LocaleRouting<TLocale extends string> {
   /**
-   * Parses a pathname using configured, case-insensitive locale prefixes.
+   * Parses a URL's pathname into its locale and canonical pathname. Locale prefixes match case-insensitively, and a
+   * prefixed path is accepted even where the canonical URL has none, such as `/en/about` for `/about`.
    *
    * @param pathname - An absolute application pathname of at most 8,192 characters without a URL, query, or fragment.
-   * @returns The canonical locale and unprefixed pathname, or `undefined` when a required prefix is absent.
+   * @returns The locale and canonical pathname, or `undefined` when a required prefix is absent.
    * @throws {TypeError} When `pathname` is not a valid application pathname.
    */
   parse(pathname: string): ParsedLocalePath<TLocale> | undefined;
 
   /**
-   * Generates the canonical pathname for one supported locale.
+   * Generates the canonical URL pathname of a page for one supported locale.
    *
-   * @param pathname - An absolute application pathname of at most 8,192 characters without a URL, query, or fragment.
+   * @param pathname - A canonical application pathname of at most 8,192 characters without a URL, query, or fragment.
+   * A path that starts with a locale is read as that locale's URL, as `parse` reads it.
    * @param locale - A supported locale, trimmed and matched case-insensitively.
-   * @returns The pathname with the configured locale-prefix policy applied.
+   * @returns The pathname in the locale's words, with the configured locale-prefix policy applied.
    * @throws {TypeError} When `pathname` is not a valid application pathname.
-   * @throws {RangeError} When `locale` is unsupported or is not a string at runtime.
+   * @throws {RangeError} When `locale` is unsupported or is not a string at runtime, or when the result would be parsed
+   * as another page or locale, such as a page the table doesn't list whose path is another locale's translated path.
    */
   localize(pathname: string, locale: TLocale): string;
 
   /**
    * Generates localized pathnames for every locale in configuration order.
    *
-   * @param pathname - An absolute application pathname of at most 8,192 characters without a URL, query, or fragment.
+   * @param pathname - A canonical application pathname, read as `localize` reads it.
    * @returns Localized pathnames paired with their canonical locales.
    * @throws {TypeError} When `pathname` is not a valid application pathname.
+   * @throws {RangeError} When a result would be parsed as another page or locale, as with `localize`.
    */
   localizeAll(pathname: string): readonly LocalizedPath<TLocale>[];
 }
 
 /**
- * Creates runtime-neutral locale-prefixed pathname operations.
+ * Creates runtime-neutral operations for localized pathnames: a locale prefix, translated paths, or both.
  *
  * The factory trims locale identifiers and snapshots the validated configuration,
  * so later caller mutations do not affect routing behavior.
  *
- * @param config - Supported locales, default locale, and default-prefix policy.
+ * @param config - Supported locales, default locale, locale-prefix policy, and optional translated paths.
  * @returns Pure parsing and generation operations bound to an immutable configuration snapshot.
  * @throws {TypeError} When `config` is not a plain object, locales are empty, invalid conservative ASCII identifiers, duplicated
- * case-insensitively after trimming, the trimmed default locale is unsupported, or `prefixDefaultLocale` is not boolean.
+ * case-insensitively after trimming, the trimmed default locale is unsupported, `localePrefix` is not a supported policy, or `pathnames` has an
+ * invalid path, an unsupported locale, a path that starts with a locale, parameters that differ from the canonical
+ * path's, or two pages with the same path in one locale.
  */
 export const createLocaleRouting = <TLocale extends string>(
   config: LocaleRoutingConfig<TLocale>,
 ): LocaleRouting<TLocale> => {
-  const validated = assertConfig(localeRoutingConfig, config, "[I18n] Invalid locale routing configuration");
+  const subject = "[I18n] Invalid locale routing configuration";
+  const validated = assertConfig(localeRoutingConfig, config, subject);
   const locales = Object.freeze(validated.locales as TLocale[]);
-  const { prefixDefaultLocale } = validated;
+  const { localePrefix } = validated;
   const localeLookup = new Map<string, TLocale>(locales.map((locale) => [locale.toLowerCase(), locale]));
-  const normalizedDefaultLocale = validated.defaultLocale.trim().toLowerCase();
 
-  const findLocale = (value: string, shouldTrim = false): TLocale | undefined => {
-    const normalizedValue = (shouldTrim ? value.trim() : value).toLowerCase();
-    return localeLookup.get(normalizedValue);
-  };
-  const defaultLocale = findLocale(normalizedDefaultLocale) as TLocale;
+  const findLocale = (value: string | undefined, shouldTrim = false): TLocale | undefined =>
+    value === undefined ? undefined : localeLookup.get((shouldTrim ? value.trim() : value).toLowerCase());
+  const defaultLocale = findLocale(validated.defaultLocale, true)!;
+  const pathnames = assertConfig(
+    (entries: unknown) =>
+      compilePathnames(
+        entries as typeof validated.pathnames,
+        locales,
+        defaultLocale,
+        (segment) => findLocale(segment) !== undefined,
+      ),
+    validated.pathnames,
+    subject,
+  );
 
   const validatePathname = (pathname: string): void => {
-    if (
-      typeof pathname !== "string" ||
-      pathname.length === 0 ||
-      pathname.length > MAX_PATHNAME_LENGTH ||
-      !pathname.startsWith("/") ||
-      pathname.includes("//") ||
-      pathname.includes("?") ||
-      pathname.includes("#") ||
-      pathname.includes("\\") ||
-      hasAsciiControlCharacter(pathname) ||
-      /%(?![0-9a-f]{2})|%(?:0[0-9a-f]|1[0-9a-f]|25|2f|5c|7f)/i.test(pathname)
-    ) {
+    const problem = findPathnameProblem(pathname);
+
+    if (problem === "invalid") {
       throw new TypeError("[I18n] pathname must be a valid absolute application pathname");
     }
-
-    const hasDotSegment = pathname.split("/").some((segment) => [".", ".."].includes(segment.replaceAll(/%2e/gi, ".")));
-
-    if (hasDotSegment) {
+    if (problem === "dot-segment") {
       throw new TypeError("[I18n] pathname must not contain dot segments");
     }
   };
 
-  const removeLocalePrefix = (pathname: string): string => {
-    const [prefix, ...segments] = pathname.slice(1).split("/");
+  /** Finds the first route whose pattern matches, returning it with its parameters. */
+  const findRoute = (
+    routes: readonly Route<TLocale>[],
+    patternOf: (route: Route<TLocale>) => Route<TLocale>["canonical"],
+    segments: readonly string[],
+  ) => {
+    const keys = segments.map(normalizeSegment);
 
-    if (findLocale(prefix ?? "") === undefined) {
-      return pathname;
+    for (const route of routes) {
+      const parameters = matchPattern(patternOf(route), keys, segments);
+      if (parameters !== undefined) {
+        return { route, parameters };
+      }
+    }
+    return undefined;
+  };
+
+  /** Reads segments as a path in `locale`, returning the canonical segments; a path the table doesn't list is kept. */
+  const readPath = (segments: readonly string[], locale: TLocale): readonly string[] => {
+    const found = findRoute(pathnames.byLocale.get(locale)!, (route) => route.forms.get(locale)!, segments);
+    return found === undefined ? segments : buildPattern(found.route.canonical, found.parameters);
+  };
+
+  const parse = (pathname: string): ParsedLocalePath<TLocale> | undefined => {
+    validatePathname(pathname);
+    const { segments, hasTrailingSlash } = splitPathname(pathname);
+    const prefixLocale = findLocale(segments[0]);
+
+    if (prefixLocale !== undefined) {
+      return {
+        locale: prefixLocale,
+        pathname: joinPathname(readPath(segments.slice(1), prefixLocale), hasTrailingSlash),
+      };
+    }
+    if (localePrefix === "always") {
+      return undefined;
+    }
+    if (localePrefix === "when-ambiguous") {
+      const keys = segments.map(normalizeSegment);
+
+      for (const { route, locale } of pathnames.unprefixed) {
+        const parameters = matchPattern(route.forms.get(locale)!, keys, segments);
+        if (parameters !== undefined) {
+          return {
+            locale,
+            pathname: joinPathname(buildPattern(route.canonical, parameters), hasTrailingSlash),
+          };
+        }
+      }
     }
 
-    return segments.length === 0 || (segments.length === 1 && segments[0] === "") ? "/" : `/${segments.join("/")}`;
+    return {
+      locale: defaultLocale,
+      pathname: joinPathname(readPath(segments, defaultLocale), hasTrailingSlash),
+    };
   };
 
   const localize = (pathname: string, locale: TLocale): string => {
@@ -128,35 +190,42 @@ export const createLocaleRouting = <TLocale extends string>(
       throw new RangeError("[I18n] locale must be a supported string");
     }
 
-    const unprefixedPathname = removeLocalePrefix(pathname);
+    // An unprefixed path is canonical; a prefixed one is read as a path in its locale, so a URL can switch language.
+    const { segments, hasTrailingSlash } = splitPathname(pathname);
+    const prefixLocale = findLocale(segments[0]);
+    const canonical = prefixLocale === undefined ? segments : readPath(segments.slice(1), prefixLocale);
+    const found = findRoute(pathnames.byCanonical, (route) => route.canonical, canonical);
+    const localized =
+      found === undefined ? canonical : buildPattern(found.route.forms.get(canonicalLocale)!, found.parameters);
+    const isPrefixed =
+      localePrefix === "always" ||
+      (canonicalLocale !== defaultLocale &&
+        !(localePrefix === "when-ambiguous" && found?.route.unprefixed.has(canonicalLocale) === true));
+    const result = isPrefixed
+      ? joinPathname([canonicalLocale, ...localized], hasTrailingSlash && localized.length > 0)
+      : joinPathname(localized, hasTrailingSlash);
 
-    if (!prefixDefaultLocale && canonicalLocale === defaultLocale) {
-      return unprefixedPathname;
+    // A page the table doesn't list can have the path of a translated one; a link to it would open that page instead.
+    const readBack = parse(result);
+    const canonicalPathname = joinPathname(canonical, hasTrailingSlash);
+
+    if (
+      readBack?.locale !== canonicalLocale ||
+      splitPathname(readBack.pathname).segments.map(normalizeSegment).join("/") !==
+        canonical.map(normalizeSegment).join("/")
+    ) {
+      throw new RangeError(
+        `[I18n] ${JSON.stringify(canonicalPathname)} in ${JSON.stringify(canonicalLocale)} would be read as ` +
+          `${JSON.stringify(readBack?.pathname)} in ${JSON.stringify(readBack?.locale)}; pass a canonical path, such as ` +
+          "parse().pathname, or list the page in pathnames",
+      );
     }
 
-    return unprefixedPathname === "/" ? `/${canonicalLocale}` : `/${canonicalLocale}${unprefixedPathname}`;
+    return result;
   };
 
   return {
-    parse(pathname) {
-      validatePathname(pathname);
-      const [prefix] = pathname.slice(1).split("/");
-      const locale = findLocale(prefix ?? "");
-
-      if (locale === undefined) {
-        return prefixDefaultLocale
-          ? undefined
-          : {
-              locale: defaultLocale,
-              pathname,
-            };
-      }
-
-      return {
-        locale,
-        pathname: removeLocalePrefix(pathname),
-      };
-    },
+    parse,
     localize,
     localizeAll(pathname) {
       return locales.map((locale) => ({

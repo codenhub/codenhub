@@ -107,10 +107,10 @@ import { createAppI18n } from "./i18n";
 const routing = createLocaleRouting({
   locales: ["en", "pt"] as const,
   defaultLocale: "en",
-  prefixDefaultLocale: false,
+  localePrefix: "except-default",
 });
 
-// Your pages, keyed by their path without a locale.
+// Your pages, keyed by their canonical path: the path without a locale, in the words your code routes on.
 const pages = { "/": renderHome, "/about": renderAbout };
 
 const builds = Object.entries(pages).flatMap(([page, render]) => routing.localizeAll(page).map(({ locale, pathname }) => ({ locale, pathname, render })));

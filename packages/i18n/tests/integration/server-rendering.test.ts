@@ -135,7 +135,7 @@ describe("server rendering", () => {
     const routing = createLocaleRouting({
       defaultLocale: "en",
       locales: LOCALES,
-      prefixDefaultLocale: false,
+      localePrefix: "except-default",
     });
     const routes = routing.localizeAll("/about");
 
