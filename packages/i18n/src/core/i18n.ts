@@ -194,9 +194,11 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
 
   formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string {
     const { timeZone } = this.config;
-    return getDateTimeFormat(this.currentLocale, timeZone === undefined ? options : { timeZone, ...options }).format(
-      value,
-    );
+    // `timeZone: undefined`, as forwarded options often carry, names no zone, so the configured one still applies.
+    return getDateTimeFormat(
+      this.currentLocale,
+      timeZone === undefined || options?.timeZone !== undefined ? options : { ...options, timeZone },
+    ).format(value);
   }
 
   formatRelativeTime(
