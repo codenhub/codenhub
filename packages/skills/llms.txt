@@ -1,6 +1,6 @@
 # @codenhub/skills
 
-> Experimental AI agent skill assets, a multi-harness installer, and synchronous Node.js utilities for discovering and copying skill directories.
+> AI agent skill assets, a multi-harness installer, and synchronous Node.js utilities for discovering and copying skill directories.
 
 Requires Node.js 24 or newer. Treat `skills/**` Markdown as shipped agent
 instructions rather than package-documentation pages. Review cleanup and path

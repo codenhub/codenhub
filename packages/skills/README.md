@@ -2,8 +2,6 @@
 
 A curated collection of AI agent skill assets, an installer for supported agent harnesses, and utilities for discovering and copying skill directories.
 
-> **Experimental:** The CLI workflow, harness support, install destinations, and bundled skill content may change as agent skill conventions evolve.
-
 ## Installation
 
 Run the installer without adding it to a project:

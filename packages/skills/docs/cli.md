@@ -63,7 +63,7 @@ The installer creates a child directory named after each skill ID. By default, i
 
 Destinations selected through a Codex label receive the complete bundled skill directory, including an `agents` directory when a skill has one. Every other destination excludes entries whose base name is exactly `agents` at any depth. When a Codex label shares a destination with other selected labels, the shared copy keeps the `agents` directory. Other references, examples, notices, and supporting files are copied unchanged.
 
-The package does not validate that a harness can interpret every bundled file. Harness conventions and bundled skill contents are part of the package's experimental surface.
+The package does not validate that a harness can interpret every bundled file.
 
 ## Destructive Cleanup
 
