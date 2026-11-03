@@ -158,6 +158,35 @@ describe.each([false, true])("failure recovery (async: %s)", (isAsync) => {
   });
 });
 
+describe.each([false, true])("record shape (async: %s)", (isAsync) => {
+  function setup(stored: unknown, onError = vi.fn(), validate?: (raw: unknown) => raw is Settings) {
+    let data = stored;
+    const driver = { get: () => data, set: (value: Settings) => ((data = structuredClone(value)), true) };
+    const store = isAsync
+      ? createAsyncStore({
+          storageKey: "settings",
+          initialState,
+          onError,
+          validate,
+          driver: { get: async () => driver.get(), set: async (value: Settings) => driver.set(value) },
+        })
+      : createStore({ storageKey: "settings", initialState, onError, validate, driver });
+    return { store, onError, stored: () => data };
+  }
+
+  it.each([
+    ["string", "hi"],
+    ["number", 5],
+    ["boolean", true],
+  ])("reports a stored %s as a validation failure without a validator", async (_kind, value) => {
+    const { store, onError, stored } = setup(value);
+    expect(await store.get()).toEqual(initialState);
+    expect(onError).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ code: "store.validation_failed" }));
+    expect(await store.patch({ count: 2 })).toEqual({ ...initialState, count: 2 });
+    expect(stored()).toEqual({ ...initialState, count: 2 });
+  });
+});
+
 describe.each([false, true])("empty storage key (async: %s)", (isAsync) => {
   it("reads and writes under the empty key", async () => {
     const onError = vi.fn();

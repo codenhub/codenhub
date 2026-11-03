@@ -70,7 +70,7 @@ export function createAsyncStore<TSchema extends object>(
     if (parsed === null || parsed === undefined) {
       return { state: structuredClone(initialState), readFailed: false };
     }
-    if (options.validate !== undefined && !options.validate(parsed)) {
+    if (typeof parsed !== "object" || (options.validate !== undefined && !options.validate(parsed))) {
       options.onError?.(failureEvent("store.validation_failed", storageKey));
       return { state: structuredClone(initialState), readFailed: false };
     }

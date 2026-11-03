@@ -182,7 +182,8 @@ export interface CreateStoreOptions<TSchema extends object> {
   driver?: StorageDriver<TSchema>;
 
   /**
-   * Optional runtime validator for parsed JSON.
+   * Optional runtime validator for parsed JSON. A stored value that is not an object is
+   * rejected as `store.validation_failed` before this runs.
    *
    * @param raw - The parsed value (typed as `unknown`).
    * @returns `true` if the value matches the expected schema.
@@ -336,7 +337,8 @@ export interface CreateAsyncStoreOptions<TSchema extends object> {
   driver: AsyncStorageDriver<TSchema>;
 
   /**
-   * Optional runtime validator for parsed JSON.
+   * Optional runtime validator for parsed JSON. A stored value that is not an object is
+   * rejected as `store.validation_failed` before this runs.
    *
    * @param raw - The parsed value (typed as `unknown`).
    * @returns `true` if the value matches the expected schema.

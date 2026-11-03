@@ -69,7 +69,7 @@ The queue coordinates one instance only. Separate stores and external writers ca
 
 ## Validation and failures
 
-TypeScript does not validate persisted values. Without `validate`, a non-null driver value is trusted as `TSchema` after cloning. Supply a predicate when old versions, user edits, or another writer may have stored a different shape:
+TypeScript does not validate persisted values. A stored value that is not an object, such as a string another script wrote under the same key, always reports `store.validation_failed`. Without `validate`, any other non-null driver value is trusted as `TSchema` after cloning. Supply a predicate when old versions, user edits, or another writer may have stored a different shape:
 
 ```ts
 import { createStore, type StoreErrorEvent } from "@codenhub/store";

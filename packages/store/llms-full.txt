@@ -178,7 +178,7 @@ The queue coordinates one instance only. Separate stores and external writers ca
 
 ## Validation and failures
 
-TypeScript does not validate persisted values. Without `validate`, a non-null driver value is trusted as `TSchema` after cloning. Supply a predicate when old versions, user edits, or another writer may have stored a different shape:
+TypeScript does not validate persisted values. A stored value that is not an object, such as a string another script wrote under the same key, always reports `store.validation_failed`. Without `validate`, any other non-null driver value is trusted as `TSchema` after cloning. Supply a predicate when old versions, user edits, or another writer may have stored a different shape:
 
 ```ts
 import { createStore, type StoreErrorEvent } from "@codenhub/store";
@@ -383,6 +383,7 @@ Return to [Core stores](docs/core-stores.md#validation-and-failures) for validat
 - **Breaking.** Node.js 24 or newer is required.
 - An exception thrown by `onError` now reaches the caller, and the callback is called once. It used to be caught, and could be called twice.
 - **Breaking.** The Node JSON file drivers throw during store creation when a second storage key binds to a file already bound to another key in the process. The file holds one record, so the two stores used to overwrite each other.
+- A stored value that is not an object reports `store.validation_failed` and falls back, even without `validate`. It used to be returned as the record, and `patch` spread a string's characters into it.
 - `createAsyncStore` copies the value given to `set`, `patch`, or `setItem` when called, so changing the object afterwards no longer changes what is written. A value that cannot be copied rejects the returned promise.
 
 ## Fixed

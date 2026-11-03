@@ -20,6 +20,12 @@ When a driver throws or rejects during a read, `patch`, `setItem`, and `removeIt
 
 Rejected: overwrite with fallback plus changes after an access failure, because that wipes unrelated fields after a transient failure. A full `set` remains an explicit replacement and does not read first.
 
+## Non-object stored values fail validation
+
+`TSchema extends object`, so a stored primitive can never be a valid record. The store reports `store.validation_failed` for a non-object value whether or not `validate` is supplied, instead of returning it as the record and letting `patch` spread a string's characters into the next write.
+
+Rejected: trusting the value when `validate` is absent, because no schema can accept it and the failure mode corrupts the next write.
+
 ## One storage key per Node JSON file
 
 The file drivers hold one record per file and ignore the storage key inside it. Binding a second key to a file already bound to another key in the process throws during store creation, compared by `path.resolve`. Without the check, two stores on one file silently overwrote each other and each read the other's record.
