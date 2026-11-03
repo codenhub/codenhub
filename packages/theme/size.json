@@ -1,7 +1,112 @@
 {
-  "bundler": "rolldown@1.2.14",
+  "bundler": "rolldown@1.2.15",
   "entrypoints": {
     ".": {
+      "exports": {
+        "THEME_CHANGE_EVENT": {
+          "files": {
+            "(unattributed)": {
+              "bytes": 32
+            },
+            "dist/index.js": {
+              "bytes": 22,
+              "declarations": {
+                "e": 16,
+                "(top level)": 6
+              }
+            }
+          },
+          "gzip": 74,
+          "minified": 54
+        },
+        "createTheme": {
+          "files": {
+            "dist/index.js": {
+              "bytes": 10736,
+              "declarations": {
+                "g": 2619,
+                "A": 2097,
+                "T": 1081,
+                "S": 515,
+                "s": 492,
+                "O": 465,
+                "E": 457,
+                "c": 453,
+                "v": 372,
+                "u": 322,
+                "D": 211,
+                "y": 211,
+                "i": 171,
+                "k": 159,
+                "l": 157,
+                "x": 131,
+                "_": 119,
+                "w": 114,
+                "a": 100,
+                "m": 76,
+                "b": 74,
+                "o": 73,
+                "h": 64,
+                "p": 48,
+                "d": 43,
+                "n": 33,
+                "f": 30,
+                "C": 21,
+                "(top level)": 12,
+                "t": 9,
+                "r": 7
+              }
+            },
+            "(unattributed)": {
+              "bytes": 25
+            }
+          },
+          "gzip": 3665,
+          "minified": 10761
+        }
+      },
+      "files": {
+        "dist/index.js": {
+          "bytes": 10740,
+          "declarations": {
+            "g": 2619,
+            "A": 2097,
+            "T": 1081,
+            "S": 515,
+            "s": 492,
+            "O": 465,
+            "E": 457,
+            "c": 453,
+            "v": 372,
+            "u": 322,
+            "D": 211,
+            "y": 211,
+            "i": 171,
+            "k": 159,
+            "l": 145,
+            "x": 131,
+            "_": 119,
+            "w": 114,
+            "a": 100,
+            "m": 76,
+            "b": 74,
+            "o": 73,
+            "h": 64,
+            "p": 48,
+            "d": 43,
+            "n": 33,
+            "f": 30,
+            "C": 21,
+            "e": 16,
+            "(top level)": 12,
+            "t": 9,
+            "r": 7
+          }
+        },
+        "(unattributed)": {
+          "bytes": 49
+        }
+      },
       "gzip": 3694,
       "minified": 10789,
       "sha256": "ac0af38125905a44896bec404f72dae874912a5c710b7b699c03ed940a928d2a"
