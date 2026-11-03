@@ -21,6 +21,13 @@ describe("catalogPackages", () => {
     });
   });
 
+  it("links GitHub from the manifest repository, not its homepage", () => {
+    // `@codenhub/error` sets `homepage` to this site, not GitHub.
+    const error = catalogPackages.find((entry) => entry.name === "@codenhub/error");
+
+    expect(error?.links.github).toBe("https://github.com/codenhub/codenhub/tree/main/packages/error");
+  });
+
   it("omits private and unlisted packages", () => {
     expect(catalogPackages.some((entry) => entry.name === "@codenhub/tools")).toBe(false);
     expect(catalogPackages.some((entry) => entry.name === "@codenhub/ui-kit")).toBe(false);
