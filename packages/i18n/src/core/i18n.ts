@@ -134,7 +134,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     registerI18nInternals(this, {
       init: (options) => this.applyInit(options as I18nInitOptions<TLocale>),
       lookup: (key) => {
-        const found = this.lookup(key);
+        const found = this.lookup("translate", key);
         return found === undefined ? undefined : this.format(key, found, {});
       },
     });
@@ -178,14 +178,14 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
 
   translate(key: string, params?: MessageValues): string {
     const count = params !== undefined && Object.hasOwn(params, "count") ? params["count"] : undefined;
-    const found = this.lookup(key, typeof count === "number" ? count : undefined);
+    const found = this.lookup("translate", key, typeof count === "number" ? count : undefined);
 
     return found === undefined ? key.trim() : this.format(key, found, params ?? {});
   }
 
   has(key: string): key is TKey {
     // Any count finds a plural group, since every group has an `other` form to fall back to.
-    return this.lookup(key, 0, false) !== undefined;
+    return this.lookup("has", key, 0) !== undefined;
   }
 
   formatNumber(value: number | bigint, options?: Intl.NumberFormatOptions): string {
@@ -310,12 +310,12 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   }
 
   /**
-   * Finds a key, or with a count, a plural group's form, through the active fallback chain. A miss is reported unless
-   * `shouldReport` is false.
+   * Finds a key, or with a count, a plural group's form, through the active fallback chain. Errors name `caller`, and a
+   * miss is reported only for `translate`, since `has` exists to check silently.
    */
-  private lookup(key: string, count?: number, shouldReport = true): FoundTranslation<TLocale> | undefined {
+  private lookup(caller: "translate" | "has", key: string, count?: number): FoundTranslation<TLocale> | undefined {
     if (!this.isReadyState || this.dictionaries === undefined) {
-      throw new Error("[I18n] translate() requires successful initialization.");
+      throw new Error(`[I18n] ${caller}() requires successful initialization.`);
     }
 
     if (typeof key !== "string" || key.length === 0) {
@@ -342,7 +342,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       }
     }
 
-    if (shouldReport) {
+    if (caller === "translate") {
       this.reportMissingKey(normalizedKey);
     }
     return undefined;

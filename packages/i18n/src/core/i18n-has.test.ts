@@ -65,7 +65,7 @@ describe("has", () => {
     const { i18n } = create();
     const { has } = i18n;
 
-    expect(() => has("greeting")).toThrow(/initialization/);
+    expect(() => has("greeting")).toThrow("[I18n] has() requires successful initialization.");
     await i18n.init();
     expect(has("greeting")).toBe(true);
     expect(() => has("")).toThrow(TypeError);
