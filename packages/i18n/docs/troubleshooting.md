@@ -87,6 +87,10 @@ The path `localize()` would build opens a different page, or the same page in an
 - **You passed a URL, not a canonical path.** `localize("/sobre", "en")` takes `/sobre` as the canonical path of an English page. If `/sobre` is the Portuguese about page's URL, read it first: `localize(routing.parse("/sobre").pathname, "en")`.
 - **A page the table doesn't list has another page's translated path.** With `localePrefix: "when-ambiguous"`, an English page at `/sobre` clashes with a Portuguese `/sobre`. Rename one of them, list the page in `pathnames`, or keep the prefix with `"except-default"`. [The risk you take on](localized-urls.md#the-risk-you-take-on) explains why routing can't catch this sooner.
 
+## `localize()` throws `RangeError`: "would be longer than 8,192 characters"
+
+The path you passed is valid, but the locale prefix or the translated words make the result longer than `parse()` accepts. Shorten the path; a link that long is also likely to be cut off by servers and proxies.
+
 ## The browser binding warns or rejects
 
 - **"The manager already has a browser binding"**: you called `initializeBrowserI18n()` twice for the same manager. Call `disconnect()` on the first binding, or keep one.

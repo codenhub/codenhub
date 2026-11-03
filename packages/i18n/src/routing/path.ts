@@ -1,6 +1,7 @@
 import { hasAsciiControlCharacter } from "../core/string-validation";
 
-const MAX_PATHNAME_LENGTH = 8_192;
+/** The longest pathname accepted. @internal */
+export const MAX_PATHNAME_LENGTH = 8_192;
 const DISALLOWED_ESCAPE_PATTERN = /%(?![0-9a-f]{2})|%(?:0[0-9a-f]|1[0-9a-f]|25|2f|5c|7f)/i;
 const PERCENT_ESCAPE_PATTERN = /%[0-9a-f]{2}/gi;
 

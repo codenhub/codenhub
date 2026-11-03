@@ -188,6 +188,20 @@ describe("createLocaleRouting", () => {
     expect(() => routing.parse(`/${"a".repeat(8_192)}`)).toThrow(TypeError);
   });
 
+  it("should throw a RangeError when the locale prefix makes a valid path too long", () => {
+    const routing = createLocaleRouting({
+      defaultLocale: "en-US",
+      locales: LOCALES,
+      localePrefix: "always",
+    });
+    const pathname = `/${"a".repeat(8_191)}`;
+
+    expect(() => routing.localize(pathname, "pt-BR")).toThrow(RangeError);
+    expect(() => routing.localize(pathname, "pt-BR")).toThrow(
+      '[I18n] the path in "pt-BR" would be longer than 8,192 characters',
+    );
+  });
+
   it("should prefix its errors with the package name", () => {
     const routing = createLocaleRouting({
       defaultLocale: "en-US",

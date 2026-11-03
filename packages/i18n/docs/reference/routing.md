@@ -60,7 +60,7 @@ Generates the canonical URL pathname of a page for one supported locale.
 **Throws**
 
 - `TypeError` — When `pathname` is not a valid application pathname.
-- `RangeError` — When `locale` is unsupported or is not a string at runtime, or when the result would be parsed as another page or locale, such as a page the table doesn't list whose path is another locale's translated path.
+- `RangeError` — When `locale` is unsupported or is not a string at runtime, when the result would be longer than 8,192 characters, or when the result would be parsed as another page or locale, such as a page the table doesn't list whose path is another locale's translated path.
 
 #### LocaleRouting › localizeAll
 
@@ -79,7 +79,7 @@ Generates localized pathnames for every locale in configuration order.
 **Throws**
 
 - `TypeError` — When `pathname` is not a valid application pathname.
-- `RangeError` — When a result would be parsed as another page or locale, as with `localize`.
+- `RangeError` — When a result would be too long or be parsed as another page or locale, as with `localize`.
 
 #### LocaleRouting › parse
 

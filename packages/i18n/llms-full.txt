@@ -1002,6 +1002,8 @@ To keep a crafted URL from reaching a different page than the one checked, every
 
 Ordinary escapes, such as `%20`, are fine, and a trailing slash is kept: `/pt/sobre/` parses to `/about/`.
 
+`localize()` throws a `RangeError` instead when the path it builds would be longer than 8,192 characters, as a path just under the limit can be once its prefix or translated words are added.
+
 ## What routing leaves to your framework
 
 Routing reads and builds paths. Your framework or server still registers the routes, redirects, navigates, and renders. It also doesn't know about a base path: if your site lives under `/docs`, remove that before calling `parse()` and add it back after `localize()`.
@@ -1093,6 +1095,10 @@ The path `localize()` would build opens a different page, or the same page in an
 - **You passed a URL, not a canonical path.** `localize("/sobre", "en")` takes `/sobre` as the canonical path of an English page. If `/sobre` is the Portuguese about page's URL, read it first: `localize(routing.parse("/sobre").pathname, "en")`.
 - **A page the table doesn't list has another page's translated path.** With `localePrefix: "when-ambiguous"`, an English page at `/sobre` clashes with a Portuguese `/sobre`. Rename one of them, list the page in `pathnames`, or keep the prefix with `"except-default"`. [The risk you take on](docs/localized-urls.md#the-risk-you-take-on) explains why routing can't catch this sooner.
 
+## `localize()` throws `RangeError`: "would be longer than 8,192 characters"
+
+The path you passed is valid, but the locale prefix or the translated words make the result longer than `parse()` accepts. Shorten the path; a link that long is also likely to be cut off by servers and proxies.
+
 ## The browser binding warns or rejects
 
 - **"The manager already has a browser binding"**: you called `initializeBrowserI18n()` twice for the same manager. Call `disconnect()` on the first binding, or keep one.
@@ -1130,6 +1136,7 @@ The path `localize()` would build opens a different page, or the same page in an
 - **Breaking, types only.** Only `locales` sets the locale type; `defaultLocale` and a callback parameter typed `string`, such as `loadLocale: (locale: string) => …`, no longer widen it. A configuration kept in a variable without `as const` on `defaultLocale` is now a compile error, where before it silently accepted any string as a locale.
 
 - **Breaking.** `createLocaleRouting` takes `localePrefix` instead of `prefixDefaultLocale`: `"always"` for `true`, `"except-default"` for `false`, or the new `"when-ambiguous"`.
+- **Breaking.** `localize()` and `localizeAll()` throw a `RangeError` when the path they build would be longer than 8,192 characters, where they returned a path that `parse()` rejects.
 
 ## Migrating from 0.1.0
 

@@ -1,5 +1,5 @@
 import { assertConfig, localeRoutingConfig } from "../locale/config-validators";
-import { findPathnameProblem, joinPathname, normalizeSegment, splitPathname } from "./path";
+import { findPathnameProblem, joinPathname, MAX_PATHNAME_LENGTH, normalizeSegment, splitPathname } from "./path";
 import { buildPattern, compilePathnames, matchPattern, type Route } from "./pathnames";
 
 /** Configuration snapshotted for parsing and generating localized pathnames. */
@@ -61,8 +61,9 @@ export interface LocaleRouting<TLocale extends string> {
    * @param locale - A supported locale, trimmed and matched case-insensitively.
    * @returns The pathname in the locale's words, with the configured locale-prefix policy applied.
    * @throws {TypeError} When `pathname` is not a valid application pathname.
-   * @throws {RangeError} When `locale` is unsupported or is not a string at runtime, or when the result would be parsed
-   * as another page or locale, such as a page the table doesn't list whose path is another locale's translated path.
+   * @throws {RangeError} When `locale` is unsupported or is not a string at runtime, when the result would be longer
+   * than 8,192 characters, or when the result would be parsed as another page or locale, such as a page the table
+   * doesn't list whose path is another locale's translated path.
    */
   localize(pathname: string, locale: TLocale): string;
 
@@ -72,7 +73,7 @@ export interface LocaleRouting<TLocale extends string> {
    * @param pathname - A canonical application pathname, read as `localize` reads it.
    * @returns Localized pathnames paired with their canonical locales.
    * @throws {TypeError} When `pathname` is not a valid application pathname.
-   * @throws {RangeError} When a result would be parsed as another page or locale, as with `localize`.
+   * @throws {RangeError} When a result would be too long or be parsed as another page or locale, as with `localize`.
    */
   localizeAll(pathname: string): readonly LocalizedPath<TLocale>[];
 }
@@ -204,6 +205,12 @@ export const createLocaleRouting = <TLocale extends string>(
     const result = isPrefixed
       ? joinPathname([canonicalLocale, ...localized], hasTrailingSlash && localized.length > 0)
       : joinPathname(localized, hasTrailingSlash);
+
+    if (result.length > MAX_PATHNAME_LENGTH) {
+      throw new RangeError(
+        `[I18n] the path in ${JSON.stringify(canonicalLocale)} would be longer than 8,192 characters`,
+      );
+    }
 
     // A page the table doesn't list can have the path of a translated one; a link to it would open that page instead.
     const readBack = parse(result);
