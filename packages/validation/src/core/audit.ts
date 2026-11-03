@@ -7,7 +7,9 @@ export interface AuditFinding {
   /**
    * What is missing. `"unbounded_size"`: an array, a set, a map or a record without a `max` or `length`,
    * a tuple with `rest` and no `max`, or a `file` without a `maxSize`. `"unbounded_text"`: text without a `max` or `length`, a format that
-   * does not bound its own text, or `json` or `searchParams` given text no step before them bounded.
+   * does not bound its own text, `json` or `searchParams` given text no step before them bounded, or a
+   * `coerceBigint` without a bound on each side, `min` or `gt` and `max` or `lt`, which limit the digits it
+   * converts.
    * `"raised_limit"`: a `lazy` whose `maxDepth` or `maxCalls` is above its default. `"unreadable"`: a
    * validator that has no description, such as one written by hand, so whether it bounds its input cannot
    * be told.
@@ -45,6 +47,9 @@ const COLLECTIONS = new Set(["array", "set", "map", "record"]);
 
 /** The defaults of `lazy`, above which a limit is reported as raised. */
 const DEFAULT_LIMITS: Readonly<Record<string, number>> = { maxDepth: 128, maxCalls: 10_000 };
+
+/** How many `lazy` parts may be walked at once, one inside another, before a schema is taken to build itself anew. */
+const MAX_OPEN_LAZY = 64;
 
 const hasBound = (record: Description): boolean =>
   record.options?.["max"] !== undefined || record.options?.["length"] !== undefined;
@@ -96,8 +101,14 @@ function boundsItself(record: Description | undefined): boolean {
  * `rest` has its length already. Formats whose input is bounded by what they accept, such as `email`,
  * `uuid` and `ip`, need none; others, such as `url`, `hex` and `jwt`, are text like any other.
  *
+ * Text read by `coerceBigint` needs a bound on each side, since converting it takes longer than linear
+ * time in its length, and a bound limits the digits converted.
+ *
  * It reads the schema and never calls it. Whether a `max` is small enough is not its to judge: any number
- * says someone decided. A check is not read, since it runs on a value that already passed.
+ * says someone decided. A check is not read, since it runs on a value that already passed. It lists the
+ * bounds an option can set, so it does not report the keys an `object` with `unknownKeys: "passthrough"`
+ * keeps, nor what `unknown()` accepts: neither has an option that bounds it. Use `"strip"` or `"strict"`
+ * for keys the schema does not name, and a validator of the type you expect in place of `unknown()`.
  *
  * @example
  * ```ts
@@ -111,7 +122,8 @@ function boundsItself(record: Description | undefined): boolean {
  *
  * @param validator - Any validator.
  * @returns Every place a bound is missing, in the order the schema lists them; empty when there is none.
- * @throws {TypeError} When `validator` is not a function.
+ * @throws {TypeError} When `validator` is not a function, or when a recursive schema is built anew at every
+ * level, as `lazy(() => build())` builds it, so that its parts never repeat: build it once and refer to it.
  */
 export function audit(validator: AnyValidator): readonly AuditFinding[] {
   assertFunction("validator", validator);
@@ -208,6 +220,18 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
         // What is sent is what the input reads; the output reads what the program made of it.
         inner("input");
         return;
+      case "coerce": {
+        // Text read as a bigint takes longer than linear time to convert, unless a bound on each side
+        // limits its digits.
+        const strict = describe(record["inner"] as AnyValidator);
+        const isOpen = (low: string, high: string): boolean =>
+          strict?.options?.[low] === undefined && strict?.options?.[high] === undefined;
+        if (!bounded && strict?.kind === "bigint" && (isOpen("min", "gt") || isOpen("max", "lt"))) {
+          report("unbounded_text");
+        }
+        inner();
+        return;
+      }
       case "json":
       case "searchParams":
         if (!bounded) {
@@ -225,6 +249,13 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
           report("raised_limit");
         }
         if (!walking.has(getter)) {
+          // A getter written where the schema is built, as in `lazy(() => build())`, is a new function at
+          // every level, and would be followed until the stack ran out.
+          if (walking.size >= MAX_OPEN_LAZY) {
+            throw new TypeError(
+              "audit found a recursive schema that is built anew at every level. Build it once and refer to it",
+            );
+          }
           walking.add(getter);
           walk(getter(), path, bounded);
           walking.delete(getter);

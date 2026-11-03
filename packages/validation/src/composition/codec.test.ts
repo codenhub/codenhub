@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { check } from "../builders/check";
+import { coerceBigint } from "../coercion/coerce-bigint";
 import { coerceNumber } from "../coercion/coerce-number";
 import { describe as describeValidator } from "../core/describe";
 import type { Validator } from "../core/types";
@@ -87,6 +88,39 @@ describe("encode", () => {
   it("should write a value back through a codec, and check it is one the validator could produce", () => {
     expect(valueOf(encode(isoDate, moment))).toBe("2026-10-07T12:00:00.000Z");
     expect(codesOf(encode(isoDate, new Date(Number.NaN)))).toEqual(["invalid_type"]);
+  });
+
+  it("should write back a codec inside the output of another, before the outer encode runs", () => {
+    const outer = codec(string(), object({ at: isoDate }), {
+      decode: (text) => JSON.parse(text) as { at: string },
+      encode: (value) => JSON.stringify(value),
+    });
+    expect(valueOf(encode(outer, { at: moment }))).toBe('{"at":"2026-10-07T12:00:00.000Z"}');
+    expect(issuesOf(encode(outer, { at: new Date(Number.NaN) })).map((issue) => issue.path)).toEqual([["at"]]);
+  });
+
+  it("should write back a codec whose output is written by hand or a transform, checking the value with it", () => {
+    const byHand: Validator<number> = (input) =>
+      typeof input === "number"
+        ? { ok: true, value: input }
+        : { ok: false, error: { issues: [{ code: "invalid_type", path: [], params: { expected: "number" } }] } };
+    for (const output of [byHand, transform(number(), (value) => value)]) {
+      const counted = codec(string(), output, { decode: Number, encode: String });
+      expect(valueOf(encode(counted, 5))).toBe("5");
+      expect(codesOf(encode(counted, "5" as never))).toEqual(["invalid_type"]);
+    }
+  });
+
+  it("should give encode the value as its output writes it back, not as the output decodes it", () => {
+    // `decimal` writes 5n back as "5" before `encode` runs, so `encode` receives the text.
+    const doubled = codec(number(), decimal, {
+      decode: (value) => String(value),
+      encode: (value) => {
+        expectTypeOf(value).toEqualTypeOf<string>();
+        return Number(value);
+      },
+    });
+    expect(valueOf(encode(doubled, 5n))).toBe(5);
   });
 
   it("should write back every composer around a codec", () => {
@@ -238,5 +272,18 @@ describe("encode", () => {
       new TypeError("encode cannot write back a validator written by hand at []. Use a codec there"),
     );
     expect(() => encode(undefined as never, 1)).toThrow(TypeError);
+  });
+
+  it("should throw for a bigint that json cannot write, naming its place", () => {
+    expect(() => encode(json(object({ id: coerceBigint() })), { id: 12n })).toThrow(
+      new TypeError("encode cannot write back a bigint as JSON at id. Use a codec there"),
+    );
+    const body = object({ body: json(object({ ids: array(coerceBigint()) })) });
+    expect(() => encode(body, { body: { ids: [1n, 2n] } })).toThrow(
+      new TypeError("encode cannot write back a bigint as JSON at body.ids[0]. Use a codec there"),
+    );
+    expect(() => encode(json(coerceBigint()), 1n)).toThrow(
+      new TypeError("encode cannot write back a bigint as JSON at the root. Use a codec there"),
+    );
   });
 });

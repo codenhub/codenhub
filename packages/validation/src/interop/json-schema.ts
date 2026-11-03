@@ -47,22 +47,39 @@ export interface JsonSchemaOptions {
   target?: "draft-2020-12" | "draft-07" | undefined;
 }
 
-/** The formats JSON Schema names otherwise than this package does. Any other is written under its own name. */
-const FORMAT_NAMES: Readonly<Record<string, string>> = {
-  url: "uri",
-  datetime: "date-time",
-  isoDate: "date",
-  domain: "hostname",
+/**
+ * The formats JSON Schema names otherwise than this package does, for the input and the output side. An
+ * empty name is a format whose text the format of that name may refuse, written with none: RFC 3339's
+ * `time` needs an offset and its `duration` has no fraction and no weeks beside days, a URL may hold `|`,
+ * which a URI may not, and an IPv6 address a zone, `fe80::1%eth0`, which `ipv6` refuses. An `email` and a
+ * `domain` read Unicode and produce ASCII, so only their output is `email` or `hostname`: `idn-email` and
+ * `idn-hostname` would fit their input, but ajv-formats has neither, and Ajv in strict mode refuses to
+ * compile a format it does not know. Any other format is written under its own name.
+ */
+const FORMAT_NAMES: Readonly<Record<string, readonly [input: string, output: string]>> = {
+  url: ["", ""],
+  ip: ["", ""],
+  time: ["", ""],
+  duration: ["", ""],
+  datetime: ["date-time", "date-time"],
+  isoDate: ["date", "date"],
+  email: ["", "email"],
+  domain: ["", "hostname"],
 };
 
-/** What each coercing validator accepts beside its own type, by the kind of its strict validator. */
+/**
+ * What each coercing validator accepts beside its own type, by the kind of its strict validator. A
+ * `bigint` and a `date` are no JSON value, so for them it is all the coercion accepts.
+ */
 const COERCED_TYPES: Readonly<Record<string, readonly string[]>> = {
-  string: ["string", "number", "boolean"],
-  number: ["number", "string"],
-  boolean: ["boolean", "string", "number"],
+  string: ["number", "boolean"],
+  number: ["string"],
+  boolean: ["string", "number"],
   bigint: ["integer", "string"],
   date: ["string", "integer"],
 };
+
+const OPTION_NAMES = ["io", "unrepresentable", "target"];
 
 /** How many definitions may be open at once, one inside another, before a schema is taken to build itself anew. */
 const MAX_OPEN_DEFINITIONS = 64;
@@ -70,7 +87,24 @@ const MAX_OPEN_DEFINITIONS = 64;
 const isUndefinedLiteral = (record: Description | undefined): boolean =>
   record?.kind === "literal" && record["value"] === undefined;
 
-const escapeForPattern = (text: string): string => text.replace(/[\\^$.*+?()[\]{}|/-]/g, String.raw`\$&`);
+// Only the characters Unicode mode, in which a schema reads a pattern, allows escaped: `\-` is an error there.
+const escapeForPattern = (text: string): string => text.replace(/[\\^$.*+?()[\]{}|/]/g, String.raw`\$&`);
+
+/**
+ * Whether a pattern written without the `u` flag means the same in Unicode mode, but for what `.` and a
+ * negated class match. `\u{41}` and `\p{L}` are escapes only there, and text with braces without it.
+ */
+const readsAlikeInUnicode = (source: string): boolean => {
+  if (/\\[pPu]\{/.test(source)) {
+    return false;
+  }
+  try {
+    RegExp(source, "u");
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 const isJsonPrimitive = (value: unknown): boolean =>
   value === null || typeof value === "string" || typeof value === "boolean" || Number.isFinite(value);
@@ -84,7 +118,13 @@ const isJsonPrimitive = (value: unknown): boolean =>
  * factories can be written. It is written so that a value the validator accepts passes it, with the
  * exceptions below, and it accepts some the validator refuses, since a validator checks more than a
  * schema can say: a format's exact rules, such as which hosts of an `email` are public, are written as
- * the nearest JSON Schema `format`.
+ * the nearest JSON Schema `format`, and with none where that format refuses text the validator accepts,
+ * as `time` refuses `12:00`. A format that reads Unicode and produces ASCII, such as `email`, is written
+ * with no format on the input side and as `email` on the output side.
+ *
+ * A schema reads a `pattern` in Unicode mode, the `u` flag, so one written without it is written as it is
+ * when it means the same there, where `.` and a negated class match a whole character rather than half of
+ * an emoji, and cannot be written otherwise, as `/^\@x$/`, which is an error in that mode, cannot.
  *
  * The exceptions are where a validator cleans a value before it checks it, which is not written.
  * `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no
@@ -104,7 +144,7 @@ const isJsonPrimitive = (value: unknown): boolean =>
  * //   type: "object",
  * //   properties: {
  * //     name: { type: "string", minLength: 2 },
- * //     email: { type: "string", format: "email" },
+ * //     email: { type: "string" },
  * //     age: { type: "integer" },
  * //   },
  * //   required: ["name", "email"],
@@ -112,17 +152,26 @@ const isJsonPrimitive = (value: unknown): boolean =>
  * ```
  *
  * @param validator - A validator made by a factory of this package.
- * @param options - Which side to write, and what to do with a part that cannot be written.
+ * @param options - Which side to write, and what to do with a part that cannot be written. `null` is no
+ * options.
  * @returns The schema, as a new plain object.
  * @throws {TypeError} When a part cannot be written and `unrepresentable` is `"throw"`, naming the part
- * and its place, or when an option is not one of its values.
+ * and its place, when an option is not one of its values, or when an option's name is not one of
+ * {@link JsonSchemaOptions}.
  */
-export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions = {}): JsonSchema {
+export function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOptions): JsonSchema {
   assertFunction("validator", validator);
-  if (!isPlainObject(options)) {
+  // `null` is no options, as it is for a factory.
+  const chosen: JsonSchemaOptions = options ?? {};
+  if (!isPlainObject(chosen)) {
     throw new TypeError("options must be an object");
   }
-  const { io = "input", unrepresentable = "throw", target = "draft-2020-12" } = options;
+  // A misspelled option, such as `draft` for `target`, would otherwise write the default without a word.
+  const unknown = Object.keys(chosen).find((name) => !OPTION_NAMES.includes(name));
+  if (unknown !== undefined) {
+    throw new TypeError(`Unknown option ${unknown}`);
+  }
+  const { io = "input", unrepresentable = "throw", target = "draft-2020-12" } = chosen;
   if (io !== "input" && io !== "output") {
     throw new TypeError(`io must be "input" or "output", received "${String(io)}"`);
   }
@@ -202,12 +251,17 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
       if (format === "regex") {
         const written = String(params["pattern"]);
         const end = written.lastIndexOf("/");
-        // A flag such as `i` or `m` changes what the pattern accepts, and JSON Schema has no flags.
-        // `g` and `y` change nothing: the check drops them.
-        if (/^g?[uv]?y?$/.test(written.slice(end + 1))) {
-          patterns.push(written.slice(1, end));
-        } else {
+        const source = written.slice(1, end);
+        const flags = written.slice(end + 1);
+        // A flag such as `i` or `m` changes what the pattern accepts, and JSON Schema has no flags: it reads
+        // every pattern in Unicode mode, `u`, which `v` reads a class otherwise than. `g` and `y` change
+        // nothing: the check drops them.
+        if (!/^g?u?y?$/.test(flags)) {
           refuse("a pattern with flags", path);
+        } else if (flags.includes("u") || readsAlikeInUnicode(source)) {
+          patterns.push(source);
+        } else {
+          refuse("a pattern Unicode mode reads otherwise", path);
         }
       } else if (format === "startsWith") {
         patterns.push(`^${escapeForPattern(String(value))}`);
@@ -332,18 +386,29 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
         if (name === "base64") {
           return checked({ type: "string", contentEncoding: given["url"] === true ? "base64url" : "base64" });
         }
-        if (name === "ip" && given["version"] !== undefined) {
-          return checked({ type: "string", format: `ip${String(given["version"])}` });
-        }
-        return checked(
-          name === "ip"
-            ? { type: "string", anyOf: [{ format: "ipv4" }, { format: "ipv6" }] }
-            : { type: "string", format: FORMAT_NAMES[name] ?? name },
-        );
+        // Own names only, so a format made with `format("constructor", …)` is not taken for `Object`.
+        const [input = name, output = input] = (Object.hasOwn(FORMAT_NAMES, name) && FORMAT_NAMES[name]) || [];
+        // A local date-time has no offset, which `date-time` requires.
+        const written =
+          name === "ip" && given["version"] === "v4"
+            ? "ipv4"
+            : name === "datetime" && given["local"] === true
+              ? ""
+              : isInput
+                ? input
+                : output;
+        return checked(written === "" ? { type: "string" } : { type: "string", format: written });
       }
       case "coerce": {
-        const types = COERCED_TYPES[describe(record["inner"] as AnyValidator)?.kind ?? ""];
-        return isInput && types !== undefined ? { type: [...types] } : child("inner");
+        const kind = describe(record["inner"] as AnyValidator)?.kind ?? "";
+        const types = COERCED_TYPES[kind];
+        if (!isInput || types === undefined) {
+          return child("inner");
+        }
+        // A value given as the type a coercion produces passes only what its strict validator accepts.
+        return kind === "bigint" || kind === "date"
+          ? { type: [...types] }
+          : { anyOf: [child("inner"), { type: types.length === 1 ? types[0] : [...types] }] };
       }
       case "object":
       case "objectLike": {
@@ -407,7 +472,14 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
           // `tagged` takes the tag out before its variant sees the value, so the tag is written into the
           // variant's own properties: beside them, a strict variant would refuse it.
           if (schema["type"] !== "object" || !isPlainObject(schema["properties"])) {
-            return anything("a variant that is not an object");
+            // Written as `{}`, the variant would match every value of another, which `oneOf` then refuses.
+            return (
+              refuse("a variant that is not an object", path) ?? {
+                type: "object",
+                properties: { [key]: { const: tag } },
+                required: [key],
+              }
+            );
           }
           return {
             ...schema,

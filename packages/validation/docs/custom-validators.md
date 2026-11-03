@@ -213,7 +213,7 @@ Things to know about asynchronous validation:
 - **Independent properties and items run their rules concurrently.** In `signup` above, the username lookup and the email check start together, and so does the rule of every item of an array, with no limit. Give the array a `max` before validating a list you did not write, so it cannot start thousands of lookups at once.
 - **Issues stay in a fixed order.** They follow the order of the shape and of the checks, not the order in which the promises finished.
 - **`is` needs a synchronous validator.** It throws a `TypeError` for one that turns out to return a promise.
-- **A rejected promise is a bug, not invalid input.** If your test throws or rejects, the exception propagates. Report invalid input by returning `false` or an issue.
+- **A rejected promise is a bug, not invalid input.** If your test throws or rejects, the exception propagates. Only `instanceOf` turns a throw into a rejection: a `Symbol.hasInstance` of the class, or a prototype trap of the value, that throws rejects the value with `invalid_type`, as `objectLike` reports a property it could not read as an issue. Report invalid input by returning `false` or an issue.
 
 ## What you must not do
 

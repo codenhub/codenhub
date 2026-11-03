@@ -15,6 +15,15 @@ describe("cuid2", () => {
     expect(accepts(cuid2(), ...invalid)).toEqual(invalid.map(() => false));
   });
 
+  it("should take 24 to 32 lowercase letters and digits, starting with a letter", () => {
+    expect(accepts(cuid2(), "a".repeat(24), `a${"1".repeat(31)}`, "a".repeat(23), "a".repeat(33))).toEqual([
+      true,
+      true,
+      false,
+      false,
+    ]);
+  });
+
   it("should report invalid_type for a non-string and invalid_format, naming the format, for a bad string", () => {
     expect(codesOf(cuid2()(42))).toEqual(["invalid_type"]);
     expect(issuesOf(cuid2()("!!"))).toEqual([{ code: "invalid_format", path: [], params: { format: "cuid2" } }]);

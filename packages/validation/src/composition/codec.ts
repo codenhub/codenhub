@@ -15,8 +15,11 @@ import type { AnyValidator, Composed, Infer, InferInput, ValidationResult } from
 export interface Conversions<TInput extends AnyValidator, TOutput extends AnyValidator> {
   /** From the value as it is sent, once `input` passed it, to the value `output` validates. */
   readonly decode: (value: Infer<TInput>) => InferInput<TOutput>;
-  /** From the value as a program uses it, once `output` passed it, to the value `input` validates. */
-  readonly encode: (value: Infer<TOutput>) => InferInput<TInput>;
+  /**
+   * From the value as `output` writes it back, which is the value a program uses unless `output` holds a
+   * codec, to the value `input` validates.
+   */
+  readonly encode: (value: InferInput<TOutput>) => InferInput<TInput>;
 }
 
 /**
@@ -27,8 +30,10 @@ export interface Conversions<TInput extends AnyValidator, TOutput extends AnyVal
  * It validates with `input`, gives what that produced to `decode`, and validates the result with
  * `output`, so both ends are checked: `"2026-02-30"` fails the input, and a `decode` that returns an
  * invalid date fails the output. `encode(validator, value)` runs the other way, through `encode`: it
- * validates the value with `output`, gives what that produced to `encode`, and checks `input` accepts the
- * result. Each function is written for one direction, and a pair of them is what lets a value go back.
+ * writes the value back through `output`, so a codec inside it writes its part first, or checks it with
+ * `output` when that cannot be written back, such as a validator written by hand, gives the result to
+ * `encode`, and checks `input` accepts what it returns. Each function is written for one direction, and a
+ * pair of them is what lets a value go back.
  *
  * An exception thrown by either function propagates, as a `transform`'s does: it is a bug, not invalid
  * input. Return a value the other validator refuses instead, to fail. Both functions are synchronous: one

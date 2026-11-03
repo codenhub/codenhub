@@ -25,7 +25,7 @@ Pass `signup` to the library that asks for a Standard Schema, and it will call `
 
 ## Short English, or `standard`
 
-The specification requires a message on every issue, and a validator's own `~standard` words each in short English: the issue's own `message`, set with the `message` option or by a check, or one sentence for its code, such as "Must be at least 2 characters" or "Invalid email". It is kept short because every program that makes a validator carries it, about 0.4 kB gzipped.
+The specification requires a message on every issue, and a validator's own `~standard` words each in short English: the issue's own `message`, set with the `message` option or by a check, or one sentence for its code, such as "Must be at least 2 characters" or "Invalid email". It is kept short because every program that makes a validator carries it, about 0.5 kB gzipped. A check is named by its format, as "Invalid startsWith", and an unrecognized key as "Unrecognized key", since the key is the last segment of the path; `standard` words both in full.
 
 `standard(validator, messages?)` gives the same validator with a `~standard` of its own that words issues as [`formatIssue`](errors.md#turning-an-issue-into-text) does. Use it for:
 
@@ -84,7 +84,7 @@ forecast["~standard"].jsonSchema.input({ target: "draft-07" });
 // { $schema: "http://json-schema.org/draft-07/schema#", type: "object", properties: { city: { ..., description: "The city to get the weather for" }, ... }, required: ["city"] }
 ```
 
-`input` and `output` write the validator with [`toJsonSchema`](json-schema.md), the side and the draft as asked. `"draft-2020-12"` and `"draft-07"` are written, and any other target throws a `TypeError`. When a part of the validator cannot be written as JSON Schema, such as a custom check, `toJsonSchema` throws for it, and so do `input` and `output`, unless the library passes `libraryOptions: { unrepresentable: "any" }`. Give [`meta`](validators.md#meta) to the validator before passing it here, since the schema is written from the validator `standardJsonSchema` is given.
+`input` and `output` write the validator with [`toJsonSchema`](json-schema.md), the side and the draft as asked. `"draft-2020-12"` and `"draft-07"` are written, and any other target throws a `TypeError`. When a part of the validator cannot be written as JSON Schema, such as a custom check, `toJsonSchema` throws for it, and so do `input` and `output`, unless the library passes `libraryOptions: { unrepresentable: "any" }`. That is the one library option, and any other name in `libraryOptions`, such as a misspelled one, throws a `TypeError` rather than being ignored. Give [`meta`](validators.md#meta) to the validator before passing it here, since the schema is written from the validator `standardJsonSchema` is given.
 
 It is a separate export so that `standard`, which a form in the browser uses, does not bundle the code that writes a schema: use `standard` where only validation is asked for, and `standardJsonSchema` where the schema is read too.
 

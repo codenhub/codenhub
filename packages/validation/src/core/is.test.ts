@@ -15,9 +15,17 @@ describe("is", () => {
     expect(is(number(), "text")).toBe(false);
   });
 
-  it("should give a boolean even when a validator written by hand sets ok to something else", () => {
-    expect(is((() => ({ ok: 1 })) as never, "text")).toBe(false);
+  it("should read a result written by hand as assert does", () => {
     expect(is((() => ({ ok: true, value: 1 })) as never, "text")).toBe(true);
+    expect(is((() => ({ ok: false, error: { issues: [{ code: "custom", path: [] }] } })) as never, "text")).toBe(false);
+  });
+
+  it("should name the mistake, as assert does, when a validator returns no result", () => {
+    for (const returned of [undefined, null, { ok: 1 }, { ok: false, error: { issues: [] } }]) {
+      expect(() => is((() => returned) as never, "text")).toThrow(
+        new TypeError("is() needs a validator that returns a result, and a failure that holds an issue"),
+      );
+    }
   });
 
   it("should throw a TypeError naming the fix when the validator is asynchronous", () => {

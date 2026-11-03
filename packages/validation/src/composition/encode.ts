@@ -62,13 +62,36 @@ function toQuery(value: unknown): string {
 }
 
 /**
+ * The path to the first `bigint` in what `JSON.stringify` would write, or `undefined` when there is none.
+ * It is looked for only once writing failed, so a value that is written is not walked a second time.
+ */
+function bigintIn(value: unknown, seen = new Set<object>()): (string | number)[] | undefined {
+  if (typeof value === "bigint") {
+    return [];
+  }
+  if (typeof value !== "object" || value === null || seen.has(value)) {
+    return undefined;
+  }
+  seen.add(value);
+  for (const [key, each] of Object.entries(value)) {
+    const found = bigintIn(each, seen);
+    if (found !== undefined) {
+      return [Array.isArray(value) ? Number(key) : key, ...found];
+    }
+  }
+  return undefined;
+}
+
+/**
  * Writes a value back to what a validator accepts: a `Date` back to the text a `codec` read it from, an
  * object of them back to an object of text, and the object `json` parsed back to JSON.
  *
  * @remarks
  * The validator is read with `describe`, and each part written back as its kind says:
  *
- * - A `codec` validates the value with its output, runs its `encode`, and checks its input accepts the result.
+ * - A `codec` writes the value back through its output, so a codec inside that writes its part first, or
+ *   checks it with its output when that cannot be written back, such as a validator written by hand, runs
+ *   its `encode` on the result, and checks its input accepts what that returns.
  * - A part that produces what it accepts, such as `string`, a format or a coercion, validates the value and
  *   gives what it produced, so `email()` gives the address as the parser reads it.
  * - A composer, such as `object`, `array` or `union`, writes back each of its parts and keeps its options,
@@ -82,8 +105,8 @@ function toQuery(value: unknown): string {
  * So a value the validator could not have produced fails with the issues it has, at their paths. A part
  * that cannot be written back throws a `TypeError` naming its place: a `transform`, whose function goes one
  * way, and a validator written by hand; use a `codec` there. A coercion writes back the value it produced,
- * which it accepts, so inside `json` a `bigint` from `coerceBigint` cannot be written as JSON: use a codec
- * that writes it as text.
+ * which it accepts, so inside `json` a `bigint` from `coerceBigint` cannot be written as JSON, and throws a
+ * `TypeError` naming its place: use a codec that writes it as text.
  *
  * @example
  * ```ts
@@ -99,7 +122,8 @@ function toQuery(value: unknown): string {
  * @param validator - A validator made by the factories of this package.
  * @param value - A value of the type the validator produces.
  * @returns The value as the validator accepts it, or every issue found.
- * @throws {TypeError} When `validator` is not a function, or a part of it cannot be written back.
+ * @throws {TypeError} When `validator` is not a function, a part of it cannot be written back, or `json`
+ * is given a `bigint` to write.
  */
 export function encode<TValidator extends AnyValidator>(
   validator: TValidator,
@@ -111,6 +135,25 @@ export function encode<TValidator extends AnyValidator>(
 
   const refuse = (what: string, path: string): never => {
     throw new TypeError(`encode cannot write back ${what} at ${path === "" ? "the root" : path}. Use a codec there`);
+  };
+
+  /** Writes what `json` at `path` read back as JSON, and names the place of a `bigint`, which it cannot hold. */
+  const toJson = (written: unknown, path: string): string => {
+    try {
+      return JSON.stringify(written);
+    } catch (error) {
+      const found = bigintIn(written);
+      if (found === undefined) {
+        throw error;
+      }
+      return refuse(
+        "a bigint as JSON",
+        found.reduce<string>(
+          (at, key) => (typeof key === "number" ? `${at}[${key}]` : at === "" ? key : `${at}.${key}`),
+          path,
+        ),
+      );
+    }
   };
 
   /**
@@ -174,8 +217,20 @@ export function encode<TValidator extends AnyValidator>(
       case "codec": {
         const { input, output } = record as unknown as { input: AnyValidator; output: AnyValidator };
         const write = record["encode"] as (value: unknown) => unknown;
+        // `decode` gave `output` what it accepts, so `encode` is given what `output` writes back, which for a
+        // codec inside it is what that codec wrote. An output that cannot be written back, such as a
+        // validator written by hand, is what a codec is for: it checks the value as it is.
+        let writeOutput: AnyValidator;
+        try {
+          writeOutput = encoderOf(output, path);
+        } catch (error) {
+          if (!(error instanceof TypeError)) {
+            throw error;
+          }
+          writeOutput = output;
+        }
         return composed((given, place) =>
-          chain(call(output, given, place), (produced): Maybe<ValidationResult<unknown>> => {
+          chain(call(writeOutput, given, place), (produced): Maybe<ValidationResult<unknown>> => {
             if (!produced.ok) {
               return produced;
             }
@@ -244,7 +299,7 @@ export function encode<TValidator extends AnyValidator>(
       }
       case "json": {
         const inner = record["inner"] === undefined ? (unknown as unknown as Make)() : part("inner");
-        return readBack((transform as unknown as Make)(over(inner), (written: unknown) => JSON.stringify(written)));
+        return readBack((transform as unknown as Make)(over(inner), (written: unknown) => toJson(written, path)));
       }
       case "searchParams":
         return readBack((transform as unknown as Make)(over(part("inner")), toQuery));

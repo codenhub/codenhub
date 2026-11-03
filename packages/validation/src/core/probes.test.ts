@@ -62,6 +62,23 @@ describe("a value that cannot be a date, a map or a set", () => {
     expect(thrown(time)).toBe(0);
   });
 
+  it("should be refused by date and coerceDate without a probe that throws when it is a plain object", () => {
+    const { time } = spies();
+    expect(date()({}).ok).toBe(false);
+    expect(coerceDate()(JSON.parse("{}")).ok).toBe(false);
+    expect(union([date(), object({})])({}).ok).toBe(true);
+    expect(thrown(time)).toBe(0);
+  });
+
+  it("should let a union with date accept 100,000 plain objects in linear time", () => {
+    // Each probe that threw took about 10 µs: this took a second, and takes about 15 ms.
+    const schema = array(object({ at: union([date(), object({})]) }));
+    const rows = Array.from({ length: 100_000 }, () => ({ at: {} }));
+    const start = performance.now();
+    expect(schema(rows).ok).toBe(true);
+    expect(performance.now() - start).toBeLessThan(300);
+  });
+
   it("should still be rejected by date, map and set, and named by its type", () => {
     expect(date()("2024-01-15").ok).toBe(false);
     expect(date()([]).ok).toBe(false);

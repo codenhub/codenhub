@@ -84,8 +84,16 @@ export const isInstance = (value: unknown, target: abstract new (...args: never[
 /** Tests whether a value is an array, in any realm. A revoked proxy, whose test throws, is not one. */
 export const isArray = (value: unknown): value is unknown[] => brand(() => Array.isArray(value)) === true;
 
-/** The moment a `Date` holds, `NaN` for an invalid one, or undefined when the value is not a `Date`, in any realm. */
-export const timeOf = (value: unknown): number | undefined => slot(value, () => Date.prototype.getTime.call(value));
+/**
+ * The moment a `Date` holds, `NaN` for an invalid one, or undefined when the value is not a `Date`, in any
+ * realm. A value whose tag is `[object Object]` is refused without asking, since a `Date` of any realm or
+ * prototype is tagged `[object Date]` unless its class names itself otherwise: 100,000 `{}` under a `union`
+ * with `date` took a second. A tag can be claimed, so it only ever refuses; `getTime` decides the rest.
+ */
+export const timeOf = (value: unknown): number | undefined =>
+  slot(value, () =>
+    Object.prototype.toString.call(value) === "[object Object]" ? undefined : Date.prototype.getTime.call(value),
+  );
 
 /**
  * The source of a regular expression, or undefined when the value is not one, in any realm. The getter

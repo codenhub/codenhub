@@ -1,6 +1,6 @@
 import { chain, detached } from "../core/async";
 import { described } from "../core/describe";
-import { assertFunction, assertUnshared, pass } from "../core/result";
+import { assertFunction, assertUnshared, isResult, notResult, pass } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue } from "../core/types";
 import type { AnyFunction } from "../primitives/func";
 import type { LiteralValue } from "../primitives/literal";
@@ -51,14 +51,18 @@ export function fallback<TValidator extends AnyValidator>(
   assertFunction("validator", validator);
   assertUnshared("A fallback object", value);
   const validate = (input: unknown) =>
-    chain(validator(input), (result) =>
-      result.ok
+    chain(validator(input), (result) => {
+      // No result is a mistake in the schema, not a failure, so it is named and never replaced.
+      if (!isResult(result)) {
+        throw notResult("The validator given to fallback");
+      }
+      return result.ok
         ? result
         : pass(
             typeof value === "function"
               ? detached(value as (issues: readonly ValidationIssue[]) => unknown, result.error.issues)
               : value,
-          ),
-    );
+          );
+    });
   return described(validate, { kind: "fallback", inner: validator, value }) as Composed<TValidator, Infer<TValidator>>;
 }

@@ -7,8 +7,8 @@ import { picking, type Picked, type Reshaped } from "./reshape";
  *
  * @remarks
  * The validator must be one `object` made, since its shape is read from what it describes itself with.
- * The new object keeps its options, `unknownKeys` and `message`, unless options are given here. One with
- * checks is refused: a check reads the whole object and may read a property that is left out, so give
+ * The new object keeps its options, `unknownKeys` and `message`, and each option given here replaces the
+ * one of its name, so a strict object stays strict given only a `message`. One with checks is refused: a check reads the whole object and may read a property that is left out, so give
  * the checks the smaller object needs here instead.
  *
  * @example
@@ -22,7 +22,7 @@ import { picking, type Picked, type Reshaped } from "./reshape";
  * @typeParam TKey - The properties kept.
  * @param validator - A validator made by `object`, without checks.
  * @param keys - The properties to keep, each of which the object has.
- * @param rest - Options, replacing those of the object, then checks on the new object.
+ * @param rest - Options, each replacing the one of its name in the object, then checks on the new object.
  * @returns A validator made by `object`, of the named properties.
  * @throws {TypeError} When the validator was not made by `object`, has checks, or lacks one of the keys.
  */

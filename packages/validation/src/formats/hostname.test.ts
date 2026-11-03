@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { union } from "../composition/union";
 import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
+import { domain } from "./domain";
 import { hostname } from "./hostname";
 
 describe("hostname", () => {
@@ -50,6 +52,11 @@ describe("hostname", () => {
       }
     }
     expect(misread).toEqual([]);
+  });
+
+  it("should take an internationalized name only in punycode, and with domain in a union take both", () => {
+    expect(accepts(hostname(), "münchen.de", "xn--mnchen-3ya.de")).toEqual([false, true]);
+    expect(accepts(union([domain(), hostname()]), "münchen.de", "localhost")).toEqual([true, true]);
   });
 
   it("should reject a punycode label that does not decode, and accept one that does", () => {

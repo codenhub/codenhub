@@ -22,7 +22,7 @@ toJsonSchema(user);
 //   type: "object",
 //   properties: {
 //     name: { type: "string", minLength: 2 },
-//     email: { type: "string", format: "email" },
+//     email: { type: "string" },
 //     age: { type: "integer", minimum: 0 },
 //   },
 //   required: ["name", "email"],
@@ -38,7 +38,7 @@ A schema says less than a validator checks. `email()` refuses an address at `loc
 Three places bend that promise, each because the validator cleans a value before it checks it, which a schema cannot say:
 
 - **Clean-up options.** `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no trimming. Text with spaces around five letters passes the validator and not the schema. `case` is the same, and so is `clamp` beside a limit, as in `number({ max: 10, clamp: { min: 0, max: 10 } })`: the schema describes the value as it is after cleaning. The range of a `clamp` is itself not written.
-- **Length of text.** A string's `length` counts an emoji, and any other character outside the Basic Multilingual Plane, as two, and JSON Schema counts it as one, so a `min` or `max` can differ by the number of such characters.
+- **Length of text.** A string's `length` counts an emoji, and any other character outside the Basic Multilingual Plane, as two, and JSON Schema counts it as one, so a `min` or `max` can differ by the number of such characters. A `pattern` is the same: a schema reads it in Unicode mode, the `u` flag, so in one written without that flag `.` and a negated class such as `[^a]` match a whole character in the schema and half of an emoji in the validator.
 - **Formats that accept several spellings.** `phone()` accepts `+55 (11) 98765-4321` and produces `+5511987654321`. A check on such a format, as in `hostname(pattern(/^[a-z.]+$/))`, sees the spelling the format produces and is written for the text as it arrives, so `EXAMPLE.com` passes the validator and not the schema. A format JSON Schema has no name for is written under its own, such as `"format": "phone"`, which a reader that does not know it ignores.
 
 ## Input and output
@@ -54,7 +54,7 @@ const query = object({
 });
 
 toJsonSchema(query).properties;
-// { page: { type: ["number", "string"] }, sort: { enum: ["new", "top"], default: "new" } }
+// { page: { anyOf: [{ type: "integer" }, { type: "string" }] }, sort: { enum: ["new", "top"], default: "new" } }
 // and only `page` is required
 
 toJsonSchema(query, { io: "output" }).properties;
@@ -66,7 +66,7 @@ toJsonSchema(query, { io: "output" }).properties;
 | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | `optional(validator, value)`                 | The validator's schema, not required, with `default` when the default is a JSON primitive                                                       | The validator's schema, required                       |
 | `lazy`, `json` or `searchParams` with checks | For `lazy` and `json`, the checks in an `allOf` beside what it refers to or parses to. For `searchParams`, a string, which says nothing of them | The checks in an `allOf` beside the validator's schema |
-| The `coerce` validators                      | The types they convert from                                                                                                                     | The type they produce                                  |
+| The `coerce` validators                      | An `anyOf` of the schema of the type they produce, bounds and checks included, and the types they convert from                                  | The type they produce                                  |
 | `transform`                                  | The schema of the validator it converts from                                                                                                    | Cannot be written                                      |
 | `pipe`                                       | Its first validator                                                                                                                             | Its last                                               |
 | `json(validator)`                            | A string, with `contentSchema` for what it parses to                                                                                            | The validator's schema                                 |
@@ -77,26 +77,42 @@ The output side takes a default and the value of a `fallback` to pass the valida
 
 ## How each validator is written
 
-| Validator                                                   | Schema                                                                                                                                                                                                                                          |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `string`                                                    | `type: "string"` with `minLength` and `maxLength`                                                                                                                                                                                               |
-| `number`                                                    | `type: "number"`, or `"integer"` with `int` or `safeInt`, with `minimum`, `maximum`, `exclusiveMinimum` and `exclusiveMaximum`                                                                                                                  |
-| `boolean`, `unknown`, `never`                               | `type: "boolean"`, `{}` and `{ not: {} }`                                                                                                                                                                                                       |
-| `literal`, `oneOf`                                          | `const` and `enum`                                                                                                                                                                                                                              |
-| A format                                                    | `type: "string"` with `format`: `email`, `uuid`, `time`, `duration`, `hostname` as named, `uri` for `url`, `date-time` for `datetime`, `date` for `isoDate`, `hostname` for `domain`, `ipv4` or `ipv6` for `ip`, and its own name for any other |
-| `port`, `base64`                                            | An integer from 1 to 65535, and a string with `contentEncoding`                                                                                                                                                                                 |
-| `object`, `objectLike`                                      | `type: "object"` with `properties`, `required`, and `additionalProperties: false` for a strict `object`                                                                                                                                         |
-| `array`                                                     | `type: "array"` with `items`, `minItems` and `maxItems`                                                                                                                                                                                         |
-| `tuple`                                                     | `prefixItems`, with `items` for `rest` and `false` without it                                                                                                                                                                                   |
-| `record`                                                    | `propertyNames` and `additionalProperties`, with `minProperties` and `maxProperties`                                                                                                                                                            |
-| `union`, `intersection`                                     | `anyOf` and `allOf`                                                                                                                                                                                                                             |
-| `tagged`                                                    | `oneOf`, with the tag as a `const` property of each variant                                                                                                                                                                                     |
-| `nullable`, `nullish`                                       | `anyOf` with `type: "null"`                                                                                                                                                                                                                     |
-| `readonly`, `brand`                                         | What the validator inside is written as                                                                                                                                                                                                         |
-| `codec`                                                     | Its `input`, or its `output` with `io: "output"`                                                                                                                                                                                                |
-| `lazy`                                                      | A `$ref` to a definition under `$defs`                                                                                                                                                                                                          |
-| `pattern`, `startsWith`, `endsWith`, `includes`, `nonBlank` | `pattern`                                                                                                                                                                                                                                       |
-| `multipleOf`, `nonZero`, `unique()`                         | `multipleOf`, `not: { const: 0 }` and `uniqueItems`                                                                                                                                                                                             |
+| Validator                                                   | Schema                                                                                                                         |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `string`                                                    | `type: "string"` with `minLength` and `maxLength`                                                                              |
+| `number`                                                    | `type: "number"`, or `"integer"` with `int` or `safeInt`, with `minimum`, `maximum`, `exclusiveMinimum` and `exclusiveMaximum` |
+| `boolean`, `unknown`, `never`                               | `type: "boolean"`, `{}` and `{ not: {} }`                                                                                      |
+| `literal`, `oneOf`                                          | `const` and `enum`                                                                                                             |
+| A format                                                    | `type: "string"` with `format`, as the table below writes it                                                                   |
+| `port`, `base64`                                            | An integer from 1 to 65535, and a string with `contentEncoding`                                                                |
+| `object`, `objectLike`                                      | `type: "object"` with `properties`, `required`, and `additionalProperties: false` for a strict `object`                        |
+| `array`                                                     | `type: "array"` with `items`, `minItems` and `maxItems`                                                                        |
+| `tuple`                                                     | `prefixItems`, with `items` for `rest` and `false` without it                                                                  |
+| `record`                                                    | `propertyNames` and `additionalProperties`, with `minProperties` and `maxProperties`                                           |
+| `union`, `intersection`                                     | `anyOf` and `allOf`                                                                                                            |
+| `tagged`                                                    | `oneOf`, with the tag as a `const` property of each variant                                                                    |
+| `nullable`, `nullish`                                       | `anyOf` with `type: "null"`                                                                                                    |
+| `readonly`, `brand`                                         | What the validator inside is written as                                                                                        |
+| `codec`                                                     | Its `input`, or its `output` with `io: "output"`                                                                               |
+| `lazy`                                                      | A `$ref` to a definition under `$defs`                                                                                         |
+| `pattern`, `startsWith`, `endsWith`, `includes`, `nonBlank` | `pattern`                                                                                                                      |
+| `multipleOf`, `nonZero`, `unique()`                         | `multipleOf`, `not: { const: 0 }` and `uniqueItems`                                                                            |
+
+A format is written under JSON Schema's name for it, and with no `format` where that name's rules refuse text the validator accepts, which would break the promise above:
+
+| Format                       | Input                                                   | Output     |
+| ---------------------------- | ------------------------------------------------------- | ---------- |
+| `email`                      | None, since the domain may be internationalized         | `email`    |
+| `domain`                     | None, for the same reason                               | `hostname` |
+| `hostname`, `uuid`           | Their own names                                         | The same   |
+| `datetime`                   | `date-time`, and none with `local`, which has no offset | The same   |
+| `isoDate`                    | `date`                                                  | The same   |
+| `ip`                         | `ipv4` with `version: "v4"`, and none otherwise         | The same   |
+| `time`, `duration`, `url`    | None                                                    | None       |
+| `port`, `base64`             | As the table above writes them                          | The same   |
+| Any other, `format` included | Its own name                                            | The same   |
+
+A format is left out where JSON Schema's has stricter rules: `time` needs an offset, which a time of day such as `12:00` never has, `duration` allows no fraction, as in `PT0.5S`, and no weeks beside days, as in `P1W1D`, an IPv6 address may have a zone, as in `fe80::1%eth0`, which `ipv6` does not allow, and a URL may hold `|` or `^`, which a URI may not. The input of `email` and `domain` may be internationalized, as in `user@bücher.example`, which `email` and `hostname` refuse; `idn-email` and `idn-hostname` would fit, but [ajv-formats](https://github.com/ajv-validator/ajv-formats) does not know them, and Ajv in its default strict mode refuses to compile a schema with a format it does not know, as it does for `phone` or `slug`: register those, or create Ajv with `strict: false`, which ignores them.
 
 A property is left out of `required` when its validator accepts `undefined`: `optional`, `nullish`, `unknown`, `fallback`, a `literal` or a `oneOf` of `undefined`, a `union` with one of those, or a `lazy`, `nullable`, `readonly`, `transform` or `pipe` around one. An `intersection` is left out when every validator in it accepts `undefined`. JSON has no `undefined`, so `literal(undefined)` in a `union` is left out of its `anyOf`, and a `union` or a `oneOf` of nothing else is written as `{ not: {} }`, which no value passes.
 
@@ -156,17 +172,18 @@ The keys are written on whatever schema the part is written as, beside a `$ref` 
 
 ## Drafts
 
-The schema is written in draft 2020-12 unless `target: "draft-07"` asks for the older draft, which some readers, such as the tools of a language model in the AI SDK, still take. In draft-07 the items of a `tuple` are listed under `items` and its `rest` under `additionalItems`, definitions are under `definitions`, and what `json` parses is not written, since that draft has no `contentSchema`. Any other target is a `TypeError`. [`standardJsonSchema`](standard-schema.md#with-its-json-schema) writes the draft a library asks for, through the same function.
+The schema is written in draft 2020-12 unless `target: "draft-07"` asks for the older draft, which some readers, such as the tools of a language model in the AI SDK, still take. In draft-07 the items of a `tuple` are listed under `items` and its `rest` under `additionalItems`, definitions are under `definitions`, and what `json` parses is not written, since that draft has no `contentSchema`. Any other target is a `TypeError`, and so is an option `toJsonSchema` does not have, such as `draft` written for `target`, as it is for a factory. [`standardJsonSchema`](standard-schema.md#with-its-json-schema) writes the draft a library asks for, through the same function.
 
 ## What cannot be written
 
 JSON Schema has no words for some of what a validator can check, and JSON has no value for some of what it can produce:
 
-- `date`, `bigint`, `symbol`, `func`, `instanceOf`, `set` and `map`, none of which is a JSON value, and a validator made by `guard`, whose test is a function nobody can read.
+- `date`, `bigint`, `symbol`, `func`, `instanceOf`, `set`, `map` and `file`, none of which is a JSON value, `formData`, which reads a form and not JSON, and a validator made by `guard`, whose test is a function nobody can read.
 - A validator you wrote by hand, and a check made by `check`, whose rule is a function nobody can read.
-- `lowercase`, `uppercase`, `unique` with a key function, and a `pattern` with a flag such as `i`, which JSON Schema patterns do not have. The flags `g` and `y`, which `pattern` drops, are left out.
+- `lowercase`, `uppercase`, `unique` with a key function, and a `pattern` with a flag such as `i` or `v`, which JSON Schema patterns do not have. The flags `g` and `y`, which `pattern` drops, are left out, and so is `u`, the mode a schema reads every pattern in.
+- A `pattern` written without `u` that Unicode mode reads otherwise: one that is an error there, such as `/^\@x$/`, whose `\@` only that mode refuses, and one with `\u{…}` or `\p{…}`, which are escapes only there and text with braces without it.
 - What a `transform` returns, on the output side.
-- A check on an `object`, and a variant of `tagged` that is not an `object`.
+- A check on an `object`, and a variant of `tagged` that is not an `object`, such as a `lazy`. With `unrepresentable: "any"` that variant is written as an object with only its tag, so the other variants still match one branch of the `oneOf`.
 
 By default `toJsonSchema` throws a `TypeError` that names the part and where it is, such as `toJsonSchema cannot write a validator of kind "date" at createdAt`, so a schema is never quietly weaker than you meant. Pass `{ unrepresentable: "any" }` to write such a part as `{}`, which accepts anything, and to leave such a check out:
 

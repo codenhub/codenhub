@@ -28,9 +28,12 @@ const AMBIGUOUS_KEY_PATTERN = /[.[\]"\p{Cc}\u2028\u2029]/u;
  */
 const UNESCAPED_PATTERN = /[\u007f-\u009f\u2028\u2029]/g;
 
-/** A key as a quoted string literal, every control character and line separator escaped. */
-const quote = (key: string): string =>
-  JSON.stringify(key).replace(
+/**
+ * Text the sender chose, such as a key, as a quoted string literal, every control character and line
+ * separator escaped, so it cannot break the line it is written on.
+ */
+export const quoteText = (text: string): string =>
+  JSON.stringify(text).replace(
     UNESCAPED_PATTERN,
     (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,
   );
@@ -63,7 +66,7 @@ export function formatPath(path: readonly ValidationPathSegment[]): string {
     } else if (typeof segment !== "string") {
       formatted += `[${String(segment)}]`;
     } else if (segment === "" || AMBIGUOUS_KEY_PATTERN.test(segment)) {
-      formatted += `[${quote(segment)}]`;
+      formatted += `[${quoteText(segment)}]`;
     } else {
       formatted += formatted.length > 0 ? `.${segment}` : segment;
     }

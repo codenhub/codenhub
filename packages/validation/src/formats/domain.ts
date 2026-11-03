@@ -16,8 +16,10 @@ import { formatFactory } from "./text-format";
  * ASCII with an internationalized label in punycode, so `München.DE` is `xn--mnchen-3ya.de`.
  *
  * @remarks
- * To accept any hostname, such as `localhost` or `intranet`, use `hostname`. Whether the domain
- * resolves, or is registered, is not checked.
+ * To accept a name that is not public, such as `localhost` or `intranet`, use `hostname`, which takes
+ * labels of ASCII letters, digits and hyphens, internationalized ones only in punycode, so it rejects
+ * `münchen.de` and accepts `xn--mnchen-3ya.de`. To accept both, use `union([domain(), hostname()])`.
+ * Whether the domain resolves, or is registered, is not checked.
  *
  * @example
  * ```ts

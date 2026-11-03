@@ -8,8 +8,10 @@ import {
   assertFunction,
   describeType,
   failWith,
+  isResult,
   issue,
   nested,
+  notResult,
   repeatedKey,
   RESERVED_KEY,
   reservedKey,
@@ -111,6 +113,14 @@ export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[
   );
   assertSizeOptions(options);
   const child = childOf(value);
+  // A key's issues stay relative to the key, so it is not called with a place, and its result is checked here.
+  const readKey = (name: unknown): Maybe<ValidationResult<unknown>> =>
+    chain(key(name), (result: ValidationResult<unknown>) => {
+      if (!isResult(result)) {
+        throw notResult("The key validator of record");
+      }
+      return result;
+    });
 
   // Valid input is answered without a result for each entry when the key and the value have a fast test.
   // A key that is not text, is produced twice or is `__proto__` is a miss, so the full work throws or reports it.
@@ -164,7 +174,7 @@ export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[
         names.length,
         (index) => {
           const name = names[index] as string;
-          return chain(key(name), (keyResult) =>
+          return chain(readKey(name), (keyResult) =>
             chain(child(values[index], place, name), (valueResult) => ({ keyResult, valueResult })),
           );
         },

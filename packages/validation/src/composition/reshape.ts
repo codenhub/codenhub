@@ -4,7 +4,7 @@
  * makes a new `object` of it, so what it returns is an `object` like any other.
  */
 import { describe } from "../core/describe";
-import { assertShape } from "../core/objects";
+import { assertShape, isPlainObject } from "../core/objects";
 import { assertList } from "../core/result";
 import type { AnyValidator, AsyncSchema, Schema, Validator } from "../core/types";
 import { nullable } from "./nullable";
@@ -46,14 +46,21 @@ function partsOf(name: string, validator: unknown): [shape: Shape, options: Obje
 
 /**
  * Makes the new object. What follows the function's own arguments is what follows a shape in `object`,
- * options and then checks; without options of its own the new object keeps those of the one it came from.
- * Options given as `undefined` or `null` are no options, as for every factory, so they keep them too.
+ * options and then checks. The new object keeps the options of the one it came from, and each option given
+ * replaces the one of its name: given `{ message }`, a strict object stays strict. Options given as
+ * `undefined` or `null` are no options, as for every factory, so they keep them all. Anything else that is
+ * not a plain object is passed on as it is, for `object` to refuse.
  */
 const rebuild = (shape: Shape, options: ObjectOptions, rest: readonly unknown[]): AnyValidator => {
   const given = rest.length > 0 && (rest[0] === undefined || rest[0] === null) ? rest.slice(1) : rest;
+  const [first, ...checks] = given;
   return (object as (shape: Shape, ...rest: unknown[]) => AnyValidator)(
     shape,
-    ...(given.length === 0 || typeof given[0] === "function" ? [options, ...given] : given),
+    ...(given.length === 0 || typeof first === "function"
+      ? [options, ...given]
+      : isPlainObject(first)
+        ? [{ ...options, ...first }, ...checks]
+        : given),
   );
 };
 

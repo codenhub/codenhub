@@ -89,6 +89,18 @@ describe("nonBlank", () => {
     expect(valueOf(string(nonBlank())(" a "))).toBe(" a ");
   });
 
+  it("should treat format characters and the characters that render as blank space as blank", () => {
+    // Zero-width space, word joiner, byte order mark, soft hyphen, the Hangul fillers and the blank
+    // braille pattern, alone and beside white space; then each beside a letter.
+    const blanks = [0x20_0b, 0x20_60, 0xfe_ff, 0xad, 0x31_64, 0xff_a0, 0x11_5f, 0x11_60, 0x28_00].map((code) =>
+      String.fromCodePoint(code),
+    );
+    expect(accepts(string(nonBlank()), ...blanks, ` ${blanks.join("")}\n`)).toEqual(
+      Array(blanks.length + 1).fill(false),
+    );
+    expect(accepts(string(nonBlank()), ...blanks.map((blank) => `${blank}a`))).toEqual(Array(blanks.length).fill(true));
+  });
+
   it("should report the format it required, worded by its message or in English", () => {
     const [found] = issuesOf(string(nonBlank())(" "));
     expect(found).toEqual({ code: "invalid_format", path: [], params: { format: "nonBlank" } });

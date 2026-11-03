@@ -48,6 +48,19 @@ describe("standardJsonSchema", () => {
     });
   });
 
+  it("should reject a library option it does not know, as toJsonSchema does", () => {
+    const { jsonSchema } = standardJsonSchema(string())["~standard"];
+    expect(() => jsonSchema.input({ target: "draft-07", libraryOptions: { unrepresentible: "any" } })).toThrow(
+      new TypeError("Unknown option unrepresentible"),
+    );
+    expect(() => jsonSchema.input({ target: "draft-07", libraryOptions: { io: "output" } })).toThrow(
+      new TypeError("Unknown option io"),
+    );
+    expect(jsonSchema.input({ target: "draft-07", libraryOptions: {} })).toEqual(
+      toJsonSchema(string(), { target: "draft-07" }),
+    );
+  });
+
   it("should behave and be described as the validator it wraps, and leave it as it was", () => {
     const exposed = standardJsonSchema(signup);
     expect(exposed({ email: "ada@example.com", age: 3 })).toEqual(signup({ email: "ada@example.com", age: 3 }));

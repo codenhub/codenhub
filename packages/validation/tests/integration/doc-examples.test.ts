@@ -149,23 +149,23 @@ describe("documentation examples", () => {
     let checked = 0;
     for (const example of examples(exportNames)) {
       const annotated: { line: number; comment: string }[] = [];
-      // A line written as `expression; // { ok: true, value: … }` states what the expression gives. It is
+      // A line whose comment states what its expression gives, as the grammar above `annotation` says, is
       // wrapped so the test receives what it gave, and every other line runs as written.
-      const body = example.code
-        .split("\n")
+      const codeLines = example.code.split("\n");
+      const body = codeLines
         .map((line, index) => {
-          const found = ANNOTATED_LINE.exec(line);
-          if (found === null || /^(?:const|let|return|await|export|import)\b/.test(found[2] as string)) {
+          const found = annotation(codeLines, index);
+          if (found === undefined) {
             return line;
           }
-          annotated.push({ line: example.lines[index] ?? -1, comment: found[3] as string });
-          return `${found[1]}await __check(${annotated.length - 1}, () => (${found[2]}));`;
+          annotated.push({ line: example.lines[index] ?? -1, comment: found.comment });
+          return `${found.indent}${found.declaration}await __check(${annotated.length - 1}, () => (${found.expression}));`;
         })
         .join("\n");
-      if (annotated.length === 0) {
+      if (annotated.length === 0 || readsUnstubbed(example.code)) {
         continue;
       }
-      const results = new Map<number, unknown>();
+      const results = new Map<number, Outcome>();
       const javascript = ts
         .transpileModule(body, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } })
         .outputText.replace(/^import .*$/gm, "")
@@ -180,8 +180,16 @@ describe("documentation examples", () => {
         // One example at a time, in order, so a failure names the example that caused it.
         // oxlint-disable-next-line no-await-in-loop -- the examples run one after another on purpose
         await run(
+          // A line that throws is recorded and the example goes on, so the lines after it are checked too.
           async (index: number, evaluate: () => unknown) => {
-            results.set(index, await evaluate());
+            try {
+              const value = await evaluate();
+              results.set(index, { value });
+              return value;
+            } catch (error) {
+              results.set(index, { error });
+              return undefined;
+            }
           },
           ...exportNames.map((name) => module[name]),
           ...STUB_NAMES.map((name) => STUBS[name]),
@@ -196,7 +204,7 @@ describe("documentation examples", () => {
           failures.push(`${where}: never ran`);
           continue;
         }
-        const problem = compare(results.get(index), comment);
+        const problem = compare(results.get(index) as Outcome, comment);
         if (problem !== undefined) {
           failures.push(`${where}: ${problem}`);
         }
@@ -208,8 +216,89 @@ describe("documentation examples", () => {
   });
 });
 
-/** A line of code that ends with a comment stating its result, the expression and the comment captured. */
-const ANNOTATED_LINE = /^(\s*)(.+?);\s*\/\/\s*(\{ ok: (?:true|false)\b.*|ok|fails\b.*|".*")$/;
+/*
+ * The comments the test checks, each written after an expression statement, on its line or, alone, on the
+ * line after it. The statement may also be a `const` or `let` declaration, whose initializer is checked.
+ *
+ *   { ok: true, value: V } | { ok: false, … } | ok | fails …   a validator's result, as `compare` says
+ *   { … } | [ … ]   a literal the result equals, which on the lines after the statement may run over
+ *                   several, each starting with `//`, until its brackets close; `...` stands for any
+ *                   other properties of an object, or any further items at the end of an array
+ *   "text"          the text the expression gives
+ *   TypeError: m    an error the expression throws, as `String(error)` writes it
+ *
+ * Any other comment, such as prose under the result, is not checked, and neither is a `{ … }` or `[ … ]`
+ * after a declaration, which writes the type it declares. A block that reads a value of `context` with no
+ * stub, such as `signup`, is not run.
+ */
+const COMMENT = /^(\{.*|\[.*|ok|fails\b.*|".*"|[A-Z]\w*Error: .*)$/;
+/** A statement that ends on its line and is not one the test can wrap, such as a `return` or a type. */
+const STATEMENT = /^(\s*)((?:const|let)\s+[^=]+?=\s*)?(?!(?:return|await|export|import|type|interface)\b)(.+?);$/;
+const SAME_LINE = /^(.+?;)\s*\/\/\s*(.*)$/;
+const COMMENT_LINE = /^\s*\/\/\s?(.*)$/;
+
+interface Annotation {
+  indent: string;
+  /** `const name = ` for a declaration, so the line still declares it. */
+  declaration: string;
+  expression: string;
+  comment: string;
+}
+
+/** The annotation of `lines[index]`, read as the grammar above says, or `undefined` when it has none. */
+function annotation(lines: readonly string[], index: number): Annotation | undefined {
+  const line = lines[index] as string;
+  const sameLine = SAME_LINE.exec(line);
+  let statement: string;
+  let comment: string;
+  if (sameLine === null) {
+    const next = COMMENT_LINE.exec(lines[index + 1] ?? "");
+    // A statement whole on its line, so the line that ends a longer one, as `});` does, is not read.
+    if (next === null || COMMENT_LINE.test(line) || !balanced(line)) {
+      return undefined;
+    }
+    statement = line;
+    comment = (next[1] as string).trim();
+    // A literal runs over the comment lines after it until its brackets close.
+    for (let more = index + 2; /^[{[]/.test(comment) && !balanced(comment); more += 1) {
+      const following = COMMENT_LINE.exec(lines[more] ?? "");
+      if (following === null) {
+        break;
+      }
+      comment = `${comment} ${(following[1] as string).trim()}`;
+    }
+  } else {
+    statement = sameLine[1] as string;
+    comment = (sameLine[2] as string).trim();
+  }
+  const parts = STATEMENT.exec(statement);
+  if (parts === null || !COMMENT.test(comment)) {
+    return undefined;
+  }
+  // The literal after a declaration writes the type it declares, as `const point = tuple(…); // [number, number]`.
+  if (parts[2] !== undefined && /^[{[]/.test(comment) && !comment.startsWith("{ ok: ")) {
+    return undefined;
+  }
+  return {
+    indent: parts[1] as string,
+    declaration: parts[2] ?? "",
+    expression: parts[3] as string,
+    comment,
+  };
+}
+
+/** Whether the brackets of `code` close, outside its strings. */
+function balanced(code: string): boolean {
+  let depth = 0;
+  for (const character of code.replaceAll(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`[^`]*`/g, "")) {
+    if ("([{".includes(character)) {
+      depth += 1;
+    } else if (")]}".includes(character)) {
+      depth -= 1;
+    }
+  }
+  return depth === 0;
+}
 
 const AsyncFunction = (async () => undefined).constructor as new (...args: string[]) => unknown;
 
@@ -224,29 +313,117 @@ const STUBS: Record<string, unknown> = {
   findUser: async () => undefined,
 };
 const STUB_NAMES = Object.keys(STUBS);
+/** The values `context` declares that have no stub, which a block that reads them cannot run without. */
+const UNSTUBBED = [...context.matchAll(/^\s*(?:const|function) (\w+)/gm)]
+  .map((match) => match[1] as string)
+  .filter((name) => !STUB_NAMES.includes(name));
+
+/** Whether `code` reads a value of `context` that has no stub, and does not declare it itself. */
+function readsUnstubbed(source: string): boolean {
+  // Without comments and strings, which may name one, as "one issue" does.
+  const code = source.replaceAll(/\/\/.*$|"(?:[^"\\\n]|\\.)*"|`[^`]*`/gm, "");
+  return UNSTUBBED.some(
+    (name) =>
+      new RegExp(`\\b${name}\\b`).test(code) && !new RegExp(`\\b(?:const|let|function|class) ${name}\\b`).test(code),
+  );
+}
+
+/** What an annotated expression gave: its value, or the error it threw. */
+type Outcome = { value: unknown } | { error: unknown };
+
+/** Stands for the `...` of a literal: a key of an object, or the last item of an array. */
+const REST = Symbol("...");
+const rest = Object.defineProperty({ [REST]: true }, Symbol.iterator, {
+  enumerable: false,
+  *value() {
+    yield REST;
+  },
+});
+
+/** The value a literal comment writes, read as TypeScript would, with each `...` read as `REST`. */
+function literal(text: string): unknown {
+  return new Function("__rest", `return (${text.replaceAll(/\.\.\.(?![\w$])/g, "...__rest")});`)(rest);
+}
 
 /**
- * Compares a result with the comment that states it: `{ ok: true, value: … }` with that value when it is
- * written out, `{ ok: false, … }` with a failure and, when it names one, the code of its first issue,
- * `ok` and `fails` with either, and quoted text with the text the expression gave.
+ * Whether `actual` is what `expected` writes: the same primitives, arrays of the same items and plain
+ * objects of the same keys and values, whatever the prototype of the actual one. `REST` lets an object
+ * have other keys, and an array other items after the ones written.
  */
-function compare(actual: unknown, comment: string): string | undefined {
+function matches(actual: unknown, expected: unknown): boolean {
+  if (Array.isArray(expected)) {
+    const open = expected.at(-1) === REST;
+    const items = open ? expected.slice(0, -1) : expected;
+    return (
+      Array.isArray(actual) &&
+      (open ? actual.length >= items.length : actual.length === items.length) &&
+      items.every((item, index) => matches(actual[index], item))
+    );
+  }
+  if (typeof expected === "object" && expected !== null && Object.getPrototypeOf(expected) === Object.prototype) {
+    if (typeof actual !== "object" || actual === null || Array.isArray(actual)) {
+      return false;
+    }
+    const prototype: unknown = Object.getPrototypeOf(actual);
+    if (prototype !== Object.prototype && prototype !== null) {
+      return false;
+    }
+    const written = expected as Record<string, unknown>;
+    const record = actual as Record<string, unknown>;
+    const keys = Object.keys(written);
+    return (
+      (REST in written || Object.keys(record).length === keys.length) &&
+      keys.every((key) => Object.hasOwn(record, key) && matches(record[key], written[key]))
+    );
+  }
+  return isDeepStrictEqual(actual, expected);
+}
+
+/** `value` as a failure message writes it, with `undefined` written out. */
+function show(value: unknown): string {
+  return JSON.stringify(value, (_, item: unknown) => (item === undefined ? "undefined" : item)) ?? String(value);
+}
+
+/**
+ * Compares what an expression gave with the comment that states it, as the grammar above `annotation`
+ * says. For a validator's result: `{ ok: true, value: … }` with that value when it is written out,
+ * `{ ok: false, … }` with a failure and, when it names one, the code of its first issue, and `ok` and
+ * `fails` with either.
+ */
+function compare(outcome: Outcome, comment: string): string | undefined {
+  if (/^[A-Z]\w*Error: /.test(comment)) {
+    if (!("error" in outcome)) {
+      return `gave ${show(outcome.value)}, the comment says it throws ${comment}`;
+    }
+    return String(outcome.error) === comment
+      ? undefined
+      : `threw ${String(outcome.error)}, the comment says ${comment}`;
+  }
+  if ("error" in outcome) {
+    return `threw ${String(outcome.error)}, the comment says ${comment}`;
+  }
+  const actual = outcome.value;
   if (comment.startsWith('"')) {
     const text = JSON.parse(comment) as string;
-    return actual === text ? undefined : `gave ${JSON.stringify(actual)}, the comment says ${comment}`;
+    return actual === text ? undefined : `gave ${show(actual)}, the comment says ${comment}`;
+  }
+  if (!/^(?:ok$|fails\b|\{ ok: )/.test(comment)) {
+    let expected: unknown;
+    try {
+      expected = literal(comment);
+    } catch {
+      return `the comment is not a literal: ${comment}`;
+    }
+    return matches(actual, expected) ? undefined : `gave ${show(actual)}, the comment says ${comment}`;
   }
   const result = actual as { ok?: unknown; value?: unknown; error?: { issues?: { code?: string }[] } };
   const isOk = comment === "ok" || comment.startsWith("{ ok: true");
   if (result.ok !== isOk) {
-    return `gave ${JSON.stringify(result)}, the comment says ${comment}`;
+    return `gave ${show(result)}, the comment says ${comment}`;
   }
   const value = /^\{ ok: true, value: (.*) \}$/.exec(comment)?.[1];
-  if (value !== undefined && !value.includes("...")) {
-    // The comment is a TypeScript literal, so it is read as one.
-    const expected: unknown = new Function(`return (${value});`)();
-    if (!isDeepStrictEqual(result.value, expected)) {
-      return `gave ${JSON.stringify(result.value)}, the comment says ${value}`;
-    }
+  if (value !== undefined && !matches(result.value, literal(value))) {
+    return `gave ${show(result.value)}, the comment says ${value}`;
   }
   const code = /code "([^"]+)"/.exec(comment)?.[1];
   if (code !== undefined && result.error?.issues?.[0]?.code !== code) {
