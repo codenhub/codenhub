@@ -10,6 +10,28 @@ group: "Reference"
 
 ## Functions
 
+### all
+
+```ts
+export declare const all: <const R extends readonly Result<unknown>[]>(results: R) => Result<OkValues<R>>;
+```
+
+Combines a list of Results into one: an `Ok` holding every value in order, or the first `Err`.
+
+A tuple keeps each position's type, so `all([ok(1), ok("a")] as const)` is a `Result<readonly [number, string]>`. For calls that run in parallel, await them first: `all(await Promise.all([attemptAsync(a), attemptAsync(b)]))`.
+
+**Parameters**
+
+- `results` — The Results to combine.
+
+**Type parameters**
+
+- `R` — The list of Results to combine.
+
+**Returns** — An Ok holding a frozen list of the values, or the first Err in the list.
+
+**Throws** — `TypeError` — If `results` is not a list.
+
 ### andThen
 
 ```ts
@@ -136,7 +158,7 @@ Ordinary unknown input never throws, including objects and proxies whose inspect
 - `error` — The raw error value to normalize, such as an `Error`, plain object, or string.
 - `options` — Configuration controlling fallback message, registry source, and wrapper depth.
 
-**Returns** — An AppError whose own properties cannot be changed or removed. An existing AppError is returned as-is unless a `registry` is supplied and finds something that improves on it: only a heuristic match replaces an unknown error, and only a known match that differs replaces a classified one. A `fallbackMessage` or `maxDepth` alone never changes an AppError.
+**Returns** — An AppError whose own properties cannot be changed or removed. An existing AppError is returned as-is unless a `registry` is supplied and finds something that improves on it: only a heuristic match replaces an unknown error, and only a known match that differs replaces a classified one. A `fallbackMessage` or `maxDepth` alone never changes a classification; a `fallbackMessage` only words an unknown AppError that still carries the default message.
 
 **Throws** — `TypeError` — If `options` is not an object, `fallbackMessage` is not a non-empty string, `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer from 0 through 3.
 
@@ -312,6 +334,50 @@ Creates a successful Result instance wrapping the provided value.
 
 **Returns** — An Ok result object.
 
+### orElse
+
+```ts
+export declare const orElse: <T, U = T>(result: Result<T>, recover: (error: AppError) => Result<U>) => Result<T | U>;
+```
+
+Recovers from a failed Result by running a callback that returns another Result. An `Ok` passes through untouched.
+
+Use it to fall back on a specific failure, such as reading a cache when `error.code` says the reader is offline, and return `err(error)` from the callback for every failure it does not handle.
+
+**Parameters**
+
+- `result` — The Result instance to recover.
+- `recover` — The function that receives the AppError and returns a new Result.
+
+**Type parameters**
+
+- `T` — The type of the original success value.
+- `U` — The type of the recovered success value.
+
+**Returns** — The original Ok, or the Result returned by `recover`.
+
+**Throws** — The exception thrown by `recover`; callback failures are not normalized.
+
+### orElseAsync
+
+```ts
+export declare const orElseAsync: <T, U = T>(result: Result<T>, recover: (error: AppError) => Result<U> | Promise<Result<U>>) => Promise<Result<T | U>>;
+```
+
+Recovers from a failed Result with a callback that returns another Result or a Promise of one.
+
+**Parameters**
+
+- `result` — The Result instance to recover.
+- `recover` — The function that receives the AppError and returns a new Result or a Promise of one.
+
+**Type parameters**
+
+- `T` — The type of the original success value.
+- `U` — The type of the recovered success value.
+
+**Returns** — A Promise resolving to the original Ok or the Result returned by `recover`. The promise rejects if `recover` throws or rejects; callback failures are not normalized.
+
 ### setErrorRegistry
 
 ```ts
@@ -379,6 +445,7 @@ export interface AppError extends Error {
     readonly source: AppErrorSource;
     readonly originalError: unknown;
     readonly isRetryable: boolean;
+    readonly details: Readonly<Record<string, unknown>> | null;
     toJSON(): {
         name: string;
         message: string;
@@ -387,6 +454,7 @@ export interface AppError extends Error {
         messageKey: string | null;
         source: AppErrorSource;
         isRetryable: boolean;
+        details: Readonly<Record<string, unknown>> | null;
     };
 }
 ```
@@ -402,6 +470,14 @@ readonly code: string | null;
 ```
 
 The registry identifier that classified this error: the matched code, or the matched error name when no code matched. `null` for message, prefix, and pattern matches and for unknown errors. Use it to branch on a specific failure; branch on `messageKey` for a built-in preset mapping matched by message, prefix, or pattern, which has no code.
+
+#### AppError › details
+
+```ts
+readonly details: Readonly<Record<string, unknown>> | null;
+```
+
+Structured data a caller attached with the `details` option, such as the form field that failed, or `null`. It holds only JSON values, is frozen, and is included in `toJSON()`, so it crosses a boundary with the error. Never read from the raw error, so nothing reaches it that the code did not put there on purpose.
 
 #### AppError › isRetryable
 
@@ -454,6 +530,7 @@ toJSON(): {
     messageKey: string | null;
     source: AppErrorSource;
     isRetryable: boolean;
+    details: Readonly<Record<string, unknown>> | null;
 };
 ```
 
@@ -468,10 +545,19 @@ export interface AppErrorOptions {
     fallbackMessage?: string;
     registry?: ErrorRegistry | ReadonlyErrorRegistry;
     maxDepth?: number;
+    details?: Readonly<Record<string, unknown>>;
 }
 ```
 
 Options configuration for controlling how raw error values are normalized into `AppError` instances.
+
+#### AppErrorOptions › details
+
+```ts
+details?: Readonly<Record<string, unknown>>;
+```
+
+Structured data to attach to the error as `details`, such as `{ field: "email" }`. Must be a plain object holding only JSON values (strings, finite numbers, booleans, `null`, lists, and plain objects), nested at most 8 levels deep. It is copied and frozen. An existing AppError keeps the details it has and gains only the keys it lacks.
 
 #### AppErrorOptions › fallbackMessage
 
@@ -1091,3 +1177,17 @@ export declare const DEFAULT_APP_ERROR_MESSAGE = "An unexpected error occurred."
 ```
 
 Default message used when no registry entry or fallback message can describe an error.
+
+## Internal types
+
+### OkValues
+
+```ts
+type OkValues<R extends readonly Result<unknown>[]> = {
+    readonly [K in keyof R]: R[K] extends Result<infer V> ? V : never;
+};
+```
+
+The success values of a list of Results, position by position.
+
+Not exported; declared in `src/result.ts`.

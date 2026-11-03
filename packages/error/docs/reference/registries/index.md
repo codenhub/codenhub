@@ -42,6 +42,26 @@ Includes name mappings for DOMException types (e.g., `AbortError`, `TimeoutError
 
 Importing this registry preset does not access or require browser/DOM globals.
 
+### httpErrorCodes
+
+```ts
+export declare const httpErrorCodes: Readonly<Record<string, Readonly<ErrorFeedback>>>;
+```
+
+Raw code mapping definitions for HTTP response statuses, keyed by the status as text.
+
+Nothing is retryable: a status is the server's answer, so the request reached it, and even a `503` or `504` can follow a request the server or a service behind it already acted on. A `429` needs a wait the flag cannot express.
+
+### httpErrorRegistry
+
+```ts
+export declare const httpErrorRegistry: ReadonlyErrorRegistry;
+```
+
+An opt-in, read-only error registry pre-populated with mappings for HTTP error statuses.
+
+Pass it as the `registry` option when classifying a failed response, as in `err({ code: response.status }, { registry: httpErrorRegistry })`, rather than merging it into the global registry: a status is a short number that only means something for a response, and could collide with another service's codes.
+
 ### nodeErrorCodes
 
 ```ts
