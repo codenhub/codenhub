@@ -1,5 +1,6 @@
 /**
- * Locale-prefixed URL paths: read the locale from a path and build the same path for another locale.
+ * Localized URL paths: read the locale and canonical path from a URL, and build a page's path in another locale, with a
+ * locale prefix, translated words, or both.
  *
  * @packageDocumentation
  */
