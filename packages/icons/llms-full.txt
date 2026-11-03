@@ -1168,7 +1168,7 @@ A minifier configured with `legalComments: "none"` strips `/*! … */` comments.
 
 ## Fixed
 
-- In `mode: "svg"`, an icon tag written inside a string in an `.astro` frontmatter broke `astro build` with a parse error. Astro compiled the file before the plugin's transform ran, so the `<svg>` landed unescaped in a string the compiler had re-quoted. The transform now runs ahead of other plugins' transforms. [codenhub/codenhub#451](https://github.com/codenhub/codenhub/issues/451)
+- In `mode: "svg"`, an icon tag written inside a string in an `.astro` frontmatter broke `astro build` with a parse error. Astro compiled the file before the plugin's transform ran, so the `<svg>` landed unescaped in a string the compiler had re-quoted. The transform now runs ahead of other plugins' ordinary transforms, Astro's compiler among them; a plugin that also orders its transform `"pre"` and is listed earlier still runs first. [codenhub/codenhub#451](https://github.com/codenhub/codenhub/issues/451)
 
 <!-- Source: docs/changelog/0.3.0.md -->
 
