@@ -332,6 +332,29 @@ describe("translated pathnames", () => {
     });
   });
 
+  describe("with a large table", () => {
+    it("should build and read 2,000 routes in well under a second", () => {
+      const pathnames: Record<string, Partial<Record<Locale, string>>> = {};
+      for (let index = 0; index < 2_000; index += 1) {
+        pathnames[`/section${index}/:id/page${index}`] = {
+          pt: `/secao${index}/:id/pagina${index}`,
+          es: `/seccion${index}/:id/pagina${index}`,
+        };
+      }
+
+      const start = performance.now();
+      const routing = create({ localePrefix: "when-ambiguous", pathnames });
+      for (let index = 0; index < 2_000; index += 1) {
+        expect(routing.parse(`/secao${index}/7/pagina${index}`)).toEqual({
+          locale: "pt",
+          pathname: `/section${index}/7/page${index}`,
+        });
+      }
+
+      expect(performance.now() - start).toBeLessThan(1_000);
+    });
+  });
+
   describe("configuration", () => {
     const invalid =
       (pathnames: unknown, localePrefix: LocaleRoutingConfig<Locale>["localePrefix"] = "except-default") =>

@@ -1,6 +1,6 @@
 import { assertConfig, localeRoutingConfig } from "../locale/config-validators";
 import { findPathnameProblem, joinPathname, MAX_PATHNAME_LENGTH, normalizeSegment, splitPathname } from "./path";
-import { buildPattern, compilePathnames, matchPattern, type Route } from "./pathnames";
+import { buildPattern, compilePathnames, matchPattern, type Route, type ShapeIndex } from "./pathnames";
 
 /** Configuration snapshotted for parsing and generating localized pathnames. */
 export interface LocaleRoutingConfig<TLocale extends string> {
@@ -128,13 +128,13 @@ export const createLocaleRouting = <TLocale extends string>(
 
   /** Finds the first route whose pattern matches, returning it with its parameters. */
   const findRoute = (
-    routes: readonly Route<TLocale>[],
+    routes: ShapeIndex<Route<TLocale>>,
     patternOf: (route: Route<TLocale>) => Route<TLocale>["canonical"],
     segments: readonly string[],
   ) => {
     const keys = segments.map(normalizeSegment);
 
-    for (const route of routes) {
+    for (const route of routes.candidates(keys.length, keys[0])) {
       const parameters = matchPattern(patternOf(route), keys, segments);
       if (parameters !== undefined) {
         return { route, parameters };
@@ -166,7 +166,7 @@ export const createLocaleRouting = <TLocale extends string>(
     if (localePrefix === "when-ambiguous") {
       const keys = segments.map(normalizeSegment);
 
-      for (const { route, locale } of pathnames.unprefixed) {
+      for (const { route, locale } of pathnames.unprefixed.candidates(keys.length, keys[0])) {
         const parameters = matchPattern(route.forms.get(locale)!, keys, segments);
         if (parameters !== undefined) {
           return {
