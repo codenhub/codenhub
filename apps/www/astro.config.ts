@@ -24,11 +24,13 @@ export default defineConfig({
   ],
   vite: {
     plugins: [
-      // Inline SVG mode: every literal `<i class="ic-…">` tag in this app and
-      // the shared shell becomes an `<svg>` at build time, frontmatter strings
-      // included. An icon picked from data is written as a whole tag in the
-      // frontmatter and rendered with `set:html`, since a class built at
-      // runtime cannot be seen by the plugin and would render nothing.
+      // Inline SVG mode: every literal `<i class="ic-…">` tag in this app's
+      // templates and the shared shell becomes an `<svg>` at build time. A
+      // class built from data cannot be seen by the plugin and would render
+      // nothing, and a whole tag in a frontmatter string breaks the build
+      // (codenhub/codenhub#451), so an icon picked from data comes from its
+      // `virtual:@codenhub/icons/…` module through `decorative`
+      // (`src/lib/icon.ts`).
       viteIcons({
         mode: "svg",
         families: [lucide, simpleIcons, logos],
