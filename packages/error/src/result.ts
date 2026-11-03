@@ -348,6 +348,9 @@ export const all = <const R extends readonly Result<unknown>[]>(results: R): Res
     if (typeof result !== "object" || result === null || typeof result.ok !== "boolean") {
       throw new TypeError("all expects a list of Results.");
     }
+  }
+
+  for (const result of results as readonly Result<unknown>[]) {
     if (!result.ok) {
       return result;
     }

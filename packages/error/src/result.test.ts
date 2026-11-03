@@ -538,5 +538,6 @@ describe("all", () => {
   ])("should throw TypeError for a list holding %s", (_label, item) => {
     expect(() => all([item, ok(2)] as never)).toThrow(TypeError);
     expect(() => all([ok(1), item] as never)).toThrow(TypeError);
+    expect(() => all([err("first"), item] as never)).toThrow(TypeError);
   });
 });
