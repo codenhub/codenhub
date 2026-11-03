@@ -153,6 +153,22 @@ describe("documentation chrome", () => {
     expect(nav).toBe('<a class="shell-nav-link" href="https://codenhub.dev/packages/">Packages</a>');
   });
 
+  it("ends the section strip with the package demo when it has one", async () => {
+    const html = await readOutput("toaster/index.html");
+    const strip = html.match(/<ul class="package-tabs">(.*?)<\/ul>/)?.[1] ?? "";
+    const tabs = [...strip.matchAll(/<a class="package-tab"[^>]*href="([^"]+)"/g)].map((match) => match[1]);
+
+    expect(tabs.at(-1)).toBe("https://demo.codenhub.dev/toaster/");
+    expect(strip).toContain('href="https://demo.codenhub.dev/toaster/" rel="noopener noreferrer" target="_blank"');
+  });
+
+  it("shows no demo tab for a package without a demo", async () => {
+    const html = await readOutput("error/index.html");
+
+    expect(html).toContain('class="package-tabs"');
+    expect(html).not.toContain("demo.codenhub.dev");
+  });
+
   it("groups a package's folder pages into collapsible sections, open on the active one", async () => {
     const html = await readOutput("styles/usage/buttons/index.html");
 

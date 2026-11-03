@@ -13,8 +13,11 @@ interface Props {
 const { currentPackage, currentRoute } = Astro.props;
 const { tabs, tree } = buildPackageSidebar(currentPackage.documents, currentRoute);
 
-// A strip of one is not a choice, so a package with a single section shows none.
-const sectionTabs = tabs.length > 1 ? tabs : [];
+const { demoUrl } = currentPackage;
+
+// A strip of one is not a choice, so a package with a single section and no
+// demo shows none.
+const sectionTabs = tabs.length + (demoUrl === undefined ? 0 : 1) > 1 ? tabs : [];
 
 // Stroked line icons in the app's shared style (see the sidebar caret and search
 // glyph): an open book, code brackets, a tag.
@@ -48,6 +51,17 @@ const TAB_ICONS: Record<DocumentSection, string> = {
             </a>
           </li>
         ))}
+        {demoUrl !== undefined && (
+          <li>
+            {/* The demo is another site, so like the shell's cross-surface links it
+                opens in a new tab and carries the outbound arrow. */}
+            <a class="package-tab" href={demoUrl} rel="noopener noreferrer" target="_blank">
+              <i aria-hidden="true" class="ic-lucide-monitor-play package-tab-icon" />
+              Demo
+              <i aria-hidden="true" class="ic-lucide-arrow-up-right package-tab-outbound" />
+            </a>
+          </li>
+        )}
       </ul>
     )
   }
