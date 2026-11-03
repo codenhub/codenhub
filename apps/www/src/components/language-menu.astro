@@ -71,7 +71,16 @@ const { label, locale, pathname } = Astro.props;
       }
     };
 
-    list?.addEventListener("animationend", finish);
+    // A cancelled close, such as one cut short by turning on reduced motion,
+    // fires no `animationend`, so it finishes too. Closing mid-open cancels the
+    // in animation, which must not.
+    const finishClose = (event: AnimationEvent) => {
+      if (event.animationName === "www-language-out") {
+        finish();
+      }
+    };
+    list?.addEventListener("animationend", finishClose);
+    list?.addEventListener("animationcancel", finishClose);
 
     // The choice outranks the browser's languages in the base layout's redirect.
     for (const option of menu.querySelectorAll<HTMLAnchorElement>("a[hreflang]")) {

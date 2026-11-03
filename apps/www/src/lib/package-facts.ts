@@ -94,15 +94,27 @@ const SIZE_UNITS = [
   [1000, "kB"],
 ] as const;
 
+const figureFormats = new Map<string, Intl.NumberFormat>();
+
 /**
  * Formats a byte count the way bundle sizes are usually quoted, in decimal units.
  * @param bytes Byte count.
- * @returns Such as `840 B`, `27.6 kB`, or `16.6 MB`.
+ * @param locale The page's locale, which picks the decimal separator. Defaults to English.
+ * @returns Such as `840 B`, `27.6 kB`, or `16.6 MB`; `27,6 kB` in Portuguese.
  */
-export function formatBytes(bytes: number): string {
+export function formatBytes(bytes: number, locale = "en"): string {
   // The unit is chosen on the rounded figure, so 999,960 bytes reads `1.0 MB`, not `1000.0 kB`.
   const unit = SIZE_UNITS.find(([size]) => Number((bytes / size).toFixed(1)) >= 1);
-  return unit === undefined ? `${bytes} B` : `${(bytes / unit[0]).toFixed(1)} ${unit[1]}`;
+  if (unit === undefined) {
+    return `${bytes} B`;
+  }
+
+  let format = figureFormats.get(locale);
+  if (format === undefined) {
+    format = new Intl.NumberFormat(locale, { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+    figureFormats.set(locale, format);
+  }
+  return `${format.format(bytes / unit[0])} ${unit[1]}`;
 }
 
 /**
@@ -111,14 +123,15 @@ export function formatBytes(bytes: number): string {
  * A root with no runtime code, such as one that only re-exports types, costs
  * nothing, so it reads `0 B` rather than the 20 bytes gzip spends on an empty file.
  * @param size The release's size report, absent for a release cut before sizes were recorded.
+ * @param locale The page's locale. Defaults to English.
  * @returns Such as `27.6 kB gzip`, or `undefined` when the release has no measured root entrypoint.
  */
-export function describeRootSize(size: SizeReport | undefined): string | undefined {
+export function describeRootSize(size: SizeReport | undefined, locale = "en"): string | undefined {
   const root = size?.entrypoints["."];
   if (root === undefined) {
     return undefined;
   }
-  return `${formatBytes(root.minified === 0 ? 0 : root.gzip)} gzip`;
+  return `${formatBytes(root.minified === 0 ? 0 : root.gzip, locale)} gzip`;
 }
 
 /**

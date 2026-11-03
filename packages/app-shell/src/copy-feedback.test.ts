@@ -64,6 +64,8 @@ describe("createCopyController", () => {
     });
 
     expect(status.textContent).toBe("Copiado");
+    expect(button.title).toBe("Copiado");
+    expect(button.getAttribute("aria-label")).toBe("Copiado");
   });
 
   it("announces a denied clipboard write while retaining the failed button state", async () => {

@@ -52,13 +52,13 @@ const toSpecifier = (subpath: string): string => (subpath === "." ? packageName 
             {hasSizes && <span />}
             {hasSizes && (
               <span class="bundle-figure">
-                {size === undefined ? "—" : formatBytes(size.minified)}
+                {size === undefined ? "—" : formatBytes(size.minified, locale)}
                 <span class="visually-hidden"> {minified}</span>
               </span>
             )}
             {hasSizes && (
               <span class="bundle-figure">
-                {size === undefined ? "—" : formatBytes(size.gzip)}
+                {size === undefined ? "—" : formatBytes(size.gzip, locale)}
                 <span class="visually-hidden"> {gzipped}</span>
               </span>
             )}
@@ -78,11 +78,11 @@ const toSpecifier = (subpath: string): string => (subpath === "." ? packageName 
                     style={`--share: ${row.share}`}
                   />
                   <span class="bundle-figure">
-                    {formatBytes(row.minified)}
+                    {formatBytes(row.minified, locale)}
                     <span class="visually-hidden"> {minified}</span>
                   </span>
                   <span class="bundle-figure">
-                    {formatBytes(row.gzip)}
+                    {formatBytes(row.gzip, locale)}
                     <span class="visually-hidden"> {gzipped}</span>
                   </span>
                 </li>
