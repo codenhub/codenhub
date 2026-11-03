@@ -65,7 +65,7 @@ export const normalizeSegment = (segment: string): string => {
       .replace(PERCENT_ESCAPE_PATTERN, (escape) => escape.toUpperCase())
       .replace(/[^%]/gu, (character) => {
         try {
-          return encodeURI(character).replace("?", "%3F").replace("#", "%23");
+          return encodeURI(character).replaceAll("?", "%3F").replaceAll("#", "%23");
         } catch {
           return character; // A lone surrogate can't be encoded.
         }
