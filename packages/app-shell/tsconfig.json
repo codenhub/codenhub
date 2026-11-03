@@ -1,4 +1,5 @@
 {
+  // astro-check loads typescript as a peer to check the Astro components.
   "compilerOptions": {
     "allowImportingTsExtensions": true,
     "composite": true,
