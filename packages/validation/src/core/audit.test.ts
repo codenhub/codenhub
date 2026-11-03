@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { check } from "../builders/check";
 import { guard } from "../builders/guard";
+import { coerceBigint } from "../coercion/coerce-bigint";
 import { coerceNumber } from "../coercion/coerce-number";
 import { coerceString } from "../coercion/coerce-string";
 import { array } from "../composition/array";
@@ -29,7 +30,7 @@ import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { unknown } from "../primitives/unknown";
 import { audit } from "./audit";
-import type { Validator } from "./types";
+import type { AnyValidator, Validator } from "./types";
 
 const name = string({ max: 100 });
 
@@ -159,6 +160,27 @@ describe("audit", () => {
     const count = codec(string(), number(), { decode: Number, encode: String });
     expect(audit(object({ count }))).toEqual([{ rule: "unbounded_text", path: "count", kind: "string" }]);
     expect(audit(codec(name, number(), { decode: Number, encode: String }))).toEqual([]);
+  });
+
+  it("should report text read as a bigint unless bounds on both sides limit its digits", () => {
+    expect(audit(object({ id: coerceBigint() }))).toEqual([{ rule: "unbounded_text", path: "id", kind: "coerce" }]);
+    expect(audit(coerceBigint({ max: 10n }))).toEqual([{ rule: "unbounded_text", path: "", kind: "coerce" }]);
+    expect(audit(coerceBigint({ gt: 0n }))).toEqual([{ rule: "unbounded_text", path: "", kind: "coerce" }]);
+    expect(audit(coerceBigint({ min: 0n, lt: 10n ** 20n }))).toEqual([]);
+    expect(audit(pipe(string({ max: 30 }), coerceBigint()))).toEqual([]);
+  });
+
+  it("should name a recursive schema built anew at every level rather than overflow the stack", () => {
+    const build = (): AnyValidator =>
+      object({
+        kids: array(
+          lazy(() => build()),
+          { max: 3 },
+        ),
+      });
+    expect(() => audit(build())).toThrow(
+      new TypeError("audit found a recursive schema that is built anew at every level. Build it once and refer to it"),
+    );
   });
 
   it("should give a frozen list, and refuse what is not a function", () => {

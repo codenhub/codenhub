@@ -829,17 +829,19 @@ audit(signup); // [{ rule: "unbounded_size", path: "tags", kind: "array" }]
 
 Give `tags` a `max`, as `const bounded = object({ name: string({ max: 100 }), email: email(), tags: array(string({ max: 20 }), { max: 10 }) })`, and the list is empty, which a test asserts: `expect(audit(bounded)).toEqual([])`. Each finding has a `rule`, the `path` of the part in the schema and its `kind`:
 
-| `rule`             | Reported for                                                                                                                                      |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `"unbounded_size"` | An `array`, `set`, `map` or `record` without a `max` or `length`, a `tuple` with `rest` and no `max`, and a `file` without a `maxSize`            |
-| `"unbounded_text"` | A `string` or `coerceString` without a `max` or `length`, a format that does not bound its own text, and `json` or `searchParams` given open text |
-| `"raised_limit"`   | A `lazy` whose `maxDepth` or `maxCalls` is above its default                                                                                      |
-| `"unreadable"`     | A validator it cannot read, such as one written by hand, whose bound it cannot tell                                                               |
+| `rule`             | Reported for                                                                                                                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `"unbounded_size"` | An `array`, `set`, `map` or `record` without a `max` or `length`, a `tuple` with `rest` and no `max`, and a `file` without a `maxSize`                                                           |
+| `"unbounded_text"` | A `string` or `coerceString` without a `max` or `length`, a format that does not bound its own text, `json` or `searchParams` given open text, and a `coerceBigint` without a bound on each side |
+| `"raised_limit"`   | A `lazy` whose `maxDepth` or `maxCalls` is above its default                                                                                                                                     |
+| `"unreadable"`     | A validator it cannot read, such as one written by hand, whose bound it cannot tell                                                                                                              |
 
 - **Formats whose input is bounded by what they accept** need no `max`: `email`, `uuid`, `ulid`, `cuid2`, `nanoid`, `ip`, `cidr`, `mac`, `port`, `phone`, `creditCard`, `isoDate`, `hostname` and `domain`. Any other, such as `url`, `hex`, `jwt` or one made with `format`, is text like any other: bound it with a `pipe`, as below.
 - **A bound before it counts.** A `pipe` step reads what the steps before it produced, so after a step that bounds its value nothing needs a bound of its own: in `pipe(string({ max: 10_000 }), json(object({ tags: array(string()) })))` the text is at most 10,000 characters, and so is everything parsed from it. `pipe(string({ max: 2048 }), url())` bounds a URL the same way.
-- **A path** joins property names with `.`, and writes `[]` for the items of an array or a set, `[0]` for an item of a tuple, `{}` for the keys and values of a record or a map, and `""` for the validator itself. A recursive schema is read once at each place it is used, and not again where it refers to itself.
+- **Text read as a bigint** takes longer than linear time to convert, so `coerceBigint` needs `min` or `gt` and `max` or `lt`: they limit the digits it converts, and text with more is refused without being converted.
+- **A path** joins property names with `.`, and writes `[]` for the items of an array or a set, `[0]` for an item of a tuple, `{}` for the keys and values of a record or a map, and `""` for the validator itself. A recursive schema is read once at each place it is used, and not again where it refers to itself. One built anew at every level, as `lazy(() => build())` builds it, never repeats, so `audit` throws a `TypeError` for it, as `toJsonSchema` does: build it once and refer to it.
 - **What it does not judge** is whether a `max` is small enough: any number says someone decided. Checks are not read, since they run on a value that already passed, and neither is anything a `guard` or a validator written by hand does inside.
+- **What no option bounds is not listed.** It lists the bounds an option can set, so the keys an `object` with `unknownKeys: "passthrough"` keeps and what `unknown()` accepts are not reported. Use `"strip"` or `"strict"` for keys the schema does not name, and a validator of the type you expect in place of `unknown()`.
 
 ## Working with results
 
