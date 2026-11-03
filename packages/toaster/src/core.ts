@@ -324,8 +324,9 @@ class ToastManager {
 
   public clear(): void {
     this.assertAlive();
+    // Leaving toasts stay tracked until they settle, so destroy() can still
+    // settle them immediately.
     this.activeToasts.forEach((t) => t.hide());
-    this.activeToasts.clear();
   }
 
   public dismiss(handle?: ToastHandle): void {
@@ -411,7 +412,7 @@ class ToastManager {
   private getModalController(): ModalController {
     if (!this.modalController) {
       this.modalController = new ModalController(
-        this.getParent(),
+        () => this.getParent(),
         this.instanceId,
         () => this.resolved.className,
         () => this.resolved.dialogLabels,

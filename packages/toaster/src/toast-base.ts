@@ -110,6 +110,8 @@ export class Toast {
   private visiblePosition: ToastPosition | null = null;
   private isHovered = false;
   private isFocused = false;
+  /** Whether render() has shown the shell but not yet filled it, while onShow subscribers run. */
+  private isAwaitingContent = false;
   /** Deferred tokens/className from an `update()` call sent while still queued; message, content, icon, and type updates go through the `current*` fields below instead, applied automatically since `render()` reads them directly. */
   private pendingStyleUpdate: LiveStyleUpdate | null = null;
   private currentIcon: ToastIcon | null;
@@ -346,7 +348,7 @@ export class Toast {
       this.remainingDuration = this.options.duration;
     }
 
-    if (this.internalState === "queued") {
+    if (this.internalState === "queued" || this.isAwaitingContent) {
       if (normalized.tokens !== undefined || normalized.className !== undefined) {
         this.pendingStyleUpdate = {
           ...this.pendingStyleUpdate,
@@ -439,14 +441,12 @@ export class Toast {
     const needsFullContentRebuild = hasExistingStructuredDom || willHaveStructuredContent || touchesStructure;
 
     if (needsFullContentRebuild) {
-      element.replaceChildren();
-      populateToastContent(
-        element,
-        this.contentOptions,
-        () => this.hide(),
-        this.parent.ownerDocument,
-        this.handle ?? undefined,
-      );
+      const keepsControls =
+        normalized.content === undefined &&
+        normalized.action === undefined &&
+        normalized.dismissible === undefined &&
+        this.currentContent === null;
+      this.rebuildContent(element, keepsControls);
     } else {
       if (normalized.message !== undefined) {
         const messageEl = element.querySelector("[data-toast-message]");
@@ -471,6 +471,60 @@ export class Toast {
     if (normalized.duration !== undefined || normalized.autoDismiss !== undefined || transitionedFromLoader) {
       this.restartAutoDismissIfShown();
     }
+  }
+
+  /**
+   * Rebuilds a visible toast's content from its `current*` fields. With
+   * `keepsControls`, only the text and icon are replaced, so the action and
+   * dismiss buttons stay the same nodes and keep focus across an update such
+   * as a progress message. Otherwise everything is replaced, and focus that
+   * was inside moves to the matching new button, or is let go.
+   */
+  private rebuildContent(element: HTMLDivElement, keepsControls: boolean): void {
+    const documentRef = this.parent.ownerDocument;
+    const previousMain = element.querySelector(":scope > [data-toast-main]");
+    if (keepsControls && previousMain) {
+      const scratch = documentRef.createElement("div");
+      populateToastContent(
+        scratch,
+        { ...this.contentOptions, action: null, dismissible: false },
+        () => this.hide(),
+        documentRef,
+        this.handle ?? undefined,
+      );
+      previousMain.replaceWith(...scratch.childNodes);
+      return;
+    }
+
+    const focused = documentRef.activeElement;
+    const hadFocus = focused !== null && element.contains(focused);
+    const focusedSelector = focused?.matches("[data-toast-action]")
+      ? "[data-toast-action]"
+      : focused?.matches(".coden-toast-dismiss")
+        ? ".coden-toast-dismiss"
+        : null;
+    element.replaceChildren();
+    populateToastContent(element, this.contentOptions, () => this.hide(), documentRef, this.handle ?? undefined);
+    if (!hadFocus) {
+      return;
+    }
+    const replacement =
+      (focusedSelector === null ? null : element.querySelector<HTMLElement>(focusedSelector)) ??
+      element.querySelector<HTMLElement>("[data-toast-action], .coden-toast-dismiss");
+    if (replacement) {
+      replacement.focus();
+    } else {
+      // Removing a focused node fires no focusout in every engine.
+      this.handleFocusLeft();
+    }
+  }
+
+  private handleFocusLeft(): void {
+    this.isFocused = false;
+    if (!this.isHovered) {
+      this.resumeAutoDismiss();
+    }
+    this.retryQueueIfUnprotected();
   }
 
   /**
@@ -634,11 +688,7 @@ export class Toast {
       if (relatedTarget instanceof Node && element.contains(relatedTarget)) {
         return;
       }
-      this.isFocused = false;
-      if (!this.isHovered) {
-        this.resumeAutoDismiss();
-      }
-      this.retryQueueIfUnprotected();
+      this.handleFocusLeft();
     });
 
     if (typeof documentRef.hidden === "boolean") {
@@ -660,11 +710,22 @@ export class Toast {
     this.visiblePosition = position;
     toastByElement.set(element, this);
 
-    this.notify("show");
+    // An update() from an onShow subscriber lands in the current* fields
+    // that populateToastContent reads below, not in the still-empty shell.
+    this.isAwaitingContent = true;
+    try {
+      this.notify("show");
+    } finally {
+      this.isAwaitingContent = false;
+    }
 
     if (this.internalState !== "visible" || this.element !== element) {
       toastByElement.delete(element);
       return;
+    }
+    const shellRootClassName = element.getAttribute("data-root-class") ?? "";
+    if (shellRootClassName !== this.currentRootClassName) {
+      applyRootClassChange(element, shellRootClassName, this.currentRootClassName);
     }
 
     const isTopAnchored = isTopAnchoredPosition(position);
@@ -720,11 +781,17 @@ export class Toast {
     playStackShift(container, previousStackRects);
     this.announceIfChanged(element);
 
-    this.currentAnimation = animateIn({
+    // Declared ahead, because onFinish runs synchronously without animation.
+    let entrance: Animation | null = null;
+    entrance = animateIn({
       element,
       position,
       onFinish: () => {
-        this.currentAnimation = null;
+        // A hide() during the entrance already replaced it with the exit
+        // animation, which destroyImmediately() must still be able to cancel.
+        if (this.currentAnimation === entrance) {
+          this.currentAnimation = null;
+        }
         if (this.internalState !== "visible" || this.element !== element) {
           return;
         }
@@ -732,6 +799,11 @@ export class Toast {
         this.scheduleAutoDismiss(element);
       },
     });
+    // Without an animation, onFinish already ran, and a subscriber may have
+    // started the exit animation from it.
+    if (entrance !== null) {
+      this.currentAnimation = entrance;
+    }
   }
 
   /**
@@ -913,6 +985,11 @@ export class Toast {
   }
 
   private finishHide(element: HTMLDivElement): void {
+    // destroyImmediately() already settled it, and canceling the exit
+    // animation calls back here.
+    if (this.internalState === "done") {
+      return;
+    }
     toastByElement.delete(element);
     this.element = null;
     this.internalState = "done";
@@ -925,7 +1002,12 @@ export class Toast {
     });
     this.removeVisibilityListener?.();
     this.removeVisibilityListener = null;
-    if (this.shouldRestoreFocus && this.restoreTarget?.isConnected) {
+    // Only focus the removal itself lost: focus the user or the app moved
+    // elsewhere during the exit animation stays where it went.
+    const activeElement = this.parent.ownerDocument.activeElement;
+    const isFocusLost =
+      activeElement === null || activeElement === this.parent.ownerDocument.body || element.contains(activeElement);
+    if (this.shouldRestoreFocus && isFocusLost && this.restoreTarget?.isConnected) {
       this.restoreTarget.focus();
     }
     this.notify("hidden");
