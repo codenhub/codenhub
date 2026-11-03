@@ -20,6 +20,12 @@ When a driver throws or rejects during a read, `patch`, `setItem`, and `removeIt
 
 Rejected: overwrite with fallback plus changes after an access failure, because that wipes unrelated fields after a transient failure. A full `set` remains an explicit replacement and does not read first.
 
+## `patch` skips `undefined` values
+
+`patch` ignores fields whose value is `undefined`. `Partial<TSchema>` admits `undefined` for required fields unless a consumer enables `exactOptionalPropertyTypes`, so `patch({ token: maybeToken })` type-checked and then dropped `token` on JSON drivers while memory drivers kept it as `undefined`. Skipping the value keeps the guarantee `RemovableStoreKey` gives `removeItem` and makes every driver store the same record.
+
+Rejected: keeping spread semantics and documenting the gap, because the type system cannot catch the case in the default compiler configuration; and a narrower parameter type, because without `exactOptionalPropertyTypes` an optional property still admits `undefined`. Cost accepted: `patch({ nickname: undefined })` no longer removes an optional field on JSON drivers; `removeItem` does.
+
 ## Non-object stored values fail validation
 
 `TSchema extends object`, so a stored primitive can never be a valid record. The store reports `store.validation_failed` for a non-object value whether or not `validate` is supplied, instead of returning it as the record and letting `patch` spread a string's characters into the next write.

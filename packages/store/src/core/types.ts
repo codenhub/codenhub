@@ -92,6 +92,7 @@ export interface Store<TSchema extends object> {
 
   /**
    * Merges partial updates into the current state and attempts to persist the result.
+   * Fields whose value is `undefined` are skipped; use `removeItem` to delete an optional field.
    *
    * If writing to the storage driver fails, the merged state is still returned by the method call,
    * but subsequent reads will reflect the old state from the storage driver. The failure is
@@ -245,6 +246,7 @@ export interface AsyncStore<TSchema extends object> {
 
   /**
    * Merges partial updates into the current state asynchronously and attempts to persist the result.
+   * Fields whose value is `undefined` are skipped; use `removeItem` to delete an optional field.
    *
    * If the write operation fails, the merged state is still returned, and the failure is reported
    * to `CreateAsyncStoreOptions.onError`.

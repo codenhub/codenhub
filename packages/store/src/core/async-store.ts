@@ -1,4 +1,5 @@
 import { captureAsync, failureEvent } from "./errors";
+import { applyPatch } from "./record";
 import { SET_STORAGE_KEY } from "./types";
 import type { AsyncStore, CreateAsyncStoreOptions, RemovableStoreKey } from "./types";
 
@@ -100,7 +101,7 @@ export function createAsyncStore<TSchema extends object>(
           if (readFailed) {
             return state;
           }
-          const nextState = { ...state, ...snapshot };
+          const nextState = applyPatch(state, snapshot);
           await writeState(nextState);
           return structuredClone(nextState);
         }),

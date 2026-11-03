@@ -185,6 +185,14 @@ describe.each([false, true])("record shape (async: %s)", (isAsync) => {
     expect(await store.patch({ count: 2 })).toEqual({ ...initialState, count: 2 });
     expect(stored()).toEqual({ ...initialState, count: 2 });
   });
+  it("ignores undefined values in patch so required fields stay present", async () => {
+    const { store, stored } = setup({ count: 1, nested: { enabled: true } });
+    const count: number | undefined = undefined;
+    const result = await store.patch({ count, nested: { enabled: false } });
+    expect(result).toEqual({ count: 1, nested: { enabled: false } });
+    expect(Object.hasOwn(result, "count")).toBe(true);
+    expect(stored()).toEqual({ count: 1, nested: { enabled: false } });
+  });
 });
 
 describe.each([false, true])("empty storage key (async: %s)", (isAsync) => {

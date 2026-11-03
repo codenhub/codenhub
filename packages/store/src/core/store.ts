@@ -1,5 +1,6 @@
 import { capture, failureEvent } from "./errors";
 import { localStorageDriver } from "./local-storage-driver";
+import { applyPatch } from "./record";
 import { SET_STORAGE_KEY } from "./types";
 import type { CreateStoreOptions, RemovableStoreKey, Store } from "./types";
 
@@ -58,7 +59,7 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
       if (readFailed) {
         return state;
       }
-      const nextState = { ...state, ...partialState };
+      const nextState = applyPatch(state, partialState);
       writeState(nextState);
       return structuredClone(nextState);
     },

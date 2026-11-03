@@ -34,13 +34,13 @@ settings.removeItem("nickname");
 | --------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `get()`               | A clone of the stored record, or initial state for an empty, unreadable, or invalid value.                     |
 | `set(state)`          | `true` after a successful whole-record replacement, otherwise `false`. It does not read first.                 |
-| `patch(partial)`      | A clone of the shallow merge of the current record and the supplied fields.                                    |
+| `patch(partial)`      | A clone of the shallow merge of the current record and the supplied fields, skipping `undefined` values.       |
 | `getItem(key)`        | One property from a full-record read, or `undefined` if absent.                                                |
 | `setItem(key, value)` | A clone of the record with one property replaced.                                                              |
 | `removeItem(key)`     | A clone of the record without an optional property; `RemovableStoreKey<TSchema>` excludes required properties. |
 | `clear()`             | No value; asks the driver to remove the persisted record.                                                      |
 
-`patch`, `setItem`, and `removeItem` read before writing. A driver read failure reports `store.read_failed`, skips the write, and returns a clone of initial state without applying the requested change. This prevents a transient read failure from wiping unrelated fields. Parse and validation failures still permit replacing a corrupt value with fallback plus the requested change. A failed write returns the computed record from these methods, but it has not been persisted. A later read uses whatever remains in the backend.
+`patch` skips fields whose value is `undefined`, so `patch({ token: maybeToken })` cannot drop a required field when `maybeToken` is missing; use `removeItem` to delete an optional field. `patch`, `setItem`, and `removeItem` read before writing. A driver read failure reports `store.read_failed`, skips the write, and returns a clone of initial state without applying the requested change. This prevents a transient read failure from wiping unrelated fields. Parse and validation failures still permit replacing a corrupt value with fallback plus the requested change. A failed write returns the computed record from these methods, but it has not been persisted. A later read uses whatever remains in the backend.
 
 Every field read parses (on a JSON driver) and clones the whole record. This is suitable for small records; read once when you need several fields, and batch several changes in one `patch`. There is no per-field storage or cache. A small settings drawer is welcome; an entire warehouse is going to be cramped.
 
