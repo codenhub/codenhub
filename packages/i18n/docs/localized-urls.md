@@ -47,14 +47,20 @@ routing.parse("/PT/about"); // { locale: "pt", pathname: "/about" }
 
 The `pathname` it returns is the **canonical path**: the path your application routes on, the same in every language. Hold on to that idea; it matters once paths are translated.
 
-With `localePrefix: "always"`, a path without a locale returns `undefined`, so you can redirect it. Add the chosen locale's prefix before calling `localize()`, so a path in that locale's words, such as `/sobre`, is read as one:
+`parse()` returns `undefined` for a path that is not a page in any locale, such as `/pt/en/about`: once its prefix is removed it starts with another locale, so no link ever leads there. Answer it with a 404.
+
+With `localePrefix: "always"`, a path without a locale returns `undefined` too, so you can redirect it. Add the chosen locale's prefix and parse that, so a path in that locale's words, such as `/sobre`, is read as one, and a path that is no page in that locale either gets its 404:
 
 ```ts
 const route = routing.parse(url.pathname);
 if (route === undefined) {
   const locale = pickLocale(i18n, request);
+  const guess = routing.parse(`/${locale}${url.pathname === "/" ? "" : url.pathname}`);
+  if (guess === undefined) {
+    return new Response("Not found", { status: 404 });
+  }
   const target = new URL(url);
-  target.pathname = routing.localize(`/${locale}${url.pathname}`, locale);
+  target.pathname = routing.localize(guess.pathname, guess.locale);
   return Response.redirect(target, 302);
 }
 ```
@@ -76,7 +82,7 @@ await initializeBrowserI18n({ i18n, locale: route?.locale });
 
 ### Redirect to the canonical URL
 
-`parse()` is forgiving: `/PT/about` and `/en/about` are read as well as `/pt/about` and `/about`. That is friendly to someone typing a URL, but a search engine that finds one page at several addresses splits its ranking between them. Send every other spelling to the one `localize()` builds:
+`parse()` is forgiving: `/PT/about` and `/en/about` are read as well as `/pt/about` and `/about`. That is friendly to someone typing a URL, but a search engine that finds one page at several addresses splits its ranking between them. Send every other spelling to the one `localize()` builds. Every path `parse()` returns has one, so this never throws:
 
 ```ts
 const route = routing.parse(url.pathname);

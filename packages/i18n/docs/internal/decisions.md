@@ -99,3 +99,15 @@ Rejected:
 ### One `localePrefix` option replaces `prefixDefaultLocale` (2026-11-02)
 
 The prefix policy has three values: `"always"`, `"except-default"`, and `"when-ambiguous"`. That makes it one option rather than `prefixDefaultLocale: boolean` plus a second flag whose combinations overlap. The change breaks the API, and it is made in 0.2.0 because before 1.0 is the cheapest time. Rejected: keeping `prefixDefaultLocale` and adding a flag later, which avoids the break but leaves two settings that interact.
+
+### `parse` returns only paths that have a canonical URL (2026-11-02)
+
+`parse` used to return a result for any path it could read, including paths no link leads to: `/pt/en/sobre` read as `/en/sobre` in Portuguese, which `localize` then read as a prefixed URL, and, with `"when-ambiguous"`, `/en/sobre` read as an English `/sobre`, whose unprefixed URL is the Portuguese about page. `localize(route.pathname, route.locale)`, the guide's canonical redirect and the advice in `localize`'s own error, then threw a `RangeError`, so a typed URL answered 500. `parse` now returns `undefined` for such a path, and for one whose canonical URL would be longer than 8,192 characters, so every result has a canonical URL that `localize` builds and the path answers 404.
+
+With `"always"`, `undefined` already meant a missing prefix. The guide's redirect tells the two apart by parsing the path with the chosen locale's prefix added: a path that is no page in that locale either is a 404.
+
+Rejected:
+
+- Catching the `RangeError` in the guide's examples, because every application would have to remember it, and a forgotten catch is a 500 on any typed URL.
+- Reading such a path as the nearest page, such as `/pt/en/sobre` as the about page, because it gives one page more addresses and hides broken links.
+- A `hasLocalePrefix` helper to tell the two `undefined` cases apart under `"always"`, because the guide's second `parse` does it without new API.

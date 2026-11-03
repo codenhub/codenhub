@@ -48,7 +48,9 @@ export interface LocaleRouting<TLocale extends string> {
    * prefixed path is accepted even where the canonical URL has none, such as `/en/about` for `/about`.
    *
    * @param pathname - An absolute application pathname of at most 8,192 characters without a URL, query, or fragment.
-   * @returns The locale and canonical pathname, or `undefined` when a required prefix is absent.
+   * @returns The locale and canonical pathname, or `undefined` when a required prefix is absent or no URL leads to the
+   * path read, such as `/pt/en/sobre`, or `/en/sobre` when `/sobre` is the Portuguese about page. A result always has a
+   * canonical URL that `localize` builds.
    * @throws {TypeError} When `pathname` is not a valid application pathname.
    */
   parse(pathname: string): ParsedLocalePath<TLocale> | undefined;
@@ -149,8 +151,25 @@ export const createLocaleRouting = <TLocale extends string>(
     return found === undefined ? segments : buildPattern(found.route.canonical, found.parameters);
   };
 
-  const parse = (pathname: string): ParsedLocalePath<TLocale> | undefined => {
-    validatePathname(pathname);
+  const isSameCanonical = (a: readonly string[], b: readonly string[]): boolean =>
+    a.map(normalizeSegment).join("/") === b.map(normalizeSegment).join("/");
+
+  /** Builds the URL of canonical segments in `locale`, without checking how it reads back. */
+  const buildUrl = (canonical: readonly string[], hasTrailingSlash: boolean, locale: TLocale): string => {
+    const found = findRoute(pathnames.byCanonical, (route) => route.canonical, canonical);
+    const localized = found === undefined ? canonical : buildPattern(found.route.forms.get(locale)!, found.parameters);
+    const isPrefixed =
+      localePrefix === "always" ||
+      (locale !== defaultLocale &&
+        !(localePrefix === "when-ambiguous" && found?.route.unprefixed.has(locale) === true));
+
+    return isPrefixed
+      ? joinPathname([locale, ...localized], hasTrailingSlash && localized.length > 0)
+      : joinPathname(localized, hasTrailingSlash);
+  };
+
+  /** Reads a valid pathname's locale and canonical path, whether or not any URL leads there. */
+  const read = (pathname: string): ParsedLocalePath<TLocale> | undefined => {
     const { segments, hasTrailingSlash } = splitPathname(pathname);
     const prefixLocale = findLocale(segments[0]);
 
@@ -183,6 +202,27 @@ export const createLocaleRouting = <TLocale extends string>(
     };
   };
 
+  const parse = (pathname: string): ParsedLocalePath<TLocale> | undefined => {
+    validatePathname(pathname);
+    const route = read(pathname);
+    if (route === undefined) {
+      return undefined;
+    }
+
+    // A path no URL leads to, such as `/pt/en/sobre` or, with `when-ambiguous`, `/en/sobre`, is not a page: its
+    // canonical URL would open another page, would be too long, or localize() would read its leading locale as a prefix.
+    const { segments, hasTrailingSlash } = splitPathname(route.pathname);
+    if (findLocale(segments[0]) !== undefined) {
+      return undefined;
+    }
+    const url = buildUrl(segments, hasTrailingSlash, route.locale);
+    const readBack = url.length > MAX_PATHNAME_LENGTH ? undefined : read(url);
+
+    return readBack?.locale === route.locale && isSameCanonical(splitPathname(readBack.pathname).segments, segments)
+      ? route
+      : undefined;
+  };
+
   const localize = (pathname: string, locale: TLocale): string => {
     validatePathname(pathname);
     const canonicalLocale = typeof locale === "string" ? findLocale(locale, true) : undefined;
@@ -195,16 +235,7 @@ export const createLocaleRouting = <TLocale extends string>(
     const { segments, hasTrailingSlash } = splitPathname(pathname);
     const prefixLocale = findLocale(segments[0]);
     const canonical = prefixLocale === undefined ? segments : readPath(segments.slice(1), prefixLocale);
-    const found = findRoute(pathnames.byCanonical, (route) => route.canonical, canonical);
-    const localized =
-      found === undefined ? canonical : buildPattern(found.route.forms.get(canonicalLocale)!, found.parameters);
-    const isPrefixed =
-      localePrefix === "always" ||
-      (canonicalLocale !== defaultLocale &&
-        !(localePrefix === "when-ambiguous" && found?.route.unprefixed.has(canonicalLocale) === true));
-    const result = isPrefixed
-      ? joinPathname([canonicalLocale, ...localized], hasTrailingSlash && localized.length > 0)
-      : joinPathname(localized, hasTrailingSlash);
+    const result = buildUrl(canonical, hasTrailingSlash, canonicalLocale);
 
     if (result.length > MAX_PATHNAME_LENGTH) {
       throw new RangeError(
@@ -218,8 +249,7 @@ export const createLocaleRouting = <TLocale extends string>(
 
     if (
       readBack?.locale !== canonicalLocale ||
-      splitPathname(readBack.pathname).segments.map(normalizeSegment).join("/") !==
-        canonical.map(normalizeSegment).join("/")
+      !isSameCanonical(splitPathname(readBack.pathname).segments, canonical)
     ) {
       throw new RangeError(
         `[I18n] ${JSON.stringify(canonicalPathname)} in ${JSON.stringify(canonicalLocale)} would be read as ` +

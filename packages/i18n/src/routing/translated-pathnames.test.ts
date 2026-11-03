@@ -332,6 +332,75 @@ describe("translated pathnames", () => {
     });
   });
 
+  describe("when no URL leads to the path read", () => {
+    it("should return undefined for a path whose remainder is another locale's URL", () => {
+      for (const localePrefix of ["always", "except-default", "when-ambiguous"] as const) {
+        const routing = create({ localePrefix });
+
+        expect(routing.parse("/pt/en/sobre")).toBeUndefined();
+        expect(routing.parse("/es/pt/acerca")).toBeUndefined();
+      }
+    });
+
+    it("should return undefined for a default-locale path that is another locale's translated path", () => {
+      const routing = create({ localePrefix: "when-ambiguous" });
+
+      expect(routing.parse("/en/sobre")).toBeUndefined();
+      expect(routing.parse("/en/acerca")).toBeUndefined();
+    });
+
+    it("should return undefined for a path that would start with a locale once its prefix is removed", () => {
+      const routing = create();
+
+      // localize() reads a leading locale as a prefix, so no canonical path starts with one.
+      expect(routing.parse("/pt/en/about")).toBeUndefined();
+      expect(routing.parse("/en/pt")).toBeUndefined();
+      expect(routing.parse("/pt/about")).toEqual({
+        locale: "pt",
+        pathname: "/about",
+      });
+    });
+
+    it("should return undefined for a path whose canonical URL would be longer than 8,192 characters", () => {
+      const routing = create({ pathnames: { "/settings/:id": { pt: "/configurações/:id" } } });
+      // The canonical URL writes the table's words percent-encoded, 10 characters longer than "configurações".
+      const id = (length: number) => "x".repeat(length - "/pt/configurações/".length);
+
+      expect(routing.parse(`/pt/configurações/${id(8_192)}`)).toBeUndefined();
+      expect(routing.parse(`/pt/configurações/${id(8_182)}`)?.pathname).toBe(`/settings/${id(8_182)}`);
+    });
+
+    it("should give every parsed path a canonical URL that localize builds", () => {
+      const words = ["about", "sobre", "acerca", "products", "produtos", "42", "reviews", "en", "pt", "es", "PT", "x"];
+      const paths = ["/"];
+      for (const a of words) {
+        paths.push(`/${a}`);
+        for (const b of words) {
+          paths.push(`/${a}/${b}`);
+          for (const c of words) {
+            paths.push(`/${a}/${b}/${c}`);
+          }
+        }
+      }
+
+      for (const localePrefix of ["always", "except-default", "when-ambiguous"] as const) {
+        const routing = create({ localePrefix });
+        const failures = paths.filter((path) => {
+          const route = routing.parse(path);
+          try {
+            if (route !== undefined) {
+              routing.localize(route.pathname, route.locale);
+            }
+            return false;
+          } catch {
+            return true;
+          }
+        });
+        expect({ localePrefix, failures }).toEqual({ localePrefix, failures: [] });
+      }
+    });
+  });
+
   describe("with a large table", () => {
     it("should build and read 2,000 routes in well under a second", () => {
       const pathnames: Record<string, Partial<Record<Locale, string>>> = {};
