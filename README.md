@@ -23,7 +23,7 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 - `packages/oidc`: OpenID Connect for both sides: a relying-party client and an OpenID Provider on the Fetch API, built on @codenhub/jwt.
 - `packages/router`: Small browser router for TypeScript apps.
 - `packages/skills`: Curated collection of AI agent skills with a built-in installer.
-- `packages/store`: Typed localStorage-backed state stores for browser TypeScript apps.
+- `packages/store`: Small typed records persisted to key-value backends.
 - `packages/styles`: CSS-only Codenhub design tokens, base styles, and composable UI helper classes.
 - `packages/theme`: Zero-dependency browser theme preference helper for TypeScript apps.
 - `packages/toaster`: Instance-based browser toast and native dialog manager with accessible semantic, loading, and custom notifications.

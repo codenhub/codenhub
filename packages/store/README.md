@@ -1,6 +1,6 @@
 # @codenhub/store
 
-Typed object stores with synchronous and asynchronous drivers for browsers, Node.js, and Cloudflare Workers.
+Small typed records persisted to key-value backends: one typed object per storage key, with whole-object reads and writes in browsers, Node.js, and Cloudflare Workers.
 
 > **Experimental:** Store APIs, driver contracts, and persistence behavior may change before a stable release.
 
@@ -26,7 +26,7 @@ const preferences = createStore({
 preferences.patch({ theme: "dark" });
 ```
 
-Recoverable driver, parsing, and validation failures use the initial state or return `false` and are reported through `onError` when provided.
+Recoverable failures use initial-state fallbacks or return `false` and report through the store's `onError`, including with `localStorageDriver(storageKey?)`. The `storeErrors` dictionary supplies optional user-facing feedback for `@codenhub/error`. A failed driver read skips a read-modify-write operation so it cannot overwrite unrelated fields. See [failure handling](docs/core-stores.md#validation-and-failures) for every error code.
 
 ## Documentation
 
@@ -36,9 +36,14 @@ Recoverable driver, parsing, and validation failures use the initial state or re
 
 ## Requirements
 
+- Node.js 24 or newer when running on Node.js.
 - `structuredClone` is required.
 - The default driver requires browser `localStorage`; other runtimes must choose an appropriate driver.
-- Stored values must be structured-cloneable and driver-compatible.
+- Stored values must be structured-cloneable. Portable values must also survive a JSON round-trip; see [value portability](docs/storage-drivers.md#value-portability).
+
+## When not to use it
+
+Use a database when records need queries, transactions, or coordination between processes or writers. This package reads and writes whole small records with last-write-wins semantics; it does not provide those guarantees.
 
 ## Notes
 
