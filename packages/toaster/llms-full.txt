@@ -16,10 +16,11 @@ pnpm add @codenhub/toaster
 
 ## Usage
 
-Import the required stylesheet once in your client entrypoint. Use the pre-configured singletons for zero-boilerplate notifications and dialogs:
+Import the required stylesheet once in your client entrypoint. Use the pre-configured singletons for zero-boilerplate notifications and dialogs. Dialogs have their own entry point, so an app that only shows toasts does not bundle them:
 
 ```ts
-import { toast, dialog } from "@codenhub/toaster";
+import { toast } from "@codenhub/toaster";
+import { dialog } from "@codenhub/toaster/dialog";
 import "@codenhub/toaster/styles";
 
 // Neutral or semantic notifications
@@ -48,10 +49,11 @@ if (await dialog.confirm("Delete workspace?")) {
 }
 ```
 
-For isolated DOM containers, micro-frontends, or custom instances, use `createToaster()`:
+For isolated DOM containers, micro-frontends, or custom instances, use `createToaster()`, and `createDialogs()` for dialogs:
 
 ```ts
 import { createToaster } from "@codenhub/toaster";
+import { createDialogs } from "@codenhub/toaster/dialog";
 
 const scopedToaster = createToaster({
   container: document.getElementById("modal-overlay")!,
@@ -59,7 +61,9 @@ const scopedToaster = createToaster({
 });
 
 scopedToaster.success("Scoped notification");
-await scopedToaster.dialog.confirm("Proceed?");
+const dialogs = createDialogs({ labels: { confirm: "Proceed" } });
+await dialogs.confirm("Proceed?");
+dialogs.destroy();
 scopedToaster.destroy();
 ```
 
@@ -107,7 +111,7 @@ Modern applications frequently balance transient notifications (build status, sy
 `@codenhub/toaster` coordinates both feedback models through specialized browser primitives:
 
 - **Dual-layer architecture**: Floating toast stacks render in light DOM containers with FLIP animations and FIFO eviction, while confirmation and prompt dialogs render into the browser's native top layer using HTML5 `<dialog>`.
-- **Zero-boilerplate singletons**: Import `toast` and `dialog` directly for application-wide notifications, or use `createToaster()` for isolated containers and micro-frontends.
+- **Zero-boilerplate singletons**: Import `toast` from `@codenhub/toaster` and `dialog` from `@codenhub/toaster/dialog` for application-wide notifications and dialogs, or use `createToaster()` and `createDialogs()` for isolated instances. An app that only shows toasts does not bundle the dialog code.
 - **First-class Promise workflows**: `toast.promise` coordinates pending, success, and error transitions with automatic timer re-arming; dialog methods return `DialogHandle<T>` implementing `PromiseLike<T>` so you can `await dialog.confirm(...)` directly.
 - **Live token composition**: Toast colors, presentation axes (`.solid`, `.soft`, `.ghost`, `.edged`), and dark mode compose live with `@codenhub/styles` or fall back to standalone generated defaults.
 
@@ -126,7 +130,8 @@ pnpm add @codenhub/toaster
 Import the required global stylesheet once in your client entrypoint, then use the pre-configured singletons anywhere in your application:
 
 ```ts
-import { toast, dialog } from "@codenhub/toaster";
+import { toast } from "@codenhub/toaster";
+import { dialog } from "@codenhub/toaster/dialog";
 import "@codenhub/toaster/styles";
 
 // 1. Plain neutral or semantic notifications
@@ -197,7 +202,7 @@ Modern web applications need two fundamentally different kinds of feedback: peri
 | **Floating Toasts**     | Light DOM stack containers (`[data-toast-container]`) | Background job completion, copy confirmation, system alerts, promise states | Auto-dismiss timer, close button, or programmatic dismissal         |
 | **Interactive Dialogs** | Browser Top Layer (`<dialog>` + `showModal()`)        | Destructive confirmations, user prompts, mandatory alerts                   | Explicit action button click, Escape key, or programmatic dismissal |
 
-Because modal dialogs use the platform's native `<dialog>` element and `showModal()`, the browser marks the rest of the document as `inert`. So while one of its dialogs is open, a toaster places its toast stacks inside that dialog: they stay in their viewport corner, above the backdrop, and can still be clicked, focused, and heard by screen readers. They move back out as soon as the dialog starts closing. Toasts from another toaster instance stay behind the backdrop, inert, until the dialog closes.
+Because modal dialogs use the platform's native `<dialog>` element and `showModal()`, the browser marks the rest of the document as `inert`. So while a dialog from `@codenhub/toaster/dialog` is open, every toaster rendering into the same parent element places its toast stacks inside that dialog: they stay in their viewport corner, above the backdrop, and can still be clicked, focused, and heard by screen readers. They move back out as soon as the dialog starts closing. A toaster with a different container, such as one scoped to a panel, stays behind the backdrop, inert, until the dialog closes.
 
 ### Your own modal dialogs
 
@@ -244,7 +249,7 @@ A major flaw in traditional toast and dialog libraries is the "truthy object" tr
 `@codenhub/toaster` resolves this by making `DialogHandle<T>` implement `PromiseLike<T>`:
 
 ```ts
-import { dialog } from "@codenhub/toaster";
+import { dialog } from "@codenhub/toaster/dialog";
 
 // 1. Direct await resolves to the primitive boolean value:
 if (await dialog.confirm("Permanently delete this project?")) {
@@ -555,14 +560,14 @@ Read [Accessibility and security](docs/accessibility.md) for full details on the
 
 # Interactive modal dialogs
 
-`@codenhub/toaster` provides native HTML5 modal dialogs through the `dialog` singleton and the `toast.dialog` namespace. Dialogs render directly into the browser's top layer via `HTMLDialogElement.showModal()`, guaranteeing proper accessibility, focus containment, backdrop styling, and keyboard handling.
+`@codenhub/toaster/dialog` provides native HTML5 modal dialogs through the `dialog` singleton and independent instances made with `createDialogs()`. Dialogs have their own entry point so an app that only shows toasts does not bundle them. Dialogs render directly into the browser's top layer via `HTMLDialogElement.showModal()`, guaranteeing proper accessibility, focus containment, backdrop styling, and keyboard handling.
 
 ## Why native dialogs?
 
 Rather than simulating modal overlays with complex `z-index` stacks and manual focus traps, `@codenhub/toaster` uses the browser's native `<dialog>` platform primitive:
 
 - **Browser Top Layer**: Always renders above every other element in the DOM tree, regardless of ancestor `z-index` or `overflow: hidden` rules.
-- **Inert Document**: The browser automatically disables user interaction with the background document while the modal is open. The same toaster's toasts move into the dialog for that time, so they stay usable (see [Concepts](docs/concepts.md#the-two-presentation-layers)). Your own modal dialogs need a scoped toaster for that (see [Your own modal dialogs](docs/concepts.md#your-own-modal-dialogs)).
+- **Inert Document**: The browser automatically disables user interaction with the background document while the modal is open. The toasts of every toaster rendering into the same parent element move into the dialog for that time, so they stay usable (see [Concepts](docs/concepts.md#the-two-presentation-layers)). Your own modal dialogs need a scoped toaster for that (see [Your own modal dialogs](docs/concepts.md#your-own-modal-dialogs)).
 - **Focus Trap & Restoration**: Focus is automatically confined within the dialog, and restored to the triggering element when the dialog closes.
 - **Escape Key Handling**: Pressing Escape triggers standard dialog dismissal, resolving the operation with its cancel value.
 
@@ -571,7 +576,7 @@ Rather than simulating modal overlays with complex `z-index` stacks and manual f
 `dialog.confirm()` prompts the user to confirm or cancel an operation, returning a promise that resolves to a boolean:
 
 ```ts
-import { dialog } from "@codenhub/toaster";
+import { dialog } from "@codenhub/toaster/dialog";
 
 if (await dialog.confirm("Are you sure you want to discard unsaved changes?")) {
   revertForm();
@@ -583,7 +588,7 @@ if (await dialog.confirm("Are you sure you want to discard unsaved changes?")) {
 You can customize the confirm and cancel button text, and specify `type: "error"` for destructive actions (which tints the confirm button with error intent styling):
 
 ```ts
-import { dialog } from "@codenhub/toaster";
+import { dialog } from "@codenhub/toaster/dialog";
 
 const confirmed = await dialog.confirm("Permanently delete this project and all its databases?", {
   title: "Delete Project",
@@ -602,7 +607,7 @@ if (confirmed) {
 `dialog.prompt()` displays an interactive text input, resolving to the entered `string` if submitted or `null` if cancelled:
 
 ```ts
-import { dialog } from "@codenhub/toaster";
+import { dialog } from "@codenhub/toaster/dialog";
 
 const branchName = await dialog.prompt("Enter a name for the new branch:", {
   title: "Create Branch",
@@ -624,7 +629,7 @@ Pressing <kbd>Enter</kbd> inside the prompt's text input automatically submits t
 `dialog.alert()` provides an accessible replacement for `window.alert()`. It interrupts the user with a message and resolves to `void` when acknowledged:
 
 ```ts
-import { dialog } from "@codenhub/toaster";
+import { dialog } from "@codenhub/toaster/dialog";
 
 await dialog.alert("Your session has expired. Please sign in again.", {
   title: "Session Expired",
@@ -639,7 +644,7 @@ redirectToLogin();
 All dialog methods return an `DialogHandle<T>`. This handle implements `PromiseLike<T>`, meaning you can either `await` the method call directly or capture the handle object for programmatic control:
 
 ```ts
-import { dialog } from "@codenhub/toaster";
+import { dialog } from "@codenhub/toaster/dialog";
 
 // Approach 1: Direct await (resolves to boolean)
 const confirmed = await dialog.confirm("Proceed with update?");
@@ -672,30 +677,45 @@ When a dialog is dismissed without confirmation (by clicking the Cancel button, 
 
 ## Localization and default labels
 
-Instead of configuring `confirmLabel`, `cancelLabel`, `submitLabel`, and `okLabel` on every call, you can set default dialog labels globally on an instance using `ToasterConfig.labels`:
+Instead of configuring `confirmLabel`, `cancelLabel`, `submitLabel`, and `okLabel` on every call, you can set default dialog labels on an instance using `DialogsConfig.labels`:
 
 ```ts
-import { createToaster } from "@codenhub/toaster";
+import { createDialogs } from "@codenhub/toaster/dialog";
 
-const toaster = createToaster({
+const dialogs = createDialogs({
   labels: {
     confirm: "Confirmar",
     cancel: "Cancelar",
     submit: "Enviar",
     ok: "Entendido",
-    dismiss: "Fechar notificação",
-    notifications: "Notificações",
   },
 });
 
-// `dismiss` names each toast's close button and `notifications` names the toast
-// stacks. All dialogs dispatched from this instance use Portuguese button labels:
-if (await toaster.dialog.confirm("Deseja prosseguir?")) {
+// All dialogs opened from this instance use Portuguese button labels:
+if (await dialogs.confirm("Deseja prosseguir?")) {
   salvarAlteracoes();
 }
 ```
 
-A label passed directly to a dialog call (`ConfirmOptions.confirmLabel`, etc.) always overrides the instance-level default.
+A label passed directly to a dialog call (`ConfirmOptions.confirmLabel`, etc.) always overrides the instance-level default. The `dismiss` and `notifications` labels belong to toasts; set them with `ToasterConfig.labels` (see [Instances](docs/instances.md)).
+
+## Dialog instances (`createDialogs`)
+
+`createDialogs()` returns an independent instance with the same `confirm`, `prompt`, and `alert` methods as the `dialog` singleton. Each instance opens its dialogs one at a time, queuing later calls until the open one closes.
+
+| Option      | Type           | Default          | Description                                                                     |
+| :---------- | :------------- | :--------------- | :------------------------------------------------------------------------------ |
+| `container` | `HTMLElement`  | `document.body`  | Element the dialogs are appended to. Cannot be changed after construction.      |
+| `labels`    | `DialogLabels` | English defaults | Default button labels: `confirm`, `cancel`, `submit`, `ok`.                     |
+| `className` | `string`       | `undefined`      | Class appended to every dialog in this instance.                                |
+| `tokens`    | `ToastTokens`  | `undefined`      | Color overrides for this instance, as on a toaster (see [Styling](docs/styling.md)). |
+| `nonce`     | `string`       | `undefined`      | CSP nonce for the `<style>` element that carries `tokens`.                      |
+
+`dialogs.configure({...})` changes any option except `container`. `dialogs.destroy()` closes the open dialog and drops queued ones, settling each with its cancel value, and removes the instance's token styles; later calls throw.
+
+## Toasts while a dialog is open
+
+A modal dialog makes the rest of the page inert, so a toast rendered outside it can be neither clicked nor announced. While a dialog from `@codenhub/toaster/dialog` is open, the toast stacks and live regions of every toaster rendering into the same parent element move inside it, and move back once it starts closing. Nested dialogs hand the toasts to the most recently opened one. The two entry points coordinate through an attribute on the open dialog, so using both costs nothing extra in either bundle.
 
 <!-- Source: docs/styling.md -->
 
@@ -735,7 +755,8 @@ Every toast is 22.25rem (356px) wide, narrowed to fit the viewport inside the st
 Presentation helper classes (`.solid`, `.soft`, `.ghost`, `.edged`, `.edgeless`) adjust how background fills and borders render:
 
 ```ts
-import { toast, dialog } from "@codenhub/toaster";
+import { toast } from "@codenhub/toaster";
+import { dialog } from "@codenhub/toaster/dialog";
 
 // Render a high-contrast solid toast:
 toast.success("Build deployed", {
@@ -880,7 +901,7 @@ The announcement is the toast's title, description, or message, or the text of i
 
 A live region inserted together with its text is often missed, because assistive technology only announces changes to a region it already tracks. Each region is therefore added empty, and its first text follows 100ms later, as in the [W3C ARIA22 technique](https://www.w3.org/WAI/WCAG21/Techniques/aria/ARIA22.html). Announced text is removed from the region after 7 seconds.
 
-While one of its dialogs is open, a toaster announces through live regions inside that dialog, because the rest of the page is inert then. Toasts from another toaster instance are not announced while the dialog is open, and the library does not repeat them after it closes. The same holds under a modal dialog your application opens itself; see [Your own modal dialogs](docs/concepts.md#your-own-modal-dialogs).
+While a dialog from `@codenhub/toaster/dialog` is open, every toaster rendering into the same parent element announces through live regions inside that dialog, because the rest of the page is inert then. Toasts from a toaster with a different container are not announced while the dialog is open, and the library does not repeat them after it closes. The same holds under a modal dialog your application opens itself; see [Your own modal dialogs](docs/concepts.md#your-own-modal-dialogs).
 
 Each toast stack is a `region` landmark named "Notifications", so screen reader users can jump to it to reach a toast's buttons. Set `labels.notifications` to localize the name.
 
@@ -993,7 +1014,7 @@ Application-supplied DOM nodes bypass string sanitization. The caller is respons
 
 # Scoped instances and lifecycles
 
-While the pre-configured `toast` and `dialog` singletons serve the majority of application feedback needs, `createToaster()` allows you to instantiate independent, scoped instances for micro-frontends, embedded widgets, or isolated testing environments.
+While the pre-configured `toast` and `dialog` singletons serve the majority of application feedback needs, `createToaster()` allows you to instantiate independent, scoped instances for micro-frontends, embedded widgets, or isolated testing environments. Dialogs have their own factory, `createDialogs()` from `@codenhub/toaster/dialog`; see [Dialog instances](docs/dialogs.md#dialog-instances-createdialogs).
 
 ## When to create an instance
 
@@ -1025,11 +1046,6 @@ const panelToaster = createToaster({
 
 // Dispatch notifications directly on the instance:
 panelToaster.success("Panel settings saved");
-
-// Use the instance-scoped dialog controller:
-if (await panelToaster.dialog.confirm("Reset panel layout?")) {
-  resetPanel();
-}
 ```
 
 ### Full configuration options
@@ -1043,8 +1059,8 @@ if (await panelToaster.dialog.confirm("Reset panel layout?")) {
 | `autoDismiss` | `boolean`              | `true`           | Whether toasts close automatically after `duration` expires.                                                                  |
 | `dismissible` | `boolean`              | `false`          | Whether to render a close button on toasts.                                                                                   |
 | `margin`      | `string \| { x?, y? }` | safe-area inset  | Spacing between the stack container and the viewport/container edge.                                                          |
-| `className`   | `string`               | `undefined`      | Custom CSS class appended to every toast and dialog in this instance.                                                         |
-| `labels`      | `ToastLabels`          | English defaults | Default text labels for dismiss buttons and dialog action buttons.                                                            |
+| `className`   | `string`               | `undefined`      | Custom CSS class appended to every toast in this instance.                                                                    |
+| `labels`      | `ToastLabels`          | English defaults | Default text labels: `dismiss` for close buttons and `notifications` for stacks.                                              |
 | `tokens`      | `ToastTokens`          | `undefined`      | Design token color overrides applied across this instance.                                                                    |
 | `nonce`       | `string`               | `undefined`      | Content Security Policy nonce applied to the injected token `<style>` element.                                                |
 
@@ -1085,10 +1101,9 @@ function mountWidget(containerEl: HTMLElement) {
 Calling `destroy()` is synchronous, deterministic, and idempotent:
 
 1. **Immediate handle settlement**: All visible and queued toast handles settle immediately, transitioning to state `"hidden"` and resolving their `settled` promises without waiting for exit animations.
-2. **Modal closure**: Any open modal dialog is closed immediately and detached from the top layer.
-3. **DOM cleanup**: All stack containers and token `<style>` nodes owned by the instance are detached from the DOM.
-4. **Listener teardown**: All internal event listeners, timers, and window observers are cleared.
-5. **Guard activation**: Any subsequent call to the destroyed instance throws an error synchronously.
+2. **DOM cleanup**: All stack containers and token `<style>` nodes owned by the instance are detached from the DOM.
+3. **Listener teardown**: All internal event listeners, timers, and window observers are cleared.
+4. **Guard activation**: Any subsequent call to the destroyed instance throws an error synchronously.
 
 ## Multi-instance isolation
 

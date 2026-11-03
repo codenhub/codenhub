@@ -5,7 +5,6 @@ import type {
   ToastContent,
   ToastHandle,
   ToastIcon,
-  ToastLabels,
   ToastPosition,
   ToastRole,
   ToastTokens,
@@ -35,20 +34,15 @@ export interface ResolvedToastConfig {
   readonly maxVisible: number;
   /** Viewport margin configurations. */
   readonly margin?: string | { x?: string; y?: string };
-  /** Extra CSS class name applied to every toast and dialog from this instance. */
+  /** Extra CSS class name applied to every toast from this instance. */
   readonly className?: string;
   /** Accessible label for a toast's dismiss button. */
   readonly dismissLabel: string;
   /** Accessible name of each toast stack's region landmark. */
   readonly regionLabel: string;
-  /** Instance-level default labels for dialog buttons (confirm/cancel/submit/ok). */
-  readonly dialogLabels: ToastLabels;
 }
 
-export const DEFAULT_CONFIG: Omit<
-  ResolvedToastConfig,
-  "instanceId" | "margin" | "dismissLabel" | "regionLabel" | "dialogLabels"
-> = {
+export const DEFAULT_CONFIG: Omit<ResolvedToastConfig, "instanceId" | "margin" | "dismissLabel" | "regionLabel"> = {
   position: "top-right",
   duration: 4000,
   dismissible: false,

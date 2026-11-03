@@ -452,15 +452,21 @@ export interface AlertOptions {
 }
 
 /**
- * Instance-level default labels, letting a consumer localize every built-in
- * piece of text this package renders without repeating the same override on
- * every dialog call. A per-call label (`ConfirmOptions.confirmLabel`, etc.)
- * still wins over its matching entry here, the same precedence `position`
- * and `duration` already have between `ToasterConfig` and a per-call option.
+ * Instance-level text for the toasts' built-in controls, for localization.
  */
 export interface ToastLabels {
   /** Accessible label for a toast's dismiss button. Defaults to "Dismiss toast". */
   dismiss?: string;
+  /** Accessible name of the region landmark each toast stack is. Defaults to "Notifications". */
+  notifications?: string;
+}
+
+/**
+ * Instance-level default button labels for dialogs, for localization without
+ * repeating them on every call. A per-call label (`ConfirmOptions.confirmLabel`,
+ * etc.) still wins over its matching entry here.
+ */
+export interface DialogLabels {
   /** Default label for a confirm dialog's positive action button. Defaults to "Confirm". */
   confirm?: string;
   /** Default label for a confirm or prompt dialog's negative action button. Defaults to "Cancel". */
@@ -469,8 +475,6 @@ export interface ToastLabels {
   submit?: string;
   /** Default label for an alert dialog's acknowledgement button. Defaults to "OK". */
   ok?: string;
-  /** Accessible name of the region landmark each toast stack is. Defaults to "Notifications". */
-  notifications?: string;
 }
 
 /**
@@ -536,9 +540,10 @@ export interface PromiseToastOptions<T> {
 }
 
 /**
- * Dispatcher interface for displaying interactive browser-native modal dialogs.
+ * A dialogs instance, made with `createDialogs` or the ready-made `dialog`
+ * from `@codenhub/toaster/dialog`. Its dialogs open one at a time, in order.
  */
-export interface DialogDispatcher {
+export interface Dialogs {
   /**
    * Displays a confirmation modal dialog with confirm and cancel buttons.
    *
@@ -568,7 +573,45 @@ export interface DialogDispatcher {
    * @throws {Error} If the instance is destroyed, the message is empty, or no DOM is available.
    */
   alert(message: string, options?: AlertOptions): DialogHandle<void>;
+
+  /**
+   * Reconfigures the instance. Applies to dialogs that open afterwards.
+   *
+   * @param config Runtime configuration to validate and apply.
+   * @throws {Error} If the instance is destroyed, `container` is given, or token colors are invalid.
+   */
+  configure(config: DialogsRuntimeConfig): void;
+
+  /**
+   * Closes every open and queued dialog, settling each with its cancel value,
+   * and removes the instance's dialog element and token stylesheet. Calling
+   * it again does nothing.
+   */
+  destroy(): void;
 }
+
+/**
+ * Configuration for a dialogs instance.
+ */
+export interface DialogsConfig {
+  /** Parent DOM element receiving the dialog element. Defaults to document.body. */
+  container?: HTMLElement;
+  /** Instance-level default button labels. */
+  labels?: DialogLabels;
+  /** Color token overrides applied to every dialog from this instance. */
+  tokens?: ToastTokens;
+  /**
+   * Nonce applied to the `<style>` element `tokens` are written through, for
+   * a host `style-src` Content Security Policy that requires one. Has no
+   * effect without `tokens`.
+   */
+  nonce?: string;
+  /** Extra CSS class name applied to every dialog from this instance. */
+  className?: string;
+}
+
+/** Dialogs configuration fields that can change after construction. */
+export type DialogsRuntimeConfig = Omit<Partial<DialogsConfig>, "container">;
 
 /**
  * Represents the Toaster instance controller.
@@ -634,9 +677,6 @@ export interface Toaster {
    */
   promise<T>(promise: PromiseLike<T>, options: PromiseToastOptions<T>): Promise<T>;
 
-  /** Interactive native dialog dispatcher. */
-  readonly dialog: DialogDispatcher;
-
   /**
    * Clears all active and queued non-interactive toasts.
    *
@@ -680,7 +720,7 @@ export interface ToasterConfig {
   dismissible?: boolean;
   /** Dismiss automatically when duration expires by default. Defaults to true. */
   autoDismiss?: boolean;
-  /** Instance-level default labels for the dismiss button and dialog buttons. */
+  /** Instance-level text for the dismiss button and the stack's region name. */
   labels?: ToastLabels;
   /** Dynamic CSS variables applied to all toasts inside this instance. */
   tokens?: ToastTokens;
@@ -701,10 +741,7 @@ export interface ToasterConfig {
    * "24px", "1.5rem") or an object.
    */
   margin?: string | { x?: string; y?: string };
-  /**
-   * Extra CSS class name applied to every toast and dialog dispatched from
-   * this instance.
-   */
+  /** Extra CSS class name applied to every toast dispatched from this instance. */
   className?: string;
 }
 

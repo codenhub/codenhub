@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createToaster, dialog as defaultDialog, toast as defaultToast } from ".";
+import { createToaster, toast as defaultToast } from ".";
 import type { LoadingToastOptions } from ".";
+import { createDialogs, dialog as defaultDialog } from "./dialog";
 import {
   animations,
   clickBackdrop,
@@ -182,20 +183,20 @@ describe("instance-level className", () => {
   });
 
   it("applies the config-level className to an interactive dialog", async () => {
-    const toaster = createToaster({ className: "glass" });
-    const handle = toaster.dialog.alert("Notice!");
+    const dialogs = createDialogs({ className: "glass" });
+    const handle = dialogs.alert("Notice!");
 
     const dialog = document.body.querySelector("dialog");
     expect(dialog?.className).toContain("glass");
 
     handle.dismiss();
     await handle.settled;
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("appends the config-level className with a per-call dialog className", async () => {
-    const toaster = createToaster({ className: "glass" });
-    const handle = toaster.dialog.confirm("Delete?", { className: "danger-dialog" });
+    const dialogs = createDialogs({ className: "glass" });
+    const handle = dialogs.confirm("Delete?", { className: "danger-dialog" });
 
     const dialog = document.body.querySelector("dialog");
     expect(dialog?.className).toContain("glass");
@@ -203,7 +204,7 @@ describe("instance-level className", () => {
 
     handle.dismiss();
     await handle.settled;
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("keeps the config-level className after handle.update() replaces the per-call className", () => {
@@ -708,32 +709,32 @@ describe("destroy()", () => {
 
 describe("dialog.confirm", () => {
   it("resolves true when confirm button clicked", async () => {
-    const toaster = createToaster();
-    const handle = toaster.dialog.confirm("Delete?");
+    const dialogs = createDialogs();
+    const handle = dialogs.confirm("Delete?");
 
     const confirmBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-primary");
     expect(confirmBtn).toBeTruthy();
     confirmBtn!.click();
 
     await expect(handle.result).resolves.toBe(true);
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("implements thenable PromiseLike directly", async () => {
-    const toaster = createToaster();
-    const confirmPromise = toaster.dialog.confirm("Are you sure?");
+    const dialogs = createDialogs();
+    const confirmPromise = dialogs.confirm("Are you sure?");
 
     const confirmBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-primary");
     confirmBtn!.click();
 
     const result = await confirmPromise;
     expect(result).toBe(true);
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("resolves false and closes the dialog when dismissed programmatically", async () => {
-    const toaster = createToaster();
-    const handle = toaster.dialog.confirm("Delete?");
+    const dialogs = createDialogs();
+    const handle = dialogs.confirm("Delete?");
 
     const dialogEl = document.body.querySelector("dialog");
     expect(dialogEl?.open).toBe(true);
@@ -742,14 +743,14 @@ describe("dialog.confirm", () => {
 
     await expect(handle.result).resolves.toBe(false);
     expect(dialogEl?.open).toBe(false);
-    toaster.destroy();
+    dialogs.destroy();
   });
 });
 
 describe("dialog.prompt", () => {
   it("resolves with typed value when submitted", async () => {
-    const toaster = createToaster();
-    const handle = toaster.dialog.prompt("Your name?", { defaultValue: "Gustavo" });
+    const dialogs = createDialogs();
+    const handle = dialogs.prompt("Your name?", { defaultValue: "Gustavo" });
 
     const input = document.body.querySelector<HTMLInputElement>("input");
     expect(input?.value).toBe("Gustavo");
@@ -759,75 +760,75 @@ describe("dialog.prompt", () => {
     submitBtn!.click();
 
     await expect(handle.result).resolves.toBe("Antigravity");
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("resolves null when cancelled", async () => {
-    const toaster = createToaster();
-    const handle = toaster.dialog.prompt("Name?");
+    const dialogs = createDialogs();
+    const handle = dialogs.prompt("Name?");
 
     const cancelBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-cancel");
     cancelBtn!.click();
 
     await expect(handle.result).resolves.toBeNull();
-    toaster.destroy();
+    dialogs.destroy();
   });
 });
 
 describe("dialog.alert", () => {
   it("resolves void when OK clicked", async () => {
-    const toaster = createToaster();
-    const handle = toaster.dialog.alert("Notice!", { okLabel: "Got it" });
+    const dialogs = createDialogs();
+    const handle = dialogs.alert("Notice!", { okLabel: "Got it" });
 
     const okBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-primary");
     okBtn!.click();
 
     await expect(handle.result).resolves.toBeUndefined();
-    toaster.destroy();
+    dialogs.destroy();
   });
 });
 
 describe("interactive shared behaviors", () => {
   it("should clean up event listeners on dialog reuse via AbortController", async () => {
-    const toaster = createToaster();
+    const dialogs = createDialogs();
 
-    const handle1 = toaster.dialog.confirm("First confirm?");
+    const handle1 = dialogs.confirm("First confirm?");
     handle1.dismiss();
     await handle1.settled;
 
-    const handle2 = toaster.dialog.confirm("Second confirm?");
+    const handle2 = dialogs.confirm("Second confirm?");
     const cancelBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-cancel");
     cancelBtn!.click();
 
     await expect(handle2.result).resolves.toBe(false);
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("applies correct button semantic class depending on type option", async () => {
-    const toaster = createToaster();
+    const dialogs = createDialogs();
 
-    const handleConfirm = toaster.dialog.confirm("Delete danger?", { type: "error" });
+    const handleConfirm = dialogs.confirm("Delete danger?", { type: "error" });
     const errorConfirmBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-error");
     expect(errorConfirmBtn).toBeTruthy();
     expect(errorConfirmBtn?.className).toContain("toast-dialog-btn-error");
     handleConfirm.dismiss();
     await handleConfirm.settled;
 
-    const handlePrompt = toaster.dialog.prompt("Name secondary?", { type: "secondary" });
+    const handlePrompt = dialogs.prompt("Name secondary?", { type: "secondary" });
     const secondarySubmitBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-secondary");
     expect(secondarySubmitBtn).toBeTruthy();
     expect(secondarySubmitBtn?.className).toContain("toast-dialog-btn-secondary");
     handlePrompt.dismiss();
     await handlePrompt.settled;
 
-    const handleAlert = toaster.dialog.alert("Success alert!", { type: "success" });
+    const handleAlert = dialogs.alert("Success alert!", { type: "success" });
     const successOkBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-success");
     expect(successOkBtn).toBeTruthy();
     expect(successOkBtn?.className).toContain("toast-dialog-btn-success");
     handleAlert.dismiss();
     await handleAlert.settled;
 
-    toaster.destroy();
+    dialogs.destroy();
   });
 });
 
@@ -1415,45 +1416,45 @@ describe("instance-level labels", () => {
   });
 
   it("applies instance-level dialog label defaults to confirm/prompt/alert", async () => {
-    const toaster = createToaster({
+    const dialogs = createDialogs({
       labels: { confirm: "Sim", cancel: "Não", submit: "Enviar", ok: "Entendi" },
     });
 
-    const confirmHandle = toaster.dialog.confirm("Continue?");
+    const confirmHandle = dialogs.confirm("Continue?");
     expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Sim");
     expect(document.body.querySelector(".toast-dialog-btn-cancel")?.textContent).toBe("Não");
     confirmHandle.dismiss();
     await confirmHandle.settled;
 
-    const promptHandle = toaster.dialog.prompt("Name?");
+    const promptHandle = dialogs.prompt("Name?");
     expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Enviar");
     expect(document.body.querySelector(".toast-dialog-btn-cancel")?.textContent).toBe("Não");
     promptHandle.dismiss();
     await promptHandle.settled;
 
-    const alertHandle = toaster.dialog.alert("Done");
+    const alertHandle = dialogs.alert("Done");
     expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Entendi");
     alertHandle.dismiss();
     await alertHandle.settled;
 
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("lets a per-call dialog label override the instance-level default", async () => {
-    const toaster = createToaster({ labels: { confirm: "Sim" } });
+    const dialogs = createDialogs({ labels: { confirm: "Sim" } });
 
-    const handle = toaster.dialog.confirm("Continue?", { confirmLabel: "Proceed" });
+    const handle = dialogs.confirm("Continue?", { confirmLabel: "Proceed" });
     expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Proceed");
     handle.dismiss();
     await handle.settled;
 
-    toaster.destroy();
+    dialogs.destroy();
   });
 });
 
 describe("Interactive Dialog Transition Queue", () => {
   it("should wait for transition to finish before showing the next queued modal", async () => {
-    const toaster = createToaster();
+    const dialogs = createDialogs();
 
     const originalGetComputedStyle = window.getComputedStyle;
     vi.spyOn(window, "getComputedStyle").mockImplementation((el) => {
@@ -1467,8 +1468,8 @@ describe("Interactive Dialog Transition Queue", () => {
       return style;
     });
 
-    toaster.dialog.alert("First alert");
-    const handle2 = toaster.dialog.alert("Second alert");
+    dialogs.alert("First alert");
+    const handle2 = dialogs.alert("Second alert");
 
     const dialogEl = document.body.querySelector("dialog");
     expect(dialogEl?.open).toBe(true);
@@ -1493,11 +1494,11 @@ describe("Interactive Dialog Transition Queue", () => {
     secondOkBtn!.click();
     await handle2.settled;
 
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("should use dynamic fallback timeout based on transition duration", async () => {
-    const toaster = createToaster();
+    const dialogs = createDialogs();
 
     const originalGetComputedStyle = window.getComputedStyle;
     vi.spyOn(window, "getComputedStyle").mockImplementation((el) => {
@@ -1512,8 +1513,8 @@ describe("Interactive Dialog Transition Queue", () => {
       return style;
     });
 
-    toaster.dialog.alert("First alert");
-    const handle2 = toaster.dialog.alert("Second alert");
+    dialogs.alert("First alert");
+    const handle2 = dialogs.alert("Second alert");
 
     const okBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-primary");
     okBtn!.click();
@@ -1528,14 +1529,14 @@ describe("Interactive Dialog Transition Queue", () => {
     secondOkBtn!.click();
     await handle2.settled;
 
-    toaster.destroy();
+    dialogs.destroy();
   });
 });
 
 describe("Interactive Dialog Backdrop Dismiss and Title Options", () => {
   it("should dismiss confirm modal on backdrop click by default", async () => {
-    const toaster = createToaster();
-    const handle = toaster.dialog.confirm("Confirm message");
+    const dialogs = createDialogs();
+    const handle = dialogs.confirm("Confirm message");
 
     const dialogEl = document.body.querySelector("dialog")!;
     expect(dialogEl.open).toBe(true);
@@ -1547,12 +1548,12 @@ describe("Interactive Dialog Backdrop Dismiss and Title Options", () => {
     expect(result).toBe(false);
     expect(dialogEl.open).toBe(false);
 
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("should dismiss prompt modal on backdrop click by default", async () => {
-    const toaster = createToaster();
-    const handle = toaster.dialog.prompt("Prompt message");
+    const dialogs = createDialogs();
+    const handle = dialogs.prompt("Prompt message");
 
     const dialogEl = document.body.querySelector("dialog")!;
     expect(dialogEl.open).toBe(true);
@@ -1564,12 +1565,12 @@ describe("Interactive Dialog Backdrop Dismiss and Title Options", () => {
     expect(result).toBeNull();
     expect(dialogEl.open).toBe(false);
 
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("should dismiss alert modal on backdrop click by default", async () => {
-    const toaster = createToaster();
-    const handle = toaster.dialog.alert("Alert message");
+    const dialogs = createDialogs();
+    const handle = dialogs.alert("Alert message");
 
     const dialogEl = document.body.querySelector("dialog")!;
     expect(dialogEl.open).toBe(true);
@@ -1580,69 +1581,69 @@ describe("Interactive Dialog Backdrop Dismiss and Title Options", () => {
     await handle.result;
     expect(dialogEl.open).toBe(false);
 
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("has no shouldBackdropDismiss alias for backdropDismiss", async () => {
-    const toaster = createToaster();
+    const dialogs = createDialogs();
     // @ts-expect-error `shouldBackdropDismiss` was removed in 0.3.0; `backdropDismiss` is the only name.
-    const handleConfirm = toaster.dialog.confirm("Confirm message", { shouldBackdropDismiss: false });
+    const handleConfirm = dialogs.confirm("Confirm message", { shouldBackdropDismiss: false });
     const dialogElement = document.body.querySelector("dialog")!;
     mockBackdropRect(dialogElement);
     clickBackdrop(dialogElement);
     expect(await handleConfirm.result).toBe(false);
     expect(dialogElement.open).toBe(false);
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("should NOT dismiss confirm modal on backdrop click if backdropDismiss: false is passed", async () => {
-    const toaster = createToaster();
-    const handleConfirm = toaster.dialog.confirm("Confirm message", { backdropDismiss: false });
+    const dialogs = createDialogs();
+    const handleConfirm = dialogs.confirm("Confirm message", { backdropDismiss: false });
     const dialogConfirm = document.body.querySelector("dialog")!;
     mockBackdropRect(dialogConfirm);
     clickBackdrop(dialogConfirm);
     expect(dialogConfirm.open).toBe(true);
     handleConfirm.dismiss();
     await handleConfirm.settled;
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("should NOT dismiss prompt modal on backdrop click if backdropDismiss: false is passed", async () => {
-    const toaster = createToaster();
-    const handlePrompt = toaster.dialog.prompt("Prompt message", { backdropDismiss: false });
+    const dialogs = createDialogs();
+    const handlePrompt = dialogs.prompt("Prompt message", { backdropDismiss: false });
     const dialogPrompt = document.body.querySelector("dialog")!;
     mockBackdropRect(dialogPrompt);
     clickBackdrop(dialogPrompt);
     expect(dialogPrompt.open).toBe(true);
     handlePrompt.dismiss();
     await handlePrompt.settled;
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("should render title in interactive dialogs when provided", async () => {
-    const toaster = createToaster();
+    const dialogs = createDialogs();
 
-    const h1 = toaster.dialog.confirm("Message 1", { title: "Title 1" });
+    const h1 = dialogs.confirm("Message 1", { title: "Title 1" });
     let titleEl = document.body.querySelector(".toast-dialog-title");
     expect(titleEl).not.toBeNull();
     expect(titleEl?.textContent).toBe("Title 1");
     h1.dismiss();
     await h1.settled;
 
-    const h2 = toaster.dialog.prompt("Message 2", { title: "Title 2" });
+    const h2 = dialogs.prompt("Message 2", { title: "Title 2" });
     titleEl = document.body.querySelector(".toast-dialog-title");
     expect(titleEl).not.toBeNull();
     expect(titleEl?.textContent).toBe("Title 2");
     h2.dismiss();
     await h2.settled;
 
-    const h3 = toaster.dialog.alert("Message 3", { title: "Title 3" });
+    const h3 = dialogs.alert("Message 3", { title: "Title 3" });
     titleEl = document.body.querySelector(".toast-dialog-title");
     expect(titleEl).not.toBeNull();
     expect(titleEl?.textContent).toBe("Title 3");
     h3.dismiss();
 
-    toaster.destroy();
+    dialogs.destroy();
   });
 });
 

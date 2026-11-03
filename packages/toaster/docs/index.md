@@ -14,7 +14,7 @@ Modern applications frequently balance transient notifications (build status, sy
 `@codenhub/toaster` coordinates both feedback models through specialized browser primitives:
 
 - **Dual-layer architecture**: Floating toast stacks render in light DOM containers with FLIP animations and FIFO eviction, while confirmation and prompt dialogs render into the browser's native top layer using HTML5 `<dialog>`.
-- **Zero-boilerplate singletons**: Import `toast` and `dialog` directly for application-wide notifications, or use `createToaster()` for isolated containers and micro-frontends.
+- **Zero-boilerplate singletons**: Import `toast` from `@codenhub/toaster` and `dialog` from `@codenhub/toaster/dialog` for application-wide notifications and dialogs, or use `createToaster()` and `createDialogs()` for isolated instances. An app that only shows toasts does not bundle the dialog code.
 - **First-class Promise workflows**: `toast.promise` coordinates pending, success, and error transitions with automatic timer re-arming; dialog methods return `DialogHandle<T>` implementing `PromiseLike<T>` so you can `await dialog.confirm(...)` directly.
 - **Live token composition**: Toast colors, presentation axes (`.solid`, `.soft`, `.ghost`, `.edged`), and dark mode compose live with `@codenhub/styles` or fall back to standalone generated defaults.
 
@@ -33,7 +33,8 @@ pnpm add @codenhub/toaster
 Import the required global stylesheet once in your client entrypoint, then use the pre-configured singletons anywhere in your application:
 
 ```ts
-import { toast, dialog } from "@codenhub/toaster";
+import { toast } from "@codenhub/toaster";
+import { dialog } from "@codenhub/toaster/dialog";
 import "@codenhub/toaster/styles";
 
 // 1. Plain neutral or semantic notifications

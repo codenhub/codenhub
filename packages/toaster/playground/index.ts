@@ -1,5 +1,6 @@
-import { toast, dialog } from "@codenhub/toaster";
+import { toast } from "@codenhub/toaster";
 import type { ToastHandle, ToastPosition } from "@codenhub/toaster";
+import { dialog } from "@codenhub/toaster/dialog";
 
 // --- Theme Toggle ------------------------------------------------------------
 // Theme init is handled in the HTML inline script to prevent FOUC.

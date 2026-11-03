@@ -6,7 +6,7 @@ order: 6
 
 # Scoped instances and lifecycles
 
-While the pre-configured `toast` and `dialog` singletons serve the majority of application feedback needs, `createToaster()` allows you to instantiate independent, scoped instances for micro-frontends, embedded widgets, or isolated testing environments.
+While the pre-configured `toast` and `dialog` singletons serve the majority of application feedback needs, `createToaster()` allows you to instantiate independent, scoped instances for micro-frontends, embedded widgets, or isolated testing environments. Dialogs have their own factory, `createDialogs()` from `@codenhub/toaster/dialog`; see [Dialog instances](dialogs.md#dialog-instances-createdialogs).
 
 ## When to create an instance
 
@@ -38,11 +38,6 @@ const panelToaster = createToaster({
 
 // Dispatch notifications directly on the instance:
 panelToaster.success("Panel settings saved");
-
-// Use the instance-scoped dialog controller:
-if (await panelToaster.dialog.confirm("Reset panel layout?")) {
-  resetPanel();
-}
 ```
 
 ### Full configuration options
@@ -56,8 +51,8 @@ if (await panelToaster.dialog.confirm("Reset panel layout?")) {
 | `autoDismiss` | `boolean`              | `true`           | Whether toasts close automatically after `duration` expires.                                                                  |
 | `dismissible` | `boolean`              | `false`          | Whether to render a close button on toasts.                                                                                   |
 | `margin`      | `string \| { x?, y? }` | safe-area inset  | Spacing between the stack container and the viewport/container edge.                                                          |
-| `className`   | `string`               | `undefined`      | Custom CSS class appended to every toast and dialog in this instance.                                                         |
-| `labels`      | `ToastLabels`          | English defaults | Default text labels for dismiss buttons and dialog action buttons.                                                            |
+| `className`   | `string`               | `undefined`      | Custom CSS class appended to every toast in this instance.                                                                    |
+| `labels`      | `ToastLabels`          | English defaults | Default text labels: `dismiss` for close buttons and `notifications` for stacks.                                              |
 | `tokens`      | `ToastTokens`          | `undefined`      | Design token color overrides applied across this instance.                                                                    |
 | `nonce`       | `string`               | `undefined`      | Content Security Policy nonce applied to the injected token `<style>` element.                                                |
 
@@ -98,10 +93,9 @@ function mountWidget(containerEl: HTMLElement) {
 Calling `destroy()` is synchronous, deterministic, and idempotent:
 
 1. **Immediate handle settlement**: All visible and queued toast handles settle immediately, transitioning to state `"hidden"` and resolving their `settled` promises without waiting for exit animations.
-2. **Modal closure**: Any open modal dialog is closed immediately and detached from the top layer.
-3. **DOM cleanup**: All stack containers and token `<style>` nodes owned by the instance are detached from the DOM.
-4. **Listener teardown**: All internal event listeners, timers, and window observers are cleared.
-5. **Guard activation**: Any subsequent call to the destroyed instance throws an error synchronously.
+2. **DOM cleanup**: All stack containers and token `<style>` nodes owned by the instance are detached from the DOM.
+3. **Listener teardown**: All internal event listeners, timers, and window observers are cleared.
+4. **Guard activation**: Any subsequent call to the destroyed instance throws an error synchronously.
 
 ## Multi-instance isolation
 

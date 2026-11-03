@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createToaster } from "./core";
+import { createDialogs } from "./dialogs";
 import { animations, flushAnimations, installAnimateMock, installDialogMocks } from "./test-utils";
 
 beforeEach(() => {
@@ -206,10 +207,12 @@ describe("content and token security", () => {
 
   it("should reject invalid per-toast and dialog token colors", () => {
     const toaster = createToaster();
+    const dialogs = createDialogs();
     const tokens = { successBg: "red; } body { display: none" };
 
     expect(() => toaster.success("Unsafe", { tokens })).toThrow(/color/);
-    expect(() => toaster.dialog.confirm("Unsafe", { tokens })).toThrow(/color/);
+    expect(() => dialogs.confirm("Unsafe", { tokens })).toThrow(/color/);
+    dialogs.destroy();
     toaster.destroy();
   });
 
@@ -282,18 +285,18 @@ describe("content and token security", () => {
 
 describe("interactive dialogs", () => {
   it("should expose an honest interactive handle", () => {
-    const toaster = createToaster();
-    const handle = toaster.dialog.confirm("Continue?");
+    const dialogs = createDialogs();
+    const handle = dialogs.confirm("Continue?");
 
     expect(handle.state).toBe("visible");
     expect(Object.keys(handle).sort()).toEqual(["catch", "dismiss", "finally", "result", "settled", "state", "then"]);
     handle.dismiss();
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("should associate dialog text and prompt labels", () => {
-    const toaster = createToaster();
-    const handle = toaster.dialog.prompt("Project name", { title: "Create project" });
+    const dialogs = createDialogs();
+    const handle = dialogs.prompt("Project name", { title: "Create project" });
     const dialog = document.body.querySelector("dialog")!;
     const input = dialog.querySelector("input")!;
 
@@ -301,7 +304,7 @@ describe("interactive dialogs", () => {
     expect(dialog.getAttribute("aria-describedby")).toBeTruthy();
     expect(input.getAttribute("aria-labelledby")).toBeTruthy();
     handle.dismiss();
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("should reject a failed modal and continue its queue", async () => {
@@ -313,36 +316,36 @@ describe("interactive dialogs", () => {
       .mockImplementation(function (this: HTMLDialogElement) {
         this.setAttribute("open", "");
       });
-    const toaster = createToaster();
-    const failed = toaster.dialog.confirm("First");
-    const next = toaster.dialog.confirm("Second");
+    const dialogs = createDialogs();
+    const failed = dialogs.confirm("First");
+    const next = dialogs.confirm("Second");
 
     await expect(failed.result).rejects.toThrow("Detached");
     expect(showModal).toHaveBeenCalledTimes(2);
     expect(document.body.textContent).toContain("Second");
     next.dismiss();
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("should ignore Enter while prompt input is composing", () => {
-    const toaster = createToaster();
-    const handle = toaster.dialog.prompt("Name");
+    const dialogs = createDialogs();
+    const handle = dialogs.prompt("Name");
     const input = document.body.querySelector("input")!;
 
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", isComposing: true, bubbles: true }));
 
     expect(handle.state).toBe("visible");
     handle.dismiss();
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("should restore the original focus after a queued dialog sequence", async () => {
     const opener = document.createElement("button");
     document.body.appendChild(opener);
     opener.focus();
-    const toaster = createToaster();
-    const first = toaster.dialog.alert("First");
-    const second = toaster.dialog.alert("Second");
+    const dialogs = createDialogs();
+    const first = dialogs.alert("First");
+    const second = dialogs.alert("Second");
 
     first.dismiss();
     await first.settled;
@@ -350,7 +353,7 @@ describe("interactive dialogs", () => {
     await second.settled;
 
     expect(document.activeElement).toBe(opener);
-    toaster.destroy();
+    dialogs.destroy();
   });
 });
 
@@ -367,24 +370,24 @@ describe("explicit undefined options", () => {
   });
 
   it("keeps instance dialog labels when a per-call label is undefined", async () => {
-    const toaster = createToaster({ labels: { confirm: "Confirmar", cancel: "Cancelar", submit: "Enviar", ok: "Ok" } });
+    const dialogs = createDialogs({ labels: { confirm: "Confirmar", cancel: "Cancelar", submit: "Enviar", ok: "Ok" } });
 
-    const confirm = toaster.dialog.confirm("Sure?", { confirmLabel: undefined, cancelLabel: undefined });
+    const confirm = dialogs.confirm("Sure?", { confirmLabel: undefined, cancelLabel: undefined });
     expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Confirmar");
     expect(document.body.querySelector(".toast-dialog-btn-cancel")?.textContent).toBe("Cancelar");
     confirm.dismiss();
     await confirm.settled;
 
-    const prompt = toaster.dialog.prompt("Name?", { submitLabel: undefined });
+    const prompt = dialogs.prompt("Name?", { submitLabel: undefined });
     expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Enviar");
     prompt.dismiss();
     await prompt.settled;
 
-    const alert = toaster.dialog.alert("Done", { okLabel: undefined });
+    const alert = dialogs.alert("Done", { okLabel: undefined });
     expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Ok");
     alert.dismiss();
     await alert.settled;
-    toaster.destroy();
+    dialogs.destroy();
   });
 });
 
@@ -454,8 +457,9 @@ describe("custom content updates", () => {
 describe("toast layers under queued dialogs", () => {
   it("keeps toasts inside the open dialog when a queued dialog is dismissed", () => {
     const toaster = createToaster();
-    void toaster.dialog.confirm("Discard?");
-    const queued = toaster.dialog.alert("Later");
+    const dialogs = createDialogs();
+    void dialogs.confirm("Discard?");
+    const queued = dialogs.alert("Later");
     const dialog = document.querySelector("dialog")!;
 
     queued.dismiss();
@@ -463,6 +467,7 @@ describe("toast layers under queued dialogs", () => {
     flushAnimations();
 
     expect(document.querySelector(".coden-toast")!.closest("dialog")).toBe(dialog);
+    dialogs.destroy();
     toaster.destroy();
   });
 });
@@ -517,15 +522,15 @@ describe("focus across updates", () => {
 
 describe("prompt submission", () => {
   it("prevents the default action of the Enter key that submits it", () => {
-    const toaster = createToaster();
-    void toaster.dialog.prompt("Name?");
+    const dialogs = createDialogs();
+    void dialogs.prompt("Name?");
     const input = document.querySelector<HTMLInputElement>("dialog input")!;
 
     const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
     input.dispatchEvent(event);
 
     expect(event.defaultPrevented).toBe(true);
-    toaster.destroy();
+    dialogs.destroy();
   });
 });
 
@@ -551,32 +556,32 @@ describe("updates from an onShow subscriber", () => {
 
 describe("dialogs after the page changes", () => {
   it("opens a dialog again after the body it was attached to is replaced", async () => {
-    const toaster = createToaster();
-    const first = toaster.dialog.alert("One");
+    const dialogs = createDialogs();
+    const first = dialogs.alert("One");
     first.dismiss();
     await first.settled;
 
     document.body.replaceWith(document.createElement("body"));
-    const second = toaster.dialog.alert("Two");
+    const second = dialogs.alert("Two");
 
     const dialog = document.querySelector("dialog")!;
     expect(dialog.parentElement).toBe(document.body);
     expect(dialog.open).toBe(true);
     second.dismiss();
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("opens a dialog again after its element was removed", async () => {
-    const toaster = createToaster();
-    const first = toaster.dialog.alert("One");
+    const dialogs = createDialogs();
+    const first = dialogs.alert("One");
     first.dismiss();
     await first.settled;
 
     document.querySelector("dialog")!.remove();
-    void toaster.dialog.alert("Two");
+    void dialogs.alert("Two");
 
     expect(document.querySelector("dialog")?.open).toBe(true);
-    toaster.destroy();
+    dialogs.destroy();
   });
 });
 

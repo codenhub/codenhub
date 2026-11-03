@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as toastModule from ".";
+import * as dialogModule from "./dialog";
 import { DEFAULT_CONFIG, DEFAULT_DISMISS_LABEL, DEFAULT_REGION_LABEL } from "./options";
 import type { RawToastOptions } from "./options";
 import { Toast } from "./toast-base";
@@ -37,7 +38,6 @@ function makeToast(options: RawToastOptions): Toast {
       instanceId: "test-instance",
       dismissLabel: DEFAULT_DISMISS_LABEL,
       regionLabel: DEFAULT_REGION_LABEL,
-      dialogLabels: {},
     },
     parent: document.body,
   });
@@ -54,7 +54,11 @@ function renderToast(toast: Toast): HTMLDivElement {
 
 describe("toast public surface", () => {
   it("should only expose public runtime exports from the barrel", () => {
-    expect(Object.keys(toastModule).sort()).toEqual(["createToaster", "dialog", "toast"]);
+    expect(Object.keys(toastModule).sort()).toEqual(["createToaster", "toast"]);
+  });
+
+  it("should only expose public runtime exports from the dialog entry", () => {
+    expect(Object.keys(dialogModule).sort()).toEqual(["createDialogs", "dialog"]);
   });
 });
 

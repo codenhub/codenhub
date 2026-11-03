@@ -14,10 +14,11 @@ pnpm add @codenhub/toaster
 
 ## Usage
 
-Import the required stylesheet once in your client entrypoint. Use the pre-configured singletons for zero-boilerplate notifications and dialogs:
+Import the required stylesheet once in your client entrypoint. Use the pre-configured singletons for zero-boilerplate notifications and dialogs. Dialogs have their own entry point, so an app that only shows toasts does not bundle them:
 
 ```ts
-import { toast, dialog } from "@codenhub/toaster";
+import { toast } from "@codenhub/toaster";
+import { dialog } from "@codenhub/toaster/dialog";
 import "@codenhub/toaster/styles";
 
 // Neutral or semantic notifications
@@ -46,10 +47,11 @@ if (await dialog.confirm("Delete workspace?")) {
 }
 ```
 
-For isolated DOM containers, micro-frontends, or custom instances, use `createToaster()`:
+For isolated DOM containers, micro-frontends, or custom instances, use `createToaster()`, and `createDialogs()` for dialogs:
 
 ```ts
 import { createToaster } from "@codenhub/toaster";
+import { createDialogs } from "@codenhub/toaster/dialog";
 
 const scopedToaster = createToaster({
   container: document.getElementById("modal-overlay")!,
@@ -57,7 +59,9 @@ const scopedToaster = createToaster({
 });
 
 scopedToaster.success("Scoped notification");
-await scopedToaster.dialog.confirm("Proceed?");
+const dialogs = createDialogs({ labels: { confirm: "Proceed" } });
+await dialogs.confirm("Proceed?");
+dialogs.destroy();
 scopedToaster.destroy();
 ```
 

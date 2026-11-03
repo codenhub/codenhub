@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createToaster } from ".";
+import { createDialogs } from "./dialog";
 import { animations, flushAnimations, installAnimateMock, installDialogMocks } from "./test-utils";
 
 beforeEach(() => {
@@ -16,21 +17,21 @@ afterEach(() => {
 
 describe("native dialog close reconciliation", () => {
   it("settles the handle and advances the queue when the dialog is closed directly", async () => {
-    const toaster = createToaster();
-    const handle = toaster.dialog.alert("Direct close");
+    const dialogs = createDialogs();
+    const handle = dialogs.alert("Direct close");
     const dialogEl = document.body.querySelector("dialog")!;
 
     dialogEl.close();
 
     await expect(handle.result).resolves.toBeUndefined();
     expect(handle.state).toBe("hidden");
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("advances a queued modal after the active one is closed directly", async () => {
-    const toaster = createToaster();
-    const first = toaster.dialog.alert("First");
-    const second = toaster.dialog.alert("Second");
+    const dialogs = createDialogs();
+    const first = dialogs.alert("First");
+    const second = dialogs.alert("Second");
 
     const dialogEl = document.body.querySelector("dialog")!;
     dialogEl.close();
@@ -39,23 +40,23 @@ describe("native dialog close reconciliation", () => {
     expect(document.body.textContent).toContain("Second");
     second.dismiss();
     await second.settled;
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("does not double-complete when the controller's own dismiss triggers the native close event", async () => {
-    const toaster = createToaster();
-    const handle = toaster.dialog.confirm("Owned close");
+    const dialogs = createDialogs();
+    const handle = dialogs.confirm("Owned close");
 
     handle.dismiss();
 
     await expect(handle.result).resolves.toBe(false);
     expect(handle.state).toBe("hidden");
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("allows directly awaiting the dialog handle via PromiseLike", async () => {
-    const toaster = createToaster();
-    const promise = toaster.dialog.confirm("Thenable confirmation");
+    const dialogs = createDialogs();
+    const promise = dialogs.confirm("Thenable confirmation");
     const dialogEl = document.body.querySelector("dialog")!;
 
     const confirmBtn = dialogEl.querySelector<HTMLButtonElement>(".toast-dialog-btn-primary")!;
@@ -63,16 +64,16 @@ describe("native dialog close reconciliation", () => {
 
     const result = await promise;
     expect(result).toBe(true);
-    toaster.destroy();
+    dialogs.destroy();
   });
 });
 
 describe("queued dialog option safety", () => {
   it("does not let a caller mutate a queued dialog's options before it renders", async () => {
-    const toaster = createToaster();
-    const first = toaster.dialog.alert("First");
+    const dialogs = createDialogs();
+    const first = dialogs.alert("First");
     const options = { title: "Original title" };
-    const queued = toaster.dialog.confirm("Queued message", options);
+    const queued = dialogs.confirm("Queued message", options);
 
     // Mutated after enqueueing but before the queue reaches this job.
     options.title = "Mutated title";
@@ -86,18 +87,18 @@ describe("queued dialog option safety", () => {
 
     queued.dismiss();
     await queued.settled;
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("does not let a caller mutate a queued confirm dialog's labels or type", async () => {
-    const toaster = createToaster();
-    const first = toaster.dialog.alert("First");
+    const dialogs = createDialogs();
+    const first = dialogs.alert("First");
     const options: { confirmLabel: string; cancelLabel: string; type: "primary" | "error" } = {
       confirmLabel: "Original confirm",
       cancelLabel: "Original cancel",
       type: "primary",
     };
-    const queued = toaster.dialog.confirm("Queued confirm", options);
+    const queued = dialogs.confirm("Queued confirm", options);
 
     options.confirmLabel = "Mutated confirm";
     options.cancelLabel = "Mutated cancel";
@@ -115,14 +116,14 @@ describe("queued dialog option safety", () => {
 
     queued.dismiss();
     await queued.settled;
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("does not let a caller mutate a queued prompt dialog's default value or placeholder", async () => {
-    const toaster = createToaster();
-    const first = toaster.dialog.alert("First");
+    const dialogs = createDialogs();
+    const first = dialogs.alert("First");
     const options = { defaultValue: "Original value", placeholder: "Original placeholder" };
-    const queued = toaster.dialog.prompt("Queued prompt", options);
+    const queued = dialogs.prompt("Queued prompt", options);
 
     options.defaultValue = "Mutated value";
     options.placeholder = "Mutated placeholder";
@@ -137,14 +138,14 @@ describe("queued dialog option safety", () => {
 
     queued.dismiss();
     await queued.settled;
-    toaster.destroy();
+    dialogs.destroy();
   });
 
   it("does not let a caller mutate a queued alert dialog's label or type", async () => {
-    const toaster = createToaster();
-    const first = toaster.dialog.alert("First");
+    const dialogs = createDialogs();
+    const first = dialogs.alert("First");
     const options: { okLabel: string; type: "primary" | "error" } = { okLabel: "Original OK", type: "primary" };
-    const queued = toaster.dialog.alert("Queued alert", options);
+    const queued = dialogs.alert("Queued alert", options);
 
     options.okLabel = "Mutated OK";
     options.type = "error";
@@ -160,7 +161,7 @@ describe("queued dialog option safety", () => {
 
     queued.dismiss();
     await queued.settled;
-    toaster.destroy();
+    dialogs.destroy();
   });
 });
 
@@ -185,7 +186,7 @@ describe("entrance animation cancellation", () => {
 
 describe("modal transition completion", () => {
   it("waits for every configured transition property before reusing the dialog", async () => {
-    const toaster = createToaster();
+    const dialogs = createDialogs();
     const originalGetComputedStyle = window.getComputedStyle;
     vi.spyOn(window, "getComputedStyle").mockImplementation((el) => {
       const style = originalGetComputedStyle(el);
@@ -199,8 +200,8 @@ describe("modal transition completion", () => {
       return style;
     });
 
-    toaster.dialog.alert("First alert");
-    const handle2 = toaster.dialog.alert("Second alert");
+    dialogs.alert("First alert");
+    const handle2 = dialogs.alert("Second alert");
 
     const dialogEl = document.body.querySelector("dialog")!;
     const okBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-primary")!;
@@ -221,14 +222,14 @@ describe("modal transition completion", () => {
     const secondOkBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-primary")!;
     secondOkBtn.click();
     await handle2.settled;
-    toaster.destroy();
+    dialogs.destroy();
   });
 });
 
 describe("dialog content cleanup", () => {
   it("clears a prompt's draft input value as soon as it closes, not only on reuse", async () => {
-    const toaster = createToaster();
-    const handle = toaster.dialog.prompt("Enter a value");
+    const dialogs = createDialogs();
+    const handle = dialogs.prompt("Enter a value");
 
     const input = document.body.querySelector<HTMLInputElement>(".toast-dialog-input")!;
     input.value = "Sensitive draft";
@@ -240,6 +241,6 @@ describe("dialog content cleanup", () => {
     expect(dialogEl.children.length).toBe(0);
     expect(dialogEl.querySelector(".toast-dialog-input")).toBeNull();
 
-    toaster.destroy();
+    dialogs.destroy();
   });
 });

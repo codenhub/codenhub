@@ -29,7 +29,7 @@ The announcement is the toast's title, description, or message, or the text of i
 
 A live region inserted together with its text is often missed, because assistive technology only announces changes to a region it already tracks. Each region is therefore added empty, and its first text follows 100ms later, as in the [W3C ARIA22 technique](https://www.w3.org/WAI/WCAG21/Techniques/aria/ARIA22.html). Announced text is removed from the region after 7 seconds.
 
-While one of its dialogs is open, a toaster announces through live regions inside that dialog, because the rest of the page is inert then. Toasts from another toaster instance are not announced while the dialog is open, and the library does not repeat them after it closes. The same holds under a modal dialog your application opens itself; see [Your own modal dialogs](concepts.md#your-own-modal-dialogs).
+While a dialog from `@codenhub/toaster/dialog` is open, every toaster rendering into the same parent element announces through live regions inside that dialog, because the rest of the page is inert then. Toasts from a toaster with a different container are not announced while the dialog is open, and the library does not repeat them after it closes. The same holds under a modal dialog your application opens itself; see [Your own modal dialogs](concepts.md#your-own-modal-dialogs).
 
 Each toast stack is a `region` landmark named "Notifications", so screen reader users can jump to it to reach a toast's buttons. Set `labels.notifications` to localize the name.
 

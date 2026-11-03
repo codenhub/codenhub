@@ -1,3 +1,4 @@
+import { getToastLayerHost } from "./layer-host";
 import type { NormalizedToastOptions } from "./options";
 import { applyTokens } from "./tokens";
 import type { ToastHandle, ToastIcon, ToastPosition } from "./types";
@@ -450,48 +451,11 @@ function getContainerKey(params: { instanceId: string; position: ToastPosition }
   return `${instanceId}-${position}`;
 }
 
-/** Marks the instance dialog that holds the instance's stacks while it is open. */
-const LAYER_HOST_ATTRIBUTE = "data-toast-layer-host";
-
-/**
- * Where an instance's stacks and live regions go: its dialog while that is
- * open as a modal, since the browser makes everything outside a modal dialog
- * inert, and `parent` otherwise.
- */
-export function getToastLayerHost(parent: HTMLElement, instanceId: string): HTMLElement {
-  for (const child of parent.children) {
-    if (child.hasAttribute(LAYER_HOST_ATTRIBUTE) && child.getAttribute("data-toast-instance") === instanceId) {
-      return child as HTMLElement;
-    }
-  }
-  return parent;
-}
-
-/**
- * Makes `dialog` the instance's layer host and moves its stacks into it, or,
- * with `dialog` set to `null`, moves them from the current host back to
- * `parent`. Live regions are not moved: a region inserted somewhere new may
- * not be tracked again by assistive technology, so the dialog gets its own.
- */
-export function setToastLayerHost(parent: HTMLElement, instanceId: string, dialog: HTMLDialogElement | null): void {
-  const from = getToastLayerHost(parent, instanceId);
-  const to = dialog ?? parent;
-  if (from === to) {
-    return;
-  }
-  const stacks = Array.from(from.children).filter(
-    (child) => child.hasAttribute("data-toast-container") && child.getAttribute("data-toast-instance") === instanceId,
-  );
-  from.removeAttribute(LAYER_HOST_ATTRIBUTE);
-  dialog?.setAttribute(LAYER_HOST_ATTRIBUTE, "");
-  to.append(...stacks);
-}
-
 export function getContainer(params: ContainerParams): HTMLDivElement | null {
   const { parent, position, instanceId } = params;
   const id = getContainerKey({ instanceId, position });
   return (
-    Array.from(getToastLayerHost(parent, instanceId).children).find(
+    Array.from(getToastLayerHost(parent).children).find(
       (element): element is HTMLDivElement =>
         element.tagName === "DIV" && element.getAttribute("data-toast-container") === id,
     ) ?? null
@@ -553,7 +517,7 @@ export function getOrCreateContainer(params: ContainerParams): HTMLDivElement {
     // A labeled landmark, so a screen reader or keyboard user can find a
     // toast, and its action, after the announcement.
     container.setAttribute("role", "region");
-    getToastLayerHost(parent, instanceId).appendChild(container);
+    getToastLayerHost(parent).appendChild(container);
   }
 
   if (margin !== undefined) {
@@ -566,9 +530,11 @@ export function getOrCreateContainer(params: ContainerParams): HTMLDivElement {
   return container;
 }
 
+/** Removes an instance's stacks and live regions, including those inside an open dialog hosting them. */
 export function removeInstanceContainers(params: { parent: HTMLElement; instanceId: string }): void {
   const { parent, instanceId } = params;
-  Array.from(parent.children)
+  const host = getToastLayerHost(parent);
+  [...parent.children, ...(host === parent ? [] : host.children)]
     .filter((element) => element.getAttribute("data-toast-instance") === instanceId)
     .forEach((element) => element.remove());
 }

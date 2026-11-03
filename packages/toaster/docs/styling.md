@@ -40,7 +40,8 @@ Every toast is 22.25rem (356px) wide, narrowed to fit the viewport inside the st
 Presentation helper classes (`.solid`, `.soft`, `.ghost`, `.edged`, `.edgeless`) adjust how background fills and borders render:
 
 ```ts
-import { toast, dialog } from "@codenhub/toaster";
+import { toast } from "@codenhub/toaster";
+import { dialog } from "@codenhub/toaster/dialog";
 
 // Render a high-contrast solid toast:
 toast.success("Build deployed", {

@@ -73,6 +73,20 @@ test("names dialogs and prompt input programmatically", async ({ page }) => {
   await expect(dialog.getByRole("textbox", { name: "Enter new workspace namespace:" })).toBeFocused();
 });
 
+// Focus returns to the trigger while the key is still down, so an Enter left to
+// its default action would press the trigger and open the prompt again.
+test("submits a prompt with Enter without reopening it", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Prompt Dialog" }).click();
+  const dialog = page.getByRole("dialog", { name: "Enter new workspace namespace:" });
+  await expect(dialog).toBeVisible();
+
+  await dialog.getByRole("textbox").press("Enter");
+
+  await expect(page.getByText("Namespace registered: my-organization")).toBeVisible();
+  await expect(dialog).toHaveCount(0);
+});
+
 test("dismisses a dialog from its visual backdrop", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Confirm Dialog" }).click();

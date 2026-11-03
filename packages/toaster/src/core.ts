@@ -1,5 +1,5 @@
 import { applyInstanceMargin, applyInstanceRegionLabel, removeInstanceContainers } from "./dom";
-import { ModalController } from "./modal";
+import { generateInstanceId } from "./instance-id";
 import {
   DEFAULT_CONFIG,
   DEFAULT_DISMISS_LABEL,
@@ -12,13 +12,9 @@ import { Toast, reportUncaughtError } from "./toast-base";
 import { reconcileCapacity } from "./toast-helpers";
 import { applyGlobalTokens, assertValidTokens, removeGlobalTokens } from "./tokens";
 import type {
-  AlertOptions,
-  ConfirmOptions,
   CustomToastOptions,
-  DialogDispatcher,
   LoadingToastOptions,
   PromiseToastOptions,
-  PromptOptions,
   SemanticType,
   ToastContent,
   ToastHandle,
@@ -30,13 +26,6 @@ import type {
 } from "./types";
 import { LoadingToast } from "./variants/loading";
 import { SemanticToast } from "./variants/semantic";
-
-let instanceCounter = 0;
-function generateInstanceId(): string {
-  const randomId =
-    globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-  return `coden-toast-${randomId}-${++instanceCounter}`;
-}
 
 function copyConfig(config: ToasterConfig): ToasterConfig {
   return {
@@ -124,22 +113,6 @@ class ToastManager {
   private readonly instanceId: string;
   private isDestroyed = false;
   private readonly activeToasts = new Set<Toast>();
-  private modalController: ModalController | null = null;
-
-  public readonly dialog: DialogDispatcher = {
-    confirm: (message: string, options?: ConfirmOptions) => {
-      this.assertAlive();
-      return this.getModalController().confirm(message, options);
-    },
-    prompt: (message: string, options?: PromptOptions) => {
-      this.assertAlive();
-      return this.getModalController().prompt(message, options);
-    },
-    alert: (message: string, options?: AlertOptions) => {
-      this.assertAlive();
-      return this.getModalController().alert(message, options);
-    },
-  };
 
   constructor(config: ToasterConfig = {}) {
     this.instanceId = generateInstanceId();
@@ -390,11 +363,6 @@ class ToastManager {
     this.activeToasts.forEach((t) => t.destroyImmediately());
     this.activeToasts.clear();
 
-    if (this.modalController) {
-      this.modalController.destroy();
-      this.modalController = null;
-    }
-
     if (this.config.container || typeof document !== "undefined") {
       const parent = this.getParent();
       removeInstanceContainers({ parent, instanceId: this.instanceId });
@@ -407,18 +375,6 @@ class ToastManager {
     void this.removeWhenSettled(toast, this.activeToasts);
     toast.show();
     return toast.handle;
-  }
-
-  private getModalController(): ModalController {
-    if (!this.modalController) {
-      this.modalController = new ModalController(
-        () => this.getParent(),
-        this.instanceId,
-        () => this.resolved.className,
-        () => this.resolved.dialogLabels,
-      );
-    }
-    return this.modalController;
   }
 
   private resolveParentElement(): HTMLElement {
@@ -451,7 +407,6 @@ class ToastManager {
       className: config.className,
       dismissLabel: config.labels?.dismiss ?? DEFAULT_DISMISS_LABEL,
       regionLabel: config.labels?.notifications ?? DEFAULT_REGION_LABEL,
-      dialogLabels: config.labels ?? {},
     };
   }
 
@@ -522,7 +477,6 @@ export function createToaster(config?: ToasterConfig): Toaster {
       custom: (contentOrOptions: ToastContent | CustomToastOptions, options?: Omit<CustomToastOptions, "content">) =>
         manager.custom(contentOrOptions, options),
       promise: <T>(promise: PromiseLike<T>, options: PromiseToastOptions<T>) => manager.promise(promise, options),
-      dialog: manager.dialog,
       clear: () => manager.clear(),
       dismiss: (handle?: ToastHandle) => manager.dismiss(handle),
       configure: (runtimeConfig: ToasterRuntimeConfig) => manager.configure(runtimeConfig),
@@ -533,11 +487,9 @@ export function createToaster(config?: ToasterConfig): Toaster {
   return toaster as Toaster;
 }
 
-// Both singletons are marked pure so a bundler drops them, and with them the
-// whole package, when nothing uses them. The package declares no side effects.
-
-/** Pre-configured default browser singleton for notifications. */
+/**
+ * Pre-configured default browser singleton for notifications. Marked pure so
+ * a bundler drops it, and with it the whole package, when nothing uses it.
+ * The package declares no side effects.
+ */
 export const toast: Toaster = /* @__PURE__ */ createToaster();
-
-/** Pre-configured default browser singleton for interactive dialogs. */
-export const dialog: DialogDispatcher = /* @__PURE__ */ (() => toast.dialog)();

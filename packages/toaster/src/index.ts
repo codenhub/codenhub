@@ -1,22 +1,17 @@
 /**
- * Accessible browser toasts and native dialogs, from ready-made `toast` and `dialog` singletons or instances made with `createToaster`.
+ * Accessible browser toasts, from the ready-made `toast` singleton or instances made with `createToaster`. Dialogs live in `@codenhub/toaster/dialog`.
  *
  * @packageDocumentation
  */
 
-export { createToaster, toast, dialog } from "./core";
+export { createToaster, toast } from "./core";
 
 export type {
-  AlertOptions,
-  ConfirmOptions,
   CustomDefaults,
   CustomToastOptions,
-  DialogDispatcher,
-  DialogHandle,
   LoadingDefaults,
   LoadingToastOptions,
   PromiseToastOptions,
-  PromptOptions,
   SemanticDefaults,
   SemanticToastOptions,
   SemanticType,
