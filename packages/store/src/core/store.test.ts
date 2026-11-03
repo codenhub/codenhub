@@ -294,7 +294,6 @@ describe("Store", () => {
         storageKey: "key-removeitem-returns",
         initialState: {
           a: 1,
-          b: 2,
         },
       });
       store.set({ a: 1, b: 2 });
@@ -308,7 +307,6 @@ describe("Store", () => {
         storageKey: "key-removeitem-persist",
         initialState: {
           a: 1,
-          b: 2,
         },
       });
       store.set({ a: 1, b: 2 });
@@ -328,7 +326,7 @@ describe("Store", () => {
 
       const store = createStore<{ a: number; b?: number }>({
         storageKey: "key-removeitem-write-fail",
-        initialState: { a: 1, b: 2 },
+        initialState: { a: 1 },
         driver: failingWriteDriver,
         onError,
       });
@@ -393,7 +391,7 @@ describe("Store", () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
       const onError = vi.fn();
 
-      localStorage.setItem("key-validate-fail", JSON.stringify({ wrong: "shape" }));
+      localStorage.setItem("key-validate-fail", JSON.stringify({ name: 42 }));
 
       const store = createStore({
         storageKey: "key-validate-fail",

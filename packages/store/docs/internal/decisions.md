@@ -20,6 +20,38 @@ When a driver throws or rejects during a read, `patch`, `setItem`, and `removeIt
 
 Rejected: overwrite with fallback plus changes after an access failure, because that wipes unrelated fields after a transient failure. A full `set` remains an explicit replacement and does not read first.
 
+## Reads fill missing fields from initial state
+
+A stored plain object reads as `{ ...initialState, ...stored }`, one level deep, before `validate` runs. The most common shape a settings record fails is not corruption but a valid record saved before the application added a field. Without filling, a consumer without `validate` read the new field as `undefined` despite its type, and a consumer with `validate` lost the user's saved fields: validation failed, the store fell back, and the next `patch` replaced the record with fallback plus change. zustand's `persist` merges the same way by default.
+
+`removeItem` returns `withDefaults(initialState, record)`, so it matches the next read: an optional field with an initial value is reset to it, and one without is absent. The persisted record omits the field so a later change to the initial value applies.
+
+Rejected: merging only when `validate` rejects the stored value, because records without a validator would still read new fields as missing; a `migrate(raw)` option, because it adds public surface and the common case is an added field, which needs no consumer code; and a deep merge, because it would fill arrays and nested objects whose shape the record owns. Fields removed from the schema stay in the record until a `set`; renamed and retyped fields still need a validator and fallback. Cost accepted: an optional field cannot be absent while `initialState` gives it a value.
+
+## `patch` skips `undefined` values
+
+`patch` ignores fields whose value is `undefined`. `Partial<TSchema>` admits `undefined` for required fields unless a consumer enables `exactOptionalPropertyTypes`, so `patch({ token: maybeToken })` type-checked and then dropped `token` on JSON drivers while memory drivers kept it as `undefined`. Skipping the value keeps the guarantee `RemovableStoreKey` gives `removeItem` and makes every driver store the same record.
+
+Rejected: keeping spread semantics and documenting the gap, because the type system cannot catch the case in the default compiler configuration; and a narrower parameter type, because without `exactOptionalPropertyTypes` an optional property still admits `undefined`. Cost accepted: `patch({ nickname: undefined })` no longer removes an optional field on JSON drivers; `removeItem` does.
+
+## Non-object stored values fail validation
+
+`TSchema extends object`, so a stored primitive can never be a valid record. The store reports `store.validation_failed` for a non-object value whether or not `validate` is supplied, instead of returning it as the record and letting `patch` spread a string's characters into the next write.
+
+Rejected: trusting the value when `validate` is absent, because no schema can accept it and the failure mode corrupts the next write.
+
+## One storage key per Node JSON file
+
+The file drivers hold one record per file and ignore the storage key inside it. Binding a second key to a file already bound to another key in the process throws during store creation, compared by `path.resolve`. Without the check, two stores on one file silently overwrote each other and each read the other's record.
+
+The binding lasts for the life of the process because stores have no disposal step, so a test suite that reuses one path with different keys must use one file per key. Paths that differ only in case on a case-insensitive filesystem, or reach the same file through a link, are not detected.
+
+Rejected: keyed records inside one file, because it changes the one-record-per-key model and turns a whole-file write into a read-modify-write across stores; and documentation alone, because the failure corrupts data silently.
+
+## Empty storage keys are valid keys
+
+Drivers treat a key as unbound only when it is `undefined`. localStorage accepts `""` as a key; the previous truthiness check made every operation under `""` fail as unbound.
+
 ## Package-owned `store.*` error codes
 
 Recoverable failures use `store.read_failed`, `store.write_failed`, `store.clear_failed`, `store.parse_failed`, and `store.validation_failed`, plus `store.clear_unsupported`. The prefix follows the repository's flat error-code namespace so applications can register errors from several packages without collisions.
