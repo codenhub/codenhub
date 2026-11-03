@@ -84,6 +84,15 @@ describe("has", () => {
     warn.mockRestore();
   });
 
+  it("should find a loaded key of exactly 1,000 characters", async () => {
+    const key = "x".repeat(1_000);
+    const i18n = createI18n({ defaultLocale: "en", locales: ["en"], loadLocale: () => ({ [key]: "Long" }) });
+    await i18n.init();
+
+    expect(i18n.has(key)).toBe(true);
+    expect(i18n.t(key)).toBe("Long");
+  });
+
   it("should still throw for a key that is not a string", async () => {
     const { i18n } = create();
     await i18n.init();
