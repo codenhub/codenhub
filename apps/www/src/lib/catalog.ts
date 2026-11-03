@@ -19,7 +19,7 @@ export interface CatalogLinks {
   demo?: string;
   /** Documentation site overview, when the package publishes documentation. */
   docs?: string;
-  /** The package's directory on GitHub, from its manifest `homepage`. */
+  /** The package's directory on GitHub, from its manifest `repository`. */
   github?: string;
   /** `llms.txt` as released, on the documentation site. */
   llms?: string;
@@ -101,6 +101,29 @@ function readString(manifest: Record<string, unknown>, key: string): string | un
   return typeof value === "string" ? value : undefined;
 }
 
+/**
+ * The package's directory on GitHub, from its manifest `repository`, or
+ * `undefined` when that is not a GitHub repository.
+ */
+function repositoryUrl(manifest: Record<string, unknown>): string | undefined {
+  const repository = manifest.repository;
+  const fields =
+    typeof repository === "string"
+      ? { url: repository }
+      : typeof repository === "object" && repository !== null
+        ? (repository as { directory?: unknown; url?: unknown })
+        : {};
+  if (typeof fields.url !== "string") {
+    return undefined;
+  }
+  const match = /^(?:git\+)?https:\/\/github\.com\/([^/]+\/[^/]+?)(?:\.git)?\/?$/u.exec(fields.url);
+  if (match === null) {
+    return undefined;
+  }
+  const directory = typeof fields.directory === "string" ? fields.directory.replace(/^\/+|\/+$/gu, "") : "";
+  return directory === "" ? `https://github.com/${match[1]}` : `https://github.com/${match[1]}/tree/main/${directory}`;
+}
+
 function packageRoot(manifestPath: string): string {
   return manifestPath.slice(0, -"/package.json".length);
 }
@@ -128,7 +151,6 @@ function describePackage(summary: PublicPackageSummary): CatalogPackage {
   const root = packageRoot(manifestPath);
   const releases = describeReleases(releaseHistory[summary.name]);
   const isDocumented = summary.documentationRoute !== undefined;
-  const homepage = readString(manifest, "homepage");
   const docs = isDocumented && siteConfig.docsUrl !== undefined ? packageDocsUrl(siteConfig.docsUrl, slug) : undefined;
   const tag = releases.latest === undefined ? undefined : `${summary.name}@${releases.latest.version}`;
   const sizeContents = sizeModules[`${root}/size.json`];
@@ -148,7 +170,7 @@ function describePackage(summary: PublicPackageSummary): CatalogPackage {
           ? packageDemoUrl(siteConfig.demoUrl, slug)
           : undefined),
       docs,
-      github: homepage?.startsWith("https://github.com/") === true ? homepage : undefined,
+      github: repositoryUrl(manifest),
       llms:
         tag !== undefined && docs !== undefined && llmsPaths.includes(`${root}/llms.txt`)
           ? `${docs}llms.txt`
