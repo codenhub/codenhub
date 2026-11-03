@@ -387,7 +387,13 @@ const getPluralRules = (locale: string, isOrdinal: boolean): Intl.PluralRules =>
 const isDateValue = (value: unknown): value is Date | number =>
   (value instanceof Date && !Number.isNaN(value.getTime())) || (typeof value === "number" && Number.isFinite(value));
 
-const formatNodes = (nodes: Message, values: MessageValues, locale: string, pound: number | undefined): string => {
+const formatNodes = (
+  nodes: Message,
+  values: MessageValues,
+  locale: string,
+  timeZone: string | undefined,
+  pound: number | undefined,
+): string => {
   let result = "";
 
   for (const node of nodes) {
@@ -408,7 +414,7 @@ const formatNodes = (nodes: Message, values: MessageValues, locale: string, poun
           typeof value === "string" || typeof value === "number"
             ? String(value)
             : value instanceof Date && isDateValue(value)
-              ? getDateTimeFormat(locale, { dateStyle: "medium" }).format(value)
+              ? getDateTimeFormat(locale, { dateStyle: "medium", timeZone }).format(value)
               : node.source;
         break;
       case "number":
@@ -429,7 +435,7 @@ const formatNodes = (nodes: Message, values: MessageValues, locale: string, poun
         result += isDateValue(value)
           ? getDateTimeFormat(
               locale,
-              node.kind === "date" ? { dateStyle: node.style } : { timeStyle: node.style },
+              node.kind === "date" ? { dateStyle: node.style, timeZone } : { timeStyle: node.style, timeZone },
             ).format(value)
           : node.source;
         break;
@@ -443,7 +449,7 @@ const formatNodes = (nodes: Message, values: MessageValues, locale: string, poun
         const category =
           intlLocale(locale) === "und" ? "other" : getPluralRules(locale, node.isOrdinal).select(value - node.offset);
         const option = exact ?? node.options.get(category) ?? node.options.get("other")!;
-        result += formatNodes(option, values, locale, value - node.offset);
+        result += formatNodes(option, values, locale, timeZone, value - node.offset);
         break;
       }
       case "select": {
@@ -452,7 +458,7 @@ const formatNodes = (nodes: Message, values: MessageValues, locale: string, poun
           break;
         }
         const option = node.options.get(String(value)) ?? node.options.get("other")!;
-        result += formatNodes(option, values, locale, pound);
+        result += formatNodes(option, values, locale, timeZone, pound);
         break;
       }
     }
@@ -462,9 +468,14 @@ const formatNodes = (nodes: Message, values: MessageValues, locale: string, poun
 };
 
 /**
- * Formats a parsed message. An argument without a usable value is left as written.
+ * Formats a parsed message, with dates and times in `timeZone`, or the runtime's when `undefined`. An argument without
+ * a usable value is left as written.
  *
  * @internal
  */
-export const formatMessage = (message: Message, values: MessageValues, locale: string): string =>
-  formatNodes(message, values, locale, undefined);
+export const formatMessage = (
+  message: Message,
+  values: MessageValues,
+  locale: string,
+  timeZone: string | undefined,
+): string => formatNodes(message, values, locale, timeZone, undefined);

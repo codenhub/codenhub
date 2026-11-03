@@ -78,7 +78,10 @@ const createCustomEvent = <TDetail>(type: string, detail: TDetail): CustomEvent<
   return new CoreCustomEvent(type, init);
 };
 
-class I18nInstance<TLocale extends string> extends EventTarget implements I18n<TLocale> {
+class I18nInstance<TLocale extends string, TKey extends string = string>
+  extends EventTarget
+  implements I18n<TLocale, TKey>
+{
   readonly defaultLocale: TLocale;
   readonly locales: readonly TLocale[];
   readonly isSilent: boolean;
@@ -107,6 +110,7 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     this.resolveLocale = this.resolveLocale.bind(this);
     this.matchLocale = this.matchLocale.bind(this);
     this.translate = this.translate.bind(this);
+    this.has = this.has.bind(this) as I18nInstance<TLocale, TKey>["has"];
     this.subscribe = this.subscribe.bind(this);
     this.formatNumber = this.formatNumber.bind(this);
     this.formatDate = this.formatDate.bind(this);
@@ -179,12 +183,20 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     return found === undefined ? key.trim() : this.format(key, found, params ?? {});
   }
 
+  has(key: string): key is TKey {
+    // Any count finds a plural group, since every group has an `other` form to fall back to.
+    return this.lookup(key, 0, false) !== undefined;
+  }
+
   formatNumber(value: number | bigint, options?: Intl.NumberFormatOptions): string {
     return getNumberFormat(this.currentLocale, options).format(value);
   }
 
   formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string {
-    return getDateTimeFormat(this.currentLocale, options).format(value);
+    const { timeZone } = this.config;
+    return getDateTimeFormat(this.currentLocale, timeZone === undefined ? options : { timeZone, ...options }).format(
+      value,
+    );
   }
 
   formatRelativeTime(
@@ -211,7 +223,7 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
       return interpolate(found.text, params);
     }
 
-    return formatMessage(message, params, found.locale);
+    return formatMessage(message, params, found.locale, this.config.timeZone);
   }
 
   private reportInvalidMessage(key: string, found: FoundTranslation<TLocale>, error: MessageSyntaxError): void {
@@ -297,7 +309,11 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     );
   }
 
-  private lookup(key: string, count?: number): FoundTranslation<TLocale> | undefined {
+  /**
+   * Finds a key, or with a count, a plural group's form, through the active fallback chain. A miss is reported unless
+   * `shouldReport` is false.
+   */
+  private lookup(key: string, count?: number, shouldReport = true): FoundTranslation<TLocale> | undefined {
     if (!this.isReadyState || this.dictionaries === undefined) {
       throw new Error("[I18n] translate() requires successful initialization.");
     }
@@ -326,7 +342,9 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
       }
     }
 
-    this.reportMissingKey(normalizedKey);
+    if (shouldReport) {
+      this.reportMissingKey(normalizedKey);
+    }
     return undefined;
   }
 
@@ -495,5 +513,5 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
 export function createI18n<TLocale extends string, TMessages = unknown>(
   config: I18nConfig<TLocale, TMessages>,
 ): I18n<TLocale, TranslationKey<TMessages>, TMessages> {
-  return new I18nInstance(config);
+  return new I18nInstance<TLocale, TranslationKey<TMessages>>(config);
 }

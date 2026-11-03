@@ -370,6 +370,19 @@ i18n.formatList(["Ana", "Bia", "Caio"]); // "Ana, Bia, and Caio"
 
 They take the same options as `Intl.NumberFormat`, `Intl.DateTimeFormat`, `Intl.RelativeTimeFormat`, and `Intl.ListFormat`, and throw what those throw for invalid options.
 
+### Time zones
+
+Dates and times are written in the runtime's time zone. In a browser that is the reader's, which is usually right. On a server it is the server's, so 01:00 UTC on 2 November renders as "November 2" for a reader in São Paulo, where it is still 1 November, and the text changes once the browser takes over. Set `timeZone` to the zone the text should use:
+
+```ts
+createI18n({
+  // ...
+  timeZone: "America/Sao_Paulo",
+});
+```
+
+It applies to `{d, date}`, `{d, time}`, and a date in `{d}`, and is `formatDate`'s default; `formatDate(value, { timeZone: "UTC" })` still overrides it. A zone `Intl` doesn't know throws a `TypeError` when the manager is created. On a server, set it per request, as in [Show dates in the reader's time zone](docs/server-rendering.md#show-dates-in-the-readers-time-zone).
+
 ### Literal braces and apostrophes
 
 An apostrophe before `{` or `}` quotes text up to the next apostrophe, and two apostrophes make one. An apostrophe anywhere else is an ordinary apostrophe, so "Don't" needs nothing:
@@ -475,7 +488,16 @@ t("cart.itmes", { count: 2 }); // compile error: misspelled
 
 The type comes from what your loader returns. If it returns several `as const` dictionaries, a key from any of them is accepted. If it returns `any` or `unknown`, as `response.json()` and dynamic imports do, every string is accepted; give the loader a return type, as in the JSON example above, to get checking back.
 
-A key you build at runtime, such as ``t(`errors.${code}`)``, fails to compile even when it exists, because TypeScript can't know the value of `code`. When you know the keys are there, cast it:
+A key you build at runtime, such as ``t(`errors.${code}`)``, fails to compile even when it exists, because TypeScript can't know the value of `code`. Check it with `has()`, which narrows it to a key `t()` accepts, and pick a fallback when it isn't there:
+
+```ts
+const key = `errors.${code}`;
+const message = i18n.has(key) ? i18n.t(key) : i18n.t("errors.unknown");
+```
+
+`has()` looks through the same dictionaries `t()` does, and a plural group counts as a key. A miss neither calls `onMissingKey` nor warns, since a key you expect to be missing sometimes is not a gap in the translations.
+
+When you know the keys are there, cast it instead:
 
 ```ts
 import type { TranslationKey } from "@codenhub/i18n";
@@ -824,6 +846,22 @@ A visitor whose languages all fail to match, including one who refuses your defa
 `matchLocale()` takes a list rather than the header because parsing the header, and limiting its size, belongs to your server. It matches the same way the browser binding does, so a visitor gets the same language from the server as from the browser: `pt-BR` gets your `pt`, and `zh-TW` gets your `zh-Hant`. Malformed tags are skipped, and `undefined` means nothing matched.
 
 When the URL carries the language, as on [a localized site](docs/localized-urls.md), read it from the URL instead and use `Accept-Language` only to choose where to redirect a visitor who arrives at `/`.
+
+## Show dates in the reader's time zone
+
+A server formats dates in its own time zone, which is rarely the reader's. Text such as "Shipped on {date, date, long}" can then show another day than the reader's calendar, and change when the browser takes over. Give each request's manager the reader's zone, such as one your app stores per account or the browser reports in a cookie:
+
+```ts
+export const createAppI18n = (timeZone?: string) =>
+  createI18n({
+    locales: ["en", "pt"] as const,
+    defaultLocale: "en",
+    loadLocale: (locale) => dictionaries[locale],
+    timeZone,
+  });
+```
+
+`Intl.DateTimeFormat().resolvedOptions().timeZone` reads the zone in the browser. A zone `Intl` doesn't know throws a `TypeError`, so check a value from a cookie before using it, or fall back to a fixed zone such as `"UTC"`.
 
 ## Keep production logs useful
 
@@ -1272,6 +1310,8 @@ The path you passed is valid, but the locale prefix or the translated words make
 
 - **ICU messages.** `t("welcome", { name: "Ana" })` fills `{name}` in the text, and a text can format its values: `{amount, number}`, `{when, date, long}`, `{count, plural, =0 {…} one {# item} other {# items}}`, `{n, selectordinal, …}`, and `{gender, select, …}`. Formatting follows the language of the text. An argument without a value is left as written. See [Put values into text](docs/translations.md#put-values-into-text).
 - **Formatters.** `formatNumber`, `formatDate`, `formatRelativeTime`, and `formatList` format values for the active locale with `Intl`.
+- **`timeZone`** on `createI18n` sets the time zone of dates and times in messages and `formatDate`'s default, so a server renders the reader's day rather than its own. See [Time zones](docs/translations.md#time-zones).
+- **`has(key)`** tells whether a key exists, without calling `onMissingKey` or warning, and narrows a key built at runtime to one `t()` accepts. See [Typed keys](docs/translations.md#typed-keys).
 - **Regional fallback.** A key missing from `pt-BR` comes from `pt` before the default locale, when both are configured. See [Regional variants](docs/translations.md#regional-variants).
 - **Plurals.** A key can hold CLDR plural forms, such as `{ one: "{count} item", other: "{count} items" }`, and `t(key, { count })` picks the right one for the language with `Intl.PluralRules`. See [Plurals](docs/translations.md#plurals).
 - **Typed keys.** Keys are inferred from what `loadLocale` returns, so a misspelled key fails to compile. `TranslationKey<typeof en>` names the key type for your own helpers. With an `as const` dictionary, `t()` also requires each message's values with the type its format needs. See [Typed values](docs/translations.md#typed-values).
@@ -1300,7 +1340,7 @@ The path you passed is valid, but the locale prefix or the translated words make
 
 1. **Remove the fallbacks after `t()`.** `t(key) ?? ""` and `t(key) ?? key` still work but are no longer needed. Code that checked `t(key) === undefined` to detect a missing key never matches now; use `onMissingKey` instead.
 2. **Stop reading `init()`'s result.** Replace `if (await i18n.init()) { … }` with `await i18n.init(); if (i18n.isReady) { … }`. A stale `init()`, superseded by a later call, resolves without applying, so compare `i18n.locale` when the outcome matters.
-3. **Cast keys built at runtime.** Where TypeScript now rejects a computed key you know exists, cast it with `as TranslationKey<typeof en>`, as in [Typed keys](docs/translations.md#typed-keys).
+3. **Check or cast keys built at runtime.** Where TypeScript now rejects a computed key, check it with `i18n.has(key)`, or, when you know it exists, cast it with `as TranslationKey<typeof en>`, as in [Typed keys](docs/translations.md#typed-keys).
 4. **Mark a separate configuration's default locale `as const`.** Fix `Type 'string' is not assignable to type '"en" | "pt"'` at `createI18n(config)` or `createLocaleRouting(config)` with `defaultLocale: "en" as const`.
 5. **Replace `prefixDefaultLocale`.** In `createLocaleRouting`, `prefixDefaultLocale: true` becomes `localePrefix: "always"`, and `false` becomes `localePrefix: "except-default"`. In a configuration kept in a variable, add `as const`.
 6. **Quote literal braces.** A text that shows `{` or `}` without meaning a value, such as a code sample, needs `'{'` and `'}'`. Run the message check in [Find untranslated keys](docs/translations.md#find-untranslated-keys) to find them.

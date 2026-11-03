@@ -79,6 +79,22 @@ A visitor whose languages all fail to match, including one who refuses your defa
 
 When the URL carries the language, as on [a localized site](localized-urls.md), read it from the URL instead and use `Accept-Language` only to choose where to redirect a visitor who arrives at `/`.
 
+## Show dates in the reader's time zone
+
+A server formats dates in its own time zone, which is rarely the reader's. Text such as "Shipped on {date, date, long}" can then show another day than the reader's calendar, and change when the browser takes over. Give each request's manager the reader's zone, such as one your app stores per account or the browser reports in a cookie:
+
+```ts
+export const createAppI18n = (timeZone?: string) =>
+  createI18n({
+    locales: ["en", "pt"] as const,
+    defaultLocale: "en",
+    loadLocale: (locale) => dictionaries[locale],
+    timeZone,
+  });
+```
+
+`Intl.DateTimeFormat().resolvedOptions().timeZone` reads the zone in the browser. A zone `Intl` doesn't know throws a `TypeError`, so check a value from a cookie before using it, or fall back to a fixed zone such as `"UTC"`.
+
 ## Keep production logs useful
 
 A missing key logs a warning once per manager. With a manager per request, that is once per request, which floods the logs. In production, send misses to your logger, or turn the warnings off:

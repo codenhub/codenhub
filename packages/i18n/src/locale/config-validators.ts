@@ -57,6 +57,18 @@ const own = (object: Record<string, unknown>, name: string): unknown =>
 const readBoolean = (path: string, value: unknown): boolean =>
   typeof value === "boolean" ? value : expectType(path, "boolean", value);
 
+/** Reads an IANA time zone, such as `America/Sao_Paulo`, that `Intl` knows, returning its canonical name. */
+const readTimeZone = (path: string, value: unknown): string => {
+  if (typeof value !== "string") {
+    return expectType(path, "string", value);
+  }
+  try {
+    return new Intl.DateTimeFormat("en", { timeZone: value }).resolvedOptions().timeZone;
+  } catch {
+    return fail(path, 'Must be a time zone Intl supports, such as "America/Sao_Paulo" or "UTC"');
+  }
+};
+
 const readFunction = (path: string, value: unknown): void => {
   if (typeof value !== "function") {
     fail(path, "Must be a function");
@@ -192,6 +204,7 @@ export interface CheckedI18nConfig {
   readonly onMissingKey?: (key: string, locale: string) => unknown;
   readonly defaultLocale: string;
   readonly isSilent?: boolean;
+  readonly timeZone?: string;
   readonly dictionaryLimits?: Record<string, number>;
 }
 
@@ -215,7 +228,7 @@ export interface CheckedLocaleRoutingConfig {
 
 /**
  * Checks the configuration of an `I18n` manager: the locales, the default locale, the loader, the optional direction
- * and missing-key callbacks, the optional silent flag, and the optional dictionary limits. Only own properties are read.
+ * and missing-key callbacks, the optional silent flag, the optional time zone, and the optional dictionary limits. Only own properties are read.
  *
  * @internal
  */
@@ -230,6 +243,7 @@ export const i18nConfig = (input: unknown): CheckedI18nConfig => {
   const onMissingKey = own(config, "onMissingKey");
   readOptionalFunction("onMissingKey", onMissingKey);
   const isSilent = own(config, "isSilent");
+  const timeZone = own(config, "timeZone");
 
   return {
     locales,
@@ -238,6 +252,7 @@ export const i18nConfig = (input: unknown): CheckedI18nConfig => {
     getLocaleDirection: getLocaleDirection as CheckedI18nConfig["getLocaleDirection"],
     onMissingKey: onMissingKey as CheckedI18nConfig["onMissingKey"],
     isSilent: isSilent === undefined ? undefined : readBoolean("isSilent", isSilent),
+    timeZone: timeZone === undefined ? undefined : readTimeZone("timeZone", timeZone),
     dictionaryLimits: readDictionaryLimits(own(config, "dictionaryLimits")),
   };
 };

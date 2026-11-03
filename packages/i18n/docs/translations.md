@@ -166,6 +166,19 @@ i18n.formatList(["Ana", "Bia", "Caio"]); // "Ana, Bia, and Caio"
 
 They take the same options as `Intl.NumberFormat`, `Intl.DateTimeFormat`, `Intl.RelativeTimeFormat`, and `Intl.ListFormat`, and throw what those throw for invalid options.
 
+### Time zones
+
+Dates and times are written in the runtime's time zone. In a browser that is the reader's, which is usually right. On a server it is the server's, so 01:00 UTC on 2 November renders as "November 2" for a reader in São Paulo, where it is still 1 November, and the text changes once the browser takes over. Set `timeZone` to the zone the text should use:
+
+```ts
+createI18n({
+  // ...
+  timeZone: "America/Sao_Paulo",
+});
+```
+
+It applies to `{d, date}`, `{d, time}`, and a date in `{d}`, and is `formatDate`'s default; `formatDate(value, { timeZone: "UTC" })` still overrides it. A zone `Intl` doesn't know throws a `TypeError` when the manager is created. On a server, set it per request, as in [Show dates in the reader's time zone](server-rendering.md#show-dates-in-the-readers-time-zone).
+
 ### Literal braces and apostrophes
 
 An apostrophe before `{` or `}` quotes text up to the next apostrophe, and two apostrophes make one. An apostrophe anywhere else is an ordinary apostrophe, so "Don't" needs nothing:
@@ -271,7 +284,16 @@ t("cart.itmes", { count: 2 }); // compile error: misspelled
 
 The type comes from what your loader returns. If it returns several `as const` dictionaries, a key from any of them is accepted. If it returns `any` or `unknown`, as `response.json()` and dynamic imports do, every string is accepted; give the loader a return type, as in the JSON example above, to get checking back.
 
-A key you build at runtime, such as ``t(`errors.${code}`)``, fails to compile even when it exists, because TypeScript can't know the value of `code`. When you know the keys are there, cast it:
+A key you build at runtime, such as ``t(`errors.${code}`)``, fails to compile even when it exists, because TypeScript can't know the value of `code`. Check it with `has()`, which narrows it to a key `t()` accepts, and pick a fallback when it isn't there:
+
+```ts
+const key = `errors.${code}`;
+const message = i18n.has(key) ? i18n.t(key) : i18n.t("errors.unknown");
+```
+
+`has()` looks through the same dictionaries `t()` does, and a plural group counts as a key. A miss neither calls `onMissingKey` nor warns, since a key you expect to be missing sometimes is not a gap in the translations.
+
+When you know the keys are there, cast it instead:
 
 ```ts
 import type { TranslationKey } from "@codenhub/i18n";

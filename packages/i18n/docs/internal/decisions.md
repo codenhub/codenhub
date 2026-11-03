@@ -85,6 +85,22 @@ Every text is read as an ICU message: `{name}`, `number` (`integer`, `percent`),
 - **Loose where the type can't know**: a key union, a `string` message, a message the types can't read, and an `I18n` typed without its third type argument accept any values, as before.
 - **Every typed dictionary that has the key contributes**, so a translation that uses another argument requires it too. Extra values are allowed.
 
+### `timeZone` is a manager option (0.2.0)
+
+Dates in messages used the runtime's time zone, with no way to change it, so a server rendered `{d, date}` on its own calendar day: 01:00 UTC on 2 November was "November 2" for a reader in São Paulo, where it is still 1 November, and the text changed when the browser took over. `formatDate` could take `options.timeZone`, but nothing reached a message.
+
+- **On the manager, not per call.** A server already creates one manager per request, so the reader's zone fits there, and a message has nowhere to name a zone. `formatDate` uses it as its default, and its own `options.timeZone` wins.
+- **Checked at creation**, with `Intl.DateTimeFormat`, so a bad zone fails where it is configured rather than at the first date.
+- **No default other than the runtime's**, which is right in a browser.
+
+Rejected: only documenting "format dates in code and pass the string", because it gives up `{d, date}` on every server.
+
+### `has(key)` (0.2.0)
+
+An application that builds keys at runtime, such as ``t(`errors.${code}`)``, needs to fall back when a key is absent. Comparing `t(key)` with the key worked, but each expected miss called `onMissingKey`, which tests set up to throw, and warned. `has()` looks through the same fallback chain silently, counts a plural group as a key, and is a type guard, so it replaces the cast to `TranslationKey` that typed keys otherwise need for such keys.
+
+Rejected: documenting the `t(key) === key` comparison, because of the reported miss, and because a key with surrounding whitespace is returned trimmed.
+
 ## Browser
 
 ### Detected locales are not persisted
