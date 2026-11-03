@@ -93,6 +93,14 @@ export interface I18nConfig<TLocale extends string = string, TMessages = unknown
   onMissingKey?(key: string, locale: NoInfer<TLocale>): void;
   /** Suppresses optional diagnostics, including the default missing-key warning, without suppressing failures. Defaults to `false`. */
   isSilent?: boolean;
+  /**
+   * IANA time zone, such as `"America/Sao_Paulo"` or `"UTC"`, for `{d, date}`, `{d, time}`, and `{d}` in messages,
+   * and the default of `formatDate`. Set it on a server, where the runtime's time zone is the server's, not the
+   * reader's, so a date shows the same day as in the reader's browser. Checked at creation.
+   *
+   * @defaultValue The runtime's time zone.
+   */
+  timeZone?: string;
   /** Raises or lowers the resource limits applied to loaded dictionaries; unset limits keep their defaults. */
   dictionaryLimits?: LocaleDictionaryLimits;
 }
@@ -251,6 +259,24 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    */
   translate<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
 
+  /**
+   * Whether a key has a text, or is a plural group, in a dictionary the active locale falls back to. Unlike `t()`, a
+   * miss neither calls `onMissingKey` nor warns, so a key built at runtime can be checked before it is used, and the
+   * check narrows it to a key `t()` accepts.
+   *
+   * @example
+   * ```ts
+   * const key = `errors.${code}`;
+   * const message = i18n.has(key) ? i18n.t(key) : i18n.t("errors.unknown");
+   * ```
+   *
+   * @param key - Translation key, trimmed as `t()` trims it.
+   * @returns `true` when `t(key)` would find a text, or `t(key, { count })` a plural form.
+   * @throws {Error} When called before successful initialization.
+   * @throws {TypeError} When the key is invalid, as for `t()`.
+   */
+  has(key: string): key is TKey;
+
   /** Short alias of {@link I18n.translate}, the same bound function. */
   t<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
 
@@ -263,7 +289,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   formatNumber(value: number | bigint, options?: Intl.NumberFormatOptions): string;
 
   /**
-   * Formats a date, or a timestamp in milliseconds, for the active locale with `Intl.DateTimeFormat`.
+   * Formats a date, or a timestamp in milliseconds, for the active locale with `Intl.DateTimeFormat`, in the
+   * configured `timeZone` unless `options.timeZone` names another.
    *
    * @throws {RangeError} When `options` or the date is invalid, as `Intl.DateTimeFormat` throws.
    */

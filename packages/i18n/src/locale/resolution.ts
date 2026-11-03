@@ -12,6 +12,7 @@ export interface ValidatedI18nConfig<TLocale extends string> {
   readonly getLocaleDirection: (locale: TLocale) => LocaleDirection;
   readonly onMissingKey: ((key: string, locale: TLocale) => void) | undefined;
   readonly isSilent: boolean;
+  readonly timeZone: string | undefined;
   readonly dictionaryLimits: DictionaryLimits;
 }
 
@@ -41,6 +42,7 @@ export function validateI18nConfig<TLocale extends string>(config: I18nConfig<TL
     onMissingKey:
       onMissingKey === undefined ? undefined : (key, locale) => void Reflect.apply(onMissingKey, config, [key, locale]),
     isSilent: validated.isSilent ?? false,
+    timeZone: validated.timeZone,
     dictionaryLimits: Object.freeze({ ...DEFAULT_DICTIONARY_LIMITS, ...validated.dictionaryLimits }),
   };
 }

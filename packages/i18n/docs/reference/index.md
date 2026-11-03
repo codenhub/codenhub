@@ -108,6 +108,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
     resolveLocale(value: string): TLocale | undefined;
     matchLocale(preferences: readonly string[]): TLocale | undefined;
     translate<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
+    has(key: string): key is TKey;
     t<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
     formatNumber(value: number | bigint, options?: Intl.NumberFormatOptions): string;
     formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
@@ -194,7 +195,7 @@ Adds a typed lifecycle event listener.
 formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
 ```
 
-Formats a date, or a timestamp in milliseconds, for the active locale with `Intl.DateTimeFormat`.
+Formats a date, or a timestamp in milliseconds, for the active locale with `Intl.DateTimeFormat`, in the configured `timeZone` unless `options.timeZone` names another.
 
 **Throws** — `RangeError` — When `options` or the date is invalid, as `Intl.DateTimeFormat` throws.
 
@@ -233,6 +234,32 @@ formatRelativeTime(value: number, unit: Intl.RelativeTimeFormatUnit, options?: I
 Formats a relative time, such as `-1, "day"` for "1 day ago", for the active locale with `Intl.RelativeTimeFormat`.
 
 **Throws** — `RangeError` — When `value`, `unit`, or `options` is invalid, as `Intl.RelativeTimeFormat` throws.
+
+#### I18n › has
+
+```ts
+has(key: string): key is TKey;
+```
+
+Whether a key has a text, or is a plural group, in a dictionary the active locale falls back to. Unlike `t()`, a miss neither calls `onMissingKey` nor warns, so a key built at runtime can be checked before it is used, and the check narrows it to a key `t()` accepts.
+
+**Parameters**
+
+- `key` — Translation key, trimmed as `t()` trims it.
+
+**Returns** — `true` when `t(key)` would find a text, or `t(key, { count })` a plural form.
+
+**Throws**
+
+- `Error` — When called before successful initialization.
+- `TypeError` — When the key is invalid, as for `t()`.
+
+**Example**
+
+```ts
+const key = `errors.${code}`;
+const message = i18n.has(key) ? i18n.t(key) : i18n.t("errors.unknown");
+```
 
 #### I18n › init
 
@@ -402,6 +429,7 @@ export interface I18nConfig<TLocale extends string = string, TMessages = unknown
     getLocaleDirection?(locale: NoInfer<TLocale>): LocaleDirection;
     onMissingKey?(key: string, locale: NoInfer<TLocale>): void;
     isSilent?: boolean;
+    timeZone?: string;
     dictionaryLimits?: LocaleDictionaryLimits;
 }
 ```
@@ -444,6 +472,16 @@ locales: readonly TLocale[];
 ```
 
 Non-empty, case-insensitively unique ASCII locale identifiers composed of alphanumeric hyphen-separated subtags.
+
+#### I18nConfig › timeZone
+
+```ts
+timeZone?: string;
+```
+
+IANA time zone, such as `"America/Sao_Paulo"` or `"UTC"`, for `{d, date}`, `{d, time}`, and `{d}` in messages, and the default of `formatDate`. Set it on a server, where the runtime's time zone is the server's, not the reader's, so a date shows the same day as in the reader's browser. Checked at creation.
+
+**Default** — The runtime's time zone.
 
 #### I18nConfig › getLocaleDirection
 
