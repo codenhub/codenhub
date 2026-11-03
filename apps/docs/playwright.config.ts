@@ -24,6 +24,7 @@ function readWorkers(): number {
 export default defineConfig({
   testDir: "./tests/browser",
   fullyParallel: true,
+  retries: process.env.CI ? 1 : 0,
   workers: readWorkers(),
   reporter: "list",
   webServer: {

@@ -2,6 +2,10 @@ name: CI
 
 on:
   pull_request:
+  # The merge queue runs the full workspace on the merge result before it lands,
+  # so a suite a pull request's `--changed` selection skipped fails there rather
+  # than on `main`. Any event other than `pull_request` gets an empty SELECTOR.
+  merge_group:
   push:
     branches: [main]
 

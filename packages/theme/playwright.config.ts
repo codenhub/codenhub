@@ -25,6 +25,7 @@ function readWorkers(): number {
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
+  retries: process.env.CI ? 1 : 0,
   workers: readWorkers(),
   reporter: [["list"], ["./tests/exit-reporter.ts"]],
   webServer: [

@@ -10,6 +10,7 @@ export default defineConfig({
   testDir: "./tests/browser",
   timeout: 120000,
   fullyParallel: true,
+  retries: process.env.CI ? 1 : 0,
   workers: process.env.PLAYWRIGHT_WORKERS ? Number(process.env.PLAYWRIGHT_WORKERS) : defaultWorkers,
   reporter: "list",
   webServer: [

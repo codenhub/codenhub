@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-22
+last_updated: 2026-11-03
 scope: Continuous integration workflows, the pinned workspace toolchain, and the checks that report on pull requests.
 ---
 
@@ -30,9 +30,12 @@ CI runs that one Node.js version and no other, for the packages as for the repos
 | Event          | Selection                                                                           |
 | -------------- | ----------------------------------------------------------------------------------- |
 | `pull_request` | `--changed=origin/<base branch>`, or the whole workspace when it changes `.github/` |
+| `merge_group`  | The whole workspace, with no selector                                               |
 | `push` to main | The whole workspace, with no selector                                               |
 
 A pull request checks what it changed, which is what makes the run fast enough to wait for. A merge into `main` checks everything, so nothing lands unverified because it happened to sit outside a changed package. Both are needed: neither alone both stays fast and stays honest.
+
+The merge queue moves that full check to before the merge. Without it, a pull request went green on its own packages and the first full run was on `main`, so a flaky or broken suite in a package the pull request never touched failed `main` instead of the pull request: 3 of 30 merges on 2026-11-03 failed that way. The queue runs the same full workspace on the merge result, and a failure there drops the pull request from the queue instead of landing it. The `push` run on `main` stays, as the record of the commit that actually landed. Requiring the queue is repository settings, in the ruleset for `main`; the `merge_group` trigger is what lets the required checks report in it.
 
 A pull request that changes `.github/` is the exception, and runs the whole workspace as its merge will. A workflow or the setup action belongs to no package, so `--changed` would select nothing and the run would pass without exercising the change it was opened for. That is how a browser-install fix once went green on its pull request and failed on its merge.
 

@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
   workers: 1,
-  retries: process.env.CI ? 2 : 1,
+  retries: process.env.CI ? 1 : 0,
   reporter: [["list"], ["./tests/exit-reporter.ts"]],
   webServer: [
     {
