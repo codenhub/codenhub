@@ -1,5 +1,5 @@
 {
-  "bundler": "rolldown@1.2.15",
+  "bundler": "rolldown@1.2.16",
   "entrypoints": {
     ".": {
       "exports": {
@@ -607,7 +607,7 @@
       },
       "gzip": 4711,
       "minified": 12777,
-      "sha256": "fc7b54fc386c9f8ad1ec4b92ac3137657bb607054b39e6cdf750eb8f835dcd45"
+      "sha256": "2dde77f4f4efd03f623d6b1306f527ad19a61a341d9b5931a66653e82a3a989b"
     },
     "./tailwind": {
       "exports": {
@@ -620,21 +620,21 @@
               }
             },
             "dist/data/simple-icons.js": {
-              "bytes": 4414342,
+              "bytes": 4414913,
               "declarations": {
-                "default": 4414342
+                "default": 4414913
               }
             },
             "dist/data/material-symbols-rounded.js": {
-              "bytes": 2872487,
+              "bytes": 2875189,
               "declarations": {
-                "default": 2872487
+                "default": 2875189
               }
             },
             "dist/data/material-symbols-rounded-fill.js": {
-              "bytes": 2483039,
+              "bytes": 2485442,
               "declarations": {
-                "default": 2483039
+                "default": 2485442
               }
             },
             "dist/data/line-md.js": {
@@ -644,39 +644,39 @@
               }
             },
             "dist/data/material-symbols-outlined.js": {
-              "bytes": 1791711,
+              "bytes": 1793739,
               "declarations": {
-                "default": 1791711
+                "default": 1793739
               }
             },
             "dist/data/material-symbols-sharp.js": {
-              "bytes": 1531802,
+              "bytes": 1533683,
               "declarations": {
-                "default": 1531802
+                "default": 1533683
               }
             },
             "dist/data/material-symbols-outlined-fill.js": {
-              "bytes": 1500133,
+              "bytes": 1502137,
               "declarations": {
-                "default": 1500133
+                "default": 1502137
               }
             },
             "dist/data/material-symbols-sharp-fill.js": {
-              "bytes": 1272293,
+              "bytes": 1274149,
               "declarations": {
-                "default": 1272293
+                "default": 1274149
+              }
+            },
+            "dist/data/lucide.js": {
+              "bytes": 1018130,
+              "declarations": {
+                "default": 1018130
               }
             },
             "dist/data/phosphor-duotone.js": {
               "bytes": 883523,
               "declarations": {
                 "default": 883523
-              }
-            },
-            "dist/data/lucide.js": {
-              "bytes": 844770,
-              "declarations": {
-                "default": 844770
               }
             },
             "dist/data/phosphor-thin.js": {
@@ -806,8 +806,8 @@
               "bytes": 55
             }
           },
-          "gzip": 8698277,
-          "minified": 28739133
+          "gzip": 8731795,
+          "minified": 28925938
         }
       },
       "files": {
@@ -818,21 +818,21 @@
           }
         },
         "dist/data/simple-icons.js": {
-          "bytes": 4414342,
+          "bytes": 4414913,
           "declarations": {
-            "default": 4414342
+            "default": 4414913
           }
         },
         "dist/data/material-symbols-rounded.js": {
-          "bytes": 2872487,
+          "bytes": 2875189,
           "declarations": {
-            "default": 2872487
+            "default": 2875189
           }
         },
         "dist/data/material-symbols-rounded-fill.js": {
-          "bytes": 2483039,
+          "bytes": 2485442,
           "declarations": {
-            "default": 2483039
+            "default": 2485442
           }
         },
         "dist/data/line-md.js": {
@@ -842,39 +842,39 @@
           }
         },
         "dist/data/material-symbols-outlined.js": {
-          "bytes": 1791711,
+          "bytes": 1793739,
           "declarations": {
-            "default": 1791711
+            "default": 1793739
           }
         },
         "dist/data/material-symbols-sharp.js": {
-          "bytes": 1531802,
+          "bytes": 1533683,
           "declarations": {
-            "default": 1531802
+            "default": 1533683
           }
         },
         "dist/data/material-symbols-outlined-fill.js": {
-          "bytes": 1500133,
+          "bytes": 1502137,
           "declarations": {
-            "default": 1500133
+            "default": 1502137
           }
         },
         "dist/data/material-symbols-sharp-fill.js": {
-          "bytes": 1272293,
+          "bytes": 1274149,
           "declarations": {
-            "default": 1272293
+            "default": 1274149
+          }
+        },
+        "dist/data/lucide.js": {
+          "bytes": 1018130,
+          "declarations": {
+            "default": 1018130
           }
         },
         "dist/data/phosphor-duotone.js": {
           "bytes": 883523,
           "declarations": {
             "default": 883523
-          }
-        },
-        "dist/data/lucide.js": {
-          "bytes": 844770,
-          "declarations": {
-            "default": 844770
           }
         },
         "dist/data/phosphor-thin.js": {
@@ -1004,9 +1004,9 @@
           "bytes": 55
         }
       },
-      "gzip": 8698277,
-      "minified": 28739133,
-      "sha256": "dd464a83844aff3ee3608faf9360f5e0de135a8e88d9fa5a178440e8d7d576b5"
+      "gzip": 8731795,
+      "minified": 28925938,
+      "sha256": "9daa987a3477814ed33ee616bbd7695416eae8888b1309c8b38976cb42f42fa6"
     },
     "./play": {
       "exports": {
@@ -1176,7 +1176,7 @@
               }
             }
           },
-          "gzip": 4367,
+          "gzip": 4381,
           "minified": 11311
         },
         "postcssIcons": {
@@ -1286,7 +1286,7 @@
               }
             }
           },
-          "gzip": 4370,
+          "gzip": 4383,
           "minified": 11316
         },
         "postcssIconsPlugin": {
@@ -1397,7 +1397,7 @@
               }
             }
           },
-          "gzip": 4377,
+          "gzip": 4391,
           "minified": 11332
         }
       },
@@ -1508,18 +1508,18 @@
           }
         }
       },
-      "gzip": 4387,
+      "gzip": 4400,
       "minified": 11363,
-      "sha256": "5282df396b5c70d15d8d8f4c11ec17cb3f2ae00c618e954cc313f6d2789ba0b3"
+      "sha256": "3d74136265361c97ef9e3376af4b4cb27062380e83d2c2eef5c8198f479924ce"
     },
     "./vite": {
       "exports": {
         "default": {
           "files": {
             "dist/vite/plugin.js": {
-              "bytes": 8003,
+              "bytes": 8002,
               "declarations": {
-                "viteIcons": 3365,
+                "viteIcons": 3364,
                 "replaceIconTagsWithSvg": 749,
                 "getEnclosingQuote": 736,
                 "stripComments": 659,
@@ -1568,18 +1568,18 @@
               }
             },
             "dist/core/render.js": {
-              "bytes": 1550,
+              "bytes": 1554,
               "declarations": {
                 "renderSvg": 438,
-                "overridePaintAttributes": 343,
-                "overridePaint": 182,
+                "overridePaintAttributes": 345,
+                "overridePaint": 183,
                 "escapeAttributeValue": 110,
                 "renderAttributes": 100,
                 "setStrokeWidth": 77,
                 "UNPAINTED_CONTAINERS": 66,
                 "isSafeAttributeName": 48,
                 "OPENING_OR_CLOSING_TAG": 43,
-                "PAINT_ATTRIBUTE": 36,
+                "PAINT_ATTRIBUTE": 37,
                 "VALID_ATTRIBUTE_NAME": 33,
                 "STYLE_ATTRIBUTE": 27,
                 "STROKE_WIDTH_ATTRIBUTE": 26,
@@ -1591,13 +1591,13 @@
               "bytes": 1043
             },
             "dist/catalog/attribution.js": {
-              "bytes": 1029,
+              "bytes": 1028,
               "declarations": {
                 "describeFamilyNotice": 293,
                 "renderSuppressedAttributionWarning": 292,
                 "collectAttributedFamilies": 132,
                 "renderAttributionNotice": 112,
-                "renderAttributionBanner": 67,
+                "renderAttributionBanner": 66,
                 "carriesNotice": 49,
                 "hasObligation": 49,
                 "OBLIGATION_ORDER": 29,
@@ -1613,12 +1613,12 @@
               }
             },
             "dist/scanner/class-scanner.js": {
-              "bytes": 607,
+              "bytes": 605,
               "declarations": {
                 "scanFiles": 156,
-                "getPatternForPrefix": 124,
+                "getPatternForPrefix": 123,
                 "resolveEntry": 114,
-                "scanIconClasses": 99,
+                "scanIconClasses": 98,
                 "escapeRegExp": 62,
                 "regexCache": 26,
                 "GLOB_CHARACTERS": 14,
@@ -1643,15 +1643,15 @@
               }
             }
           },
-          "gzip": 7155,
+          "gzip": 7172,
           "minified": 18669
         },
         "viteIcons": {
           "files": {
             "dist/vite/plugin.js": {
-              "bytes": 8003,
+              "bytes": 8002,
               "declarations": {
-                "viteIcons": 3365,
+                "viteIcons": 3364,
                 "replaceIconTagsWithSvg": 749,
                 "getEnclosingQuote": 736,
                 "stripComments": 659,
@@ -1700,18 +1700,18 @@
               }
             },
             "dist/core/render.js": {
-              "bytes": 1550,
+              "bytes": 1554,
               "declarations": {
                 "renderSvg": 438,
-                "overridePaintAttributes": 343,
-                "overridePaint": 182,
+                "overridePaintAttributes": 345,
+                "overridePaint": 183,
                 "escapeAttributeValue": 110,
                 "renderAttributes": 100,
                 "setStrokeWidth": 77,
                 "UNPAINTED_CONTAINERS": 66,
                 "isSafeAttributeName": 48,
                 "OPENING_OR_CLOSING_TAG": 43,
-                "PAINT_ATTRIBUTE": 36,
+                "PAINT_ATTRIBUTE": 37,
                 "VALID_ATTRIBUTE_NAME": 33,
                 "STYLE_ATTRIBUTE": 27,
                 "STROKE_WIDTH_ATTRIBUTE": 26,
@@ -1723,13 +1723,13 @@
               "bytes": 1045
             },
             "dist/catalog/attribution.js": {
-              "bytes": 1029,
+              "bytes": 1028,
               "declarations": {
                 "describeFamilyNotice": 293,
                 "renderSuppressedAttributionWarning": 292,
                 "collectAttributedFamilies": 132,
                 "renderAttributionNotice": 112,
-                "renderAttributionBanner": 67,
+                "renderAttributionBanner": 66,
                 "carriesNotice": 49,
                 "hasObligation": 49,
                 "OBLIGATION_ORDER": 29,
@@ -1745,12 +1745,12 @@
               }
             },
             "dist/scanner/class-scanner.js": {
-              "bytes": 607,
+              "bytes": 605,
               "declarations": {
                 "scanFiles": 156,
-                "getPatternForPrefix": 124,
+                "getPatternForPrefix": 123,
                 "resolveEntry": 114,
-                "scanIconClasses": 99,
+                "scanIconClasses": 98,
                 "escapeRegExp": 62,
                 "regexCache": 26,
                 "GLOB_CHARACTERS": 14,
@@ -1775,15 +1775,15 @@
               }
             }
           },
-          "gzip": 7159,
+          "gzip": 7176,
           "minified": 18671
         },
         "viteIconsPlugin": {
           "files": {
             "dist/vite/plugin.js": {
-              "bytes": 8015,
+              "bytes": 8014,
               "declarations": {
-                "viteIcons": 3365,
+                "viteIcons": 3364,
                 "replaceIconTagsWithSvg": 749,
                 "getEnclosingQuote": 736,
                 "stripComments": 659,
@@ -1833,18 +1833,18 @@
               }
             },
             "dist/core/render.js": {
-              "bytes": 1550,
+              "bytes": 1554,
               "declarations": {
                 "renderSvg": 438,
-                "overridePaintAttributes": 343,
-                "overridePaint": 182,
+                "overridePaintAttributes": 345,
+                "overridePaint": 183,
                 "escapeAttributeValue": 110,
                 "renderAttributes": 100,
                 "setStrokeWidth": 77,
                 "UNPAINTED_CONTAINERS": 66,
                 "isSafeAttributeName": 48,
                 "OPENING_OR_CLOSING_TAG": 43,
-                "PAINT_ATTRIBUTE": 36,
+                "PAINT_ATTRIBUTE": 37,
                 "VALID_ATTRIBUTE_NAME": 33,
                 "STYLE_ATTRIBUTE": 27,
                 "STROKE_WIDTH_ATTRIBUTE": 26,
@@ -1856,13 +1856,13 @@
               "bytes": 1051
             },
             "dist/catalog/attribution.js": {
-              "bytes": 1029,
+              "bytes": 1028,
               "declarations": {
                 "describeFamilyNotice": 293,
                 "renderSuppressedAttributionWarning": 292,
                 "collectAttributedFamilies": 132,
                 "renderAttributionNotice": 112,
-                "renderAttributionBanner": 67,
+                "renderAttributionBanner": 66,
                 "carriesNotice": 49,
                 "hasObligation": 49,
                 "OBLIGATION_ORDER": 29,
@@ -1878,12 +1878,12 @@
               }
             },
             "dist/scanner/class-scanner.js": {
-              "bytes": 607,
+              "bytes": 605,
               "declarations": {
                 "scanFiles": 156,
-                "getPatternForPrefix": 124,
+                "getPatternForPrefix": 123,
                 "resolveEntry": 114,
-                "scanIconClasses": 99,
+                "scanIconClasses": 98,
                 "escapeRegExp": 62,
                 "regexCache": 26,
                 "GLOB_CHARACTERS": 14,
@@ -1908,15 +1908,15 @@
               }
             }
           },
-          "gzip": 7170,
+          "gzip": 7188,
           "minified": 18689
         }
       },
       "files": {
         "dist/vite/plugin.js": {
-          "bytes": 8014,
+          "bytes": 8012,
           "declarations": {
-            "viteIcons": 3365,
+            "viteIcons": 3363,
             "replaceIconTagsWithSvg": 749,
             "getEnclosingQuote": 736,
             "stripComments": 659,
@@ -1966,18 +1966,18 @@
           }
         },
         "dist/core/render.js": {
-          "bytes": 1550,
+          "bytes": 1554,
           "declarations": {
             "renderSvg": 438,
-            "overridePaintAttributes": 343,
-            "overridePaint": 182,
+            "overridePaintAttributes": 345,
+            "overridePaint": 183,
             "escapeAttributeValue": 110,
             "renderAttributes": 100,
             "setStrokeWidth": 77,
             "UNPAINTED_CONTAINERS": 66,
             "isSafeAttributeName": 48,
             "OPENING_OR_CLOSING_TAG": 43,
-            "PAINT_ATTRIBUTE": 36,
+            "PAINT_ATTRIBUTE": 37,
             "VALID_ATTRIBUTE_NAME": 33,
             "STYLE_ATTRIBUTE": 27,
             "STROKE_WIDTH_ATTRIBUTE": 26,
@@ -1989,13 +1989,13 @@
           "bytes": 1079
         },
         "dist/catalog/attribution.js": {
-          "bytes": 1030,
+          "bytes": 1028,
           "declarations": {
             "describeFamilyNotice": 293,
-            "renderSuppressedAttributionWarning": 293,
+            "renderSuppressedAttributionWarning": 292,
             "collectAttributedFamilies": 132,
             "renderAttributionNotice": 112,
-            "renderAttributionBanner": 67,
+            "renderAttributionBanner": 66,
             "carriesNotice": 49,
             "hasObligation": 49,
             "OBLIGATION_ORDER": 29,
@@ -2041,9 +2041,9 @@
           }
         }
       },
-      "gzip": 7174,
+      "gzip": 7194,
       "minified": 18717,
-      "sha256": "12bad2149fa66dddb648293aa2f1cda8c7da8684d2027750a991c96cc0e7ed3d"
+      "sha256": "acd852348200f7775fb5a828f77f51e6976b3973d5927322c149618443c2078d"
     }
   }
 }
