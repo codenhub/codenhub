@@ -4,8 +4,6 @@
 
 A curated collection of AI agent skill assets, an installer for supported agent harnesses, and utilities for discovering and copying skill directories.
 
-> **Experimental:** The CLI workflow, harness support, install destinations, and bundled skill content may change as agent skill conventions evolve.
-
 ## Installation
 
 Run the installer without adding it to a project:
@@ -240,7 +238,7 @@ The installer creates a child directory named after each skill ID. By default, i
 
 Destinations selected through a Codex label receive the complete bundled skill directory, including an `agents` directory when a skill has one. Every other destination excludes entries whose base name is exactly `agents` at any depth. When a Codex label shares a destination with other selected labels, the shared copy keeps the `agents` directory. Other references, examples, notices, and supporting files are copied unchanged.
 
-The package does not validate that a harness can interpret every bundled file. Harness conventions and bundled skill contents are part of the package's experimental surface.
+The package does not validate that a harness can interpret every bundled file.
 
 ## Destructive Cleanup
 
@@ -453,6 +451,10 @@ Most bundled skills adapt third-party material. Package and per-skill notices tr
 - `logo-design`, which designs logos from written concepts to outlined SVG files and usage rules, with a script that outlines lettering with the font's kerning.
 - `motion-graphics`, which storyboards, animates, and renders videos frame by frame from a seekable timeline, with any encoder the environment has.
 - `ponytail` and `ponytail-review`, which keep code to the simplest solution that works and review a diff for over-engineering.
+- `babysit-pr`, which sees a pull request through CI and review until it is ready to merge, fixing failing checks and answering reviewers.
+- `project-template`, which creates, syncs, and adopts projects built on the shared project template.
+- `playful-tone`, which gives docs and public text a natural, playful tone in any language.
+- **Stable.** The package is no longer experimental.
 - The installer covers Cursor, Gemini CLI, Copilot, Windsurf, Trae, Cline, Kiro, ZCode, and the cross-harness Agent Skills location (`.agents/skills`). Harnesses that read the same directory get one copy of each skill.
 - A CLI guide, a skill format and catalog page, and a provenance page.
 
@@ -465,4 +467,4 @@ Most bundled skills adapt third-party material. Package and per-skill notices tr
 
 ## Removed
 
-- **Breaking.** `frontend-design`, replaced by `design`, and `caveman-review`, folded into `audit`. The installer does not remove a skill's old directory, so delete `frontend-design` and `caveman-review` from each skills destination by hand. Do not use `--cleanup` for this, since it removes the whole destination.
+- **Breaking.** `frontend-design`, replaced by `design`, and `caveman-review`, folded into `audit`. The installer does not remove a skill's old directory, so delete `frontend-design` and `caveman-review` from each skills destination by hand.
