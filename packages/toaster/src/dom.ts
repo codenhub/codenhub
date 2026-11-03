@@ -20,15 +20,6 @@ type ToastElementOptions = Pick<
   | "instanceId"
 >;
 
-const POSITION_CONTAINER_CLASSES: Record<ToastPosition, string> = {
-  "top-left": "coden-toast-stack coden-toast-stack-top-left",
-  "top-right": "coden-toast-stack coden-toast-stack-top-right",
-  "bottom-right": "coden-toast-stack coden-toast-stack-bottom-right",
-  "bottom-left": "coden-toast-stack coden-toast-stack-bottom-left",
-  "top-center": "coden-toast-stack coden-toast-stack-top-center",
-  "bottom-center": "coden-toast-stack coden-toast-stack-bottom-center",
-};
-
 const FALLBACK_ANIMATION_DURATION_MS = 400;
 const FALLBACK_ANIMATION_EASING = "cubic-bezier(0.2, 0, 0, 1)";
 
@@ -40,11 +31,12 @@ const FALLBACK_ANIMATION_EASING = "cubic-bezier(0.2, 0, 0, 1)";
  * standalone, or in an environment (such as jsdom) that does not resolve
  * custom properties from a stylesheet.
  */
+function readCustomProperty(element: Element, property: string): string | undefined {
+  return element.ownerDocument.defaultView?.getComputedStyle(element).getPropertyValue(property).trim();
+}
+
 function readAnimationDuration(element: Element): number {
-  const raw = element.ownerDocument.defaultView
-    ?.getComputedStyle(element)
-    .getPropertyValue("--motion-duration-slow")
-    .trim();
+  const raw = readCustomProperty(element, "--motion-duration-slow");
   if (!raw) {
     return FALLBACK_ANIMATION_DURATION_MS;
   }
@@ -57,8 +49,7 @@ function readAnimationDuration(element: Element): number {
 
 /** Reads `--motion-ease` the same way {@link readAnimationDuration} reads its duration token. */
 function readAnimationEasing(element: Element): string {
-  const raw = element.ownerDocument.defaultView?.getComputedStyle(element).getPropertyValue("--motion-ease").trim();
-  return raw && raw.length > 0 ? raw : FALLBACK_ANIMATION_EASING;
+  return readCustomProperty(element, "--motion-ease") || FALLBACK_ANIMATION_EASING;
 }
 
 function getAnimationOptions(element: Element): KeyframeAnimationOptions {
@@ -67,6 +58,10 @@ function getAnimationOptions(element: Element): KeyframeAnimationOptions {
     easing: readAnimationEasing(element),
     fill: "both",
   };
+}
+
+function prefersReducedMotion(documentRef: Document): boolean | undefined {
+  return documentRef.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 }
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
@@ -101,42 +96,26 @@ const STROKE_ICON_ATTRIBUTES = {
  * blocks the custom-content path (see `options.ts`) does not also block a
  * plain semantic toast.
  */
+function svgPath(d: string): SvgChildSpec {
+  return { tag: "path", attributes: { d } };
+}
+
+const OUTLINE_CIRCLE: SvgChildSpec = { tag: "circle", attributes: { cx: "12", cy: "12", r: "10" } };
+
+/** A semantic icon: stroked outline, drawn from `children`. */
+function strokeIcon(...children: SvgChildSpec[]): SvgSpec {
+  return { className: "coden-toast-icon", rootAttributes: STROKE_ICON_ATTRIBUTES, children };
+}
+
 const ICON_SPECS: Record<ToastIcon, SvgSpec> = {
-  success: {
-    className: "coden-toast-icon",
-    rootAttributes: STROKE_ICON_ATTRIBUTES,
-    children: [
-      { tag: "circle", attributes: { cx: "12", cy: "12", r: "10" } },
-      { tag: "path", attributes: { d: "m9 12 2 2 4-4" } },
-    ],
-  },
-  error: {
-    className: "coden-toast-icon",
-    rootAttributes: STROKE_ICON_ATTRIBUTES,
-    children: [
-      { tag: "circle", attributes: { cx: "12", cy: "12", r: "10" } },
-      { tag: "path", attributes: { d: "m15 9-6 6" } },
-      { tag: "path", attributes: { d: "m9 9 6 6" } },
-    ],
-  },
-  warning: {
-    className: "coden-toast-icon",
-    rootAttributes: STROKE_ICON_ATTRIBUTES,
-    children: [
-      { tag: "path", attributes: { d: "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" } },
-      { tag: "path", attributes: { d: "M12 9v4" } },
-      { tag: "path", attributes: { d: "M12 17h.01" } },
-    ],
-  },
-  info: {
-    className: "coden-toast-icon",
-    rootAttributes: STROKE_ICON_ATTRIBUTES,
-    children: [
-      { tag: "circle", attributes: { cx: "12", cy: "12", r: "10" } },
-      { tag: "path", attributes: { d: "M12 16v-4" } },
-      { tag: "path", attributes: { d: "M12 8h.01" } },
-    ],
-  },
+  success: strokeIcon(OUTLINE_CIRCLE, svgPath("m9 12 2 2 4-4")),
+  error: strokeIcon(OUTLINE_CIRCLE, svgPath("m15 9-6 6"), svgPath("m9 9 6 6")),
+  warning: strokeIcon(
+    svgPath("m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"),
+    svgPath("M12 9v4"),
+    svgPath("M12 17h.01"),
+  ),
+  info: strokeIcon(OUTLINE_CIRCLE, svgPath("M12 16v-4"), svgPath("M12 8h.01")),
   loader: {
     className: "coden-toast-icon coden-toast-spinner",
     rootAttributes: { stroke: "currentColor" },
@@ -159,10 +138,7 @@ const ICON_SPECS: Record<ToastIcon, SvgSpec> = {
 
 const CLOSE_ICON_SPEC: SvgSpec = {
   rootAttributes: STROKE_ICON_ATTRIBUTES,
-  children: [
-    { tag: "path", attributes: { d: "M18 6 6 18" } },
-    { tag: "path", attributes: { d: "m6 6 12 12" } },
-  ],
+  children: [svgPath("M18 6 6 18"), svgPath("m6 6 12 12")],
 };
 
 function buildSvg(spec: SvgSpec, documentRef: Document): SVGElement {
@@ -197,7 +173,7 @@ function createDismissButton(onDismiss: () => void, documentRef: Document, dismi
 
 function createIcon(icon: ToastIcon, documentRef: Document): SVGElement {
   const element = buildSvg(ICON_SPECS[icon], documentRef);
-  if (icon === "loader" && documentRef.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+  if (icon === "loader" && prefersReducedMotion(documentRef)) {
     element.style.animation = "none";
   }
   return element;
@@ -205,20 +181,12 @@ function createIcon(icon: ToastIcon, documentRef: Document): SVGElement {
 
 /** Finds the message-icon `<svg>` created by {@link createIcon}, if any -- never the dismiss button's own icon, which carries no `coden-toast-icon` class, and never custom user-provided SVGs. */
 function findToastIcon(container: HTMLDivElement): Element | null {
+  const isToastIcon = (child: Element) =>
+    child.tagName.toLowerCase() === "svg" && child.classList.contains("coden-toast-icon");
   const main = Array.from(container.children).find((child) => child.classList.contains("coden-toast-main"));
-  if (main) {
-    for (const child of main.children) {
-      if (child.tagName.toLowerCase() === "svg" && child.classList.contains("coden-toast-icon")) {
-        return child;
-      }
-    }
-  }
-  for (const child of container.children) {
-    if (child.tagName.toLowerCase() === "svg" && child.classList.contains("coden-toast-icon")) {
-      return child;
-    }
-  }
-  return null;
+  return (
+    (main && Array.from(main.children).find(isToastIcon)) ?? Array.from(container.children).find(isToastIcon) ?? null
+  );
 }
 
 /**
@@ -246,21 +214,13 @@ export function updateToastIcon(container: HTMLDivElement, icon: ToastIcon | nul
   const targetParent = container.querySelector<HTMLElement>(".coden-toast-main") ?? container;
   const contentEl =
     targetParent.querySelector("[data-toast-content]") ?? targetParent.querySelector("[data-toast-message]");
-  if (contentEl) {
-    if (contentEl.parentElement === targetParent) {
-      targetParent.insertBefore(next, contentEl);
-    } else {
-      let directChild: Node = contentEl;
-      while (directChild.parentNode && directChild.parentNode !== targetParent) {
-        directChild = directChild.parentNode;
-      }
-      targetParent.insertBefore(next, directChild);
-    }
-  } else if (targetParent.firstChild) {
-    targetParent.insertBefore(next, targetParent.firstChild);
-  } else {
-    targetParent.appendChild(next);
+  // Before the child of `targetParent` holding the text, else first; an
+  // empty `targetParent` has no first child, so the icon is appended.
+  let directChild: Node | null = contentEl;
+  while (directChild?.parentNode && directChild.parentNode !== targetParent) {
+    directChild = directChild.parentNode;
   }
+  targetParent.insertBefore(next, directChild ?? targetParent.firstChild);
 }
 
 /**
@@ -306,6 +266,14 @@ export function createToastShell(
   return container;
 }
 
+/** A `<div>` for one named part of a toast, with its `coden-toast-<part>` class and `data-toast-<part>` marker. */
+function createToastPart(documentRef: Document, part: string): HTMLDivElement {
+  const element = documentRef.createElement("div");
+  element.className = `coden-toast-${part}`;
+  element.setAttribute(`data-toast-${part}`, "");
+  return element;
+}
+
 /**
  * Fills an already-connected {@link createToastShell} region with its
  * message/icon or custom content and dismiss control. Call only after the
@@ -329,9 +297,7 @@ export function populateToastContent(
     return;
   }
 
-  const mainWrapper = documentRef.createElement("div");
-  mainWrapper.className = "coden-toast-main";
-  mainWrapper.setAttribute("data-toast-main", "");
+  const mainWrapper = createToastPart(documentRef, "main");
 
   if (options.icon !== null) {
     mainWrapper.appendChild(createIcon(options.icon, documentRef));
@@ -342,22 +308,16 @@ export function populateToastContent(
   const hasStructuredContent = resolvedDescription !== null;
 
   if (hasStructuredContent) {
-    const contentWrapper = documentRef.createElement("div");
-    contentWrapper.className = "coden-toast-content";
-    contentWrapper.setAttribute("data-toast-content", "");
+    const contentWrapper = createToastPart(documentRef, "content");
 
     if (resolvedTitle !== null) {
-      const titleEl = documentRef.createElement("div");
-      titleEl.className = "coden-toast-title";
-      titleEl.setAttribute("data-toast-title", "");
+      const titleEl = createToastPart(documentRef, "title");
       titleEl.setAttribute("data-toast-message", "");
       titleEl.textContent = resolvedTitle;
       contentWrapper.appendChild(titleEl);
     }
 
-    const descEl = documentRef.createElement("div");
-    descEl.className = "coden-toast-description";
-    descEl.setAttribute("data-toast-description", "");
+    const descEl = createToastPart(documentRef, "description");
     if (resolvedTitle === null) {
       descEl.setAttribute("data-toast-message", "");
     }
@@ -378,9 +338,7 @@ export function populateToastContent(
   container.appendChild(mainWrapper);
 
   if (options.action || options.dismissible) {
-    const actionsWrapper = documentRef.createElement("div");
-    actionsWrapper.className = "coden-toast-actions";
-    actionsWrapper.setAttribute("data-toast-actions", "");
+    const actionsWrapper = createToastPart(documentRef, "actions");
 
     if (options.action) {
       const actionButton = documentRef.createElement("button");
@@ -446,14 +404,13 @@ interface ContainerParams {
   regionLabel?: string;
 }
 
-function getContainerKey(params: { instanceId: string; position: ToastPosition }): string {
-  const { instanceId, position } = params;
+function getContainerKey(instanceId: string, position: ToastPosition): string {
   return `${instanceId}-${position}`;
 }
 
 export function getContainer(params: ContainerParams): HTMLDivElement | null {
   const { parent, position, instanceId } = params;
-  const id = getContainerKey({ instanceId, position });
+  const id = getContainerKey(instanceId, position);
   return (
     Array.from(getToastLayerHost(parent).children).find(
       (element): element is HTMLDivElement =>
@@ -465,23 +422,27 @@ export function getContainer(params: ContainerParams): HTMLDivElement | null {
 /** Writes `margin` onto a stack container; a falsy value clears it. */
 function setContainerMargin(container: HTMLDivElement, margin: NonNullable<ContainerParams["margin"]>): void {
   const { x, y } = typeof margin === "string" ? { x: margin, y: margin } : margin;
-  if (x) {
-    container.style.setProperty("--toast-margin-x", x);
-  } else {
-    container.style.removeProperty("--toast-margin-x");
+  for (const [property, value] of [
+    ["--toast-margin-x", x],
+    ["--toast-margin-y", y],
+  ] as const) {
+    if (value) {
+      container.style.setProperty(property, value);
+    } else {
+      container.style.removeProperty(property);
+    }
   }
-  if (y) {
-    container.style.setProperty("--toast-margin-y", y);
-  } else {
-    container.style.removeProperty("--toast-margin-y");
-  }
+}
+
+function getInstanceContainers(parent: HTMLElement, instanceId: string): NodeListOf<HTMLDivElement> {
+  return parent.querySelectorAll<HTMLDivElement>(`div[data-toast-container][data-toast-instance="${instanceId}"]`);
 }
 
 /** Writes the region label onto every stack container of an instance, as `configure({ labels })` does. */
 export function applyInstanceRegionLabel(params: { parent: HTMLElement; instanceId: string; label: string }): void {
-  params.parent
-    .querySelectorAll<HTMLDivElement>(`div[data-toast-container][data-toast-instance="${params.instanceId}"]`)
-    .forEach((container) => container.setAttribute("aria-label", params.label));
+  getInstanceContainers(params.parent, params.instanceId).forEach((container) =>
+    container.setAttribute("aria-label", params.label),
+  );
 }
 
 /** Writes `margin` onto every stack container of an instance, as `configure({ margin })` does. */
@@ -490,9 +451,9 @@ export function applyInstanceMargin(params: {
   instanceId: string;
   margin: NonNullable<ContainerParams["margin"]>;
 }): void {
-  params.parent
-    .querySelectorAll<HTMLDivElement>(`div[data-toast-container][data-toast-instance="${params.instanceId}"]`)
-    .forEach((container) => setContainerMargin(container, params.margin));
+  getInstanceContainers(params.parent, params.instanceId).forEach((container) =>
+    setContainerMargin(container, params.margin),
+  );
 }
 
 /**
@@ -509,11 +470,11 @@ export function getOrCreateContainer(params: ContainerParams): HTMLDivElement {
   let container = getContainer({ parent, position, instanceId });
 
   if (!container) {
-    const id = getContainerKey({ instanceId, position });
+    const id = getContainerKey(instanceId, position);
     container = parent.ownerDocument.createElement("div");
     container.setAttribute("data-toast-container", id);
     container.setAttribute("data-toast-instance", instanceId);
-    container.className = POSITION_CONTAINER_CLASSES[position];
+    container.className = `coden-toast-stack coden-toast-stack-${position}`;
     // A labeled landmark, so a screen reader or keyboard user can find a
     // toast, and its action, after the announcement.
     container.setAttribute("role", "region");
@@ -552,25 +513,13 @@ export function isTopAnchoredPosition(position: ToastPosition): boolean {
   return TOP_ANCHORED_POSITIONS.has(position);
 }
 
+/** Slides in from the stack's own edge: vertically for a centered stack, from its side otherwise. */
 function getKeyframes(position: ToastPosition): Keyframe[] {
-  if (position === "top-center") {
-    return [
-      { transform: "translateY(-100%)", opacity: 0 },
-      { transform: "translateY(0)", opacity: 1 },
-    ];
-  }
-  if (position === "bottom-center") {
-    return [
-      { transform: "translateY(100%)", opacity: 0 },
-      { transform: "translateY(0)", opacity: 1 },
-    ];
-  }
-
-  const isRight = position === "top-right" || position === "bottom-right";
-  const start = isRight ? "translateX(100%)" : "translateX(-100%)";
+  const axis = position.endsWith("center") ? "Y" : "X";
+  const offset = position === "top-center" || position.endsWith("left") ? "-100%" : "100%";
   return [
-    { transform: start, opacity: 0 },
-    { transform: "translateX(0)", opacity: 1 },
+    { transform: `translate${axis}(${offset})`, opacity: 0 },
+    { transform: `translate${axis}(0)`, opacity: 1 },
   ];
 }
 
@@ -589,45 +538,25 @@ function createSingleRunCallback(callback?: () => void): (() => void) | undefine
 }
 
 /** @returns The running `Animation`, so a caller (e.g. `Toast.destroyImmediately()`) can cancel it early; `null` when nothing is actually animating (reduced motion, no `Element.animate`, or an already-finished synchronous path). */
-function runAnimation(
-  element: HTMLDivElement,
-  keyframes: Keyframe[],
-  onFinish?: () => void,
-  shouldCompleteOnCancel = false,
-): Animation | null {
+/** `onFinish` runs once, when the animation finishes or is canceled, or right away when nothing animates. */
+function runAnimation(element: HTMLDivElement, keyframes: Keyframe[], onFinish?: () => void): Animation | null {
   const finish = createSingleRunCallback(onFinish);
-  const prefersReducedMotion = element.ownerDocument.defaultView?.matchMedia?.(
-    "(prefers-reduced-motion: reduce)",
-  ).matches;
 
-  if (prefersReducedMotion) {
+  if (prefersReducedMotion(element.ownerDocument) || typeof element.animate !== "function") {
     finish?.();
-    return null;
-  }
-
-  if (!finish) {
-    try {
-      return element.animate(keyframes, getAnimationOptions(element));
-    } catch {
-      // Animation support unavailable, nothing pending.
-      return null;
-    }
-  }
-
-  if (typeof element.animate !== "function") {
-    finish();
     return null;
   }
 
   try {
     const animation = element.animate(keyframes, getAnimationOptions(element));
-    animation.onfinish = finish;
-    if (shouldCompleteOnCancel) {
+    if (finish) {
+      animation.onfinish = finish;
       animation.oncancel = finish;
     }
     return animation;
   } catch {
-    finish();
+    // Animation support unavailable, nothing pending.
+    finish?.();
     return null;
   }
 }
@@ -643,7 +572,7 @@ export function animateIn(params: {
   // "visible" with no "shown" notification and no auto-dismiss timer ever
   // scheduled -- see Toast.render()'s onFinish, which still guards against
   // running twice or after the toast has already moved on.
-  return runAnimation(element, getKeyframes(position), onFinish, true);
+  return runAnimation(element, getKeyframes(position), onFinish);
 }
 
 export function animateOut(params: {
@@ -652,7 +581,7 @@ export function animateOut(params: {
   onComplete: () => void;
 }): Animation | null {
   const { element, position, onComplete } = params;
-  return runAnimation(element, [...getKeyframes(position)].reverse(), onComplete, true);
+  return runAnimation(element, getKeyframes(position).reverse(), onComplete);
 }
 
 /**

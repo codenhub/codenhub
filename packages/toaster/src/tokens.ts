@@ -1,41 +1,49 @@
 import type { ToastTokens } from "./types";
 
-const TOKEN_MAP: Record<keyof ToastTokens, string> = {
-  successBg: "--toast-color-success-bg",
-  successFg: "--toast-color-success-fg",
-  successEdge: "--toast-color-success-edge",
-  errorBg: "--toast-color-error-bg",
-  errorFg: "--toast-color-error-fg",
-  errorEdge: "--toast-color-error-edge",
-  warningBg: "--toast-color-warning-bg",
-  warningFg: "--toast-color-warning-fg",
-  warningEdge: "--toast-color-warning-edge",
-  infoBg: "--toast-color-info-bg",
-  infoFg: "--toast-color-info-fg",
-  infoEdge: "--toast-color-info-edge",
-  defaultBg: "--toast-color-default-bg",
-  defaultFg: "--toast-color-default-fg",
-  defaultEdge: "--toast-color-default-edge",
-  border: "--toast-color-border",
-  surface: "--toast-color-surface",
-  text: "--toast-color-text",
-  primaryBg: "--toast-color-primary-bg",
-  primaryFg: "--toast-color-primary-fg",
-  primaryBgHover: "--toast-color-primary-bg-hover",
-  primaryEdge: "--toast-color-primary-edge",
-  secondaryBg: "--toast-color-secondary-bg",
-  secondaryFg: "--toast-color-secondary-fg",
-  secondaryBgHover: "--toast-color-secondary-bg-hover",
-  secondaryEdge: "--toast-color-secondary-edge",
-  successBtnBg: "--toast-color-success-btn-bg",
-  successBtnFg: "--toast-color-success-btn-fg",
-  successBtnBgHover: "--toast-color-success-btn-bg-hover",
-  successBtnEdge: "--toast-color-success-btn-edge",
-  errorBtnBg: "--toast-color-error-btn-bg",
-  errorBtnFg: "--toast-color-error-btn-fg",
-  errorBtnBgHover: "--toast-color-error-btn-bg-hover",
-  errorBtnEdge: "--toast-color-error-btn-edge",
+/**
+ * Every token key. Its CSS custom property is derived from the key -- see
+ * {@link getTokenProperty} -- so `successBtnBg` is `--toast-color-success-btn-bg`.
+ */
+const TOKEN_KEYS: Record<keyof ToastTokens, true> = {
+  successBg: true,
+  successFg: true,
+  successEdge: true,
+  errorBg: true,
+  errorFg: true,
+  errorEdge: true,
+  warningBg: true,
+  warningFg: true,
+  warningEdge: true,
+  infoBg: true,
+  infoFg: true,
+  infoEdge: true,
+  defaultBg: true,
+  defaultFg: true,
+  defaultEdge: true,
+  border: true,
+  surface: true,
+  text: true,
+  primaryBg: true,
+  primaryFg: true,
+  primaryBgHover: true,
+  primaryEdge: true,
+  secondaryBg: true,
+  secondaryFg: true,
+  secondaryBgHover: true,
+  secondaryEdge: true,
+  successBtnBg: true,
+  successBtnFg: true,
+  successBtnBgHover: true,
+  successBtnEdge: true,
+  errorBtnBg: true,
+  errorBtnFg: true,
+  errorBtnBgHover: true,
+  errorBtnEdge: true,
 };
+
+function getTokenProperty(key: string): string {
+  return `--toast-color-${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
+}
 
 interface OwnedStyleEntry {
   readonly element: HTMLStyleElement;
@@ -48,12 +56,12 @@ interface OwnedStyleEntry {
 const ownedStyleElements = new Map<string, OwnedStyleEntry>();
 
 function assertColor(value: string, documentRef?: Document): void {
-  if (value.trim().length === 0 || /[;{}]/.test(value)) {
-    throw new Error(`Toast token value must be a valid CSS color: ${value}`);
-  }
-
   const css = documentRef?.defaultView?.CSS ?? globalThis.CSS;
-  if (typeof css?.supports === "function" && !css.supports("color", value)) {
+  if (
+    value.trim().length === 0 ||
+    /[;{}]/.test(value) ||
+    (typeof css?.supports === "function" && !css.supports("color", value))
+  ) {
     throw new Error(`Toast token value must be a valid CSS color: ${value}`);
   }
 }
@@ -76,15 +84,16 @@ export function applyTokens(style: CSSStyleDeclaration, tokens: ToastTokens | nu
     return;
   }
   for (const [key, value] of Object.entries(tokens)) {
-    if (value !== undefined && key in TOKEN_MAP) {
-      style.setProperty(TOKEN_MAP[key as keyof ToastTokens], value);
+    // Own keys only: a key such as `constructor` never named a token.
+    if (value !== undefined && Object.hasOwn(TOKEN_KEYS, key)) {
+      style.setProperty(getTokenProperty(key), value);
     }
   }
 }
 
 /** Replaces all package token declarations on a style object. */
 export function replaceTokens(style: CSSStyleDeclaration, tokens: ToastTokens | null | undefined): void {
-  Object.values(TOKEN_MAP).forEach((property) => style.removeProperty(property));
+  Object.keys(TOKEN_KEYS).forEach((key) => style.removeProperty(getTokenProperty(key)));
   applyTokens(style, tokens);
 }
 

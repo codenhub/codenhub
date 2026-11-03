@@ -357,16 +357,9 @@ export function normalizeToastOptions(params: {
     assertSemanticType(options.type);
   }
 
-  const typePreset = options.type
-    ? {
-        role: SEMANTIC_ROLES[options.type],
-        icon: SEMANTIC_ICONS[options.type],
-        rootClassName: SEMANTIC_ROOT_CLASS_NAMES[options.type],
-      }
-    : null;
-
+  const { type } = options;
   const position = options.position ?? config.position;
-  const role = options.role ?? preset?.role ?? typePreset?.role ?? DEFAULT_ROLE;
+  const role = options.role ?? preset?.role ?? (type ? SEMANTIC_ROLES[type] : DEFAULT_ROLE);
   assertToastPosition(position);
   assertToastRole(role);
 
@@ -374,29 +367,27 @@ export function normalizeToastOptions(params: {
   const dismissible = options.dismissible ?? config.dismissible;
   const autoDismiss = options.autoDismiss ?? preset?.autoDismiss ?? config.autoDismiss;
 
-  const resolvedTitle = hasNonEmptyString(title) ? title : null;
-  const resolvedMessage = hasNonEmptyString(message) ? message : null;
-  const resolvedDescription = hasNonEmptyString(description) ? description : null;
+  // Content and message/icon are mutually exclusive.
+  const isMessageToast = content === undefined;
 
   return Object.freeze({
     instanceId: config.instanceId,
     autoDismiss,
-    content: content === undefined ? null : resolveToastContent(content, documentRef, handle),
+    content: isMessageToast ? null : resolveToastContent(content, documentRef, handle),
     duration: options.duration ?? config.duration,
-    icon:
-      content === undefined
-        ? options.icon !== undefined
-          ? options.icon
-          : (preset?.icon ?? typePreset?.icon ?? null)
-        : null,
+    icon: !isMessageToast
+      ? null
+      : options.icon !== undefined
+        ? options.icon
+        : (preset?.icon ?? (type ? SEMANTIC_ICONS[type] : null)),
     dismissible,
-    title: content === undefined ? resolvedTitle : null,
-    message: content === undefined ? resolvedMessage : null,
-    description: content === undefined ? resolvedDescription : null,
-    action: content === undefined ? (action ?? null) : null,
+    title: isMessageToast && hasNonEmptyString(title) ? title : null,
+    message: isMessageToast && hasNonEmptyString(message) ? message : null,
+    description: isMessageToast && hasNonEmptyString(description) ? description : null,
+    action: isMessageToast ? (action ?? null) : null,
     position,
     role,
-    rootClassName: preset?.rootClassName ?? typePreset?.rootClassName ?? DEFAULT_TOAST_CLASS,
+    rootClassName: preset?.rootClassName ?? (type ? SEMANTIC_ROOT_CLASS_NAMES[type] : DEFAULT_TOAST_CLASS),
     className: joinClassNames(config.className, options.className),
     instanceClassName: config.className,
     tokens: options.tokens ? { ...options.tokens } : null,
@@ -421,11 +412,10 @@ export interface LiveStyleUpdate {
 export function applyUpdateToElement(element: HTMLDivElement, update: LiveStyleUpdate): void {
   // Validate everything before mutating anything: a rejected update must be
   // atomic, not leave an earlier field in this same call already applied.
+  // Only the tokens can be rejected, so validating them first keeps a
+  // rejected update from applying anything.
   if (update.tokens !== undefined) {
     assertValidTokens(update.tokens, element.ownerDocument);
-  }
-
-  if (update.tokens !== undefined) {
     replaceTokens(element.style, update.tokens);
   }
 

@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gzipSync } from "node:zlib";
 
 import { build } from "tsdown";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -21,6 +22,9 @@ const dialogEntry = distPath("dialog.js");
 // A string only the dialog code carries, and one only the toast code carries.
 const DIALOG_MARKER = "toast-dialog";
 const TOAST_MARKER = "data-toast-message";
+
+// Gzipped bytes a bundle calling only `toast("…")` may reach; see docs/internal/roadmap.md.
+const TOAST_BUDGET_GZIP_BYTES = 11_000;
 
 // Created in `beforeAll`, so a run filtered to other tests leaves no directory behind.
 let workspace: string;
@@ -79,6 +83,12 @@ describe("tree shaking", { timeout: 30_000 }, () => {
     );
     expect(output).toContain(TOAST_MARKER);
     expect(output).not.toContain(DIALOG_MARKER);
+  });
+
+  // The size budget in docs/internal/roadmap.md: what the smallest real use may cost gzipped.
+  it("keeps a minimal toast within the size budget", async () => {
+    const output = await bundle("budget", `import { toast } from "DIST"; export const show = () => toast("Saved");`);
+    expect(gzipSync(output).length).toBeLessThanOrEqual(TOAST_BUDGET_GZIP_BYTES);
   });
 
   it("keeps dialogs, and only dialogs, when only dialogs are used", async () => {
