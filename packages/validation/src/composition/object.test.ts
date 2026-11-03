@@ -148,7 +148,12 @@ describe("object", () => {
 
     it("should keep a key Object.prototype holds as a setter or read-only as data of the output", () => {
       const written: unknown[] = [];
-      Object.defineProperty(Object.prototype, "trapped", { set: (value) => written.push(value), configurable: true });
+      Object.defineProperty(Object.prototype, "trapped", {
+        set: (value) => {
+          written.push(value);
+        },
+        configurable: true,
+      });
       Object.defineProperty(Object.prototype, "locked", { value: "inherited", writable: false, configurable: true });
       try {
         const user = object({ trapped: string(), locked: string(), toString: string() });
