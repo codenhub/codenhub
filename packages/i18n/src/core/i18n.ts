@@ -207,12 +207,12 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   }
 
   formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string {
-    const { timeZone } = this.config;
-    // `timeZone: undefined`, as forwarded options often carry, names no zone, so the configured one still applies.
-    return getDateTimeFormat(
-      this.currentLocale,
-      timeZone === undefined || options?.timeZone !== undefined ? options : { ...options, timeZone },
-    ).format(value);
+    // `timeZone: undefined`, as forwarded options often carry, names no zone, so the configured one still applies. The
+    // zone is copied as an own property, which the formatter cache's key sees, even when the options inherit it.
+    const timeZone = options?.timeZone ?? this.config.timeZone;
+    return getDateTimeFormat(this.currentLocale, timeZone === undefined ? options : { ...options, timeZone }).format(
+      value,
+    );
   }
 
   formatRelativeTime(

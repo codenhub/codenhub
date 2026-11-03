@@ -59,6 +59,17 @@ describe("timeZone", () => {
     expect(i18n.formatDate(when, { dateStyle: "long", timeZone: forwarded.timeZone })).toBe(expected);
   });
 
+  it("should not reuse a formatter across inherited time zones", async () => {
+    const i18n = create("UTC");
+    await i18n.init();
+    // Intl reads options through the prototype chain, as from a class instance's defaults.
+    const inherit = (timeZone: string): Intl.DateTimeFormatOptions =>
+      Object.assign(Object.create({ timeZone }) as Intl.DateTimeFormatOptions, { dateStyle: "long" as const });
+
+    expect(i18n.formatDate(when, inherit("Pacific/Pago_Pago"))).toBe("November 1, 2026");
+    expect(i18n.formatDate(when, inherit("Pacific/Kiritimati"))).toBe("November 2, 2026");
+  });
+
   it("should use the runtime's time zone when unset", async () => {
     const i18n = create();
     await i18n.init();

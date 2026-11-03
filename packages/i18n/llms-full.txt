@@ -1392,7 +1392,7 @@ The path you passed is valid, but the locale prefix or the translated words make
 
 ## Fixed
 
-- `formatDate(value, { timeZone: undefined })`, as options forwarded from a property often are, used the runtime's time zone instead of the manager's `timeZone`, so a server could show its own calendar day.
+- `formatDate(value, { timeZone: undefined })`, as options forwarded from a property often are, used the runtime's time zone instead of the manager's `timeZone`, so a server could show its own calendar day. A `timeZone` the options inherit, as from a class instance's defaults, no longer reuses a formatter made for another zone.
 
 <!-- Source: docs/changelog/0.2.0.md -->
 
