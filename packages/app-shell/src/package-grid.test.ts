@@ -82,4 +82,16 @@ describe("initPackageGrid", () => {
     const labels = [...(grid?.children ?? [])].map((child) => (child as HTMLElement).dataset.label);
     expect(labels).toEqual(["Router", "Icons", "Error"]);
   });
+
+  // The icons plugin's svg mode inlines each `<i>` as an `<svg>`, which has no
+  // `hidden` property; only the attribute hides it.
+  it("toggles the hidden attribute on inlined svg sort icons", () => {
+    const button = document.getElementById("package-sort") as HTMLButtonElement;
+    button.innerHTML = `<svg data-sort-icon="asc"></svg><svg data-sort-icon="desc" hidden></svg>`;
+
+    button.click();
+
+    expect(button.querySelector('[data-sort-icon="asc"]')?.hasAttribute("hidden")).toBe(true);
+    expect(button.querySelector('[data-sort-icon="desc"]')?.hasAttribute("hidden")).toBe(false);
+  });
 });

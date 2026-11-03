@@ -7,6 +7,11 @@
 import type { GetStaticPaths } from "astro";
 
 import AsciiField from "../../components/ascii-field.astro";
+import * as bookOpenIcon from "virtual:@codenhub/icons/lucide/book-open";
+import * as gaugeIcon from "virtual:@codenhub/icons/lucide/gauge";
+import * as globeIcon from "virtual:@codenhub/icons/lucide/globe";
+import * as tagIcon from "virtual:@codenhub/icons/lucide/tag";
+import { decorative } from "../../lib/icon";
 import { getTranslator, localeStaticPaths, routing, type Locale } from "../../i18n";
 import BaseLayout from "../../layouts/base-layout.astro";
 import { catalogPackages } from "../../lib/catalog";
@@ -76,29 +81,29 @@ const recentReleases = catalogPackages
 
 const principles = [
   {
-    icon: "ic-lucide-globe",
+    icon: decorative(globeIcon),
     title: t("home.principles.platform.title"),
     body: t("home.principles.platform.body"),
   },
   {
-    icon: "ic-lucide-gauge",
+    icon: decorative(gaugeIcon),
     title: t("home.principles.measured.title"),
     body: t("home.principles.measured.body"),
   },
   {
-    icon: "ic-lucide-book-open",
+    icon: decorative(bookOpenIcon),
     title: t("home.principles.documented.title"),
     body: t("home.principles.documented.body"),
   },
   {
-    icon: "ic-lucide-tag",
+    icon: decorative(tagIcon),
     title: t("home.principles.published.title"),
     body: t("home.principles.published.body"),
   },
 ];
 ---
 
-<BaseLayout locale={locale} siteConfig={headerConfig}>
+<BaseLayout locale={locale} overlayHeader siteConfig={headerConfig}>
   <main class="landing" id="main-content">
     <section aria-labelledby="landing-title" class="landing-hero">
       <AsciiField class="landing-hero-field" />
@@ -132,7 +137,7 @@ const principles = [
             principles.map((principle) => (
               <li class="landing-principle">
                 <span aria-hidden="true" class="landing-principle-icon">
-                  <i class={principle.icon} />
+                  <Fragment set:html={principle.icon} />
                 </span>
                 <h3>{principle.title}</h3>
                 <p>{principle.body}</p>

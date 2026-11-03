@@ -1,16 +1,18 @@
 @import "@codenhub/styles/native";
+@import "@codenhub/icons";
 @import "@codenhub/app-shell/styles.css";
-/* The icon base rules, size classes, and generated mask rules all arrive
-   through `virtual:icons.css`, which the shared base layout imports; in CSS mode
-   that stylesheet carries the base, so a separate `@import "@codenhub/icons"`
-   here would only duplicate it. */
+/* Icons are inlined as SVG at build time (see `astro.config.ts`), so the
+   shell's `virtual:icons.css` import is empty here; the `@codenhub/icons` base
+   rules above are what size every inlined `<svg>` from `--ic-size`. */
 
-/* Header: see-through at the top of the page, so the landing hero's glyph
-   field shows behind it; the shell's fill, blur, and rule return once the page
-   scrolls. `data-at-top` is set by the inline script in `base-layout.astro`.
-   The rule is a pseudo-element rather than the shell's border, so it can draw
-   out from the middle to both edges instead of fading in. */
-.shell-header {
+/* Header, on a page with `overlayHeader` (the landing page): see-through at
+   the top of the page, so the hero's glyph field shows behind it; the shell's
+   fill, blur, and rule return once the page scrolls. `data-overlay` and
+   `data-at-top` are set by the inline script in `base-layout.astro`; every
+   other page keeps the shell's static header. The rule is a pseudo-element
+   rather than the shell's border, so it can draw out from the middle to both
+   edges instead of fading in. */
+.shell-header[data-overlay] {
   border-bottom-color: transparent;
   transition:
     background-color var(--motion-duration-slow) var(--motion-ease),
@@ -18,7 +20,7 @@
 }
 
 /* Over the transparent border, so the header keeps the shell's height. */
-.shell-header::after {
+.shell-header[data-overlay]::after {
   content: "";
   position: absolute;
   inset-inline: 0;
@@ -30,18 +32,18 @@
 }
 
 /* `blur(0)` rather than `none`, so the blur eases in with the fill. */
-.shell-header[data-at-top] {
+.shell-header[data-overlay][data-at-top] {
   background-color: transparent;
   backdrop-filter: blur(0);
 }
 
-.shell-header[data-at-top]::after {
+.shell-header[data-overlay][data-at-top]::after {
   transform: scaleX(0);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .shell-header,
-  .shell-header::after {
+  .shell-header[data-overlay],
+  .shell-header[data-overlay]::after {
     transition: none;
   }
 }
@@ -65,7 +67,7 @@
   display: none;
 }
 
-.www-language-trigger i {
+.www-language-trigger svg {
   --ic-size: 1.125rem;
 }
 
@@ -146,7 +148,7 @@
   color: var(--color-text);
 }
 
-.www-language-option i {
+.www-language-option svg {
   --ic-size: 0.875rem;
 }
 
@@ -320,9 +322,9 @@
   --ic-size: 1rem;
 }
 
-/* The icons base stylesheet gives `i[class^="ic-"]` an explicit `display`, which
-   outranks the `[hidden]` user-agent rule; the sort button's inactive direction
-   needs this to disappear. */
+/* An inlined icon is an `<svg>`, which the `[hidden]` user-agent rule does not
+   reach, and the icons base stylesheet gives it an explicit `display`; the sort
+   button's inactive direction needs this to disappear. */
 [data-sort-icon][hidden] {
   display: none;
 }
@@ -607,18 +609,13 @@
   background: var(--color-surface);
 }
 
-.www-tab i {
+.www-tab svg {
   --ic-size: 0.875rem;
 }
 
 /* The native button styles give every button the control height. */
 .install-tabs .www-tab {
   min-height: 0;
-}
-
-/* Full-color brand marks, so no `--ic-color` here. */
-.install-tab-icon {
-  --ic-size: 0.875rem;
 }
 
 .install-panel {
@@ -674,7 +671,7 @@
   font-weight: 700;
 }
 
-.package-facts dt i {
+.package-facts dt svg {
   flex-shrink: 0;
   --ic-size: 0.875rem;
 }
