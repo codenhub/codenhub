@@ -20,6 +20,14 @@ When a driver throws or rejects during a read, `patch`, `setItem`, and `removeIt
 
 Rejected: overwrite with fallback plus changes after an access failure, because that wipes unrelated fields after a transient failure. A full `set` remains an explicit replacement and does not read first.
 
+## One storage key per Node JSON file
+
+The file drivers hold one record per file and ignore the storage key inside it. Binding a second key to a file already bound to another key in the process throws during store creation, compared by `path.resolve`. Without the check, two stores on one file silently overwrote each other and each read the other's record.
+
+The binding lasts for the life of the process because stores have no disposal step, so a test suite that reuses one path with different keys must use one file per key. Paths that differ only in case on a case-insensitive filesystem, or reach the same file through a link, are not detected.
+
+Rejected: keyed records inside one file, because it changes the one-record-per-key model and turns a whole-file write into a read-modify-write across stores; and documentation alone, because the failure corrupts data silently.
+
 ## Empty storage keys are valid keys
 
 Drivers treat a key as unbound only when it is `undefined`. localStorage accepts `""` as a key; the previous truthiness check made every operation under `""` fail as unbound.

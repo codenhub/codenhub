@@ -37,7 +37,7 @@ const config = createAsyncStore({
 });
 ```
 
-Missing files and empty files read as no value. Writes create parent directories and serialize indented JSON to a unique temporary file in the same directory, then rename it over the destination. A failed write or rename leaves the previous file intact and cleans up the temporary file. These drivers are single-process: they provide no cross-process locking or coordination. Atomic replacement prevents a partial file from replacing a good one; it does not make a read-modify-write sequence transactional or promise crash durability. Clear removes the file and ignores a missing file. Invalid JSON and other filesystem errors throw or reject from the driver and become recoverable when called through a store.
+Missing files and empty files read as no value. Writes create parent directories and serialize indented JSON to a unique temporary file in the same directory, then rename it over the destination. A failed write or rename leaves the previous file intact and cleans up the temporary file. These drivers are single-process: they provide no cross-process locking or coordination. A file holds one record and the drivers do not use the storage key inside it, so binding a second storage key to the same resolved path throws during store creation. The binding lasts for the life of the process, including in test suites; use one file per storage key. Atomic replacement prevents a partial file from replacing a good one; it does not make a read-modify-write sequence transactional or promise crash durability. Clear removes the file and ignores a missing file. Invalid JSON and other filesystem errors throw or reject from the driver and become recoverable when called through a store.
 
 ## Cloudflare Workers
 

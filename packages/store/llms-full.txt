@@ -283,7 +283,7 @@ const config = createAsyncStore({
 });
 ```
 
-Missing files and empty files read as no value. Writes create parent directories and serialize indented JSON to a unique temporary file in the same directory, then rename it over the destination. A failed write or rename leaves the previous file intact and cleans up the temporary file. These drivers are single-process: they provide no cross-process locking or coordination. Atomic replacement prevents a partial file from replacing a good one; it does not make a read-modify-write sequence transactional or promise crash durability. Clear removes the file and ignores a missing file. Invalid JSON and other filesystem errors throw or reject from the driver and become recoverable when called through a store.
+Missing files and empty files read as no value. Writes create parent directories and serialize indented JSON to a unique temporary file in the same directory, then rename it over the destination. A failed write or rename leaves the previous file intact and cleans up the temporary file. These drivers are single-process: they provide no cross-process locking or coordination. A file holds one record and the drivers do not use the storage key inside it, so binding a second storage key to the same resolved path throws during store creation. The binding lasts for the life of the process, including in test suites; use one file per storage key. Atomic replacement prevents a partial file from replacing a good one; it does not make a read-modify-write sequence transactional or promise crash durability. Clear removes the file and ignores a missing file. Invalid JSON and other filesystem errors throw or reject from the driver and become recoverable when called through a store.
 
 ## Cloudflare Workers
 
@@ -382,6 +382,7 @@ Return to [Core stores](docs/core-stores.md#validation-and-failures) for validat
 - **Breaking.** When the driver fails to read, `patch`, `setItem`, and `removeItem` report `store.read_failed`, write nothing, and return the initial state. They used to write the initial state plus the change, which erased every other stored field. Unparsable or invalid stored values are still replaced.
 - **Breaking.** Node.js 24 or newer is required.
 - An exception thrown by `onError` now reaches the caller, and the callback is called once. It used to be caught, and could be called twice.
+- **Breaking.** The Node JSON file drivers throw during store creation when a second storage key binds to a file already bound to another key in the process. The file holds one record, so the two stores used to overwrite each other.
 - `createAsyncStore` copies the value given to `set`, `patch`, or `setItem` when called, so changing the object afterwards no longer changes what is written. A value that cannot be copied rejects the returned promise.
 
 ## Fixed

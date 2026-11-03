@@ -5,6 +5,21 @@ import * as path from "node:path";
 import { SET_STORAGE_KEY } from "./core/types";
 import type { AsyncStorageDriver, StorageDriver } from "./core/types";
 
+// The drivers store one record per file and ignore the key, so two keys on one file would overwrite
+// each other. Bindings last for the process because stores have no disposal step.
+const fileKeys = new Map<string, string>();
+
+function bindFile(filePath: string, storageKey: string): void {
+  const resolved = path.resolve(filePath);
+  const bound = fileKeys.get(resolved);
+  if (bound !== undefined && bound !== storageKey) {
+    throw new Error(
+      `File "${resolved}" is already bound to storage key "${bound}"; tried to bind it to "${storageKey}". Use one file per storage key.`,
+    );
+  }
+  fileKeys.set(resolved, storageKey);
+}
+
 /**
  * Options for configuring local filesystem JSON storage drivers.
  */
@@ -21,6 +36,8 @@ export interface NodeJsonFileDriverOptions {
  * Suitable for small JSON-safe records in Node.js 24 or newer. Writes use a unique
  * same-directory temporary file and rename over the destination, cleaning up on failure.
  * Single-process use only: there is no cross-process locking.
+ * The file holds one record: binding a second storage key to the same resolved path in one
+ * process throws, for the life of the process.
  * If file read/write operations fail or the JSON is invalid, the driver throws an error
  * (e.g. `SyntaxError` for malformed JSON, or filesystem errors), which is caught
  * and handled by the store.
@@ -75,6 +92,7 @@ export function nodeJsonFileDriver<TSchema extends object>(options: NodeJsonFile
           `Driver instance cannot be shared across stores with different keys (already bound to "${key}", tried to bind to "${k}").`,
         );
       }
+      bindFile(filePath, k);
       key = k;
     },
   };
@@ -86,7 +104,8 @@ export function nodeJsonFileDriver<TSchema extends object>(options: NodeJsonFile
  * Uses non-blocking promise-based filesystem operations on Node.js 24 or newer.
  * JSON-safe records are written to a unique same-directory temporary file, then renamed
  * over the destination; temporary files are cleaned up on failure. Single-process use only,
- * with no cross-process locking.
+ * with no cross-process locking. The file holds one record: binding a second storage key to the
+ * same resolved path in one process throws, for the life of the process.
  * If file access/write fails or the JSON is invalid, the driver throws or rejects
  * with an error (e.g. `SyntaxError` for malformed JSON, or filesystem errors),
  * which is caught and handled by the store.
@@ -143,6 +162,7 @@ export function nodeAsyncJsonFileDriver<TSchema extends object>(
           `Driver instance cannot be shared across stores with different keys (already bound to "${key}", tried to bind to "${k}").`,
         );
       }
+      bindFile(filePath, k);
       key = k;
     },
   };

@@ -1,11 +1,14 @@
 import * as fs from "node:fs";
+import * as path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAsyncStore, createStore } from "./index";
 import { nodeAsyncJsonFileDriver, nodeJsonFileDriver } from "./node";
 
-const tempFile = "temp-test-dir/store.json";
+// Each test gets its own file: a file stays bound to the first storage key used on it.
+let testCount = 0;
+let tempFile = "";
 
 // In-memory virtual filesystem map
 const mockFiles = new Map<string, string>();
@@ -72,6 +75,7 @@ vi.mock("node:fs", () => {
 describe("Node Drivers", () => {
   beforeEach(() => {
     mockFiles.clear();
+    tempFile = `temp-test-dir/store-${String(++testCount)}.json`;
   });
 
   afterEach(() => {
@@ -114,6 +118,30 @@ describe("Node Drivers", () => {
         expect([...mockFiles.keys()]).toEqual([tempFile]);
       },
     );
+  });
+
+  describe("one storage key per file", () => {
+    const create = (isAsync: boolean, storageKey: string, filePath: string) =>
+      isAsync
+        ? createAsyncStore({ storageKey, initialState: {}, driver: nodeAsyncJsonFileDriver({ filePath }) })
+        : createStore({ storageKey, initialState: {}, driver: nodeJsonFileDriver({ filePath }) });
+
+    it.each([
+      [false, false],
+      [true, true],
+      [false, true],
+    ])("rejects a second key on the same file (first async: %s, second async: %s)", (firstAsync, secondAsync) => {
+      const filePath = `shared-${String(firstAsync)}-${String(secondAsync)}/store.json`;
+      create(firstAsync, "a", filePath);
+      expect(() => create(secondAsync, "b", `./${filePath}`)).toThrow(
+        `File "${path.resolve(filePath)}" is already bound to storage key "a"; tried to bind it to "b". Use one file per storage key.`,
+      );
+    });
+
+    it("allows the same key on the same file again", () => {
+      create(false, "same", "same-key/store.json");
+      expect(() => create(true, "same", "same-key/store.json")).not.toThrow();
+    });
   });
 
   describe("nodeJsonFileDriver (Sync)", () => {
