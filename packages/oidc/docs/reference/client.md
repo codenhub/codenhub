@@ -1,5 +1,6 @@
 ---
 title: "/client"
+description: "Sign users in through an OpenID Provider with a Fetch API client."
 order: 1
 ---
 

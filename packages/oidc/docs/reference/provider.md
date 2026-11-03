@@ -1,5 +1,6 @@
 ---
 title: "/provider"
+description: "Serve OpenID Connect endpoints and issue tokens through the Fetch API."
 order: 2
 ---
 
