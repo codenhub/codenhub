@@ -1,7 +1,8 @@
 # @codenhub/i18n
 
-> Translations with typed keys, CLDR plurals, `{name}` placeholders, and a
-> default-locale fallback, plus optional browser and locale-path helpers.
+> Translations with typed keys and values, ICU messages, CLDR plurals, `Intl`
+> formatters, and regional and default-locale fallback, plus optional browser
+> and locale-path helpers.
 
 Use only the root, `/browser`, and `/routing` entry points. Await `init()` (or
 `initializeBrowserI18n()`) before calling `t()`. Create one manager per request
@@ -12,7 +13,8 @@ returns the trimmed key.
 
 - [Overview](docs/index.md): Core ideas, a walkthrough, and missing-key behavior.
 - [Write your translations](docs/translations.md): Dictionary rules, JSON
-  loaders, placeholders, plurals, typed keys, key-parity tests, and size limits.
+  loaders, regional variants, ICU messages, formatters, plurals, typed keys and
+  values, key-parity and message tests, and size limits.
 - [Translate a browser app](docs/browser.md): Locale detection order,
   persistence, `lang`/`dir` sync, framework re-rendering, and `data-i18n`.
 - [Render on a server or at build time](docs/server-rendering.md): Per-request

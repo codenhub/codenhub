@@ -1,6 +1,6 @@
 # @codenhub/i18n
 
-Translate your app's text with typed keys, plurals, and a fallback language, in the browser, on a server, or at build time.
+Translate your app's text with typed keys, ICU messages, plurals, and fallback languages, in the browser, on a server, or at build time.
 
 ## Installation
 
@@ -47,7 +47,7 @@ Two optional entry points cover what differs by environment:
 ## Documentation
 
 - [Overview](docs/index.md): the ideas behind the package and a walkthrough.
-- [Write your translations](docs/translations.md): JSON files, placeholders, plurals, and typed keys.
+- [Write your translations](docs/translations.md): JSON files, ICU messages, plurals, regional variants, and typed keys and values.
 - [Translate a browser app](docs/browser.md)
 - [Render on a server or at build time](docs/server-rendering.md)
 - [Localized URLs](docs/localized-urls.md)
@@ -64,7 +64,7 @@ Two optional entry points cover what differs by environment:
 ## Notes
 
 - On a server or in a static build, create one manager per request or page, not a shared one.
-- The package does not format numbers or dates, render HTML from translations, or support the ICU message format.
+- The package does not render HTML from translations. ICU messages cover `number`, `date`, `time`, `plural`, `selectordinal`, and `select`, without number skeletons.
 
 ## License
 
