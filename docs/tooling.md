@@ -292,7 +292,9 @@ It exists because neither deployment builds branches. Both Cloudflare projects b
 
 ## Release preflight
 
-`hub release` reports whether the selected packages could be published. It runs `verify` first, then checks the three preconditions a build and a test run cannot answer: whether the local version is ahead of the registry, whether the package has uncommitted changes, and whether `npm pack --dry-run` includes every file the manifest's entry points name. A wildcard subpath export such as `./data/*` is satisfied when the tarball carries at least one file its pattern matches.
+`hub release` reports whether the selected packages could be published. It runs `verify` first, then checks the four preconditions a build and a test run cannot answer: whether the local version is ahead of the registry, whether the package has uncommitted changes, whether `npm pack --dry-run` includes every file the manifest's entry points name, and whether every translation is current. A wildcard subpath export such as `./data/*` is satisfied when the tarball carries at least one file its pattern matches.
+
+The `translation` precondition blocks a package with a stale translation: a `README.<locale>.md` or `docs/<locale>/` document whose `source` is not the `git hash-object` blob ID of the English file it translates. `hub check` only warns about one, so a change to an English page can merge before its translation follows; a release is where a translation reaches readers, so it is where staleness stops (`docs/specs/packages-translations.md`, "Drift"). A translation whose `source` is missing or malformed blocks too, because it cannot be shown current. When git cannot hash the files, the precondition is unresolved, which `hub publish` treats as a blocker like any other.
 
 ```sh
 pnpm hub release error

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { parseArguments } from "../cli/parse-arguments.ts";
+import type { TranslationDriftReport } from "../documentation/translations.ts";
 import type { PublishRunner, RevisionResolver } from "../release/publish.ts";
 import type { ReadinessCheck, ReadinessOptions, ReleaseRunner } from "../release/readiness.ts";
 import { createReporter } from "../reporting/reporter.ts";
@@ -28,7 +29,12 @@ const runner: ReleaseRunner = vi.fn(async (command: string) =>
   command === "npm" ? { isSuccess: true, stdout: JSON.stringify("0.9.0") } : { isSuccess: true, stdout: "" },
 );
 
-const readiness: ReadinessOptions = { readPack: async () => new Set(["dist/index.js"]), run: runner };
+const noTranslations = async (): Promise<TranslationDriftReport> => ({ stale: [], translationCount: 0, unsourced: [] });
+const readiness: ReadinessOptions = {
+  readPack: async () => new Set(["dist/index.js"]),
+  readTranslations: noTranslations,
+  run: runner,
+};
 
 interface RunResult {
   exitCode: number;
@@ -183,6 +189,7 @@ describe("hub publish", () => {
   it("stops at a blocked precondition rather than publishing", async () => {
     const stale: ReadinessOptions = {
       readPack: async () => new Set(["dist/index.js"]),
+      readTranslations: noTranslations,
       run: async (command) =>
         command === "npm" ? { isSuccess: true, stdout: JSON.stringify("2.0.0") } : { isSuccess: true, stdout: "" },
     };
@@ -192,6 +199,25 @@ describe("hub publish", () => {
     });
 
     expect(result.output).toContain("is not newer than the published 2.0.0");
+    expect(result.published).toEqual([]);
+    expect(result.exitCode).toBe(EXIT_FAILURE);
+  });
+
+  it("refuses to publish a stale translation", async () => {
+    const result = await runPublish([createPackage("@codenhub/error", "1.0.0")], ["--from-tag=@codenhub/error@1.0.0"], {
+      readiness: {
+        ...readiness,
+        readTranslations: async () => ({
+          stale: [
+            { current: "b".repeat(40), englishPath: "README.md", packagePath: "README.es.md", source: "a".repeat(40) },
+          ],
+          translationCount: 1,
+          unsourced: [],
+        }),
+      },
+    });
+
+    expect(result.output).toContain("README.es.md is stale");
     expect(result.published).toEqual([]);
     expect(result.exitCode).toBe(EXIT_FAILURE);
   });
@@ -220,6 +246,7 @@ describe("hub publish", () => {
       readPack: async () => {
         throw new Error("npm pack could not run");
       },
+      readTranslations: noTranslations,
       run: runner,
     };
 
@@ -320,6 +347,7 @@ describe("hub publish", () => {
   it("still refuses a selector naming a version npm already has", async () => {
     const stale: ReadinessOptions = {
       readPack: async () => new Set(["dist/index.js"]),
+      readTranslations: noTranslations,
       run: async (command) =>
         command === "npm" ? { isSuccess: true, stdout: JSON.stringify("1.0.0") } : { isSuccess: true, stdout: "" },
     };
