@@ -315,7 +315,31 @@
 
   /* Rows deliberately inherit the table's intent instead of resetting it, so a
      `.data-table.success` tints its own rows. A `<tr class="warning">` still wins,
-     because an intent class on the element beats an inherited value. */
+     because an intent class on the element beats an inherited value.
+
+     The class only changes the row's intent slots, though, and everything the
+     row paints was resolved on the table: the text, the rule and the hover
+     step are each a custom property whose `var()`s resolved against the
+     table's intent, so they inherited down already-green to a destructive row.
+     A row with its own intent resolves them again against it. The plate stays
+     the table's, so the ink keeps the table's ramp -- `--_on-fill`, inherited
+     as a resolved percentage -- and a solid table's rows still print contrast
+     ink on it. Only a row that names an intent: an ordinary row would resolve
+     the same values, but a `color` declared on every row would override a
+     colour a consumer set on the table. */
+  & tbody tr:is(.neutral, .primary, .secondary, .success, .warning, .destructive, .info) {
+    --table-rule-tone: color-mix(
+      in oklab,
+      var(--table-rule-plated) var(--ui-fill, var(--_d-fill)),
+      var(--intent-border)
+    );
+    --table-rule: color-mix(in oklab, var(--table-rule-tone) var(--table-rule-amount), transparent);
+    --table-hover-tone: color-mix(in oklab, currentColor var(--ui-fill, var(--_d-fill)), var(--intent-hover));
+    --table-row-hover: color-mix(in oklab, var(--table-hover-tone) 12%, transparent);
+
+    color: color-mix(in oklab, var(--intent-contrast) var(--_on-fill), var(--intent-strong));
+  }
+
   & tbody tr > * {
     transition: background-color var(--motion-duration-fast) var(--motion-ease);
   }
