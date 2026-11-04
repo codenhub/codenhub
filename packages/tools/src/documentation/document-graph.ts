@@ -9,6 +9,7 @@ import {
   parsePublicDocumentFrontmatter,
 } from "./document-policy.ts";
 import { getDocumentRoute } from "./package-metadata.ts";
+import { parseTranslationPath, splitTranslatedDocsPath } from "./translation-paths.ts";
 
 interface MarkdownNode {
   children?: MarkdownNode[];
@@ -121,11 +122,12 @@ function normalizePath(filePath: string): string {
  * root `docs/guidelines/documentation.md`) that never reaches a real build, so it carries
  * no frontmatter contract at all.
  * @param filePath Package-relative POSIX path.
- * @returns `true` for the README, LLM files, and public `docs/` Markdown.
+ * @returns `true` for the README and its translations, LLM files, and public `docs/` Markdown.
  */
 export function isValidationSurface(filePath: string): boolean {
   return (
     filePath === "README.md" ||
+    isTranslatedReadme(filePath) ||
     filePath === "llms.txt" ||
     filePath === "llms-full.txt" ||
     (filePath.startsWith("docs/") &&
@@ -133,6 +135,10 @@ export function isValidationSurface(filePath: string): boolean {
       !filePath.startsWith("docs/internal/") &&
       !filePath.startsWith("docs/plans/"))
   );
+}
+
+function isTranslatedReadme(filePath: string): boolean {
+  return parseTranslationPath(filePath)?.kind === "readme";
 }
 
 function getNodeText(node: MarkdownNode): string {
@@ -231,7 +237,13 @@ export function createDocumentGraph(packageFiles: Record<string, string>): Docum
   return { documents, files: new Set(Object.keys(normalizedFiles)) };
 }
 
-function resolveLocalPath(sourcePath: string, target: string): { fragment?: string; path?: string } {
+/**
+ * Resolves a local link target against the document it was written in.
+ * @param sourcePath Package-relative path of the linking document.
+ * @param target Link target as written.
+ * @returns The package-relative target path and fragment, or no path when the target is absolute or escapes the package root.
+ */
+export function resolveLocalPath(sourcePath: string, target: string): { fragment?: string; path?: string } {
   const hashIndex = target.indexOf("#");
   const rawPath = (hashIndex === -1 ? target : target.slice(0, hashIndex)).split("?", 1)[0]!;
   const fragment = hashIndex === -1 ? undefined : target.slice(hashIndex + 1);
@@ -387,7 +399,7 @@ function addDocumentPolicyIssues(document: GraphDocument, issues: ValidationIssu
     issues.push({ code: "invalid-frontmatter", message: unsupported.message, sourcePath: document.path });
   }
   const isPublicDocument = document.path.startsWith(DOCS_PREFIX);
-  if (!isPublicDocument && !SINGLE_H1_SURFACES.has(document.path)) {
+  if (!isPublicDocument && !SINGLE_H1_SURFACES.has(document.path) && !isTranslatedReadme(document.path)) {
     return;
   }
   if (isPublicDocument && unsupported === undefined) {
@@ -409,7 +421,9 @@ function addDocumentPolicyIssues(document: GraphDocument, issues: ValidationIssu
  *
  * `docs/guides/index.md` identifies the `guides` area and `docs/guides.md`
  * identifies the `guides` document, so a package holding both has no stable name
- * for either.
+ * for either. A translation is compared only with the other translations in its
+ * locale, by the English path it mirrors, so it neither collides with nor counts
+ * as an English page.
  * @param graph Parsed documents of one package.
  * @param issues Collector the problems are appended to.
  */
@@ -419,10 +433,12 @@ function addDocumentIdentifierIssues(graph: DocumentGraph, issues: ValidationIss
     if (!path.startsWith(DOCS_PREFIX)) {
       continue;
     }
-    const identifier = getDocumentRoute(path.slice(DOCS_PREFIX.length));
-    const owner = owners.get(identifier);
+    const translation = splitTranslatedDocsPath(path.slice(DOCS_PREFIX.length));
+    const identifier = getDocumentRoute(translation?.relativePath ?? path.slice(DOCS_PREFIX.length));
+    const key = `${translation?.locale ?? ""}:${identifier}`;
+    const owner = owners.get(key);
     if (owner === undefined) {
-      owners.set(identifier, path);
+      owners.set(key, path);
     } else {
       issues.push({
         code: "duplicate-document-identifier",
@@ -457,6 +473,15 @@ export function validateDocumentGraph(
         code: "npm-unpublished-target",
         message: `${requiredPath} is absent from npm pack.`,
         target: requiredPath,
+      });
+    }
+  }
+  for (const filePath of graph.files) {
+    if (npmFiles !== undefined && isTranslatedReadme(filePath) && !npmFiles.has(filePath)) {
+      issues.push({
+        code: "npm-unpublished-target",
+        message: `${filePath} is absent from npm pack.`,
+        target: filePath,
       });
     }
   }

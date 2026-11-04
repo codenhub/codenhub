@@ -1,3 +1,5 @@
+import { splitTranslatedDocsPath } from "./translation-paths.ts";
+
 interface HeadingDefinition {
   depth: number;
   text?: string;
@@ -35,11 +37,26 @@ export interface PublicDocumentFrontmatter {
    * `docs/specs/packages-reference.md`. Absent on every other page.
    */
   since?: string;
+  /**
+   * Git blob ID of the English document a translation was made from. Valid only
+   * on a document under `docs/<locale>/`, per `docs/specs/packages-translations.md`.
+   * Absent on every other page.
+   */
+  source?: string;
   /** Page label used for navigation and browser titles. */
   title: string;
 }
 
-const ALLOWED_FRONTMATTER_FIELDS = new Set(["curated", "date", "description", "group", "order", "since", "title"]);
+const ALLOWED_FRONTMATTER_FIELDS = new Set([
+  "curated",
+  "date",
+  "description",
+  "group",
+  "order",
+  "since",
+  "source",
+  "title",
+]);
 
 const FOLDER_INDEX = /^[^/]+\/index\.md$/;
 
@@ -119,6 +136,17 @@ function readOptionalGroup(frontmatter: Record<string, unknown>, sourcePath: str
   }
   if (typeof value !== "string" || value.trim() === "") {
     throw new Error(`Invalid group frontmatter in ${sourcePath}: expected a non-empty string.`);
+  }
+  return value;
+}
+
+function readOptionalSource(frontmatter: Record<string, unknown>, sourcePath: string): string | undefined {
+  const value = frontmatter.source;
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new Error(`Invalid source frontmatter in ${sourcePath}: expected a non-empty string.`);
   }
   return value;
 }
@@ -224,7 +252,7 @@ function readOptionalDate(frontmatter: Record<string, unknown>, sourcePath: stri
  * Validates public document frontmatter against its closed schema.
  * @param frontmatter Parsed frontmatter fields.
  * @param sourcePath Document path used in error messages and to place the document.
- * @returns The validated title, optional description, section label, order, curated flag, release date, and version.
+ * @returns The validated title, optional description, section label, order, curated flag, release date, version, and translation source.
  * @throws When a field is unknown, missing, empty, or not allowed on this path.
  */
 export function parsePublicDocumentFrontmatter(
@@ -237,7 +265,11 @@ export function parsePublicDocumentFrontmatter(
     }
   }
 
-  const relativePath = docsRelativePath(sourcePath);
+  // A translation is placed by the English document it mirrors, so its
+  // `docs/<locale>/index.md` is the package index and obeys the same rules.
+  const docsPath = docsRelativePath(sourcePath);
+  const translation = splitTranslatedDocsPath(docsPath);
+  const relativePath = translation?.relativePath ?? docsPath;
   const order = readOptionalOrder(frontmatter, sourcePath);
   if (order !== undefined && relativePath === "index.md") {
     throw new Error(`Invalid order frontmatter in ${sourcePath}: the package index is always first.`);
@@ -258,6 +290,10 @@ export function parsePublicDocumentFrontmatter(
   if (since !== undefined && !REFERENCE_PAGE.test(relativePath)) {
     throw new Error(`Invalid since frontmatter in ${sourcePath}: only a generated reference page can set a version.`);
   }
+  const source = readOptionalSource(frontmatter, sourcePath);
+  if (source !== undefined && translation === undefined) {
+    throw new Error(`Invalid source frontmatter in ${sourcePath}: only a translation under docs/<locale>/ can set it.`);
+  }
 
   return {
     curated,
@@ -266,6 +302,7 @@ export function parsePublicDocumentFrontmatter(
     group,
     order,
     since,
+    source,
     title: readRequiredTitle(frontmatter, sourcePath),
   };
 }
