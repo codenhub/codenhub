@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { messagesFor } from "../../i18n";
 import { describeLink } from "./describe-link";
 
 const pageUrl = "https://docs.example.dev/kit/setup/";
@@ -11,6 +12,20 @@ const previews = {
 const context = { pageUrl, previews };
 
 describe("describeLink", () => {
+  it("speaks the page's language when given its messages", () => {
+    const messages = messagesFor("pt-BR").linkPreviewCard;
+
+    expect(describeLink("mailto:team@example.dev?subject=Ol%C3%A1", { ...context, messages })).toMatchObject({
+      actions: [{ label: "Copiar endereço" }, { label: "Enviar e-mail" }],
+      summary: "Assunto: Olá",
+      trail: ["E-mail"],
+    });
+    expect(describeLink("https://example.com/", { ...context, messages })).toMatchObject({
+      actions: [{ label: "Copiar link" }, { label: "Nova aba" }, { label: "Abrir" }],
+      trail: ["Site externo"],
+    });
+  });
+
   it("describes a page on this site from the preview index", () => {
     expect(describeLink("../concepts/", context)).toEqual({
       actions: [

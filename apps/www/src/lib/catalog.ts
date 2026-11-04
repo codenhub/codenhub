@@ -2,6 +2,7 @@ import { packageDemoUrl, packageDocsUrl, packageNpmUrl } from "@codenhub/app-she
 import {
   buildPackageDefinitions,
   buildPublicPackageSummaries,
+  isTranslationLocale,
   parsePackageMetadata,
   type PublicPackageSummary,
 } from "@codenhub/tools/documentation";
@@ -9,7 +10,7 @@ import { parseSizeReport, type ReleaseHistory, type SizeReport } from "@codenhub
 
 import { siteConfig } from "../site-config";
 import { describeProperties, describeReleases, type PackageProperties, type PackageReleases } from "./package-facts";
-import type { ReadmeBases } from "./readme";
+import type { ReadmeBases, ReadmeSources } from "./readme";
 
 /** Outbound links for one package, each present only when its target exists. */
 export interface CatalogLinks {
@@ -35,8 +36,8 @@ export interface CatalogPackage extends PublicPackageSummary {
   /** Site path of the package's logo, when it declares one. */
   logoUrl?: string;
   properties: PackageProperties;
-  /** The package's README, with where its package-relative links and images resolve. */
-  readme?: ReadmeBases & { source: string };
+  /** The package's README and its translations, with where their package-relative links and images resolve. */
+  readme?: ReadmeBases & ReadmeSources;
   releases: PackageReleases;
   /** Bundle sizes the release recorded, absent for a release cut before sizes were. */
   size?: SizeReport;
@@ -76,6 +77,15 @@ const readmeModules = import.meta.env.PROD
       query: "?raw",
     })
   : import.meta.glob<string>("../../../../packages/**/README.md", { eager: true, import: "default", query: "?raw" });
+// `README.<locale>.md`, which the snapshot keeps for each listed locale
+// (docs/specs/packages-translations.md, "Publishing", "Main site").
+const translatedReadmeModules = import.meta.env.PROD
+  ? import.meta.glob<string>("../../.codenhub-published/packages/**/README.*.md", {
+      eager: true,
+      import: "default",
+      query: "?raw",
+    })
+  : import.meta.glob<string>("../../../../packages/**/README.*.md", { eager: true, import: "default", query: "?raw" });
 // A release's `size.json`, written by `hub release --cut` (docs/specs/packages-lifecycle.md, "Bundle size").
 const sizeModules = import.meta.env.PROD
   ? import.meta.glob<string>("../../.codenhub-published/packages/**/size.json", {
@@ -122,6 +132,17 @@ function repositoryUrl(manifest: Record<string, unknown>): string | undefined {
   }
   const directory = typeof fields.directory === "string" ? fields.directory.replace(/^\/+|\/+$/gu, "") : "";
   return directory === "" ? `https://github.com/${match[1]}` : `https://github.com/${match[1]}/tree/main/${directory}`;
+}
+
+/** A package's `README.<locale>.md` contents by locale, for each listed locale it has. */
+function readmeTranslations(root: string): Partial<Record<string, string>> {
+  const prefix = `${root}/README.`;
+  return Object.fromEntries(
+    Object.entries(translatedReadmeModules).flatMap(([path, contents]) => {
+      const locale = path.startsWith(prefix) ? path.slice(prefix.length, -".md".length) : "";
+      return isTranslationLocale(locale) ? [[locale, contents] as const] : [];
+    }),
+  );
 }
 
 function packageRoot(manifestPath: string): string {
@@ -187,6 +208,7 @@ function describePackage(summary: PublicPackageSummary): CatalogPackage {
             baseUrl: `${siteConfig.githubUrl}/blob/${tag ?? "HEAD"}/${workspaceRoot(manifestPath)}/`,
             imageBaseUrl: `${siteConfig.githubUrl}/raw/${tag ?? "HEAD"}/${workspaceRoot(manifestPath)}/`,
             source: readmeSource,
+            translations: readmeTranslations(root),
           },
     releases,
     size: sizeContents === undefined ? undefined : parseSizeReport(sizeContents, `${root}/size.json`),

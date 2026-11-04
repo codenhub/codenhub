@@ -6,6 +6,7 @@ interface MarkdownNode {
   depth?: number;
   identifier?: string;
   url?: string;
+  value?: string;
   children?: MarkdownNode[];
   data?: { hProperties?: Record<string, unknown> };
 }
@@ -20,6 +21,7 @@ export interface ReadmeBases {
 
 // A URL with a scheme, a protocol-relative URL, or an in-page fragment stays as written.
 const UNRESOLVED_URL = /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/iu;
+const HTML_COMMENT = /^<!--[\s\S]*-->$/u;
 
 function walk(node: MarkdownNode, visit: (node: MarkdownNode) => void): void {
   visit(node);
@@ -40,6 +42,12 @@ function walk(node: MarkdownNode, visit: (node: MarkdownNode) => void): void {
  */
 function remarkPackageReadme({ baseUrl, imageBaseUrl }: ReadmeBases) {
   return () => (tree: MarkdownNode) => {
+    // A translated README opens with its `<!-- source: … -->` line
+    // (docs/specs/packages-translations.md), which would hide its title.
+    const leading = tree.children?.[0];
+    if (leading?.type === "html" && HTML_COMMENT.test(leading.value ?? "")) {
+      tree.children?.shift();
+    }
     const first = tree.children?.[0];
     if (first?.type === "heading" && first.depth === 1) {
       first.depth = 2;
@@ -63,6 +71,27 @@ function remarkPackageReadme({ baseUrl, imageBaseUrl }: ReadmeBases) {
       node.url = new URL(node.url, isImage ? imageBaseUrl : baseUrl).href;
     });
   };
+}
+
+/** A package's README in English and in each locale its release translates it to. */
+export interface ReadmeSources {
+  /** `README.md`. */
+  source: string;
+  /** `README.<locale>.md` by locale, for each the release carries. */
+  translations: Readonly<Partial<Record<string, string>>>;
+}
+
+/**
+ * Picks the README a package page shows in a locale: the release's
+ * `README.<locale>.md` when it carries one, otherwise `README.md`
+ * (`docs/specs/packages-translations.md`, "Publishing", "Main site").
+ * @param readme The README and its translations.
+ * @param locale The page's locale.
+ * @returns The Markdown to render and the language it is written in.
+ */
+export function selectReadme(readme: ReadmeSources, locale: string): { lang: string; source: string } {
+  const translation = readme.translations[locale];
+  return translation === undefined ? { lang: "en", source: readme.source } : { lang: locale, source: translation };
 }
 
 /**

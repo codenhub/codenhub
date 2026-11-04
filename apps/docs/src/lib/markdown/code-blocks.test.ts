@@ -22,8 +22,21 @@ describe("Markdown code block labels", () => {
     ["html", "HTML"],
     ["unknown-lang", "Unknown lang"],
     [undefined, "Plain text"],
+    ["plaintext", "Plain text"],
   ])("maps the %s fence to a readable label", (language, label) => {
     expect(getCodeBlockLabel({ language })).toBe(label);
+  });
+
+  it("marks a fence with no language or title so the document's language can label it", () => {
+    const transformer = createCodeBlockTransformer();
+    const plain = { type: "element", tagName: "pre", properties: {}, children: [] };
+    const titled = { type: "element", tagName: "pre", properties: {}, children: [] };
+
+    transformer.pre.call({ options: { lang: "plaintext" } }, plain);
+    transformer.pre.call({ options: { lang: "plaintext", meta: { __raw: 'title="out.txt"' } } }, titled);
+
+    expect(plain.properties).toMatchObject({ dataCodeLabel: "Plain text", dataCodePlain: "" });
+    expect(titled.properties).not.toHaveProperty("dataCodePlain");
   });
 
   it("annotates Shiki output with the metadata title", () => {

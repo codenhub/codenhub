@@ -81,6 +81,33 @@ describe("documentation rule", () => {
     expect(await runRule("documentation", await createDocumentedPackage())).toEqual([]);
   });
 
+  it("holds translations to the English rules without counting them as English pages", async () => {
+    const source = `source: ${"a".repeat(40)}`;
+    const workspacePackage = await createDocumentedPackage({
+      files: {
+        "README.pt-BR.md": `<!-- source: ${"a".repeat(40)} -->\n\n# @codenhub/example\n\n[Docs](docs/pt-BR/index.md)\n`,
+        "docs/pt-BR/index.md": `---\ntitle: Exemplo\n${source}\n---\n\n# Exemplo\n\n[English](../index.md)\n`,
+      },
+    });
+
+    expect(await runRule("documentation", workspacePackage)).toEqual([]);
+  });
+
+  it("checks a translation's links, H1, and frontmatter like the English", async () => {
+    const workspacePackage = await createDocumentedPackage({
+      files: {
+        "README.es.md": "# One\n\n# Two\n",
+        "docs/es/index.md": `---\ntitle: Ejemplo\norder: 1\n---\n\n# Ejemplo\n\n[Gone](./gone.md)\n`,
+      },
+    });
+
+    expect((await runRule("documentation", workspacePackage)).map(({ code, location }) => [code, location])).toEqual([
+      ["documentation/invalid-heading-count", "README.es.md"],
+      ["documentation/invalid-frontmatter", "docs/es/index.md"],
+      ["documentation/missing-target", "docs/es/index.md"],
+    ]);
+  });
+
   it("reports a missing required surface", async () => {
     const workspacePackage = await createDocumentedPackage({ omit: ["llms.txt"] });
 

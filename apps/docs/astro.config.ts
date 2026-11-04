@@ -6,11 +6,13 @@ import { remarkAlerts } from "@codenhub/app-shell/remark-alerts";
 import lucide from "@codenhub/icons/data/lucide";
 import simpleIcons from "@codenhub/icons/data/simple-icons";
 import { viteIcons } from "@codenhub/icons/vite";
+import { TRANSLATION_LOCALES } from "@codenhub/tools/documentation";
 import { snapshotPackagesRoot } from "@codenhub/tools/release";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 
 import { createDocumentationIntegration } from "./src/lib/documentation-integration";
+import { createLocaleNotFoundIntegration } from "./src/lib/locale-not-found-integration";
 import { createCodeBlockTransformer } from "./src/lib/markdown/code-blocks";
 import { rehypeMarkdownEnhancements } from "./src/lib/markdown/rehype-enhancements";
 import { createPublishedDocsSnapshotIntegration } from "./src/lib/published-docs-snapshot-integration";
@@ -31,6 +33,7 @@ export default defineConfig({
       packagesRoot,
       publishedPackagesRoot: snapshotPackagesRoot(publishedDocsSnapshotRoot),
     }),
+    createLocaleNotFoundIntegration(TRANSLATION_LOCALES),
   ],
   markdown: {
     processor: unified({

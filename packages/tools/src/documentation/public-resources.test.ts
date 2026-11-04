@@ -72,6 +72,17 @@ describe("resolveSiteRoute", () => {
     expect(resolveSiteRoute("example", "docs/plans/draft.md")).toBeUndefined();
     expect(resolveSiteRoute("example", "docs/.npmignore")).toBeUndefined();
   });
+
+  it("shouldPublishATranslationUnderItsLocaleAtTheMirroredRoute", () => {
+    expect(resolveSiteRoute("example", "docs/pt-BR/index.md")).toBe("/pt-BR/example/");
+    expect(resolveSiteRoute("example", "docs/es/guides/setup.md")).toBe("/es/example/guides/setup/");
+    expect(resolveSiteRoute("example", "docs/es/assets/diagram.svg")).toBe("/es/example/assets/diagram.svg");
+  });
+
+  it("shouldNotPublishAnUnlistedLocaleOrATranslatedReadme", () => {
+    expect(resolveSiteRoute("example", "docs/fr/index.md")).toBeUndefined();
+    expect(resolveSiteRoute("example", "README.pt-BR.md")).toBeUndefined();
+  });
 });
 
 describe("publishLlmsText", () => {

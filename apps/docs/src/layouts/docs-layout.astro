@@ -4,15 +4,19 @@ import LinkPreview from "../components/link-preview.astro";
 import PageActions from "../components/page-actions.astro";
 import PageOutline from "../components/page-outline.astro";
 import PackageNavigation from "../components/package-navigation.astro";
+import { defaultLocale, messagesFor, type Locale } from "../i18n";
 import { isReferenceDocument, type PublicDocument, type PublicPackage } from "../lib/catalog";
 import BaseLayout from "./base-layout.astro";
 
 interface Props {
   currentPackage: PublicPackage;
   document: PublicDocument;
+  /** The page's language: the document's own, or English for an English page. */
+  locale?: Locale;
 }
 
-const { currentPackage, document } = Astro.props;
+const { currentPackage, document, locale = defaultLocale } = Astro.props;
+const messages = messagesFor(locale);
 const tocHeadings = document.headings.filter(({ depth }) => depth === 2 || depth === 3);
 
 // A generated reference page carries a terse sidebar title (`/`, `/registries`)
@@ -25,27 +29,29 @@ const browserTitle =
 ---
 
 <BaseLayout
+  alternates={document.alternates}
   currentPackage={currentPackage}
   description={document.description ?? currentPackage.description}
+  locale={locale}
   sectionTitle={currentPackage.label}
   title={browserTitle}
 >
   <details class="mobile-navigation">
-    <summary>Browse documentation</summary>
+    <summary>{messages.browse}</summary>
     <div class="mobile-navigation-panel">
-      <PackageNavigation currentPackage={currentPackage} currentRoute={document.route} />
+      <PackageNavigation currentPackage={currentPackage} currentRoute={document.route} locale={locale} />
     </div>
   </details>
 
   <div class="docs-shell section-content wide">
     <aside class="left-rail">
-      <PackageNavigation currentPackage={currentPackage} currentRoute={document.route} />
+      <PackageNavigation currentPackage={currentPackage} currentRoute={document.route} locale={locale} />
     </aside>
 
     <main class="document-column" id="main-content">
       <div class="document-body">
-        {tocHeadings.length > 0 && <PageOutline headings={tocHeadings} />}
-        <PageActions route={document.route} />
+        {tocHeadings.length > 0 && <PageOutline headings={tocHeadings} label={messages.onThisPage} />}
+        <PageActions locale={locale} route={document.route} />
         <article class="markdown-content">
           <slot />
         </article>
@@ -55,8 +61,8 @@ const browserTitle =
     <aside class="toc-rail">
       {
         tocHeadings.length > 0 && (
-          <nav aria-label="On this page" data-toc>
-            <p class="rail-title">On this page</p>
+          <nav aria-label={messages.onThisPage} data-toc>
+            <p class="rail-title">{messages.onThisPage}</p>
             <ol>
               {tocHeadings.map((heading) => (
                 <li class:list={{ nested: heading.depth === 3 }}>
@@ -70,8 +76,8 @@ const browserTitle =
     </aside>
   </div>
 
-  <BackToTop />
-  <LinkPreview />
+  <BackToTop label={messages.backToTop} />
+  <LinkPreview locale={locale} />
 
   <script>
     import { createTocRevealer, findActiveHeadingId } from "../lib/toc-highlight";

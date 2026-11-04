@@ -4,18 +4,31 @@ import {
   buildPackageDefinitions,
   comparePublicDocuments,
   parsePublicDocumentFrontmatter,
+  TRANSLATION_LOCALES,
   type PackageStatus,
+  type TranslationLocale,
 } from "@codenhub/tools/documentation";
 import type { MarkdownHeading, MarkdownInstance } from "astro";
 
+import { defaultLocale, localizePath, type Locale } from "../i18n";
 import { siteConfig } from "../site-config";
 import { publishDocumentMarkdown } from "./document-markdown";
 import { annotateCuratedLinks, applyFolderCuration } from "./folder-curation";
 import { rewritePackageMarkdownLinks } from "./markdown-links";
+import { pageAlternates, type PageAlternate } from "./page-alternates";
 
 type PublicDocumentModule = MarkdownInstance<Record<string, unknown>>;
 
+export type { PageAlternate } from "./page-alternates";
+
 export interface PublicDocument {
+  /**
+   * Every language version of this page, itself included, and `x-default`,
+   * when it has a translation; empty otherwise.
+   */
+  alternates: PageAlternate[];
+  /** Language the page is written in. */
+  lang: Locale;
   /** Whether this is a curated folder's overview page, which lists its published siblings. */
   curated?: boolean;
   description?: string;
@@ -83,6 +96,12 @@ export interface PublicPackage {
   /** Accessible label for the GitHub action when {@link githubUrl} is set. */
   githubLabel?: string;
   label: string;
+  /**
+   * Each locale's navigation list, for a locale the package has at least one
+   * translation in: every published page, translated where a translation exists
+   * and English otherwise.
+   */
+  localeDocuments: Partial<Record<TranslationLocale, PublicDocument[]>>;
   /** npm package name from the manifest. */
   name?: string;
   /** npmjs.com URL, when the package is published. */
@@ -143,68 +162,140 @@ interface LoadedDocument extends PublicDocument {
   rawHtml: string;
 }
 
+interface LoadableDocument {
+  /** Path relative to the package `docs/`, the locale folder included for a translation. */
+  docsPath: string;
+  /** Language the document is written in. */
+  lang: Locale;
+  /** Path of the English document relative to `docs/`, which a translation mirrors. */
+  relativePath: string;
+  routePath: string;
+  sourcePath: string;
+}
+
+async function loadDocument(slug: string, definition: LoadableDocument): Promise<LoadedDocument> {
+  const load = documentModules[definition.sourcePath];
+  if (load === undefined) {
+    throw new Error(`Unable to load documentation source ${definition.sourcePath}.`);
+  }
+
+  const documentModule = await load();
+  const headings = documentModule.getHeadings();
+  const frontmatter = parsePublicDocumentFrontmatter(documentModule.frontmatter, definition.sourcePath);
+  assertSingleH1(headings, definition.sourcePath);
+  const rawHtml = await documentModule.compiledContent();
+
+  const linkedHtml = rewritePackageMarkdownLinks(rawHtml, {
+    packageSlug: slug,
+    sourceRelativePath: definition.docsPath,
+  });
+  const isReference = isReferenceDocument({ relativePath: definition.relativePath });
+
+  return {
+    alternates: [],
+    curated: frontmatter.curated,
+    date: frontmatter.date,
+    description: frontmatter.description,
+    group: frontmatter.group,
+    headings,
+    html: isReference
+      ? insertReferenceDeck(linkedHtml, { description: frontmatter.description, since: frontmatter.since })
+      : linkedHtml,
+    lang: definition.lang,
+    markdown: publishDocumentMarkdown({
+      body: documentModule.rawContent(),
+      relativePath: definition.docsPath,
+      siteUrl: siteConfig.siteUrl,
+      slug,
+    }),
+    order: frontmatter.order,
+    rawHtml,
+    relativePath: definition.relativePath,
+    route: `${localizePath(definition.lang, `/${slug}`)}/${definition.routePath}`.replace(/\/$/, "") + "/",
+    routePath: definition.routePath,
+    since: frontmatter.since,
+    title: frontmatter.title,
+  };
+}
+
+/**
+ * Finishes one navigation list: adds each curated index's sibling annotations,
+ * drops the load-only fields, and sorts in catalog order.
+ * @param loaded The list's documents, already curated.
+ * @returns The published documents.
+ */
+function finishDocuments(loaded: readonly LoadedDocument[]): PublicDocument[] {
+  const documents: PublicDocument[] = loaded.map(({ date: _date, rawHtml: _rawHtml, ...document }) => {
+    if (document.curated !== true) {
+      return document;
+    }
+    const folder = document.relativePath.slice(0, -"index.md".length);
+    // Every other document directly in the index's folder is a sibling it links.
+    const siblings = loaded.filter(({ relativePath }) => {
+      const rest = relativePath.slice(folder.length);
+      return relativePath.startsWith(folder) && rest !== "index.md" && !rest.includes("/");
+    });
+    return { ...document, html: annotateCuratedLinks(document.html, siblings) };
+  });
+  return documents.sort(comparePublicDocuments);
+}
+
 async function loadCatalog(): Promise<PublicPackage[]> {
   return Promise.all(
     packageDefinitions.map(async (packageDefinition) => {
-      const loadedDocuments = await Promise.all(
-        packageDefinition.documents.map(async (definition): Promise<LoadedDocument> => {
-          const loadDocument = documentModules[definition.sourcePath];
-          if (loadDocument === undefined) {
-            throw new Error(`Unable to load documentation source ${definition.sourcePath}.`);
-          }
-
-          const documentModule = await loadDocument();
-          const headings = documentModule.getHeadings();
-          const frontmatter = parsePublicDocumentFrontmatter(documentModule.frontmatter, definition.sourcePath);
-          assertSingleH1(headings, definition.sourcePath);
-          const rawHtml = await documentModule.compiledContent();
-
-          const linkedHtml = rewritePackageMarkdownLinks(rawHtml, {
-            packageSlug: packageDefinition.slug,
-            sourceRelativePath: definition.relativePath,
-          });
-          const isReference = isReferenceDocument({ relativePath: definition.relativePath });
-
-          return {
-            curated: frontmatter.curated,
-            date: frontmatter.date,
-            description: frontmatter.description,
-            group: frontmatter.group,
-            headings,
-            html: isReference
-              ? insertReferenceDeck(linkedHtml, { description: frontmatter.description, since: frontmatter.since })
-              : linkedHtml,
-            markdown: publishDocumentMarkdown({
-              body: documentModule.rawContent(),
-              relativePath: definition.relativePath,
-              siteUrl: siteConfig.siteUrl,
-              slug: packageDefinition.slug,
+      const { slug } = packageDefinition;
+      const englishDocuments = applyFolderCuration(
+        await Promise.all(
+          packageDefinition.documents.map((definition) =>
+            loadDocument(slug, { ...definition, docsPath: definition.relativePath, lang: defaultLocale }),
+          ),
+        ),
+      );
+      // Curation is the English document's: a translation of a page the English
+      // curated index leaves out is not published either.
+      const publishedPaths = new Set(englishDocuments.map(({ relativePath }) => relativePath));
+      const translatedDocuments = await Promise.all(
+        packageDefinition.translations
+          .filter(({ relativePath }) => publishedPaths.has(relativePath))
+          .map((definition) =>
+            loadDocument(slug, {
+              ...definition,
+              docsPath: `${definition.locale}/${definition.relativePath}`,
+              lang: definition.locale,
             }),
-            order: frontmatter.order,
-            rawHtml,
-            relativePath: definition.relativePath,
-            route: `/${packageDefinition.slug}/${definition.routePath}`.replace(/\/$/, "") + "/",
-            routePath: definition.routePath,
-            since: frontmatter.since,
-            title: frontmatter.title,
-          };
-        }),
+          ),
       );
 
-      const curatedDocuments = applyFolderCuration(loadedDocuments);
-      const documents: PublicDocument[] = curatedDocuments.map(({ date: _date, rawHtml: _rawHtml, ...document }) => {
-        if (document.curated !== true) {
-          return document;
+      // Each version of a page names every version, itself included, as an alternate.
+      for (const english of englishDocuments) {
+        const translations = translatedDocuments.filter(({ relativePath }) => relativePath === english.relativePath);
+        const alternates = pageAlternates(english, translations);
+        for (const version of [english, ...translations]) {
+          version.alternates = alternates;
         }
-        const folder = document.relativePath.slice(0, -"index.md".length);
-        // Every other document directly in the index's folder is a sibling it links.
-        const siblings = curatedDocuments.filter(({ relativePath }) => {
-          const rest = relativePath.slice(folder.length);
-          return relativePath.startsWith(folder) && rest !== "index.md" && !rest.includes("/");
-        });
-        return { ...document, html: annotateCuratedLinks(document.html, siblings) };
-      });
-      documents.sort(comparePublicDocuments);
+      }
+
+      const documents = finishDocuments(englishDocuments);
+      // A locale's navigation lists every published page, the translation where
+      // there is one and the English page otherwise.
+      const localeDocuments: Partial<Record<TranslationLocale, PublicDocument[]>> = {};
+      for (const locale of TRANSLATION_LOCALES) {
+        const translations = new Map(
+          translatedDocuments
+            .filter(({ lang }) => lang === locale)
+            .map((document) => [document.relativePath, document]),
+        );
+        if (translations.size > 0) {
+          // Curation sets a kept sibling's `order` from its link position in the
+          // English index, so the translation takes the English page's place.
+          localeDocuments[locale] = finishDocuments(
+            englishDocuments.map((english) => {
+              const translation = translations.get(english.relativePath);
+              return translation === undefined ? english : { ...translation, order: english.order };
+            }),
+          );
+        }
+      }
 
       const manifest = manifestModules[packageDefinition.manifestPath];
       const name = readManifestString(manifest, "name");
@@ -219,17 +310,49 @@ async function loadCatalog(): Promise<PublicPackage[]> {
             : undefined,
         description: packageDefinition.description,
         documents,
+        localeDocuments,
         githubLabel: githubUrl === undefined ? undefined : `${name} on GitHub`,
         githubUrl,
         label: packageDefinition.label,
         name,
         npmLabel: npmUrl === undefined ? undefined : `${name} on npm`,
         npmUrl,
-        slug: packageDefinition.slug,
+        slug,
         status: packageDefinition.status,
       };
     }),
   );
+}
+
+/**
+ * The documents a package's navigation lists in a page language.
+ * @param publicPackage The package.
+ * @param locale The page's language.
+ * @returns The locale's list, or the English documents for English or a locale the package has no translation in.
+ */
+export function navigationDocuments(publicPackage: PublicPackage, locale: Locale): PublicDocument[] {
+  return locale === defaultLocale
+    ? publicPackage.documents
+    : (publicPackage.localeDocuments[locale] ?? publicPackage.documents);
+}
+
+/**
+ * Every page a package publishes, each with the language its navigation is shown in.
+ *
+ * English pages are listed once, in English. A translated page is listed under
+ * its own locale; a locale route exists only for a translated document.
+ * @param publicPackage The package.
+ * @returns Each page and its interface language.
+ */
+export function publishedPages(publicPackage: PublicPackage): { document: PublicDocument; locale: Locale }[] {
+  return [
+    ...publicPackage.documents.map((document) => ({ document, locale: defaultLocale as Locale })),
+    ...Object.entries(publicPackage.localeDocuments).flatMap(([locale, documents]) =>
+      (documents ?? [])
+        .filter((document) => document.lang === locale)
+        .map((document) => ({ document, locale: locale as Locale })),
+    ),
+  ];
 }
 
 const packageDefinitions = buildPackageDefinitions(manifestModules, Object.keys(documentModules));

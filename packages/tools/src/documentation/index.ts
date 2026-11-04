@@ -61,6 +61,7 @@ export {
   type PackageMetadata,
   type PackageStatus,
   type PublicPackageSummary,
+  type TranslatedDocumentDefinition,
 } from "./package-metadata.ts";
 export {
   discoverPublicResources,
@@ -89,3 +90,4 @@ export {
   type SignatureResolver,
   type SymbolSignature,
 } from "./reference-signatures.ts";
+export { isTranslationLocale, TRANSLATION_LOCALES, type TranslationLocale } from "./translation-paths.ts";

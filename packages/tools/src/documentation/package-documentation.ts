@@ -44,6 +44,15 @@ export interface PackageDocumentationReport {
 // because the last build left the file behind.
 const IGNORED_DIRECTORIES = new Set([".astro", ".git", "coverage", "dist", "node_modules", "test-results"]);
 
+/**
+ * Lists every file of a package, skipping build output and symlinks.
+ * @param rootPath Absolute package directory.
+ * @returns Package-relative POSIX paths, sorted.
+ */
+export async function listPackageFiles(rootPath: string): Promise<string[]> {
+  return listFiles(rootPath);
+}
+
 async function listFiles(rootPath: string, relativePath = ""): Promise<string[]> {
   const entries = await readdir(join(rootPath, relativePath), { withFileTypes: true });
   const files = await Promise.all(
