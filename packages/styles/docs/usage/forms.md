@@ -193,12 +193,14 @@ An aesthetic that draws its border as an inner shadow, such as `.pixel`, cannot 
 
 Text controls take intent, which colors the border and the focus ring, and both presentation axes. Their fill is capped low, so typed text stays readable:
 
-| On a text control                   | Fill |
-| ----------------------------------- | ---- |
-| `.ghost`, default                   | 0%   |
-| `.solid` inherited from a container | 6%   |
-| `.soft`, inherited or its own       | 12%  |
-| `.solid` on the control itself      | 20%  |
+| On a text control                               | Fill |
+| ----------------------------------------------- | ---- |
+| `.ghost`, default                               | 0%   |
+| Any fill from a container (`.soft` or `.solid`) | 6%   |
+| `.soft` on the control                          | 12%  |
+| `.solid` on the control                         | 20%  |
+
+A container's fill is meant for the surfaces in it, so a field nobody classed takes only a faint 6% of it. Put the class on the field itself for more.
 
 The border works the same way. An `.edgeless` inherited from a container is ignored, so a toolbar cannot leave a field with no visible edge. `.edgeless` written on the control itself is honored: that is how you ask for a borderless field. A borderless field does not meet the WCAG 1.4.11 contrast requirement for a control's boundary, so it is never a default; its focus ring still shows.
 
@@ -207,7 +209,7 @@ The border works the same way. An `.edgeless` inherited from a container is igno
 <input class="ipt soft edged" placeholder="Tinted, with a border" />
 <input class="ipt soft edgeless" placeholder="Sunk into the page" />
 <div class="soft">
-  <input class="ipt" placeholder="Inherits soft from the container" />
+  <input class="ipt" placeholder="A container's .soft gives a 6% tint" />
 </div>
 ```
 

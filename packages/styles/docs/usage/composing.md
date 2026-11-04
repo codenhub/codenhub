@@ -81,22 +81,8 @@ A neutral `.card.soft`, `.panel`, `.alert`, `.kbd`, `.code`, and `.pre` show no 
 
 ### Text controls and toggles
 
-A text control limits how much fill it takes, so typed text stays readable:
-
-| On a text control                   | Fill |
-| ----------------------------------- | ---- |
-| `.ghost`, default                   | 0%   |
-| `.solid` inherited from a container | 6%   |
-| `.soft`, inherited or its own       | 12%  |
-| `.solid` on the control itself      | 20%  |
-
-The border follows the same rule. An `.edgeless` inherited from a container is ignored, so a toolbar cannot erase the border of a field inside it. `.edgeless` on the control itself is honored.
-
-A toggle's unchecked fill is capped at 40%, whether the class is on the toggle or on a container: `.ghost` is 0%, `.soft` and the default are 12%, and `.solid` is 40%. Once checked, every toggle fills to 100%, whatever its presentation.
-
-`.checkbox` and `.radio` always draw their border, even with their own `.edgeless`, because the border is the only thing that shows an unchecked box. `.switch.ghost` keeps its border too: with no fill and no border, nothing would show the track. `.switch.ghost.edgeless` looks the same as `.switch.ghost.edged`.
-
-[Forms](./forms.md#checked-and-unchecked-colors) shows the toggle colors in full.
+- **Text controls** cap their fill so typed text stays readable: at most 6% from a container, 12% for their own `.soft`, and 20% for their own `.solid`. They ignore an `.edgeless` from a container and honor their own. See [Forms → Fill and border on text controls](./forms.md#fill-and-border-on-text-controls).
+- **Toggles** cap their unchecked fill at 40% and fill to 100% once checked. `.checkbox` and `.radio` always draw their border, and so does `.switch.ghost`. See [Forms → Checked and unchecked colors](./forms.md#checked-and-unchecked-colors).
 
 ### Tooltip bubbles
 
