@@ -55,7 +55,7 @@ Examples:
 
 ## Loading
 
-The package ships no loading state or spinner of its own: a loading button is a disabled `.btn` composed with a spinner you bring, such as a `@codenhub/icons` glyph with `ic-anim-spin` (see [Feedback](./feedback.md)). Disable the button so users cannot trigger duplicate work, and drop the spinner in beside the label. Whether to also hide the label is your call; the package has no built-in mechanism for that.
+The package ships no loading state or spinner of its own: a loading button is a disabled `.btn` composed with a spinner you bring, such as a `@codenhub/icons` glyph with `ic-anim-spin`. This package does not load those icon classes; [Feedback](./feedback.md) shows how to load `@codenhub/icons` for your pipeline. Disable the button so users cannot trigger duplicate work, and drop the spinner in beside the label. Whether to also hide the label is your call; the package has no built-in mechanism for that.
 
 On the base look a press scales the button down a little (`--ui-active-transform`, `scale(0.97)`). [Aesthetics](./aesthetics.md) swap in their own press gesture, and `prefers-reduced-motion` turns it off.
 

@@ -18,6 +18,13 @@ order: 7
 
 The package ships no spinner. Bring one from an icon set, such as `@codenhub/icons`: a glyph with `ic-anim-spin` (`ic-lucide-loader-circle ic-anim-spin`), or the animated `svg-spinners` family. A `currentColor` icon matches the text around it. `ic-anim-spin` stops under `prefers-reduced-motion: reduce`; `svg-spinners` artwork keeps moving. See [Accessibility](../accessibility.md).
 
+This package does not import an icon set. Install `@codenhub/icons` and load it for your pipeline, as its README describes: after Tailwind, `@import "@codenhub/icons/tw";`; in plain CSS, the base rules and each family you use:
+
+```css
+@import "@codenhub/icons";
+@import "@codenhub/icons/lucide";
+```
+
 Alerts, badges, progress bars, and skeletons accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, and `.info`. Without an intent, alerts and badges use the text palette, while the indicators -- `.skeleton` and `.progress` -- take `currentColor`, so they match whatever content surrounds them.
 
 Skeletons and dividers are indicators: they read intent but ignore fill and edge [presentation](./composing.md#presentation). `.progress` is not one of them — its track reads both, `.soft.edgeless` by default; only the moving value fill stays intent-colored at full strength regardless of presentation. `.solid` is unsupported on the track, and `.ghost.edgeless` renders but is discouraged, since neither leaves the track a visible frame. See [Composing → Component axis reference](./composing.md#component-axis-reference) for the full table.

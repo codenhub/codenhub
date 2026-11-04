@@ -1255,7 +1255,7 @@ Examples:
 
 ## Loading
 
-The package ships no loading state or spinner of its own: a loading button is a disabled `.btn` composed with a spinner you bring, such as a `@codenhub/icons` glyph with `ic-anim-spin` (see [Feedback](docs/usage/feedback.md)). Disable the button so users cannot trigger duplicate work, and drop the spinner in beside the label. Whether to also hide the label is your call; the package has no built-in mechanism for that.
+The package ships no loading state or spinner of its own: a loading button is a disabled `.btn` composed with a spinner you bring, such as a `@codenhub/icons` glyph with `ic-anim-spin`. This package does not load those icon classes; [Feedback](docs/usage/feedback.md) shows how to load `@codenhub/icons` for your pipeline. Disable the button so users cannot trigger duplicate work, and drop the spinner in beside the label. Whether to also hide the label is your call; the package has no built-in mechanism for that.
 
 On the base look a press scales the button down a little (`--ui-active-transform`, `scale(0.97)`). [Aesthetics](docs/usage/aesthetics.md) swap in their own press gesture, and `prefers-reduced-motion` turns it off.
 
@@ -1434,6 +1434,13 @@ Keep a hint or error message outside the `<label>` and point `aria-describedby` 
 | `.indeterminate` | Optional on `.progress` to animate a moving fill without `--progress-value`. |
 
 The package ships no spinner. Bring one from an icon set, such as `@codenhub/icons`: a glyph with `ic-anim-spin` (`ic-lucide-loader-circle ic-anim-spin`), or the animated `svg-spinners` family. A `currentColor` icon matches the text around it. `ic-anim-spin` stops under `prefers-reduced-motion: reduce`; `svg-spinners` artwork keeps moving. See [Accessibility](docs/accessibility.md).
+
+This package does not import an icon set. Install `@codenhub/icons` and load it for your pipeline, as its README describes: after Tailwind, `@import "@codenhub/icons/tw";`; in plain CSS, the base rules and each family you use:
+
+```css
+@import "@codenhub/icons";
+@import "@codenhub/icons/lucide";
+```
 
 Alerts, badges, progress bars, and skeletons accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, and `.info`. Without an intent, alerts and badges use the text palette, while the indicators -- `.skeleton` and `.progress` -- take `currentColor`, so they match whatever content surrounds them.
 
