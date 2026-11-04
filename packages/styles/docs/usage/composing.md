@@ -88,14 +88,7 @@ A neutral `.card.soft`, `.panel`, and `.alert` show no tint at rest. They use th
 
 ### Tooltip bubbles
 
-A tooltip bubble is filled. An intent fills it with that intent's color and switches its text to the matching contrast color:
-
-- `.tooltip-bubble.primary` has a near-black background with near-white text on a light page, and a near-white background with near-black text on a dark one.
-- `.tooltip-bubble.destructive` is red with light text.
-
-With no intent, the bubble uses `--color-tooltip`, chosen per theme rather than derived from an intent: near-white on a light page, mid gray on a dark one, with `--color-tooltip-contrast` as its text color.
-
-Near-white measures only 1.04:1 against a light page, so the bubble also draws a thin border. A container's `.edgeless` cannot remove it; `.tooltip-bubble.edgeless` can. The bubble's background stays opaque under any presentation, so it stays readable over whatever it covers. [Tooltips](./tooltips.md) has the rest.
+A tooltip bubble is always filled and opaque, and draws a thin border that only its own `.edgeless` removes. With no intent it uses `--color-tooltip`; an intent fills it with that intent's color. [Tooltips → How the bubble looks](./tooltips.md#how-the-bubble-looks) has the colors.
 
 ### Progress tracks
 

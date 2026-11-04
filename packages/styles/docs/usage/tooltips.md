@@ -110,7 +110,7 @@ document.addEventListener("keydown", (event) => {
 
 ## How the bubble looks
 
-With no intent class, the bubble uses `--color-tooltip`, a background chosen per theme: near-white on a light page, mid gray on a dark one, with `--color-tooltip-contrast` as its text color. Near-white measures only 1.04:1 against a light page, so the bubble also draws a thin border, and a container's `.edgeless` cannot remove it. `.edgeless` on the bubble itself still can.
+With no intent class, the bubble uses `--color-tooltip`, a background chosen per theme: near-white on a light page, mid gray on a dark one, with `--color-tooltip-contrast` as its text color. Near-white measures only 1.04:1 against a light page, so the bubble also draws a thin border, and a container's `.edgeless` cannot remove it. `.edgeless` on the bubble itself still can. The background stays opaque under any presentation, so the bubble stays readable over whatever it covers.
 
 An intent class fills the bubble with that intent's color and switches the text to the matching contrast color:
 
