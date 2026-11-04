@@ -107,15 +107,15 @@ A validator is synchronous unless something it runs is asynchronous. Checking a 
 
 ## Testing whether a value passes
 
-When you only need a yes or no, or a type guard, use `is`:
+When you only need a yes or no, use `is`:
 
 ```ts
 import { is, number } from "@codenhub/validation";
 
-const isPort = (input: unknown): input is number => is(number({ int: true, min: 1, max: 65535 }), input);
+const isPort = (input: unknown): boolean => is(number({ int: true, min: 1, max: 65535 }), input);
 ```
 
-`is` returns a `boolean` and does not narrow its input, so the guard above names the type itself. A type guard also says that a value that fails is not of the type, which is false of a validator: `string({ min: 3 })` refuses `"ab"`, which is a string. Read `result.value` from calling the validator where you want the typed value. `is` accepts synchronous validators only.
+`is` returns a `boolean` and does not narrow its input, and `isPort` is no type guard for the same reason: a type guard also says that a value that fails is not of the type, which is false of a validator, since `isPort(70000)` is false for a number. Read `result.value` from calling the validator where you want the typed value. `is` accepts synchronous validators only.
 
 ## Throwing for invalid configuration
 

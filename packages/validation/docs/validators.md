@@ -876,7 +876,7 @@ A validator is still called with any value at all. The input type says what can 
 
 ### `is`
 
-`is(validator, input)` returns whether `input` passes, as a `boolean`. It does not narrow `input`: a type guard also says that a value that fails is not of the type, and `string({ min: 3 })` refuses `"ab"`, which is a string. Read `result.value` from calling the validator for the typed value, or wrap `is` in a guard of your own for the one type you mean, `(input: unknown): input is number => is(number(), input)`. It accepts synchronous validators only, and throws a `TypeError` if the validator turns out to return a promise.
+`is(validator, input)` returns whether `input` passes, as a `boolean`. It does not narrow `input`: a type guard also says that a value that fails is not of the type, and `string({ min: 3 })` refuses `"ab"`, which is a string. Read `result.value` from calling the validator for the typed value, or wrap `is` in a guard of your own where the validator accepts every value of the type, as `string()` with no options does: `(input: unknown): input is string => is(string(), input)`. `number()` is not one, since it refuses `NaN`. It accepts synchronous validators only, and throws a `TypeError` if the validator turns out to return a promise.
 
 ### `pass` and `fail`
 

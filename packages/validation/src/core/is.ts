@@ -8,14 +8,19 @@ import type { ValidationErr, ValidationResult, Validator } from "./types";
  * It returns a `boolean` and narrows nothing. A type guard says two things, that a value that passes is
  * of the type and that one that fails is not, and the second is false of a validator: `string({ min: 3 })`
  * refuses `"ab"`, which is a string. Where the type is wanted, read `result.value` from calling the
- * validator, or write the guard for the one type you mean, as below.
+ * validator, as below.
  *
  * @example
  * ```ts
- * const isPort = (input: unknown): input is number => is(number({ int: true, min: 1, max: 65535 }), input);
+ * const port = number({ int: true, min: 1, max: 65535 });
  *
- * if (is(email(), value)) {
+ * if (is(port, value)) {
  *   // value passes, and is still typed as it was
+ * }
+ *
+ * const result = port(value);
+ * if (result.ok) {
+ *   const chosen: number = result.value;
  * }
  * ```
  *
