@@ -22,10 +22,11 @@ This records what `@codenhub/validation` is building toward, what it takes to re
 
 ## Current Focus
 
-**0.5.0 fixes what the audit before release found in 0.4.x.** 0.4.0 was released on 2026-10-09 and 0.4.1, which changed no code, on 2026-11-03. Since then, fixes have landed that break a caller, so the next release is 0.5.0 rather than 0.4.2, as [Versioning until 1.0](#versioning-until-10) asks. Four of them break: `pick`, `omit` and their kin merge the options given to them, `encode` writes a codec back through its output, `toJsonSchema` writes a schema that readers compile and agree with, and a recursion that waits between levels is held to `maxDepth`. The audit that found them, on 2026-11-04, is not kept in the repository; each fix records its case in its test and, where it changed a decision, in [architecture.md](architecture.md). The 0.5.0 changelog lists them when the release is cut.
+**0.5.0 fixes what the audit before release found in 0.4.x.** 0.4.0 was released on 2026-10-09 and 0.4.1, which changed no code, on 2026-11-03. Since then, fixes have landed that break a caller, so the next release is 0.5.0 rather than 0.4.2, as [Versioning until 1.0](#versioning-until-10) asks. Several of them break a caller, among them `pick`, `omit` and their kin merging the options given to them, `encode` writing a codec back through its output, the JSON Schema `toJsonSchema` writes, and a recursion that waits between levels being held to `maxDepth`. The 0.5.0 changelog marks each one when the release is cut. The fixes are merged as they are made and wait for that release; nothing of them is published before it.
 
 0.5.0 is released when:
 
+- Its README and public pages are translated into pt-BR and es, and the tools and both sites support translations as [the translations spec](../../../../docs/specs/packages-translations.md) defines, so the translations ship with the release. The owner decided on 2026-11-04 that 0.5.0 is not released without them. Rejected: releasing 0.5.0 first and the translations with 0.5.1, which the spec allows, since the release is where the translations reach readers.
 - `README.md` and every public page describe 0.5.0 as it ships, the translations are current with them, `llms.txt` and `llms-full.txt` are current, and the examples of the docs type-check and run against the built package.
 - `pnpm verify` passes, the changelog entry describes the release as it ships, with its date, and `hub release validation` reports it ready.
 
