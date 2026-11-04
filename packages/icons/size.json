@@ -1517,9 +1517,9 @@
         "default": {
           "files": {
             "dist/vite/plugin.js": {
-              "bytes": 8002,
+              "bytes": 8076,
               "declarations": {
-                "viteIcons": 3364,
+                "viteIcons": 3386,
                 "replaceIconTagsWithSvg": 749,
                 "getEnclosingQuote": 736,
                 "stripComments": 659,
@@ -1528,10 +1528,10 @@
                 "replaceIconTagsInTemplate": 264,
                 "splitAstroFrontmatter": 256,
                 "resolveIconTagClasses": 237,
+                "renderIconModule": 175,
                 "resolveIconModule": 172,
                 "stringQuoteAt": 166,
                 "createRegistry": 149,
-                "renderIconModule": 123,
                 "replaceIconTagsInAstro": 123,
                 "ICON_TAG": 97,
                 "removeIconTags": 69,
@@ -1643,15 +1643,15 @@
               }
             }
           },
-          "gzip": 7172,
-          "minified": 18669
+          "gzip": 7207,
+          "minified": 18743
         },
         "viteIcons": {
           "files": {
             "dist/vite/plugin.js": {
-              "bytes": 8002,
+              "bytes": 8076,
               "declarations": {
-                "viteIcons": 3364,
+                "viteIcons": 3386,
                 "replaceIconTagsWithSvg": 749,
                 "getEnclosingQuote": 736,
                 "stripComments": 659,
@@ -1660,10 +1660,10 @@
                 "replaceIconTagsInTemplate": 264,
                 "splitAstroFrontmatter": 256,
                 "resolveIconTagClasses": 237,
+                "renderIconModule": 175,
                 "resolveIconModule": 172,
                 "stringQuoteAt": 166,
                 "createRegistry": 149,
-                "renderIconModule": 123,
                 "replaceIconTagsInAstro": 123,
                 "ICON_TAG": 97,
                 "removeIconTags": 69,
@@ -1775,15 +1775,15 @@
               }
             }
           },
-          "gzip": 7176,
-          "minified": 18671
+          "gzip": 7211,
+          "minified": 18745
         },
         "viteIconsPlugin": {
           "files": {
             "dist/vite/plugin.js": {
-              "bytes": 8014,
+              "bytes": 8088,
               "declarations": {
-                "viteIcons": 3364,
+                "viteIcons": 3386,
                 "replaceIconTagsWithSvg": 749,
                 "getEnclosingQuote": 736,
                 "stripComments": 659,
@@ -1792,10 +1792,10 @@
                 "replaceIconTagsInTemplate": 264,
                 "splitAstroFrontmatter": 256,
                 "resolveIconTagClasses": 237,
+                "renderIconModule": 175,
                 "resolveIconModule": 172,
                 "stringQuoteAt": 166,
                 "createRegistry": 149,
-                "renderIconModule": 123,
                 "replaceIconTagsInAstro": 123,
                 "ICON_TAG": 97,
                 "removeIconTags": 69,
@@ -1908,15 +1908,15 @@
               }
             }
           },
-          "gzip": 7188,
-          "minified": 18689
+          "gzip": 7222,
+          "minified": 18763
         }
       },
       "files": {
         "dist/vite/plugin.js": {
-          "bytes": 8012,
+          "bytes": 8086,
           "declarations": {
-            "viteIcons": 3363,
+            "viteIcons": 3385,
             "replaceIconTagsWithSvg": 749,
             "getEnclosingQuote": 736,
             "stripComments": 659,
@@ -1925,10 +1925,10 @@
             "replaceIconTagsInTemplate": 264,
             "splitAstroFrontmatter": 256,
             "resolveIconTagClasses": 237,
+            "renderIconModule": 175,
             "resolveIconModule": 172,
             "stringQuoteAt": 166,
             "createRegistry": 149,
-            "renderIconModule": 123,
             "replaceIconTagsInAstro": 123,
             "ICON_TAG": 97,
             "removeIconTags": 69,
@@ -2041,9 +2041,9 @@
           }
         }
       },
-      "gzip": 7194,
-      "minified": 18717,
-      "sha256": "acd852348200f7775fb5a828f77f51e6976b3973d5927322c149618443c2078d"
+      "gzip": 7229,
+      "minified": 18791,
+      "sha256": "a91b80b5e7e738b993e554534316cba4a5f04adda0937d339ae493a22b86d54a"
     }
   }
 }
