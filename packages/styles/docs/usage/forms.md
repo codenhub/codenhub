@@ -39,7 +39,7 @@ Mark the control invalid with `aria-invalid="true"` and give the error message `
 </div>
 ```
 
-An invalid control draws its border and focus ring in the destructive color, whatever intent class it has. The package only paints the state: deciding that the value is invalid, setting and clearing `aria-invalid`, and writing the message are your code. Remove `aria-invalid` once the value is valid again; leaving it set keeps the field red.
+An invalid control draws its border, focus ring, and typed text in the destructive color, whatever intent class it has. The text uses the readable tone of that color, `--intent-strong`, so it stays legible on the page. The package only paints the state: deciding that the value is invalid, setting and clearing `aria-invalid`, and writing the message are your code. Remove `aria-invalid` once the value is valid again; leaving it set keeps the field red.
 
 ## Put the profile form together
 
@@ -191,7 +191,7 @@ An aesthetic that draws its border as an inner shadow, such as `.pixel`, cannot 
 
 ## Fill and border on text controls
 
-Text controls take intent, which colors the border and the focus ring, and both presentation axes. Their fill is capped low, so typed text stays readable:
+Text controls take intent, which colors the border, the focus ring, and the typed text, the text in the intent's readable tone (`--intent-strong`). They also take both presentation axes. Their fill is capped low, so typed text stays readable:
 
 | On a text control                               | Fill |
 | ----------------------------------------------- | ---- |
