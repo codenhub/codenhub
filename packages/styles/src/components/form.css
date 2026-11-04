@@ -716,10 +716,13 @@
        physical x offset and mirrored under :dir(rtl) to travel toward the
        opposite edge, matching the inset-inline-start resting position. */
     translate: var(--switch-travel);
+  }
 
-    :dir(rtl) & {
-      translate: calc(-1 * var(--switch-travel));
-    }
+  /* Direction sits on the control, ahead of the pseudo-element: nested as
+     `:dir(rtl) &` inside `&:checked::after`, `&` carries `::after`, which
+     cannot appear inside `:is()`, and the emitted rule matched nothing. */
+  &:checked:dir(rtl)::after {
+    translate: calc(-1 * var(--switch-travel));
   }
 
   /* The mark appears without moving under reduced motion, for the entries

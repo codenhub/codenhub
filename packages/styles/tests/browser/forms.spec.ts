@@ -1271,4 +1271,60 @@ test.describe("forms", () => {
     expect(styles.rtl.chevronX).not.toBe(styles.ltr.chevronX);
     expect(styles.rtl.chevronX).not.toContain("100%");
   });
+
+  /* A checked knob travels to the inline end. The mirrored travel was once
+     nested as `:dir(rtl) &` inside `&:checked::after`, which compiled to an
+     empty `:is()` and matched nothing: a checked right-to-left knob kept the
+     positive travel and left the track past its right edge. The travel token
+     was right all along, so this reads where the knob lands inside the track,
+     resolved from the knob's own used offset and translation, under each
+     direction and under a direction an inner element changes back. */
+  test("keeps a checked switch's knob inside the track at the inline end in either direction", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const knobs = await page.evaluate(() => {
+      const read = (markup: string) => {
+        const host = document.createElement("div");
+        host.innerHTML = markup;
+        document.body.append(host);
+        const track = host.querySelector<HTMLInputElement>(".switch")!;
+        const knob = getComputedStyle(track, "::after");
+        /* Offsets are from the padding box, which starts inside the border. */
+        const start = track.clientLeft + parseFloat(knob.left) + parseFloat(knob.translate || "0");
+        const result = {
+          start,
+          end: start + parseFloat(knob.width),
+          inner: { start: track.clientLeft, end: track.clientLeft + track.clientWidth },
+        };
+        host.remove();
+
+        return result;
+      };
+      const control = (attributes = "") => `<input type="checkbox" class="switch" checked ${attributes} />`;
+
+      return {
+        ltr: read(`<div dir="ltr">${control()}</div>`),
+        rtl: read(`<div dir="rtl">${control()}</div>`),
+        ltrInsideRtl: read(`<div dir="rtl"><div dir="ltr">${control()}</div></div>`),
+        rtlInsideLtr: read(`<div dir="ltr"><div dir="rtl">${control()}</div></div>`),
+        rtlOnControl: read(`<div dir="ltr">${control('dir="rtl"')}</div>`),
+      };
+    });
+
+    for (const [label, knob] of Object.entries(knobs)) {
+      expect(knob.start, `${label} knob start`).toBeGreaterThanOrEqual(knob.inner.start);
+      expect(knob.end, `${label} knob end`).toBeLessThanOrEqual(knob.inner.end);
+    }
+
+    /* Checked, the knob sits against the inline end: the right in left-to-right,
+       the left in right-to-left, the same gap from that edge either way. */
+    const gapLtr = knobs.ltr.inner.end - knobs.ltr.end;
+    const gapRtl = knobs.rtl.start - knobs.rtl.inner.start;
+
+    expect(gapLtr).toBeLessThan(knobs.ltr.start - knobs.ltr.inner.start);
+    expect(gapRtl).toBeCloseTo(gapLtr, 1);
+    expect(knobs.ltrInsideRtl).toEqual(knobs.ltr);
+    expect(knobs.rtlInsideLtr).toEqual(knobs.rtl);
+    expect(knobs.rtlOnControl).toEqual(knobs.rtl);
+  });
 });
