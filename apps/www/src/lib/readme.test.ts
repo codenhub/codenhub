@@ -1,10 +1,23 @@
 import { describe, expect, it } from "vitest";
 
-import { renderReadme } from "./readme";
+import { renderReadme, selectReadme } from "./readme";
 
 const BASE_URL = "https://github.com/codenhub/codenhub/blob/@codenhub/validation@0.4.0/packages/validation/";
 const IMAGE_BASE_URL = "https://github.com/codenhub/codenhub/raw/@codenhub/validation@0.4.0/packages/validation/";
 const BASES = { baseUrl: BASE_URL, imageBaseUrl: IMAGE_BASE_URL };
+
+describe("selectReadme", () => {
+  const readme = { source: "# English", translations: { "pt-BR": "# Português" } };
+
+  it("shows the release's README in the page's locale when it carries one", () => {
+    expect(selectReadme(readme, "pt-BR")).toEqual({ lang: "pt-BR", source: "# Português" });
+  });
+
+  it("falls back to the English README in a locale the release does not translate it to", () => {
+    expect(selectReadme(readme, "es")).toEqual({ lang: "en", source: "# English" });
+    expect(selectReadme(readme, "en")).toEqual({ lang: "en", source: "# English" });
+  });
+});
 
 describe("renderReadme", () => {
   it("keeps the leading title as a section heading that looks like a title", async () => {
@@ -13,6 +26,17 @@ describe("renderReadme", () => {
     expect(html).not.toContain("<h1");
     expect(html).toMatch(/<h2 class="package-readme-title"[^>]*>@codenhub\/validation<\/h2>/u);
     expect(html).toContain("<p>Validation for data.</p>");
+  });
+
+  it("keeps a translated README's title a section heading under its source line", async () => {
+    const html = await renderReadme(
+      "<!-- source: 783c4dee7188267518be702367f3a8cfe8476b67 -->\n\n# @codenhub/validation\n\nValidação de dados.\n",
+      BASES,
+    );
+
+    expect(html).not.toContain("<h1");
+    expect(html).not.toContain("source:");
+    expect(html).toMatch(/^<h2 class="package-readme-title"[^>]*>@codenhub\/validation<\/h2>/u);
   });
 
   it("points package-relative links at the file in the release", async () => {

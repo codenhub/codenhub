@@ -34,7 +34,7 @@ import { describeEntrypoints } from "../../../lib/bundle-breakdown";
 import { catalogPackages, type CatalogPackage } from "../../../lib/catalog";
 import { formatDate } from "../../../lib/format";
 import { describeRootSize, npmTarballUrl } from "../../../lib/package-facts";
-import { renderReadme } from "../../../lib/readme";
+import { renderReadme, selectReadme } from "../../../lib/readme";
 import { headerConfig } from "../../../site-config";
 import "../../../styles/global.css";
 
@@ -126,7 +126,8 @@ const facts: { icon: string; term: string; value: string }[] = [
 // Every entrypoint the manifest exports, with as much of its cost as the release measured.
 const entrypoints = describeEntrypoints(properties.entrypoints, size);
 
-const readmeHtml = entry.readme === undefined ? undefined : await renderReadme(entry.readme.source, entry.readme);
+const readme = entry.readme === undefined ? undefined : selectReadme(entry.readme, locale);
+const readmeHtml = readme === undefined ? undefined : await renderReadme(readme.source, entry.readme!);
 
 const detailTabs = [
   ...(readmeHtml === undefined ? [] : [{ icon: decorative(bookTextIcon), id: "readme", label: t("package.tabs.readme") }]),
@@ -246,6 +247,7 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
               aria-labelledby="package-tab-readme"
               class="package-panel package-readme"
               id="package-panel-readme"
+              lang={readme?.lang === locale ? undefined : readme?.lang}
               role="tabpanel"
               set:html={readmeHtml}
             />
