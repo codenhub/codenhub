@@ -1,10 +1,10 @@
 import { chain, collect, runEach, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
-import { described } from "../core/describe";
+import { describe, described, type Description } from "../core/describe";
 import { cap, MAX_ISSUES } from "../core/limit";
 import { call, composed } from "../core/nesting";
 import { entriesOf, isArray, isPlainObject, setOwn, sizeOfMap, sizeOfSet, timeOf, valuesOf } from "../core/objects";
-import { assertFunction, failWith, issue } from "../core/result";
+import { assertFunction, failWith, issue, RESERVED_KEY, reservedKey } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -34,6 +34,14 @@ type Step = Pending | (() => void);
 /** What each pair of objects already met was merged into, so a pair met again is not walked again. */
 type Merged = Map<object, Map<object, unknown>>;
 
+/** What every pair of one merge shares. */
+interface Walk {
+  /** The two validators whose outputs are merged. */
+  members: readonly [AnyValidator, AnyValidator];
+  conflicts: ValidationIssue[];
+  merged: Merged;
+}
+
 /** The path from the root to a pair, built only when a conflict is reported there. */
 function pathOf(pending: Pending): ValidationPathSegment[] {
   const path: ValidationPathSegment[] = [];
@@ -53,6 +61,81 @@ function conflict(conflicts: ValidationIssue[], pending: Pending): void {
   }
 }
 
+/** Reports an own `__proto__` no shape listed in the object the merge builds at `pending`, as `conflict` reports. */
+function reserved(conflicts: ValidationIssue[], pending: Pending): void {
+  if (conflicts.length <= MAX_ISSUES) {
+    const found = reservedKey(RESERVED_KEY);
+    conflicts.push({ ...found, path: [...pathOf(pending), ...found.path] });
+  }
+}
+
+/** The validators that produce the value of `record`'s output itself, such as the members of a union. */
+function producersOf(record: Description): readonly unknown[] | undefined {
+  switch (record.kind) {
+    case "union":
+    case "intersection":
+      return record["members"] as unknown[];
+    case "tagged":
+      return Object.values(record["variants"] as Record<string, unknown>);
+    case "pipe":
+      return record["steps"] as unknown[];
+    case "codec":
+      return [record["output"]];
+    case "lazy":
+      return [(record["getter"] as () => unknown)()];
+    default:
+      return record["inner"] === undefined ? undefined : [record["inner"]];
+  }
+}
+
+/** The validators that produce what is at `segment` of `record`'s output. */
+function partsAt(record: Description, segment: ValidationPathSegment): readonly unknown[] {
+  switch (record.kind) {
+    case "object":
+    case "objectLike": {
+      const shape = record["shape"] as Record<string, unknown>;
+      return typeof segment === "string" && Object.hasOwn(shape, segment) ? [shape[segment]] : [];
+    }
+    case "array":
+    case "set":
+      return [record["item"]];
+    case "tuple": {
+      const items = record["items"] as unknown[];
+      return typeof segment === "number" && segment < items.length ? [items[segment]] : [record["rest"]];
+    }
+    case "record":
+    case "map":
+      return [record["key"], record["value"]];
+    default:
+      return [];
+  }
+}
+
+/**
+ * Whether a shape that `validator` reaches at `path` lists `__proto__`, so the developer named the key.
+ * Where more than one part may have produced the value, as in a union, any of them listing it is enough,
+ * which keeps what such a shape gave before. `seen` stops a `lazy` that returns itself at the same level.
+ */
+function listsReserved(validator: unknown, path: readonly ValidationPathSegment[], seen = new Set<unknown>()): boolean {
+  const record = typeof validator === "function" ? describe(validator as AnyValidator) : undefined;
+  if (record === undefined || seen.has(validator)) {
+    return false;
+  }
+  seen.add(validator);
+  const producers = producersOf(record);
+  if (producers !== undefined) {
+    return producers.some((each) => listsReserved(each, path, seen));
+  }
+  const [segment, ...rest] = path;
+  if (segment === undefined) {
+    return (
+      (record.kind === "object" || record.kind === "objectLike") &&
+      Object.hasOwn(record["shape"] as object, RESERVED_KEY)
+    );
+  }
+  return partsAt(record, segment).some((each) => listsReserved(each, rest));
+}
+
 /**
  * Merges one pair, queueing the pairs inside it in `inner`. The same value on both sides is kept,
  * which is what a key both sides passed through unchecked holds, and so are two dates holding the same
@@ -64,8 +147,9 @@ function conflict(conflicts: ValidationIssue[], pending: Pending): void {
  * a last step queued after the pairs inside them. Anything else cannot be both values at once, so it is
  * reported in `conflicts` at its path, and the right value stands in only so the walk can go on.
  */
-function mergeOne(pending: Pending, inner: Step[], conflicts: ValidationIssue[], merged: Merged): unknown {
+function mergeOne(pending: Pending, inner: Step[], walk: Walk): unknown {
   const { left, right } = pending;
+  const { conflicts, merged } = walk;
   if (Object.is(left, right)) {
     return right;
   }
@@ -115,6 +199,11 @@ function mergeOne(pending: Pending, inner: Step[], conflicts: ValidationIssue[],
       } else {
         setOwn(output, key, value);
       }
+    }
+    // The object is new, so a `__proto__` an unchecked side passed on would become the prototype of any
+    // copy of it made by assignment, unless a shape listed it.
+    if (Object.hasOwn(output, RESERVED_KEY) && !walk.members.some((each) => listsReserved(each, pathOf(pending)))) {
+      reserved(conflicts, pending);
     }
     return output;
   }
@@ -169,9 +258,8 @@ function mergeOne(pending: Pending, inner: Step[], conflicts: ValidationIssue[],
  * with a list of its own rather than by recursion, so outputs nested deeper than the stack allows,
  * such as two parses of the same JSON, are merged instead of overflowing it.
  */
-function merge(left: unknown, right: unknown, conflicts: ValidationIssue[]): unknown {
+function merge(left: unknown, right: unknown, walk: Walk): unknown {
   let result: unknown;
-  const merged: Merged = new Map();
   const steps: Step[] = [
     {
       left,
@@ -187,7 +275,7 @@ function merge(left: unknown, right: unknown, conflicts: ValidationIssue[]): unk
       continue;
     }
     const inner: Step[] = [];
-    next.place(mergeOne(next, inner, conflicts, merged));
+    next.place(mergeOne(next, inner, walk));
     // Pushed last first, so they are taken in order and conflicts keep the order of the keys. The step
     // that fills a map or a set is queued last, so it runs once every pair inside it is merged.
     for (let index = inner.length - 1; index >= 0; index -= 1) {
@@ -209,7 +297,11 @@ function merge(left: unknown, right: unknown, conflicts: ValidationIssue[]): unk
  * same value, `0` and `-0` merging as `0`, or two dates holding the same moment. Where the outputs differ otherwise, such as
  * `"  ab "` trimmed on one side and uppercased on the other, no value satisfies both, so each such place
  * fails with `invalid_intersection` at its path, rather than one side silently winning, up to the 1,000 issues a collection reports. Cyclic or
- * shared objects in the outputs are merged once, and the merged output keeps their shape. Two `object`s
+ * shared objects in the outputs are merged once, and the merged output keeps their shape. The merged
+ * object is new, so an own `__proto__` key that a side passed on unchecked, as `unknown()` does, is
+ * reported as `invalid_key` with `{ reserved: true }`, as `record` reports it, unless a shape of either
+ * side lists `__proto__` there; a value both sides passed on whole is the input's own object, and is
+ * kept as it is. Two `object`s
  * with `unknownKeys: "strict"` never pass together, since each rejects the keys only the other lists;
  * spread their shapes into one strict object instead. It is synchronous when both validators are, and
  * asynchronous otherwise.
@@ -247,7 +339,7 @@ export function intersection(left: AnyValidator, right: AnyValidator, ...rest: u
       chain(collect(runEach(2, (index) => call(index === 0 ? left : right, input, place))), ([first, second]) => {
         if (first?.ok && second?.ok) {
           const conflicts: ValidationIssue[] = [];
-          const merged = merge(first.value, second.value, conflicts);
+          const merged = merge(first.value, second.value, { members: [left, right], conflicts, merged: new Map() });
           return conflicts.length > 0 ? reject(cap(conflicts, undefined, undefined), place) : accept(merged, place);
         }
         return failWith([first, second].flatMap((result) => (result?.ok === false ? result.error.issues : [])));

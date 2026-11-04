@@ -11,6 +11,7 @@ import { intersection } from "./intersection";
 import { json } from "./json";
 import { map } from "./map";
 import { object } from "./object";
+import { optional } from "./optional";
 import { set } from "./set";
 import { transform } from "./transform";
 
@@ -154,6 +155,40 @@ describe("intersection", () => {
     const output = valueOf(intersection(listed, listed)(parsed));
     expect(({} as { admin?: boolean }).admin).toBeUndefined();
     expect(Object.getPrototypeOf(output)).toBe(Object.prototype);
+  });
+
+  const reserved = (path: string[]): unknown => ({
+    code: "invalid_key",
+    path: [...path, "__proto__"],
+    params: { issues: [{ code: "invalid_value", path: [], params: { reserved: true } }] },
+  });
+
+  it("should report a __proto__ key an unchecked side would copy into the object it builds", () => {
+    const parsed = JSON.parse('{"__proto__":{"admin":true},"a":"x"}') as unknown;
+    expect(issuesOf(intersection(unknown(), object({ a: string() }))(parsed))).toEqual([reserved([])]);
+    expect(issuesOf(intersection(object({ a: string() }), unknown())(parsed))).toEqual([reserved([])]);
+  });
+
+  it("should report a __proto__ key an unchecked side would copy at its path inside the output", () => {
+    const parsed = JSON.parse('{"inner":{"__proto__":{"admin":true},"a":"x"}}') as unknown;
+    const left = object({ inner: unknown() });
+    const right = object({ inner: object({ a: string() }) });
+    expect(issuesOf(intersection(left, right)(parsed))).toEqual([reserved(["inner"])]);
+  });
+
+  it("should keep a value both sides passed on whole, which is the input's own object and builds none", () => {
+    const parsed = JSON.parse('{"__proto__":{"admin":true}}') as unknown;
+    expect(valueOf(intersection(unknown(), unknown())(parsed))).toBe(parsed);
+  });
+
+  it("should keep a __proto__ key a shape lists on one side only, there or deeper", () => {
+    const parsed = JSON.parse('{"__proto__":{"admin":true},"a":"x"}') as unknown;
+    const listed = object({ ["__proto__"]: unknown(), a: string() });
+    const output = valueOf(intersection(listed, object({ a: string() }))(parsed)) as object;
+    expect(Object.hasOwn(output, "__proto__")).toBe(true);
+    const nested = JSON.parse('{"items":[{"__proto__":{"admin":true}}]}') as unknown;
+    const deep = object({ items: array(optional(object({ ["__proto__"]: unknown() }))) });
+    expect(issuesOf(intersection(object({ items: unknown() }), deep)(nested))).toEqual([]);
   });
 
   it("should keep a value both sides passed through as it is, so cyclic input does not recurse forever", () => {
