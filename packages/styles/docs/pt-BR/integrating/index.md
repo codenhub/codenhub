@@ -3,7 +3,7 @@ title: Visão geral
 description: Como a folha de estilos é carregada no build de um framework e qual guia seguir.
 group: Integração
 order: 2
-source: a7353f2d39d05f89769513beb128e8de653b2bf6
+source: f2ccb27bbdbe15278726278864c01a586505eb16
 ---
 
 # Integração
@@ -40,7 +40,7 @@ Depois do import, renderize um elemento estilizado e confirme que ele pegou os t
 <button class="btn primary">Save changes</button>
 ```
 
-Um botão arredondado preenchido com a cor primária (quase preto numa página clara, quase branco numa escura) significa que a folha de estilos carregou. Texto com o padrão do navegador, sem estilo, na maioria das vezes significa que o especificador do import não foi resolvido — confira na [tabela de entrypoints](../setup.md#todos-os-entrypoints) o especificador exato de que o seu entrypoint precisa, e confirme que o ferramental do seu build resolve imports de CSS de pacotes; veja [Configuração → Requisitos](../setup.md#requisitos). Sem ferramenta de build, referencie o arquivo pelo caminho; veja [Sem bundler](./without-a-bundler.md). [Configuração → Quando nada é estilizado](../setup.md#quando-nada-é-estilizado) lista as outras causas comuns.
+Um botão arredondado preenchido com a cor primária (quase preto numa página clara, quase branco numa escura) significa que a folha de estilos carregou. Texto com o padrão do navegador, sem estilo, na maioria das vezes significa que o especificador do import não foi resolvido — confira na [tabela de entrypoints](../setup.md#todos-os-entrypoints) o especificador exato a importar, e confirme que o ferramental do seu build resolve imports de CSS de pacotes; veja [Configuração → Requisitos](../setup.md#requisitos). Sem ferramenta de build, referencie o arquivo pelo caminho; veja [Sem bundler](./without-a-bundler.md). [Configuração → Quando nada é estilizado](../setup.md#quando-nada-é-estilizado) lista as outras causas comuns.
 
 ## A seguir
 

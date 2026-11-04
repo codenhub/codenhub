@@ -2,7 +2,7 @@
 title: Sin bundler
 description: Enlazar las hojas de estilos compiladas desde HTML simple, Rails, Django o cualquier aplicación renderizada en el servidor.
 order: 6
-source: c18a6d2488839883d8171685e9916225c4eb98fd
+source: 3b29f40d4ca6413f4c0ee8e3a69eb1f8394e2ba6
 ---
 
 # Sin bundler

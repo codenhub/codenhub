@@ -2,7 +2,7 @@
 title: Sem bundler
 description: Como referenciar as folhas de estilos compiladas a partir de HTML puro, Rails, Django ou qualquer aplicação renderizada no servidor.
 order: 6
-source: c18a6d2488839883d8171685e9916225c4eb98fd
+source: 3b29f40d4ca6413f4c0ee8e3a69eb1f8394e2ba6
 ---
 
 # Sem bundler

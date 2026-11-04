@@ -3,7 +3,7 @@ title: Visión general
 description: Cómo se carga la hoja de estilos en el build de un framework, y qué guía seguir.
 group: Integración
 order: 2
-source: a7353f2d39d05f89769513beb128e8de653b2bf6
+source: f2ccb27bbdbe15278726278864c01a586505eb16
 ---
 
 # Integración
@@ -40,7 +40,7 @@ Después del import, renderiza un elemento con estilo y confirma que ha tomado l
 <button class="btn primary">Save changes</button>
 ```
 
-Un botón redondeado relleno con el color principal (casi negro en una página clara, casi blanco en una oscura) significa que la hoja de estilos se ha cargado. Un texto sin estilo, con los valores por defecto del navegador, casi siempre significa que el especificador del import no se ha resuelto: consulta en la [tabla de puntos de entrada](../setup.md#todos-los-puntos-de-entrada) el especificador exacto que necesita tu punto de entrada, y confirma que tus herramientas de build resuelven imports de CSS de paquetes; consulta [Configuración inicial → Requisitos](../setup.md#requisitos). Sin herramienta de build, enlaza el archivo por su ruta; consulta [Sin bundler](./without-a-bundler.md). [Configuración inicial → Cuando nada tiene estilo](../setup.md#cuando-nada-tiene-estilo) enumera las otras causas habituales.
+Un botón redondeado relleno con el color principal (casi negro en una página clara, casi blanco en una oscura) significa que la hoja de estilos se ha cargado. Un texto sin estilo, con los valores por defecto del navegador, casi siempre significa que el especificador del import no se ha resuelto: consulta en la [tabla de puntos de entrada](../setup.md#todos-los-puntos-de-entrada) el especificador exacto que debes importar, y confirma que tus herramientas de build resuelven imports de CSS de paquetes; consulta [Configuración inicial → Requisitos](../setup.md#requisitos). Sin herramienta de build, enlaza el archivo por su ruta; consulta [Sin bundler](./without-a-bundler.md). [Configuración inicial → Cuando nada tiene estilo](../setup.md#cuando-nada-tiene-estilo) enumera las otras causas habituales.
 
 ## Siguiente paso
 
