@@ -162,6 +162,71 @@ test.describe("forms", () => {
     }
   });
 
+  /* Typed text is printed on a page: a ghost field shows the page through, and
+     even a solid one is a light wash. `--intent-color` is a fill colour and
+     reads below 4.5:1 there for several intents -- warning at 3.06:1 in light,
+     success, destructive (and so an invalid field), and info near 3.1-3.7:1 in
+     dark -- so the text takes `--intent-strong`, measured here on the field's
+     rendered ground for every intent, both themes, and each presentation. */
+  test("prints typed text at 4.5:1 on its field for every intent and presentation", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    for (const theme of ["light", "dark"]) {
+      // oxlint-disable-next-line no-await-in-loop -- one theme, then the other, on one page.
+      const fields = await page.evaluate((name) => {
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(name);
+        const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+        /* The nearest painted ancestor: the page the field shows through. */
+        const ground = (element: Element) => {
+          for (let node: Element | null = element; node; node = node.parentElement) {
+            const color = getComputedStyle(node).backgroundColor;
+            if (color !== "rgba(0, 0, 0, 0)" && color !== "transparent") {
+              return color;
+            }
+          }
+          return getComputedStyle(document.documentElement).backgroundColor;
+        };
+        const results: { label: string; color: string; background: string; page: string }[] = [];
+        const intents = ["", "neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
+        const controls = {
+          ipt: '<input class="ipt CLASSES" ATTRS value="Typed" />',
+          textarea: '<textarea class="textarea CLASSES" ATTRS>Typed</textarea>',
+          select: '<select class="select CLASSES" ATTRS><option>Typed</option></select>',
+        };
+
+        for (const [control, template] of Object.entries(controls)) {
+          for (const presentation of ["ghost", "soft", "solid"]) {
+            for (const state of [...intents, "invalid"]) {
+              const wrapper = document.createElement("div");
+              const classes = `${presentation} ${state === "invalid" ? "" : state}`;
+              wrapper.innerHTML = template
+                .replace("CLASSES", classes)
+                .replace("ATTRS", state === "invalid" ? 'aria-invalid="true"' : "");
+              host.append(wrapper);
+              const field = wrapper.firstElementChild!;
+              const styles = getComputedStyle(field);
+              results.push({
+                label: `${name} .${control}.${presentation}${state ? ` ${state}` : ""}`,
+                color: styles.color,
+                background: styles.backgroundColor,
+                page: ground(wrapper),
+              });
+              wrapper.remove();
+            }
+          }
+        }
+
+        return results;
+      }, theme);
+
+      for (const field of fields) {
+        const ratio = getContrastRatio(field.color, flattenColor(field.background, field.page));
+        expect.soft(ratio, `${field.label} typed text`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
   /* `none` is only valid as an entire `box-shadow` value. Composing a focus ring
      as `<ring>, var(--ui-shadow, none)` makes the whole declaration invalid, so
      the ring silently disappears. Asserted on a real focus because that is the

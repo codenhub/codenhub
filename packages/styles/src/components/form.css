@@ -32,8 +32,8 @@
 
      Named rather than written into the `min()`, because the soft hover below is
      derived from it and the two must not drift apart. Typed text is
-     `--intent-color` over a wash of its own tone, past 10:1 in both themes at
-     any value this cap is likely to take.
+     `--intent-strong` over a wash of its own tone, which holds 4.5:1 for every
+     intent in both themes up to `.solid`'s 20% below.
 
      The fill and the ink are `box`'s own, unrestated: its `--_capped` reads
      this cap, so the plate and the ink ramp stay in step at every bound,
@@ -255,7 +255,8 @@
      own utility; a consumer's utility setting an intent slot on an invalid
      field loses to it too, because state wins over every choice
      (model.md#precedence). `--intent-hover` is redirected with the others so
-     the line does not go grey under the pointer. The `:has()` arm bridges an
+     the line does not go grey under the pointer, and `--intent-strong` so typed
+     text is destructive too. The `:has()` arm bridges an
      inner control's state to an `.input-group`. */
   :is(
     .text-control,
@@ -274,6 +275,7 @@
     --intent-color: var(--color-destructive);
     --intent-hover: var(--color-destructive-hover);
     --intent-border: var(--color-destructive);
+    --intent-strong: var(--color-destructive-strong);
   }
 }
 
@@ -289,10 +291,12 @@
   --_d-border: 100%;
   --_d-elevation: 0;
 
-  /* Typed text is the intent colour at full strength -- on the three text
-     inputs, not `text-control`, because a toggle's mark takes `box`'s composed
-     `--_fg` instead. */
-  --_fg: var(--intent-color);
+  /* Typed text is the intent printed on a page, `--intent-strong`: a field's
+     plate is at most a wash, and `--intent-color`, a fill colour, reads below
+     4.5:1 there for several intents. On the three text inputs, not
+     `text-control`, because a toggle's mark takes `box`'s composed `--_fg`
+     instead. See docs/internal/model.md#intent. */
+  --_fg: var(--intent-strong);
 
   min-height: var(--control-height);
 }
@@ -332,10 +336,12 @@
   --_d-border: 100%;
   --_d-elevation: 0;
 
-  /* Typed text is the intent colour at full strength -- on the three text
-     inputs, not `text-control`, because a toggle's mark takes `box`'s composed
-     `--_fg` instead. */
-  --_fg: var(--intent-color);
+  /* Typed text is the intent printed on a page, `--intent-strong`: a field's
+     plate is at most a wash, and `--intent-color`, a fill colour, reads below
+     4.5:1 there for several intents. On the three text inputs, not
+     `text-control`, because a toggle's mark takes `box`'s composed `--_fg`
+     instead. See docs/internal/model.md#intent. */
+  --_fg: var(--intent-strong);
 
   @apply min-h-28 resize-y;
 }
@@ -351,10 +357,12 @@
   --_d-border: 100%;
   --_d-elevation: 0;
 
-  /* Typed text is the intent colour at full strength -- on the three text
-     inputs, not `text-control`, because a toggle's mark takes `box`'s composed
-     `--_fg` instead. */
-  --_fg: var(--intent-color);
+  /* Typed text is the intent printed on a page, `--intent-strong`: a field's
+     plate is at most a wash, and `--intent-color`, a fill colour, reads below
+     4.5:1 there for several intents. On the three text inputs, not
+     `text-control`, because a toggle's mark takes `box`'s composed `--_fg`
+     instead. See docs/internal/model.md#intent. */
+  --_fg: var(--intent-strong);
 
   min-height: var(--control-height);
   background-image:
