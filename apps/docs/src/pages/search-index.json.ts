@@ -1,23 +1,12 @@
 import type { APIRoute } from "astro";
 
-import { packages } from "../lib/catalog";
-import { buildSearchIndex } from "../lib/search/build-index";
+import { buildLocaleSearchIndex } from "../lib/search/locale-search-index";
 
 /**
- * Emits the search index as a static asset.
+ * Emits the English search index as a static asset.
  *
  * The palette fetches it on first open rather than shipping it in the page
- * bundle, so a reader who never searches never pays for it. A curated
- * overview page is left out: each line on it repeats a sibling's own entry.
+ * bundle, so a reader who never searches never pays for it. Each locale has its
+ * own at `/<locale>/search-index.json`.
  */
-export const GET: APIRoute = () =>
-  Response.json(
-    buildSearchIndex(
-      packages.map(({ documents, label }) => ({
-        documents: documents
-          .filter((document) => document.curated !== true)
-          .map(({ headings, html, relativePath, route, title }) => ({ headings, html, relativePath, route, title })),
-        label,
-      })),
-    ),
-  );
+export const GET: APIRoute = () => Response.json(buildLocaleSearchIndex("en"));

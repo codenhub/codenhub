@@ -1,4 +1,13 @@
-<button aria-label="Back to top" class="back-to-top" data-back-to-top title="Back to top" type="button">
+---
+interface Props {
+  /** The button's name in the page's language. */
+  label?: string;
+}
+
+const { label = "Back to top" } = Astro.props;
+---
+
+<button aria-label={label} class="back-to-top" data-back-to-top title={label} type="button">
   <i aria-hidden="true" class="ic-lucide-arrow-up"></i>
 </button>
 

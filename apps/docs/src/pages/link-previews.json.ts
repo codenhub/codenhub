@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 
-import { packages } from "../lib/catalog";
+import { packages, publishedPages } from "../lib/catalog";
 import { SECTION_LABELS, sectionOf } from "../lib/document-section";
 import { buildLinkPreviewIndex } from "../lib/link-preview/build-index";
 
@@ -9,12 +9,13 @@ import { buildLinkPreviewIndex } from "../lib/link-preview/build-index";
  *
  * Like the search index, a page fetches it the first time a reader points at a
  * link, so a reader who never does never pays for it.
+ * Translated pages are included, so a link on one previews too.
  */
 export const GET: APIRoute = () =>
   Response.json(
     buildLinkPreviewIndex(
-      packages.map(({ documents, label }) => ({
-        documents: documents.map((document) => ({
+      packages.map((publicPackage) => ({
+        documents: publishedPages(publicPackage).map(({ document }) => ({
           description: document.description,
           headings: document.headings,
           html: document.html,
@@ -23,7 +24,7 @@ export const GET: APIRoute = () =>
           sectionLabel: SECTION_LABELS[sectionOf(document)],
           title: document.title,
         })),
-        label,
+        label: publicPackage.label,
       })),
     ),
   );

@@ -9,9 +9,16 @@
  * from the link into the card's actions. As a manual popover it still paints in
  * the top layer, clear of the article's overflow and stacking.
  */
+
+interface Props {
+  /** The card's accessible name in the page's language. */
+  label?: string;
+}
+
+const { label = "Link preview" } = Astro.props;
 ---
 
-<div aria-label="Link preview" class="link-preview" data-link-preview popover="manual" role="group">
+<div aria-label={label} class="link-preview" data-link-preview popover="manual" role="group">
   <p class="link-preview-trail" data-link-preview-trail></p>
   <p class="link-preview-title" data-link-preview-title></p>
   <p class="link-preview-summary" data-link-preview-summary></p>

@@ -10,8 +10,10 @@ function doc(
   extra: { group?: string; order?: number } = {},
 ): PublicDocument {
   return {
+    alternates: [],
     headings: [],
     html: "",
+    lang: "en",
     markdown: "",
     relativePath,
     route,
@@ -51,6 +53,7 @@ describe("buildNavigationTree", () => {
     expect(integrating.title).toBe("Integrating");
     expect(integrating.items[0]).toEqual({
       kind: "link",
+      lang: "en",
       route: "/styles/integrating/",
       title: "Framework integration",
     });
@@ -75,8 +78,34 @@ describe("buildNavigationTree", () => {
     const tree = buildNavigationTree([doc("recipes/first.md", "First recipe", "/x/recipes/first/")]);
 
     expect(tree).toEqual([
-      { items: [{ kind: "link", route: "/x/recipes/first/", title: "First recipe" }], kind: "group", title: "Recipes" },
+      {
+        items: [{ kind: "link", lang: "en", route: "/x/recipes/first/", title: "First recipe" }],
+        kind: "group",
+        title: "Recipes",
+      },
     ]);
+  });
+
+  it("keeps each page's language so a locale can mark an untranslated page", () => {
+    const tree = buildNavigationTree([
+      { ...doc("index.md", "Visão geral", "/pt-BR/x/"), lang: "pt-BR" },
+      doc("setup.md", "Setup", "/x/setup/"),
+    ]);
+
+    expect(tree.map((node) => (node.kind === "link" ? [node.lang, node.route] : []))).toEqual([
+      ["pt-BR", "/pt-BR/x/"],
+      ["en", "/x/setup/"],
+    ]);
+  });
+
+  it("labels the section tabs in the page's language", () => {
+    const { tabs } = buildPackageSidebar(
+      [doc("index.md", "Visão geral", "/pt-BR/x/"), doc("reference/index.md", "Referência", "/x/reference/")],
+      "/pt-BR/x/",
+      { changelog: "Changelog", guides: "Guias", reference: "Referência" },
+    );
+
+    expect(tabs.map(({ label }) => label)).toEqual(["Guias", "Referência"]);
   });
 
   it("leaves a folderless package as a flat list", () => {
@@ -171,14 +200,14 @@ describe("buildPackageSidebar", () => {
     ]);
 
     const reference = buildPackageSidebar(errorLike, "/error/reference/").tree;
-    expect(reference[0]).toEqual({ kind: "link", route: "/error/reference/", title: "/" });
+    expect(reference[0]).toEqual({ kind: "link", lang: "en", route: "/error/reference/", title: "/" });
     // The folder takes its `index.md` page's subpath as the group title, and the
     // siblings drop that prefix: `/registries/browser` reads as `/browser`. The
     // folder's own page reads as "Overview", since a bare "/" names nothing.
     expect(reference[1]).toMatchObject({ kind: "group", title: "/registries" });
     expect((reference[1] as NavGroup).items).toEqual([
-      { kind: "link", route: "/error/reference/registries/", title: "Overview" },
-      { kind: "link", route: "/error/reference/registries/browser/", title: "/browser" },
+      { kind: "link", lang: "en", route: "/error/reference/registries/", title: "Overview" },
+      { kind: "link", lang: "en", route: "/error/reference/registries/browser/", title: "/browser" },
     ]);
   });
 

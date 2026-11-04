@@ -152,6 +152,12 @@ html {
   @apply border-primary text-text font-semibold;
 }
 
+/* In a locale's navigation, an untranslated page opens in English. The marker
+   is part of the link text, so it is read with the title. */
+.nav-language {
+  @apply text-text-secondary ml-1.5 text-xs font-normal;
+}
+
 /* A group toggle is a sibling of the plain links around it, not a heading over
    them, so it takes the same resting tone and weight as `.document-list a`. Only
    the row layout for the caret is its own. */

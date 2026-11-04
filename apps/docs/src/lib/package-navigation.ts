@@ -1,11 +1,14 @@
 import { orderDocumentSections } from "@codenhub/tools/documentation";
 
+import type { Locale } from "../i18n";
 import type { PublicDocument } from "./catalog";
 import { DOCUMENT_SECTIONS, type DocumentSection, SECTION_LABELS, sectionOf } from "./document-section";
 
 /** A single documentation page in the package sidebar. */
 export interface NavLink {
   kind: "link";
+  /** Language of the linked page; in a locale's navigation, `en` marks an untranslated page. */
+  lang: Locale;
   route: string;
   title: string;
 }
@@ -40,7 +43,7 @@ export interface PackageSidebar {
 }
 
 function toLink(document: PublicDocument): NavLink {
-  return { kind: "link", route: document.route, title: document.title };
+  return { kind: "link", lang: document.lang, route: document.route, title: document.title };
 }
 
 /**
@@ -112,11 +115,13 @@ function reframeReferenceSubpaths(documents: readonly PublicDocument[]): PublicD
  * routes and titles.
  * @param documents The package's published documents, already in catalog order.
  * @param currentRoute The route of the page being rendered, when there is one.
+ * @param sectionLabels The tabs' labels in the page's language.
  * @returns The section strip and the active section's navigation tree.
  */
 export function buildPackageSidebar(
   documents: readonly PublicDocument[],
   currentRoute: string | undefined,
+  sectionLabels: Readonly<Record<DocumentSection, string>> = SECTION_LABELS,
 ): PackageSidebar {
   const bySection = new Map<DocumentSection, PublicDocument[]>();
   for (const document of documents) {
@@ -152,7 +157,7 @@ export function buildPackageSidebar(
         const path = relativeTo(id, document.relativePath);
         return path === "index.md" || path === `${id}.md`;
       }) ?? sectionDocuments[0];
-    return [{ current: id === activeSection, id, label: SECTION_LABELS[id], route: landing.route }];
+    return [{ current: id === activeSection, id, label: sectionLabels[id], route: landing.route }];
   });
 
   const sectionDocuments = (bySection.get(activeSection) ?? []).map((document) => {

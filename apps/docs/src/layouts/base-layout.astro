@@ -3,12 +3,17 @@ import type { SiteConfig } from "@codenhub/app-shell/site-config";
 import ShellLayout from "@codenhub/app-shell/layouts/base-layout.astro";
 import SearchPalette from "@codenhub/app-shell/components/search-palette.astro";
 
-import type { PublicPackage } from "../lib/catalog";
+import { defaultLocale, localizePath, messagesFor, type Locale } from "../i18n";
+import type { PageAlternate, PublicPackage } from "../lib/catalog";
 import { siteConfig } from "../site-config";
 import "../styles/global.css";
 
 interface Props {
+  /** Every language version of the page, itself included, named in `hreflang` alternates. */
+  alternates?: readonly PageAlternate[];
   description?: string;
+  /** The page's language, which sets `<html lang>`, the interface text, and the search index. */
+  locale?: Locale;
   sectionTitle?: string;
   title?: string;
   /**
@@ -19,7 +24,10 @@ interface Props {
   currentPackage?: Pick<PublicPackage, "githubLabel" | "githubUrl" | "npmLabel" | "npmUrl">;
 }
 
-const { currentPackage, description, sectionTitle, title } = Astro.props;
+const { alternates = [], currentPackage, description, locale = defaultLocale, sectionTitle, title } = Astro.props;
+const messages = messagesFor(locale);
+// The main site has every page in every locale, so its links keep the reader's language.
+const wwwPath = (path: string): string => `${siteConfig.wwwUrl}${localizePath(locale, path)}`;
 
 /*
  * The header reads as part of codenhub.dev: the logo goes to its home and the
@@ -34,21 +42,33 @@ const scopedSiteConfig: SiteConfig = {
   npmUrl: currentPackage?.npmUrl ?? siteConfig.npmUrl,
   wwwUrl: undefined,
 };
-const homeHref = `${siteConfig.wwwUrl}/`;
-const localLinks = [{ href: `${siteConfig.wwwUrl}/packages/`, label: "Packages" }];
+const homeHref = wwwPath("/");
+const localLinks = [{ href: wwwPath("/packages/"), label: messages.packages }];
 ---
 
 <ShellLayout
   description={description}
   githubLabel={currentPackage?.githubLabel}
   homeHref={homeHref}
+  lang={locale}
   localLinks={localLinks}
+  messages={messages.shell}
   npmLabel={currentPackage?.npmLabel}
   sectionTitle={sectionTitle}
   siteConfig={scopedSiteConfig}
   title={title}
 >
-  <SearchPalette indexUrl="/search-index.json" slot="actions" />
+  {
+    alternates.map((alternate) => (
+      <link
+        href={new URL(alternate.route, siteConfig.siteUrl).href}
+        hreflang={alternate.lang}
+        rel="alternate"
+        slot="head"
+      />
+    ))
+  }
+  <SearchPalette indexUrl={localizePath(locale, "/search-index.json")} messages={messages.shell.search} slot="actions" />
   <slot />
   <script>
     import { createCopyController } from "@codenhub/app-shell/copy-feedback";

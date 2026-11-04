@@ -1,0 +1,48 @@
+import type { Dictionary } from "./en";
+
+export const es: Dictionary = {
+  shell: {
+    skipToContent: "Saltar al contenido principal",
+    home: "Inicio de {site}",
+    sitesNav: "Sitios",
+    nav: { documentation: "Documentación", demo: "Demo" },
+    github: "CodenHub en GitHub",
+    npm: "CodenHub en npm",
+    theme: { toggle: "Cambiar tema", toDark: "Cambiar al tema oscuro", toLight: "Cambiar al tema claro" },
+    builtBy: "Hecho por",
+    status: { deprecated: "Obsoleto", experimental: "Experimental" },
+    copy: { copied: "Copiado", failed: "No se pudo copiar", retry: "No se pudo copiar. Inténtalo de nuevo" },
+    search: {
+      trigger: "Buscar",
+      label: "Buscar en la documentación",
+      results: "Resultados de la búsqueda",
+      idle: "Escribe para buscar en todos los documentos de los paquetes.",
+      unavailable: "La búsqueda no está disponible en este momento. Inténtalo de nuevo en un momento.",
+      empty: "Ningún documento coincide con «{query}».",
+      count: {
+        one: "{count} resultado. Usa las flechas para elegir uno.",
+        other: "{count} resultados. Usa las flechas para elegir uno.",
+      },
+    },
+  },
+  packages: "Paquetes",
+  browse: "Explorar la documentación",
+  packageNavigation: "Documentación de {label}",
+  inEnglish: "en inglés",
+  onThisPage: "En esta página",
+  sections: { changelog: "Changelog", guides: "Guías", reference: "Referencia" },
+  demo: "Demo",
+  backToTop: "Volver arriba",
+  linkPreview: "Vista previa del enlace",
+  pageActions: {
+    copyAsMarkdown: "Copiar la página como Markdown",
+    copyPage: "Copiar página",
+    copied: "Copiado",
+    copyFailed: "No se pudo copiar",
+    more: "Más acciones de la página",
+    copyDescription: "En Markdown, listo para pegar en cualquier lugar",
+    view: "Ver Markdown",
+    viewDescription: "El texto fuente de esta página",
+    download: "Descargar Markdown",
+  },
+};

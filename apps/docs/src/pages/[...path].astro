@@ -1,24 +1,26 @@
 ---
-import { packages, type PublicDocument, type PublicPackage } from "../lib/catalog";
+import type { Locale } from "../i18n";
+import { packages, publishedPages, type PublicDocument, type PublicPackage } from "../lib/catalog";
 import DocsLayout from "../layouts/docs-layout.astro";
 
 interface Props {
   currentPackage: PublicPackage;
   document: PublicDocument;
+  locale: Locale;
 }
 
 export function getStaticPaths() {
   return packages.flatMap((packageEntry) =>
-    packageEntry.documents.map((document) => ({
+    publishedPages(packageEntry).map(({ document, locale }) => ({
       params: { path: document.route.slice(1, -1) },
-      props: { currentPackage: packageEntry, document },
+      props: { currentPackage: packageEntry, document, locale },
     })),
   );
 }
 
-const { currentPackage, document } = Astro.props;
+const { currentPackage, document, locale } = Astro.props;
 ---
 
-<DocsLayout currentPackage={currentPackage} document={document}>
+<DocsLayout currentPackage={currentPackage} document={document} locale={locale}>
   <Fragment set:html={document.html} />
 </DocsLayout>
