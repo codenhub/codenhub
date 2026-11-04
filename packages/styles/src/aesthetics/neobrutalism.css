@@ -122,18 +122,24 @@
    own `--_d-elevation: 0`, which it does there at 0-2-0, and it writes only a
    private nothing a consumer sets.
 
-   Bounded to its own region, the way sketch's rotation and liquid glass's
-   layers are: an alert inside another aesthetic nested in a neobrutalist
-   region rests as that aesthetic rests it, rather than taking this slab. The
-   exclusion stops at the nested region and does not resume inside a
-   neobrutalist region nested again within it. */
+   Bounded by the nearest aesthetic region: an alert inside another aesthetic
+   nested in a neobrutalist region rests as that aesthetic rests it, and one in
+   a neobrutalist region nested again inside that takes the slab back. A
+   `:not(.neobrutalism :is(...) *)` exclusion cannot tell those two apart, since
+   the re-entered alert also sits below the other aesthetic, so each region
+   writes a private flag instead and inheritance hands the alert the nearest
+   one's. The slab is the alert's own resting default when the flag is unset. */
 @layer utilities {
-  .neobrutalism
-    .alert:not(
-      .neobrutalism :is(.glass, .pixel, .chunky-tile, .cyber, .sketch),
-      .neobrutalism :is(.glass, .pixel, .chunky-tile, .cyber, .sketch) *
-    ) {
-    --_d-elevation: 1;
+  .neobrutalism {
+    --_neo-alert-elevation: 1;
+  }
+
+  :is(.glass, .pixel, .chunky-tile, .cyber, .sketch) {
+    --_neo-alert-elevation: initial;
+  }
+
+  .neobrutalism .alert {
+    --_d-elevation: var(--_neo-alert-elevation, 0);
   }
 }
 

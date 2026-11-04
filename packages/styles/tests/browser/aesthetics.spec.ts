@@ -171,6 +171,45 @@ test.describe("aesthetics", () => {
       expect(measured.floating, "floating alert").toMatch(/\b8px 8px 0px\b/);
     });
 
+    /* The nearest aesthetic region decides: an alert in another aesthetic
+       nested inside a neobrutalist region rests as that aesthetic rests it, and
+       one in a neobrutalist region nested again inside that takes the slab back.
+       A descendant-selector exclusion cannot tell the two apart -- the re-entered
+       alert also sits below the other aesthetic -- so it once rested flat. */
+    test("rests an alert on the slab by the nearest aesthetic region", async ({ page }) => {
+      await page.goto(FEEDBACK_URL);
+
+      const shadows = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const read = (regions: string[]) => {
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = `${regions.map((region) => `<div class="${region}">`).join("")}<div class="alert">x</div>${"</div>".repeat(regions.length)}`;
+          host.append(wrapper);
+          const shadow = getComputedStyle(wrapper.querySelector(".alert")!).boxShadow;
+          wrapper.remove();
+          return shadow;
+        };
+        const others = ["glass", "pixel", "chunky-tile", "cyber", "sketch"];
+
+        return {
+          alone: read(["neobrutalism"]),
+          nested: Object.fromEntries(others.map((other) => [other, read(["neobrutalism", other])])),
+          reference: Object.fromEntries(others.map((other) => [other, read([other])])),
+          reentered: Object.fromEntries(others.map((other) => [other, read(["neobrutalism", other, "neobrutalism"])])),
+          twice: read(["neobrutalism", "glass", "neobrutalism", "pixel", "neobrutalism"]),
+        };
+      });
+
+      expect(shadows.alone, "neobrutalist alert").toMatch(/\b4px 4px 0px\b/);
+      for (const [other, shadow] of Object.entries(shadows.nested)) {
+        expect(shadow, `alert in ${other} inside neobrutalism`).toBe(shadows.reference[other]);
+        expect(shadows.reentered[other], `alert in neobrutalism inside ${other} inside neobrutalism`).toBe(
+          shadows.alone,
+        );
+      }
+      expect(shadows.twice, "alert re-entering neobrutalism twice").toBe(shadows.alone);
+    });
+
     test("squares the components that hardcode a radius", async ({ page }) => {
       await page.goto(withAesthetic(FEEDBACK_URL, "neobrutalism"));
 
