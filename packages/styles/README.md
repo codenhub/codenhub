@@ -1,6 +1,6 @@
 # @codenhub/styles
 
-CSS-only Codenhub design tokens, base styles, and composable UI helper classes.
+Build a consistent, themeable interface by writing class names on plain HTML: one stylesheet with tokens, a reset, layout and type helpers, and classes for buttons, form fields, alerts, cards, tables, and tooltips. There is no JavaScript to load and no component library to wrap.
 
 ## Installation
 
@@ -10,30 +10,35 @@ pnpm add @codenhub/styles
 
 ## Usage
 
-Import the compiled stylesheet for the complete token, reset, utility, and component-class surface:
+Import the compiled stylesheet, which holds everything the package ships:
 
 ```css
 @import "@codenhub/styles";
 ```
 
 ```html
-<main class="stack">
-  <p class="text-label">Status</p>
-  <h1 class="text-title">Ready to publish</h1>
-  <button class="btn primary">Continue</button>
-</main>
+<form class="card stack">
+  <h2 class="text-title-sm">Profile</h2>
+  <div class="field">
+    <label class="label" for="display-name">Display name</label>
+    <input class="ipt" id="display-name" name="display-name" />
+  </div>
+  <button class="btn primary" type="submit">Save changes</button>
+</form>
 ```
 
-For the Tailwind CSS v4 entrypoint, theme selection, the intent/presentation axes, and opt-in aesthetics, see [Setup](./docs/setup.md), [Concepts](./docs/concepts.md), and [Usage](./docs/usage/index.md).
+To use the Tailwind CSS v4 source entrypoints instead, or to load only part of the package, see [Setup](./docs/setup.md). The [demo](https://demo.codenhub.dev/styles/) shows every component in every intent, presentation, and aesthetic.
 
 ## Documentation
 
-- [Documentation overview](./docs/index.md): What the package is, what it does and does not do, and where to go next.
-- [Setup](./docs/setup.md): Installation, entrypoints, and configuration.
-- [Concepts](./docs/concepts.md): The three-axis model and the token system.
-- [Usage](./docs/usage/index.md): Composing, theming, customizing, aesthetics, and each component family.
-- [Integrating](./docs/integrating/index.md): Wiring the stylesheet into Next.js, Vue, Svelte, Astro, or a Tailwind CSS v4 build.
-- [Accessibility](./docs/accessibility.md): CSS accessibility hooks and non-goals.
+The docs build one account settings screen from start to finish, in this order:
+
+- [Introduction](./docs/index.md): What the package is for, what it costs, and the reading order.
+- [Setup](./docs/setup.md): Install the package, choose compiled CSS or Tailwind source, and render the page shell.
+- [Integrating](./docs/integrating/index.md): Load the stylesheet in Next.js, Vue, Svelte, Astro, Tailwind CSS v4, or a page with no bundler.
+- [Building a screen](./docs/concepts.md): Lay out the page and learn intent, fill, edge, and aesthetic.
+- [Usage](./docs/usage/index.md): Guides for buttons, forms, feedback, tooltips, theming, aesthetics, and solo classes, then the lookup pages for every class, token, and default.
+- [Accessibility](./docs/accessibility.md): What the CSS does for your users and what your application still owes them.
 - [Changelog](./docs/changelog/index.md): Release history, including breaking changes.
 
 ## Requirements
