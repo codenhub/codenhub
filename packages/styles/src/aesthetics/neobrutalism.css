@@ -120,9 +120,19 @@
 
    In `utilities`, not with the token class: it has to beat `@utility alert`'s
    own `--_d-elevation: 0`, which it does there at 0-2-0, and it writes only a
-   private nothing a consumer sets. */
+   private nothing a consumer sets.
+
+   Bounded to its own region, the way sketch's rotation and liquid glass's
+   layers are: an alert inside another aesthetic nested in a neobrutalist
+   region rests as that aesthetic rests it, rather than taking this slab. The
+   exclusion stops at the nested region and does not resume inside a
+   neobrutalist region nested again within it. */
 @layer utilities {
-  .neobrutalism .alert {
+  .neobrutalism
+    .alert:not(
+      .neobrutalism :is(.glass, .pixel, .chunky-tile, .cyber, .sketch),
+      .neobrutalism :is(.glass, .pixel, .chunky-tile, .cyber, .sketch) *
+    ) {
     --_d-elevation: 1;
   }
 }

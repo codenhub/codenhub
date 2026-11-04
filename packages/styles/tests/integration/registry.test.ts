@@ -779,13 +779,13 @@ test("an aesthetic names a component only with a recorded reason", async () => {
 });
 
 /* An aesthetic that writes onto components -- sketch's rotation, liquid glass's
-   layers -- has to skip a region of another aesthetic nested inside it, or
+   layers, neobrutalism's alert slab -- has to skip a region of another aesthetic nested inside it, or
    overrule that aesthetic's material. Every list of aesthetics it names is that
    exclusion, and a list missing one is how a new aesthetic would silently take
    another's treatment. */
 test("an aesthetic writing onto components excludes every other aesthetic", async () => {
   const names = (registry.aesthetics ?? []).map((aesthetic) => aesthetic.class);
-  const excluding = ["sketch", "glass"];
+  const excluding = ["sketch", "glass", "neobrutalism"];
   const sources = await Promise.all(
     excluding.map(async (name) => [name, withoutComments(await read(`src/aesthetics/${name}.css`))] as const),
   );
