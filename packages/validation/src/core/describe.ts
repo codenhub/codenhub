@@ -26,6 +26,13 @@ export interface Description {
 const DESCRIPTION = "~description";
 
 /**
+ * The options of the formats made with `format`, whose test no reader of a description can see, so
+ * `audit` does not take one named as a built-in format for it. Keyed by the options and not the validator,
+ * since `meta` and `standard` copy a description onto another function and keep its options.
+ */
+export const customFormats = new WeakSet<object>();
+
+/**
  * Records on a validator or a check what a factory made. The record is kept on the function itself and
  * not in a registry, so one copy of this package reads what another made, and it is set when the function
  * is made, never when a module loads.

@@ -1,4 +1,4 @@
-import { describe, type Description } from "./describe";
+import { customFormats, describe, type Description } from "./describe";
 import { assertFunction } from "./result";
 import type { AnyValidator } from "./types";
 
@@ -54,6 +54,10 @@ const MAX_OPEN_LAZY = 64;
 const hasBound = (record: Description): boolean =>
   record.options?.["max"] !== undefined || record.options?.["length"] !== undefined;
 
+/** Whether a format is a built-in one that bounds its text, and not one made with `format` under its name. */
+const isBoundedFormat = (record: Description): boolean =>
+  BOUNDED_FORMATS.has(String(record["format"])) && !customFormats.has(record.options as object);
+
 /**
  * Whether a part bounds what it produces, so a step after it in a `pipe` reads a bounded value: a
  * `string` or a collection with a bound, a format that bounds its input, a `pipe` with such a step, a
@@ -69,7 +73,7 @@ function boundsItself(record: Description | undefined): boolean {
     case "string":
       return hasBound(record);
     case "format":
-      return BOUNDED_FORMATS.has(String(record["format"]));
+      return isBoundedFormat(record);
     case "pipe":
       return parts("steps").some(boundsItself);
     case "union":
@@ -99,7 +103,8 @@ function boundsItself(record: Description | undefined): boolean {
  * a tuple with `rest` a `max`, and a `file` a `maxSize`, unless something before it bounds it: text read by `json` or `searchParams`
  * inside `pipe(string({ max }), ...)`, and everything inside it, is bounded by that `max`. A tuple without
  * `rest` has its length already. Formats whose input is bounded by what they accept, such as `email`,
- * `uuid` and `ip`, need none; others, such as `url`, `hex` and `jwt`, are text like any other.
+ * `uuid` and `ip`, need none; others, such as `url`, `hex` and `jwt`, are text like any other, and so is one
+ * made with `format`, whatever its name.
  *
  * Text read by `coerceBigint` needs a bound on each side, since converting it takes longer than linear
  * time in its length, and a bound limits the digits converted.
@@ -160,7 +165,7 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
         }
         return;
       case "format":
-        if (!bounded && !BOUNDED_FORMATS.has(String(record["format"]))) {
+        if (!bounded && !isBoundedFormat(record)) {
           report("unbounded_text");
         }
         return;

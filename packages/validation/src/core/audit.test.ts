@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { check } from "../builders/check";
+import { format } from "../builders/format";
 import { guard } from "../builders/guard";
 import { coerceBigint } from "../coercion/coerce-bigint";
 import { coerceNumber } from "../coercion/coerce-number";
@@ -73,6 +74,18 @@ describe("audit", () => {
       { rule: "unbounded_text", path: "bio", kind: "string" },
       { rule: "unbounded_text", path: "site", kind: "format" },
       { rule: "unbounded_text", path: "raw", kind: "string" },
+    ]);
+  });
+
+  it("should report a format made with format, even one named as a built-in format that bounds its text", () => {
+    const mail = format("email", (text) => /^[^@]+@[^@]+$/.test(text))();
+    expect(audit(object({ mail }))).toEqual([{ rule: "unbounded_text", path: "mail", kind: "format" }]);
+    expect(audit(meta(standard(mail), { title: "Mail" }))).toEqual([
+      { rule: "unbounded_text", path: "", kind: "format" },
+    ]);
+    expect(audit(pipe(mail, json(object({}))))).toEqual([
+      { rule: "unbounded_text", path: "", kind: "format" },
+      { rule: "unbounded_text", path: "", kind: "json" },
     ]);
   });
 
