@@ -36,7 +36,7 @@ How it resolves:
 - Put one theme on an element. If an element carries both a light and a dark selector, dark wins, but do not rely on that.
 - Setting `color-scheme` yourself on an element works the same way, because it is the only thing the palette reads. It also themes native parts such as scrollbars and the inside of form controls.
 
-Every component color comes from a token or from `currentColor`, so components follow the theme with no dark-mode rules of their own. The only marks the package draws, the checkbox tick and dash, use `currentColor` too. Icons and images you add are yours to theme.
+Every component color comes from a token or from `currentColor`, so components follow the theme with no dark-mode rules of their own. The marks the package draws, such as the checkbox tick and the select arrow, use `currentColor` too. Icons and images you add are yours to theme.
 
 `light-dark()` works from Chrome 123, Safari 17.5, and Firefox 120. The package as a whole needs Firefox 128; see [Setup → Requirements](../setup.md#requirements).
 

@@ -96,7 +96,7 @@ While the profile card waits for data, show gray blocks where the text will be:
 
 A `.skeleton` fills the width of its container and is at least 1rem tall. It has no size or shape of its own: use a block element such as a `<div>`, and set its width and height to match the content it stands in for. An empty inline element such as `<span class="skeleton">` has no size and does not appear.
 
-A skeleton takes an intent but ignores presentation. With no intent, it uses `currentColor`, so it matches the text around it. It shows a moving shimmer that stops when the user asks for reduced motion.
+A skeleton takes an intent but ignores presentation. With no intent, it is a light gray tinted by the surrounding text color. It shows a moving shimmer that stops when the user asks for reduced motion.
 
 Mark the blocks `aria-hidden="true"`, because they mean nothing to a screen reader. Say that the content is loading in text instead, as the visually hidden paragraph does, and remove `aria-busy` once the content is in place.
 
@@ -125,7 +125,7 @@ function setExportProgress(bar, percent) {
 }
 ```
 
-When you do not know how far along the work is, such as while the export is being prepared, use `.indeterminate`. A third of the track slides back and forth, and `--progress-value` is ignored. Remove `aria-valuenow`, because there is no known value to announce:
+When you do not know how far along the work is, such as while the export is being prepared, use `.indeterminate`. A bar about a third of the track wide sweeps from start to end, again and again, and `--progress-value` is ignored. Remove `aria-valuenow`, because there is no known value to announce:
 
 ```html
 <div class="progress primary indeterminate" role="progressbar" aria-label="Preparing export"></div>

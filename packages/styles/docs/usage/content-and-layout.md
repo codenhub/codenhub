@@ -95,7 +95,7 @@ Use one half for a card that answers only one gesture. A card that holds its own
 <article class="card success solid">Filled success card</article>
 <article class="card primary ghost edged">Intent border, no fill</article>
 <a class="card success soft interactive" href="/settings/billing">Billing: tinted at rest, deeper on hover</a>
-<article class="card hoverable">Warms on hover; the action is a nested button</article>
+<article class="card hoverable">Tinted on hover; the action is a nested button</article>
 <aside class="panel">A sidebar</aside>
 ```
 

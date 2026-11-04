@@ -39,7 +39,7 @@ A button accepts one intent, one fill class, and one edge class, all optional. W
 
 A **neutral** button never fills completely. Its color is the page's own text color, so a full fill would be a black or white block, the loudest thing on the page for the intent that means nothing in particular. A neutral `.solid` button stops at a 20% fill instead, a quiet gray a step darker than `.soft`. Every named intent fills to 100%.
 
-On hover, a button's fill deepens by `--hover-step` (14%), so a `.ghost` button picks up a tint and a `.solid` one darkens. On press it scales down slightly (`scale(0.97)`); an [aesthetic](./aesthetics.md) can replace that with its own press, and a user's reduced-motion preference turns it off.
+On hover, a button's fill deepens by `--hover-step` (14%), so a `.ghost` button picks up a tint and a `.solid` one changes to its intent's hover color. On press it scales down slightly (`scale(0.97)`); an [aesthetic](./aesthetics.md) can replace that with its own press, and a user's reduced-motion preference turns it off.
 
 ## Sizes and shapes
 
@@ -114,7 +114,9 @@ Do not use `<div class="btn">` or `<span class="btn">`: they look like buttons b
 Any of these makes a button look disabled: the `disabled` attribute, `.disabled`, `aria-disabled="true"`, or `data-disabled`. A disabled button is drawn at 58% opacity with a not-allowed cursor, and does not change on hover or press.
 
 ```html
-<button class="btn primary" type="submit" disabled>Save changes</button> <a class="btn ghost" aria-disabled="true">Download invoice</a>
+<button class="btn primary" type="submit" disabled>Save changes</button>
+
+<a class="btn ghost" aria-disabled="true">Download invoice</a>
 ```
 
 Only the `disabled` attribute stops the button from working. `.disabled`, `aria-disabled`, and `data-disabled` change the look only: a click or the Enter key still activates it, so your code has to ignore it. `aria-disabled` is the right choice when the button should stay focusable, for example so a tooltip can explain why it is disabled. A link has no `disabled` attribute, so remove its `href` as well when it should not navigate.
