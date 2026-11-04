@@ -1,6 +1,6 @@
 import { mapConcurrent } from "../process/concurrency.ts";
 import { cutRelease } from "../release/cut.ts";
-import { fetchReleaseTags, runGit, type GitRunner } from "../release/published-tags.ts";
+import { fetchReleaseTags, listTags, runGit, type GitRunner } from "../release/published-tags.ts";
 import { readPackageReadiness, type PackageReadiness, type ReadinessOptions } from "../release/readiness.ts";
 import { readUnreleasedChanges } from "../release/unreleased.ts";
 import type { SummaryRow } from "../reporting/reporter.ts";
@@ -90,6 +90,13 @@ async function runCut(context: CommandContext, requested: string): Promise<numbe
   try {
     result = await cutRelease(workspacePackage, requested, new Date().toISOString().slice(0, 10), {
       timeoutMs: context.options.timeoutMs,
+      // A clone that never fetched the tag would otherwise re-record a released version.
+      isTagged: async (tag, cwd) => {
+        if (!(await fetchReleaseTags(cwd))) {
+          context.reporter.warn("Could not fetch release tags from origin; checking local tags.");
+        }
+        return (await listTags(cwd)).includes(tag);
+      },
     });
   } catch (error) {
     context.reporter.error(error instanceof Error ? error.message : String(error));
