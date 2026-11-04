@@ -1,154 +1,247 @@
 ---
 title: Theming
-description: The color, intent, and foundation token reference.
-order: 2
+description: Light and dark mode, replacing the palette with brand colors, defining an intent of your own, and every color, intent, foundation, and font token with its default.
+order: 5
 ---
 
 # Theming
 
-Color tokens are how you restyle the palette; see [Concepts → Theme selection](../concepts.md#theme-selection) for how a theme is chosen. Intent tokens are how a component reads that palette once an intent class is applied. Foundation tokens are the shared layout, shape, and motion defaults underneath everything.
+The settings screen works and looks like the package's defaults: near-black actions on a near-white page. This page makes it yours. It covers light and dark mode, then replaces the primary color with a brand color in both modes, then defines an intent the package does not ship. The second half is the lookup reference: every color, intent, foundation, and font token, with its default.
 
-## Color tokens
+## Light and dark
 
-Each color token holds both of its theme values at once through `light-dark()`, and the element's `color-scheme` picks one.
+Out of the box, the page follows the operating system: light when the user's system is light, dark when it is dark. You do nothing for that.
 
-Every row is an override point: set it on `:root` to retheme globally, or on any element to retheme that subtree. The `-hover`, `-subtle`, `-strong`, and `-contrast` rows are companion tones wired into the intent slots, so overriding a base color such as `--color-primary` on its own does not shift its companions — retheme the whole family. The `text` family has no `-subtle` row: the neutral intent draws its subtle tone from `--color-surface`.
+To let the user choose, put a theme selector on the root element:
 
 ```html
-<section data-theme="dark">
-  <article>Dark token subtree</article>
-</section>
+<html data-theme="dark">
+  …
+</html>
 ```
 
-| Token                          | Purpose                                                                                                           |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| `--color-primary`              | Primary action/content color.                                                                                     |
-| `--color-primary-contrast`     | Text/icon color on primary filled surface.                                                                        |
-| `--color-primary-hover`        | Primary hover state.                                                                                              |
-| `--color-primary-subtle`       | Low-emphasis companion tone for primary. Use as soft surface or subtle background.                                |
-| `--color-primary-strong`       | High-emphasis companion tone for primary. Use as readable text, icon, or border on subtle surfaces.               |
-| `--color-accent`               | Secondary/accent surface.                                                                                         |
-| `--color-accent-contrast`      | Text/icon color on accent filled surface.                                                                         |
-| `--color-accent-hover`         | Accent hover state.                                                                                               |
-| `--color-accent-subtle`        | Low-emphasis companion tone for accent. Use as soft surface or subtle background.                                 |
-| `--color-accent-strong`        | High-emphasis companion tone for accent. Use as readable text, icon, or border on subtle surfaces.                |
-| `--color-border`               | Default border color.                                                                                             |
-| `--color-border-hover`         | Interactive border color.                                                                                         |
-| `--color-control-border`       | Resting line on the six text controls; one value, drawn at a fraction on text inputs.                             |
-| `--color-background`           | Page and default raised surface background.                                                                       |
-| `--color-foreground`           | Subtle raised foreground surface.                                                                                 |
-| `--color-surface`              | Nested or muted surface.                                                                                          |
-| `--color-text`                 | Primary text color.                                                                                               |
-| `--color-text-secondary`       | Secondary text color.                                                                                             |
-| `--color-text-contrast`        | Readable color on top of a full fill of `--color-text`. A checked toggle prints it.                               |
-| `--color-text-hover`           | Text hover state.                                                                                                 |
-| `--color-text-strong`          | High-emphasis companion tone for text. Use as readable text, icon, or border on subtle surfaces.                  |
-| `--color-tooltip`              | Tooltip bubble plate with no intent. Chosen per theme rather than derived: near-white in light, mid grey in dark. |
-| `--color-tooltip-contrast`     | Ink on `--color-tooltip`.                                                                                         |
-| `--color-success`              | Success state color.                                                                                              |
-| `--color-success-contrast`     | Text/icon color on success filled surface. Meets 4.5:1 as normal text on `--color-success` (5.14:1).              |
-| `--color-success-hover`        | Success hover tone.                                                                                               |
-| `--color-success-subtle`       | Low-emphasis companion tone for success.                                                                          |
-| `--color-success-strong`       | High-emphasis companion tone for success.                                                                         |
-| `--color-warning`              | Warning state color.                                                                                              |
-| `--color-warning-contrast`     | The near-black tone, not the page tone. Meets 4.5:1 as normal text on `--color-warning` (6.19:1).                 |
-| `--color-warning-hover`        | Warning hover tone.                                                                                               |
-| `--color-warning-subtle`       | Low-emphasis companion tone for warning.                                                                          |
-| `--color-warning-strong`       | High-emphasis companion tone for warning.                                                                         |
-| `--color-destructive`          | Destructive/error state color.                                                                                    |
-| `--color-destructive-contrast` | Text/icon color on destructive filled surface. Meets 4.5:1 as normal text on `--color-destructive` (5.78:1).      |
-| `--color-destructive-hover`    | Destructive hover tone.                                                                                           |
-| `--color-destructive-subtle`   | Low-emphasis companion tone for destructive.                                                                      |
-| `--color-destructive-strong`   | High-emphasis companion tone for destructive.                                                                     |
-| `--color-info`                 | Informational state color.                                                                                        |
-| `--color-info-contrast`        | Text/icon color on info filled surface. Meets 4.5:1 as normal text on `--color-info` (6.19:1).                    |
-| `--color-info-hover`           | Info hover tone.                                                                                                  |
-| `--color-info-subtle`          | Low-emphasis companion tone for info.                                                                             |
-| `--color-info-strong`          | High-emphasis companion tone for info.                                                                            |
+| Theme | Equivalent selectors                             |
+| ----- | ------------------------------------------------ |
+| Light | `.light`, `.theme-light`, `[data-theme="light"]` |
+| Dark  | `.dark`, `.theme-dark`, `[data-theme="dark"]`    |
 
-> **Intent token contract**: color intent tokens own meaning and tone variants. Intent classes map one family onto the shared intent slots below, and presentation classes decide how much of it a component shows. Theme changes belong in token values, not broad component-level theme checks. Component-level theme handling should exist only when a component has an internal structure that cannot be expressed through the token palette alone.
+A settings screen with a "System / Light / Dark" choice removes the attribute for System and sets it for the other two.
 
-## Intent tokens
+How it resolves:
 
-Intent classes set these seven slots; components read them. Because every supporting component reads the same seven names, an intent works on every component that supports intent, and a custom intent needs no component changes.
+- A theme selector sets the CSS `color-scheme` property and nothing else. Every color token holds its light and its dark value at once, through `light-dark()`, and the element's `color-scheme` picks one.
+- `color-scheme` inherits, so a selector themes everything inside it. A selector on any element themes that part of the page: a dark sidebar on a light page is `<aside class="dark">`.
+- The nearest selector wins, at any depth. A `.light` card inside a `.dark` page is light.
+- With no selector, the root has `color-scheme: light dark`, which follows the system.
+- Put one theme on an element. If an element carries both a light and a dark selector, dark wins, but do not rely on that.
+- Setting `color-scheme` yourself on an element works the same way, because it is the only thing the palette reads. It also themes native parts such as scrollbars and the inside of form controls.
 
-| Token               | Purpose                                                                                                                                                                                                                                |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--intent-color`    | The intent's base color. What a fill is made of.                                                                                                                                                                                       |
-| `--intent-contrast` | Readable color on top of a filled `--intent-color`.                                                                                                                                                                                    |
-| `--intent-hover`    | The intent's hovered base color.                                                                                                                                                                                                       |
-| `--intent-strong`   | The intent printed on a page. Text, icon, or border wherever the fill is not full.                                                                                                                                                     |
-| `--intent-subtle`   | Low-emphasis tone. Tinted surfaces and tracks. Neutral resolves to `--color-surface`.                                                                                                                                                  |
-| `--intent-border`   | Line color. With no intent it resolves to the aesthetic's `--ui-ink`, then `--color-border`; text controls and toggles read `--ui-control-ink`, then `--ui-ink`, then `--color-control-border`, and tables read `--ui-rule-ink` first. |
-| `--intent-fill-max` | How far a fill of this intent is allowed to go. `100%` for every intent but neutral.                                                                                                                                                   |
+Every component color comes from a token or from `currentColor`, so components follow the theme with no dark-mode rules of their own. The only marks the package draws, the checkbox tick and dash, use `currentColor` too. Icons and images you add are yours to theme.
 
-`--intent-color` and `--intent-strong` are two ends of the same family and not interchangeable. The base is a ground, chosen to be filled with; the strong tone is chosen to be read against a page. A `.soft` or `.ghost` component prints the strong one, which is why an unfilled warning reads in amber-800 rather than the amber-600 its solid sibling is filled with.
+`light-dark()` works from Chrome 123, Safari 17.5, and Firefox 120. The package as a whole needs Firefox 128; see [Setup → Requirements](../setup.md#requirements).
 
-The strong tone has to stay recognisably its own hue, not just readable. On a dark page the `-100` shade of every family is a pale tint that carries almost no chroma at small sizes: a soft success badge and a soft destructive one printed labels that both read white, and a soft radio's dot stopped matching the ring around it. The dark tones are `-300` for that reason, and the tinted grounds under them are `-900` so there is room — measured at 5.0:1 or better everywhere a partial fill prints text, and past 9:1 on the page.
+### The `dark:` variant
 
-`--intent-border` exists because a neutral border must stay the quiet border gray rather than the text color. Everything that draws a line reads it: control borders, table rules, dividers, key caps, and quote bars.
+With the Tailwind source entrypoints (`/tw`), the package replaces Tailwind's `dark:` variant so your own utilities follow the same theme as the tokens. A `dark:` utility applies under an explicit dark selector on the element or an ancestor, or under a dark system preference when no ancestor sets a theme:
 
-`--intent-fill-max` exists for the neutral intent, whose color is the page's own ink. Every other intent is a hue, legible pale at 12% and saturated at 100%; a grey filled to 100% is a black or white slab, which is the loudest thing on the page and the wrong look for the intent that means _nothing in particular_. Neutral stops at `20%`, so `.solid` gives it a quiet plate that still reads as a step past `.soft`. Hover adds its step on top of the cap, so a capped fill still deepens under the pointer.
+```html
+<html>
+  <body>
+    <p class="dark:text-white">Follows the system preference</p>
+    <div class="light">
+      <p class="dark:text-white">Stays light: this part of the page chose a theme</p>
+    </div>
+  </body>
+</html>
+```
 
-The foreground is gated by the plate rather than tied to the fill. `--intent-contrast` is the ink for a _full_ fill, so printing it at full strength on a fifth of one puts white on light grey. Contrast ink therefore appears only once the fill is past halfway and reaches full at a full fill; below that a component prints `--intent-strong`, the tone chosen to be read.
+It differs from the tokens in one case: an explicit theme nested inside the opposite one. A `.light` element inside a `.dark` one has light tokens, because the nearest `color-scheme` wins. But `dark:` matches by selector, and `.dark *` matches every element inside `.dark`, so a `dark:` utility inside that `.light` element still applies. If a page uses both tokens and `dark:` utilities, do not nest opposite themes.
 
-So a capped neutral takes the strong tone whole rather than a fraction of the way toward the page. A state that lifts the cap on purpose — a checked checkbox is filled with its own intent by definition — reaches a full fill and gets the contrast whole.
+The compiled entrypoints do not define a `dark:` variant; they have no Tailwind build to define it in.
 
-Set them directly to define an intent this package does not ship. **State every slot**, including `--intent-fill-max`: components reset all seven to the neutral values, so a slot your intent leaves out keeps neutral's — and an intent that omits the cap fills to 20% of its color instead of 100%.
+## Change the brand color
+
+The primary color is near-black on a light page and near-white on a dark one. To make it a brand color, replace the whole primary family: the base color and its four companions. Each holds a light and a dark value:
 
 ```css
-.brand {
-  --intent-color: var(--color-violet-600);
-  --intent-contrast: var(--color-neutral-50);
-  --intent-hover: var(--color-violet-700);
-  --intent-strong: var(--color-violet-800);
-  --intent-subtle: var(--color-violet-100);
-  --intent-border: var(--color-violet-600);
+:root {
+  --color-primary: light-dark(#0f766e, #2dd4bf);
+  --color-primary-contrast: light-dark(#ffffff, #042f2e);
+  --color-primary-hover: light-dark(#115e59, #5eead4);
+  --color-primary-subtle: light-dark(#ccfbf1, #134e4a);
+  --color-primary-strong: light-dark(#115e59, #5eead4);
+}
+```
+
+What each one is for:
+
+| Token                      | Role                                                                   | Check                                          |
+| -------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------- |
+| `--color-primary`          | The fill of a solid primary button, a checked toggle, a progress fill. | Text in `-contrast` on it reaches 4.5:1.       |
+| `--color-primary-contrast` | Text and icons on a full primary fill.                                 | See above.                                     |
+| `--color-primary-hover`    | The fill under the pointer.                                            | Text in `-contrast` on it still reaches 4.5:1. |
+| `--color-primary-subtle`   | The light tint behind soft components.                                 | Text in `-strong` on it reaches 4.5:1.         |
+| `--color-primary-strong`   | Text, icons, and borders where the fill is not full: soft and ghost.   | Reaches 4.5:1 on the page and on `-subtle`.    |
+
+The teal values above measure, in light and dark mode: 5.47:1 and 7.77:1 for the fill and its text, 7.27:1 and 13.38:1 for the strong tone on the page, and 6.73:1 and 6.41:1 for the strong tone on the subtle tint.
+
+Replace the whole family. Changing only `--color-primary` leaves its companions on the old near-black, so a soft primary badge keeps gray text and a hovered button flashes black. The focus ring is drawn from `--color-primary` at 64% opacity, so it follows the brand color without a change of its own.
+
+The same pattern works for every family in [Color tokens](#color-tokens): `--color-accent` is what `.secondary` reads, and the four status families are `success`, `warning`, `destructive`, and `info`. Set them on `:root` for the whole page, or on any element to retheme only what is inside it.
+
+The values must be complete colors: hex, `rgb()`, `oklch()`, or a variable you declared yourself. Tailwind palette variables such as `--color-teal-700` exist in a `/tw` build, from your Tailwind theme, but the compiled CSS declares only the palette colors the package itself uses. With compiled CSS, a reference to any other palette variable is empty, and the color it feeds is lost.
+
+## Your own intent
+
+The package ships six intents: `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, and `.info`, and the default, `.neutral`. To add one, such as a "Beta" color for features in preview, write a class that sets the seven intent slots. Use complete colors, with `light-dark()` for anything that changes between themes:
+
+```css
+.beta {
+  --intent-color: #7c3aed;
+  --intent-contrast: #ffffff;
+  --intent-hover: #6d28d9;
+  --intent-strong: light-dark(#5b21b6, #c4b5fd);
+  --intent-subtle: light-dark(#ede9fe, #4c1d95);
+  --intent-border: light-dark(#7c3aed, #a78bfa);
   --intent-fill-max: 100%;
 }
 ```
 
 ```html
-<button class="btn brand">Custom intent</button> <span class="badge brand soft">Works everywhere</span>
+<span class="badge beta">Beta</span> <button class="btn beta" type="button">Try the new editor</button>
 ```
 
-> **Intent does not cascade.** Components reset these slots to their neutral values at their own root, so a `.success` container never recolors a nested destructive button. Put the intent class on the element that shows the intent.
+These values measure 5.7:1 for white on the fill, 7.1:1 for white on the hover color, 8.61:1 (light) and 10.72:1 (dark) for the strong tone on the page, and 7.57:1 and 5.93:1 for the strong tone on the subtle tint.
+
+**Set every slot**, including `--intent-fill-max`. Each component resets all seven slots to the neutral values at its own root, so a slot you leave out keeps neutral's value, and without `--intent-fill-max: 100%` your intent fills only to 20%, like neutral. What each slot does is in [Intent tokens](#intent-tokens).
+
+The class works on everything that takes an intent: buttons, badges, fields and toggles, solid and ghost cards, progress bars, skeletons, tooltip bubbles, and the rest. A few behaviors are written for the six built-in names, and a custom intent does not get them:
+
+- **A quiet, untinted rest.** A neutral `.card.soft`, `.panel`, `.alert`, `.kbd`, `.code`, and `.pre` show no tint at rest, and they recognize an intent only by the six built-in classes. `.card.soft.beta`, `.panel.beta`, `.alert.beta`, and a `.beta` key cap or code block are drawn like the neutral one: the quiet background tone instead of a violet tint. Your intent still colors their text and border.
+- **Solo classes.** A [solo class](./solo.md) such as `.neobrutalism-solo` takes an intent only from the six built-in classes, so `.neobrutalism-solo.beta` is drawn neutral.
+
+If you need those, there are two ways:
+
+- **Retheme a built-in intent instead.** Set the `--color-info` family (or another one) to your colors, as in [Change the brand color](#change-the-brand-color), and write `.info`. Everything, including the cases above, then works. The cost is that the change reaches every `.info` inside the element you set it on, so set it on the narrowest element that works, and do not do it with an intent the page already uses for its own meaning.
+- **Paint it yourself.** Write your own CSS for that one component, such as a `background-color` on `.panel.beta`.
+
+> **Intent does not pass down.** Each component resets the intent slots at its own root, so a `.success` container does not recolor a destructive button inside it. Put the intent class on the element that shows the color.
+
+## Color tokens
+
+Every color token holds a light and a dark value through `light-dark()`; one value means both themes use it. Palette names such as `neutral-950` are Tailwind's default palette, which the package's compiled CSS declares for the colors it uses.
+
+Each row is an override point: set it on `:root` to retheme the page, or on any element to retheme what is inside it. The `-hover`, `-subtle`, `-strong`, and `-contrast` rows are companions of their family's base color and do not follow it, so retheme the whole family. The `text` family has no `-subtle` row: the neutral intent takes its subtle tone from `--color-surface`.
+
+| Token                          | Light, dark                  | Purpose                                                                                        |
+| ------------------------------ | ---------------------------- | ---------------------------------------------------------------------------------------------- |
+| `--color-primary`              | `neutral-950`, `neutral-50`  | Fill of `.primary`.                                                                            |
+| `--color-primary-contrast`     | `neutral-50`, `neutral-950`  | Text and icons on a full primary fill.                                                         |
+| `--color-primary-hover`        | `neutral-700`, `neutral-200` | Primary fill under the pointer.                                                                |
+| `--color-primary-subtle`       | `neutral-200`, `neutral-900` | Primary tint behind soft components.                                                           |
+| `--color-primary-strong`       | `neutral-900`, `neutral-100` | Primary text, icons, and borders where the fill is not full.                                   |
+| `--color-accent`               | `neutral-600`, `neutral-400` | Fill of `.secondary`.                                                                          |
+| `--color-accent-contrast`      | `neutral-50`, `neutral-950`  | Text and icons on a full secondary fill.                                                       |
+| `--color-accent-hover`         | `neutral-700`, `neutral-300` | Secondary fill under the pointer.                                                              |
+| `--color-accent-subtle`        | `neutral-100`, `neutral-800` | Secondary tint behind soft components.                                                         |
+| `--color-accent-strong`        | `neutral-800`, `neutral-200` | Secondary text, icons, and borders where the fill is not full.                                 |
+| `--color-border`               | `neutral-400`, `neutral-700` | Border of neutral surfaces, tables, dividers, and key caps.                                    |
+| `--color-border-hover`         | `neutral-600`, `neutral-500` | Border under the pointer.                                                                      |
+| `--color-control-border`       | `neutral-500`                | Resting border of neutral text controls and toggles, drawn at a fraction on text controls.     |
+| `--color-background`           | `neutral-50`, `neutral-950`  | The page.                                                                                      |
+| `--color-foreground`           | `neutral-100`, `neutral-900` | The quiet background tone one step off the page: neutral soft cards, panels, and alerts.       |
+| `--color-surface`              | `neutral-200`, `neutral-800` | A further step: nested and muted surfaces, and the neutral intent's tint.                      |
+| `--color-text`                 | `neutral-950`, `neutral-50`  | Body text, and the neutral intent's color.                                                     |
+| `--color-text-secondary`       | `neutral-700`, `neutral-400` | Secondary text, such as `.hint`.                                                               |
+| `--color-text-contrast`        | `neutral-50`, `neutral-950`  | Text on a full fill of `--color-text`, such as the mark of a checked neutral toggle.           |
+| `--color-text-hover`           | `neutral-700`, `neutral-200` | Neutral color under the pointer.                                                               |
+| `--color-text-strong`          | `neutral-900`, `neutral-100` | Neutral text, icons, and borders where the fill is not full.                                   |
+| `--color-tooltip`              | `white`, `neutral-700`       | Background of a tooltip bubble with no intent. Chosen per theme so it reads as lifted in both. |
+| `--color-tooltip-contrast`     | `neutral-900`, `neutral-100` | Text on `--color-tooltip`.                                                                     |
+| `--color-success`              | `emerald-700`                | Fill of `.success`.                                                                            |
+| `--color-success-contrast`     | `neutral-50`                 | Text on a full success fill: 5.14:1.                                                           |
+| `--color-success-hover`        | `#007552`, `#008e66`         | Success fill under the pointer.                                                                |
+| `--color-success-subtle`       | `emerald-100`, `emerald-900` | Success tint behind soft components.                                                           |
+| `--color-success-strong`       | `emerald-800`, `emerald-300` | Success text, icons, and borders where the fill is not full.                                   |
+| `--color-warning`              | `amber-600`                  | Fill of `.warning`.                                                                            |
+| `--color-warning-contrast`     | `neutral-950`                | Text on a full warning fill: near-black, not the page color. 6.19:1.                           |
+| `--color-warning-hover`        | `#d46700`, `#e78300`         | Warning fill under the pointer.                                                                |
+| `--color-warning-subtle`       | `amber-100`, `amber-900`     | Warning tint behind soft components.                                                           |
+| `--color-warning-strong`       | `amber-800`, `amber-300`     | Warning text, icons, and borders where the fill is not full.                                   |
+| `--color-destructive`          | `rose-700`                   | Fill of `.destructive`.                                                                        |
+| `--color-destructive-contrast` | `neutral-50`                 | Text on a full destructive fill: 5.78:1.                                                       |
+| `--color-destructive-hover`    | `#c00036`, `#d1054b`         | Destructive fill under the pointer.                                                            |
+| `--color-destructive-subtle`   | `rose-100`, `rose-900`       | Destructive tint behind soft components.                                                       |
+| `--color-destructive-strong`   | `rose-800`, `rose-300`       | Destructive text, icons, and borders where the fill is not full.                               |
+| `--color-info`                 | `indigo-600`                 | Fill of `.info`.                                                                               |
+| `--color-info-contrast`        | `neutral-50`                 | Text on a full info fill: 6.19:1.                                                              |
+| `--color-info-hover`           | `#4b36e9`, `#5e4ff9`         | Info fill under the pointer.                                                                   |
+| `--color-info-subtle`          | `indigo-100`, `indigo-900`   | Info tint behind soft components.                                                              |
+| `--color-info-strong`          | `indigo-800`, `indigo-300`   | Info text, icons, and borders where the fill is not full.                                      |
+
+Theme changes belong in these values, not in component rules that check the theme.
+
+## Intent tokens
+
+An intent class sets these seven slots, and components read them. Because every component reads the same seven names, a class that sets all seven works as an intent, as [Your own intent](#your-own-intent) shows.
+
+| Token               | Purpose                                                                                                                                                                                                                       |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--intent-color`    | The intent's base color, what a fill is made of.                                                                                                                                                                              |
+| `--intent-contrast` | Text on a full fill of `--intent-color`.                                                                                                                                                                                      |
+| `--intent-hover`    | The base color under the pointer.                                                                                                                                                                                             |
+| `--intent-strong`   | The intent as text, icon, or border wherever the fill is not full.                                                                                                                                                            |
+| `--intent-subtle`   | The light tint behind soft components and progress tracks. Neutral uses `--color-surface`.                                                                                                                                    |
+| `--intent-border`   | Line color. With no intent it is the aesthetic's `--ui-ink`, then `--color-border`; text controls and toggles read `--ui-control-ink`, then `--ui-ink`, then `--color-control-border`, and tables read `--ui-rule-ink` first. |
+| `--intent-fill-max` | How far a fill of this intent may go. `100%` for every intent except neutral.                                                                                                                                                 |
+
+`--intent-color` and `--intent-strong` are not interchangeable. The base color is chosen to be filled with; the strong tone is chosen to be read against the page. A soft or ghost component prints the strong tone, which is why a soft warning reads in amber-800 while a solid one is filled with amber-600.
+
+The strong tone also has to stay recognizably its own hue. On a dark page, the `-100` shade of every family is a pale tint with almost no color at small sizes: a soft success badge and a soft destructive one would both read as white. The dark strong tones are `-300` for that reason, and the tints under them are `-900`, which measures 5.0:1 or better wherever a partial fill holds text, and over 9:1 on the page.
+
+`--intent-border` exists so a neutral border stays the quiet border gray rather than the text color. Everything that draws a line reads it: control borders, table rules, dividers, key caps, and quote bars.
+
+`--intent-fill-max` exists for the neutral intent, whose color is the page's own text color. Every other intent is a hue, readable as a pale tint at 12% and saturated at 100%; a gray filled to 100% is a black or white block, the loudest thing on the page for the intent that means nothing in particular. Neutral stops at `20%`, so `.solid` gives it a quiet gray that is still a step past `.soft`. Hover adds its step on top of the cap, so a capped fill still deepens under the pointer.
+
+The text color follows the fill. `--intent-contrast` is the text color for a full fill; printed on a fifth of one, it would be white on light gray. So contrast text appears only once the fill is past halfway, and reaches full strength at a full fill; below that, a component prints `--intent-strong`. A capped neutral therefore prints the strong tone. A state that lifts the cap on purpose, such as a checked checkbox, reaches a full fill and prints the contrast color.
 
 ## Foundation tokens
 
-Foundation tokens are not aliases for one color. They define layout, shape, motion, focus, depth, and layering behavior used by helper classes.
+Foundation tokens set layout, shape, motion, focus, depth, and stacking. Override them on `:root`, or on an element for what is inside it.
 
-The four `--elevation-*` values below are raw shadows for elements you style yourself. They are a separate thing from `.flat`/`.raised`/`.floating`, which scale a _component's own_ shadow geometry and default to no shadow at all until an aesthetic or one of those classes asks for depth — see [Composing → Elevation](./composing.md#elevation) for that system. The two share `none`/`sm`/`md`/`lg` naming for the same weight of depth, but one is a fixed value and the other multiplies shadow parts, so they will not always paint identically.
+The four `--elevation-*` shadows are for elements you style yourself. They are separate from the `.flat`, `.raised`, and `.floating` classes, which scale a component's own shadow and draw nothing until an aesthetic or one of those classes asks for depth; see [Composing → Elevation](./composing.md#elevation). Both use the weights none, small, medium, and large, but one is a fixed value and the other scales shadow parts, so they do not always look the same.
 
-| Token                      | Purpose                                                                                                                                     |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--font-default`           | Default app font family, `"Segoe UI", system-ui, sans-serif`. See [Fonts](#fonts).                                                          |
-| `--container-narrow`       | Narrow content width.                                                                                                                       |
-| `--container-max`          | Default content width.                                                                                                                      |
-| `--container-wide`         | Wide content width.                                                                                                                         |
-| `--layout-gutter`          | Responsive inline page padding.                                                                                                             |
-| `--layout-section-block`   | Responsive section vertical padding.                                                                                                        |
-| `--layout-gap`             | Shared gap for `.view`, `.stack`, `.cluster`, and `.auto-grid`.                                                                             |
-| `--layout-grid-min`        | Minimum column width for `.auto-grid`.                                                                                                      |
-| `--radius-small`           | Small radius for compact utility surfaces such as code elements.                                                                            |
-| `--radius-control`         | Radius for buttons, inputs, tooltips, and compact UI.                                                                                       |
-| `--radius-surface`         | Radius for cards, panels, and alerts.                                                                                                       |
-| `--control-height`         | Default minimum height for controls.                                                                                                        |
-| `--border-width`           | Default border width.                                                                                                                       |
-| `--elevation-color`        | Shadow color the four elevations compose from. Heavier in dark themes.                                                                      |
-| `--elevation-none`         | No shadow. Use on an element that should read as flat against its page.                                                                     |
-| `--elevation-sm`           | A light shadow for your own surface-level elements, such as cards.                                                                          |
-| `--elevation-md`           | A shadow for your own raised elements, such as dropdowns and popovers.                                                                      |
-| `--elevation-lg`           | A shadow for your own full overlays, such as modal dialogs.                                                                                 |
-| `--focus-ring`             | Focus-visible ring color.                                                                                                                   |
-| `--focus-ring-offset`      | Focus-visible outline offset. Unset: the negative of the focused element's line width, so the ring lands on the edge under every aesthetic. |
-| `--focus-ring-width`       | Focus-visible outline/ring width.                                                                                                           |
-| `--motion-duration-fast`   | Fast transition for a table row's hover (`120ms`).                                                                                          |
-| `--motion-duration-normal` | Every component's colour, border, shadow, and press transitions, toggle marks, and the tooltip bubble (`200ms`).                            |
-| `--motion-duration-slow`   | Progress value changes, and the base of the skeleton and progress shimmer cycle (`400ms`).                                                  |
-| `--motion-ease`            | Default easing curve.                                                                                                                       |
-| `--z-popover`              | Popover/tooltip z-index.                                                                                                                    |
-| `--breakpoint-xs`          | Extra-small Tailwind responsive breakpoint (`xs:`), `30rem`. `/tw` only: compiled entrypoints do not declare it.                            |
+| Token                      | Default                                                | Purpose                                                                                                         |
+| -------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `--font-default`           | `"Segoe UI", system-ui, sans-serif`                    | Page font. See [Fonts](#fonts).                                                                                 |
+| `--container-narrow`       | `48rem`                                                | Width of `.section-content.narrow`.                                                                             |
+| `--container-max`          | `80rem`                                                | Width of `.section-content`.                                                                                    |
+| `--container-wide`         | `90rem`                                                | Width of `.section-content.wide`.                                                                               |
+| `--layout-gutter`          | `clamp(1rem, 4vw, 2rem)`                               | Side padding of `.section`, growing with the window.                                                            |
+| `--layout-section-block`   | `clamp(4rem, 9vw, 7rem)`                               | Top and bottom padding of `.section`, growing with the window.                                                  |
+| `--layout-gap`             | `1rem`                                                 | Gap of `.view`, `.stack`, `.cluster`, and `.auto-grid`.                                                         |
+| `--layout-grid-min`        | `16rem`                                                | Narrowest column of `.auto-grid`.                                                                               |
+| `--radius-small`           | `0.25rem`                                              | Corner of small chips: `.kbd` and `.code`.                                                                      |
+| `--radius-control`         | `0.5rem`                                               | Corner of buttons, fields, and tooltip bubbles.                                                                 |
+| `--radius-surface`         | `0.875rem`                                             | Corner of cards, panels, and alerts.                                                                            |
+| `--control-height`         | `2.5rem`                                               | Minimum height of a default button and a text control.                                                          |
+| `--border-width`           | `1px`                                                  | Border width.                                                                                                   |
+| `--elevation-color`        | `rgb(15 23 42 / 0.08)` light, `rgb(0 0 0 / 0.55)` dark | The shadow color the four elevations use. Heavier on a dark page, where a light shadow would not show.          |
+| `--elevation-none`         | `none`                                                 | No shadow.                                                                                                      |
+| `--elevation-sm`           | `0 1px 2px`, `0 1px 3px`                               | A light shadow for your own surfaces, such as a card.                                                           |
+| `--elevation-md`           | `0 4px 6px -1px`, `0 2px 4px -2px`                     | A shadow for your own raised elements, such as a dropdown menu.                                                 |
+| `--elevation-lg`           | `0 20px 25px -5px`, `0 8px 10px -6px`                  | A shadow for your own overlays, such as a modal dialog.                                                         |
+| `--focus-ring`             | `--color-primary` at 64% opacity                       | Color of the keyboard focus ring.                                                                               |
+| `--focus-ring-offset`      | Not set                                                | Distance of the ring from the element. When unset, the ring sits on the element's border under every aesthetic. |
+| `--focus-ring-width`       | `3px`                                                  | Width of the keyboard focus ring.                                                                               |
+| `--motion-duration-fast`   | `120ms`                                                | A table row's hover.                                                                                            |
+| `--motion-duration-normal` | `200ms`                                                | Color, border, shadow, and press transitions, toggle marks, and the tooltip bubble.                             |
+| `--motion-duration-slow`   | `400ms`                                                | Progress value changes, and the base of the skeleton and progress shimmer cycle.                                |
+| `--motion-ease`            | `cubic-bezier(0.2, 0, 0, 1)`                           | Easing for every transition.                                                                                    |
+| `--z-popover`              | `40`                                                   | Stacking order of tooltip bubbles. Use it for your own popovers so they stack the same way.                     |
+| `--breakpoint-xs`          | `30rem`                                                | The `xs:` responsive breakpoint. Only in a `/tw` build; the compiled entrypoints do not declare it.             |
+
+Each `--elevation-*` shadow is made of the listed parts, each in `--elevation-color`. The hover step that deepens a fill under the pointer is a presentation token, `--hover-step`; see [Customizing](./customizing.md#presentation-tokens).
 
 ## Fonts
 
@@ -165,7 +258,7 @@ The package ships no font files and makes no network requests. Every font token 
 
 `--font-default` reaches the page only through the reset, which `@codenhub/styles`, `/native`, `/tw`, `/tw/native`, and `/tw/reset` include. With `/theme` or `/components` alone, set `font-family` on `body` yourself. The aesthetic tokens are read by the aesthetic's own class, so they work with any entrypoint.
 
-To use a web font, load it the way you load any font, then name it in the token. Set the token on `:root` for the whole page, or on any element for that subtree:
+To use a web font, load it the way you load any font, then name it in the token. Set the token on `:root` for the whole page, or on any element for that part of it:
 
 ```html
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -196,4 +289,6 @@ A self-hosted font is declared with `@font-face` and named the same way:
 
 Load weights 400 to 700, and 800 for `--font-rounded`: components set `font-weight` from 400 to 700, and `.chunky-tile` sets its labels in 800. A browser that lacks a weight fakes it by thickening the regular one, which smears a pixel or handwriting face. Always end the stack with a generic family, such as `sans-serif` or `monospace`, so text still renders while the font loads or if it fails to.
 
-Next: [Customizing](./customizing.md) covers presentation and material tokens — how much of an intent shows, and what a component is made of.
+## Next
+
+The screen has your colors in both themes. [Aesthetics](./aesthetics.md) changes what it is made of: thick black outlines, frosted glass, pixels, and more.
