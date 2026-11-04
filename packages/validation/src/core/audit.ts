@@ -59,37 +59,52 @@ const isBoundedFormat = (record: Description): boolean =>
   BOUNDED_FORMATS.has(String(record["format"])) && !customFormats.has(record.options as object);
 
 /**
- * Whether a part bounds what it produces, so a step after it in a `pipe` reads a bounded value: a
- * `string` or a collection with a bound, a format that bounds its input, a `pipe` with such a step, a
- * `union` whose every option is one, and a wrapper of one, such as `optional`, `coerce` or another `pipe`.
+ * How much of a value a step before it bounds: nothing, the number of items of a collection, or all of it,
+ * every item and every text it holds. A collection's `max` limits how many items it has, not what each
+ * holds, so it bounds all of it only when its items are bounded too.
  */
-function boundsItself(record: Description | undefined): boolean {
+const OPEN = 0;
+const COUNT = 1;
+const ALL = 2;
+type Bound = typeof OPEN | typeof COUNT | typeof ALL;
+
+/** The parts of a collection that hold its items. */
+const ITEM_PARTS = ["item", "key", "value"];
+
+/**
+ * How much a part bounds what it produces, so a step after it in a `pipe` reads a value bounded that far:
+ * all of it for a `string` with a bound or a format that bounds its input, the count for a collection with
+ * a bound, all of it when its items are bounded too, the most of any step of a `pipe`, the least of the
+ * options of a `union`, and what a wrapper holds, such as `optional`, `coerce` or another `pipe`.
+ */
+function boundOf(part: unknown): Bound {
+  const record = describe(part as AnyValidator);
   if (record === undefined) {
-    return false;
+    return OPEN;
   }
-  const parts = (name: string): Description[] =>
-    (record[name] as AnyValidator[]).map((part) => describe(part) as Description);
+  const parts = (name: string): Bound[] => (record[name] as unknown[]).map(boundOf);
   switch (record.kind) {
     case "string":
-      return hasBound(record);
+      return hasBound(record) ? ALL : OPEN;
     case "format":
-      return isBoundedFormat(record);
+      return isBoundedFormat(record) ? ALL : OPEN;
     case "pipe":
-      return parts("steps").some(boundsItself);
+      return Math.max(OPEN, ...parts("steps")) as Bound;
     case "union":
-      return parts("members").every(boundsItself);
+      return Math.min(ALL, ...parts("members")) as Bound;
     case "codec":
       // What it produces is decoded from what its input read.
-      return (
-        boundsItself(describe(record["input"] as AnyValidator)) ||
-        boundsItself(describe(record["output"] as AnyValidator))
-      );
+      return Math.max(boundOf(record["input"]), boundOf(record["output"])) as Bound;
     case "lazy":
-      return false;
+      return OPEN;
     default:
-      return COLLECTIONS.has(record.kind)
-        ? hasBound(record)
-        : record["inner"] !== undefined && boundsItself(describe(record["inner"] as AnyValidator));
+      if (COLLECTIONS.has(record.kind)) {
+        if (!hasBound(record)) {
+          return OPEN;
+        }
+        return ITEM_PARTS.every((name) => record[name] === undefined || boundOf(record[name]) === ALL) ? ALL : COUNT;
+      }
+      return record["inner"] === undefined ? OPEN : boundOf(record["inner"]);
   }
 }
 
@@ -101,7 +116,8 @@ function boundsItself(record: Description | undefined): boolean {
  * Input that passes a validator is validated in full, so a body of a million items, or of text a gigabyte
  * long, costs what its size costs. Each array, set, map, record and text needs a `max` or a `length`, and
  * a tuple with `rest` a `max`, and a `file` a `maxSize`, unless something before it bounds it: text read by `json` or `searchParams`
- * inside `pipe(string({ max }), ...)`, and everything inside it, is bounded by that `max`. A tuple without
+ * inside `pipe(string({ max }), ...)`, and everything inside it, is bounded by that `max`. A collection's
+ * `max` bounds how many items a collection after it has, not what they hold. A tuple without
  * `rest` has its length already. Formats whose input is bounded by what they accept, such as `email`,
  * `uuid` and `ip`, need none; others, such as `url`, `hex` and `jwt`, are text like any other, and so is one
  * made with `format`, whatever its name.
@@ -140,7 +156,8 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
   const reported = new Set<unknown>();
   const at = (path: string, key: string): string => (path === "" ? key : `${path}.${key}`);
 
-  const walk = (target: unknown, path: string, bounded: boolean): void => {
+  // `bounded` is how much of the value a step before it bounds, as `boundOf` gives it.
+  const walk = (target: unknown, path: string, bounded: Bound): void => {
     const record = describe(target as AnyValidator);
     if (record === undefined) {
       findings.push({ rule: "unreadable", path, kind: "unknown" });
@@ -149,23 +166,25 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
     const report = (rule: AuditFinding["rule"]): void => {
       findings.push({ rule, path, kind: record.kind });
     };
-    const inner = (name = "inner", place = path, isBounded = bounded): void => {
+    // What the value holds is bounded only by a bound on all of it; one on its count bounds no item.
+    const held = bounded === ALL ? ALL : OPEN;
+    const inner = (name = "inner", place = path, bound = bounded): void => {
       if (record[name] !== undefined) {
-        walk(record[name], place, isBounded);
+        walk(record[name], place, bound);
       }
     };
-    const each = (name: string, place: (index: number) => string = () => path): void => {
-      (record[name] as unknown[]).forEach((part, index) => walk(part, place(index), bounded));
+    const each = (name: string, place: (index: number) => string = () => path, bound = bounded): void => {
+      (record[name] as unknown[]).forEach((part, index) => walk(part, place(index), bound));
     };
 
     switch (record.kind) {
       case "string":
-        if (!bounded && !hasBound(record)) {
+        if (bounded !== ALL && !hasBound(record)) {
           report("unbounded_text");
         }
         return;
       case "format":
-        if (!bounded && !isBoundedFormat(record)) {
+        if (bounded !== ALL && !isBoundedFormat(record)) {
           report("unbounded_text");
         }
         return;
@@ -177,30 +196,30 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
         return;
       case "array":
       case "set":
-        if (!bounded && !hasBound(record)) {
+        if (bounded === OPEN && !hasBound(record)) {
           report("unbounded_size");
         }
-        inner("item", `${path}[]`);
+        inner("item", `${path}[]`, held);
         return;
       case "map":
       case "record":
-        if (!bounded && !hasBound(record)) {
+        if (bounded === OPEN && !hasBound(record)) {
           report("unbounded_size");
         }
-        inner("key", `${path}{}`);
-        inner("value", `${path}{}`);
+        inner("key", `${path}{}`, held);
+        inner("value", `${path}{}`, held);
         return;
       case "tuple":
-        if (!bounded && record["rest"] !== undefined && record.options?.["max"] === undefined) {
+        if (bounded === OPEN && record["rest"] !== undefined && record.options?.["max"] === undefined) {
           report("unbounded_size");
         }
-        each("items", (index) => `${path}[${index}]`);
-        inner("rest", `${path}[]`);
+        each("items", (index) => `${path}[${index}]`, held);
+        inner("rest", `${path}[]`, held);
         return;
       case "object":
       case "objectLike":
         for (const [key, part] of Object.entries(record["shape"] as Record<string, unknown>)) {
-          walk(part, at(path, key), bounded);
+          walk(part, at(path, key), held);
         }
         return;
       case "tagged":
@@ -214,10 +233,10 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
         return;
       case "pipe": {
         // A step reads what the steps before it produced, so one that bounds its value bounds the rest.
-        let isBounded = bounded;
+        let bound = bounded;
         for (const step of record["steps"] as unknown[]) {
-          walk(step, path, isBounded);
-          isBounded ||= boundsItself(describe(step as AnyValidator));
+          walk(step, path, bound);
+          bound = Math.max(bound, boundOf(step)) as Bound;
         }
         return;
       }
@@ -231,7 +250,7 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
         const strict = describe(record["inner"] as AnyValidator);
         const isOpen = (low: string, high: string): boolean =>
           strict?.options?.[low] === undefined && strict?.options?.[high] === undefined;
-        if (!bounded && strict?.kind === "bigint" && (isOpen("min", "gt") || isOpen("max", "lt"))) {
+        if (bounded !== ALL && strict?.kind === "bigint" && (isOpen("min", "gt") || isOpen("max", "lt"))) {
           report("unbounded_text");
         }
         inner();
@@ -239,10 +258,10 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
       }
       case "json":
       case "searchParams":
-        if (!bounded) {
+        if (bounded !== ALL) {
           report("unbounded_text");
         }
-        inner();
+        inner("inner", path, held);
         return;
       case "lazy": {
         const getter = record["getter"] as () => unknown;
@@ -274,6 +293,6 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
     }
   };
 
-  walk(validator, "", false);
+  walk(validator, "", OPEN);
   return Object.freeze(findings);
 }

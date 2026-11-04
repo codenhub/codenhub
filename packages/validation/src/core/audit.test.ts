@@ -125,6 +125,20 @@ describe("audit", () => {
     ]);
   });
 
+  it("should take a collection's max before it as bounding the count of items after it, not what they hold", () => {
+    expect(audit(pipe(array(unknown(), { max: 1 }), array(string())))).toEqual([
+      { rule: "unbounded_text", path: "[]", kind: "string" },
+    ]);
+    expect(audit(pipe(optional(record(name, unknown(), { max: 5 })), record(string(), array(name))))).toEqual([
+      { rule: "unbounded_text", path: "{}", kind: "string" },
+      { rule: "unbounded_size", path: "{}", kind: "array" },
+    ]);
+    expect(audit(pipe(array(unknown(), { max: 1 }), array(array(name))))).toEqual([
+      { rule: "unbounded_size", path: "[]", kind: "array" },
+    ]);
+    expect(audit(pipe(array(name, { max: 5 }), array(string())))).toEqual([]);
+  });
+
   it("should count a bound held by a wrapper or a nested pipe for the steps after it", () => {
     const parsed = json(object({ bio: string() }));
     expect(audit(pipe(pipe(string({ max: 100 }), parsed), object({ bio: string() })))).toEqual([]);
