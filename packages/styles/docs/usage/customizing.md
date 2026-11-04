@@ -44,7 +44,9 @@ A computed color therefore reaches the page as a resolved `color-mix` result rat
 
 Material tokens describe what a component is _made of_ rather than which intent it shows or how strongly. They control shape, borders, shadows, translucency, filters, and transforms.
 
-Components read each with a fallback, so leaving them unset produces the default look. Setting them on a container restyles the whole subtree, with one exception: `--ui-elevation` does not inherit, so it reaches only the element it is set on (see [Composing → Elevation](./composing.md#elevation)). Only shadow geometry is split into colorless parts that inherit safely; color-capable inputs such as `--ui-ink` and `--ui-surface-shadow` may include their own colors.
+Components read each with a fallback, so leaving them unset gives the default look. Set on a container, they restyle everything inside it. The one exception is `--ui-elevation`, which does not inherit, so it reaches only the element it is set on; see [Composing → Elevation](./composing.md#elevation).
+
+Shadow geometry is split into parts with no color in them, so they inherit safely. Tokens that take a color, such as `--ui-ink` and `--ui-surface-shadow`, may include their own.
 
 | Token                     | Purpose                                                                                                                                              | Fallback                                  |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
@@ -56,7 +58,7 @@ Components read each with a fallback, so leaving them unset produces the default
 | `--ui-scale`              | Overrides the size step the size and padding classes set.                                                                                            | The step                                  |
 | `--ui-corner-shape`       | What every corner draws: `round`, `bevel` for a straight cut, or `squircle` for a continuous curve. Chromium only today.                             | `round`                                   |
 | `--ui-radius-pill`        | Corner for what is fully round by default: badges, switches, progress, the tooltip icon; `.btn.pill` and `.radio` read it with no fallback but full. | `--ui-radius`, `--ui-corner`, then full   |
-| `--ui-radius-tight`       | Complete radius for chips -- checkbox, `.kbd`, `.code` -- when set; otherwise a small computed default.                                              | `min(--ui-radius or --ui-corner, small)`  |
+| `--ui-radius-tight`       | Complete radius for chips, such as a checkbox, `.kbd`, or `.code`, when set. Unset, a small computed default.                                        | `min(--ui-radius or --ui-corner, small)`  |
 | `--ui-line-style`         | Style of every line a component draws: `solid`, `dashed`, `dotted`, or `double` (3px wide or more).                                                  | `solid`                                   |
 | `--ui-border-width`       | Edge thickness.                                                                                                                                      | `--border-width`                          |
 | `--ui-border-max`         | Ceiling on computed edge width.                                                                                                                      | `100px`                                   |
@@ -77,7 +79,7 @@ Components read each with a fallback, so leaving them unset produces the default
 | `--ui-active-translate-x` | Distance a press travels into the element's depth; `-y` beside it. Scaled like the shadow.                                                           | `0px`                                     |
 | `--ui-shadow-ink`         | Percentage of shadow color taken from intent ink.                                                                                                    | `0%`                                      |
 | `--ui-halo-blur`          | Blur of a halo around the element; `--ui-halo-spread` beside it. Elevation does not scale it.                                                        | `0px`                                     |
-| `--ui-halo-ink`           | The halo's share of the intent colour, over nothing. Unset, there is no halo.                                                                        | Unset                                     |
+| `--ui-halo-ink`           | The halo's share of the intent color, over nothing. Unset, there is no halo.                                                                         | Unset                                     |
 | `--ui-shadow-edge`        | Declared, even empty, when the shadow is the element's edge rather than its depth. Read for presence.                                                | Unset                                     |
 | `--ui-elevation`          | Unitless multiplier over shadow geometry. Does not inherit.                                                                                          | `1`                                       |
 | `--ui-surface-shadow`     | Complete multi-layer shadow accepted by surfaces only.                                                                                               | Unset                                     |
@@ -92,7 +94,7 @@ Components read each with a fallback, so leaving them unset produces the default
 | `--ui-label-weight`       | Label weight of `.btn` (and, with `/native`, a bare `<button>`) and `.badge`.                                                                        | Semibold on a button, bold on a badge     |
 | `--ui-label-tracking`     | Label letter spacing. Unset, the label inherits it.                                                                                                  | Unset                                     |
 | `--ui-label-case`         | Label `text-transform`.                                                                                                                              | `none` on a button; inherited on a badge  |
-| `--ui-label-shadow`       | Label `text-shadow`, written without a colour so it takes the label's own.                                                                           | `none` on a button; inherited on a badge  |
+| `--ui-label-shadow`       | Label `text-shadow`, written without a color so it takes the label's own.                                                                            | `none` on a button; inherited on a badge  |
 
 ```html
 <section style="--ui-corner: 0; --ui-border-width: 3px">
@@ -111,23 +113,23 @@ Which corners take the corner is its own choice. `.cut-diagonal` keeps the top-l
 
 ### Lines, layers, and labels
 
-`--ui-line-style` reaches every line a component draws: the box's edge, the progress track, and dividers and table rules. `--ui-rule-style` optionally overrides just dividers and table rules, without changing the box edge; sketch uses it for dashed accents. A dashed or dotted line keeps its colour, so it keeps its contrast; `double` needs a width of 3px or more to draw two lines.
+`--ui-line-style` reaches every line a component draws: the box's edge, the progress track, and dividers and table rules. `--ui-rule-style` optionally overrides just dividers and table rules, without changing the box edge; sketch uses it for dashed accents. A dashed or dotted line keeps its color, so it keeps its contrast. A `double` line needs a width of 3px or more to draw two lines.
 
-`--ui-halo-*` is light rather than depth -- a glow in the element's own intent colour -- so elevation does not scale it and `.flat` leaves it on. It appears only when its ink is set.
+`--ui-halo-*` is light rather than depth: a glow in the element's own intent color. Elevation does not scale it, and `.flat` leaves it on. It appears only when its ink is set.
 
 `--ui-surface-image` lays any `background-image` over a surface's plate: cards, panels, alerts, and tooltips, not controls. Whoever sets it owns the contrast of the text over it, and your own `background-image` on a surface still wins.
 
-`--ui-label-*` treats the label of a button or a badge: weight, tracking, case, and a text shadow. Write the shadow without a colour -- `0 0 6px` -- so it takes the label's own colour and cannot lower its contrast. Your own `font-*`, `tracking-*`, and case utilities still win.
+`--ui-label-*` treats the label of a button or a badge: weight, tracking, case, and a text shadow. Write the shadow without a color, such as `0 0 6px`, so it takes the label's own color and cannot lower its contrast. Your own `font-*`, `tracking-*`, and case utilities still win.
 
-Under forced colours each of these draws its plain version: a solid line, no halo, no painted layer, and no label shadow. The silhouette and the ring below go too: forced colours remove every box shadow, so `--ui-clip`, `--ui-clip-tight`, `--ui-border-max`, and `--ui-shadow-edge` are cleared and a component draws its real border at `--ui-border-width`.
+Under forced colors each of these draws its plain version: a solid line, no halo, no painted layer, and no label shadow. The silhouette and the ring below go too. Forced colors remove every box shadow, so `--ui-clip`, `--ui-clip-tight`, `--ui-border-max`, and `--ui-shadow-edge` are cleared and a component draws its real border at `--ui-border-width`.
 
 ### Shape and ring composition
 
-Clipping removes borders, outlines, and outer shadows. An aesthetic that uses a clip can replace the border with an inset shadow by setting `--ui-shadow-inset` and the four shadow geometry parts. Set `--ui-border-max: 0px` when that ring replaces the component border. Focusable components restore the clipped focus outline through `--ui-focus-inset`: an inset layer of that width in `--focus-ring`, with a 2px line of `--color-background` inside it so focus still shows on a component filled with the ring's own colour.
+Clipping removes borders, outlines, and outer shadows. An aesthetic that uses a clip can replace the border with an inset shadow by setting `--ui-shadow-inset` and the four shadow geometry parts. Set `--ui-border-max: 0px` when that ring replaces the component border. Focusable components restore the clipped focus outline through `--ui-focus-inset`: an inset layer of that width in `--focus-ring`, with a 2px line of `--color-background` inside it so focus still shows on a component filled with the ring's own color.
 
-A clip is not the only way to cut a corner. `--ui-corner-shape: bevel` draws the corner the radius sets as a straight cut instead of an arc, and the border, outer shadow, focus outline, and backdrop all follow it -- so a bevelled element keeps its glow and its line, where a clipped one loses both. `.cyber` uses it. Engines without `corner-shape` ignore it and draw the radius round, so an aesthetic that bevels should square its radius under `@supports not (corner-shape: bevel)`. A bevel on a full radius cuts to points: a radio, a `.btn.pill`, and anything reading `--ui-radius-pill` become diamonds or pointed hexagons.
+A clip is not the only way to cut a corner. `--ui-corner-shape: bevel` draws the corner the radius sets as a straight cut instead of an arc, and the border, outer shadow, focus outline, and backdrop all follow it. A beveled element therefore keeps its glow and its line, where a clipped one loses both. `.cyber` uses it. Engines without `corner-shape` ignore it and draw the radius round, so an aesthetic that bevels should square its radius under `@supports not (corner-shape: bevel)`. A bevel on a full radius cuts to points: a radio, a `.btn.pill`, and anything reading `--ui-radius-pill` become diamonds or pointed hexagons.
 
-`--ui-radius` accepts any `border-radius` value and is used as written, so it can place the corner per side: `10px 0` cuts only top-left and bottom-right. The pill and chip corners are separate tokens. An unset chip corner computes a small default from `--ui-radius`, then `--ui-corner`, capped at `--radius-small`; an explicit `--ui-radius-tight` is used as written, even for a per-corner or elliptical value. Aesthetic and consumer overrides can therefore give a chip a larger or more irregular shape. `.btn.pill` takes `--ui-radius-pill` ahead of the other radii; under sketch it takes organic hand-drawn pill contours avoiding egg distortion, while an explicit `--ui-radius-pill` on that button still wins.
+`--ui-radius` accepts any `border-radius` value and is used as written, so it can place the corner per side: `10px 0` cuts only top-left and bottom-right. The pill and chip corners are separate tokens. An unset chip corner computes a small default from `--ui-radius`, then `--ui-corner`, capped at `--radius-small`; an explicit `--ui-radius-tight` is used as written, even for a per-corner or elliptical value. Aesthetic and consumer overrides can therefore give a chip a larger or more irregular shape. `.btn.pill` takes `--ui-radius-pill` ahead of the other radii; under sketch it takes an uneven hand-drawn pill outline whose ends stay the same size. An explicit `--ui-radius-pill` on that button still wins.
 
 Declare `--ui-shadow-edge` when that ring _is_ the border. The ring then takes the element's edge color, which carries the edge axis as its alpha, so `.edged` draws it and `.edgeless` does not — the same answer a real border gives. Without it the ring paints on every component the aesthetic reaches and the edge classes have no effect. Use `--ui-shadow-ink` instead when the shadow is depth cast in the intent's own ink, such as a hard offset slab, which an `.edgeless` element still gets.
 
@@ -168,13 +170,13 @@ The shipped [aesthetic classes](./aesthetics.md) set material tokens for you. On
 | `--cyber-shape`                   | `.cyber`                     | Where controls take the cut: any `border-radius` value.                                         | `<cut> 0` (top-left, bottom-right)                                 |
 | `--cyber-shape-surface`           | `.cyber`                     | Where surfaces take the cut: any `border-radius` value.                                         | `0 <cut>` (top-right, bottom-left)                                 |
 | `--cyber-glow`                    | `.cyber`                     | Blur of the glow.                                                                               | `8px`                                                              |
-| `--cyber-ink`                     | `.cyber`                     | Neutral line and glow colour, where no intent sets one.                                         | Theme ink (near-black, near-white)                                 |
+| `--cyber-ink`                     | `.cyber`                     | Neutral line and glow color, where no intent sets one.                                          | Theme ink (near-black, near-white)                                 |
 | `--font-cyber`                    | `.cyber`                     | Consumer-supplied technical font stack.                                                         | Falls back to the monospace stack                                  |
 | `--sketch-radius`                 | `.sketch`                    | Control outline radius: any `border-radius` value.                                              | Irregular box outline with sibling variation                       |
 | `--sketch-radius-surface`         | `.sketch`                    | Surface container outline radius: any `border-radius` value.                                    | Sharp irregular square outline with sibling variation              |
 | `--sketch-radius-rounded`         | `.sketch`, `.sketch-rounded` | Rounded control outline radius: expressive elliptical contour with sibling variation.           | `26px 10px 24px 11px / 12px 23px 11px 20px` with sibling variation |
 | `--sketch-radius-surface-rounded` | `.sketch`, `.sketch-rounded` | Rounded surface container outline radius: expressive elliptical contour with sibling variation. | `38px 16px 36px 17px / 16px 34px 17px 32px` with sibling variation |
-| `--sketch-radius-pill`            | `.sketch`                    | Pill button outline radius: organic hand-drawn pill contour avoiding egg-shaped distortion.     | `24px 16px 23px 17px / 17px 21px 16px 20px` with sibling variation |
+| `--sketch-radius-pill`            | `.sketch`                    | Radius of a pill button's outline: an uneven hand-drawn pill whose ends stay the same size.     | `24px 16px 23px 17px / 17px 21px 16px 20px` with sibling variation |
 | `--font-sketch`                   | `.sketch`                    | Consumer-supplied handwriting font stack.                                                       | Falls back to `cursive`                                            |
 
 Every aesthetic's knobs reach the same way: each knob is _read_ with its default as a `var()` fallback rather than declared, so it resolves once into a private on the aesthetic's own class (`--_pixel-unit`, `--_neo-offset`, `--_tile-radius`, `--_tile-lift`, and so on). Set a knob on the element carrying the aesthetic class, or on any ancestor including `:root`:
@@ -193,7 +195,9 @@ Every aesthetic's knobs reach the same way: each knob is _read_ with its default
 </html>
 ```
 
-Knobs and material tokens reach in opposite directions, and telling them apart matters. A knob resolves once at the aesthetic's own class and inherits down already-resolved, so it reaches the aesthetic **from above**: setting it on the element or any ancestor works, but setting it on a _descendant_ of the aesthetic class changes nothing — the value has already been read. `--ui-radius` and the other material tokens above are read fresh by each component as it draws, so they reach **at or below** the element carrying them, which is how you round one card differently from its neighbours without touching the knob at all.
+Knobs and material tokens reach in opposite directions. A knob is read once, at the element with the aesthetic class, and the result passes down. So set a knob on that element or on one above it; set on an element inside the aesthetic, it changes nothing, because the value has already been read.
+
+`--ui-radius` and the other material tokens are read by each component as it draws. They work on the element they are set on and everything inside it, which is how you round one card differently from its neighbors without touching the knob.
 
 Shipped aesthetics set the shared material tokens above. Every shipped aesthetic sets `--ui-ink` for its neutral line. Every shipped aesthetic also sets `--ui-control-ink`: `.glass` and `.chunky-tile` to a line of their own, heavier than their surfaces', and the others to `--color-control-border`, since their ink is near-black or near-white and a resting checkbox outlined in it would look checked. `.glass` sets `--ui-rule-ink` too, so a table's lines read on its plate; the others clear it. Intent classes still override the intent slots on each component.
 
@@ -221,12 +225,17 @@ Every value is a finished color, never a reference to another variable, so the f
 
 Naming: `--palette-<intent>-<presentation>-<slot>`, where `<intent>` is one of the seven published intents (`neutral`, `primary`, `secondary`, `success`, `warning`, `destructive`, `info`) and `<presentation>` is `solid`, `soft`, or `ghost`. `<slot>` is `bg`, `fg`, or `edge`. Two qualifiers layer on only where they apply:
 
-- A ground qualifier (`page` or `subtle`) inserted before the slot, present only on `.soft`/`.ghost`'s `bg` and `edge` -- `.solid` is ground-independent at full fill, and `fg` never varies by ground. No qualifier means the `transparent` ground (`.badge`/`.btn`'s ground): `--palette-success-soft-bg`. `page` is `.alert`'s ground (`--color-background`): `--palette-success-soft-page-bg`. `subtle` is `.pre`/`.code`/`.kbd`/`.tooltip-bubble`'s ground (that intent's own `--intent-subtle`): `--palette-success-soft-subtle-bg`.
-- A `-hover` suffix on `bg` and `edge` only -- `fg` never changes on hover: `--palette-success-soft-page-bg-hover`.
+- A ground qualifier, `page` or `subtle`, before the slot. It appears only on the `bg` and `edge` of `.soft` and `.ghost`, because a `.solid` fill covers its ground and the text color never depends on it.
+  - No qualifier is the transparent ground of `.badge` and `.btn`: `--palette-success-soft-bg`.
+  - `page` is the ground of `.alert`, `--color-background`: `--palette-success-soft-page-bg`.
+  - `subtle` is the ground of `.pre`, `.code`, `.kbd`, and `.tooltip-bubble`, the intent's own `--intent-subtle`: `--palette-success-soft-subtle-bg`.
+- A `-hover` suffix, on `bg` and `edge` only, because the text color does not change on hover: `--palette-success-soft-page-bg-hover`.
 
-Light values sit on `:root` and dark values are scoped the same way `@codenhub/styles`' own explicit theme override is: `.dark`, `.theme-dark`, and `[data-theme="dark"]`, on the element or an ancestor. The light values also answer `.light`, `.theme-light`, and `[data-theme="light"]`, so the nearest explicit theme wins at any depth -- a light subtree nested inside a dark one reads the light values. There is no `prefers-color-scheme` fallback in this file -- a consumer reaching for a standalone palette is already handling its own theme switching, so the OS-preference case is left to `@codenhub/styles`' own `light-dark()`-based tokens when that package is actually in use.
+Light values are set on `:root`. Dark values apply under `.dark`, `.theme-dark`, or `[data-theme="dark"]` on the element or an element above it, the same selectors the package's theme uses. The light values also apply under `.light`, `.theme-light`, and `[data-theme="light"]`, so the nearest explicit theme wins: a light area inside a dark one reads the light values.
 
-Three more tokens sit alongside the intent cells for the same reason, without an intent, presentation, ground, or hover axis of their own: `--palette-border`, `--palette-surface`, and `--palette-text`, flat values for `--color-border`, `--color-surface`, and `--color-text` -- the resting colors anything that is not intent-colored needs (a container's border, a dialog's background, its text), which an optional-peer consumer needs just as much as the intent cells.
+The file does not follow `prefers-color-scheme`. Code that uses the palette on its own already switches themes itself, so it sets one of those classes or attributes.
+
+Three more tokens have no intent, presentation, ground, or hover: `--palette-border`, `--palette-surface`, and `--palette-text`, fixed values of `--color-border`, `--color-surface`, and `--color-text`. They are for things that are not intent-colored, such as a container's border, a dialog's background, and its text.
 
 ## Component variables
 
