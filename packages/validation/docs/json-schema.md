@@ -6,7 +6,7 @@ order: 10
 
 # JSON Schema
 
-`toJsonSchema(validator)` writes a validator as a [JSON Schema](https://json-schema.org/), draft 2020-12. It is what an OpenAPI document, the tool definitions of a language model and many form generators take, So one validator can both check a value and tell another program what the value must look like. The sign-up endpoint can publish its body in an OpenAPI document from the same validator that checks it.
+`toJsonSchema(validator)` writes a validator as a [JSON Schema](https://json-schema.org/), draft 2020-12. It is what an OpenAPI document, the tool definitions of a language model and many form generators take, so one validator can both check a value and tell another program what the value must look like. The sign-up endpoint can publish its body in an OpenAPI document from the same validator that checks it.
 
 This page covers what the schema promises, how each validator is written, and how to read a validator yourself with `describe`. The schema it returns has the type `JsonSchema`, and its options the type `JsonSchemaOptions`.
 
