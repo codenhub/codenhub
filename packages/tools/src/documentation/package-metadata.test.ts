@@ -99,6 +99,33 @@ describe("package documentation catalog", () => {
     ]);
   });
 
+  it("keeps translations apart from the English and places each by its mirror", () => {
+    const packages = buildPackageDefinitions({ "../../packages/example/package.json": createManifest() }, [
+      "../../packages/example/docs/index.md",
+      "../../packages/example/docs/guides/setup.md",
+      "../../packages/example/docs/pt-BR/guides/setup.md",
+      "../../packages/example/docs/es/index.md",
+      "../../packages/example/docs/es/extra.md",
+      "../../packages/example/docs/fr/index.md",
+    ]);
+
+    expect(packages[0]?.documents.map(({ relativePath }) => relativePath)).toEqual(["index.md", "guides/setup.md"]);
+    expect(packages[0]?.translations).toEqual([
+      {
+        locale: "pt-BR",
+        relativePath: "guides/setup.md",
+        routePath: "guides/setup",
+        sourcePath: "../../packages/example/docs/pt-BR/guides/setup.md",
+      },
+      {
+        locale: "es",
+        relativePath: "index.md",
+        routePath: "",
+        sourcePath: "../../packages/example/docs/es/index.md",
+      },
+    ]);
+  });
+
   it("rejects duplicate package slugs", () => {
     expect(() =>
       buildPackageDefinitions(

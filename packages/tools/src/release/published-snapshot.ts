@@ -2,6 +2,7 @@ import { lstat, mkdir, readdir, readFile, realpath, rm, writeFile } from "node:f
 import path from "node:path";
 
 import { parsePackageMetadata, type PackageMetadata } from "../documentation/package-metadata.ts";
+import { isTranslationLocale, parseTranslationPath } from "../documentation/translation-paths.ts";
 import { discoverWorkspace, type WorkspacePackage } from "../workspace/discover.ts";
 import {
   collectReleases,
@@ -55,6 +56,18 @@ const ROOT_SURFACES = new Set([
   SIZE_FILE,
 ]);
 const DOCS_DIRECTORY = "docs";
+
+/**
+ * Whether a package-root entry is a `README.<locale>.md` in a listed locale,
+ * which the main site shows in that locale (`docs/specs/packages-translations.md`,
+ * "Publishing"). `docs/<locale>/` needs no such rule, since `docs/` is kept whole.
+ * @param entry Package-root file name.
+ * @returns True for a translated README the site may read.
+ */
+function isListedTranslatedReadme(entry: string): boolean {
+  const translation = parseTranslationPath(entry);
+  return translation?.kind === "readme" && isTranslationLocale(translation.locale);
+}
 
 const RELEASES_FILE = "releases.json";
 
@@ -193,7 +206,7 @@ async function pruneToPublishedSurfaces(packageDirectory: string): Promise<void>
   const entries = await readdir(packageDirectory);
   await Promise.all(
     entries
-      .filter((entry) => entry !== DOCS_DIRECTORY && !ROOT_SURFACES.has(entry))
+      .filter((entry) => entry !== DOCS_DIRECTORY && !ROOT_SURFACES.has(entry) && !isListedTranslatedReadme(entry))
       .map((entry) => rm(path.join(packageDirectory, entry), { force: true, recursive: true })),
   );
   await rm(path.join(packageDirectory, DOCS_DIRECTORY, "internal"), { force: true, recursive: true });
