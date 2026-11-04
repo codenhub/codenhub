@@ -250,32 +250,57 @@ test("paints a table row's own intent while other rows keep the table's", async 
 });
 
 /* On a solid table the plate is the table's, so a row with its own intent
-   keeps printing contrast ink on it rather than its intent's page ink. */
+   prints the table's contrast ink on it, not its own: the row's
+   `--intent-contrast` is chosen for a fill the row does not paint, and a light
+   one on a light plate -- a `.warning` row on a `.primary` table -- read at
+   1:1. Every hued table and every row intent, in both themes, at 4.5:1 against
+   the plate.
+
+   A solid neutral table is left out: its plate is a capped grey wash rather
+   than a fill, so a row prints its own strong tone there, and `.success`,
+   `.warning`, and `.destructive` rows measure 4.05-4.49:1 in the light theme.
+   That is an open question, not a passing case. */
 test("keeps a row with its own intent readable on a solid table", async ({ page }) => {
   await page.goto(TYPOGRAPHY_URL);
 
-  const values = await page.evaluate(() => {
-    const host = document.createElement("div");
-    host.innerHTML = `
-      <table class="data-table success solid">
-        <tbody>
-          <tr class="destructive"><td>Error</td></tr>
-          <tr><td>Inherited</td></tr>
-        </tbody>
-      </table>`;
-    document.body.prepend(host);
-    const [own, inherited] = [...host.querySelectorAll("td")].map((element) => getComputedStyle(element).color);
+  const intents = ["neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
 
-    return {
-      own,
-      inherited,
-      plate: getComputedStyle(host.querySelector("table")!).backgroundColor,
-    };
-  });
+  /* oxlint-disable no-await-in-loop -- one theme, then the other, on one page. */
+  for (const theme of ["light", "dark"]) {
+    const cells = await page.evaluate(
+      ({ name, list }) => {
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(name);
+        const results: { label: string; color: string; plate: string }[] = [];
 
-  expect(getContrastRatio(values.own, values.plate)).toBeGreaterThanOrEqual(
-    Math.min(4.5, getContrastRatio(values.inherited, values.plate)),
-  );
+        for (const table of list.filter((intent) => intent !== "neutral")) {
+          const host = document.createElement("div");
+          const rows = list.map((row) => `<tr class="${row}"><td>${row}</td></tr>`).join("");
+          host.innerHTML = `<table class="data-table solid ${table}"><tbody><tr><td>none</td></tr>${rows}</tbody></table>`;
+          document.body.prepend(host);
+          const plate = getComputedStyle(host.querySelector("table")!).backgroundColor;
+
+          for (const cell of host.querySelectorAll("td")) {
+            results.push({
+              label: `${name} .${table} table, ${cell.textContent} row`,
+              color: getComputedStyle(cell).color,
+              plate,
+            });
+          }
+          host.remove();
+        }
+
+        return results;
+      },
+      { name: theme, list: intents },
+    );
+
+    for (const cell of cells) {
+      expect(readSrgb(cell.plate).alpha, `${cell.label} plate is opaque`).toBe(1);
+      expect.soft(getContrastRatio(cell.color, cell.plate), cell.label).toBeGreaterThanOrEqual(4.5);
+    }
+  }
+  /* oxlint-enable no-await-in-loop */
 });
 
 /* Three positions from one token, and the point of the switch is that none of

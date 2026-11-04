@@ -78,6 +78,11 @@
   --table-head-plate: color-mix(in oklab, var(--intent-subtle) var(--table-ground), transparent);
   --table-head-bg: color-mix(in oklab, var(--intent-color) var(--table-fill), var(--table-head-plate));
   --table-head-fg: color-mix(in oklab, var(--intent-contrast) var(--_on-fill), var(--intent-strong));
+  /* The table's own contrast ink, resolved here so a row with its own intent
+     prints on the table's plate in the ink that plate takes: the row's
+     `--intent-contrast` is chosen for the row's fill, which a row does not
+     paint, and a light one on a light plate reads at 1:1. */
+  --_table-contrast: var(--intent-contrast);
 
   /* Untinted rather than mixed, the same call `.card.soft` makes: 12% ink onto
      `--intent-subtle` still reads as `.solid` on neutral, since neutral's ink
@@ -323,8 +328,8 @@
      table's intent, so they inherited down already-green to a destructive row.
      A row with its own intent resolves them again against it. The plate stays
      the table's, so the ink keeps the table's ramp -- `--_on-fill`, inherited
-     as a resolved percentage -- and a solid table's rows still print contrast
-     ink on it. Only a row that names an intent: an ordinary row would resolve
+     as a resolved percentage -- and a solid table's rows still print the
+     table's contrast ink on it. Only a row that names an intent: an ordinary row would resolve
      the same values, but a `color` declared on every row would override a
      colour a consumer set on the table. */
   & tbody tr:is(.neutral, .primary, .secondary, .success, .warning, .destructive, .info) {
@@ -337,7 +342,7 @@
     --table-hover-tone: color-mix(in oklab, currentColor var(--ui-fill, var(--_d-fill)), var(--intent-hover));
     --table-row-hover: color-mix(in oklab, var(--table-hover-tone) 12%, transparent);
 
-    color: color-mix(in oklab, var(--intent-contrast) var(--_on-fill), var(--intent-strong));
+    color: color-mix(in oklab, var(--_table-contrast) var(--_on-fill), var(--intent-strong));
   }
 
   & tbody tr > * {
