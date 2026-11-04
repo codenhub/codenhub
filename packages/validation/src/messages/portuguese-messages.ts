@@ -44,11 +44,18 @@ const COLLECTIONS: Readonly<Record<string, readonly [string, string]>> = {
 };
 
 /** Says how many allowed values a list left out. */
-const more = (count: number): string => `ou mais ${count}`;
+const more = (count: number): string => `e mais ${count}`;
+
+/**
+ * A number written with the decimal comma Brazil uses, `0,1`. Only a bound or a step: a value listed
+ * among others is written as in code, where a comma would read as the end of one.
+ */
+const decimal = (value: unknown): string =>
+  typeof value === "number" ? String(value).replace(".", ",") : String(value);
 
 const describeLimit = ({ params }: ValidationIssue, isMin: boolean): string => {
   const limit = params?.[isMin ? "minimum" : "maximum"];
-  const bound = String(limit);
+  const bound = decimal(limit);
   const type = String(params?.type);
   const moment = momentOf(limit, type);
   if (moment !== undefined) {
@@ -140,7 +147,8 @@ const describeValue = (issue: ValidationIssue): string => {
     return "Deve ser único";
   }
   if (issue.params?.reserved === true) {
-    return "É reservado";
+    // Only a key is reserved, and every message of a key agrees with "a chave".
+    return "É reservada";
   }
   if (issue.params?.unreadable === true) {
     return "Não pôde ser lido";
@@ -159,7 +167,7 @@ const describeValue = (issue: ValidationIssue): string => {
   }
   switch (issue.params?.format) {
     case "multipleOf":
-      return `Deve ser múltiplo de ${param(issue, "value")}`;
+      return `Deve ser múltiplo de ${decimal(issue.params?.["value"])}`;
     case "int":
       return "Deve ser um número inteiro";
     case "safeInt":
@@ -187,7 +195,7 @@ const describeType = (issue: ValidationIssue): string => {
 const describeKey = (issue: ValidationIssue, messages: Messages): string => {
   const [found] = (issue.params?.issues ?? []) as readonly ValidationIssue[];
   if (found?.code === "invalid_value" && found.params?.unique === true) {
-    return "Deve ser informado apenas uma vez";
+    return "Deve ser informada apenas uma vez";
   }
   if (found?.code === "invalid_value" && found.params?.reserved === true) {
     return "Não pode ser usada como chave";

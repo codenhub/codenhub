@@ -115,18 +115,31 @@ describe("portugueseMessages", () => {
     expect(said(array(string(), unique())(["a", "a"]))).toEqual(["Deve ser único"]);
   });
 
+  it("should write a bound and a step that are not whole with a decimal comma", () => {
+    expect(said(number({ min: 0.1 })(0))).toEqual(["Deve ser no mínimo 0,1"]);
+    expect(said(number({ lt: -2.5 })(0))).toEqual(["Deve ser menor que -2,5"]);
+    expect(said(number(multipleOf(0.01))(0.015))).toEqual(["Deve ser múltiplo de 0,01"]);
+  });
+
   it("should word a reserved key as one that must not be used, and what is inside it as reserved", () => {
     const [reserved] = issuesOf(record(string(), number())(JSON.parse('{"__proto__":1}')));
     expect(formatIssue(reserved as ValidationIssue, portugueseMessages)).toBe("Não pode ser usada como chave");
     const [inside] = ((reserved as ValidationIssue).params ?? {})["issues"] as ValidationIssue[];
-    expect(formatIssue(inside as ValidationIssue, portugueseMessages)).toBe("É reservado");
+    // Only a key is reserved, and "a chave" is feminine, as every message of a key is.
+    expect(formatIssue(inside as ValidationIssue, portugueseMessages)).toBe("É reservada");
+  });
+
+  it("should word a key given twice in the feminine, as the other messages of a key", () => {
+    expect(said(record(string({ trim: true }), number())({ a: 1, " a": 2 }))).toEqual([
+      "Deve ser informada apenas uma vez",
+    ]);
   });
 
   it("should word a value that is not the one expected, and a long list of them", () => {
     expect(said(literal("a")("b"))).toEqual(['Esperado "a"']);
     expect(said(oneOf(["a", 1])("b"))).toEqual(['Esperado um de "a", 1']);
     const many = Array.from({ length: 12 }, (_, index) => index);
-    expect(said(oneOf(many)("b"))).toEqual(["Esperado um de 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ou mais 2"]);
+    expect(said(oneOf(many)("b"))).toEqual(["Esperado um de 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 e mais 2"]);
     const unread = {
       get name(): string {
         throw new Error("boom");
