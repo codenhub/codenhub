@@ -373,7 +373,7 @@ After the import, render one styled element and confirm it picked up the package
 <button class="btn primary">Save changes</button>
 ```
 
-A rounded button filled with the primary color (near-black on a light page, near-white on a dark one) means the stylesheet loaded. Unstyled browser-default text most often means the import specifier didn't resolve — check the [entrypoint table](docs/setup.md#all-entrypoints) for the exact one your entrypoint needs, and confirm your build tooling resolves package CSS imports at all, see [Setup → Requirements](docs/setup.md#requirements). With no build tool, link the file by its path instead; see [Without a bundler](docs/integrating/without-a-bundler.md). [Setup → When nothing is styled](docs/setup.md#when-nothing-is-styled) lists the other common causes.
+A rounded button filled with the primary color (near-black on a light page, near-white on a dark one) means the stylesheet loaded. Unstyled browser-default text most often means the import specifier didn't resolve — check the [entrypoint table](docs/setup.md#all-entrypoints) for the exact specifier to import, and confirm your build tooling resolves package CSS imports at all, see [Setup → Requirements](docs/setup.md#requirements). With no build tool, link the file by its path instead; see [Without a bundler](docs/integrating/without-a-bundler.md). [Setup → When nothing is styled](docs/setup.md#when-nothing-is-styled) lists the other common causes.
 
 ## Next
 
@@ -639,7 +639,7 @@ Each compiled import path is one file in the package's `dist/` folder:
 | `@codenhub/styles/aesthetics`   | `dist/aesthetics/index.css`                                       |
 | `@codenhub/styles/aesthetics/*` | `dist/aesthetics/<name>.css`, such as `dist/aesthetics/pixel.css` |
 
-Link the base file first and an aesthetic after it. [Setup → Import paths](docs/setup.md#all-entrypoints) explains what each one contains; link one base file, not several, since they overlap.
+Link the base file first and an aesthetic after it. [Setup → All entrypoints](docs/setup.md#all-entrypoints) explains what each one contains; link one base file, not several, since they overlap.
 
 ## From a CDN
 
@@ -673,7 +673,7 @@ Repeat the copy after each upgrade, for example from an npm `postinstall` script
 
 ### Ruby on Rails
 
-A Rails app built with `cssbundling-rails` already runs a bundler: import the package from `app/assets/stylesheets/application.css` as in [Setup → Quick start](docs/setup.md#import-the-stylesheet).
+A Rails app built with `cssbundling-rails` already runs a bundler: import the package from `app/assets/stylesheets/application.css` as in [Setup → Import the stylesheet](docs/setup.md#import-the-stylesheet).
 
 With Propshaft and no CSS bundler, add the package's folder to the asset paths:
 
@@ -710,7 +710,7 @@ STATICFILES_DIRS = [
 
 ### Laravel
 
-A Laravel app runs Vite by default, so it has a bundler: import the package from `resources/css/app.css` as in [Setup → Quick start](docs/setup.md#import-the-stylesheet), and load that file with the `@vite` directive as usual.
+A Laravel app runs Vite by default, so it has a bundler: import the package from `resources/css/app.css` as in [Setup → Import the stylesheet](docs/setup.md#import-the-stylesheet), and load that file with the `@vite` directive as usual.
 
 ## Verifying it worked
 

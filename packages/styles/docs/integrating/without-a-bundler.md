@@ -26,7 +26,7 @@ Each compiled import path is one file in the package's `dist/` folder:
 | `@codenhub/styles/aesthetics`   | `dist/aesthetics/index.css`                                       |
 | `@codenhub/styles/aesthetics/*` | `dist/aesthetics/<name>.css`, such as `dist/aesthetics/pixel.css` |
 
-Link the base file first and an aesthetic after it. [Setup → Import paths](../setup.md#all-entrypoints) explains what each one contains; link one base file, not several, since they overlap.
+Link the base file first and an aesthetic after it. [Setup → All entrypoints](../setup.md#all-entrypoints) explains what each one contains; link one base file, not several, since they overlap.
 
 ## From a CDN
 
@@ -60,7 +60,7 @@ Repeat the copy after each upgrade, for example from an npm `postinstall` script
 
 ### Ruby on Rails
 
-A Rails app built with `cssbundling-rails` already runs a bundler: import the package from `app/assets/stylesheets/application.css` as in [Setup → Quick start](../setup.md#import-the-stylesheet).
+A Rails app built with `cssbundling-rails` already runs a bundler: import the package from `app/assets/stylesheets/application.css` as in [Setup → Import the stylesheet](../setup.md#import-the-stylesheet).
 
 With Propshaft and no CSS bundler, add the package's folder to the asset paths:
 
@@ -97,7 +97,7 @@ STATICFILES_DIRS = [
 
 ### Laravel
 
-A Laravel app runs Vite by default, so it has a bundler: import the package from `resources/css/app.css` as in [Setup → Quick start](../setup.md#import-the-stylesheet), and load that file with the `@vite` directive as usual.
+A Laravel app runs Vite by default, so it has a bundler: import the package from `resources/css/app.css` as in [Setup → Import the stylesheet](../setup.md#import-the-stylesheet), and load that file with the `@vite` directive as usual.
 
 ## Verifying it worked
 
