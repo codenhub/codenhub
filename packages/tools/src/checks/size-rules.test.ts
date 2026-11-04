@@ -80,6 +80,27 @@ describe("size rule", () => {
     expect(checkSize).toHaveBeenCalledWith(workspacePackage, 1000);
   });
 
+  it("runs one comparison at a time, since each one builds its package", async () => {
+    let running = 0;
+    let overlapped = false;
+    const checkSize = vi.fn<SizeRuleSources["checkSize"]>(async () => {
+      running += 1;
+      overlapped ||= running > 1;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      running -= 1;
+      return { detail: "ok", name: "size", status: "ready" };
+    });
+    const [rule] = createSizeRules({ checkSize, listTags: async () => ["@codenhub/example@0.2.0"] });
+    const packages = await Promise.all([1, 2, 3].map(async () => createPackage("0.3.0", { sizeFile: true })));
+
+    await Promise.all(
+      packages.map(async (workspacePackage) => rule!.run({ includePack: false, package: workspacePackage })),
+    );
+
+    expect(checkSize).toHaveBeenCalledTimes(3);
+    expect(overlapped).toBe(false);
+  });
+
   it("does not apply to a private package", async () => {
     const { rule } = createRule([]);
 

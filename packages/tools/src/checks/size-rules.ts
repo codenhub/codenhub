@@ -67,7 +67,8 @@ async function run(
   const untagged = `${releaseTagFor(workspacePackage)} has no tag yet, so this version is awaiting release and \`hub publish\` will compare ${SIZE_FILE} with the build. If it is already released, run \`git fetch --tags\`.`;
   const exists = await access(join(workspacePackage.directory, SIZE_FILE)).then(
     () => true,
-    () => false,
+    // Any other error is not evidence of absence; the comparison reports it.
+    (error: NodeJS.ErrnoException) => error.code !== "ENOENT",
   );
   if (!exists) {
     return [
@@ -95,15 +96,36 @@ async function run(
 
 /**
  * Builds the `size` rule: a version awaiting release carries a `size.json` that matches its build.
+ *
+ * `hub check` inspects packages concurrently, and each comparison runs the
+ * package's build, which can clean its `dist` while another package's build
+ * reads it. The comparisons therefore run one at a time.
  * @param sources Tags and the size precondition.
  * @returns The rule.
  */
 export function createSizeRules(sources: SizeRuleSources): CheckRule[] {
+  let previous: Promise<void> = Promise.resolve();
+  const serialized: SizeRuleSources = {
+    ...sources,
+    checkSize: async (workspacePackage, timeoutMs) => {
+      const waitFor = previous;
+      let release = (): void => undefined;
+      previous = new Promise((resolve) => {
+        release = resolve;
+      });
+      await waitFor;
+      try {
+        return await sources.checkSize(workspacePackage, timeoutMs);
+      } finally {
+        release();
+      }
+    },
+  };
   return [
     {
       appliesTo: ({ isPrivate }) => !isPrivate,
       name: "size",
-      run: ({ package: workspacePackage, timeoutMs }) => run(workspacePackage, sources, timeoutMs),
+      run: ({ package: workspacePackage, timeoutMs }) => run(workspacePackage, serialized, timeoutMs),
       summary: "A version awaiting its release tag carries a size.json that matches its build.",
     },
   ];
