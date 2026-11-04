@@ -1,62 +1,128 @@
 ---
 title: Buttons
-description: Button classes, intents, sizes, and states.
-order: 5
+description: Destructive and secondary actions, icon buttons, sizes, link buttons, disabled states, and loading icons.
+order: 1
 ---
 
 # Buttons
 
-Use `.btn` with one optional intent class, one optional fill class, one optional edge class, optional size class, and optional state. See [Composing](./composing.md) for how the intent, presentation, and aesthetic axes combine on any component.
+The settings screen has a Save button and a Cancel button. This page adds the rest of its actions: a danger zone with a destructive Delete button, an icon button that copies an API key, and smaller buttons for a dense row. It also covers disabled buttons and how to load the icons used here and on later pages.
 
-Intent classes map color tokens into button tone slots. [Presentation](./composing.md#presentation) decides how much of that intent reaches background, text, border, and hover.
+## Add a danger zone
 
-Intent classes:
-
-| Class                  | Meaning                        |
-| ---------------------- | ------------------------------ |
-| `.neutral` _(default)_ | No specific intent.            |
-| `.primary`             | Primary action.                |
-| `.secondary`           | Secondary/accent action.       |
-| `.success`             | Successful or positive action. |
-| `.warning`             | Warning/caution action.        |
-| `.destructive`         | Destructive or error action.   |
-| `.info`                | Informational action.          |
-
-Every component that supports intent accepts the same list and reads the same [intent tokens](./theming.md#intent-tokens), so a custom intent class works everywhere without touching a component.
-
-`.neutral` is the only intent that does not fill all the way. Its color is the page's own text color, so a full fill of it would be a black or white slab — the loudest element on the page, for the intent that means nothing in particular. It stops at `--intent-fill-max`, which is why a `.solid` neutral is a quiet plate a step past `.soft` rather than a block of ink. Set the slot on your own intent classes; see [Theming → Intent tokens](./theming.md#intent-tokens).
-
-Size and shape classes:
-
-| Class                                                                  | Purpose                                                                                                                                                                                                                                   |
-| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.pill`                                                                | Fully rounded button corners by default; under sketch it takes organic hand-drawn pill contours avoiding egg-shaped distortion.                                                                                                           |
-| `.sm`                                                                  | Smaller button.                                                                                                                                                                                                                           |
-| `.lg`                                                                  | Larger button.                                                                                                                                                                                                                            |
-| `.p-xs`                                                                | Tightest padding modifier (`px-2 py-0.5`; icon `p-0.5`). Also drops the `--control-height` minimum so a chip-sized button fits a table cell or a dense toolbar; every other size and padding class keeps that floor for a labeled button. |
-| `.p-sm`                                                                | Compact padding modifier (`px-2.5 py-1`; icon `p-1`).                                                                                                                                                                                     |
-| `.p-lg`                                                                | Spacious padding modifier (`px-6 py-3`; icon `p-3`).                                                                                                                                                                                      |
-| `.icon`                                                                | Square icon button, at least `--control-height` on each side, or 2rem with `.sm` and 3rem with `.lg`. With `.p-xs`, `.p-sm`, or `.p-lg` it drops that floor and sizes to its own padding. Use an accessible name in HTML.                 |
-| `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                                                                                                                                                                                                         |
-
-Examples:
+A destructive action goes in its own card at the bottom of the screen. The card is soft and destructive so it reads as a warning; the button is solid so it is the loudest thing in that card:
 
 ```html
-<button class="btn primary">Primary</button>
-<button class="btn success ghost edged">Success outline</button>
-<button class="btn warning soft">Warning soft</button>
-<button class="btn destructive ghost edgeless">Danger ghost</button>
-<button class="btn icon primary" aria-label="Create">+</button>
-<button class="btn primary" disabled>
-  <i class="ic-lucide-loader-circle ic-anim-spin" aria-hidden="true"></i>
-  Saving
+<section class="card soft destructive stack" aria-labelledby="danger-title">
+  <h2 class="text-title-sm" id="danger-title">Delete account</h2>
+  <p>This removes your projects, invoices, and API keys. It cannot be undone.</p>
+  <div class="cluster">
+    <button class="btn destructive" type="button">Delete account</button>
+    <button class="btn ghost" type="button">Export data first</button>
+  </div>
+</section>
+```
+
+The card and the button each name `.destructive`, because [intent does not pass down](../concepts.md#intent-which-color). The Export button keeps its neutral color inside the red card for the same reason.
+
+## Choose a fill and an edge
+
+A button accepts one intent, one fill class, and one edge class, all optional. With none, a button is solid and edgeless:
+
+```html
+<button class="btn primary">Save changes</button>
+<button class="btn secondary">Preview</button>
+<button class="btn primary soft">Invite member</button>
+<button class="btn destructive ghost edged">Revoke key</button>
+<button class="btn ghost">Cancel</button>
+```
+
+A **neutral** button never fills completely. Its color is the page's own text color, so a full fill would be a black or white block, the loudest thing on the page for the intent that means nothing in particular. A neutral `.solid` button stops at a 20% fill instead, a quiet gray a step darker than `.soft`. Every named intent fills to 100%.
+
+On hover, a button's fill deepens by `--hover-step` (14%), so a `.ghost` button picks up a tint and a `.solid` one darkens. On press it scales down slightly (`scale(0.97)`); an [aesthetic](./aesthetics.md) can replace that with its own press, and a user's reduced-motion preference turns it off.
+
+## Sizes and shapes
+
+| Class   | Effect                                                                                                                                       |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| _none_  | At least 2.5rem tall (`--control-height`), 1rem side padding, and the same font size as the surrounding text.                                |
+| `.sm`   | At least 2rem tall, 0.75rem side padding, 0.875rem text.                                                                                     |
+| `.lg`   | At least 3rem tall, 1.25rem side padding, 1.0625rem text.                                                                                    |
+| `.pill` | Fully rounded ends.                                                                                                                          |
+| `.icon` | Square. At least 2.5rem on each side, 2rem with `.sm`, 3rem with `.lg`.                                                                      |
+| `.p-xs` | Tightest padding (0.5rem sides, 0.125rem top and bottom). Also removes the minimum height, so a button fits a table cell or a dense toolbar. |
+| `.p-sm` | Compact padding (0.625rem sides, 0.25rem top and bottom).                                                                                    |
+| `.p-lg` | Roomy padding (1.5rem sides, 0.75rem top and bottom).                                                                                        |
+
+A size class and a padding class can be combined. Only `.p-xs` removes the minimum height of a labeled button; every other combination keeps it. On an icon button, any `.p-*` class removes the minimum size and the button sizes to its icon plus that padding: 0.125rem, 0.25rem, or 0.75rem around it.
+
+The base look draws corners that scale with the size: a `.sm` or `.p-sm` button has slightly smaller corners than a default one, and `.lg` slightly larger.
+
+## Icon buttons
+
+The API keys list on the settings screen has a copy button beside each key. An icon-only button needs an accessible name, because the icon has no text a screen reader can read:
+
+```html
+<button class="btn icon ghost" type="button" aria-label="Copy API key">
+  <i class="ic-lucide-copy" aria-hidden="true"></i>
+</button>
+<button class="btn ghost sm" type="button">
+  <i class="ic-lucide-download" aria-hidden="true"></i>
+  Download invoice
 </button>
 ```
 
-## Loading
+A button is a flex row with a 0.5rem gap, so an icon next to a label is spaced without extra markup.
 
-The package ships no loading state or spinner of its own: a loading button is a disabled `.btn` composed with a spinner you bring, such as a `@codenhub/icons` glyph with `ic-anim-spin`. This package does not load those icon classes; [Feedback](./feedback.md) shows how to load `@codenhub/icons` for your pipeline. Disable the button so users cannot trigger duplicate work, and drop the spinner in beside the label. Whether to also hide the label is your call; the package has no built-in mechanism for that.
+### Loading icons
 
-On the base look a press scales the button down a little (`--ui-active-transform`, `scale(0.97)`). [Aesthetics](./aesthetics.md) swap in their own press gesture, and `prefers-reduced-motion` turns it off.
+This package ships no icons. The examples in these docs use `@codenhub/icons` with the Lucide family, and its class names are always written with the family, as `ic-lucide-copy`. Install it and load it once, next to this package:
 
-Use `<button>` for actions or an accessible link for navigation; see [Accessibility](../accessibility.md).
+```sh
+pnpm add @codenhub/icons
+```
+
+With compiled CSS, import the base rules and each family you use:
+
+```css
+@import "@codenhub/styles";
+@import "@codenhub/icons";
+@import "@codenhub/icons/lucide";
+```
+
+With Tailwind source, import its Tailwind entrypoint after this package's:
+
+```css
+@import "@codenhub/styles/tw";
+@import "@codenhub/icons/tw";
+```
+
+Any other icon works too: an inline `<svg>` with `stroke="currentColor"` or `fill="currentColor"` takes the button's text color the same way.
+
+## Links that look like buttons
+
+A link that navigates, such as "View billing history", is still a link. Write it as `<a href>` with `.btn`, and it gets the same look:
+
+```html
+<a class="btn secondary ghost edged" href="/settings/billing">View billing history</a>
+```
+
+Do not use `<div class="btn">` or `<span class="btn">`: they look like buttons but cannot be focused or activated from a keyboard. Use `<button>` for actions and `<a href>` for navigation.
+
+## Disabled buttons
+
+Any of these makes a button look disabled: the `disabled` attribute, `.disabled`, `aria-disabled="true"`, or `data-disabled`. A disabled button is drawn at 58% opacity with a not-allowed cursor, and does not change on hover or press.
+
+```html
+<button class="btn primary" type="submit" disabled>Save changes</button> <a class="btn ghost" aria-disabled="true">Download invoice</a>
+```
+
+Only the `disabled` attribute stops the button from working. `.disabled`, `aria-disabled`, and `data-disabled` change the look only: a click or the Enter key still activates it, so your code has to ignore it. `aria-disabled` is the right choice when the button should stay focusable, for example so a tooltip can explain why it is disabled. A link has no `disabled` attribute, so remove its `href` as well when it should not navigate.
+
+## Loading state
+
+There is no loading class. A loading button is a disabled button with a spinner icon you bring, which [Feedback](./feedback.md#show-that-the-form-is-saving) builds for the Save button. Disable it so a second click cannot submit twice.
+
+## Next
+
+The buttons are ready; the card they save has nothing to save yet. [Forms](./forms.md) adds the profile fields.
