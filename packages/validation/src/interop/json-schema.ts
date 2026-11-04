@@ -49,19 +49,19 @@ export interface JsonSchemaOptions {
 }
 
 /**
- * The formats JSON Schema names otherwise than this package does, for the input and the output side. An
- * empty name is a format whose text the format of that name may refuse, written with none: RFC 3339's
- * `time` needs an offset and its `duration` has no fraction and no weeks beside days, a URL may hold `|`,
- * which a URI may not, and an IPv6 address a zone, `fe80::1%eth0`, which `ipv6` refuses. An `email` and a
- * `domain` read Unicode and produce ASCII, so only their output is `email` or `hostname`: `idn-email` and
- * `idn-hostname` would fit their input, but ajv-formats has neither, and Ajv in strict mode refuses to
- * compile a format it does not know. Any other format is written under its own name.
+ * The formats written with a JSON Schema `format`, under JSON Schema's name, for the input and the output
+ * side. Any other is written with none: Ajv in its default strict mode refuses to compile a format it does
+ * not know, such as `phone`, so a name of this package's own, or of a `format()`, would make the whole
+ * schema unusable there. An empty name is a format whose text the format of that name may refuse: RFC
+ * 3339's `time` needs an offset and its `duration` has no fraction and no weeks beside days, a URL may
+ * hold `|`, which a URI may not, and an IPv6 address a zone, `fe80::1%eth0`, which `ipv6` refuses. An
+ * `email` and a `domain` read Unicode and produce ASCII, so only their output is `email` or `hostname`:
+ * `idn-email` and `idn-hostname` would fit their input, but ajv-formats has neither.
  */
 const FORMAT_NAMES: Readonly<Record<string, readonly [input: string, output: string]>> = {
-  url: ["", ""],
+  uuid: ["uuid", "uuid"],
+  hostname: ["hostname", "hostname"],
   ip: ["", ""],
-  time: ["", ""],
-  duration: ["", ""],
   datetime: ["date-time", "date-time"],
   isoDate: ["date", "date"],
   email: ["", "email"],
@@ -121,7 +121,9 @@ const isJsonPrimitive = (value: unknown): boolean =>
  * schema can say: a format's exact rules, such as which hosts of an `email` are public, are written as
  * the nearest JSON Schema `format`, and with none where that format refuses text the validator accepts,
  * as `time` refuses `12:00`. A format that reads Unicode and produces ASCII, such as `email`, is written
- * with no format on the input side and as `email` on the output side.
+ * with no format on the input side and as `email` on the output side. A format JSON Schema has no name
+ * for, such as `phone`, `slug` or one made with `format`, is written with none, since a reader in strict
+ * mode, as Ajv is by default, refuses to compile a format it does not know.
  *
  * A schema reads a `pattern` in Unicode mode, the `u` flag, so one written without it is written as it is
  * when it means the same there, where `.` and a negated class match a whole character rather than half of
@@ -396,7 +398,7 @@ export function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOption
           return checked({ type: "string", contentEncoding: given["url"] === true ? "base64url" : "base64" });
         }
         // Own names only, so a format made with `format("constructor", …)` is not taken for `Object`.
-        const [input = name, output = input] = (Object.hasOwn(FORMAT_NAMES, name) && FORMAT_NAMES[name]) || [];
+        const [input = "", output = input] = (Object.hasOwn(FORMAT_NAMES, name) && FORMAT_NAMES[name]) || [];
         // A local date-time has no offset, which `date-time` requires.
         const written =
           name === "ip" && given["version"] === "v4"

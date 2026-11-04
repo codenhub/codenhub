@@ -38,17 +38,27 @@ import { tuple } from "../composition/tuple";
 import { union } from "../composition/union";
 import type { AnyValidator, Validator } from "../core/types";
 import { base64 } from "../formats/base64";
+import { cidr } from "../formats/cidr";
+import { creditCard } from "../formats/credit-card";
+import { cuid2 } from "../formats/cuid2";
 import { datetime } from "../formats/datetime";
 import { domain } from "../formats/domain";
 import { duration } from "../formats/duration";
 import { email } from "../formats/email";
+import { hex } from "../formats/hex";
 import { hostname } from "../formats/hostname";
 import { ip } from "../formats/ip";
 import { isoDate } from "../formats/iso-date";
+import { jwt } from "../formats/jwt";
+import { mac } from "../formats/mac";
+import { nanoid } from "../formats/nanoid";
+import { phone } from "../formats/phone";
 import { port } from "../formats/port";
 import { searchParams } from "../formats/search-params";
+import { semver } from "../formats/semver";
 import { slug } from "../formats/slug";
 import { time } from "../formats/time";
+import { ulid } from "../formats/ulid";
 import { url } from "../formats/url";
 import { uuid } from "../formats/uuid";
 import { bigint } from "../primitives/bigint";
@@ -165,13 +175,12 @@ describe("toJsonSchema", () => {
     expect(schemaOf(oneOf(["a", 1, true]))).toEqual({ enum: ["a", 1, true] });
   });
 
-  it("should write formats under the name JSON Schema gives them, and any other under its own", () => {
+  it("should write formats under the name JSON Schema gives them", () => {
     expect(schemaOf(uuid())).toEqual({ type: "string", format: "uuid" });
     expect(schemaOf(datetime())).toEqual({ type: "string", format: "date-time" });
     expect(schemaOf(datetime({ offset: true, precision: 3 }))).toEqual({ type: "string", format: "date-time" });
     expect(schemaOf(isoDate())).toEqual({ type: "string", format: "date" });
     expect(schemaOf(hostname())).toEqual({ type: "string", format: "hostname" });
-    expect(schemaOf(slug())).toEqual({ type: "string", format: "slug" });
     expect(schemaOf(ip({ version: "v4" }))).toEqual({ type: "string", format: "ipv4" });
     expect(schemaOf(base64({ url: true }))).toEqual({ type: "string", contentEncoding: "base64url" });
     expect(schemaOf(port())).toEqual({ type: "integer", minimum: 1, maximum: 65_535 });
@@ -199,9 +208,29 @@ describe("toJsonSchema", () => {
     }
   });
 
-  it("should write a format made with format under its own name, whatever the name", () => {
-    expect(schemaOf(format("constructor", () => true)())).toEqual({ type: "string", format: "constructor" });
-    expect(schemaOf(format("toString", () => true)())).toEqual({ type: "string", format: "toString" });
+  it("should write no format for a format JSON Schema has no name for, which a strict reader refuses to compile", () => {
+    for (const validator of [
+      phone(),
+      slug(),
+      hex(),
+      ulid(),
+      semver(),
+      cidr(),
+      mac(),
+      jwt(),
+      cuid2(),
+      nanoid(),
+      creditCard(),
+      format("even", (text) => text.length % 2 === 0)(),
+    ]) {
+      expect(schemaOf(validator)).toEqual({ type: "string" });
+      expect(schemaOf(validator, { io: "output" })).toEqual({ type: "string" });
+    }
+  });
+
+  it("should not take a format made with format for a name an object inherits", () => {
+    expect(schemaOf(format("constructor", () => true)())).toEqual({ type: "string" });
+    expect(schemaOf(format("toString", () => true)())).toEqual({ type: "string" });
   });
 
   it("should write collections", () => {
