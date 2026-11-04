@@ -196,7 +196,7 @@ describe("cutRelease", () => {
     expect(JSON.parse(await readFile(join(workspacePackage.directory, "size.json"), "utf8"))).toEqual(SIZE);
     expect(await readFile(join(workspacePackage.directory, "package.json"), "utf8")).toBe(manifest);
     // A re-cut is not an opt-in to a changelog the package does not keep.
-    await expect(access(join(workspacePackage.directory, "docs/changelog"))).rejects.toThrow();
+    await expect(access(join(workspacePackage.directory, "docs/changelog"))).rejects.toThrow("ENOENT");
   });
 
   it("refuses to re-cut a version that is already tagged, writing nothing", async () => {
@@ -205,6 +205,6 @@ describe("cutRelease", () => {
     await expect(
       cutRelease(workspacePackage, "0.3.0", "2026-09-07", { isTagged: async () => true, measure: measured }),
     ).rejects.toThrow("@codenhub/error@0.3.0 is already released");
-    await expect(access(join(workspacePackage.directory, "size.json"))).rejects.toThrow();
+    await expect(access(join(workspacePackage.directory, "size.json"))).rejects.toThrow("ENOENT");
   });
 });
