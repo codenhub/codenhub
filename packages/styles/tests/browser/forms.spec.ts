@@ -963,6 +963,70 @@ test.describe("forms", () => {
     expect(measured.affixGrows, "affix does not grow").toBe("0");
   });
 
+  /* The group floors its own line at full, so a container's `.edgeless` cannot
+     erase the field. That floor once inherited into a button nested in the
+     group: a ghost clear button, which rests edgeless, drew the field's line
+     around itself. These read the painted border of the button against the
+     same button standing alone, and the group's own line under an edgeless
+     container, which is the floor the fix keeps. */
+  test("keeps a nested button's own edge inside a group that floors its line", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const measured = await page.evaluate(() => {
+      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+      const read = (markup: string) => {
+        const wrapper = document.createElement("div");
+
+        wrapper.innerHTML = markup;
+        host.append(wrapper);
+
+        const paint = (selector: string) => {
+          const styles = getComputedStyle(wrapper.querySelector(selector)!);
+          return { color: styles.borderTopColor, width: styles.borderTopWidth };
+        };
+        const values = { button: paint(".btn"), group: paint(".input-group") };
+
+        wrapper.remove();
+
+        return values;
+      };
+      const group = (button: string, container = "") =>
+        read(`<div class="${container}"><div class="input-group"><input class="ipt" />${button}</div></div>`);
+      const alone = (button: string) => read(`<div class="input-group"></div>${button}`).button;
+
+      return {
+        ghost: {
+          grouped: group('<button class="btn ghost">x</button>').button,
+          alone: alone('<button class="btn ghost">x</button>'),
+        },
+        edgeless: {
+          grouped: group('<button class="btn ghost edgeless">x</button>').button,
+          alone: alone('<button class="btn ghost edgeless">x</button>'),
+        },
+        edged: {
+          grouped: group('<button class="btn ghost edged">x</button>').button,
+          alone: alone('<button class="btn ghost edged">x</button>'),
+        },
+        groupUnderEdgeless: group('<button class="btn ghost">x</button>', "edgeless").group,
+        groupAlone: group('<button class="btn ghost">x</button>').group,
+      };
+    });
+
+    for (const variant of ["ghost", "edgeless"] as const) {
+      expect(isTransparent(measured[variant].alone.color), `${variant} button alone draws no line`).toBe(true);
+      expect(isTransparent(measured[variant].grouped.color), `${variant} button in a group draws no line`).toBe(true);
+    }
+    /* An edged button still draws its own line in the group. */
+    expect(getColorDistance(measured.edged.grouped.color, measured.edged.alone.color), "edged button").toBeLessThan(2);
+    expect(isTransparent(measured.edged.grouped.color), "edged button in a group").toBe(false);
+    /* The group keeps its floor under a container's `.edgeless`. */
+    expect(isTransparent(measured.groupUnderEdgeless.color), "group under an edgeless container").toBe(false);
+    expect(
+      getColorDistance(measured.groupUnderEdgeless.color, measured.groupAlone.color),
+      "the group's line is the one it draws alone",
+    ).toBeLessThan(2);
+  });
+
   test("rings the group on focus-within and does not double the ring on the control", async ({ page }) => {
     await page.goto(FORMS_URL);
 

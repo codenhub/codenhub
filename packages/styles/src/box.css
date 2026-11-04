@@ -106,7 +106,14 @@
      Rewriting the result drops every term it was composed from, silently and
      with nothing to report. Bounding the input leaves the axis live, so
      `.edged` and `.edgeless` still mean what they say on a component that
-     floors itself. */
+     floors itself.
+
+     Restated at `0%` -- no floor -- for the reason `--_fill-cap` is restated
+     above: the floor inherits, so a field's or a tooltip bubble's `100%` reached
+     every box nested inside, and a `.btn.edgeless` clear button in an
+     `.input-group` drew a field's line it had asked not to have. Components
+     that floor themselves declare theirs after `@apply box`. */
+  --_edge-floor: 0%;
   --_edge-amount: max(var(--ui-border, var(--_d-border)), var(--_edge-floor, 0%));
   --_edge: color-mix(in oklab, var(--_line) var(--_edge-amount), transparent);
   --_width: min(var(--ui-border-width, var(--border-width)), var(--ui-border-max, 100px));
