@@ -210,6 +210,19 @@ describe("audit", () => {
     );
   });
 
+  it("should walk a long chain of distinct lazy parts to its end, as a schema generator writes one", () => {
+    let chain: AnyValidator = string({ max: 3 });
+    let built: AnyValidator = string();
+    for (let level = 0; level < 100; level += 1) {
+      const child = chain;
+      chain = lazy(() => child);
+      const next = built;
+      built = lazy(() => object({ next }));
+    }
+    expect(audit(chain)).toEqual([]);
+    expect(audit(built)).toEqual([{ rule: "unbounded_text", path: "next.".repeat(99) + "next", kind: "string" }]);
+  });
+
   it("should give a frozen list, and refuse what is not a function", () => {
     expect(Object.isFrozen(audit(string()))).toBe(true);
     expect(() => audit(undefined as never)).toThrow(TypeError);

@@ -48,7 +48,10 @@ const COLLECTIONS = new Set(["array", "set", "map", "record"]);
 /** The defaults of `lazy`, above which a limit is reported as raised. */
 const DEFAULT_LIMITS: Readonly<Record<string, number>> = { maxDepth: 128, maxCalls: 10_000 };
 
-/** How many `lazy` parts may be walked at once, one inside another, before a schema is taken to build itself anew. */
+/**
+ * How many `lazy` parts whose getter makes new `lazy` parts each time it is called may be walked at once,
+ * one inside another, before a schema is taken to build itself anew.
+ */
 const MAX_OPEN_LAZY = 64;
 
 const hasBound = (record: Description): boolean =>
@@ -57,6 +60,47 @@ const hasBound = (record: Description): boolean =>
 /** Whether a format is a built-in one that bounds its text, and not one made with `format` under its name. */
 const isBoundedFormat = (record: Description): boolean =>
   BOUNDED_FORMATS.has(String(record["format"])) && !customFormats.has(record.options as object);
+
+/**
+ * Adds to `found` the getters of the `lazy` parts a validator holds, short of what those parts refer to.
+ * A part reached twice is read once, since parts a schema shares would otherwise be read once for each way to them.
+ */
+function addGetters(part: unknown, found: Set<unknown>, seen: Set<unknown>): void {
+  const record = describe(part as AnyValidator);
+  if (record === undefined || seen.has(part)) {
+    return;
+  }
+  seen.add(part);
+  if (record.kind === "lazy") {
+    found.add(record["getter"]);
+    return;
+  }
+  for (const value of Object.values(record)) {
+    // A child is a validator, or is in a list, such as `steps`, or in a record, such as `shape`.
+    const children: unknown[] =
+      typeof value === "function" ? [value] : typeof value === "object" && value !== null ? Object.values(value) : [];
+    for (const child of children) {
+      addGetters(child, found, seen);
+    }
+  }
+}
+
+/**
+ * Whether a getter makes new `lazy` parts each time it is called, as `lazy(() => build())` does, so that
+ * following them never comes back to one already walked. A getter that returns a schema built once, or
+ * builds a part around `lazy` parts that exist already, makes none.
+ */
+function makesNewLazy(getter: () => unknown, first: unknown): boolean {
+  const again = getter();
+  if (again === first) {
+    return false;
+  }
+  const before = new Set<unknown>();
+  const after = new Set<unknown>();
+  addGetters(first, before, new Set());
+  addGetters(again, after, new Set());
+  return [...after].some((each) => !before.has(each));
+}
 
 /**
  * How much of a value a step before it bounds: nothing, the number of items of a collection, or all of it,
@@ -125,7 +169,8 @@ function boundOf(part: unknown): Bound {
  * Text read by `coerceBigint` needs a bound on each side, since converting it takes longer than linear
  * time in its length, and a bound limits the digits converted.
  *
- * It reads the schema and never calls it. Whether a `max` is small enough is not its to judge: any number
+ * It reads the schema and never calls it, though it calls the getter of each `lazy` twice, to tell a schema
+ * built anew at every level from one built once. Whether a `max` is small enough is not its to judge: any number
  * says someone decided. A check is not read, since it runs on a value that already passed. It lists the
  * bounds an option can set, so it does not report the keys an `object` with `unknownKeys: "passthrough"`
  * keeps, nor what `unknown()` accepts: neither has an option that bounds it. Use `"strip"` or `"strict"`
@@ -154,6 +199,8 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
   const walking = new Set<unknown>();
   // The getters reported for raised limits, so a `lazy` used at two places is reported once.
   const reported = new Set<unknown>();
+  // How many of the `lazy` parts being walked make new `lazy` parts each time their getter is called.
+  let rebuilding = 0;
   const at = (path: string, key: string): string => (path === "" ? key : `${path}.${key}`);
 
   // `bounded` is how much of the value a step before it bounds, as `boundOf` gives it.
@@ -274,15 +321,20 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
         }
         if (!walking.has(getter)) {
           // A getter written where the schema is built, as in `lazy(() => build())`, is a new function at
-          // every level, and would be followed until the stack ran out.
-          if (walking.size >= MAX_OPEN_LAZY) {
+          // every level, and would be followed until the stack ran out. Its getter makes new `lazy` parts
+          // each time it is called, which a long chain of distinct `lazy` parts built once does not.
+          const target = getter();
+          const isRebuilding = makesNewLazy(getter, target);
+          if (isRebuilding && rebuilding >= MAX_OPEN_LAZY) {
             throw new TypeError(
               "audit found a recursive schema that is built anew at every level. Build it once and refer to it",
             );
           }
+          rebuilding += isRebuilding ? 1 : 0;
           walking.add(getter);
-          walk(getter(), path, bounded);
+          walk(target, path, bounded);
           walking.delete(getter);
+          rebuilding -= isRebuilding ? 1 : 0;
         }
         return;
       }
