@@ -51,7 +51,7 @@ const browserTitle =
     <main class="document-column" id="main-content">
       <div class="document-body">
         {tocHeadings.length > 0 && <PageOutline headings={tocHeadings} label={messages.onThisPage} />}
-        <PageActions messages={messages.pageActions} route={document.route} />
+        <PageActions locale={locale} route={document.route} />
         <article class="markdown-content">
           <slot />
         </article>
@@ -77,7 +77,7 @@ const browserTitle =
   </div>
 
   <BackToTop label={messages.backToTop} />
-  <LinkPreview label={messages.linkPreview} />
+  <LinkPreview locale={locale} />
 
   <script>
     import { createTocRevealer, findActiveHeadingId } from "../lib/toc-highlight";

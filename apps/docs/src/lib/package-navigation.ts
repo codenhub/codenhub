@@ -77,9 +77,10 @@ export function buildNavigationTree(documents: readonly PublicDocument[]): NavNo
  * folder with no index page is left as `orderDocumentSections` labels it.
  * @param documents Reference-section documents with the `reference/` prefix
  *   already stripped from their paths.
+ * @param overviewLabel The title the folder's own page takes.
  * @returns The same documents with folder titles reframed.
  */
-function reframeReferenceSubpaths(documents: readonly PublicDocument[]): PublicDocument[] {
+function reframeReferenceSubpaths(documents: readonly PublicDocument[], overviewLabel: string): PublicDocument[] {
   const folderTitle = new Map<string, string>();
   for (const document of documents) {
     const slash = document.relativePath.indexOf("/");
@@ -99,7 +100,7 @@ function reframeReferenceSubpaths(documents: readonly PublicDocument[]): PublicD
     }
     const isIndex = document.relativePath.slice(slash + 1) === "index.md";
     const stripped = document.title.startsWith(prefix) ? document.title.slice(prefix.length) : document.title;
-    return { ...document, group: isIndex ? prefix : document.group, title: stripped === "" ? "Overview" : stripped };
+    return { ...document, group: isIndex ? prefix : document.group, title: stripped === "" ? overviewLabel : stripped };
   });
 }
 
@@ -116,12 +117,14 @@ function reframeReferenceSubpaths(documents: readonly PublicDocument[]): PublicD
  * @param documents The package's published documents, already in catalog order.
  * @param currentRoute The route of the page being rendered, when there is one.
  * @param sectionLabels The tabs' labels in the page's language.
+ * @param overviewLabel The title a reference folder's own page takes, in the page's language.
  * @returns The section strip and the active section's navigation tree.
  */
 export function buildPackageSidebar(
   documents: readonly PublicDocument[],
   currentRoute: string | undefined,
   sectionLabels: Readonly<Record<DocumentSection, string>> = SECTION_LABELS,
+  overviewLabel = "Overview",
 ): PackageSidebar {
   const bySection = new Map<DocumentSection, PublicDocument[]>();
   for (const document of documents) {
@@ -164,7 +167,8 @@ export function buildPackageSidebar(
     const relativePath = relativeTo(activeSection, document.relativePath);
     return relativePath === document.relativePath ? document : { ...document, relativePath };
   });
-  const treeDocuments = activeSection === "reference" ? reframeReferenceSubpaths(sectionDocuments) : sectionDocuments;
+  const treeDocuments =
+    activeSection === "reference" ? reframeReferenceSubpaths(sectionDocuments, overviewLabel) : sectionDocuments;
 
   return { tabs, tree: buildNavigationTree(treeDocuments) };
 }

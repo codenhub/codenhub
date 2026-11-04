@@ -1,3 +1,7 @@
+import { fillMessage } from "@codenhub/app-shell/messages";
+import { isTranslationLocale } from "@codenhub/tools/documentation";
+
+import { defaultLocale, messagesFor, type Dictionary, type Locale } from "../../i18n";
 import type { AstNode } from "./ast";
 import { getNodeText } from "./ast";
 
@@ -5,9 +9,24 @@ interface MarkdownEnhancementOptions {
   siteOrigin?: string;
 }
 
+type MarkdownMessages = Dictionary["markdown"];
+
 interface TransformContext extends MarkdownEnhancementOptions {
   codeBlockCount: number;
+  /** The copy button's feedback in the document's language. */
+  copy: Dictionary["shell"]["copy"];
   isReference: boolean;
+  messages: MarkdownMessages;
+}
+
+/**
+ * The language a document is written in: a translation's locale, from its
+ * `docs/<locale>/` folder, and English otherwise. The controls added to its
+ * Markdown speak that language, since only its pages render it.
+ */
+function documentLocale(path: string | undefined): Locale {
+  const segment = path?.replaceAll("\\", "/").match(/\/docs\/([^/]+)\//)?.[1];
+  return segment !== undefined && isTranslationLocale(segment) ? segment : defaultLocale;
 }
 
 const SVG_PROPERTIES = {
@@ -30,7 +49,7 @@ function icon(path: string, className?: string): AstNode {
   ]);
 }
 
-function appendHeadingAnchor(node: AstNode, isReference: boolean): void {
+function appendHeadingAnchor(node: AstNode, isReference: boolean, messages: MarkdownMessages): void {
   if (!(isReference ? /^h[2-6]$/ : /^h[23]$/).test(node.tagName ?? "") || typeof node.properties?.id !== "string") {
     return;
   }
@@ -40,7 +59,7 @@ function appendHeadingAnchor(node: AstNode, isReference: boolean): void {
     element(
       "a",
       {
-        ariaLabel: `Link to ${headingText}`,
+        ariaLabel: fillMessage(messages.headingLink, { heading: headingText }),
         className: ["heading-anchor"],
         href: `#${node.properties.id}`,
       },
@@ -86,15 +105,18 @@ function enhanceExternalLink(node: AstNode, siteOrigin?: string): void {
   );
 }
 
-function createCopyButton(label: string, statusId: string): AstNode {
+function createCopyButton(label: string, statusId: string, { copy, messages: markdown }: TransformContext): AstNode {
   return element(
     "button",
     {
       ariaDescribedBy: statusId,
-      ariaLabel: `Copy ${label} code`,
+      ariaLabel: fillMessage(markdown.copyLanguageCode, { label }),
       className: ["code-copy-button"],
       dataCodeCopy: "",
-      title: "Copy code",
+      dataCopiedLabel: copy.copied,
+      dataFailedLabel: copy.failed,
+      dataRetryLabel: copy.retry,
+      title: markdown.copyCode,
       type: "button",
     },
     [
@@ -108,16 +130,22 @@ function createCopyButton(label: string, statusId: string): AstNode {
 }
 
 function wrapCodeBlock(node: AstNode, context: TransformContext): AstNode {
-  const label = node.properties?.dataCodeLabel;
-  if (node.tagName !== "pre" || typeof label !== "string") {
+  const authoredLabel = node.properties?.dataCodeLabel;
+  if (node.tagName !== "pre" || typeof authoredLabel !== "string") {
     return node;
+  }
+  // A block with no language or title is labelled in the document's language.
+  const label = node.properties?.dataCodePlain === undefined ? authoredLabel : context.messages.plainText;
+  delete node.properties?.dataCodePlain;
+  if (node.properties !== undefined) {
+    node.properties.dataCodeLabel = label;
   }
   context.codeBlockCount += 1;
   const statusId = `code-copy-status-${context.codeBlockCount}`;
   return element("figure", { className: ["code-block"] }, [
     element("figcaption", { className: ["code-block-header"] }, [
       { type: "text", value: label, children: [] },
-      createCopyButton(label, statusId),
+      createCopyButton(label, statusId, context),
       element("span", { ariaLive: "polite", className: ["code-copy-status", "sr-only"], id: statusId }, [
         { type: "text", value: "" },
       ]),
@@ -183,7 +211,7 @@ function transformChildren(node: AstNode, context: TransformContext): void {
     if (context.isReference) {
       markReferenceHeading(child);
     }
-    appendHeadingAnchor(child, context.isReference);
+    appendHeadingAnchor(child, context.isReference, context.messages);
     enhanceExternalLink(child, context.siteOrigin);
     return wrapTable(wrapCodeBlock(child, context));
   });
@@ -223,6 +251,7 @@ export function rehypeMarkdownEnhancements(options: MarkdownEnhancementOptions =
     if (isReference) {
       markReferenceSignatures(root);
     }
-    transformChildren(root, { ...options, codeBlockCount: 0, isReference });
+    const { markdown, shell } = messagesFor(documentLocale(file?.path));
+    transformChildren(root, { ...options, codeBlockCount: 0, copy: shell.copy, isReference, messages: markdown });
   };
 }

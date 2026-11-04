@@ -211,6 +211,12 @@ describe("buildPackageSidebar", () => {
     ]);
   });
 
+  it("titles a reference folder's own page in the page's language", () => {
+    const reference = buildPackageSidebar(errorLike, "/error/reference/", undefined, "Visão geral").tree;
+
+    expect((reference[1] as NavGroup).items[0]).toMatchObject({ title: "Visão geral" });
+  });
+
   it("leaves a single-section package with one tab for the caller to hide", () => {
     const { tabs } = buildPackageSidebar([doc("index.md", "Overview", "/theme/")], "/theme/");
 

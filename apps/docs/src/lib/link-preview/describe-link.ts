@@ -18,7 +18,39 @@ export interface LinkPreview {
   trail: string[];
 }
 
+/** The card's text in the page's language. */
+export interface LinkPreviewMessages {
+  copyLink: string;
+  newTab: string;
+  open: string;
+  externalSite: string;
+  copyAddress: string;
+  sendEmail: string;
+  /** An email link's subject line. `{subject}` is the subject. */
+  subject: string;
+  email: string;
+  copyNumber: string;
+  call: string;
+  phone: string;
+}
+
+export const ENGLISH_LINK_PREVIEW_MESSAGES: LinkPreviewMessages = {
+  copyLink: "Copy link",
+  newTab: "New tab",
+  open: "Open",
+  externalSite: "External site",
+  copyAddress: "Copy address",
+  sendEmail: "Send email",
+  subject: "Subject: {subject}",
+  email: "Email",
+  copyNumber: "Copy number",
+  call: "Call",
+  phone: "Phone",
+};
+
 export interface DescribeLinkContext {
+  /** The card's text; English when omitted. */
+  messages?: LinkPreviewMessages;
   /** The page the link is on, which relative links resolve against. */
   pageUrl: string;
   previews: LinkPreviewIndex;
@@ -34,60 +66,66 @@ function decode(value: string): string {
   }
 }
 
-function navigationActions(url: URL): LinkPreviewAction[] {
+function navigationActions(url: URL, messages: LinkPreviewMessages): LinkPreviewAction[] {
   return [
-    { icon: COPY_ICON, kind: "copy", label: "Copy link", text: url.href },
-    { href: url.href, icon: "external-link", isNewTab: true, kind: "open", label: "New tab" },
-    { href: url.href, icon: "arrow-right", isNewTab: false, kind: "open", label: "Open" },
+    { icon: COPY_ICON, kind: "copy", label: messages.copyLink, text: url.href },
+    { href: url.href, icon: "external-link", isNewTab: true, kind: "open", label: messages.newTab },
+    { href: url.href, icon: "arrow-right", isNewTab: false, kind: "open", label: messages.open },
   ];
 }
 
-function describeSiteLink(url: URL, previews: LinkPreviewIndex): LinkPreview {
+function describeSiteLink(url: URL, previews: LinkPreviewIndex, messages: LinkPreviewMessages): LinkPreview {
   const fragment = decode(url.hash.slice(1));
   const entry = (fragment === "" ? undefined : previews[`${url.pathname}#${fragment}`]) ?? previews[url.pathname];
   const detail = decode(`${url.pathname}${url.search}${url.hash}`);
   if (entry !== undefined) {
-    return { actions: navigationActions(url), detail, summary: entry.summary, title: entry.title, trail: entry.trail };
+    return {
+      actions: navigationActions(url, messages),
+      detail,
+      summary: entry.summary,
+      title: entry.title,
+      trail: entry.trail,
+    };
   }
 
   // A published file such as `LICENSE` or an image, or a page this build does not know.
   const fileName = decode(url.pathname.split("/").findLast((segment) => segment !== "") ?? url.host);
-  return { actions: navigationActions(url), detail, title: fileName, trail: [url.host] };
+  return { actions: navigationActions(url, messages), detail, title: fileName, trail: [url.host] };
 }
 
-function describeExternalLink(url: URL): LinkPreview {
+function describeExternalLink(url: URL, messages: LinkPreviewMessages): LinkPreview {
   return {
-    actions: navigationActions(url),
+    actions: navigationActions(url, messages),
     detail: url.href,
     title: url.hostname.replace(/^www\./, ""),
-    trail: ["External site"],
+    trail: [messages.externalSite],
   };
 }
 
 /** `mailto:` may carry several comma-separated recipients and a `?subject=` query. */
-function describeEmailLink(url: URL): LinkPreview {
+function describeEmailLink(url: URL, messages: LinkPreviewMessages): LinkPreview {
   const address = decode(url.pathname);
   const subject = url.searchParams.get("subject") ?? undefined;
   return {
     actions: [
-      { icon: COPY_ICON, kind: "copy", label: "Copy address", text: address },
-      { href: url.href, icon: "mail", isNewTab: false, kind: "open", label: "Send email" },
+      { icon: COPY_ICON, kind: "copy", label: messages.copyAddress, text: address },
+      { href: url.href, icon: "mail", isNewTab: false, kind: "open", label: messages.sendEmail },
     ],
-    summary: subject === undefined ? undefined : `Subject: ${subject}`,
+    summary: subject === undefined ? undefined : messages.subject.replace("{subject}", () => subject),
     title: address,
-    trail: ["Email"],
+    trail: [messages.email],
   };
 }
 
-function describePhoneLink(url: URL): LinkPreview {
+function describePhoneLink(url: URL, messages: LinkPreviewMessages): LinkPreview {
   const number = decode(url.pathname);
   return {
     actions: [
-      { icon: COPY_ICON, kind: "copy", label: "Copy number", text: number },
-      { href: url.href, icon: "phone", isNewTab: false, kind: "open", label: "Call" },
+      { icon: COPY_ICON, kind: "copy", label: messages.copyNumber, text: number },
+      { href: url.href, icon: "phone", isNewTab: false, kind: "open", label: messages.call },
     ],
     title: number,
-    trail: ["Phone"],
+    trail: [messages.phone],
   };
 }
 
@@ -99,7 +137,10 @@ function describePhoneLink(url: URL): LinkPreview {
  * phone links show the address or number with a way to copy it. Any other
  * scheme returns `undefined` and gets no card.
  */
-export function describeLink(href: string, { pageUrl, previews }: DescribeLinkContext): LinkPreview | undefined {
+export function describeLink(
+  href: string,
+  { messages = ENGLISH_LINK_PREVIEW_MESSAGES, pageUrl, previews }: DescribeLinkContext,
+): LinkPreview | undefined {
   let url: URL;
   try {
     url = new URL(href, pageUrl);
@@ -109,12 +150,14 @@ export function describeLink(href: string, { pageUrl, previews }: DescribeLinkCo
 
   switch (url.protocol) {
     case "mailto:":
-      return describeEmailLink(url);
+      return describeEmailLink(url, messages);
     case "tel:":
-      return describePhoneLink(url);
+      return describePhoneLink(url, messages);
     case "http:":
     case "https:":
-      return url.origin === new URL(pageUrl).origin ? describeSiteLink(url, previews) : describeExternalLink(url);
+      return url.origin === new URL(pageUrl).origin
+        ? describeSiteLink(url, previews, messages)
+        : describeExternalLink(url, messages);
     default:
       return undefined;
   }

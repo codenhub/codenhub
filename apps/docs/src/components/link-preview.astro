@@ -9,16 +9,28 @@
  * from the link into the card's actions. As a manual popover it still paints in
  * the top layer, clear of the article's overflow and stacking.
  */
+import { localizePath, messagesFor, type Locale } from "../i18n";
 
 interface Props {
-  /** The card's accessible name in the page's language. */
-  label?: string;
+  /** The page's language, which picks the card's text and the preview data it reads. */
+  locale?: Locale;
 }
 
-const { label = "Link preview" } = Astro.props;
+const { locale = "en" } = Astro.props;
+const messages = messagesFor(locale);
+// What the client script reads: the card's text and the copy feedback, in the page's language.
+const clientMessages = JSON.stringify({ card: messages.linkPreviewCard, copy: messages.shell.copy });
 ---
 
-<div aria-label={label} class="link-preview" data-link-preview popover="manual" role="group">
+<div
+  aria-label={messages.linkPreview}
+  class="link-preview"
+  data-index-url={localizePath(locale, "/link-previews.json")}
+  data-link-preview
+  data-messages={clientMessages}
+  popover="manual"
+  role="group"
+>
   <p class="link-preview-trail" data-link-preview-trail></p>
   <p class="link-preview-title" data-link-preview-title></p>
   <p class="link-preview-summary" data-link-preview-summary></p>
@@ -44,6 +56,7 @@ const { label = "Link preview" } = Astro.props;
     type LinkPreview,
     type LinkPreviewAction,
     type LinkPreviewIcon,
+    type LinkPreviewMessages,
   } from "../lib/link-preview/describe-link";
 
   /** Hover intent: long enough that sweeping the pointer across a paragraph opens nothing. */
@@ -87,11 +100,16 @@ const { label = "Link preview" } = Astro.props;
     const actions = part("actions");
     const status = part("status");
     const copyController = createCopyController();
+    const indexUrl = card.dataset.indexUrl ?? "/link-previews.json";
+    const { card: messages, copy: copyMessages } = JSON.parse(card.dataset.messages ?? "{}") as {
+      card?: LinkPreviewMessages;
+      copy?: { copied: string; failed: string; retry: string };
+    };
 
     // A failed fetch still previews every link, just without page summaries.
     const fetchPreviews = async (): Promise<LinkPreviewIndex> => {
       try {
-        const response = await fetch("/link-previews.json");
+        const response = await fetch(indexUrl);
         return response.ok ? ((await response.json()) as LinkPreviewIndex) : {};
       } catch {
         return {};
@@ -118,6 +136,11 @@ const { label = "Link preview" } = Astro.props;
         control.title = action.label;
         control.setAttribute("aria-label", action.label);
         control.dataset.copyText = action.kind === "copy" ? action.text : "";
+        if (copyMessages !== undefined) {
+          control.dataset.copiedLabel = copyMessages.copied;
+          control.dataset.failedLabel = copyMessages.failed;
+          control.dataset.retryLabel = copyMessages.retry;
+        }
       } else if (action.kind === "open") {
         control.href = action.href;
         if (action.isNewTab) {
@@ -190,7 +213,7 @@ const { label = "Link preview" } = Astro.props;
       if (requestedLink !== link) {
         return;
       }
-      const preview = describeLink(href, { pageUrl: location.href, previews: index });
+      const preview = describeLink(href, { messages, pageUrl: location.href, previews: index });
       if (preview === undefined) {
         close();
         return;

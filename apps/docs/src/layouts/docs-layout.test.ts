@@ -279,6 +279,15 @@ describe("documentation chrome", () => {
     expect(config).toContain('"directory": "./dist"');
   });
 
+  it("builds a not-found page in each locale beside its pages", async () => {
+    const [ptBR, es] = await Promise.all([readOutput("pt-BR/404.html"), readOutput("es/404.html")]);
+
+    expect(ptBR).toContain('<html lang="pt-BR"');
+    expect(ptBR).toContain("Página não encontrada");
+    expect(ptBR).toContain('href="https://codenhub.dev/pt-BR/packages/"');
+    expect(es).toContain("Página no encontrada");
+  });
+
   it("points robots at the sitemap for the canonical origin", async () => {
     const robots = await readOutput("robots.txt");
 

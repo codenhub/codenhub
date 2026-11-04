@@ -3,16 +3,17 @@
  * Copy, view, or download the page's Markdown, published beside the page as
  * `index.md`. The split button copies in one click; the menu holds the rest.
  */
-import { messagesFor, type Dictionary } from "../i18n";
+import { messagesFor, type Locale } from "../i18n";
 import { documentMarkdownRoute } from "../lib/document-markdown";
 
 interface Props {
   route: string;
-  /** The actions' text in the page's language. Defaults to English. */
-  messages?: Dictionary["pageActions"];
+  /** The page's language, which the actions and their copy feedback speak. Defaults to English. */
+  locale?: Locale;
 }
 
-const { messages = messagesFor("en").pageActions, route } = Astro.props;
+const { locale = "en", route } = Astro.props;
+const { pageActions: messages, shell } = messagesFor(locale);
 const markdownUrl = documentMarkdownRoute(route);
 // Every file is `index.md` on the server; a download named after the route
 // keeps several saved pages apart.
@@ -20,7 +21,17 @@ const downloadName = `${route.split("/").filter(Boolean).join("-")}.md`;
 ---
 
 <div class="page-actions" data-markdown-url={markdownUrl} data-page-actions>
-  <button aria-describedby="page-copy-status" aria-label={messages.copyAsMarkdown} class="page-actions-copy" data-page-copy title={messages.copyAsMarkdown} type="button">
+  <button
+    aria-describedby="page-copy-status"
+    aria-label={messages.copyAsMarkdown}
+    class="page-actions-copy"
+    data-copied-label={messages.copied}
+    data-failed-label={messages.copyFailed}
+    data-page-copy
+    data-retry-label={shell.copy.retry}
+    title={messages.copyAsMarkdown}
+    type="button"
+  >
     <i aria-hidden="true" class="ic-lucide-copy page-actions-rest-icon"></i>
     <i aria-hidden="true" class="ic-lucide-check page-actions-copied-icon"></i>
     <span class="page-actions-label-rest">{messages.copyPage}</span>

@@ -25,6 +25,7 @@ describe("Astro Markdown configuration", () => {
     expect(config.integrations).toEqual([
       expect.objectContaining({ name: "codenhub-published-docs-snapshot" }),
       expect.objectContaining({ name: "codenhub-package-documentation" }),
+      expect.objectContaining({ name: "codenhub-locale-not-found" }),
     ]);
   });
 

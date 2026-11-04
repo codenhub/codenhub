@@ -42,12 +42,21 @@ export function parseCodeTitle(meta: string | undefined): string | undefined {
   return title === "" ? undefined : title;
 }
 
+// Astro hands Shiki `plaintext` for a fence written with no language.
+function isUnlabelledLanguage(language: string | undefined): boolean {
+  return language === undefined || language.trim() === "" || language === "plaintext";
+}
+
+function isPlainTextBlock({ language, meta }: CodeBlockOptions): boolean {
+  return parseCodeTitle(meta) === undefined && isUnlabelledLanguage(language);
+}
+
 export function getCodeBlockLabel({ language, meta }: CodeBlockOptions): string {
   const title = parseCodeTitle(meta);
   if (title !== undefined) {
     return title;
   }
-  if (language === undefined || language.trim() === "") {
+  if (language === undefined || isUnlabelledLanguage(language)) {
     return "Plain text";
   }
 
@@ -63,10 +72,13 @@ export function createCodeBlockTransformer(): CodeBlockTransformer {
     name: "codenhub-code-block-label",
     pre(node) {
       node.properties ??= {};
-      node.properties.dataCodeLabel = getCodeBlockLabel({
-        language: this.options.lang,
-        meta: this.options.meta?.__raw,
-      });
+      const options = { language: this.options.lang, meta: this.options.meta?.__raw };
+      node.properties.dataCodeLabel = getCodeBlockLabel(options);
+      // The transformer does not know the document's language, so the
+      // Markdown enhancements relabel this block in it.
+      if (isPlainTextBlock(options)) {
+        node.properties.dataCodePlain = "";
+      }
     },
   };
 }

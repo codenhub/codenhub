@@ -1,5 +1,7 @@
 import { defaultShellMessages, type ShellMessages } from "@codenhub/app-shell/messages";
 
+import { ENGLISH_LINK_PREVIEW_MESSAGES, type LinkPreviewMessages } from "../../lib/link-preview/describe-link";
+
 /** Every piece of interface text the documentation site renders around a document. */
 export interface Dictionary {
   shell: ShellMessages;
@@ -17,6 +19,21 @@ export interface Dictionary {
   demo: string;
   backToTop: string;
   linkPreview: string;
+  /** What a link preview card says about a link, its trail and actions. */
+  linkPreviewCard: LinkPreviewMessages;
+  /** The title a folder's own page takes among its siblings in the navigation. */
+  overview: string;
+  /** Controls added to a document's rendered Markdown. */
+  markdown: {
+    /** A heading's anchor link. `{heading}` is the heading text. */
+    headingLink: string;
+    copyCode: string;
+    /** A code block's copy button. `{label}` is the block's language or title. */
+    copyLanguageCode: string;
+    /** The label of a code block with no language or title. */
+    plainText: string;
+  };
+  notFound: { title: string; description: string; lede: string; browse: string };
   pageActions: {
     copyAsMarkdown: string;
     copyPage: string;
@@ -41,6 +58,20 @@ export const en: Dictionary = {
   demo: "Demo",
   backToTop: "Back to top",
   linkPreview: "Link preview",
+  linkPreviewCard: ENGLISH_LINK_PREVIEW_MESSAGES,
+  overview: "Overview",
+  markdown: {
+    headingLink: "Link to {heading}",
+    copyCode: "Copy code",
+    copyLanguageCode: "Copy {label} code",
+    plainText: "Plain text",
+  },
+  notFound: {
+    title: "Page not found",
+    description: "The requested page could not be found.",
+    lede: "This page moved or never existed. Package documentation is reorganized as packages change, so a saved link can outlive the page it pointed at.",
+    browse: "Browse packages",
+  },
   pageActions: {
     copyAsMarkdown: "Copy page as Markdown",
     copyPage: "Copy page",
