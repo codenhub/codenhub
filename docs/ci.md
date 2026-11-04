@@ -31,19 +31,20 @@ CI runs that one Node.js version and no other, for the packages as for the repos
 | -------------- | ----------------------------------------------------------------------------------- |
 | `pull_request` | `--changed=origin/<base branch>`, or the whole workspace when it changes `.github/` |
 | `merge_group`  | The whole workspace, with no selector                                               |
-| `push` to main | The whole workspace, with no selector                                               |
 
-A pull request checks what it changed, which is what makes the run fast enough to wait for. A merge into `main` checks everything, so nothing lands unverified because it happened to sit outside a changed package. Both are needed: neither alone both stays fast and stays honest.
+A pull request checks what it changed, which is what makes the run fast enough to wait for. The merge queue checks everything, so nothing lands unverified because it happened to sit outside a changed package. Both are needed: neither alone both stays fast and stays honest.
 
-The merge queue moves that full check to before the merge. Without it, a pull request went green on its own packages and the first full run was on `main`, so a flaky or broken suite in a package the pull request never touched failed `main` instead of the pull request: 3 of 30 merges on 2026-11-03 failed that way. The queue runs the same full workspace on the merge result, and a failure there drops the pull request from the queue instead of landing it. The `push` run on `main` stays, as the record of the commit that actually landed. Requiring the queue is repository settings, in the ruleset for `main`; the `merge_group` trigger is what lets the required checks report in it.
+The merge queue moves that full check to before the merge. Without it, a pull request went green on its own packages and the first full run was on `main`, so a flaky or broken suite in a package the pull request never touched failed `main` instead of the pull request: 3 of 30 merges on 2026-11-03 failed that way. The queue runs the same full workspace on the merge result, and a failure there drops the pull request from the queue instead of landing it. Requiring the queue is repository settings, in the ruleset for `main`; the `merge_group` trigger is what lets the required checks report in it.
+
+CI does not run on a `push` to `main`. The queue lands the exact commit it tested, so its passing checks are already attached to the commit on `main`, and the ruleset lets nobody bypass the queue. Keeping a `push` run as the record of the landed commit was the earlier choice. It was reversed because that run repeated a check on an identical commit: on 2026-11-04 the queue tested `a823c49f`, `main` moved to that same commit, and CI ran the full workspace on it again, a third run per pull request where there had been two. The trigger has to come back if the ruleset ever gains a bypass actor or stops requiring the queue, because a commit could then reach `main` without a full run.
 
 A pull request that changes `.github/` is the exception, and runs the whole workspace as its merge will. A workflow or the setup action belongs to no package, so `--changed` would select nothing and the run would pass without exercising the change it was opened for. That is how a browser-install fix once went green on its pull request and failed on its merge.
 
 `--changed` compares against a branch ref, so the checkout uses `fetch-depth: 0`. A shallow clone has no base branch to compare against. Both selecting jobs assert the base ref exists before running: `--changed` degrades to working-tree changes when its ref is missing, which locally means "check what I am editing" and in CI would mean checking nothing and reporting success.
 
-Runs for the same pull request cancel each other, because only the newest push is worth a verdict. Runs on `main` never cancel: each merge is the authoritative check of that commit.
+Runs for the same pull request cancel each other, because only the newest push is worth a verdict. Merge queue runs never cancel: each is the authoritative check of the commit it would land.
 
-The verification sequence builds declarations before `hub check` inspects them. Its `undocumented-export/missing-jsdoc` errors fail the `Verify` job when a selected package exposes a top-level typed export without JSDoc/TSDoc. Pull requests check the changed packages against their base branch; pushes to `main` check the whole workspace. The scope and remaining review responsibilities are defined in `docs/guidelines/code.md`.
+The verification sequence builds declarations before `hub check` inspects them. Its `undocumented-export/missing-jsdoc` errors fail the `Verify` job when a selected package exposes a top-level typed export without JSDoc/TSDoc. Pull requests check the changed packages against their base branch; the merge queue checks the whole workspace. The scope and remaining review responsibilities are defined in `docs/guidelines/code.md`.
 
 ## Jobs
 
