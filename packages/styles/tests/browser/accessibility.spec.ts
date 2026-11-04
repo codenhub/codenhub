@@ -5,18 +5,6 @@ const NATIVE_URL = "http://localhost:5184/native/?env=vanilla";
 const COMPONENT_STYLES_URL = "http://localhost:5184/shared/entry-components.css";
 const NATIVE_STYLES_URL = "http://localhost:5184/native/entry-vanilla.css";
 const CONTROL_CLASSES = ["text-control", "ipt", "textarea", "select", "checkbox", "radio", "switch"] as const;
-const LOADER_VARIANTS = [
-  "loader",
-  "dots-wave",
-  "dots-fade",
-  "dots-queue",
-  "dots-rotate",
-  "dots-grow",
-  "dots-grow-alternate",
-  "dot-bounce",
-  "bars-wave",
-  "pulse-ring",
-] as const;
 
 test("associates every native form label with its control", async ({ page }) => {
   await page.goto(NATIVE_URL);
@@ -31,33 +19,6 @@ test("associates every native form label with its control", async ({ page }) => 
       ),
     ),
   ).toBe(true);
-});
-
-test("gives every loader fixture a unique ID matching its variant", async ({ page }) => {
-  await page.goto(FEEDBACK_URL);
-
-  const expectedFixtures = [
-    { className: "loader", testId: "loader-default" },
-    { className: "dots-wave", testId: "loader-dots-wave" },
-    { className: "dots-fade", testId: "loader-dots-fade" },
-    { className: "dots-queue", testId: "loader-dots-queue" },
-    { className: "dots-rotate", testId: "loader-dots-rotate" },
-    { className: "dots-grow", testId: "loader-dots-grow" },
-    { className: "dots-grow-alternate", testId: "loader-dots-grow-alternate" },
-    { className: "dot-bounce", testId: "loader-dot-bounce" },
-    { className: "bars-wave", testId: "loader-bars-wave" },
-    { className: "pulse-ring", testId: "loader-pulse-ring" },
-  ] as const;
-  const loaderIds = await page
-    .locator(".loader")
-    .evaluateAll((loaders) => loaders.map((loader) => loader.getAttribute("data-testid")));
-
-  expect(new Set(loaderIds).size).toBe(loaderIds.length);
-  await Promise.all(
-    expectedFixtures.map((fixture) =>
-      expect(page.getByTestId(fixture.testId)).toHaveClass(new RegExp(`(^|\\s)${fixture.className}(\\s|$)`)),
-    ),
-  );
 });
 
 /* A pseudo-element bubble's text was never reliably exposed to assistive tech
@@ -347,46 +308,6 @@ test("keeps the select arrow themed for every dark-mode path while light overrid
   expect(systemThemeImages.explicitLight).toBe(explicitThemeImages.light);
 });
 
-/* The motion lives inside the artwork rather than in a CSS animation on the
-   element, so `animation-name` says nothing about whether a loader moves. What
-   reduced motion swaps is `--loader-art` itself, and the still artwork is the
-   one with no `animation` declaration in its SVG. */
-test("stops every loader variant under reduced motion with the component-only stylesheet", async ({ page }) => {
-  const readArtwork = async () => {
-    await page.setContent("<!doctype html><html><body></body></html>");
-    await page.addStyleTag({ url: COMPONENT_STYLES_URL });
-
-    return page.evaluate(
-      (variants) =>
-        variants.map((variant) => {
-          const loader = document.createElement("span");
-          loader.className = variant === "loader" ? "loader" : `loader ${variant}`;
-          document.body.append(loader);
-          const art = getComputedStyle(loader).getPropertyValue("--loader-art");
-          loader.remove();
-          return { art, variant };
-        }),
-      LOADER_VARIANTS,
-    );
-  };
-
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  const still = await readArtwork();
-
-  await page.emulateMedia({ reducedMotion: "no-preference" });
-  const moving = await readArtwork();
-
-  for (const [index, styles] of still.entries()) {
-    expect(styles.art, styles.variant).not.toContain("animation");
-    /* A variant whose still artwork equals its moving one was never stopped. */
-    expect(styles.art, styles.variant).not.toBe(moving[index]!.art);
-  }
-
-  for (const styles of moving) {
-    expect(styles.art, styles.variant).toContain("animation");
-  }
-});
-
 test("allows document-level horizontal overflow instead of clipping it", async ({ page }) => {
   await page.goto(FEEDBACK_URL);
 
@@ -400,7 +321,7 @@ test("allows document-level horizontal overflow instead of clipping it", async (
 });
 
 /* `/components` carries no reset, so every component that moves stops on its
-   own under reduced motion, the way the loaders already swap their artwork. */
+   own under reduced motion. */
 test("stops component motion under reduced motion without the reset", async ({ page }) => {
   await page.setContent("<!doctype html><html><body></body></html>");
   await page.addStyleTag({ url: COMPONENT_STYLES_URL });

@@ -65,7 +65,6 @@ const TAGS: Record<string, string> = {
   quote: "blockquote",
   btn: "button",
   badge: "span",
-  loader: "span",
 };
 
 const TYPES: Record<string, string> = { checkbox: "checkbox", radio: "radio", switch: "checkbox" };

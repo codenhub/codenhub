@@ -15,9 +15,9 @@
         <p class="text-label">UI fixtures</p>
         <h1 class="text-title-lg">Feedback</h1>
         <p class="text-body text-text-secondary">
-          Everything that reports state back: alerts, badges, progress, skeletons, loaders, and tooltips. Each grid is
-          one row per presentation and one column per intent, a cell with no intent class at all always first -- a
-          curated subset of both axes rather than every combination, sized to read as a reference.
+          Everything that reports state back: alerts, badges, progress, skeletons, and tooltips. Each grid is one row
+          per presentation and one column per intent, a cell with no intent class at all always first -- a curated
+          subset of both axes rather than every combination, sized to read as a reference.
         </p>
       </section>
 
@@ -130,75 +130,6 @@
           data-matrix-states="rest"
           data-testid="skeleton-matrix"
         ></div>
-      </section>
-
-      <section class="sect-inn stack loose">
-        <div class="stack tight">
-          <h2 class="text-title">Loaders</h2>
-          <p class="text-body text-text-secondary">
-            A loader reads intent and no presentation; its artwork is a mask. With no intent a loader keeps
-            <code class="code">currentColor</code>
-            , so it matches whatever text surrounds it.
-          </p>
-        </div>
-        <div
-          data-matrix="loader"
-          data-matrix-intents="none,primary,success"
-          data-matrix-states="rest"
-          data-testid="loader-matrix"
-        ></div>
-        <div class="stack tight">
-          <h3 class="text-title-sm">Sizes</h3>
-          <div class="cluster">
-            <span class="loader sm" data-testid="loader-sm" role="img" aria-label="Small loader"></span>
-            <span class="loader" data-testid="loader-default" role="img" aria-label="Default loader"></span>
-            <span class="loader lg" data-testid="loader-lg" role="img" aria-label="Large loader"></span>
-          </div>
-        </div>
-        <div class="stack tight">
-          <h3 class="text-title-sm">Animations</h3>
-          <p class="text-body text-text-secondary">
-            A separate axis from intent: each variant swaps the mask, not the color. Under
-            <code class="code">prefers-reduced-motion</code>
-            every one of them falls back to a static mask.
-          </p>
-          <div class="cluster">
-            <span class="loader lg dots-wave" data-testid="loader-dots-wave" role="img" aria-label="Dots wave"></span>
-            <span class="loader lg dots-fade" data-testid="loader-dots-fade" role="img" aria-label="Dots fade"></span>
-            <span
-              class="loader lg dots-queue"
-              data-testid="loader-dots-queue"
-              role="img"
-              aria-label="Dots queue"
-            ></span>
-            <span
-              class="loader lg dots-rotate"
-              data-testid="loader-dots-rotate"
-              role="img"
-              aria-label="Dots rotate"
-            ></span>
-            <span class="loader lg dots-grow" data-testid="loader-dots-grow" role="img" aria-label="Dots grow"></span>
-            <span
-              class="loader lg dots-grow-alternate"
-              data-testid="loader-dots-grow-alternate"
-              role="img"
-              aria-label="Dots grow alternate"
-            ></span>
-            <span
-              class="loader lg dot-bounce"
-              data-testid="loader-dot-bounce"
-              role="img"
-              aria-label="Dot bounce"
-            ></span>
-            <span class="loader lg bars-wave" data-testid="loader-bars-wave" role="img" aria-label="Bars wave"></span>
-            <span
-              class="loader lg pulse-ring"
-              data-testid="loader-pulse-ring"
-              role="img"
-              aria-label="Pulse ring"
-            ></span>
-          </div>
-        </div>
       </section>
 
       <section class="sect-inn stack loose">

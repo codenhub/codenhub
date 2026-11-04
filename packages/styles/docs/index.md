@@ -13,7 +13,7 @@ The package ships as ready-to-import compiled CSS, or as Tailwind CSS v4 source 
 
 - Publishes color, foundation, intent, presentation, and material design tokens as CSS custom properties, themed with `light-dark()`.
 - Provides a reset, focus-visible handling, and responsive layout/content utilities.
-- Provides composable classes for buttons, form controls and toggles, alerts, badges, loaders, progress, cards/panels, tables, quotes, code, and tooltips.
+- Provides composable classes for buttons, form controls and toggles, alerts, badges, progress, cards/panels, tables, quotes, code, and tooltips.
 - Provides six opt-in aesthetics that restyle the same components by setting material tokens, not by adding component variants, each with a solo class that paints the look onto an element the package does not style.
 - Provides classless mappings so plain HTML elements pick up base styling without added classes, from a dedicated entrypoint.
 - Publishes Tailwind CSS v4 source entrypoints alongside the compiled output.

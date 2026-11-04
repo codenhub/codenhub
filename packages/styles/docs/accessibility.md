@@ -39,12 +39,11 @@ This package provides CSS hooks for accessible states. It does not provide seman
 
 | Feature                   | Behavior                                                                                                                                                                                                           |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Reduced-motion loaders    | Loader variants use animated embedded SVGs normally and static masks when `prefers-reduced-motion: reduce` matches.                                                                                                |
 | Reduced-motion components | Every component stops its own transitions and animations -- the skeleton and progress shimmer, the indeterminate sweep, the tooltip, toggle marks, and the press -- when `prefers-reduced-motion: reduce` matches. |
 | Reduced-motion document   | The reset additionally shortens every other animation and transition on the page when `prefers-reduced-motion: reduce` matches.                                                                                    |
 | Reduced transparency      | `.glass` and `.glass-liquid` drop their blur and lens and become an opaque surface when `prefers-reduced-transparency: reduce` matches.                                                                            |
 
-The loader fallback and each component's own reduced-motion rule ship with the component, so every entrypoint that includes it honors reduced motion without the reset -- `@codenhub/styles/components`, `@codenhub/styles/tw/components`, and each focused `/tw/*` component entrypoint included. The complete and native entrypoints add the reset's page-wide shortening on top.
+Each component's own reduced-motion rule ships with the component, so every entrypoint that includes it honors reduced motion without the reset -- `@codenhub/styles/components`, `@codenhub/styles/tw/components`, and each focused `/tw/*` component entrypoint included. The complete and native entrypoints add the reset's page-wide shortening on top.
 
 The reset's rule is `!important` inside the `base` layer, and a layered `!important` beats an unlayered one, so your own `!important` cannot switch an animation back on. To keep one running for users who ask for reduced motion -- a progress indicator you consider essential, say -- declare it `!important` in a layer ordered before `base`. The order is set by the first `@layer` statement the browser meets, so yours goes before the package loads:
 
@@ -88,16 +87,16 @@ Custom checkboxes and radios use the system `Canvas`, `CanvasText`, `Highlight`,
 
 Use semantic HTML and behavior appropriate for the component.
 
-| UI                | Required outside CSS                                                                                                                                                                                                                    |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Buttons           | Use `<button>` for actions or accessible links for navigation. Add accessible names for `.btn.icon`.                                                                                                                                    |
-| Forms             | Use labels, `type`, validation logic, `aria-describedby`, and error message relationships. Keep hints and errors outside the `<label>`, and give a `.switch` `role="switch"`.                                                           |
-| Alerts            | Add `role="status"` or `role="alert"` based on announcement urgency.                                                                                                                                                                    |
-| Toasts            | Add live-region behavior, dismissal behavior, focus rules, and pause/timeout logic when needed.                                                                                                                                         |
-| Tooltips          | Give the bubble a real `id` and `role="tooltip"`, and reference it from the trigger's `aria-describedby`. Dismiss it on Escape by writing `data-state="closed"` (see [Tooltips](./usage/tooltips.md)); the bubble is already hoverable. |
-| Progress          | Use semantic progress elements or ARIA values when numeric progress must be announced.                                                                                                                                                  |
-| Skeletons/loaders | Mark decorative loading visuals with `aria-hidden="true"` and expose loading state elsewhere when needed.                                                                                                                               |
-| Popovers/modals   | Provide focus trapping, escape handling, inert background behavior, labels, and roles outside this CSS package.                                                                                                                         |
+| UI              | Required outside CSS                                                                                                                                                                                                                    |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Buttons         | Use `<button>` for actions or accessible links for navigation. Add accessible names for `.btn.icon`.                                                                                                                                    |
+| Forms           | Use labels, `type`, validation logic, `aria-describedby`, and error message relationships. Keep hints and errors outside the `<label>`, and give a `.switch` `role="switch"`.                                                           |
+| Alerts          | Add `role="status"` or `role="alert"` based on announcement urgency.                                                                                                                                                                    |
+| Toasts          | Add live-region behavior, dismissal behavior, focus rules, and pause/timeout logic when needed.                                                                                                                                         |
+| Tooltips        | Give the bubble a real `id` and `role="tooltip"`, and reference it from the trigger's `aria-describedby`. Dismiss it on Escape by writing `data-state="closed"` (see [Tooltips](./usage/tooltips.md)); the bubble is already hoverable. |
+| Progress        | Use semantic progress elements or ARIA values when numeric progress must be announced.                                                                                                                                                  |
+| Skeletons       | Mark decorative loading visuals, including any spinner you bring, with `aria-hidden="true"` and expose loading state elsewhere when needed.                                                                                             |
+| Popovers/modals | Provide focus trapping, escape handling, inert background behavior, labels, and roles outside this CSS package.                                                                                                                         |
 
 ## State attribute guidance
 

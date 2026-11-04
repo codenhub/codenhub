@@ -75,7 +75,7 @@ With no presentation class in scope, each component keeps its own default: butto
 | `.quote`                                        | Fill, text, border, and width.                                                                  |
 | `.code`, `.pre`, `.tooltip-bubble`              | Fill, text, border, and material.                                                               |
 | `.progress`                                     | Track fill, border, and border width; the value fill is always the intent color, full strength. |
-| `.loader`, `.skeleton`, `.divider`              | Intent only, not presentation.                                                                  |
+| `.skeleton`, `.divider`                         | Intent only, not presentation.                                                                  |
 
 A text control caps a **cascaded** fill at `6%`, keeping typed text legible when a `.solid` container reaches a field nobody classed. A fill class written on the control itself names its own cap instead, because that is a consumer describing what they want: `.soft` takes `12%` and `.solid` takes `20%`.
 
@@ -105,7 +105,6 @@ Presentation is two independent axes, so they get a column each. A `Yes` means t
 | Components                                                | Intent | Fill | Edge | Aesthetic material |
 | --------------------------------------------------------- | ------ | ---- | ---- | ------------------ |
 | `.btn`, `.alert`, `.badge`, `.card`, `.panel`             | Yes    | Yes  | Yes  | Shape              |
-| `.loader`                                                 | Yes    | No   | No   | No                 |
 | `.kbd`, `.data-table`                                     | Yes    | Yes  | Yes  | Radius and edge    |
 | `.quote`                                                  | Yes    | Yes  | Yes  | Edge width         |
 | `.divider`, `.skeleton`                                   | Yes    | No   | No   | No                 |

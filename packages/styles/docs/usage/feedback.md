@@ -1,6 +1,6 @@
 ---
 title: Feedback
-description: Alert, badge, loader, skeleton, and progress class reference.
+description: Alert, badge, skeleton, and progress class reference.
 order: 7
 ---
 
@@ -11,44 +11,19 @@ order: 7
 | `.alert`         | Inline feedback surface.                                                     |
 | `.alert-icon`    | Sizing and alignment for an icon element dropped in as a child of `.alert`.  |
 | `.badge`         | Compact status pill.                                                         |
-| `.loader-mask`   | Low-level activity indicator composition utility. Applies the spinner mask.  |
-| `.loader`        | Standalone inline loader artwork.                                            |
 | `.skeleton`      | Ambient loading placeholder.                                                 |
 | `.progress`      | Progress track. Uses `--progress-value` variable.                            |
 | `.active`        | Optional on `.progress` to add a track shimmer.                              |
 | `.indeterminate` | Optional on `.progress` to animate a moving fill without `--progress-value`. |
 
-Activity indicator modifier classes compose with `.loader`:
+The package ships no spinner. Bring one from an icon set, such as `@codenhub/icons`: a glyph with `ic-anim-spin` (`ic-lucide-loader-circle ic-anim-spin`), or the animated `svg-spinners` family. A `currentColor` icon matches the text around it. `ic-anim-spin` stops under `prefers-reduced-motion: reduce`; `svg-spinners` artwork keeps moving. See [Accessibility](../accessibility.md).
 
-| Class                  | Animation style                         |
-| ---------------------- | --------------------------------------- |
-| _(default)_            | Circular spinner (rotating arc).        |
-| `.dots-wave`           | Three dots bouncing up/down in a wave.  |
-| `.dots-fade`           | Three dots fading in and out.           |
-| `.dots-queue`          | Dot queuing from left to right.         |
-| `.dots-rotate`         | Side dots rotating around a center dot. |
-| `.dots-grow`           | Three dots growing and shrinking.       |
-| `.dots-grow-alternate` | Outer dots small, center dot pulses.    |
-| `.dot-bounce`          | Single dot bouncing with squash effect. |
-| `.bars-wave`           | Three vertical bars scaling in a wave.  |
-| `.pulse-ring`          | Two concentric rings pulsing outward.   |
+Alerts, badges, progress bars, and skeletons accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, and `.info`. Without an intent, alerts and badges use the text palette, while the indicators -- `.skeleton` and `.progress` -- take `currentColor`, so they match whatever content surrounds them.
 
-These variants retain their embedded SVG animations normally. Under `prefers-reduced-motion: reduce`, loader CSS substitutes a corresponding static mask. This fallback ships wherever the loader does -- the complete, native, and `/components` entrypoints, `/tw/components`, and `/tw/loader` -- and does not depend on the global reset. `/tw/button` does not include the loader; pair it with `/tw/loader`. See [Accessibility](../accessibility.md).
-
-Loader size modifiers:
-
-| Class    | Size                 |
-| -------- | -------------------- |
-| _(none)_ | Default (`1.75rem`). |
-| `.sm`    | Small (`1.25rem`).   |
-| `.lg`    | Large (`2.25rem`).   |
-
-Alerts, badges, progress bars, skeletons, and loaders accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, and `.info`. Without an intent, alerts and badges use the text palette, while the indicators -- `.loader`, `.skeleton`, and `.progress` -- take `currentColor`, so they match whatever content surrounds them.
-
-Skeletons, loaders, and dividers are indicators: they read intent but ignore fill and edge [presentation](./composing.md#presentation). `.progress` is not one of them — its track reads both, `.soft.edgeless` by default; only the moving value fill stays intent-colored at full strength regardless of presentation. `.solid` is unsupported on the track, and `.ghost.edgeless` renders but is discouraged, since neither leaves the track a visible frame. See [Composing → Component axis reference](./composing.md#component-axis-reference) for the full table.
+Skeletons and dividers are indicators: they read intent but ignore fill and edge [presentation](./composing.md#presentation). `.progress` is not one of them — its track reads both, `.soft.edgeless` by default; only the moving value fill stays intent-colored at full strength regardless of presentation. `.solid` is unsupported on the track, and `.ghost.edgeless` renders but is discouraged, since neither leaves the track a visible frame. See [Composing → Component axis reference](./composing.md#component-axis-reference) for the full table.
 
 ```html
-<span class="loader success" aria-hidden="true"></span> <span class="skeleton info"></span>
+<span class="skeleton info"></span>
 ```
 
 The package ships no icon of its own: `.alert` is already `flex`, so an icon dropped in as a child is spaced from the message by its `gap-3`. `.alert-icon` only sizes and aligns whatever icon element you provide — an inline `<svg>`, an `<img>`, or a class from an icon set such as `@codenhub/icons` — the same contract [`.input-group`](./forms.md#icons) documents.
@@ -74,12 +49,6 @@ Alerts and badges read the shared [presentation](./composing.md#presentation) cl
 <span class="badge warning">Queued</span>
 <span class="badge success solid">Live</span>
 <span class="badge info soft">Draft</span>
-<span class="loader" aria-hidden="true"></span>
-<span class="loader dots-wave" aria-hidden="true"></span>
-<span class="loader dots-fade" aria-hidden="true"></span>
-<span class="loader bars-wave" aria-hidden="true"></span>
-<span class="loader pulse-ring sm" aria-hidden="true"></span>
-<span class="loader dots-grow lg" aria-hidden="true"></span>
 <div class="progress" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64" style="--progress-value: 64%"></div>
 <div class="progress secondary active" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64" style="--progress-value: 64%"></div>
 <div class="progress primary ghost edged" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64" style="--progress-value: 64%"></div>

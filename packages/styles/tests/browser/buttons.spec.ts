@@ -110,15 +110,14 @@ test.describe("buttons", () => {
       .toBe(false);
   });
 
-  /* The package ships no loading state of its own any more -- a loading button
-     is a disabled `.btn` composed with a real `.loader` child (see
-     docs/usage/buttons.md), and `.loader`'s own color and variant behavior is
-     already covered generically in feedback.spec.ts. Nothing button-specific
-     is left to assert here beyond the fixture rendering at all. */
-  test("composes a loading state from a disabled button and a real loader child", async ({ page }) => {
+  /* The package ships no loading state of its own -- a loading button is a
+     disabled `.btn` composed with any spinner the consumer brings (see
+     docs/usage/buttons.md). Nothing button-specific is left to assert here
+     beyond the fixture rendering at all. */
+  test("composes a loading state from a disabled button and a spinner child", async ({ page }) => {
     await page.goto(BUTTONS_URL);
 
-    const spinner = page.getByTestId("loading-button").locator(".loader");
+    const spinner = page.getByTestId("loading-button").locator(".ic-loader-circle");
 
     await expect(spinner).toBeVisible();
     await expect(page.getByTestId("loading-button")).toBeDisabled();

@@ -74,10 +74,6 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
     candidates: "alert badge progress",
     patterns: [/\.alert\{[^}]*--_capped:/, /\.badge\{[^}]*--_capped:/, /\.progress\{/],
   },
-  "./tw/loader": {
-    candidates: "loader dots-wave",
-    patterns: [/\.loader/, /\.dots-wave/, /mask-image:/],
-  },
   "./tw/tooltip": {
     candidates: "tooltip tooltip-bubble tooltip-icon",
     patterns: [
@@ -157,7 +153,6 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
       /\.btn\{/,
       /\.panel\{/,
       /\.field\{/,
-      /\.loader\{/,
       /\.text-title\{/,
       /\.tooltip\{/,
       /\.tooltip-bubble\{/,
@@ -304,7 +299,7 @@ function unlayeredRules(source: string): { context: string; selector: string }[]
 }
 
 /* What may stay unlayered, each because it has to beat every layer: the
-   `forced-colors` and reduced-motion accessibility overrides, the closed and
+   `forced-colors` accessibility override, the closed and
    open `<dialog>` restatements that must beat `.card`'s own `display`, and the
    solo classes, which must beat a foreign component's unlayered CSS. Keyframe
    steps are not style rules at all. Anything else unlayered beats a consumer's
@@ -312,12 +307,6 @@ function unlayeredRules(source: string): { context: string; selector: string }[]
 const UNLAYERED_ALLOWED: { reason: string; matches: (rule: { context: string; selector: string }) => boolean }[] = [
   { reason: "keyframe step", matches: (rule) => rule.context.startsWith("@keyframes") },
   { reason: "forced-colors override", matches: (rule) => rule.context.includes("forced-colors:active") },
-  {
-    reason: "reduced-motion loader art",
-    matches: (rule) =>
-      rule.context.includes("prefers-reduced-motion:reduce") &&
-      /^\.(?:loader|dots?-[a-z-]+|bars-wave|pulse-ring)(?:,|$)/.test(rule.selector),
-  },
   {
     reason: "dialog restatement on the package's containers",
     matches: (rule) => /^dialog:is\(\.card,\.panel,\.surface\)(?::not\(\[open\]\)|\[open\])$/.test(rule.selector),
@@ -410,20 +399,12 @@ for (const [target, roots] of Object.entries(compiledCompleteness)) {
    `@utility` body ever compiling. That gap is exactly how `.input-group`,
    `.text-control`, and `.surface` went dark when the docs prose that was
    accidentally naming them was excluded from the content scan: every existing
-   assertion here still passed, and only the browser suite caught it. The seven
+   assertion here still passed, and only the browser suite caught it. The six
    composition utilities are the ones at risk -- unlike a component class, they
    never appear as the selector of a rule of their own except through the
    `@source inline` safelist in `components/index.css` -- so this holds each to
    emitting a real rule. */
-const COMPOSITION_UTILITIES = [
-  "box",
-  "box-hover",
-  "box-active",
-  "loader-mask",
-  "text-control",
-  "surface",
-  "input-group",
-];
+const COMPOSITION_UTILITIES = ["box", "box-hover", "box-active", "text-control", "surface", "input-group"];
 
 /* True when `name` starts a rule of its own in `output`: immediately followed
    by `{` (its base declarations) or `:` (a pseudo-class state, the only form
@@ -707,9 +688,8 @@ const undeclaredColors = (css: string) => {
   );
 };
 
-/* The loader and the aesthetics carry no theme by contract; everything else
-   does. */
-const carriesTheme = (exportName: string) => exportName !== "./tw/loader" && !exportName.startsWith("./tw/aesthetics");
+/* The aesthetics carry no theme by contract; everything else does. */
+const carriesTheme = (exportName: string) => !exportName.startsWith("./tw/aesthetics");
 
 for (const [exportName, contract] of Object.entries(tailwindExportContracts)) {
   test(`${exportName} emits its representative public surface`, async () => {
@@ -788,14 +768,6 @@ test("compiled entrypoints declare every documented colour and foundation token"
       `${target} should declare every documented token`,
     ).toEqual([]);
   }
-});
-
-/* `/tw/button`'s documented pairing, with the loader last: a file loaded after
-   the theme that referenced Tailwind used to undeclare the palette ramp. */
-test("a focused entry keeps its colours when the loader loads after it", async () => {
-  const output = await compileAsConsumer(["./tw/button", "./tw/loader"], "btn loader");
-
-  expect(undeclaredColors(output)).toEqual([]);
 });
 
 /* Tailwind's content detection scans the whole package directory, and the

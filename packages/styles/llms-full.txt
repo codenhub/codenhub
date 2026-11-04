@@ -53,7 +53,7 @@ This package has no JavaScript behavior. It ships no compatibility aliases: a re
 
 ## License
 
-Licensed under Apache-2.0. Embedded SVG icons derived from [Lucide](https://lucide.dev) are ISC-licensed, and loaders derived from [svg-spinners](https://github.com/n3r4zzurr0/svg-spinners) are MIT-licensed. See [NOTICE](NOTICE) for the required notices.
+Licensed under Apache-2.0. The embedded checkbox marks are derived from [Lucide](https://lucide.dev) and are ISC-licensed. See [NOTICE](NOTICE) for the required notices.
 
 <!-- Source: docs/index.md -->
 
@@ -67,7 +67,7 @@ The package ships as ready-to-import compiled CSS, or as Tailwind CSS v4 source 
 
 - Publishes color, foundation, intent, presentation, and material design tokens as CSS custom properties, themed with `light-dark()`.
 - Provides a reset, focus-visible handling, and responsive layout/content utilities.
-- Provides composable classes for buttons, form controls and toggles, alerts, badges, loaders, progress, cards/panels, tables, quotes, code, and tooltips.
+- Provides composable classes for buttons, form controls and toggles, alerts, badges, progress, cards/panels, tables, quotes, code, and tooltips.
 - Provides six opt-in aesthetics that restyle the same components by setting material tokens, not by adding component variants, each with a solo class that paints the look onto an element the package does not style.
 - Provides classless mappings so plain HTML elements pick up base styling without added classes, from a dedicated entrypoint.
 - Publishes Tailwind CSS v4 source entrypoints alongside the compiled output.
@@ -199,12 +199,11 @@ Compiled entrypoints are ready-to-import CSS and require only tooling that can r
 | `@codenhub/styles/aesthetics/*`  | One compiled aesthetic and its solo class: `/neobrutalism`, `/glass`, `/pixel`, `/chunky-tile`, `/cyber`, or `/sketch`. Same rules and ordering as the combined file.                                                                                                                                                                                                                                                                                                                                                      |
 | `@codenhub/styles/tw`            | Source equivalent of the complete stylesheet. Imports Tailwind itself, theme, typography, utilities, components, and reset; applies the same global rules.                                                                                                                                                                                                                                                                                                                                                                 |
 | `@codenhub/styles/tw/theme`      | Source theme, tokens, and presentation classes. Imports Tailwind's theme layer; emits root/system/explicit theme selectors and defines the package's custom `dark:` variant.                                                                                                                                                                                                                                                                                                                                               |
-| `@codenhub/styles/tw/components` | Published Tailwind source for theme, typography, buttons, feedback, forms, loaders, surfaces, and tooltips, including static reduced-motion loader masks. No reset, layout/content utilities, or native mappings.                                                                                                                                                                                                                                                                                                          |
+| `@codenhub/styles/tw/components` | Published Tailwind source for theme, typography, buttons, feedback, forms, surfaces, and tooltips. No reset, layout/content utilities, or native mappings.                                                                                                                                                                                                                                                                                                                                                                 |
 | `@codenhub/styles/tw/surface`    | Source theme plus `.surface`, `.card`, and `.panel`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `@codenhub/styles/tw/button`     | Published Tailwind source for theme and `.btn`. Pair it with `/tw/loader` for a loading state composed from `.loader`.                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `@codenhub/styles/tw/button`     | Published Tailwind source for theme and `.btn`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `@codenhub/styles/tw/form`       | Source theme plus field, public `text-control`, input, textarea, select, checkbox, radio, and switch utilities.                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `@codenhub/styles/tw/feedback`   | Source theme plus alert, badge, skeleton, and progress utilities and their keyframes.                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `@codenhub/styles/tw/loader`     | Published Tailwind source for activity indicators and loaders, including static reduced-motion masks. It has no theme or reset side effects and uses `currentColor`.                                                                                                                                                                                                                                                                                                                                                       |
 | `@codenhub/styles/tw/tooltip`    | Source theme plus tooltip utilities.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `@codenhub/styles/tw/reset`      | Source theme, typography utilities, and global reset/accessibility rules. It changes root/body/elements and selection, motion, focus, scrollbar, and forced colors.                                                                                                                                                                                                                                                                                                                                                        |
 | `@codenhub/styles/tw/native`     | Source complete surface plus reset and classless native-element mappings; broadest global effects.                                                                                                                                                                                                                                                                                                                                                                                                                         |
@@ -300,7 +299,7 @@ The root follows the operating-system `color-scheme` preference until an explici
 - A theme selector on `:root` overrides the system preference in either direction.
 - A nested explicit selector overrides an inherited theme, so the nearest themed ancestor controls that subtree at any depth.
 - If conflicting light and dark selectors are placed on the same element, the dark declaration wins because it appears later with equal specificity. Do not rely on this conflict behavior; apply one theme per element.
-- Component colors resolve from tokens or `currentColor`, so they follow the theme without separate dark-variant rules, with no exception: every glyph the package draws is a `currentColor` mask. Icon artwork a consumer brings is theirs to theme.
+- Component colors resolve from tokens or `currentColor`, so they follow the theme without separate dark-variant rules, with no exception: the only glyphs the package draws, the checkbox tick and dash, are `currentColor` masks. Icons and spinners a consumer brings are theirs to theme.
 - The Tailwind source entrypoints' `dark:` variant tracks this rule for the explicit-selector-versus-system-preference choice: it fires under an explicit dark selector, or under the system preference when the subtree carries no explicit selector at all. It does not track the previous rule the same way: that one holds because `color-scheme` inherits, so the nearest declaration always wins regardless of depth, while `dark:` matches by selector -- `.dark *` matches every descendant of a `.dark` element, with no way to stop at a nearer `.light` in between. A `.light` subtree nested inside `.dark` themes its tokens correctly but still matches `dark:`'s explicit arm. See [Setup → Dark variant](docs/setup.md#dark-variant).
 
 Setting `color-scheme` yourself on an element also re-themes the tokens below it, because that is the only signal the palette reads. This also themes native UI such as scrollbars and form-control internals to match.
@@ -400,7 +399,7 @@ With no presentation class in scope, each component keeps its own default: butto
 | `.quote`                                        | Fill, text, border, and width.                                                                  |
 | `.code`, `.pre`, `.tooltip-bubble`              | Fill, text, border, and material.                                                               |
 | `.progress`                                     | Track fill, border, and border width; the value fill is always the intent color, full strength. |
-| `.loader`, `.skeleton`, `.divider`              | Intent only, not presentation.                                                                  |
+| `.skeleton`, `.divider`                         | Intent only, not presentation.                                                                  |
 
 A text control caps a **cascaded** fill at `6%`, keeping typed text legible when a `.solid` container reaches a field nobody classed. A fill class written on the control itself names its own cap instead, because that is a consumer describing what they want: `.soft` takes `12%` and `.solid` takes `20%`.
 
@@ -430,7 +429,6 @@ Presentation is two independent axes, so they get a column each. A `Yes` means t
 | Components                                                | Intent | Fill | Edge | Aesthetic material |
 | --------------------------------------------------------- | ------ | ---- | ---- | ------------------ |
 | `.btn`, `.alert`, `.badge`, `.card`, `.panel`             | Yes    | Yes  | Yes  | Shape              |
-| `.loader`                                                 | Yes    | No   | No   | No                 |
 | `.kbd`, `.data-table`                                     | Yes    | Yes  | Yes  | Radius and edge    |
 | `.quote`                                                  | Yes    | Yes  | Yes  | Edge width         |
 | `.divider`, `.skeleton`                                   | Yes    | No   | No   | No                 |
@@ -1250,14 +1248,14 @@ Examples:
 <button class="btn destructive ghost edgeless">Danger ghost</button>
 <button class="btn icon primary" aria-label="Create">+</button>
 <button class="btn primary" disabled>
-  <span class="loader sm" aria-hidden="true"></span>
+  <i class="ic-lucide-loader-circle ic-anim-spin" aria-hidden="true"></i>
   Saving
 </button>
 ```
 
 ## Loading
 
-The package ships no loading state of its own: a loading button is a disabled `.btn` composed with a real [`.loader`](docs/usage/feedback.md) child, the same activity indicator every other component uses. Disable the button so users cannot trigger duplicate work, and drop a `.loader` in beside the label — any of its variants (`.dots-wave`, `.bars-wave`, and so on) work the same way. Whether to also hide the label is your call; the package has no built-in mechanism for that.
+The package ships no loading state or spinner of its own: a loading button is a disabled `.btn` composed with a spinner you bring, such as a `@codenhub/icons` glyph with `ic-anim-spin` (see [Feedback](docs/usage/feedback.md)). Disable the button so users cannot trigger duplicate work, and drop the spinner in beside the label. Whether to also hide the label is your call; the package has no built-in mechanism for that.
 
 On the base look a press scales the button down a little (`--ui-active-transform`, `scale(0.97)`). [Aesthetics](docs/usage/aesthetics.md) swap in their own press gesture, and `prefers-reduced-motion` turns it off.
 
@@ -1430,44 +1428,19 @@ Keep a hint or error message outside the `<label>` and point `aria-describedby` 
 | `.alert`         | Inline feedback surface.                                                     |
 | `.alert-icon`    | Sizing and alignment for an icon element dropped in as a child of `.alert`.  |
 | `.badge`         | Compact status pill.                                                         |
-| `.loader-mask`   | Low-level activity indicator composition utility. Applies the spinner mask.  |
-| `.loader`        | Standalone inline loader artwork.                                            |
 | `.skeleton`      | Ambient loading placeholder.                                                 |
 | `.progress`      | Progress track. Uses `--progress-value` variable.                            |
 | `.active`        | Optional on `.progress` to add a track shimmer.                              |
 | `.indeterminate` | Optional on `.progress` to animate a moving fill without `--progress-value`. |
 
-Activity indicator modifier classes compose with `.loader`:
+The package ships no spinner. Bring one from an icon set, such as `@codenhub/icons`: a glyph with `ic-anim-spin` (`ic-lucide-loader-circle ic-anim-spin`), or the animated `svg-spinners` family. A `currentColor` icon matches the text around it. `ic-anim-spin` stops under `prefers-reduced-motion: reduce`; `svg-spinners` artwork keeps moving. See [Accessibility](docs/accessibility.md).
 
-| Class                  | Animation style                         |
-| ---------------------- | --------------------------------------- |
-| _(default)_            | Circular spinner (rotating arc).        |
-| `.dots-wave`           | Three dots bouncing up/down in a wave.  |
-| `.dots-fade`           | Three dots fading in and out.           |
-| `.dots-queue`          | Dot queuing from left to right.         |
-| `.dots-rotate`         | Side dots rotating around a center dot. |
-| `.dots-grow`           | Three dots growing and shrinking.       |
-| `.dots-grow-alternate` | Outer dots small, center dot pulses.    |
-| `.dot-bounce`          | Single dot bouncing with squash effect. |
-| `.bars-wave`           | Three vertical bars scaling in a wave.  |
-| `.pulse-ring`          | Two concentric rings pulsing outward.   |
+Alerts, badges, progress bars, and skeletons accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, and `.info`. Without an intent, alerts and badges use the text palette, while the indicators -- `.skeleton` and `.progress` -- take `currentColor`, so they match whatever content surrounds them.
 
-These variants retain their embedded SVG animations normally. Under `prefers-reduced-motion: reduce`, loader CSS substitutes a corresponding static mask. This fallback ships wherever the loader does -- the complete, native, and `/components` entrypoints, `/tw/components`, and `/tw/loader` -- and does not depend on the global reset. `/tw/button` does not include the loader; pair it with `/tw/loader`. See [Accessibility](docs/accessibility.md).
-
-Loader size modifiers:
-
-| Class    | Size                 |
-| -------- | -------------------- |
-| _(none)_ | Default (`1.75rem`). |
-| `.sm`    | Small (`1.25rem`).   |
-| `.lg`    | Large (`2.25rem`).   |
-
-Alerts, badges, progress bars, skeletons, and loaders accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, and `.info`. Without an intent, alerts and badges use the text palette, while the indicators -- `.loader`, `.skeleton`, and `.progress` -- take `currentColor`, so they match whatever content surrounds them.
-
-Skeletons, loaders, and dividers are indicators: they read intent but ignore fill and edge [presentation](docs/usage/composing.md#presentation). `.progress` is not one of them — its track reads both, `.soft.edgeless` by default; only the moving value fill stays intent-colored at full strength regardless of presentation. `.solid` is unsupported on the track, and `.ghost.edgeless` renders but is discouraged, since neither leaves the track a visible frame. See [Composing → Component axis reference](docs/usage/composing.md#component-axis-reference) for the full table.
+Skeletons and dividers are indicators: they read intent but ignore fill and edge [presentation](docs/usage/composing.md#presentation). `.progress` is not one of them — its track reads both, `.soft.edgeless` by default; only the moving value fill stays intent-colored at full strength regardless of presentation. `.solid` is unsupported on the track, and `.ghost.edgeless` renders but is discouraged, since neither leaves the track a visible frame. See [Composing → Component axis reference](docs/usage/composing.md#component-axis-reference) for the full table.
 
 ```html
-<span class="loader success" aria-hidden="true"></span> <span class="skeleton info"></span>
+<span class="skeleton info"></span>
 ```
 
 The package ships no icon of its own: `.alert` is already `flex`, so an icon dropped in as a child is spaced from the message by its `gap-3`. `.alert-icon` only sizes and aligns whatever icon element you provide — an inline `<svg>`, an `<img>`, or a class from an icon set such as `@codenhub/icons` — the same contract [`.input-group`](docs/usage/forms.md#icons) documents.
@@ -1493,12 +1466,6 @@ Alerts and badges read the shared [presentation](docs/usage/composing.md#present
 <span class="badge warning">Queued</span>
 <span class="badge success solid">Live</span>
 <span class="badge info soft">Draft</span>
-<span class="loader" aria-hidden="true"></span>
-<span class="loader dots-wave" aria-hidden="true"></span>
-<span class="loader dots-fade" aria-hidden="true"></span>
-<span class="loader bars-wave" aria-hidden="true"></span>
-<span class="loader pulse-ring sm" aria-hidden="true"></span>
-<span class="loader dots-grow lg" aria-hidden="true"></span>
 <div class="progress" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64" style="--progress-value: 64%"></div>
 <div class="progress secondary active" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64" style="--progress-value: 64%"></div>
 <div class="progress primary ghost edged" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64" style="--progress-value: 64%"></div>
@@ -1849,7 +1816,6 @@ Unlike `/tw`, the focused entrypoints and `/tw/native` do not import Tailwind, s
 ```css
 @import "tailwindcss";
 @import "@codenhub/styles/tw/button";
-@import "@codenhub/styles/tw/loader";
 ```
 
 ## Troubleshooting
@@ -2177,12 +2143,11 @@ This package provides CSS hooks for accessible states. It does not provide seman
 
 | Feature                   | Behavior                                                                                                                                                                                                           |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Reduced-motion loaders    | Loader variants use animated embedded SVGs normally and static masks when `prefers-reduced-motion: reduce` matches.                                                                                                |
 | Reduced-motion components | Every component stops its own transitions and animations -- the skeleton and progress shimmer, the indeterminate sweep, the tooltip, toggle marks, and the press -- when `prefers-reduced-motion: reduce` matches. |
 | Reduced-motion document   | The reset additionally shortens every other animation and transition on the page when `prefers-reduced-motion: reduce` matches.                                                                                    |
 | Reduced transparency      | `.glass` and `.glass-liquid` drop their blur and lens and become an opaque surface when `prefers-reduced-transparency: reduce` matches.                                                                            |
 
-The loader fallback and each component's own reduced-motion rule ship with the component, so every entrypoint that includes it honors reduced motion without the reset -- `@codenhub/styles/components`, `@codenhub/styles/tw/components`, and each focused `/tw/*` component entrypoint included. The complete and native entrypoints add the reset's page-wide shortening on top.
+Each component's own reduced-motion rule ships with the component, so every entrypoint that includes it honors reduced motion without the reset -- `@codenhub/styles/components`, `@codenhub/styles/tw/components`, and each focused `/tw/*` component entrypoint included. The complete and native entrypoints add the reset's page-wide shortening on top.
 
 The reset's rule is `!important` inside the `base` layer, and a layered `!important` beats an unlayered one, so your own `!important` cannot switch an animation back on. To keep one running for users who ask for reduced motion -- a progress indicator you consider essential, say -- declare it `!important` in a layer ordered before `base`. The order is set by the first `@layer` statement the browser meets, so yours goes before the package loads:
 
@@ -2226,16 +2191,16 @@ Custom checkboxes and radios use the system `Canvas`, `CanvasText`, `Highlight`,
 
 Use semantic HTML and behavior appropriate for the component.
 
-| UI                | Required outside CSS                                                                                                                                                                                                                    |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Buttons           | Use `<button>` for actions or accessible links for navigation. Add accessible names for `.btn.icon`.                                                                                                                                    |
-| Forms             | Use labels, `type`, validation logic, `aria-describedby`, and error message relationships. Keep hints and errors outside the `<label>`, and give a `.switch` `role="switch"`.                                                           |
-| Alerts            | Add `role="status"` or `role="alert"` based on announcement urgency.                                                                                                                                                                    |
-| Toasts            | Add live-region behavior, dismissal behavior, focus rules, and pause/timeout logic when needed.                                                                                                                                         |
-| Tooltips          | Give the bubble a real `id` and `role="tooltip"`, and reference it from the trigger's `aria-describedby`. Dismiss it on Escape by writing `data-state="closed"` (see [Tooltips](docs/usage/tooltips.md)); the bubble is already hoverable. |
-| Progress          | Use semantic progress elements or ARIA values when numeric progress must be announced.                                                                                                                                                  |
-| Skeletons/loaders | Mark decorative loading visuals with `aria-hidden="true"` and expose loading state elsewhere when needed.                                                                                                                               |
-| Popovers/modals   | Provide focus trapping, escape handling, inert background behavior, labels, and roles outside this CSS package.                                                                                                                         |
+| UI              | Required outside CSS                                                                                                                                                                                                                    |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Buttons         | Use `<button>` for actions or accessible links for navigation. Add accessible names for `.btn.icon`.                                                                                                                                    |
+| Forms           | Use labels, `type`, validation logic, `aria-describedby`, and error message relationships. Keep hints and errors outside the `<label>`, and give a `.switch` `role="switch"`.                                                           |
+| Alerts          | Add `role="status"` or `role="alert"` based on announcement urgency.                                                                                                                                                                    |
+| Toasts          | Add live-region behavior, dismissal behavior, focus rules, and pause/timeout logic when needed.                                                                                                                                         |
+| Tooltips        | Give the bubble a real `id` and `role="tooltip"`, and reference it from the trigger's `aria-describedby`. Dismiss it on Escape by writing `data-state="closed"` (see [Tooltips](docs/usage/tooltips.md)); the bubble is already hoverable. |
+| Progress        | Use semantic progress elements or ARIA values when numeric progress must be announced.                                                                                                                                                  |
+| Skeletons       | Mark decorative loading visuals, including any spinner you bring, with `aria-hidden="true"` and expose loading state elsewhere when needed.                                                                                             |
+| Popovers/modals | Provide focus trapping, escape handling, inert background behavior, labels, and roles outside this CSS package.                                                                                                                         |
 
 ## State attribute guidance
 

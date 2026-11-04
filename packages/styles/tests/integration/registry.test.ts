@@ -96,7 +96,6 @@ function shippedClassNames(): string[] {
     ...Object.values(registry.intents).flatMap((intent) => intent.aliases ?? []),
     ...modifiers,
     ...registry.components.map((component) => component.class),
-    ...registry.components.flatMap((component) => component.art ?? []),
     ...(registry.helpers ?? []),
     ...(registry.aesthetics ?? []).map((aesthetic) => aesthetic.class),
     ...(registry.aesthetics ?? []).map((aesthetic) => aesthetic.solo),
@@ -436,10 +435,10 @@ function rootDeclarations(block: string): string {
    registry does not list them, because they publish no per-component default for
    it to hold. Two of them -- `text-control` and `surface` -- are documented all
    the same, as the low-level boxes a consumer builds on when the package ships
-   no component for what they are making; the other four are internal. Both
+   no component for what they are making; the other three are internal. Both
    documented ones are in the intent reset, which is what a typeable class needs
    to paint at all. */
-const composition = new Set(["box", "box-hover", "box-active", "surface", "text-control", "loader-mask"]);
+const composition = new Set(["box", "box-hover", "box-active", "surface", "text-control"]);
 
 /* The registry is the list of what the package supports, so a utility it does
    not name is either drift or an accidental part of the public surface. `.table`
@@ -447,7 +446,6 @@ const composition = new Set(["box", "box-hover", "box-active", "surface", "text-
 test("every shipped utility is in the registry", async () => {
   const known = new Set([
     ...registry.components.map((component) => component.class),
-    ...registry.components.flatMap((component) => component.art ?? []),
     ...(registry.helpers ?? []),
     ...composition,
   ]);

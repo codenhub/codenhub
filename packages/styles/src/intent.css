@@ -139,7 +139,6 @@
   .badge,
   .kbd,
   .code,
-  .loader,
   .skeleton,
   .progress,
   .divider
@@ -218,11 +217,11 @@
 }
 
 /* Indicators take the color they sit in rather than the shared neutral, so a
-   loader inside filled or colored content still matches it. It has to be
+   skeleton inside filled or colored content still matches it. It has to be
    declared here at zero specificity: written in the component's own block it
    would carry 0-1-0 and, being later in the stylesheet, beat `.success` --
    which silently makes every indicator ignore every intent class. */
-:where(.loader, .skeleton, .progress, .divider) {
+:where(.skeleton, .progress, .divider) {
   --intent-color: currentColor;
   --intent-border: currentColor;
 }
