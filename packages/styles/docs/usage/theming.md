@@ -117,7 +117,8 @@ These values measure 5.7:1 for white on the fill, 7.1:1 for white on the hover c
 
 The class works on everything that takes an intent: buttons, badges, fields and toggles, solid and ghost cards, progress bars, skeletons, tooltip bubbles, and the rest. A few behaviors are written for the six built-in names, and a custom intent does not get them:
 
-- **A quiet, untinted rest.** A neutral `.card.soft`, `.panel`, `.alert`, `.kbd`, `.code`, and `.pre` show no tint at rest, and they recognize an intent only by the six built-in classes. `.card.soft.beta`, `.panel.beta`, `.alert.beta`, and a `.beta` key cap or code block are drawn like the neutral one: the quiet background tone instead of a violet tint. Your intent still colors their text and border.
+- **A quiet, untinted rest.** A neutral `.card.soft`, `.panel`, and `.alert` rest on the quiet background tone, and they recognize an intent only by the six built-in classes. `.card.soft.beta`, `.panel.beta`, and `.alert.beta` are drawn like the neutral one: the quiet background tone instead of a violet tint. Your intent still colors their text and border.
+- **The chip tint.** A `.beta` key cap or code block shows your `--intent-subtle` tint, but not the extra 12% of `--intent-color` a built-in intent adds over it.
 - **Solo classes.** A [solo class](./solo.md) such as `.neobrutalism-solo` takes an intent only from the six built-in classes, so `.neobrutalism-solo.beta` is drawn neutral.
 
 If you need those, there are two ways:

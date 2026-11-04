@@ -76,11 +76,7 @@ A panel is for sidebars, toolbars, and wells: areas that are part of the page, n
 
 ### Neutral cards and panels
 
-A neutral `.card.soft` and a neutral `.panel` show no tint. They use `--color-foreground`, the quiet background tone one step off the page, so they read as a separate area without drawing attention.
-
-- A `.card.soft` with `.interactive` or `.hoverable` takes the tint, on `--color-surface`, when hovered. A plain `.card.soft` has no hover state.
-- A panel has no hover state, so a neutral panel always rests at the quiet tone.
-- With one of the six built-in intents, both keep their tint at rest, and a card deepens it on hover. `.solid` and `.ghost` are unaffected.
+A neutral `.card.soft` and a neutral `.panel` show no tint: they rest on the quiet background tone one step off the page, so they read as a separate area without drawing attention. With a built-in intent they take the ordinary tint. [Composing → Neutral surfaces rest untinted](./composing.md#neutral-surfaces-rest-untinted) has the details, including hover.
 
 ### Clickable cards
 
@@ -209,7 +205,7 @@ Keep the wrapper on any table that could be wider than its container; without it
 <kbd class="kbd primary soft edged">Shift</kbd>
 ```
 
-A neutral `.kbd`, `.code`, or `.pre` uses the quiet tint only; an intent class adds 12% of its color over it. `.ghost` is not supported on these three: the tinted background is what makes them chips, so they keep it and `.ghost` changes nothing. Their font is `--font-mono`; see [Theming → Fonts](./theming.md#fonts).
+A `.kbd`, `.code`, or `.pre` rests on its intent's subtle tone, `--color-surface` for neutral, and a built-in intent class adds 12% of its color over it. `.ghost` is not supported on these three: the tinted background is what makes them chips, so they keep it and `.ghost` changes nothing. Their font is `--font-mono`; see [Theming → Fonts](./theming.md#fonts).
 
 ## Next
 
