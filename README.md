@@ -24,7 +24,7 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 - `packages/router`: Small browser router for TypeScript apps.
 - `packages/skills`: Curated collection of AI agent skills with a built-in installer.
 - `packages/store`: Small typed records persisted to key-value backends.
-- `packages/styles`: CSS-only Codenhub design tokens, base styles, and composable UI helper classes.
+- `packages/styles`: Build a consistent, themeable interface by writing class names on plain HTML, with one stylesheet of tokens, a reset, layout and type helpers, and component classes, and no JavaScript.
 - `packages/theme`: Zero-dependency browser theme preference helper for TypeScript apps.
 - `packages/toaster`: Instance-based browser toast and native dialog manager with accessible semantic, loading, and custom notifications.
 - `packages/ui-kit`: Browser UI utilities for feedback, internationalization, themes, toasts, and global styles.
