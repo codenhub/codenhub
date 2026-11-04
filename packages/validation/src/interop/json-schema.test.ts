@@ -118,6 +118,15 @@ describe("toJsonSchema", () => {
     });
   });
 
+  it("should write a step of multipleOf only when binary floating point holds it exactly", () => {
+    expect(schemaOf(number(multipleOf(0.25)))).toEqual({ type: "number", multipleOf: 0.25 });
+    expect(schemaOf(number(multipleOf(1.5)))).toEqual({ type: "number", multipleOf: 1.5 });
+    // A reader divides in binary, where 0.3 / 0.1 is 2.9999999999999996, so it refuses 0.3 the check accepts.
+    expect(schemaOf(number(multipleOf(0.1)))).toEqual({ type: "number" });
+    expect(schemaOf(number(multipleOf(0.01)))).toEqual({ type: "number" });
+    expect(schemaOf(number(multipleOf(1e-7)))).toEqual({ type: "number" });
+  });
+
   it("should write a pattern a schema reads as the check does, so one a prefix made matches that text only", () => {
     const { pattern: written } = schemaOf(string(startsWith("a.b|c")));
     expect(new RegExp(written as string, "u").test("a.b|c!")).toBe(true);

@@ -8,6 +8,18 @@ const toDecimal = (value: number): { digits: bigint; exponent: number } => {
   return { digits: BigInt(whole + fraction), exponent: Number(exponent) - fraction.length };
 };
 
+/**
+ * Whether the decimal a finite number is written as is the number binary floating point holds: an integer,
+ * or a fraction whose denominator is a power of two, such as 0.25. 0.1 is not.
+ *
+ * @internal
+ */
+export const isBinaryExact = (value: number): boolean => {
+  const { digits, exponent } = toDecimal(value);
+  // digits / 10^k is a power-of-two fraction exactly when 5^k divides digits.
+  return exponent >= 0 || digits % 5n ** BigInt(-exponent) === 0n;
+};
+
 const isMultipleOf = (value: number, step: number): boolean => {
   // NaN and the infinities are numbers, so a guard or a hand-made validator can hand them over, and no
   // decimal reads them: they are a multiple of nothing.

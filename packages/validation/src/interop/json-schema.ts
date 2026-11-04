@@ -1,3 +1,4 @@
+import { isBinaryExact } from "../checks/multiple-of";
 import { describe, type Description } from "../core/describe";
 import { isPlainObject } from "../core/objects";
 import { assertFunction } from "../core/result";
@@ -125,6 +126,10 @@ const isJsonPrimitive = (value: unknown): boolean =>
  * A schema reads a `pattern` in Unicode mode, the `u` flag, so one written without it is written as it is
  * when it means the same there, where `.` and a negated class match a whole character rather than half of
  * an emoji, and cannot be written otherwise, as `/^\@x$/`, which is an error in that mode, cannot.
+ *
+ * A step of `multipleOf` is written only when binary floating point holds it exactly, an integer or a
+ * fraction such as `0.25`. A reader divides in binary, where `0.3 / 0.1` is not `3`, so a step such as
+ * `0.1` or `0.01` is left out rather than written for a reader to refuse values the validator accepts.
  *
  * The exceptions are where a validator cleans a value before it checks it, which is not written.
  * `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no
@@ -272,7 +277,11 @@ export function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOption
       } else if (format === "nonBlank") {
         patterns.push(String.raw`\S`);
       } else if (format === "multipleOf" && typeof value === "number") {
-        schema["multipleOf"] = value;
+        // A reader divides in binary, where 0.3 / 0.1 is not 3, so it would refuse a value the check
+        // accepts. A step binary holds exactly divides as the check does; another is left out.
+        if (isBinaryExact(value)) {
+          schema["multipleOf"] = value;
+        }
       } else if (format === "nonZero") {
         schema["not"] = { const: 0 };
       } else if (params["unique"] === true && by === undefined) {
