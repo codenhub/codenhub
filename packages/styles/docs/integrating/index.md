@@ -39,7 +39,7 @@ After the import, render one styled element and confirm it picked up the package
 <button class="btn primary">Save changes</button>
 ```
 
-A rounded button filled with the primary color (near-black on a light page, near-white on a dark one) means the stylesheet loaded. Unstyled browser-default text most often means the import specifier didn't resolve — check the [entrypoint table](../setup.md#all-entrypoints) for the exact one your entrypoint needs, and confirm your build tooling resolves package CSS imports at all, see [Setup → Requirements](../setup.md#requirements). With no build tool, link the file by its path instead; see [Without a bundler](./without-a-bundler.md). [Setup → When nothing is styled](../setup.md#when-nothing-is-styled) lists the other common causes.
+A rounded button filled with the primary color (near-black on a light page, near-white on a dark one) means the stylesheet loaded. Unstyled browser-default text most often means the import specifier didn't resolve — check the [entrypoint table](../setup.md#all-entrypoints) for the exact specifier to import, and confirm your build tooling resolves package CSS imports at all, see [Setup → Requirements](../setup.md#requirements). With no build tool, link the file by its path instead; see [Without a bundler](./without-a-bundler.md). [Setup → When nothing is styled](../setup.md#when-nothing-is-styled) lists the other common causes.
 
 ## Next
 
