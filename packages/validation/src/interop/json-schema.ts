@@ -1,5 +1,6 @@
 import { isBinaryExact } from "../checks/multiple-of";
-import { describe, type Description } from "../core/describe";
+import { customFormats, describe, type Description } from "../core/describe";
+import { makesNewLazy } from "../core/lazy";
 import { isPlainObject } from "../core/objects";
 import { assertFunction } from "../core/result";
 import type { AnyValidator } from "../core/types";
@@ -82,7 +83,10 @@ const COERCED_TYPES: Readonly<Record<string, readonly string[]>> = {
 
 const OPTION_NAMES = ["io", "unrepresentable", "target"];
 
-/** How many definitions may be open at once, one inside another, before a schema is taken to build itself anew. */
+/**
+ * How many definitions whose getter makes new `lazy` parts each time it is called may be open at once, one
+ * inside another, before a schema is taken to build itself anew.
+ */
 const MAX_OPEN_DEFINITIONS = 64;
 
 const isUndefinedLiteral = (record: Description | undefined): boolean =>
@@ -449,6 +453,10 @@ export function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOption
           : anything("a value JSON has none for");
       }
       case "format": {
+        // A format made with `format` has a test no schema can hold, whatever its name.
+        if (customFormats.has(given)) {
+          return checked({ type: "string" });
+        }
         const name = String(record["format"]);
         if (name === "port") {
           return checked({ type: "integer", minimum: 1, maximum: 65_535 });
@@ -582,19 +590,22 @@ export function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOption
         let name = names.get(getter);
         if (name === undefined) {
           // A getter written where the schema is built, as in `lazy(() => build())`, is a new function at
-          // every level, and would be followed until the stack ran out.
-          if (open >= MAX_OPEN_DEFINITIONS) {
+          // every level, and would be followed until the stack ran out. Its getter makes new `lazy` parts
+          // each time it is called, which a long chain of distinct `lazy` parts built once does not.
+          const target = getter();
+          const isRebuilding = makesNewLazy(getter, target);
+          if (isRebuilding && open >= MAX_OPEN_DEFINITIONS) {
             throw new TypeError(
               "toJsonSchema found a recursive schema that is built anew at every level. Build it once and refer to it",
             );
           }
           name = `schema${names.size + 1}`;
           names.set(getter, name);
-          open += 1;
+          open += isRebuilding ? 1 : 0;
           try {
-            definitions[name] = convert(getter(), path);
+            definitions[name] = convert(target, path);
           } finally {
-            open -= 1;
+            open -= isRebuilding ? 1 : 0;
           }
         }
         // The checks are of this `lazy` and not of its getter, which another `lazy` may share.

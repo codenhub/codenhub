@@ -248,6 +248,13 @@ describe("toJsonSchema", () => {
     expect(schemaOf(format("toString", () => true)())).toEqual({ type: "string" });
   });
 
+  it("should not take a format made with format for the built-in of its name, whose test it does not share", () => {
+    for (const name of ["uuid", "email", "port", "base64", "ip"]) {
+      expect(schemaOf(format(name, () => true)())).toEqual({ type: "string" });
+      expect(schemaOf(format(name, () => true)(), { io: "output" })).toEqual({ type: "string" });
+    }
+  });
+
   it("should write collections", () => {
     expect(schemaOf(tuple([string(), number()]))).toEqual({
       type: "array",
@@ -512,6 +519,15 @@ describe("toJsonSchema", () => {
     it("should say so, and not run out of stack, for a getter written anew at each level", () => {
       const build = (): AnyValidator => object({ next: optional(lazy(() => build())) });
       expect(() => toJsonSchema(build())).toThrow("built anew at every level");
+    });
+
+    it("should write a long chain of distinct lazy parts to its end, as a schema generator writes one", () => {
+      let chain: AnyValidator = string();
+      for (let level = 0; level < 100; level += 1) {
+        const next = chain;
+        chain = lazy(() => object({ next }));
+      }
+      expect(Object.keys(toJsonSchema(chain)["$defs"] as object)).toHaveLength(100);
     });
 
     it("should write the values a union and a list of values hold beside undefined", () => {

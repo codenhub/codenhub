@@ -102,17 +102,17 @@ The output side takes a default and the value of a `fallback` to pass the valida
 
 A format is written under JSON Schema's name for it, and with no `format` where that name's rules refuse text the validator accepts, which would break the promise above:
 
-| Format                       | Input                                                   | Output     |
-| ---------------------------- | ------------------------------------------------------- | ---------- |
-| `email`                      | None, since the domain may be internationalized         | `email`    |
-| `domain`                     | None, for the same reason                               | `hostname` |
-| `hostname`, `uuid`           | Their own names                                         | The same   |
-| `datetime`                   | `date-time`, and none with `local`, which has no offset | The same   |
-| `isoDate`                    | `date`                                                  | The same   |
-| `ip`                         | `ipv4` with `version: "v4"`, and none otherwise         | The same   |
-| `time`, `duration`, `url`    | None                                                    | None       |
-| `port`, `base64`             | As the table above writes them                          | The same   |
-| Any other, `format` included | None                                                    | None       |
+| Format                                                   | Input                                                   | Output     |
+| -------------------------------------------------------- | ------------------------------------------------------- | ---------- |
+| `email`                                                  | None, since the domain may be internationalized         | `email`    |
+| `domain`                                                 | None, for the same reason                               | `hostname` |
+| `hostname`, `uuid`                                       | Their own names                                         | The same   |
+| `datetime`                                               | `date-time`, and none with `local`, which has no offset | The same   |
+| `isoDate`                                                | `date`                                                  | The same   |
+| `ip`                                                     | `ipv4` with `version: "v4"`, and none otherwise         | The same   |
+| `time`, `duration`, `url`                                | None                                                    | None       |
+| `port`, `base64`                                         | As the table above writes them                          | The same   |
+| Any other, and any made with `format`, whatever its name | None                                                    | None       |
 
 A format is left out where JSON Schema's has stricter rules: `time` needs an offset, which a time of day such as `12:00` never has, `duration` allows no fraction, as in `PT0.5S`, and no weeks beside days, as in `P1W1D`, an IPv6 address may have a zone, as in `fe80::1%eth0`, which `ipv6` does not allow, and a URL may hold `|` or `^`, which a URI may not. The input of `email` and `domain` may be internationalized, as in `user@bücher.example`, which `email` and `hostname` refuse; `idn-email` and `idn-hostname` would fit, but [ajv-formats](https://github.com/ajv-validator/ajv-formats) does not know them, and Ajv in its default strict mode refuses to compile a schema with a format it does not know. That is also why a format JSON Schema has no name for, such as `phone`, `slug` or one made with `format`, is written with none.
 

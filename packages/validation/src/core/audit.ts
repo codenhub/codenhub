@@ -1,4 +1,5 @@
 import { customFormats, describe, type Description } from "./describe";
+import { makesNewLazy } from "./lazy";
 import { assertFunction } from "./result";
 import type { AnyValidator } from "./types";
 
@@ -60,47 +61,6 @@ const hasBound = (record: Description): boolean =>
 /** Whether a format is a built-in one that bounds its text, and not one made with `format` under its name. */
 const isBoundedFormat = (record: Description): boolean =>
   BOUNDED_FORMATS.has(String(record["format"])) && !customFormats.has(record.options as object);
-
-/**
- * Adds to `found` the getters of the `lazy` parts a validator holds, short of what those parts refer to.
- * A part reached twice is read once, since parts a schema shares would otherwise be read once for each way to them.
- */
-function addGetters(part: unknown, found: Set<unknown>, seen: Set<unknown>): void {
-  const record = describe(part as AnyValidator);
-  if (record === undefined || seen.has(part)) {
-    return;
-  }
-  seen.add(part);
-  if (record.kind === "lazy") {
-    found.add(record["getter"]);
-    return;
-  }
-  for (const value of Object.values(record)) {
-    // A child is a validator, or is in a list, such as `steps`, or in a record, such as `shape`.
-    const children: unknown[] =
-      typeof value === "function" ? [value] : typeof value === "object" && value !== null ? Object.values(value) : [];
-    for (const child of children) {
-      addGetters(child, found, seen);
-    }
-  }
-}
-
-/**
- * Whether a getter makes new `lazy` parts each time it is called, as `lazy(() => build())` does, so that
- * following them never comes back to one already walked. A getter that returns a schema built once, or
- * builds a part around `lazy` parts that exist already, makes none.
- */
-function makesNewLazy(getter: () => unknown, first: unknown): boolean {
-  const again = getter();
-  if (again === first) {
-    return false;
-  }
-  const before = new Set<unknown>();
-  const after = new Set<unknown>();
-  addGetters(first, before, new Set());
-  addGetters(again, after, new Set());
-  return [...after].some((each) => !before.has(each));
-}
 
 /**
  * How much of a value a step before it bounds: nothing, the number of items of a collection, or all of it,
