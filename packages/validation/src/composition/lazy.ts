@@ -1,4 +1,15 @@
-import { chain, detached, isThenable, refundCall, resultsOf, spendCall, type Maybe } from "../core/async";
+import {
+  chain,
+  closeLevel,
+  detached,
+  isThenable,
+  openLevel,
+  openLevels,
+  refundCall,
+  resultsOf,
+  spendCall,
+  type Maybe,
+} from "../core/async";
 import { tail } from "../core/checks";
 import { described } from "../core/describe";
 import { call, composed, type Place } from "../core/nesting";
@@ -22,8 +33,10 @@ export interface LazyOptions extends MessageOptions {
    * The most levels of `lazy` that may be open at once, counting every `lazy` validator, not only this
    * one. Input nested deeper fails with `too_big` instead of exhausting the stack. Since the levels of
    * every `lazy` count, a `maxDepth` of 1 inside another `lazy` fails at once: set it for the whole
-   * nesting. A worker has about half the stack of a page in Chromium and Firefox, so a schema with many
-   * validators at each level that runs in one needs it lowered.
+   * nesting. A level opened before an await stays open after it, so recursion that waits between levels
+   * is held to it too, and asynchronous data nested deeper needs it raised. A worker has about half the
+   * stack of a page in Chromium and Firefox, so a schema with many validators at each level that runs in
+   * one needs it lowered.
    *
    * @defaultValue 128
    */
@@ -56,13 +69,6 @@ function assertLimit(name: string, value: number): void {
     throw new RangeError(`${name} must be a positive integer, received ${value}`);
   }
 }
-
-/**
- * How many `lazy` calls are running right now. It only counts calls that are still on the stack:
- * one that returned a promise is finished as far as the stack is concerned, and its continuation
- * starts from a shallow one. That is the depth that can overflow.
- */
-let openDepth = 0;
 
 /**
  * The count of the `lazy` whose getter is running, which a `lazy` made by that getter shares. A schema
@@ -135,11 +141,11 @@ function spotOf(place: Place, { root, spots }: Paths): Spot {
  * Every level of nesting is a level of recursion, and input nested past the stack, or a cyclic
  * object, would throw. `maxDepth` stops that first: a value found more than that many levels down
  * fails with `too_big` and `{ maximum, type: "depth" }` at its own path, so untrusted input can be
- * checked without a size cap tuned to the stack. The count is of calls on the stack, so it bounds
- * recursion that happens in one synchronous run, which is where the stack can overflow; a rule that
- * awaits between levels starts the next from a fresh stack, and is not counted. So `maxDepth` does not
- * bound an asynchronous recursive schema; `maxCalls` does, below, since each level is a `lazy` call
- * and the count of calls lasts across awaits, so even a cyclic object stops.
+ * checked without a size cap tuned to the stack. A level opened before an await is still open after it,
+ * so a rule that awaits between levels does not reset the count: an asynchronous recursive schema is held
+ * to `maxDepth` too, a cyclic object included, and its issues, each holding its full path, stay small.
+ * Asynchronous data nested deeper than the limit needs it raised, which costs no stack, since what runs
+ * after an await starts from a fresh one.
  *
  * Work can also grow faster than the input. A `union` tries every option, and an `object` checks every
  * property even after one fails, so in a recursive `union` of objects every option reaches the children.
@@ -152,14 +158,14 @@ function spotOf(place: Place, { root, spots }: Paths): Spot {
  * `{ maximum, type: "calls" }`. A validation is a call such as `schema(input)` and everything it reaches
  * before it settles, whatever validator its root is, so the items of an `array` share each `lazy`'s
  * count. Unlike `maxDepth`, each `lazy` counts its own calls against its own limit, so a limit set on one
- * is never overridden by another that the validation reaches. Unlike `maxDepth` too, it lasts across awaits: what runs after an await counts toward the same
+ * is never overridden by another that the validation reaches. Like `maxDepth`, it lasts across awaits: what runs after an await counts toward the same
  * validation, so an asynchronous recursive schema is held to it as well. That holds for the awaits of
  * this package, such as an asynchronous check's: an await inside a validator you write yourself is not
  * seen, so what that validator calls after it starts a validation of its own, with fresh counts, and
- * `maxCalls` does not bound recursion through it. Put asynchronous work in a check, or bound such a
- * validator yourself. The issues of
- * the options that failed are kept, about 1 KB per call, so the default holds a validation stopped by the
- * limit to about 10 MB and a few tenths of a second for each `lazy`. Raise it for trusted recursive data with more nodes
+ * neither limit bounds recursion through it. Put asynchronous work in a check, or bound such a
+ * validator yourself. The issues found on the way are kept, each with a path no deeper than `maxDepth`
+ * allows, about 1 to 2 KB per call, so the default holds a validation stopped by the limit to about 20 MB
+ * and a few tenths of a second for each `lazy`. Raise it for trusted recursive data with more nodes
  * than that in one validation. For recursive objects told apart by a property, `tagged` reads that
  * property first and validates only the matching variant.
  *
@@ -216,10 +222,10 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
     if (spent > maxCalls + (isPrimitive ? 1 : 0)) {
       return tooMany();
     }
-    if (openDepth >= maxDepth) {
+    if (openLevels() >= maxDepth) {
       return reject([issue("too_big", { maximum: maxDepth, type: "depth" })], place);
     }
-    openDepth += 1;
+    openLevel();
     started += 1;
     const mark = started;
     try {
@@ -256,7 +262,7 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
       }
       return outcome;
     } finally {
-      openDepth -= 1;
+      closeLevel();
     }
   };
   // An object reached again at the same path in one validation, as each option of a `union` reaches the

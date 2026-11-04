@@ -154,12 +154,40 @@ describe("lazy", () => {
       expect(() => broken(1)).toThrow("boom");
     });
 
-    it("should measure depth on the stack, not across an await", async () => {
-      const slow: Validator<Category> = object({ name: string(), children: array(lazy(() => slow, { maxDepth: 2 })) });
-      const late = lazy(() => isFree, { maxDepth: 1 });
-      const results = await Promise.all([late("a"), late("b"), late("c")]);
+    interface Waiting {
+      next?: Waiting;
+    }
+    // Waits before each level, so the next one starts from a fresh stack.
+    const waiting: AsyncValidator<Waiting> = lazy(
+      () => object({ next: optional(pipe(unknown(check(async () => true)), waiting)) }),
+      { maxDepth: 3 },
+    );
+    const links = (levels: number): Waiting => {
+      let link: Waiting = {};
+      for (let level = 0; level < levels; level += 1) {
+        link = { next: link };
+      }
+      return link;
+    };
+
+    it("should count levels across an await, so recursion that waits between levels stops at the limit", async () => {
+      // Each issue carries its full path, so without this the issues of such input took memory quadratic in its depth.
+      expect((await waiting(links(2))).ok).toBe(true);
+      expect(issuesOf(await waiting(links(5)))).toEqual([
+        { code: "too_big", path: ["next", "next", "next"], params: { maximum: 3, type: "depth" } },
+      ]);
+    });
+
+    it("should count the levels of each branch apart, so branches and validations that wait at once do not add up", async () => {
+      const both = object({ a: waiting, b: waiting, slow: string(check(async () => true)) });
+      const results = await Promise.all([1, 2, 3].map(() => both({ a: links(2), b: links(2), slow: "x" })));
       expect(results.map((result) => result.ok)).toEqual([true, true, true]);
-      expect(slow(nested(1)).ok).toBe(true);
+      const late = lazy(() => isFree, { maxDepth: 1 });
+      expect((await Promise.all([late("a"), late("b"), late("c")])).map((result) => result.ok)).toEqual([
+        true,
+        true,
+        true,
+      ]);
     });
 
     it("should reject a limit that is not a positive integer", () => {

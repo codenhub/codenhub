@@ -27,6 +27,28 @@ interface Validation {
 let current: Validation | undefined;
 
 /**
+ * How many `lazy` levels are open where the code running now sits. {@link chain} carries it into a
+ * continuation, as it carries the validation, so a level opened before an await is still open after it
+ * and `maxDepth` bounds recursion that waits between levels too. Counted on the stack alone, such
+ * recursion had no bound but the count of calls, and its issues, each holding its full path, took memory
+ * quadratic in the depth: 10,000 levels with a bad field at each held about 50 million path segments.
+ */
+let depth = 0;
+
+/** How many `lazy` levels are open where the code running now sits. */
+export const openLevels = (): number => depth;
+
+/** Opens a `lazy` level, which the caller closes with {@link closeLevel} in a `finally`. */
+export const openLevel = (): void => {
+  depth += 1;
+};
+
+/** Closes the level {@link openLevel} opened. */
+export const closeLevel = (): void => {
+  depth -= 1;
+};
+
+/**
  * Runs `work` with `validation` as the one running, and restores the one that was running when it
  * returns. Undefined runs it outside any, and a composer it reaches starts one of its own.
  */
@@ -115,7 +137,8 @@ export function decided<A, R>(builder: string, test: (argument: A) => R, argumen
 
 /**
  * Applies `next` to a value that may still be pending, staying synchronous when it is not. A pending
- * value's continuation stays part of the validation that was running when it was chained.
+ * value's continuation stays part of the validation that was running when it was chained, at the
+ * `lazy` levels that were open then.
  *
  * A validator's own result is a plain object, so a value with a `then` inside it is not mistaken
  * for a pending result. What `transform` and `check` get back from the consumer's callback is
@@ -126,11 +149,20 @@ export function chain<T, R>(value: Maybe<T>, next: (resolved: T) => Maybe<R>): M
     return next(value);
   }
   const validation = current;
+  const levels = depth;
   // Adopted as `await` adopts it, so a thenable whose `then` returns nothing, or calls back at once, still
   // gives a promise of what `next` returns; `Promise.resolve` returns a native promise as it is. A thenable
   // has to be unwrapped with `then`; the alternative to `await` is the point of this helper.
   // oxlint-disable-next-line promise/prefer-await-to-then, promise/no-callback-in-promise
-  return Promise.resolve(value).then((resolved) => enter(validation, next, resolved));
+  return Promise.resolve(value).then((resolved) => {
+    const previous = depth;
+    depth = levels;
+    try {
+      return enter(validation, next, resolved);
+    } finally {
+      depth = previous;
+    }
+  });
 }
 
 /**
