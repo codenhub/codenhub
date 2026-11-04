@@ -111,6 +111,16 @@ describe("translation rule", () => {
     ]);
   });
 
+  it("errors on a translated internal area, which is never published", async () => {
+    const findings = await check({
+      "docs/internal/notes.md": "# Notes\n",
+      "docs/pt-BR/internal/notes.md": translatedDocument("title: Notas", "# Notas\n"),
+    });
+    expect(findings.map(({ code, location, severity }) => [code, location, severity])).toEqual([
+      ["translation/untranslatable-area", "docs/pt-BR/internal/", "error"],
+    ]);
+  });
+
   it("errors on a source that is missing or is not a blob ID", async () => {
     const findings = await check({
       "README.es.md": "# @codenhub/example\n",

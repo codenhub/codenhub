@@ -48,9 +48,9 @@ export interface TranslationFile extends TranslationPath {
 const BLOB_ID = /^[0-9a-f]{40}$/i;
 const README_SOURCE = /^<!--\s*source:\s*(?<id>\S*)\s*-->/;
 const BYTE_ORDER_MARK = "﻿";
-// Generated or never-maintained areas a translation would go stale in, per the
-// spec's "What is translated".
-const UNTRANSLATABLE_AREAS = ["reference", "changelog"] as const;
+// Areas a translation never reaches a reader in, per the spec's "What is
+// translated": generated or never-maintained pages, and unpublished ones.
+const UNTRANSLATABLE_AREAS = ["reference", "changelog", "internal"] as const;
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -207,7 +207,7 @@ export function validateTranslations(
         reportedAreas.add(untranslatable);
         issues.push({
           code: "untranslatable-area",
-          message: `${untranslatable} is never translated: generated reference pages and changelog pages are read in English.`,
+          message: `${untranslatable} is never translated: generated reference pages and changelog pages are read in English, and internal docs are never published.`,
           severity: "error",
           sourcePath: untranslatable,
         });

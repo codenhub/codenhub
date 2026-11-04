@@ -76,7 +76,7 @@ What is not translated:
 
 - A generated `docs/reference/` area (`docs/specs/packages-reference.md`). It is compiled from TSDoc in English and regenerated with the code, so a hand-written translation would go stale on every API change. `docs/<locale>/reference/` is invalid.
 - `docs/changelog/` (`docs/specs/packages-changelog.md`). A version page records a release once and is not maintained afterwards, so translating it buys little. `docs/<locale>/changelog/` is invalid.
-- `docs/internal/`, which is for maintainers and is never published.
+- `docs/internal/`, which is for maintainers and is never published, so a translation of it would never reach a reader. `docs/<locale>/internal/` is invalid.
 - `llms.txt` and `llms-full.txt`. Their readers are language models, which read English, and a second compilation per locale would double what each publish has to keep current. `llms-full.txt` MUST exclude every `docs/<locale>/` area.
 - Source code, TSDoc, and code inside fenced blocks. Comments inside a code example MAY be translated.
 
@@ -166,7 +166,7 @@ The main site's package page in a locale shows `README.<locale>.md` when the rel
 
 - A file under `docs/<locale>/` with no English counterpart at the mirrored path, or a `README.<locale>.md` beside no `README.md`.
 - A `docs/<locale>/` or `README.<locale>.md` for a locale not listed under "Languages".
-- A `docs/<locale>/reference/` or `docs/<locale>/changelog/` area.
+- A `docs/<locale>/reference/`, `docs/<locale>/changelog/`, or `docs/<locale>/internal/` area.
 - A translation whose `source` is missing or is not a 40-character hexadecimal blob ID.
 - A translated document whose `order` or `curated` differs from its English counterpart's.
 
