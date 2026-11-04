@@ -644,6 +644,14 @@ The table component is `.data-table`, not `.table`: an `@utility table` would re
 
 They are the seam the components are built from, and a consumer composing a component the package does not ship is better served by them than by copying a component's declarations. What they are not is a taxonomy: applying `box` says how an element is painted, not what kind of thing it is.
 
+### Public component variables
+
+Six component-scoped custom properties are supported consumer inputs, documented in one table in `docs/usage/customizing.md`: `--progress-value`, `--progress-color`, `--progress-surface`, `--progress-edge`, `--input-group-gap`, and `--tooltip-linger`. Every other variable a component declares or reads -- `--surface-padding`, `--field-gap`, `--switch-*`, `--table-*`, `--quote-*`, the tooltip positioning intermediates, `--elevation-y`, `--elevation-blur`, and every `--_*` private -- is internal wiring that may change in any release.
+
+The six are public for different reasons. `--input-group-gap` and `--tooltip-linger` have been taught in the published docs since 0.2.0 and 0.6.0, so consumers may rely on them, and each meets a need nothing else does: `--input-group-gap: 0` glues a text affix to its value, and `--tooltip-linger` is the hover timing WCAG 1.4.13 asks for. The progress trio is the override path [Pseudo-element budget](#pseudo-element-budget) already gives an aesthetic or a consumer into `.progress`, and `--progress-value` is the bar's only input.
+
+Rejected: keeping only `--progress-value` public, as the customizing page once said. It would have silently withdrawn two inputs published docs teach, breaking those consumers without a release note, and left the progress override path without a contract. No new token was added by this decision.
+
 `box` declares `box-sizing: border-box` on itself. A box sizes itself as `min-height`/`min-width: var(--control-height)` plus its own padding and the composed `border` shorthand, so its geometry only resolves correctly under `border-box`. `reset.css` sets that on `*`, but the reset ships only with `.`, `/native`, and `/tw/reset`; `/components` and the granular `/tw/*` component entrypoints carry neither it nor Preflight. A component's own geometry is not an external reset's responsibility; the universal rule in `reset.css` covers only the consumer's own markup.
 
 ## Variant specs
