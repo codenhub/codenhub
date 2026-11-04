@@ -59,4 +59,17 @@ describe("coerceBigint", () => {
     expect(valueOf(coerceBigint({ max: 10n })(`-${digits}`))).toBe(-BigInt(digits));
     expect(valueOf(coerceBigint({ min: 10n })(digits))).toBe(BigInt(digits));
   });
+
+  it("should refuse long text by the bounds it checks with, read once from the options", () => {
+    let reads = 0;
+    const changing = coerceBigint({
+      get max() {
+        reads += 1;
+        return reads === 1 ? 100n : 0n;
+      },
+    });
+    expect(issuesOf(changing("999"))).toEqual([
+      { code: "too_big", path: [], params: { maximum: "100", inclusive: true, type: "bigint" } },
+    ]);
+  });
 });
