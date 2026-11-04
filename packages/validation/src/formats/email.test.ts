@@ -23,6 +23,20 @@ describe("email", () => {
     ]);
   });
 
+  it("should accept a domain with a joiner where IDNA allows one, as url reads it, and reject one between letters", () => {
+    // A zero-width non-joiner after a Persian letter and after a Devanagari virama, and a zero-width
+    // joiner after a Sinhala virama, as these scripts write them (RFC 5892 CONTEXTJ).
+    for (const name of ["می\u200Cخواهم.com", "क्\u200Cष.com", "ශ්\u200Dරී.lk"]) {
+      const host = new URL(valueOf(url()(`http://${name}/`))).hostname;
+      expect(valueOf(email()(`ada@${name}`))).toBe(`ada@${host}`);
+    }
+    expect(accepts(email(), "ada@a\u200Cb.com", "ada@a\u200Db.com", "ada@xn--ab-j1t.com")).toEqual([
+      false,
+      false,
+      false,
+    ]);
+  });
+
   it("should reject a domain the parser writes as a label it cannot read again", () => {
     expect(email()("a@éxn--.com").ok).toBe(false);
   });

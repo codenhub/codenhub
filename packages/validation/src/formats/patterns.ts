@@ -56,11 +56,14 @@ export const isPublicHost = (host: string): boolean =>
 /**
  * Letters, combining marks and digits from any script, joined by hyphens and dots: what a domain is
  * written with. Marks are there for scripts that write them even in normalized text, such as the vowel
- * signs of Devanagari. The ideographic, fullwidth and halfwidth full stops are there because IDNA reads
- * them as dots, and `url` accepts them through the parser. None of these can end a host, so text of them
- * is read by the parser as a host and nothing else: never a port, a path, credentials or an escape.
+ * signs of Devanagari. The zero-width non-joiner and joiner, `Join_Control`, are there because Persian,
+ * the Indic scripts and others write them inside a word, after a virama for one, and IDNA allows them
+ * there (RFC 5892, CONTEXTJ); the parser refuses one anywhere else, as in `a\u200Cb.com`, so whether it
+ * may stand is the parser's to say. The ideographic, fullwidth and halfwidth full stops are there because IDNA reads them
+ * as dots, and `url` accepts them through the parser. None of these can end a host, so text of them is
+ * read by the parser as a host and nothing else: never a port, a path, credentials or an escape.
  */
-const DOMAIN_TEXT_PATTERN = /^[\p{L}\p{M}\p{N}.。．｡-]+$/u;
+const DOMAIN_TEXT_PATTERN = /^[\p{L}\p{M}\p{N}\p{Join_Control}.。．｡-]+$/u;
 /** The longest a domain name can be, in its ASCII form. */
 export const HOST_MAX_LENGTH = 253;
 /**

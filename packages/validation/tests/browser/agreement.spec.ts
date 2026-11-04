@@ -56,12 +56,12 @@ function answers(module: Module, name: string, inputs: readonly string[]): strin
 
 /**
  * Characters that parsers map, drop, or treat differently from one another, and ordinary ones to mix
- * them with: soft hyphen, zero-width space and joiner, combining grapheme joiner, variation selector,
- * ideographic and fullwidth full stops, a fullwidth letter, a combining diaeresis, dotted capital I,
- * the "ff" ligature, the Hangul filler, the Arabic tatweel, Arabic-Indic and extended digits, final
- * sigma, sharp s, letters, digits and marks of right-to-left scripts, which the bidi rule reads, and
+ * them with: soft hyphen, zero-width space, non-joiner and joiner, combining grapheme joiner, variation
+ * selector, ideographic and fullwidth full stops, a fullwidth letter, a combining diaeresis, dotted
+ * capital I, the "ff" ligature, the Hangul filler, the Arabic tatweel, Arabic-Indic and extended digits,
+ * final sigma, sharp s, letters, digits and marks of right-to-left scripts, which the bidi rule reads,
  * characters whose bidi class their block does not tell: `¡`, `°`, a Rumi numeral and a Coptic epact
- * number.
+ * number, and the two joiners after a virama, Devanagari and Sinhala, where IDNA allows them.
  */
 const HOST_PIECES = [
   ..."exEM1-.",
@@ -73,10 +73,12 @@ const HOST_PIECES = [
   "a",
   "0x",
   ...[
-    0xad, 0x20_0b, 0x20_0d, 0x03_4f, 0xfe_0f, 0x30_02, 0xff_0e, 0xff_45, 0x03_08, 0x01_30, 0xfb_00, 0x31_64, 0x06_40,
-    0x06_60, 0x06_61, 0x06_f0, 0x05_d0, 0x05_bc, 0x06_28, 0x06_4e, 0x07_10, 0x07_c0, 0x07_ca, 0x1_e9_00, 0x1_e9_50,
-    0xa1, 0xb0, 0x1_0e_60, 0x1_02_e1,
+    0xad, 0x20_0b, 0x20_0c, 0x20_0d, 0x03_4f, 0xfe_0f, 0x30_02, 0xff_0e, 0xff_45, 0x03_08, 0x01_30, 0xfb_00, 0x31_64,
+    0x06_40, 0x06_60, 0x06_61, 0x06_f0, 0x05_d0, 0x05_bc, 0x06_28, 0x06_4e, 0x07_10, 0x07_c0, 0x07_ca, 0x1_e9_00,
+    0x1_e9_50, 0xa1, 0xb0, 0x1_0e_60, 0x1_02_e1,
   ].map((code) => String.fromCodePoint(code)),
+  String.fromCodePoint(0x09_4d, 0x20_0c),
+  String.fromCodePoint(0x0d_ca, 0x20_0d),
 ];
 
 /** The same seeded generator as the parser agreement tests, so a failure names an input that reproduces it. */
@@ -91,7 +93,19 @@ function strings(seed: number, count: number, length: number, pieces: readonly s
   );
 }
 
-const HOSTS = strings(7, 2000, 8, HOST_PIECES).map((host, index) => host + ["", ".com", ".de", ".xn--p1ai"][index % 4]);
+/**
+ * Generated hosts, and names with joiners written as their scripts write them, one between Latin
+ * letters, and its punycode, `xn--ab-j1t.com`, which Chromium and WebKit read and Node.js and Firefox
+ * refuse.
+ */
+const HOSTS = [
+  ...strings(7, 2000, 8, HOST_PIECES).map((host, index) => host + ["", ".com", ".de", ".xn--p1ai"][index % 4]),
+  "می\u200Cخواهم.com",
+  "क्\u200Cष.com",
+  "ශ්\u200Dරී.lk",
+  "a\u200Cb.com",
+  "xn--ab-j1t.com",
+];
 
 const CASES: Record<string, readonly string[]> = {
   domain: HOSTS,

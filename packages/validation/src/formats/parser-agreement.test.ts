@@ -17,9 +17,10 @@ import { url } from "./url";
 
 /**
  * Characters the parser removes, maps or reads as structure, and ordinary ones to mix them with. The
- * invisible ones are written as code points so the source shows them: soft hyphen, zero-width space and
- * joiner, combining grapheme joiner, variation selector, ideographic and fullwidth full stops,
- * fullwidth "e", a combining diaeresis and a line separator.
+ * invisible ones are written as code points so the source shows them: soft hyphen, zero-width space,
+ * non-joiner and joiner, combining grapheme joiner, variation selector, ideographic and fullwidth full
+ * stops, fullwidth "e", a combining diaeresis and a line separator, and the two joiners after a virama,
+ * Devanagari and Sinhala, where IDNA allows them.
  */
 const PIECES = [
   ..."exEM1-./\\@:",
@@ -29,9 +30,11 @@ const PIECES = [
   "/..",
   "ü",
   "ß",
-  ...[0xad, 0x20_0b, 0x20_0d, 0x03_4f, 0xfe_0f, 0x30_02, 0xff_0e, 0xff_45, 0x03_08, 0x20_28].map((code) =>
+  ...[0xad, 0x20_0b, 0x20_0c, 0x20_0d, 0x03_4f, 0xfe_0f, 0x30_02, 0xff_0e, 0xff_45, 0x03_08, 0x20_28].map((code) =>
     String.fromCodePoint(code),
   ),
+  String.fromCodePoint(0x09_4d, 0x20_0c),
+  String.fromCodePoint(0x0d_ca, 0x20_0d),
 ];
 
 /**
