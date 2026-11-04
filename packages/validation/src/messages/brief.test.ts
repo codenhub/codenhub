@@ -33,8 +33,20 @@ describe("brief", () => {
     [at("unrecognized_key", { key: "role" }), "Unrecognized key"],
     [at("unrecognized_key", { key: "a\u2028b\u0085c\nd" }), "Unrecognized key"],
     [at("invalid_union", { issues: [] }), "Does not match any allowed type"],
-    // A check is named by its format; what it asks is worded by englishMessages, which no validator carries.
-    [at("invalid_format", { format: "startsWith", value: "ab" }), "Invalid startsWith"],
+    // A name that is a code identifier would reach a form's user as it is; what a check asks is worded by
+    // englishMessages, which no validator carries.
+    ...[
+      "regex",
+      "startsWith",
+      "endsWith",
+      "includes",
+      "lowercase",
+      "uppercase",
+      "nonBlank",
+      "isoDate",
+      "creditCard",
+    ].map((format): [ValidationIssue, string] => [at("invalid_format", { format, value: "ab" }), "Invalid value"]),
+    [at("invalid_format", { format: "uuid" }), "Invalid uuid"],
     [at("invalid_format", { format: "constructor" }), "Invalid constructor"],
     [at("invalid_value", { type: "number", format: "multipleOf", value: 5 }), "Must be a multiple of 5"],
     [at("invalid_key", { issues: [] }), "Invalid key"],

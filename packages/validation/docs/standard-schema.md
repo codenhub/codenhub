@@ -25,7 +25,7 @@ Pass `signup` to the library that asks for a Standard Schema, and it will call `
 
 ## Short English, or `standard`
 
-The specification requires a message on every issue, and a validator's own `~standard` words each in short English: the issue's own `message`, set with the `message` option or by a check, or one sentence for its code, such as "Must be at least 2 characters" or "Invalid email". It is kept short because every program that makes a validator carries it, about 0.5 kB gzipped. A check is named by its format, as "Invalid startsWith", and an unrecognized key as "Unrecognized key", since the key is the last segment of the path; `standard` words both in full.
+The specification requires a message on every issue, and a validator's own `~standard` words each in short English: the issue's own `message`, set with the `message` option or by a check, or one sentence for its code, such as "Must be at least 2 characters" or "Invalid email". It is kept short because every program that makes a validator carries it, about 0.5 kB gzipped. A check such as `startsWith`, and a format whose name is written in camelCase such as `creditCard`, is worded "Invalid value", and an unrecognized key "Unrecognized key", since the key is the last segment of the path; `standard` words both in full.
 
 `standard(validator, messages?)` gives the same validator with a `~standard` of its own that words issues as [`formatIssue`](errors.md#turning-an-issue-into-text) does. Use it for:
 
