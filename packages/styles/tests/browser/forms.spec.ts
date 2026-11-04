@@ -1084,8 +1084,14 @@ test.describe("forms", () => {
     /* An edged button still draws its own line in the group. */
     expect(getColorDistance(measured.edged.grouped.color, measured.edged.alone.color), "edged button").toBeLessThan(2);
     expect(isTransparent(measured.edged.grouped.color), "edged button in a group").toBe(false);
+    /* A colour computes whatever the width, so a drawn line needs both. */
+    expect(Number.parseFloat(measured.edged.grouped.width), "edged button in a group width").toBeGreaterThan(0);
     /* The group keeps its floor under a container's `.edgeless`. */
     expect(isTransparent(measured.groupUnderEdgeless.color), "group under an edgeless container").toBe(false);
+    expect(
+      Number.parseFloat(measured.groupUnderEdgeless.width),
+      "group under an edgeless container width",
+    ).toBeGreaterThan(0);
     expect(
       getColorDistance(measured.groupUnderEdgeless.color, measured.groupAlone.color),
       "the group's line is the one it draws alone",
