@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-22
+last_updated: 2026-11-04
 scope: repo-wide direction for the workspace's packages and deploy surfaces
 ---
 
@@ -26,7 +26,9 @@ Durable direction for the workspace: what is being worked on now, what is intend
 - **Repository governance.** `SECURITY.md`, the issue forms, the label list, and the pull-request template have landed. `CODEOWNERS` pays off once more than one person reviews here.
 - **Backfill package demos.** `apps/demo` aggregates `packages/*/demo/`, and only `icons`, `styles`, `theme`, and `toaster` have one; every other public package is missing from the deployed surface.
 - **Bootstrap the unpublished packages.** `components`, `kbd`, `tauri-plugin-webview`, `tauri-plugin-window`, and `vite-plugin-icons` have never been published; each needs one manual `hub publish` from a maintainer's machine before its trusted publisher can be configured on npm.
-- **Documentation versioning, then localization.** Keep docs for past package versions, then localize with `@codenhub/i18n`. Both thread a content dimension through routing, the catalog loader, and the search index; the version-by-locale shape should be designed once, before either is built. `apps/docs` already resolves each package's _current_ docs from its latest release tag rather than the working tree (`docs/ci.md`, "Publish-scoped content"), which settled the snapshot-on-publish-vs-build-from-git-tags question for that narrower problem — it took the git-tag route. Versioning is a different, larger step: browsing a _past_ version concurrently with the current one, not just keeping the live site in step with the latest release. Open question: the URL scheme.
+- **Documentation localization.** Translate package READMEs and docs into the locales `docs/specs/packages-translations.md` lists, as it defines: translations live beside the English in each package, ship with its release, and a stale one blocks the release. Next: the `translation` check and release blocker in `@codenhub/tools`, locale routes, interface strings, and per-locale search in `apps/docs`, the localized README on `apps/www` package pages, then the first translations. This comes before versioning, reversing the order this entry used to give: that order did not weigh a concrete need, reaching developers who do not read English, against versioning, which no reader has asked for yet. The concern behind the old order, designing the version-by-locale URL shape once, is kept by the spec placing the locale as the outermost segment so that a version segment can later go inside the package route without moving any locale URL.
+
+- **Documentation versioning.** Keep docs for past package versions. It threads a content dimension through routing, the catalog loader, and the search index, and must fit inside the package route that localization leaves for it. `apps/docs` already resolves each package's _current_ docs from its latest release tag rather than the working tree (`docs/ci.md`, "Publish-scoped content"), which settled the snapshot-on-publish-vs-build-from-git-tags question for that narrower problem — it took the git-tag route. Versioning is a different, larger step: browsing a _past_ version concurrently with the current one, not just keeping the live site in step with the latest release. Open question: the version segment's form.
 
 ## Later / Possible
 

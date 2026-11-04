@@ -36,6 +36,7 @@ Root `docs/` contains durable repository knowledge. Package-specific consumer an
 | [README template](specs/packages-readme-template.md)             | A starting structure for a public package README.                                         |
 | [Documentation index template](specs/packages-index-template.md) | An advisory structure for a package documentation index.                                  |
 | [API reference](specs/packages-reference.md)                     | Generated package API reference contracts.                                                |
+| [Package translations](specs/packages-translations.md)           | Translated READMEs and docs, drift checks, and how translations publish.                  |
 | [Package exceptions](specs/packages-exceptions.md)               | Scoped exceptions and compliance-check waivers.                                           |
 | [Package changelog](specs/packages-changelog.md)                 | Recommended changelog structure and release entries.                                      |
 | [Package development](specs/packages-development.md)             | Optional playground, dev, and debug environments.                                         |
