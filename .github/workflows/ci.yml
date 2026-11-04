@@ -5,12 +5,12 @@ on:
   # The merge queue runs the full workspace on the merge result before it lands,
   # so a suite a pull request's `--changed` selection skipped fails there rather
   # than on `main`. Any event other than `pull_request` gets an empty SELECTOR.
+  # There is no `push` trigger for `main`: the queue lands the exact commit it
+  # tested, so a run there would repeat a passed check (`docs/ci.md`).
   merge_group:
-  push:
-    branches: [main]
 
 # A pull request that is pushed to again abandons the run it just superseded;
-# `main` keeps every run, because each merge is the authoritative check of a commit.
+# the queue keeps every run, because each is the authoritative check of a commit.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -19,8 +19,8 @@ permissions:
   contents: read
 
 env:
-  # A pull request verifies what it changed against its base branch; a merge into
-  # `main` verifies the whole workspace, so nothing reaches `main` unverified
+  # A pull request verifies what it changed against its base branch; the merge
+  # queue verifies the whole workspace, so nothing reaches `main` unverified
   # because it happened to sit outside a changed package.
   SELECTOR: ${{ github.event_name == 'pull_request' && format('--changed=origin/{0}', github.base_ref) || '' }}
 
