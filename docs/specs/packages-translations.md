@@ -1,5 +1,5 @@
 ---
-status: APPROVED
+status: IMPLEMENTED
 last_updated: 2026-11-04
 scope: Translations of package READMEs and public package documentation.
 ---

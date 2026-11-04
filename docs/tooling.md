@@ -226,7 +226,7 @@ When the brand cannot be reached, through a network failure, a timeout, or a ser
 pnpm hub new store --description="Typed localStorage-backed state stores."
 ```
 
-It writes the manifest, `tsconfig.json`, `README.md`, `llms.txt`, `docs/index.md`, `docs/.npmignore`, a source entrypoint, and a test, then compiles `llms-full.txt` from the surfaces it just wrote. The result passes `pnpm verify` and all seven check rules on its first run, so the author edits prose instead of hunting for the fields and surfaces a package is required to have. Everything a human should write is marked `TODO`.
+It writes the manifest, `tsconfig.json`, `README.md`, `llms.txt`, `docs/index.md`, `docs/.npmignore`, a source entrypoint, and a test, then compiles `llms-full.txt` from the surfaces it just wrote. The result passes `pnpm verify` and every check rule on its first run, so the author edits prose instead of hunting for the fields and surfaces a package is required to have. Everything a human should write is marked `TODO`.
 
 The scope comes from the workspace rather than a constant, and a new package always starts `experimental`: promoting it is a deliberate act that has to update the README notice at the same time.
 
