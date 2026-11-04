@@ -219,7 +219,7 @@ At rest, a field's border is deliberately lighter than 3:1 against the page, so 
 
 ## Building your own control
 
-For a text-like control the package does not ship, `.text-control` gives an element the same border, height, placeholder, focus, invalid, and disabled styles as `.ipt`. [Customizing → Composition helpers](./customizing.md#composition-helpers) explains it with the other building blocks.
+For a text-like control the package does not ship, `.text-control` gives an element the same border, placeholder, hover, focus, invalid, and disabled styles as `.ipt`, without its height or padding. [Customizing → Composition helpers](./customizing.md#composition-helpers) explains it with the other building blocks.
 
 ## Next
 

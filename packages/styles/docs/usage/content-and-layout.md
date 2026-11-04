@@ -1,183 +1,216 @@
 ---
 title: Content and layout
-description: Layout helpers, content chips and tables, surfaces, and typography utilities.
-order: 9
+description: Lookup for every layout helper with its spacing, the type scale with its sizes, cards and panels with their padding, tables, quotes, code, and keyboard keys.
+order: 10
 ---
 
 # Content and layout
 
+This is a lookup page for the classes that arrange a page and set its content: layout helpers, the type scale, cards and panels, tables, and the small content chips. [Building a screen](../concepts.md#lay-out-the-page) shows them in use.
+
 ## Layout
 
-Layout helpers use the shared `--layout-gap` token, which reaches every layout inside the element that sets it. `.tight` (`0.5rem`) and `.loose` (`1.5rem`) set the gap of the view, stack, cluster, or auto-grid they sit on, and a layout nested inside keeps its own.
+Every layout helper's gap is `--layout-gap`, `1rem` by default. Setting `--layout-gap` on an element changes the gap of every layout inside it. `.tight` and `.loose` change only the layout they are on; a layout nested inside keeps its own gap.
 
-- `.view` is a flex container; `.vertical` and `.horizontal` set its direction, and horizontal views wrap with centered cross-axis alignment.
-- `.stack` is a vertical flex stack.
-- `.cluster` is a wrapping horizontal flex row; `.between` adds `space-between` alignment.
-- `.auto-grid` is a responsive auto-fit grid using `--layout-grid-min`.
-- `.section` adds responsive block padding and an inline gutter.
-- `.section-content` centers content at `--container-max`; `.narrow` and `.wide` select the corresponding container tokens.
-- `.divider` is horizontal; `.vertical` makes it self-stretch vertically. It takes intent, but presentation classes do not affect it.
-- `.visually-hidden` hides content visually while keeping it in the accessibility tree, using the standard clip-based recipe. Not named `.sr-only`: on a `/tw` entry the consumer's own Tailwind build already ships a real `.sr-only`, and a same-named utility of this package's own would silently collide with it in the cascade — the same reason `.data-table` is not named `.table`.
+| Class              | Layout                                                                                                         | Gap                                              |
+| ------------------ | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `.stack`           | A vertical column.                                                                                             | `--layout-gap`, `.tight` 0.5rem, `.loose` 1.5rem |
+| `.cluster`         | A row that wraps, with items centered vertically. `.between` spreads the items to both ends.                   | Same                                             |
+| `.view`            | A flex container. `.vertical` makes it a column; `.horizontal` a wrapping row with items centered.             | Same                                             |
+| `.auto-grid`       | A grid of equal columns, each at least `--layout-grid-min` (16rem) wide, as many as fit.                       | Same                                             |
+| `.section`         | Padding around a page section: `--layout-gutter` at the sides, `--layout-section-block` at the top and bottom. | None                                             |
+| `.section-content` | Centers its content at a width of `--container-max` (80rem). `.narrow` uses 48rem, `.wide` 90rem.              | None                                             |
+| `.divider`         | A horizontal line, as wide as its container. `.vertical` makes it a vertical line as tall as the row.          | None                                             |
+| `.visually-hidden` | Hides content on screen and keeps it for screen readers.                                                       | None                                             |
 
-## Content
+`.auto-grid` fits two 16rem columns once its container is 32rem plus the gap wide, three at 48rem plus two gaps, and so on. Below one column's width, the column shrinks to fit. Set `--layout-grid-min` on the grid to change the column width.
 
-| Class           | Purpose                                                                                  | Intent affects         |
-| --------------- | ---------------------------------------------------------------------------------------- | ---------------------- |
-| `.table-wrap`   | Full-width horizontal overflow wrapper for wide tables.                                  | Nothing.               |
-| `.data-table`   | Rounded nested table styling for captions, heads, footers, cells, and rows.              | Head, border, hover.   |
-| `.ruled`        | On `.data-table`. Draws a rule between body rows.                                        | Rule color.            |
-| `.ruleless`     | On `.data-table`. Draws no lines inside the table at all.                                | Nothing.               |
-| `.kbd`          | Inline keyboard-input styling.                                                           | Surface, border, text. |
-| `.quote`        | Block quote styling; a nested `cite` is set upright and takes the quotation's own color. | Bar, surface, text.    |
-| `.quote-inline` | Inline quotation styling.                                                                | Nothing.               |
-| `.code`         | Inline code formatting.                                                                  | Surface.               |
-| `.pre`          | Scrollable block code formatting with larger padding.                                    | Surface.               |
+`--layout-gutter` is `clamp(1rem, 4vw, 2rem)` and `--layout-section-block` is `clamp(4rem, 9vw, 7rem)`: both grow with the window between those bounds. The full list of foundation tokens is in [Theming → Foundation tokens](./theming.md#foundation-tokens).
 
-### Table rules
+A `.divider` takes an intent, which colors it, and ignores presentation classes, so a `.ghost.edgeless` container does not hide the dividers inside it. Its width is the aesthetic's border width.
 
-A table draws three kinds of line, and `.ruled` and `.ruleless` move all of them together:
+`.visually-hidden` is not named `.sr-only` because Tailwind ships a `.sr-only` of its own, and two classes with one name would conflict.
 
-| Class       | Head and foot boundaries | Rules between body rows |
-| ----------- | ------------------------ | ----------------------- |
-| `.ruleless` | No                       | No                      |
-| _no class_  | Yes                      | No                      |
-| `.ruled`    | Yes                      | Yes                     |
+## Typography
+
+| Class            | Size                          | Weight   | Letter spacing |
+| ---------------- | ----------------------------- | -------- | -------------- |
+| `.text-display`  | 3.75rem, 6rem from 48rem wide | Bold     | Tight          |
+| `.text-title-lg` | 3rem, 3.75rem from 48rem wide | Bold     | Tight          |
+| `.text-title`    | 1.875rem                      | Bold     | Tight          |
+| `.text-title-sm` | 1.25rem                       | Semibold | Tight          |
+| `.text-label-lg` | 1.125rem                      | Medium   | Wide           |
+| `.text-label`    | 1rem                          | Medium   | Wide           |
+| `.text-body`     | 0.875rem                      | Normal   | Wider          |
+
+The two largest sizes grow at Tailwind's `md` breakpoint, 48rem by default. With the Tailwind source entrypoints, your own `md` breakpoint applies. The package sets no size on unclassed text: body text and unclassed headings take the browser's size, or the surrounding text size under the reset; see [Setup → Classless HTML](../setup.md#classless-html) for the classless mapping.
+
+`.text-body` is 0.875rem, smaller than the 1rem page text; use it for secondary or dense copy, not for the page's main text.
+
+`.selection-contrast` on an element swaps the colors of selected text inside it to `--color-primary` on `--color-primary-contrast`. Use it on a `.solid.primary` area, where the default selection color would match the background.
+
+## Surfaces
+
+`.card` and `.panel` are the two containers. Both take intent, [presentation](./composing.md#presentation), and [material tokens](./customizing.md#material-tokens).
+
+| Class    | Default look                                                                | Padding by default |
+| -------- | --------------------------------------------------------------------------- | ------------------ |
+| `.card`  | No fill, a border, the surface corner, and a resting elevation of 1.        | 1.25rem            |
+| `.panel` | The quiet background tone, no border, the surface corner, and no elevation. | 1rem               |
+
+A resting elevation of 1 shows no shadow by itself. A card has a shadow only under an [aesthetic](./aesthetics.md) that draws depth, or with `.raised` or `.floating`; see [Composing → Elevation](./composing.md#elevation).
+
+Padding classes:
+
+| Class    | On `.card` | On `.panel` |
+| -------- | ---------- | ----------- |
+| `.p-xs`  | 0.5rem     | 0.25rem     |
+| `.p-sm`  | 0.75rem    | 0.5rem      |
+| _none_   | 1.25rem    | 1rem        |
+| `.p-lg`  | 2rem       | 1.5rem      |
+| `.flush` | 0          | 0           |
+
+`.flush` is for content that runs edge to edge, such as an image or a table inside a card.
+
+A panel is for sidebars, toolbars, and wells: areas that are part of the page, not objects on it. A card is a self-contained object, such as the profile card or the plan card on the settings screen.
+
+### Neutral cards and panels
+
+A neutral `.card.soft` and a neutral `.panel` show no tint. They use `--color-foreground`, the quiet background tone one step off the page, so they read as a separate area without drawing attention.
+
+- A `.card.soft` with `.interactive` or `.hoverable` takes the tint, on `--color-surface`, when hovered. A plain `.card.soft` has no hover state.
+- A panel has no hover state, so a neutral panel always rests at the quiet tone.
+- With one of the six built-in intents, both keep their tint at rest, and a card deepens it on hover. `.solid` and `.ghost` are unaffected.
+
+### Clickable cards
+
+| Class          | Effect                                                                                                    |
+| -------------- | --------------------------------------------------------------------------------------------------------- |
+| `.interactive` | Pointer cursor, hover color, press, and a focus ring. The same as `.hoverable` and `.pressable` together. |
+| `.hoverable`   | The hover color only, with no pointer cursor.                                                             |
+| `.pressable`   | The press and the pointer cursor only.                                                                    |
+
+On the default look, a press scales the card down slightly (`scale(0.97)`); an aesthetic can replace that with its own press, and a reduced-motion preference turns it off.
+
+Use one half for a card that answers only one gesture. A card that holds its own button takes `.hoverable`, so that pressing the button does not press the whole card.
 
 ```html
-<table class="data-table">
-  <!-- Head and foot boundaries only -->
-</table>
-<table class="data-table ruled">
-  <!-- Every row separated -->
-</table>
-<table class="data-table ruleless">
-  <!-- No lines inside the table at all -->
-</table>
+<article class="card">Neutral card</article>
+<article class="card success solid">Filled success card</article>
+<article class="card primary ghost edged">Intent border, no fill</article>
+<a class="card success soft interactive" href="/settings/billing">Billing: tinted at rest, deeper on hover</a>
+<article class="card hoverable">Warms on hover; the action is a nested button</article>
+<aside class="panel">A sidebar</aside>
 ```
 
-The boundaries under a head and above a foot separate the parts of a table from each other, so they are drawn by default where the row rules are not. Rules between body rows are asked for by `.ruled` or `--ui-rule`, never by the edge axis, so whether you get them depends on your markup and not on a default you cannot see.
+These classes only style. Put them on a real link or button and give it an accessible name; a `<div class="card interactive">` cannot be focused or used from a keyboard.
 
-`--ui-rule` is the token behind both classes, so a container can set the answer for a whole region without classing each table:
+## Tables
 
-```html
-<section style="--ui-rule: 100%">
-  <table class="data-table">
-    <!-- Ruled by the region -->
-  </table>
-</section>
-```
-
-The frame around the table is the edge axis and is asked for the same way: `.data-table` publishes `edgeless`, so `.edged` draws one. None of the three switches reaches the others — `.data-table.ruleless.edged` is a framed table with no lines inside it, and `.data-table.ruled` is a frameless one with every row separated.
-
-A table's rows deliberately inherit its intent instead of resetting it, so `.data-table.success` tints throughout. A row carrying its own intent still wins:
-
-```html
-<table class="data-table success">
-  <tbody>
-    <tr>
-      <td>Inherits the table intent</td>
-    </tr>
-    <tr class="destructive">
-      <td>Overrides it for this row</td>
-    </tr>
-  </tbody>
-</table>
-```
-
-This is the one place intent cascades, because a table's rows are parts of the table rather than independent components.
-
-`.data-table`, `.kbd`, `.code`, and `.pre` also read [presentation](./composing.md#presentation). A table applies it to its header, its rules and its border; a chip to its whole plate:
-
-```html
-<table class="data-table success soft edged">
-  <!-- ... -->
-</table>
-<table class="data-table ghost">
-  <!-- A ghost table: rules and type, no header plate -->
-</table>
-<kbd class="kbd primary solid">Ctrl</kbd>
-<kbd class="kbd primary soft edged">Shift</kbd>
-```
-
-`.ghost` means two different things on these components, and both are worth knowing before you reach for it.
-
-On `.data-table` it removes the header plate along with the body tint, so `.data-table.ghost` is boundaries and type alone. The component rests at `soft`, so that is something to ask for rather than the default.
-
-`.soft` rests untinted throughout -- `--color-foreground`, no intent color mixed in, for every intent, including the resting default, on the head plate and the table's own base fill alike. A table has no hover or interaction state to reveal a tint into the way `.card.soft` does on `.interactive`/`.hoverable`, so unlike a card there is no state where a `.data-table.success.soft` reveals green; only the boundary and rule lines still read the intent.
-
-On `.kbd`, `.code`, and `.pre` it is **not supported**. All three rest on `--intent-subtle`, and that ground draws the plate whatever the fill says — so `.ghost` took the fill away and changed nothing visible. Worse, the ground alone is a near-page tint: a ghost chip measured the same `#e5e5e5` for neutral and primary on the light page, and `#f5f5f5` at 1.04:1 against it for secondary. A named intent rests at `.soft` instead, which puts a real `12%` of the intent over the ground and separates it from the others; the no-named-intent case reads no differently from `.ghost` either way, so it rests at the ground alone rather than adding an unmotivated wash of its own.
-
-Use `.table-wrap` around `.data-table` when table width may exceed its container:
+The settings screen lists API keys in a table:
 
 ```html
 <div class="table-wrap">
   <table class="data-table">
+    <caption class="visually-hidden">
+      API keys
+    </caption>
     <thead>
       <tr>
-        <th>Package</th>
-        <th>Status</th>
+        <th scope="col">Name</th>
+        <th scope="col">Created</th>
+        <th scope="col">Status</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td>styles</td>
-        <td>Ready</td>
+        <td>Deploy bot</td>
+        <td>3 March 2026</td>
+        <td>Active</td>
+      </tr>
+      <tr class="destructive">
+        <td>Old laptop</td>
+        <td>12 June 2024</td>
+        <td>Revoked</td>
       </tr>
     </tbody>
   </table>
 </div>
 ```
 
-A table takes the surface corner, like a card beside it. Nothing clips it: the four corner cells take the corners, so a `<caption>` sits above the table untouched in every engine. A cell that spans rows down into a bottom corner leaves that corner square.
+| Class         | Effect                                                                                                                                    |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `.data-table` | Styles a `<table>`: full width, `.text-body` text, a header background, the surface corner, cell padding, and a hover color on body rows. |
+| `.table-wrap` | Scrolls a table sideways when it is wider than its container.                                                                             |
+| `.ruled`      | On `.data-table`. Draws a line between body rows.                                                                                         |
+| `.ruleless`   | On `.data-table`. Draws no lines inside the table.                                                                                        |
 
-`.table-wrap` scrolls, and a scroll container clips whatever paints outside it. Under an aesthetic that draws a halo -- cyber's glow -- the wrapper pads itself by the halo's reach and pulls itself out by the same amount, so the glow fits inside it and the table stays where it would be. The wrapper then reaches that far past its parent, which only shows when the parent is flush with the viewport. Depth shadows, such as a `.raised` table's, are not given room and are still cut. The wrapper can only make room for a halo it is inside, so put the aesthetic class on `.table-wrap` or an ancestor rather than on a wrapped table alone: `<table class="data-table cyber">` inside a plain wrapper glows, and the wrapper cuts the glow. Leave the wrapper off a table that can never outgrow its container; keep it wherever one can, or a wide table widens the whole page.
+### Row intent
 
-## Surfaces
+A table's rows take the table's intent, so `.data-table.success` colors its header and lines green. A row with its own intent class uses that instead, as the revoked key's `<tr class="destructive">` does. `<tr class="neutral">` sets a row back to neutral inside a colored table. This is the one place an intent passes down, because rows are parts of the table, not separate components.
 
-| Class          | Purpose                                                                               |
-| -------------- | ------------------------------------------------------------------------------------- |
-| `.card`        | Bordered container, surface radius, padded. Rests at elevation `1`.                   |
-| `.panel`       | Flush container for sidebars, toolbars, and wells. No elevation.                      |
-| `.interactive` | On `.card`. Adds pointer cursor, hover and press response, and a focus ring.          |
-| `.hoverable`   | On `.card`. The hover half of `.interactive`: hover response only, no pointer cursor. |
-| `.pressable`   | On `.card`. The press half of `.interactive`: press response and pointer cursor.      |
-| `.p-xs`        | On `.card` or `.panel`. Reduces padding further than `.p-sm`.                         |
-| `.p-sm`        | On `.card` or `.panel`. Reduces padding.                                              |
-| `.p-lg`        | On `.card` or `.panel`. Increases padding.                                            |
-| `.flush`       | On `.card` or `.panel`. Removes padding, for edge-to-edge content.                    |
+### Table rules
 
-Both read intent, [presentation](./composing.md#presentation), and [material tokens](./customizing.md#material-tokens). A plain `.card` is a neutral bordered container; only an explicit presentation tints it. Resting at elevation `1` is not a visible shadow by itself — nothing draws depth until an [aesthetic](./aesthetics.md) supplies shadow geometry or `.raised`/`.floating` asks for it; see [Composing → Elevation](./composing.md#elevation).
+A table draws lines under its header and above its footer. `.ruled` and `.ruleless` change them together with the lines between body rows:
 
-`.card.soft` with no named intent is untinted at rest — a plain `--color-foreground` plate, no ink mixed in, marking a different container without drawing attention to it. The intent tint and a `--color-surface` ground only appear together, on `:hover`, and only on `.card.interactive`/`.card.hoverable`: a plain `.card.soft` with neither has no hover state to reveal into and stays at the quiet rest. A named intent (`.card.soft.success`, `.card.soft.destructive`, and so on) keeps its ordinary tint at rest instead, and deepens further on hover the same way any other filled surface does — only the no-intent case is untinted, since removing an intent's own color would silence it rather than quiet it. `.solid` and `.ghost` are unaffected either way.
+| Class       | Under the header and above the footer | Between body rows |
+| ----------- | ------------------------------------- | ----------------- |
+| `.ruleless` | No                                    | No                |
+| _none_      | Yes                                   | No                |
+| `.ruled`    | Yes                                   | Yes               |
 
-`.panel` with no named intent behaves the same way, permanently rather than on hover: a plain `.panel` rests at the same untinted `--color-foreground` plate a neutral `.card.soft` does, because a panel has no hover state to reveal a tint into. `.panel.primary`, `.panel.destructive`, and every other named intent keep their ordinary tint. `.kbd`, `.code`, and `.pre` follow the same no-named-intent rule for their own fill, without moving off their `--intent-subtle` ground.
+`--ui-rule` is the token behind both classes, so a container can rule every table inside it: `style="--ui-rule: 100%"` acts like `.ruled`, and `0%` like `.ruleless`.
 
-On the base look, `.card.interactive` scales down slightly on press (`--ui-active-transform`, `scale(0.97)`); an [aesthetic](./aesthetics.md) substitutes its own press gesture, and `prefers-reduced-motion` turns it off.
+The frame around the table is separate: a table has no border by default, and `.edged` adds one. The three choices do not affect each other, so `.data-table.ruleless.edged` is a framed table with no lines inside, and `.data-table.ruled` has every row separated and no frame.
 
-`.interactive` is the pair `.hoverable` (hover response only, no pointer cursor) and `.pressable` (press response and pointer cursor) applied together. Take one half for a card that answers a single gesture: a card that warms on hover but holds its own action in a nested button takes `.hoverable`, so pressing that button does not dip the whole card.
+### Presentation on tables
+
+A table reads [presentation](./composing.md#presentation) on its header, its lines, and its border:
 
 ```html
-<article class="card">Neutral card</article>
-<article class="card success solid">Filled success card</article>
-<article class="card primary ghost edged">Intent border, no fill</article>
-<a class="card success soft interactive" href="/package">Success-tinted at rest; deepens on hover</a>
-<article class="card hoverable">Warms on hover; the action is a nested button</article>
-<aside class="panel">Flush panel</aside>
+<table class="data-table success soft edged">
+  …
+</table>
+<table class="data-table ghost">
+  <!-- No header background: only lines and text -->
+</table>
 ```
 
-`.interactive` and `.pressable` are styling only. Use a real interactive element and give it an accessible name; a `<div class="card interactive">` is not focusable or operable by keyboard.
+- `.soft`, the default, gives the header the quiet background tone, `--color-foreground`, for every intent. A table has no hover state for a tint, so a `.data-table.success.soft` does not turn green; its lines and border do.
+- `.ghost` removes the header background, leaving lines and text.
+- `.solid` fills the header with the intent color.
 
-## Typography utilities
+### Corners and scrolling
 
-All typography classes and `.selection-contrast` are `@utility` classes.
+A table takes the surface corner, like a card beside it. The corner cells carry the corners, so a `<caption>` above the table is not cut off in any browser. A cell that spans rows down into a bottom corner leaves that corner square.
 
-| Class                 | Purpose                                                      |
-| --------------------- | ------------------------------------------------------------ |
-| `.text-display`       | Large display headings.                                      |
-| `.text-title-lg`      | Large section titles.                                        |
-| `.text-title`         | Default section titles.                                      |
-| `.text-title-sm`      | Smaller titles or card titles.                               |
-| `.text-label-lg`      | Large label text.                                            |
-| `.text-label`         | Default label text.                                          |
-| `.text-body`          | Default body copy.                                           |
-| `.selection-contrast` | Inverts `::selection` colors to primary-contrast background. |
+`.table-wrap` scrolls, and a scrolling element cuts off whatever is drawn outside it, including a tooltip on a cell; see [Tooltips → Where a tooltip gets cut off](./tooltips.md#where-a-tooltip-gets-cut-off).
+
+- Under an aesthetic that draws a glow around components, such as `.cyber`, the wrapper makes room for the glow so it is not cut off. The wrapper then extends that far past its parent, which only shows when the parent touches the edge of the window.
+- The wrapper can only make room for a glow from an aesthetic around it. Put the aesthetic class on `.table-wrap` or an element above it, not on the table alone.
+- Shadows, such as a `.raised` table's, get no room and are cut off.
+
+Keep the wrapper on any table that could be wider than its container; without it, a wide table widens the whole page.
+
+## Quotes, code, and keys
+
+| Class           | Use                                                                            | Default look                  | Intent colors            |
+| --------------- | ------------------------------------------------------------------------------ | ----------------------------- | ------------------------ |
+| `.quote`        | A `<blockquote>`. A `<cite>` inside it is upright and takes the quote's color. | A bar at the start, no fill   | Bar, background, text    |
+| `.quote-inline` | An inline `<q>` quotation.                                                     | Quotation styling only        | Nothing                  |
+| `.kbd`          | A key the user presses, such as <kbd>Ctrl</kbd>.                               | A tinted chip with a border   | Background, border, text |
+| `.code`         | Inline code.                                                                   | A tinted chip with no border  | Background, text         |
+| `.pre`          | A block of code. It scrolls sideways when a line is too long.                  | A tinted block with no border | Background, text         |
+
+```html
+<p>Press <kbd class="kbd">Ctrl</kbd> + <kbd class="kbd">K</kbd> to search members.</p>
+<p>Use the <code class="code">Authorization</code> header with your API key.</p>
+<kbd class="kbd primary solid">Ctrl</kbd>
+<kbd class="kbd primary soft edged">Shift</kbd>
+```
+
+A neutral `.kbd`, `.code`, or `.pre` uses the quiet tint only; an intent class adds 12% of its color over it. `.ghost` is not supported on these three: the tinted background is what makes them chips, so they keep it and `.ghost` changes nothing. Their font is `--font-mono`; see [Theming → Fonts](./theming.md#fonts).
+
+## Next
+
+[Accessibility](../accessibility.md) lists what the CSS does for your users and what your application still owes them.

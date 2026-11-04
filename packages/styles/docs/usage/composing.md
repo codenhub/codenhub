@@ -1,149 +1,182 @@
 ---
 title: Composing
-description: Combining intent, presentation, and aesthetic on a component, and the axis-support matrix.
-order: 1
+description: Lookup for how intent, presentation, aesthetic, and elevation combine, every component's default look, and which classes each component reads.
+order: 8
 ---
 
-# Composing the three axes
+# Composing
 
-See [Concepts](../concepts.md#the-three-axes) for what each axis means. This page covers how they combine in markup, what the presentation classes mean in depth, which components support which axis, and elevation.
+This is a lookup page. [Building a screen](../concepts.md) introduces intent, presentation, and aesthetic; this page has the complete rules for combining them, the default look of every component, which classes each component reads, and elevation.
 
-## Combining axes
+## Combining classes
 
 ```html
 <div class="soft">
   <button class="btn primary">Soft primary button</button>
   <span class="badge success">Soft success badge</span>
-  <button class="btn primary ghost edged">Outlined; the element wins</button>
+  <button class="btn primary ghost edged">Outlined: the class on the element wins</button>
 </div>
 ```
 
-A declaration on the element always beats one inherited from a container, so a container sets the default look for its subtree and any element opts out.
+- **Presentation passes down.** `.solid`, `.soft`, `.ghost`, `.edged`, and `.edgeless` work on the component or on any container, and a class on the element beats one inherited from a container. A container sets the look of everything inside it, and any element can choose its own.
+- **Aesthetics and [material tokens](./customizing.md#material-tokens) pass down** the same way.
+- **Intent does not pass down.** `.primary` and the other intent classes color only the element they are on. A container that silently recolored everything inside it would turn a red danger-zone card's neutral Cancel button red. `.neutral` names the default; use it where an element would otherwise take an intent, such as a table row inside a `.success` table. See [Theming → Intent tokens](./theming.md#intent-tokens).
+- **Elevation does not pass down.** `.raised` lifts only the element it is on; see [Elevation](#elevation).
 
-Intent classes do not cascade. `.primary` and its siblings stay on the element that shows the intent, because a container silently recoloring every descendant is a trap rather than a feature — see [Theming → Intent tokens](./theming.md#intent-tokens). Use `.neutral` to opt an element back out of an inherited intent context. Presentation and [material tokens](./customizing.md#material-tokens) do cascade, so a container can set the look of its whole subtree while any element overrides it.
+## Component defaults
+
+With no presentation class on it or around it, each component has its own look. "Resting elevation" is how much depth it takes when an [aesthetic](./aesthetics.md) draws depth; with no aesthetic, nothing has a shadow.
+
+| Component                        | Fill        | Edge     | Resting elevation |
+| -------------------------------- | ----------- | -------- | ----------------- |
+| `.btn`                           | `.solid`    | edgeless | 1                 |
+| `.card`                          | `.ghost`    | edged    | 1                 |
+| `.panel`                         | `.soft`     | edgeless | 0                 |
+| `.alert`                         | `.soft`     | edged    | 0                 |
+| `.badge`                         | `.soft`     | edgeless | 0                 |
+| `.ipt`, `.textarea`, `.select`   | `.ghost`    | edged    | 0                 |
+| `.input-group`                   | `.ghost`    | edged    | 0                 |
+| `.checkbox`, `.radio`, `.switch` | `.soft`     | edged    | 0                 |
+| `.kbd`                           | `.soft`     | edged    | 0                 |
+| `.code`, `.pre`                  | `.soft`     | edgeless | 0                 |
+| `.data-table`                    | `.soft`     | edgeless | 0                 |
+| `.progress` (the track)          | `.soft`     | edgeless | 0                 |
+| `.tooltip-bubble`                | `.solid`    | edged    | 0                 |
+| `.quote`                         | `.ghost`    | edged    | 0                 |
+| `.skeleton`, `.divider`          | Intent only | None     | 0                 |
+
+A neutral `.solid` fills only to 20%; see [Theming → Intent tokens](./theming.md#intent-tokens). The neutral exceptions to these fills are in [Presentation](#presentation).
 
 ## Presentation
 
-Presentation has two independent axes. `.solid`, `.soft`, and `.ghost` decide how much intent fills a component; `.edged` and `.edgeless` decide whether it draws a boundary. They set [presentation tokens](./customizing.md#presentation-tokens) and nothing else, so they work on the component itself or on any ancestor.
+Presentation is two separate choices. `.solid`, `.soft`, and `.ghost` set how much of the intent color fills a component. `.edged` and `.edgeless` set whether it draws a border. They set [presentation tokens](./customizing.md#presentation-tokens) and nothing else.
 
-| Class       | Look                                                       |
-| ----------- | ---------------------------------------------------------- |
-| `.solid`    | Intent-colored fill with contrast text.                    |
-| `.soft`     | Lightly tinted fill with intent-colored text.              |
-| `.ghost`    | No fill at rest, with intent-colored text.                 |
-| `.edged`    | Intent-colored boundary at the aesthetic's material width. |
-| `.edgeless` | No boundary.                                               |
-
-Values each class ships:
-
-| Class       | `--ui-fill` | `--ui-fg-on-fill` | `--ui-border` |
-| ----------- | ----------- | ----------------- | ------------- |
-| `.solid`    | `100%`      | `100%`            |               |
-| `.soft`     | `12%`       | `0%`              |               |
-| `.ghost`    | `0%`        | `0%`              |               |
-| `.edged`    |             |                   | `100%`        |
-| `.edgeless` |             |                   | `0%`          |
-
-`.card`, `.panel`, `.alert`, `.kbd`, `.code`, and `.pre` override `.soft`'s fill at rest to `0%` for the no-named-intent case only, and reveal it on `.card`'s own `:hover`/`.interactive`/`.hoverable` -- the one place a component remaps what a presentation class resolves to for part of its intent range, the same way text controls cap it at `6%` cascaded. A named intent on any of the six keeps the ordinary `12%`. `.badge` reads the identical intent/presentation classes but keeps its 12% wash at rest even with no named intent, since it has no border to fall back on and would otherwise disappear rather than read quieter. See [Content and layout → Surfaces](./content-and-layout.md#surfaces) and [Feedback](./feedback.md).
-
-The combinations mean exactly what they spell:
+| Class       | Look                                                      | `--ui-fill` | `--ui-fg-on-fill` | `--ui-border` |
+| ----------- | --------------------------------------------------------- | ----------- | ----------------- | ------------- |
+| `.solid`    | Filled with the intent color, with contrast text.         | `100%`      | `100%`            |               |
+| `.soft`     | A light tint, with intent-colored text.                   | `12%`       | `0%`              |               |
+| `.ghost`    | No fill at rest, with intent-colored text.                | `0%`        | `0%`              |               |
+| `.edged`    | An intent-colored border, as thick as the aesthetic sets. |             |                   | `100%`        |
+| `.edgeless` | No border.                                                |             |                   | `0%`          |
 
 ```html
 <button class="btn primary">Solid, the button default</button>
-<button class="btn soft edged">Tinted with a border</button>
+<button class="btn soft edged">Tinted, with a border</button>
 <button class="btn primary ghost edged">Outline</button>
-<button class="btn ghost">Ghost; picks up a tint on hover</button>
-<input class="ipt soft edgeless" />
-<!-- A field sunk into the page -->
+<button class="btn ghost">Ghost: picks up a tint on hover</button>
+<input class="ipt soft edgeless" aria-label="Search" />
 ```
 
-A fill class never decides an edge and an edge class never decides a fill. Use `.solid.edgeless` for a filled box with no line; `.solid.edged` renders the same box, because the line fades out as the fill fills in.
+A fill class never sets the border, and a border class never sets the fill. `.solid.edged` looks the same as `.solid.edgeless`, because the border fades out as the fill fills in.
 
-The edge is the silhouette and nothing else. Rules _inside_ a component that has an inside are a separate switch — see [Content and layout → Table rules](./content-and-layout.md#table-rules) — because tying them to this axis made them arrive by implication rather than by request.
+The border is the outline of the component and nothing else. Lines inside a component, such as the rules between table rows, are a separate switch; see [Content and layout → Table rules](./content-and-layout.md#table-rules).
 
-With no presentation class in scope, each component keeps its own default: buttons are filled, alerts and badges are tinted, surfaces and controls are neutral and bordered.
+### Neutral surfaces rest untinted
 
-| Component                                       | Reads                                                                                           |
-| ----------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `.btn`, `.alert`, `.badge`, `.card`, `.panel`   | Fill, text, border, and border width.                                                           |
-| `.kbd`                                          | Fill, text, border, and border width.                                                           |
-| `.data-table`                                   | Header fill and text, border, border width.                                                     |
-| `.ipt`, `.textarea`, `.select`, `.text-control` | Border, border width, and a capped fill.                                                        |
-| `.input-group`                                  | Border, border width, and a capped fill.                                                        |
-| `.checkbox`, `.radio`                           | A capped fill, checked and unchecked.                                                           |
-| `.switch`                                       | Border, border width, and a capped fill.                                                        |
-| `.quote`                                        | Fill, text, border, and width.                                                                  |
-| `.code`, `.pre`, `.tooltip-bubble`              | Fill, text, border, and material.                                                               |
-| `.progress`                                     | Track fill, border, and border width; the value fill is always the intent color, full strength. |
-| `.skeleton`, `.divider`                         | Intent only, not presentation.                                                                  |
+A neutral `.card.soft`, `.panel`, `.alert`, `.kbd`, `.code`, and `.pre` show no tint at rest. They use the quiet background tone one step off the page instead (`--color-foreground`), because a gray tint on every neutral box looks dirty rather than quiet.
 
-A text control caps a **cascaded** fill at `6%`, keeping typed text legible when a `.solid` container reaches a field nobody classed. A fill class written on the control itself names its own cap instead, because that is a consumer describing what they want: `.soft` takes `12%` and `.solid` takes `20%`.
+- A `.card.soft` with `.interactive` or `.hoverable` shows the tint on hover.
+- With one of the six built-in intents, all of them keep the ordinary 12% tint. An intent you defined yourself is treated as neutral here; see [Theming → Your own intent](./theming.md#your-own-intent).
+- A `.badge` keeps its 12% tint even when neutral. It has no border, so without the tint it would disappear into the text around it.
 
-| On a text control | fill |
-| ----------------- | ---- |
-| `.ghost`          | 0%   |
-| cascaded `.solid` | 6%   |
-| `.soft`           | 12%  |
-| `.solid`          | 20%  |
+### Text controls and toggles
 
-A toggle's cap does not have that split: it is `40%` whether the presentation class is on the checkbox/radio/switch itself or cascaded from a container, the same value for all three. That is where an unchecked `.ghost` (0%), `.soft`/default (12%), and `.solid` (the cap) read as three distinct plates instead of shades of the same wash. Being checked pins the fill to `100%` instead, whatever the presentation class asks — a checkbox, a radio, and a switch each have one "on" look, and presentation only shapes them unchecked. See [Forms](./forms.md) for the full toggle reference.
+A text control limits how much fill it takes, so typed text stays readable:
 
-The same split governs the edge: a cascaded `.edgeless` is floored and the element's own is honoured — except on `.checkbox` and `.radio`, which never drop their line at all, and on `.switch.ghost`, which keeps its line specifically against its own `.edgeless`: `.ghost` already asks for zero fill, so removing the line too would leave nothing marking the track but the knob. `.switch.ghost.edgeless` renders the same as `.switch.ghost.edged` rather than as a distinct, boundary-less look. See [Forms](./forms.md) for the full toggle and text control reference.
+| On a text control                   | Fill |
+| ----------------------------------- | ---- |
+| `.ghost`, default                   | 0%   |
+| `.solid` inherited from a container | 6%   |
+| `.soft`, inherited or its own       | 12%  |
+| `.solid` on the control itself      | 20%  |
 
-A tooltip bubble is filled, over a tinted ground. An intent fills it with that intent's own color: `.tooltip-bubble.primary` is the primary color, black on a light page and white on a dark one, and `.tooltip-bubble.destructive` is a red bubble.
+The border follows the same rule. An `.edgeless` inherited from a container is ignored, so a toolbar cannot erase the border of a field inside it. `.edgeless` on the control itself is honored.
 
-With no intent the bubble is `--color-tooltip`, the one plate in the package chosen per theme rather than derived from an intent: near-white over a light page, a mid grey over a dark one. `--color-tooltip-contrast` is its ink.
+A toggle's unchecked fill is capped at 40%, whether the class is on the toggle or on a container: `.ghost` is 0%, `.soft` and the default are 12%, and `.solid` is 40%. Once checked, every toggle fills to 100%, whatever its presentation.
 
-Near-white is only 1.04:1 against a light page, so the bubble draws a hairline as well, and floors it: a container's `.solid` or `.edgeless` cannot take the boundary away from a bubble nobody classed, while `.tooltip-bubble.edgeless` still can. The ground keeps the bubble opaque at every fill, so a cascaded presentation leaves it readable over whatever it floats above. It reads the material tokens too, so an [aesthetic](./aesthetics.md) in scope shapes the bubble like any other component. See [Tooltips](./tooltips.md) for the full tooltip reference.
+`.checkbox` and `.radio` always draw their border, even with their own `.edgeless`, because the border is the only thing that shows an unchecked box. `.switch.ghost` keeps its border too: with no fill and no border, nothing would show the track. `.switch.ghost.edgeless` looks the same as `.switch.ghost.edged`.
+
+[Forms](./forms.md#checked-and-unchecked-colors) shows the toggle colors in full.
+
+### Tooltip bubbles
+
+A tooltip bubble is filled. An intent fills it with that intent's color and switches its text to the matching contrast color:
+
+- `.tooltip-bubble.primary` has a near-black background with near-white text on a light page, and a near-white background with near-black text on a dark one.
+- `.tooltip-bubble.destructive` is red with light text.
+
+With no intent, the bubble uses `--color-tooltip`, chosen per theme rather than derived from an intent: near-white on a light page, mid gray on a dark one, with `--color-tooltip-contrast` as its text color.
+
+Near-white measures only 1.04:1 against a light page, so the bubble also draws a thin border. A container's `.edgeless` cannot remove it; `.tooltip-bubble.edgeless` can. The bubble's background stays opaque under any presentation, so it stays readable over whatever it covers. [Tooltips](./tooltips.md) has the rest.
+
+### Progress tracks
+
+`.progress` reads both choices on its track. The filled part is always the intent color at full strength. `.solid` is not supported on the track, because the track and the filled part would be the same color. `.ghost.edgeless` renders but leaves the track with no visible frame; `.ghost.edged` draws an outline around it.
+
+### Unsupported combinations
+
+| Component               | Class       | What happens                                                                                 |
+| ----------------------- | ----------- | -------------------------------------------------------------------------------------------- |
+| `.kbd`, `.code`, `.pre` | `.ghost`    | The chip still draws its tinted background, because that background is what makes it a chip. |
+| `.progress`             | `.solid`    | The track and the filled part are the same color, so the value cannot be seen.               |
+| `.checkbox`, `.radio`   | `.edgeless` | Ignored: the border is always drawn.                                                         |
 
 ## Component axis reference
 
-This table is the authoritative axis map for demonstrated components. "Shape" means the component reads applicable radius, border-width, shadow, hover, or clip/edge material tokens; an aesthetic may intentionally affect only the materials that component draws.
+Which classes change each component. "Material" is what an [aesthetic](./aesthetics.md) can change on it: "Shape" means corner, border width, shadow, hover, and outline; the narrower entries list what applies.
 
-Presentation is two independent axes, so they get a column each. A `Yes` means the class changes what the component computes, which `tests/browser/axes.spec.ts` asserts against `registry.json` in both directions: an axis marked `Yes` must move, and an axis marked `No` must not.
-
-| Components                                                | Intent | Fill | Edge | Aesthetic material |
+| Components                                                | Intent | Fill | Edge | Material           |
 | --------------------------------------------------------- | ------ | ---- | ---- | ------------------ |
 | `.btn`, `.alert`, `.badge`, `.card`, `.panel`             | Yes    | Yes  | Yes  | Shape              |
-| `.kbd`, `.data-table`                                     | Yes    | Yes  | Yes  | Radius and edge    |
+| `.kbd`, `.data-table`                                     | Yes    | Yes  | Yes  | Corner and edge    |
 | `.quote`                                                  | Yes    | Yes  | Yes  | Edge width         |
 | `.divider`, `.skeleton`                                   | Yes    | No   | No   | No                 |
 | `.ipt`, `.textarea`, `.select`, `.text-control`           | Yes    | Yes  | Yes  | Shape              |
 | `.input-group`                                            | Yes    | Yes  | Yes  | Shape              |
 | `.surface`                                                | Yes    | Yes  | Yes  | Shape              |
-| `.checkbox`, `.radio`                                     | Yes    | Yes  | No   | Radius and edge    |
-| `.switch`                                                 | Yes    | Yes  | Yes  | Radius and edge    |
-| `.progress`                                               | Yes    | Yes  | Yes  | Radius and edge    |
-| `.code`, `.pre`                                           | Yes    | Yes  | Yes  | Radius and clip    |
-| `.tooltip-bubble`                                         | Yes    | Yes  | Yes  | Shape and overlay  |
+| `.checkbox`, `.radio`                                     | Yes    | Yes  | No   | Corner and edge    |
+| `.switch`                                                 | Yes    | Yes  | Yes  | Corner and edge    |
+| `.progress`                                               | Yes    | Yes  | Yes  | Corner and edge    |
+| `.code`, `.pre`                                           | Yes    | Yes  | Yes  | Corner and outline |
+| `.tooltip-bubble`                                         | Yes    | Yes  | Yes  | Shape and blur     |
 | `.table-wrap`, `.quote-inline`, layout and text utilities | No     | No   | No   | No                 |
 
-`.checkbox` and `.radio` are the only components that read one axis and not the other. Their line is the only thing marking an unchecked box, so it is drawn whatever the edge class says, from a container or from the element itself. `.edgeless` on either is unsupported rather than merely discouraged.
+"Yes" means the class changes the component, and "No" means it does not; the package's tests check both. What each component does with a class:
 
-`.progress` reads both axes on its track; the value fill, the moving bar itself, is always the intent color at full strength and never changes. `.solid` is unsupported on the track: at full fill the track and the value fill compose the same color, and the one thing the component exists to show — how much is filled versus not — disappears. `.ghost.edgeless` renders (no fill, no border) but is not recommended: `.ghost.edged` — an outline capsule around the moving fill — keeps a visible frame at rest, while pairing `.ghost` with `.edgeless` leaves the track with none.
+| Component                                       | Reads                                                                                  |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `.btn`, `.alert`, `.badge`, `.card`, `.panel`   | Fill, text color, border, and border width.                                            |
+| `.kbd`                                          | Fill, text color, border, and border width.                                            |
+| `.data-table`                                   | Header fill and text color, border, and border width.                                  |
+| `.ipt`, `.textarea`, `.select`, `.text-control` | Border, border width, and a capped fill.                                               |
+| `.input-group`                                  | Border, border width, and a capped fill.                                               |
+| `.checkbox`, `.radio`                           | A capped fill, checked and unchecked.                                                  |
+| `.switch`                                       | Border, border width, and a capped fill.                                               |
+| `.quote`                                        | Fill, text color, border, and border width.                                            |
+| `.code`, `.pre`, `.tooltip-bubble`              | Fill, text color, border, and material.                                                |
+| `.progress`                                     | Track fill, border, and border width. The filled part is always the full intent color. |
+| `.skeleton`, `.divider`                         | Intent only.                                                                           |
 
-Every other text control floors a _cascaded_ `.edgeless` and honours its own: a `.edgeless` toolbar will not erase the line of a field nobody classed, while `.ipt.edgeless` is a consumer describing what they want and gets it.
-
-State and modifier classes such as `.interactive`, `.hoverable`, `.pressable`, `.p-sm`, and `.vertical` sit above this map and are documented with their component. An invalid control is marked with `aria-invalid="true"` rather than a class; see [Forms](./forms.md).
+State and modifier classes such as `.interactive`, `.hoverable`, `.pressable`, `.p-sm`, and `.vertical` are documented with their component. An invalid control is marked with `aria-invalid="true"`, not a class; see [Forms](./forms.md#show-a-validation-error).
 
 ## Elevation
 
-Depth is a modifier, not an axis. Nothing is raised until an [aesthetic](./aesthetics.md) draws depth or one of these classes asks for it.
+Elevation is how much depth a component takes. Nothing has a shadow until an [aesthetic](./aesthetics.md) draws depth or one of these classes asks for it.
 
-| Class       | Depth                                                                    |
-| ----------- | ------------------------------------------------------------------------ |
-| `.flat`     | Removes part-based elevation; glass surfaces keep their complete shadow. |
-| `.raised`   | One unit of the depth in scope. Cards, tiles, popovers that sit close.   |
-| `.floating` | Twice it, for menus and popovers.                                        |
-
-These are a different thing from the raw `--elevation-*` shadow tokens in [Theming](./theming.md#foundation-tokens), which are fixed shadows for elements you style yourself.
-
-Each is one unitless multiplier over whatever shadow geometry is in scope, so the same class reads as a soft blur on a plain page and as a hard offset slab under `.neobrutalism` — the aesthetic decides what depth looks like, the class decides how much of it this element takes.
+| Class       | Depth                                                                                |
+| ----------- | ------------------------------------------------------------------------------------ |
+| `.flat`     | None. Glass surfaces keep their shadow, because it is part of what glass is made of. |
+| `.raised`   | One step of the depth in scope: cards and tiles that sit close to the page.          |
+| `.floating` | Two steps: menus and popovers.                                                       |
 
 ```html
 <article class="card raised">Lifted</article>
-<div class="floating panel">A menu surface</div>
-<article class="card flat">Flat, whatever the page or container says</article>
+<div class="floating panel">A menu</div>
+<article class="card flat">Flat, whatever the aesthetic says</article>
 ```
 
-The multiplier does not inherit: an elevation class lifts or flattens the element it is written on only, and an unclassed element inside it takes no depth of its own. Give each element that needs depth its own elevation class. Spread is deliberately left out of the multiplication, because an aesthetic that draws its edge as an inset ring spends spread on it and scaling that would erase the edge.
+Each class multiplies the shadow of the aesthetic in scope. The same `.raised` is a soft blur on a plain page and a hard offset shadow under `.neobrutalism`: the aesthetic decides what depth looks like, and the class decides how much of it this element takes.
+
+The class does not pass down. It lifts or flattens only the element it is on, and an element inside it takes no depth from it. Give each element that needs depth its own class. The spread of a shadow is not multiplied, because an aesthetic that draws its border as an inner shadow uses the spread for that border.
+
+These classes are separate from the `--elevation-*` shadow tokens in [Theming → Foundation tokens](./theming.md#foundation-tokens), which are fixed shadows for elements you style yourself.

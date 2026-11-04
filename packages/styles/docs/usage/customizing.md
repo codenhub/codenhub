@@ -1,24 +1,32 @@
 ---
 title: Customizing
-description: Presentation and material token reference, and aesthetic knobs.
-order: 3
+description: Lookup for presentation and material tokens, aesthetic knobs, the six public component variables, the generated palette, and the helpers for building your own components.
+order: 9
 ---
 
 # Customizing
 
-Presentation tokens decide how much of an intent shows. Material tokens decide what a component is made of. Aesthetic tokens are the small set of named knobs a shipped aesthetic exposes to scale its own look.
+This is a lookup page for changing the package beyond its classes. [Theming](./theming.md) covers colors and the foundation tokens; this page covers the rest:
+
+- [Presentation tokens](#presentation-tokens): how much of an intent a component shows.
+- [Material tokens](#material-tokens): what a component is made of.
+- [Aesthetic tokens](#aesthetic-tokens): the knobs each aesthetic exposes.
+- [Component variables](#component-variables): the six variables a single component reads.
+- [Generated palette](#generated-palette): fixed color values for code that cannot load the package.
+- [Composition helpers](#composition-helpers): the classes to build a component of your own from.
 
 ## Presentation tokens
 
 Presentation tokens describe _how much_ of an intent a component shows, never _which_ intent it shows. They are unitless numbers and percentages, so they carry no color and inherit safely: a container sets them once and every component below resolves them against its own intent.
 
-| Token             | Purpose                                                                    |
-| ----------------- | -------------------------------------------------------------------------- |
-| `--ui-fill`       | Percentage of the intent color mixed into the background.                  |
-| `--ui-fg-on-fill` | Percentage blended from the intent readable tone toward its contrast tone. |
-| `--ui-border`     | Percentage of the intent color mixed into the border color.                |
+| Token             | Purpose                                                                                             | Default                             |
+| ----------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `--ui-fill`       | Percentage of the intent color mixed into the background.                                           | The component's default; see below. |
+| `--ui-fg-on-fill` | Percentage blended from the intent's strong tone toward its contrast color.                         | The component's default.            |
+| `--ui-border`     | Percentage of the intent's border color in the border.                                              | The component's default.            |
+| `--hover-step`    | Added to the resting fill under the pointer, in `--intent-hover`. Set it on `:root` or any element. | `14%`                               |
 
-A component resolves them with `color-mix` from its published default. Hover is derived by adding `--hover-step` to the resting fill and using `--intent-hover`; there are no per-presentation hover tokens.
+Unset, each component uses its own default, listed in [Composing → Component defaults](./composing.md#component-defaults). The presentation classes set the first three to the values in [Composing → Presentation](./composing.md#presentation). There are no hover tokens per presentation: hover is always the resting fill plus `--hover-step`, up to 100%.
 
 No fill class writes `--ui-border` and no edge class writes `--ui-fill`. A filled box with no line is `.solid.edgeless`, and `.solid.edged` renders the same box: the line fades out as the fill fills in, so even a neutral fill, capped and translucent, shows through its own border as one coat.
 
@@ -187,13 +195,15 @@ Every aesthetic's knobs reach the same way: each knob is _read_ with its default
 
 Knobs and material tokens reach in opposite directions, and telling them apart matters. A knob resolves once at the aesthetic's own class and inherits down already-resolved, so it reaches the aesthetic **from above**: setting it on the element or any ancestor works, but setting it on a _descendant_ of the aesthetic class changes nothing — the value has already been read. `--ui-radius` and the other material tokens above are read fresh by each component as it draws, so they reach **at or below** the element carrying them, which is how you round one card differently from its neighbours without touching the knob at all.
 
-Shipped aesthetics set the shared material tokens above. Every shipped aesthetic sets `--ui-ink` for its neutral line. Every shipped aesthetic also sets `--ui-control-ink`: `.glass` and `.chunky-tile` to a line of their own, heavier than their surfaces', and the others to `--color-control-border`, since their ink is the primary colour in both themes. `.glass` sets `--ui-rule-ink` too, so a table's lines read on its plate; the others clear it. Intent classes still override the intent slots on each component.
+Shipped aesthetics set the shared material tokens above. Every shipped aesthetic sets `--ui-ink` for its neutral line. Every shipped aesthetic also sets `--ui-control-ink`: `.glass` and `.chunky-tile` to a line of their own, heavier than their surfaces', and the others to `--color-control-border`, since their ink is near-black or near-white and a resting checkbox outlined in it would look checked. `.glass` sets `--ui-rule-ink` too, so a table's lines read on its plate; the others clear it. Intent classes still override the intent slots on each component.
 
-The same knobs tune each aesthetic's [solo class](./aesthetics.md#solo-classes), which reads them on its own element.
+The same knobs tune each aesthetic's [solo class](./solo.md), which reads them on its own element.
 
 ## Generated palette
 
-`@codenhub/styles/palette` is a generated, self-contained stylesheet of every `intent x presentation` cell's composed colors, baked to flat `--palette-*` custom properties -- the same values the components compose live, computed once at build time rather than re-derived. It exists for a consumer that cannot take `@codenhub/styles` as a build-time dependency (an optional peer, for example) but still wants to look consistent with it, not as a replacement for the components themselves when Tailwind is available.
+`@codenhub/styles/palette` is a generated stylesheet of fixed colors: for every intent and presentation, the background, text, and border color a component would draw, as flat `--palette-*` custom properties. It is for code that cannot load this package's stylesheet, such as a library that lists `@codenhub/styles` as an optional peer, but wants to match it. Where you can load the stylesheet, use the components instead.
+
+**The values are a snapshot of the shipped colors.** They were computed from the package's default theme when it was built, and they do not change when you override a token. If you set `--color-primary` to your brand color, `--palette-primary-solid-bg` is still the shipped near-black. Code that must follow your theme has to read the `--color-*` tokens, which means loading `@codenhub/styles/theme`.
 
 ```css
 @import "@codenhub/styles/palette";
@@ -207,7 +217,7 @@ The same knobs tune each aesthetic's [solo class](./aesthetics.md#solo-classes),
 }
 ```
 
-Every value is already the composited color -- never a `var(--color-background)` or `var(--intent-subtle)` reference -- so this file never needs `./theme` loaded alongside it to resolve anything.
+Every value is a finished color, never a reference to another variable, so the file needs nothing else loaded.
 
 Naming: `--palette-<intent>-<presentation>-<slot>`, where `<intent>` is one of the seven published intents (`neutral`, `primary`, `secondary`, `success`, `warning`, `destructive`, `info`) and `<presentation>` is `solid`, `soft`, or `ghost`. `<slot>` is `bg`, `fg`, or `edge`. Two qualifiers layer on only where they apply:
 
@@ -218,10 +228,57 @@ Light values sit on `:root` and dark values are scoped the same way `@codenhub/s
 
 Three more tokens sit alongside the intent cells for the same reason, without an intent, presentation, ground, or hover axis of their own: `--palette-border`, `--palette-surface`, and `--palette-text`, flat values for `--color-border`, `--color-surface`, and `--color-text` -- the resting colors anything that is not intent-colored needs (a container's border, a dialog's background, its text), which an optional-peer consumer needs just as much as the intent cells.
 
-## Component internals
+## Component variables
 
-Component classes may define scoped implementation variables such as `--surface-padding`, `--field-gap`, `--input-group-pad`, `--switch-*`, `--table-*`, `--quote-*`, and `--tooltip-*`. These variables are internal wiring for class composition and are not the public token contract.
+Six variables are read by a single component and are supported inputs. Every other variable a component declares, such as `--surface-padding`, `--field-gap`, `--switch-*`, `--table-*`, or `--quote-*`, is internal and may change in any release.
 
-Consumers should customize broad behavior through color, foundation, motion, elevation, radius, layout, and focus tokens first. The only supported component-scoped input is `--progress-value` on the `.progress` element, because consumers must provide a value such as `64%`.
+| Variable             | Element        | Value                        | Default                                                                 | Effect                                                                                                | Where to set it                                                                               |
+| -------------------- | -------------- | ---------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `--progress-value`   | `.progress`    | A percentage, `0%` to `100%` | `0%`                                                                    | Width of the filled part. Not clamped; a value without `%` is invalid and shows empty.                | The bar, or any element around it.                                                            |
+| `--progress-color`   | `.progress`    | A color                      | The intent color                                                        | Color of the filled part and of the `.active` shimmer.                                                | The bar, or any element around it.                                                            |
+| `--progress-surface` | `.progress`    | A color                      | The intent color at the presentation's fill: 12% by default             | Color of the track.                                                                                   | The bar, or any element around it.                                                            |
+| `--progress-edge`    | `.progress`    | A color                      | The intent's border color at the presentation's border: none by default | Color of the track's border. It shows only where the track has a border width, such as with `.edged`. | The bar, or any element around it.                                                            |
+| `--input-group-gap`  | `.input-group` | A length                     | `0.5rem`                                                                | Space between the control and its icon or text.                                                       | The `.input-group` itself. The group declares the default, so a value on a parent is ignored. |
+| `--tooltip-linger`   | `.tooltip`     | A time                       | `300ms`                                                                 | How long the bubble stays after the pointer leaves the trigger.                                       | The `.tooltip` itself. The wrapper declares the default, so a value on a parent is ignored.   |
 
-Next: [Aesthetics](./aesthetics.md) covers each shipped aesthetic's complete look and its documented exceptions.
+```html
+<div class="progress" role="meter" aria-label="Storage used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="92" style="--progress-value: 92%; --progress-color: var(--color-warning)"></div>
+
+<div class="input-group" style="--input-group-gap: 0">
+  <span>app.example.com/u/</span>
+  <input class="ipt" id="profile-url" aria-label="Profile address" />
+</div>
+```
+
+The examples in context are in [Feedback → Show progress](./feedback.md#show-progress), [Forms → Add an icon or a fixed prefix](./forms.md#add-an-icon-or-a-fixed-prefix), and [Tooltips → Hover, linger, and Escape](./tooltips.md#hover-linger-and-escape).
+
+## Composition helpers
+
+To build a component the package does not ship, such as a segmented control or a filter chip, compose it from the same classes the package's components are built from. With compiled CSS, write them as classes; with Tailwind source, you can also `@apply` them.
+
+| Class          | What it gives an element                                                                                                                                                                   |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `box`          | The painted box: background, text color, border, corner, shadow, the aesthetic's material, the focus ring, and the disabled look. It reads intent, presentation, aesthetic, and elevation. |
+| `box-hover`    | The hover color, for something pressed rather than typed into. Add it with `box`.                                                                                                          |
+| `box-active`   | The press: a slight shrink, or the aesthetic's own press. Add it with `box`.                                                                                                               |
+| `surface`      | `box` with a surface's defaults: no fill and a border, the surface corner, and the aesthetic's surface background, blur, and shadow, as on a card.                                         |
+| `text-control` | `box` with a text field's defaults: no fill and a border, the capped fill and border rules, placeholder color, a border that changes on hover and focus, and the invalid state.            |
+
+A filter chip for the members list:
+
+```html
+<button class="box box-hover box-active neutral soft edgeless" type="button" aria-pressed="true" style="padding: 0.25rem 0.75rem; border-radius: 999px">Admins</button>
+```
+
+What to give each one:
+
+- **`box` needs a fill and an edge class.** It has no defaults of its own, so with no `.solid`, `.soft`, or `.ghost` and no `.edged` or `.edgeless`, on the element or a container, it draws nothing. `surface` and `text-control` have defaults and work alone.
+- **Name the intent.** A `box` element takes the intent of the nearest element around it that has one, unlike the package's components. Put `.neutral` or an intent class on it.
+- **Size and spacing are yours.** None of the helpers sets padding, width, or height; `text-control` does not set the 2.5rem height that `.ipt` adds.
+- **So are behavior and semantics.** Use a real `<button>`, `<input>`, or `<a href>`, or add the role and keyboard handling yourself, and set states such as `aria-pressed` or `aria-invalid`. `box` draws the disabled look for `disabled`, `.disabled`, `aria-disabled="true"`, and `data-disabled`, but only the `disabled` attribute stops input.
+
+Do not set or read the `--_`-prefixed variables these helpers use internally; they change between releases.
+
+## Next
+
+[Content and layout](./content-and-layout.md) lists the layout helpers, the type scale, surfaces, tables, and content chips.
