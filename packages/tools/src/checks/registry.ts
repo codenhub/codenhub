@@ -9,6 +9,7 @@ import { createManifestRules } from "./manifest-rules.ts";
 import { createReadmeRules } from "./readme-rules.ts";
 import { createReferenceRules } from "./reference-rules.ts";
 import type { CheckRule } from "./rule.ts";
+import { createSizeRuleSources, createSizeRules } from "./size-rules.ts";
 import { createUndocumentedExportRules } from "./undocumented-export-rules.ts";
 
 /**
@@ -31,5 +32,6 @@ export function createCheckRules(workspace: Workspace): CheckRule[] {
     ...createReadmeRules(),
     ...createReferenceRules(),
     ...createChangelogRules(),
+    ...createSizeRules(createSizeRuleSources(workspace.root)),
   ];
 }

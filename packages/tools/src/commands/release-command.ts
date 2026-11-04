@@ -102,6 +102,11 @@ async function runCut(context: CommandContext, requested: string): Promise<numbe
   }
   context.reporter.blank();
   context.reporter.info("Next, in this order:");
+  if (result.isRecut) {
+    context.reporter.detail("  1. Commit it, then merge");
+    context.reporter.detail(`  2. Tag the merge: git tag "${result.tag}" && git push origin "${result.tag}"`);
+    return EXIT_SUCCESS;
+  }
   context.reporter.detail(`  1. Fill in ${workspacePackage.location}/docs/changelog/${result.version}.md`);
   context.reporter.detail("  2. Run `pnpm generate` and commit it with everything above, then merge");
   context.reporter.detail(`  3. Tag the merge: git tag "${result.tag}" && git push origin "${result.tag}"`);

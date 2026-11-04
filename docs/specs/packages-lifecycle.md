@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-02
+last_updated: 2026-11-04
 scope: Public workspace packages.
 ---
 
@@ -225,7 +225,7 @@ What is measured, and why:
 
 `size.json` names the bundler and its version, and for each measured subpath the minified byte length, the gzipped byte length, the SHA-256 of the minified output, the minified and gzipped length of each export alone under `exports`, and the bytes by source under `files`, largest first, each as `{ "bytes": n, "declarations": { ... } }` with `declarations` absent for a dependency, for `(unattributed)`, and for a file that could not be parsed; each export carries its own `files` the same way. The publish check compares the bundler version, the minified length, the hash, each export's minified length, and every byte count under each `files`, its declarations included, and never a gzipped length. Exports and files are compared even when the hash matches, because they can change without it: dropping a `/* @__PURE__ */` annotation leaves the minified whole bundle identical but changes what an export tree-shakes to, and moving code between files or declarations changes its attribution. A release recorded before a field was measured lacks it, and that field is not compared for it. The gzipped length is never compared because gzip output is not fixed by its input. Node.js bundles Chromium's fork of zlib, which picks its match-finding hash by the CPU features it detects, and any zlib change between Node.js versions can move it too, so identical minified bytes can gzip to different lengths on a maintainer's machine and on the runner, and a gzip comparison would fail a correct release. The hash proves the bytes are the ones that were measured, and the gzip figure follows from them. Rejected: a pure-JavaScript deflate compared exactly, which adds a dependency to make a number reproducible that the hash already pins; and comparing gzip within a tolerance, which is a weaker check with an arbitrary margin.
 
-Only `hub publish` compares the file. Between releases `size.json` records the last release, not the working tree, so `hub check` comparing it would warn on every source change by design. The file is never in the tarball: it describes the published code rather than being part of it, and the `tarball` precondition blocks a release whose `files` would pack it.
+`hub publish` compares the file, and so does `hub check`'s `size` rule while a release is pending: from the cut until the version's tag exists. Between releases `size.json` records the last release, not the working tree, so a comparison outside that window would fail on every source change by design. The earlier decision kept the comparison in `hub publish` alone for that reason. It did not weigh the window itself, which is where every stale file has been: 3 of the 10 publish runs up to 2026-11-03 were refused after their merge, one for a missing `size.json` and two for a stale one, each needing a follow-up pull request, a re-tag, and a re-run. A cut that went stale is recorded again by re-cutting its version (`docs/tooling.md`, "Cutting a release"). The file is never in the tarball: it describes the published code rather than being part of it, and the `tarball` precondition blocks a release whose `files` would pack it.
 
 ## Versioning
 

@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, writeFile, mkdir } from "node:fs/promises";
+import { access, mkdtemp, readFile, writeFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -181,5 +181,30 @@ describe("cutRelease", () => {
       "does not come after",
     );
     expect(await readFile(join(workspacePackage.directory, "package.json"), "utf8")).toContain('"version": "1.0.0"');
+  });
+
+  it("re-cuts the current version while it has no tag, rewriting only size.json", async () => {
+    const workspacePackage = await createPackageOnDisk("0.3.0");
+    const manifest = await readFile(join(workspacePackage.directory, "package.json"), "utf8");
+
+    const result = await cutRelease(workspacePackage, "0.3.0", "2026-09-07", {
+      isTagged: async () => false,
+      measure: measured,
+    });
+
+    expect(result).toEqual({ isRecut: true, tag: "@codenhub/error@0.3.0", version: "0.3.0", written: ["size.json"] });
+    expect(JSON.parse(await readFile(join(workspacePackage.directory, "size.json"), "utf8"))).toEqual(SIZE);
+    expect(await readFile(join(workspacePackage.directory, "package.json"), "utf8")).toBe(manifest);
+    // A re-cut is not an opt-in to a changelog the package does not keep.
+    await expect(access(join(workspacePackage.directory, "docs/changelog"))).rejects.toThrow();
+  });
+
+  it("refuses to re-cut a version that is already tagged, writing nothing", async () => {
+    const workspacePackage = await createPackageOnDisk("0.3.0");
+
+    await expect(
+      cutRelease(workspacePackage, "0.3.0", "2026-09-07", { isTagged: async () => true, measure: measured }),
+    ).rejects.toThrow("@codenhub/error@0.3.0 is already released");
+    await expect(access(join(workspacePackage.directory, "size.json"))).rejects.toThrow();
   });
 });

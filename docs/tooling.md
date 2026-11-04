@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-02
+last_updated: 2026-11-04
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -322,6 +322,8 @@ Before writing anything, it runs the package's `build` script and measures every
 
 It commits nothing and tags nothing, and the page it writes is deliberately unfinished. What changed for a consumer is the one part of a release no tool can derive, so the page carries a `TODO` description and the Keep a Changelog headings with `TODO` bullets, and the command prints the three steps that follow: fill the page in, run `pnpm generate` and commit, then tag the merge. A cut that committed itself would publish a changelog saying nothing, which is worse than no changelog at all.
 
+Asking for the version the manifest already declares, `--cut=0.4.0` on a manifest at `0.4.0`, re-cuts it: while that version has no release tag, the package is measured again and only `size.json` is rewritten. That is how a cut that went stale before its tag, through a rebase or a change to something it bundles, is recorded again; the `size` compliance rule below reports when one is needed. The manifest and changelog are left as they are, so a package that keeps no changelog is not opted into one. Once the tag exists the version is released and the re-cut is refused.
+
 The `changelog` compliance rule below is the other half. `--cut` makes the entry easy to write; the rule makes it impossible to skip.
 
 ### What the next release carries
@@ -401,6 +403,7 @@ Findings carry a `<rule>/<detail>` code and a severity. Only `error` findings fa
 | `llms-full`           | `llms-full.txt` still matches the documents it compiles.                                                                |
 | `readme`              | README status notices agree with `codenhub.status`.                                                                     |
 | `changelog`           | An opted-in changelog documents, dates, describes, and links the version the manifest declares.                         |
+| `size`                | A version awaiting its release tag carries a `size.json` that matches its build.                                        |
 | `assets`              | `codenhub.assets` entries name files `coden.agency/brand` publishes.                                                    |
 
 The `documentation` rule also reports `documentation/legacy-metadata` when a package declares identity (`label`, `status`, and the other fields `docs/specs/packages-metadata.md` lists) inside `codenhub.docs` instead of on `codenhub`, and `documentation/missing-logo` when `codenhub.logo` names no file in the package.
@@ -412,6 +415,8 @@ The `error` reverses the earlier decision that every unresolved export stays a w
 Typed export targets include `.d.ts`, `.d.mts`, and `.d.cts`; missing CommonJS declarations can be emitted from `.cts` sources. A namespace re-export such as `export * as utilities from "./utilities.js"` is documented on that export declaration. Its members are not checked as top-level exports, and subsequent barrel aliases follow back to that namespace declaration.
 
 The `changelog` rule applies only to a package that already has `docs/changelog/`, because `docs/specs/packages-changelog.md` makes keeping one recommended rather than required and the directory is the opt-in. What it enforces is the part that stops being optional once a package has opted in: `changelog/missing-entry` when the manifest version has no page, and `changelog/unlinked-entry` when it has one the curated `index.md` does not link, which on the documentation site means no route, no navigation entry, and no search result. `changelog/missing-date` and `changelog/missing-description` report a current version page without the frontmatter the spec requires, counting a description `--cut` left as a `TODO` as missing. Only the current version is checked — the spec permits dropping an older version's link deliberately, and this rule leaves that alone. It is what makes a version bump and the document describing it land in the same change; without it, a released version a consumer cannot read about is invisible until someone goes looking.
+
+The `size` rule applies to a public package whose manifest version is cut but not released: it has no `<name>@<version>` tag, while the package has some earlier release tag. It runs the same comparison as `hub publish`'s `size` precondition and reports `size/missing` when there is no `size.json` and `size/stale` when the file disagrees with a fresh build. That moves the failure from the tag push, after the merge, to the pull request that cut the release or the one that later changed what it bundles. A released version is skipped, because its `size.json` records the release rather than the code since; so is a package with no release tag at all, whose first release is published by hand and checked by `hub publish` there. It reads `git tag --list`, so a local clone with stale tags can report a version that is already released, and the message says to fetch tags. The fix it names is a re-cut, described under "Cutting a release". Measuring builds the package, which costs a build only for a package with a release pending.
 
 The `engines` rule applies to a published package that declares `engines.node`, and compares it with the root `.nvmrc`, the version CI runs. `engines/node-range` reports anything but a bare lower bound, `engines/node-below-pin` a floor below the pinned major, which no run tests, and `engines/node-above-pin` one above the pinned version, which no run satisfies. A floor between the two, such as `>=24.14.1`, passes: the lifecycle spec allows it when the README names the API that needs it, and that reason is a review responsibility. `engines/readme` and `engines/docs` report a README that states no floor, and a README or public document stating a different one in the form `Node.js 24 or newer`; internal docs and changelog pages are skipped, because a changelog page describes the release it belongs to. Whether a package runs on Node.js at all, and so whether it should declare a floor, is not knowable from its files, so a browser-only package that declares one is left to review too.
 
