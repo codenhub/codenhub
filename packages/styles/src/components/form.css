@@ -751,6 +751,15 @@
     background-color: CanvasText;
   }
 
+  /* The chevron is two gradients, and forced colours drop every gradient, so a
+     drop-down with `appearance: none` showed no arrow at all and read as a text
+     field. The platform's own arrow comes back instead: it is drawn in system
+     colours, and the author border, padding and focus outline still apply. A
+     list box has no arrow to restore. */
+  .select:not([multiple], [size]:not([size="1"])) {
+    appearance: auto;
+  }
+
   .checkbox:checked,
   .checkbox:indeterminate,
   .radio:checked,

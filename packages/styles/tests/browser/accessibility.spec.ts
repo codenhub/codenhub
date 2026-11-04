@@ -183,6 +183,71 @@ test("uses visible system-color outlines for unclassed native controls in forced
   }
 });
 
+/* The chevron is two gradients and forced colours drop every gradient, so a
+   drop-down once showed no arrow at all and read as a text field. A computed
+   `background-image` cannot show what replaces it -- the platform's own arrow
+   -- so this reads paint: a screenshot of a select with an empty option, so no
+   text is drawn, decoded in the page, and the arrow is ink in the inline-end
+   strip the select keeps for it, against a middle strip that stays blank.
+   Both the class and the `/native` element are read, and right-to-left. No
+   baseline is stored: ink is counted against the select's own ground. */
+test("keeps a drop-down indicator on a select in forced colors", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active" });
+
+  for (const [stylesUrl, markup] of [
+    [COMPONENT_STYLES_URL, '<select class="select" dir="ltr"><option></option></select>'],
+    [COMPONENT_STYLES_URL, '<select class="select" dir="rtl"><option></option></select>'],
+    [NATIVE_STYLES_URL, '<select dir="ltr"><option></option></select>'],
+  ] as const) {
+    /* oxlint-disable no-await-in-loop -- one entrypoint at a time keeps the failure naming it. */
+    await page.setContent(`<!doctype html><html><body style="padding:16px">${markup}</body></html>`);
+    await page.addStyleTag({ url: stylesUrl });
+    await page.addStyleTag({ content: "select { width: 240px; }" });
+
+    const select = page.locator("select");
+    const png = (await select.screenshot({ animations: "disabled" })).toString("base64");
+    const ink = await page.evaluate(async (source) => {
+      const image = new Image();
+      image.src = `data:image/png;base64,${source}`;
+      await image.decode();
+
+      const canvas = document.createElement("canvas");
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const context = canvas.getContext("2d")!;
+      context.drawImage(image, 0, 0);
+      const { data, width, height } = context.getImageData(0, 0, image.width, image.height);
+      const scale = width / 240;
+      const at = (x: number, y: number) => data.slice((y * width + x) * 4, (y * width + x) * 4 + 3);
+      const ground = at(Math.round(width / 2), Math.round(height / 2));
+      /* Inside the border and the focus-free box: a strip 4px to 36px from an
+         edge, rows clear of the top and bottom border. */
+      const count = (from: number, to: number) => {
+        let pixels = 0;
+        for (let x = Math.round(from * scale); x < Math.round(to * scale); x += 1) {
+          for (let y = Math.round(6 * scale); y < height - Math.round(6 * scale); y += 1) {
+            const pixel = at(x, y);
+            if (Math.max(...pixel.map((channel, index) => Math.abs(channel - ground[index]!))) > 64) {
+              pixels += 1;
+            }
+          }
+        }
+        return pixels;
+      };
+
+      return { left: count(4, 36), middle: count(104, 136), right: count(204, 236) };
+    }, png);
+    /* oxlint-enable no-await-in-loop */
+
+    const label = `${stylesUrl.includes("native") ? "native" : ".select"} ${markup.includes("rtl") ? "rtl" : "ltr"}`;
+    const [end, start] = markup.includes("rtl") ? [ink.left, ink.right] : [ink.right, ink.left];
+
+    expect(end, `${label}: ink where the arrow sits`).toBeGreaterThan(4);
+    expect(ink.middle, `${label}: no ink in the middle of an empty select`).toBe(0);
+    expect(start, `${label}: no ink at the inline start`).toBe(0);
+  }
+});
+
 test("uses system colors to distinguish checked custom toggles in forced colors", async ({ page }) => {
   await page.emulateMedia({ forcedColors: "active" });
 
