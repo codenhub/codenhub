@@ -48,8 +48,9 @@ function partsOf(name: string, validator: unknown): [shape: Shape, options: Obje
  * Makes the new object. What follows the function's own arguments is what follows a shape in `object`,
  * options and then checks. The new object keeps the options of the one it came from, and each option given
  * replaces the one of its name: given `{ message }`, a strict object stays strict. Options given as
- * `undefined` or `null` are no options, as for every factory, so they keep them all. Anything else that is
- * not a plain object is passed on as it is, for `object` to refuse.
+ * `undefined` or `null` are no options, as for every factory, so they keep them all, and an option given
+ * as `undefined` is no option, so it keeps the one of its name. Anything else that is not a plain object is
+ * passed on as it is, for `object` to refuse.
  */
 const rebuild = (shape: Shape, options: ObjectOptions, rest: readonly unknown[]): AnyValidator => {
   const given = rest.length > 0 && (rest[0] === undefined || rest[0] === null) ? rest.slice(1) : rest;
@@ -59,7 +60,10 @@ const rebuild = (shape: Shape, options: ObjectOptions, rest: readonly unknown[])
     ...(given.length === 0 || typeof first === "function"
       ? [options, ...given]
       : isPlainObject(first)
-        ? [{ ...options, ...first }, ...checks]
+        ? [
+            { ...options, ...Object.fromEntries(Object.entries(first).filter(([, value]) => value !== undefined)) },
+            ...checks,
+          ]
         : given),
   );
 };

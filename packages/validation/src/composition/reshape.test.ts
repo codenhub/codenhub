@@ -79,6 +79,26 @@ describe("pick", () => {
     },
   );
 
+  it.each(["unknownKeys", "message"])(
+    "should keep the option %s of the object when it is given as undefined, which is no option",
+    (name) => {
+      const strict = object({ a: string(), b: string() }, { unknownKeys: "strict", message: "Not that" });
+      // As options built from a configuration that does not set this one: `{ unknownKeys: config.mode }`.
+      const given = { [name]: undefined } as { unknownKeys?: "strict" };
+      for (const made of [
+        pick(strict, ["a"], given),
+        omit(strict, ["b"], given),
+        partial(strict, given),
+        required(strict, given),
+        extend(strict, {}, given),
+      ]) {
+        expect(describeValidator(made)?.options).toEqual({ unknownKeys: "strict", message: "Not that" });
+        expect(codesOf(made({ a: "x", zzz: 1 }))).toContain("unrecognized_key");
+        expect(issuesOf(made(1))[0]?.message).toBe("Not that");
+      }
+    },
+  );
+
   it("should take checks on the new object, with its options kept", () => {
     const strict = object({ a: string(), b: string() }, { unknownKeys: "strict" });
     const picked = pick(
