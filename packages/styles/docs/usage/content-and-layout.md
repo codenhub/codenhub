@@ -72,6 +72,8 @@ Padding classes:
 
 `.flush` is for content that runs edge to edge, such as an image or a table inside a card.
 
+A padding class applies only to the card or panel it is on. A card or panel nested inside keeps its own padding, so a `.card.flush` holding a `.panel` still pads the panel by 1rem.
+
 A panel is for sidebars, toolbars, and wells: areas that are part of the page, not objects on it. A card is a self-contained object, such as the profile card or the plan card on the settings screen.
 
 ### Neutral cards and panels

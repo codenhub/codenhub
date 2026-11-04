@@ -111,6 +111,8 @@ A members search, with an icon at the start (the `ic-lucide-*` classes need `@co
 </div>
 ```
 
+A `.select` works in a group too. The group removes the control's side padding, except at the end of a single-row select, which keeps 1.75rem so the chosen option's text does not run under the arrow.
+
 Any element works as the adornment: an icon class, an inline `<svg>`, an `<img>`, or text. The package ships no icons for fields, because a built-in image could not follow your text color, theme, or aesthetic.
 
 The group reads intent and presentation the way a lone `.ipt` does: `.input-group.primary` colors the border, and `.input-group.soft.edgeless` is a field sunk into the page. `aria-invalid="true"` or `disabled` on the control inside applies to the whole group, and so does either on the group itself. The focus ring appears when anything inside the group has focus, so unlike a lone field it also shows after a mouse click.
