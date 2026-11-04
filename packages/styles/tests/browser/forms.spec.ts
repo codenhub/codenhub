@@ -1377,6 +1377,76 @@ test.describe("forms", () => {
     expect(styles.rtl.chevronX).not.toContain("100%");
   });
 
+  /* The group takes its control's inline padding, but a drop-down's chevron is
+     the select's own background, drawn inside the select's box: with no end
+     padding a long label ran 21px under it. This resolves the chevron's two
+     tiles from the used background position and checks that the label's
+     content box ends before the nearer one, in both directions. A list box draws
+     no chevron and is left as it was. */
+  test("keeps a long select label clear of its chevron inside a group", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const label = "A very long option label that cannot fit inside the select at this width";
+    const measured = await page.evaluate((text) => {
+      const read = (dir: string, markup: string) => {
+        const host = document.createElement("div");
+        host.dir = dir;
+        host.style.width = "20rem";
+        host.innerHTML = markup;
+        document.body.append(host);
+        const select = host.querySelector("select")!;
+        const style = getComputedStyle(select);
+        const rect = select.getBoundingClientRect();
+        const border = parseFloat(style.borderLeftWidth);
+        const paddingBox = rect.width - border - parseFloat(style.borderRightWidth);
+        const tile = parseFloat(style.backgroundSize);
+        /* Each position is `calc(100% - Npx)`, a length, or a percentage of the
+           room left once the tile is placed. */
+        const tileStart = (value: string) => {
+          const fromEnd = /calc\(100% - ([\d.]+)px\)/.exec(value);
+          if (fromEnd) {
+            return paddingBox - tile - parseFloat(fromEnd[1]!);
+          }
+          if (value.endsWith("%")) {
+            return ((paddingBox - tile) * parseFloat(value)) / 100;
+          }
+          return parseFloat(value);
+        };
+        const starts = style.backgroundPositionX.split(",").map((value) => tileStart(value.trim()));
+        const contentStart = parseFloat(style.paddingLeft);
+        const contentEnd = paddingBox - parseFloat(style.paddingRight);
+        const result = {
+          chevron: style.backgroundImage === "none" ? null : [Math.min(...starts), Math.max(...starts) + tile],
+          content: [contentStart, contentEnd],
+          paddingInline: [style.paddingLeft, style.paddingRight],
+        };
+        host.remove();
+
+        return result;
+      };
+      const option = `<option>${text}</option>`;
+      const grouped = (attributes = "") =>
+        `<div class="input-group"><span>i</span><select class="select"${attributes}>${option}</select></div>`;
+
+      return {
+        ltr: read("ltr", grouped()),
+        rtl: read("rtl", grouped()),
+        listBox: read("ltr", grouped(" multiple")),
+        alone: read("ltr", `<select class="select">${option}</select>`),
+      };
+    }, label);
+
+    const { ltr, rtl } = measured;
+    expect(ltr.chevron, "ltr group draws its chevron").not.toBeNull();
+    expect(rtl.chevron, "rtl group draws its chevron").not.toBeNull();
+    expect(ltr.content[1], "ltr label ends before the chevron").toBeLessThanOrEqual(ltr.chevron![0]!);
+    expect(rtl.content[0], "rtl label ends before the chevron").toBeGreaterThanOrEqual(rtl.chevron![1]!);
+    expect(ltr.paddingInline[0], "ltr start stays flush to the group").toBe("0px");
+    expect(rtl.paddingInline[1], "rtl start stays flush to the group").toBe("0px");
+    expect(measured.listBox.chevron, "a list box draws no chevron").toBeNull();
+    expect(measured.alone.paddingInline, "a lone select keeps its own room").toEqual(["12px", "40px"]);
+  });
+
   /* A checked knob travels to the inline end. The mirrored travel was once
      nested as `:dir(rtl) &` inside `&:checked::after`, which compiled to an
      empty `:is()` and matched nothing: a checked right-to-left knob kept the

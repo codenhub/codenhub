@@ -481,6 +481,14 @@
     }
   }
 
+  /* Except a drop-down's end: its chevron is the select's own background,
+     drawn inside its box 0.6875-1.3125rem from the inline end, so a long label
+     with no padding there ran under it. A list box draws none and keeps the
+     padding its own rule gives it. */
+  & > :is(.select, select):not([multiple], [size]:not([size="1"])) {
+    padding-inline-end: 1.75rem;
+  }
+
   /* Anything else in the group -- an icon, affix text -- does not stretch and
      reads as secondary. A nested `<button>` keeps its own styling. */
   & > :not(.ipt, .textarea, .select, .text-control, input, textarea, select, button) {
