@@ -38,8 +38,10 @@ type EmailParts<TOptions> = Extract<TOptions[keyof TOptions & ("domain" | "local
  * The value is the address as mail is delivered to it: the local part as written, and the domain as
  * the URL parser reads it, lowercase ASCII with internationalized labels in punycode. So
  * `Ada@München.DE` is `Ada@xn--mnchen-3ya.de`, and every spelling that names one domain, such as
- * fullwidth letters or an invisible variation selector, gives one address. The local part must be
- * ASCII: addresses with letters beyond it (RFC 6531) are rejected. Surrounding whitespace is not
+ * fullwidth letters or an invisible variation selector, gives one address. The local part must be a
+ * dot-atom, as HTML's email input accepts: ASCII letters, digits, the backtick and
+ * `!#$%&'*+/=?^_{|}~-`, with single dots between them, so a quoted local part such as `"a b"@example.com`, and addresses with
+ * letters beyond ASCII before the `@` (RFC 6531), are rejected. Surrounding whitespace is not
  * trimmed; trim first with `pipe` when the input may need it. A domain written with more than 759
  * characters, three for each one a domain can have, is rejected before the parser reads it. The `domain` and `local` options check
  * those parts with validators of your own, which make the validator asynchronous when one is. A part
