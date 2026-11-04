@@ -6,7 +6,7 @@ order: 1
 
 # Tailwind CSS v4
 
-A project that already runs Tailwind CSS v4 can process this package's source instead of its compiled output, so both sets of classes compile through the same Tailwind build.
+A project that already runs Tailwind CSS v4 can compile this package's source instead of loading its compiled output. Your app's utilities and the package's classes then come out of one build, share one theme, and use one `dark:` variant. This page covers the import, aesthetics, the focused entrypoints, and the build problems you are likely to meet.
 
 ## Why source instead of compiled
 
@@ -37,7 +37,7 @@ Add an aesthetic from the source entrypoint the same way as the compiled one, af
 
 ## Using a focused entrypoint
 
-Import a focused `/tw/*` entrypoint instead of the combined one — such as `/tw/button` or `/tw/form` — when a build only needs one component family; see the full [import path table](../setup.md#import-paths) for what each one composes.
+Import a focused `/tw/*` entrypoint instead of the combined one — such as `/tw/button` or `/tw/form` — when a build only needs one component family; see the full [entrypoint table](../setup.md#all-entrypoints) for what each one composes.
 
 Unlike `/tw`, the focused entrypoints and `/tw/native` do not import Tailwind, so keep your own import first:
 
@@ -60,4 +60,18 @@ Unlike `/tw`, the focused entrypoints and `/tw/native` do not import Tailwind, s
 - **Why:** one of two things. Importing both a compiled entrypoint (`@codenhub/styles`) and a `/tw` entrypoint (`@codenhub/styles/tw`) in the same build compiles the same tokens and reset from two independent sources; Tailwind's build has no way to know they describe the same package. Or your stylesheet imports `tailwindcss` beside `/tw`, which already imports it, so Preflight is emitted twice.
 - **Fix:** pick one path per project — `/tw` entrypoints for a project running Tailwind CSS v4, compiled entrypoints everywhere else — and drop your own `@import "tailwindcss"` when you import `/tw`.
 
+**A class built at runtime has no styling**
+
+- **What happened:** `<button class="btn primary">` is styled, but a button whose intent comes from a variable, such as `` `btn ${tone}` ``, is not.
+- **Why:** Tailwind generates a class only when it finds the complete name in your source files. The package's own component and axis classes are always generated, but your own utilities are not, and a name assembled from strings is invisible to the scan.
+- **Fix:** write complete class names in your source, for example in a lookup object (`{ save: "btn primary", remove: "btn destructive" }`), or list the names your code can produce with `@source inline("...")` in your stylesheet.
+
 Every `/tw` entrypoint requires Tailwind CSS 4.3.2 or newer, below 5: the source uses `@source not` and `@source inline()`, which arrived in 4.1, and it is tested against 4.3.2.
+
+## The `dark:` variant
+
+The `/tw` entrypoints define their own `dark:` variant, so your utilities switch with the same light and dark selectors the package's tokens use. It has one known difference from the tokens when themes are nested; see [Theming → The dark: variant](../usage/theming.md#the-dark-variant).
+
+## Next
+
+Return to the main path: [Building a screen](../concepts.md) adds the first card and form to the settings page. Everything it shows works the same on `/tw`.

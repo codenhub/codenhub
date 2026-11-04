@@ -47,7 +47,7 @@ Running Tailwind CSS v4? `@import "@codenhub/styles/tw"` is a CSS directive, so 
 
 ## Force a theme
 
-Apply `.dark` or `.light` on `<html>` to force a theme instead of following the system preference; see [Setup → Configuration](../setup.md#configuration).
+Apply `.dark` or `.light` on `<html>` to force a theme instead of following the system preference; see [Theming → Light and dark](../usage/theming.md#light-and-dark).
 
 ```tsx
 <html lang="en" className="dark">
@@ -61,7 +61,6 @@ Apply `.dark` or `.light` on `<html>` to force a theme instead of following the 
 - **Why:** the Pages Router has no per-route CSS boundary the way the App Router does, so Next.js requires one predictable file for global stylesheets to avoid ordering conflicts between pages.
 - **Fix:** move the `import "@codenhub/styles"` line to `pages/_app.tsx`, and remove it from wherever it currently is.
 
-## See also
+## Next
 
-- [Setup → Import paths](../setup.md#import-paths): every entrypoint this package publishes.
-- [Usage](../usage/index.md): component classes to compose once the stylesheet is loaded.
+Return to the main path: [Building a screen](../concepts.md) adds the first card and form to the settings page. [Setup → All entrypoints](../setup.md#all-entrypoints) lists every other stylesheet you can import.
