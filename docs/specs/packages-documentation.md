@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-31
+last_updated: 2026-11-04
 scope: Documentation for public workspace packages.
 ---
 
@@ -105,7 +105,7 @@ Packages SHOULD adapt their structure when another organization better matches t
 
 Public documentation paths MUST be deterministic and portable:
 
-- Markdown file and directory names MUST use kebab-case, except version-named files in a package `changelog/` folder, which follow `docs/specs/packages-changelog.md`.
+- Markdown file and directory names MUST use kebab-case, except version-named files in a package `changelog/` folder, which follow `docs/specs/packages-changelog.md`, and a `docs/<locale>/` translation area such as `docs/pt-BR/`, which follows `docs/specs/packages-translations.md`.
 - For a package opted into generated reference, `docs/reference/` is owned end to end by `pnpm generate`, per `docs/specs/packages-reference.md`. Its pages MUST NOT be hand-authored or hand-edited, and a sibling hand-authored `docs/reference.md` is invalid. A package that has not opted in MAY keep its hand-authored `docs/reference.md`; opting in is what transfers reference ownership to the generator. The reason and rejected immediate conversion are recorded in that spec's "Structure" section.
 - An `index.md` represents its containing documentation area.
 - Publishing tools MUST place the package-root `docs/index.md` before every other package page, and a folder's `index.md` before the other pages in that folder.
@@ -174,6 +174,7 @@ Every public package `docs/**/*.md` file outside `docs/internal/` MUST start wit
 - `curated`: OPTIONAL boolean, valid only on a folder's `index.md`. When `true`, that page's links decide what the folder publishes: publishing tools MUST treat only the sibling documents it links to, in that link order, as published for that folder, and MUST NOT publish, navigate to, or index a sibling it does not link. Unlinked siblings remain ordinary public documents for every other purpose, including this spec's other requirements and link validation. A site that gives pages routes MUST also publish the curated index as the folder's overview page, showing each linked sibling with its `date` and `description`, each only when the sibling sets it; it SHOULD leave that page out of search, since every entry on it repeats a sibling's own search result. A compilation of document bodies, such as `llms-full.txt`, MUST leave the curated index out, since its link list adds nothing the compiled siblings do not already carry.
 - `date`: ISO `YYYY-MM-DD` string, valid only on a changelog version page, which MUST set it: a non-index Markdown file directly under a package `changelog/` folder, per `docs/specs/packages-changelog.md`. It records the release date of the version the page documents. It does not affect ordering; a curated changelog `index.md` still controls order through its link list.
 - `since`: OPTIONAL non-empty string, valid only on a generated `docs/reference/` page, per `docs/specs/packages-reference.md`. It records the version the documented entrypoint first became available. It is an opaque label, not validated as a version format, and does not affect ordering.
+- `source`: git blob ID, valid only on a translated document under `docs/<locale>/`, which MUST set it. It records the English document the translation was made from, per `docs/specs/packages-translations.md`.
 
 Unknown fields, including repository governance fields, are invalid. Every public document MUST contain exactly one H1, but its text is unrestricted and independent from the frontmatter title. Frontmatter controls presentation metadata; Markdown controls article markup. Publishing tools MUST render the Markdown body as authored and MUST NOT inject titles, descriptions, package identifiers, status notices, or other metadata into the article body. There are two exceptions. The first is a generated `docs/reference/` page (per `docs/specs/packages-reference.md`): a publishing tool MAY render that page's `description` and `since` frontmatter as a deck immediately after the page H1, since both are generator-derived and read as part of the entrypoint heading they sit under. The second exception is a `curated: true` index page: a publishing tool MAY add each linked sibling's `date` and `description` to that sibling's link, because the index only names what to publish and authors are told not to repeat that metadata in it (`docs/specs/packages-changelog.md`). Site chrome outside the article body MAY present package metadata, navigation, breadcrumbs, or status. Browser titles MUST add the package label between the page title and site title so pages with common titles remain distinguishable.
 
@@ -207,7 +208,7 @@ Do not use `docs/internal/` for scratch notes, short-lived plans, TODO lists, or
 
 Prefer package-relative links so the published artifact remains self-contained. Canonical external URLs MAY supplement those links.
 
-`llms-full.txt` MUST contain the package README, `docs/index.md`, and then all remaining public Markdown documentation in deterministic order. It MUST preserve authored Markdown bodies despite the `.txt` extension. It MUST omit public-page presentation frontmatter and exclude `docs/internal/`, a generated `docs/reference/` area (per `docs/specs/packages-reference.md`), source code, tests, generated declarations, and raw JSDoc/TSDoc extraction.
+`llms-full.txt` MUST contain the package README, `docs/index.md`, and then all remaining public Markdown documentation in deterministic order. It MUST preserve authored Markdown bodies despite the `.txt` extension. It MUST omit public-page presentation frontmatter and exclude `docs/internal/`, a generated `docs/reference/` area (per `docs/specs/packages-reference.md`), translations (per `docs/specs/packages-translations.md`), source code, tests, generated declarations, and raw JSDoc/TSDoc extraction.
 
 `llms-full.txt` is generated by `pnpm generate`, as defined by `docs/tooling.md`, and MUST NOT be edited by hand. Generated content identifies each source document with a `<!-- Source: ... -->` marker and MUST NOT become a competing contract. The generator rebases relative link destinations so they resolve from `llms-full.txt`; this is the only allowed change to copied Markdown bodies. Regenerate it in the same change as its inputs.
 
