@@ -1106,6 +1106,47 @@ test.describe("forms", () => {
     ).toBeLessThan(2);
     expect(Number.parseFloat(measured.disabled.opacity), "an inner disabled dims the group").toBeLessThan(1);
     expect(measured.disabled.cursor, "and shows the not-allowed cursor").toBe("not-allowed");
+
+    /* A dimmed group does not answer the pointer, as a disabled lone field
+       does not: its line once darkened on hover anyway. Hovered for real and
+       read once the line's transition settles, against an enabled group that
+       does darken, so the probe is shown to move a line that can move. A
+       `<select>` with a disabled option is a control, not a group, and keeps
+       its hover. */
+    await page.evaluate(() => {
+      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+
+      host.insertAdjacentHTML(
+        "beforeend",
+        `<div class="input-group" data-hover-probe="enabled"><input class="ipt" /></div>
+         <div class="input-group" data-hover-probe="disabled"><input class="ipt" disabled /></div>
+         <select class="select" data-hover-probe="select"><option disabled>Off</option><option>On</option></select>`,
+      );
+    });
+
+    const hoverLine = async (probe: string) => {
+      const element = page.locator(`[data-hover-probe="${probe}"]`);
+      const settled = () =>
+        element.evaluate(async (node) => {
+          await Promise.all(node.getAnimations().map((animation) => animation.finished));
+          return getComputedStyle(node).borderTopColor;
+        });
+
+      await page.mouse.move(0, 0);
+      const rest = await settled();
+      await element.hover({ force: true });
+      const hovered = await settled();
+
+      return { rest, hovered };
+    };
+
+    const enabled = await hoverLine("enabled");
+    const disabled = await hoverLine("disabled");
+    const select = await hoverLine("select");
+
+    expect(getColorDistance(enabled.hovered, enabled.rest), "an enabled group's line moves").toBeGreaterThan(2);
+    expect(getColorDistance(disabled.hovered, disabled.rest), "a disabled group's line holds").toBeLessThan(2);
+    expect(getColorDistance(select.hovered, select.rest), "a select with a disabled option moves").toBeGreaterThan(2);
   });
 
   test("styles only destructive hints as field helper text", async ({ page }) => {

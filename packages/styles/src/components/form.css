@@ -89,7 +89,18 @@
     color: var(--color-text-secondary);
   }
 
-  &:hover:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled], :focus-visible) {
+  /* The last exclusion is `.input-group`'s: a group whose control is disabled
+     dims as a disabled field does (see `input-group`), so it does not answer
+     the pointer either. The list is the group's own, so a `<select>` with a
+     disabled `<option>` is not caught by it. */
+  &:hover:not(
+      :disabled,
+      .disabled,
+      [aria-disabled="true"],
+      [data-disabled],
+      :focus-visible,
+      :has(> :is(.ipt, .textarea, .select, .text-control, input, textarea, select):disabled)
+    ) {
     --_line-tone: var(--intent-hover);
   }
 
