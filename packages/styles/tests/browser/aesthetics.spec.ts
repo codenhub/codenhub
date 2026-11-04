@@ -680,18 +680,23 @@ test.describe("aesthetics", () => {
     /* Glass has no slab for a press to travel into, so the base scale is the
        press. It read `none` from before the base look had one, and a click on a
        glass button changed nothing. Pressed for real, since `:active` is what
-       `box-active` keys on. */
+       `box-active` keys on.
+
+       Transitions are off so the pressed value is final the moment `:active`
+       applies, and one read settles it. Polling for the end of the transition
+       failed on Firefox: with the button held, a single `evaluate` sometimes
+       took 5-7s to return, which the poll's 5s timeout counted against the
+       press even though the value it returned was right. */
     test("presses with the base scale, and not at all under reduced motion", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "glass"));
+      await page.addStyleTag({ content: "* { transition: none !important; }" });
 
       const button = page.getByTestId("btn-solid-primary");
-      const pressedTransform = () => button.evaluate((node) => getComputedStyle(node).transform);
       const press = async (expected: RegExp, label: string) => {
         await button.hover();
         await page.mouse.down();
         try {
-          /* The transform is transitioned, so this polls for the settled value. */
-          await expect.poll(pressedTransform, label).toMatch(expected);
+          expect(await button.evaluate((node) => getComputedStyle(node).transform), label).toMatch(expected);
         } finally {
           await page.mouse.up();
         }
