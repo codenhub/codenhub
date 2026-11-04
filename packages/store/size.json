@@ -1,5 +1,5 @@
 {
-  "bundler": "rolldown@1.2.15",
+  "bundler": "rolldown@1.2.16",
   "entrypoints": {
     ".": {
       "exports": {
@@ -22,9 +22,9 @@
         "asyncMemoryDriver": {
           "files": {
             "dist/index.js": {
-              "bytes": 312,
+              "bytes": 321,
               "declarations": {
-                "asyncMemoryDriver": 312
+                "asyncMemoryDriver": 321
               }
             },
             "dist/types-Crb35r9e.js": {
@@ -38,20 +38,23 @@
               "bytes": 31
             }
           },
-          "gzip": 271,
-          "minified": 387
+          "gzip": 276,
+          "minified": 396
         },
         "createAsyncStore": {
           "files": {
             "dist/index.js": {
-              "bytes": 2215,
+              "bytes": 2575,
               "declarations": {
-                "createAsyncStore": 1434,
+                "createAsyncStore": 1570,
                 "failureEvent": 468,
                 "AsyncQueue": 130,
                 "snapshotThen": 93,
+                "applyPatch": 92,
                 "captureAsync": 86,
-                "(top level)": 4
+                "isPlainObject": 78,
+                "withDefaults": 48,
+                "(top level)": 10
               }
             },
             "dist/types-Crb35r9e.js": {
@@ -65,20 +68,23 @@
               "bytes": 30
             }
           },
-          "gzip": 883,
-          "minified": 2289
+          "gzip": 1023,
+          "minified": 2649
         },
         "createStore": {
           "files": {
             "dist/index.js": {
-              "bytes": 2403,
+              "bytes": 2780,
               "declarations": {
-                "createStore": 1164,
-                "localStorageDriver": 533,
+                "createStore": 1300,
+                "localStorageDriver": 550,
                 "failureEvent": 468,
                 "isStorageAvailable": 142,
+                "applyPatch": 92,
+                "isPlainObject": 78,
                 "capture": 74,
-                "(top level)": 10,
+                "withDefaults": 48,
+                "(top level)": 16,
                 "cachedLocalStorage": 7,
                 "cachedAvailable": 5
               }
@@ -94,15 +100,15 @@
               "bytes": 25
             }
           },
-          "gzip": 1035,
-          "minified": 2472
+          "gzip": 1174,
+          "minified": 2849
         },
         "localStorageDriver": {
           "files": {
             "dist/index.js": {
-              "bytes": 697,
+              "bytes": 714,
               "declarations": {
-                "localStorageDriver": 533,
+                "localStorageDriver": 550,
                 "isStorageAvailable": 142,
                 "(top level)": 10,
                 "cachedLocalStorage": 7,
@@ -120,15 +126,15 @@
               "bytes": 32
             }
           },
-          "gzip": 451,
-          "minified": 773
+          "gzip": 457,
+          "minified": 790
         },
         "memoryDriver": {
           "files": {
             "dist/index.js": {
-              "bytes": 294,
+              "bytes": 303,
               "declarations": {
-                "memoryDriver": 294
+                "memoryDriver": 303
               }
             },
             "dist/types-Crb35r9e.js": {
@@ -142,8 +148,8 @@
               "bytes": 26
             }
           },
-          "gzip": 262,
-          "minified": 364
+          "gzip": 268,
+          "minified": 373
         },
         "storeErrors": {
           "files": {
@@ -164,21 +170,24 @@
       },
       "files": {
         "dist/index.js": {
-          "bytes": 5537,
+          "bytes": 6068,
           "declarations": {
-            "createAsyncStore": 1434,
-            "createStore": 1164,
+            "createAsyncStore": 1570,
+            "createStore": 1300,
             "storeErrors": 775,
-            "localStorageDriver": 533,
+            "localStorageDriver": 550,
             "failureEvent": 468,
-            "asyncMemoryDriver": 312,
-            "memoryDriver": 294,
+            "asyncMemoryDriver": 321,
+            "memoryDriver": 303,
             "isStorageAvailable": 142,
             "AsyncQueue": 130,
             "snapshotThen": 93,
+            "applyPatch": 92,
             "captureAsync": 86,
+            "isPlainObject": 78,
             "capture": 74,
-            "(top level)": 20,
+            "withDefaults": 48,
+            "(top level)": 26,
             "cachedLocalStorage": 7,
             "cachedAvailable": 5
           }
@@ -194,18 +203,20 @@
           }
         }
       },
-      "gzip": 1701,
-      "minified": 5731,
-      "sha256": "b9a5488e847e883b895e7c98ddd628d98d1e88f60ecd13fdd582e46cbd42379a"
+      "gzip": 1861,
+      "minified": 6262,
+      "sha256": "d051e7a35f6a84f867703511db164a44605fb93de3d5341b6f696722960c810f"
     },
     "./node": {
       "exports": {
         "nodeAsyncJsonFileDriver": {
           "files": {
             "dist/node.js": {
-              "bytes": 765,
+              "bytes": 1010,
               "declarations": {
-                "nodeAsyncJsonFileDriver": 765
+                "nodeAsyncJsonFileDriver": 781,
+                "bindFile": 203,
+                "fileKeys": 26
               }
             },
             "(unattributed)": {
@@ -219,15 +230,17 @@
               }
             }
           },
-          "gzip": 544,
-          "minified": 941
+          "gzip": 661,
+          "minified": 1186
         },
         "nodeJsonFileDriver": {
           "files": {
             "dist/node.js": {
-              "bytes": 688,
+              "bytes": 933,
               "declarations": {
-                "nodeJsonFileDriver": 688
+                "nodeJsonFileDriver": 704,
+                "bindFile": 203,
+                "fileKeys": 26
               }
             },
             "(unattributed)": {
@@ -241,16 +254,18 @@
               }
             }
           },
-          "gzip": 520,
-          "minified": 859
+          "gzip": 638,
+          "minified": 1104
         }
       },
       "files": {
         "dist/node.js": {
-          "bytes": 1453,
+          "bytes": 1714,
           "declarations": {
-            "nodeAsyncJsonFileDriver": 765,
-            "nodeJsonFileDriver": 688
+            "nodeAsyncJsonFileDriver": 781,
+            "nodeJsonFileDriver": 704,
+            "bindFile": 203,
+            "fileKeys": 26
           }
         },
         "(unattributed)": {
@@ -264,18 +279,18 @@
           }
         }
       },
-      "gzip": 612,
-      "minified": 1653,
-      "sha256": "727ee8fd5b22ba048f0db4d4af4602c61b2a3f5b940094aaf0d4107ce849955c"
+      "gzip": 731,
+      "minified": 1914,
+      "sha256": "7f268350812b64f31c2b10620b4f96bccf7acb229620dc4215e1d4ddee4aa8cc"
     },
     "./cf": {
       "exports": {
         "cloudflareDoDriver": {
           "files": {
             "dist/cloudflare.js": {
-              "bytes": 488,
+              "bytes": 505,
               "declarations": {
-                "cloudflareDoDriver": 488
+                "cloudflareDoDriver": 505
               }
             },
             "dist/types-Crb35r9e.js": {
@@ -289,15 +304,15 @@
               "bytes": 32
             }
           },
-          "gzip": 360,
-          "minified": 564
+          "gzip": 361,
+          "minified": 581
         },
         "cloudflareKvDriver": {
           "files": {
             "dist/cloudflare.js": {
-              "bytes": 517,
+              "bytes": 534,
               "declarations": {
-                "cloudflareKvDriver": 517
+                "cloudflareKvDriver": 534
               }
             },
             "dist/types-Crb35r9e.js": {
@@ -311,16 +326,16 @@
               "bytes": 32
             }
           },
-          "gzip": 384,
-          "minified": 593
+          "gzip": 391,
+          "minified": 610
         }
       },
       "files": {
         "dist/cloudflare.js": {
-          "bytes": 1005,
+          "bytes": 1039,
           "declarations": {
-            "cloudflareKvDriver": 517,
-            "cloudflareDoDriver": 488
+            "cloudflareKvDriver": 534,
+            "cloudflareDoDriver": 505
           }
         },
         "(unattributed)": {
@@ -334,9 +349,9 @@
           }
         }
       },
-      "gzip": 418,
-      "minified": 1105,
-      "sha256": "187510386d3c1fcf6dcc82ecfee81500becb67476ca834c262663c1df7f55542"
+      "gzip": 423,
+      "minified": 1139,
+      "sha256": "d89529c89103822bfc589418bd08de8d723959d2c894cc03db11383ba17b1b62"
     }
   }
 }

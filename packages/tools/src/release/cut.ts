@@ -2,6 +2,7 @@ import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { WorkspacePackage } from "../workspace/discover.ts";
+import { listTags } from "./published-tags.ts";
 import { compareVersions } from "./readiness.ts";
 import { serializeSizeReport, SIZE_FILE, type SizeReport } from "./size-report.ts";
 
@@ -178,6 +179,8 @@ export interface CutResult {
   written: string[];
   /** Release tag that would authorize publishing this version. */
   tag: string;
+  /** Whether this re-recorded the size of a version already cut, rather than raising it. */
+  isRecut: boolean;
 }
 
 /** Measures a package's bundle size for its `size.json`. Injected by tests. */
@@ -193,7 +196,11 @@ export interface CutOptions {
   measure?: SizeMeasurer;
   /** Milliseconds before the package build is killed, or `undefined` to wait indefinitely. */
   timeoutMs?: number;
+  /** Whether a release tag exists, defaulting to the local tag list. Injected by tests. */
+  isTagged?: (tag: string, cwd: string) => Promise<boolean>;
 }
+
+const isTaggedLocally = async (tag: string, cwd: string): Promise<boolean> => (await listTags(cwd)).includes(tag);
 
 /**
  * Raises a package's version, records its bundle size, and scaffolds the changelog entry that documents it.
@@ -207,12 +214,18 @@ export interface CutOptions {
  * that fails leaves the working tree as it was. `size.json` is what the
  * publish check later compares against (`docs/specs/packages-lifecycle.md`,
  * "Bundle size").
+ *
+ * Asking for the version the manifest already declares re-cuts it: while that
+ * version has no release tag, only `size.json` is measured and rewritten, so a
+ * cut that went stale before its tag, through a rebase or a change to a bundled
+ * dependency, can be recorded again. Once the tag exists the version is
+ * released and its `size.json` records that release, so a re-cut is refused.
  * @param workspacePackage Package to cut.
  * @param requested A bump name, or an explicit version.
  * @param today Release date in ISO `YYYY-MM-DD` form.
  * @param options Size measurer and build timeout.
  * @returns What was written and the tag that would publish it.
- * @throws When the version request is unusable, the package cannot be measured, or the manifest cannot be rewritten.
+ * @throws When the version request is unusable or already released, the package cannot be measured, or the manifest cannot be rewritten.
  */
 export async function cutRelease(
   workspacePackage: WorkspacePackage,
@@ -223,6 +236,17 @@ export async function cutRelease(
   const current = workspacePackage.manifest.version;
   if (typeof current !== "string") {
     throw new Error(`${workspacePackage.name} has no "version" in its manifest.`);
+  }
+  if (requested === current) {
+    const tag = `${workspacePackage.name}@${current}`;
+    if (await (options.isTagged ?? isTaggedLocally)(tag, workspacePackage.directory)) {
+      throw new Error(
+        `${tag} is already released, and its ${SIZE_FILE} records that release. Cut the next version instead.`,
+      );
+    }
+    const size = await (options.measure ?? measureSize)(workspacePackage, options.timeoutMs);
+    await writeFile(join(workspacePackage.directory, SIZE_FILE), serializeSizeReport(size));
+    return { isRecut: true, tag, version: current, written: [SIZE_FILE] };
   }
   const version = resolveNextVersion(current, requested);
   const size = await (options.measure ?? measureSize)(workspacePackage, options.timeoutMs);
@@ -251,5 +275,5 @@ export async function cutRelease(
   await writeFile(join(workspacePackage.directory, SIZE_FILE), serializeSizeReport(size));
   written.push(SIZE_FILE);
 
-  return { tag: `${workspacePackage.name}@${version}`, version, written };
+  return { isRecut: false, tag: `${workspacePackage.name}@${version}`, version, written };
 }
