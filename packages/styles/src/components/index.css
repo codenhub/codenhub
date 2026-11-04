@@ -34,17 +34,16 @@
 @import "./button.css";
 @import "./feedback.css";
 @import "./form.css";
-@import "./loader.css";
 @import "./surface.css";
 @import "./tooltip.css";
 
-/* The composition utilities -- `box`, `box-hover`, `box-active`, `loader-mask`,
+/* The composition utilities -- `box`, `box-hover`, `box-active`,
    `text-control`, `surface`, `input-group` -- are `@utility` rules whose bodies
    the content scan will not emit on its own. `box` and friends appear only as
    `@utility` blocks and `@apply` targets; `text-control`, `surface` and
    `input-group` appear only inside `:is()`/`:where()` argument lists in
    `intent.css` and `form.css`, never as a selector of their own. Safelisting
-   all seven makes the emission deliberate; the composition-body check in
+   all six makes the emission deliberate; the composition-body check in
    `exports.test.ts` fails the build if one is dropped. `text-control` and
    `surface` are also documented as consumer-usable on their own. */
-@source inline("box box-hover box-active loader-mask text-control surface input-group unadorned text-display text-title-lg text-title text-title-sm text-label-lg text-label text-body btn field label hint ipt icon textarea select checkbox radio switch alert alert-icon badge skeleton progress tooltip tooltip-bubble tooltip-icon card panel interactive flush neutral solid soft ghost edged edgeless flat raised floating loader");
+@source inline("box box-hover box-active text-control surface input-group unadorned text-display text-title-lg text-title text-title-sm text-label-lg text-label text-body btn field label hint ipt icon textarea select checkbox radio switch alert alert-icon badge skeleton progress tooltip tooltip-bubble tooltip-icon card panel interactive flush neutral solid soft ghost edged edgeless flat raised floating");

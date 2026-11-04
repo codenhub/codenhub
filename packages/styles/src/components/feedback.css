@@ -135,11 +135,11 @@
 
 /* The track is a box, the fill is not: `box.css`'s formula composes the frame,
    the value fill stays `--intent-color` at full strength with no presentation,
-   same contract as `.loader`/`.skeleton`. `.progress` cannot `@apply box`
+   same contract as `.skeleton`. `.progress` cannot `@apply box`
    (the fill is a `::after`, not the element's own background), so it hand-
    reimplements the formula the way `.quote` does -- see
    docs/internal/model.md#components-that-do-not-take-the-whole-of-box for the
-   decision and why the other three indicators do not get the same treatment. */
+   decision and why the other two indicators do not get the same treatment. */
 @utility progress {
   --_d-fill: 12%;
   --_d-fg-on-fill: 0%;

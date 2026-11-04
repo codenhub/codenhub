@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-15
+last_updated: 2026-11-04
 scope: `@codenhub/styles` styling model, token contracts, and composition rules.
 ---
 
@@ -292,10 +292,10 @@ The number is expected to move. This is a test, not a quota: a bound that passes
 The rules that follow:
 
 - A file other files `@reference` -- `box.css`, `surface.css` -- imports neither the theme nor Tailwind.
-- A file that references Tailwind imports the theme straight after it, so the theme is the last word. `loader.css` and the layout and content utilities, which must not carry the theme or never stand alone, reference neither.
+- A file that references Tailwind imports the theme straight after it, so the theme is the last word. The layout and content utilities, which never stand alone, reference neither.
 - A compiled entry imports the theme before its own `@reference "tailwindcss"`. Tailwind writes the theme's variables where it meets the first `@theme`, and after the reference that is Tailwind's own reference-only one.
 
-`exports.test.ts` holds it: every compiled entry, every `/tw` entry that carries the theme, and the documented `/tw/button` and `/tw/loader` pairing must declare every `--color-*` they read.
+`exports.test.ts` holds it: every compiled entry, and every `/tw` entry that carries the theme must declare every `--color-*` they read.
 
 ## Intent
 
@@ -506,7 +506,7 @@ CSS shipped by the package is placed across Tailwind's four cascade layers, in T
 | `base`       | The reset and the native element styles.                                                                                   |
 | `components` | The four class families: intent (floor, classes, both resets), presentation, elevation, and every aesthetic's token class. |
 | `utilities`  | Every component, and the seams that must beat their own component.                                                         |
-| _unlayered_  | The `forced-colors` and loader reduced-motion overrides, the closed-`<dialog>` restatement, solo classes, and `@property`. |
+| _unlayered_  | The `forced-colors` overrides, the closed-`<dialog>` restatement, solo classes, and `@property`.                           |
 
 So a consumer's own utility, or their unlayered CSS, beats any class of the four families on the same element. A consumer's utility and a component contest one layer, by specificity and then source order: components cannot sit below `utilities`, because `@apply` reaches only `@utility` rules and `box`, `surface`, and `text-control` are applied that way.
 
@@ -520,24 +520,24 @@ Neutral soft surfaces use a private `--_d-surface-ground` instead of writing the
 
 Every component declares its resting pair in the registry. There is no "plain" and no implicit default: a component with no presentation class renders the pair the registry names for it, and that pair is published.
 
-| Component                        | Default        |
-| -------------------------------- | -------------- |
-| `.btn`                           | solid edgeless |
-| `.ipt` `.textarea` `.select`     | ghost edged    |
-| `.input-group`                   | ghost edged    |
-| `.checkbox` `.radio`             | soft edged     |
-| `.switch`                        | soft edged     |
-| `.card`                          | ghost edged    |
-| `.panel`                         | soft edgeless  |
-| `.alert`                         | soft edged     |
-| `.data-table`                    | soft edgeless  |
-| `.tooltip`                       | solid edged    |
-| `.pre` `.code`                   | soft edgeless  |
-| `.kbd`                           | soft edged     |
-| `.badge`                         | soft edgeless  |
-| `.quote`                         | ghost edged    |
-| `.progress`                      | soft edgeless  |
-| `.loader` `.skeleton` `.divider` | n/a            |
+| Component                    | Default        |
+| ---------------------------- | -------------- |
+| `.btn`                       | solid edgeless |
+| `.ipt` `.textarea` `.select` | ghost edged    |
+| `.input-group`               | ghost edged    |
+| `.checkbox` `.radio`         | soft edged     |
+| `.switch`                    | soft edged     |
+| `.card`                      | ghost edged    |
+| `.panel`                     | soft edgeless  |
+| `.alert`                     | soft edged     |
+| `.data-table`                | soft edgeless  |
+| `.tooltip`                   | solid edged    |
+| `.pre` `.code`               | soft edgeless  |
+| `.kbd`                       | soft edged     |
+| `.badge`                     | soft edgeless  |
+| `.quote`                     | ghost edged    |
+| `.progress`                  | soft edgeless  |
+| `.skeleton` `.divider`       | n/a            |
 
 Four of those name a ground as well. `.pre`, `.code` and `.kbd` are not transparent at rest -- each is a quiet tinted block -- and that tone is not a fill of the component's intent, it is `--intent-subtle`. They rest at `soft` over `--_d-ground: var(--intent-subtle)`, the mechanism `surface` uses for its own ground, so the plate is 12% of the intent over that tone and `.solid` fills with the intent. The tooltip bubble names one too, and reads `--ui-surface-ground` ahead of it so a glass tooltip stays glass. The registry records the ground beside the pair.
 
@@ -549,13 +549,15 @@ These authored defaults are decisions, not derivations -- there is no rule that 
 
 `.input-group` is the composition that carries an icon or affix. It is a wrapper that takes the whole of `box` through `text-control`: the group draws the border, radius, fill, focus treatment, invalid and disabled state. The control inside it switches its own paint off -- `--_fill-cap: 0%`, `border: none`, no background, no shadow, and its `:focus-visible` ring suppressed -- so the boundary is drawn once, by the group. It reads the same axes and the same bounds a lone `.ipt` does, so `.input-group.soft.edgeless` is the sunk field and a `.solid` container is still capped at `6%`. Icons are the consumer's: the package paints none, because a `data:` URI resolves no custom property and could not follow the theme or fit every aesthetic.
 
+The package ships no icon or spinner artwork at all; `@codenhub/icons` owns that. Version 0.7.0 still drew ten loader variants as `data:` masks, with still copies for reduced motion -- about 9 KB of source duplicating the `svg-spinners` family `@codenhub/icons` already ships, and a second place to maintain the same artwork. They were removed with `.loader` itself, so a spinner is composed like an alert or field icon. The cost: `svg-spinners` artwork keeps moving under reduced motion, where the package's loaders showed a still frame; `ic-anim-spin` on a static glyph does stop. The checkbox tick and indeterminate dash are the one exception, because an `<input>` cannot hold a child element and its mark can only come from the stylesheet.
+
 Two deviations from a lone field, both because a `<div>` is not a control. `:focus-within` stands in for `:focus-visible`, so the ring also shows on a mouse click. And `:has()` bridges an inner control's `aria-invalid` or `disabled` to the group, because a wrapper cannot see a descendant's state otherwise. `:has(:focus-visible)` is not used for the ring: the inner control only matches `:focus-visible` while the document itself has focus, which makes the ring flicker out whenever focus leaves the page.
 
 ### Components that do not take the whole of `box`
 
-Six of them, and the registry says which rather than leaving it to be found by reading CSS. Three are indicators: `.loader` is a single mask silhouette, `.divider` is a line rather than a box with an inside, and `.skeleton` is a single placeholder gradient. None has a track separate from a value and none reads box presentation. `.progress` alone has a frame holding a measured value: its track takes fill and edge while the value stays at full-strength intent colour. Its `--ui-border-width` override reaches the track just as it reaches other edged components.
+Five of them, and the registry says which rather than leaving it to be found by reading CSS. Two are indicators: `.divider` is a line rather than a box with an inside, and `.skeleton` is a single placeholder gradient. None has a track separate from a value and none reads box presentation. `.progress` alone has a frame holding a measured value: its track takes fill and edge while the value stays at full-strength intent colour. Its `--ui-border-width` override reaches the track just as it reaches other edged components.
 
-`.quote` and `.progress` each compose none of `box`, but both still read `fill` and `edge` -- they reimplement the formula rather than taking it whole. `.quote` cannot take it because `box` draws a border on four sides and a quotation wants one; a radius, a clip and a shadow are inert on a left bar as well, so what is left of `box` after removing the border is not worth composing. `.progress` cannot because its value fill is a `::after`, not the element's own background, so there is nowhere for `box`'s single `--_bg` to land without also painting behind the value it measures. Only the track -- the element's own box -- composes the formula; the value fill stays `--intent-color` at full strength, the same contract `.loader` and `.skeleton` have.
+`.quote` and `.progress` each compose none of `box`, but both still read `fill` and `edge` -- they reimplement the formula rather than taking it whole. `.quote` cannot take it because `box` draws a border on four sides and a quotation wants one; a radius, a clip and a shadow are inert on a left bar as well, so what is left of `box` after removing the border is not worth composing. `.progress` cannot because its value fill is a `::after`, not the element's own background, so there is nowhere for `box`'s single `--_bg` to land without also painting behind the value it measures. Only the track -- the element's own box -- composes the formula; the value fill stays `--intent-color` at full strength, the same contract `.skeleton` has.
 
 The cost is that each reimplements the fill and the edge blend, and every copy has to agree with `box`. Each registry entry says so, so an edge change knows how many places it has: `box`, `.quote`, and `.progress`.
 
@@ -637,7 +639,6 @@ The table component is `.data-table`, not `.table`: an `@utility table` would re
 | `box-active`   | The `:active` press: the base `scale(0.97)`, or the aesthetic's active shadow and transform. `btn`, and `.card.interactive` / `.card.pressable`. |
 | `surface`      | `box` plus the surface-only slots: ground, backdrop, surface shadow.                                                                             |
 | `text-control` | `box` plus the fill cap, the edge floor, and the field affordances all six text controls share.                                                  |
-| `loader-mask`  | The spinner artwork, as a mask so it takes the element's own color.                                                                              |
 
 They are the seam the components are built from, and a consumer composing a component the package does not ship is better served by them than by copying a component's declarations. What they are not is a taxonomy: applying `box` says how an element is painted, not what kind of thing it is.
 

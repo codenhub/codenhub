@@ -257,14 +257,6 @@ const COMPONENTS = {
     attrs: () => ({ "aria-hidden": "true" }),
     states: {},
   },
-  /* A loader is a coloured mask and nothing else: no fill, no edge, no
-     silhouette. */
-  loader: {
-    tag: "span",
-    presentations: INTENT_ONLY,
-    attrs: (intent) => ({ role: "img", "aria-label": `${title(intent)} loader` }),
-    states: {},
-  },
   /* `.tooltip` is a wrapper around a real trigger and a real `.tooltip-bubble`,
      not a single classed host -- see `docs/usage/tooltips.md`. The cell is the
      wrapper; intent lives on the bubble inside it. */
@@ -322,7 +314,7 @@ const buildCell = (key, component, intent, presentation, state) => {
   } else if (component.text) {
     element.textContent = component.text(intent);
   } else {
-    /* Cells with no text of their own — a toggle, a loader, a divider — are told
+    /* Cells with no text of their own — a toggle, a divider — are told
        apart by position alone, so the intent has to be readable some other way. */
     element.title = title(intent);
   }

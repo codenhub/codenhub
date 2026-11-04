@@ -25,7 +25,6 @@ test("defines every intent slot on each component that reads them", async ({ pag
       "switch",
       "progress",
       "skeleton",
-      "loader",
       "ipt",
       "textarea",
       "select",

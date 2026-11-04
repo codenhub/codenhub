@@ -128,54 +128,6 @@ test.describe("feedback", () => {
     expect(styles.softEdgedBorderWidth).toBe(styles.defaultBorderWidth);
   });
 
-  /* A loader used to be a bordered box wrapped around a masked pseudo-element,
-     and it read every presentation class through that box. It is now the mask
-     itself: a coloured shape with no fill, no edge and no silhouette. The
-     presentation coverage is not narrowed but inverted -- what has to hold is
-     that no presentation class moves it at all. */
-  test("keeps a loader on intent alone, whatever presentation is in scope", async ({ page }) => {
-    await page.goto(FEEDBACK_URL);
-
-    const measured = await page.evaluate(() => {
-      const host = document.querySelector('[data-testid="preview-root"]')!;
-      const read = (presentation: string) => {
-        const loader = document.createElement("span");
-
-        loader.className = `loader primary ${presentation}`.trim();
-        host.append(loader);
-
-        const styles = getComputedStyle(loader);
-        const result = {
-          background: styles.backgroundColor,
-          borderWidth: styles.borderTopWidth,
-          presentation: presentation || "default",
-        };
-
-        loader.remove();
-
-        return result;
-      };
-      const probe = document.createElement("span");
-
-      probe.style.color = "var(--color-primary)";
-      host.append(probe);
-
-      const intent = getComputedStyle(probe).color;
-
-      probe.remove();
-
-      return {
-        intent,
-        variants: ["", "solid edged", "soft edged", "ghost edged", "ghost edgeless"].map(read),
-      };
-    });
-
-    for (const variant of measured.variants) {
-      expect(variant.borderWidth, `${variant.presentation} border`).toBe("0px");
-      expectSameColor(variant.background, measured.intent, `${variant.presentation} loader colour`);
-    }
-  });
-
   /* An indicator reads intent and no presentation token at all: it stands in for
      content rather than being a box with a look, so there is nothing a fill or an
      edge class has to say about it. The floor that used to keep an unfilled
@@ -214,116 +166,6 @@ test.describe("feedback", () => {
     expect(styles.solidEdged.border, "no edge to draw").toBe("0px");
     /* Intent is the one axis it does read. */
     expect(styles.secondary.image).not.toBe(styles.plain.image);
-  });
-
-  test("sizes loaders and renders every loader variant", async ({ page }) => {
-    await page.goto(FEEDBACK_URL);
-
-    const loaderWidths = await Promise.all(
-      ["loader-sm", "loader-default", "loader-lg"].map((testId) =>
-        page.getByTestId(testId).evaluate((element) => getComputedStyle(element).width),
-      ),
-    );
-    /* The artwork is the element's own mask now, not a pseudo-element's. */
-    const loaderDefaultMask = await page.getByTestId("loader-default").evaluate((element) => {
-      const styles = getComputedStyle(element);
-
-      return styles.maskImage || styles.getPropertyValue("-webkit-mask-image") || "none";
-    });
-    const variantIds = [
-      "loader-dots-wave",
-      "loader-dots-fade",
-      "loader-dots-queue",
-      "loader-dots-rotate",
-      "loader-dots-grow",
-      "loader-dots-grow-alternate",
-      "loader-dot-bounce",
-      "loader-bars-wave",
-      "loader-pulse-ring",
-    ];
-    const variantImages = await Promise.all(
-      variantIds.map((testId) =>
-        page.getByTestId(testId).evaluate((element) => getComputedStyle(element).getPropertyValue("--loader-art")),
-      ),
-    );
-
-    expect(loaderWidths).toEqual(["20px", "28px", "36px"]);
-    expect(loaderDefaultMask).not.toBe("none");
-    for (const [index, image] of variantImages.entries()) {
-      expect(image, variantIds[index]).toContain("data:image/svg+xml");
-    }
-  });
-
-  test("preserves a distinct mask for every loader variant", async ({ page }) => {
-    await page.goto(FEEDBACK_URL);
-
-    const testIds = [
-      "loader-default",
-      "loader-dots-wave",
-      "loader-dots-fade",
-      "loader-dots-queue",
-      "loader-dots-rotate",
-      "loader-dots-grow",
-      "loader-dots-grow-alternate",
-      "loader-dot-bounce",
-      "loader-bars-wave",
-      "loader-pulse-ring",
-    ];
-    const images = await Promise.all(
-      testIds.map((testId) =>
-        page.getByTestId(testId).evaluate((element) => getComputedStyle(element).getPropertyValue("--loader-art")),
-      ),
-    );
-
-    expect(new Set(images).size).toBe(testIds.length);
-  });
-
-  /* The artwork's closing `style` tag ships percent-encoded so the stylesheet
-     survives being inlined into an HTML `<style>` element. A data URI decodes
-     the escape before the SVG is parsed; an image that failed to parse would
-     reject `decode()` and mask nothing. */
-  test("decodes every loader artwork", async ({ page }) => {
-    await page.goto(FEEDBACK_URL);
-
-    const results = await page.evaluate(async () => {
-      const testIds = [
-        "loader-default",
-        "loader-dots-wave",
-        "loader-dots-fade",
-        "loader-dots-queue",
-        "loader-dots-rotate",
-        "loader-dots-grow",
-        "loader-dots-grow-alternate",
-        "loader-dot-bounce",
-        "loader-bars-wave",
-        "loader-pulse-ring",
-      ];
-
-      return Promise.all(
-        testIds.map(async (testId) => {
-          /* The mask, not `--loader-art`: a custom property reads back as
-             authored, and the dev server's CSS pipeline authors `<` as the
-             CSS escape `\3c `, which is not a URL character. */
-          const styles = getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
-          const mask = styles.maskImage || styles.getPropertyValue("-webkit-mask-image");
-          const source = /^url\(\s*(["']?)(.*)\1\s*\)$/s.exec(mask)?.[2] ?? "";
-          const image = new Image();
-
-          image.src = source;
-
-          try {
-            await image.decode();
-            return { testId, decoded: image.naturalWidth > 0 };
-          } catch {
-            return { testId, decoded: false };
-          }
-        }),
-      );
-    });
-
-    for (const { testId, decoded } of results) {
-      expect(decoded, testId).toBe(true);
-    }
   });
 
   test("renders every alert fill", async ({ page }) => {
@@ -535,7 +377,7 @@ test.describe("feedback", () => {
     expectSameColor(values.progressBg, values.tokenText, "no-intent progress fill");
   });
 
-  test("colors progress fills and loaders by intent", async ({ page }) => {
+  test("colors progress fills by intent", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 
     const styles = await page.evaluate(() => {
@@ -551,8 +393,6 @@ test.describe("feedback", () => {
         getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!, "::after").backgroundColor;
 
       return {
-        /* The loader is the mask, so its own background is the colour. */
-        loader: getComputedStyle(document.querySelector('[data-testid="loader-default-success"]')!).backgroundColor,
         progressDestructive: fill("progress-default-destructive"),
         progressInfo: fill("progress-default-info"),
         progressPrimary: fill("progress-default-primary"),
@@ -568,7 +408,6 @@ test.describe("feedback", () => {
       };
     });
 
-    expectSameColor(styles.loader, styles.tokenSuccess, "loader intent color");
     expect(styles.progressPrimary).toBe(styles.tokenPrimary);
     expect(styles.progressSecondary).toBe(styles.tokenSecondary);
     expect(styles.progressSuccess).toBe(styles.tokenSuccess);

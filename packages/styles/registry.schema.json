@@ -170,13 +170,6 @@
               }
             }
           },
-          "art": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Indicator artwork variants, which are not a presentation."
-          },
           "native": {
             "type": "array",
             "items": {

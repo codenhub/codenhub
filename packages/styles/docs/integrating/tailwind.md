@@ -44,7 +44,6 @@ Unlike `/tw`, the focused entrypoints and `/tw/native` do not import Tailwind, s
 ```css
 @import "tailwindcss";
 @import "@codenhub/styles/tw/button";
-@import "@codenhub/styles/tw/loader";
 ```
 
 ## Troubleshooting

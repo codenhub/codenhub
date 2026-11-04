@@ -113,11 +113,6 @@
       "import": "./dist/tw/components/feedback.css",
       "default": "./dist/tw/components/feedback.css"
     },
-    "./tw/loader": {
-      "style": "./dist/tw/components/loader.css",
-      "import": "./dist/tw/components/loader.css",
-      "default": "./dist/tw/components/loader.css"
-    },
     "./tw/tooltip": {
       "style": "./dist/tw/components/tooltip.css",
       "import": "./dist/tw/components/tooltip.css",

@@ -51,4 +51,4 @@ This package has no JavaScript behavior. It ships no compatibility aliases: a re
 
 ## License
 
-Licensed under Apache-2.0. Embedded SVG icons derived from [Lucide](https://lucide.dev) are ISC-licensed, and loaders derived from [svg-spinners](https://github.com/n3r4zzurr0/svg-spinners) are MIT-licensed. See [NOTICE](NOTICE) for the required notices.
+Licensed under Apache-2.0. The embedded checkbox marks are derived from [Lucide](https://lucide.dev) and are ISC-licensed. See [NOTICE](NOTICE) for the required notices.

@@ -177,27 +177,6 @@
       "axes": ["fill", "edge"]
     },
     {
-      "class": "loader",
-      "default": {
-        "elevation": 0
-      },
-      "art": [
-        "dots-wave",
-        "dots-fade",
-        "dots-queue",
-        "dots-rotate",
-        "dots-grow",
-        "dots-grow-alternate",
-        "dot-bounce",
-        "bars-wave",
-        "pulse-ring"
-      ],
-      "native": [],
-      "composition": "none",
-      "compositionReason": "An indicator paints only its artwork and has no box presentation.",
-      "axes": []
-    },
-    {
       "class": "textarea",
       "default": {
         "fill": "ghost",
