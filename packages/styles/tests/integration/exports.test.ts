@@ -773,10 +773,10 @@ test("compiled entrypoints declare every documented colour and foundation token"
 /* Tailwind's content detection scans the whole package directory, and the
    compiled entrypoints narrow it back to `src/` with `@source not`. A miss in
    that list leaks: a `--color-<family>-<shade>` that appears only in a docs
-   example -- the violet ramp in `docs/usage/theming.md`'s custom-intent block --
-   compiles into a real `@theme` entry in the shipped CSS. This holds every
-   palette color the build declares to one the stylesheet source actually
-   references (comments included, because Tailwind scans those too). */
+   example compiles into a real `@theme` entry in the shipped CSS, so no color
+   ramp a documentation example names may reach the compiled theme. This holds
+   every palette color the build declares to one the stylesheet source
+   actually references (comments included, because Tailwind scans those too). */
 test("compiled entrypoints ship only palette colors the source references", async () => {
   const sourceDirectory = path.resolve(packageRoot, "src");
   const sourceFiles = (await readdir(sourceDirectory, { recursive: true })).filter(
