@@ -1,14 +1,14 @@
 ---
 status: APPROVED
-last_updated: 2026-10-07
-scope: What `@codenhub/validation` builds toward, what it takes to release 0.4.0, and what it takes to reach 1.0.
+last_updated: 2026-11-04
+scope: What `@codenhub/validation` builds toward, what it takes to release 0.5.0, and what it takes to reach 1.0.
 ---
 
 # Roadmap
 
 ## Purpose
 
-This records what `@codenhub/validation` is building toward, what it takes to release 0.4.0, and what it takes to reach 1.0. The design it builds toward, and why, is in [architecture.md](architecture.md). Nothing in it names a consuming package: the package is for any package or app that has to check a value, and a list of expected adopters would go stale and imply they are the only ones.
+This records what `@codenhub/validation` is building toward, what it takes to release 0.5.0, and what it takes to reach 1.0. The design it builds toward, and why, is in [architecture.md](architecture.md). Nothing in it names a consuming package: the package is for any package or app that has to check a value, and a list of expected adopters would go stale and imply they are the only ones.
 
 ## Direction
 
@@ -22,14 +22,11 @@ This records what `@codenhub/validation` is building toward, what it takes to re
 
 ## Current Focus
 
-**0.4.0 is in a restructure phase, and it is released when we can say "this is the best package we can build".** It will not be the last word: there will be improvements after it. The bar is that nobody working on it can see anything left that would significantly improve the package. Until then, everything that bar finds goes into 0.4.0 rather than a later minor, signatures included, since nothing of 0.4.0 is published and no caller has to migrate twice.
+**0.5.0 fixes what the audit before release found in 0.4.x.** 0.4.0 was released on 2026-10-09 and 0.4.1, which changed no code, on 2026-11-03. Since then, fixes have landed that break a caller, so the next release is 0.5.0 rather than 0.4.2, as [Versioning until 1.0](#versioning-until-10) asks. Four of them break: `pick`, `omit` and their kin merge the options given to them, `encode` writes a codec back through its output, `toJsonSchema` writes a schema that readers compile and agree with, and a recursion that waits between levels is held to `maxDepth`. The audit that found them, on 2026-11-04, is not kept in the repository; each fix records its case in its test and, where it changed a decision, in [architecture.md](architecture.md). The 0.5.0 changelog lists them when the release is cut.
 
-[0.4.0.md](0.4.0.md) is the spec of that work, in the order it is built. Its first six steps came from measuring the package against valibot, zod and yup on 2026-10-07 and are built. Its second pass, steps 7 to 13, came from a second comparison the same day, which asked what they still had that a consumer would choose them for, and is built. Its third pass, steps 14 to 18, came from a third, which asked when a consumer would still choose them, and found mostly reach: what the package does best cannot be had without the rest of it, and the first call of a form or a hand-off still asks for more than theirs do. Each step is its own pull request, in the order its dependencies need, and step 18, a measurement, was dropped by what it measured. The [0.4.0 changelog](../changelog/0.4.0.md) is kept current with what is built, and the package's version is 0.4.0. It is not published: the workspace catalog and the packages that depend on this one stay on 0.3.0 until it is.
+0.5.0 is released when:
 
-0.4.0 is released when:
-
-- Every step of [0.4.0.md](0.4.0.md) is built, or dropped with its reason and measurement recorded there.
-- `README.md` and every public page describe 0.4.0 as it ships, `llms.txt` and `llms-full.txt` are current, and the examples of the docs type-check and run against the built package.
+- `README.md` and every public page describe 0.5.0 as it ships, the translations are current with them, `llms.txt` and `llms-full.txt` are current, and the examples of the docs type-check and run against the built package.
 - `pnpm verify` passes, the changelog entry describes the release as it ships, with its date, and `hub release validation` reports it ready.
 
 ### No comparison with other libraries
@@ -44,18 +41,18 @@ The measurements of 2026-10-07 stay in [0.4.0.md](0.4.0.md) as the evidence for 
 
 ## Versioning until 1.0
 
-0.4.0 is the API, and everything after its release is a 0.4.x release: fixes, new validators, new checks, new options, better messages. A change that would break a caller means the design missed something, as 0.4.0 was for 0.3.0, which had no type for what a validator accepts, and it is the next minor and a signal to revisit [architecture.md](architecture.md), not a routine event. What counts as breaking for a format is set by [Compatibility of a format](architecture.md#compatibility-of-a-format).
+0.5.0 is the API, and everything after its release is a 0.5.x release: fixes, new validators, new checks, new options, better messages. A change that would break a caller means the design missed something, as 0.4.0 was for 0.3.0, which had no type for what a validator accepts, and 0.5.0 for 0.4.x, whose audit found values passed or failed wrongly; it is the next minor and a signal to revisit [architecture.md](architecture.md), not a routine event. What counts as breaking for a format is set by [Compatibility of a format](architecture.md#compatibility-of-a-format).
 
 1.0 is not a date and not a promise made on release day. It is declared when the API has been used for real, by more than one consumer, through enough releases to have shown where it was wrong:
 
-- Every release since 0.4.0 has been additive or a fix, with no change to an existing signature, issue code or `params` shape.
+- Every release since 0.5.0 has been additive or a fix, with no change to an existing signature, issue code or `params` shape.
 - Validators in this package have been used by more than one package and by at least one app or site validating forms or an integration, and what they found is fixed.
 - The public docs have not needed a correction to what an existing validator does.
 - No document under `docs/internal/` is still a `DRAFT`.
 
 ## Later / Possible
 
-Each is additive, so it fits a 0.4.x release. When the release bar of [Current Focus](#current-focus) finds that an item here would significantly improve the package, that item moves into 0.4.0 instead.
+Each is additive, so it fits a 0.5.x release.
 
 - **A page on accepting a validator.** What a package that takes one from its caller declares, `Validator<T>` or a Standard Schema, how it reports a failure, and what it costs when the caller passes none.
 
