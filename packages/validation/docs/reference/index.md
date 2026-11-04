@@ -54,11 +54,11 @@ export declare function audit(validator: AnyValidator): readonly AuditFinding[];
 
 Finds where a schema accepts input of a size nothing bounds, so a test can hold a schema for input nobody controls to the bounds it needs.
 
-Input that passes a validator is validated in full, so a body of a million items, or of text a gigabyte long, costs what its size costs. Each array, set, map, record and text needs a `max` or a `length`, and a tuple with `rest` a `max`, and a `file` a `maxSize`, unless something before it bounds it: text read by `json` or `searchParams` inside `pipe(string({ max }), ...)`, and everything inside it, is bounded by that `max`. A tuple without `rest` has its length already. Formats whose input is bounded by what they accept, such as `email`, `uuid` and `ip`, need none; others, such as `url`, `hex` and `jwt`, are text like any other.
+Input that passes a validator is validated in full, so a body of a million items, or of text a gigabyte long, costs what its size costs. Each array, set, map, record and text needs a `max` or a `length`, and a tuple with `rest` a `max`, and a `file` a `maxSize`, unless something before it bounds it: text read by `json` or `searchParams` inside `pipe(string({ max }), ...)`, and everything inside it, is bounded by that `max`. A collection's `max` bounds how many items a collection after it has, not what they hold. A tuple without `rest` has its length already. Formats whose input is bounded by what they accept, such as `email`, `uuid` and `ip`, need none; others, such as `url`, `hex` and `jwt`, are text like any other, and so is one made with `format`, whatever its name.
 
 Text read by `coerceBigint` needs a bound on each side, since converting it takes longer than linear time in its length, and a bound limits the digits converted.
 
-It reads the schema and never calls it. Whether a `max` is small enough is not its to judge: any number says someone decided. A check is not read, since it runs on a value that already passed. It lists the bounds an option can set, so it does not report the keys an `object` with `unknownKeys: "passthrough"` keeps, nor what `unknown()` accepts: neither has an option that bounds it. Use `"strip"` or `"strict"` for keys the schema does not name, and a validator of the type you expect in place of `unknown()`.
+It reads the schema and never calls it, though it calls the getter of each `lazy` twice, to tell a schema built anew at every level from one built once. Whether a `max` is small enough is not its to judge: any number says someone decided. A check is not read, since it runs on a value that already passed. It lists the bounds an option can set, so it does not report the keys an `object` with `unknownKeys: "passthrough"` keeps, nor what `unknown()` accepts: neither has an option that bounds it. Use `"strip"` or `"strict"` for keys the schema does not name, and a validator of the type you expect in place of `unknown()`.
 
 **Parameters**
 
@@ -129,7 +129,7 @@ export declare function is(validator: Validator<unknown>, input: unknown): boole
 
 Tests whether an input passes a validator.
 
-It returns a `boolean` and narrows nothing. A type guard says two things, that a value that passes is of the type and that one that fails is not, and the second is false of a validator: `string({ min: 3 })` refuses `"ab"`, which is a string. Where the type is wanted, read `result.value` from calling the validator, or write the guard for the one type you mean, as below.
+It returns a `boolean` and narrows nothing. A type guard says two things, that a value that passes is of the type and that one that fails is not, and the second is false of a validator: `string({ min: 3 })` refuses `"ab"`, which is a string. Where the type is wanted, read `result.value` from calling the validator, as below.
 
 **Parameters**
 
@@ -143,10 +143,15 @@ It returns a `boolean` and narrows nothing. A type guard says two things, that a
 **Example**
 
 ```ts
-const isPort = (input: unknown): input is number => is(number({ int: true, min: 1, max: 65535 }), input);
+const port = number({ int: true, min: 1, max: 65535 });
 
-if (is(email(), value)) {
+if (is(port, value)) {
   // value passes, and is still typed as it was
+}
+
+const result = port(value);
+if (result.ok) {
+  const chosen: number = result.value;
 }
 ```
 
