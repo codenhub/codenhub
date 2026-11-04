@@ -273,11 +273,15 @@ To build a component the package does not ship, such as a segmented control or a
 | `surface`      | `box` with a surface's defaults: no fill and a border, the surface corner, and the aesthetic's surface background, blur, and shadow, as on a card.                                         |
 | `text-control` | `box` with a text field's defaults: no fill and a border, the capped fill and border rules, placeholder color, a border that changes on hover and focus, and the invalid state.            |
 
-A filter chip for the members list:
+Filter chips for the members list, one pressed and one not:
 
 ```html
 <button class="box box-hover box-active neutral soft edgeless" type="button" aria-pressed="true" style="padding: 0.25rem 0.75rem; border-radius: 999px">Admins</button>
+
+<button class="box box-hover box-active neutral ghost edgeless" type="button" aria-pressed="false" style="padding: 0.25rem 0.75rem; border-radius: 999px">Owners</button>
 ```
+
+`box` does not read `aria-pressed`, so the pressed chip looks pressed only because it has `.soft`. When your code changes `aria-pressed`, change the presentation class with it: `.soft` when pressed, `.ghost` when not.
 
 What to give each one:
 
