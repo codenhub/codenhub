@@ -574,4 +574,4 @@ The map defaults to `englishMessages`. Until 0.4.0 it was required, as it was by
 6. Report every failing constraint, not the first.
 7. Tests beside it: accepted values, rejected values, edge cases, the exact issue shape, the `message` option, and that no issue contains the input. A format that returns a parser's reading also gets a case in `src/formats/parser-agreement.test.ts`.
 8. Add it to the size budgets if it adds a scenario a consumer would plausibly bundle alone.
-9. Document it in `docs/validators.md`, and the wording for its issue shape in `messages/english-messages.ts`.
+9. Document it on the public page that covers its kind, such as `docs/formats.md` for a format or `docs/getting-started.md` for a primitive or a check, and the wording for its issue shape in `messages/english-messages.ts`.

@@ -1,15 +1,25 @@
 ---
 title: Overview
-description: What the validation package does, how to read a result, and where to go next.
+description: What the validation package is for, how to install it, and the order to read its pages in.
 ---
 
 # Validate values and shapes
 
-`@codenhub/validation` answers one question: is this value what I said it should be? You hand a value to a validator and get back either that value, typed, or a complete list of what is wrong with it. It works the same for one value, such as an email address or a port number, and for a whole object such as a form or a request body.
+`@codenhub/validation` answers one question: is this value what I said it should be? You give a value to a validator. You get back either that value, typed, or a complete list of what is wrong with it.
 
-This matters wherever data crosses a boundary you do not control: a request, a form, a query string, an environment variable, a file, a message from another service. TypeScript cannot check those at runtime, so the type you wrote for them is a promise nothing enforces until a validator does.
+It works the same for one value, such as an email address or a port number, and for a whole object, such as a form or a request body.
 
-The package is built for that boundary, where the input may be hostile. `email()` and `url()` return what the platform's URL parser read, so the value you store is the one a request or a mail server will use. What a failing input costs is bounded: a long list of bad items stops at 1,000 issues, and input nested too deep is one issue and never a stack overflow, while input that passes is checked in full, so give collections a `max`. An issue the package reports never holds the value that failed, so a log of failures holds no passwords; it does name the input's properties, in `path`, and a check you write decides what its own issue holds.
+## Why validate
+
+Data that crosses a boundary you do not control can hold anything: a request, a form, a query string, an environment variable, a file, a message from another service. TypeScript checks types when you compile, not when the program runs. So the type you wrote for that data is a promise that nothing enforces, until a validator does.
+
+The package is built for that boundary, where the input may be hostile:
+
+- **A format gives you what the parser read.** `email()` and `url()` produce the value the platform's URL parser reads. The value you store is the one a request or a mail server will use.
+- **A failing input has a bounded cost.** A long list of bad items stops at 1,000 issues. Input nested too deep is one issue, never a stack overflow.
+- **An issue never holds a value of the input.** A log of failures holds no passwords. An issue does name the input's keys, in its `path`.
+
+Input that passes is checked in full, so a large valid input still costs its size. [Limits](limits.md) says how to bound it.
 
 ## Installation
 
@@ -17,130 +27,39 @@ The package is built for that boundary, where the input may be hostile. `email()
 pnpm add @codenhub/validation
 ```
 
-The package is ESM only and has no dependencies. Its types need TypeScript 5.0 or newer. Everything is imported by name from `@codenhub/validation`; the only other export is `@codenhub/validation/package.json`, for tools that read the version.
+The package is ESM only and has no dependencies. Its types need TypeScript 5.0 or newer. Everything is imported by name from `@codenhub/validation`. The only other export is `@codenhub/validation/package.json`, for tools that read the version.
 
-## A validator is a function
-
-Every validator takes any input and returns a result. That is the whole idea, and it has two consequences worth knowing up front.
-
-You create a validator by calling a function, with options if you want them, and then you call the validator with the value:
+## A first validator
 
 ```ts
-import { number, string } from "@codenhub/validation";
-
-const port = number({ int: true, min: 1, max: 65535 });
-
-port(8080); // { ok: true, value: 8080 }
-port(70000); // { ok: false, error: { issues: [...] } }
-
-string({ min: 3 })("ab"); // { ok: false, ... }
-```
-
-Every validator takes its arguments in the same order: its own, such as the shape of an object, then options, then checks, which are rules for the rarer cases, such as `string({ min: 3 }, startsWith("a"))`. Options and checks can both be left out.
-
-The first line of that example runs once, when the module loads, and produces a function you can reuse for every value. When you only need to check a single value once, call both at once: `number({ int: true })(input)`.
-
-Because a validator is only a function, you can write your own with no helper at all, and you can pass any validator wherever another expects one. [Custom validators](custom-validators.md) shows how.
-
-## Reading the result
-
-A result is one of two plain objects, so you branch on `ok`:
-
-```ts
-import { email, formatIssue } from "@codenhub/validation";
-
-const result = email()(input);
-
-if (result.ok) {
-  save(result.value); // typed as string
-} else {
-  for (const issue of result.error.issues) {
-    console.log(issue.path, formatIssue(issue));
-  }
-}
-```
-
-A validator never throws for invalid input, because invalid input is an expected outcome and not a bug. The one exception is input that runs code of its own while it is read, a getter or a `Proxy` trap that throws: that exception propagates, as one from your own callback does, except in `objectLike`, which reports a property it could not read as an issue, and `instanceOf`, which rejects the value with `invalid_type` when its prototype trap, or the `Symbol.hasInstance` of the class, throws. Data parsed from JSON has no such code. If you would rather stop the program, that is one line: `if (!result.ok) throw new Error(...)`.
-
-`result.value` is not necessarily the input you passed in. It is the value after the validator has run, with any clean-up you asked for applied (`trim`, `case`, `clamp`) and, for an object, unlisted properties dropped. A format with several spellings produces one: `email` and `url` produce what the URL parser reads, such as a lowercase domain, and `phone` produces `+` and the digits, so a check made later on the value sees what a mail server or a request will, and one value is one string. The input is never modified.
-
-When something is wrong, the validator reports every problem it can find and not just the first, so a form can show all its errors at once. Each issue has a stable `code` to branch on, the `path` to the offending value, and `params` describing what was wrong. Give a validator a `message` option for a sentence of its own, as in `string({ min: 2, message: "Enter your full name" })`, or word every issue at once with a message map. [Issues and messages](errors.md) has the details.
-
-## Objects
-
-`object` takes a shape, an object whose values are validators, and returns a validator for objects of that shape:
-
-```ts
-import { email, number, object, optional, string, type Infer } from "@codenhub/validation";
+import { email, object, string } from "@codenhub/validation";
 
 const signup = object({
-  username: string({ trim: true, min: 3, max: 30 }),
+  name: string({ trim: true, min: 2, max: 100 }),
   email: email(),
-  age: optional(number({ int: true, min: 18 })),
 });
 
-export type Signup = Infer<typeof signup>;
+signup({ name: "  Ada ", email: "ada@example.com" }); // { ok: true, value: { name: "Ada", email: "ada@example.com" } }
+signup({ name: "A", email: "nope" }); // { ok: false, ... }, code "too_small"
 ```
 
-`Infer` reads the TypeScript type a validator produces, so the validator is the single source of truth and there is no separate interface to keep in sync. Here `Signup` has a required `username` and `email` and an optional `age`.
+These pages follow one example: the sign-up of a web app. It starts here as two fields. Each page adds what that page teaches, such as a form with a password check, a JSON request body, the server's configuration and the messages a user reads.
 
-Issue paths lead down to the offending value, so a problem with `email` has the path `["email"]` and one inside a list has segments such as `["addresses", 0, "street"]`.
+## Reading path
 
-`object` accepts plain objects only: created by `{}`, `Object.create(null)` or `JSON.parse`, in this realm or another such as an iframe. Arrays, class instances, `Map`s and `null` are rejected. Properties the shape does not list are dropped from the output by default; the [validator reference](validators.md#objects) shows how to reject them or keep them.
+Read the pages in this order to learn the package from start to end, or jump to the one you need:
 
-## Combining validators
+1. [Getting started](getting-started.md): what a validator is, how to read its result, and the validators for strings, numbers, dates, fixed values and objects.
+2. [Forms](forms.md): rules across fields, optional fields and defaults, errors per field, files, and the types of a form.
+3. [Request bodies](request-bodies.md): JSON text, lists and dictionaries, a choice between shapes, and recursive data.
+4. [Text input](text-input.md): numbers, flags and dates that arrive as text, from environment variables, query strings and form fields.
+5. [Issues and messages](errors.md): what a failed result holds, the built-in codes, and the text a person reads, in English, in Portuguese or in your own words.
+6. [Custom validators](custom-validators.md): rules, formats and types of your own, asynchronous rules, and how to test them.
+7. [Formats](formats.md): every built-in format, such as `email`, `url`, `ip` and `datetime`, what each accepts and what it produces.
+8. [Shaping values](shaping-values.md): changing a value, writing it back, marking its type, describing it, and deriving one object from another.
+9. [Standard Schema](standard-schema.md): give a validator to any library that accepts a Standard Schema.
+10. [JSON Schema](json-schema.md): write a validator as a JSON Schema, and read what a validator is made of.
+11. [Integrations](integrations.md): use a validator with react-hook-form, TanStack Form, tRPC, Hono, the AI SDK, the Model Context Protocol, OpenAPI, zod and valibot.
+12. [Limits](limits.md): what input that may be hostile costs, the limits of recursive data, and how to check a schema for the bounds it needs.
 
-A few functions combine validators into new ones:
-
-- `optional(validator)`, `nullable(validator)` and `nullish(validator)` accept `undefined`, `null` or both as well, and `optional(validator, value)` replaces a missing value with a default.
-- `brand(validator, name)` marks the type a validator produces, so only a validated value is accepted where that type is asked for, and `readonly(validator)` makes what it produces read-only in its type and freezes the object or array the validator made.
-- `pipe(a, b, c)` runs validators in order, feeding each the value the previous one produced. This is how you clean a string before checking a format: `pipe(string({ trim: true, case: "lower" }), email())`.
-- `check(test, issue)` adds a rule the validator cannot express, given to the validator after its options, and `checkFields(keys, test, issue)` one across properties of an object, such as two fields having to match, that runs as soon as those properties have passed, and `transform(validator, convert)` changes the value into another.
-- `array`, `tuple`, `record`, `set` and `map` validate collections, and `union`, `tagged` and `intersection` choose between or merge validators.
-- `url` and `email` take validators for their parts, such as `url({ host: hostname() })` to accept local hosts, and `searchParams` reads a query string into typed values.
-
-The [validator reference](validators.md) covers every one.
-
-## Sync and async
-
-A validator is synchronous unless something it runs is asynchronous. Checking a username against a database is asynchronous; checking its length is not. You do not pick a mode: you write the rule, and the types follow. A validator that contains an async rule is an `AsyncValidator`, its result must be `await`ed, and the compiler stops you from reading it as if it were ready. Everything else stays synchronous and pays nothing. [Custom validators](custom-validators.md#asynchronous-rules) has an example.
-
-## Testing whether a value passes
-
-When you only need a yes or no, use `is`:
-
-```ts
-import { is, number } from "@codenhub/validation";
-
-const isPort = (input: unknown): boolean => is(number({ int: true, min: 1, max: 65535 }), input);
-```
-
-`is` returns a `boolean` and does not narrow its input, and `isPort` is no type guard for the same reason: a type guard also says that a value that fails is not of the type, which is false of a validator, since `isPort(70000)` is false for a number. Read `result.value` from calling the validator where you want the typed value. `is` accepts synchronous validators only.
-
-## Throwing for invalid configuration
-
-A validator reports invalid input in its result instead of throwing, and only code the input carries, a getter or a `Proxy` trap that throws while it is read, propagates an exception. When invalid input is a mistake of the caller, such as an options object passed to your function, `assert` returns the value or throws a `TypeError` that names the problem and where it is:
-
-```ts
-import { assert, englishMessages, number, object } from "@codenhub/validation";
-
-const options = object({ port: number({ int: true, min: 1, max: 65535 }) });
-
-assert(options, { port: 8080 }, { subject: "createServer:", messages: englishMessages }); // { port: 8080 }
-assert(options, { port: 0 }, { subject: "createServer:", messages: englishMessages });
-// TypeError: createServer: port: Must be at least 1
-```
-
-[Issues and messages](errors.md#throwing-for-invalid-configuration) covers the message, and how to bundle only the wording you need.
-
-## Next steps
-
-- [Validator reference](validators.md): every validator and combinator, with its options and the issue it reports.
-- [Custom validators](custom-validators.md): add rules with `check`, build validators with `format` and `guard`, and validate asynchronously.
-- [Coercion](coercion.md): validate text input such as environment variables, query strings and form fields by converting it.
-- [Standard Schema](standard-schema.md): use a validator wherever a library accepts a Standard Schema.
-- [JSON Schema](json-schema.md): write a validator as a JSON Schema, for an HTTP API, the tools of a language model or a form generator.
-- [Integrations](integrations.md): use a validator with react-hook-form, TanStack Form, tRPC, Hono, the AI SDK, the Model Context Protocol and OpenAPI.
-- [Issues and messages](errors.md): the shape of an issue, the built-in codes, message text, localization and form errors.
-- [API reference](reference/index.md): every export with its signature and documentation, generated from the source.
-- [Changelog](changelog/index.md): release notes, and the migrations from 0.1.0 and from 0.0.1.
+To look up one export, use the [API reference](reference/index.md), generated from the source. The [changelog](changelog/index.md) lists every release and the migrations between them.
