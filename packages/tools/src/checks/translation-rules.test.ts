@@ -87,6 +87,17 @@ describe("translation rule", () => {
     ]);
   });
 
+  it("errors on a localized asset with no English counterpart, and accepts one that replaces the English", async () => {
+    const findings = await check({
+      "docs/diagram.svg": "<svg/>\n",
+      "docs/pt-BR/diagram.svg": "<svg/>\n",
+      "docs/pt-BR/extra.svg": "<svg/>\n",
+    });
+    expect(findings.map(({ code, location }) => [code, location])).toEqual([
+      ["translation/missing-english", "docs/pt-BR/extra.svg"],
+    ]);
+  });
+
   it("errors once per area in an unlisted locale", async () => {
     const findings = await check({
       "README.fr.md": "# @codenhub/example\n",

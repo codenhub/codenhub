@@ -62,7 +62,7 @@ packages/<pkg>/
 
 - A translated public document lives at `docs/<locale>/<path>`, where `docs/<path>` is the English document it translates.
 - A translated README lives at `README.<locale>.md`, beside `README.md`. The README is at the package root so its relative links keep the same shape as the English one's, and `README.<locale>.md` is the name GitHub readers look for.
-- `docs/<locale>/` is not a documentation area of its own: it is reserved for translations, and every Markdown file in it MUST have an English counterpart at the mirrored path.
+- `docs/<locale>/` is not a documentation area of its own: it is reserved for translations, and every file in it MUST have an English counterpart at the mirrored path. That includes assets: a localized image, such as a screenshot with translated labels, replaces the English one at the same path, so the translated page links it in the same shape as the English page links the original.
 
 Translating is per document. Any subset of a package's public documents MAY be translated; an untranslated document is read in English.
 
