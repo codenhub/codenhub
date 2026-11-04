@@ -30,9 +30,10 @@ export interface Conversions<TInput extends AnyValidator, TOutput extends AnyVal
  * It validates with `input`, gives what that produced to `decode`, and validates the result with
  * `output`, so both ends are checked: `"2026-02-30"` fails the input, and a `decode` that returns an
  * invalid date fails the output. `encode(validator, value)` runs the other way, through `encode`: it
- * writes the value back through `output`, so a codec inside it writes its part first, or checks it with
- * `output` when that cannot be written back, such as a validator written by hand, gives the result to
- * `encode`, and checks `input` accepts what it returns. Each function is written for one direction, and a
+ * writes the value back through `output`, so a codec inside it writes its part first, or, when `output` is
+ * a validator written by hand, checks the value with it and passes it on as it is, gives the result to
+ * `encode`, and checks `input` accepts what it returns. A `transform` in `output` throws, as it does
+ * anywhere else. Each function is written for one direction, and a
  * pair of them is what lets a value go back.
  *
  * An exception thrown by either function propagates, as a `transform`'s does: it is a bug, not invalid

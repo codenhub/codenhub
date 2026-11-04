@@ -99,16 +99,46 @@ describe("encode", () => {
     expect(issuesOf(encode(outer, { at: new Date(Number.NaN) })).map((issue) => issue.path)).toEqual([["at"]]);
   });
 
-  it("should write back a codec whose output is written by hand or a transform, checking the value with it", () => {
+  it("should write back a codec whose output is written by hand, checking the value with it", () => {
     const byHand: Validator<number> = (input) =>
       typeof input === "number"
         ? { ok: true, value: input }
         : { ok: false, error: { issues: [{ code: "invalid_type", path: [], params: { expected: "number" } }] } };
-    for (const output of [byHand, transform(number(), (value) => value)]) {
-      const counted = codec(string(), output, { decode: Number, encode: String });
-      expect(valueOf(encode(counted, 5))).toBe("5");
-      expect(codesOf(encode(counted, "5" as never))).toEqual(["invalid_type"]);
-    }
+    const counted = codec(string(), byHand, { decode: Number, encode: String });
+    expect(valueOf(encode(counted, 5))).toBe("5");
+    expect(codesOf(encode(counted, "5" as never))).toEqual(["invalid_type"]);
+  });
+
+  it("should give encode the value given, not what an output written by hand produces from it", () => {
+    // Run forward, this output would double the value, which then decodes to twice what was given.
+    const doubling: Validator<number> = (input) =>
+      typeof input === "number"
+        ? { ok: true, value: input * 2 }
+        : { ok: false, error: { issues: [{ code: "invalid_type", path: [], params: { expected: "number" } }] } };
+    const counted = codec(string(), doubling, { decode: Number, encode: String });
+    expect(valueOf(encode(counted, 21))).toBe("21");
+  });
+
+  it("should throw naming a transform that is the output of a codec, rather than run it forward", () => {
+    const doubled = codec(
+      string(),
+      transform(number(), (value) => value * 2),
+      { decode: Number, encode: String },
+    );
+    expect(valueOf(doubled("21"))).toBe(42);
+    expect(() => encode(doubled, 42)).toThrow(
+      new TypeError("encode cannot write back a transform at the root. Use a codec there"),
+    );
+  });
+
+  it("should throw naming a transform inside the output of a codec, at its place", () => {
+    const labelled = codec(string(), object({ at: isoDate, label: transform(string(), (text) => text.trim()) }), {
+      decode: (text) => JSON.parse(text) as { at: string; label: string },
+      encode: (value) => JSON.stringify(value),
+    });
+    expect(() => encode(labelled, { at: moment, label: "hi" })).toThrow(
+      new TypeError("encode cannot write back a transform at label. Use a codec there"),
+    );
   });
 
   it("should give encode the value as its output writes it back, not as the output decodes it", () => {

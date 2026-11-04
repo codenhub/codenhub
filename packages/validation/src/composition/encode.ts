@@ -89,9 +89,10 @@ function bigintIn(value: unknown, seen = new Set<object>()): (string | number)[]
  * @remarks
  * The validator is read with `describe`, and each part written back as its kind says:
  *
- * - A `codec` writes the value back through its output, so a codec inside that writes its part first, or
- *   checks it with its output when that cannot be written back, such as a validator written by hand, runs
- *   its `encode` on the result, and checks its input accepts what that returns.
+ * - A `codec` writes the value back through its output, so a codec inside that writes its part first, or,
+ *   when the output is a validator written by hand, checks the value with it and passes it on as it is,
+ *   runs its `encode` on the result, and checks its input accepts what that returns. A `transform` in the
+ *   output throws, as it does anywhere else.
  * - A part that produces what it accepts, such as `string`, a format or a coercion, validates the value and
  *   gives what it produced, so `email()` gives the address as the parser reads it.
  * - A composer, such as `object`, `array` or `union`, writes back each of its parts and keeps its options,
@@ -218,23 +219,17 @@ export function encode<TValidator extends AnyValidator>(
         const { input, output } = record as unknown as { input: AnyValidator; output: AnyValidator };
         const write = record["encode"] as (value: unknown) => unknown;
         // `decode` gave `output` what it accepts, so `encode` is given what `output` writes back, which for a
-        // codec inside it is what that codec wrote. An output that cannot be written back, such as a
-        // validator written by hand, is what a codec is for: it checks the value as it is.
-        let writeOutput: AnyValidator;
-        try {
-          writeOutput = encoderOf(output, path);
-        } catch (error) {
-          if (!(error instanceof TypeError)) {
-            throw error;
-          }
-          writeOutput = output;
-        }
+        // codec inside it is what that codec wrote. An output written by hand cannot be written back, and is
+        // what a codec is for: it only checks the value, which `encode` is given as it is, since run forward
+        // it may change it. Any other part that cannot be written back throws, naming its place.
+        const isByHand = describe(output) === undefined;
+        const writeOutput = isByHand ? output : encoderOf(output, path);
         return composed((given, place) =>
           chain(call(writeOutput, given, place), (produced): Maybe<ValidationResult<unknown>> => {
             if (!produced.ok) {
               return produced;
             }
-            const written = decided("codec", write, produced.value, "encode");
+            const written = decided("codec", write, isByHand ? given : produced.value, "encode");
             return chain(call(input, written, place), (read) => (read.ok ? pass(written) : read));
           }),
         ) as AnyValidator;
