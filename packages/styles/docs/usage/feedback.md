@@ -137,7 +137,7 @@ When you do not know how far along the work is, such as while the export is bein
 
 The fill is the intent color at full strength, or `currentColor` with no intent. The track is soft and edgeless by default: a light tint with no border.
 
-The default track is faint. Against the page it measures about 1.1:1 to 1.3:1, below the 3:1 that WCAG 1.4.11 asks of the parts of a graphic needed to understand it. When the track's extent matters, use `.ghost.edged`, which draws an outline around it; [Accessibility → Control boundaries](../accessibility.md#control-boundaries) has the measurements. `.solid` is not supported on the track, because the fill and the track would be the same color. `.ghost.edgeless` renders, but leaves the track with no visible frame.
+The default track is faint. Against the page it measures about 1.1:1 to 1.3:1, below the 3:1 that WCAG 1.4.11 asks of the parts of a graphic needed to understand it. When the track's extent matters, use `.ghost.edged` with an intent class, which draws an outline around it in the intent's color. With no intent the outline is a light gray that measures below 3:1; [Accessibility → Progress outlines](../accessibility.md#progress-outlines) has the measurements and what to do for a neutral bar. `.solid` is not supported on the track, because the fill and the track would be the same color. `.ghost.edgeless` renders, but leaves the track with no visible frame.
 
 To change the colors of the fill, the track, or its border without changing the intent, set `--progress-color`, `--progress-surface`, or `--progress-edge` on the bar or any element around it. They and `--progress-value` are listed in [Customizing → Component variables](./customizing.md#component-variables).
 
