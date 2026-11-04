@@ -98,7 +98,7 @@ The output side takes a default and the value of a `fallback` to pass the valida
 | `pattern`, `startsWith`, `endsWith`, `includes`, `nonBlank` | `pattern`                                                                                                                      |
 | `multipleOf`, `nonZero`, `unique()`                         | `multipleOf`, `not: { const: 0 }` and `uniqueItems`                                                                            |
 
-`multipleOf` is written only for a step binary floating point holds exactly, an integer or a fraction such as `0.5` or `0.25`. A reader divides in binary, where `0.3 / 0.1` is not `3`, so with a step such as `0.1` or `0.01` it would refuse values the validator accepts; such a step is left out.
+`multipleOf` is written only for a step binary floating point holds exactly, an integer or a fraction such as `0.5` or `0.25`. A reader divides in binary, where `0.3 / 0.1` is not `3`, so with a step such as `0.1` or `0.01` it would refuse values the validator accepts; such a step is left out. `uniqueItems` is written only for items that are primitives, since `unique()` compares an object by identity and `uniqueItems` by what it holds.
 
 A format is written under JSON Schema's name for it, and with no `format` where that name's rules refuse text the validator accepts, which would break the promise above:
 

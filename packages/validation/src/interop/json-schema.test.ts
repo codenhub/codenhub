@@ -36,7 +36,7 @@ import { tagged } from "../composition/tagged";
 import { transform } from "../composition/transform";
 import { tuple } from "../composition/tuple";
 import { union } from "../composition/union";
-import type { AnyValidator, Validator } from "../core/types";
+import type { AnyValidator, Check, Validator } from "../core/types";
 import { base64 } from "../formats/base64";
 import { cidr } from "../formats/cidr";
 import { creditCard } from "../formats/credit-card";
@@ -135,6 +135,21 @@ describe("toJsonSchema", () => {
     expect(schemaOf(number(multipleOf(0.1)))).toEqual({ type: "number" });
     expect(schemaOf(number(multipleOf(0.01)))).toEqual({ type: "number" });
     expect(schemaOf(number(multipleOf(1e-7)))).toEqual({ type: "number" });
+  });
+
+  it("should write uniqueItems for unique() only over items that are primitives", () => {
+    expect(schemaOf(array(nullable(oneOf(["a", "b"])), unique()))).toEqual({
+      type: "array",
+      items: { anyOf: [{ enum: ["a", "b"] }, { type: "null" }] },
+      uniqueItems: true,
+    });
+    expect(schemaOf(tuple([number(), uuid()], unique()))).toMatchObject({ uniqueItems: true });
+    // `unique()` compares objects by identity, and every object `object` produces is new, so the validator
+    // accepts two equal ones, which `uniqueItems`, comparing deeply, refuses. The types forbid it.
+    const anyUnique = unique() as unknown as Check<readonly unknown[]>;
+    for (const item of [object({ id: number() }), array(number()), unknown()] as Validator<unknown>[]) {
+      expect(schemaOf(array(item, anyUnique))).toEqual(schemaOf(array(item)));
+    }
   });
 
   it("should write a pattern a schema reads as the check does, so one a prefix made matches that text only", () => {

@@ -110,6 +110,62 @@ const readsAlikeInUnicode = (source: string): boolean => {
 const isJsonPrimitive = (value: unknown): boolean =>
   value === null || typeof value === "string" || typeof value === "boolean" || Number.isFinite(value);
 
+/** The kinds whose output is a primitive, which `unique()` compares by value as `uniqueItems` does. */
+const PRIMITIVE_KINDS = new Set(["string", "number", "boolean", "literal", "oneOf", "format"]);
+
+/** Whether a validator produces a primitive, seen through the wrappers that keep one. */
+const producesPrimitive = (target: unknown, seen = new Set<unknown>()): boolean => {
+  const record = describe(target as AnyValidator);
+  if (record === undefined || seen.has(target)) {
+    return false;
+  }
+  seen.add(target);
+  switch (record.kind) {
+    case "nullable":
+    case "nullish":
+    case "optional":
+    case "readonly":
+    case "meta":
+      return producesPrimitive(record["inner"], seen);
+    case "lazy":
+      return producesPrimitive((record["getter"] as () => unknown)(), seen);
+    case "union":
+      return (record["members"] as unknown[]).every((member) => producesPrimitive(member, seen));
+    default:
+      return PRIMITIVE_KINDS.has(record.kind);
+  }
+};
+
+/**
+ * Whether the items of the array a check is given are primitives. `unique()` compares an object by
+ * identity, and `uniqueItems` by what it holds, so over objects the schema would refuse two equal ones
+ * the check accepts. What cannot be told is taken as not.
+ */
+const holdsPrimitives = (record: Description, seen = new Set<unknown>()): boolean => {
+  switch (record.kind) {
+    case "array":
+      return producesPrimitive(record["item"]);
+    case "tuple":
+      return [...(record["items"] as unknown[]), ...(record["rest"] === undefined ? [] : [record["rest"]])].every(
+        (item) => producesPrimitive(item),
+      );
+    case "json":
+    case "readonly":
+    case "meta":
+    case "lazy": {
+      const inner = record.kind === "lazy" ? (record["getter"] as () => unknown)() : record["inner"];
+      const described = describe(inner as AnyValidator);
+      if (described === undefined || seen.has(inner)) {
+        return false;
+      }
+      seen.add(inner);
+      return holdsPrimitives(described, seen);
+    }
+    default:
+      return false;
+  }
+};
+
 /**
  * Writes a validator as a JSON Schema, draft 2020-12 unless `target` asks for draft-07, for whatever takes
  * one: the body of an HTTP API, the arguments of a tool a language model calls, a form generator.
@@ -132,6 +188,7 @@ const isJsonPrimitive = (value: unknown): boolean =>
  * A step of `multipleOf` is written only when binary floating point holds it exactly, an integer or a
  * fraction such as `0.25`. A reader divides in binary, where `0.3 / 0.1` is not `3`, so a step such as
  * `0.1` or `0.01` is left out rather than written for a reader to refuse values the validator accepts.
+ * `unique()` is written as `uniqueItems` only over items that are primitives, which both compare by value.
  *
  * The exceptions are where a validator cleans a value before it checks it, which is not written.
  * `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no
@@ -287,7 +344,9 @@ export function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOption
       } else if (format === "nonZero") {
         schema["not"] = { const: 0 };
       } else if (params["unique"] === true && by === undefined) {
-        schema["uniqueItems"] = true;
+        if (holdsPrimitives(record)) {
+          schema["uniqueItems"] = true;
+        }
       } else {
         refuse(format === undefined ? "a check that cannot be read" : `the check ${String(format)}`, path);
       }
