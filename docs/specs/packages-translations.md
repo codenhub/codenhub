@@ -148,7 +148,7 @@ The documentation site follows the main site's URL scheme (`apps/www/src/i18n/in
 - English: `https://docs.codenhub.dev/<slug>/<path>/`.
 - A translation: `https://docs.codenhub.dev/<locale>/<slug>/<path>/`, its Markdown at `index.md` inside that route, as `docs/specs/packages-documentation.md` defines for English pages.
 
-A locale route exists only for a translated document. The site's interface is translated for every supported locale, and inside a locale its navigation lists every published page of the package, linking each untranslated one to its English route and marking it as English. Each translated page and its English counterpart MUST name each other as alternates (`hreflang`), so a search engine shows the reader's language.
+A locale route exists only for a translated document. The site's interface is translated for every supported locale, and inside a locale its navigation lists every published page of the package, linking each untranslated one to its English route and marking it as English. Each translated page and its English counterpart MUST name each other as alternates (`hreflang`), so a search engine shows the reader's language. Each also MUST name the English page as the `x-default` alternate: a reader whose language the site does not offer gets the English, which is complete and is what every translation is checked against, rather than whichever translation a search engine picks.
 
 The locale is the outermost path segment so that a later version dimension (`docs/roadmap.md`, "Documentation versioning") can go inside the package route without moving any locale URL. This settles only where the locale goes; the version segment's form stays with versioning.
 

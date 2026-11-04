@@ -9,7 +9,7 @@ import { siteConfig } from "../site-config";
 import "../styles/global.css";
 
 interface Props {
-  /** Every language version of the page, itself included, named in `hreflang` alternates. */
+  /** Every language version of the page, itself included, and `x-default`, named in `hreflang` alternates. */
   alternates?: readonly PageAlternate[];
   description?: string;
   /** The page's language, which sets `<html lang>`, the interface text, and the search index. */

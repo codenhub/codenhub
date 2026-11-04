@@ -15,19 +15,16 @@ import { siteConfig } from "../site-config";
 import { publishDocumentMarkdown } from "./document-markdown";
 import { annotateCuratedLinks, applyFolderCuration } from "./folder-curation";
 import { rewritePackageMarkdownLinks } from "./markdown-links";
+import { pageAlternates, type PageAlternate } from "./page-alternates";
 
 type PublicDocumentModule = MarkdownInstance<Record<string, unknown>>;
 
-/** One language version of a page, as `hreflang` alternates name it. */
-export interface PageAlternate {
-  lang: Locale;
-  route: string;
-}
+export type { PageAlternate } from "./page-alternates";
 
 export interface PublicDocument {
   /**
-   * Every language version of this page, itself included, when it has a
-   * translation; empty otherwise.
+   * Every language version of this page, itself included, and `x-default`,
+   * when it has a translation; empty otherwise.
    */
   alternates: PageAlternate[];
   /** Language the page is written in. */
@@ -271,15 +268,10 @@ async function loadCatalog(): Promise<PublicPackage[]> {
 
       // Each version of a page names every version, itself included, as an alternate.
       for (const english of englishDocuments) {
-        const versions = [
-          english,
-          ...translatedDocuments.filter(({ relativePath }) => relativePath === english.relativePath),
-        ];
-        if (versions.length > 1) {
-          const alternates = versions.map(({ lang, route }) => ({ lang, route }));
-          for (const version of versions) {
-            version.alternates = alternates;
-          }
+        const translations = translatedDocuments.filter(({ relativePath }) => relativePath === english.relativePath);
+        const alternates = pageAlternates(english, translations);
+        for (const version of [english, ...translations]) {
+          version.alternates = alternates;
         }
       }
 
