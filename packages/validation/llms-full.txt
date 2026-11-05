@@ -2658,7 +2658,7 @@ Every validator a factory of this package makes is already a Standard Schema, wo
 
 ## Forms
 
-A form holds what the user typed, which is the validator's input type and not what it produces, so type the form's values with [`InferInput`](docs/forms.md#the-types-of-a-form) and what it submits with `Infer`. A field of `coerceNumber()` holds text or a number, and what is submitted is a number.
+A form holds what the user typed, which is the validator's input type and not what it produces, so type the form's values with [`InferInput`](docs/forms.md#the-types-of-a-form). A field of `coerceNumber()` holds text or a number. What the form submits depends on the library: react-hook-form submits what the validator produced, typed with `Infer`, and TanStack Form submits the values as typed.
 
 ### react-hook-form
 
@@ -2696,7 +2696,7 @@ export const form = new FormApi({
 });
 ```
 
-A validator given to `validators` reports each issue under its field, `form.state.fieldMeta.email.errors`, as `{ message, path }`.
+A validator given to `validators` reports each issue under its field, `form.state.fieldMeta.email.errors`, as `{ message, path }`. `onSubmit` is given the values as typed, not what the validator produced, so call the validator on them to get, for example, the number of a `coerceNumber()` field.
 
 ## RPC and HTTP
 

@@ -1,7 +1,7 @@
 ---
 title: Integrações
 description: Use um validador com bibliotecas de formulário, frameworks de RPC e HTTP, as ferramentas de um modelo de linguagem, OpenAPI e dentro de um schema zod ou valibot, com um exemplo para cada, executado com a biblioteca que ele cita.
-source: eb270ae81768ce94a5e3f8942dd6452078e95898
+source: 0ff1b6d8fe7f58ddc0b039eea6f27e06def3269e
 order: 11
 ---
 
@@ -19,7 +19,7 @@ Todo validador que uma factory deste pacote cria já é um Standard Schema, com 
 
 ## Formulários
 
-Um formulário guarda o que o usuário digitou, que é o tipo de entrada do validador e não o que ele produz. Então tipe os valores do formulário com [`InferInput`](forms.md#os-tipos-de-um-formulário) e o que ele envia com `Infer`. Um campo de `coerceNumber()` guarda texto ou um número, e o que é enviado é um número.
+Um formulário guarda o que o usuário digitou, que é o tipo de entrada do validador e não o que ele produz. Então tipe os valores do formulário com [`InferInput`](forms.md#os-tipos-de-um-formulário). Um campo de `coerceNumber()` guarda texto ou um número. O que o formulário envia depende da biblioteca: o react-hook-form envia o que o validador produziu, tipado com `Infer`, e o TanStack Form envia os valores como foram digitados.
 
 ### react-hook-form
 
@@ -57,7 +57,7 @@ export const form = new FormApi({
 });
 ```
 
-Um validador passado em `validators` reporta cada problema no campo dele, `form.state.fieldMeta.email.errors`, como `{ message, path }`.
+Um validador passado em `validators` reporta cada problema no campo dele, `form.state.fieldMeta.email.errors`, como `{ message, path }`. `onSubmit` recebe os valores como foram digitados, não o que o validador produziu, então chame o validador sobre eles para obter, por exemplo, o número de um campo de `coerceNumber()`.
 
 ## RPC e HTTP
 
