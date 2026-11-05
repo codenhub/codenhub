@@ -1,9 +1,9 @@
 ---
 name: caveman-commit
-description: Writes terse Conventional Commits messages that keep intent and reasoning without noise. Use when the user says "write a commit", "commit message", or "generate commit", or when changes are staged for a commit.
+description: Writes terse commit messages in the project's convention that keep intent and reasoning without noise. Use when the user says "write a commit", "commit message", or "generate commit", or when changes are staged for a commit.
 ---
 
-Write commit messages terse and exact. Conventional Commits format. No fluff. Why over what.
+Write commit messages terse and exact. Conventional Commits format, unless `git log` shows the project uses another convention; then match it. No fluff. Why over what.
 
 ## Rules
 
@@ -20,21 +20,21 @@ Write commit messages terse and exact. Conventional Commits format. No fluff. Wh
 **Body (only if needed):**
 
 - Skip entirely when subject is self-explanatory
-- Add body only for: non-obvious _why_, breaking changes, migration notes, linked issues
+- Add body only for: non-obvious _why_, breaking changes, security fixes, data migrations, reverts, linked issues
 - Wrap at 72 chars
 - Bullets `-` not `*`
-- Reference issues/PRs at end: `Closes #42`, `Refs #17`
+- Reference issues/PRs at end: `Closes #42`, `Refs: #17`
 
 **Trailers:**
 
 - Keep every trailer the project or workflow uses, such as `Skipped:`, `Co-authored-by:`, or `Refs:`, even when the subject alone would do. Tools read them from the log
 - Put them in the final paragraph, after a blank line
 
-**What NEVER goes in:**
+**Leave out:**
 
 - "This commit does X", "I", "we", "now", "currently" — the diff says what
 - "As requested by..." — the requester is not an author; leave it out
-- "Generated with ..." lines or other tool promotion. Add a `Co-authored-by` trailer only when the project requires one, in the project's format
+- "Generated with ..." lines or other tool promotion. Add a `Co-authored-by` trailer only when the project or workflow requires one, in its format.
 - Emoji (unless project convention requires)
 - Restating the file name when scope already says it
 
@@ -71,4 +71,4 @@ Always include body for: breaking changes, security fixes, data migrations, anyt
 
 ## Boundaries
 
-Only generates the commit message. Does not run `git commit`, does not stage files, does not amend. Output the message as a code block ready to paste.
+Write the message. Stage, commit, or amend only when the user asked for that; otherwise output the message as a code block ready to paste.

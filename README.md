@@ -22,7 +22,7 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 - `packages/kbd`: Page-wide and target-scoped keyboard shortcut event binding registry.
 - `packages/oidc`: OpenID Connect for both sides: a relying-party client and an OpenID Provider on the Fetch API, built on @codenhub/jwt.
 - `packages/router`: Small browser router for TypeScript apps.
-- `packages/skills`: Curated collection of AI agent skills with a built-in installer.
+- `packages/skills`: Installer CLI for a curated collection of AI agent skills, for every major agent harness.
 - `packages/store`: Small typed records persisted to key-value backends.
 - `packages/styles`: Build a consistent, themeable interface by writing class names on plain HTML, with one stylesheet of tokens, a reset, layout and type helpers, and component classes, and no JavaScript.
 - `packages/theme`: Zero-dependency browser theme preference helper for TypeScript apps.

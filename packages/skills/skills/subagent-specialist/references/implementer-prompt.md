@@ -6,10 +6,19 @@ Use this template when dispatching an implementation subagent.
 You are implementing Task [N]: [task name]
 
 ## Task Description
-[FULL TEXT of the task or requirement. Paste it here. Do not make the subagent read the plan file just to reconstruct scope.]
+[Full text of the task or requirement. Paste it here. Do not make the subagent read the plan file just to reconstruct scope.]
 
 ## Context
 [Scene-setting context: where this fits, dependencies, architectural constraints, existing patterns, and anything the task depends on.]
+
+## Decisions
+[Required signatures, names, file layout, error handling, and allowed dependencies.]
+
+## Acceptance
+[Concrete, checkable cases, each to implement as a test.]
+
+## Out of Scope
+[Nearby work the task does not cover.]
 
 ## Working Rules
 - Work in: [directory]
@@ -28,7 +37,7 @@ If anything is unclear, such as the requirements, acceptance criteria, approach,
 ## Your Job
 Once the task is clear:
 1. Implement exactly what the task specifies.
-2. Add or update tests when the task requires it.
+2. Implement each acceptance case as a test.
 3. Verify the implementation works.
 4. Self-review your own work.
 5. Report back using the required format.
@@ -39,7 +48,7 @@ You reason best about code you can hold in context at once, and your edits are m
 Keep this in mind:
 - Follow the file structure defined by the task or plan.
 - Each file should have one clear responsibility with a well-defined interface.
-- If a file you are creating is growing beyond the task's intent, stop and report `DONE_WITH_CONCERNS` instead of splitting things on your own without direction.
+- If a file you are creating is growing beyond the task's intent, do not split it on your own; finish the task and report `DONE_WITH_CONCERNS` saying so.
 - If an existing file is already large or tangled, work carefully and call that out in your report.
 - Improve the code you touch the way a good developer would, but do not restructure unrelated areas.
 

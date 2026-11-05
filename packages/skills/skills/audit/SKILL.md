@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Audits and reviews code, packages, pull requests, and diffs for defects, vulnerabilities, API and contract problems, wrong design decisions, and readiness to merge, publish, or release, and classifies every finding the same way. Use when asked to audit or review something, to check whether it is ready, safe, or good enough to ship, to find bugs, issues, gaps, or vulnerabilities, or to write pull request review comments. Not for auditing agent skills or AGENTS.md files.
+description: Audits and reviews code, packages, pull requests, and diffs for defects, vulnerabilities, API and contract problems, wrong design decisions, and readiness to merge, publish, or release, and classifies every finding the same way. Use when asked to audit or review something, to check whether it is ready, safe, or good enough to ship, to find bugs, issues, gaps, or vulnerabilities, or to write pull request review comments. Not for over-engineering or bloat reviews, or for auditing agent skills or AGENTS.md files.
 metadata:
   short-description: Audit code and classify findings consistently
 ---
@@ -60,7 +60,7 @@ Do not report:
 
 ## Classify
 
-Every finding gets one kind and one severity.
+Every finding gets one kind and, except a `question`, one severity.
 
 ### Kind
 
@@ -125,7 +125,7 @@ When the audit is split across workers, or results from another audit are in han
 Open with the verdict and the counts, then the scope. List findings by severity, `blocker` first. Number them so the user can answer by number.
 
 ```markdown
-**Verdict: not ready.** 1 blocker, 1 major, 2 minor, 1 question.
+**Verdict: not ready.** 1 blocker, 1 major, 1 question.
 **Scope:** `packages/http` at `a1b2c3d`: source, tests, and public docs. Not covered: the browser build, since no browser was available.
 
 ### Findings
@@ -163,7 +163,7 @@ When asked for comments to post on a pull request, write one line per finding, r
 `<file>:L<line>: <severity> <kind>: <problem>. <fix>.`
 
 ```text
-csv.ts:L88: blocker vulnerability: an unterminated quote makes parseCsv scan forever. Stop at end of input and report it.
+csv.ts:L120: major defect: a trailing empty field is dropped. Keep it as an empty string.
 retry.ts:L57: minor defect: the delay ignores a Retry-After header. Use it when present.
 ```
 
@@ -172,6 +172,6 @@ Write `vulnerability` and `decision` findings as a short paragraph instead, sinc
 ## After the Report
 
 - Fix only the findings the user approves.
-- Give each fix a test that fails before it and passes after.
+- Give each fix that changes behavior a test that fails before it and passes after. When no test can be written, ask the user before shipping the fix without one, and say so in the report.
 - When a fix turns out to need new public surface, stop and bring it back as a decision.
 - Record each decision the user takes where the project records decisions, with its reason and the alternatives rejected.

@@ -54,7 +54,7 @@ When everything holds, say so and change nothing.
 
 ## Report
 
-Report before changing anything. Number every item so the user can approve by number, show each proposed line as it will read, and end with the net change in lines.
+Report before changing anything. Number every item so the user can approve by number, show each proposed line as it will read, and end with the net change in lines. List only files with proposed changes; summarize unchanged files in one line.
 
 ```markdown
 **Files:** `AGENTS.md`, `packages/api/AGENTS.md`, `CLAUDE.md` (imports `AGENTS.md`).
@@ -69,7 +69,7 @@ Report before changing anything. Number every item so the user can approve by nu
 
 ### packages/api/AGENTS.md
 
-5. `reword` L3 "NEVER touch the cache.": state the trap instead: what breaks, when, and what to prefer.
+5. `reword` L3 "NEVER touch the cache.": state the trap instead: "Editing files under `.cache/` by hand corrupts the build index; prefer `pnpm cache:rebuild`."
 
 ### Conflicts
 

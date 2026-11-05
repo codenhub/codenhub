@@ -42,6 +42,14 @@ An exception to a rule that `hub check` enforces MUST also declare a `Checks byp
 - **Temporary or permanent:** Permanent while the package remains CSS-only and this computed-style, cross-browser strategy remains effective.
 - **Reevaluate when:** The package stops being CSS-only; the browser suite stops covering Chromium, Firefox, and WebKit or its glass and reduced-transparency branches; the public contract adds a visual outcome that computed styles and DOM behavior cannot assert; or a confirmed final-paint, clipping, compositing, font-rendering, antialiasing, or correct-property-interaction regression passes the suite. Reevaluation means choosing an effective test for the demonstrated gap and updating this exception; it does not presume screenshot baselines.
 
+## `@codenhub/skills`: CLI-only package
+
+- **Rules bypassed:** `docs/specs/packages-lifecycle.md` (metadata fields `main`, `module`, and `types` required in `package.json`).
+- **Checks bypassed:** `metadata/main`, `metadata/module`, `metadata/types`.
+- **Where it applies:** `packages/skills/`.
+- **Why acceptable:** Since 0.3.0 the package ships skill assets and the `codenhub-skills` installer only, and exports no JavaScript or TypeScript API; `exports` declares only `./package.json`. Its former helpers could not reach the bundled skills and had no known consumer. Adding `main`, `module`, and `types` would point at no usable entrypoint.
+- **Temporary or permanent:** Permanent while the package exposes no library API.
+
 ## `@codenhub/error`: built-in opt-in registry presets
 
 - **Rules bypassed:** `docs/specs/errors.md` (general library packages must not instantiate or export preset registries when publishing error definitions).

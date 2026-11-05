@@ -1,6 +1,6 @@
 # @codenhub/skills
 
-A curated collection of AI agent skill assets, an installer for supported agent harnesses, and utilities for discovering and copying skill directories.
+A curated set of agent skills and a CLI that installs them into the right folders for your agent tools. Choose the workflows you want, then install them in a project, in your home directory, or both.
 
 ## Installation
 
@@ -10,41 +10,44 @@ Run the installer without adding it to a project:
 pnpm dlx @codenhub/skills@latest
 ```
 
-The equivalent npm command is `npx @codenhub/skills@latest`.
+Or use npm:
+
+```sh
+npx @codenhub/skills@latest
+```
 
 ## Usage
 
-Use the library entrypoint to discover skill directories and copy one into a destination:
+Run the command from your project directory. In an interactive terminal, the wizard asks where to install, whether to include all skills or choose a subset, which agent harnesses to target, and whether to clean their skills folders first. Cleanup is off by default.
 
-```ts
-import { copyRecursiveSync, getSkills } from "@codenhub/skills";
+For a repeatable install without prompts, select skills and destinations explicitly:
 
-const [skill] = getSkills("./skills");
-
-if (skill) {
-  copyRecursiveSync({ src: skill.path, dest: `./output/${skill.id}` });
-}
+```sh
+pnpm dlx @codenhub/skills@latest --local --skills=brainstorming,test-driven-development --harnesses="Claude Workspace,Codex Workspace"
 ```
 
-The CLI is interactive only when invoked in a TTY without arguments (`--include-drafts` aside). Before using `--cleanup`, review its destructive behavior in the [CLI guide](docs/cli.md#destructive-cleanup).
+The collection covers planning and implementation (`brainstorming`, `test-driven-development`, `ponytail`), review and delivery (`audit`, `babysit-pr`), creative work (`branding`, `design`, `logo-design`, `motion-graphics`, `naming`), and agent guidance and writing. See the [skill catalog](docs/skills.md) for every skill and when it applies.
 
 ## Documentation
 
 - [Documentation overview](docs/index.md): Complete package documentation.
-- [Programmatic API](docs/api.md): Public exports, path rules, and failures.
+- [Bundled skills](docs/skills.md): Choose skills and understand their format and versioning.
 - [CLI installer](docs/cli.md): Options, destinations, and harness behavior.
-- [Skill format and catalog](docs/skills.md): Supported assets and bundled inventory.
+- [Security and failures](docs/security-and-failures.md): Cleanup risks, partial installs, and recovery.
+- [Changelog](docs/changelog/index.md): Release history.
 
 ## Requirements
 
 - Node.js 24 or newer.
 - Filesystem permission to read source skills and modify selected destinations.
-- A TTY for the interactive wizard; explicit CLI options support automation.
+- An interactive terminal (TTY) for the wizard; explicit CLI options support automation.
 
 ## Notes
 
 - Existing files are merged and overwritten by default; stale files are not removed unless `--cleanup` is used.
 - `--cleanup` recursively removes each selected harness's entire skills directory before installation.
+- Installation writes directly to disk without rollback. Back up customized skills before updating; see [failure behavior](docs/security-and-failures.md).
+- The package provides an installer CLI, with no supported programmatic library imports.
 
 ## License
 

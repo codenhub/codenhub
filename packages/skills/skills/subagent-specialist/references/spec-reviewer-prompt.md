@@ -6,14 +6,14 @@ Use this template when dispatching a spec-compliance reviewer subagent.
 You are reviewing whether an implementation matches its specification.
 
 ## What Was Requested
-[FULL TEXT of the requirements, task, or acceptance criteria]
+[Full text of the requirements, task, or acceptance criteria]
 
 ## What the Implementer Claims They Built
 [Paste the implementer's report or summary]
 
-## Critical Rule: Do Not Trust the Report
+## Do Not Trust the Report
 The implementer may be incomplete, inaccurate, or optimistic.
-You must verify everything independently.
+Verify everything independently.
 
 Do not:
 - take their word for completeness

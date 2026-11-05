@@ -22,7 +22,7 @@
 - Build one master timeline, created with `paused: true`, that holds the whole piece. Nothing animates outside it.
 - Write each scene as a function that returns its own timeline, and add the scenes to the master with labels: `master.add(intro(), "intro").add(features(), "features-=0.3")`. Negative offsets overlap scenes for transitions.
 - Use the position parameter to overlap elements inside a scene: `"<"` starts with the previous tween, `"<0.1"` starts 0.1 seconds after the previous tween's start, and `"-=0.2"` starts 0.2 seconds before the previous tween ends.
-- Set the piece's easing family once with `gsap.defaults({ ease: "power3.out", duration: 0.6 })`, and override it per tween only for exits and moves.
+- Set the piece's easing family once with `gsap.defaults({ ease: "power4.out", duration: 0.6 })`, and override it per tween only for exits and moves.
 - Use `expo.out` or `power4.out` for strong entrances, `power2.in` for exits, and `power2.inOut` for moves. Use `CustomEase` when the brand needs its own curve.
 - Give repeating motion a finite `repeat` count that fits the scene. An infinite repeat makes the timeline's duration infinite.
 - Build the whole timeline before rendering starts, after fonts have loaded, and expose seeking for the renderer. Put this in a `<script type="module">`, since top-level `await` is a syntax error in a classic script and `window.ready` would never be set:
@@ -59,7 +59,7 @@ Register each plugin before use: `gsap.registerPlugin(SplitText, DrawSVGPlugin)`
 
 ## Determinism
 
-- Replace `Math.random()` with a seeded generator, especially in `stagger: { from: "random" }` and `gsap.utils.random()`, when frames may be rendered in more than one page load, such as when rendering in parallel. Otherwise each load produces different values.
+- Replace `Math.random()` with a seeded generator, especially in `stagger: { from: "random" }` and `gsap.utils.random()`, so every render, including a re-render after an edit or a parallel render, produces the same values.
 - Decode every image before rendering starts, for example with `await Promise.all([...document.images].map((img) => img.decode()))`.
 - Avoid CSS transitions and animations on elements inside the stage; they run on the clock. Let the timeline drive every change.
 - For embedded video, pause it and set its `currentTime` from the timeline on each seek, then wait for its `seeked` event before capturing the frame.

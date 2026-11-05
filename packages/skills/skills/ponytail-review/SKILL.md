@@ -26,7 +26,7 @@ Pick the scope from the request, taking the first that matches:
 One line per finding: `L<line>: <tag> <what>. <replacement>.`, or `<file>:L<line>: ...` across files.
 
 - Bad: "This EmailValidator class might be more complex than necessary; have you considered whether all these rules are needed?"
-- Good: `L12-38: stdlib: 27-line validator class. A "@" check is enough; the confirmation email is the real validation.`
+- Good: `L12-38: yagni: 27-line validator class. A "@" check is enough; the confirmation email is the real validation.`
 - Good: `L4: native: moment imported for one format call. Intl.DateTimeFormat, 0 deps.`
 - Good: `repo.ts:L88: yagni: AbstractRepository with one implementation. Inline it until a second exists.`
 - Good: `L30-44: shrink: manual loop builds an object. Object.fromEntries(pairs), 1 line.`
@@ -50,7 +50,7 @@ git log --grep='^Skipped:' --format='%h %s%n%(trailers:key=Skipped,valueonly)'
 
 Add the project's other build directories and comment prefixes as needed. One row per marker or trailer, grouped by file, then by commit:
 
-- `<file>:<line>: <what was simplified>. ceiling: <the limit>. revisit: <the trigger>.`
+- `<file>:<line>: <what was simplified>. revisit: <the trigger>.` Include `ceiling: <the limit>` when the marker names one.
 - `<commit>: skipped <feature>. revisit: <the trigger>.`
 
 Tag any row that names no trigger for revisiting with `no-trigger`; those are the ones that quietly become permanent. End with `<N> items, <M> with no trigger.` Nothing found: `No deferred work recorded.` Write the ledger to a file only when asked.

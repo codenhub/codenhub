@@ -1,54 +1,49 @@
 ---
 title: Overview
+description: Choose agent skills and install them in the right folders for your tools.
 ---
 
 # Install and manage agent skills
 
-`@codenhub/skills` provides a curated collection of AI agent skills, a CLI that installs them into supported harnesses, and Node.js utilities for discovering and copying skill directories.
+Each agent tool expects skills in particular folders. Using several tools can mean copying the same skill directories into each project and into your home directory, then repeating the work when they change. `@codenhub/skills` gives you a curated collection and an installer that puts your choices in those folders. The folder names can remain someone else's hobby.
 
-## Setup
+An agent harness is the application that runs an agent, such as Claude or Codex. A skill gives that agent instructions for a particular kind of work. This collection covers planning, coding, review, design, branding, writing, and maintaining agent guidance. You can install just the skills you need; each is packaged with its supporting files and any required notices.
 
-### Installation
+These docs follow a project using Claude and Codex. We start with `brainstorming` to clarify a change before implementation and `test-driven-development` to implement it with tests, then install the same pair globally for use across projects.
 
-Run the installer without adding it to a project:
+## Quick start
+
+With Node.js 24 or newer, open an interactive terminal in your project directory and run:
 
 ```sh
 pnpm dlx @codenhub/skills@latest
 ```
 
-The npm equivalent is `npx @codenhub/skills@latest`.
+The npm equivalent is `npx @codenhub/skills@latest`. Neither command adds a dependency to your project.
 
-### Quick start
+In the wizard, choose local scope, decline the all-skills option, select `brainstorming` and `test-driven-development`, and choose `Claude Workspace` and `Codex Workspace`. Leave cleanup off to keep other installed skills. The installer copies the selected directories into `.claude/skills` and `.agents/skills` under the current directory.
 
-Run the command from the workspace where the skills should be installed. With no arguments in a TTY, the wizard lets you choose scope, skills, harnesses, and cleanup behavior.
-
-For automation, provide explicit options. This installs two skills into every supported workspace harness without prompting:
+To make the same selection without prompts:
 
 ```sh
-pnpm dlx @codenhub/skills@latest --local --all-harnesses --skills=brainstorming,test-driven-development
+pnpm dlx @codenhub/skills@latest --local --skills=brainstorming,test-driven-development --harnesses="Claude Workspace,Codex Workspace"
 ```
 
-Review the [CLI installer](cli.md) before choosing destinations or automating cleanup.
+Any argument except `--include-drafts` switches off the wizard. Without arguments outside an interactive terminal, the installer selects all bundled skills and detected local harnesses. The [CLI guide](cli.md#modes) explains detection and how to choose destinations explicitly.
 
-### Configuration
+## Before installing
 
-Use `--local`, `--global`, or `--both` to select scope. Select skills with `--skills` or `--all-skills`, and destinations with `--harnesses` or `--all-harnesses`. Without arguments outside a TTY, the CLI installs all skills to detected harnesses in the local scope and fails if none are detected.
+You need filesystem permission to read the bundled skills and write to every selected destination. Review the skills you install: they contain instructions an agent may follow and may include scripts. The installer copies files; your harness determines how to load and use them. There are no supported programmatic library imports.
 
-## Requirements
+Existing files at matching paths are overwritten, directories are merged, and stale files remain. Installation has no rollback. The optional `--cleanup` removes the entire selected skills folder, including skills from other sources. Read [Security and failures](security-and-failures.md) before using cleanup or updating customized installations.
 
-- Node.js 24 or newer.
-- Filesystem permission to read source skills and modify every selected destination.
-- A TTY for the interactive wizard. Explicit CLI options support automation.
+## Reading path
 
-## Filesystem safety
+1. [Bundled skills](skills.md): choose workflows, understand what a skill contains, and learn the format, quality rules, and versioning policy.
+2. [CLI installer](cli.md): install the pair for Claude and Codex, repeat it globally, and learn all options, destinations, and harness differences.
+3. [Security and failures](security-and-failures.md): understand what an update can overwrite, diagnose a partial install, and interpret exit codes.
+4. [Skill provenance](provenance.md): check origins, licenses, and the notices to preserve when sharing installed skills.
 
-Installation and copying write directly to local filesystem trees and are not transactional. Existing files are merged and overwritten by default. The `--cleanup` option first removes each selected harness's entire skills directory, including content not managed by this package. Cleanup failures do not by themselves produce a nonzero exit code.
+The [changelog](changelog/index.md) records release changes. The installed `SKILL.md` and its accompanying files describe the workflows for the version you installed.
 
-Read [Security and failure behavior](security-and-failures.md) for path and symlink constraints, partial-write behavior, cleanup risks, and CLI exit semantics before copying untrusted trees or automating installation.
-
-## Next steps
-
-- [CLI installer](cli.md): Review interactive and automated modes, options, destinations, harness behavior, and destructive cleanup.
-- [Programmatic API](api.md): Use synchronous parsing, discovery, and recursive copy utilities in custom Node.js workflows.
-- [Skill format and catalog](skills.md): Evaluate or author compatible `SKILL.md` assets and inspect the bundled inventory.
-- [Skill provenance](provenance.md): Review origins, licenses, package notices, and the per-skill `NOTICE` files copied during installation.
+Start with [Bundled skills](skills.md) to decide which ones belong in your project.

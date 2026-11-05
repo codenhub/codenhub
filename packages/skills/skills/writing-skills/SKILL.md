@@ -2,7 +2,7 @@
 name: writing-skills
 description: Covers authoring agent skills (SKILL.md bundles) to the Agent Skills specification. Use when creating a new skill, editing, reviewing, or auditing an existing one, fixing a skill agents ignore or misapply, or turning a repeated workflow into a skill.
 metadata:
-  short-description: Create and validate reusable skills
+  short-description: Create, review, and evaluate reusable skills
 ---
 
 # Writing Skills
@@ -69,9 +69,9 @@ For workflow, template, example, and script patterns, read [references/patterns.
 
 ## Wording
 
-Current models follow instructions closely, so phrasing changes how often a rule fires.
+Models follow instructions closely, so phrasing changes how often a rule fires.
 
-- **Use plain directives.** "Run the tests before committing." Capitals, "CRITICAL", and "You MUST" make current models over-apply a rule; add emphasis only when an evaluation shows the plain wording is ignored.
+- **Use plain directives.** "Run the tests before committing." Capitals, "CRITICAL", and "You MUST" make models over-apply a rule; add emphasis only when an evaluation shows the plain wording is ignored.
 - **Give the reason for a rule that is not obvious.** "Never use ellipses; a text-to-speech engine reads the output" lets the agent handle cases the rule did not list.
 - **Say what to do.** State the wanted behavior, and pair a necessary prohibition with its alternative: "Do not mock the database; use the test container."
 - **Put the most important rules first, and keep them few.** Adherence drops as instructions pile up, and a model that starts dropping them tends to drop later ones first.
@@ -79,11 +79,11 @@ Current models follow instructions closely, so phrasing changes how often a rule
 
 ## Evaluate To The Risk
 
-| Change                                                                           | Minimum evidence                                                                                                                                                                                                                                                              |
-| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| New skill, or a behavioral change: triggers, rules, workflow order, gates        | Run at least three realistic scenarios without the change and record each outcome. Run them with it until two consecutive runs pass: every failure the change targets is gone, and scenarios that already passed, such as one where the skill should not trigger, still pass. |
-| Discipline skill: a rule agents are tempted to skip under pressure               | The above, plus pressure scenarios. Counter each rationalization you observe, quoted verbatim.                                                                                                                                                                                |
-| Editorial change: wording, formatting, or links with no intended behavior change | The hard rules, then a re-read of the diff confirming no rule, trigger, or order changed. When unsure, treat the change as behavioral.                                                                                                                                        |
+| Change                                                                           | Minimum evidence                                                                                                                                                                                                                                                            |
+| -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| New skill, or a behavioral change: triggers, rules, workflow order, gates        | Run at least three realistic scenarios without the change and record each outcome. Run them with it until two consecutive runs pass: every failure the change targets is gone, and scenarios that already passed, such as one at the edge of the skill's scope, still pass. |
+| Discipline skill: a rule agents are tempted to skip under pressure               | The above, plus pressure scenarios. Counter each rationalization you observe, quoted verbatim.                                                                                                                                                                              |
+| Editorial change: wording, formatting, or links with no intended behavior change | The hard rules, then a re-read of the diff confirming no rule, trigger, or order changed. When unsure, treat the change as behavioral.                                                                                                                                      |
 
 Run scenarios in a fresh context that holds only the skill and the task, such as a subagent or a new session. That context has the skill loaded already, so it cannot test the description. For a new skill or a trigger change, also install the skill beside the others the agent will have, send requests that do not name it, and check that it loads and that a near-miss request does not load it.
 

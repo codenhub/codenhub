@@ -1,6 +1,6 @@
 # Verification Baselines and Flaky Triage
 
-Load this reference when baseline failures exist before coding or verification fails during VERIFY GREEN.
+Load this reference before coding, to capture a baseline, and when verification fails during Verify GREEN.
 
 ## Core Rule
 

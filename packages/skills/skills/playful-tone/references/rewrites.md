@@ -68,8 +68,5 @@ Each entry shows a flat or forced draft, the rewrite, and why it works. The rewr
 
 ## Another Language
 
-- Portuguese, flat: "A função trata fusos horários."
-- Rewrite: "Esta função trata fusos horários, e é por isso que ela tem quarenta linhas em vez de uma."
-- Why: the dark register rebuilt in Portuguese rhythm, not translated word by word.
 - Portuguese, honest: "Funciona, e o porquê está na próxima seção, porque 'funciona' sem porquê é como toda gambiarra começa."
 - Why: uses a joke the Brazilian developer culture already shares.

@@ -55,7 +55,7 @@ Write a table with one row per beat: start time, duration, on-screen text, what 
 - Every text gets time to be read: after it has fully arrived, hold it for the longer of 1 second plus about 0.3 seconds per word, or about 15 characters per second, so long words and identifiers get their time. Viewers read slower in motion than on a page.
 - Every text adds something the earlier beats did not say, so cut any headline that restates the previous beat. Write each as a plain sentence, unless the words are given, such as a quote or a title sequence's credits; generated scripts fall back on two-fragment slogans ("Seven days. Seven pings.") and "X, not Y" contrasts. Use each of those patterns at most once in the piece.
 - The first two seconds state what the video is about. On social platforms, most viewers decide within them whether to keep watching.
-- The last beat holds the call to action or the logo for at least 2 seconds.
+- When the piece ends on a call to action or the logo, hold it for at least 2 seconds.
 
 ## Timing And Easing
 
@@ -73,7 +73,7 @@ Write a table with one row per beat: start time, duration, on-screen text, what 
 
 - Design every key frame as a still that works on its own: clear hierarchy, aligned edges, and one focal point.
 - Use the whole frame. Size and place the focal element for the format, and balance the frame; a headline in the top-left corner with the rest of the frame empty is a slide layout, not a composition for video.
-- Keep text large. On a 1080px-tall frame, keep body text at 40px or more and headlines at 80px or more; on vertical video seen on a phone, go larger. Check legibility by viewing a frame at phone size.
+- Keep text large. Per 1080px of the frame's shorter side, keep body text at 40px or more and headlines at 80px or more; on vertical video meant for phones, at least 48px and 96px per 1080px. Check legibility by viewing a frame at phone size.
 - Animate text by line or word for anything people must read. Animate by letter only for short display words, since letter-by-letter animation delays reading.
 - Use the brand's fonts, colors, and assets, including the logo file for logo and end cards, never the name retyped in a font. When no logo file is supplied, put a box labeled as the logo placeholder where it goes, with no name set in type beside it, and ask for the file. Load fonts locally and confirm they render before any frame is captured.
 - Without brand colors, take them from the subject, such as the product's interface, the place, or the material, and write in the storyboard which part of the subject each color comes from. Avoid the palettes generated video falls back to, unless the subject's own colors produce one: a near-black or slate ground with one bright accent, a cream or off-white ground with dark ink or an orange, rust, terracotta, or copper accent, and indigo or violet, which generated video gives anything technical. A technical subject is not a source for indigo or violet; its own colors must be. Moods such as "calm", "technical", or "paper-like" are not a source.

@@ -23,7 +23,7 @@ Understand first: read the task and the code it touches, and trace the real flow
 6. **Can it be one line?** Make it one line.
 7. **Only then** write the minimum code that works.
 
-Two rungs work? Take the higher one and move on.
+Two rungs work? Take the earlier one and move on.
 
 **A bug fix is a root-cause fix.** Before editing a function, find every caller. One guard in the shared function is a smaller diff than one per caller, and patching only the reported path leaves the others broken.
 
@@ -33,7 +33,7 @@ Two rungs work? Take the higher one and move on.
 - No scaffolding "for later". Later can scaffold for itself.
 - Deletion over addition. Boring over clever.
 - Fewest files and shortest working diff, once you understand the problem. The smallest change in the wrong place is a second bug.
-- Complex request? Ship the lazy version and question the rest in the same response: "Did X; Y covers it. Need full X? Say so." Never stall on a question you can default.
+- Complex request? Build everything asked, the simplest way it can be built, and question the extras you skipped in the same response: "Did X with Y; skipped the Z layer nobody asked for. Need Z? Say so." Never stall on a question you can default.
 - Two standard options of the same size? Take the one correct on edge cases. Lazy means less code, not a flimsier algorithm.
 
 ## Skipped and Deferred Work
@@ -62,7 +62,7 @@ Example: "Add a cache for these API responses."
 
 - lite: "Done, cache class added. A memoized fetch covers this in one line if you would rather not own a cache."
 - full: "Memoized the fetch function. Skipped a custom cache class; add it when memoization measurably falls short."
-- ultra: "No cache until a profiler asks for one. Then: memoize the fetch. A hand-rolled TTL cache is a bug farm."
+- ultra: "Memoized the fetch; that is the cache. A hand-rolled TTL cache waits for a profiler to ask for it."
 
 ## Never Simplify Away
 
