@@ -52,13 +52,19 @@ const DOTTED_IPV4_PATTERN = /^\d+\.\d+\.\d+\.\d+$/;
 const WRITTEN_IPV6_PATTERN =
   /^\[[\da-f:]*(?::(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d))?\]$/i;
 
+/**
+ * A Hangul filler, which Node.js, Chromium and Firefox drop from a host and WebKit refuses, so `𞤀ㅤ` is
+ * `xn--9d6h` in one and no URL in the other. The host the parser writes no longer shows it.
+ */
+const HANGUL_FILLER_PATTERN = /[ᅟᅠㅤﾠ]/u;
+
 /** A part of a host written as `0x` with no digit, which some parsers read as 0 and Firefox refuses. */
 const BARE_HEX_PATTERN = /(?:^|\.)0x(?:\.|$)/i;
 
 /**
  * Tests whether a host a special scheme's URL was read with is one every runtime reads alike, for a URL
  * whose host a host validator decides: a name of plain characters, an IPv4 address not written with a bare
- * `0x` part, or an IPv6 address spelled as every parser reads it. Chromium writes `a*b.com` as `a%2Ab.com` and
+ * `0x` part, or an IPv6 address spelled as every parser reads it, and not written with a Hangul filler. Chromium writes `a*b.com` as `a%2Ab.com` and
  * Firefox refuses it, and Chromium reads `[::01.2.3.4]` and `a%20.com`, which Node.js refuses.
  */
 function isPlainHost(text: string, hostname: string): boolean {
@@ -66,7 +72,11 @@ function isPlainHost(text: string, hostname: string): boolean {
   if (hostname.startsWith("[")) {
     return WRITTEN_IPV6_PATTERN.test(written);
   }
-  return PLAIN_HOST_PATTERN.test(hostname) && !(DOTTED_IPV4_PATTERN.test(hostname) && BARE_HEX_PATTERN.test(written));
+  return (
+    PLAIN_HOST_PATTERN.test(hostname) &&
+    !HANGUL_FILLER_PATTERN.test(written) &&
+    !(DOTTED_IPV4_PATTERN.test(hostname) && BARE_HEX_PATTERN.test(written))
+  );
 }
 
 /**
