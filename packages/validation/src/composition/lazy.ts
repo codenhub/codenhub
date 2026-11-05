@@ -86,12 +86,12 @@ let started = 0;
 /**
  * A path met in one validation: the paths one segment below it, and what a `lazy` kept for each object
  * it found there. Every place at one path leads to the same one, so what was kept for an object at a
- * path is found by the object alone. Kept by the last segment of the place instead, and compared with
+ * path is found by the object and the depth it was reached at. Kept by the last segment of the place instead, and compared with
  * each place the object was already found at, 80,000 rows that shared ten objects took 7.8 seconds.
  */
 interface Spot {
   below?: Map<ValidationPathSegment, Spot>;
-  results?: Map<object, Maybe<ValidationResult<unknown>>>;
+  results?: Map<number, Map<object, Maybe<ValidationResult<unknown>>>>;
 }
 
 /** The paths a `lazy` has met in one validation: the root's, and the one each place it has seen leads to. */
@@ -275,8 +275,16 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
       if (isPrimitive || paths === undefined) {
         return validate(input, place, isPrimitive);
       }
+      // Two options may reach the object here through different numbers of levels, and a result found
+      // nearer `maxDepth` may have failed for that alone, so each is kept for the depth it was found at.
       const spot = spotOf(place, paths);
-      const kept = (spot.results ??= new Map());
+      const depth = openLevels();
+      const byDepth = (spot.results ??= new Map());
+      let kept = byDepth.get(depth);
+      if (kept === undefined) {
+        kept = new Map();
+        byDepth.set(depth, kept);
+      }
       const found = kept.get(input as object);
       if (found !== undefined) {
         return found;

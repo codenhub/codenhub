@@ -133,6 +133,23 @@ describe("lazy", () => {
       expect(block(input).ok).toBe(true);
     });
 
+    it("should not give an option a depth failure another option met deeper at the same place", async () => {
+      // Both options reach the object at the root, one through two more levels, which pass the limit.
+      const shallow = lazy(() => object({ n: number() }), { maxDepth: 2 });
+      const deep = lazy(() => lazy(() => shallow));
+      expect(valueOf(union([deep, shallow])({ n: 1 }))).toEqual({ n: 1 });
+      const waiting = lazy(
+        () =>
+          object(
+            { n: number() },
+            check(async () => true),
+          ),
+        { maxDepth: 2 },
+      );
+      const deepWaiting = lazy(() => lazy(() => waiting));
+      expect(valueOf(await union([deepWaiting, waiting])({ n: 1 }))).toEqual({ n: 1 });
+    });
+
     it("should count every lazy validator, so two that call each other share one limit", () => {
       const ping: Validator<unknown> = optional(object({ next: lazy(() => pong, { maxDepth: 4 }) }));
       const pong: Validator<unknown> = optional(object({ next: lazy(() => ping, { maxDepth: 4 }) }));
