@@ -1,7 +1,7 @@
 ---
 title: Integrações
 description: Use um validador com bibliotecas de formulário, frameworks de RPC e HTTP, as ferramentas de um modelo de linguagem, OpenAPI e dentro de um schema zod ou valibot, com um exemplo para cada, executado com a biblioteca que ele cita.
-source: d9f2e9d9e221aead7e7ebb6594d84d1e856e230c
+source: eb270ae81768ce94a5e3f8942dd6452078e95898
 order: 11
 ---
 
@@ -177,7 +177,7 @@ server.setRequestHandler(CallToolRequestSchema, (request) => {
 
 ## OpenAPI
 
-O OpenAPI 3.1 escreve schemas em JSON Schema 2020-12, que é o que `toJsonSchema` escreve, então um schema entra em `components.schemas` sem mudanças. Um schema recursivo é a exceção. Ele se refere às suas definições como `#/$defs/schema1`, a partir da raiz do documento em que está, e a raiz de um documento OpenAPI não tem `$defs`. Então um schema assim precisa ter as definições movidas para `components.schemas` e as referências reescritas para apontar para lá. O OpenAPI 3.0 usa um dialeto mais antigo, que `toJsonSchema` não escreve.
+O OpenAPI 3.1 escreve schemas em JSON Schema 2020-12, que é o que `toJsonSchema` escreve, então um schema entra em `components.schemas` sem mudanças. Um schema com um `lazy`, recursivo ou não, é a exceção. Ele se refere às suas definições como `#/$defs/schema1`, a partir da raiz do documento em que está, e a raiz de um documento OpenAPI não tem `$defs`. Então um schema assim precisa ter as definições movidas para `components.schemas` e as referências reescritas para apontar para lá. O OpenAPI 3.0 usa um dialeto mais antigo, que `toJsonSchema` não escreve.
 
 ```ts
 import { email, meta, object, string, toJsonSchema } from "@codenhub/validation";

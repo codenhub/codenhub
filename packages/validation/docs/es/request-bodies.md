@@ -2,7 +2,7 @@
 title: Cuerpos de solicitud
 description: Texto JSON, listas, tuplas, diccionarios, sets y maps, elegir entre formas, y datos recursivos.
 order: 3
-source: fe1d6fa59f7a66689cc47b092fdc0d5ea3745ce0
+source: 423213eb840760e3d625b904bba8368890887046
 ---
 
 # Cuerpos de solicitud
@@ -185,7 +185,7 @@ Cada variante debe producir un objeto plano, ya que eso es lo que puede llevar l
 
 Donde las salidas difieren de cualquier otra forma, como `"  ab "` cuando un lado le quita los espacios y el otro lo pasa a mayúsculas, ningún valor satisface a ambos. Cada uno de esos lugares falla con `invalid_intersection` en su ruta, en lugar de que un lado gane sin avisar.
 
-El objeto fusionado es nuevo. Así que una clave `__proto__` propia que un lado dejó pasar sin verificar, como hace `unknown()`, se reporta como `invalid_key` con un problema dentro, `{ reserved: true }`, igual que la reporta `record`. Si la forma de alguno de los lados incluye `__proto__` en ese lugar, la conserva. Un valor que ambos lados dejaron pasar entero, por ejemplo con `unknown()` en los dos, es el propio objeto de la entrada, y se conserva sin cambios.
+El objeto fusionado es nuevo. Así que una clave `__proto__` propia que un lado dejó pasar sin verificar, como hace `unknown()`, se reporta como `invalid_key` con un problema dentro, `{ reserved: true }`, igual que la reporta `record`. Si la forma de alguno de los lados incluye `__proto__` en ese lugar, la conserva, pero solo si esa forma produjo el valor ahí. No lo produjo una forma que un `transform` ejecuta antes de su función, ni una en un paso de `pipe` seguido de un paso que crea un objeto nuevo, ni el validador de claves de una entrada de `map`, para el valor de esa entrada. Un valor que ambos lados dejaron pasar entero, por ejemplo con `unknown()` en los dos, es el propio objeto de la entrada, y se conserva sin cambios.
 
 Ambos validadores ven la entrada completa, así que dos `object` con `unknownKeys: "strict"` solo pasan juntos cuando cada clave de la entrada está incluida en ambas formas: cada uno rechaza las claves que solo incluye el otro. Para combinar formas estrictas, expándelas en una sola: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
 

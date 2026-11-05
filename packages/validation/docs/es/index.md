@@ -1,7 +1,7 @@
 ---
 title: Visión general
 description: Para qué sirve el paquete de validación, cómo instalarlo y en qué orden leer sus páginas.
-source: 353ec40ccfafe1ceade6135e369faa7ee1f633f7
+source: acc3ea5f9cdca5707b9a2df752d212aa10cc5b49
 ---
 
 # Valida valores y formas
@@ -20,7 +20,7 @@ El paquete está hecho para esa frontera, donde la entrada puede ser hostil:
 - **Lo que reporta una entrada que falla está acotado.** Una lista larga de elementos inválidos se detiene en 1000 problemas. Una entrada anidada demasiado profundo es un solo problema, no un desbordamiento de pila, siempre que el límite de profundidad quepa en la pila.
 - **Un problema nunca contiene un valor de la entrada.** Un registro de fallos no contiene contraseñas, a menos que un `literal` o un `oneOf` verifique una: estos reportan los valores que aceptan, como dice [Primeros pasos](./getting-started.md#valores-fijos). Un problema sí nombra las claves de la entrada, en su `path`.
 
-Todo elemento válido se revisa igual, pase o falle la entrada, así que una entrada grande cuesta lo que mide. [Límites](./limits.md) explica cómo acotar su tamaño y su profundidad.
+El límite de 1000 problemas acota el reporte, no el trabajo: una entrada que pasa, o que falla solo cerca de su final, se revisa igual elemento por elemento, así que una entrada grande cuesta lo que mide. [Límites](./limits.md) explica cómo acotar su tamaño y su profundidad.
 
 ## Instalación
 

@@ -1,7 +1,7 @@
 ---
 title: Formatos
 description: Endereços de e-mail, URLs, nomes de domínio, endereços IP, datas, horários e os outros formatos de string, o que cada um aceita e o valor que produz.
-source: 93bf70e591f7a455796d5799052538beee90e41b
+source: 5ac6fedbc6d4475eb4aab0f0bedbe55cdcdadb38
 order: 7
 ---
 
@@ -213,7 +213,7 @@ Os endereços que ele aceita:
 
 - IPv4 tem quatro partes decimais de 0 a 255, sem zeros à esquerda, que alguns parsers leem como octal.
 - IPv6 é escrito como a RFC 4291 permite: oito grupos de um a quatro dígitos hexadecimais, com uma sequência de grupos zero abreviada como `::`, e um endereço IPv4 no lugar dos dois últimos grupos, como em `::ffff:192.0.2.1`, cujas partes seguem a regra do IPv4.
-- Uma zona como `%eth0` só é aceita depois de um endereço link-local (`fe80::/10`), o único lugar em que ela significa algo.
+- Uma zona como `%eth0` só é aceita depois de um endereço link-local (`fe80::/10`). Depois de qualquer outro endereço ela falha, inclusive um multicast com escopo como `ff02::1%eth0`.
 
 Um endereço IPv4 tem uma única grafia e é produzido como foi escrito. Um endereço IPv6 é produzido na forma canônica, de modo que um endereço é uma única string:
 
@@ -285,7 +285,7 @@ Para um esquema para o qual o parser não tem regras, como `ssh`, `url({ host })
 
 ### Caminhos que um servidor lê de outro jeito
 
-Um servidor pode ler um caminho de formas que o URL Standard não prevê: decodificando `%61` para `a`, juntando `//` em `/` ou descartando de um segmento o `;` e o que vem depois. Então escreva um validador `path` como uma allowlist, uma descrição dos caminhos que podem passar, como `string(startsWith("/api/"))`. Uma denylist como "não está sob `/admin`" deixa passar `/;/admin`, `//admin` e `/%61dmin`. Uma allowlist continua valendo para cada uma dessas leituras. Ela não vale para um servidor que decodifica o caminho duas vezes. Um servidor assim lê `/api/%252e%252e/admin` como `/api/../admin`, que é `/admin`, e `startsWith("/api/")` o aceita. Para um servidor assim, escreva uma allowlist que deixe `%` de fora, como `pattern(/^\/api\/[\w/-]*$/)`.
+Um servidor pode ler um caminho de formas que o URL Standard não prevê: decodificando `%61` para `a`, juntando `//` em `/` ou descartando de um segmento o `;` e o que vem depois. Então escreva um validador `path` como uma allowlist, uma descrição dos caminhos que podem passar, como `string(startsWith("/api/"))`. Uma denylist como "não está sob `/admin`" deixa passar `/;/admin`, `//admin` e `/%61dmin`. Uma allowlist continua valendo para cada uma dessas leituras. Ela não vale para um servidor que decodifica o caminho duas vezes. Um servidor assim lê `/api/%252e%252e/admin` como `/api/../admin`, que é `/admin`, e `startsWith("/api/")` o aceita. Para um servidor assim, escreva uma allowlist que deixe `%` de fora, como `string(pattern(/^\/api\/[\w/-]*$/))`.
 
 Com um validador `path`, dois tipos de caminho falham antes de qualquer parte rodar. Cada um falha como a parte do caminho, cujos `issues` contêm `invalid_value`:
 
@@ -294,7 +294,7 @@ Com um validador `path`, dois tipos de caminho falham antes de qualquer parte ro
 
 Um `;` em qualquer outro lugar, como em `/api/a;v=1`, é aceito. Sem um validador `path`, uma URL dessas é aceita, já que nada verifica o caminho dela.
 
-Para um esquema para o qual o parser não tem regras, como `ssh`, um `\` no caminho é mantido como foi escrito, e não é um separador para o parser. Então `foo://host/api/..\admin` passa em `startsWith("/api/")`. Quem consome a URL e lê `\` como separador, como pode acontecer no Windows, precisa de uma allowlist que o deixe de fora, como `pattern(/^\/api\/[\w/-]*$/)`.
+Para um esquema para o qual o parser não tem regras, como `ssh`, um `\` no caminho é mantido como foi escrito, e não é um separador para o parser. Então `foo://host/api/..\admin` passa em `startsWith("/api/")`. Quem consome a URL e lê `\` como separador, como pode acontecer no Windows, precisa de uma allowlist que o deixe de fora, como `string(pattern(/^\/api\/[\w/-]*$/))`.
 
 ## Próximos passos
 

@@ -1,7 +1,7 @@
 ---
 title: Corpos de requisição
 description: Texto JSON, listas, tuplas, dicionários, sets e maps, uma escolha entre estruturas e dados recursivos.
-source: fe1d6fa59f7a66689cc47b092fdc0d5ea3745ce0
+source: 423213eb840760e3d625b904bba8368890887046
 order: 3
 ---
 
@@ -185,7 +185,7 @@ Cada variante precisa produzir um objeto simples, já que é ele que pode levar 
 
 Onde as saídas diferem de outra forma, como `"  ab "` difere quando um lado aplica trim e o outro passa para maiúsculas, nenhum valor satisfaz os dois. Cada um desses pontos falha com `invalid_intersection` no caminho dele, em vez de um lado vencer em silêncio.
 
-O objeto mesclado é novo. Então uma chave `__proto__` própria que um dos lados deixou passar sem verificar, como faz `unknown()`, é reportada como `invalid_key` com um problema dentro, `{ reserved: true }`, como `record` a reporta. Uma estrutura de qualquer um dos lados que lista `__proto__` naquele ponto a mantém. Um valor que os dois lados deixaram passar inteiro, como por `unknown()` nos dois, é o próprio objeto da entrada, e é mantido sem alteração.
+O objeto mesclado é novo. Então uma chave `__proto__` própria que um dos lados deixou passar sem verificar, como faz `unknown()`, é reportada como `invalid_key` com um problema dentro, `{ reserved: true }`, como `record` a reporta. Uma estrutura de qualquer um dos lados que lista `__proto__` naquele ponto a mantém, mas só se essa estrutura produziu o valor ali. Não o produziu uma estrutura que um `transform` executa antes da sua função, nem uma em uma etapa de `pipe` seguida de uma etapa que cria um objeto novo, nem o validador de chave de uma entrada de `map`, para o valor dessa entrada. Um valor que os dois lados deixaram passar inteiro, como por `unknown()` nos dois, é o próprio objeto da entrada, e é mantido sem alteração.
 
 Os dois validadores veem a entrada inteira, então dois `object`s com `unknownKeys: "strict"` só passam juntos quando toda chave da entrada está listada nas duas estruturas: cada um rejeita as chaves que só o outro lista. Para combinar estruturas estritas, espalhe-as em uma só: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
 

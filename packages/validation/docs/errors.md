@@ -245,7 +245,7 @@ An entry must be text or a function that returns text. Anything else, such as a 
 
 ### The wording of one code
 
-Each code's English wording is also an export of its own. A program that can report only a few codes builds a map of those, and bundles no other wording:
+Each code's English wording is also an export of its own. A program that can report only a few codes builds a map of those. One that words its issues only with [`assert`](#throwing-for-invalid-configuration) then bundles no other wording, while `formatIssue`, `flatten` and `standard` bundle all of `englishMessages` anyway, [as their default](#turning-an-issue-into-text):
 
 | Code                   | Export                       |
 | ---------------------- | ---------------------------- |

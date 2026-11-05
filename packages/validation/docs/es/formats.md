@@ -2,7 +2,7 @@
 title: Formatos
 description: Direcciones de correo, URL, nombres de dominio, direcciones IP, fechas, horas y los demás formatos de cadena, lo que acepta cada uno y el valor que produce.
 order: 7
-source: 93bf70e591f7a455796d5799052538beee90e41b
+source: 5ac6fedbc6d4475eb4aab0f0bedbe55cdcdadb38
 ---
 
 # Formatos
@@ -213,7 +213,7 @@ Las direcciones que acepta:
 
 - IPv4 son cuatro partes decimales de 0 a 255, sin ceros a la izquierda, que algunos parsers leen como octal.
 - IPv6 se escribe como lo permite el RFC 4291: ocho grupos de uno a cuatro dígitos hexadecimales, con una secuencia de grupos de ceros abreviada como `::`, y una dirección IPv4 en lugar de los dos últimos grupos, como en `::ffff:192.0.2.1`, cuyas partes siguen la regla de IPv4.
-- Una zona como `%eth0` se acepta solo después de una dirección link-local (`fe80::/10`), el único lugar donde significa algo.
+- Una zona como `%eth0` se acepta solo después de una dirección link-local (`fe80::/10`). Después de cualquier otra dirección falla, incluida una multicast con ámbito como `ff02::1%eth0`.
 
 Una dirección IPv4 tiene una sola escritura, y se produce tal como está escrita. Una dirección IPv6 se produce en su forma canónica, para que una dirección sea una sola cadena:
 
@@ -285,7 +285,7 @@ Para un esquema para el que el parser no tiene reglas, como `ssh`, `url({ host }
 
 ### Rutas que un servidor lee de otra forma
 
-Un servidor puede leer una ruta de maneras que el URL Standard no contempla: decodificar `%61` como `a`, unir `//` en `/`, o descartar de un segmento el `;` y lo que le sigue. Así que escribe un validador `path` como una lista de permitidos, una descripción de las rutas que pueden pasar, como `string(startsWith("/api/"))`. Una lista de bloqueados como "no bajo `/admin`" deja pasar `/;/admin`, `//admin` y `/%61dmin`. Una lista de permitidos sigue siendo válida para cada una de esas lecturas. No lo es para un servidor que decodifica la ruta dos veces. Un servidor así lee `/api/%252e%252e/admin` como `/api/../admin`, que es `/admin`, y `startsWith("/api/")` la acepta. Para un servidor así, escribe una lista de permitidos que deje fuera `%`, como `pattern(/^\/api\/[\w/-]*$/)`.
+Un servidor puede leer una ruta de maneras que el URL Standard no contempla: decodificar `%61` como `a`, unir `//` en `/`, o descartar de un segmento el `;` y lo que le sigue. Así que escribe un validador `path` como una lista de permitidos, una descripción de las rutas que pueden pasar, como `string(startsWith("/api/"))`. Una lista de bloqueados como "no bajo `/admin`" deja pasar `/;/admin`, `//admin` y `/%61dmin`. Una lista de permitidos sigue siendo válida para cada una de esas lecturas. No lo es para un servidor que decodifica la ruta dos veces. Un servidor así lee `/api/%252e%252e/admin` como `/api/../admin`, que es `/admin`, y `startsWith("/api/")` la acepta. Para un servidor así, escribe una lista de permitidos que deje fuera `%`, como `string(pattern(/^\/api\/[\w/-]*$/))`.
 
 Con un validador `path`, dos tipos de ruta fallan antes de que se ejecute cualquier parte. Cada uno falla como la parte de la ruta, cuyos `issues` contienen `invalid_value`:
 
@@ -294,7 +294,7 @@ Con un validador `path`, dos tipos de ruta fallan antes de que se ejecute cualqu
 
 Un `;` en cualquier otro lugar, como en `/api/a;v=1`, se acepta. Sin un validador `path`, una URL así se acepta, ya que nada comprueba su ruta.
 
-Para un esquema para el que el parser no tiene reglas, como `ssh`, un `\` en la ruta se mantiene tal como se escribió, y no es un separador para el parser. Así que `foo://host/api/..\admin` pasa `startsWith("/api/")`. Quien lea `\` como separador, como puede hacerlo algo en Windows, necesita una lista de permitidos que lo excluya, como `pattern(/^\/api\/[\w/-]*$/)`.
+Para un esquema para el que el parser no tiene reglas, como `ssh`, un `\` en la ruta se mantiene tal como se escribió, y no es un separador para el parser. Así que `foo://host/api/..\admin` pasa `startsWith("/api/")`. Quien lea `\` como separador, como puede hacerlo algo en Windows, necesita una lista de permitidos que lo excluya, como `string(pattern(/^\/api\/[\w/-]*$/))`.
 
 ## Siguiente
 

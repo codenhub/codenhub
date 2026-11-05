@@ -88,7 +88,7 @@ The package is built for that boundary, where the input may be hostile:
 - **A failing input has a bounded report.** A long list of bad items stops at 1,000 issues. Input nested too deep is one issue, not a stack overflow, as long as the depth limit fits the stack.
 - **An issue never holds a value of the input.** A log of failures holds no passwords, unless a `literal` or a `oneOf` checks one: those report the values they accept, as [Getting started](docs/getting-started.md#fixed-values) says. An issue does name the input's keys, in its `path`.
 
-Every valid item is still checked, whether the input passes or fails, so a large input costs its size. [Limits](docs/limits.md) says how to bound its size and its depth.
+The limit of 1,000 issues bounds the report, not the work: an input that passes, or fails only near its end, is still checked item by item, so a large one costs its size. [Limits](docs/limits.md) says how to bound its size and its depth.
 
 ## Installation
 
@@ -913,7 +913,7 @@ Each variant must produce a plain object, since that is what can carry the tag. 
 
 Where the outputs differ otherwise, as `"  ab "` does when one side trims it and the other uppercases it, no value satisfies both. Each such place fails with `invalid_intersection` at its path, instead of one side silently winning.
 
-The merged object is new. So an own `__proto__` key that one side passed on unchecked, as `unknown()` does, is reported as `invalid_key` with one issue inside, `{ reserved: true }`, as `record` reports it. A shape of either side that lists `__proto__` at that place keeps it. A value both sides passed on whole, such as through `unknown()` on both, is the input's own object, and is kept unchanged.
+The merged object is new. So an own `__proto__` key that one side passed on unchecked, as `unknown()` does, is reported as `invalid_key` with one issue inside, `{ reserved: true }`, as `record` reports it. A shape of either side that lists `__proto__` at that place keeps it, but only if that shape made the value there. A shape a `transform` runs before its function did not, nor did one in a `pipe` step followed by a step that makes a new object, nor the key validator of a `map` entry, for the entry's value. A value both sides passed on whole, such as through `unknown()` on both, is the input's own object, and is kept unchanged.
 
 Both validators see the whole input, so two `object`s with `unknownKeys: "strict"` pass together only when every key of the input is listed in both shapes: each rejects the keys only the other lists. To combine strict shapes, spread them into one: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
 
@@ -1332,7 +1332,7 @@ An entry must be text or a function that returns text. Anything else, such as a 
 
 ### The wording of one code
 
-Each code's English wording is also an export of its own. A program that can report only a few codes builds a map of those, and bundles no other wording:
+Each code's English wording is also an export of its own. A program that can report only a few codes builds a map of those. One that words its issues only with [`assert`](#throwing-for-invalid-configuration) then bundles no other wording, while `formatIssue`, `flatten` and `standard` bundle all of `englishMessages` anyway, [as their default](#turning-an-issue-into-text):
 
 | Code                   | Export                       |
 | ---------------------- | ---------------------------- |
@@ -1949,7 +1949,7 @@ The addresses it accepts:
 
 - IPv4 is four decimal parts from 0 to 255, without leading zeros, which some parsers read as octal.
 - IPv6 is written as RFC 4291 allows: eight groups of one to four hex digits, with one run of zero groups shortened to `::`, and an IPv4 address in place of the last two groups, as in `::ffff:192.0.2.1`, whose parts follow the IPv4 rule.
-- A zone such as `%eth0` is accepted only after a link-local address (`fe80::/10`), the one place it means something.
+- A zone such as `%eth0` is accepted only after a link-local address (`fe80::/10`). After any other address it fails, a scoped multicast one such as `ff02::1%eth0` included.
 
 An IPv4 address has one spelling, and is produced as written. An IPv6 address is produced in its canonical form, so that one address is one string:
 
@@ -2021,7 +2021,7 @@ For a scheme the parser has no rules for, such as `ssh`, `url({ host })` receive
 
 ### Paths a server reads otherwise
 
-A server may read a path in ways the URL Standard does not: decoding `%61` to `a`, merging `//` into `/`, or dropping `;` and what follows from a segment. So write a `path` validator as an allowlist, a description of the paths that may pass, such as `string(startsWith("/api/"))`. A denylist such as "not under `/admin`" passes `/;/admin`, `//admin` and `/%61dmin`. An allowlist still holds for each of those readings. It does not hold for a server that decodes the path twice. Such a server reads `/api/%252e%252e/admin` as `/api/../admin`, which is `/admin`, and `startsWith("/api/")` accepts it. For such a server, write an allowlist that leaves out `%`, such as `pattern(/^\/api\/[\w/-]*$/)`.
+A server may read a path in ways the URL Standard does not: decoding `%61` to `a`, merging `//` into `/`, or dropping `;` and what follows from a segment. So write a `path` validator as an allowlist, a description of the paths that may pass, such as `string(startsWith("/api/"))`. A denylist such as "not under `/admin`" passes `/;/admin`, `//admin` and `/%61dmin`. An allowlist still holds for each of those readings. It does not hold for a server that decodes the path twice. Such a server reads `/api/%252e%252e/admin` as `/api/../admin`, which is `/admin`, and `startsWith("/api/")` accepts it. For such a server, write an allowlist that leaves out `%`, such as `string(pattern(/^\/api\/[\w/-]*$/))`.
 
 With a `path` validator, two kinds of path fail before any part runs. Each fails as the path part, whose `issues` hold `invalid_value`:
 
@@ -2030,7 +2030,7 @@ With a `path` validator, two kinds of path fail before any part runs. Each fails
 
 A `;` anywhere else, as in `/api/a;v=1`, is accepted. Without a `path` validator, such a URL is accepted, since nothing checks its path.
 
-For a scheme the parser has no rules for, such as `ssh`, a `\` in the path is kept as it was written, and is no separator to the parser. So `foo://host/api/..\admin` passes `startsWith("/api/")`. A consumer that reads `\` as a separator, as one on Windows may, needs an allowlist that leaves it out, such as `pattern(/^\/api\/[\w/-]*$/)`.
+For a scheme the parser has no rules for, such as `ssh`, a `\` in the path is kept as it was written, and is no separator to the parser. So `foo://host/api/..\admin` passes `startsWith("/api/")`. A consumer that reads `\` as a separator, as one on Windows may, needs an allowlist that leaves it out, such as `string(pattern(/^\/api\/[\w/-]*$/))`.
 
 ## Next
 
@@ -2816,7 +2816,7 @@ server.setRequestHandler(CallToolRequestSchema, (request) => {
 
 ## OpenAPI
 
-OpenAPI 3.1 writes schemas in JSON Schema 2020-12, which `toJsonSchema` writes, so a schema goes under `components.schemas` unchanged. A recursive schema is the exception. It refers to its definitions as `#/$defs/schema1`, from the root of the document it is in, and the root of an OpenAPI document has no `$defs`. So such a schema needs its definitions moved under `components.schemas`, and its references rewritten to point there. OpenAPI 3.0 uses an older dialect, which `toJsonSchema` does not write.
+OpenAPI 3.1 writes schemas in JSON Schema 2020-12, which `toJsonSchema` writes, so a schema goes under `components.schemas` unchanged. A schema with a `lazy`, recursive or not, is the exception. It refers to its definitions as `#/$defs/schema1`, from the root of the document it is in, and the root of an OpenAPI document has no `$defs`. So such a schema needs its definitions moved under `components.schemas`, and its references rewritten to point there. OpenAPI 3.0 uses an older dialect, which `toJsonSchema` does not write.
 
 ```ts
 import { email, meta, object, string, toJsonSchema } from "@codenhub/validation";

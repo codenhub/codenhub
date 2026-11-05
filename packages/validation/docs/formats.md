@@ -212,7 +212,7 @@ The addresses it accepts:
 
 - IPv4 is four decimal parts from 0 to 255, without leading zeros, which some parsers read as octal.
 - IPv6 is written as RFC 4291 allows: eight groups of one to four hex digits, with one run of zero groups shortened to `::`, and an IPv4 address in place of the last two groups, as in `::ffff:192.0.2.1`, whose parts follow the IPv4 rule.
-- A zone such as `%eth0` is accepted only after a link-local address (`fe80::/10`), the one place it means something.
+- A zone such as `%eth0` is accepted only after a link-local address (`fe80::/10`). After any other address it fails, a scoped multicast one such as `ff02::1%eth0` included.
 
 An IPv4 address has one spelling, and is produced as written. An IPv6 address is produced in its canonical form, so that one address is one string:
 
@@ -284,7 +284,7 @@ For a scheme the parser has no rules for, such as `ssh`, `url({ host })` receive
 
 ### Paths a server reads otherwise
 
-A server may read a path in ways the URL Standard does not: decoding `%61` to `a`, merging `//` into `/`, or dropping `;` and what follows from a segment. So write a `path` validator as an allowlist, a description of the paths that may pass, such as `string(startsWith("/api/"))`. A denylist such as "not under `/admin`" passes `/;/admin`, `//admin` and `/%61dmin`. An allowlist still holds for each of those readings. It does not hold for a server that decodes the path twice. Such a server reads `/api/%252e%252e/admin` as `/api/../admin`, which is `/admin`, and `startsWith("/api/")` accepts it. For such a server, write an allowlist that leaves out `%`, such as `pattern(/^\/api\/[\w/-]*$/)`.
+A server may read a path in ways the URL Standard does not: decoding `%61` to `a`, merging `//` into `/`, or dropping `;` and what follows from a segment. So write a `path` validator as an allowlist, a description of the paths that may pass, such as `string(startsWith("/api/"))`. A denylist such as "not under `/admin`" passes `/;/admin`, `//admin` and `/%61dmin`. An allowlist still holds for each of those readings. It does not hold for a server that decodes the path twice. Such a server reads `/api/%252e%252e/admin` as `/api/../admin`, which is `/admin`, and `startsWith("/api/")` accepts it. For such a server, write an allowlist that leaves out `%`, such as `string(pattern(/^\/api\/[\w/-]*$/))`.
 
 With a `path` validator, two kinds of path fail before any part runs. Each fails as the path part, whose `issues` hold `invalid_value`:
 
@@ -293,7 +293,7 @@ With a `path` validator, two kinds of path fail before any part runs. Each fails
 
 A `;` anywhere else, as in `/api/a;v=1`, is accepted. Without a `path` validator, such a URL is accepted, since nothing checks its path.
 
-For a scheme the parser has no rules for, such as `ssh`, a `\` in the path is kept as it was written, and is no separator to the parser. So `foo://host/api/..\admin` passes `startsWith("/api/")`. A consumer that reads `\` as a separator, as one on Windows may, needs an allowlist that leaves it out, such as `pattern(/^\/api\/[\w/-]*$/)`.
+For a scheme the parser has no rules for, such as `ssh`, a `\` in the path is kept as it was written, and is no separator to the parser. So `foo://host/api/..\admin` passes `startsWith("/api/")`. A consumer that reads `\` as a separator, as one on Windows may, needs an allowlist that leaves it out, such as `string(pattern(/^\/api\/[\w/-]*$/))`.
 
 ## Next
 

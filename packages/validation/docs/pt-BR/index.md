@@ -1,7 +1,7 @@
 ---
 title: Visão geral
 description: Para que serve o pacote de validação, como instalá-lo e em que ordem ler as páginas.
-source: 353ec40ccfafe1ceade6135e369faa7ee1f633f7
+source: acc3ea5f9cdca5707b9a2df752d212aa10cc5b49
 ---
 
 # Valide valores e estruturas
@@ -20,7 +20,7 @@ O pacote foi feito para essa fronteira, onde a entrada pode ser hostil:
 - **O que uma entrada inválida reporta é limitado.** Uma lista longa de itens inválidos para em 1.000 problemas. Uma entrada aninhada fundo demais vira um problema só, não um estouro de pilha, desde que o limite de profundidade caiba na pilha.
 - **Um problema nunca guarda um valor da entrada.** Um log de falhas não contém senhas, a menos que um `literal` ou um `oneOf` verifique uma: eles reportam os valores que aceitam, como diz [Primeiros passos](getting-started.md#valores-fixos). Um problema cita, sim, as chaves da entrada, no seu `path`.
 
-Todo item válido ainda é verificado, quer a entrada passe ou falhe, então uma entrada grande custa o seu tamanho. [Limites](limits.md) explica como limitar o tamanho e a profundidade dela.
+O limite de 1.000 problemas restringe o relatório, não o trabalho: uma entrada que passa, ou que falha só perto do fim, ainda é verificada item por item, então uma entrada grande custa o seu tamanho. [Limites](limits.md) explica como limitar o tamanho e a profundidade dela.
 
 ## Instalação
 

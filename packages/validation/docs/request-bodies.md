@@ -184,7 +184,7 @@ Each variant must produce a plain object, since that is what can carry the tag. 
 
 Where the outputs differ otherwise, as `"  ab "` does when one side trims it and the other uppercases it, no value satisfies both. Each such place fails with `invalid_intersection` at its path, instead of one side silently winning.
 
-The merged object is new. So an own `__proto__` key that one side passed on unchecked, as `unknown()` does, is reported as `invalid_key` with one issue inside, `{ reserved: true }`, as `record` reports it. A shape of either side that lists `__proto__` at that place keeps it. A value both sides passed on whole, such as through `unknown()` on both, is the input's own object, and is kept unchanged.
+The merged object is new. So an own `__proto__` key that one side passed on unchecked, as `unknown()` does, is reported as `invalid_key` with one issue inside, `{ reserved: true }`, as `record` reports it. A shape of either side that lists `__proto__` at that place keeps it, but only if that shape made the value there. A shape a `transform` runs before its function did not, nor did one in a `pipe` step followed by a step that makes a new object, nor the key validator of a `map` entry, for the entry's value. A value both sides passed on whole, such as through `unknown()` on both, is the input's own object, and is kept unchanged.
 
 Both validators see the whole input, so two `object`s with `unknownKeys: "strict"` pass together only when every key of the input is listed in both shapes: each rejects the keys only the other lists. To combine strict shapes, spread them into one: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
 

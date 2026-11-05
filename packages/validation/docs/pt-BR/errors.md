@@ -1,7 +1,7 @@
 ---
 title: Problemas e mensagens
 description: O que um resultado com falha contém, os códigos de problema nativos e seus params, e como transformar problemas em texto em inglês, em português ou com as suas próprias palavras.
-source: 1038b624e0c11aaaa42137d11d435ab102251142
+source: ae76c2953676715dddf6b0e9ceb9bd1af4d96632
 order: 5
 ---
 
@@ -246,7 +246,7 @@ Uma entrada precisa ser texto ou uma função que retorna texto. Qualquer outra 
 
 ### O texto de um código
 
-O texto em inglês de cada código também é uma exportação separada. Um programa que só pode reportar alguns códigos monta um mapa com eles, e não inclui nenhum outro texto no bundle:
+O texto em inglês de cada código também é uma exportação separada. Um programa que só pode reportar alguns códigos monta um mapa com eles. Um que escreve os problemas só com [`assert`](#lançando-um-erro-para-configuração-inválida) não inclui então nenhum outro texto no bundle, enquanto `formatIssue`, `flatten` e `standard` incluem todo o `englishMessages` mesmo assim, [por ele ser o padrão delas](#transformando-um-problema-em-texto):
 
 | Código                 | Exportação                   |
 | ---------------------- | ---------------------------- |

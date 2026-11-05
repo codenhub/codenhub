@@ -176,7 +176,7 @@ server.setRequestHandler(CallToolRequestSchema, (request) => {
 
 ## OpenAPI
 
-OpenAPI 3.1 writes schemas in JSON Schema 2020-12, which `toJsonSchema` writes, so a schema goes under `components.schemas` unchanged. A recursive schema is the exception. It refers to its definitions as `#/$defs/schema1`, from the root of the document it is in, and the root of an OpenAPI document has no `$defs`. So such a schema needs its definitions moved under `components.schemas`, and its references rewritten to point there. OpenAPI 3.0 uses an older dialect, which `toJsonSchema` does not write.
+OpenAPI 3.1 writes schemas in JSON Schema 2020-12, which `toJsonSchema` writes, so a schema goes under `components.schemas` unchanged. A schema with a `lazy`, recursive or not, is the exception. It refers to its definitions as `#/$defs/schema1`, from the root of the document it is in, and the root of an OpenAPI document has no `$defs`. So such a schema needs its definitions moved under `components.schemas`, and its references rewritten to point there. OpenAPI 3.0 uses an older dialect, which `toJsonSchema` does not write.
 
 ```ts
 import { email, meta, object, string, toJsonSchema } from "@codenhub/validation";

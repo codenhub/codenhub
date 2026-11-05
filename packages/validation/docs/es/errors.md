@@ -2,7 +2,7 @@
 title: Problemas y mensajes
 description: Qué contiene un resultado fallido, los códigos de problema integrados y sus params, y cómo convertir los problemas en texto en inglés, en portugués o con tus propias palabras.
 order: 5
-source: 1038b624e0c11aaaa42137d11d435ab102251142
+source: ae76c2953676715dddf6b0e9ceb9bd1af4d96632
 ---
 
 # Problemas y mensajes
@@ -246,7 +246,7 @@ Una entrada debe ser texto o una función que devuelve texto. Cualquier otra cos
 
 ### La redacción de un código
 
-La redacción en inglés de cada código también es una exportación propia. Un programa que solo puede reportar unos pocos códigos arma un mapa con esos, y no empaqueta ninguna otra redacción:
+La redacción en inglés de cada código también es una exportación propia. Un programa que solo puede reportar unos pocos códigos arma un mapa con esos. Uno que redacta sus problemas solo con [`assert`](#lanzar-una-excepción-ante-una-configuración-inválida) no empaqueta entonces ninguna otra redacción, mientras que `formatIssue`, `flatten` y `standard` empaquetan todo `englishMessages` de todos modos, [por ser su valor predeterminado](#convertir-un-problema-en-texto):
 
 | Código                 | Exportación                  |
 | ---------------------- | ---------------------------- |
