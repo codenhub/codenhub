@@ -143,3 +143,32 @@ describe("every format that reads a host refuses a long punycode label without d
     });
   }
 });
+
+/*
+ * A pattern that repeats a group, such as base64's groups of four, keeps a frame for each repetition, and
+ * on Node.js 24.22 overflowed the stack on a few megabytes: `base64()` on 5,000,000 characters and
+ * `creditCard()` on 6,700,000 threw a `RangeError` where they return a result. Text ten megabytes long is
+ * answered, and base64 that long passes.
+ */
+describe("every format reads text of ten megabytes without overflowing the stack", () => {
+  const LARGE = 10_000_000;
+  const header = btoa('{"alg":"none"}').replace(/=+$/, "");
+  const payload = btoa('{"sub":"1"}').replace(/=+$/, "");
+  const cases: Record<string, [validate: AnyValidator, text: string, isValid: boolean]> = {
+    base64: [base64(), "A".repeat(LARGE), true],
+    "base64, padded": [base64(), `${"A".repeat(LARGE - 2)}Q=`, true],
+    "base64, invalid at the end": [base64(), `${"A".repeat(LARGE)}!`, false],
+    base64url: [base64({ url: true }), `${"_".repeat(LARGE - 2)}Q`, true],
+    "base64url, invalid at the end": [base64({ url: true }), `${"_".repeat(LARGE)}!`, false],
+    "jwt, with a long signature": [jwt(), `${header}.${payload}.${"A".repeat(LARGE)}`, true],
+    "jwt, with a long signature that is not base64url": [jwt(), `${header}.${payload}.${"A".repeat(LARGE + 1)}`, false],
+    creditCard: [creditCard(), "1 ".repeat(LARGE / 2), false],
+    "creditCard, of digits": [creditCard(), "4".repeat(LARGE), false],
+  };
+
+  for (const [name, [validate, text, isValid]] of Object.entries(cases)) {
+    it(`${name} is answered`, () => {
+      expect((validate(text) as { ok: boolean }).ok).toBe(isValid);
+    });
+  }
+});

@@ -1,4 +1,4 @@
-import { BASE64URL_PATTERN } from "./base64";
+import { isBase64url } from "./base64";
 import { formatFactory } from "./text-format";
 
 /** A header, a payload and a signature, which may be empty, in the base64url alphabet without padding. */
@@ -8,7 +8,7 @@ const JWT_PATTERN = /^([\w-]+)\.([\w-]+)\.([\w-]*)$/;
  * Tests whether a segment is base64url as an encoder writes it: no length of one mod four, and no bits set
  * past the last byte, which `atob` ignores, so one token has one spelling, as `base64({ url: true })` holds it.
  */
-const isEncoded = (segment: string): boolean => BASE64URL_PATTERN.test(segment);
+const isEncoded = isBase64url;
 
 /**
  * Tests whether JSON text that parsed holds an object with a key twice, as `{"alg":"none","alg":"HS256"}`.
