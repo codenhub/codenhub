@@ -135,6 +135,10 @@ describe("toJsonSchema", () => {
     expect(schemaOf(number(multipleOf(0.1)))).toEqual({ type: "number" });
     expect(schemaOf(number(multipleOf(0.01)))).toEqual({ type: "number" });
     expect(schemaOf(number(multipleOf(1e-7)))).toEqual({ type: "number" });
+    // 1e22 is held exactly; 1e23 is held as 99999999999999991611392, so a reader finds 3e23 / 1e23 is
+    // 3.0000000000000004 and refuses 3e23, which the check accepts.
+    expect(schemaOf(number(multipleOf(1e22)))).toEqual({ type: "number", multipleOf: 1e22 });
+    expect(schemaOf(number(multipleOf(1e23)))).toEqual({ type: "number" });
   });
 
   it("should write uniqueItems for unique() only over items that are primitives", () => {
