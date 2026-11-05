@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-04
+last_updated: 2026-11-05
 scope: What `@codenhub/validation` builds toward, what it takes to release 0.5.0, and what it takes to reach 1.0.
 ---
 
@@ -22,7 +22,7 @@ This records what `@codenhub/validation` is building toward, what it takes to re
 
 ## Current Focus
 
-**0.5.0 fixes what the audit before release found in 0.4.x.** 0.4.0 was released on 2026-10-09 and 0.4.1, which changed no code, on 2026-11-03. Since then, fixes have landed that break a caller, so the next release is 0.5.0 rather than 0.4.2, as [Versioning until 1.0](#versioning-until-10) asks. Several of them break a caller, among them `pick`, `omit` and their kin merging the options given to them, `encode` writing a codec back through its output, the JSON Schema `toJsonSchema` writes, and a recursion that waits between levels being held to `maxDepth`. The 0.5.0 changelog marks each one when the release is cut. The fixes are merged as they are made and wait for that release; nothing of them is published before it.
+**0.5.0 fixes what the audit before release found in 0.4.x.** 0.4.0 was released on 2026-10-09 and 0.4.1, which changed no code, on 2026-11-03. Since then, fixes have landed that break a caller, so the next release is 0.5.0 rather than 0.4.2, as [Versioning until 1.0](#versioning-until-10) asks. Several of them break a caller, among them `pick`, `omit` and their kin merging the options given to them, `encode` writing a codec back through its output, the JSON Schema `toJsonSchema` writes, and a recursion that waits between levels being held to `maxDepth`. The [0.5.0 changelog](../changelog/0.5.0.md) marks each one.
 
 0.5.0 is released when:
 

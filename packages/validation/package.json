@@ -1,6 +1,6 @@
 {
   "name": "@codenhub/validation",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "private": false,
   "description": "Zero-dependency validation of untrusted input for TypeScript: formats that return what a parser read, a bounded cost for input that fails, issues that never hold a value of the input, and tree-shakable validators.",
   "homepage": "https://codenhub.dev/packages/validation/",
