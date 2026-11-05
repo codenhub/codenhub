@@ -251,13 +251,16 @@ html {
 }
 
 /* Above an English body shown under a locale prefix: says, in the locale, why
-   the page reads in English. */
+   the page reads in English. It is page metadata, not content, so it sits on
+   the page actions' row at their size and tone (`top-1`, `h-9`, `text-sm`)
+   instead of competing with the H1. */
 .untranslated-notice {
-  @apply text-text-secondary text-label mb-6 flex items-center gap-2;
+  @apply text-text-secondary mt-1 mb-6 flex min-h-9 items-center gap-2 text-sm leading-snug;
+  --ic-size: 1rem;
 }
 
-.untranslated-notice svg {
-  @apply size-4 shrink-0;
+.untranslated-notice > i {
+  @apply shrink-0;
 }
 
 .markdown-content h1 {
