@@ -76,10 +76,32 @@ type Bound = typeof OPEN | typeof COUNT | typeof ALL;
 const ITEM_PARTS = ["item", "key", "value"];
 
 /**
+ * The kinds whose value holds nothing the input can size, so an item of one is bounded by itself. A
+ * `bigint` is not one: its digits are as many as it was given.
+ */
+const FIXED_SIZE = new Set(["number", "boolean", "date", "literal", "oneOf", "symbol", "never"]);
+
+/** The wrappers that give back the value of the part they hold, or nothing. */
+const KEEPING_WRAPPERS = new Set(["optional", "nullable", "nullish", "readonly", "meta"]);
+
+/** Whether a part produces a fixed-size value, seen through the wrappers that keep it. */
+const isFixedSize = (part: unknown): boolean => {
+  const record = describe(part as AnyValidator);
+  if (record === undefined) {
+    return false;
+  }
+  return FIXED_SIZE.has(record.kind) || (KEEPING_WRAPPERS.has(record.kind) && isFixedSize(record["inner"]));
+};
+
+/** Whether an item of a collection with a bound is bounded too, so the collection bounds all of it. */
+const isBoundedItem = (part: unknown): boolean => part === undefined || isFixedSize(part) || boundOf(part) === ALL;
+
+/**
  * How much a part bounds what it produces, so a step after it in a `pipe` reads a value bounded that far:
  * all of it for a `string` with a bound or a format that bounds its input, the count for a collection with
- * a bound, all of it when its items are bounded too, the most of any step of a `pipe`, the least of the
- * options of a `union`, and what a wrapper holds, such as `optional`, `coerce` or another `pipe`.
+ * a bound, all of it when its items are bounded too or are of a fixed size, such as numbers, the most of
+ * any step of a `pipe`, the least of the options of a `union`, and what a wrapper holds, such as
+ * `optional`, `coerce` or another `pipe`.
  */
 function boundOf(part: unknown): Bound {
   const record = describe(part as AnyValidator);
@@ -106,7 +128,7 @@ function boundOf(part: unknown): Bound {
         if (!hasBound(record)) {
           return OPEN;
         }
-        return ITEM_PARTS.every((name) => record[name] === undefined || boundOf(record[name]) === ALL) ? ALL : COUNT;
+        return ITEM_PARTS.every((name) => isBoundedItem(record[name])) ? ALL : COUNT;
       }
       return record["inner"] === undefined ? OPEN : boundOf(record["inner"]);
   }
@@ -121,7 +143,8 @@ function boundOf(part: unknown): Bound {
  * long, costs what its size costs. Each array, set, map, record and text needs a `max` or a `length`, and
  * a tuple with `rest` a `max`, and a `file` a `maxSize`, unless something before it bounds it: text read by `json` or `searchParams`
  * inside `pipe(string({ max }), ...)`, and everything inside it, is bounded by that `max`. A collection's
- * `max` bounds how many items a collection after it has, not what they hold. A tuple without
+ * `max` bounds how many items a collection after it has, not what they hold, unless its own items are
+ * bounded or of a fixed size, such as numbers. A tuple without
  * `rest` has its length already. Formats whose input is bounded by what they accept, such as `email`,
  * `uuid` and `ip`, need none; others, such as `url`, `hex` and `jwt`, are text like any other, and so is one
  * made with `format`, whatever its name.
