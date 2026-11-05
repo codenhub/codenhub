@@ -387,6 +387,19 @@ describe("a factory given where its validator belongs", () => {
     expect(() => object({ "": factory })({})).toThrow('The validator at [""] returned no result');
   });
 
+  it("should take a passing result written by hand without reading its error", () => {
+    // A result class whose error is a getter that throws when nothing failed.
+    const passing = ((input: unknown) => ({
+      ok: true,
+      value: input,
+      get error(): never {
+        throw new Error("passed, so no error");
+      },
+    })) as unknown as Validator<unknown>;
+    expect(valueOf(object({ a: passing })({ a: 2 }))).toEqual({ a: 2 });
+    expect(valueOf(union([passing])(2))).toBe(2);
+  });
+
   it("should still take a result written by hand whose ok is not a boolean", () => {
     const loose = ((input: unknown) => ({ ok: 1, value: input })) as unknown as Validator<unknown>;
     expect(object({ a: loose })({ a: 2 })).toEqual({ ok: true, value: { a: 2 } });
