@@ -81,6 +81,11 @@ describe("describeProperties", () => {
     const manifest = { bin: { tool: "./dist/cli.js" }, exports: { ".": "./dist/index.js" } };
 
     expect(describeProperties(manifest).isCli).toBe(false);
+    expect(describeProperties({ bin: "./dist/cli.js", main: "./dist/index.js" }).isCli).toBe(false);
+  });
+
+  it("keeps a package with several binaries a library, since npx cannot pick one", () => {
+    expect(describeProperties({ bin: { a: "./dist/a.js", b: "./dist/b.js" } }).isCli).toBe(false);
   });
 
   it("does not call a package with a require condition ESM-only", () => {

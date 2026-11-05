@@ -9,9 +9,11 @@ export interface PackageProperties {
   /** Public entrypoints, the keys of `exports`. */
   entrypoints: string[];
   /**
-   * Whether the package is a command to run rather than a library to install: it declares `bin` and
-   * exports no entrypoint besides its manifest, as `@codenhub/skills` does. A package with both
-   * stays a library, since a project installs it to import from.
+   * Whether the package is a command to run rather than a library to install: it declares exactly
+   * one `bin` and no library entrypoint, neither an `exports` subpath besides its manifest nor a
+   * `main`, as `@codenhub/skills` does. A package with both stays a library, since a project
+   * installs it to import from. One with several binaries does too: `npx <name>` cannot pick among
+   * them unless one is named after the package, and installing it still works.
    */
   isCli: boolean;
   /** Whether the package is ESM-only: `type: module` and no `require` export condition. */
@@ -84,13 +86,14 @@ export function describeProperties(manifest: Record<string, unknown>): PackagePr
   const codenhub = isRecord(manifest.codenhub) ? manifest.codenhub : {};
   const names = (value: unknown): string[] => (isRecord(value) ? Object.keys(value).sort() : []);
   const entrypoints = entrypointsOf(manifest.exports);
-  const hasBin = (typeof manifest.bin === "string" && manifest.bin !== "") || names(manifest.bin).length > 0;
+  const binCount = typeof manifest.bin === "string" ? Number(manifest.bin !== "") : names(manifest.bin).length;
+  const hasMain = typeof manifest.main === "string" && manifest.main !== "";
 
   return {
     bundled: Array.isArray(codenhub.bundled) ? codenhub.bundled.filter((name) => typeof name === "string") : [],
     dependencyCount: names(manifest.dependencies).length,
     entrypoints,
-    isCli: hasBin && entrypoints.length === 0,
+    isCli: binCount === 1 && entrypoints.length === 0 && !hasMain,
     isEsmOnly: manifest.type === "module" && !hasCondition(exportsField, "require"),
     isSideEffectFree: manifest.sideEffects === false,
     peerDependencies: names(manifest.peerDependencies),
