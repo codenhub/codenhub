@@ -1,4 +1,6 @@
-import { describe, type Description } from "../core/describe";
+import { isBinaryExact } from "../checks/multiple-of";
+import { customFormats, describe, type Description } from "../core/describe";
+import { makesNewLazy } from "../core/lazy";
 import { isPlainObject } from "../core/objects";
 import { assertFunction } from "../core/result";
 import type { AnyValidator } from "../core/types";
@@ -48,19 +50,19 @@ export interface JsonSchemaOptions {
 }
 
 /**
- * The formats JSON Schema names otherwise than this package does, for the input and the output side. An
- * empty name is a format whose text the format of that name may refuse, written with none: RFC 3339's
- * `time` needs an offset and its `duration` has no fraction and no weeks beside days, a URL may hold `|`,
- * which a URI may not, and an IPv6 address a zone, `fe80::1%eth0`, which `ipv6` refuses. An `email` and a
- * `domain` read Unicode and produce ASCII, so only their output is `email` or `hostname`: `idn-email` and
- * `idn-hostname` would fit their input, but ajv-formats has neither, and Ajv in strict mode refuses to
- * compile a format it does not know. Any other format is written under its own name.
+ * The formats written with a JSON Schema `format`, under JSON Schema's name, for the input and the output
+ * side. Any other is written with none: Ajv in its default strict mode refuses to compile a format it does
+ * not know, such as `phone`, so a name of this package's own, or of a `format()`, would make the whole
+ * schema unusable there. An empty name is a format whose text the format of that name may refuse: RFC
+ * 3339's `time` needs an offset and its `duration` has no fraction and no weeks beside days, a URL may
+ * hold `|`, which a URI may not, and an IPv6 address a zone, `fe80::1%eth0`, which `ipv6` refuses. An
+ * `email` and a `domain` read Unicode and produce ASCII, so only their output is `email` or `hostname`:
+ * `idn-email` and `idn-hostname` would fit their input, but ajv-formats has neither.
  */
 const FORMAT_NAMES: Readonly<Record<string, readonly [input: string, output: string]>> = {
-  url: ["", ""],
+  uuid: ["uuid", "uuid"],
+  hostname: ["hostname", "hostname"],
   ip: ["", ""],
-  time: ["", ""],
-  duration: ["", ""],
   datetime: ["date-time", "date-time"],
   isoDate: ["date", "date"],
   email: ["", "email"],
@@ -81,7 +83,10 @@ const COERCED_TYPES: Readonly<Record<string, readonly string[]>> = {
 
 const OPTION_NAMES = ["io", "unrepresentable", "target"];
 
-/** How many definitions may be open at once, one inside another, before a schema is taken to build itself anew. */
+/**
+ * How many definitions whose getter makes new `lazy` parts each time it is called may be open at once, one
+ * inside another, before a schema is taken to build itself anew.
+ */
 const MAX_OPEN_DEFINITIONS = 64;
 
 const isUndefinedLiteral = (record: Description | undefined): boolean =>
@@ -109,6 +114,70 @@ const readsAlikeInUnicode = (source: string): boolean => {
 const isJsonPrimitive = (value: unknown): boolean =>
   value === null || typeof value === "string" || typeof value === "boolean" || Number.isFinite(value);
 
+/** The kinds whose output is a primitive, which `unique()` compares by value as `uniqueItems` does. */
+const PRIMITIVE_KINDS = new Set(["string", "number", "boolean", "literal", "oneOf", "format"]);
+
+/** Whether a validator produces a primitive, seen through the wrappers that keep one. */
+const producesPrimitive = (target: unknown, seen = new Set<unknown>()): boolean => {
+  const record = describe(target as AnyValidator);
+  if (record === undefined || seen.has(target)) {
+    return false;
+  }
+  seen.add(target);
+  switch (record.kind) {
+    case "nullable":
+    case "nullish":
+    case "optional":
+    case "readonly":
+    case "meta":
+      return producesPrimitive(record["inner"], seen);
+    case "lazy": {
+      // A getter that builds its schema anew makes a new validator at every level, so it is the getter
+      // that comes back, and one already followed is taken as not.
+      const getter = record["getter"] as () => unknown;
+      if (seen.has(getter)) {
+        return false;
+      }
+      seen.add(getter);
+      return producesPrimitive(getter(), seen);
+    }
+    case "union":
+      return (record["members"] as unknown[]).every((member) => producesPrimitive(member, seen));
+    default:
+      return PRIMITIVE_KINDS.has(record.kind);
+  }
+};
+
+/**
+ * Whether the items of the array a check is given are primitives. `unique()` compares an object by
+ * identity, and `uniqueItems` by what it holds, so over objects the schema would refuse two equal ones
+ * the check accepts. What cannot be told is taken as not.
+ */
+const holdsPrimitives = (record: Description, seen = new Set<unknown>()): boolean => {
+  switch (record.kind) {
+    case "array":
+      return producesPrimitive(record["item"]);
+    case "tuple":
+      return [...(record["items"] as unknown[]), ...(record["rest"] === undefined ? [] : [record["rest"]])].every(
+        (item) => producesPrimitive(item),
+      );
+    case "json":
+    case "readonly":
+    case "meta":
+    case "lazy": {
+      const inner = record.kind === "lazy" ? (record["getter"] as () => unknown)() : record["inner"];
+      const described = describe(inner as AnyValidator);
+      if (described === undefined || seen.has(inner)) {
+        return false;
+      }
+      seen.add(inner);
+      return holdsPrimitives(described, seen);
+    }
+    default:
+      return false;
+  }
+};
+
 /**
  * Writes a validator as a JSON Schema, draft 2020-12 unless `target` asks for draft-07, for whatever takes
  * one: the body of an HTTP API, the arguments of a tool a language model calls, a form generator.
@@ -120,11 +189,18 @@ const isJsonPrimitive = (value: unknown): boolean =>
  * schema can say: a format's exact rules, such as which hosts of an `email` are public, are written as
  * the nearest JSON Schema `format`, and with none where that format refuses text the validator accepts,
  * as `time` refuses `12:00`. A format that reads Unicode and produces ASCII, such as `email`, is written
- * with no format on the input side and as `email` on the output side.
+ * with no format on the input side and as `email` on the output side. A format JSON Schema has no name
+ * for, such as `phone`, `slug` or one made with `format`, is written with none, since a reader in strict
+ * mode, as Ajv is by default, refuses to compile a format it does not know.
  *
  * A schema reads a `pattern` in Unicode mode, the `u` flag, so one written without it is written as it is
  * when it means the same there, where `.` and a negated class match a whole character rather than half of
  * an emoji, and cannot be written otherwise, as `/^\@x$/`, which is an error in that mode, cannot.
+ *
+ * A step of `multipleOf` is written only when binary floating point holds it exactly, an integer or a
+ * fraction such as `0.25`. A reader divides in binary, where `0.3 / 0.1` is not `3`, so a step such as
+ * `0.1` or `0.01` is left out rather than written for a reader to refuse values the validator accepts.
+ * `unique()` is written as `uniqueItems` only over items that are primitives, which both compare by value.
  *
  * The exceptions are where a validator cleans a value before it checks it, which is not written.
  * `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no
@@ -272,11 +348,17 @@ export function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOption
       } else if (format === "nonBlank") {
         patterns.push(String.raw`\S`);
       } else if (format === "multipleOf" && typeof value === "number") {
-        schema["multipleOf"] = value;
+        // A reader divides in binary, where 0.3 / 0.1 is not 3, so it would refuse a value the check
+        // accepts. A step binary holds exactly divides as the check does; another is left out.
+        if (isBinaryExact(value)) {
+          schema["multipleOf"] = value;
+        }
       } else if (format === "nonZero") {
         schema["not"] = { const: 0 };
       } else if (params["unique"] === true && by === undefined) {
-        schema["uniqueItems"] = true;
+        if (holdsPrimitives(record)) {
+          schema["uniqueItems"] = true;
+        }
       } else {
         refuse(format === undefined ? "a check that cannot be read" : `the check ${String(format)}`, path);
       }
@@ -379,6 +461,10 @@ export function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOption
           : anything("a value JSON has none for");
       }
       case "format": {
+        // A format made with `format` has a test no schema can hold, whatever its name.
+        if (customFormats.has(given)) {
+          return checked({ type: "string" });
+        }
         const name = String(record["format"]);
         if (name === "port") {
           return checked({ type: "integer", minimum: 1, maximum: 65_535 });
@@ -387,7 +473,7 @@ export function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOption
           return checked({ type: "string", contentEncoding: given["url"] === true ? "base64url" : "base64" });
         }
         // Own names only, so a format made with `format("constructor", …)` is not taken for `Object`.
-        const [input = name, output = input] = (Object.hasOwn(FORMAT_NAMES, name) && FORMAT_NAMES[name]) || [];
+        const [input = "", output = input] = (Object.hasOwn(FORMAT_NAMES, name) && FORMAT_NAMES[name]) || [];
         // A local date-time has no offset, which `date-time` requires.
         const written =
           name === "ip" && given["version"] === "v4"
@@ -512,19 +598,22 @@ export function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOption
         let name = names.get(getter);
         if (name === undefined) {
           // A getter written where the schema is built, as in `lazy(() => build())`, is a new function at
-          // every level, and would be followed until the stack ran out.
-          if (open >= MAX_OPEN_DEFINITIONS) {
+          // every level, and would be followed until the stack ran out. Its getter makes new `lazy` parts
+          // each time it is called, which a long chain of distinct `lazy` parts built once does not.
+          const target = getter();
+          const isRebuilding = makesNewLazy(getter, target);
+          if (isRebuilding && open >= MAX_OPEN_DEFINITIONS) {
             throw new TypeError(
               "toJsonSchema found a recursive schema that is built anew at every level. Build it once and refer to it",
             );
           }
           name = `schema${names.size + 1}`;
           names.set(getter, name);
-          open += 1;
+          open += isRebuilding ? 1 : 0;
           try {
-            definitions[name] = convert(getter(), path);
+            definitions[name] = convert(target, path);
           } finally {
-            open -= 1;
+            open -= isRebuilding ? 1 : 0;
           }
         }
         // The checks are of this `lazy` and not of its getter, which another `lazy` may share.

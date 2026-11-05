@@ -275,14 +275,22 @@ export function assertBounds<T extends number | bigint>({
 }
 
 /**
- * Whether a validator returned a result: an object that passed, or one that holds a list of issues. A
- * function, a primitive, nothing, a value given back as it is and a failure without its issues are none.
- * `ok` is read as true or false, not compared, so a result written by hand with `ok: 1` passes as before.
+ * Whether a validator returned a result: an object that passed, or one that holds a list of at least one
+ * issue. A function, a primitive, nothing, a value given back as it is and a failure without its issues
+ * are none. An empty list is none either: a composer that gathers its children's issues would find none,
+ * and pass the value the failure was meant to refuse. `ok` is read as true or false, not compared, so a
+ * result written by hand with `ok: 1` passes as before, and a result that passed is not read further.
  */
-export const isResult = (result: unknown): boolean =>
-  typeof result === "object" &&
-  result !== null &&
-  (Boolean((result as ValidationOk<unknown>).ok) || Array.isArray((result as Partial<ValidationErr>).error?.issues));
+export const isResult = (result: unknown): boolean => {
+  if (typeof result !== "object" || result === null) {
+    return false;
+  }
+  if ((result as ValidationOk<unknown>).ok) {
+    return true;
+  }
+  const issues: unknown = (result as Partial<ValidationErr>).error?.issues;
+  return Array.isArray(issues) && issues.length > 0;
+};
 
 /**
  * The error for a validator that returned no result. A factory given where its validator belongs,

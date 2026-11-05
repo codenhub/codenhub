@@ -36,19 +36,29 @@ import { tagged } from "../composition/tagged";
 import { transform } from "../composition/transform";
 import { tuple } from "../composition/tuple";
 import { union } from "../composition/union";
-import type { AnyValidator, Validator } from "../core/types";
+import type { AnyValidator, Check, Validator } from "../core/types";
 import { base64 } from "../formats/base64";
+import { cidr } from "../formats/cidr";
+import { creditCard } from "../formats/credit-card";
+import { cuid2 } from "../formats/cuid2";
 import { datetime } from "../formats/datetime";
 import { domain } from "../formats/domain";
 import { duration } from "../formats/duration";
 import { email } from "../formats/email";
+import { hex } from "../formats/hex";
 import { hostname } from "../formats/hostname";
 import { ip } from "../formats/ip";
 import { isoDate } from "../formats/iso-date";
+import { jwt } from "../formats/jwt";
+import { mac } from "../formats/mac";
+import { nanoid } from "../formats/nanoid";
+import { phone } from "../formats/phone";
 import { port } from "../formats/port";
 import { searchParams } from "../formats/search-params";
+import { semver } from "../formats/semver";
 import { slug } from "../formats/slug";
 import { time } from "../formats/time";
+import { ulid } from "../formats/ulid";
 import { url } from "../formats/url";
 import { uuid } from "../formats/uuid";
 import { bigint } from "../primitives/bigint";
@@ -118,6 +128,42 @@ describe("toJsonSchema", () => {
     });
   });
 
+  it("should write a step of multipleOf only when binary floating point holds it exactly", () => {
+    expect(schemaOf(number(multipleOf(0.25)))).toEqual({ type: "number", multipleOf: 0.25 });
+    expect(schemaOf(number(multipleOf(1.5)))).toEqual({ type: "number", multipleOf: 1.5 });
+    // A reader divides in binary, where 0.3 / 0.1 is 2.9999999999999996, so it refuses 0.3 the check accepts.
+    expect(schemaOf(number(multipleOf(0.1)))).toEqual({ type: "number" });
+    expect(schemaOf(number(multipleOf(0.01)))).toEqual({ type: "number" });
+    expect(schemaOf(number(multipleOf(1e-7)))).toEqual({ type: "number" });
+    // 1e22 is held exactly; 1e23 is held as 99999999999999991611392, so a reader finds 3e23 / 1e23 is
+    // 3.0000000000000004 and refuses 3e23, which the check accepts.
+    expect(schemaOf(number(multipleOf(1e22)))).toEqual({ type: "number", multipleOf: 1e22 });
+    expect(schemaOf(number(multipleOf(1e23)))).toEqual({ type: "number" });
+  });
+
+  it("should write uniqueItems for unique() only over items that are primitives", () => {
+    expect(schemaOf(array(nullable(oneOf(["a", "b"])), unique()))).toEqual({
+      type: "array",
+      items: { anyOf: [{ enum: ["a", "b"] }, { type: "null" }] },
+      uniqueItems: true,
+    });
+    expect(schemaOf(tuple([number(), uuid()], unique()))).toMatchObject({ uniqueItems: true });
+    // `unique()` compares objects by identity, and every object `object` produces is new, so the validator
+    // accepts two equal ones, which `uniqueItems`, comparing deeply, refuses. The types forbid it.
+    const anyUnique = unique() as unknown as Check<readonly unknown[]>;
+    for (const item of [object({ id: number() }), array(number()), unknown()] as Validator<unknown>[]) {
+      expect(schemaOf(array(item, anyUnique))).toEqual(schemaOf(array(item)));
+    }
+  });
+
+  it("should write an array of items a getter rebuilds at every level, with unique(), without recursing forever", () => {
+    // Each call makes a new union and a new lazy, so no validator is met twice; the getter is.
+    const build = (): Validator<string> => union([string(), lazy(build)]);
+    const items = array(lazy(build), unique());
+    expect(() => toJsonSchema(items)).not.toThrow();
+    expect(schemaOf(items)).toEqual(schemaOf(array(lazy(build))));
+  });
+
   it("should write a pattern a schema reads as the check does, so one a prefix made matches that text only", () => {
     const { pattern: written } = schemaOf(string(startsWith("a.b|c")));
     expect(new RegExp(written as string, "u").test("a.b|c!")).toBe(true);
@@ -156,13 +202,12 @@ describe("toJsonSchema", () => {
     expect(schemaOf(oneOf(["a", 1, true]))).toEqual({ enum: ["a", 1, true] });
   });
 
-  it("should write formats under the name JSON Schema gives them, and any other under its own", () => {
+  it("should write formats under the name JSON Schema gives them", () => {
     expect(schemaOf(uuid())).toEqual({ type: "string", format: "uuid" });
     expect(schemaOf(datetime())).toEqual({ type: "string", format: "date-time" });
     expect(schemaOf(datetime({ offset: true, precision: 3 }))).toEqual({ type: "string", format: "date-time" });
     expect(schemaOf(isoDate())).toEqual({ type: "string", format: "date" });
     expect(schemaOf(hostname())).toEqual({ type: "string", format: "hostname" });
-    expect(schemaOf(slug())).toEqual({ type: "string", format: "slug" });
     expect(schemaOf(ip({ version: "v4" }))).toEqual({ type: "string", format: "ipv4" });
     expect(schemaOf(base64({ url: true }))).toEqual({ type: "string", contentEncoding: "base64url" });
     expect(schemaOf(port())).toEqual({ type: "integer", minimum: 1, maximum: 65_535 });
@@ -190,9 +235,36 @@ describe("toJsonSchema", () => {
     }
   });
 
-  it("should write a format made with format under its own name, whatever the name", () => {
-    expect(schemaOf(format("constructor", () => true)())).toEqual({ type: "string", format: "constructor" });
-    expect(schemaOf(format("toString", () => true)())).toEqual({ type: "string", format: "toString" });
+  it("should write no format for a format JSON Schema has no name for, which a strict reader refuses to compile", () => {
+    for (const validator of [
+      phone(),
+      slug(),
+      hex(),
+      ulid(),
+      semver(),
+      cidr(),
+      mac(),
+      jwt(),
+      cuid2(),
+      nanoid(),
+      creditCard(),
+      format("even", (text) => text.length % 2 === 0)(),
+    ]) {
+      expect(schemaOf(validator)).toEqual({ type: "string" });
+      expect(schemaOf(validator, { io: "output" })).toEqual({ type: "string" });
+    }
+  });
+
+  it("should not take a format made with format for a name an object inherits", () => {
+    expect(schemaOf(format("constructor", () => true)())).toEqual({ type: "string" });
+    expect(schemaOf(format("toString", () => true)())).toEqual({ type: "string" });
+  });
+
+  it("should not take a format made with format for the built-in of its name, whose test it does not share", () => {
+    for (const name of ["uuid", "email", "port", "base64", "ip"]) {
+      expect(schemaOf(format(name, () => true)())).toEqual({ type: "string" });
+      expect(schemaOf(format(name, () => true)(), { io: "output" })).toEqual({ type: "string" });
+    }
   });
 
   it("should write collections", () => {
@@ -459,6 +531,15 @@ describe("toJsonSchema", () => {
     it("should say so, and not run out of stack, for a getter written anew at each level", () => {
       const build = (): AnyValidator => object({ next: optional(lazy(() => build())) });
       expect(() => toJsonSchema(build())).toThrow("built anew at every level");
+    });
+
+    it("should write a long chain of distinct lazy parts to its end, as a schema generator writes one", () => {
+      let chain: AnyValidator = string();
+      for (let level = 0; level < 100; level += 1) {
+        const next = chain;
+        chain = lazy(() => object({ next }));
+      }
+      expect(Object.keys(toJsonSchema(chain)["$defs"] as object)).toHaveLength(100);
     });
 
     it("should write the values a union and a list of values hold beside undefined", () => {

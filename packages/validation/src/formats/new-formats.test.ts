@@ -298,6 +298,16 @@ describe("domain", () => {
     expect(valueOf(domain()("münchen.de"))).toBe("xn--mnchen-3ya.de");
   });
 
+  it("should accept a name with a joiner where IDNA allows one, as url reads it, and reject one between letters", () => {
+    // A zero-width non-joiner after a Persian letter and after a Devanagari virama, and a zero-width
+    // joiner after a Sinhala virama, as these scripts write them (RFC 5892 CONTEXTJ).
+    for (const name of ["می\u200Cخواهم.com", "क्\u200Cष.com", "ශ්\u200Dරී.lk"]) {
+      expect(valueOf(domain()(name))).toBe(new URL(valueOf(url()(`http://${name}/`))).hostname);
+    }
+    expect(accepts(domain(), "a\u200Cb.com", "a\u200Db.com", "xn--ab-j1t.com")).toEqual([false, false, false]);
+    expect(url()("http://a\u200Cb.com/").ok).toBe(false);
+  });
+
   it("should reject a name written with more than 759 characters, before the parser reads it", () => {
     // A variation selector, which the parser drops from a host, so the name read is `example.com`.
     const padded = (marks: number): string => `e${"️".repeat(marks)}xample.com`;

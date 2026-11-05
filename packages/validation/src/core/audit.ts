@@ -1,4 +1,5 @@
-import { describe, type Description } from "./describe";
+import { customFormats, describe, type Description } from "./describe";
+import { makesNewLazy } from "./lazy";
 import { assertFunction } from "./result";
 import type { AnyValidator } from "./types";
 
@@ -48,44 +49,88 @@ const COLLECTIONS = new Set(["array", "set", "map", "record"]);
 /** The defaults of `lazy`, above which a limit is reported as raised. */
 const DEFAULT_LIMITS: Readonly<Record<string, number>> = { maxDepth: 128, maxCalls: 10_000 };
 
-/** How many `lazy` parts may be walked at once, one inside another, before a schema is taken to build itself anew. */
+/**
+ * How many `lazy` parts whose getter makes new `lazy` parts each time it is called may be walked at once,
+ * one inside another, before a schema is taken to build itself anew.
+ */
 const MAX_OPEN_LAZY = 64;
 
 const hasBound = (record: Description): boolean =>
   record.options?.["max"] !== undefined || record.options?.["length"] !== undefined;
 
+/** Whether a format is a built-in one that bounds its text, and not one made with `format` under its name. */
+const isBoundedFormat = (record: Description): boolean =>
+  BOUNDED_FORMATS.has(String(record["format"])) && !customFormats.has(record.options as object);
+
 /**
- * Whether a part bounds what it produces, so a step after it in a `pipe` reads a bounded value: a
- * `string` or a collection with a bound, a format that bounds its input, a `pipe` with such a step, a
- * `union` whose every option is one, and a wrapper of one, such as `optional`, `coerce` or another `pipe`.
+ * How much of a value a step before it bounds: nothing, the number of items of a collection, or all of it,
+ * every item and every text it holds. A collection's `max` limits how many items it has, not what each
+ * holds, so it bounds all of it only when its items are bounded too.
  */
-function boundsItself(record: Description | undefined): boolean {
+const OPEN = 0;
+const COUNT = 1;
+const ALL = 2;
+type Bound = typeof OPEN | typeof COUNT | typeof ALL;
+
+/** The parts of a collection that hold its items. */
+const ITEM_PARTS = ["item", "key", "value"];
+
+/**
+ * The kinds whose value holds nothing the input can size, so an item of one is bounded by itself. A
+ * `bigint` is not one: its digits are as many as it was given.
+ */
+const FIXED_SIZE = new Set(["number", "boolean", "date", "literal", "oneOf", "symbol", "never"]);
+
+/** The wrappers that give back the value of the part they hold, or nothing. */
+const KEEPING_WRAPPERS = new Set(["optional", "nullable", "nullish", "readonly", "meta"]);
+
+/** Whether a part produces a fixed-size value, seen through the wrappers that keep it. */
+const isFixedSize = (part: unknown): boolean => {
+  const record = describe(part as AnyValidator);
   if (record === undefined) {
     return false;
   }
-  const parts = (name: string): Description[] =>
-    (record[name] as AnyValidator[]).map((part) => describe(part) as Description);
+  return FIXED_SIZE.has(record.kind) || (KEEPING_WRAPPERS.has(record.kind) && isFixedSize(record["inner"]));
+};
+
+/** Whether an item of a collection with a bound is bounded too, so the collection bounds all of it. */
+const isBoundedItem = (part: unknown): boolean => part === undefined || isFixedSize(part) || boundOf(part) === ALL;
+
+/**
+ * How much a part bounds what it produces, so a step after it in a `pipe` reads a value bounded that far:
+ * all of it for a `string` with a bound or a format that bounds its input, the count for a collection with
+ * a bound, all of it when its items are bounded too or are of a fixed size, such as numbers, the most of
+ * any step of a `pipe`, the least of the options of a `union`, and what a wrapper holds, such as
+ * `optional`, `coerce` or another `pipe`.
+ */
+function boundOf(part: unknown): Bound {
+  const record = describe(part as AnyValidator);
+  if (record === undefined) {
+    return OPEN;
+  }
+  const parts = (name: string): Bound[] => (record[name] as unknown[]).map(boundOf);
   switch (record.kind) {
     case "string":
-      return hasBound(record);
+      return hasBound(record) ? ALL : OPEN;
     case "format":
-      return BOUNDED_FORMATS.has(String(record["format"]));
+      return isBoundedFormat(record) ? ALL : OPEN;
     case "pipe":
-      return parts("steps").some(boundsItself);
+      return Math.max(OPEN, ...parts("steps")) as Bound;
     case "union":
-      return parts("members").every(boundsItself);
+      return Math.min(ALL, ...parts("members")) as Bound;
     case "codec":
       // What it produces is decoded from what its input read.
-      return (
-        boundsItself(describe(record["input"] as AnyValidator)) ||
-        boundsItself(describe(record["output"] as AnyValidator))
-      );
+      return Math.max(boundOf(record["input"]), boundOf(record["output"])) as Bound;
     case "lazy":
-      return false;
+      return OPEN;
     default:
-      return COLLECTIONS.has(record.kind)
-        ? hasBound(record)
-        : record["inner"] !== undefined && boundsItself(describe(record["inner"] as AnyValidator));
+      if (COLLECTIONS.has(record.kind)) {
+        if (!hasBound(record)) {
+          return OPEN;
+        }
+        return ITEM_PARTS.every((name) => isBoundedItem(record[name])) ? ALL : COUNT;
+      }
+      return record["inner"] === undefined ? OPEN : boundOf(record["inner"]);
   }
 }
 
@@ -97,14 +142,18 @@ function boundsItself(record: Description | undefined): boolean {
  * Input that passes a validator is validated in full, so a body of a million items, or of text a gigabyte
  * long, costs what its size costs. Each array, set, map, record and text needs a `max` or a `length`, and
  * a tuple with `rest` a `max`, and a `file` a `maxSize`, unless something before it bounds it: text read by `json` or `searchParams`
- * inside `pipe(string({ max }), ...)`, and everything inside it, is bounded by that `max`. A tuple without
+ * inside `pipe(string({ max }), ...)`, and everything inside it, is bounded by that `max`. A collection's
+ * `max` bounds how many items a collection after it has, not what they hold, unless its own items are
+ * bounded or of a fixed size, such as numbers. A tuple without
  * `rest` has its length already. Formats whose input is bounded by what they accept, such as `email`,
- * `uuid` and `ip`, need none; others, such as `url`, `hex` and `jwt`, are text like any other.
+ * `uuid` and `ip`, need none; others, such as `url`, `hex` and `jwt`, are text like any other, and so is one
+ * made with `format`, whatever its name.
  *
  * Text read by `coerceBigint` needs a bound on each side, since converting it takes longer than linear
  * time in its length, and a bound limits the digits converted.
  *
- * It reads the schema and never calls it. Whether a `max` is small enough is not its to judge: any number
+ * It reads the schema and never calls it, though it calls the getter of each `lazy` twice, to tell a schema
+ * built anew at every level from one built once. Whether a `max` is small enough is not its to judge: any number
  * says someone decided. A check is not read, since it runs on a value that already passed. It lists the
  * bounds an option can set, so it does not report the keys an `object` with `unknownKeys: "passthrough"`
  * keeps, nor what `unknown()` accepts: neither has an option that bounds it. Use `"strip"` or `"strict"`
@@ -133,9 +182,12 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
   const walking = new Set<unknown>();
   // The getters reported for raised limits, so a `lazy` used at two places is reported once.
   const reported = new Set<unknown>();
+  // How many of the `lazy` parts being walked make new `lazy` parts each time their getter is called.
+  let rebuilding = 0;
   const at = (path: string, key: string): string => (path === "" ? key : `${path}.${key}`);
 
-  const walk = (target: unknown, path: string, bounded: boolean): void => {
+  // `bounded` is how much of the value a step before it bounds, as `boundOf` gives it.
+  const walk = (target: unknown, path: string, bounded: Bound): void => {
     const record = describe(target as AnyValidator);
     if (record === undefined) {
       findings.push({ rule: "unreadable", path, kind: "unknown" });
@@ -144,23 +196,25 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
     const report = (rule: AuditFinding["rule"]): void => {
       findings.push({ rule, path, kind: record.kind });
     };
-    const inner = (name = "inner", place = path, isBounded = bounded): void => {
+    // What the value holds is bounded only by a bound on all of it; one on its count bounds no item.
+    const held = bounded === ALL ? ALL : OPEN;
+    const inner = (name = "inner", place = path, bound = bounded): void => {
       if (record[name] !== undefined) {
-        walk(record[name], place, isBounded);
+        walk(record[name], place, bound);
       }
     };
-    const each = (name: string, place: (index: number) => string = () => path): void => {
-      (record[name] as unknown[]).forEach((part, index) => walk(part, place(index), bounded));
+    const each = (name: string, place: (index: number) => string = () => path, bound = bounded): void => {
+      (record[name] as unknown[]).forEach((part, index) => walk(part, place(index), bound));
     };
 
     switch (record.kind) {
       case "string":
-        if (!bounded && !hasBound(record)) {
+        if (bounded !== ALL && !hasBound(record)) {
           report("unbounded_text");
         }
         return;
       case "format":
-        if (!bounded && !BOUNDED_FORMATS.has(String(record["format"]))) {
+        if (bounded !== ALL && !isBoundedFormat(record)) {
           report("unbounded_text");
         }
         return;
@@ -172,30 +226,30 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
         return;
       case "array":
       case "set":
-        if (!bounded && !hasBound(record)) {
+        if (bounded === OPEN && !hasBound(record)) {
           report("unbounded_size");
         }
-        inner("item", `${path}[]`);
+        inner("item", `${path}[]`, held);
         return;
       case "map":
       case "record":
-        if (!bounded && !hasBound(record)) {
+        if (bounded === OPEN && !hasBound(record)) {
           report("unbounded_size");
         }
-        inner("key", `${path}{}`);
-        inner("value", `${path}{}`);
+        inner("key", `${path}{}`, held);
+        inner("value", `${path}{}`, held);
         return;
       case "tuple":
-        if (!bounded && record["rest"] !== undefined && record.options?.["max"] === undefined) {
+        if (bounded === OPEN && record["rest"] !== undefined && record.options?.["max"] === undefined) {
           report("unbounded_size");
         }
-        each("items", (index) => `${path}[${index}]`);
-        inner("rest", `${path}[]`);
+        each("items", (index) => `${path}[${index}]`, held);
+        inner("rest", `${path}[]`, held);
         return;
       case "object":
       case "objectLike":
         for (const [key, part] of Object.entries(record["shape"] as Record<string, unknown>)) {
-          walk(part, at(path, key), bounded);
+          walk(part, at(path, key), held);
         }
         return;
       case "tagged":
@@ -209,10 +263,10 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
         return;
       case "pipe": {
         // A step reads what the steps before it produced, so one that bounds its value bounds the rest.
-        let isBounded = bounded;
+        let bound = bounded;
         for (const step of record["steps"] as unknown[]) {
-          walk(step, path, isBounded);
-          isBounded ||= boundsItself(describe(step as AnyValidator));
+          walk(step, path, bound);
+          bound = Math.max(bound, boundOf(step)) as Bound;
         }
         return;
       }
@@ -226,7 +280,7 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
         const strict = describe(record["inner"] as AnyValidator);
         const isOpen = (low: string, high: string): boolean =>
           strict?.options?.[low] === undefined && strict?.options?.[high] === undefined;
-        if (!bounded && strict?.kind === "bigint" && (isOpen("min", "gt") || isOpen("max", "lt"))) {
+        if (bounded !== ALL && strict?.kind === "bigint" && (isOpen("min", "gt") || isOpen("max", "lt"))) {
           report("unbounded_text");
         }
         inner();
@@ -234,10 +288,10 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
       }
       case "json":
       case "searchParams":
-        if (!bounded) {
+        if (bounded !== ALL) {
           report("unbounded_text");
         }
-        inner();
+        inner("inner", path, held);
         return;
       case "lazy": {
         const getter = record["getter"] as () => unknown;
@@ -250,15 +304,20 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
         }
         if (!walking.has(getter)) {
           // A getter written where the schema is built, as in `lazy(() => build())`, is a new function at
-          // every level, and would be followed until the stack ran out.
-          if (walking.size >= MAX_OPEN_LAZY) {
+          // every level, and would be followed until the stack ran out. Its getter makes new `lazy` parts
+          // each time it is called, which a long chain of distinct `lazy` parts built once does not.
+          const target = getter();
+          const isRebuilding = makesNewLazy(getter, target);
+          if (isRebuilding && rebuilding >= MAX_OPEN_LAZY) {
             throw new TypeError(
               "audit found a recursive schema that is built anew at every level. Build it once and refer to it",
             );
           }
+          rebuilding += isRebuilding ? 1 : 0;
           walking.add(getter);
-          walk(getter(), path, bounded);
+          walk(target, path, bounded);
           walking.delete(getter);
+          rebuilding -= isRebuilding ? 1 : 0;
         }
         return;
       }
@@ -269,6 +328,6 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
     }
   };
 
-  walk(validator, "", false);
+  walk(validator, "", OPEN);
   return Object.freeze(findings);
 }

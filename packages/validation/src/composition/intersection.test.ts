@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { check } from "../builders/check";
 import { coerceDate } from "../coercion/coerce-date";
+import type { Validator } from "../core/types";
 import { date } from "../primitives/date";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
@@ -9,8 +11,11 @@ import { codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
 import { array } from "./array";
 import { intersection } from "./intersection";
 import { json } from "./json";
+import { lazy } from "./lazy";
 import { map } from "./map";
 import { object } from "./object";
+import { optional } from "./optional";
+import { pipe } from "./pipe";
 import { set } from "./set";
 import { transform } from "./transform";
 
@@ -154,6 +159,91 @@ describe("intersection", () => {
     const output = valueOf(intersection(listed, listed)(parsed));
     expect(({} as { admin?: boolean }).admin).toBeUndefined();
     expect(Object.getPrototypeOf(output)).toBe(Object.prototype);
+  });
+
+  const reserved = (path: (string | number)[]): unknown => ({
+    code: "invalid_key",
+    path: [...path, "__proto__"],
+    params: { issues: [{ code: "invalid_value", path: [], params: { reserved: true } }] },
+  });
+
+  it("should report a __proto__ key an unchecked side would copy into the object it builds", () => {
+    const parsed = JSON.parse('{"__proto__":{"admin":true},"a":"x"}') as unknown;
+    expect(issuesOf(intersection(unknown(), object({ a: string() }))(parsed))).toEqual([reserved([])]);
+    expect(issuesOf(intersection(object({ a: string() }), unknown())(parsed))).toEqual([reserved([])]);
+  });
+
+  it("should report a __proto__ key an unchecked side would copy at its path inside the output", () => {
+    const parsed = JSON.parse('{"inner":{"__proto__":{"admin":true},"a":"x"}}') as unknown;
+    const left = object({ inner: unknown() });
+    const right = object({ inner: object({ a: string() }) });
+    expect(issuesOf(intersection(left, right)(parsed))).toEqual([reserved(["inner"])]);
+  });
+
+  it("should keep a value both sides passed on whole, which is the input's own object and builds none", () => {
+    const parsed = JSON.parse('{"__proto__":{"admin":true}}') as unknown;
+    expect(valueOf(intersection(unknown(), unknown())(parsed))).toBe(parsed);
+  });
+
+  it("should keep a __proto__ key a shape lists on one side only, there or deeper", () => {
+    const parsed = JSON.parse('{"__proto__":{"admin":true},"a":"x"}') as unknown;
+    const listed = object({ ["__proto__"]: unknown(), a: string() });
+    const output = valueOf(intersection(listed, object({ a: string() }))(parsed)) as object;
+    expect(Object.hasOwn(output, "__proto__")).toBe(true);
+    const nested = JSON.parse('{"items":[{"__proto__":{"admin":true}}]}') as unknown;
+    const deep = object({ items: array(optional(object({ ["__proto__"]: unknown() }))) });
+    expect(issuesOf(intersection(object({ items: unknown() }), deep)(nested))).toEqual([]);
+  });
+
+  it("should read a __proto__ listed only by the step of a pipe that produced the output", () => {
+    const listed = object({ ["__proto__"]: unknown(), a: string() });
+    const made = (): object => JSON.parse('{"__proto__":{"admin":true},"a":"x"}') as object;
+    const replaced = pipe(
+      listed,
+      transform(unknown(), () => made()),
+    );
+    expect(issuesOf(intersection(replaced, object({ a: string() }))({ a: "x" }))).toEqual([reserved([])]);
+    expect(issuesOf(intersection(transform(listed, made), object({ a: string() }))(made()))).toEqual([reserved([])]);
+    // A step that hands its input on as it is leaves the step before it the producer.
+    expect(issuesOf(intersection(pipe(listed, unknown()), object({ a: string() }))(made()))).toEqual([]);
+  });
+
+  it("should read a lazy part a __proto__ is listed by without calling its getter again", () => {
+    const getter = vi.fn((): Validator<object> => object({ ["__proto__"]: unknown(), a: string() }));
+    const parsed = JSON.parse('{"__proto__":{"admin":true},"a":"x"}') as unknown;
+    expect(issuesOf(intersection(lazy(getter as () => Validator<object>), object({ a: string() }))(parsed))).toEqual(
+      [],
+    );
+    expect(getter).toHaveBeenCalledTimes(1);
+  });
+
+  it("should not let the key of a map entry list a __proto__ for its value", () => {
+    const key = { k: 1 };
+    const parsed = JSON.parse('{"__proto__":{"admin":true}}') as unknown;
+    const keyed = map(object({ ["__proto__"]: optional(unknown()), k: number() }), unknown());
+    const copied = map(
+      unknown(),
+      transform(unknown(), (value) => ({ ...(value as object) })),
+    );
+    expect(issuesOf(intersection(keyed, copied)(new Map([[key, parsed]])))).toEqual([reserved([0])]);
+  });
+
+  it("should report a __proto__ at every place a pair merged before is reached again", () => {
+    // Each side gives one object at both places, as a transform that shares it may.
+    const parsed = (): Record<string, unknown> => JSON.parse('{"__proto__":{"admin":true}}') as Record<string, unknown>;
+    let shared: unknown;
+    const kept = check((value: object) => {
+      shared = value;
+      return true;
+    });
+    const left = object({
+      a: object({ ["__proto__"]: unknown() }, kept),
+      b: transform(unknown(), () => shared as object),
+    });
+    const copy = { ...parsed() };
+    const right = transform(unknown(), () => ({ a: copy, b: copy }));
+    // Listed at `a`, so kept there; at `b` no shape lists it.
+    expect(issuesOf(intersection(left, right)({ a: parsed(), b: null }))).toEqual([reserved(["b"])]);
   });
 
   it("should keep a value both sides passed through as it is, so cyclic input does not recurse forever", () => {

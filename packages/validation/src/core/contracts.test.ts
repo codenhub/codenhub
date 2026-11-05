@@ -12,10 +12,16 @@ import { coerceDate } from "../coercion/coerce-date";
 import { array } from "../composition/array";
 import { fallback } from "../composition/fallback";
 import { intersection } from "../composition/intersection";
+import { lazy } from "../composition/lazy";
 import { map } from "../composition/map";
 import { object } from "../composition/object";
+import { objectLike } from "../composition/object-like";
 import { optional } from "../composition/optional";
+import { pipe } from "../composition/pipe";
 import { record } from "../composition/record";
+import { set } from "../composition/set";
+import { tagged } from "../composition/tagged";
+import { tuple } from "../composition/tuple";
 import { union } from "../composition/union";
 import { base64 } from "../formats/base64";
 import { datetime } from "../formats/datetime";
@@ -345,10 +351,53 @@ describe("a factory given where its validator belongs", () => {
     expect(() => array(listless)([1])).toThrow("The validator at [0] returned no result");
   });
 
+  it("should name a failure whose list of issues is empty, which would otherwise pass the value it held", async () => {
+    const silent = (() => ({ ok: false, error: { issues: [] } })) as unknown as Validator<string>;
+    const named = 'The validator at ["a"] returned no result';
+    expect(() => object({ a: silent })({ a: "secret" })).toThrow(named);
+    expect(() => objectLike({ a: silent })({ a: "secret" })).toThrow(named);
+    expect(() => record(string(), silent)({ a: "secret" })).toThrow(named);
+    expect(() => map(string(), silent)(new Map([["a", "secret"]]))).toThrow("returned no result");
+    expect(() => array(silent)(["secret"])).toThrow("The validator at [0] returned no result");
+    expect(() => tuple([silent])(["secret"])).toThrow("The validator at [0] returned no result");
+    expect(() => set(silent)(new Set(["secret"]))).toThrow("returned no result");
+    expect(() => tagged("type", { a: object({ b: silent }) })({ type: "a", b: "x" })).toThrow(
+      'The validator at ["b"] returned no result',
+    );
+    for (const composed of [
+      optional(silent),
+      intersection(silent, unknown()),
+      pipe(unknown(), silent),
+      lazy(() => silent),
+      fallback(silent, "x"),
+    ]) {
+      expect(() => composed("secret")).toThrow("returned no result");
+    }
+    expect(() => union([silent])("secret")).toThrow("options[0] returned no result");
+    expect(() => record(silent, number())({ a: 1 })).toThrow("The key validator of record returned no result");
+    expect(() => map(silent, number())(new Map([["a", 1]]))).toThrow("The key validator of map returned no result");
+    const later = (async () => ({ ok: false, error: { issues: [] } })) as unknown as Validator<string>;
+    await expect(object({ a: later })({ a: "secret" })).rejects.toThrow(named);
+    await expect(union([later])("secret")).rejects.toThrow("options[0] returned no result");
+  });
+
   it("should write the place so that no key is mistaken for a path or for the root", () => {
     expect(() => object({ "a.b": factory })({})).toThrow('The validator at ["a.b"] returned no result');
     expect(() => object({ a: object({ b: factory }) })({ a: {} })).toThrow('The validator at ["a","b"] returned');
     expect(() => object({ "": factory })({})).toThrow('The validator at [""] returned no result');
+  });
+
+  it("should take a passing result written by hand without reading its error", () => {
+    // A result class whose error is a getter that throws when nothing failed.
+    const passing = ((input: unknown) => ({
+      ok: true,
+      value: input,
+      get error(): never {
+        throw new Error("passed, so no error");
+      },
+    })) as unknown as Validator<unknown>;
+    expect(valueOf(object({ a: passing })({ a: 2 }))).toEqual({ a: 2 });
+    expect(valueOf(union([passing])(2))).toBe(2);
   });
 
   it("should still take a result written by hand whose ok is not a boolean", () => {

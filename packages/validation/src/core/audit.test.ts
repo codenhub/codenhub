@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { check } from "../builders/check";
+import { format } from "../builders/format";
 import { guard } from "../builders/guard";
 import { coerceBigint } from "../coercion/coerce-bigint";
 import { coerceNumber } from "../coercion/coerce-number";
@@ -76,6 +77,18 @@ describe("audit", () => {
     ]);
   });
 
+  it("should report a format made with format, even one named as a built-in format that bounds its text", () => {
+    const mail = format("email", (text) => /^[^@]+@[^@]+$/.test(text))();
+    expect(audit(object({ mail }))).toEqual([{ rule: "unbounded_text", path: "mail", kind: "format" }]);
+    expect(audit(meta(standard(mail), { title: "Mail" }))).toEqual([
+      { rule: "unbounded_text", path: "", kind: "format" },
+    ]);
+    expect(audit(pipe(mail, json(object({}))))).toEqual([
+      { rule: "unbounded_text", path: "", kind: "format" },
+      { rule: "unbounded_text", path: "", kind: "json" },
+    ]);
+  });
+
   it("should take text bounded before it in a pipe as bounding what reads it", () => {
     const settings = pipe(string({ max: 10_000 }), json(object({ tags: array(string()) })));
     expect(audit(settings)).toEqual([]);
@@ -109,6 +122,34 @@ describe("audit", () => {
     expect(audit(object({ sent: body, kept: note }))).toEqual([
       { rule: "raised_limit", path: "sent", kind: "lazy" },
       { rule: "unbounded_text", path: "kept.text", kind: "string" },
+    ]);
+  });
+
+  it("should take a collection's max before it as bounding the count of items after it, not what they hold", () => {
+    expect(audit(pipe(array(unknown(), { max: 1 }), array(string())))).toEqual([
+      { rule: "unbounded_text", path: "[]", kind: "string" },
+    ]);
+    expect(audit(pipe(optional(record(name, unknown(), { max: 5 })), record(string(), array(name))))).toEqual([
+      { rule: "unbounded_text", path: "{}", kind: "string" },
+      { rule: "unbounded_size", path: "{}", kind: "array" },
+    ]);
+    expect(audit(pipe(array(unknown(), { max: 1 }), array(array(name))))).toEqual([
+      { rule: "unbounded_size", path: "[]", kind: "array" },
+    ]);
+    expect(audit(pipe(array(name, { max: 5 }), array(string())))).toEqual([]);
+  });
+
+  it("should take a bounded collection of numbers or other fixed-size values as bounding all of it", () => {
+    const grid = array(array(number(), { max: 5 }), { max: 5 });
+    expect(audit(pipe(grid, array(array(number()))))).toEqual([]);
+    expect(audit(pipe(array(optional(boolean()), { max: 5 }), array(string())))).toEqual([]);
+    // unknown() holds anything, so it stays open, and a transform may make anything from a number.
+    expect(audit(pipe(array(array(unknown(), { max: 5 }), { max: 5 }), array(array(number()))))).toEqual([
+      { rule: "unbounded_size", path: "[]", kind: "array" },
+    ]);
+    const repeated = transform(number(), (count) => "x".repeat(count));
+    expect(audit(pipe(array(repeated, { max: 5 }), array(string())))).toEqual([
+      { rule: "unbounded_text", path: "[]", kind: "string" },
     ]);
   });
 
@@ -181,6 +222,19 @@ describe("audit", () => {
     expect(() => audit(build())).toThrow(
       new TypeError("audit found a recursive schema that is built anew at every level. Build it once and refer to it"),
     );
+  });
+
+  it("should walk a long chain of distinct lazy parts to its end, as a schema generator writes one", () => {
+    let chain: AnyValidator = string({ max: 3 });
+    let built: AnyValidator = string();
+    for (let level = 0; level < 100; level += 1) {
+      const child = chain;
+      chain = lazy(() => child);
+      const next = built;
+      built = lazy(() => object({ next }));
+    }
+    expect(audit(chain)).toEqual([]);
+    expect(audit(built)).toEqual([{ rule: "unbounded_text", path: "next.".repeat(99) + "next", kind: "string" }]);
   });
 
   it("should give a frozen list, and refuse what is not a function", () => {

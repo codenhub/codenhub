@@ -1,3 +1,4 @@
+import { describe } from "../core/describe";
 import type { Factory } from "../core/types";
 import { bigint, type BigintOptions } from "../primitives/bigint";
 import { coercing } from "./coerce";
@@ -31,8 +32,8 @@ const LEADING_PATTERN = /^[+-]?0*/;
  */
 export const coerceBigint = ((...args: unknown[]) => {
   const strict = bigint(...(args as []));
-  const [first] = args;
-  const { min, max, gt, lt } = (typeof first === "object" && first !== null ? first : {}) as BigintOptions;
+  // The bounds the strict validator copied, so a getter in the options cannot give the shortcut others.
+  const { min, max, gt, lt }: BigintOptions = describe(strict)?.options ?? {};
   const bounds = [min, max, gt, lt].filter((bound) => bound !== undefined);
   // A number of more digits than every bound lies beyond all of them, as this power of ten does, so it
   // fails the bounds this one fails, and is never converted: 8,000,000 digits took 1.5 s.
