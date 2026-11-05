@@ -16,8 +16,8 @@
   "files": [
     "dist",
     "skills",
-    "docs/*.md",
-    "docs/changelog/*.md",
+    "docs",
+    "!docs/internal",
     "llms.txt",
     "llms-full.txt",
     "NOTICE"
