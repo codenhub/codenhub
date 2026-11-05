@@ -22,7 +22,10 @@ export type Picked<T, K extends keyof T> = Simplify<Pick<T, K>>;
 /** The object type without the properties named. */
 export type Omitted<T, K extends keyof T> = Simplify<Omit<T, K>>;
 
-/** The object type with every property present and none of them `undefined`. */
+/**
+ * The object type with every property present and none of them `undefined`. A property typed `unknown`
+ * or `any` still admits `undefined`, as `required` keeps an `unknown()` property unchanged.
+ */
 export type AllRequired<T> = Simplify<{ [K in keyof T]-?: Exclude<T[K], undefined> }>;
 
 /**

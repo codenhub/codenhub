@@ -50,7 +50,7 @@ Every collection validator takes the validator for its items, then options and c
 The size options are `min`, `max` and `length`, all non-negative integers, and `min` and `max` are inclusive:
 
 - A size failure is `too_small` with `{ minimum, type }` or `too_big` with `{ maximum, type }`, where `type` is `"array"`, `"set"`, `"map"` or `"record"`. `exact: true` is added for `length`.
-- A wrong size is reported at once, without validating the items, so a huge input is never worked through only to be rejected.
+- A wrong size is reported at once, without validating the items, so the items of a huge input are never validated only to be rejected. A `record` still lists the input's keys, to count them.
 - A size that is not a number, such as `"3"`, throws a `TypeError` when the validator is created. A number that is not a non-negative integer throws a `RangeError`, and so do limits no size can satisfy together, such as `min` above `max`, or a `length` outside them.
 
 A collection also stops once its items have reported 1,000 issues. [Limits](limits.md#a-failing-input-has-a-bounded-cost) explains that limit.
@@ -184,7 +184,7 @@ Each variant must produce a plain object, since that is what can carry the tag. 
 
 Where the outputs differ otherwise, as `"  ab "` does when one side trims it and the other uppercases it, no value satisfies both. Each such place fails with `invalid_intersection` at its path, instead of one side silently winning.
 
-The merged object is new. So an own `__proto__` key that one side passed on unchecked, as `unknown()` does, is reported as `invalid_key` with one issue inside, `{ reserved: true }`, as `record` reports it. A shape of either side that lists `__proto__` at that place keeps it. A value both sides passed on whole, such as through `unknown()` on both, is the input's own object, and is kept unchanged.
+The merged object is new. So an own `__proto__` key that one side passed on unchecked, as `unknown()` does, is reported as `invalid_key` with one issue inside, `{ reserved: true }`, as `record` reports it. A shape of either side that lists `__proto__` at that place keeps it, but only if that shape made the value there. A shape a `transform` runs before its function did not, nor did one in a `pipe` step followed by a step that makes a new object, nor the key validator of a `map` entry, for the entry's value. A value both sides passed on whole, such as through `unknown()` on both, is the input's own object, and is kept unchanged.
 
 Both validators see the whole input, so two `object`s with `unknownKeys: "strict"` pass together only when every key of the input is listed in both shapes: each rejects the keys only the other lists. To combine strict shapes, spread them into one: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
 

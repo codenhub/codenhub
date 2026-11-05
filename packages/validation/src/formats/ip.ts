@@ -15,7 +15,7 @@ const LINK_LOCAL_MASK = 0xffc0;
 /**
  * Tests an IPv6 address written as RFC 4291 allows: eight groups of one to four hex digits, one run
  * of zero groups shortened to `::`, and an IPv4 address in place of the last two groups. A zone
- * such as `%eth0` is allowed only after a link-local address, the one place it means something.
+ * such as `%eth0` is allowed only after a link-local address, not after a scoped multicast one.
  */
 function isIpv6(text: string): boolean {
   const zoneStart = text.indexOf("%");

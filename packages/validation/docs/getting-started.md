@@ -235,7 +235,7 @@ Both fail with `invalid_value`: `literal` reports `{ expected }`, and `oneOf` re
 
 A bigint is reported as its decimal digits, so the issue can be sent as JSON: `literal(1n)` reports `{ expected: "1", type: "bigint" }`, and a `oneOf` of bigints alone adds `type: "bigint"` too. In a `oneOf` that mixes bigints with other values, a bigint is reported as its digits, with nothing to tell it from a string.
 
-`literal` and `oneOf` report the values they accept, so do not use them to check a secret, such as an API key: a failed check would print it.
+Like every rule, `literal` and `oneOf` report what they were configured with, here the values they accept. So do not check a secret, such as an API key, with them or with a check such as `startsWith`: a failed check would print it, as [The issue](errors.md#the-issue) explains.
 
 ## Any value, no value, functions and instances
 

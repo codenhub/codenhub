@@ -16,10 +16,10 @@ Data that crosses a boundary you do not control can hold anything: a request, a 
 The package is built for that boundary, where the input may be hostile:
 
 - **A format gives you what the parser read.** `email()` and `url()` produce the value the platform's URL parser reads. The value you store is the one a request or a mail server will use.
-- **A failing input has a bounded report.** A long list of bad items stops at 1,000 issues. Input nested too deep is one issue, not a stack overflow, as long as the depth limit fits the stack.
-- **An issue never holds a value of the input.** A log of failures holds no passwords, unless a `literal` or a `oneOf` checks one: those report the values they accept, as [Getting started](getting-started.md#fixed-values) says. An issue does name the input's keys, in its `path`.
+- **A failing input has a bounded report.** Each collection stops reporting at 1,000 issues, as [Limits](limits.md#a-failing-input-has-a-bounded-cost) explains. Input nested too deep is one issue, not a stack overflow, as long as the depth limit fits the stack.
+- **An issue never holds a value of the input.** A log of failures holds no password that was sent. An issue does hold what the schema was configured with, such as the values a `oneOf` accepts or the prefix of a `startsWith`, and the input's keys, in its `path`, as [The issue](errors.md#the-issue) says.
 
-Every valid item is still checked, whether the input passes or fails, so a large input costs its size. [Limits](limits.md) says how to bound its size and its depth.
+The 1,000-issue limit of a collection bounds its report, not the work: an input that passes, or fails only near its end, is still checked item by item, so a large one costs its size. [Limits](limits.md) says how to bound its size and its depth.
 
 ## Installation
 

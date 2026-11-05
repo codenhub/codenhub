@@ -241,7 +241,7 @@ They need a validator `object` made, since that is how they know its shape. `obj
 The types they return have names, for a library that exports what it derives:
 
 - `Picked<T, K>` and `Omitted<T, K>`: the object type with only the named properties, or without them.
-- `AllOptional<T>` and `AllRequired<T>`: the object type with every property optional, or every property present and none of them `undefined`.
+- `AllOptional<T>` and `AllRequired<T>`: the object type with every property optional, or every property present and none of them `undefined`. A property typed `unknown` or `any` still admits `undefined`, as `required` keeps an `unknown()` property unchanged.
 - `Extended<T, TShape>`: the object type `T` with the properties of `TShape` added or replaced.
 - `Reshaped<TValidator, T, TInput?>`: a validator of `T` that is synchronous when the validator it was made from is.
 

@@ -18,7 +18,7 @@ Every validator a factory of this package makes is already a Standard Schema, wo
 
 ## Forms
 
-A form holds what the user typed, which is the validator's input type and not what it produces, so type the form's values with [`InferInput`](forms.md#the-types-of-a-form) and what it submits with `Infer`. A field of `coerceNumber()` holds text or a number, and what is submitted is a number.
+A form holds what the user typed, which is the validator's input type and not what it produces, so type the form's values with [`InferInput`](forms.md#the-types-of-a-form). A field of `coerceNumber()` holds text or a number. What the form submits depends on the library: react-hook-form submits what the validator produced, typed with `Infer`, and TanStack Form submits the values as typed.
 
 ### react-hook-form
 
@@ -56,7 +56,7 @@ export const form = new FormApi({
 });
 ```
 
-A validator given to `validators` reports each issue under its field, `form.state.fieldMeta.email.errors`, as `{ message, path }`.
+A validator given to `validators` reports each issue under its field, `form.state.fieldMeta.email.errors`, as `{ message, path }`. `onSubmit` is given the values as typed, not what the validator produced, so call the validator on them to get, for example, the number of a `coerceNumber()` field.
 
 ## RPC and HTTP
 
@@ -176,7 +176,7 @@ server.setRequestHandler(CallToolRequestSchema, (request) => {
 
 ## OpenAPI
 
-OpenAPI 3.1 writes schemas in JSON Schema 2020-12, which `toJsonSchema` writes, so a schema goes under `components.schemas` unchanged. A recursive schema is the exception. It refers to its definitions as `#/$defs/schema1`, from the root of the document it is in, and the root of an OpenAPI document has no `$defs`. So such a schema needs its definitions moved under `components.schemas`, and its references rewritten to point there. OpenAPI 3.0 uses an older dialect, which `toJsonSchema` does not write.
+OpenAPI 3.1 writes schemas in JSON Schema 2020-12, which `toJsonSchema` writes, so a schema goes under `components.schemas` unchanged. A schema with a `lazy`, recursive or not, is the exception. It refers to its definitions as `#/$defs/schema1`, from the root of the document it is in, and the root of an OpenAPI document has no `$defs`. So such a schema needs its definitions moved under `components.schemas`, and its references rewritten to point there. OpenAPI 3.0 uses an older dialect, which `toJsonSchema` does not write.
 
 ```ts
 import { email, meta, object, string, toJsonSchema } from "@codenhub/validation";
