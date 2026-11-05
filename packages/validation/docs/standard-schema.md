@@ -1,11 +1,14 @@
 ---
 title: Standard Schema
 description: Use a validator wherever a library accepts a Standard Schema, such as form libraries, API frameworks and routers.
+order: 9
 ---
 
 # Standard Schema
 
-[Standard Schema](https://standardschema.dev/) is a small shared interface that lets libraries accept a validator without depending on the one that made it. Form libraries, API frameworks and routers that support it take any conforming validator, from any library, directly. Every validator a factory of this package makes is one as it is:
+The sign-up form runs in a form library, and the sign-up endpoint in a web framework. Neither should need code of its own for each validation library. [Standard Schema](https://standardschema.dev/) is a small shared interface that lets libraries accept a validator without depending on the one that made it. Form libraries, API frameworks and routers that support it take any conforming validator, from any library, directly. This page covers how a validator of this package is one, and how to choose the wording of its messages.
+
+Every validator a factory of this package makes is already a Standard Schema:
 
 ```ts
 import { email, number, object } from "@codenhub/validation";
@@ -25,7 +28,14 @@ Pass `signup` to the library that asks for a Standard Schema, and it will call `
 
 ## Short English, or `standard`
 
-The specification requires a message on every issue, and a validator's own `~standard` words each in short English: the issue's own `message`, set with the `message` option or by a check, or one sentence for its code, such as "Must be at least 2 characters" or "Invalid email". It is kept short because every program that makes a validator carries it, about 0.5 kB gzipped. A check such as `startsWith`, and a format whose name is written in camelCase such as `creditCard`, is worded "Invalid value", and an unrecognized key "Unrecognized key", since the key is the last segment of the path; `standard` words both in full.
+The specification requires a message on every issue. The `~standard` of a validator words each in short English: the issue's own `message`, set with the `message` option or by a check, or one sentence for its code, such as "Must be at least 2 characters" or "Invalid email". It is kept short because every program that makes a validator bundles it.
+
+Some issues get less than a sentence:
+
+- A check named by an identifier in code, such as `startsWith`, and a format whose name is written that way, such as `creditCard`, are worded "Invalid value". The short English does not show a reader the name of a function.
+- An unrecognized key is "Unrecognized key", since the key is the last segment of the path.
+
+`standard` words both in full.
 
 `standard(validator, messages?)` gives the same validator with a `~standard` of its own that words issues as [`formatIssue`](errors.md#turning-an-issue-into-text) does. Use it for:
 
@@ -47,13 +57,13 @@ A factory returns a `Schema<T, TInput>`, or an `AsyncSchema<T, TInput>` when one
 
 A validator that behaves exactly as the one you gave, with the `~standard` property added, so it is still an ordinary validator you can call and compose. The validator you gave is not modified, so the same one can be exposed twice, with different messages for different audiences.
 
-`~standard.validate` returns `{ value }` on success and `{ issues }` on failure, and never both. It returns its result directly for a synchronous validator and a `Promise` for an asynchronous one, which the specification allows. That holds even for a validator of your own that returns another kind of thenable, such as a query builder's, since callers tell the two apart with `instanceof Promise` and would read anything else as a result without issues. The input type is what the validator accepts, [`InferInput`](validators.md#inferinput), and the output type is what it produces, so a library that infers types from a Standard Schema gets both: a form library types the field of a `coerceNumber()` as `string | number`, since a number passes as it is, and what it hands you after validation as a number.
+`~standard.validate` returns `{ value }` on success and `{ issues }` on failure, and never both. It returns its result directly for a synchronous validator and a `Promise` for an asynchronous one, which the specification allows. That holds even for a validator of your own that returns another kind of thenable, such as a query builder's, since callers tell the two apart with `instanceof Promise` and would read anything else as a result without issues. The input type is what the validator accepts, [`InferInput`](forms.md#the-types-of-a-form), and the output type is what it produces. So a library that infers types from a Standard Schema gets both. A form library types the field of a `coerceNumber()` as `string | number`, since a number passes too, and types what it hands you after validation as a number.
 
-The package exports the `StandardSchemaV1` type so you can accept one in your own code.
+The package exports the `StandardSchemaV1` type so you can accept one in your own code, and `StandardJSONSchemaV1` for one that also carries its JSON Schema.
 
 ## Messages of `standard`
 
-`standard` builds each message from the message map given as its second argument: the built-in English when you give none, `portugueseMessages` for Portuguese, or a map of your own. A program that calls `standard` bundles the English, about 1.7 kB gzipped, even when it passes another map; calling it is what brings the English in, so a program that words its issues with a map of its own and never calls `standard` does not bundle it. A second argument left out or given as `undefined` is the English; any other that is not a map, such as `null`, text or a list, is a `TypeError` when `standard` is called. Messages then come from [`formatIssue`](errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map, then the map's `default` entry, then "Invalid value".
+`standard` builds each message from the message map given as its second argument: the built-in English when you give none, `portugueseMessages` for Portuguese, or a map of your own. A program that calls `standard` bundles the English, even when it passes another map, since it is the default. A program that words its issues with a map of its own and never calls `standard` does not bundle it. A second argument left out or given as `undefined` is the English; any other that is not a map, such as `null`, text or a list, is a `TypeError` when `standard` is called. Messages then come from [`formatIssue`](errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map, then the map's `default` entry, then "Invalid value".
 
 ```ts
 import { englishMessages, number, standard } from "@codenhub/validation";
@@ -84,10 +94,14 @@ forecast["~standard"].jsonSchema.input({ target: "draft-07" });
 // { $schema: "http://json-schema.org/draft-07/schema#", type: "object", properties: { city: { ..., description: "The city to get the weather for" }, ... }, required: ["city"] }
 ```
 
-`input` and `output` write the validator with [`toJsonSchema`](json-schema.md), the side and the draft as asked. `"draft-2020-12"` and `"draft-07"` are written, and any other target throws a `TypeError`. When a part of the validator cannot be written as JSON Schema, such as a custom check, `toJsonSchema` throws for it, and so do `input` and `output`, unless the library passes `libraryOptions: { unrepresentable: "any" }`. That is the one library option, and any other name in `libraryOptions`, such as a misspelled one, throws a `TypeError` rather than being ignored. Give [`meta`](validators.md#meta) to the validator before passing it here, since the schema is written from the validator `standardJsonSchema` is given.
+`input` and `output` write the validator with [`toJsonSchema`](json-schema.md), the side and the draft as asked. `"draft-2020-12"` and `"draft-07"` are written, and any other target throws a `TypeError`. When a part of the validator cannot be written as JSON Schema, such as a custom check, `toJsonSchema` throws for it, and so do `input` and `output`, unless the library passes `libraryOptions: { unrepresentable: "any" }`. That is the one library option, and any other name in `libraryOptions`, such as a misspelled one, throws a `TypeError` rather than being ignored. Give [`meta`](shaping-values.md#meta) to the validator before passing it here, since the schema is written from the validator `standardJsonSchema` is given.
 
 It is a separate export so that `standard`, which a form in the browser uses, does not bundle the code that writes a schema: use `standard` where only validation is asked for, and `standardJsonSchema` where the schema is read too.
 
 ## A note on functions
 
 A validator here is a function, and `standard` attaches `~standard` to a function. The specification allows any object, and libraries that follow it read the property, so this works. A library that insists on `typeof schema === "object"` before looking would not recognize it; if you meet one, wrap the validator in an object of your own: `{ "~standard": standard(validator)["~standard"] }`.
+
+## Next
+
+Some libraries read a schema rather than call it: an API description, a form generator, or a language model choosing the arguments of a tool. [JSON Schema](json-schema.md) covers how to write a validator as one.

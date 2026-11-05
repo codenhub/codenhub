@@ -1,15 +1,24 @@
 ---
 title: Integrations
 description: Use a validator with form libraries, RPC and HTTP frameworks, the tools of a language model, OpenAPI, and inside a zod or valibot schema, with an example for each that was run against the library it names.
+order: 11
 ---
 
 # Integrations
 
-A validator goes where a library asks for a schema in one of three ways: as a [Standard Schema](standard-schema.md), which most form libraries and frameworks accept; as a [JSON Schema](json-schema.md), which tools of language models and OpenAPI documents are written in; or called directly, as any function is, which is also how one field of a [zod or valibot schema](#inside-a-zod-or-valibot-schema) can use it. Every validator is a Standard Schema as it is, worded in short English; the examples below pass it through `standard`, which words its issues in the full English and was what they were run with. Each example below was run against the version of the library it names, on 2026-10-07: it validated input that passes and input that fails, and gave what the text around it says.
+The sign-up runs inside other libraries: a form library in the browser, a framework on the server, perhaps the tools of a language model. This page shows a validator in each of the common ones, so you can copy the few lines each needs.
+
+A validator goes where a library asks for a schema in one of three ways:
+
+- As a [Standard Schema](standard-schema.md), which most form libraries and frameworks accept.
+- As a [JSON Schema](json-schema.md), in which the tools of language models and OpenAPI documents are written.
+- Called directly, as any function is. That is also how one field of a [zod or valibot schema](#inside-a-zod-or-valibot-schema) can use it.
+
+Every validator a factory of this package makes is already a Standard Schema, worded in short English. The examples for forms, RPC and HTTP pass it through `standard`, which words its issues in the full English, and were run that way. The other examples use what their section names: `standardJsonSchema`, `toJsonSchema`, or the validator called directly. Each example was run against the version of the library it names, on 2026-10-07: it validated input that passes and input that fails, and gave what the text around it says.
 
 ## Forms
 
-A form holds what the user typed, which is the validator's input type and not what it produces, so type the form's values with [`InferInput`](validators.md#inferinput) and what it submits with `Infer`. A field of `coerceNumber()` holds text or a number, and what is submitted is a number.
+A form holds what the user typed, which is the validator's input type and not what it produces, so type the form's values with [`InferInput`](forms.md#the-types-of-a-form) and what it submits with `Infer`. A field of `coerceNumber()` holds text or a number, and what is submitted is a number.
 
 ### react-hook-form
 
@@ -99,7 +108,7 @@ Give `sValidator` a hook as above. Without one, the response to input that fails
 
 ## Tools of a language model
 
-A model chooses a tool and fills in its arguments from the JSON Schema of its input, so describe each argument with [`meta`](validators.md#meta): the description is what the model reads.
+A model chooses a tool and fills in its arguments from the JSON Schema of its input, so describe each argument with [`meta`](shaping-values.md#meta): the description is what the model reads.
 
 ### AI SDK
 
@@ -167,7 +176,7 @@ server.setRequestHandler(CallToolRequestSchema, (request) => {
 
 ## OpenAPI
 
-OpenAPI 3.1 writes schemas in JSON Schema 2020-12, which `toJsonSchema` writes, so a schema goes under `components.schemas` as it is. OpenAPI 3.0 uses an older dialect, which `toJsonSchema` does not write.
+OpenAPI 3.1 writes schemas in JSON Schema 2020-12, which `toJsonSchema` writes, so a schema goes under `components.schemas` unchanged. A recursive schema is the exception. It refers to its definitions as `#/$defs/schema1`, from the root of the document it is in, and the root of an OpenAPI document has no `$defs`. So such a schema needs its definitions moved under `components.schemas`, and its references rewritten to point there. OpenAPI 3.0 uses an older dialect, which `toJsonSchema` does not write.
 
 ```ts
 import { email, meta, object, string, toJsonSchema } from "@codenhub/validation";
@@ -264,3 +273,7 @@ v.safeParse(webhook, { callback: "http://169.254.169.254/latest", owner: "ada@lo
 ```
 
 The adapter is a few lines in your code and not an export of this package, so this package's API does not follow the context each library gives a transform, which zod changed between its versions 3 and 4.
+
+## Next
+
+A validator in production meets input written to hurt it. [Limits](limits.md) says what the package bounds for you, and what it leaves to you.
