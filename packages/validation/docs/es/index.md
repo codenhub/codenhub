@@ -1,7 +1,7 @@
 ---
 title: Visión general
 description: Para qué sirve el paquete de validación, cómo instalarlo y en qué orden leer sus páginas.
-source: acc3ea5f9cdca5707b9a2df752d212aa10cc5b49
+source: 533571f419ed6de73fe8f241e415c797093db48d
 ---
 
 # Valida valores y formas
@@ -17,10 +17,10 @@ Los datos que cruzan una frontera que no controlas pueden traer cualquier cosa: 
 El paquete está hecho para esa frontera, donde la entrada puede ser hostil:
 
 - **Un formato te da lo que leyó el parser.** `email()` y `url()` producen el valor que lee el parser de URL de la plataforma. El valor que guardas es el que usará una solicitud o un servidor de correo.
-- **Lo que reporta una entrada que falla está acotado.** Una lista larga de elementos inválidos se detiene en 1000 problemas. Una entrada anidada demasiado profundo es un solo problema, no un desbordamiento de pila, siempre que el límite de profundidad quepa en la pila.
-- **Un problema nunca contiene un valor de la entrada.** Un registro de fallos no contiene contraseñas, a menos que un `literal` o un `oneOf` verifique una: estos reportan los valores que aceptan, como dice [Primeros pasos](./getting-started.md#valores-fijos). Un problema sí nombra las claves de la entrada, en su `path`.
+- **Lo que reporta una entrada que falla está acotado.** Cada colección deja de reportar en 1000 problemas, como explica [Límites](./limits.md#una-entrada-que-falla-tiene-un-costo-acotado). Una entrada anidada demasiado profundo es un solo problema, no un desbordamiento de pila, siempre que el límite de profundidad quepa en la pila.
+- **Un problema nunca contiene un valor de la entrada.** Un registro de fallos no contiene ninguna contraseña que se haya enviado. Un problema sí contiene aquello con lo que se configuró el esquema, como los valores que acepta un `oneOf` o el prefijo de un `startsWith`, y las claves de la entrada, en su `path`, como dice [El problema](./errors.md#el-problema).
 
-El límite de 1000 problemas acota el reporte, no el trabajo: una entrada que pasa, o que falla solo cerca de su final, se revisa igual elemento por elemento, así que una entrada grande cuesta lo que mide. [Límites](./limits.md) explica cómo acotar su tamaño y su profundidad.
+El límite de 1000 problemas de una colección acota su reporte, no el trabajo: una entrada que pasa, o que falla solo cerca de su final, se revisa igual elemento por elemento, así que una entrada grande cuesta lo que mide. [Límites](./limits.md) explica cómo acotar su tamaño y su profundidad.
 
 ## Instalación
 

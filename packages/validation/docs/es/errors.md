@@ -2,7 +2,7 @@
 title: Problemas y mensajes
 description: Qué contiene un resultado fallido, los códigos de problema integrados y sus params, y cómo convertir los problemas en texto en inglés, en portugués o con tus propias palabras.
 order: 5
-source: ae76c2953676715dddf6b0e9ceb9bd1af4d96632
+source: 05948497c973ec08784c6635902e20a10c08db22
 ---
 
 # Problemas y mensajes
@@ -40,7 +40,7 @@ const result = {
 | `params`  | Los datos detrás del fallo, como el límite que se superó. Presente cuando hay alguno.                                                                 |
 | `message` | Texto fijo, cuando el problema recibió uno: mediante la opción `message` de un validador, el mensaje de una verificación o un validador propio.       |
 
-**Un problema nunca contiene un valor de la entrada.** No hay ningún campo para eso, y `params` contiene nombres de tipo y límites, nunca el valor que se está verificando. Las entradas suelen ser contraseñas o tokens, y los problemas se registran en logs y se muestran, así que esto es una regla y no un valor predeterminado. Si necesitas el valor, ya lo tienes.
+**Un problema nunca contiene un valor de la entrada.** No hay ningún campo para eso, y `params` contiene nombres de tipo y aquello con lo que se configuró el esquema, como un límite, nunca el valor que se está verificando. Las entradas suelen ser contraseñas o tokens, y los problemas se registran en logs y se muestran, así que esto es una regla y no un valor predeterminado. Si necesitas el valor, ya lo tienes.
 
 Las claves no son valores, y sí aparecen en los problemas:
 
@@ -49,7 +49,7 @@ Las claves no son valores, y sí aparecen en los problemas:
 
 Así que no pongas secretos en nombres de claves que valides. Una clave también es texto que eligió quien la envió. `englishMessages` la pone dentro del mensaje como una cadena entre comillas, como en `Unrecognized key "…"`, con las comillas y los saltos de línea escapados. `formatPath` la pone entre comillas de la misma forma en los nombres de campo de `flatten`. Así, una clave no puede romper una línea de log. Escapa ambos cuando los pongas en HTML.
 
-Lo mismo vale para lo que nombra tu propio esquema: `literal` y `oneOf` reportan los valores que aceptan, en `params` y en el mensaje en inglés. Así que no verifiques un secreto con ellos, como advierte [Valores fijos](./getting-started.md#valores-fijos).
+Lo mismo vale para lo que nombra tu propio esquema: una regla reporta aquello con lo que se configuró, en `params` y en el mensaje en inglés. Eso incluye los valores que aceptan `literal` y `oneOf`, el texto de `startsWith`, `endsWith` e `includes`, y la expresión de `pattern`. Así que no escribas un secreto, como una clave de API, en un esquema: una verificación fallida lo imprimiría.
 
 ### Escribir una ruta
 

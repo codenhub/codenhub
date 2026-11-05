@@ -5,8 +5,8 @@
 Validation for data you do not control: a request body, a query string, a form, a message from another origin. A validator gives you either the typed value or the reasons it is not one, and is built for input that may be hostile:
 
 - **Formats return what a parser read.** `email()` and `url()` produce what the URL parser of the platform sees, so the value you store is the one a request or a mail server will use.
-- **What a failing input reports is bounded.** A long list of bad items stops at 1,000 issues, and input nested too deep is one issue, not a stack overflow, as long as the depth limit fits the stack.
-- **Issues never hold a value of the input**, so logging a failed validation cannot log a password, unless a `literal` or a `oneOf` checks one, since those report the values they accept. They do name its keys, in `path`, as [The issue](docs/errors.md#the-issue) says.
+- **What a failing input reports is bounded.** Each collection stops reporting at 1,000 issues, as [Limits](docs/limits.md#a-failing-input-has-a-bounded-cost) explains, and input nested too deep is one issue, not a stack overflow, as long as the depth limit fits the stack.
+- **Issues never hold a value of the input**, so logging a failed validation cannot log a password that was sent. They do hold what the schema was configured with, such as the values a `oneOf` accepts or the prefix of a `startsWith`, and the input's keys, in `path`, as [The issue](docs/errors.md#the-issue) says.
 
 Each validator is a function you import on its own, so a program bundles only the validators it uses. No dependencies.
 
@@ -85,10 +85,10 @@ Data that crosses a boundary you do not control can hold anything: a request, a 
 The package is built for that boundary, where the input may be hostile:
 
 - **A format gives you what the parser read.** `email()` and `url()` produce the value the platform's URL parser reads. The value you store is the one a request or a mail server will use.
-- **A failing input has a bounded report.** A long list of bad items stops at 1,000 issues. Input nested too deep is one issue, not a stack overflow, as long as the depth limit fits the stack.
-- **An issue never holds a value of the input.** A log of failures holds no passwords, unless a `literal` or a `oneOf` checks one: those report the values they accept, as [Getting started](docs/getting-started.md#fixed-values) says. An issue does name the input's keys, in its `path`.
+- **A failing input has a bounded report.** Each collection stops reporting at 1,000 issues, as [Limits](docs/limits.md#a-failing-input-has-a-bounded-cost) explains. Input nested too deep is one issue, not a stack overflow, as long as the depth limit fits the stack.
+- **An issue never holds a value of the input.** A log of failures holds no password that was sent. An issue does hold what the schema was configured with, such as the values a `oneOf` accepts or the prefix of a `startsWith`, and the input's keys, in its `path`, as [The issue](docs/errors.md#the-issue) says.
 
-The limit of 1,000 issues bounds the report, not the work: an input that passes, or fails only near its end, is still checked item by item, so a large one costs its size. [Limits](docs/limits.md) says how to bound its size and its depth.
+The 1,000-issue limit of a collection bounds its report, not the work: an input that passes, or fails only near its end, is still checked item by item, so a large one costs its size. [Limits](docs/limits.md) says how to bound its size and its depth.
 
 ## Installation
 
@@ -366,7 +366,7 @@ Both fail with `invalid_value`: `literal` reports `{ expected }`, and `oneOf` re
 
 A bigint is reported as its decimal digits, so the issue can be sent as JSON: `literal(1n)` reports `{ expected: "1", type: "bigint" }`, and a `oneOf` of bigints alone adds `type: "bigint"` too. In a `oneOf` that mixes bigints with other values, a bigint is reported as its digits, with nothing to tell it from a string.
 
-`literal` and `oneOf` report the values they accept, so do not use them to check a secret, such as an API key: a failed check would print it.
+Like every rule, `literal` and `oneOf` report what they were configured with, here the values they accept. So do not check a secret, such as an API key, with them or with a check such as `startsWith`: a failed check would print it, as [The issue](docs/errors.md#the-issue) explains.
 
 ## Any value, no value, functions and instances
 
@@ -779,7 +779,7 @@ Every collection validator takes the validator for its items, then options and c
 The size options are `min`, `max` and `length`, all non-negative integers, and `min` and `max` are inclusive:
 
 - A size failure is `too_small` with `{ minimum, type }` or `too_big` with `{ maximum, type }`, where `type` is `"array"`, `"set"`, `"map"` or `"record"`. `exact: true` is added for `length`.
-- A wrong size is reported at once, without validating the items, so a huge input is never worked through only to be rejected.
+- A wrong size is reported at once, without validating the items, so the items of a huge input are never validated only to be rejected. A `record` still lists the input's keys, to count them.
 - A size that is not a number, such as `"3"`, throws a `TypeError` when the validator is created. A number that is not a non-negative integer throws a `RangeError`, and so do limits no size can satisfy together, such as `min` above `max`, or a `length` outside them.
 
 A collection also stops once its items have reported 1,000 issues. [Limits](docs/limits.md#a-failing-input-has-a-bounded-cost) explains that limit.
@@ -955,7 +955,7 @@ The body of a request is JSON, but much of what a server reads is text: a query 
 
 # Text input
 
-Much of the data a program receives is text, even when it means something else. Every environment variable, query-string parameter and form field is a string, whether it stands for a port number, a yes-or-no flag or a date. This page covers the validators that read a value from such text, and two places it comes from: a query string and the environment. The sign-up server reads its configuration from the environment, and its sign-up page reads an invitation from the query string.
+Much of the data a program receives is text, even when it means something else. Every environment variable, query-string parameter and text field of a form is a string, whether it stands for a port number, a yes-or-no flag or a date. A file field is a `File` instead, which [Files](docs/forms.md#files) covers. This page covers the validators that read a value from such text, and two places it comes from: a query string and the environment. The sign-up server reads its configuration from the environment, and its sign-up page reads an invitation from the query string.
 
 A strict validator such as `number()` rejects `"8080"`, because it is a string. That is correct, and no help here. A coercing validator converts the text first and then validates the result, so one call gives you a typed value or the reasons it could not be one:
 
@@ -1126,7 +1126,7 @@ const result = {
 | `params`  | The facts behind the failure, such as the limit that was crossed. Present when there are any.                                               |
 | `message` | Fixed text, when the issue was given one: by a validator's `message` option, a check's message, or a validator of your own.                 |
 
-**An issue never contains an input value.** There is no field for it, and `params` holds type names and limits, never the value under test. Inputs are often passwords or tokens, and issues get logged and shown, so this is a rule and not a default. If you need the value, you already have it.
+**An issue never contains an input value.** There is no field for it, and `params` holds type names and what the schema was configured with, such as a limit, never the value under test. Inputs are often passwords or tokens, and issues get logged and shown, so this is a rule and not a default. If you need the value, you already have it.
 
 Keys are not values, and they do appear in issues:
 
@@ -1135,7 +1135,7 @@ Keys are not values, and they do appear in issues:
 
 So do not put secrets in key names you validate. A key is also text the sender chose. `englishMessages` puts it inside the message as a quoted string, as in `Unrecognized key "…"`, with quotes and line breaks escaped. `formatPath` quotes it the same way in the field names of `flatten`. So a key cannot break a log line. Escape both when you put them into HTML.
 
-The same goes for what your own schema names: `literal` and `oneOf` report the values they accept, in `params` and in the English message. So do not check a secret with them, as [Fixed values](docs/getting-started.md#fixed-values) warns.
+The same goes for what your own schema names: a rule reports what it was configured with, in `params` and in the English message. That includes the values `literal` and `oneOf` accept, the text of `startsWith`, `endsWith` and `includes`, and the expression of `pattern`. So do not write a secret, such as an API key, into a schema: a failed check would print it.
 
 ### Writing a path
 
@@ -2275,7 +2275,7 @@ They need a validator `object` made, since that is how they know its shape. `obj
 The types they return have names, for a library that exports what it derives:
 
 - `Picked<T, K>` and `Omitted<T, K>`: the object type with only the named properties, or without them.
-- `AllOptional<T>` and `AllRequired<T>`: the object type with every property optional, or every property present and none of them `undefined`.
+- `AllOptional<T>` and `AllRequired<T>`: the object type with every property optional, or every property present and none of them `undefined`. A property typed `unknown` or `any` still admits `undefined`, as `required` keeps an `unknown()` property unchanged.
 - `Extended<T, TShape>`: the object type `T` with the properties of `TShape` added or replaced.
 - `Reshaped<TValidator, T, TInput?>`: a validator of `T` that is synchronous when the validator it was made from is.
 
@@ -2423,7 +2423,7 @@ The result is a new plain object that `JSON.stringify` can write. It is its own 
 
 A schema says less than a validator checks. `email()` refuses an address at `localhost`, and JSON Schema's `email` format has no such rule. So the schema is written to one promise: **a value the validator accepts passes the schema**. The schema may accept a value the validator then refuses, and the validator stays the check that counts. Validate what you receive with the validator, and give the schema to whoever needs to know the shape.
 
-Three places bend that promise, each because the validator cleans a value before it checks it, which a schema cannot say:
+Three places bend that promise. In two, the validator cleans a value before it checks it, which a schema cannot say, and in the other, the two count the length of text differently:
 
 - **Clean-up options.** `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no trimming. Text with spaces around five letters passes the validator and not the schema. `case` is the same, and so is `clamp` beside a limit, as in `number({ max: 10, clamp: { min: 0, max: 10 } })`: the schema describes the value after cleaning. The range of a `clamp` is itself not written.
 - **Length of text.** A string's `length` counts an emoji, and any other character outside the Basic Multilingual Plane, as two, and JSON Schema counts it as one, so a `min` or `max` can differ by the number of such characters. A `pattern` is the same: a schema reads it in Unicode mode, the `u` flag, so in one written without that flag `.` and a negated class such as `[^a]` match a whole character in the schema and half of an emoji in the validator.
@@ -2926,7 +2926,7 @@ A sign-up endpoint receives whatever anybody sends it, including input written t
 
 In short:
 
-- A failing input reports a bounded number of issues: they stop at 1,000, and a recursive schema stops at a depth and a number of calls.
+- A failing input reports a bounded number of issues: each collection stops at 1,000, and a recursive schema stops at a depth and a number of calls.
 - An input that passes is validated in full. So its size is yours to cap, with a `max` on text and on every collection.
 - `audit` lists every place a schema leaves a size open, so a test can keep it closed.
 
@@ -2968,7 +2968,7 @@ record(string(), unknown())(JSON.parse('{"__proto__":{"admin":true}}')); // { ok
 
 ## A failing input has a bounded cost
 
-A collection stops once its items have reported 1,000 issues. The items after that are not validated. One more issue, `too_big` with `{ maximum: 1000, type: "issues" }` at the path of the collection, says that it stopped.
+A collection stops once its items have reported 1,000 issues. The items after that are not validated. One more issue, `too_big` with `{ maximum: 1000, type: "issues" }` at the path of the collection, says that it stopped. The limit is for each collection, not for the whole input, so an `object` with two lists can report about 2,000.
 
 - An issue that holds others in `params.issues` counts with them. So an item that fails a `union` counts once, and once more for each issue of each option. A key that fails counts with the issue behind it.
 - The unknown keys of a strict `object`, the repeats `unique` and `set` find, the keys a query string repeats, and the conflicts of an `intersection` are listed up to the same limit.
@@ -2976,7 +2976,7 @@ A collection stops once its items have reported 1,000 issues. The items after th
 - To report every bad row of a long list, such as an import, call the item validator on each row yourself.
 - Items that are validated asynchronously have all started before any is counted. So the limit cuts what they report, and not their work: give such a collection a `max`.
 
-A wrong size is reported at once, without validating the items. So a huge input that breaks a `max` is never worked through only to be rejected.
+A wrong size is reported at once, without validating the items. So the items of a huge input that breaks a `max` are never validated only to be rejected, though a `record` still lists the input's keys to count them.
 
 ## Recursive data
 

@@ -1,7 +1,7 @@
 ---
 title: Visão geral
 description: Para que serve o pacote de validação, como instalá-lo e em que ordem ler as páginas.
-source: acc3ea5f9cdca5707b9a2df752d212aa10cc5b49
+source: 533571f419ed6de73fe8f241e415c797093db48d
 ---
 
 # Valide valores e estruturas
@@ -17,10 +17,10 @@ Dados que cruzam uma fronteira que você não controla podem conter qualquer coi
 O pacote foi feito para essa fronteira, onde a entrada pode ser hostil:
 
 - **Um formato devolve o que o parser leu.** `email()` e `url()` produzem o valor que o parser de URL da plataforma lê. O valor que você guarda é o mesmo que uma requisição ou um servidor de e-mail vai usar.
-- **O que uma entrada inválida reporta é limitado.** Uma lista longa de itens inválidos para em 1.000 problemas. Uma entrada aninhada fundo demais vira um problema só, não um estouro de pilha, desde que o limite de profundidade caiba na pilha.
-- **Um problema nunca guarda um valor da entrada.** Um log de falhas não contém senhas, a menos que um `literal` ou um `oneOf` verifique uma: eles reportam os valores que aceitam, como diz [Primeiros passos](getting-started.md#valores-fixos). Um problema cita, sim, as chaves da entrada, no seu `path`.
+- **O que uma entrada inválida reporta é limitado.** Cada coleção para de reportar em 1.000 problemas, como explica [Limites](limits.md#uma-entrada-inválida-tem-custo-limitado). Uma entrada aninhada fundo demais vira um problema só, não um estouro de pilha, desde que o limite de profundidade caiba na pilha.
+- **Um problema nunca guarda um valor da entrada.** Um log de falhas não contém nenhuma senha que foi enviada. Um problema guarda, sim, aquilo com que o schema foi configurado, como os valores que um `oneOf` aceita ou o prefixo de um `startsWith`, e as chaves da entrada, no seu `path`, como diz [O problema](errors.md#o-problema).
 
-O limite de 1.000 problemas restringe o relatório, não o trabalho: uma entrada que passa, ou que falha só perto do fim, ainda é verificada item por item, então uma entrada grande custa o seu tamanho. [Limites](limits.md) explica como limitar o tamanho e a profundidade dela.
+O limite de 1.000 problemas de uma coleção restringe o relatório dela, não o trabalho: uma entrada que passa, ou que falha só perto do fim, ainda é verificada item por item, então uma entrada grande custa o seu tamanho. [Limites](limits.md) explica como limitar o tamanho e a profundidade dela.
 
 ## Instalação
 

@@ -1,7 +1,7 @@
 ---
 title: Corpos de requisição
 description: Texto JSON, listas, tuplas, dicionários, sets e maps, uma escolha entre estruturas e dados recursivos.
-source: 423213eb840760e3d625b904bba8368890887046
+source: 65bf294a1b14a3d7ace2b4c620bd9494786c3beb
 order: 3
 ---
 
@@ -51,7 +51,7 @@ Todo validador de coleção recebe o validador dos itens, depois opções e veri
 As opções de tamanho são `min`, `max` e `length`, todas inteiros não negativos, e `min` e `max` são inclusivos:
 
 - Uma falha de tamanho é `too_small` com `{ minimum, type }` ou `too_big` com `{ maximum, type }`, em que `type` é `"array"`, `"set"`, `"map"` ou `"record"`. Para `length`, é acrescentado `exact: true`.
-- Um tamanho errado é reportado de imediato, sem validar os itens, então uma entrada enorme nunca é processada inteira só para ser rejeitada.
+- Um tamanho errado é reportado de imediato, sem validar os itens, então os itens de uma entrada enorme nunca são validados só para ela ser rejeitada. Um `record` ainda lista as chaves da entrada, para contá-las.
 - Um tamanho que não é número, como `"3"`, lança um `TypeError` quando o validador é criado. Um número que não é inteiro não negativo lança um `RangeError`, assim como limites que nenhum tamanho satisfaz juntos, como `min` acima de `max`, ou um `length` fora deles.
 
 Uma coleção também para depois que seus itens reportaram 1.000 problemas. [Limites](limits.md#uma-entrada-inválida-tem-custo-limitado) explica esse limite.

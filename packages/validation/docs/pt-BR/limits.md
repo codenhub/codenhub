@@ -1,7 +1,7 @@
 ---
 title: Limites
 description: Quanto custa uma entrada inválida, os limites dos schemas recursivos, os tamanhos que uma entrada não confiável exige e como audit encontra os limites que um schema deixa em aberto.
-source: e0d538a88e38b7688c5582656ba6fe10474f3eb6
+source: 245de196e8904f5e3401f0222d0f4118e660b511
 order: 12
 ---
 
@@ -11,7 +11,7 @@ Um endpoint de cadastro recebe o que qualquer pessoa enviar, inclusive entradas 
 
 Em resumo:
 
-- Uma entrada inválida reporta um número limitado de problemas: eles param em 1.000, e um schema recursivo para numa profundidade e num número de chamadas.
+- Uma entrada inválida reporta um número limitado de problemas: cada coleção para em 1.000, e um schema recursivo para numa profundidade e num número de chamadas.
 - Uma entrada que passa é validada por inteiro. Então limitar o tamanho dela é com você, com um `max` no texto e em toda coleção.
 - `audit` lista todo lugar em que um schema deixa um tamanho em aberto, para que um teste o mantenha fechado.
 
@@ -53,7 +53,7 @@ record(string(), unknown())(JSON.parse('{"__proto__":{"admin":true}}')); // { ok
 
 ## Uma entrada inválida tem custo limitado
 
-Uma coleção para assim que os itens dela reportam 1.000 problemas. Os itens depois disso não são validados. Mais um problema, `too_big` com `{ maximum: 1000, type: "issues" }` no caminho da coleção, diz que ela parou.
+Uma coleção para assim que os itens dela reportam 1.000 problemas. Os itens depois disso não são validados. Mais um problema, `too_big` com `{ maximum: 1000, type: "issues" }` no caminho da coleção, diz que ela parou. O limite é de cada coleção, não da entrada inteira, então um `object` com duas listas pode reportar cerca de 2.000.
 
 - Um problema que guarda outros em `params.issues` conta junto com eles. Então um item que falha numa `union` conta uma vez, e mais uma para cada problema de cada opção. Uma chave que falha conta junto com o problema por trás dela.
 - As chaves desconhecidas de um `object` strict, as repetições que `unique` e `set` encontram, as chaves que uma query string repete e os conflitos de uma `intersection` são listados até o mesmo limite.
@@ -61,7 +61,7 @@ Uma coleção para assim que os itens dela reportam 1.000 problemas. Os itens de
 - Para reportar todas as linhas inválidas de uma lista longa, como uma importação, chame você mesmo o validador do item em cada linha.
 - Itens validados de forma assíncrona já começaram todos antes de qualquer um ser contado. Então o limite corta o que eles reportam, e não o trabalho deles: dê um `max` a uma coleção assim.
 
-Um tamanho errado é reportado na hora, sem validar os itens. Assim, uma entrada enorme que excede um `max` nunca é processada inteira só para ser rejeitada.
+Um tamanho errado é reportado na hora, sem validar os itens. Assim, os itens de uma entrada enorme que excede um `max` nunca são validados só para serem rejeitados, embora um `record` ainda liste as chaves da entrada para contá-las.
 
 ## Dados recursivos
 

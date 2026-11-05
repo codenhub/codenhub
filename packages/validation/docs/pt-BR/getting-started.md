@@ -1,7 +1,7 @@
 ---
 title: Primeiros passos
 description: O que é um validador, como ler o resultado dele e os validadores para strings, números, datas, valores fixos e objetos.
-source: b482583c60e9a0302dfe5d4c19e9cbe7050dddff
+source: c75ad2300c395a779c01fac37ccbabdf2d9c403f
 order: 1
 ---
 
@@ -236,7 +236,7 @@ Os dois falham com `invalid_value`: `literal` reporta `{ expected }`, e `oneOf` 
 
 Um bigint é reportado com os seus dígitos decimais, para que o problema possa ser enviado como JSON: `literal(1n)` reporta `{ expected: "1", type: "bigint" }`, e um `oneOf` só de bigints também acrescenta `type: "bigint"`. Em um `oneOf` que mistura bigints com outros valores, um bigint é reportado com os seus dígitos, sem nada que o diferencie de uma string.
 
-`literal` e `oneOf` reportam os valores que aceitam, então não os use para verificar um segredo, como uma chave de API: uma verificação que falhasse o exibiria.
+Como toda regra, `literal` e `oneOf` reportam aquilo com que foram configurados, aqui os valores que aceitam. Então não verifique um segredo, como uma chave de API, com eles nem com uma verificação como `startsWith`: uma verificação que falhasse o exibiria, como explica [O problema](errors.md#o-problema).
 
 ## Qualquer valor, nenhum valor, funções e instâncias
 

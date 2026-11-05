@@ -1,7 +1,7 @@
 ---
 title: Problemas e mensagens
 description: O que um resultado com falha contém, os códigos de problema nativos e seus params, e como transformar problemas em texto em inglês, em português ou com as suas próprias palavras.
-source: ae76c2953676715dddf6b0e9ceb9bd1af4d96632
+source: 05948497c973ec08784c6635902e20a10c08db22
 order: 5
 ---
 
@@ -40,7 +40,7 @@ const result = {
 | `params`  | Os fatos por trás da falha, como o limite que foi ultrapassado. Presente quando há algum.                                                              |
 | `message` | Texto fixo, quando o problema recebeu um: pela opção `message` de um validador, pela mensagem de uma verificação ou por um validador escrito por você. |
 
-**Um problema nunca contém um valor da entrada.** Não há campo para isso, e `params` guarda nomes de tipo e limites, nunca o valor testado. Entradas muitas vezes são senhas ou tokens, e problemas vão para logs e para a tela, então isso é uma regra, não um padrão. Se você precisa do valor, você já o tem.
+**Um problema nunca contém um valor da entrada.** Não há campo para isso, e `params` guarda nomes de tipo e aquilo com que o schema foi configurado, como um limite, nunca o valor testado. Entradas muitas vezes são senhas ou tokens, e problemas vão para logs e para a tela, então isso é uma regra, não um padrão. Se você precisa do valor, você já o tem.
 
 Chaves não são valores, e elas aparecem nos problemas:
 
@@ -49,7 +49,7 @@ Chaves não são valores, e elas aparecem nos problemas:
 
 Então não coloque segredos em nomes de chaves que você valida. Uma chave também é um texto que o remetente escolheu. `englishMessages` a coloca dentro da mensagem como uma string entre aspas, como em `Unrecognized key "…"`, com aspas e quebras de linha escapadas. `formatPath` a coloca entre aspas do mesmo jeito nos nomes de campo de `flatten`. Assim, uma chave não consegue quebrar uma linha de log. Escape os dois quando for colocá-los em HTML.
 
-O mesmo vale para o que o seu próprio schema nomeia: `literal` e `oneOf` reportam os valores que aceitam, em `params` e na mensagem em inglês. Então não verifique um segredo com eles, como [Valores fixos](getting-started.md#valores-fixos) avisa.
+O mesmo vale para o que o seu próprio schema nomeia: uma regra reporta aquilo com que foi configurada, em `params` e na mensagem em inglês. Isso inclui os valores que `literal` e `oneOf` aceitam, o texto de `startsWith`, `endsWith` e `includes`, e a expressão de `pattern`. Então não escreva um segredo, como uma chave de API, em um schema: uma verificação que falhasse o exibiria.
 
 ### Escrevendo um caminho
 

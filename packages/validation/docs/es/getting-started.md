@@ -2,7 +2,7 @@
 title: Primeros pasos
 description: Qué es un validador, cómo leer su resultado, y los validadores de cadenas, números, fechas, valores fijos y objetos.
 order: 1
-source: b482583c60e9a0302dfe5d4c19e9cbe7050dddff
+source: c75ad2300c395a779c01fac37ccbabdf2d9c403f
 ---
 
 # Primeros pasos
@@ -236,7 +236,7 @@ Ambos fallan con `invalid_value`: `literal` reporta `{ expected }`, y `oneOf` re
 
 Un bigint se reporta con sus dígitos decimales, para que el problema se pueda enviar como JSON: `literal(1n)` reporta `{ expected: "1", type: "bigint" }`, y un `oneOf` compuesto solo de bigints también agrega `type: "bigint"`. En un `oneOf` que mezcla bigints con otros valores, un bigint se reporta con sus dígitos, sin nada que lo distinga de una cadena.
 
-`literal` y `oneOf` reportan los valores que aceptan, así que no los uses para verificar un secreto, como una clave de API: una verificación fallida lo imprimiría.
+Como toda regla, `literal` y `oneOf` reportan aquello con lo que se configuraron, aquí los valores que aceptan. Así que no verifiques un secreto, como una clave de API, con ellos ni con una verificación como `startsWith`: una verificación fallida lo imprimiría, como explica [El problema](./errors.md#el-problema).
 
 ## Cualquier valor, ningún valor, funciones e instancias
 

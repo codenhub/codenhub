@@ -2,7 +2,7 @@
 title: Cuerpos de solicitud
 description: Texto JSON, listas, tuplas, diccionarios, sets y maps, elegir entre formas, y datos recursivos.
 order: 3
-source: 423213eb840760e3d625b904bba8368890887046
+source: 65bf294a1b14a3d7ace2b4c620bd9494786c3beb
 ---
 
 # Cuerpos de solicitud
@@ -51,7 +51,7 @@ Todo validador de colección recibe el validador de sus elementos y luego las op
 Las opciones de tamaño son `min`, `max` y `length`, todas enteros no negativos, y `min` y `max` son inclusivos:
 
 - Un fallo de tamaño es `too_small` con `{ minimum, type }` o `too_big` con `{ maximum, type }`, donde `type` es `"array"`, `"set"`, `"map"` o `"record"`. Para `length` se agrega `exact: true`.
-- Un tamaño incorrecto se reporta de inmediato, sin validar los elementos, así que nunca se recorre una entrada enorme solo para rechazarla.
+- Un tamaño incorrecto se reporta de inmediato, sin validar los elementos, así que los elementos de una entrada enorme nunca se validan solo para rechazarla. Un `record` igual lista las claves de la entrada, para contarlas.
 - Un tamaño que no es un número, como `"3"`, lanza un `TypeError` al crear el validador. Un número que no es un entero no negativo lanza un `RangeError`, y lo mismo ocurre con límites que ningún tamaño puede cumplir a la vez, como un `min` mayor que `max`, o un `length` fuera de ellos.
 
 Una colección también se detiene cuando sus elementos ya reportaron 1000 problemas. [Límites](./limits.md#una-entrada-que-falla-tiene-un-costo-acotado) explica ese límite.

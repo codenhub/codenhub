@@ -18,7 +18,7 @@ Create a validator by calling a factory, then call it with the value: `email()(i
 - [Standard Schema](docs/standard-schema.md): Every validator a factory makes is a Standard Schema, and one written by hand is not; `standard` and `standardJsonSchema` choose its wording and add its JSON Schema.
 - [JSON Schema](docs/json-schema.md): `toJsonSchema`, what each validator is written as, and `describe` for reading a validator.
 - [Integrations](docs/integrations.md): react-hook-form, TanStack Form, tRPC, Hono, the AI SDK, the Model Context Protocol, OpenAPI, zod and valibot.
-- [Limits](docs/limits.md): The 1,000-issue limit, `maxDepth` and `maxCalls` of `lazy`, sizes to cap, and `audit`.
+- [Limits](docs/limits.md): The 1,000-issue limit of each collection, `maxDepth` and `maxCalls` of `lazy`, sizes to cap, and `audit`.
 
 ## Optional
 

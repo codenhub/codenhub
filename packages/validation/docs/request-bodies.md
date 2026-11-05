@@ -50,7 +50,7 @@ Every collection validator takes the validator for its items, then options and c
 The size options are `min`, `max` and `length`, all non-negative integers, and `min` and `max` are inclusive:
 
 - A size failure is `too_small` with `{ minimum, type }` or `too_big` with `{ maximum, type }`, where `type` is `"array"`, `"set"`, `"map"` or `"record"`. `exact: true` is added for `length`.
-- A wrong size is reported at once, without validating the items, so a huge input is never worked through only to be rejected.
+- A wrong size is reported at once, without validating the items, so the items of a huge input are never validated only to be rejected. A `record` still lists the input's keys, to count them.
 - A size that is not a number, such as `"3"`, throws a `TypeError` when the validator is created. A number that is not a non-negative integer throws a `RangeError`, and so do limits no size can satisfy together, such as `min` above `max`, or a `length` outside them.
 
 A collection also stops once its items have reported 1,000 issues. [Limits](limits.md#a-failing-input-has-a-bounded-cost) explains that limit.

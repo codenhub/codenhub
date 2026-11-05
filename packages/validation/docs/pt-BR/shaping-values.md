@@ -1,7 +1,7 @@
 ---
 title: Moldando valores
 description: Encadeie validadores, converta valores, escreva-os de volta, marque e congele valores, descreva-os, troque uma falha por um fallback e reaproveite a estrutura de um objeto.
-source: 1b3c3ad3d66b0d6207d5dffe49e43473f3dd567d
+source: a72339831656b6b15e8e578f57e702615555bf6b
 order: 8
 ---
 
@@ -242,7 +242,7 @@ Elas precisam de um validador criado por `object`, já que é assim que conhecem
 Os tipos que elas retornam têm nomes, para uma biblioteca que exporta o que deriva:
 
 - `Picked<T, K>` e `Omitted<T, K>`: o tipo do objeto só com as propriedades nomeadas, ou sem elas.
-- `AllOptional<T>` e `AllRequired<T>`: o tipo do objeto com todas as propriedades opcionais, ou com todas presentes e nenhuma `undefined`.
+- `AllOptional<T>` e `AllRequired<T>`: o tipo do objeto com todas as propriedades opcionais, ou com todas presentes e nenhuma `undefined`. Uma propriedade do tipo `unknown` ou `any` ainda admite `undefined`, como `required` mantém sem alteração uma propriedade `unknown()`.
 - `Extended<T, TShape>`: o tipo de objeto `T` com as propriedades de `TShape` acrescentadas ou substituídas.
 - `Reshaped<TValidator, T, TInput?>`: um validador de `T` que é síncrono quando o validador de origem é.
 

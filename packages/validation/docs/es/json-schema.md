@@ -2,7 +2,7 @@
 title: JSON Schema
 description: Escribe un validador como JSON Schema, para el cuerpo de una API HTTP, los argumentos de una herramienta que llama un modelo de lenguaje o un generador de formularios.
 order: 10
-source: 59d6b80a5532f064d65bdaa43fcc83b8fd3e0044
+source: d803b9b6b958da6617332343c97771eed2d675a4
 ---
 
 # JSON Schema
@@ -39,7 +39,7 @@ El resultado es un objeto plano nuevo que `JSON.stringify` puede escribir. Se im
 
 Un esquema dice menos de lo que verifica un validador. `email()` rechaza una dirección en `localhost`, y el formato `email` de JSON Schema no tiene esa regla. Por eso el esquema se escribe para cumplir una promesa: **un valor que el validador acepta pasa el esquema**. El esquema puede aceptar un valor que luego el validador rechaza, y el validador sigue siendo la verificación que cuenta. Valida lo que recibes con el validador, y dale el esquema a quien necesite conocer la forma.
 
-Hay tres casos que doblan esa promesa, cada uno porque el validador limpia un valor antes de verificarlo, algo que un esquema no puede expresar:
+Hay tres casos que doblan esa promesa. En dos, el validador limpia un valor antes de verificarlo, algo que un esquema no puede expresar, y en el otro, los dos cuentan de forma distinta la longitud del texto:
 
 - **Opciones de limpieza.** `string({ trim: true, max: 5 })` se escribe con `maxLength: 5`, que describe un texto que no necesita que se le quiten espacios. Un texto con espacios alrededor de cinco letras pasa el validador y no el esquema. Con `case` pasa lo mismo, y también con `clamp` junto a un límite, como en `number({ max: 10, clamp: { min: 0, max: 10 } })`: el esquema describe el valor después de la limpieza. El rango de un `clamp` en sí no se escribe.
 - **Longitud del texto.** El `length` de una cadena cuenta un emoji, y cualquier otro carácter fuera del Plano Multilingüe Básico, como dos, y JSON Schema lo cuenta como uno, así que un `min` o un `max` pueden diferir en la cantidad de esos caracteres. Con un `pattern` pasa lo mismo: un esquema lo lee en modo Unicode, el flag `u`, así que en uno escrito sin ese flag, `.` y una clase negada como `[^a]` coinciden con un carácter entero en el esquema y con medio emoji en el validador.

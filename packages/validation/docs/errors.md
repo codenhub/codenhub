@@ -39,7 +39,7 @@ const result = {
 | `params`  | The facts behind the failure, such as the limit that was crossed. Present when there are any.                                               |
 | `message` | Fixed text, when the issue was given one: by a validator's `message` option, a check's message, or a validator of your own.                 |
 
-**An issue never contains an input value.** There is no field for it, and `params` holds type names and limits, never the value under test. Inputs are often passwords or tokens, and issues get logged and shown, so this is a rule and not a default. If you need the value, you already have it.
+**An issue never contains an input value.** There is no field for it, and `params` holds type names and what the schema was configured with, such as a limit, never the value under test. Inputs are often passwords or tokens, and issues get logged and shown, so this is a rule and not a default. If you need the value, you already have it.
 
 Keys are not values, and they do appear in issues:
 
@@ -48,7 +48,7 @@ Keys are not values, and they do appear in issues:
 
 So do not put secrets in key names you validate. A key is also text the sender chose. `englishMessages` puts it inside the message as a quoted string, as in `Unrecognized key "…"`, with quotes and line breaks escaped. `formatPath` quotes it the same way in the field names of `flatten`. So a key cannot break a log line. Escape both when you put them into HTML.
 
-The same goes for what your own schema names: `literal` and `oneOf` report the values they accept, in `params` and in the English message. So do not check a secret with them, as [Fixed values](getting-started.md#fixed-values) warns.
+The same goes for what your own schema names: a rule reports what it was configured with, in `params` and in the English message. That includes the values `literal` and `oneOf` accept, the text of `startsWith`, `endsWith` and `includes`, and the expression of `pattern`. So do not write a secret, such as an API key, into a schema: a failed check would print it.
 
 ### Writing a path
 

@@ -1,12 +1,12 @@
-<!-- source: a3e37824dfb872adab4ad6fea3e5f3ce1a6f096a -->
+<!-- source: 6f1f110570551d88793fa3ba58cb3ed297da4fba -->
 
 # @codenhub/validation
 
 Validación para datos que no controlas: el cuerpo de una solicitud, una query string, un formulario, un mensaje de otro origen. Un validador te da el valor tipado o las razones por las que no lo es, y está hecho para una entrada que puede ser hostil:
 
 - **Los formatos devuelven lo que leyó un parser.** `email()` y `url()` producen lo que ve el parser de URL de la plataforma, así que el valor que guardas es el que usará una solicitud o un servidor de correo.
-- **Lo que reporta una entrada que falla está acotado.** Una lista larga de elementos inválidos se detiene en 1000 problemas, y una entrada anidada demasiado profundo es un solo problema, no un desbordamiento de pila, siempre que el límite de profundidad quepa en la pila.
-- **Los problemas nunca contienen un valor de la entrada**, así que registrar una validación fallida no puede registrar una contraseña, a menos que un `literal` o un `oneOf` verifique una, ya que estos reportan los valores que aceptan. Sí nombran sus claves, en `path`, como explica [El problema](docs/es/errors.md#el-problema).
+- **Lo que reporta una entrada que falla está acotado.** Cada colección deja de reportar en 1000 problemas, como explica [Límites](docs/es/limits.md#una-entrada-que-falla-tiene-un-costo-acotado), y una entrada anidada demasiado profundo es un solo problema, no un desbordamiento de pila, siempre que el límite de profundidad quepa en la pila.
+- **Los problemas nunca contienen un valor de la entrada**, así que registrar una validación fallida no puede registrar una contraseña que se envió. Sí contienen aquello con lo que se configuró el esquema, como los valores que acepta un `oneOf` o el prefijo de un `startsWith`, y las claves de la entrada, en `path`, como explica [El problema](docs/es/errors.md#el-problema).
 
 Cada validador es una función que importas por separado, así que un programa empaqueta solo los validadores que usa. Sin dependencias.
 

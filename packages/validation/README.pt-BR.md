@@ -1,12 +1,12 @@
-<!-- source: a3e37824dfb872adab4ad6fea3e5f3ce1a6f096a -->
+<!-- source: 6f1f110570551d88793fa3ba58cb3ed297da4fba -->
 
 # @codenhub/validation
 
 Validação para dados que você não controla: o corpo de uma requisição, uma query string, um formulário, uma mensagem vinda de outra origem. Um validador devolve o valor já tipado ou os motivos pelos quais ele não é válido, e foi feito para entradas que podem ser hostis:
 
 - **Formatos devolvem o que um parser leu.** `email()` e `url()` produzem o que o parser de URL da plataforma enxerga, então o valor que você guarda é o mesmo que uma requisição ou um servidor de e-mail vai usar.
-- **O que uma entrada inválida reporta é limitado.** Uma lista longa de itens inválidos para em 1.000 problemas, e uma entrada aninhada fundo demais vira um problema só, não um estouro de pilha, desde que o limite de profundidade caiba na pilha.
-- **Problemas nunca guardam um valor da entrada**, então registrar em log uma validação que falhou não tem como registrar uma senha, a menos que um `literal` ou um `oneOf` verifique uma, já que eles reportam os valores que aceitam. Eles citam as chaves da entrada, em `path`, como explica [O problema](docs/pt-BR/errors.md#o-problema).
+- **O que uma entrada inválida reporta é limitado.** Cada coleção para de reportar em 1.000 problemas, como explica [Limites](docs/pt-BR/limits.md#uma-entrada-inválida-tem-custo-limitado), e uma entrada aninhada fundo demais vira um problema só, não um estouro de pilha, desde que o limite de profundidade caiba na pilha.
+- **Problemas nunca guardam um valor da entrada**, então registrar em log uma validação que falhou não tem como registrar uma senha que foi enviada. Eles guardam, sim, aquilo com que o schema foi configurado, como os valores que um `oneOf` aceita ou o prefixo de um `startsWith`, e as chaves da entrada, em `path`, como explica [O problema](docs/pt-BR/errors.md#o-problema).
 
 Cada validador é uma função que você importa separadamente, então um programa leva para o bundle só os validadores que usa. Sem dependências.
 

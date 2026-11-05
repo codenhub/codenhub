@@ -2,12 +2,12 @@
 title: Entrada de texto
 description: Lee números, flags, bigints y fechas a partir de texto, como variables de entorno, query strings y campos de formulario.
 order: 4
-source: a45fccc48d93315d9dd00bd7c57490c599b9553e
+source: 3a6ee8d9bd5a65e7d1b7449427a9e2f4bacb2548
 ---
 
 # Entrada de texto
 
-Gran parte de los datos que recibe un programa es texto, aunque signifique otra cosa. Cada variable de entorno, cada parámetro de una query string y cada campo de formulario es una cadena, ya represente un número de puerto, un flag de sí o no o una fecha. Esta página cubre los validadores que leen un valor a partir de ese texto, y dos lugares de donde viene: una query string y el entorno. El servidor del registro lee su configuración del entorno, y su página de registro lee una invitación de la query string.
+Gran parte de los datos que recibe un programa es texto, aunque signifique otra cosa. Cada variable de entorno, cada parámetro de una query string y cada campo de texto de un formulario es una cadena, ya represente un número de puerto, un flag de sí o no o una fecha. Un campo de archivo es un `File`, que cubre [Archivos](./forms.md#archivos). Esta página cubre los validadores que leen un valor a partir de ese texto, y dos lugares de donde viene: una query string y el entorno. El servidor del registro lee su configuración del entorno, y su página de registro lee una invitación de la query string.
 
 Un validador estricto como `number()` rechaza `"8080"`, porque es una cadena. Es lo correcto, y aquí no ayuda. Un validador que convierte primero transforma el texto y luego valida el resultado, así que una sola llamada te da un valor tipado o los motivos por los que no pudo serlo:
 

@@ -2,7 +2,7 @@
 title: Límites
 description: Lo que cuesta una entrada que falla, los límites de los esquemas recursivos, los tamaños que necesita una entrada no confiable y cómo audit encuentra los límites que un esquema deja abiertos.
 order: 12
-source: e0d538a88e38b7688c5582656ba6fe10474f3eb6
+source: 245de196e8904f5e3401f0222d0f4118e660b511
 ---
 
 # Límites
@@ -11,7 +11,7 @@ Un endpoint de registro recibe lo que cualquiera le envíe, incluida una entrada
 
 En resumen:
 
-- Una entrada que falla reporta un número acotado de problemas: se detienen en 1000, y un esquema recursivo se detiene en una profundidad y en un número de llamadas.
+- Una entrada que falla reporta un número acotado de problemas: cada colección se detiene en 1000, y un esquema recursivo se detiene en una profundidad y en un número de llamadas.
 - Una entrada que pasa se valida completa. Así que limitar su tamaño te corresponde a ti, con un `max` en el texto y en cada colección.
 - `audit` enumera cada lugar donde un esquema deja un tamaño abierto, para que una prueba lo mantenga cerrado.
 
@@ -53,7 +53,7 @@ record(string(), unknown())(JSON.parse('{"__proto__":{"admin":true}}')); // { ok
 
 ## Una entrada que falla tiene un costo acotado
 
-Una colección se detiene una vez que sus elementos reportaron 1000 problemas. Los elementos que siguen no se validan. Un problema más, `too_big` con `{ maximum: 1000, type: "issues" }` en la ruta de la colección, indica que se detuvo.
+Una colección se detiene una vez que sus elementos reportaron 1000 problemas. Los elementos que siguen no se validan. Un problema más, `too_big` con `{ maximum: 1000, type: "issues" }` en la ruta de la colección, indica que se detuvo. El límite es de cada colección, no de toda la entrada, así que un `object` con dos listas puede reportar unos 2000.
 
 - Un problema que contiene otros en `params.issues` cuenta junto con ellos. Así, un elemento que falla una `union` cuenta una vez, y una vez más por cada problema de cada opción. Una clave que falla cuenta junto con el problema que tiene detrás.
 - Las claves desconocidas de un `object` estricto, las repeticiones que encuentran `unique` y `set`, las claves que una query string repite y los conflictos de una `intersection` se enumeran hasta el mismo límite.
@@ -61,7 +61,7 @@ Una colección se detiene una vez que sus elementos reportaron 1000 problemas. L
 - Para reportar cada fila inválida de una lista larga, como en una importación, llama tú mismo al validador de los elementos en cada fila.
 - Los elementos que se validan de forma asíncrona ya comenzaron todos antes de que se cuente alguno. Así que el límite recorta lo que reportan, pero no su trabajo: dale a una colección así un `max`.
 
-Un tamaño incorrecto se reporta de inmediato, sin validar los elementos. Así, una entrada enorme que excede un `max` nunca se recorre entera solo para ser rechazada.
+Un tamaño incorrecto se reporta de inmediato, sin validar los elementos. Así, los elementos de una entrada enorme que excede un `max` nunca se validan solo para ser rechazados, aunque un `record` igual lista las claves de la entrada para contarlas.
 
 ## Datos recursivos
 

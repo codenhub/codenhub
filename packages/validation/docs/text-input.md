@@ -6,7 +6,7 @@ order: 4
 
 # Text input
 
-Much of the data a program receives is text, even when it means something else. Every environment variable, query-string parameter and form field is a string, whether it stands for a port number, a yes-or-no flag or a date. This page covers the validators that read a value from such text, and two places it comes from: a query string and the environment. The sign-up server reads its configuration from the environment, and its sign-up page reads an invitation from the query string.
+Much of the data a program receives is text, even when it means something else. Every environment variable, query-string parameter and text field of a form is a string, whether it stands for a port number, a yes-or-no flag or a date. A file field is a `File` instead, which [Files](forms.md#files) covers. This page covers the validators that read a value from such text, and two places it comes from: a query string and the environment. The sign-up server reads its configuration from the environment, and its sign-up page reads an invitation from the query string.
 
 A strict validator such as `number()` rejects `"8080"`, because it is a string. That is correct, and no help here. A coercing validator converts the text first and then validates the result, so one call gives you a typed value or the reasons it could not be one:
 

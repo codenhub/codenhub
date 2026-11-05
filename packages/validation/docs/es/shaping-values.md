@@ -2,7 +2,7 @@
 title: Dar forma a los valores
 description: Encadena validadores, convierte valores, vuelve a escribirlos, márcalos y congélalos, descríbelos, reemplaza un fallo por un valor de respaldo y reutiliza la forma de un objeto.
 order: 8
-source: 1b3c3ad3d66b0d6207d5dffe49e43473f3dd567d
+source: a72339831656b6b15e8e578f57e702615555bf6b
 ---
 
 # Dar forma a los valores
@@ -242,7 +242,7 @@ Necesitan un validador creado por `object`, ya que así conocen su forma. `objec
 Los tipos que devuelven tienen nombre, para una biblioteca que exporta lo que deriva:
 
 - `Picked<T, K>` y `Omitted<T, K>`: el tipo del objeto solo con las propiedades nombradas, o sin ellas.
-- `AllOptional<T>` y `AllRequired<T>`: el tipo del objeto con todas las propiedades opcionales, o con todas presentes y ninguna `undefined`.
+- `AllOptional<T>` y `AllRequired<T>`: el tipo del objeto con todas las propiedades opcionales, o con todas presentes y ninguna `undefined`. Una propiedad de tipo `unknown` o `any` sigue admitiendo `undefined`, como `required` conserva sin cambios una propiedad `unknown()`.
 - `Extended<T, TShape>`: el tipo de objeto `T` con las propiedades de `TShape` agregadas o reemplazadas.
 - `Reshaped<TValidator, T, TInput?>`: un validador de `T` que es síncrono cuando lo es el validador del que se creó.
 

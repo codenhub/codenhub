@@ -1459,7 +1459,7 @@ export type AllRequired<T> = Simplify<{
 }>;
 ```
 
-The object type with every property present and none of them `undefined`.
+The object type with every property present and none of them `undefined`. A property typed `unknown` or `any` still admits `undefined`, as `required` keeps an `unknown()` property unchanged.
 
 ### Branded
 

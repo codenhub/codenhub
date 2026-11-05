@@ -10,7 +10,7 @@ A sign-up endpoint receives whatever anybody sends it, including input written t
 
 In short:
 
-- A failing input reports a bounded number of issues: they stop at 1,000, and a recursive schema stops at a depth and a number of calls.
+- A failing input reports a bounded number of issues: each collection stops at 1,000, and a recursive schema stops at a depth and a number of calls.
 - An input that passes is validated in full. So its size is yours to cap, with a `max` on text and on every collection.
 - `audit` lists every place a schema leaves a size open, so a test can keep it closed.
 
@@ -52,7 +52,7 @@ record(string(), unknown())(JSON.parse('{"__proto__":{"admin":true}}')); // { ok
 
 ## A failing input has a bounded cost
 
-A collection stops once its items have reported 1,000 issues. The items after that are not validated. One more issue, `too_big` with `{ maximum: 1000, type: "issues" }` at the path of the collection, says that it stopped.
+A collection stops once its items have reported 1,000 issues. The items after that are not validated. One more issue, `too_big` with `{ maximum: 1000, type: "issues" }` at the path of the collection, says that it stopped. The limit is for each collection, not for the whole input, so an `object` with two lists can report about 2,000.
 
 - An issue that holds others in `params.issues` counts with them. So an item that fails a `union` counts once, and once more for each issue of each option. A key that fails counts with the issue behind it.
 - The unknown keys of a strict `object`, the repeats `unique` and `set` find, the keys a query string repeats, and the conflicts of an `intersection` are listed up to the same limit.
@@ -60,7 +60,7 @@ A collection stops once its items have reported 1,000 issues. The items after th
 - To report every bad row of a long list, such as an import, call the item validator on each row yourself.
 - Items that are validated asynchronously have all started before any is counted. So the limit cuts what they report, and not their work: give such a collection a `max`.
 
-A wrong size is reported at once, without validating the items. So a huge input that breaks a `max` is never worked through only to be rejected.
+A wrong size is reported at once, without validating the items. So the items of a huge input that breaks a `max` are never validated only to be rejected, though a `record` still lists the input's keys to count them.
 
 ## Recursive data
 

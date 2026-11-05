@@ -1,7 +1,7 @@
 ---
 title: JSON Schema
 description: Escreva um validador como um JSON Schema, para o corpo de uma API HTTP, os argumentos de uma ferramenta que um modelo de linguagem chama ou um gerador de formulários.
-source: 59d6b80a5532f064d65bdaa43fcc83b8fd3e0044
+source: d803b9b6b958da6617332343c97771eed2d675a4
 order: 10
 ---
 
@@ -39,7 +39,7 @@ O resultado é um novo objeto simples que `JSON.stringify` consegue escrever. El
 
 Um schema diz menos do que um validador verifica. `email()` recusa um endereço em `localhost`, e o formato `email` do JSON Schema não tem essa regra. Por isso o schema é escrito para cumprir uma promessa: **um valor que o validador aceita passa no schema**. O schema pode aceitar um valor que o validador depois recusa, e o validador continua sendo a verificação que vale. Valide o que você recebe com o validador, e entregue o schema a quem precisa conhecer a estrutura.
 
-Em três casos essa promessa é flexibilizada, todos porque o validador limpa um valor antes de verificá-lo, e um schema não consegue dizer isso:
+Em três casos essa promessa é flexibilizada. Em dois, o validador limpa um valor antes de verificá-lo, e um schema não consegue dizer isso, e no outro, os dois contam o tamanho do texto de formas diferentes:
 
 - **Opções de limpeza.** `string({ trim: true, max: 5 })` é escrito com `maxLength: 5`, que descreve um texto que não precisa de trim. Um texto com espaços em volta de cinco letras passa no validador e não no schema. Com `case` é igual, e com `clamp` ao lado de um limite também, como em `number({ max: 10, clamp: { min: 0, max: 10 } })`: o schema descreve o valor depois da limpeza. O intervalo de um `clamp` não é escrito.
 - **Comprimento de texto.** O `length` de uma string conta um emoji, e qualquer outro caractere fora do Plano Multilíngue Básico, como dois, e o JSON Schema o conta como um, então um `min` ou `max` pode diferir pelo número desses caracteres. Com `pattern` é igual: um schema o lê no modo Unicode, a flag `u`, então num pattern escrito sem essa flag, `.` e uma classe negada como `[^a]` casam com um caractere inteiro no schema e com metade de um emoji no validador.
