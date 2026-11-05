@@ -345,6 +345,19 @@
     color: color-mix(in oklab, var(--_table-contrast) var(--_on-fill), var(--intent-strong));
   }
 
+  /* A neutral solid table caps its fill at 20%, so its plate is a light grey
+     and the ramp keeps `--_on-fill` low: the row's ink is then mostly the
+     row's `--intent-strong`, which is chosen against the row's own subtle
+     ground rather than a grey one, and success, warning and destructive fall
+     under 4.5:1 on it. Those rows print the table's own ink, `--_fg`,
+     inherited already resolved against the table, and keep their intent in
+     the rule and the hover. */
+  &.solid:not(.primary, .secondary, .success, .warning, .destructive, .info)
+    tbody
+    tr:is(.neutral, .primary, .secondary, .success, .warning, .destructive, .info) {
+    color: var(--_fg);
+  }
+
   & tbody tr > * {
     transition: background-color var(--motion-duration-fast) var(--motion-ease);
   }

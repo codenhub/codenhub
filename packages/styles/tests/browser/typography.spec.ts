@@ -253,27 +253,26 @@ test("paints a table row's own intent while other rows keep the table's", async 
    prints the table's contrast ink on it, not its own: the row's
    `--intent-contrast` is chosen for a fill the row does not paint, and a light
    one on a light plate -- a `.warning` row on a `.primary` table -- read at
-   1:1. Every hued table and every row intent, in both themes, at 4.5:1 against
-   the plate.
-
-   A solid neutral table is left out: its plate is a capped grey wash rather
-   than a fill, so a row prints its own strong tone there, and `.success`,
-   `.warning`, and `.destructive` rows measure 4.05-4.49:1 in the light theme.
-   That is an open question, not a passing case. */
+   1:1. A neutral solid table -- unclassed or `.neutral` -- caps its fill to a
+   grey wash, where the row's own strong tone measured 4.05-4.49:1 for
+   `.success`, `.warning`, and `.destructive` in the light theme, so its rows
+   print the table's ink instead. Every table and every row intent, in both
+   themes, at 4.5:1 against the plate. */
 test("keeps a row with its own intent readable on a solid table", async ({ page }) => {
   await page.goto(TYPOGRAPHY_URL);
 
+  const tables = ["", "neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
   const intents = ["neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
 
   /* oxlint-disable no-await-in-loop -- one theme, then the other, on one page. */
   for (const theme of ["light", "dark"]) {
     const cells = await page.evaluate(
-      ({ name, list }) => {
+      ({ name, list, kinds }) => {
         document.documentElement.classList.remove("light", "dark");
         document.documentElement.classList.add(name);
         const results: { label: string; color: string; plate: string }[] = [];
 
-        for (const table of list.filter((intent) => intent !== "neutral")) {
+        for (const table of kinds) {
           const host = document.createElement("div");
           const rows = list.map((row) => `<tr class="${row}"><td>${row}</td></tr>`).join("");
           host.innerHTML = `<table class="data-table solid ${table}"><tbody><tr><td>none</td></tr>${rows}</tbody></table>`;
@@ -282,7 +281,7 @@ test("keeps a row with its own intent readable on a solid table", async ({ page 
 
           for (const cell of host.querySelectorAll("td")) {
             results.push({
-              label: `${name} .${table} table, ${cell.textContent} row`,
+              label: `${name} ${table ? `.${table}` : "unclassed"} table, ${cell.textContent} row`,
               color: getComputedStyle(cell).color,
               plate,
             });
@@ -292,7 +291,7 @@ test("keeps a row with its own intent readable on a solid table", async ({ page 
 
         return results;
       },
-      { name: theme, list: intents },
+      { name: theme, list: intents, kinds: tables },
     );
 
     for (const cell of cells) {
