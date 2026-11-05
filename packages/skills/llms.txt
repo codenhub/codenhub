@@ -1,17 +1,19 @@
 # @codenhub/skills
 
-> AI agent skill assets, a multi-harness installer, and synchronous Node.js utilities for discovering and copying skill directories.
+> A curated collection of agent skills and an installer CLI that copies selected skills into local or global harness folders without manually copying directories.
 
-Requires Node.js 24 or newer. Treat `skills/**` Markdown as shipped agent
-instructions rather than package-documentation pages. Review cleanup and path
-constraints before writing to harness destinations.
+Requires Node.js 24 or newer. Run `pnpm dlx @codenhub/skills@latest` or
+`npx @codenhub/skills@latest` in the target project for the wizard. Explicit
+options support automation. There are no supported programmatic library imports.
+Treat `skills/**` Markdown as shipped agent instructions rather than package
+documentation. Updates merge directories, overwrite matching files, and keep
+stale files. Review destructive cleanup and failure behavior before updating.
 
 ## Documentation
 
 - [Documentation overview](docs/index.md): Canonical package documentation entrypoint.
-- [Programmatic API](docs/api.md): Public exports, skill discovery, copying, and parser limits.
+- [Bundled skills](docs/skills.md): Choose workflows; learn skill format, quality rules, drafts, and versioning.
 - [CLI installer](docs/cli.md): Modes, options, destinations, harness behavior, and destructive cleanup.
-- [Skill format and catalog](docs/skills.md): Supported skill structure and bundled inventory.
 - [Security and failure behavior](docs/security-and-failures.md): Path constraints, partial writes, and exit behavior.
 
 ## Optional

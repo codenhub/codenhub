@@ -2,7 +2,7 @@
   "name": "@codenhub/skills",
   "version": "0.2.0",
   "private": false,
-  "description": "Curated collection of AI agent skills with a built-in installer.",
+  "description": "Installer CLI for a curated collection of AI agent skills, for every major agent harness.",
   "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/skills",
   "license": "Apache-2.0",
   "repository": {

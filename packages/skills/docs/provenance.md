@@ -1,10 +1,14 @@
 ---
 title: Provenance
+description: Check the origins, licenses, and notices that accompany bundled skills.
+order: 4
 ---
 
 # Skill Provenance
 
-This page records the origin and license context of skill assets shipped by `@codenhub/skills`. The package-level legal terms are in [NOTICE](../NOTICE). Each adapted skill also carries its attribution and upstream license text in its own directory, in `NOTICE` and, where the license is long, `LICENSE`, so both are copied when the installer copies that skill alone.
+When you install a skill in a project and share it with your team, its attribution needs to travel with it. This page records the origin and license context of the skills shipped by `@codenhub/skills`, so you can check what you are adopting before redistributing or modifying it.
+
+The package-level legal terms are in [NOTICE](../NOTICE). Each adapted skill also carries its attribution and upstream license text in its own directory, in `NOTICE` and, where the license is long, `LICENSE`, so both are copied when the installer copies that skill alone. For our `brainstorming` and `test-driven-development` example, their MIT notices accompany each copy installed for Claude and Codex.
 
 | Skill                     | Origin                                 | License    |
 | ------------------------- | -------------------------------------- | ---------- |
@@ -27,7 +31,9 @@ This page records the origin and license context of skill assets shipped by `@co
 | `test-driven-development` | Adapted from [obra/superpowers]        | MIT        |
 | `writing-skills`          | Adapted from [obra/superpowers]        | MIT        |
 
-The package `NOTICE` contains the applicable attribution blocks and bundled MIT license text. Per-skill notices are product assets and remain included when the installer copies an individual skill. For the current shipped inventory and format, see [Skill format and catalog](skills.md).
+The package `NOTICE` contains the applicable attribution blocks and bundled MIT license text. Preserve the relevant notices and license text when sharing installed directories, and review the license terms before modifying or redistributing them.
+
+Return to [Bundled skills](skills.md) to choose another workflow, or the [CLI installer](cli.md) to install it. Before updating an existing installation, review the [changelog](changelog/index.md) and [overwrite and recovery behavior](security-and-failures.md).
 
 [dietrichgebert/ponytail]: https://github.com/DietrichGebert/ponytail
 [juliusbrussee/caveman]: https://github.com/JuliusBrussee/caveman
