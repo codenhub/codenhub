@@ -20,3 +20,25 @@ test("finishes a language-menu close cancelled before its first animation frame"
   await expect(menu).not.toHaveAttribute("open", "");
   await expect(menu.locator("summary")).toBeFocused();
 });
+
+for (const width of [320, 375, 640, 1280]) {
+  test(`keeps every language option inside a ${width}px viewport`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/pt-BR/styles/");
+
+    const menu = page.locator("[data-language-menu]");
+    await menu.locator("summary").click();
+    await expect(menu.getByRole("link")).toHaveCount(3);
+
+    const bounds = await menu.getByRole("link").evaluateAll((options) =>
+      options.map((option) => {
+        const { left, right } = option.getBoundingClientRect();
+        return { left, right };
+      }),
+    );
+    for (const { left, right } of bounds) {
+      expect(left).toBeGreaterThanOrEqual(0);
+      expect(right).toBeLessThanOrEqual(width);
+    }
+  });
+}

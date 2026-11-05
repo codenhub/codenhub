@@ -457,6 +457,16 @@
   --ic-size: 0.875rem;
 }
 
+/* On narrow headers the trigger sits left of the standard actions, so the
+   list has room to open toward them rather than past the viewport's left edge. */
+@media (max-width: 40rem) {
+  .shell-language-list {
+    right: auto;
+    left: 0;
+    transform-origin: top left;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .shell-language-option,
   .shell-language-chevron {
