@@ -2,18 +2,18 @@
 title: Overview
 description: How the stylesheet loads in a framework build, and which guide to follow.
 group: Integrating
-order: 4
+order: 2
 ---
 
 # Integrating
 
-This package has no JavaScript and no framework bindings; see [Introduction](../index.md#what-it-does-not-do). Integrating it into a framework is entirely about where that framework lets you load a global stylesheet, and whether the project runs Tailwind CSS v4.
+This section is a detour from the main reading path, for projects whose framework decides where global CSS may go. The package has no JavaScript and no framework bindings (see [Introduction](../index.md#what-it-does-not-do)), so integrating it is only about two things: where your framework lets you load a global stylesheet, and whether the project runs Tailwind CSS v4. Follow the one guide that matches your stack, then return to [Building a screen](../concepts.md).
 
 ## The shared model
 
 Every stack does the same two imports, from the same kind of place — a root layout, an app entry file, or a global CSS file, never a page or a component further down the tree:
 
-1. One [entrypoint](../setup.md#import-paths) — the compiled `@codenhub/styles` for any build, or `@codenhub/styles/tw` when the project already runs Tailwind CSS v4.
+1. One [entrypoint](../setup.md#all-entrypoints) — the compiled `@codenhub/styles` for any build, or `@codenhub/styles/tw` when the project already runs Tailwind CSS v4.
 2. `@codenhub/styles/aesthetics` (or `/tw/aesthetics`) after it, only if the project uses an [aesthetic](../usage/aesthetics.md).
 
 Importing from one place matters for two reasons. Some frameworks only _allow_ global CSS from a designated root file and fail the build otherwise — Next.js's Pages Router is one, see [Next.js → Troubleshooting](./nextjs.md#troubleshooting). Where a framework allows it more broadly, as Next.js's App Router does, importing from the root remains the recommended choice for predictable CSS ordering — and importing per-component instead would load the same reset and token rules once per component rather than once per app.
@@ -29,14 +29,18 @@ Importing from one place matters for two reasons. Some frameworks only _allow_ g
 | Astro                                                        | [Astro](./astro.md)                         |
 | Plain HTML, Rails, Django, or any app with no CSS build step | [Without a bundler](./without-a-bundler.md) |
 
-A project with no framework — a plain Vite, webpack, or Parcel build — needs nothing beyond [Setup → Quick start](../setup.md#quick-start): import the compiled stylesheet from the project's existing global CSS entry.
+A project with no framework — a plain Vite, webpack, or Parcel build — needs nothing beyond [Setup → Import the stylesheet](../setup.md#import-the-stylesheet): import the compiled stylesheet from the project's existing global CSS entry.
 
 ## Verifying it worked
 
 After the import, render one styled element and confirm it picked up the package's tokens rather than the browser default:
 
 ```html
-<button class="btn primary">Continue</button>
+<button class="btn primary">Save changes</button>
 ```
 
-A rounded, filled button in the primary color means the stylesheet loaded. Unstyled browser-default text most often means the import specifier didn't resolve — check the [import paths table](../setup.md#import-paths) for the exact one your entrypoint needs, and confirm your build tooling resolves package CSS imports at all, see [Setup → Requirements](../setup.md#requirements). With no build tool, link the file by its path instead; see [Without a bundler](./without-a-bundler.md).
+A rounded button filled with the primary color (near-black on a light page, near-white on a dark one) means the stylesheet loaded. Unstyled browser-default text most often means the import specifier didn't resolve — check the [entrypoint table](../setup.md#all-entrypoints) for the exact specifier to import, and confirm your build tooling resolves package CSS imports at all, see [Setup → Requirements](../setup.md#requirements). With no build tool, link the file by its path instead; see [Without a bundler](./without-a-bundler.md). [Setup → When nothing is styled](../setup.md#when-nothing-is-styled) lists the other common causes.
+
+## Next
+
+Once the button renders, go back to the main path: [Building a screen](../concepts.md) adds the first card and form to the settings page.

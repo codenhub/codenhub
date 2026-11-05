@@ -6,11 +6,11 @@ order: 6
 
 # Without a bundler
 
-The compiled stylesheets are finished CSS: each one is a single file with no `@import` and no reference to another file, and every image it draws is embedded as a `data:` URL. A page can load one with a plain `<link>` tag, from any server, with no build step.
+The compiled stylesheets are finished CSS: each one is a single file with no `@import` and no reference to another file, and every image it draws is embedded as a `data:` URL: the checkbox tick and dash masks, and the SVG lens filters `.glass-liquid` uses. A page can load one with a plain `<link>` tag, from any server, with no build step, and the stylesheet makes no further requests.
 
 What needs a build tool is the import _name_. `@import "@codenhub/styles"` names a package, and finding the file behind that name — `node_modules/@codenhub/styles/dist/index.css` — is done by Node-aware tooling such as Vite, webpack, or the Tailwind CLI, which read the package's `exports` map. A browser does not: it resolves an `@import` URL against the stylesheet that contains it and a `<link href>` against the page, so a bare package name becomes a request for a path that does not exist. Without a bundler, link the file by its path instead.
 
-The `/tw` entrypoints are Tailwind source and need a Tailwind build. `/tw/aesthetics` is the exception, plain CSS with nothing for Tailwind to process, but without a bundler link the compiled `dist/aesthetics/` files instead, as below. This page covers the compiled entrypoints only.
+The `/tw` entrypoints are Tailwind source and need a Tailwind build. `/tw/aesthetics` is the exception, plain CSS with nothing for Tailwind to process, but without a bundler link the compiled `dist/aesthetics/` files instead, as below. This page covers the compiled entrypoints only, for a page that has no CSS build at all: plain HTML, Rails, Django, or any server-rendered app.
 
 ## Which file to link
 
@@ -26,7 +26,7 @@ Each compiled import path is one file in the package's `dist/` folder:
 | `@codenhub/styles/aesthetics`   | `dist/aesthetics/index.css`                                       |
 | `@codenhub/styles/aesthetics/*` | `dist/aesthetics/<name>.css`, such as `dist/aesthetics/pixel.css` |
 
-Link the base file first and an aesthetic after it. [Setup → Import paths](../setup.md#import-paths) explains what each one contains; link one base file, not several, since they overlap.
+Link the base file first and an aesthetic after it. [Setup → All entrypoints](../setup.md#all-entrypoints) explains what each one contains; link one base file, not several, since they overlap.
 
 ## From a CDN
 
@@ -60,7 +60,7 @@ Repeat the copy after each upgrade, for example from an npm `postinstall` script
 
 ### Ruby on Rails
 
-A Rails app built with `cssbundling-rails` already runs a bundler: import the package from `app/assets/stylesheets/application.css` as in [Setup → Quick start](../setup.md#quick-start).
+A Rails app built with `cssbundling-rails` already runs a bundler: import the package from `app/assets/stylesheets/application.css` as in [Setup → Import the stylesheet](../setup.md#import-the-stylesheet).
 
 With Propshaft and no CSS bundler, add the package's folder to the asset paths:
 
@@ -97,14 +97,18 @@ STATICFILES_DIRS = [
 
 ### Laravel
 
-A Laravel app runs Vite by default, so it has a bundler: import the package from `resources/css/app.css` as in [Setup → Quick start](../setup.md#quick-start), and load that file with the `@vite` directive as usual.
+A Laravel app runs Vite by default, so it has a bundler: import the package from `resources/css/app.css` as in [Setup → Import the stylesheet](../setup.md#import-the-stylesheet), and load that file with the `@vite` directive as usual.
 
 ## Verifying it worked
 
 Render one styled element, as in [Integrating → Verifying it worked](./index.md#verifying-it-worked):
 
 ```html
-<button class="btn primary">Continue</button>
+<button class="btn primary">Save changes</button>
 ```
 
-A rounded, filled button in the primary color means the stylesheet loaded. If the button looks like the browser default, open the browser's network panel: a `404` on the stylesheet means the path or the static-file setup is wrong.
+A rounded button filled with the primary color means the stylesheet loaded. If the button looks like the browser default, open the browser's network panel: a `404` on the stylesheet means the path or the static-file setup is wrong.
+
+## Next
+
+Return to the main path: [Building a screen](../concepts.md) adds the first card and form to the settings page. [Setup → All entrypoints](../setup.md#all-entrypoints) lists every other stylesheet you can import.

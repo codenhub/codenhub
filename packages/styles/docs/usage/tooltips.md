@@ -1,77 +1,101 @@
 ---
 title: Tooltips
-description: Tooltip composition classes and positioning attributes.
-order: 8
+description: Field help that opens on hover and focus, how to connect it for screen readers and Escape, and where a tooltip gets cut off.
+order: 4
 ---
 
 # Tooltips
 
-| Class or Attribute                     | Purpose                                                                                                                                                                     |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.tooltip`                             | Wrapper around a trigger and a bubble. Paints nothing itself.                                                                                                               |
-| `.tooltip-bubble`                      | The message. A real element, styled like any other surface.                                                                                                                 |
-| `.tooltip-icon`                        | Round icon-style trigger, for a message with nothing else to hang on. It takes the aesthetic's corner: square under `.neobrutalism` and `.pixel`, a diamond under `.cyber`. |
-| `[data-tooltip-position="top"]`        | Positions the bubble above the trigger, on `.tooltip`.                                                                                                                      |
-| `[data-tooltip-position="bottom"]`     | Positions the bubble below the trigger, on `.tooltip`.                                                                                                                      |
-| `[data-tooltip-position="left"]`       | Positions the bubble left of the trigger, on `.tooltip`.                                                                                                                    |
-| `[data-tooltip-position="right"]`      | Positions the bubble right of the trigger, on `.tooltip`.                                                                                                                   |
-| No `data-tooltip-position`             | Defaults to top placement.                                                                                                                                                  |
-| `[data-state="open"]`                  | Shows the bubble without hover, on `.tooltip`.                                                                                                                              |
-| `[data-state="closed"]`                | Hides the bubble even while hovered or focused, on `.tooltip`. For an Escape handler.                                                                                       |
-| `.tooltip-bubble.raised` / `.floating` | Adds one or two units of depth. The bubble is flat by default.                                                                                                              |
+The "Public profile" switch on the settings screen deserves a short explanation: what becomes visible when it is on. This page adds a help button beside it that shows a tooltip on hover and on keyboard focus. The CSS shows and hides the message and draws it; you connect it to its trigger for screen readers, add the Escape key, and check that nothing around it cuts it off.
 
-A tooltip is composition, not a single class: `.tooltip` wraps a trigger element and a `.tooltip-bubble`, and shows the bubble on hover or focus within the wrapper. The bubble is a real element because CSS generated content is not reliably exposed to assistive tech and cannot be the target of an `aria-describedby`, which needs a real element with a real `id`. Wire the association yourself: give the bubble an `id`, give the trigger `aria-describedby` pointing at it, and put `role="tooltip"` on the bubble.
-
-A tooltip bubble's fill, ground color, and floor behavior are covered in [Composing → Presentation](./composing.md#presentation), and its material follows whichever [aesthetic](./aesthetics.md) is in scope. Intent, presentation, aesthetic, and elevation classes go on `.tooltip-bubble` — the element that actually paints — not on `.tooltip`, the same rule every component in this package follows: put the class on the element that shows it.
-
-The bubble rests flat. It draws no shadow of its own on a plain page, and zeroes an aesthetic's part-based depth (such as `.neobrutalism`'s slab) the same way `.flat` does elsewhere. Add [`.raised` or `.floating`](./composing.md#elevation) to lift it, on the bubble itself. An aesthetic whose shadow is a complete value, like `.glass`, still reaches the bubble as it reaches any surface.
-
-Intent works on a tooltip bubble the same way it works on a filled component: `.tooltip-bubble.primary` fills the bubble with the primary color, black text on a light page and white on a dark one; `.tooltip-bubble.destructive` is a red bubble with the same logic. With no intent, the bubble uses `--color-tooltip`, a plate chosen per theme rather than derived from an intent; see [Composing → Presentation](./composing.md#presentation) for why.
-
-## Example
+## A help tooltip
 
 ```html
-<span class="tooltip">
-  <button aria-describedby="status-bubble">Status</button>
-  <span class="tooltip-bubble" role="tooltip" id="status-bubble">Saved 2 minutes ago</span>
-</span>
+<div class="cluster tight">
+  <label class="cluster tight">
+    <input class="switch primary" type="checkbox" role="switch" name="public-profile" />
+    Public profile
+  </label>
+  <span class="tooltip">
+    <button class="tooltip-icon" type="button" aria-label="About public profiles" aria-describedby="public-profile-help">?</button>
+    <span class="tooltip-bubble" role="tooltip" id="public-profile-help">Anyone with the link can see your name, photo, and public projects.</span>
+  </span>
+</div>
+```
 
+The three parts:
+
+- `.tooltip` wraps the trigger and the message. It positions the message and paints nothing itself.
+- `.tooltip-bubble` is the message. It is a real element, so it can have an `id` that the trigger points to.
+- `.tooltip-icon` is a small round trigger, for a message with nothing else to attach to. Any focusable element can be the trigger instead: wrap an existing `.btn` in `.tooltip` and it keeps its own look.
+
+Connect them yourself: an `id` on the bubble, `aria-describedby` on the trigger pointing to that `id`, and `role="tooltip"` on the bubble. A screen reader then reads the message as the trigger's description. The CSS cannot make this connection, and without it the message is visual only.
+
+The trigger must be focusable, such as a `<button>`, so keyboard users can reach the message. The bubble opens when anything inside `.tooltip` has focus, so it also opens after a mouse click on the trigger.
+
+## Placement
+
+The bubble opens above its trigger, horizontally centered, with a 0.5rem gap. Set `data-tooltip-position` on `.tooltip` to choose another side:
+
+```html
 <span class="tooltip" data-tooltip-position="bottom">
-  <button aria-describedby="docs-bubble">Docs</button>
-  <span class="tooltip-bubble" role="tooltip" id="docs-bubble">Opens in a new tab</span>
-</span>
-
-<span class="tooltip">
-  <button class="btn primary" aria-describedby="deploy-bubble">Deploy</button>
-  <span class="tooltip-bubble raised primary" role="tooltip" id="deploy-bubble">Primary intent, lifted a step</span>
-</span>
-
-<span class="tooltip" data-state="open">
-  <span aria-describedby="pinned-bubble">Pinned</span>
-  <span class="tooltip-bubble" role="tooltip" id="pinned-bubble">Always visible, no hover needed</span>
-</span>
-
-<span class="tooltip" data-tooltip-position="right">
-  <button type="button" class="tooltip-icon" aria-label="More details" aria-describedby="icon-bubble">?</button>
-  <span class="tooltip-bubble" role="tooltip" id="icon-bubble">More details</span>
+  <button class="btn ghost sm" type="button" aria-describedby="renewal-help">Renews 12 March 2027</button>
+  <span class="tooltip-bubble" role="tooltip" id="renewal-help">Your card is charged on this date.</span>
 </span>
 ```
 
-The first two show plain triggers with default (top) and explicit bottom placement. The third combines an intent with `.raised` on the bubble to show they compose freely — the intent decides the bubble's fill, `.raised` decides whether it casts depth. The fourth uses `data-state="open"` on the wrapper to keep a tooltip visible without a hover or focus interaction, useful for a tooltip that should be demonstrated or tested without simulating pointer input. The fifth uses `.tooltip-icon` as the trigger, for a message with no other element to hang it on.
+| `data-tooltip-position` | Bubble                                            |
+| ----------------------- | ------------------------------------------------- |
+| _none_ or `"top"`       | Above the trigger, centered.                      |
+| `"bottom"`              | Below the trigger, centered.                      |
+| `"left"`                | To the left of the trigger, centered vertically.  |
+| `"right"`               | To the right of the trigger, centered vertically. |
 
-`.tooltip` composes with any trigger: wrap an existing `.btn` or `.badge` in it and both keep their own look, gaining a bubble beside them. `.tooltip-icon` is only the round chip for the case where there is nothing else to be the trigger.
+A bubble is as wide as its text, up to 18rem, and then wraps.
 
-Showing and hiding the bubble is CSS-only — `:hover` and `:focus-within` on `.tooltip` — but that is presentational. It is not a complete accessible tooltip implementation by itself: provide the `id`/`aria-describedby`/`role="tooltip"` association outside the CSS; see [Accessibility](../accessibility.md).
+### Where a tooltip gets cut off
 
-The bubble is hoverable, as WCAG 1.4.13 asks of content that appears on hover: once the pointer leaves the trigger, the bubble stays for `--tooltip-linger` (`300ms`, set on `.tooltip`) and then fades, so the pointer can cross the gap onto it, and it stays open for as long as the pointer is over it. A closed bubble is `visibility: hidden`, so it is nothing under the pointer. It stays in the accessibility tree through `aria-describedby`, which reads hidden content, but a bubble with no `aria-describedby` pointing at it is no longer read in place while hidden.
+The bubble is positioned with CSS only, on the side you chose. Nothing measures the page: it does not move to stay inside the window, flip to the other side when there is no room, or move to the top layer of the page. That has three consequences:
 
-1.4.13 also asks that the message can be dismissed without moving the pointer or focus, which takes a key handler. Write `data-state="closed"` on `.tooltip` on Escape, and clear it when the pointer and focus leave:
+- **A scrolling or clipping container cuts it off.** An ancestor with `overflow: hidden`, `auto`, or `scroll` clips the bubble at its edge. The API keys table on the settings screen sits in a `.table-wrap`, which scrolls, so a top tooltip on the first row is cut off at the top of the wrapper. Raising `z-index` does not help: it changes what the bubble is painted above, not whether the container clips it.
+- **The window edge cuts it off.** A top tooltip on the first line of a page, or a right tooltip near the right edge, extends off screen.
+- **Left and right are physical sides.** In a right-to-left page, `"left"` still means the left side of the screen.
+
+What to do:
+
+- Choose a side with room: on a table's first row, use `data-tooltip-position="bottom"`.
+- Move the tooltip's trigger out of the clipping container, or remove the `overflow` from a container that does not need it.
+- If the trigger's position cannot be known in advance, such as in a scrolling list or a resizable panel, use a positioning library or your framework's popover component, which can measure and flip. You can still give its message element the `.tooltip-bubble` classes for the look, but the showing, hiding, and positioning described on this page then come from that library, not from `.tooltip`.
+
+## Hover, linger, and Escape
+
+WCAG 1.4.13 asks three things of content that appears on hover or focus. The package handles two:
+
+- **Hoverable.** When the pointer leaves the trigger, the bubble stays for `--tooltip-linger` (300ms) and then fades, so the pointer can cross the gap onto it. It stays open while the pointer is over it. A closed bubble is `visibility: hidden`, so it never catches the pointer.
+- **Persistent.** It stays open until the pointer and focus leave.
+- **Dismissible.** The user must be able to close it without moving the pointer or focus, usually with Escape. CSS cannot listen for a key, so this part is yours.
+
+To change the linger time, set `--tooltip-linger` on the `.tooltip` element, for example `style="--tooltip-linger: 500ms"`. The wrapper declares its own default, so a value set on a parent of `.tooltip` has no effect. Keep it long enough for the pointer to reach the bubble. It is one of six [public component variables](./customizing.md#component-variables).
+
+For Escape, write `data-state="closed"` on `.tooltip`: it hides the bubble even while it is hovered or focused. Remove the attribute only when both the pointer and focus have left the tooltip, so the next hover or focus opens it again. Removing it earlier, while the trigger still has focus, makes the message reappear without the user doing anything.
 
 ```js
 for (const tooltip of document.querySelectorAll(".tooltip")) {
-  const reopen = () => tooltip.removeAttribute("data-state");
-  tooltip.addEventListener("pointerleave", reopen);
-  tooltip.addEventListener("focusout", reopen);
+  let pointerInside = tooltip.matches(":hover");
+
+  tooltip.addEventListener("pointerenter", () => {
+    pointerInside = true;
+  });
+
+  tooltip.addEventListener("pointerleave", () => {
+    pointerInside = false;
+    if (!tooltip.contains(document.activeElement)) tooltip.removeAttribute("data-state");
+  });
+
+  tooltip.addEventListener("focusout", (event) => {
+    const focusStaysInside = tooltip.contains(event.relatedTarget);
+    if (!focusStaysInside && !pointerInside) tooltip.removeAttribute("data-state");
+  });
 }
 
 document.addEventListener("keydown", (event) => {
@@ -82,4 +106,21 @@ document.addEventListener("keydown", (event) => {
 });
 ```
 
-Next: [Content and layout](./content-and-layout.md) covers layout helpers, content chips and tables, surfaces, and typography utilities.
+`data-state="open"` does the opposite: it shows the bubble with no hover or focus, for a message that should stay visible, or for a test or a screenshot.
+
+## How the bubble looks
+
+With no intent class, the bubble uses `--color-tooltip`, a background chosen per theme: near-white on a light page, mid gray on a dark one, with `--color-tooltip-contrast` as its text color. Near-white measures only 1.04:1 against a light page, so the bubble also draws a thin border, and a container's `.edgeless` cannot remove it. `.edgeless` on the bubble itself still can. The background stays opaque under any presentation, so the bubble stays readable over whatever it covers.
+
+An intent class fills the bubble with that intent's color and switches the text to the matching contrast color:
+
+- `.tooltip-bubble.primary` has a near-black background with near-white text on a light page, and a near-white background with near-black text on a dark one.
+- `.tooltip-bubble.destructive` has a red background with light text in both themes.
+
+Put intent, presentation, aesthetic, and elevation classes on `.tooltip-bubble`, the element that is painted, not on `.tooltip`. The bubble is flat by default, even under an aesthetic that draws depth; add `.raised` or `.floating` to the bubble to lift it. An aesthetic in scope shapes the bubble like any other component; under `.glass` it is frosted like a card. `.tooltip-icon` takes the aesthetic's corner: square under `.neobrutalism` and `.pixel`, a diamond under `.cyber`.
+
+The bubble appears without scaling up when the user asks for reduced motion.
+
+## Next
+
+The settings screen is complete in its default look. [Theming](./theming.md) gives it a dark mode and your brand colors.
