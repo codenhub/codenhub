@@ -22,6 +22,8 @@ Apply this workflow for:
 - behavior changes
 - refactors that can affect behavior
 
+For a refactor meant to keep behavior, confirm tests cover that behavior, adding passing characterization tests where they do not, then refactor as in step 5.
+
 Edits no tool reads, such as comments, whitespace, key order, or descriptive text, need no test and no approval; say in the report that the change was one. Anything a runtime, build, or deploy reads, such as flags, permissions, routes, dependency pins, or environment keys, is behavior and needs a test. When unsure whether a tool reads the change, run full TDD.
 
 Throwaway prototypes and generated code need the user's explicit approval for that exact change in this conversation. Ask once, before writing it; without a yes, run full TDD. Never approve one yourself; urgency is not approval.
@@ -35,7 +37,7 @@ A test that output leaves something out is different when it states a contract, 
 ## The Iron Law
 
 ```text
-NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
+No production code without a failing test first.
 ```
 
 If production code is written before a failing test:
@@ -66,7 +68,7 @@ Requirements:
 
 ### 2) Verify RED - Watch It Fail
 
-**MANDATORY. Never skip this step.**
+Never skip this step.
 
 Run the targeted test.
 
@@ -91,7 +93,7 @@ Rules:
 
 ### 4) Verify GREEN - Watch It Pass
 
-**MANDATORY. Never skip this step.**
+Never skip this step.
 
 Each cycle, run the targeted test and the tests beside it, in the same file or module. Confirm the new test passes and those stay green. Broader suites wait for the end: their output repeats every cycle and stays in context.
 
@@ -101,7 +103,7 @@ Before finishing, run:
 - tests that cover touched public interfaces and integration boundaries
 - repo-required smoke or pre-merge suites
 
-If baseline failures exist before coding (flaky or not), run the exact verification commands before coding and capture failing test IDs plus error signatures as baseline evidence.
+Before coding, run the verification commands you will use at the end; if any fail, capture failing test IDs plus error signatures as baseline evidence.
 
 If uncertain whether the change reaches beyond its module, run the broader suite before finishing.
 
@@ -170,15 +172,13 @@ For bugs, start by writing a failing regression test that reproduces the issue.
 
 If deterministic reproduction is not immediately possible, write the smallest deterministic characterization test (contract, property, or boundary case) that captures the observed failure before changing production code.
 
-If you cannot produce a failing automated test, stop and ask the user before shipping a bug fix.
+If you cannot produce a failing automated test, stop and ask the user whether to ship the fix without one. Ship it only with their approval, and say in your report that the fix has no test.
 
-Then run the normal RED-GREEN-REFACTOR cycle. Never ship a bug fix without a reproduction or characterization test.
+With a failing test in hand, run the normal RED-GREEN-REFACTOR cycle. Without the user's approval, never ship a bug fix without a reproduction or characterization test.
 
 ## Testing Anti-Patterns
 
 When adding or changing tests, especially with mocks, review [references/testing-anti-patterns.md](references/testing-anti-patterns.md).
-
-When baseline failures or flaky tests appear during verification, review [references/verification-baselines.md](references/verification-baselines.md).
 
 ## Verification Checklist
 

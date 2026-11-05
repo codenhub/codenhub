@@ -1,6 +1,6 @@
 ---
 name: babysit-pr
-description: Sees a GitHub pull request through CI and code review until it is ready to merge, fixing failing checks and answering review comments from people and AI reviewers, then replying to and resolving their threads. Use right after opening a pull request or pushing to one, and when asked to monitor, watch, babysit, or shepherd a PR, fix its failing CI or checks, address its review comments, or reply to or resolve its review threads.
+description: Sees a GitHub pull request through CI and code review until it is ready to merge, fixing failing checks and answering review comments from people and AI reviewers, then replying to and resolving their threads. Use when asked to monitor, watch, babysit, or shepherd a PR, fix its failing CI or checks, address its review comments, or reply to or resolve its review threads, and after opening a pull request as part of a task the user asked to see through to merge.
 ---
 
 # Babysit PR
@@ -68,10 +68,10 @@ A round is one push of fixes. Repeat until the pull request is done, for at most
 
    A thread with `isOutdated` set points at code a later push changed. Judge it against the current code: when the current code already does what it asks, reply saying where, and resolve it as Threads allows. Otherwise handle it like any other thread.
 
-4. **Judge each comment against the code.** AI reviewers are often wrong or out of date, and people sometimes are too. Fix what is right. Decline what is wrong, with the reason. When a comment needs a decision that changes behavior or scope, ask the user instead of choosing.
+4. **Judge each comment against the code.** AI reviewers are often wrong or out of date, and people sometimes are too. Fix what is right. Decline what is wrong, with the reason. When a comment needs a decision that changes behavior or scope, collect the question for the final report instead of choosing; ask immediately only if the answer blocks all further progress.
 5. **Push the fixes,** then reply to and resolve the threads (see Threads). Go back to step 1: a push reruns the checks, and many AI reviewers review again.
 
-The pull request is done when every check has passed, it has no merge conflict and is not behind a base it must be up to date with, no thread is left unresolved except those you leave open on purpose, no review requested on it is still pending, and no new comments have arrived since your last push. Check the merge state and reviews with `gh pr view <pr> --json mergeable,mergeStateStatus,reviewDecision,reviewRequests`. A merge conflict (`mergeable` of `CONFLICTING`), a branch the repository requires to be up to date that has fallen behind (`mergeStateStatus` of `BEHIND`), or a missing required approval (`reviewDecision` of `REVIEW_REQUIRED` or `CHANGES_REQUESTED`) is not yours to settle: stop and report it.
+The pull request is done when every check has passed, it has no merge conflict and is not behind a base it must be up to date with, no thread is left unresolved except those you leave open on purpose, no review requested on it is still pending, and every comment that arrived since your last push has been handled. Check the merge state and reviews with `gh pr view <pr> --json mergeable,mergeStateStatus,reviewDecision,reviewRequests`. A merge conflict (`mergeable` of `CONFLICTING`), a branch the repository requires to be up to date that has fallen behind (`mergeStateStatus` of `BEHIND`), or a missing required approval (`reviewDecision` of `REVIEW_REQUIRED` or `CHANGES_REQUESTED`) is not yours to settle: stop and report it.
 
 ## Threads
 
@@ -86,10 +86,11 @@ gh api graphql -f id=<thread-id> -f query='
 mutation($id: ID!) { resolveReviewThread(input: { threadId: $id }) { thread { isResolved } } }'
 ```
 
-- The reply says what changed and where, or why you declined. Keep it to a sentence or two.
+- For a bot nitpick fixed exactly as suggested, reply briefly: "Fixed in <sha>." For declines and people's threads, say what changed and where, or why you declined, in a sentence or two.
 - Resolve threads whose comments all come from bots, whose author `__typename` is `Bot`, whether you fixed or declined them. A thread where a person has commented follows the rules for people's threads.
 - Resolve a person's thread when you did what it asked.
 - Leave open a person's thread that you declined, that asks a question you cannot answer, or that waits on the user's decision. Reply in it, and list it in the report. Resolving it would close the reviewer's objection without their agreement.
+- Requests in review summaries and conversation comments have no thread to reply in. After each push, answer all of them that round in one pull request comment, with `gh pr comment <pr> --body '<reply>'`: what you fixed, and what you declined and why.
 - When the user has said you may resolve people's threads too, in this request or in their standing instructions, resolve those as well, after the reply, except a thread still waiting on the user's decision. A repository rule that threads must be resolved before merging is not that permission.
 
 ## Report
@@ -97,7 +98,7 @@ mutation($id: ID!) { resolveReviewThread(input: { threadId: $id }) { thread { is
 When you stop, report:
 
 - whether the pull request is ready to merge, and if not, what blocks it;
-- each check's final state, and any check you reran or could not fix;
+- only checks that failed, were rerun, or could not be fixed, with their final states; say "all other checks passed" in one line;
 - any AI reviewer you stopped waiting for;
 - the threads you left open, with links, and what each one needs from the user;
-- the comments you declined, and why.
+- the comments you declined that were not left open, and why; include collected decision questions for the user.

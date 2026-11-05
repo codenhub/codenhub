@@ -15,6 +15,7 @@ You are working one independent problem domain. Stay strictly within scope.
 [Only the context this domain actually needs]
 
 ## Constraints
+- May edit: [files or paths]. Do not commit, push, install dependencies, or change configuration; report the need instead.
 - Do not broaden scope into other failures or subsystems.
 - Do not refactor unrelated code.
 - Do not "fix" the problem by hiding it with arbitrary timeout increases, blanket retries, or similar papering-over unless that is explicitly justified by the root cause.

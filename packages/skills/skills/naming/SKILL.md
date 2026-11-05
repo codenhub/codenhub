@@ -69,7 +69,7 @@ If you can't search the web or query registries, say exactly which checks weren'
 
 ### 4. Screen And Rank
 
-Cut any candidate that fails a gate:
+Cut any candidate that fails a gate, except a near miss kept as an alternative under the rule below:
 
 - **Collision.** A known product in the same or an adjacent field already has the name. The exception is a small dormant project: disclose it, verify that the intended registry identifier is available when one is needed, and explain why confusion is unlikely before keeping the candidate. Active or famous products do not qualify for the exception. Dormancy alone does not establish availability or legal clearance. When activity or confusion remains unresolved, treat the collision as an unresolved doubt under the rule below.
 - **Say-and-spell.** Someone who hears it once can't type it correctly, or someone who reads it once can't say it.

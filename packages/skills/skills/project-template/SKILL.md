@@ -1,13 +1,15 @@
 ---
 name: project-template
-description: Creates, syncs, adopts, and audits projects built on the shared project template (codenhub/template), a pnpm workspace with docs-first guidelines, agent instructions, git hooks, and CI whose files are tracked in `.template/manifest.json`. Use when starting a new project or repository from the template, when asked to sync or update a project with the template, adopt the template in an existing project, or audit a project's structure, and when a task changes a file the template owns. Not for unrelated work in a project that happens to use the template.
+description: Creates, syncs, adopts, and audits projects built on the shared project template (codenhub/template), a pnpm workspace with docs-first guidelines, agent instructions, git hooks, and CI whose files are tracked in `.template/manifest.json`. Use when starting a new project or repository from the template, when asked to sync or update a project with the template, adopt the template in an existing project, or audit a template-based project's structure, and when a task changes a file the template owns. Not for unrelated work in a project that happens to use the template.
 ---
 
 # Project Template
 
 The template repository is the source of truth for the shared project structure: a pnpm workspace, docs-first guidelines under `docs/`, agent instructions in `AGENTS.md`, git hooks in `.githooks/`, and CI in `.github/`. Read its guidelines there; do not restate or reinterpret them in a project.
 
-The template is the repository named in `.template/manifest.json#template`, or `codenhub/template` when a project has no manifest yet. Its `.template/README.md`, which every project keeps a copy of, defines the file classes (`canonical`, `blocks`, `seed`), project blocks, placeholders, and `synced`. Read it before any of the work below; this skill says how to apply it.
+The steps use `git`, `pnpm`, and an authenticated GitHub CLI (`gh`). Without `gh`, use the local start and ask the user to create the repository.
+
+The template is the GitHub repository named, as an `owner/repo` string, in `.template/manifest.json#template`, or `codenhub/template` when a project has no manifest yet. Its `.template/README.md`, which every project keeps a copy of, defines the file classes (`canonical`, `blocks`, `seed`), project blocks, placeholders, and `synced`. Read it before any of the work below; this skill says how to apply it.
 
 A project brings its own name, brand, and domain. Never carry a name, owner, or brand from the template or from another project into this one.
 
@@ -27,7 +29,7 @@ Creating a repository, pushing, and opening a pull request or an issue are outwa
 2. **Create the repository.** Prefer GitHub's template creation, which keeps the hooks' executable bits. Read the template's commit first, then create the repository with the visibility the user chose, `--private` or `--public`:
 
    ```sh
-   git ls-remote https://github.com/codenhub/template refs/heads/main
+   git ls-remote https://github.com/codenhub/template HEAD
    gh repo create <owner>/<slug> --template codenhub/template --<visibility> --clone
    ```
 
@@ -35,7 +37,7 @@ Creating a repository, pushing, and opening a pull request or an issue are outwa
 
    It fails when `<owner>/<slug>` already exists. Check what is there: an empty repository takes the local start below, and one with content is an existing project to sync or adopt.
 
-   For a local start, clone the template and note which files `git ls-files -s .githooks` shows as `100755`, then remove its `.git`, run `git init -b main`, and stage everything. Hooks staged from a Windows checkout lose their executable bit, and git on Linux and macOS then skips them, so stage each of those files again with `git add --chmod=+x .githooks/<hook>`, and only those. `git ls-files -s .githooks` must then match the template's modes.
+   For a local start, clone the template, record `git rev-parse HEAD` for step 3, and note which files `git ls-files -s .githooks` shows as `100755`, then remove its `.git`, run `git init -b main`, and stage everything. Hooks staged from a Windows checkout lose their executable bit, and git on Linux and macOS then skips them, so stage each of those files again with `git add --chmod=+x .githooks/<hook>`, and only those. `git ls-files -s .githooks` must then match the template's modes.
 
    Then turn on "Automatically delete head branches", so merged branches, starting with the bootstrap branch, do not pile up on the remote. It is part of creating the repository; for a repository that already existed, ask first:
 
@@ -43,11 +45,11 @@ Creating a repository, pushing, and opening a pull request or an issue are outwa
    gh repo edit <owner>/<slug> --delete-branch-on-merge
    ```
 
-3. **Record the template commit** as the full SHA in `manifest.json#synced`: the HEAD of a local clone, or for GitHub's creation the commit read before creating the repository.
+3. **Record the template commit** as the full SHA in `.template/manifest.json#synced`: the SHA recorded during the local start, or for GitHub's creation the commit read before creating the repository.
 4. **Replace every placeholder** in seed files and project blocks. Leave `.template/README.md` alone, since it documents the placeholders, and leave GitHub Actions expressions such as `${{ github.ref }}` alone. This must print nothing:
 
    ```sh
-   git grep -nE '\{\{(name|slug|scope|description|owner|holder|year)\}\}' -- ':!.template/README.md'
+   git grep -nE '\{\{[a-z]+\}\}' -- ':!.template/README.md'
    ```
 
    A value the user has not decided yet, such as the license of a private repository, stays a placeholder only when the user says so, and goes in the report.
@@ -64,7 +66,7 @@ Start from a clean working tree on a branch. When `synced` is `null`, nothing re
 1. **Fetch the template** without adding a remote, and look at what changed:
 
    ```sh
-   git fetch https://github.com/<template> main
+   git fetch https://github.com/<template> HEAD
    git diff --stat <synced> FETCH_HEAD
    ```
 
@@ -103,7 +105,7 @@ A project that predates the template has no `.template/`. Adoption rewrites file
 
 Report and change nothing:
 
-- How far `synced` is behind the template's `main`.
+- How far `synced` is behind the head of the template's default branch.
 - Local edits to `canonical` files, `git diff <synced> -- <canonical paths>`, and to `blocks` files outside their blocks.
 - Manifest files that are missing, project blocks whose markers are gone, and placeholders left behind.
 - Hooks without `100755` in `git ls-files -s .githooks`, and `core.hooksPath` not set to `.githooks`.

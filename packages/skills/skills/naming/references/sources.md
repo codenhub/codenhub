@@ -1,6 +1,6 @@
 # Naming Sources
 
-Seeds for each lane, with the technique and cautions that apply to it. The seeds are starting points to find related material from, not a menu to pick from. Names marked _(crowded)_ are already widely used in software; avoid them unless their story fits unusually well. Verify every meaning before recommending a name.
+Seeds for each lane, with the technique and cautions that apply to it. The seeds are starting points to find related material from, not a menu to pick from. Names listed as crowded are already widely used in software; avoid them unless their story fits unusually well. Verify every meaning before recommending a name.
 
 ## Contents
 
@@ -25,7 +25,7 @@ Use these as calibration for the kind of link between a name and its thing that 
 | YouTube           | Field (compound)     | "You" plus "tube", slang for television: TV made by you.                   |
 | Netflix           | Coined (blend)       | Net plus flicks: films over the internet.                                  |
 | Claude            | History (first name) | Widely read as a nod to Claude Shannon; a human first name feels personal. |
-| Opus/Sonnet/Haiku | Arts (family)        | Three-line poem, 14-line poem, major work: the name tells you the size.    |
+| Haiku/Sonnet/Opus | Arts (family)        | Three-line poem, 14-line poem, major work: the name tells you the size.    |
 | Gemini            | Myth/astronomy       | The twins: a duality, and an echo of NASA's Gemini program.                |
 | Manus             | Language root        | Latin "hand": an agent that does things instead of only talking.           |
 | Docker            | Field (trade)        | A dock worker who loads shipping containers.                               |
@@ -76,7 +76,7 @@ Look for the figure, creature, place, or object whose specific story matches the
 - **Biology.** Mycelium (the hidden network), Synapse, Axon, Symbiosis, Cambrian (the explosion of new forms), Chlorophyll.
 - **Mathematics.** Googol, Fractal, Tensor, Euler, Sigma, Möbius, Lemma. Crowded: Vertex, Vector, Prime.
 - **Weather and Earth.** Monsoon, Zephyr (the west wind), Sirocco, Aurora, Tide, Delta.
-- **Cognition.** Gestalt, Flow (crowded), Kaizen, the Zeigarnik effect (unfinished tasks stay in the mind).
+- **Cognition.** Gestalt, Kaizen, the Zeigarnik effect (unfinished tasks stay in the mind). Crowded: Flow.
 
 Pick a phenomenon whose behavior mirrors the thing's mechanism: mycelium for a mesh network, flint for something that starts things, amber for something that preserves.
 

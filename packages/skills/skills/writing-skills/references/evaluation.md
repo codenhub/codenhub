@@ -8,7 +8,7 @@ Write at least three, each a task the skill targets:
 
 - **Concrete:** a real request with realistic files, paths, and constraints, not "what does the skill say?"
 - **Forcing a choice:** the agent must act or pick an option, with no vague "I would consider" exit.
-- **Varied:** at least one scenario sits at the edge of the skill's scope and one should not trigger it at all.
+- **Varied:** at least one scenario sits at the edge of the skill's scope and, for a new skill or a trigger change, one should not trigger it at all; run that one as described in Triggering.
 
 Record each scenario with the behavior that counts as a pass:
 
