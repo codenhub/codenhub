@@ -11,6 +11,7 @@ function doc(
 ): PublicDocument {
   return {
     alternates: [],
+    englishRoute: route,
     headings: [],
     html: "",
     lang: "en",

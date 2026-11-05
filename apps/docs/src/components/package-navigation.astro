@@ -28,8 +28,9 @@ const { demoUrl } = currentPackage;
 // demo shows none.
 const sectionTabs = tabs.length + (demoUrl === undefined ? 0 : 1) > 1 ? tabs : [];
 
-// In a locale, an untranslated page links to its English route and says so
-// (`docs/specs/packages-translations.md`, "Documentation site").
+// In a locale, an untranslated page stays under the locale's prefix but its
+// body is English, so its entry says so (`docs/specs/packages-translations.md`,
+// "Documentation site").
 const isEnglishFallback = (link: NavLink): boolean => link.lang !== locale;
 ---
 

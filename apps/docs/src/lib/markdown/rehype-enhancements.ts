@@ -6,6 +6,12 @@ import type { AstNode } from "./ast";
 import { getNodeText } from "./ast";
 
 interface MarkdownEnhancementOptions {
+  /**
+   * The language of the page the document renders on, when it differs from
+   * the document's own: an untranslated page under a locale prefix speaks the
+   * locale's interface around its English body.
+   */
+  locale?: Locale;
   siteOrigin?: string;
 }
 
@@ -251,7 +257,7 @@ export function rehypeMarkdownEnhancements(options: MarkdownEnhancementOptions =
     if (isReference) {
       markReferenceSignatures(root);
     }
-    const { markdown, shell } = messagesFor(documentLocale(file?.path));
+    const { markdown, shell } = messagesFor(options.locale ?? documentLocale(file?.path));
     transformChildren(root, { ...options, codeBlockCount: 0, copy: shell.copy, isReference, messages: markdown });
   };
 }

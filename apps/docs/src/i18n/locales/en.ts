@@ -1,4 +1,5 @@
 import { defaultShellMessages, type ShellMessages } from "@codenhub/app-shell/messages";
+import { REFERENCE_LABELS, type ReferenceLabel } from "@codenhub/tools/documentation";
 
 import { ENGLISH_LINK_PREVIEW_MESSAGES, type LinkPreviewMessages } from "../../lib/link-preview/describe-link";
 
@@ -15,6 +16,8 @@ export interface Dictionary {
   packageNavigation: string;
   /** Marks a navigation entry whose page has no translation and opens in English. */
   inEnglish: string;
+  /** The notice above an untranslated page shown under a locale, whose body is in English. */
+  untranslated: string;
   /** The page outline's toggle and landmark. */
   onThisPage: string;
   sections: { changelog: string; guides: string; reference: string };
@@ -25,6 +28,13 @@ export interface Dictionary {
   linkPreviewCard: LinkPreviewMessages;
   /** The title a folder's own page takes among its siblings in the navigation. */
   overview: string;
+  /** The text a generated reference page carries around its TSDoc. */
+  reference: {
+    /** The deck line under the H1. `{version}` is the version the entrypoint first shipped in. */
+    addedIn: string;
+    /** The generator's fixed labels (`REFERENCE_LABELS`), in the page's language. */
+    labels: Record<ReferenceLabel, string>;
+  };
   /** Controls added to a document's rendered Markdown. */
   markdown: {
     /** A heading's anchor link. `{heading}` is the heading text. */
@@ -56,6 +66,7 @@ export const en: Dictionary = {
   browse: "Browse documentation",
   packageNavigation: "{label} documentation",
   inEnglish: "in English",
+  untranslated: "This page is not translated yet, so it is shown in English.",
   onThisPage: "On this page",
   sections: { changelog: "Changelog", guides: "Guides", reference: "Reference" },
   demo: "Demo",
@@ -63,6 +74,7 @@ export const en: Dictionary = {
   linkPreview: "Link preview",
   linkPreviewCard: ENGLISH_LINK_PREVIEW_MESSAGES,
   overview: "Overview",
+  reference: { addedIn: "Added in {version}", labels: REFERENCE_LABELS },
   markdown: {
     headingLink: "Link to {heading}",
     copyCode: "Copy code",

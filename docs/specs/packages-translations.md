@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-04
+last_updated: 2026-11-05
 scope: Translations of package READMEs and public package documentation.
 ---
 
@@ -74,7 +74,7 @@ Rejected: a repository-wide `translations/<locale>/<pkg>/` tree. It would publis
 
 What is not translated:
 
-- A generated `docs/reference/` area (`docs/specs/packages-reference.md`). It is compiled from TSDoc in English and regenerated with the code, so a hand-written translation would go stale on every API change. `docs/<locale>/reference/` is invalid.
+- A generated `docs/reference/` area (`docs/specs/packages-reference.md`). It is compiled from TSDoc in English and regenerated with the code, so a hand-written translation would go stale on every API change. `docs/<locale>/reference/` is invalid. Its fixed labels, the words the generator writes on every page (section headings such as "Functions", and leads such as "Parameters" and "Returns"), are not part of the package: they are named in one list (`REFERENCE_LABELS` in `packages/tools/src/documentation/reference-labels.ts`), and the documentation site translates them as interface text. TSDoc prose stays English. A per-symbol translation of the prose, checked for drift like a document, is deferred until a package needs it.
 - `docs/changelog/` (`docs/specs/packages-changelog.md`). A version page records a release once and is not maintained afterwards, so translating it buys little. `docs/<locale>/changelog/` is invalid.
 - `docs/internal/`, which is for maintainers and is never published, so a translation of it would never reach a reader. `docs/<locale>/internal/` is invalid.
 - `llms.txt` and `llms-full.txt`. Their readers are language models, which read English, and a second compilation per locale would double what each publish has to keep current. `llms-full.txt` MUST exclude every `docs/<locale>/` area.
@@ -148,13 +148,19 @@ The documentation site follows the main site's URL scheme (`apps/www/src/i18n/in
 - English: `https://docs.codenhub.dev/<slug>/<path>/`.
 - A translation: `https://docs.codenhub.dev/<locale>/<slug>/<path>/`, its Markdown at `index.md` inside that route, as `docs/specs/packages-documentation.md` defines for English pages.
 
-A locale route exists only for a translated document. The site's interface is translated for every supported locale, down to copy feedback, link previews and code-block controls; a missing path under a locale gets that locale's not-found page. Inside a locale its navigation lists every published page of the package, linking each untranslated one to its English route and marking it as English. Each translated page and its English counterpart MUST name each other as alternates (`hreflang`), so a search engine shows the reader's language. Each also MUST name the English page as the `x-default` alternate: a reader whose language the site does not offer gets the English, which is complete and is what every translation is checked against, rather than whichever translation a search engine picks.
+Every published page, reference and changelog included, has a route in every locale, so a reader who chose a language keeps it on every page they open. The site's interface is translated for every supported locale, down to copy feedback, link previews and code-block controls; a missing path under a locale gets that locale's not-found page. A page without a translation in a locale shows its English body in that locale's interface, under a notice that it is not translated yet, with the body marked `lang="en"`. Such a page MUST name the English page as its canonical URL, MUST NOT name alternates, and is left out of the sitemap, so search engines index the English page once. Inside a locale the navigation marks each untranslated page as English. Each translated page and its English counterpart MUST name each other as alternates (`hreflang`), so a search engine shows the reader's language. Each also MUST name the English page as the `x-default` alternate: a reader whose language the site does not offer gets the English, which is complete and is what every translation is checked against, rather than whichever translation a search engine picks.
 
 The locale is the outermost path segment so that a later version dimension (`docs/roadmap.md`, "Documentation versioning") can go inside the package route without moving any locale URL. This settles only where the locale goes; the version segment's form stays with versioning.
 
-Rejected: serving an untranslated page's English content under the locale prefix. Each such page would exist at two URLs with the same content, which search engines treat as duplicates, and a reader could not tell from the URL whether they were reading a translation.
+Rejected: a locale route only for a translated document, linking each untranslated page to its English route. A reader who opened an untranslated page, which every reference and changelog page is, landed on the English site and stayed there: the section links, the language menu and the next page they opened were all English, and the interface around the page changed language under them. It was chosen to avoid serving the same content at two URLs and to let the URL say whether a page is a translation; the canonical link answers the first and the notice the second.
 
-The site's search index is built per locale and covers what each locale's navigation lists.
+The site's search index is built per locale and covers what each locale's navigation lists, untranslated pages included, at their locale routes.
+
+### Language choice
+
+A visitor's language choice is shared by every CodenHub site. The language menu saves it in the `codenhub-locale` cookie, scoped to `codenhub.dev` so it reaches `docs.codenhub.dev` too (`packages/app-shell/src/locales.ts`). An English page on either site, opened from outside CodenHub, sends the visitor to the same page in the saved language, or, without a saved choice, in the first of the browser's languages the site offers. Navigation between CodenHub pages never redirects, so choosing English in the menu sticks. The main site links a package's documentation, changelog and search in the page's locale.
+
+Rejected: `localStorage`, which each origin keeps to itself, so a choice made on one site was unknown to the other.
 
 ### Main site
 

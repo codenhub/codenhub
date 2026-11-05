@@ -2,6 +2,7 @@
 import type { SiteConfig } from "@codenhub/app-shell/site-config";
 import ShellLayout from "@codenhub/app-shell/layouts/base-layout.astro";
 import LanguageMenu from "@codenhub/app-shell/components/language-menu.astro";
+import LocaleRedirect from "@codenhub/app-shell/components/locale-redirect.astro";
 import SearchPalette from "@codenhub/app-shell/components/search-palette.astro";
 
 import { defaultLocale, localeNames, locales, localizePath, messagesFor, type Locale } from "../i18n";
@@ -13,10 +14,18 @@ interface Props {
   /** Every language version of the page, itself included, and `x-default`, named in `hreflang` alternates. */
   alternates?: readonly PageAlternate[];
   description?: string;
+  /**
+   * The English page's route, for a page that exists in every locale: the
+   * language menu lists it in each, and an English page redirects a reader
+   * who chose another language there.
+   */
+  englishRoute?: string;
   /** The page's language, which sets `<html lang>`, the interface text, and the search index. */
   locale?: Locale;
   sectionTitle?: string;
   title?: string;
+  /** Whether the page shows an English body under a locale prefix, which names the English page as canonical. */
+  untranslated?: boolean;
   /**
    * The package this page belongs to, when it is package-scoped. Scopes the
    * header's npm and GitHub links to this package. A package's demo is linked
@@ -25,7 +34,16 @@ interface Props {
   currentPackage?: Pick<PublicPackage, "githubLabel" | "githubUrl" | "npmLabel" | "npmUrl">;
 }
 
-const { alternates = [], currentPackage, description, locale = defaultLocale, sectionTitle, title } = Astro.props;
+const {
+  alternates = [],
+  currentPackage,
+  description,
+  englishRoute,
+  locale = defaultLocale,
+  sectionTitle,
+  title,
+  untranslated = false,
+} = Astro.props;
 const messages = messagesFor(locale);
 // The main site has every page in every locale, so its links keep the reader's language.
 const wwwPath = (path: string): string => `${siteConfig.wwwUrl}${localizePath(locale, path)}`;
@@ -44,12 +62,15 @@ const scopedSiteConfig: SiteConfig = {
   wwwUrl: undefined,
 };
 const homeHref = wwwPath("/");
-// The page's language versions in the site's locale order, as on the main site.
-// An untranslated page has none, and so no menu: its other locales would 404.
-const languageOptions = locales.flatMap((target) => {
-  const alternate = alternates.find((candidate) => candidate.lang === target);
-  return alternate === undefined ? [] : [{ locale: target, href: alternate.route, name: localeNames[target] }];
-});
+// The page in every language, in the site's locale order, as on the main site.
+const languageOptions =
+  englishRoute === undefined
+    ? []
+    : locales.map((target) => ({ locale: target, href: localizePath(target, englishRoute), name: localeNames[target] }));
+// This page in every other locale, for the redirect on English pages.
+const redirectTargets = Object.fromEntries(
+  languageOptions.filter((option) => option.locale !== defaultLocale).map((option) => [option.locale, option.href]),
+);
 const localLinks = [{ href: wwwPath("/packages/"), label: messages.packages }];
 ---
 
@@ -65,6 +86,12 @@ const localLinks = [{ href: wwwPath("/packages/"), label: messages.packages }];
   siteConfig={scopedSiteConfig}
   title={title}
 >
+  {locale === defaultLocale && englishRoute !== undefined && <LocaleRedirect slot="head" targets={redirectTargets} />}
+  {
+    untranslated && englishRoute !== undefined && (
+      <link href={new URL(englishRoute, siteConfig.siteUrl).href} rel="canonical" slot="head" />
+    )
+  }
   {
     alternates.map((alternate) => (
       <link

@@ -234,7 +234,8 @@ html {
   @apply absolute top-1 right-0;
 }
 
-.document-body .markdown-content h1 {
+.document-body .markdown-content h1,
+.document-body > .untranslated-notice {
   padding-inline-end: calc(var(--page-actions-width) + 1rem);
 }
 
@@ -243,9 +244,20 @@ html {
     @apply static mb-4 flex justify-end;
   }
 
-  .document-body .markdown-content h1 {
+  .document-body .markdown-content h1,
+  .document-body > .untranslated-notice {
     padding-inline-end: 0;
   }
+}
+
+/* Above an English body shown under a locale prefix: says, in the locale, why
+   the page reads in English. */
+.untranslated-notice {
+  @apply text-text-secondary text-label mb-6 flex items-center gap-2;
+}
+
+.untranslated-notice svg {
+  @apply size-4 shrink-0;
 }
 
 .markdown-content h1 {
