@@ -20,7 +20,8 @@ export const localeNames: Record<Locale, string> = { en: "English", "pt-BR": "Po
 
 const dictionaries: Record<Locale, Dictionary> = { en, "pt-BR": ptBR, es };
 
-export { LOCALE_STORAGE_KEY } from "./storage-key";
+/** Where the language menu saves the visitor's choice, which wins over their browser's languages. */
+export const LOCALE_STORAGE_KEY = "www-locale";
 
 /** Each locale by its language subtag, such as `pt` for `pt-BR`; one locale per language. */
 export const localesByLanguage: Record<string, Locale> = Object.fromEntries(

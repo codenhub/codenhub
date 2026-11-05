@@ -15,14 +15,15 @@
  */
 import type { ComponentProps } from "astro/types";
 import { defaultShellMessages } from "@codenhub/app-shell/messages";
+import LanguageMenu from "@codenhub/app-shell/components/language-menu.astro";
 import SearchPalette from "@codenhub/app-shell/components/search-palette.astro";
 import ShellLayout from "@codenhub/app-shell/layouts/base-layout.astro";
 
-import LanguageMenu from "../components/language-menu.astro";
 import {
   defaultLocale,
   getTranslator,
   LOCALE_STORAGE_KEY,
+  localeNames,
   locales,
   localesByLanguage,
   routing,
@@ -59,6 +60,13 @@ const alternates =
         ...routing.localizeAll(pathname).map((page) => ({ hreflang: page.locale, pathname: page.pathname })),
         { hreflang: "x-default", pathname: routing.localize(pathname, defaultLocale) },
       ];
+
+// This page in every locale, for the language menu.
+const languageOptions = locales.map((target) => ({
+  locale: target,
+  href: routing.localize(pathname, target),
+  name: localeNames[target],
+}));
 
 // This page in every other locale, for the inline redirect on English pages.
 const redirectTargets = Object.fromEntries(
@@ -133,7 +141,13 @@ const redirectTargets = Object.fromEntries(
   <SearchPalette indexUrl={`${siteConfig.docsUrl}/search-index.json`} messages={messages.search} slot="actions" />
   {
     locale !== undefined && translator !== undefined && (
-      <LanguageMenu label={translator.t("language.label")} locale={locale} pathname={pathname} slot="actions" />
+      <LanguageMenu
+        label={translator.t("language.label")}
+        locale={locale}
+        options={languageOptions}
+        slot="actions"
+        storageKey={LOCALE_STORAGE_KEY}
+      />
     )
   }
   <!--

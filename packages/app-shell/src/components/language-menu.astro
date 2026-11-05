@@ -1,0 +1,130 @@
+---
+/**
+ * The header's language menu: the current page in each language the host
+ * lists, in the order given. Plain links in a `<details>`, so it works without
+ * JavaScript; the script animates its close and closes it on an outside click
+ * or Escape. With `storageKey`, a chosen option's locale is saved under that
+ * `localStorage` key, for a host that redirects by the visitor's choice.
+ *
+ * @param label - The menu's accessible name, in the page's language.
+ * @param locale - The page's locale, marked as current among the options.
+ * @param options - Each language version of the page: its locale, URL, and name in its own language.
+ * @param storageKey - Where to save the chosen locale; nothing is saved without it.
+ */
+interface LanguageOption {
+  locale: string;
+  href: string;
+  name: string;
+}
+
+interface Props {
+  label: string;
+  locale: string;
+  options: readonly LanguageOption[];
+  storageKey?: string;
+}
+
+const { label, locale, options, storageKey } = Astro.props;
+---
+
+<details class="shell-language" data-language-menu data-storage-key={storageKey}>
+  <summary aria-label={label} class="shell-action shell-language-trigger" title={label}>
+    <i aria-hidden="true" class="ic-lucide-languages"></i>
+    <i aria-hidden="true" class="ic-lucide-chevron-down shell-language-chevron"></i>
+  </summary>
+  <ul class="shell-language-list">
+    {
+      options.map((option) => (
+        <li>
+          <a
+            aria-current={option.locale === locale ? "true" : undefined}
+            class="shell-language-option"
+            href={option.href}
+            hreflang={option.locale}
+            lang={option.locale}
+          >
+            {option.name}
+            {option.locale === locale && <i aria-hidden="true" class="ic-lucide-check" />}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</details>
+
+<script>
+  // Removing `open` hides the list at once, so a close first plays the list's
+  // out animation (`data-closing`, `styles.css`) and removes `open` after it.
+  for (const menu of document.querySelectorAll<HTMLDetailsElement>("[data-language-menu]")) {
+    const summary = menu.querySelector("summary");
+    const list = menu.querySelector<HTMLElement>(".shell-language-list");
+    const storageKey = menu.dataset.storageKey;
+
+    const finish = () => {
+      if (menu.hasAttribute("data-closing")) {
+        menu.removeAttribute("data-closing");
+        menu.open = false;
+      }
+    };
+
+    const close = () => {
+      if (!menu.open || menu.hasAttribute("data-closing")) {
+        return;
+      }
+      menu.setAttribute("data-closing", "");
+      // Reduced motion turns the animation off, and then no `animationend` comes.
+      if (list === null || getComputedStyle(list).animationName === "none") {
+        finish();
+      }
+    };
+
+    // A cancelled close, such as one cut short by turning on reduced motion,
+    // fires no `animationend`, so it finishes too. Closing mid-open cancels the
+    // in animation, which must not.
+    const finishClose = (event: AnimationEvent) => {
+      if (event.animationName === "shell-language-out") {
+        finish();
+      }
+    };
+    list?.addEventListener("animationend", finishClose);
+    list?.addEventListener("animationcancel", finishClose);
+
+    if (storageKey !== undefined) {
+      for (const option of menu.querySelectorAll<HTMLAnchorElement>("a[hreflang]")) {
+        option.addEventListener("click", () => {
+          try {
+            localStorage.setItem(storageKey, option.hreflang);
+          } catch {
+            // Storage blocked: the choice is not remembered, and the link still works.
+          }
+        });
+      }
+    }
+
+    summary?.addEventListener("click", (event) => {
+      if (!menu.open) {
+        return;
+      }
+      event.preventDefault();
+      if (menu.hasAttribute("data-closing")) {
+        // Pressed again mid-close: stay open.
+        menu.removeAttribute("data-closing");
+      } else {
+        close();
+      }
+    });
+
+    document.addEventListener("click", (event) => {
+      if (event.target instanceof Node && !menu.contains(event.target)) {
+        close();
+      }
+    });
+
+    menu.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && menu.open) {
+        close();
+        summary?.focus();
+      }
+    });
+  }
+</script>
