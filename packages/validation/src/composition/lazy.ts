@@ -12,6 +12,7 @@ import {
 } from "../core/async";
 import { tail } from "../core/checks";
 import { described } from "../core/describe";
+import { keepResolved } from "../core/lazy";
 import { call, composed, type Place } from "../core/nesting";
 import { assertFunction, assertOption, issue } from "../core/result";
 import type {
@@ -242,6 +243,7 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
           throw new TypeError(`getter() must return a function, received ${found === null ? "null" : typeof found}`);
         }
         resolved = found as AnyValidator;
+        keepResolved(validator, resolved);
       }
       const outcome = chain(call(resolved, input, place), (result: ValidationResult<unknown>) =>
         result.ok ? accept(result.value, place) : result,
@@ -268,7 +270,7 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
   // An object reached again at the same path in one validation, as each option of a `union` reaches the
   // children, is validated once. The path is part of the key, since the issues are written at it. A
   // primitive is not kept: it has no children, so validating it again cannot multiply the work.
-  return described(
+  const validator = described(
     composed((input, place) => {
       const paths = resultsOf(self, newPaths);
       const isPrimitive = (typeof input !== "object" && typeof input !== "function") || input === null;
@@ -295,4 +297,5 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
     }),
     { kind: "lazy", options, checks, getter },
   );
+  return validator;
 }
