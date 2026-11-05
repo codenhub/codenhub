@@ -186,7 +186,7 @@ When adding or changing tests, especially with mocks, review [references/testing
 
 Before marking work complete:
 
-- [ ] Every added or changed behavior has a test, unless the user approved shipping it without one
+- [ ] Every added or changed behavior has a test, except a prototype, generated code, or bug fix the user approved shipping without one
 - [ ] Each new test was observed failing first, except characterization tests added before a refactor
 - [ ] Failures happened for the expected reason
 - [ ] Implementation was minimal for each GREEN step

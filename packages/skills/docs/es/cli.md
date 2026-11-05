@@ -2,7 +2,7 @@
 title: Instalador CLI
 description: Instala las skills seleccionadas de forma local o global, elige los harnesses de destino y automatiza las actualizaciones.
 order: 2
-source: ef1ab911764995d981a00857ef67223eb8b30162
+source: 6c8ba2bb6def412604fa6835ddfee0361e95b0a7
 ---
 
 # Instala skills en tus herramientas de agentes
@@ -84,7 +84,7 @@ Las etiquetas de harnesses incluyen su ámbito, por ejemplo, `Claude Workspace` 
 
 Usa la forma con `=` para las opciones de lista: `--skills=brainstorming`, no `--skills brainstorming`. Las listas eliminan los espacios en blanco de los extremos, ignoran los elementos vacíos entre comas y eliminan los elementos idénticos repetidos, pero deben contener al menos un elemento. Los IDs de skills desconocidos y las etiquetas de harnesses no válidas provocan un fallo antes de la instalación.
 
-Es preferible usar una sola opción de ámbito y una sola forma de selección por lista. Si se repiten, gana la última opción de ámbito y la última lista de `--skills` o `--harnesses` reemplaza a las anteriores. `--all-skills` y `--all-harnesses` tienen prioridad sobre sus respectivas listas, aunque una lista sintácticamente vacía sigue provocando un fallo. Los argumentos desconocidos provocan un fallo. `--help` o `-h` tiene prioridad sobre todos los demás argumentos, incluidos los desconocidos o no válidos: muestra las instrucciones de uso y termina con el código de salida 0 sin instalar, después de cargar las fuentes de las skills.
+Es preferible usar una sola opción de ámbito y una sola forma de selección por lista. Si se repiten, gana la última opción de ámbito y la última lista de `--skills` o `--harnesses` reemplaza a las anteriores. `--all-skills` y `--all-harnesses` tienen prioridad sobre sus respectivas listas, aunque una lista sintácticamente vacía sigue provocando un fallo. Los argumentos desconocidos provocan un fallo. Las fuentes de las skills se cargan primero, así que un fallo al cargarlas sigue terminando con el código de salida 1; por ejemplo, `--include-drafts` en el paquete publicado, que no incluye borradores. Después, `--help` o `-h` tiene prioridad sobre todos los demás argumentos, incluidos los desconocidos o no válidos: muestra las instrucciones de uso y termina con el código de salida 0 sin instalar.
 
 ## Destinos de instalación
 

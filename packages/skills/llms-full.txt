@@ -292,7 +292,7 @@ Harness labels include their scope, for example `Claude Workspace` and `Claude G
 
 Use the `=` form for list options: `--skills=brainstorming`, not `--skills brainstorming`. Lists trim whitespace, ignore empty comma-separated items, and remove repeated identical entries, but must contain at least one item. Unknown skill IDs and invalid harness labels fail before installation.
 
-Prefer one scope option and one selection form per list. If repeated, the last scope option wins, and the last `--skills` or `--harnesses` list replaces earlier lists. `--all-skills` and `--all-harnesses` take precedence over their respective lists, though a syntactically empty list still fails. Unknown arguments fail. `--help` or `-h` takes precedence over every other argument, including unknown or invalid ones: it prints usage and exits with status 0 without installing, after loading the skill sources.
+Prefer one scope option and one selection form per list. If repeated, the last scope option wins, and the last `--skills` or `--harnesses` list replaces earlier lists. `--all-skills` and `--all-harnesses` take precedence over their respective lists, though a syntactically empty list still fails. Unknown arguments fail. The skill sources load first, so a loading failure still exits with status 1, such as `--include-drafts` in the published package, which ships no drafts. After that, `--help` or `-h` takes precedence over every other argument, including unknown or invalid ones: it prints usage and exits with status 0 without installing.
 
 ## Install Destinations
 

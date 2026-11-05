@@ -172,6 +172,6 @@ Write `vulnerability` and `decision` findings as a short paragraph instead, sinc
 ## After the Report
 
 - Fix only the findings the user approves.
-- Give each fix that changes behavior a test that fails before it and passes after.
+- Give each fix that changes behavior a test that fails before it and passes after. When no test can be written, ask the user before shipping the fix without one, and say so in the report.
 - When a fix turns out to need new public surface, stop and bring it back as a decision.
 - Record each decision the user takes where the project records decisions, with its reason and the alternatives rejected.
