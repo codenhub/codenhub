@@ -207,7 +207,7 @@ Skills still in development live in `drafts/` in the repository, in the same for
 
 ## Third-party material
 
-Most bundled skills adapt third-party material. Package and per-skill notices travel with the relevant assets. See [Skill provenance](docs/provenance.md) and the package [NOTICE](NOTICE) before redistributing or modifying them.
+Several bundled skills adapt third-party material; the provenance table lists which. Package and per-skill notices travel with the relevant assets. See [Skill provenance](docs/provenance.md) and the package [NOTICE](NOTICE) before redistributing or modifying them.
 
 Next, use the [CLI installer](docs/cli.md) to put your chosen skills in the project folders Claude and Codex read.
 
@@ -292,7 +292,7 @@ Harness labels include their scope, for example `Claude Workspace` and `Claude G
 
 Use the `=` form for list options: `--skills=brainstorming`, not `--skills brainstorming`. Lists trim whitespace, ignore empty comma-separated items, and remove repeated identical entries, but must contain at least one item. Unknown skill IDs and invalid harness labels fail before installation.
 
-Prefer one scope option and one selection form per list. If repeated, the last scope option wins, and the last `--skills` or `--harnesses` list replaces earlier lists. `--all-skills` and `--all-harnesses` take precedence over their respective lists, though a syntactically empty list still fails. Unknown arguments fail. Help prints usage and exits without installing, after loading the skill sources.
+Prefer one scope option and one selection form per list. If repeated, the last scope option wins, and the last `--skills` or `--harnesses` list replaces earlier lists. `--all-skills` and `--all-harnesses` take precedence over their respective lists, though a syntactically empty list still fails. Unknown arguments fail. `--help` or `-h` takes precedence over every other argument, including unknown or invalid ones: it prints usage and exits with status 0 without installing, after loading the skill sources.
 
 ## Install Destinations
 
@@ -340,7 +340,7 @@ Run it from a checkout after building the package, from the directory to install
 
 ```sh
 pnpm build skills
-node <checkout>/packages/skills/dist/cli.js --include-drafts
+node "<checkout>/packages/skills/dist/cli.js" --include-drafts
 ```
 
 Replace `<checkout>` with the path to the repository checkout. The build command runs from that checkout; run the `node` command from the project where the draft skills should be installed.
@@ -419,26 +419,26 @@ When you install a skill in a project and share it with your team, its attributi
 
 The package-level legal terms are in [NOTICE](NOTICE). Each adapted skill also carries its attribution and upstream license text in its own directory, in `NOTICE` and, where the license is long, `LICENSE`, so both are copied when the installer copies that skill alone. For our `brainstorming` and `test-driven-development` example, their MIT notices accompany each copy installed for Claude and Codex.
 
-| Skill                     | Origin                                 | License    |
-| ------------------------- | -------------------------------------- | ---------- |
-| `agents-md-improver`      | Original Coden Agency work             | Apache-2.0 |
-| `audit`                   | Adapted from [JuliusBrussee/caveman]   | MIT        |
-| `babysit-pr`              | Original Coden Agency work             | Apache-2.0 |
-| `brainstorming`           | Adapted from [obra/superpowers]        | MIT        |
-| `branding`                | Original Coden Agency work             | Apache-2.0 |
-| `caveman`                 | Adapted from [JuliusBrussee/caveman]   | MIT        |
-| `caveman-commit`          | Adapted from [JuliusBrussee/caveman]   | MIT        |
-| `design`                  | Original Coden Agency work             | Apache-2.0 |
-| `logo-design`             | Original Coden Agency work             | Apache-2.0 |
-| `motion-graphics`         | Original Coden Agency work             | Apache-2.0 |
-| `naming`                  | Original Coden Agency work             | Apache-2.0 |
-| `playful-tone`            | Original Coden Agency work             | Apache-2.0 |
-| `ponytail`                | Adapted from [DietrichGebert/ponytail] | MIT        |
-| `ponytail-review`         | Adapted from [DietrichGebert/ponytail] | MIT        |
-| `project-template`        | Original Coden Agency work             | Apache-2.0 |
-| `subagent-specialist`     | Adapted from [obra/superpowers]        | MIT        |
-| `test-driven-development` | Adapted from [obra/superpowers]        | MIT        |
-| `writing-skills`          | Adapted from [obra/superpowers]        | MIT        |
+| Skill                     | Origin                                 | License            |
+| ------------------------- | -------------------------------------- | ------------------ |
+| `agents-md-improver`      | Original Coden Agency work             | Apache-2.0         |
+| `audit`                   | Adapted from [JuliusBrussee/caveman]   | MIT and Apache-2.0 |
+| `babysit-pr`              | Original Coden Agency work             | Apache-2.0         |
+| `brainstorming`           | Adapted from [obra/superpowers]        | MIT                |
+| `branding`                | Original Coden Agency work             | Apache-2.0         |
+| `caveman`                 | Adapted from [JuliusBrussee/caveman]   | MIT                |
+| `caveman-commit`          | Adapted from [JuliusBrussee/caveman]   | MIT                |
+| `design`                  | Original Coden Agency work             | Apache-2.0         |
+| `logo-design`             | Original Coden Agency work             | Apache-2.0         |
+| `motion-graphics`         | Original Coden Agency work             | Apache-2.0         |
+| `naming`                  | Original Coden Agency work             | Apache-2.0         |
+| `playful-tone`            | Original Coden Agency work             | Apache-2.0         |
+| `ponytail`                | Adapted from [DietrichGebert/ponytail] | MIT                |
+| `ponytail-review`         | Adapted from [DietrichGebert/ponytail] | MIT                |
+| `project-template`        | Original Coden Agency work             | Apache-2.0         |
+| `subagent-specialist`     | Adapted from [obra/superpowers]        | MIT                |
+| `test-driven-development` | Adapted from [obra/superpowers]        | MIT                |
+| `writing-skills`          | Adapted from [obra/superpowers]        | MIT                |
 
 The package `NOTICE` contains the applicable attribution blocks and bundled MIT license text. Preserve the relevant notices and license text when sharing installed directories, and review the license terms before modifying or redistributing them.
 

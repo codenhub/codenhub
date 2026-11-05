@@ -39,7 +39,7 @@ Creating a repository, pushing, and opening a pull request or an issue are outwa
 
    For a local start, clone the template, record `git rev-parse HEAD` for step 3, and note which files `git ls-files -s .githooks` shows as `100755`, then remove its `.git`, run `git init -b main`, and stage everything. Hooks staged from a Windows checkout lose their executable bit, and git on Linux and macOS then skips them, so stage each of those files again with `git add --chmod=+x .githooks/<hook>`, and only those. `git ls-files -s .githooks` must then match the template's modes.
 
-   Then turn on "Automatically delete head branches", so merged branches, starting with the bootstrap branch, do not pile up on the remote. It is part of creating the repository; for a repository that already existed, ask first:
+   Then turn on "Automatically delete head branches", so merged branches, starting with the bootstrap branch, do not pile up on the remote. It is part of creating the repository; for a repository that already existed, ask first. Without `gh`, ask the user to turn it on under the repository's Settings, General, Pull Requests:
 
    ```sh
    gh repo edit <owner>/<slug> --delete-branch-on-merge

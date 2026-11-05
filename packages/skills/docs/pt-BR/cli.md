@@ -2,7 +2,7 @@
 title: Instalador CLI
 description: Instale skills selecionadas local ou globalmente, escolha destinos por harness e automatize atualizações.
 order: 2
-source: 4761509a7377dab69047fda9d2571b93463e4a3f
+source: ef1ab911764995d981a00857ef67223eb8b30162
 ---
 
 # Instale skills nas suas ferramentas de agente
@@ -84,7 +84,7 @@ Os rótulos dos harnesses incluem o escopo, por exemplo, `Claude Workspace` e `C
 
 Use a forma com `=` nas opções de lista: `--skills=brainstorming`, e não `--skills brainstorming`. As listas removem espaços em branco nas extremidades de cada item, ignoram itens vazios separados por vírgulas e eliminam entradas idênticas repetidas, mas precisam conter pelo menos um item. IDs de skills desconhecidos e rótulos de harnesses inválidos causam falha antes da instalação.
 
-Prefira uma opção de escopo e uma forma de seleção por lista. Se houver repetição, a última opção de escopo prevalece, e a última lista `--skills` ou `--harnesses` substitui as anteriores. `--all-skills` e `--all-harnesses` têm precedência sobre suas respectivas listas, embora uma lista sintaticamente vazia ainda cause falha. Argumentos desconhecidos causam falha. A ajuda exibe o uso e encerra sem instalar, após carregar as fontes das skills.
+Prefira uma opção de escopo e uma forma de seleção por lista. Se houver repetição, a última opção de escopo prevalece, e a última lista `--skills` ou `--harnesses` substitui as anteriores. `--all-skills` e `--all-harnesses` têm precedência sobre suas respectivas listas, embora uma lista sintaticamente vazia ainda cause falha. Argumentos desconhecidos causam falha. `--help` ou `-h` tem precedência sobre todos os outros argumentos, inclusive os desconhecidos ou inválidos: exibe o uso e encerra com código de saída 0 sem instalar, após carregar as fontes das skills.
 
 ## Destinos de instalação
 
@@ -132,7 +132,7 @@ Execute a partir de um checkout após fazer o build do pacote, usando como diret
 
 ```sh
 pnpm build skills
-node <checkout>/packages/skills/dist/cli.js --include-drafts
+node "<checkout>/packages/skills/dist/cli.js" --include-drafts
 ```
 
 Substitua `<checkout>` pelo caminho do checkout do repositório. O comando de build é executado a partir desse checkout; execute o comando `node` a partir do projeto em que as skills em rascunho devem ser instaladas.

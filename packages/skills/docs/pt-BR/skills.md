@@ -2,7 +2,7 @@
 title: Skills incluídas
 description: Escolha fluxos de trabalho no catálogo e entenda o formato, a qualidade e o versionamento das skills.
 order: 1
-source: 733e3fceb49400a41d91ce438ba8ebfd1ef9ba1f
+source: 499b417fd0bb2d1c2b9c439aefa26f63f3edb1fc
 ---
 
 # Escolha suas skills
@@ -108,6 +108,6 @@ Skills ainda em desenvolvimento ficam em `drafts/` no repositório, no mesmo for
 
 ## Material de terceiros
 
-A maioria das skills incluídas adapta material de terceiros. Os avisos do pacote e de cada skill acompanham os assets pertinentes. Veja [Origem das skills](provenance.md) e o [NOTICE](../../NOTICE) do pacote antes de redistribuir ou modificar esse material.
+Várias das skills incluídas adaptam material de terceiros; a tabela de origem indica quais. Os avisos do pacote e de cada skill acompanham os assets pertinentes. Veja [Origem das skills](provenance.md) e o [NOTICE](../../NOTICE) do pacote antes de redistribuir ou modificar esse material.
 
 Em seguida, use o [Instalador CLI](cli.md) para colocar as skills escolhidas nas pastas de projeto que Claude e Codex leem.

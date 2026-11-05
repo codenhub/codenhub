@@ -158,7 +158,7 @@ describe("skill catalog", () => {
     // understood by the package's flat frontmatter parser, which would read the indicator as the description.
     it("should keep name and description loadable by every harness", () => {
       expect(meta.name).not.toMatch(/anthropic|claude/);
-      expect(`${meta.name} ${meta.description}`).not.toMatch(/<\/?[a-z][^>]*>/i);
+      expect(`${meta.name} ${meta.description}`).not.toMatch(/<\/?[a-z_:][^>]*>/i);
       expect(meta.description).not.toMatch(/^[>|][+-]?$/);
     });
 
@@ -206,7 +206,7 @@ describe("skill catalog", () => {
         .filter((file) => file.startsWith("references/") && file.endsWith(".md"))
         .filter((file) => {
           const content = read(path.join(skill.path, file));
-          return content.split("\n").length > 100 && !/^## Contents$/m.test(content);
+          return content.split("\n").length > 100 && content.match(/^## .*$/m)?.[0].trimEnd() !== "## Contents";
         });
       expect(long).toEqual([]);
     });

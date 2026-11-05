@@ -83,7 +83,7 @@ Harness labels include their scope, for example `Claude Workspace` and `Claude G
 
 Use the `=` form for list options: `--skills=brainstorming`, not `--skills brainstorming`. Lists trim whitespace, ignore empty comma-separated items, and remove repeated identical entries, but must contain at least one item. Unknown skill IDs and invalid harness labels fail before installation.
 
-Prefer one scope option and one selection form per list. If repeated, the last scope option wins, and the last `--skills` or `--harnesses` list replaces earlier lists. `--all-skills` and `--all-harnesses` take precedence over their respective lists, though a syntactically empty list still fails. Unknown arguments fail. Help prints usage and exits without installing, after loading the skill sources.
+Prefer one scope option and one selection form per list. If repeated, the last scope option wins, and the last `--skills` or `--harnesses` list replaces earlier lists. `--all-skills` and `--all-harnesses` take precedence over their respective lists, though a syntactically empty list still fails. Unknown arguments fail. `--help` or `-h` takes precedence over every other argument, including unknown or invalid ones: it prints usage and exits with status 0 without installing, after loading the skill sources.
 
 ## Install Destinations
 
@@ -131,7 +131,7 @@ Run it from a checkout after building the package, from the directory to install
 
 ```sh
 pnpm build skills
-node <checkout>/packages/skills/dist/cli.js --include-drafts
+node "<checkout>/packages/skills/dist/cli.js" --include-drafts
 ```
 
 Replace `<checkout>` with the path to the repository checkout. The build command runs from that checkout; run the `node` command from the project where the draft skills should be installed.

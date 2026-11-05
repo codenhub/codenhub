@@ -2,7 +2,7 @@
 title: Procedencia
 description: Consulta los orígenes, las licencias y los avisos que acompañan a las skills incluidas.
 order: 4
-source: d342866aed7d38b4393f6d0c4288380755bf74e6
+source: 0debfb956199f5cf59bcf273ad292511238f766d
 ---
 
 # Procedencia de las skills
@@ -11,26 +11,26 @@ Cuando instalas una skill en un proyecto y la compartes con tu equipo, su atribu
 
 Los términos legales del paquete están en [NOTICE](../../NOTICE). Cada skill adaptada también lleva su atribución y el texto de la licencia original en su propio directorio, en `NOTICE` y, cuando la licencia es larga, en `LICENSE`, de modo que ambos se copian cuando el instalador copia solo esa skill. En nuestro ejemplo con `brainstorming` y `test-driven-development`, sus avisos MIT acompañan a cada copia instalada para Claude y Codex.
 
-| Skill                     | Origen                                | Licencia   |
-| ------------------------- | ------------------------------------- | ---------- |
-| `agents-md-improver`      | Trabajo original de Coden Agency      | Apache-2.0 |
-| `audit`                   | Adaptado de [JuliusBrussee/caveman]   | MIT        |
-| `babysit-pr`              | Trabajo original de Coden Agency      | Apache-2.0 |
-| `brainstorming`           | Adaptado de [obra/superpowers]        | MIT        |
-| `branding`                | Trabajo original de Coden Agency      | Apache-2.0 |
-| `caveman`                 | Adaptado de [JuliusBrussee/caveman]   | MIT        |
-| `caveman-commit`          | Adaptado de [JuliusBrussee/caveman]   | MIT        |
-| `design`                  | Trabajo original de Coden Agency      | Apache-2.0 |
-| `logo-design`             | Trabajo original de Coden Agency      | Apache-2.0 |
-| `motion-graphics`         | Trabajo original de Coden Agency      | Apache-2.0 |
-| `naming`                  | Trabajo original de Coden Agency      | Apache-2.0 |
-| `playful-tone`            | Trabajo original de Coden Agency      | Apache-2.0 |
-| `ponytail`                | Adaptado de [DietrichGebert/ponytail] | MIT        |
-| `ponytail-review`         | Adaptado de [DietrichGebert/ponytail] | MIT        |
-| `project-template`        | Trabajo original de Coden Agency      | Apache-2.0 |
-| `subagent-specialist`     | Adaptado de [obra/superpowers]        | MIT        |
-| `test-driven-development` | Adaptado de [obra/superpowers]        | MIT        |
-| `writing-skills`          | Adaptado de [obra/superpowers]        | MIT        |
+| Skill                     | Origen                                | Licencia         |
+| ------------------------- | ------------------------------------- | ---------------- |
+| `agents-md-improver`      | Trabajo original de Coden Agency      | Apache-2.0       |
+| `audit`                   | Adaptado de [JuliusBrussee/caveman]   | MIT y Apache-2.0 |
+| `babysit-pr`              | Trabajo original de Coden Agency      | Apache-2.0       |
+| `brainstorming`           | Adaptado de [obra/superpowers]        | MIT              |
+| `branding`                | Trabajo original de Coden Agency      | Apache-2.0       |
+| `caveman`                 | Adaptado de [JuliusBrussee/caveman]   | MIT              |
+| `caveman-commit`          | Adaptado de [JuliusBrussee/caveman]   | MIT              |
+| `design`                  | Trabajo original de Coden Agency      | Apache-2.0       |
+| `logo-design`             | Trabajo original de Coden Agency      | Apache-2.0       |
+| `motion-graphics`         | Trabajo original de Coden Agency      | Apache-2.0       |
+| `naming`                  | Trabajo original de Coden Agency      | Apache-2.0       |
+| `playful-tone`            | Trabajo original de Coden Agency      | Apache-2.0       |
+| `ponytail`                | Adaptado de [DietrichGebert/ponytail] | MIT              |
+| `ponytail-review`         | Adaptado de [DietrichGebert/ponytail] | MIT              |
+| `project-template`        | Trabajo original de Coden Agency      | Apache-2.0       |
+| `subagent-specialist`     | Adaptado de [obra/superpowers]        | MIT              |
+| `test-driven-development` | Adaptado de [obra/superpowers]        | MIT              |
+| `writing-skills`          | Adaptado de [obra/superpowers]        | MIT              |
 
 El `NOTICE` del paquete contiene los bloques de atribución aplicables y el texto de la licencia MIT incluida. Conserva los avisos y el texto de licencia pertinentes al compartir directorios instalados y revisa los términos de la licencia antes de modificarlos o redistribuirlos.
 

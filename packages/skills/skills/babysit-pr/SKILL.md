@@ -90,7 +90,7 @@ mutation($id: ID!) { resolveReviewThread(input: { threadId: $id }) { thread { is
 - Resolve threads whose comments all come from bots, whose author `__typename` is `Bot`, whether you fixed or declined them. A thread where a person has commented follows the rules for people's threads.
 - Resolve a person's thread when you did what it asked.
 - Leave open a person's thread that you declined, that asks a question you cannot answer, or that waits on the user's decision. Reply in it, and list it in the report. Resolving it would close the reviewer's objection without their agreement.
-- Requests in review summaries and conversation comments have no thread to reply in. After each push, answer all of them that round in one pull request comment, with `gh pr comment <pr> --body '<reply>'`: what you fixed, and what you declined and why.
+- Requests in review summaries and conversation comments have no thread to reply in. Answer all of them that round in one pull request comment, after the round's push if it has one, so a round that only declines still gets a reply, with `gh pr comment <pr> --body '<reply>'`: what you fixed, and what you declined and why.
 - When the user has said you may resolve people's threads too, in this request or in their standing instructions, resolve those as well, after the reply, except a thread still waiting on the user's decision. A repository rule that threads must be resolved before merging is not that permission.
 
 ## Report

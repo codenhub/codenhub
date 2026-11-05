@@ -40,6 +40,8 @@ A test that output leaves something out is different when it states a contract, 
 No production code without a failing test first.
 ```
 
+The only exceptions are the ones the user approves: throwaway prototypes and generated code under When To Use, and a bug fix shipped without a test under Bug Fix Pattern.
+
 If production code is written before a failing test:
 
 1. Remove that code from the intended delivery change set.
@@ -184,8 +186,8 @@ When adding or changing tests, especially with mocks, review [references/testing
 
 Before marking work complete:
 
-- [ ] Every added or changed behavior has a test
-- [ ] Each new test was observed failing first
+- [ ] Every added or changed behavior has a test, unless the user approved shipping it without one
+- [ ] Each new test was observed failing first, except characterization tests added before a refactor
 - [ ] Failures happened for the expected reason
 - [ ] Implementation was minimal for each GREEN step
 - [ ] All relevant tests are passing

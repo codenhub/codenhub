@@ -2,7 +2,7 @@
 title: Instalador CLI
 description: Instala las skills seleccionadas de forma local o global, elige los harnesses de destino y automatiza las actualizaciones.
 order: 2
-source: 4761509a7377dab69047fda9d2571b93463e4a3f
+source: ef1ab911764995d981a00857ef67223eb8b30162
 ---
 
 # Instala skills en tus herramientas de agentes
@@ -84,7 +84,7 @@ Las etiquetas de harnesses incluyen su ámbito, por ejemplo, `Claude Workspace` 
 
 Usa la forma con `=` para las opciones de lista: `--skills=brainstorming`, no `--skills brainstorming`. Las listas eliminan los espacios en blanco de los extremos, ignoran los elementos vacíos entre comas y eliminan los elementos idénticos repetidos, pero deben contener al menos un elemento. Los IDs de skills desconocidos y las etiquetas de harnesses no válidas provocan un fallo antes de la instalación.
 
-Es preferible usar una sola opción de ámbito y una sola forma de selección por lista. Si se repiten, gana la última opción de ámbito y la última lista de `--skills` o `--harnesses` reemplaza a las anteriores. `--all-skills` y `--all-harnesses` tienen prioridad sobre sus respectivas listas, aunque una lista sintácticamente vacía sigue provocando un fallo. Los argumentos desconocidos provocan un fallo. La ayuda muestra las instrucciones de uso y termina sin instalar, después de cargar las fuentes de las skills.
+Es preferible usar una sola opción de ámbito y una sola forma de selección por lista. Si se repiten, gana la última opción de ámbito y la última lista de `--skills` o `--harnesses` reemplaza a las anteriores. `--all-skills` y `--all-harnesses` tienen prioridad sobre sus respectivas listas, aunque una lista sintácticamente vacía sigue provocando un fallo. Los argumentos desconocidos provocan un fallo. `--help` o `-h` tiene prioridad sobre todos los demás argumentos, incluidos los desconocidos o no válidos: muestra las instrucciones de uso y termina con el código de salida 0 sin instalar, después de cargar las fuentes de las skills.
 
 ## Destinos de instalación
 
@@ -132,7 +132,7 @@ Ejecútalo desde una copia de trabajo del repositorio después de compilar el pa
 
 ```sh
 pnpm build skills
-node <checkout>/packages/skills/dist/cli.js --include-drafts
+node "<checkout>/packages/skills/dist/cli.js" --include-drafts
 ```
 
 Reemplaza `<checkout>` con la ruta a la copia de trabajo del repositorio. El comando de compilación se ejecuta desde esa copia de trabajo; ejecuta el comando `node` desde el proyecto donde deban instalarse las skills en borrador.

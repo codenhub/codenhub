@@ -107,6 +107,6 @@ Skills still in development live in `drafts/` in the repository, in the same for
 
 ## Third-party material
 
-Most bundled skills adapt third-party material. Package and per-skill notices travel with the relevant assets. See [Skill provenance](provenance.md) and the package [NOTICE](../NOTICE) before redistributing or modifying them.
+Several bundled skills adapt third-party material; the provenance table lists which. Package and per-skill notices travel with the relevant assets. See [Skill provenance](provenance.md) and the package [NOTICE](../NOTICE) before redistributing or modifying them.
 
 Next, use the [CLI installer](cli.md) to put your chosen skills in the project folders Claude and Codex read.

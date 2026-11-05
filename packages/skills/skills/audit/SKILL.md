@@ -163,7 +163,7 @@ When asked for comments to post on a pull request, write one line per finding, r
 `<file>:L<line>: <severity> <kind>: <problem>. <fix>.`
 
 ```text
-csv.ts:L120: minor defect: a trailing empty field is dropped. Keep it as an empty string.
+csv.ts:L120: major defect: a trailing empty field is dropped. Keep it as an empty string.
 retry.ts:L57: minor defect: the delay ignores a Retry-After header. Use it when present.
 ```
 
