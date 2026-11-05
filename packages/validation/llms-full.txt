@@ -2,11 +2,11 @@
 
 # @codenhub/validation
 
-Validation for data you do not control: a request body, a query string, a form, a message from another origin. A validator gives you either the typed value or every reason it is not one, and is built for input that may be hostile:
+Validation for data you do not control: a request body, a query string, a form, a message from another origin. A validator gives you either the typed value or the reasons it is not one, and is built for input that may be hostile:
 
 - **Formats return what a parser read.** `email()` and `url()` produce what the URL parser of the platform sees, so the value you store is the one a request or a mail server will use.
-- **What a failing input costs is bounded.** A long list of bad items stops at 1,000 issues, and input nested too deep is one issue, never a stack overflow.
-- **Issues never hold a value of the input**, so logging a failed validation cannot log a password. They do name its keys, in `path`, as [The issue](docs/errors.md#the-issue) says.
+- **What a failing input reports is bounded.** A long list of bad items stops at 1,000 issues, and input nested too deep is one issue, not a stack overflow, as long as the depth limit fits the stack.
+- **Issues never hold a value of the input**, so logging a failed validation cannot log a password, unless a `literal` or a `oneOf` checks one, since those report the values they accept. They do name its keys, in `path`, as [The issue](docs/errors.md#the-issue) says.
 
 Each validator is a function you import on its own, so a program bundles only the validators it uses. No dependencies.
 
@@ -74,7 +74,7 @@ Licensed under Apache-2.0.
 
 # Validate values and shapes
 
-`@codenhub/validation` answers one question: is this value what I said it should be? You give a value to a validator. You get back either that value, typed, or a complete list of what is wrong with it.
+`@codenhub/validation` answers one question: is this value what I said it should be? You give a value to a validator. You get back either that value, typed, or a list of what is wrong with it.
 
 It works the same for one value, such as an email address or a port number, and for a whole object, such as a form or a request body.
 
@@ -85,10 +85,10 @@ Data that crosses a boundary you do not control can hold anything: a request, a 
 The package is built for that boundary, where the input may be hostile:
 
 - **A format gives you what the parser read.** `email()` and `url()` produce the value the platform's URL parser reads. The value you store is the one a request or a mail server will use.
-- **A failing input has a bounded cost.** A long list of bad items stops at 1,000 issues. Input nested too deep is one issue, never a stack overflow.
-- **An issue never holds a value of the input.** A log of failures holds no passwords. An issue does name the input's keys, in its `path`.
+- **A failing input has a bounded report.** A long list of bad items stops at 1,000 issues. Input nested too deep is one issue, not a stack overflow, as long as the depth limit fits the stack.
+- **An issue never holds a value of the input.** A log of failures holds no passwords, unless a `literal` or a `oneOf` checks one: those report the values they accept, as [Getting started](docs/getting-started.md#fixed-values) says. An issue does name the input's keys, in its `path`.
 
-Input that passes is checked in full, so a large valid input still costs its size. [Limits](docs/limits.md) says how to bound it.
+Every valid item is still checked, whether the input passes or fails, so a large input costs its size. [Limits](docs/limits.md) says how to bound its size and its depth.
 
 ## Installation
 
@@ -652,8 +652,17 @@ const signupUpload = formData(
   }),
 );
 
-export const readSignup = async (request: Request) => signupUpload(await request.formData());
+export const readSignup = async (request: Request) => {
+  const form = await request.formData();
+  const avatar = form.get("avatar");
+  if (avatar instanceof File && avatar.name === "" && avatar.size === 0) {
+    form.delete("avatar");
+  }
+  return signupUpload(form);
+};
 ```
+
+A file input with no file chosen still sends a part: a `File` with no name and no content. `optional` sees a value, so `file` accepts it and `contentType` rejects it, since it holds no image. `readSignup` removes that part first, so a sign-up without an avatar passes.
 
 ### `formData`
 
@@ -906,7 +915,7 @@ Where the outputs differ otherwise, as `"  ab "` does when one side trims it and
 
 The merged object is new. So an own `__proto__` key that one side passed on unchecked, as `unknown()` does, is reported as `invalid_key` with one issue inside, `{ reserved: true }`, as `record` reports it. A shape of either side that lists `__proto__` at that place keeps it. A value both sides passed on whole, such as through `unknown()` on both, is the input's own object, and is kept unchanged.
 
-Both validators see the whole input, so two `object`s with `unknownKeys: "strict"` can never pass together: each rejects the keys only the other lists. To combine strict shapes, spread them into one: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
+Both validators see the whole input, so two `object`s with `unknownKeys: "strict"` pass together only when every key of the input is listed in both shapes: each rejects the keys only the other lists. To combine strict shapes, spread them into one: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
 
 ## Recursive data
 
@@ -936,7 +945,7 @@ Recursive input can be deep enough to overflow the stack, or wide enough to make
 - `maxDepth`, 128 by default: the most levels of `lazy` that may be open at once. Deeper input fails with `too_big` and `{ maximum, type: "depth" }`.
 - `maxCalls`, 10,000 by default: the most calls one `lazy` may make in one validation. Past it, each call fails with `too_big` and `{ maximum, type: "calls" }`.
 
-Input nested thousands of levels deep, or a cyclic object, comes back as one of those failures and never throws. [Limits](docs/limits.md#recursive-data) explains both limits, when to change them, and how to build a recursive schema so that they hold.
+Input nested thousands of levels deep, or a cyclic object, comes back as one of those failures and does not throw, as long as `maxDepth` fits the stack. A schema with many validators at each level can overflow the stack of a worker first, so [lower `maxDepth`](docs/limits.md#maxdepth) for it there. [Limits](docs/limits.md#recursive-data) explains both limits, when to change them, and how to build a recursive schema so that they hold.
 
 ## Next
 
@@ -1258,7 +1267,7 @@ Two maps ship with the package. Each is a value of its own, so a program bundles
 | `englishMessages`    | English                          | "Must be at least 18"     |
 | `portugueseMessages` | Portuguese, as written in Brazil | "Deve ser no mínimo 18"   |
 
-Both word the same nine codes, and are passed the same way to `formatIssue`, `flatten`, `standard` and `assert`. For a program in several languages, choose the map where you show the issue:
+Both word the same nine codes. `formatIssue`, `flatten` and `standard` take the map as an argument, and `assert` takes it as its `messages` option. For a program in several languages, choose the map where you show the issue:
 
 ```ts
 import { englishMessages, formatIssue, portugueseMessages, type Messages } from "@codenhub/validation";
@@ -2012,7 +2021,7 @@ For a scheme the parser has no rules for, such as `ssh`, `url({ host })` receive
 
 ### Paths a server reads otherwise
 
-A server may read a path in ways the URL Standard does not: decoding `%61` to `a`, merging `//` into `/`, or dropping `;` and what follows from a segment. So write a `path` validator as an allowlist, a description of the paths that may pass, such as `string(startsWith("/api/"))`. A denylist such as "not under `/admin`" passes `/;/admin`, `//admin` and `/%61dmin`. An allowlist still holds for every such reading of what it accepts.
+A server may read a path in ways the URL Standard does not: decoding `%61` to `a`, merging `//` into `/`, or dropping `;` and what follows from a segment. So write a `path` validator as an allowlist, a description of the paths that may pass, such as `string(startsWith("/api/"))`. A denylist such as "not under `/admin`" passes `/;/admin`, `//admin` and `/%61dmin`. An allowlist still holds for each of those readings. It does not hold for a server that decodes the path twice. Such a server reads `/api/%252e%252e/admin` as `/api/../admin`, which is `/admin`, and `startsWith("/api/")` accepts it. For such a server, write an allowlist that leaves out `%`, such as `pattern(/^\/api\/[\w/-]*$/)`.
 
 With a `path` validator, two kinds of path fail before any part runs. Each fails as the path part, whose `issues` hold `invalid_value`:
 
@@ -2477,7 +2486,7 @@ The output side takes a default and the value of a `fallback` to pass the valida
 | `pattern`, `startsWith`, `endsWith`, `includes`, `nonBlank` | `pattern`                                                                                                                      |
 | `multipleOf`, `nonZero`, `unique()`                         | `multipleOf`, `not: { const: 0 }` and `uniqueItems`                                                                            |
 
-`multipleOf` is written only for a step binary floating point holds exactly: an integer it holds as written, so not `1e23`, or a fraction such as `0.5` or `0.25`. A reader divides in binary, where `0.3 / 0.1` is not `3`, so with a step such as `0.1` or `0.01` it would refuse values the validator accepts; such a step is left out. Ajv also refuses some very large numbers: it divides the value by the step and reads the result with `parseInt`, which misreads a result of `1e21` or more, so it refuses `1e25` against `multipleOf: 5`, which `number(multipleOf(5))` accepts. Where Ajv reads the schema, give the number a `max` that keeps the value divided by the step below `1e21`. Above `2 ** 53`, where a number is not the integer its digits spell, any reader that divides can refuse a value the validator accepts, as it does `20054952883093950` with `multipleOf(5)`. `uniqueItems` is written only for items that are primitives, since `unique()` compares an object by identity and `uniqueItems` by what it holds.
+`multipleOf` is written only for a step binary floating point holds exactly: an integer it holds as written, so not `1e23`, or a fraction such as `0.5` or `0.25`. A reader divides in binary, where `0.3 / 0.1` is not `3`, so with a step such as `0.1` or `0.01` it would refuse values the validator accepts; such a step is left out. Ajv also refuses some very large numbers: it divides the value by the step and reads the result with `parseInt`, which misreads a result of `1e21` or more, so it refuses `1e25` against `multipleOf: 5`, which `number(multipleOf(5))` accepts. Where Ajv reads the schema, give the number a `min` and a `max` that keep the value divided by the step strictly between `-1e21` and `1e21`. Above `2 ** 53`, where a number is not the integer its digits spell, any reader that divides can refuse a value the validator accepts, as it does `20054952883093950` with `multipleOf(5)`. `uniqueItems` is written only for items that are primitives, since `unique()` compares an object by identity and `uniqueItems` by what it holds.
 
 A format is written under JSON Schema's name for it, and with no `format` where that name's rules refuse text the validator accepts, which would break the promise above:
 
@@ -2598,32 +2607,32 @@ describe(shape["nickname"] as AnyValidator)?.kind; // "optional"
 
 A validator inside another is given as the validator itself, to be described in turn. So a recursive schema is read one level at a time, and never without end. The description and its options are frozen, and are a copy of what the factory was given. So changing an options object afterwards changes neither the validator nor what it says of itself.
 
-| `kind`                                                                                        | Made by                                           | Beside `options` and `checks`                                                                                                   |
-| --------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `"string"`, `"number"`, `"bigint"`, `"boolean"`, `"date"`, `"symbol"`, `"unknown"`, `"never"` | The validator of that name                        |                                                                                                                                 |
-| `"function"`                                                                                  | `func`                                            |                                                                                                                                 |
-| `"literal"`                                                                                   | `literal`                                         | `value`                                                                                                                         |
-| `"oneOf"`                                                                                     | `oneOf`                                           | `values`, a list, for an enum too                                                                                               |
-| `"instance"`                                                                                  | `instanceOf`                                      | `target`, the class                                                                                                             |
-| `"guard"`                                                                                     | A factory `guard` made                            | `expected`                                                                                                                      |
-| `"format"`                                                                                    | Every format, `port`, and a factory `format` made | `format`, its name, as in the issue it reports                                                                                  |
-| `"coerce"`                                                                                    | The `coerce` validators                           | `inner`, the strict validator, which has the options; `options` for an option of the coercion's own, `zoneless` of `coerceDate` |
-| `"object"`, `"objectLike"`                                                                    | `object`, `objectLike`                            | `shape`                                                                                                                         |
-| `"array"`, `"set"`                                                                            | `array`, `set`                                    | `item`                                                                                                                          |
-| `"tuple"`                                                                                     | `tuple`                                           | `items`, and `rest` when it has one                                                                                             |
-| `"record"`, `"map"`                                                                           | `record`, `map`                                   | `key`, `value`                                                                                                                  |
-| `"union"`, `"intersection"`                                                                   | `union`, `intersection`                           | `members`                                                                                                                       |
-| `"tagged"`                                                                                    | `tagged`                                          | `key`, `variants`                                                                                                               |
-| `"optional"`                                                                                  | `optional`                                        | `inner`, `default`; no `options` or `checks`                                                                                    |
-| `"nullable"`, `"nullish"`                                                                     | `nullable`, `nullish`                             | `inner`; no `options` or `checks`                                                                                               |
-| `"readonly"`                                                                                  | `readonly`                                        | `inner`; no `options` or `checks`                                                                                               |
-| `"fallback"`                                                                                  | `fallback`                                        | `inner`, `value`; no `options` or `checks`                                                                                      |
-| `"transform"`                                                                                 | `transform`                                       | `inner`, `convert`; no `options` or `checks`                                                                                    |
-| `"pipe"`                                                                                      | `pipe`                                            | `steps`; no `options` or `checks`                                                                                               |
-| `"codec"`                                                                                     | `codec`                                           | `input`, `output`, `decode`, `encode`; no `options` or `checks`                                                                 |
-| `"lazy"`                                                                                      | `lazy`                                            | `getter`, which returns the validator                                                                                           |
-| `"json"`, `"searchParams"`                                                                    | `json`, `searchParams`                            | `inner`                                                                                                                         |
-| `"check"`                                                                                     | Every built-in check                              | `code` and `params` of the issue it reports                                                                                     |
+| `kind`                                                                                                  | Made by                                           | Beside `options` and `checks`                                                                                                   |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `"string"`, `"number"`, `"bigint"`, `"boolean"`, `"date"`, `"symbol"`, `"unknown"`, `"never"`, `"file"` | The validator of that name                        |                                                                                                                                 |
+| `"function"`                                                                                            | `func`                                            |                                                                                                                                 |
+| `"literal"`                                                                                             | `literal`                                         | `value`                                                                                                                         |
+| `"oneOf"`                                                                                               | `oneOf`                                           | `values`, a list, for an enum too                                                                                               |
+| `"instance"`                                                                                            | `instanceOf`                                      | `target`, the class                                                                                                             |
+| `"guard"`                                                                                               | A factory `guard` made                            | `expected`                                                                                                                      |
+| `"format"`                                                                                              | Every format, `port`, and a factory `format` made | `format`, its name, as in the issue it reports                                                                                  |
+| `"coerce"`                                                                                              | The `coerce` validators                           | `inner`, the strict validator, which has the options; `options` for an option of the coercion's own, `zoneless` of `coerceDate` |
+| `"object"`, `"objectLike"`                                                                              | `object`, `objectLike`                            | `shape`                                                                                                                         |
+| `"array"`, `"set"`                                                                                      | `array`, `set`                                    | `item`                                                                                                                          |
+| `"tuple"`                                                                                               | `tuple`                                           | `items`, and `rest` when it has one                                                                                             |
+| `"record"`, `"map"`                                                                                     | `record`, `map`                                   | `key`, `value`                                                                                                                  |
+| `"union"`, `"intersection"`                                                                             | `union`, `intersection`                           | `members`                                                                                                                       |
+| `"tagged"`                                                                                              | `tagged`                                          | `key`, `variants`                                                                                                               |
+| `"optional"`                                                                                            | `optional`                                        | `inner`, `default`; no `options` or `checks`                                                                                    |
+| `"nullable"`, `"nullish"`                                                                               | `nullable`, `nullish`                             | `inner`; no `options` or `checks`                                                                                               |
+| `"readonly"`                                                                                            | `readonly`                                        | `inner`; no `options` or `checks`                                                                                               |
+| `"fallback"`                                                                                            | `fallback`                                        | `inner`, `value`; no `options` or `checks`                                                                                      |
+| `"transform"`                                                                                           | `transform`                                       | `inner`, `convert`; no `options` or `checks`                                                                                    |
+| `"pipe"`                                                                                                | `pipe`                                            | `steps`; no `options` or `checks`                                                                                               |
+| `"codec"`                                                                                               | `codec`                                           | `input`, `output`, `decode`, `encode`; no `options` or `checks`                                                                 |
+| `"lazy"`                                                                                                | `lazy`                                            | `getter`, which returns the validator                                                                                           |
+| `"json"`, `"searchParams"`, `"formData"`                                                                | `json`, `searchParams`, `formData`                | `inner`                                                                                                                         |
+| `"check"`                                                                                               | Every built-in check                              | `code` and `params` of the issue it reports                                                                                     |
 
 A check is described the same way, so the list in `checks` can be read too: `describe(pattern(/^a/))` gives `{ kind: "check", code: "invalid_format", params: { format: "regex", pattern: "/^a/" } }`. A check made by `checkFields` gives `{ kind: "check", fields }`, the properties it waits for, and no `params`, since its test is a function. What nobody can read gives `undefined`: a validator or a check you wrote by hand, and a check made by `check`, whose test is a function. A reader of a schema decides what such a rule means to it, and code that turns a schema into another notation usually refuses it. The function a `transform` converts with and a `lazy`'s getter are in the description as functions, for the same reason. The test of a `guard` and what a format reads with are not in it: a `guard` gives the `expected` it names and a format its name.
 
@@ -2645,7 +2654,7 @@ A validator goes where a library asks for a schema in one of three ways:
 - As a [JSON Schema](docs/json-schema.md), in which the tools of language models and OpenAPI documents are written.
 - Called directly, as any function is. That is also how one field of a [zod or valibot schema](#inside-a-zod-or-valibot-schema) can use it.
 
-Every validator is already a Standard Schema, worded in short English. The examples below pass it through `standard`, which words its issues in the full English, and were run that way. Each example was run against the version of the library it names, on 2026-10-07: it validated input that passes and input that fails, and gave what the text around it says.
+Every validator a factory of this package makes is already a Standard Schema, worded in short English. The examples for forms, RPC and HTTP pass it through `standard`, which words its issues in the full English, and were run that way. The other examples use what their section names: `standardJsonSchema`, `toJsonSchema`, or the validator called directly. Each example was run against the version of the library it names, on 2026-10-07: it validated input that passes and input that fails, and gave what the text around it says.
 
 ## Forms
 
@@ -2807,7 +2816,7 @@ server.setRequestHandler(CallToolRequestSchema, (request) => {
 
 ## OpenAPI
 
-OpenAPI 3.1 writes schemas in JSON Schema 2020-12, which `toJsonSchema` writes, so a schema goes under `components.schemas` unchanged. OpenAPI 3.0 uses an older dialect, which `toJsonSchema` does not write.
+OpenAPI 3.1 writes schemas in JSON Schema 2020-12, which `toJsonSchema` writes, so a schema goes under `components.schemas` unchanged. A recursive schema is the exception. It refers to its definitions as `#/$defs/schema1`, from the root of the document it is in, and the root of an OpenAPI document has no `$defs`. So such a schema needs its definitions moved under `components.schemas`, and its references rewritten to point there. OpenAPI 3.0 uses an older dialect, which `toJsonSchema` does not write.
 
 ```ts
 import { email, meta, object, string, toJsonSchema } from "@codenhub/validation";
@@ -2917,7 +2926,7 @@ A sign-up endpoint receives whatever anybody sends it, including input written t
 
 In short:
 
-- A failing input costs a bounded amount: its issues stop at 1,000, and a recursive schema stops at a depth and a number of calls.
+- A failing input reports a bounded number of issues: they stop at 1,000, and a recursive schema stops at a depth and a number of calls.
 - An input that passes is validated in full. So its size is yours to cap, with a `max` on text and on every collection.
 - `audit` lists every place a schema leaves a size open, so a test can keep it closed.
 
@@ -2943,7 +2952,8 @@ for (let level = 0; level < 100_000; level += 1) {
 }
 tree(deep); // { ok: false, ... }, code "too_big"
 
-// An address a server must not fetch is not a URL here.
+/// A URL whose host is written as an address a server must not fetch fails. The host is not looked up,
+// so a public name that resolves to such an address passes: check the address you connect to as well.
 url()("http://169.254.169.254/latest/meta-data"); // { ok: false, ... }
 url()("http://localhost:3000"); // { ok: false, ... }
 url()("javascript:alert(1)"); // { ok: false, ... }

@@ -352,8 +352,8 @@ function merge(left: unknown, right: unknown, walk: Walk): unknown {
  * reported as `invalid_key` with `{ reserved: true }`, as `record` reports it, unless a shape of either
  * side lists `__proto__` there; a value both sides passed on whole is the input's own object, and is
  * kept as it is. Two `object`s
- * with `unknownKeys: "strict"` never pass together, since each rejects the keys only the other lists;
- * spread their shapes into one strict object instead. It is synchronous when both validators are, and
+ * with `unknownKeys: "strict"` pass together only when every key of the input is listed in both shapes,
+ * since each rejects the keys only the other lists; spread their shapes into one strict object instead. It is synchronous when both validators are, and
  * asynchronous otherwise.
  *
  * @example

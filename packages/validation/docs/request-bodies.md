@@ -186,7 +186,7 @@ Where the outputs differ otherwise, as `"  ab "` does when one side trims it and
 
 The merged object is new. So an own `__proto__` key that one side passed on unchecked, as `unknown()` does, is reported as `invalid_key` with one issue inside, `{ reserved: true }`, as `record` reports it. A shape of either side that lists `__proto__` at that place keeps it. A value both sides passed on whole, such as through `unknown()` on both, is the input's own object, and is kept unchanged.
 
-Both validators see the whole input, so two `object`s with `unknownKeys: "strict"` can never pass together: each rejects the keys only the other lists. To combine strict shapes, spread them into one: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
+Both validators see the whole input, so two `object`s with `unknownKeys: "strict"` pass together only when every key of the input is listed in both shapes: each rejects the keys only the other lists. To combine strict shapes, spread them into one: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
 
 ## Recursive data
 
@@ -216,7 +216,7 @@ Recursive input can be deep enough to overflow the stack, or wide enough to make
 - `maxDepth`, 128 by default: the most levels of `lazy` that may be open at once. Deeper input fails with `too_big` and `{ maximum, type: "depth" }`.
 - `maxCalls`, 10,000 by default: the most calls one `lazy` may make in one validation. Past it, each call fails with `too_big` and `{ maximum, type: "calls" }`.
 
-Input nested thousands of levels deep, or a cyclic object, comes back as one of those failures and never throws. [Limits](limits.md#recursive-data) explains both limits, when to change them, and how to build a recursive schema so that they hold.
+Input nested thousands of levels deep, or a cyclic object, comes back as one of those failures and does not throw, as long as `maxDepth` fits the stack. A schema with many validators at each level can overflow the stack of a worker first, so [lower `maxDepth`](limits.md#maxdepth) for it there. [Limits](limits.md#recursive-data) explains both limits, when to change them, and how to build a recursive schema so that they hold.
 
 ## Next
 

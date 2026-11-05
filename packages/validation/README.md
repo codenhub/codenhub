@@ -1,10 +1,10 @@
 # @codenhub/validation
 
-Validation for data you do not control: a request body, a query string, a form, a message from another origin. A validator gives you either the typed value or every reason it is not one, and is built for input that may be hostile:
+Validation for data you do not control: a request body, a query string, a form, a message from another origin. A validator gives you either the typed value or the reasons it is not one, and is built for input that may be hostile:
 
 - **Formats return what a parser read.** `email()` and `url()` produce what the URL parser of the platform sees, so the value you store is the one a request or a mail server will use.
-- **What a failing input costs is bounded.** A long list of bad items stops at 1,000 issues, and input nested too deep is one issue, never a stack overflow.
-- **Issues never hold a value of the input**, so logging a failed validation cannot log a password. They do name its keys, in `path`, as [The issue](docs/errors.md#the-issue) says.
+- **What a failing input reports is bounded.** A long list of bad items stops at 1,000 issues, and input nested too deep is one issue, not a stack overflow, as long as the depth limit fits the stack.
+- **Issues never hold a value of the input**, so logging a failed validation cannot log a password, unless a `literal` or a `oneOf` checks one, since those report the values they accept. They do name its keys, in `path`, as [The issue](docs/errors.md#the-issue) says.
 
 Each validator is a function you import on its own, so a program bundles only the validators it uses. No dependencies.
 

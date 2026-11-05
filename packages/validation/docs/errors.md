@@ -180,7 +180,7 @@ Two maps ship with the package. Each is a value of its own, so a program bundles
 | `englishMessages`    | English                          | "Must be at least 18"     |
 | `portugueseMessages` | Portuguese, as written in Brazil | "Deve ser no mínimo 18"   |
 
-Both word the same nine codes, and are passed the same way to `formatIssue`, `flatten`, `standard` and `assert`. For a program in several languages, choose the map where you show the issue:
+Both word the same nine codes. `formatIssue`, `flatten` and `standard` take the map as an argument, and `assert` takes it as its `messages` option. For a program in several languages, choose the map where you show the issue:
 
 ```ts
 import { englishMessages, formatIssue, portugueseMessages, type Messages } from "@codenhub/validation";

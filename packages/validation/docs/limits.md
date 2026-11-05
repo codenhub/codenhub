@@ -10,7 +10,7 @@ A sign-up endpoint receives whatever anybody sends it, including input written t
 
 In short:
 
-- A failing input costs a bounded amount: its issues stop at 1,000, and a recursive schema stops at a depth and a number of calls.
+- A failing input reports a bounded number of issues: they stop at 1,000, and a recursive schema stops at a depth and a number of calls.
 - An input that passes is validated in full. So its size is yours to cap, with a `max` on text and on every collection.
 - `audit` lists every place a schema leaves a size open, so a test can keep it closed.
 
@@ -36,7 +36,8 @@ for (let level = 0; level < 100_000; level += 1) {
 }
 tree(deep); // { ok: false, ... }, code "too_big"
 
-// An address a server must not fetch is not a URL here.
+/// A URL whose host is written as an address a server must not fetch fails. The host is not looked up,
+// so a public name that resolves to such an address passes: check the address you connect to as well.
 url()("http://169.254.169.254/latest/meta-data"); // { ok: false, ... }
 url()("http://localhost:3000"); // { ok: false, ... }
 url()("javascript:alert(1)"); // { ok: false, ... }

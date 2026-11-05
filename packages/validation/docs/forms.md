@@ -133,8 +133,17 @@ const signupUpload = formData(
   }),
 );
 
-export const readSignup = async (request: Request) => signupUpload(await request.formData());
+export const readSignup = async (request: Request) => {
+  const form = await request.formData();
+  const avatar = form.get("avatar");
+  if (avatar instanceof File && avatar.name === "" && avatar.size === 0) {
+    form.delete("avatar");
+  }
+  return signupUpload(form);
+};
 ```
+
+A file input with no file chosen still sends a part: a `File` with no name and no content. `optional` sees a value, so `file` accepts it and `contentType` rejects it, since it holds no image. `readSignup` removes that part first, so a sign-up without an avatar passes.
 
 ### `formData`
 

@@ -14,7 +14,7 @@ A validator goes where a library asks for a schema in one of three ways:
 - As a [JSON Schema](json-schema.md), in which the tools of language models and OpenAPI documents are written.
 - Called directly, as any function is. That is also how one field of a [zod or valibot schema](#inside-a-zod-or-valibot-schema) can use it.
 
-Every validator is already a Standard Schema, worded in short English. The examples below pass it through `standard`, which words its issues in the full English, and were run that way. Each example was run against the version of the library it names, on 2026-10-07: it validated input that passes and input that fails, and gave what the text around it says.
+Every validator a factory of this package makes is already a Standard Schema, worded in short English. The examples for forms, RPC and HTTP pass it through `standard`, which words its issues in the full English, and were run that way. The other examples use what their section names: `standardJsonSchema`, `toJsonSchema`, or the validator called directly. Each example was run against the version of the library it names, on 2026-10-07: it validated input that passes and input that fails, and gave what the text around it says.
 
 ## Forms
 
@@ -176,7 +176,7 @@ server.setRequestHandler(CallToolRequestSchema, (request) => {
 
 ## OpenAPI
 
-OpenAPI 3.1 writes schemas in JSON Schema 2020-12, which `toJsonSchema` writes, so a schema goes under `components.schemas` unchanged. OpenAPI 3.0 uses an older dialect, which `toJsonSchema` does not write.
+OpenAPI 3.1 writes schemas in JSON Schema 2020-12, which `toJsonSchema` writes, so a schema goes under `components.schemas` unchanged. A recursive schema is the exception. It refers to its definitions as `#/$defs/schema1`, from the root of the document it is in, and the root of an OpenAPI document has no `$defs`. So such a schema needs its definitions moved under `components.schemas`, and its references rewritten to point there. OpenAPI 3.0 uses an older dialect, which `toJsonSchema` does not write.
 
 ```ts
 import { email, meta, object, string, toJsonSchema } from "@codenhub/validation";

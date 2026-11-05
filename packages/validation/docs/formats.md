@@ -284,7 +284,7 @@ For a scheme the parser has no rules for, such as `ssh`, `url({ host })` receive
 
 ### Paths a server reads otherwise
 
-A server may read a path in ways the URL Standard does not: decoding `%61` to `a`, merging `//` into `/`, or dropping `;` and what follows from a segment. So write a `path` validator as an allowlist, a description of the paths that may pass, such as `string(startsWith("/api/"))`. A denylist such as "not under `/admin`" passes `/;/admin`, `//admin` and `/%61dmin`. An allowlist still holds for every such reading of what it accepts.
+A server may read a path in ways the URL Standard does not: decoding `%61` to `a`, merging `//` into `/`, or dropping `;` and what follows from a segment. So write a `path` validator as an allowlist, a description of the paths that may pass, such as `string(startsWith("/api/"))`. A denylist such as "not under `/admin`" passes `/;/admin`, `//admin` and `/%61dmin`. An allowlist still holds for each of those readings. It does not hold for a server that decodes the path twice. Such a server reads `/api/%252e%252e/admin` as `/api/../admin`, which is `/admin`, and `startsWith("/api/")` accepts it. For such a server, write an allowlist that leaves out `%`, such as `pattern(/^\/api\/[\w/-]*$/)`.
 
 With a `path` validator, two kinds of path fail before any part runs. Each fails as the path part, whose `issues` hold `invalid_value`:
 

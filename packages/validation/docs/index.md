@@ -5,7 +5,7 @@ description: What the validation package is for, how to install it, and the orde
 
 # Validate values and shapes
 
-`@codenhub/validation` answers one question: is this value what I said it should be? You give a value to a validator. You get back either that value, typed, or a complete list of what is wrong with it.
+`@codenhub/validation` answers one question: is this value what I said it should be? You give a value to a validator. You get back either that value, typed, or a list of what is wrong with it.
 
 It works the same for one value, such as an email address or a port number, and for a whole object, such as a form or a request body.
 
@@ -16,10 +16,10 @@ Data that crosses a boundary you do not control can hold anything: a request, a 
 The package is built for that boundary, where the input may be hostile:
 
 - **A format gives you what the parser read.** `email()` and `url()` produce the value the platform's URL parser reads. The value you store is the one a request or a mail server will use.
-- **A failing input has a bounded cost.** A long list of bad items stops at 1,000 issues. Input nested too deep is one issue, never a stack overflow.
-- **An issue never holds a value of the input.** A log of failures holds no passwords. An issue does name the input's keys, in its `path`.
+- **A failing input has a bounded report.** A long list of bad items stops at 1,000 issues. Input nested too deep is one issue, not a stack overflow, as long as the depth limit fits the stack.
+- **An issue never holds a value of the input.** A log of failures holds no passwords, unless a `literal` or a `oneOf` checks one: those report the values they accept, as [Getting started](getting-started.md#fixed-values) says. An issue does name the input's keys, in its `path`.
 
-Input that passes is checked in full, so a large valid input still costs its size. [Limits](limits.md) says how to bound it.
+Every valid item is still checked, whether the input passes or fails, so a large input costs its size. [Limits](limits.md) says how to bound its size and its depth.
 
 ## Installation
 
