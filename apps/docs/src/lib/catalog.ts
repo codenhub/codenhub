@@ -1,3 +1,6 @@
+import { pathToFileURL } from "node:url";
+
+import { fillMessage } from "@codenhub/app-shell/messages";
 import { packageDemoUrl, packageNpmUrl } from "@codenhub/app-shell/package-links";
 import {
   assertSingleH1,
@@ -10,12 +13,14 @@ import {
 } from "@codenhub/tools/documentation";
 import type { MarkdownHeading, MarkdownInstance } from "astro";
 
-import { defaultLocale, localizePath, type Locale } from "../i18n";
+import { defaultLocale, localizePath, messagesFor, type Locale } from "../i18n";
 import { siteConfig } from "../site-config";
 import { publishDocumentMarkdown } from "./document-markdown";
 import { annotateCuratedLinks, applyFolderCuration } from "./folder-curation";
 import { rewritePackageMarkdownLinks } from "./markdown-links";
+import { rendererFor } from "./markdown/processor";
 import { pageAlternates, type PageAlternate } from "./page-alternates";
+import { localizeReferenceHeadings, localizeReferenceHtml } from "./reference-labels";
 
 type PublicDocumentModule = MarkdownInstance<Record<string, unknown>>;
 
@@ -27,7 +32,15 @@ export interface PublicDocument {
    * when it has a translation; empty otherwise.
    */
   alternates: PageAlternate[];
-  /** Language the page is written in. */
+  /**
+   * The English page's route. Every page exists in every locale at this route
+   * under the locale's prefix, translated or not.
+   */
+  englishRoute: string;
+  /**
+   * Language the page is written in. Under a locale prefix, `en` marks an
+   * untranslated page: its body is the English one, inside the locale's interface.
+   */
   lang: Locale;
   /** Whether this is a curated folder's overview page, which lists its published siblings. */
   curated?: boolean;
@@ -70,13 +83,21 @@ const escapeHtml = (value: string): string =>
  * entrypoint heading they sit under. `docs/specs/packages-documentation.md`
  * carves this out for `docs/reference/` pages.
  */
-export function insertReferenceDeck(html: string, meta: { description?: string; since?: string }): string {
+export function insertReferenceDeck(
+  html: string,
+  meta: { description?: string; since?: string },
+  addedIn = "Added in {version}",
+  lang?: string,
+): string {
   const parts: string[] = [];
   if (meta.description !== undefined) {
     parts.push(`<p class="reference-summary">${escapeHtml(meta.description)}</p>`);
   }
   if (meta.since !== undefined) {
-    parts.push(`<p class="reference-since">Added in ${escapeHtml(meta.since)}</p>`);
+    const langAttribute = lang === undefined ? "" : ` lang="${lang}"`;
+    parts.push(
+      `<p class="reference-since"${langAttribute}>${fillMessage(addedIn, { version: escapeHtml(meta.since) })}</p>`,
+    );
   }
   const cut = parts.length === 0 ? -1 : html.indexOf("</h1>");
   if (cut === -1) {
@@ -97,11 +118,10 @@ export interface PublicPackage {
   githubLabel?: string;
   label: string;
   /**
-   * Each locale's navigation list, for a locale the package has at least one
-   * translation in: every published page, translated where a translation exists
-   * and English otherwise.
+   * Each locale's pages: every published page under the locale's prefix, the
+   * translation where one exists and the English body otherwise.
    */
-  localeDocuments: Partial<Record<TranslationLocale, PublicDocument[]>>;
+  localeDocuments: Record<TranslationLocale, PublicDocument[]>;
   /** npm package name from the manifest. */
   name?: string;
   /** npmjs.com URL, when the package is published. */
@@ -156,6 +176,8 @@ function readManifestString(manifest: unknown, key: string): string | undefined 
 }
 
 interface LoadedDocument extends PublicDocument {
+  /** Markdown body without frontmatter, rendered again for each locale that shows it untranslated. */
+  body: string;
   /** Release date of a changelog version page, used only to annotate its curated index. */
   date?: string;
   /** Compiled HTML before local links are rewritten, used only to resolve curated-folder links. */
@@ -167,6 +189,8 @@ interface LoadableDocument {
   docsPath: string;
   /** Language the document is written in. */
   lang: Locale;
+  /** Language of the page it is published on, whose prefix its links to other pages keep. */
+  pageLocale: Locale;
   /** Path of the English document relative to `docs/`, which a translation mirrors. */
   relativePath: string;
   routePath: string;
@@ -187,16 +211,20 @@ async function loadDocument(slug: string, definition: LoadableDocument): Promise
 
   const linkedHtml = rewritePackageMarkdownLinks(rawHtml, {
     packageSlug: slug,
+    pageLocale: definition.pageLocale,
     sourceRelativePath: definition.docsPath,
   });
   const isReference = isReferenceDocument({ relativePath: definition.relativePath });
+  const englishRoute = `/${slug}/${definition.routePath}`.replace(/\/$/, "") + "/";
 
   return {
     alternates: [],
+    body: documentModule.rawContent(),
     curated: frontmatter.curated,
     date: frontmatter.date,
     description: frontmatter.description,
     group: frontmatter.group,
+    englishRoute,
     headings,
     html: isReference
       ? insertReferenceDeck(linkedHtml, { description: frontmatter.description, since: frontmatter.since })
@@ -204,6 +232,7 @@ async function loadDocument(slug: string, definition: LoadableDocument): Promise
     lang: definition.lang,
     markdown: publishDocumentMarkdown({
       body: documentModule.rawContent(),
+      pageLocale: definition.pageLocale,
       relativePath: definition.docsPath,
       siteUrl: siteConfig.siteUrl,
       slug,
@@ -211,10 +240,63 @@ async function loadDocument(slug: string, definition: LoadableDocument): Promise
     order: frontmatter.order,
     rawHtml,
     relativePath: definition.relativePath,
-    route: `${localizePath(definition.lang, `/${slug}`)}/${definition.routePath}`.replace(/\/$/, "") + "/",
+    route: localizePath(definition.lang, englishRoute),
     routePath: definition.routePath,
     since: frontmatter.since,
     title: frontmatter.title,
+  };
+}
+
+/**
+ * An English document as the page it is under a locale's prefix while it has
+ * no translation there: the English body, rendered again so the controls added
+ * to it, its links to other pages, and a generated reference page's fixed
+ * labels speak the locale. It names no `hreflang` alternates; the layout names
+ * the English page as canonical instead.
+ * @param english The English document.
+ * @param slug The package slug.
+ * @param locale The locale it is shown under.
+ * @returns The page.
+ */
+async function untranslatedPage(
+  english: LoadedDocument,
+  slug: string,
+  locale: TranslationLocale,
+): Promise<LoadedDocument> {
+  const renderer = await rendererFor(locale);
+  // The path only tells the pipeline whether this is a reference page.
+  const fileURL = pathToFileURL(`/packages/${slug}/docs/${english.relativePath}`);
+  const rendered = await renderer.render(english.body, { fileURL });
+  const messages = messagesFor(locale);
+  let html = rewritePackageMarkdownLinks(rendered.code, {
+    packageSlug: slug,
+    pageLocale: locale,
+    sourceRelativePath: english.relativePath,
+  });
+  let headings = rendered.metadata.headings;
+  if (isReferenceDocument(english)) {
+    html = insertReferenceDeck(
+      localizeReferenceHtml(html, messages.reference.labels, locale),
+      { description: english.description, since: english.since },
+      messages.reference.addedIn,
+      locale,
+    );
+    headings = localizeReferenceHeadings(headings, messages.reference.labels);
+  }
+  return {
+    ...english,
+    alternates: [],
+    headings,
+    html,
+    markdown: publishDocumentMarkdown({
+      body: english.body,
+      pageLocale: locale,
+      relativePath: english.relativePath,
+      siteUrl: siteConfig.siteUrl,
+      slug,
+    }),
+    rawHtml: rendered.code,
+    route: localizePath(locale, english.englishRoute),
   };
 }
 
@@ -225,7 +307,7 @@ async function loadDocument(slug: string, definition: LoadableDocument): Promise
  * @returns The published documents.
  */
 function finishDocuments(loaded: readonly LoadedDocument[]): PublicDocument[] {
-  const documents: PublicDocument[] = loaded.map(({ date: _date, rawHtml: _rawHtml, ...document }) => {
+  const documents: PublicDocument[] = loaded.map(({ body: _body, date: _date, rawHtml: _rawHtml, ...document }) => {
     if (document.curated !== true) {
       return document;
     }
@@ -247,7 +329,12 @@ async function loadCatalog(): Promise<PublicPackage[]> {
       const englishDocuments = applyFolderCuration(
         await Promise.all(
           packageDefinition.documents.map((definition) =>
-            loadDocument(slug, { ...definition, docsPath: definition.relativePath, lang: defaultLocale }),
+            loadDocument(slug, {
+              ...definition,
+              docsPath: definition.relativePath,
+              lang: defaultLocale,
+              pageLocale: defaultLocale,
+            }),
           ),
         ),
       );
@@ -262,6 +349,7 @@ async function loadCatalog(): Promise<PublicPackage[]> {
               ...definition,
               docsPath: `${definition.locale}/${definition.relativePath}`,
               lang: definition.locale,
+              pageLocale: definition.locale,
             }),
           ),
       );
@@ -276,26 +364,29 @@ async function loadCatalog(): Promise<PublicPackage[]> {
       }
 
       const documents = finishDocuments(englishDocuments);
-      // A locale's navigation lists every published page, the translation where
-      // there is one and the English page otherwise.
-      const localeDocuments: Partial<Record<TranslationLocale, PublicDocument[]>> = {};
-      for (const locale of TRANSLATION_LOCALES) {
-        const translations = new Map(
-          translatedDocuments
-            .filter(({ lang }) => lang === locale)
-            .map((document) => [document.relativePath, document]),
-        );
-        if (translations.size > 0) {
+      // Every locale publishes every page: the translation where there is one,
+      // and the English body inside the locale's interface otherwise.
+      const localeEntries = await Promise.all(
+        TRANSLATION_LOCALES.map(async (locale) => {
+          const translations = new Map(
+            translatedDocuments
+              .filter(({ lang }) => lang === locale)
+              .map((document) => [document.relativePath, document]),
+          );
           // Curation sets a kept sibling's `order` from its link position in the
           // English index, so the translation takes the English page's place.
-          localeDocuments[locale] = finishDocuments(
+          const pages = await Promise.all(
             englishDocuments.map((english) => {
               const translation = translations.get(english.relativePath);
-              return translation === undefined ? english : { ...translation, order: english.order };
+              return translation === undefined
+                ? untranslatedPage(english, slug, locale)
+                : { ...translation, order: english.order };
             }),
           );
-        }
-      }
+          return [locale, finishDocuments(pages)] as const;
+        }),
+      );
+      const localeDocuments = Object.fromEntries(localeEntries) as Record<TranslationLocale, PublicDocument[]>;
 
       const manifest = manifestModules[packageDefinition.manifestPath];
       const name = readManifestString(manifest, "name");
@@ -325,32 +416,29 @@ async function loadCatalog(): Promise<PublicPackage[]> {
 }
 
 /**
- * The documents a package's navigation lists in a page language.
+ * The pages a package publishes in a page language, which its navigation lists.
  * @param publicPackage The package.
  * @param locale The page's language.
- * @returns The locale's list, or the English documents for English or a locale the package has no translation in.
+ * @returns The locale's pages.
  */
 export function navigationDocuments(publicPackage: PublicPackage, locale: Locale): PublicDocument[] {
-  return locale === defaultLocale
-    ? publicPackage.documents
-    : (publicPackage.localeDocuments[locale] ?? publicPackage.documents);
+  return locale === defaultLocale ? publicPackage.documents : publicPackage.localeDocuments[locale];
 }
 
 /**
- * Every page a package publishes, each with the language its navigation is shown in.
+ * Every page a package publishes, each with the language of its interface.
  *
- * English pages are listed once, in English. A translated page is listed under
- * its own locale; a locale route exists only for a translated document.
+ * Every page is listed once per language: in English, and under each locale,
+ * translated or with its English body. A page whose `lang` differs from its
+ * locale is untranslated.
  * @param publicPackage The package.
  * @returns Each page and its interface language.
  */
 export function publishedPages(publicPackage: PublicPackage): { document: PublicDocument; locale: Locale }[] {
   return [
     ...publicPackage.documents.map((document) => ({ document, locale: defaultLocale as Locale })),
-    ...Object.entries(publicPackage.localeDocuments).flatMap(([locale, documents]) =>
-      (documents ?? [])
-        .filter((document) => document.lang === locale)
-        .map((document) => ({ document, locale: locale as Locale })),
+    ...TRANSLATION_LOCALES.flatMap((locale) =>
+      publicPackage.localeDocuments[locale].map((document) => ({ document, locale: locale as Locale })),
     ),
   ];
 }

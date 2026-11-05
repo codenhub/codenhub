@@ -3,13 +3,13 @@
  * The header's language menu: the current page in each language the host
  * lists, in the order given. Plain links in a `<details>`, so it works without
  * JavaScript; the script animates its close and closes it on an outside click
- * or Escape. With `storageKey`, a chosen option's locale is saved under that
- * `localStorage` key, for a host that redirects by the visitor's choice.
+ * or Escape. A chosen option's locale is saved in the locale cookie
+ * (`../locales.ts`), shared by every CodenHub site, for a host that redirects
+ * by the visitor's choice (`locale-redirect.astro`).
  *
  * @param label - The menu's accessible name, in the page's language.
  * @param locale - The page's locale, marked as current among the options.
  * @param options - Each language version of the page: its locale, URL, and name in its own language.
- * @param storageKey - Where to save the chosen locale; nothing is saved without it.
  */
 interface LanguageOption {
   locale: string;
@@ -21,13 +21,12 @@ interface Props {
   label: string;
   locale: string;
   options: readonly LanguageOption[];
-  storageKey?: string;
 }
 
-const { label, locale, options, storageKey } = Astro.props;
+const { label, locale, options } = Astro.props;
 ---
 
-<details class="shell-language" data-language-menu data-storage-key={storageKey}>
+<details class="shell-language" data-language-menu>
   <summary aria-label={label} class="shell-action shell-language-trigger" title={label}>
     <i aria-hidden="true" class="ic-lucide-languages"></i>
     <i aria-hidden="true" class="ic-lucide-chevron-down shell-language-chevron"></i>
@@ -53,12 +52,13 @@ const { label, locale, options, storageKey } = Astro.props;
 </details>
 
 <script>
+  import { LOCALE_COOKIE_DOMAIN, localeCookie } from "../locales.ts";
+
   // Removing `open` hides the list at once, so a close first plays the list's
   // out animation (`data-closing`, `styles.css`) and removes `open` after it.
   for (const menu of document.querySelectorAll<HTMLDetailsElement>("[data-language-menu]")) {
     const summary = menu.querySelector("summary");
     const list = menu.querySelector<HTMLElement>(".shell-language-list");
-    const storageKey = menu.dataset.storageKey;
 
     const finish = () => {
       if (menu.hasAttribute("data-closing")) {
@@ -80,16 +80,11 @@ const { label, locale, options, storageKey } = Astro.props;
       finish();
     };
 
-    if (storageKey !== undefined) {
-      for (const option of menu.querySelectorAll<HTMLAnchorElement>("a[hreflang]")) {
-        option.addEventListener("click", () => {
-          try {
-            localStorage.setItem(storageKey, option.hreflang);
-          } catch {
-            // Storage blocked: the choice is not remembered, and the link still works.
-          }
-        });
-      }
+    for (const option of menu.querySelectorAll<HTMLAnchorElement>("a[hreflang]")) {
+      option.addEventListener("click", () => {
+        // Blocked cookies drop the write silently: the choice is not remembered, and the link still works.
+        document.cookie = localeCookie(option.hreflang, location.hostname, LOCALE_COOKIE_DOMAIN);
+      });
     }
 
     summary?.addEventListener("click", (event) => {

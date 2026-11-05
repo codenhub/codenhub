@@ -1,5 +1,4 @@
 import type { SearchEntry } from "@codenhub/app-shell/search";
-import type { TranslationLocale } from "@codenhub/tools/documentation";
 
 import type { Locale } from "../../i18n";
 import { navigationDocuments, packages } from "../catalog";
@@ -24,14 +23,4 @@ export function buildLocaleSearchIndex(locale: Locale): SearchEntry[] {
       label: publicPackage.label,
     })),
   );
-}
-
-/**
- * The locales any package has a translation in, which are the locales that have pages.
- * @returns Those locales, without duplicates.
- */
-export function translatedLocales(): TranslationLocale[] {
-  return [
-    ...new Set(packages.flatMap((publicPackage) => Object.keys(publicPackage.localeDocuments) as TranslationLocale[])),
-  ];
 }

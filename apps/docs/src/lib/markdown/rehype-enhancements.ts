@@ -6,6 +6,13 @@ import type { AstNode } from "./ast";
 import { getNodeText } from "./ast";
 
 interface MarkdownEnhancementOptions {
+  /**
+   * The language of the page the document renders on, when it differs from
+   * the document's own: an untranslated page under a locale prefix speaks the
+   * locale's interface around its English body. The controls it adds then
+   * carry `lang`, since the body around them is in another language.
+   */
+  locale?: Locale;
   siteOrigin?: string;
 }
 
@@ -49,7 +56,7 @@ function icon(path: string, className?: string): AstNode {
   ]);
 }
 
-function appendHeadingAnchor(node: AstNode, isReference: boolean, messages: MarkdownMessages): void {
+function appendHeadingAnchor(node: AstNode, { isReference, locale, messages }: TransformContext): void {
   if (!(isReference ? /^h[2-6]$/ : /^h[23]$/).test(node.tagName ?? "") || typeof node.properties?.id !== "string") {
     return;
   }
@@ -62,6 +69,7 @@ function appendHeadingAnchor(node: AstNode, isReference: boolean, messages: Mark
         ariaLabel: fillMessage(messages.headingLink, { heading: headingText }),
         className: ["heading-anchor"],
         href: `#${node.properties.id}`,
+        ...(locale === undefined ? {} : { lang: locale }),
       },
       [
         icon(
@@ -143,13 +151,18 @@ function wrapCodeBlock(node: AstNode, context: TransformContext): AstNode {
   context.codeBlockCount += 1;
   const statusId = `code-copy-status-${context.codeBlockCount}`;
   return element("figure", { className: ["code-block"] }, [
-    element("figcaption", { className: ["code-block-header"] }, [
-      { type: "text", value: label, children: [] },
-      createCopyButton(label, statusId, context),
-      element("span", { ariaLive: "polite", className: ["code-copy-status", "sr-only"], id: statusId }, [
-        { type: "text", value: "" },
-      ]),
-    ]),
+    // The caption's label, button, and status all speak the interface's language.
+    element(
+      "figcaption",
+      { className: ["code-block-header"], ...(context.locale === undefined ? {} : { lang: context.locale }) },
+      [
+        { type: "text", value: label, children: [] },
+        createCopyButton(label, statusId, context),
+        element("span", { ariaLive: "polite", className: ["code-copy-status", "sr-only"], id: statusId }, [
+          { type: "text", value: "" },
+        ]),
+      ],
+    ),
     node,
   ]);
 }
@@ -211,7 +224,7 @@ function transformChildren(node: AstNode, context: TransformContext): void {
     if (context.isReference) {
       markReferenceHeading(child);
     }
-    appendHeadingAnchor(child, context.isReference, context.messages);
+    appendHeadingAnchor(child, context);
     enhanceExternalLink(child, context.siteOrigin);
     return wrapTable(wrapCodeBlock(child, context));
   });
@@ -251,7 +264,7 @@ export function rehypeMarkdownEnhancements(options: MarkdownEnhancementOptions =
     if (isReference) {
       markReferenceSignatures(root);
     }
-    const { markdown, shell } = messagesFor(documentLocale(file?.path));
+    const { markdown, shell } = messagesFor(options.locale ?? documentLocale(file?.path));
     transformChildren(root, { ...options, codeBlockCount: 0, copy: shell.copy, isReference, messages: markdown });
   };
 }

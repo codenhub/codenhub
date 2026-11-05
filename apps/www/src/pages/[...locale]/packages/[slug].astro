@@ -5,6 +5,7 @@
  * its own (docs/roadmap.md, "Package-provided sections").
  */
 import StatusBadge from "@codenhub/app-shell/components/status-badge.astro";
+import { localizeUrl } from "@codenhub/app-shell/locales";
 import * as bookOpenIcon from "virtual:@codenhub/icons/lucide/book-open";
 import * as bookTextIcon from "virtual:@codenhub/icons/lucide/book-text";
 import * as botIcon from "virtual:@codenhub/icons/lucide/bot";
@@ -68,9 +69,11 @@ interface Link {
   external: boolean;
 }
 
+// Every documentation page exists in every locale, so these keep the reader's language.
+// `llms.txt` is English only (`docs/specs/packages-translations.md`).
 const linkCandidates: (Link | undefined)[] = [
-  links.docs === undefined ? undefined : { href: links.docs, label: t("package.links.documentation"), icon: decorative(bookOpenIcon), external: false },
-  links.changelog === undefined ? undefined : { href: links.changelog, label: t("package.links.changelog"), icon: decorative(historyIcon), external: false },
+  links.docs === undefined ? undefined : { href: localizeUrl(links.docs, locale), label: t("package.links.documentation"), icon: decorative(bookOpenIcon), external: false },
+  links.changelog === undefined ? undefined : { href: localizeUrl(links.changelog, locale), label: t("package.links.changelog"), icon: decorative(historyIcon), external: false },
   links.demo === undefined ? undefined : { href: links.demo, label: t("package.links.demo"), icon: decorative(playIcon), external: false },
   links.llms === undefined ? undefined : { href: links.llms, label: "llms.txt", icon: decorative(botIcon), external: true },
 ];

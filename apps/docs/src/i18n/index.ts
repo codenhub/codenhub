@@ -1,28 +1,23 @@
 /**
- * The site's languages, following the main site's URL scheme
- * (`apps/www/src/i18n/index.ts`): English at the root and each other locale
- * under its own prefix. A locale page exists only for a translated document
- * (`docs/specs/packages-translations.md`, "Documentation site"), but its
- * interface is always in that locale.
+ * The site's languages, shared with the main site (`@codenhub/app-shell/locales`):
+ * English at the root and each other locale under its own prefix. Every page
+ * exists in every locale; an untranslated one shows its English body inside
+ * that locale's interface (`docs/specs/packages-translations.md`,
+ * "Documentation site").
  */
-import { TRANSLATION_LOCALES, type TranslationLocale } from "@codenhub/tools/documentation";
+import { DEFAULT_LOCALE, type SiteLocale } from "@codenhub/app-shell/locales";
 
 import { en, type Dictionary } from "./locales/en";
 import { es } from "./locales/es";
 import { ptBR } from "./locales/pt-br";
 
 export type { Dictionary } from "./locales/en";
+export { LOCALE_NAMES as localeNames, SITE_LOCALES as locales, localizePath } from "@codenhub/app-shell/locales";
 
 /** A page language: English, or a locale packages may translate into. */
-export type Locale = "en" | TranslationLocale;
+export type Locale = SiteLocale;
 
-export const defaultLocale = "en" satisfies Locale;
-
-/** Every page language, English first. */
-export const locales: readonly Locale[] = [defaultLocale, ...TRANSLATION_LOCALES];
-
-/** Each locale's name in its own language, as the language menu lists it. */
-export const localeNames: Record<Locale, string> = { en: "English", "pt-BR": "Português (Brasil)", es: "Español" };
+export const defaultLocale = DEFAULT_LOCALE;
 
 const dictionaries: Record<Locale, Dictionary> = { en, es, "pt-BR": ptBR };
 
@@ -33,14 +28,4 @@ const dictionaries: Record<Locale, Dictionary> = { en, es, "pt-BR": ptBR };
  */
 export function messagesFor(locale: Locale): Dictionary {
   return dictionaries[locale];
-}
-
-/**
- * Prefixes a site path with a locale, leaving English at the root.
- * @param locale The page's language.
- * @param path A root-relative path such as `/search-index.json`.
- * @returns The path under the locale's prefix.
- */
-export function localizePath(locale: Locale, path: string): string {
-  return locale === defaultLocale ? path : `/${locale}${path}`;
 }

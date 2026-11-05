@@ -16,16 +16,16 @@
 import type { ComponentProps } from "astro/types";
 import { defaultShellMessages } from "@codenhub/app-shell/messages";
 import LanguageMenu from "@codenhub/app-shell/components/language-menu.astro";
+import LocaleRedirect from "@codenhub/app-shell/components/locale-redirect.astro";
+import { localizePath } from "@codenhub/app-shell/locales";
 import SearchPalette from "@codenhub/app-shell/components/search-palette.astro";
 import ShellLayout from "@codenhub/app-shell/layouts/base-layout.astro";
 
 import {
   defaultLocale,
   getTranslator,
-  LOCALE_STORAGE_KEY,
   localeNames,
   locales,
-  localesByLanguage,
   routing,
   shellMessages,
   type Locale,
@@ -82,63 +82,18 @@ const redirectTargets = Object.fromEntries(
   localLinks={localLinks}
   messages={messages}
 >
-  <!--
-    Sends a visitor arriving at an English page to the same page in their
-    language: the one they chose in the language menu, else the first of their
-    browser's languages the site has. Inline in the head so it runs before
-    first paint, which is also why it mirrors `detectLocale` (`../i18n`)
-    rather than importing it. It never runs on a prefixed URL, so a shared
-    `/pt-BR/` link always opens in Portuguese, and never after a link on this
-    site, so choosing English stays English even where storage is blocked.
-  -->
-  {
-    locale === defaultLocale && (
-      <script
-        define:vars={{ languages: localesByLanguage, locales, storageKey: LOCALE_STORAGE_KEY, targets: redirectTargets }}
-        is:inline
-        slot="head"
-      >
-        (() => {
-          try {
-            if (document.referrer !== "" && new URL(document.referrer).origin === location.origin) {
-              return;
-            }
-          } catch {
-            // An unreadable referrer counts as arriving from elsewhere.
-          }
-
-          let chosen = null;
-          try {
-            chosen = localStorage.getItem(storageKey);
-          } catch {
-            // Storage blocked: fall back to the browser's languages.
-          }
-
-          let target = locales.includes(chosen) ? chosen : undefined;
-          if (target === undefined) {
-            const preferences = navigator.languages.length > 0 ? navigator.languages : [navigator.language];
-            for (const preference of preferences) {
-              const language = (preference ?? "").split("-")[0].toLowerCase();
-              if (Object.hasOwn(languages, language)) {
-                target = languages[language];
-                break;
-              }
-            }
-          }
-
-          if (target !== undefined && Object.hasOwn(targets, target)) {
-            location.replace(targets[target] + location.search + location.hash);
-          }
-        })();
-      </script>
-    )
-  }
+  <!-- Sends a visitor arriving at an English page to the one in the language they chose. -->
+  {locale === defaultLocale && <LocaleRedirect slot="head" targets={redirectTargets} />}
   {
     alternates.map((alternate) => (
       <link href={new URL(alternate.pathname, siteConfig.siteUrl).href} hreflang={alternate.hreflang} rel="alternate" slot="head" />
     ))
   }
-  <SearchPalette indexUrl={`${siteConfig.docsUrl}/search-index.json`} messages={messages.search} slot="actions" />
+  <SearchPalette
+    indexUrl={`${siteConfig.docsUrl}${localizePath(locale ?? defaultLocale, "/search-index.json")}`}
+    messages={messages.search}
+    slot="actions"
+  />
   {
     locale !== undefined && translator !== undefined && (
       <LanguageMenu
@@ -146,7 +101,6 @@ const redirectTargets = Object.fromEntries(
         locale={locale}
         options={languageOptions}
         slot="actions"
-        storageKey={LOCALE_STORAGE_KEY}
       />
     )
   }

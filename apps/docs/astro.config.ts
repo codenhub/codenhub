@@ -1,8 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { rehypeHeadingIds, unified } from "@astrojs/markdown-remark";
-import { remarkAlerts } from "@codenhub/app-shell/remark-alerts";
 import lucide from "@codenhub/icons/data/lucide";
 import simpleIcons from "@codenhub/icons/data/simple-icons";
 import { viteIcons } from "@codenhub/icons/vite";
@@ -13,8 +11,7 @@ import { defineConfig } from "astro/config";
 
 import { createDocumentationIntegration } from "./src/lib/documentation-integration";
 import { createLocaleNotFoundIntegration } from "./src/lib/locale-not-found-integration";
-import { createCodeBlockTransformer } from "./src/lib/markdown/code-blocks";
-import { rehypeMarkdownEnhancements } from "./src/lib/markdown/rehype-enhancements";
+import { markdownProcessor, shikiConfig } from "./src/lib/markdown/processor";
 import { createPublishedDocsSnapshotIntegration } from "./src/lib/published-docs-snapshot-integration";
 import { siteConfig } from "./src/site-config";
 
@@ -36,14 +33,8 @@ export default defineConfig({
     createLocaleNotFoundIntegration(TRANSLATION_LOCALES),
   ],
   markdown: {
-    processor: unified({
-      rehypePlugins: [rehypeHeadingIds, rehypeMarkdownEnhancements],
-      remarkPlugins: [remarkAlerts],
-    }),
-    shikiConfig: {
-      theme: "github-dark-default",
-      transformers: [createCodeBlockTransformer()],
-    },
+    processor: markdownProcessor(),
+    shikiConfig,
   },
   vite: {
     plugins: [

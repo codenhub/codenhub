@@ -26,15 +26,19 @@ const tocHeadings = document.headings.filter(({ depth }) => depth === 2 || depth
 const headingTitle = document.headings.find(({ depth }) => depth === 1)?.text;
 const browserTitle =
   isReferenceDocument(document) && headingTitle !== undefined ? headingTitle : document.title;
+// An English body under a locale prefix (`docs/specs/packages-translations.md`, "Documentation site").
+const untranslated = document.lang !== locale;
 ---
 
 <BaseLayout
   alternates={document.alternates}
   currentPackage={currentPackage}
   description={document.description ?? currentPackage.description}
+  englishRoute={document.englishRoute}
   locale={locale}
   sectionTitle={currentPackage.label}
   title={browserTitle}
+  untranslated={untranslated}
 >
   <details class="mobile-navigation">
     <summary>{messages.browse}</summary>
@@ -52,7 +56,15 @@ const browserTitle =
       <div class="document-body">
         {tocHeadings.length > 0 && <PageOutline headings={tocHeadings} label={messages.onThisPage} />}
         <PageActions locale={locale} route={document.route} />
-        <article class="markdown-content">
+        {
+          untranslated && (
+            <p class="untranslated-notice" role="note">
+              <i aria-hidden="true" class="ic-lucide-languages" />
+              {messages.untranslated}
+            </p>
+          )
+        }
+        <article class="markdown-content" lang={untranslated ? document.lang : undefined}>
           <slot />
         </article>
       </div>

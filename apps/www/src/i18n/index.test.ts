@@ -1,6 +1,7 @@
+import { pickArrivalLocale } from "@codenhub/app-shell/locales";
 import { describe, expect, it, vi } from "vitest";
 
-import { defaultLocale, detectLocale, getTranslator, locales, localeStaticPaths, routing, shellMessages } from ".";
+import { defaultLocale, getTranslator, locales, localeStaticPaths, routing, shellMessages } from ".";
 
 describe("translations", () => {
   it("has a valid message under every key in every locale", async () => {
@@ -31,7 +32,10 @@ describe("translations", () => {
   });
 });
 
-describe("detectLocale", () => {
+// The arrival redirect (`@codenhub/app-shell/components/locale-redirect.astro`)
+// matches by language alone; with one locale per language that is what the
+// manager's `matchLocale` picks.
+describe("pickArrivalLocale", () => {
   it.each([
     [["pt-BR"]],
     [["pt-PT", "en"]],
@@ -45,7 +49,7 @@ describe("detectLocale", () => {
   ])("picks what the manager's matchLocale picks for %j", async (preferences) => {
     const { matchLocale } = await getTranslator(defaultLocale);
 
-    expect(detectLocale(preferences)).toBe(matchLocale(preferences));
+    expect(pickArrivalLocale(null, preferences, locales)).toBe(matchLocale(preferences));
   });
 });
 

@@ -3,6 +3,7 @@
  * its own prefix, as in `/pt-BR/packages/`, so every page is built once per
  * locale and each language has a URL to share and index.
  */
+import { DEFAULT_LOCALE, SITE_LOCALES, type SiteLocale } from "@codenhub/app-shell/locales";
 import type { ShellMessages } from "@codenhub/app-shell/messages";
 import { createI18n } from "@codenhub/i18n";
 import { createLocaleRouting } from "@codenhub/i18n/routing";
@@ -11,41 +12,14 @@ import { en, type Dictionary } from "./locales/en";
 import { es } from "./locales/es";
 import { ptBR } from "./locales/pt-br";
 
-export const locales = ["en", "pt-BR", "es"] as const;
-export type Locale = (typeof locales)[number];
-export const defaultLocale: Locale = "en";
+export { LOCALE_NAMES as localeNames } from "@codenhub/app-shell/locales";
 
-/** Each locale's name in its own language, as the language menu lists it. */
-export const localeNames: Record<Locale, string> = { en: "English", "pt-BR": "Português (Brasil)", es: "Español" };
+/** The site's languages, shared with the documentation site, English first. */
+export const locales = SITE_LOCALES;
+export type Locale = SiteLocale;
+export const defaultLocale: Locale = DEFAULT_LOCALE;
 
 const dictionaries: Record<Locale, Dictionary> = { en, "pt-BR": ptBR, es };
-
-/** Where the language menu saves the visitor's choice, which wins over their browser's languages. */
-export const LOCALE_STORAGE_KEY = "www-locale";
-
-/** Each locale by its language subtag, such as `pt` for `pt-BR`; one locale per language. */
-export const localesByLanguage: Record<string, Locale> = Object.fromEntries(
-  locales.map((locale) => [new Intl.Locale(locale).language, locale]),
-);
-
-/**
- * The locale for a visitor's browser languages, matched by language alone,
- * which with one locale per language picks what the manager's `matchLocale`
- * would. The base layout's inline redirect mirrors this, since an inline
- * script cannot import; the tests hold the two to the manager.
- * @param preferences The visitor's languages, most preferred first, such as `navigator.languages`.
- * @returns The first one the site has, or undefined.
- */
-export function detectLocale(preferences: readonly string[]): Locale | undefined {
-  for (const preference of preferences) {
-    const language = preference.split("-")[0]?.toLowerCase() ?? "";
-    if (Object.hasOwn(localesByLanguage, language)) {
-      return localesByLanguage[language];
-    }
-  }
-
-  return undefined;
-}
 
 export const routing = createLocaleRouting({ locales, defaultLocale, localePrefix: "except-default" });
 

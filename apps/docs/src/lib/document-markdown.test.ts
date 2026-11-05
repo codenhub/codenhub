@@ -25,6 +25,15 @@ describe("publishDocumentMarkdown", () => {
     );
   });
 
+  it("points page links into the page's language and keeps files at their one URL", () => {
+    const body =
+      "See [concepts](../concepts.md#errors), the [license](../../LICENSE), and ![Diagram](assets/flow.svg).";
+
+    expect(publishDocumentMarkdown({ ...site, body, pageLocale: "pt-BR", relativePath: "guides/setup.md" })).toBe(
+      "See [concepts](https://docs.example.dev/pt-BR/kit/concepts/#errors), the [license](https://docs.example.dev/kit/LICENSE), and ![Diagram](https://docs.example.dev/kit/guides/assets/flow.svg).",
+    );
+  });
+
   it("keeps external links, fragments, and code as written", () => {
     const body = "[npm](https://npmjs.com) [below](#usage) `./setup.md`\n\n```md\n[x](./setup.md)\n```\n";
 

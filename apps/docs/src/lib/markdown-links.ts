@@ -2,6 +2,12 @@ import { isTranslationLocale } from "@codenhub/tools/documentation";
 
 interface RewriteOptions {
   packageSlug: string;
+  /**
+   * The language of the page the links are on. A link to another page keeps
+   * this locale's prefix, since every page exists in every locale; an asset,
+   * which has no locale route, keeps its own path.
+   */
+  pageLocale?: string;
   /** The document's path relative to the package `docs/`, its locale folder included. */
   sourceRelativePath: string;
 }
@@ -28,9 +34,12 @@ function rewriteUrl(url: string, options: RewriteOptions): string {
   // A translation's route puts its locale before the package slug
   // (`docs/specs/packages-translations.md`, "Documentation site").
   const [firstSegment = "", ...restSegments] = targetRelativePath?.split("/") ?? [];
-  const locale = restSegments.length > 0 && isTranslationLocale(firstSegment) ? firstSegment : undefined;
-  const routedPath = locale === undefined ? targetRelativePath : restSegments.join("/");
+  const targetLocale = restSegments.length > 0 && isTranslationLocale(firstSegment) ? firstSegment : undefined;
+  const routedPath = targetLocale === undefined ? targetRelativePath : restSegments.join("/");
   const isMarkdownTarget = routedPath?.toLowerCase().endsWith(".md") === true;
+  const pageLocale =
+    options.pageLocale !== undefined && isTranslationLocale(options.pageLocale) ? options.pageLocale : undefined;
+  const locale = targetLocale ?? (isMarkdownTarget ? pageLocale : undefined);
   const targetRoute = isMarkdownTarget
     ? routedPath!.replace(/(^|\/)index\.md$/i, "").replace(/\.md$/i, "")
     : (routedPath ?? (["/LICENSE", "/NOTICE"].includes(targetUrl.pathname) ? targetUrl.pathname.slice(1) : undefined));
