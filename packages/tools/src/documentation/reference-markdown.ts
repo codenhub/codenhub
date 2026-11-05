@@ -2,6 +2,7 @@ import GithubSlugger, { slug } from "github-slugger";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 
+import { REFERENCE_LABELS as L } from "./reference-labels.ts";
 import {
   type ReferenceEntrypoint,
   type ReferenceMember,
@@ -12,13 +13,13 @@ import {
 
 // Symbol-group headings, in the render order docs/specs/packages-reference.md sets.
 const GROUP_HEADINGS: readonly { kind: ReferenceSymbol["kind"]; heading: string }[] = [
-  { kind: "function", heading: "Functions" },
-  { kind: "class", heading: "Classes" },
-  { kind: "interface", heading: "Interfaces" },
-  { kind: "type-alias", heading: "Type aliases" },
-  { kind: "enum", heading: "Enumerations" },
-  { kind: "variable", heading: "Variables" },
-  { kind: "namespace", heading: "Namespaces" },
+  { kind: "function", heading: L.functions },
+  { kind: "class", heading: L.classes },
+  { kind: "interface", heading: L.interfaces },
+  { kind: "type-alias", heading: L.typeAliases },
+  { kind: "enum", heading: L.enumerations },
+  { kind: "variable", heading: L.variables },
+  { kind: "namespace", heading: L.namespaces },
 ];
 
 const LINK_PATTERN = /\{@link\s([^{}]*)\}/g;
@@ -294,11 +295,11 @@ function inheritedNote(member: ReferenceMember, link: (text: string) => string):
   // The same key `memberBlocks` registers for the declaring type's own section.
   const target = member.kind === "index-signature" ? `${from} index signature` : `${from} › ${member.name}`;
   const toMember = link(`{@link ${target} | ${from}}`);
-  return `Inherited from ${toMember.startsWith("[") ? toMember : link(`{@link ${from}}`)}.`;
+  return `${L.inheritedFrom} ${toMember.startsWith("[") ? toMember : link(`{@link ${from}}`)}.`;
 }
 
 function deprecationNote(deprecated: string | true, link: (text: string) => string): string {
-  const body = deprecated === true ? "**Deprecated.**" : `**Deprecated.** ${link(deprecated)}`;
+  const body = deprecated === true ? `**${L.deprecated}**` : `**${L.deprecated}** ${link(deprecated)}`;
   return body
     .split("\n")
     .map((line) => (line === "" ? ">" : `> ${line}`))
@@ -319,22 +320,22 @@ function proseBlocks(
   if (prose.doc !== undefined) {
     blocks.push(link(prose.doc));
   }
-  blocks.push(...namedDocList("Parameters", prose.parameters, link));
-  blocks.push(...namedDocList("Type parameters", prose.typeParameters, link));
+  blocks.push(...namedDocList(L.parameters, prose.parameters, link));
+  blocks.push(...namedDocList(L.typeParameters, prose.typeParameters, link));
   if (prose.returns !== undefined) {
-    blocks.push(`**Returns** — ${link(prose.returns)}`);
+    blocks.push(`**${L.returns}** — ${link(prose.returns)}`);
   }
-  blocks.push(...notesSection("Throws", prose.throws, link));
+  blocks.push(...notesSection(L.throws, prose.throws, link));
   if (defaultValue !== undefined) {
-    blocks.push(`**Default** — ${link(defaultValue)}`);
+    blocks.push(`**${L.default}** — ${link(defaultValue)}`);
   }
   if (prose.since !== undefined) {
-    blocks.push(`**Since** — ${link(prose.since)}`);
+    blocks.push(`**${L.since}** — ${link(prose.since)}`);
   }
   for (const example of prose.examples) {
-    blocks.push("**Example**", nestHeadings(escapeHtml(example.trim()), level));
+    blocks.push(`**${L.example}**`, nestHeadings(escapeHtml(example.trim()), level));
   }
-  blocks.push(...notesSection("See also", prose.see, link));
+  blocks.push(...notesSection(L.seeAlso, prose.see, link));
   return blocks;
 }
 
@@ -381,7 +382,7 @@ function symbolBlocks(
   }
 
   if (symbol.alsoExportedAsDefault) {
-    blocks.push("Also exported as `default`.");
+    blocks.push(`${L.alsoExportedAs} \`default\`.`);
   }
   for (const member of symbol.members) {
     blocks.push(...memberBlocks(member, qualifiedName, prose, link, level + 1));
@@ -436,7 +437,7 @@ function pageBlocks(
   }
 
   if (entrypoint.internalTypes.length > 0) {
-    sections.push("## Internal types");
+    sections.push(`## ${L.internalTypes}`);
     for (const type of entrypoint.internalTypes) {
       const exported = entrypoint.symbols.some((symbol) => symbol.name === type.name);
       const typeHeading = heading(3, type.name);
@@ -445,7 +446,7 @@ function pageBlocks(
         sections.push(nestHeadings(link(type.doc), 3));
       }
       const files = type.declaredIn.map((file) => `\`${file}\``).join(", ");
-      sections.push(`Not exported; declared in ${files}.`);
+      sections.push(`${L.notExportedDeclaredIn} ${files}.`);
     }
   }
 

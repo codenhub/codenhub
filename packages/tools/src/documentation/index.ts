@@ -81,6 +81,13 @@ export {
   type UnsupportedExport,
 } from "./reference-model.ts";
 export { parseReferenceConfig, type ReferenceConfig } from "./reference-config.ts";
+export {
+  REFERENCE_GROUP_LABELS,
+  REFERENCE_LABELS,
+  REFERENCE_LEAD_LABELS,
+  REFERENCE_SENTENCE_LABELS,
+  type ReferenceLabel,
+} from "./reference-labels.ts";
 export { renderReferencePage, symbolSlug, type RenderReferencePageOptions } from "./reference-markdown.ts";
 export {
   attachSignatures,
