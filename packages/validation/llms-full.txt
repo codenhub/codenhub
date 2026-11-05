@@ -2952,7 +2952,7 @@ for (let level = 0; level < 100_000; level += 1) {
 }
 tree(deep); // { ok: false, ... }, code "too_big"
 
-/// A URL whose host is written as an address a server must not fetch fails. The host is not looked up,
+// A URL whose host is written as an address a server must not fetch fails. The host is not looked up,
 // so a public name that resolves to such an address passes: check the address you connect to as well.
 url()("http://169.254.169.254/latest/meta-data"); // { ok: false, ... }
 url()("http://localhost:3000"); // { ok: false, ... }
