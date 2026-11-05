@@ -232,6 +232,7 @@ async function loadDocument(slug: string, definition: LoadableDocument): Promise
     lang: definition.lang,
     markdown: publishDocumentMarkdown({
       body: documentModule.rawContent(),
+      pageLocale: definition.pageLocale,
       relativePath: definition.docsPath,
       siteUrl: siteConfig.siteUrl,
       slug,
@@ -287,6 +288,13 @@ async function untranslatedPage(
     alternates: [],
     headings,
     html,
+    markdown: publishDocumentMarkdown({
+      body: english.body,
+      pageLocale: locale,
+      relativePath: english.relativePath,
+      siteUrl: siteConfig.siteUrl,
+      slug,
+    }),
     rawHtml: rendered.code,
     route: localizePath(locale, english.englishRoute),
   };

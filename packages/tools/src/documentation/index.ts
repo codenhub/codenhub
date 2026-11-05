@@ -33,6 +33,7 @@ export {
   orderLlmsFullSources,
   rebaseMarkdownTargets,
   renderLlmsFull,
+  rewriteMarkdownTargets,
   type LlmsFullDocument,
   type LlmsFullSection,
 } from "./llms-full.ts";
