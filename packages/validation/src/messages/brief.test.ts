@@ -45,6 +45,7 @@ describe("brief", () => {
       "nonBlank",
       "isoDate",
       "creditCard",
+      "sha256Hash",
     ].map((format): [ValidationIssue, string] => [at("invalid_format", { format, value: "ab" }), "Invalid value"]),
     [at("invalid_format", { format: "uuid" }), "Invalid uuid"],
     [at("invalid_format", { format: "constructor" }), "Invalid constructor"],

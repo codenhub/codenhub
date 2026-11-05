@@ -55,9 +55,11 @@ export function brief(issue: ValidationIssue): string {
       return limit(params, false);
     case "invalid_format": {
       const format = String(params["format"]);
-      // A check's name and a camelCase format, such as `startsWith` or `creditCard`, are code identifiers,
-      // which a form would show its user as they are.
-      return /[a-z][A-Z]|^(?:regex|includes|lowercase|uppercase)$/.test(format) ? "Invalid value" : `Invalid ${format}`;
+      // A check's name and a camelCase format, such as `startsWith`, `creditCard` or `sha256Hash`, are code
+      // identifiers, which a form would show its user as they are.
+      return /[a-z\d][A-Z]|^(?:regex|includes|lowercase|uppercase)$/.test(format)
+        ? "Invalid value"
+        : `Invalid ${format}`;
     }
     case "invalid_value":
       return params["format"] === "multipleOf"
