@@ -67,27 +67,18 @@ const { label, locale, options, storageKey } = Astro.props;
       }
     };
 
-    const close = () => {
+    const close = async () => {
       if (!menu.open || menu.hasAttribute("data-closing")) {
         return;
       }
       menu.setAttribute("data-closing", "");
-      // Reduced motion turns the animation off, and then no `animationend` comes.
-      if (list === null || getComputedStyle(list).animationName === "none") {
-        finish();
+      try {
+        await Promise.all(list?.getAnimations().map((animation) => animation.finished) ?? []);
+      } catch {
+        // Cancellation before the first frame rejects too, without an animationcancel event.
       }
+      finish();
     };
-
-    // A cancelled close, such as one cut short by turning on reduced motion,
-    // fires no `animationend`, so it finishes too. Closing mid-open cancels the
-    // in animation, which must not.
-    const finishClose = (event: AnimationEvent) => {
-      if (event.animationName === "shell-language-out") {
-        finish();
-      }
-    };
-    list?.addEventListener("animationend", finishClose);
-    list?.addEventListener("animationcancel", finishClose);
 
     if (storageKey !== undefined) {
       for (const option of menu.querySelectorAll<HTMLAnchorElement>("a[hreflang]")) {
@@ -110,19 +101,19 @@ const { label, locale, options, storageKey } = Astro.props;
         // Pressed again mid-close: stay open.
         menu.removeAttribute("data-closing");
       } else {
-        close();
+        void close();
       }
     });
 
     document.addEventListener("click", (event) => {
       if (event.target instanceof Node && !menu.contains(event.target)) {
-        close();
+        void close();
       }
     });
 
     menu.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && menu.open) {
-        close();
+        void close();
         summary?.focus();
       }
     });
