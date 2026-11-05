@@ -315,6 +315,8 @@ describe("documentation chrome", () => {
     // The reader stays in their language on the page's links and its section strip.
     expect(html).toContain('class="package-tab" href="/pt-BR/error/reference/"');
     expect(html.replace(/<details class="shell-language".*?<\/details>/, "")).not.toContain('href="/error/');
+    // The controls added to the English body speak the page's language, and say so.
+    expect(html).toMatch(/<a aria-label="Link para [^"]+" class="heading-anchor" href="#[^"]+" lang="pt-BR">/);
     expect(html).not.toContain("location.replace(");
   });
 
@@ -328,9 +330,10 @@ describe("documentation chrome", () => {
   it("translates a generated reference page's fixed labels under a locale", async () => {
     const html = await readOutput("pt-BR/error/reference/index.html");
 
-    expect(html).toContain('<h2 id="functions">Funções<');
-    expect(html).toContain("<strong>Parâmetros</strong>");
-    expect(html).toContain("<strong>Retorna</strong>");
+    // Each translated label says its language, inside a body marked English.
+    expect(html).toMatch(/<h2 id="functions" lang="pt-BR">Funções<a aria-label="Link para Funções"/);
+    expect(html).toContain('<strong lang="pt-BR">Parâmetros</strong>');
+    expect(html).toContain('<strong lang="pt-BR">Retorna</strong>');
     expect(html).not.toContain(">Functions<");
     expect(html).not.toContain("<strong>Parameters</strong>");
   });

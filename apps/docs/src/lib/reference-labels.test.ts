@@ -7,12 +7,34 @@ import { localizeReferenceHeadings, localizeReferenceHtml } from "./reference-la
 const { labels } = messagesFor("pt-BR").reference;
 
 describe("localizeReferenceHtml", () => {
-  it("translates group headings and keeps their ids", () => {
-    const html = '<h2 id="functions">Functions<a class="heading-anchor" href="#functions"></a></h2>';
+  it("translates group headings and their anchor labels, and keeps their ids", () => {
+    const html =
+      '<h2 id="functions">Functions<a aria-label="Link para Functions" class="heading-anchor" href="#functions"></a></h2>';
 
     expect(localizeReferenceHtml(html, labels)).toBe(
-      '<h2 id="functions">Funções<a class="heading-anchor" href="#functions"></a></h2>',
+      '<h2 id="functions">Funções<a aria-label="Link para Funções" class="heading-anchor" href="#functions"></a></h2>',
     );
+  });
+
+  it("marks each translated label with the page's language, and only the label", () => {
+    const html =
+      '<h2 id="classes">Classes<a aria-label="Link para Classes"></a></h2><p><strong>Returns</strong> — The value.</p>' +
+      "<p>Not exported; declared in <code>src/a.ts</code>, <code>src/b.ts</code>.</p>";
+
+    expect(localizeReferenceHtml(html, labels, "pt-BR")).toBe(
+      '<h2 id="classes" lang="pt-BR">Classes<a aria-label="Link para Classes"></a></h2>' +
+        '<p><strong lang="pt-BR">Retorna</strong> — The value.</p>' +
+        '<p><span lang="pt-BR">Não exportado; declarado em</span> <code>src/a.ts</code>, <code>src/b.ts</code>.</p>',
+    );
+  });
+
+  it("leaves TSDoc prose that opens with a label's words in English", () => {
+    const html =
+      "<p><strong>Returns</strong> null when the key is missing.</p>" +
+      "<p>Inherited from the base class, which validates first.</p>" +
+      "<p><strong>Deprecated.</strong> Outside a quote.</p>";
+
+    expect(localizeReferenceHtml(html, labels, "pt-BR")).toBe(html);
   });
 
   it("translates the labels and sentences the generator writes", () => {

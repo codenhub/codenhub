@@ -87,13 +87,17 @@ export function insertReferenceDeck(
   html: string,
   meta: { description?: string; since?: string },
   addedIn = "Added in {version}",
+  lang?: string,
 ): string {
   const parts: string[] = [];
   if (meta.description !== undefined) {
     parts.push(`<p class="reference-summary">${escapeHtml(meta.description)}</p>`);
   }
   if (meta.since !== undefined) {
-    parts.push(`<p class="reference-since">${fillMessage(addedIn, { version: escapeHtml(meta.since) })}</p>`);
+    const langAttribute = lang === undefined ? "" : ` lang="${lang}"`;
+    parts.push(
+      `<p class="reference-since"${langAttribute}>${fillMessage(addedIn, { version: escapeHtml(meta.since) })}</p>`,
+    );
   }
   const cut = parts.length === 0 ? -1 : html.indexOf("</h1>");
   if (cut === -1) {
@@ -271,9 +275,10 @@ async function untranslatedPage(
   let headings = rendered.metadata.headings;
   if (isReferenceDocument(english)) {
     html = insertReferenceDeck(
-      localizeReferenceHtml(html, messages.reference.labels),
+      localizeReferenceHtml(html, messages.reference.labels, locale),
       { description: english.description, since: english.since },
       messages.reference.addedIn,
+      locale,
     );
     headings = localizeReferenceHeadings(headings, messages.reference.labels);
   }
