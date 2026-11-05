@@ -171,6 +171,45 @@ test.describe("aesthetics", () => {
       expect(measured.floating, "floating alert").toMatch(/\b8px 8px 0px\b/);
     });
 
+    /* The nearest aesthetic region decides: an alert in another aesthetic
+       nested inside a neobrutalist region rests as that aesthetic rests it, and
+       one in a neobrutalist region nested again inside that takes the slab back.
+       A descendant-selector exclusion cannot tell the two apart -- the re-entered
+       alert also sits below the other aesthetic -- so it once rested flat. */
+    test("rests an alert on the slab by the nearest aesthetic region", async ({ page }) => {
+      await page.goto(FEEDBACK_URL);
+
+      const shadows = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const read = (regions: string[]) => {
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = `${regions.map((region) => `<div class="${region}">`).join("")}<div class="alert">x</div>${"</div>".repeat(regions.length)}`;
+          host.append(wrapper);
+          const shadow = getComputedStyle(wrapper.querySelector(".alert")!).boxShadow;
+          wrapper.remove();
+          return shadow;
+        };
+        const others = ["glass", "pixel", "chunky-tile", "cyber", "sketch"];
+
+        return {
+          alone: read(["neobrutalism"]),
+          nested: Object.fromEntries(others.map((other) => [other, read(["neobrutalism", other])])),
+          reference: Object.fromEntries(others.map((other) => [other, read([other])])),
+          reentered: Object.fromEntries(others.map((other) => [other, read(["neobrutalism", other, "neobrutalism"])])),
+          twice: read(["neobrutalism", "glass", "neobrutalism", "pixel", "neobrutalism"]),
+        };
+      });
+
+      expect(shadows.alone, "neobrutalist alert").toMatch(/\b4px 4px 0px\b/);
+      for (const [other, shadow] of Object.entries(shadows.nested)) {
+        expect(shadow, `alert in ${other} inside neobrutalism`).toBe(shadows.reference[other]);
+        expect(shadows.reentered[other], `alert in neobrutalism inside ${other} inside neobrutalism`).toBe(
+          shadows.alone,
+        );
+      }
+      expect(shadows.twice, "alert re-entering neobrutalism twice").toBe(shadows.alone);
+    });
+
     test("squares the components that hardcode a radius", async ({ page }) => {
       await page.goto(withAesthetic(FEEDBACK_URL, "neobrutalism"));
 
@@ -2637,9 +2676,11 @@ test.describe("control ink", () => {
    inside it inherits unless that region names or clears it --
    `registry.test.ts` holds the declarations, and this holds the painted result:
    a focused button and a resting card inside every other aesthetic compute
-   exactly what they compute on their own. Pixel's inset focus ring once
-   reached every region nested inside it, and a glass card inside chunky tile
-   cast chunky tile's opaque black depth. */
+   exactly what they compute on their own, and so does a resting alert, the
+   one component an aesthetic writes onto by selector. Pixel's inset focus
+   ring once reached every region nested inside it, a glass card inside chunky
+   tile cast chunky tile's opaque black depth, and an alert inside chunky tile
+   inside neobrutalism took neobrutalism's slab. */
 test.describe("nested aesthetics", () => {
   /* Liquid glass is a modifier, not an aesthetic, but it writes layers onto
      surfaces, and a region nested inside it must not take them. */
@@ -2674,7 +2715,8 @@ test.describe("nested aesthetics", () => {
         region.className = inner;
         region.innerHTML =
           `<button class="btn primary" data-nested-probe="${index}" style="transition:none">Probe</button>` +
-          `<div class="card" data-nested-card="${index}" style="transition:none">Card</div>`;
+          `<div class="card" data-nested-card="${index}" style="transition:none">Card</div>` +
+          `<div class="alert" data-nested-alert="${index}" style="transition:none">Alert</div>`;
 
         if (outer) {
           const wrapper = document.createElement("div");
@@ -2706,12 +2748,16 @@ test.describe("nested aesthetics", () => {
       );
     }
 
-    const cards = await page.evaluate(
+    const surfaces = await page.evaluate(
       (count) =>
         Array.from({ length: count }, (_, index) => {
-          const card = document.querySelector(`[data-nested-card="${index}"]`)!;
+          const paint = (element: Element) =>
+            [getComputedStyle(element).boxShadow, getComputedStyle(element, "::before").content].join(" | ");
 
-          return [getComputedStyle(card).boxShadow, getComputedStyle(card, "::before").content].join(" | ");
+          return {
+            card: paint(document.querySelector(`[data-nested-card="${index}"]`)!),
+            alert: paint(document.querySelector(`[data-nested-alert="${index}"]`)!),
+          };
         }),
       cases.length,
     );
@@ -2727,7 +2773,8 @@ test.describe("nested aesthetics", () => {
       }
 
       expect(focused[index]!.shadow, `${inner} in ${outer}: focused button`).toBe(focused[reference]!.shadow);
-      expect(cards[index], `${inner} in ${outer}: card`).toBe(cards[reference]);
+      expect(surfaces[index]!.card, `${inner} in ${outer}: card`).toBe(surfaces[reference]!.card);
+      expect(surfaces[index]!.alert, `${inner} in ${outer}: alert`).toBe(surfaces[reference]!.alert);
     }
   });
 });

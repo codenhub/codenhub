@@ -184,9 +184,11 @@
    plate, not at a pane's edge against the backdrop, so an aesthetic whose
    neutral line is a highlight names a rule line of its own: glass's white
    hairline vanishes on the table's light plate. Neutral only, and `.neutral`
-   included, the way the control line above is. */
+   included, the way the control line above is, and a `.neutral` row in a
+   table of another intent, which draws its rules as a neutral table does. */
 :where(.data-table),
-.data-table.neutral {
+.data-table.neutral,
+.data-table tr.neutral {
   --intent-border: var(--ui-rule-ink, var(--ui-ink, var(--color-border)));
 }
 

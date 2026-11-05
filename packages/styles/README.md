@@ -51,4 +51,4 @@ This package has no JavaScript behavior. It ships no compatibility aliases: a re
 
 ## License
 
-Licensed under Apache-2.0. The embedded checkbox marks are derived from [Lucide](https://lucide.dev) and are ISC-licensed. See [NOTICE](NOTICE) for the required notices.
+Licensed under Apache-2.0. The embedded checkbox marks are derived from the [Lucide](https://lucide.dev) `check` and `minus` icons (ISC), which Lucide derives from [Feather](https://github.com/feathericons/feather) (MIT). See [NOTICE](NOTICE) for the required notices.

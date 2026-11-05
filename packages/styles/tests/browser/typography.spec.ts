@@ -165,24 +165,141 @@ test("prints a quotation's attribution in the quotation's own colour", async ({ 
 });
 
 /* Intent cascades nowhere except into table rows, because a row is part of the
-   table rather than an independent component. */
-test("lets a table row override the table intent while others inherit it", async ({ page }) => {
+   table rather than an independent component. A row's own class once changed
+   only its intent token: text, rule, and hover were resolved on the table, so
+   a destructive row in a success table painted green like its neighbours. So
+   this reads what the rows paint: a row with its own intent in a success table
+   paints as a row of a table of that intent does, while its unclassed
+   neighbour paints as a row of a success table. `.neutral` is included
+   because a neutral table draws its rules in a line of its own, which only
+   differs from the shared neutral line under an aesthetic such as `.glass`,
+   so every table is read on the page and again under glass. Rows are hovered
+   for real and read after their transition settles. */
+test("paints a table row's own intent while other rows keep the table's", async ({ page }) => {
   await page.goto(TYPOGRAPHY_URL);
 
-  const styles = await page.evaluate(() => {
-    const readIntent = (testId: string) =>
-      getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!)
-        .getPropertyValue("--intent-color")
-        .trim();
+  const rowIntents = ["destructive", "neutral"];
+  const aesthetics = ["page", "glass"];
+  const markup = (intent: string, rowIntent = "") => `
+    <table class="data-table ${intent} ghost ruled">
+      <tbody>
+        <tr class="${rowIntent}" data-row="probe"><td>Own</td></tr>
+        <tr data-row="plain"><td>Inherited</td></tr>
+        <tr><td>Last</td></tr>
+      </tbody>
+    </table>`;
+  const tables = Object.fromEntries([
+    ["success", markup("success")],
+    ...rowIntents.flatMap((intent) => [
+      [`mixed-${intent}`, markup("success", intent)],
+      [intent, markup(intent)],
+    ]),
+  ]);
 
-    return {
-      inheritedRow: readIntent("data-table-row-inherited"),
-      overriddenRow: readIntent("data-table-row-destructive"),
-    };
-  });
+  await page.evaluate(
+    ({ entries, regions }) => {
+      for (const region of regions) {
+        const host = document.createElement("div");
+        host.dataset.region = region;
+        host.className = region === "page" ? "" : region;
+        host.innerHTML = Object.entries(entries)
+          .map(([name, table]) => `<div data-table="${name}">${table}</div>`)
+          .join("");
+        document.body.append(host);
+      }
+    },
+    { entries: tables, regions: aesthetics },
+  );
 
-  expect(styles.inheritedRow).not.toBe("");
-  expect(styles.inheritedRow).not.toBe(styles.overriddenRow);
+  const read = async (region: string, table: string, row: string) => {
+    const target = page.locator(`[data-region="${region}"] [data-table="${table}"] [data-row="${row}"] > td`);
+    const resting = await target.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { text: style.color, rule: style.borderBottomColor };
+    });
+
+    await target.hover();
+    const hover = await target.evaluate(async (element) => {
+      await Promise.all(element.getAnimations().map((animation) => animation.finished));
+      return getComputedStyle(element).backgroundColor;
+    });
+    await page.mouse.move(0, 0);
+
+    return { ...resting, hover };
+  };
+
+  /* oxlint-disable no-await-in-loop -- one page, hovered in turn: a real
+     pointer is over one row at a time. */
+  for (const region of aesthetics) {
+    const successRow = await read(region, "success", "plain");
+
+    for (const intent of rowIntents) {
+      const ownRow = await read(region, `mixed-${intent}`, "probe");
+      const inheritedRow = await read(region, `mixed-${intent}`, "plain");
+      const referenceRow = await read(region, intent, "probe");
+
+      for (const part of ["text", "rule", "hover"] as const) {
+        const label = `${region}: ${intent} row ${part}`;
+        expectSameColor(ownRow[part], referenceRow[part], label);
+        expectSameColor(inheritedRow[part], successRow[part], `${region}: row inherited beside ${intent} ${part}`);
+        expect(getColorDistance(ownRow[part], inheritedRow[part]), `${label} differs`).toBeGreaterThan(20);
+      }
+    }
+  }
+  /* oxlint-enable no-await-in-loop */
+});
+
+/* On a solid table the plate is the table's, so a row with its own intent
+   prints the table's contrast ink on it, not its own: the row's
+   `--intent-contrast` is chosen for a fill the row does not paint, and a light
+   one on a light plate -- a `.warning` row on a `.primary` table -- read at
+   1:1. A neutral solid table -- unclassed or `.neutral` -- caps its fill to a
+   grey wash, where the row's own strong tone measured 4.05-4.49:1 for
+   `.success`, `.warning`, and `.destructive` in the light theme, so its rows
+   print the table's ink instead. Every table and every row intent, in both
+   themes, at 4.5:1 against the plate. */
+test("keeps a row with its own intent readable on a solid table", async ({ page }) => {
+  await page.goto(TYPOGRAPHY_URL);
+
+  const tables = ["", "neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
+  const intents = ["neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
+
+  /* oxlint-disable no-await-in-loop -- one theme, then the other, on one page. */
+  for (const theme of ["light", "dark"]) {
+    const cells = await page.evaluate(
+      ({ name, list, kinds }) => {
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(name);
+        const results: { label: string; color: string; plate: string }[] = [];
+
+        for (const table of kinds) {
+          const host = document.createElement("div");
+          const rows = list.map((row) => `<tr class="${row}"><td>${row}</td></tr>`).join("");
+          host.innerHTML = `<table class="data-table solid ${table}"><tbody><tr><td>none</td></tr>${rows}</tbody></table>`;
+          document.body.prepend(host);
+          const plate = getComputedStyle(host.querySelector("table")!).backgroundColor;
+
+          for (const cell of host.querySelectorAll("td")) {
+            results.push({
+              label: `${name} ${table ? `.${table}` : "unclassed"} table, ${cell.textContent} row`,
+              color: getComputedStyle(cell).color,
+              plate,
+            });
+          }
+          host.remove();
+        }
+
+        return results;
+      },
+      { name: theme, list: intents, kinds: tables },
+    );
+
+    for (const cell of cells) {
+      expect(readSrgb(cell.plate).alpha, `${cell.label} plate is opaque`).toBe(1);
+      expect.soft(getContrastRatio(cell.color, cell.plate), cell.label).toBeGreaterThanOrEqual(4.5);
+    }
+  }
+  /* oxlint-enable no-await-in-loop */
 });
 
 /* Three positions from one token, and the point of the switch is that none of

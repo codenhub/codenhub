@@ -32,8 +32,8 @@
 
      Named rather than written into the `min()`, because the soft hover below is
      derived from it and the two must not drift apart. Typed text is
-     `--intent-color` over a wash of its own tone, past 10:1 in both themes at
-     any value this cap is likely to take.
+     `--intent-strong` over a wash of its own tone, which holds 4.5:1 for every
+     intent in both themes up to `.solid`'s 20% below.
 
      The fill and the ink are `box`'s own, unrestated: its `--_capped` reads
      this cap, so the plate and the ink ramp stay in step at every bound,
@@ -89,7 +89,18 @@
     color: var(--color-text-secondary);
   }
 
-  &:hover:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled], :focus-visible) {
+  /* The last exclusion is `.input-group`'s: a group whose control is disabled
+     dims as a disabled field does (see `input-group`), so it does not answer
+     the pointer either. The list is the group's own, so a `<select>` with a
+     disabled `<option>` is not caught by it. */
+  &:hover:not(
+      :disabled,
+      .disabled,
+      [aria-disabled="true"],
+      [data-disabled],
+      :focus-visible,
+      :has(> :is(.ipt, .textarea, .select, .text-control, input, textarea, select):disabled)
+    ) {
     --_line-tone: var(--intent-hover);
   }
 
@@ -244,7 +255,8 @@
      own utility; a consumer's utility setting an intent slot on an invalid
      field loses to it too, because state wins over every choice
      (model.md#precedence). `--intent-hover` is redirected with the others so
-     the line does not go grey under the pointer. The `:has()` arm bridges an
+     the line does not go grey under the pointer, and `--intent-strong` so typed
+     text is destructive too. The `:has()` arm bridges an
      inner control's state to an `.input-group`. */
   :is(
     .text-control,
@@ -263,6 +275,7 @@
     --intent-color: var(--color-destructive);
     --intent-hover: var(--color-destructive-hover);
     --intent-border: var(--color-destructive);
+    --intent-strong: var(--color-destructive-strong);
   }
 }
 
@@ -278,10 +291,12 @@
   --_d-border: 100%;
   --_d-elevation: 0;
 
-  /* Typed text is the intent colour at full strength -- on the three text
-     inputs, not `text-control`, because a toggle's mark takes `box`'s composed
-     `--_fg` instead. */
-  --_fg: var(--intent-color);
+  /* Typed text is the intent printed on a page, `--intent-strong`: a field's
+     plate is at most a wash, and `--intent-color`, a fill colour, reads below
+     4.5:1 there for several intents. On the three text inputs, not
+     `text-control`, because a toggle's mark takes `box`'s composed `--_fg`
+     instead. See docs/internal/model.md#intent. */
+  --_fg: var(--intent-strong);
 
   min-height: var(--control-height);
 }
@@ -321,10 +336,12 @@
   --_d-border: 100%;
   --_d-elevation: 0;
 
-  /* Typed text is the intent colour at full strength -- on the three text
-     inputs, not `text-control`, because a toggle's mark takes `box`'s composed
-     `--_fg` instead. */
-  --_fg: var(--intent-color);
+  /* Typed text is the intent printed on a page, `--intent-strong`: a field's
+     plate is at most a wash, and `--intent-color`, a fill colour, reads below
+     4.5:1 there for several intents. On the three text inputs, not
+     `text-control`, because a toggle's mark takes `box`'s composed `--_fg`
+     instead. See docs/internal/model.md#intent. */
+  --_fg: var(--intent-strong);
 
   @apply min-h-28 resize-y;
 }
@@ -340,10 +357,12 @@
   --_d-border: 100%;
   --_d-elevation: 0;
 
-  /* Typed text is the intent colour at full strength -- on the three text
-     inputs, not `text-control`, because a toggle's mark takes `box`'s composed
-     `--_fg` instead. */
-  --_fg: var(--intent-color);
+  /* Typed text is the intent printed on a page, `--intent-strong`: a field's
+     plate is at most a wash, and `--intent-color`, a fill colour, reads below
+     4.5:1 there for several intents. On the three text inputs, not
+     `text-control`, because a toggle's mark takes `box`'s composed `--_fg`
+     instead. See docs/internal/model.md#intent. */
+  --_fg: var(--intent-strong);
 
   min-height: var(--control-height);
   background-image:
@@ -468,6 +487,14 @@
       outline: none;
       box-shadow: none;
     }
+  }
+
+  /* Except a drop-down's end: its chevron is the select's own background,
+     drawn inside its box 0.6875-1.3125rem from the inline end, so a long label
+     with no padding there ran under it. A list box draws none and keeps the
+     padding its own rule gives it. */
+  & > :is(.select, select):not([multiple], [size]:not([size="1"])) {
+    padding-inline-end: 1.75rem;
   }
 
   /* Anything else in the group -- an icon, affix text -- does not stretch and
@@ -716,10 +743,13 @@
        physical x offset and mirrored under :dir(rtl) to travel toward the
        opposite edge, matching the inset-inline-start resting position. */
     translate: var(--switch-travel);
+  }
 
-    :dir(rtl) & {
-      translate: calc(-1 * var(--switch-travel));
-    }
+  /* Direction sits on the control, ahead of the pseudo-element: nested as
+     `:dir(rtl) &` inside `&:checked::after`, `&` carries `::after`, which
+     cannot appear inside `:is()`, and the emitted rule matched nothing. */
+  &:checked:dir(rtl)::after {
+    translate: calc(-1 * var(--switch-travel));
   }
 
   /* The mark appears without moving under reduced motion, for the entries
@@ -746,6 +776,15 @@
      colours off it would keep the package grey on a system Canvas. */
   .switch::after {
     background-color: CanvasText;
+  }
+
+  /* The chevron is two gradients, and forced colours drop every gradient, so a
+     drop-down with `appearance: none` showed no arrow at all and read as a text
+     field. The platform's own arrow comes back instead: it is drawn in system
+     colours, and the author border, padding and focus outline still apply. A
+     list box has no arrow to restore. */
+  .select:not([multiple], [size]:not([size="1"])) {
+    appearance: auto;
   }
 
   .checkbox:checked,

@@ -178,6 +178,51 @@ test.describe("surfaces", () => {
     expectSameColor(backgrounds.inCard, backgrounds.inRegion, "card nested in a .card.soft rests on the page ground");
   });
 
+  /* A padding modifier sizes its own surface: `--surface-padding` inherits, so
+     without `box`'s reset a `.card.p-xs` padded every card and panel inside it
+     at 8px, and a `.flush` card left them at zero. */
+  test("keeps a nested surface's own padding under a padding modifier", async ({ page }) => {
+    await page.goto(SURFACES_URL);
+
+    const padding = await page.evaluate(() => {
+      const read = (markup: string) => {
+        const host = document.createElement("div");
+        host.innerHTML = markup;
+        document.body.append(host);
+        const inner = host.querySelector(".inner")!;
+        const styles = getComputedStyle(inner);
+        const value = [styles.paddingTop, styles.paddingInlineStart, styles.paddingBottom, styles.paddingInlineEnd];
+        host.remove();
+        return value.join(" ");
+      };
+      const results: Record<string, { nested: string; alone: string }> = {};
+
+      for (const outer of ["p-xs", "p-sm", "p-lg", "flush"]) {
+        for (const kind of ["card", "panel"]) {
+          for (const container of ["card", "panel"]) {
+            results[`${kind} in .${container}.${outer}`] = {
+              nested: read(`<div class="${container} ${outer}"><div class="${kind} inner">x</div></div>`),
+              alone: read(`<div class="${kind} inner">x</div>`),
+            };
+          }
+        }
+      }
+
+      results["card.p-sm in .card.p-xs"] = {
+        nested: read('<div class="card p-xs"><div class="card p-sm inner">x</div></div>'),
+        alone: read('<div class="card p-sm inner">x</div>'),
+      };
+
+      return results;
+    });
+
+    for (const [name, { nested, alone }] of Object.entries(padding)) {
+      expect(nested, name).toBe(alone);
+    }
+    expect(padding["card in .card.p-xs"]!.alone).toBe("20px 20px 20px 20px");
+    expect(padding["panel in .card.p-xs"]!.alone).toBe("16px 16px 16px 16px");
+  });
+
   /* A divider is an indicator: it reads intent and no presentation token at all.
      A rule is a line, and neither a fill class nor an edge class has anything to
      say about one -- while reading both used to mean a container's `.ghost.edgeless`

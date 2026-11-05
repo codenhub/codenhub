@@ -120,10 +120,26 @@
 
    In `utilities`, not with the token class: it has to beat `@utility alert`'s
    own `--_d-elevation: 0`, which it does there at 0-2-0, and it writes only a
-   private nothing a consumer sets. */
+   private nothing a consumer sets.
+
+   Bounded by the nearest aesthetic region: an alert inside another aesthetic
+   nested in a neobrutalist region rests as that aesthetic rests it, and one in
+   a neobrutalist region nested again inside that takes the slab back. A
+   `:not(.neobrutalism :is(...) *)` exclusion cannot tell those two apart, since
+   the re-entered alert also sits below the other aesthetic, so each region
+   writes a private flag instead and inheritance hands the alert the nearest
+   one's. The slab is the alert's own resting default when the flag is unset. */
 @layer utilities {
+  .neobrutalism {
+    --_neo-alert-elevation: 1;
+  }
+
+  :is(.glass, .pixel, .chunky-tile, .cyber, .sketch) {
+    --_neo-alert-elevation: initial;
+  }
+
   .neobrutalism .alert {
-    --_d-elevation: 1;
+    --_d-elevation: var(--_neo-alert-elevation, 0);
   }
 }
 

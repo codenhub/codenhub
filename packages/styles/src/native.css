@@ -208,4 +208,10 @@
       background-color: HighlightText;
     }
   }
+
+  /* The platform's arrow, for the reason `.select` takes it back in
+     `form.css`: forced colours drop the gradient chevron. */
+  select:not([multiple], [size]:not([size="1"])) {
+    appearance: auto;
+  }
 }

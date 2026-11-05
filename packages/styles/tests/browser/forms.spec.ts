@@ -162,6 +162,71 @@ test.describe("forms", () => {
     }
   });
 
+  /* Typed text is printed on a page: a ghost field shows the page through, and
+     even a solid one is a light wash. `--intent-color` is a fill colour and
+     reads below 4.5:1 there for several intents -- warning at 3.06:1 in light,
+     success, destructive (and so an invalid field), and info near 3.1-3.7:1 in
+     dark -- so the text takes `--intent-strong`, measured here on the field's
+     rendered ground for every intent, both themes, and each presentation. */
+  test("prints typed text at 4.5:1 on its field for every intent and presentation", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    for (const theme of ["light", "dark"]) {
+      // oxlint-disable-next-line no-await-in-loop -- one theme, then the other, on one page.
+      const fields = await page.evaluate((name) => {
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(name);
+        const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+        /* The nearest painted ancestor: the page the field shows through. */
+        const ground = (element: Element) => {
+          for (let node: Element | null = element; node; node = node.parentElement) {
+            const color = getComputedStyle(node).backgroundColor;
+            if (color !== "rgba(0, 0, 0, 0)" && color !== "transparent") {
+              return color;
+            }
+          }
+          return getComputedStyle(document.documentElement).backgroundColor;
+        };
+        const results: { label: string; color: string; background: string; page: string }[] = [];
+        const intents = ["", "neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
+        const controls = {
+          ipt: '<input class="ipt CLASSES" ATTRS value="Typed" />',
+          textarea: '<textarea class="textarea CLASSES" ATTRS>Typed</textarea>',
+          select: '<select class="select CLASSES" ATTRS><option>Typed</option></select>',
+        };
+
+        for (const [control, template] of Object.entries(controls)) {
+          for (const presentation of ["ghost", "soft", "solid"]) {
+            for (const state of [...intents, "invalid"]) {
+              const wrapper = document.createElement("div");
+              const classes = `${presentation} ${state === "invalid" ? "" : state}`;
+              wrapper.innerHTML = template
+                .replace("CLASSES", classes)
+                .replace("ATTRS", state === "invalid" ? 'aria-invalid="true"' : "");
+              host.append(wrapper);
+              const field = wrapper.firstElementChild!;
+              const styles = getComputedStyle(field);
+              results.push({
+                label: `${name} .${control}.${presentation}${state ? ` ${state}` : ""}`,
+                color: styles.color,
+                background: styles.backgroundColor,
+                page: ground(wrapper),
+              });
+              wrapper.remove();
+            }
+          }
+        }
+
+        return results;
+      }, theme);
+
+      for (const field of fields) {
+        const ratio = getContrastRatio(field.color, flattenColor(field.background, field.page));
+        expect.soft(ratio, `${field.label} typed text`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
   /* `none` is only valid as an entire `box-shadow` value. Composing a focus ring
      as `<ring>, var(--ui-shadow, none)` makes the whole declaration invalid, so
      the ring silently disappears. Asserted on a real focus because that is the
@@ -963,6 +1028,76 @@ test.describe("forms", () => {
     expect(measured.affixGrows, "affix does not grow").toBe("0");
   });
 
+  /* The group floors its own line at full, so a container's `.edgeless` cannot
+     erase the field. That floor once inherited into a button nested in the
+     group: a ghost clear button, which rests edgeless, drew the field's line
+     around itself. These read the painted border of the button against the
+     same button standing alone, and the group's own line under an edgeless
+     container, which is the floor the fix keeps. */
+  test("keeps a nested button's own edge inside a group that floors its line", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const measured = await page.evaluate(() => {
+      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+      const read = (markup: string) => {
+        const wrapper = document.createElement("div");
+
+        wrapper.innerHTML = markup;
+        host.append(wrapper);
+
+        const paint = (selector: string) => {
+          const styles = getComputedStyle(wrapper.querySelector(selector)!);
+          return { color: styles.borderTopColor, width: styles.borderTopWidth };
+        };
+        const values = { button: paint(".btn"), group: paint(".input-group") };
+
+        wrapper.remove();
+
+        return values;
+      };
+      const group = (button: string, container = "") =>
+        read(`<div class="${container}"><div class="input-group"><input class="ipt" />${button}</div></div>`);
+      const alone = (button: string) => read(`<div class="input-group"></div>${button}`).button;
+
+      return {
+        ghost: {
+          grouped: group('<button class="btn ghost">x</button>').button,
+          alone: alone('<button class="btn ghost">x</button>'),
+        },
+        edgeless: {
+          grouped: group('<button class="btn ghost edgeless">x</button>').button,
+          alone: alone('<button class="btn ghost edgeless">x</button>'),
+        },
+        edged: {
+          grouped: group('<button class="btn ghost edged">x</button>').button,
+          alone: alone('<button class="btn ghost edged">x</button>'),
+        },
+        groupUnderEdgeless: group('<button class="btn ghost">x</button>', "edgeless").group,
+        groupAlone: group('<button class="btn ghost">x</button>').group,
+      };
+    });
+
+    for (const variant of ["ghost", "edgeless"] as const) {
+      expect(isTransparent(measured[variant].alone.color), `${variant} button alone draws no line`).toBe(true);
+      expect(isTransparent(measured[variant].grouped.color), `${variant} button in a group draws no line`).toBe(true);
+    }
+    /* An edged button still draws its own line in the group. */
+    expect(getColorDistance(measured.edged.grouped.color, measured.edged.alone.color), "edged button").toBeLessThan(2);
+    expect(isTransparent(measured.edged.grouped.color), "edged button in a group").toBe(false);
+    /* A colour computes whatever the width, so a drawn line needs both. */
+    expect(Number.parseFloat(measured.edged.grouped.width), "edged button in a group width").toBeGreaterThan(0);
+    /* The group keeps its floor under a container's `.edgeless`. */
+    expect(isTransparent(measured.groupUnderEdgeless.color), "group under an edgeless container").toBe(false);
+    expect(
+      Number.parseFloat(measured.groupUnderEdgeless.width),
+      "group under an edgeless container width",
+    ).toBeGreaterThan(0);
+    expect(
+      getColorDistance(measured.groupUnderEdgeless.color, measured.groupAlone.color),
+      "the group's line is the one it draws alone",
+    ).toBeLessThan(2);
+  });
+
   test("rings the group on focus-within and does not double the ring on the control", async ({ page }) => {
     await page.goto(FORMS_URL);
 
@@ -1042,6 +1177,47 @@ test.describe("forms", () => {
     ).toBeLessThan(2);
     expect(Number.parseFloat(measured.disabled.opacity), "an inner disabled dims the group").toBeLessThan(1);
     expect(measured.disabled.cursor, "and shows the not-allowed cursor").toBe("not-allowed");
+
+    /* A dimmed group does not answer the pointer, as a disabled lone field
+       does not: its line once darkened on hover anyway. Hovered for real and
+       read once the line's transition settles, against an enabled group that
+       does darken, so the probe is shown to move a line that can move. A
+       `<select>` with a disabled option is a control, not a group, and keeps
+       its hover. */
+    await page.evaluate(() => {
+      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+
+      host.insertAdjacentHTML(
+        "beforeend",
+        `<div class="input-group" data-hover-probe="enabled"><input class="ipt" /></div>
+         <div class="input-group" data-hover-probe="disabled"><input class="ipt" disabled /></div>
+         <select class="select" data-hover-probe="select"><option disabled>Off</option><option>On</option></select>`,
+      );
+    });
+
+    const hoverLine = async (probe: string) => {
+      const element = page.locator(`[data-hover-probe="${probe}"]`);
+      const settled = () =>
+        element.evaluate(async (node) => {
+          await Promise.all(node.getAnimations().map((animation) => animation.finished));
+          return getComputedStyle(node).borderTopColor;
+        });
+
+      await page.mouse.move(0, 0);
+      const rest = await settled();
+      await element.hover({ force: true });
+      const hovered = await settled();
+
+      return { rest, hovered };
+    };
+
+    const enabled = await hoverLine("enabled");
+    const disabled = await hoverLine("disabled");
+    const select = await hoverLine("select");
+
+    expect(getColorDistance(enabled.hovered, enabled.rest), "an enabled group's line moves").toBeGreaterThan(2);
+    expect(getColorDistance(disabled.hovered, disabled.rest), "a disabled group's line holds").toBeLessThan(2);
+    expect(getColorDistance(select.hovered, select.rest), "a select with a disabled option moves").toBeGreaterThan(2);
   });
 
   test("styles only destructive hints as field helper text", async ({ page }) => {
@@ -1270,5 +1446,131 @@ test.describe("forms", () => {
     expect(styles.rtl.paddingRight).toBe(styles.ltr.paddingLeft);
     expect(styles.rtl.chevronX).not.toBe(styles.ltr.chevronX);
     expect(styles.rtl.chevronX).not.toContain("100%");
+  });
+
+  /* The group takes its control's inline padding, but a drop-down's chevron is
+     the select's own background, drawn inside the select's box: with no end
+     padding a long label ran 21px under it. This resolves the chevron's two
+     tiles from the used background position and checks that the label's
+     content box ends before the nearer one, in both directions. A list box draws
+     no chevron and is left as it was. */
+  test("keeps a long select label clear of its chevron inside a group", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const label = "A very long option label that cannot fit inside the select at this width";
+    const measured = await page.evaluate((text) => {
+      const read = (dir: string, markup: string) => {
+        const host = document.createElement("div");
+        host.dir = dir;
+        host.style.width = "20rem";
+        host.innerHTML = markup;
+        document.body.append(host);
+        const select = host.querySelector("select")!;
+        const style = getComputedStyle(select);
+        const rect = select.getBoundingClientRect();
+        const border = parseFloat(style.borderLeftWidth);
+        const paddingBox = rect.width - border - parseFloat(style.borderRightWidth);
+        const tile = parseFloat(style.backgroundSize);
+        /* Each position is `calc(100% - Npx)`, a length, or a percentage of the
+           room left once the tile is placed. */
+        const tileStart = (value: string) => {
+          const fromEnd = /calc\(100% - ([\d.]+)px\)/.exec(value);
+          if (fromEnd) {
+            return paddingBox - tile - parseFloat(fromEnd[1]!);
+          }
+          if (value.endsWith("%")) {
+            return ((paddingBox - tile) * parseFloat(value)) / 100;
+          }
+          return parseFloat(value);
+        };
+        const starts = style.backgroundPositionX.split(",").map((value) => tileStart(value.trim()));
+        const contentStart = parseFloat(style.paddingLeft);
+        const contentEnd = paddingBox - parseFloat(style.paddingRight);
+        const result = {
+          chevron: style.backgroundImage === "none" ? null : [Math.min(...starts), Math.max(...starts) + tile],
+          content: [contentStart, contentEnd],
+          paddingInline: [style.paddingLeft, style.paddingRight],
+        };
+        host.remove();
+
+        return result;
+      };
+      const option = `<option>${text}</option>`;
+      const grouped = (attributes = "") =>
+        `<div class="input-group"><span>i</span><select class="select"${attributes}>${option}</select></div>`;
+
+      return {
+        ltr: read("ltr", grouped()),
+        rtl: read("rtl", grouped()),
+        listBox: read("ltr", grouped(" multiple")),
+        alone: read("ltr", `<select class="select">${option}</select>`),
+      };
+    }, label);
+
+    const { ltr, rtl } = measured;
+    expect(ltr.chevron, "ltr group draws its chevron").not.toBeNull();
+    expect(rtl.chevron, "rtl group draws its chevron").not.toBeNull();
+    expect(ltr.content[1], "ltr label ends before the chevron").toBeLessThanOrEqual(ltr.chevron![0]!);
+    expect(rtl.content[0], "rtl label ends before the chevron").toBeGreaterThanOrEqual(rtl.chevron![1]!);
+    expect(ltr.paddingInline[0], "ltr start stays flush to the group").toBe("0px");
+    expect(rtl.paddingInline[1], "rtl start stays flush to the group").toBe("0px");
+    expect(measured.listBox.chevron, "a list box draws no chevron").toBeNull();
+    expect(measured.alone.paddingInline, "a lone select keeps its own room").toEqual(["12px", "40px"]);
+  });
+
+  /* A checked knob travels to the inline end. The mirrored travel was once
+     nested as `:dir(rtl) &` inside `&:checked::after`, which compiled to an
+     empty `:is()` and matched nothing: a checked right-to-left knob kept the
+     positive travel and left the track past its right edge. The travel token
+     was right all along, so this reads where the knob lands inside the track,
+     resolved from the knob's own used offset and translation, under each
+     direction and under a direction an inner element changes back. */
+  test("keeps a checked switch's knob inside the track at the inline end in either direction", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const knobs = await page.evaluate(() => {
+      const read = (markup: string) => {
+        const host = document.createElement("div");
+        host.innerHTML = markup;
+        document.body.append(host);
+        const track = host.querySelector<HTMLInputElement>(".switch")!;
+        const knob = getComputedStyle(track, "::after");
+        /* Offsets are from the padding box, which starts inside the border. */
+        const start = track.clientLeft + parseFloat(knob.left) + parseFloat(knob.translate || "0");
+        const result = {
+          start,
+          end: start + parseFloat(knob.width),
+          inner: { start: track.clientLeft, end: track.clientLeft + track.clientWidth },
+        };
+        host.remove();
+
+        return result;
+      };
+      const control = (attributes = "") => `<input type="checkbox" class="switch" checked ${attributes} />`;
+
+      return {
+        ltr: read(`<div dir="ltr">${control()}</div>`),
+        rtl: read(`<div dir="rtl">${control()}</div>`),
+        ltrInsideRtl: read(`<div dir="rtl"><div dir="ltr">${control()}</div></div>`),
+        rtlInsideLtr: read(`<div dir="ltr"><div dir="rtl">${control()}</div></div>`),
+        rtlOnControl: read(`<div dir="ltr">${control('dir="rtl"')}</div>`),
+      };
+    });
+
+    for (const [label, knob] of Object.entries(knobs)) {
+      expect(knob.start, `${label} knob start`).toBeGreaterThanOrEqual(knob.inner.start);
+      expect(knob.end, `${label} knob end`).toBeLessThanOrEqual(knob.inner.end);
+    }
+
+    /* Checked, the knob sits against the inline end: the right in left-to-right,
+       the left in right-to-left, the same gap from that edge either way. */
+    const gapLtr = knobs.ltr.inner.end - knobs.ltr.end;
+    const gapRtl = knobs.rtl.start - knobs.rtl.inner.start;
+
+    expect(gapLtr).toBeLessThan(knobs.ltr.start - knobs.ltr.inner.start);
+    expect(gapRtl).toBeCloseTo(gapLtr, 1);
+    expect(knobs.ltrInsideRtl).toEqual(knobs.ltr);
+    expect(knobs.rtlInsideLtr).toEqual(knobs.rtl);
+    expect(knobs.rtlOnControl).toEqual(knobs.rtl);
   });
 });
