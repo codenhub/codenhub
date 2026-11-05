@@ -127,6 +127,22 @@ describe("skill catalog", () => {
     expect(drafts.filter((draft) => ids.has(draft.id)).map((draft) => draft.id)).toEqual([]);
   });
 
+  // A skill cannot reach another skill's files, so a shared script is copied into each skill that runs it.
+  it("should keep every copy of a shared script identical", () => {
+    const copies = new Map<string, string[]>();
+    for (const skill of skills) {
+      for (const file of walk(skill.path).filter(
+        (file) => file.startsWith("scripts/") && !file.includes("node_modules/"),
+      )) {
+        copies.set(file, [...(copies.get(file) ?? []), path.join(skill.path, file)]);
+      }
+    }
+    const diverged = [...copies]
+      .filter(([, paths]) => new Set(paths.map((file) => read(file))).size > 1)
+      .map(([file]) => file);
+    expect(diverged).toEqual([]);
+  });
+
   describe.each(skills.map((skill) => [skill.id, skill]))("%s", (_, skill) => {
     const skillMd = read(path.join(skill.path, "SKILL.md"));
     const { frontmatter, body } = split(skillMd);
