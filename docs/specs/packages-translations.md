@@ -158,7 +158,7 @@ The site's search index is built per locale and covers what each locale's naviga
 
 ### Language choice
 
-A visitor's language choice is shared by every CodenHub site. The language menu saves it in the `codenhub-locale` cookie, scoped to `codenhub.dev` so it reaches `docs.codenhub.dev` too (`packages/app-shell/src/locales.ts`). An English page on either site, opened from outside CodenHub, sends the visitor to the same page in the saved language, or, without a saved choice, in the first of the browser's languages the site offers. Navigation between CodenHub pages never redirects, so choosing English in the menu sticks. The main site links a package's documentation, changelog and search in the page's locale.
+A visitor's language choice is shared by every CodenHub site. The language menu saves it in the `codenhub-locale` cookie, scoped to `codenhub.dev` so it reaches `docs.codenhub.dev` too (`packages/app-shell/src/locales.ts`). An English page on either site, opened from outside CodenHub, sends the visitor to the same page in the saved language, or, without a saved choice, in the first of the browser's languages the site offers. Where cookies are blocked it does not guess from the browser's languages, since no choice of English could be saved. Navigation between CodenHub pages never redirects, so choosing English in the menu sticks. The main site links a package's documentation, changelog and search in the page's locale.
 
 Rejected: `localStorage`, which each origin keeps to itself, so a choice made on one site was unknown to the other.
 
