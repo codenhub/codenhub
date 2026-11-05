@@ -2,7 +2,7 @@
 title: Conteúdo e layout
 description: Consulta de todos os helpers de layout com os seus espaçamentos, a escala tipográfica com os seus tamanhos, cards e painéis com o seu padding, tabelas, citações, código e teclas.
 order: 10
-source: bf9064b0255169f3ed7ca53ed4f0595bdf44d0ac
+source: 6a638b6d6e735f1a7343bf9c6b2db131ca91fc30
 ---
 
 # Conteúdo e layout
@@ -146,7 +146,7 @@ A tela de configurações lista as chaves de API numa tabela:
 
 ### Intenção das linhas
 
-As linhas de uma tabela recebem a intenção da tabela, então `.data-table.success` deixa o cabeçalho e as linhas divisórias verdes. Uma linha com a sua própria classe de intenção usa essa, como faz o `<tr class="destructive">` da chave revogada. `<tr class="neutral">` volta uma linha para neutro dentro de uma tabela colorida. Este é o único lugar em que uma intenção é herdada, porque as linhas são partes da tabela, e não componentes separados.
+As linhas de uma tabela recebem a intenção da tabela, então `.data-table.success` deixa o cabeçalho e as linhas divisórias verdes. Uma linha com a sua própria classe de intenção usa essa, como faz o `<tr class="destructive">` da chave revogada. `<tr class="neutral">` volta uma linha para neutro dentro de uma tabela colorida. Numa tabela `.solid`, uma linha com a sua própria intenção mantém a cor de texto da tabela, para continuar legível sobre o preenchimento da tabela, e mostra a sua intenção pela linha divisória e pelo hover. Este é o único lugar em que uma intenção é herdada, porque as linhas são partes da tabela, e não componentes separados.
 
 ### Linhas divisórias de tabela
 

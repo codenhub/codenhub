@@ -2,7 +2,7 @@
 title: Contenido y layout
 description: Consulta de cada helper de layout con su espaciado, la escala tipográfica con sus tamaños, las tarjetas y los paneles con su relleno interior, las tablas, las citas, el código y las teclas.
 order: 10
-source: bf9064b0255169f3ed7ca53ed4f0595bdf44d0ac
+source: 6a638b6d6e735f1a7343bf9c6b2db131ca91fc30
 ---
 
 # Contenido y layout
@@ -146,7 +146,7 @@ La pantalla de ajustes enumera las claves de API en una tabla:
 
 ### Intención de las filas
 
-Las filas de una tabla toman la intención de la tabla, así que `.data-table.success` colorea de verde su encabezado y sus líneas. Una fila con su propia clase de intención usa esa en su lugar, como hace el `<tr class="destructive">` de la clave revocada. `<tr class="neutral">` devuelve una fila a neutra dentro de una tabla de color. Es el único lugar en el que una intención se hereda, porque las filas son partes de la tabla, no componentes separados.
+Las filas de una tabla toman la intención de la tabla, así que `.data-table.success` colorea de verde su encabezado y sus líneas. Una fila con su propia clase de intención usa esa en su lugar, como hace el `<tr class="destructive">` de la clave revocada. `<tr class="neutral">` devuelve una fila a neutra dentro de una tabla de color. En una tabla `.solid`, una fila con su propia intención conserva el color de texto de la tabla para seguir siendo legible sobre el relleno de la tabla, y muestra su intención con su línea divisoria y su hover. Es el único lugar en el que una intención se hereda, porque las filas son partes de la tabla, no componentes separados.
 
 ### Líneas divisorias de las tablas
 
