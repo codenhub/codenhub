@@ -99,6 +99,18 @@ describe("pick", () => {
     },
   );
 
+  it("should refuse an option the object does not know, even given as undefined, as object does", () => {
+    const strict = object({ a: string(), b: string() }, { unknownKeys: "strict" });
+    // A misspelled name, as `{ unknownkeys: config.mode }` with no mode set.
+    const given = { unknownkeys: undefined } as { unknownKeys?: "strict" };
+    expect(() => object({ a: string() }, given)).toThrow("Unknown option unknownkeys");
+    expect(() => pick(strict, ["a"], given)).toThrow("Unknown option unknownkeys");
+    expect(() => omit(strict, ["b"], given)).toThrow("Unknown option unknownkeys");
+    expect(() => partial(strict, given)).toThrow("Unknown option unknownkeys");
+    expect(() => required(strict, given)).toThrow("Unknown option unknownkeys");
+    expect(() => extend(strict, {}, given)).toThrow("Unknown option unknownkeys");
+  });
+
   it("should take checks on the new object, with its options kept", () => {
     const strict = object({ a: string(), b: string() }, { unknownKeys: "strict" });
     const picked = pick(

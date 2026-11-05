@@ -1,6 +1,18 @@
 import { describe } from "./describe";
 import type { AnyValidator } from "./types";
 
+/** The validator each `lazy` returned from its getter, once it has called it. */
+const resolvedLazies = new WeakMap<object, unknown>();
+
+/** Records what the getter of the `lazy` `validator` returned, so it is read without calling it again. */
+export const keepResolved = (validator: object, resolved: unknown): void => {
+  resolvedLazies.set(validator, resolved);
+};
+
+/** What the getter of the `lazy` `validator` returned, or `undefined` if it was never called. */
+export const resolvedOf = (validator: unknown): unknown =>
+  typeof validator === "function" ? resolvedLazies.get(validator) : undefined;
+
 /**
  * Adds to `found` the getters of the `lazy` parts a validator holds, short of what those parts refer to.
  * A part reached twice is read once, since parts a schema shares would otherwise be read once for each way to them.

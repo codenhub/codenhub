@@ -54,9 +54,11 @@ const WRITTEN_IPV6_PATTERN =
 
 /**
  * A Hangul filler, which Node.js, Chromium and Firefox drop from a host and WebKit refuses, so `𞤀ㅤ` is
- * `xn--9d6h` in one and no URL in the other. The host the parser writes no longer shows it.
+ * `xn--9d6h` in one and no URL in the other. The host the parser writes no longer shows it. The parser
+ * decodes a host's escapes before it reads the name, so a filler percent-encoded as UTF-8, `%E3%85%A4`,
+ * is one too.
  */
-const HANGUL_FILLER_PATTERN = /[ᅟᅠㅤﾠ]/u;
+const HANGUL_FILLER_PATTERN = /[ᅟᅠㅤﾠ]|%E1%85%(?:9F|A0)|%E3%85%A4|%EF%BE%A0/iu;
 
 /** A part of a host written as `0x` with no digit, which some parsers read as 0 and Firefox refuses. */
 const BARE_HEX_PATTERN = /(?:^|\.)0x(?:\.|$)/i;
@@ -64,8 +66,9 @@ const BARE_HEX_PATTERN = /(?:^|\.)0x(?:\.|$)/i;
 /**
  * Tests whether a host a special scheme's URL was read with is one every runtime reads alike, for a URL
  * whose host a host validator decides: a name of plain characters, an IPv4 address not written with a bare
- * `0x` part, or an IPv6 address spelled as every parser reads it, and not written with a Hangul filler. Chromium writes `a*b.com` as `a%2Ab.com` and
- * Firefox refuses it, and Chromium reads `[::01.2.3.4]` and `a%20.com`, which Node.js refuses.
+ * `0x` part, or an IPv6 address spelled as every parser reads it, and not written with a Hangul filler, as
+ * it is or percent-encoded. Chromium writes `a*b.com` as `a%2Ab.com` and Firefox refuses it, and Chromium
+ * reads `[::01.2.3.4]` and `a%20.com`, which Node.js refuses.
  */
 function isPlainHost(text: string, hostname: string): boolean {
   const written = WRITTEN_HOST_PATTERN.exec(text)?.[1] ?? "";

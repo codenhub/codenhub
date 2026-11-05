@@ -131,8 +131,16 @@ const producesPrimitive = (target: unknown, seen = new Set<unknown>()): boolean 
     case "readonly":
     case "meta":
       return producesPrimitive(record["inner"], seen);
-    case "lazy":
-      return producesPrimitive((record["getter"] as () => unknown)(), seen);
+    case "lazy": {
+      // A getter that builds its schema anew makes a new validator at every level, so it is the getter
+      // that comes back, and one already followed is taken as not.
+      const getter = record["getter"] as () => unknown;
+      if (seen.has(getter)) {
+        return false;
+      }
+      seen.add(getter);
+      return producesPrimitive(getter(), seen);
+    }
     case "union":
       return (record["members"] as unknown[]).every((member) => producesPrimitive(member, seen));
     default:

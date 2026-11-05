@@ -135,6 +135,10 @@ describe("toJsonSchema", () => {
     expect(schemaOf(number(multipleOf(0.1)))).toEqual({ type: "number" });
     expect(schemaOf(number(multipleOf(0.01)))).toEqual({ type: "number" });
     expect(schemaOf(number(multipleOf(1e-7)))).toEqual({ type: "number" });
+    // 1e22 is held exactly; 1e23 is held as 99999999999999991611392, so a reader finds 3e23 / 1e23 is
+    // 3.0000000000000004 and refuses 3e23, which the check accepts.
+    expect(schemaOf(number(multipleOf(1e22)))).toEqual({ type: "number", multipleOf: 1e22 });
+    expect(schemaOf(number(multipleOf(1e23)))).toEqual({ type: "number" });
   });
 
   it("should write uniqueItems for unique() only over items that are primitives", () => {
@@ -150,6 +154,14 @@ describe("toJsonSchema", () => {
     for (const item of [object({ id: number() }), array(number()), unknown()] as Validator<unknown>[]) {
       expect(schemaOf(array(item, anyUnique))).toEqual(schemaOf(array(item)));
     }
+  });
+
+  it("should write an array of items a getter rebuilds at every level, with unique(), without recursing forever", () => {
+    // Each call makes a new union and a new lazy, so no validator is met twice; the getter is.
+    const build = (): Validator<string> => union([string(), lazy(build)]);
+    const items = array(lazy(build), unique());
+    expect(() => toJsonSchema(items)).not.toThrow();
+    expect(schemaOf(items)).toEqual(schemaOf(array(lazy(build))));
   });
 
   it("should write a pattern a schema reads as the check does, so one a prefix made matches that text only", () => {

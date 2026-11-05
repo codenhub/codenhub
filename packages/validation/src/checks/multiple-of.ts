@@ -9,15 +9,19 @@ const toDecimal = (value: number): { digits: bigint; exponent: number } => {
 };
 
 /**
- * Whether the decimal a finite number is written as is the number binary floating point holds: an integer,
- * or a fraction whose denominator is a power of two, such as 0.25. 0.1 is not.
+ * Whether the decimal a finite number is written as is the number binary floating point holds: an integer
+ * it holds as written, or a fraction whose denominator is a power of two, such as 0.25. 0.1 is not, and
+ * neither is 1e23, held as 99999999999999991611392.
  *
  * @internal
  */
 export const isBinaryExact = (value: number): boolean => {
   const { digits, exponent } = toDecimal(value);
+  if (exponent >= 0) {
+    return digits * 10n ** BigInt(exponent) === BigInt(value);
+  }
   // digits / 10^k is a power-of-two fraction exactly when 5^k divides digits.
-  return exponent >= 0 || digits % 5n ** BigInt(-exponent) === 0n;
+  return digits % 5n ** BigInt(-exponent) === 0n;
 };
 
 const isMultipleOf = (value: number, step: number): boolean => {

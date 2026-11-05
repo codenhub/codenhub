@@ -1,6 +1,7 @@
 import { chain, collect, runEach, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { describe, described, type Description } from "../core/describe";
+import { resolvedOf } from "../core/lazy";
 import { cap, MAX_ISSUES } from "../core/limit";
 import { call, composed } from "../core/nesting";
 import { entriesOf, isArray, isPlainObject, setOwn, sizeOfMap, sizeOfSet, timeOf, valuesOf } from "../core/objects";
@@ -26,6 +27,8 @@ interface Pending {
   place: (merged: unknown) => void;
   parent?: Pending;
   segment?: ValidationPathSegment;
+  /** Whether the pair is the key of a map entry, whose path is the entry's, as its value's is. */
+  isKey?: boolean;
 }
 
 /** A step of the walk: a pair to merge, or work to finish once every pair queued before it is merged. */
@@ -69,27 +72,60 @@ function reserved(conflicts: ValidationIssue[], pending: Pending): void {
   }
 }
 
-/** The validators that produce the value of `record`'s output itself, such as the members of a union. */
-function producersOf(record: Description): readonly unknown[] | undefined {
+/** A segment of the path to a pair, and whether it leads to the key of a map entry. */
+interface Place {
+  segment: ValidationPathSegment;
+  isKey: boolean;
+}
+
+/** The places from the root to a pair, built only when a reserved key is met there. */
+function placesOf(pending: Pending): Place[] {
+  const places: Place[] = [];
+  for (let node: Pending | undefined = pending; node?.segment !== undefined; node = node.parent) {
+    places.push({ segment: node.segment, isKey: node.isKey === true });
+  }
+  return places.reverse();
+}
+
+/** The kinds that give back the value they were given, so what they produce is what the step before made. */
+const PASSING_KINDS = new Set(["unknown", "guard", "instance"]);
+
+/**
+ * The validators that produce the value of `validator`'s output itself, such as the members of a union. Of
+ * a `pipe` that is the last step, and the step before each that gives back what it was given. A
+ * `transform` makes its own value, which no shape describes, and a `lazy` produces what its getter
+ * returned, read as it was kept, so the getter is not called again; one never called produced nothing.
+ */
+function producersOf(validator: unknown, record: Description): readonly unknown[] | undefined {
   switch (record.kind) {
     case "union":
     case "intersection":
       return record["members"] as unknown[];
     case "tagged":
       return Object.values(record["variants"] as Record<string, unknown>);
-    case "pipe":
-      return record["steps"] as unknown[];
+    case "pipe": {
+      const steps = record["steps"] as unknown[];
+      let first = steps.length - 1;
+      while (first > 0 && PASSING_KINDS.has(describe(steps[first] as AnyValidator)?.kind ?? "")) {
+        first -= 1;
+      }
+      return steps.slice(first);
+    }
     case "codec":
       return [record["output"]];
-    case "lazy":
-      return [(record["getter"] as () => unknown)()];
+    case "transform":
+      return [];
+    case "lazy": {
+      const resolved = resolvedOf(validator);
+      return resolved === undefined ? [] : [resolved];
+    }
     default:
       return record["inner"] === undefined ? undefined : [record["inner"]];
   }
 }
 
-/** The validators that produce what is at `segment` of `record`'s output. */
-function partsAt(record: Description, segment: ValidationPathSegment): readonly unknown[] {
+/** The validators that produce what is at `place` of `record`'s output. */
+function partsAt(record: Description, { segment, isKey }: Place): readonly unknown[] {
   switch (record.kind) {
     case "object":
     case "objectLike": {
@@ -104,8 +140,9 @@ function partsAt(record: Description, segment: ValidationPathSegment): readonly 
       return typeof segment === "number" && segment < items.length ? [items[segment]] : [record["rest"]];
     }
     case "record":
+      return [record["value"]];
     case "map":
-      return [record["key"], record["value"]];
+      return [isKey ? record["key"] : record["value"]];
     default:
       return [];
   }
@@ -116,24 +153,40 @@ function partsAt(record: Description, segment: ValidationPathSegment): readonly 
  * Where more than one part may have produced the value, as in a union, any of them listing it is enough,
  * which keeps what such a shape gave before. `seen` stops a `lazy` that returns itself at the same level.
  */
-function listsReserved(validator: unknown, path: readonly ValidationPathSegment[], seen = new Set<unknown>()): boolean {
+function listsReserved(validator: unknown, path: readonly Place[], seen = new Set<unknown>()): boolean {
   const record = typeof validator === "function" ? describe(validator as AnyValidator) : undefined;
   if (record === undefined || seen.has(validator)) {
     return false;
   }
   seen.add(validator);
-  const producers = producersOf(record);
+  const producers = producersOf(validator, record);
   if (producers !== undefined) {
     return producers.some((each) => listsReserved(each, path, seen));
   }
-  const [segment, ...rest] = path;
-  if (segment === undefined) {
+  const [place, ...rest] = path;
+  if (place === undefined) {
     return (
       (record.kind === "object" || record.kind === "objectLike") &&
       Object.hasOwn(record["shape"] as object, RESERVED_KEY)
     );
   }
-  return partsAt(record, segment).some((each) => listsReserved(each, rest));
+  return partsAt(record, place).some((each) => listsReserved(each, rest));
+}
+
+/**
+ * Gives back `output`, the object a pair was merged into, having reported an own `__proto__` in it that no
+ * shape lists at `pending`. The object is new, so the key, which an unchecked side passed on, would
+ * become the prototype of any copy of it made by assignment.
+ */
+function checkReserved(output: unknown, pending: Pending, walk: Walk): unknown {
+  if (
+    isPlainObject(output) &&
+    Object.hasOwn(output, RESERVED_KEY) &&
+    !walk.members.some((each) => listsReserved(each, placesOf(pending)))
+  ) {
+    reserved(walk.conflicts, pending);
+  }
+  return output;
 }
 
 /**
@@ -163,7 +216,9 @@ function mergeOne(pending: Pending, inner: Step[], walk: Walk): unknown {
     return right;
   }
   if (merged.get(left)?.has(right) === true) {
-    return merged.get(left)?.get(right);
+    // What a pair was merged into before is checked again here, since a shape may list a `__proto__` at
+    // the place it was first met and not at this one.
+    return checkReserved(merged.get(left)?.get(right), pending, walk);
   }
   const remember = <T>(output: T): T => {
     const byRight = merged.get(left) ?? new Map<object, unknown>();
@@ -200,12 +255,7 @@ function mergeOne(pending: Pending, inner: Step[], walk: Walk): unknown {
         setOwn(output, key, value);
       }
     }
-    // The object is new, so a `__proto__` an unchecked side passed on would become the prototype of any
-    // copy of it made by assignment, unless a shape listed it.
-    if (Object.hasOwn(output, RESERVED_KEY) && !walk.members.some((each) => listsReserved(each, pathOf(pending)))) {
-      reserved(conflicts, pending);
-    }
-    return output;
+    return checkReserved(output, pending, walk);
   }
   // Asked only now: asking whether a value is a Date, a Map or a Set throws and catches inside for a value
   // that is not, which for every array or plain object cost ten times the validation itself.
@@ -229,7 +279,7 @@ function mergeOne(pending: Pending, inner: Step[], walk: Walk): unknown {
       const placeValue = (value: unknown): void => {
         values[index] = value;
       };
-      queue({ left: leftKey, right: rightKey, place: placeKey, segment });
+      queue({ left: leftKey, right: rightKey, place: placeKey, segment, isKey: true });
       queue({ left: leftValue, right: rightValue, place: placeValue, segment });
     });
     inner.push(() => keys.forEach((key, index) => output.set(key, values[index])));

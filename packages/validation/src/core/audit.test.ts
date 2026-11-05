@@ -139,6 +139,20 @@ describe("audit", () => {
     expect(audit(pipe(array(name, { max: 5 }), array(string())))).toEqual([]);
   });
 
+  it("should take a bounded collection of numbers or other fixed-size values as bounding all of it", () => {
+    const grid = array(array(number(), { max: 5 }), { max: 5 });
+    expect(audit(pipe(grid, array(array(number()))))).toEqual([]);
+    expect(audit(pipe(array(optional(boolean()), { max: 5 }), array(string())))).toEqual([]);
+    // unknown() holds anything, so it stays open, and a transform may make anything from a number.
+    expect(audit(pipe(array(array(unknown(), { max: 5 }), { max: 5 }), array(array(number()))))).toEqual([
+      { rule: "unbounded_size", path: "[]", kind: "array" },
+    ]);
+    const repeated = transform(number(), (count) => "x".repeat(count));
+    expect(audit(pipe(array(repeated, { max: 5 }), array(string())))).toEqual([
+      { rule: "unbounded_text", path: "[]", kind: "string" },
+    ]);
+  });
+
   it("should count a bound held by a wrapper or a nested pipe for the steps after it", () => {
     const parsed = json(object({ bio: string() }));
     expect(audit(pipe(pipe(string({ max: 100 }), parsed), object({ bio: string() })))).toEqual([]);

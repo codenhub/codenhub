@@ -139,6 +139,18 @@ describe("url", () => {
     ]);
   });
 
+  it("should give a host validator no host with a Hangul filler written percent-encoded, which the parser decodes", () => {
+    // Node.js reads `https://%F0%9E%A4%80%E3%85%A4/` as `xn--9d6h`, as it reads the filler written as it is.
+    const anyHost = url({ host: unknown() });
+    const fillers = ["%E1%85%9F", "%E1%85%A0", "%E3%85%A4", "%ef%be%a0"];
+    expect(accepts(anyHost, ...fillers.map((filler) => `https://%F0%9E%A4%80${filler}/`))).toEqual([
+      false,
+      false,
+      false,
+      false,
+    ]);
+  });
+
   it("should give a host validator only a host every runtime reads alike, of letters, digits, . - and _ or an IP address", () => {
     // Chromium and Firefox read or refuse each of these differently from Node.js.
     const anyHost = url({ protocols: ["http", "ssh"], host: unknown() });
