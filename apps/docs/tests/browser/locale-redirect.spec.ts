@@ -25,6 +25,20 @@ test("falls back to the browser's language without a saved choice", async ({ bro
   await context.close();
 });
 
+test("keeps English where cookies are blocked, since no choice could be saved", async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ baseURL, locale: "pt-PT" });
+  await context.addInitScript(() => {
+    Object.defineProperty(Navigator.prototype, "cookieEnabled", { get: () => false });
+  });
+  const page = await context.newPage();
+
+  await page.goto("/error/caveats/", { referer: outside });
+
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  expect(new URL(page.url()).pathname).toBe("/error/caveats/");
+  await context.close();
+});
+
 test("keeps English after a link from the same site", async ({ browser, baseURL }) => {
   const context = await browser.newContext({ baseURL, locale: "es-ES" });
   const page = await context.newPage();
