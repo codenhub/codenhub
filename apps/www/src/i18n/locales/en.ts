@@ -140,6 +140,7 @@ export const en = {
     },
     install: {
       title: "Install",
+      runTitle: "Run",
       packageManager: "Package manager",
       copy: "Copy command",
     },
@@ -153,6 +154,7 @@ export const en = {
       latest: "Latest",
       prerelease: "Pre-release",
       copyInstall: "Copy install command for {version}",
+      copyRun: "Copy run command for {version}",
       download: "Download {version} tarball",
     },
     entrypoints: {

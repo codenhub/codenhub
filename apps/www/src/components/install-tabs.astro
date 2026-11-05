@@ -1,10 +1,12 @@
 ---
 /**
- * The install command for each package manager, one tab each, with a copy
- * button. The manager a visitor picks is remembered across package pages.
- * Without JavaScript the first tab's command still shows.
+ * The command for each package manager, one tab each, with a copy button:
+ * installing a library, or running a CLI without installing it. The manager a
+ * visitor picks is remembered across package pages. Without JavaScript the
+ * first tab's command still shows.
  *
  * @param packageName - Full npm name, such as `@codenhub/validation`.
+ * @param isCli - Whether the package is run rather than installed (`PackageProperties.isCli`).
  * @param locale - The page's locale.
  */
 import { getTranslator, type Locale } from "../i18n";
@@ -13,14 +15,16 @@ import * as npmIcon from "virtual:@codenhub/icons/logos/npm-icon";
 import * as pnpmIcon from "virtual:@codenhub/icons/logos/pnpm";
 import * as yarnIcon from "virtual:@codenhub/icons/logos/yarn";
 import { decorative } from "../lib/icon";
+import { packageCommand } from "../lib/package-facts";
 import CopyButton from "./copy-button.astro";
 
 interface Props {
   packageName: string;
+  isCli: boolean;
   locale: Locale;
 }
 
-const { packageName, locale } = Astro.props;
+const { packageName, isCli, locale } = Astro.props;
 const { t } = await getTranslator(locale);
 
 // Full-color `logos` marks: `simple-icons` has no Yarn mark (upstream records
@@ -28,10 +32,10 @@ const { t } = await getTranslator(locale);
 // under CC0. Each is its own icon module, since svg mode inlines only literal
 // `<i>` tags (`../lib/icon`).
 const managers = [
-  { brand: "npm", command: `npm install ${packageName}`, icon: decorative(npmIcon) },
-  { brand: "pnpm", command: `pnpm add ${packageName}`, icon: decorative(pnpmIcon) },
-  { brand: "yarn", command: `yarn add ${packageName}`, icon: decorative(yarnIcon) },
-  { brand: "bun", command: `bun add ${packageName}`, icon: decorative(bunIcon) },
+  { brand: "npm", command: packageCommand("npm", packageName, isCli), icon: decorative(npmIcon) },
+  { brand: "pnpm", command: packageCommand("pnpm", packageName, isCli), icon: decorative(pnpmIcon) },
+  { brand: "yarn", command: packageCommand("yarn", packageName, isCli), icon: decorative(yarnIcon) },
+  { brand: "bun", command: packageCommand("bun", packageName, isCli), icon: decorative(bunIcon) },
 ];
 ---
 

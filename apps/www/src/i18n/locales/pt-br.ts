@@ -137,6 +137,7 @@ export const ptBR: Dictionary = {
     },
     install: {
       title: "Instalação",
+      runTitle: "Execução",
       packageManager: "Gerenciador de pacotes",
       copy: "Copiar comando",
     },
@@ -150,6 +151,7 @@ export const ptBR: Dictionary = {
       latest: "Mais recente",
       prerelease: "Pré-lançamento",
       copyInstall: "Copiar comando de instalação da {version}",
+      copyRun: "Copiar comando de execução da {version}",
       download: "Baixar o tarball da {version}",
     },
     entrypoints: {

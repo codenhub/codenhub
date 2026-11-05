@@ -34,7 +34,7 @@ import BaseLayout from "../../../layouts/base-layout.astro";
 import { describeEntrypoints } from "../../../lib/bundle-breakdown";
 import { catalogPackages, type CatalogPackage } from "../../../lib/catalog";
 import { formatDate } from "../../../lib/format";
-import { describeRootSize, npmTarballUrl } from "../../../lib/package-facts";
+import { describeRootSize, npmTarballUrl, packageCommand } from "../../../lib/package-facts";
 import { renderReadme, selectReadme } from "../../../lib/readme";
 import { headerConfig } from "../../../site-config";
 import "../../../styles/global.css";
@@ -220,8 +220,8 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
       </dl>
 
       <section aria-labelledby="install-title" class="package-section">
-        <h2 id="install-title">{t("package.install.title")}</h2>
-        <InstallTabs locale={locale} packageName={entry.name} />
+        <h2 id="install-title">{t(properties.isCli ? "package.install.runTitle" : "package.install.title")}</h2>
+        <InstallTabs isCli={properties.isCli} locale={locale} packageName={entry.name} />
       </section>
 
       <section aria-label={t("package.details")} class="package-section" data-package-tabs>
@@ -309,9 +309,11 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
                         <td>
                           <span class="package-release-actions">
                             <CopyButton
-                              label={t("package.releases.copyInstall", { version: release.version })}
+                              label={t(properties.isCli ? "package.releases.copyRun" : "package.releases.copyInstall", {
+                                version: release.version,
+                              })}
                               locale={locale}
-                              text={`npm install ${entry.name}@${release.version}`}
+                              text={packageCommand("npm", entry.name, properties.isCli, release.version)}
                             />
                             <a
                               aria-label={t("package.releases.download", { version: release.version })}
