@@ -26,6 +26,7 @@ export const es: Dictionary = {
     },
   },
   packages: "Paquetes",
+  language: "Idioma",
   browse: "Explorar la documentación",
   packageNavigation: "Documentación de {label}",
   inEnglish: "en inglés",

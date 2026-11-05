@@ -353,6 +353,132 @@
   }
 }
 
+/* Language menu (`components/language-menu.astro`): a header action that opens
+   a list of this page in each language the host lists. */
+.shell-language {
+  position: relative;
+}
+
+/* Flex rather than the shell action's grid, so the chevron sits beside the
+   mark and says the button opens a list. */
+.shell-language-trigger {
+  display: flex;
+  gap: 0.125rem;
+  align-items: center;
+  list-style: none;
+}
+
+.shell-language-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.shell-language-trigger svg {
+  --ic-size: 1.125rem;
+}
+
+.shell-language-trigger .shell-language-chevron {
+  --ic-size: 0.875rem;
+  transition: transform var(--motion-duration-normal) var(--motion-ease);
+}
+
+.shell-language[open]:not([data-closing]) .shell-language-chevron {
+  transform: rotate(180deg);
+}
+
+.shell-language[open] .shell-language-trigger {
+  color: var(--color-text);
+}
+
+/* The options' corners are the list's minus its padding, so the two curves
+   stay concentric. */
+.shell-language-list {
+  --shell-language-padding: 0.25rem;
+
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  z-index: 1;
+  min-width: 12rem;
+  margin: 0;
+  padding: var(--shell-language-padding);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-background);
+  list-style: none;
+  transform-origin: top right;
+  animation: shell-language-in var(--motion-duration-normal) var(--motion-ease);
+}
+
+/* The close runs this before the script removes `open`, which would
+   otherwise hide the list at once. */
+.shell-language[data-closing] .shell-language-list {
+  animation: shell-language-out var(--motion-duration-fast) var(--motion-ease) forwards;
+}
+
+@keyframes shell-language-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem) scale(0.97);
+  }
+}
+
+@keyframes shell-language-out {
+  to {
+    opacity: 0;
+    transform: translateY(-0.25rem) scale(0.97);
+  }
+}
+
+.shell-language-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: max(0px, calc(var(--radius-control) - var(--shell-language-padding)));
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition:
+    color var(--motion-duration-fast, 120ms) var(--motion-ease),
+    background-color var(--motion-duration-fast, 120ms) var(--motion-ease);
+}
+
+.shell-language-option:hover {
+  background: var(--color-foreground);
+  color: var(--color-text);
+}
+
+.shell-language-option[aria-current] {
+  color: var(--color-text);
+}
+
+.shell-language-option svg {
+  --ic-size: 0.875rem;
+}
+
+/* On narrow headers the trigger sits left of the standard actions, so the
+   list has room to open toward them rather than past the viewport's left edge. */
+@media (max-width: 40rem) {
+  .shell-language-list {
+    right: auto;
+    left: 0;
+    transform-origin: top left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-language-option,
+  .shell-language-chevron {
+    transition: none;
+  }
+
+  .shell-language-list,
+  .shell-language[data-closing] .shell-language-list {
+    animation: none;
+  }
+}
+
 /* Search palette (`components/search-palette.astro`). The trigger sits in the
    header's actions slot, edged like the surfaces' other inputs. No 44px floor,
    unlike the header's icon targets: it stays as tall as they are rather than

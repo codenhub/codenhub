@@ -11,6 +11,7 @@
     "./components/status-badge.astro": "./src/components/status-badge.astro",
     "./components/theme-toggle.astro": "./src/components/theme-toggle.astro",
     "./components/search-palette.astro": "./src/components/search-palette.astro",
+    "./components/language-menu.astro": "./src/components/language-menu.astro",
     "./package-grid": "./src/package-grid.ts",
     "./package-links": "./src/package-links.ts",
     "./copy-feedback": "./src/copy-feedback.ts",

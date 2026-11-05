@@ -279,6 +279,25 @@ describe("documentation chrome", () => {
     expect(config).toContain('"directory": "./dist"');
   });
 
+  it("lists a translated page's languages in the header's language menu", async () => {
+    const html = await readOutput("pt-BR/styles/index.html");
+    const menu = html.match(/<details class="shell-language"[^>]*>(.*?)<\/details>/)?.[1] ?? "";
+    const options = [...menu.matchAll(/<a ([^>]*)>/g)].map((match) => match[1]);
+
+    expect(menu).toContain('aria-label="Idioma"');
+    expect(options).toEqual([
+      expect.stringContaining('href="/styles/" hreflang="en"'),
+      expect.stringMatching(/aria-current="true".*href="\/pt-BR\/styles\/" hreflang="pt-BR"/),
+      expect.stringContaining('href="/es/styles/" hreflang="es"'),
+    ]);
+  });
+
+  it("leaves the language menu off a page without a translation", async () => {
+    const html = await readOutput("error/index.html");
+
+    expect(html).not.toContain("data-language-menu");
+  });
+
   it("builds a not-found page in each locale beside its pages", async () => {
     const [ptBR, es] = await Promise.all([readOutput("pt-BR/404.html"), readOutput("es/404.html")]);
 

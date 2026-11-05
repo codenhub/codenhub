@@ -26,6 +26,7 @@ export const ptBR: Dictionary = {
     },
   },
   packages: "Pacotes",
+  language: "Idioma",
   browse: "Navegar na documentação",
   packageNavigation: "Documentação de {label}",
   inEnglish: "em inglês",

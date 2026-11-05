@@ -7,6 +7,8 @@ export interface Dictionary {
   shell: ShellMessages;
   /** The header's link to the main site's package list. */
   packages: string;
+  /** The header's language menu. */
+  language: string;
   /** The mobile toggle that opens the package navigation. */
   browse: string;
   /** The package navigation's landmark. `{label}` is the package label. */
@@ -50,6 +52,7 @@ export interface Dictionary {
 export const en: Dictionary = {
   shell: defaultShellMessages,
   packages: "Packages",
+  language: "Language",
   browse: "Browse documentation",
   packageNavigation: "{label} documentation",
   inEnglish: "in English",
