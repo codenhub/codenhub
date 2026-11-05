@@ -1,0 +1,23 @@
+---
+/*
+ * The not-found page under each locale's prefix. The deployment serves the
+ * nearest `404.html` above a missing path (`not_found_handling: "404-page"` in
+ * `wrangler.jsonc`), so a reader who mistypes a translated page's address
+ * stays in their language.
+ */
+import { TRANSLATION_LOCALES, type TranslationLocale } from "@codenhub/tools/documentation";
+import type { GetStaticPaths } from "astro";
+
+import NotFound from "../../components/not-found.astro";
+
+interface Props {
+  locale: TranslationLocale;
+}
+
+export const getStaticPaths = (() =>
+  TRANSLATION_LOCALES.map((locale) => ({ params: { locale }, props: { locale } }))) satisfies GetStaticPaths;
+
+const { locale } = Astro.props;
+---
+
+<NotFound locale={locale} />

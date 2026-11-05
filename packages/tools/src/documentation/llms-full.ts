@@ -11,6 +11,7 @@ import {
   comparePublicDocumentPaths,
   parseMarkdown,
 } from "./document-policy.ts";
+import { parseTranslationPath } from "./translation-paths.ts";
 
 const SOURCE_MARKER = "<!-- Source: %s -->";
 const CODE_TYPES = new Set(["code", "inlineCode"]);
@@ -246,7 +247,8 @@ export function rebaseMarkdownTargets(body: string, sourceDirectory: string): st
  * requires. `docs/internal/` is maintainer-only, `docs/plans/` is a
  * git-ignored planning aid that never reaches a real package build (per
  * the repository root `docs/guidelines/documentation.md`), and `docs/reference/` is a generated area (per
- * `docs/specs/packages-reference.md`); all three are excluded.
+ * `docs/specs/packages-reference.md`); all three are excluded, and so is every
+ * `docs/<locale>/` translation area (per `docs/specs/packages-translations.md`).
  * @param packageFiles Every package-relative file path.
  * @returns Package-relative document paths in compilation order.
  */
@@ -258,7 +260,8 @@ export function orderLlmsFullSources(packageFiles: readonly string[]): string[] 
         packagePath.endsWith(".md") &&
         !packagePath.startsWith("docs/internal/") &&
         !packagePath.startsWith("docs/plans/") &&
-        !packagePath.startsWith("docs/reference/"),
+        !packagePath.startsWith("docs/reference/") &&
+        parseTranslationPath(packagePath) === undefined,
     )
     .map((packagePath) => packagePath.slice("docs/".length))
     .sort(comparePublicDocumentPaths)

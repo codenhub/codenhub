@@ -1,5 +1,5 @@
 ---
-status: APPROVED
+status: IMPLEMENTED
 last_updated: 2026-11-04
 scope: Translations of package READMEs and public package documentation.
 ---
@@ -62,7 +62,7 @@ packages/<pkg>/
 
 - A translated public document lives at `docs/<locale>/<path>`, where `docs/<path>` is the English document it translates.
 - A translated README lives at `README.<locale>.md`, beside `README.md`. The README is at the package root so its relative links keep the same shape as the English one's, and `README.<locale>.md` is the name GitHub readers look for.
-- `docs/<locale>/` is not a documentation area of its own: it is reserved for translations, and every Markdown file in it MUST have an English counterpart at the mirrored path.
+- `docs/<locale>/` is not a documentation area of its own: it is reserved for translations, and every file in it MUST have an English counterpart at the mirrored path. That includes assets: a localized image, such as a screenshot with translated labels, replaces the English one at the same path, so the translated page links it in the same shape as the English page links the original.
 
 Translating is per document. Any subset of a package's public documents MAY be translated; an untranslated document is read in English.
 
@@ -76,7 +76,7 @@ What is not translated:
 
 - A generated `docs/reference/` area (`docs/specs/packages-reference.md`). It is compiled from TSDoc in English and regenerated with the code, so a hand-written translation would go stale on every API change. `docs/<locale>/reference/` is invalid.
 - `docs/changelog/` (`docs/specs/packages-changelog.md`). A version page records a release once and is not maintained afterwards, so translating it buys little. `docs/<locale>/changelog/` is invalid.
-- `docs/internal/`, which is for maintainers and is never published.
+- `docs/internal/`, which is for maintainers and is never published, so a translation of it would never reach a reader. `docs/<locale>/internal/` is invalid.
 - `llms.txt` and `llms-full.txt`. Their readers are language models, which read English, and a second compilation per locale would double what each publish has to keep current. `llms-full.txt` MUST exclude every `docs/<locale>/` area.
 - Source code, TSDoc, and code inside fenced blocks. Comments inside a code example MAY be translated.
 
@@ -148,7 +148,7 @@ The documentation site follows the main site's URL scheme (`apps/www/src/i18n/in
 - English: `https://docs.codenhub.dev/<slug>/<path>/`.
 - A translation: `https://docs.codenhub.dev/<locale>/<slug>/<path>/`, its Markdown at `index.md` inside that route, as `docs/specs/packages-documentation.md` defines for English pages.
 
-A locale route exists only for a translated document. The site's interface is translated for every supported locale, and inside a locale its navigation lists every published page of the package, linking each untranslated one to its English route and marking it as English. Each translated page and its English counterpart MUST name each other as alternates (`hreflang`), so a search engine shows the reader's language.
+A locale route exists only for a translated document. The site's interface is translated for every supported locale, down to copy feedback, link previews and code-block controls; a missing path under a locale gets that locale's not-found page. Inside a locale its navigation lists every published page of the package, linking each untranslated one to its English route and marking it as English. Each translated page and its English counterpart MUST name each other as alternates (`hreflang`), so a search engine shows the reader's language. Each also MUST name the English page as the `x-default` alternate: a reader whose language the site does not offer gets the English, which is complete and is what every translation is checked against, rather than whichever translation a search engine picks.
 
 The locale is the outermost path segment so that a later version dimension (`docs/roadmap.md`, "Documentation versioning") can go inside the package route without moving any locale URL. This settles only where the locale goes; the version segment's form stays with versioning.
 
@@ -166,7 +166,7 @@ The main site's package page in a locale shows `README.<locale>.md` when the rel
 
 - A file under `docs/<locale>/` with no English counterpart at the mirrored path, or a `README.<locale>.md` beside no `README.md`.
 - A `docs/<locale>/` or `README.<locale>.md` for a locale not listed under "Languages".
-- A `docs/<locale>/reference/` or `docs/<locale>/changelog/` area.
+- A `docs/<locale>/reference/`, `docs/<locale>/changelog/`, or `docs/<locale>/internal/` area.
 - A translation whose `source` is missing or is not a 40-character hexadecimal blob ID.
 - A translated document whose `order` or `curated` differs from its English counterpart's.
 

@@ -1,3 +1,4 @@
+import type { TranslationDriftReport } from "../documentation/translations.ts";
 import { execute } from "../process/execute.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { SIZE_FILE } from "./size-report.ts";
@@ -218,6 +219,46 @@ async function checkTarball(
     : { detail: `missing from the tarball: ${missing.join(", ")}`, name: "tarball", status: "blocked" };
 }
 
+/** Reports a package's stale and unverifiable translations. Injected by tests. */
+export type TranslationReader = (workspacePackage: WorkspacePackage) => Promise<TranslationDriftReport>;
+
+const readTranslations: TranslationReader = async (workspacePackage) => {
+  // Loaded on demand for the same reason as the pack inventory: it pulls in the Markdown parser.
+  const { readTranslationDrift } = await import("../documentation/translations.ts");
+  return readTranslationDrift(workspacePackage.directory);
+};
+
+/**
+ * Blocks a release that would publish a stale translation.
+ *
+ * `hub check` only warns about one, so that a change to an English page can
+ * merge before its translation follows; a release is where a translation
+ * reaches readers, so it is where staleness stops
+ * (`docs/specs/packages-translations.md`, "Drift"). A translation whose
+ * `source` cannot be read blocks too, because it cannot be shown current.
+ * @param workspacePackage Package to inspect.
+ * @param read Translation reader.
+ * @returns The `translation` precondition.
+ */
+async function checkTranslations(workspacePackage: WorkspacePackage, read: TranslationReader): Promise<ReadinessCheck> {
+  let report: TranslationDriftReport;
+  try {
+    report = await read(workspacePackage);
+  } catch (cause) {
+    return { detail: (cause as Error).message, name: "translation", status: "unknown" };
+  }
+  if (report.translationCount === 0) {
+    return { detail: "no translations", name: "translation", status: "ready" };
+  }
+  const problems = [
+    ...report.stale.map(({ englishPath, packagePath }) => `${packagePath} is stale (${englishPath} changed)`),
+    ...report.unsourced.map((packagePath) => `${packagePath} has no valid source`),
+  ];
+  return problems.length === 0
+    ? { detail: `${report.translationCount} translation(s), all current`, name: "translation", status: "ready" }
+    : { detail: problems.join("; "), name: "translation", status: "blocked" };
+}
+
 /** Everything a preflight learned about one package. */
 export interface PackageReadiness {
   /** Package that was inspected. */
@@ -234,6 +275,8 @@ export interface ReadinessOptions {
   readPack?: PackReader;
   /** Milliseconds before npm is killed, or `undefined` to wait indefinitely. */
   timeoutMs?: number;
+  /** Translation reader, defaulting to reading the package and hashing with git. */
+  readTranslations?: TranslationReader;
 }
 
 /**
@@ -241,8 +284,8 @@ export interface ReadinessOptions {
  *
  * Nothing here writes, tags, or publishes. The preconditions are the ones a
  * build and a test run cannot answer: what the registry already has, whether the
- * tarball carries what the manifest promises, and whether the source on disk is
- * the source in a commit.
+ * tarball carries what the manifest promises, whether the source on disk is
+ * the source in a commit, and whether every translation is current.
  * @param workspacePackage Package to inspect.
  * @param options Runners and timeout, injected by tests.
  * @returns Preconditions and their outcomes.
@@ -256,6 +299,7 @@ export async function readPackageReadiness(
     checkVersion(workspacePackage, run),
     checkWorkingTree(workspacePackage, run),
     checkTarball(workspacePackage, options.readPack ?? readPack, options.timeoutMs),
+    checkTranslations(workspacePackage, options.readTranslations ?? readTranslations),
   ]);
   return { checks, workspacePackage };
 }

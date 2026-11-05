@@ -1,6 +1,6 @@
 import type { APIRoute, GetStaticPaths } from "astro";
 
-import { packages, type PublicDocument } from "../../lib/catalog";
+import { packages, publishedPages, type PublicDocument } from "../../lib/catalog";
 
 interface Props {
   document: PublicDocument;
@@ -9,7 +9,7 @@ interface Props {
 /** Each page's Markdown, at `index.md` inside the page's own route. */
 export const getStaticPaths = (() =>
   packages.flatMap((packageEntry) =>
-    packageEntry.documents.map((document) => ({
+    publishedPages(packageEntry).map(({ document }) => ({
       params: { path: document.route.slice(1, -1) },
       props: { document },
     })),

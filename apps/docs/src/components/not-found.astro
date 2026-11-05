@@ -1,0 +1,25 @@
+---
+import { localizePath, messagesFor, type Locale } from "../i18n";
+import BaseLayout from "../layouts/base-layout.astro";
+import { siteConfig } from "../site-config";
+
+interface Props {
+  /** The language of the path the reader asked for. */
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const { notFound } = messagesFor(locale);
+const packagesHref = `${siteConfig.wwwUrl}${localizePath(locale, "/packages/")}`;
+---
+
+<BaseLayout description={notFound.description} locale={locale} title={notFound.title}>
+  <main aria-labelledby="not-found-title" class="section section-content wide" id="main-content">
+    <p class="not-found-status">404</p>
+    <h1 class="text-title-lg" id="not-found-title">{notFound.title}</h1>
+    <p class="not-found-lede">{notFound.lede}</p>
+    <p class="not-found-actions">
+      <a class="btn primary" href={packagesHref}>{notFound.browse}</a>
+    </p>
+  </main>
+</BaseLayout>

@@ -1,3 +1,5 @@
+import { isTranslationLocale, splitTranslatedDocsPath, type TranslationLocale } from "./translation-paths.ts";
+
 const STATUSES = ["active", "experimental", "deprecated"] as const;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 // Identity fields `codenhub.docs` held before they moved to `codenhub` itself.
@@ -46,10 +48,26 @@ export interface DocumentDefinition {
   sourcePath: string;
 }
 
+/** A translation of one public document, placed by the English path it mirrors. */
+export interface TranslatedDocumentDefinition extends DocumentDefinition {
+  /** Locale of the translation. */
+  locale: TranslationLocale;
+  /** `docs/`-relative path of the English document, which the translation mirrors. */
+  relativePath: string;
+  /** Route segment of the English document, shared by the translation under its locale. */
+  routePath: string;
+}
+
 /** A package that declares public documentation, with its documents resolved. */
 export interface PackageDefinition extends PackageMetadata {
-  /** Public documents, unordered. */
+  /** Public English documents, unordered. A `docs/<locale>/` area is never one of them. */
   documents: DocumentDefinition[];
+  /**
+   * Translations of public documents in listed locales, unordered. A file in an
+   * unlisted locale or with no English counterpart is left out; `hub check`
+   * reports it (`docs/specs/packages-translations.md`, "Validation").
+   */
+  translations: TranslatedDocumentDefinition[];
   /** Path to the package manifest. */
   manifestPath: string;
   /** Package directory containing the manifest. */
@@ -260,16 +278,34 @@ export function buildPackageDefinitions(
 
     const rootPath = manifestPath.slice(0, -"/package.json".length);
     const docsPrefix = `${rootPath}/docs/`;
-    const documents = sourcePaths
+    const candidates = sourcePaths
       .map(normalizePath)
       .filter((sourcePath) => sourcePath.startsWith(docsPrefix))
       .map((sourcePath) => ({ sourcePath, relativePath: sourcePath.slice(docsPrefix.length) }))
-      .filter(({ relativePath }) => !relativePath.startsWith("internal/"))
+      .filter(({ relativePath }) => !relativePath.startsWith("internal/"));
+    const documents = candidates
+      .filter(({ relativePath }) => splitTranslatedDocsPath(relativePath) === undefined)
       .map(({ sourcePath, relativePath }) => ({
         relativePath,
         routePath: getDocumentRoute(relativePath),
         sourcePath,
       }));
+    const englishPaths = new Set(documents.map(({ relativePath }) => relativePath));
+    const translations = candidates.flatMap(({ sourcePath, relativePath }): TranslatedDocumentDefinition[] => {
+      const translation = splitTranslatedDocsPath(relativePath);
+      return translation !== undefined &&
+        isTranslationLocale(translation.locale) &&
+        englishPaths.has(translation.relativePath)
+        ? [
+            {
+              locale: translation.locale,
+              relativePath: translation.relativePath,
+              routePath: getDocumentRoute(translation.relativePath),
+              sourcePath,
+            },
+          ]
+        : [];
+    });
 
     if (!documents.some(({ relativePath }) => relativePath === "index.md")) {
       throw new Error(`Missing docs/index.md for ${metadata.label} (${manifestPath}).`);
@@ -283,7 +319,7 @@ export function buildPackageDefinitions(
       routes.add(document.routePath);
     }
 
-    return [{ ...metadata, documents, manifestPath, rootPath }];
+    return [{ ...metadata, documents, manifestPath, rootPath, translations }];
   });
 
   const slugs = new Map<string, string>();

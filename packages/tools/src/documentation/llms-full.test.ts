@@ -69,6 +69,20 @@ describe("orderLlmsFullSources", () => {
   it("shouldOmitAMissingReadmeRatherThanFailing", () => {
     expect(orderLlmsFullSources(["docs/index.md"])).toEqual(["docs/index.md"]);
   });
+
+  it("shouldExcludeEveryTranslationAndTranslatedReadme", () => {
+    expect(
+      orderLlmsFullSources([
+        "README.md",
+        "README.pt-BR.md",
+        "docs/index.md",
+        "docs/pt-BR/index.md",
+        "docs/es/guides/setup.md",
+        "docs/fr/index.md",
+        "docs/api/index.md",
+      ]),
+    ).toEqual(["README.md", "docs/index.md", "docs/api/index.md"]);
+  });
 });
 
 describe("orderLlmsFullDocuments", () => {

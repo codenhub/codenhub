@@ -235,6 +235,57 @@ describe("readPackageReadiness", () => {
   it("reports every precondition in a stable order", async () => {
     const readiness = await readPackageReadiness(createPackage(), { readPack: packed, run: createRunner("1.1.0") });
 
-    expect(readiness.checks.map(({ name }) => name)).toEqual(["version", "worktree", "tarball"]);
+    expect(readiness.checks.map(({ name }) => name)).toEqual(["version", "worktree", "tarball", "translation"]);
+  });
+
+  it("is ready when every translation is current", async () => {
+    const readTranslations = async () => ({ stale: [], translationCount: 2, unsourced: [] });
+
+    const check = await checkFor(
+      createPackage(),
+      { readPack: packed, readTranslations, run: createRunner("1.1.0") },
+      "translation",
+    );
+
+    expect(check).toEqual({ detail: "2 translation(s), all current", status: "ready" });
+  });
+
+  it("blocks a stale or unsourced translation", async () => {
+    const readTranslations = async () => ({
+      stale: [
+        {
+          current: "b".repeat(40),
+          englishPath: "docs/start.md",
+          packagePath: "docs/es/start.md",
+          source: "a".repeat(40),
+        },
+      ],
+      translationCount: 2,
+      unsourced: ["README.es.md"],
+    });
+
+    const check = await checkFor(
+      createPackage(),
+      { readPack: packed, readTranslations, run: createRunner("1.1.0") },
+      "translation",
+    );
+
+    expect(check.status).toBe("blocked");
+    expect(check.detail).toContain("docs/es/start.md is stale");
+    expect(check.detail).toContain("README.es.md has no valid source");
+  });
+
+  it("reports translations it could not read as unknown", async () => {
+    const readTranslations = async () => {
+      throw new Error("git is not installed");
+    };
+
+    const check = await checkFor(
+      createPackage(),
+      { readPack: packed, readTranslations, run: createRunner("1.1.0") },
+      "translation",
+    );
+
+    expect(check).toEqual({ detail: "git is not installed", status: "unknown" });
   });
 });

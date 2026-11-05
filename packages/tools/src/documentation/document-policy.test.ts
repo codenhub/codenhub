@@ -197,6 +197,26 @@ describe("public document policy", () => {
     );
   });
 
+  it("accepts a translation source only under a locale area", () => {
+    const source = "3f9c2a1d8e7b6c5a4f3e2d1c0b9a8f7e6d5c4b3a";
+    expect(parsePublicDocumentFrontmatter({ source, title: "Primeiros passos" }, "docs/pt-BR/start.md").source).toBe(
+      source,
+    );
+    expect(() => parsePublicDocumentFrontmatter({ source, title: "Start" }, "docs/start.md")).toThrow(
+      "only a translation under docs/<locale>/",
+    );
+  });
+
+  it("places a translation by the English document it mirrors", () => {
+    expect(() => parsePublicDocumentFrontmatter({ order: 1, title: "Início" }, "docs/pt-BR/index.md")).toThrow(
+      "the package index is always first",
+    );
+    expect(
+      parsePublicDocumentFrontmatter({ group: "Guías", title: "Guías" }, "../../packages/x/docs/es/guides/index.md")
+        .group,
+    ).toBe("Guías");
+  });
+
   it("rejects documents without an H1", () => {
     expect(() => assertSingleH1([{ depth: 2 }], "docs/api.md")).toThrow("exactly one H1");
   });

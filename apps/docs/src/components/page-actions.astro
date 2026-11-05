@@ -3,13 +3,17 @@
  * Copy, view, or download the page's Markdown, published beside the page as
  * `index.md`. The split button copies in one click; the menu holds the rest.
  */
+import { messagesFor, type Locale } from "../i18n";
 import { documentMarkdownRoute } from "../lib/document-markdown";
 
 interface Props {
   route: string;
+  /** The page's language, which the actions and their copy feedback speak. Defaults to English. */
+  locale?: Locale;
 }
 
-const { route } = Astro.props;
+const { locale = "en", route } = Astro.props;
+const { pageActions: messages, shell } = messagesFor(locale);
 const markdownUrl = documentMarkdownRoute(route);
 // Every file is `index.md` on the server; a download named after the route
 // keeps several saved pages apart.
@@ -17,14 +21,24 @@ const downloadName = `${route.split("/").filter(Boolean).join("-")}.md`;
 ---
 
 <div class="page-actions" data-markdown-url={markdownUrl} data-page-actions>
-  <button aria-describedby="page-copy-status" aria-label="Copy page as Markdown" class="page-actions-copy" data-page-copy title="Copy page as Markdown" type="button">
+  <button
+    aria-describedby="page-copy-status"
+    aria-label={messages.copyAsMarkdown}
+    class="page-actions-copy"
+    data-copied-label={messages.copied}
+    data-failed-label={messages.copyFailed}
+    data-page-copy
+    data-retry-label={shell.copy.retry}
+    title={messages.copyAsMarkdown}
+    type="button"
+  >
     <i aria-hidden="true" class="ic-lucide-copy page-actions-rest-icon"></i>
     <i aria-hidden="true" class="ic-lucide-check page-actions-copied-icon"></i>
-    <span class="page-actions-label-rest">Copy page</span>
-    <span class="page-actions-label-copied">Copied</span>
-    <span class="page-actions-label-failed">Copy failed</span>
+    <span class="page-actions-label-rest">{messages.copyPage}</span>
+    <span class="page-actions-label-copied">{messages.copied}</span>
+    <span class="page-actions-label-failed">{messages.copyFailed}</span>
   </button>
-  <button aria-label="More page actions" class="page-actions-toggle" popovertarget="page-actions-menu" title="More page actions" type="button">
+  <button aria-label={messages.more} class="page-actions-toggle" popovertarget="page-actions-menu" title={messages.more} type="button">
     <i aria-hidden="true" class="ic-lucide-chevron-down"></i>
   </button>
   <span aria-live="polite" class="sr-only" id="page-copy-status"></span>
@@ -33,21 +47,21 @@ const downloadName = `${route.split("/").filter(Boolean).join("-")}.md`;
     <button class="page-actions-item" data-page-copy-item type="button">
       <i aria-hidden="true" class="ic-lucide-copy"></i>
       <span class="page-actions-item-text">
-        <span class="page-actions-item-label">Copy page</span>
-        <span class="page-actions-item-description">As Markdown, ready to paste anywhere</span>
+        <span class="page-actions-item-label">{messages.copyPage}</span>
+        <span class="page-actions-item-description">{messages.copyDescription}</span>
       </span>
     </button>
     <a class="page-actions-item" href={markdownUrl} rel="noopener" target="_blank">
       <i aria-hidden="true" class="ic-lucide-file-text"></i>
       <span class="page-actions-item-text">
-        <span class="page-actions-item-label">View Markdown</span>
-        <span class="page-actions-item-description">The source text of this page</span>
+        <span class="page-actions-item-label">{messages.view}</span>
+        <span class="page-actions-item-description">{messages.viewDescription}</span>
       </span>
     </a>
     <a class="page-actions-item" download={downloadName} href={markdownUrl}>
       <i aria-hidden="true" class="ic-lucide-download"></i>
       <span class="page-actions-item-text">
-        <span class="page-actions-item-label">Download Markdown</span>
+        <span class="page-actions-item-label">{messages.download}</span>
         <span class="page-actions-item-description">{downloadName}</span>
       </span>
     </a>

@@ -36,4 +36,12 @@ describe("package markdown links", () => {
       }),
     ).toBe('<a href="/example/reference/?filter=a?b#first#second">Reference</a>');
   });
+
+  it("routes a translation's links to translated pages under the locale and the rest to English", () => {
+    const html = '<a href="./guides/setup.md">Setup</a> <a href="../reference.md">Reference</a>';
+
+    expect(rewritePackageMarkdownLinks(html, { packageSlug: "example", sourceRelativePath: "pt-BR/index.md" })).toBe(
+      '<a href="/pt-BR/example/guides/setup/">Setup</a> <a href="/example/reference/">Reference</a>',
+    );
+  });
 });

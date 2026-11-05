@@ -24,6 +24,36 @@ function transform(children: TestElement[], siteOrigin = "https://docs.example.c
   return tree;
 }
 
+describe("controls in a translated document", () => {
+  it("speaks the language of the document's locale folder", () => {
+    const heading = element("h2", { id: "instalacao" }, [text("Instalação")]);
+    const pre = element("pre", { dataCodeLabel: "Plain text", dataCodePlain: "" }, [element("code", {}, [])]);
+    const tree: TestElement = { type: "root", children: [heading, pre] };
+
+    rehypeMarkdownEnhancements()(tree, { path: "C:\\repo\\packages\\error\\docs\\pt-BR\\guides\\setup.md" });
+
+    expect(heading.children.at(-1)?.properties).toMatchObject({ ariaLabel: "Link para Instalação" });
+    const header = tree.children[1]!.children[0]!;
+    expect(header.children[0]).toMatchObject({ value: "Texto simples" });
+    expect(header.children[1]?.properties).toMatchObject({
+      ariaLabel: "Copiar código Texto simples",
+      dataCopiedLabel: "Copiado",
+      title: "Copiar código",
+    });
+    expect(pre.properties).not.toHaveProperty("dataCodePlain");
+    expect(pre.properties).toMatchObject({ dataCodeLabel: "Texto simples" });
+  });
+
+  it("stays in English outside a listed locale folder", () => {
+    const heading = element("h2", { id: "io" }, [text("IO")]);
+    const tree: TestElement = { type: "root", children: [heading] };
+
+    rehypeMarkdownEnhancements()(tree, { path: "/repo/packages/error/docs/io/index.md" });
+
+    expect(heading.children.at(-1)?.properties).toMatchObject({ ariaLabel: "Link to IO" });
+  });
+});
+
 describe("heading anchors", () => {
   it.each(["h4", "h5", "h6"])("adds a permalink to reference member %s", (tagName) => {
     const heading = element(tagName, { id: "settokens" }, [text("setTokens")]);

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { parseArguments } from "../cli/parse-arguments.ts";
+import type { TranslationDriftReport } from "../documentation/translations.ts";
 import type { GitRunner } from "../release/published-tags.ts";
 import type { ReadinessOptions, ReleaseRunner } from "../release/readiness.ts";
 import { createReporter } from "../reporting/reporter.ts";
@@ -33,7 +34,12 @@ const runner: ReleaseRunner = vi.fn(async (command: string) =>
   command === "npm" ? { isSuccess: true, stdout: JSON.stringify("0.9.0") } : { isSuccess: true, stdout: "" },
 );
 
-const readiness: ReadinessOptions = { readPack: async () => new Set(["dist/index.js"]), run: runner };
+const noTranslations = async (): Promise<TranslationDriftReport> => ({ stale: [], translationCount: 0, unsourced: [] });
+const readiness: ReadinessOptions = {
+  readPack: async () => new Set(["dist/index.js"]),
+  readTranslations: noTranslations,
+  run: runner,
+};
 
 interface RunResult {
   exitCode: number;

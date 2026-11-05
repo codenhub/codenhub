@@ -104,10 +104,13 @@ describe("buildPublishedSnapshot", () => {
       materializeTreeAtRef: materializeFiles({
         LICENSE: "MIT\n",
         NOTICE: "Notice\n",
+        "README.fr.md": "# Erreur\n",
         "README.md": "# Error\n",
+        "README.pt-BR.md": "# Erro\n",
         "demo/package.json": "{}",
         "docs/assets/diagram.svg": "<svg/>",
         "docs/index.md": "# Error\n",
+        "docs/pt-BR/index.md": "# Erro\n",
         "docs/internal/architecture.md": "# Internal\n",
         "llms-full.txt": "full\n",
         "llms.txt": "index\n",
@@ -127,6 +130,7 @@ describe("buildPublishedSnapshot", () => {
       "LICENSE",
       "NOTICE",
       "README.md",
+      "README.pt-BR.md",
       "docs",
       "llms-full.txt",
       "llms.txt",
@@ -136,6 +140,7 @@ describe("buildPublishedSnapshot", () => {
     await expect(readdir(path.join(packageDirectory, "docs")).then((entries) => entries.sort())).resolves.toEqual([
       "assets",
       "index.md",
+      "pt-BR",
     ]);
   });
 

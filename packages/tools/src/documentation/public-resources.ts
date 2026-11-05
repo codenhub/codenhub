@@ -1,6 +1,7 @@
 import { posix } from "node:path";
 
 import { rewriteMarkdownTargets } from "./llms-full.ts";
+import { isTranslationLocale, splitTranslatedDocsPath } from "./translation-paths.ts";
 
 const ROOT_RESOURCES = new Set(["LICENSE", "NOTICE", "llms-full.txt", "llms.txt"]);
 
@@ -26,11 +27,49 @@ function normalizePath(filePath: string): string {
 }
 
 /**
+ * Splits a public `docs/` file into the route prefix it is published under and
+ * its path below that prefix.
+ *
+ * English is published under `/<slug>/`, and a translation in a listed locale
+ * under `/<locale>/<slug>/` at the path it mirrors
+ * (`docs/specs/packages-translations.md`, "Documentation site"). A file in an
+ * unlisted locale area is not published.
+ * @param slug Package documentation slug.
+ * @param normalizedPath Package-relative POSIX path.
+ * @returns The route prefix and `docs/`-relative path, or `undefined` for a file the site does not publish.
+ */
+function splitPublicDocsPath(
+  slug: string,
+  normalizedPath: string,
+): { prefix: string; relativePath: string } | undefined {
+  if (
+    !normalizedPath.startsWith("docs/") ||
+    normalizedPath.startsWith("docs/internal/") ||
+    normalizedPath.startsWith("docs/plans/")
+  ) {
+    return undefined;
+  }
+  const docsRelative = normalizedPath.slice("docs/".length);
+  if (docsRelative.split("/").some((segment) => segment.startsWith("."))) {
+    return undefined;
+  }
+  const translation = splitTranslatedDocsPath(docsRelative);
+  if (translation === undefined) {
+    return { prefix: `/${slug}`, relativePath: docsRelative };
+  }
+  return isTranslationLocale(translation.locale)
+    ? { prefix: `/${translation.locale}/${slug}`, relativePath: translation.relativePath }
+    : undefined;
+}
+
+/**
  * Derives the documentation-site route a package-relative file is published at.
  *
  * Public `docs/` Markdown becomes a page, other public `docs/` files keep their
  * names below the package route, and package-root `LICENSE`, `NOTICE`,
- * `llms.txt`, and `llms-full.txt` are published as they are.
+ * `llms.txt`, and `llms-full.txt` are published as they are. A translation
+ * under `docs/<locale>/` is published below `/<locale>/<slug>/` at the path it
+ * mirrors.
  * @param slug Package documentation slug.
  * @param packagePath Package-relative POSIX path.
  * @returns Site route, or `undefined` when the site does not publish the file.
@@ -40,22 +79,16 @@ export function resolveSiteRoute(slug: string, packagePath: string): string | un
   if (ROOT_RESOURCES.has(normalizedPath)) {
     return `/${slug}/${normalizedPath}`;
   }
-  if (
-    !normalizedPath.startsWith("docs/") ||
-    normalizedPath.startsWith("docs/internal/") ||
-    normalizedPath.startsWith("docs/plans/")
-  ) {
+  const publicPath = splitPublicDocsPath(slug, normalizedPath);
+  if (publicPath === undefined) {
     return undefined;
   }
-  const relativePath = normalizedPath.slice("docs/".length);
-  if (relativePath.split("/").some((segment) => segment.startsWith("."))) {
-    return undefined;
-  }
+  const { prefix, relativePath } = publicPath;
   if (!relativePath.toLowerCase().endsWith(".md")) {
-    return `/${slug}/${relativePath}`;
+    return `${prefix}/${relativePath}`;
   }
   const pageRoute = relativePath.replace(/\.md$/i, "").replace(/(^|\/)index$/i, "");
-  return `/${slug}/${pageRoute}`.replace(/\/$/, "") + "/";
+  return `${prefix}/${pageRoute}`.replace(/\/$/, "") + "/";
 }
 
 /**
@@ -101,17 +134,10 @@ export function discoverPublicResources(slug: string, packageFiles: readonly str
     return routePath === undefined ? [] : [{ packagePath, routePath }];
   });
   const documentOutputs = normalizedFiles
-    .filter(
-      (packagePath) =>
-        packagePath.startsWith("docs/") &&
-        !packagePath.startsWith("docs/internal/") &&
-        !packagePath.startsWith("docs/plans/") &&
-        packagePath.toLowerCase().endsWith(".md"),
-    )
-    .map((packagePath) => {
-      const relativePath = packagePath.slice("docs/".length).replace(/\.md$/i, "");
-      const routePath = relativePath.replace(/(^|\/)index$/i, "");
-      return `/${slug}/${routePath}`.replace(/\/$/, "") + "/index.html";
+    .filter((packagePath) => packagePath.toLowerCase().endsWith(".md"))
+    .flatMap((packagePath) => {
+      const routePath = resolveSiteRoute(slug, packagePath);
+      return routePath === undefined ? [] : [`${routePath}index.html`];
     });
   const resourceRoutes = new Set<string>();
   for (const resource of resources) {

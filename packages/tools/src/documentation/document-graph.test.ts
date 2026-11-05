@@ -335,3 +335,36 @@ describe("document policy", () => {
     ).toEqual(["invalid-frontmatter"]);
   });
 });
+
+describe("translations", () => {
+  const translated = {
+    ...BASE_FILES,
+    "README.pt-BR.md": "<!-- source: x -->\n\n# Exemplo\n\n[Docs](docs/pt-BR/index.md)",
+    "docs/pt-BR/index.md": "---\ntitle: Exemplo\nsource: x\n---\n\n# Exemplo\n",
+  };
+
+  it("requires a translated README and locale area in the tarball", () => {
+    const graph = createDocumentGraph(translated);
+    const issues = validateDocumentGraph(graph, {
+      npmFiles: new Set(Object.keys(BASE_FILES)),
+      siteFiles: new Set(["docs/index.md", "docs/pt-BR/index.md"]),
+    });
+    expect(
+      issues.filter(({ sourcePath }) => sourcePath === undefined).map(({ code, target }) => [code, target]),
+    ).toEqual([
+      ["npm-unpublished-target", "README.pt-BR.md"],
+      ["npm-unpublished-target", "docs/pt-BR/index.md"],
+    ]);
+  });
+
+  it("checks a translation's identifiers only against its own locale", () => {
+    expect(getIssueCodes(translated)).toEqual([]);
+    expect(
+      getIssueCodes({
+        ...translated,
+        "docs/pt-BR/guides.md": "---\ntitle: Guias\n---\n\n# Guias\n",
+        "docs/pt-BR/guides/index.md": "---\ntitle: Guias\n---\n\n# Guias\n",
+      }),
+    ).toEqual(["duplicate-document-identifier"]);
+  });
+});

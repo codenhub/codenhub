@@ -1,16 +1,26 @@
 ---
 import StatusBadge from "@codenhub/app-shell/components/status-badge.astro";
+import { fillMessage } from "@codenhub/app-shell/messages";
 
-import type { PublicPackage } from "../lib/catalog";
-import { buildPackageSidebar, groupContainsRoute } from "../lib/package-navigation";
+import { messagesFor, type Locale } from "../i18n";
+import { navigationDocuments, type PublicPackage } from "../lib/catalog";
+import { buildPackageSidebar, groupContainsRoute, type NavLink } from "../lib/package-navigation";
 
 interface Props {
   currentPackage: PublicPackage;
   currentRoute?: string;
+  /** The page's language, which picks the navigation list and its labels. */
+  locale?: Locale;
 }
 
-const { currentPackage, currentRoute } = Astro.props;
-const { tabs, tree } = buildPackageSidebar(currentPackage.documents, currentRoute);
+const { currentPackage, currentRoute, locale = "en" } = Astro.props;
+const messages = messagesFor(locale);
+const { tabs, tree } = buildPackageSidebar(
+  navigationDocuments(currentPackage, locale),
+  currentRoute,
+  messages.sections,
+  messages.overview,
+);
 
 const { demoUrl } = currentPackage;
 
@@ -18,12 +28,15 @@ const { demoUrl } = currentPackage;
 // demo shows none.
 const sectionTabs = tabs.length + (demoUrl === undefined ? 0 : 1) > 1 ? tabs : [];
 
+// In a locale, an untranslated page links to its English route and says so
+// (`docs/specs/packages-translations.md`, "Documentation site").
+const isEnglishFallback = (link: NavLink): boolean => link.lang !== locale;
 ---
 
-<nav aria-label={`${currentPackage.label} documentation`}>
+<nav aria-label={fillMessage(messages.packageNavigation, { label: currentPackage.label })}>
   <div class="package-navigation-title">
     <p class="rail-title">{currentPackage.label}</p>
-    <StatusBadge status={currentPackage.status} />
+    <StatusBadge labels={messages.shell.status} status={currentPackage.status} />
   </div>
 
   {
@@ -47,7 +60,7 @@ const sectionTabs = tabs.length + (demoUrl === undefined ? 0 : 1) > 1 ? tabs : [
                 opens in a new tab and carries the outbound arrow. */}
             <a class="package-tab" href={demoUrl} rel="noopener noreferrer" target="_blank">
               <i aria-hidden="true" class="ic-lucide-monitor-play package-tab-icon" />
-              Demo
+              {messages.demo}
               <i aria-hidden="true" class="ic-lucide-arrow-up-right package-tab-outbound" />
             </a>
           </li>
@@ -61,8 +74,13 @@ const sectionTabs = tabs.length + (demoUrl === undefined ? 0 : 1) > 1 ? tabs : [
       tree.map((node) =>
         node.kind === "link" ? (
           <li>
-            <a aria-current={node.route === currentRoute ? "page" : undefined} href={node.route}>
-              {node.title}
+            <a
+              aria-current={node.route === currentRoute ? "page" : undefined}
+              href={node.route}
+              hreflang={isEnglishFallback(node) ? "en" : undefined}
+            >
+              {isEnglishFallback(node) ? <span lang="en">{node.title}</span> : node.title}
+              {isEnglishFallback(node) && <span class="nav-language">({messages.inEnglish})</span>}
             </a>
           </li>
         ) : (
@@ -77,8 +95,13 @@ const sectionTabs = tabs.length + (demoUrl === undefined ? 0 : 1) > 1 ? tabs : [
               <ul class="document-sublist">
                 {node.items.map((item) => (
                   <li>
-                    <a aria-current={item.route === currentRoute ? "page" : undefined} href={item.route}>
-                      {item.title}
+                    <a
+                      aria-current={item.route === currentRoute ? "page" : undefined}
+                      href={item.route}
+                      hreflang={isEnglishFallback(item) ? "en" : undefined}
+                    >
+                      {isEnglishFallback(item) ? <span lang="en">{item.title}</span> : item.title}
+                      {isEnglishFallback(item) && <span class="nav-language">({messages.inEnglish})</span>}
                     </a>
                   </li>
                 ))}

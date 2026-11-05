@@ -1,5 +1,8 @@
+import { isTranslationLocale } from "@codenhub/tools/documentation";
+
 interface RewriteOptions {
   packageSlug: string;
+  /** The document's path relative to the package `docs/`, its locale folder included. */
   sourceRelativePath: string;
 }
 
@@ -22,16 +25,21 @@ function rewriteUrl(url: string, options: RewriteOptions): string {
     return url;
   }
 
-  const isMarkdownTarget = targetRelativePath?.toLowerCase().endsWith(".md") === true;
+  // A translation's route puts its locale before the package slug
+  // (`docs/specs/packages-translations.md`, "Documentation site").
+  const [firstSegment = "", ...restSegments] = targetRelativePath?.split("/") ?? [];
+  const locale = restSegments.length > 0 && isTranslationLocale(firstSegment) ? firstSegment : undefined;
+  const routedPath = locale === undefined ? targetRelativePath : restSegments.join("/");
+  const isMarkdownTarget = routedPath?.toLowerCase().endsWith(".md") === true;
   const targetRoute = isMarkdownTarget
-    ? targetRelativePath!.replace(/(^|\/)index\.md$/i, "").replace(/\.md$/i, "")
-    : (targetRelativePath ??
-      (["/LICENSE", "/NOTICE"].includes(targetUrl.pathname) ? targetUrl.pathname.slice(1) : undefined));
+    ? routedPath!.replace(/(^|\/)index\.md$/i, "").replace(/\.md$/i, "")
+    : (routedPath ?? (["/LICENSE", "/NOTICE"].includes(targetUrl.pathname) ? targetUrl.pathname.slice(1) : undefined));
   if (targetRoute === undefined) {
     return url;
   }
   const suffix = `${query === undefined ? "" : `?${query}`}${fragment === undefined ? "" : `#${fragment}`}`;
-  const route = `/${options.packageSlug}/${targetRoute}`.replace(/\/$/, "");
+  const packageRoute = locale === undefined ? `/${options.packageSlug}` : `/${locale}/${options.packageSlug}`;
+  const route = `${packageRoute}/${targetRoute}`.replace(/\/$/, "");
   return `${route}${isMarkdownTarget ? "/" : ""}${suffix}`;
 }
 
