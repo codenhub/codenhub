@@ -21,6 +21,9 @@ export const defaultLocale = "en" satisfies Locale;
 /** Every page language, English first. */
 export const locales: readonly Locale[] = [defaultLocale, ...TRANSLATION_LOCALES];
 
+/** Each locale's name in its own language, as the language menu lists it. */
+export const localeNames: Record<Locale, string> = { en: "English", "pt-BR": "Português (Brasil)", es: "Español" };
+
 const dictionaries: Record<Locale, Dictionary> = { en, es, "pt-BR": ptBR };
 
 /**

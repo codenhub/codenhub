@@ -1,9 +1,10 @@
 ---
 import type { SiteConfig } from "@codenhub/app-shell/site-config";
 import ShellLayout from "@codenhub/app-shell/layouts/base-layout.astro";
+import LanguageMenu from "@codenhub/app-shell/components/language-menu.astro";
 import SearchPalette from "@codenhub/app-shell/components/search-palette.astro";
 
-import { defaultLocale, localizePath, messagesFor, type Locale } from "../i18n";
+import { defaultLocale, localeNames, locales, localizePath, messagesFor, type Locale } from "../i18n";
 import type { PageAlternate, PublicPackage } from "../lib/catalog";
 import { siteConfig } from "../site-config";
 import "../styles/global.css";
@@ -43,6 +44,12 @@ const scopedSiteConfig: SiteConfig = {
   wwwUrl: undefined,
 };
 const homeHref = wwwPath("/");
+// The page's language versions in the site's locale order, as on the main site.
+// An untranslated page has none, and so no menu: its other locales would 404.
+const languageOptions = locales.flatMap((target) => {
+  const alternate = alternates.find((candidate) => candidate.lang === target);
+  return alternate === undefined ? [] : [{ locale: target, href: alternate.route, name: localeNames[target] }];
+});
 const localLinks = [{ href: wwwPath("/packages/"), label: messages.packages }];
 ---
 
@@ -69,6 +76,11 @@ const localLinks = [{ href: wwwPath("/packages/"), label: messages.packages }];
     ))
   }
   <SearchPalette indexUrl={localizePath(locale, "/search-index.json")} messages={messages.shell.search} slot="actions" />
+  {
+    languageOptions.length > 0 && (
+      <LanguageMenu label={messages.language} locale={locale} options={languageOptions} slot="actions" />
+    )
+  }
   <slot />
   <script>
     import { createCopyController } from "@codenhub/app-shell/copy-feedback";
