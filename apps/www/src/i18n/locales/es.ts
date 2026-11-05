@@ -137,6 +137,7 @@ export const es: Dictionary = {
     },
     install: {
       title: "Instalación",
+      runTitle: "Ejecución",
       packageManager: "Gestor de paquetes",
       copy: "Copiar comando",
     },
@@ -150,6 +151,7 @@ export const es: Dictionary = {
       latest: "Más reciente",
       prerelease: "Prelanzamiento",
       copyInstall: "Copiar el comando de instalación de {version}",
+      copyRun: "Copiar el comando de ejecución de {version}",
       download: "Descargar el tarball de {version}",
     },
     entrypoints: {

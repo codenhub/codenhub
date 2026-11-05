@@ -8,6 +8,14 @@ export interface PackageProperties {
   dependencyCount: number;
   /** Public entrypoints, the keys of `exports`. */
   entrypoints: string[];
+  /**
+   * Whether the package is a command to run rather than a library to install: it declares exactly
+   * one `bin` and no library entrypoint, neither an `exports` subpath besides its manifest nor a
+   * `main`, as `@codenhub/skills` does. A package with both stays a library, since a project
+   * installs it to import from. One with several binaries does too: `npx <name>` cannot pick among
+   * them unless one is named after the package, and installing it still works.
+   */
+  isCli: boolean;
   /** Whether the package is ESM-only: `type: module` and no `require` export condition. */
   isEsmOnly: boolean;
   /** Whether `sideEffects` is `false`, so bundlers can drop unused modules. */
@@ -77,16 +85,45 @@ export function describeProperties(manifest: Record<string, unknown>): PackagePr
   const exportsField = isRecord(manifest.exports) ? manifest.exports : {};
   const codenhub = isRecord(manifest.codenhub) ? manifest.codenhub : {};
   const names = (value: unknown): string[] => (isRecord(value) ? Object.keys(value).sort() : []);
+  const entrypoints = entrypointsOf(manifest.exports);
+  const binCount = typeof manifest.bin === "string" ? Number(manifest.bin !== "") : names(manifest.bin).length;
+  const hasMain = typeof manifest.main === "string" && manifest.main !== "";
 
   return {
     bundled: Array.isArray(codenhub.bundled) ? codenhub.bundled.filter((name) => typeof name === "string") : [],
     dependencyCount: names(manifest.dependencies).length,
-    entrypoints: entrypointsOf(manifest.exports),
+    entrypoints,
+    isCli: binCount === 1 && entrypoints.length === 0 && !hasMain,
     isEsmOnly: manifest.type === "module" && !hasCondition(exportsField, "require"),
     isSideEffectFree: manifest.sideEffects === false,
     peerDependencies: names(manifest.peerDependencies),
     shipsTypes: typeof manifest.types === "string" || hasCondition(exportsField, "types"),
   };
+}
+
+/** Package managers the index gives a command for. */
+export type PackageManager = "npm" | "pnpm" | "yarn" | "bun";
+
+// A library is added to the project; a CLI is fetched and run without becoming
+// a dependency. `yarn dlx` is Yarn 2 and later; Yarn 1 has no equivalent.
+const COMMANDS: Record<"install" | "run", Record<PackageManager, string>> = {
+  install: { npm: "npm install", pnpm: "pnpm add", yarn: "yarn add", bun: "bun add" },
+  run: { npm: "npx", pnpm: "pnpm dlx", yarn: "yarn dlx", bun: "bunx" },
+};
+
+/**
+ * The command that gets a package with a package manager: installing a library, or running a CLI.
+ * @param manager Package manager the command is for.
+ * @param packageName Full npm name, such as `@codenhub/validation`.
+ * @param isCli Whether the package is run rather than installed (`PackageProperties.isCli`).
+ * @param version Exact version to pin. Without it a library resolves its default range and a CLI
+ *   runs `@latest`, so a cached copy is not reused.
+ * @returns Such as `pnpm add @codenhub/validation` or `npx @codenhub/skills@latest`.
+ */
+export function packageCommand(manager: PackageManager, packageName: string, isCli: boolean, version?: string): string {
+  const spec = version ?? (isCli ? "latest" : undefined);
+  const command = COMMANDS[isCli ? "run" : "install"][manager];
+  return `${command} ${spec === undefined ? packageName : `${packageName}@${spec}`}`;
 }
 
 const SIZE_UNITS = [

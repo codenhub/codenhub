@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { describeProperties, describeReleases, describeRootSize, formatBytes, npmTarballUrl } from "./package-facts";
+import {
+  describeProperties,
+  describeReleases,
+  describeRootSize,
+  formatBytes,
+  npmTarballUrl,
+  packageCommand,
+} from "./package-facts";
 
 describe("describeReleases", () => {
   it("takes the newest stable release as the latest, skipping a newer pre-release", () => {
@@ -45,6 +52,7 @@ describe("describeProperties", () => {
       bundled: ["@codenhub/validation"],
       dependencyCount: 2,
       entrypoints: [".", "./data/*"],
+      isCli: false,
       isEsmOnly: true,
       isSideEffectFree: true,
       peerDependencies: ["@codenhub/styles", "react"],
@@ -61,6 +69,25 @@ describe("describeProperties", () => {
     expect(describeProperties({ exports: { "./package.json": "./package.json" } }).entrypoints).toEqual([]);
   });
 
+  it("calls a package a CLI when it declares bin and exports nothing but its manifest", () => {
+    const exports = { "./package.json": "./package.json" };
+
+    expect(describeProperties({ bin: { "codenhub-skills": "./dist/cli.js" }, exports }).isCli).toBe(true);
+    expect(describeProperties({ bin: "./dist/cli.js" }).isCli).toBe(true);
+    expect(describeProperties({ exports }).isCli).toBe(false);
+  });
+
+  it("keeps a package with bin and a library entrypoint a library", () => {
+    const manifest = { bin: { tool: "./dist/cli.js" }, exports: { ".": "./dist/index.js" } };
+
+    expect(describeProperties(manifest).isCli).toBe(false);
+    expect(describeProperties({ bin: "./dist/cli.js", main: "./dist/index.js" }).isCli).toBe(false);
+  });
+
+  it("keeps a package with several binaries a library, since npx cannot pick one", () => {
+    expect(describeProperties({ bin: { a: "./dist/a.js", b: "./dist/b.js" } }).isCli).toBe(false);
+  });
+
   it("does not call a package with a require condition ESM-only", () => {
     const properties = describeProperties({
       exports: { ".": { import: "./index.js", require: "./index.cjs" } },
@@ -68,6 +95,20 @@ describe("describeProperties", () => {
     });
 
     expect(properties).toMatchObject({ isEsmOnly: false, isSideEffectFree: false, shipsTypes: false });
+  });
+});
+
+describe("packageCommand", () => {
+  it("adds a library to the project", () => {
+    expect(packageCommand("npm", "@codenhub/error", false)).toBe("npm install @codenhub/error");
+    expect(packageCommand("bun", "@codenhub/error", false, "0.3.0")).toBe("bun add @codenhub/error@0.3.0");
+  });
+
+  it("runs a CLI without installing it, at the latest version unless one is pinned", () => {
+    expect(packageCommand("npm", "@codenhub/skills", true)).toBe("npx @codenhub/skills@latest");
+    expect(packageCommand("pnpm", "@codenhub/skills", true)).toBe("pnpm dlx @codenhub/skills@latest");
+    expect(packageCommand("yarn", "@codenhub/skills", true)).toBe("yarn dlx @codenhub/skills@latest");
+    expect(packageCommand("bun", "@codenhub/skills", true, "0.3.0")).toBe("bunx @codenhub/skills@0.3.0");
   });
 });
 
