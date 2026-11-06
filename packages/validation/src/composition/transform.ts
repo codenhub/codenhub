@@ -1,6 +1,7 @@
 import { chain, detached, type Maybe } from "../core/async";
 import { described } from "../core/describe";
-import { call, composed } from "../core/nesting";
+import { useMixedRun } from "../core/mixed";
+import { call, composed, fastOf, MISS } from "../core/nesting";
 import { assertFunction, pass } from "../core/result";
 import type { AnyValidator, AsyncSchema, Schema, ValidationResult, Validator } from "../core/types";
 
@@ -60,10 +61,17 @@ export function transform<T, R, TInput = unknown>(
 export function transform<T, R>(validator: AnyValidator<T>, convert: (value: T) => Maybe<R>): AnyValidator<R> {
   assertFunction("validator", validator);
   assertFunction("convert", convert);
-  const validate = composed((input, place) =>
-    chain(call(validator, input, place) as Maybe<ValidationResult<T>>, (result): Maybe<ValidationResult<R>> =>
-      result.ok ? chain(detached(convert, result.value), (converted) => pass(converted)) : result,
-    ),
-  );
+  useMixedRun();
+  // The validator's fast test, when it has one, is asked first, as `childOf` asks a composer's: it gives what
+  // the validator would produce, and on a miss the validator runs and says why.
+  const fast = fastOf(validator);
+  const validate = composed((input, place) => {
+    const value = fast === undefined ? MISS : fast(input);
+    return chain(
+      (value === MISS ? call(validator, input, place) : pass(value)) as Maybe<ValidationResult<T>>,
+      (result): Maybe<ValidationResult<R>> =>
+        result.ok ? chain(detached(convert, result.value), (converted) => pass(converted)) : result,
+    );
+  });
   return described(validate, { kind: "transform", inner: validator, convert }) as AnyValidator<R>;
 }

@@ -3,6 +3,7 @@ import { report, tail } from "../core/checks";
 import { described } from "../core/describe";
 import { fieldFailureOf } from "../core/field-hook";
 import { cap, MAX_ISSUES } from "../core/limit";
+import { mixedRunOf } from "../core/mixed";
 import { append, childOf, composed, fastOf, MISS, type Child, type Fast } from "../core/nesting";
 import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
 import { assertFunction, failWith, issue, RESERVED_KEY, reservedKey } from "../core/result";
@@ -170,6 +171,9 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
   // Its work still asks its properties' fast tests first, and runs the checks once on what they produced.
   const fast = checks.length > 0 ? undefined : childrenFast;
   const fastChecked = checks.length > 0 ? childrenFast : undefined;
+  // A shape some of whose properties have no fast test, such as one with a `transform` property, asks the
+  // others' first and runs each of these once, when a validator that leaves one without has turned it on.
+  const mixedRun = childrenFast === undefined ? mixedRunOf() : undefined;
 
   const validator = composed((input, place): Maybe<ValidationResult<unknown>> => {
     if (fastChecked !== undefined) {
@@ -212,9 +216,13 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
       // Copied, it would be the prototype of whatever the output is next assigned to.
       append(issues, report([reservedKey(RESERVED_KEY)], place, options.message));
     }
-    const results = runEach(values.length, (index) =>
-      (children[index] as Child)(values[index], place, keys[index] as string),
-    );
+    const results =
+      mixedRun === undefined || issues.length > 0
+        ? runEach(values.length, (index) => (children[index] as Child)(values[index], place, keys[index] as string))
+        : mixedRun(keys, children, fastChildren, values, present, extra, place);
+    if (!Array.isArray(results)) {
+      return accept(results, place);
+    }
     return chain(collect(results), (settled) => {
       const output: Record<string, unknown> = {};
       for (let index = 0; index < settled.length; index += 1) {

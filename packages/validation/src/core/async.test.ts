@@ -114,6 +114,10 @@ describe("a composer whose child throws after another returned a pending result"
     try {
       const composers: [string, () => unknown][] = [
         ["object", () => object({ a: rejecting, b: throwing })({ a: 1, b: 2 })],
+        [
+          "object with a property that has a fast test",
+          () => object({ a: rejecting, c: string(), b: throwing })({ a: 1, c: "x", b: 2 }),
+        ],
         ["array", () => array(mixed)([1, 2])],
         ["tuple", () => tuple([rejecting, throwing])([1, 2])],
         ["record", () => record(string(), mixed)({ a: 1, b: 2 })],

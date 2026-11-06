@@ -13,6 +13,7 @@ import {
 import { tail } from "../core/checks";
 import { described } from "../core/describe";
 import { keepResolved } from "../core/lazy";
+import { useMixedRun } from "../core/mixed";
 import { call, composed, type Place } from "../core/nesting";
 import { assertFunction, assertOption, issue } from "../core/result";
 import type {
@@ -252,6 +253,7 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
   const { maxDepth = DEFAULT_MAX_DEPTH, maxCalls = DEFAULT_MAX_CALLS } = options;
   assertLimit("maxDepth", maxDepth);
   assertLimit("maxCalls", maxCalls);
+  useMixedRun();
   let resolved: AnyValidator | undefined;
   // Names this `lazy` to the results it keeps, which are its own, since another `lazy` may validate
   // the same object at the same path otherwise.
