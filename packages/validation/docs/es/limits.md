@@ -2,7 +2,7 @@
 title: Límites
 description: Lo que cuesta una entrada que falla, los límites de los esquemas recursivos, los tamaños que necesita una entrada no confiable y cómo audit encuentra los límites que un esquema deja abiertos.
 order: 12
-source: a3150de56f84a1c4de175605afa3f34a51e94d8c
+source: 0d5df4008c35a7d4451adff8dab664749c0704a9
 ---
 
 # Límites
@@ -56,7 +56,7 @@ record(string(), unknown())(JSON.parse('{"__proto__":{"admin":true}}')); // { ok
 Una colección se detiene una vez que sus elementos reportaron 1000 problemas. Los elementos que siguen no se validan. Un problema más, `too_big` con `{ maximum: 1000, type: "issues" }` en la ruta de la colección, indica que se detuvo. El límite es de cada colección, no de toda la entrada, así que un `object` con dos listas puede reportar unos 2000.
 
 - Un problema que contiene otros en `params.issues` cuenta junto con ellos. Así, un elemento que falla una `union` cuenta una vez, y una vez más por cada problema de cada opción. Una clave que falla cuenta junto con el problema que tiene detrás.
-- Las claves desconocidas de un `object` estricto, las repeticiones que encuentran `unique` y `set`, las claves que una query string repite y los conflictos de una `intersection` se enumeran hasta el mismo límite.
+- Las claves desconocidas de un `object` estricto, o de uno que las pasa a un validador, las repeticiones que encuentran `unique` y `set`, las claves que una query string repite y los conflictos de una `intersection` se enumeran hasta el mismo límite.
 - Solo se cuentan los problemas. Así que una entrada que pasa nunca se ve afectada, y una entrada que falla sigue fallando. Lo que cambia es que una lista larga de elementos inválidos no se reporta completa, y no cuesta la memoria ni el tiempo de reportarla.
 - Para reportar cada fila inválida de una lista larga, como en una importación, llama tú mismo al validador de los elementos en cada fila.
 - Los elementos que se validan de forma asíncrona ya comenzaron todos antes de que se cuente alguno. Así que el límite recorta lo que reportan, pero no su trabajo: dale a una colección así un `max`.
@@ -183,7 +183,7 @@ Cómo lee un esquema:
 - **Los formatos cuya entrada está acotada por lo que aceptan** no necesitan `max`: `email`, `uuid`, `ulid`, `cuid2`, `nanoid`, `ip`, `cidr`, `mac`, `port`, `phone`, `creditCard`, `isoDate`, `hostname` y `domain`. Cualquier otro, como `url`, `hex`, `jwt` o uno creado con `format`, es texto como cualquier otro. Acótalo con un `pipe`, como se muestra abajo.
 - **Cuenta un límite anterior.** Un paso de `pipe` lee lo que produjeron los pasos anteriores. Así que, después de un paso que acota su valor, nada necesita un límite propio. En `pipe(string({ max: 10_000 }), json(object({ tags: array(string()) })))`, el texto tiene como máximo 10 000 caracteres, y también todo lo que se parsea a partir de él. `pipe(string({ max: 2048 }), url())` acota una URL de la misma forma. El `max` de una colección acota cuántos elementos tiene, no lo que contiene cada uno, así que los elementos después de él siguen necesitando sus propios límites, a menos que los elementos anteriores también estuvieran acotados o sean números, booleanos, fechas o literales, que no contienen nada más.
 - **El texto que se lee como bigint** tarda más que un tiempo lineal en convertirse. Así que `coerceBigint` necesita `min` o `gt`, y `max` o `lt`. Estos limitan los dígitos que convierte, y un texto con más dígitos se rechaza sin convertirse.
-- **Una ruta** une los nombres de propiedad con `.`. Escribe `[]` para los elementos de un array o un set, `[0]` para un elemento de una tupla, `{}` para las claves y los valores de un record o un map, y `""` para el propio validador.
+- **Una ruta** une los nombres de propiedad con `.`. Escribe `[]` para los elementos de un array o un set, `[0]` para un elemento de una tupla, `{}` para las claves y los valores de un record o un map y para las claves desconocidas que un `object` pasa a un validador, y `""` para el propio validador.
 - **Un esquema recursivo** se lee una vez en cada lugar donde se usa, y no otra vez donde se refiere a sí mismo. Uno que se construye de nuevo en cada nivel, como lo construye `lazy(() => build())`, nunca se repite, así que `audit` lanza un `TypeError` para él, igual que `toJsonSchema`.
 - **`formData`** se lee de punta a punta, hasta lo que contiene.
 
@@ -191,7 +191,7 @@ Lo que no juzga:
 
 - Si un `max` es lo bastante pequeño. Cualquier número indica que alguien lo decidió.
 - Las verificaciones, ya que se ejecutan sobre un valor que ya pasó, ni nada de lo que hace por dentro un `guard` o un validador escrito a mano.
-- Lo que ninguna opción acota. Las claves que conserva un `object` con `unknownKeys: "passthrough"` y lo que acepta `unknown()` no se reportan. Usa `"strip"` o `"strict"` para las claves que el esquema no nombra, y un validador del tipo que esperas en lugar de `unknown()`.
+- Lo que ninguna opción acota. Cuántas claves conserva un `object` con `unknownKeys: "passthrough"` o un validador, y lo que acepta `unknown()`, no se reportan. El propio validador se lee, así que sus límites sí. Usa `"strip"` o `"strict"` para las claves que el esquema no nombra, y un validador del tipo que esperas en lugar de `unknown()`.
 
 ## Siguiente
 

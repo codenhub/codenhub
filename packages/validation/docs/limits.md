@@ -55,7 +55,7 @@ record(string(), unknown())(JSON.parse('{"__proto__":{"admin":true}}')); // { ok
 A collection stops once its items have reported 1,000 issues. The items after that are not validated. One more issue, `too_big` with `{ maximum: 1000, type: "issues" }` at the path of the collection, says that it stopped. The limit is for each collection, not for the whole input, so an `object` with two lists can report about 2,000.
 
 - An issue that holds others in `params.issues` counts with them. So an item that fails a `union` counts once, and once more for each issue of each option. A key that fails counts with the issue behind it.
-- The unknown keys of a strict `object`, the repeats `unique` and `set` find, the keys a query string repeats, and the conflicts of an `intersection` are listed up to the same limit.
+- The unknown keys of a strict `object`, or of one that gives them to a validator, the repeats `unique` and `set` find, the keys a query string repeats, and the conflicts of an `intersection` are listed up to the same limit.
 - Only issues are counted. So input that passes is never affected, and input that fails still fails. What changes is that a long list of bad items is not reported in full, and does not cost the memory and time of reporting it.
 - To report every bad row of a long list, such as an import, call the item validator on each row yourself.
 - Items that are validated asynchronously have all started before any is counted. So the limit cuts what they report, and not their work: give such a collection a `max`.
@@ -182,7 +182,7 @@ How it reads a schema:
 - **Formats whose input is bounded by what they accept** need no `max`: `email`, `uuid`, `ulid`, `cuid2`, `nanoid`, `ip`, `cidr`, `mac`, `port`, `phone`, `creditCard`, `isoDate`, `hostname` and `domain`. Any other, such as `url`, `hex`, `jwt` or one made with `format`, is text like any other. Bound it with a `pipe`, as below.
 - **A bound before it counts.** A `pipe` step reads what the steps before it produced. So after a step that bounds its value, nothing needs a bound of its own. In `pipe(string({ max: 10_000 }), json(object({ tags: array(string()) })))`, the text is at most 10,000 characters, and so is everything parsed from it. `pipe(string({ max: 2048 }), url())` bounds a URL the same way. The `max` of a collection bounds how many items it has, not what each holds, so the items after it still need their own bounds, unless the items before were bounded too or are numbers, booleans, dates or literals, which hold nothing more.
 - **Text read as a bigint** takes longer than linear time to convert. So `coerceBigint` needs `min` or `gt`, and `max` or `lt`. They limit the digits it converts, and text with more is refused without being converted.
-- **A path** joins property names with `.`. It writes `[]` for the items of an array or a set, `[0]` for an item of a tuple, `{}` for the keys and values of a record or a map, and `""` for the validator itself.
+- **A path** joins property names with `.`. It writes `[]` for the items of an array or a set, `[0]` for an item of a tuple, `{}` for the keys and values of a record or a map and for the unknown keys an `object` gives a validator, and `""` for the validator itself.
 - **A recursive schema** is read once at each place it is used, and not again where it refers to itself. One built anew at every level, as `lazy(() => build())` builds it, never repeats, so `audit` throws a `TypeError` for it, as `toJsonSchema` does.
 - **`formData`** is read through, to what it holds.
 
@@ -190,7 +190,7 @@ What it does not judge:
 
 - Whether a `max` is small enough. Any number says someone decided.
 - Checks, since they run on a value that already passed, and anything a `guard` or a validator written by hand does inside.
-- What no option bounds. The keys an `object` with `unknownKeys: "passthrough"` keeps, and what `unknown()` accepts, are not reported. Use `"strip"` or `"strict"` for keys the schema does not name, and a validator of the type you expect in place of `unknown()`.
+- What no option bounds. How many keys an `object` with `unknownKeys: "passthrough"` or a validator keeps, and what `unknown()` accepts, are not reported. The validator itself is read, so its own bounds are. Use `"strip"` or `"strict"` for keys the schema does not name, and a validator of the type you expect in place of `unknown()`.
 
 ## Next
 

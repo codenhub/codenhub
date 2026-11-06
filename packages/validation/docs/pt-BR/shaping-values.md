@@ -1,7 +1,7 @@
 ---
 title: Moldando valores
 description: Encadeie validadores, converta valores, escreva-os de volta, marque e congele valores, descreva-os, troque uma falha por um fallback e reaproveite a estrutura de um objeto.
-source: 3153f42ba602763a0c2f593e3fa938c2f1066472
+source: 210016e82ea9da98e51685547f5408c1acffdfe7
 order: 8
 ---
 
@@ -234,6 +234,7 @@ O novo objeto mantém as opções do objeto de origem, `unknownKeys` e `message`
 
 - Cada opção passada substitui a de mesmo nome e mantém as outras. Então um objeto strict do qual se faz `pick` passando só uma `message` continua strict.
 - Uma opção passada como `undefined` conta como não passada, e mantém a do original. Então `pick(strictUser, ["name"], { unknownKeys: undefined })` continua strict.
+- Um validador passado como `unknownKeys` também é mantido. Assim, uma propriedade que `pick` ou `omit` deixa de fora vai para ele quando a entrada a tem, como qualquer outra chave que a nova estrutura não lista.
 
 Um objeto com verificações é recusado com um `TypeError`. Uma verificação lê o objeto inteiro, então pode ler uma propriedade que o novo objeto não tem. Mantida, ela poderia fazer todo valor falhar. Descartada sem aviso, o novo objeto aceitaria o que o primeiro foi escrito para recusar. Crie o objeto sem as verificações, derive a partir dele e dê a cada resultado as verificações de que ele precisa.
 

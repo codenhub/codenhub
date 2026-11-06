@@ -233,6 +233,7 @@ The new object keeps the options of the one it came from, `unknownKeys` and `mes
 
 - Each option given replaces the one of its name, and leaves the others. So a strict object picked from with only a `message` stays strict.
 - An option given as `undefined` counts as not given, and keeps the one of the original. So `pick(strictUser, ["name"], { unknownKeys: undefined })` stays strict.
+- A validator given as `unknownKeys` is kept too. So a property that `pick` or `omit` leaves out goes to it when the input has it, as any other key the new shape does not list does.
 
 An object with checks is refused with a `TypeError`. A check reads the whole object, so it may read a property the new object lacks. Kept, it could fail every value. Dropped without a word, the new object would accept what the first was written to refuse. Make the object without its checks, derive from that, and give each result the checks it needs.
 

@@ -1,7 +1,7 @@
 ---
 title: JSON Schema
 description: Escreva um validador como um JSON Schema, para o corpo de uma API HTTP, os argumentos de uma ferramenta que um modelo de linguagem chama ou um gerador de formulários.
-source: f900b56f7a8c8319899b73b773f639f5a9daf462
+source: 7cffb6323c34985f02326fa5baac10fb40002fa0
 order: 10
 ---
 
@@ -89,7 +89,7 @@ O lado da saída considera que um valor padrão e o valor de um `fallback` passa
 | `literal`, `oneOf`                                          | `const` e `enum`                                                                                                           |
 | Um formato                                                  | `type: "string"` com `format`, como a tabela abaixo o escreve                                                              |
 | `port`, `base64`                                            | Um inteiro de 1 a 65535, e uma string com `contentEncoding`                                                                |
-| `object`, `objectLike`                                      | `type: "object"` com `properties`, `required` e `additionalProperties: false` para um `object` strict                      |
+| `object`, `objectLike`                                      | `type: "object"` com `properties`, `required` e `additionalProperties` se strict ou com validador de chaves desconhecidas  |
 | `array`                                                     | `type: "array"` com `items`, `minItems` e `maxItems`                                                                       |
 | `tuple`                                                     | `prefixItems`, com `items` para `rest` e `false` sem ele                                                                   |
 | `record`                                                    | `propertyNames` e `additionalProperties`, com `minProperties` e `maxProperties`                                            |
@@ -119,6 +119,8 @@ Um formato é escrito com o nome que o JSON Schema dá a ele, e sem `format` ond
 | Qualquer outro, e qualquer um feito com `format`, seja qual for o nome | Nenhum                                                | Nenhum     |
 
 Um formato fica de fora onde o do JSON Schema tem regras mais rígidas: `time` exige um offset, que uma hora do dia como `12:00` nunca tem; `duration` não permite fração, como em `PT0.5S`, nem semanas ao lado de dias, como em `P1W1D`; um endereço IPv6 pode ter uma zona, como em `fe80::1%eth0`, que `ipv6` não permite; e uma URL pode conter `|` ou `^`, que uma URI não pode. A entrada de `email` e `domain` pode ser internacionalizada, como em `user@bücher.example`, o que `email` e `hostname` recusam; `idn-email` e `idn-hostname` serviriam, mas o [ajv-formats](https://github.com/ajv-validator/ajv-formats) não os conhece, e o Ajv, no modo strict padrão, se recusa a compilar um schema com um formato que não conhece. É também por isso que um formato para o qual o JSON Schema não tem nome, como `phone`, `slug` ou um feito com `format`, é escrito sem nenhum.
+
+Um `object` escreve `additionalProperties: false` quando é strict, e o schema do validador ao qual passa as chaves desconhecidas quando tem um, como um `record` escreve o schema dos valores dele. Um objeto passthrough ou que descarta as chaves não escreve nenhum, já que qualquer outra chave passa.
 
 Uma propriedade fica de fora de `required` quando o validador dela aceita `undefined`: `optional`, `nullish`, `unknown`, `fallback`, um `literal` ou um `oneOf` de `undefined`, uma `union` com um desses, ou um `lazy`, `nullable`, `readonly`, `transform` ou `pipe` em volta de um deles. Uma `intersection` fica de fora quando todos os validadores dela aceitam `undefined`. JSON não tem `undefined`, então `literal(undefined)` numa `union` fica de fora do `anyOf` dela, e uma `union` ou um `oneOf` só com ele é escrito como `{ not: {} }`, em que nenhum valor passa.
 

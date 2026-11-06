@@ -1,7 +1,7 @@
 ---
 title: Limites
 description: Quanto custa uma entrada inválida, os limites dos schemas recursivos, os tamanhos que uma entrada não confiável exige e como audit encontra os limites que um schema deixa em aberto.
-source: a3150de56f84a1c4de175605afa3f34a51e94d8c
+source: 0d5df4008c35a7d4451adff8dab664749c0704a9
 order: 12
 ---
 
@@ -56,7 +56,7 @@ record(string(), unknown())(JSON.parse('{"__proto__":{"admin":true}}')); // { ok
 Uma coleção para assim que os itens dela reportam 1.000 problemas. Os itens depois disso não são validados. Mais um problema, `too_big` com `{ maximum: 1000, type: "issues" }` no caminho da coleção, diz que ela parou. O limite é de cada coleção, não da entrada inteira, então um `object` com duas listas pode reportar cerca de 2.000.
 
 - Um problema que guarda outros em `params.issues` conta junto com eles. Então um item que falha numa `union` conta uma vez, e mais uma para cada problema de cada opção. Uma chave que falha conta junto com o problema por trás dela.
-- As chaves desconhecidas de um `object` strict, as repetições que `unique` e `set` encontram, as chaves que uma query string repete e os conflitos de uma `intersection` são listados até o mesmo limite.
+- As chaves desconhecidas de um `object` strict, ou de um que as passa a um validador, as repetições que `unique` e `set` encontram, as chaves que uma query string repete e os conflitos de uma `intersection` são listados até o mesmo limite.
 - Só os problemas são contados. Então uma entrada que passa nunca é afetada, e uma entrada que falha continua falhando. O que muda é que uma lista longa de itens inválidos não é reportada por inteiro, e não custa a memória e o tempo de reportá-la.
 - Para reportar todas as linhas inválidas de uma lista longa, como uma importação, chame você mesmo o validador do item em cada linha.
 - Itens validados de forma assíncrona já começaram todos antes de qualquer um ser contado. Então o limite corta o que eles reportam, e não o trabalho deles: dê um `max` a uma coleção assim.
@@ -183,7 +183,7 @@ Como ele lê um schema:
 - **Formatos cuja entrada é limitada pelo que aceitam** não precisam de `max`: `email`, `uuid`, `ulid`, `cuid2`, `nanoid`, `ip`, `cidr`, `mac`, `port`, `phone`, `creditCard`, `isoDate`, `hostname` e `domain`. Qualquer outro, como `url`, `hex`, `jwt` ou um feito com `format`, é um texto como qualquer outro. Limite-o com um `pipe`, como abaixo.
 - **Um limite antes conta.** Uma etapa de `pipe` lê o que as etapas anteriores produziram. Então, depois de uma etapa que limita o valor, nada precisa de limite próprio. Em `pipe(string({ max: 10_000 }), json(object({ tags: array(string()) })))`, o texto tem no máximo 10.000 caracteres, e tudo o que se obtém do parse dele também. `pipe(string({ max: 2048 }), url())` limita uma URL do mesmo jeito. O `max` de uma coleção limita quantos itens ela tem, não o que cada um guarda, então os itens depois dele ainda precisam de limites próprios, a menos que os itens antes também tenham sido limitados ou sejam números, booleanos, datas ou literais, que não guardam nada além disso.
 - **Texto lido como bigint** leva mais que tempo linear para ser convertido. Por isso `coerceBigint` precisa de `min` ou `gt`, e de `max` ou `lt`. Eles limitam os dígitos que ele converte, e um texto com mais dígitos é recusado sem ser convertido.
-- **Um caminho** junta nomes de propriedades com `.`. Ele escreve `[]` para os itens de um array ou de um set, `[0]` para um item de uma tuple, `{}` para as chaves e os valores de um record ou de um map, e `""` para o próprio validador.
+- **Um caminho** junta nomes de propriedades com `.`. Ele escreve `[]` para os itens de um array ou de um set, `[0]` para um item de uma tuple, `{}` para as chaves e os valores de um record ou de um map e para as chaves desconhecidas que um `object` passa a um validador, e `""` para o próprio validador.
 - **Um schema recursivo** é lido uma vez em cada lugar em que é usado, e não de novo onde faz referência a si mesmo. Um criado de novo a cada nível, como `lazy(() => build())` o cria, nunca se repete, então `audit` lança um `TypeError` para ele, como `toJsonSchema` faz.
 - **`formData`** é lido por dentro, até o que ele contém.
 
@@ -191,7 +191,7 @@ O que ele não avalia:
 
 - Se um `max` é pequeno o bastante. Qualquer número indica que alguém decidiu.
 - Verificações, já que rodam sobre um valor que já passou, e qualquer coisa que um `guard` ou um validador escrito à mão faça por dentro.
-- O que nenhuma opção limita. As chaves que um `object` com `unknownKeys: "passthrough"` mantém, e o que `unknown()` aceita, não são reportados. Use `"strip"` ou `"strict"` para as chaves que o schema não nomeia, e um validador do tipo que você espera no lugar de `unknown()`.
+- O que nenhuma opção limita. Quantas chaves um `object` com `unknownKeys: "passthrough"` ou um validador mantém, e o que `unknown()` aceita, não são reportados. O próprio validador é lido, então os limites dele são. Use `"strip"` ou `"strict"` para as chaves que o schema não nomeia, e um validador do tipo que você espera no lugar de `unknown()`.
 
 ## Próximos passos
 

@@ -2,7 +2,7 @@
 title: Dar forma a los valores
 description: Encadena validadores, convierte valores, vuelve a escribirlos, márcalos y congélalos, descríbelos, reemplaza un fallo por un valor de respaldo y reutiliza la forma de un objeto.
 order: 8
-source: 3153f42ba602763a0c2f593e3fa938c2f1066472
+source: 210016e82ea9da98e51685547f5408c1acffdfe7
 ---
 
 # Dar forma a los valores
@@ -234,6 +234,7 @@ El objeto nuevo conserva las opciones del que proviene, `unknownKeys` y `message
 
 - Cada opción pasada reemplaza la de su mismo nombre y deja las demás. Así, un objeto estricto del que se toman propiedades pasando solo un `message` sigue siendo estricto.
 - Una opción pasada como `undefined` cuenta como no pasada, y conserva la del original. Así, `pick(strictUser, ["name"], { unknownKeys: undefined })` sigue siendo estricto.
+- Un validador pasado como `unknownKeys` también se conserva. Así, una propiedad que `pick` u `omit` deja fuera va a él cuando la entrada la tiene, como cualquier otra clave que la forma nueva no incluye.
 
 Un objeto con verificaciones se rechaza con un `TypeError`. Una verificación lee el objeto entero, así que puede leer una propiedad que le falta al objeto nuevo. Si se conservara, podría hacer fallar todos los valores. Si se descartara sin aviso, el objeto nuevo aceptaría lo que el primero se escribió para rechazar. Crea el objeto sin sus verificaciones, deriva a partir de ese y dale a cada resultado las verificaciones que necesita.
 

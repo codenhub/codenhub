@@ -1,7 +1,7 @@
 ---
 title: Primeiros passos
 description: O que é um validador, como ler o resultado dele e os validadores para strings, números, datas, valores fixos e objetos.
-source: 48e3039a7ada1fac57f4723b4349de7761bc429d
+source: 00992dea16dfbcb706c35d248f777a563f7119f5
 order: 1
 ---
 
@@ -331,10 +331,28 @@ A opção `unknownKeys` decide o que acontece com as propriedades da entrada que
 | `"strip"`       | Descarta-as da saída. É o padrão.                                                             |
 | `"strict"`      | Rejeita cada uma com um problema `unrecognized_key` no caminho da chave, e `params: { key }`. |
 | `"passthrough"` | Copia-as para a saída sem alteração e sem verificação, exceto `__proto__`, que é rejeitada.   |
+| Um validador    | Valida cada uma com ele, e mantém o que ele produz.                                           |
 
 Qualquer outro valor, como um `"Strict"` com erro de digitação, lança um `TypeError` quando o validador é criado, em vez de cair para `"strip"`.
 
 Um objeto passthrough rejeita `__proto__` porque uma chave `__proto__` mantida viraria o protótipo de qualquer cópia da saída feita por atribuição, como `Object.assign({}, output)`. O problema é `invalid_key` com um problema dentro, `invalid_value` com `{ reserved: true }`.
+
+Um validador passado como `unknownKeys` verifica cada chave que a estrutura não lista, como `record` verifica os valores dele:
+
+```ts
+import { boolean, object, string } from "@codenhub/validation";
+
+const settings = object({ name: string() }, { unknownKeys: boolean() });
+
+settings({ name: "Ada", beta: true }); // { ok: true, value: { name: "Ada", beta: true } }
+settings({ name: "Ada", beta: "yes" }); // { ok: false, ... }, code "invalid_type" at ["beta"]
+```
+
+- A saída mantém o que o validador produziu para cada chave, depois das propriedades listadas, na ordem da entrada.
+- Os problemas dele ficam no caminho da chave, depois dos das propriedades listadas. Eles param nos 1.000 problemas que uma coleção reporta, como [Limites](limits.md#uma-entrada-inválida-tem-custo-limitado) descreve.
+- Uma `__proto__` não listada é rejeitada com o mesmo problema `invalid_key`, e o valor dela ainda é validado, como em um `record`.
+- O objeto é assíncrono quando o validador é.
+- O tipo ganha uma index signature para as outras chaves. Ela contém o que o validador produz e o que cada propriedade listada contém, porque o TypeScript também confere as propriedades listadas contra a index signature. Assim, `{ name: "Ada", beta: true }` pode ser escrito como um valor do tipo, e uma chave não listada que contém uma string não é pega pelo tipo, só pelo validador.
 
 ### Objetos que não são simples
 
