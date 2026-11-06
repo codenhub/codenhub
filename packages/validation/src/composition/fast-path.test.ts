@@ -144,6 +144,46 @@ describe("the fast path of valid input", () => {
     expect(calls).toBe(1);
   });
 
+  it("should answer an object with checks from its properties' fast tests, and run each check once", () => {
+    let calls = 0;
+    const differ = (value: { a: string; b: string }) => {
+      calls += 1;
+      return value.a === value.b ? [{ code: "custom", path: ["b"] }] : undefined;
+    };
+    const quick = object({ a: string(), b: string() }, differ);
+    const full = object({ a: slow(string()), b: string() }, differ);
+    // The object has no fast test of its own, so a parent that missed later would run its checks again.
+    expect(fastOf(quick)).toBeUndefined();
+    for (const input of [{ a: "x", b: "y" }, { a: "x", b: "x" }, { a: 1, b: "x" }, { a: "x", b: "y", c: 1 }, "no"]) {
+      calls = 0;
+      const answer = quick(input);
+      const quickCalls = calls;
+      calls = 0;
+      expect(answer).toEqual(full(input));
+      expect(quickCalls).toBe(calls);
+    }
+    calls = 0;
+    const parent = object({ items: array(quick), other: string() });
+    expect(
+      parent({
+        items: [
+          { a: "x", b: "y" },
+          { a: "x", b: "x" },
+        ],
+        other: 1,
+      }),
+    ).toEqual(
+      object({ items: array(full), other: string() })({
+        items: [
+          { a: "x", b: "y" },
+          { a: "x", b: "x" },
+        ],
+        other: 1,
+      }),
+    );
+    expect(calls).toBe(4);
+  });
+
   it("should make a fresh output, and never return the input itself", () => {
     const list = ["a"];
     const result = array(string())(list);
