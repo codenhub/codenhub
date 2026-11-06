@@ -41,7 +41,7 @@ Alguns problemas recebem menos que uma frase:
 `standard(validator, messages?)` devolve o mesmo validador com um `~standard` próprio, que escreve os problemas como [`formatIssue`](errors.md#transformando-um-problema-em-texto) faz. Use-o para:
 
 - **O inglês completo**, como "Invalid email address" e "Must contain at most 3 items", que é o padrão.
-- **Outro idioma**, com `portugueseMessages` ou um mapa seu.
+- **Outro idioma**, com `portugueseMessages`, `spanishMessages` ou um mapa seu.
 - **Um validador que você escreveu à mão**, que não tem `~standard` próprio, já que não foi este pacote que o criou.
 
 ```ts

@@ -40,7 +40,7 @@ Some issues get less than a sentence:
 `standard(validator, messages?)` gives the same validator with a `~standard` of its own that words issues as [`formatIssue`](errors.md#turning-an-issue-into-text) does. Use it for:
 
 - **The full English**, such as "Invalid email address" and "Must contain at most 3 items", which is the default.
-- **Another language**, with `portugueseMessages` or a map of your own.
+- **Another language**, with `portugueseMessages`, `spanishMessages` or a map of your own.
 - **A validator you wrote by hand**, which has no `~standard` of its own, since this package did not make it.
 
 ```ts

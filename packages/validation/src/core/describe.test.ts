@@ -152,6 +152,7 @@ const others = new Set([
   "partial",
   "pick",
   "portugueseMessages",
+  "spanishMessages",
   "required",
   "pass",
   "standard",

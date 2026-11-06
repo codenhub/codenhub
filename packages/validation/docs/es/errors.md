@@ -174,14 +174,15 @@ Un problema que lleva un mensaje se redacta primero con él, antes que con cualq
 
 ## Idiomas integrados
 
-El paquete incluye dos mapas. Cada uno es un valor independiente, así que un programa empaqueta los idiomas que importa y ningún otro:
+El paquete incluye tres mapas. Cada uno es un valor independiente, así que un programa empaqueta los idiomas que importa y ningún otro:
 
 | Mapa                 | Idioma                                   | `number({ min: 18 })(15)` |
 | -------------------- | ---------------------------------------- | ------------------------- |
 | `englishMessages`    | Inglés                                   | "Must be at least 18"     |
 | `portugueseMessages` | Portugués, tal como se escribe en Brasil | "Deve ser no mínimo 18"   |
+| `spanishMessages`    | Español                                  | "Debe ser como mínimo 18" |
 
-Ambos redactan los mismos nueve códigos. `formatIssue`, `flatten` y `standard` reciben el mapa como argumento, y `assert` lo recibe como su opción `messages`. Para un programa en varios idiomas, elige el mapa donde muestras el problema:
+Los tres redactan los mismos nueve códigos. `formatIssue`, `flatten` y `standard` reciben el mapa como argumento, y `assert` lo recibe como su opción `messages`. Para un programa en varios idiomas, elige el mapa donde muestras el problema:
 
 ```ts
 import { englishMessages, formatIssue, portugueseMessages, type Messages } from "@codenhub/validation";

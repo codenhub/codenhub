@@ -125,6 +125,7 @@ export {
   unrecognizedKeyMessage,
 } from "./messages/english-messages";
 export { portugueseMessages } from "./messages/portuguese-messages";
+export { spanishMessages } from "./messages/spanish-messages";
 export { flatten, formatIssue, formatPath, type FlattenedErrors, type Messages } from "./messages/format-issue";
 export { bigint, type BigintOptions } from "./primitives/bigint";
 export { boolean } from "./primitives/boolean";

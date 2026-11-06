@@ -168,6 +168,11 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
     budget: 3860,
   },
   {
+    name: "formatIssue with the Spanish wording",
+    source: `import { formatIssue, spanishMessages } from "DIST"; export const describe = (issue: Parameters<typeof formatIssue>[0]) => formatIssue(issue, spanishMessages);`,
+    budget: 3930,
+  },
+  {
     name: "brand and readonly",
     source: `import { brand, readonly, string } from "DIST"; export const check = readonly(brand(string(), "Name"));`,
     budget: 3110,

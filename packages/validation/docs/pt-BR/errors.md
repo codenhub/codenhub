@@ -174,14 +174,15 @@ Um problema que traz uma mensagem é descrito por ela primeiro, antes de qualque
 
 ## Idiomas nativos
 
-Dois mapas vêm com o pacote. Cada um é um valor separado, então um programa inclui no bundle os idiomas que importa e nenhum outro:
+Três mapas vêm com o pacote. Cada um é um valor separado, então um programa inclui no bundle os idiomas que importa e nenhum outro:
 
 | Mapa                 | Idioma                               | `number({ min: 18 })(15)` |
 | -------------------- | ------------------------------------ | ------------------------- |
 | `englishMessages`    | Inglês                               | "Must be at least 18"     |
 | `portugueseMessages` | Português, como se escreve no Brasil | "Deve ser no mínimo 18"   |
+| `spanishMessages`    | Espanhol                             | "Debe ser como mínimo 18" |
 
-Os dois descrevem os mesmos nove códigos. `formatIssue`, `flatten` e `standard` recebem o mapa como argumento, e `assert` o recebe na opção `messages`. Para um programa em vários idiomas, escolha o mapa onde você mostra o problema:
+Os três descrevem os mesmos nove códigos. `formatIssue`, `flatten` e `standard` recebem o mapa como argumento, e `assert` o recebe na opção `messages`. Para um programa em vários idiomas, escolha o mapa onde você mostra o problema:
 
 ```ts
 import { englishMessages, formatIssue, portugueseMessages, type Messages } from "@codenhub/validation";
