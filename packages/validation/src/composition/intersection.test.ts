@@ -195,6 +195,13 @@ describe("intersection", () => {
     expect(issuesOf(intersection(object({ items: unknown() }), deep)(nested))).toEqual([]);
   });
 
+  it("should keep a __proto__ key listed by the shape an object gives its unknown keys", () => {
+    const parsed = JSON.parse('{"inner":{"__proto__":{"admin":true}}}') as unknown;
+    const rested = object({}, { unknownKeys: object({ ["__proto__"]: unknown() }) });
+    const output = valueOf(intersection(object({ inner: unknown() }), rested)(parsed)) as { inner: object };
+    expect(Object.hasOwn(output.inner, "__proto__")).toBe(true);
+  });
+
   it("should read a __proto__ listed only by the step of a pipe that produced the output", () => {
     const listed = object({ ["__proto__"]: unknown(), a: string() });
     const made = (): object => JSON.parse('{"__proto__":{"admin":true},"a":"x"}') as object;

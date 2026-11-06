@@ -330,10 +330,28 @@ The `unknownKeys` option decides what happens to input properties the shape does
 | `"strip"`       | Drop them from the output. This is the default.                                         |
 | `"strict"`      | Reject each with an `unrecognized_key` issue at the key's path, and `params: { key }`.  |
 | `"passthrough"` | Copy them to the output unchanged and unchecked, except `__proto__`, which is rejected. |
+| A validator     | Validate each with it, and keep what it produces.                                       |
 
 Any other value, such as a misspelled `"Strict"`, throws a `TypeError` when the validator is created, instead of falling back to `"strip"`.
 
 A passthrough object rejects `__proto__` because a kept `__proto__` key would become the prototype of any copy of the output made by assignment, such as `Object.assign({}, output)`. The issue is `invalid_key` with one issue inside, `invalid_value` with `{ reserved: true }`.
+
+A validator given as `unknownKeys` checks each key the shape does not list, as `record` checks its values:
+
+```ts
+import { boolean, object, string } from "@codenhub/validation";
+
+const settings = object({ name: string() }, { unknownKeys: boolean() });
+
+settings({ name: "Ada", beta: true }); // { ok: true, value: { name: "Ada", beta: true } }
+settings({ name: "Ada", beta: "yes" }); // { ok: false, ... }, code "invalid_type" at ["beta"]
+```
+
+- The output keeps what the validator produced for each key, after the listed properties, in the order of the input.
+- Its issues are at the key's path, after those of the listed properties. They stop at the 1,000 issues a collection reports, as [Limits](limits.md#a-failing-input-has-a-bounded-cost) describes.
+- An unlisted `__proto__` is rejected with the same `invalid_key` issue, and its value is still validated, as in a `record`.
+- The object is asynchronous when the validator is.
+- The type gains an index signature for the other keys. It holds what the validator produces and what each listed property holds, because TypeScript checks the listed properties against the index signature too. So `{ name: "Ada", beta: true }` can be written as a value of the type, and an unlisted key that holds a string is not caught by the type, only by the validator.
 
 ### Objects that are not plain
 

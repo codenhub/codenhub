@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+import { check } from "../builders/check";
 import { fail, pass } from "../core/result";
 import type { AsyncValidator, Validator } from "../core/types";
 import { email } from "../formats/email";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
+import { unknown } from "../primitives/unknown";
 import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
 import { object } from "./object";
 import { optional } from "./optional";
@@ -171,6 +173,111 @@ describe("object", () => {
     });
   });
 
+  describe("unknown keys given to a validator", () => {
+    const counts = object({ name: string() }, { unknownKeys: number() });
+
+    it("should validate each key the shape does not list with it, and keep what it produces", () => {
+      const trimmed = object({ name: string() }, { unknownKeys: string({ trim: true }) });
+      expect(valueOf(trimmed({ name: " Ada ", city: " Paris ", country: "France" }))).toEqual({
+        name: " Ada ",
+        city: "Paris",
+        country: "France",
+      });
+    });
+
+    it("should not give it the keys the shape lists", () => {
+      expect(valueOf(counts({ name: "Ada" }))).toEqual({ name: "Ada" });
+    });
+
+    it("should report what it finds at the key, after the issues of the listed properties", () => {
+      expect(issuesOf(counts({ b: "x", name: 1, a: 2, c: "y" }))).toEqual([
+        { code: "invalid_type", path: ["name"], params: { expected: "string", received: "number" } },
+        { code: "invalid_type", path: ["b"], params: { expected: "number", received: "string" } },
+        { code: "invalid_type", path: ["c"], params: { expected: "number", received: "string" } },
+      ]);
+    });
+
+    it("should put the listed properties first in the output, then the others in the order of the input", () => {
+      expect(Object.keys(valueOf(counts({ b: 1, name: "Ada", a: 2 })))).toEqual(["name", "b", "a"]);
+    });
+
+    it("should leave out unlisted keys that are symbols or not enumerable, as passthrough does", () => {
+      const input = Object.defineProperty({ [Symbol.for("extra")]: "x", name: "Ada" }, "hidden", {
+        value: "x",
+        enumerable: false,
+      });
+      expect(Reflect.ownKeys(valueOf(counts(input)))).toEqual(["name"]);
+    });
+
+    it("should refuse an unlisted __proto__ key, as record does, and still validate its value", () => {
+      const parsed = JSON.parse('{"name":"Ada","__proto__":{"admin":true}}') as unknown;
+      const reserved = {
+        code: "invalid_key",
+        path: ["__proto__"],
+        params: { issues: [{ code: "invalid_value", path: [], params: { reserved: true } }] },
+      };
+      expect(issuesOf(object({ name: string() }, { unknownKeys: unknown() })(parsed))).toEqual([reserved]);
+      expect(issuesOf(counts(parsed))).toEqual([
+        { code: "invalid_type", path: ["__proto__"], params: { expected: "number", received: "object" } },
+        reserved,
+      ]);
+    });
+
+    it("should keep keys Object.prototype holds as data of the output, never as its prototype or a setter", () => {
+      const written: unknown[] = [];
+      Object.defineProperty(Object.prototype, "trapped", {
+        set: (value) => {
+          written.push(value);
+        },
+        configurable: true,
+      });
+      try {
+        const output = valueOf(counts({ name: "Ada", constructor: 1, toString: 2, hasOwnProperty: 3, trapped: 4 }));
+        expect(written).toEqual([]);
+        expect(Object.getPrototypeOf(output)).toBe(Object.prototype);
+        expect(Object.entries(output)).toEqual([
+          ["name", "Ada"],
+          ["constructor", 1],
+          ["toString", 2],
+          ["hasOwnProperty", 3],
+          ["trapped", 4],
+        ]);
+      } finally {
+        delete (Object.prototype as Record<string, unknown>)["trapped"];
+      }
+    });
+
+    it("should run the checks of the object on the output, unlisted keys included", () => {
+      const total = object(
+        { name: string() },
+        { unknownKeys: number() },
+        check((data: Record<string, unknown>) => Object.keys(data).length <= 2, { code: "too_many" }),
+      );
+      expect(total({ name: "Ada", a: 1 }).ok).toBe(true);
+      expect(codesOf(total({ name: "Ada", a: 1, b: 2 }))).toEqual(["too_many"]);
+    });
+
+    it("should reject what is neither a mode nor a function when the validator is created", () => {
+      expect(() => object({}, { unknownKeys: 1 as never })).toThrow(
+        'unknownKeys must be "strip", "strict", "passthrough" or a validator, received "1"',
+      );
+    });
+
+    it("should read every unlisted value before the validator can change the input", () => {
+      const input: Record<string, unknown> = { name: "Ada", a: 1, b: 2 };
+      const changing: Validator<number> = (value) => {
+        input["b"] = "changed";
+        input["c"] = 3;
+        return pass(value as number);
+      };
+      expect(valueOf(object({ name: string() }, { unknownKeys: changing })(input))).toEqual({
+        name: "Ada",
+        a: 1,
+        b: 2,
+      });
+    });
+  });
+
   it("should read the shape once, when the validator is created", () => {
     const shape: Record<string, Validator<unknown>> = { name: string() };
     const user = object(shape, { unknownKeys: "strict" });
@@ -242,6 +349,25 @@ describe("object", () => {
         { unknownKeys: "passthrough" },
       );
       expect(valueOf(await passthrough(input))).toEqual({ username: "ada", nickname: "a", extra: "before" });
+    });
+
+    it("should be asynchronous when the validator of unlisted keys is, and keep the order of the issues", async () => {
+      const slow: AsyncValidator<string> = async (input) => {
+        await new Promise((resolve) => setTimeout(resolve, 15));
+        return input === "taken" ? fail({ code: "taken" }) : pass(input as string);
+      };
+      const handles = object({ name: string() }, { unknownKeys: slow });
+      const pending = handles({ name: 1, a: "taken", b: "ada" });
+      expect("then" in pending).toBe(true);
+      expect(issuesOf(await pending).map((issue) => [issue.path, issue.code])).toEqual([
+        [["name"], "invalid_type"],
+        [["a"], "taken"],
+      ]);
+      expect(valueOf(await handles({ name: "Ada", b: "ada" }))).toEqual({ name: "Ada", b: "ada" });
+    });
+
+    it("should stay synchronous when the validator of unlisted keys is and every property is", () => {
+      expect("then" in object({ name: string() }, { unknownKeys: number() })({ name: "Ada", a: 1 })).toBe(false);
     });
 
     it("should return the validated value once the promises resolve", async () => {

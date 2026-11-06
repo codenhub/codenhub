@@ -90,6 +90,17 @@ describe("encode", () => {
     expect(codesOf(encode(isoDate, new Date(Number.NaN)))).toEqual(["invalid_type"]);
   });
 
+  it("should write back the keys an object gives its validator of unknown keys through that validator", () => {
+    const schedule = object({ name: string() }, { unknownKeys: isoDate });
+    expect(valueOf(encode(schedule, { name: "launch", start: moment }))).toEqual({
+      name: "launch",
+      start: "2026-10-07T12:00:00.000Z",
+    });
+    expect(issuesOf(encode(schedule, { name: "launch", start: 1 } as never)).map((issue) => issue.path)).toEqual([
+      ["start"],
+    ]);
+  });
+
   it("should write back a codec inside the output of another, before the outer encode runs", () => {
     const outer = codec(string(), object({ at: isoDate }), {
       decode: (text) => JSON.parse(text) as { at: string },

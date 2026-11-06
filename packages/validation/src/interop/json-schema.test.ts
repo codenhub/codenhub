@@ -451,6 +451,19 @@ describe("toJsonSchema", () => {
     expect(schema["required"]).toEqual(["__proto__", "constructor"]);
   });
 
+  it("should write the validator of an object's unknown keys as its additionalProperties, by the side asked for", () => {
+    const scores = object({ name: string() }, { unknownKeys: coerceNumber({ min: 0 }) });
+    expect(schemaOf(scores)).toEqual({
+      type: "object",
+      properties: { name: { type: "string" } },
+      required: ["name"],
+      additionalProperties: { anyOf: [{ type: "number", minimum: 0 }, { type: "string" }] },
+    });
+    expect(schemaOf(scores, { io: "output" })["additionalProperties"]).toEqual({ type: "number", minimum: 0 });
+    const opaque = object({}, { unknownKeys: transform(string(), (text) => text.length) });
+    expect(() => toJsonSchema(opaque, { io: "output" })).toThrow("what a transform returns at {}");
+  });
+
   describe("input and output", () => {
     it("should write a default on the input side, and require the property on the output side", () => {
       const settings = object({ theme: optional(oneOf(["light", "dark"]), "light") });

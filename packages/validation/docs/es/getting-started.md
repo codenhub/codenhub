@@ -2,7 +2,7 @@
 title: Primeros pasos
 description: Qué es un validador, cómo leer su resultado, y los validadores de cadenas, números, fechas, valores fijos y objetos.
 order: 1
-source: 48e3039a7ada1fac57f4723b4349de7761bc429d
+source: 00992dea16dfbcb706c35d248f777a563f7119f5
 ---
 
 # Primeros pasos
@@ -331,10 +331,28 @@ La opción `unknownKeys` decide qué pasa con las propiedades de la entrada que 
 | `"strip"`       | Las descarta de la salida. Es el valor predeterminado.                                           |
 | `"strict"`      | Rechaza cada una con un problema `unrecognized_key` en la ruta de la clave, y `params: { key }`. |
 | `"passthrough"` | Las copia a la salida sin cambios y sin verificar, excepto `__proto__`, que se rechaza.          |
+| Un validador    | Valida cada una con él, y conserva lo que produce.                                               |
 
 Cualquier otro valor, como un `"Strict"` mal escrito, lanza un `TypeError` cuando se crea el validador, en lugar de recurrir a `"strip"`.
 
 Un objeto passthrough rechaza `__proto__` porque una clave `__proto__` conservada se convertiría en el prototipo de cualquier copia de la salida hecha por asignación, como `Object.assign({}, output)`. El problema es `invalid_key` con un problema dentro, `invalid_value` con `{ reserved: true }`.
+
+Un validador pasado como `unknownKeys` verifica cada clave que la forma no incluye, como `record` verifica sus valores:
+
+```ts
+import { boolean, object, string } from "@codenhub/validation";
+
+const settings = object({ name: string() }, { unknownKeys: boolean() });
+
+settings({ name: "Ada", beta: true }); // { ok: true, value: { name: "Ada", beta: true } }
+settings({ name: "Ada", beta: "yes" }); // { ok: false, ... }, code "invalid_type" at ["beta"]
+```
+
+- La salida conserva lo que el validador produjo para cada clave, después de las propiedades incluidas, en el orden de la entrada.
+- Sus problemas están en la ruta de la clave, después de los de las propiedades incluidas. Se detienen en los 1000 problemas que reporta una colección, como describe [Límites](limits.md#una-entrada-que-falla-tiene-un-costo-acotado).
+- Una `__proto__` no incluida se rechaza con el mismo problema `invalid_key`, y su valor se valida igual, como en un `record`.
+- El objeto es asíncrono cuando el validador lo es.
+- El tipo gana una firma de índice para las demás claves. Contiene lo que produce el validador y lo que contiene cada propiedad incluida, porque TypeScript también compara las propiedades incluidas con la firma de índice. Así, `{ name: "Ada", beta: true }` se puede escribir como un valor del tipo, y una clave no incluida que contiene una cadena no la detecta el tipo, solo el validador.
 
 ### Objetos que no son planos
 

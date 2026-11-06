@@ -38,7 +38,16 @@ export { map } from "./composition/map";
 export { meta, type Meta } from "./composition/meta";
 export { nullable } from "./composition/nullable";
 export { nullish } from "./composition/nullish";
-export { object, type InferShape, type InferShapeInput, type ObjectOptions, type Shape } from "./composition/object";
+export {
+  object,
+  type InferObject,
+  type InferObjectInput,
+  type InferShape,
+  type InferShapeInput,
+  type ObjectOptions,
+  type Shape,
+  type UnknownKeys,
+} from "./composition/object";
 export { objectLike } from "./composition/object-like";
 export { optional } from "./composition/optional";
 export { omit } from "./composition/omit";

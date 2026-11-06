@@ -463,10 +463,28 @@ The `unknownKeys` option decides what happens to input properties the shape does
 | `"strip"`       | Drop them from the output. This is the default.                                         |
 | `"strict"`      | Reject each with an `unrecognized_key` issue at the key's path, and `params: { key }`.  |
 | `"passthrough"` | Copy them to the output unchanged and unchecked, except `__proto__`, which is rejected. |
+| A validator     | Validate each with it, and keep what it produces.                                       |
 
 Any other value, such as a misspelled `"Strict"`, throws a `TypeError` when the validator is created, instead of falling back to `"strip"`.
 
 A passthrough object rejects `__proto__` because a kept `__proto__` key would become the prototype of any copy of the output made by assignment, such as `Object.assign({}, output)`. The issue is `invalid_key` with one issue inside, `invalid_value` with `{ reserved: true }`.
+
+A validator given as `unknownKeys` checks each key the shape does not list, as `record` checks its values:
+
+```ts
+import { boolean, object, string } from "@codenhub/validation";
+
+const settings = object({ name: string() }, { unknownKeys: boolean() });
+
+settings({ name: "Ada", beta: true }); // { ok: true, value: { name: "Ada", beta: true } }
+settings({ name: "Ada", beta: "yes" }); // { ok: false, ... }, code "invalid_type" at ["beta"]
+```
+
+- The output keeps what the validator produced for each key, after the listed properties, in the order of the input.
+- Its issues are at the key's path, after those of the listed properties. They stop at the 1,000 issues a collection reports, as [Limits](docs/limits.md#a-failing-input-has-a-bounded-cost) describes.
+- An unlisted `__proto__` is rejected with the same `invalid_key` issue, and its value is still validated, as in a `record`.
+- The object is asynchronous when the validator is.
+- The type gains an index signature for the other keys. It holds what the validator produces and what each listed property holds, because TypeScript checks the listed properties against the index signature too. So `{ name: "Ada", beta: true }` can be written as a value of the type, and an unlisted key that holds a string is not caught by the type, only by the validator.
 
 ### Objects that are not plain
 
@@ -2283,6 +2301,7 @@ The new object keeps the options of the one it came from, `unknownKeys` and `mes
 
 - Each option given replaces the one of its name, and leaves the others. So a strict object picked from with only a `message` stays strict.
 - An option given as `undefined` counts as not given, and keeps the one of the original. So `pick(strictUser, ["name"], { unknownKeys: undefined })` stays strict.
+- A validator given as `unknownKeys` is kept too. So a property that `pick` or `omit` leaves out goes to it when the input has it, as any other key the new shape does not list does.
 
 An object with checks is refused with a `TypeError`. A check reads the whole object, so it may read a property the new object lacks. Kept, it could fail every value. Dropped without a word, the new object would accept what the first was written to refuse. Make the object without its checks, derive from that, and give each result the checks it needs.
 
@@ -2489,7 +2508,7 @@ The output side takes a default and the value of a `fallback` to pass the valida
 | `literal`, `oneOf`                                          | `const` and `enum`                                                                                                             |
 | A format                                                    | `type: "string"` with `format`, as the table below writes it                                                                   |
 | `port`, `base64`                                            | An integer from 1 to 65535, and a string with `contentEncoding`                                                                |
-| `object`, `objectLike`                                      | `type: "object"` with `properties`, `required`, and `additionalProperties: false` for a strict `object`                        |
+| `object`, `objectLike`                                      | `type: "object"` with `properties`, `required`, and `additionalProperties` when strict or given a validator for unknown keys   |
 | `array`                                                     | `type: "array"` with `items`, `minItems` and `maxItems`                                                                        |
 | `tuple`                                                     | `prefixItems`, with `items` for `rest` and `false` without it                                                                  |
 | `record`                                                    | `propertyNames` and `additionalProperties`, with `minProperties` and `maxProperties`                                           |
@@ -2519,6 +2538,8 @@ A format is written under JSON Schema's name for it, and with no `format` where 
 | Any other, and any made with `format`, whatever its name | None                                                    | None       |
 
 A format is left out where JSON Schema's has stricter rules: `time` needs an offset, which a time of day such as `12:00` never has, `duration` allows no fraction, as in `PT0.5S`, and no weeks beside days, as in `P1W1D`, an IPv6 address may have a zone, as in `fe80::1%eth0`, which `ipv6` does not allow, and a URL may hold `|` or `^`, which a URI may not. The input of `email` and `domain` may be internationalized, as in `user@bücher.example`, which `email` and `hostname` refuse; `idn-email` and `idn-hostname` would fit, but [ajv-formats](https://github.com/ajv-validator/ajv-formats) does not know them, and Ajv in its default strict mode refuses to compile a schema with a format it does not know. That is also why a format JSON Schema has no name for, such as `phone`, `slug` or one made with `format`, is written with none.
+
+An `object` writes `additionalProperties: false` when strict, and the schema of the validator it gives its unknown keys when it has one, as a `record` writes the schema of its values. A passthrough or stripping object writes none, since any other key passes. The schema says nothing of `__proto__`, which a passthrough object, one with a validator of its unknown keys and a `record` reject, so a schema validator accepts it there.
 
 A property is left out of `required` when its validator accepts `undefined`: `optional`, `nullish`, `unknown`, `fallback`, a `literal` or a `oneOf` of `undefined`, a `union` with one of those, or a `lazy`, `nullable`, `readonly`, `transform` or `pipe` around one. An `intersection` is left out when every validator in it accepts `undefined`. JSON has no `undefined`, so `literal(undefined)` in a `union` is left out of its `anyOf`, and a `union` or a `oneOf` of nothing else is written as `{ not: {} }`, which no value passes.
 
@@ -2987,7 +3008,7 @@ record(string(), unknown())(JSON.parse('{"__proto__":{"admin":true}}')); // { ok
 A collection stops once its items have reported 1,000 issues. The items after that are not validated. One more issue, `too_big` with `{ maximum: 1000, type: "issues" }` at the path of the collection, says that it stopped. The limit is for each collection, not for the whole input, so an `object` with two lists can report about 2,000.
 
 - An issue that holds others in `params.issues` counts with them. So an item that fails a `union` counts once, and once more for each issue of each option. A key that fails counts with the issue behind it.
-- The unknown keys of a strict `object`, the repeats `unique` and `set` find, the keys a query string repeats, and the conflicts of an `intersection` are listed up to the same limit.
+- The unknown keys of a strict `object`, or of one that gives them to a validator, the repeats `unique` and `set` find, the keys a query string repeats, and the conflicts of an `intersection` are listed up to the same limit.
 - Only issues are counted. So input that passes is never affected, and input that fails still fails. What changes is that a long list of bad items is not reported in full, and does not cost the memory and time of reporting it.
 - To report every bad row of a long list, such as an import, call the item validator on each row yourself.
 - Items that are validated asynchronously have all started before any is counted. So the limit cuts what they report, and not their work: give such a collection a `max`.
@@ -3114,7 +3135,7 @@ How it reads a schema:
 - **Formats whose input is bounded by what they accept** need no `max`: `email`, `uuid`, `ulid`, `cuid2`, `nanoid`, `ip`, `cidr`, `mac`, `port`, `phone`, `creditCard`, `isoDate`, `hostname` and `domain`. Any other, such as `url`, `hex`, `jwt` or one made with `format`, is text like any other. Bound it with a `pipe`, as below.
 - **A bound before it counts.** A `pipe` step reads what the steps before it produced. So after a step that bounds its value, nothing needs a bound of its own. In `pipe(string({ max: 10_000 }), json(object({ tags: array(string()) })))`, the text is at most 10,000 characters, and so is everything parsed from it. `pipe(string({ max: 2048 }), url())` bounds a URL the same way. The `max` of a collection bounds how many items it has, not what each holds, so the items after it still need their own bounds, unless the items before were bounded too or are numbers, booleans, dates or literals, which hold nothing more.
 - **Text read as a bigint** takes longer than linear time to convert. So `coerceBigint` needs `min` or `gt`, and `max` or `lt`. They limit the digits it converts, and text with more is refused without being converted.
-- **A path** joins property names with `.`. It writes `[]` for the items of an array or a set, `[0]` for an item of a tuple, `{}` for the keys and values of a record or a map, and `""` for the validator itself.
+- **A path** joins property names with `.`. It writes `[]` for the items of an array or a set, `[0]` for an item of a tuple, `{}` for the keys and values of a record or a map and for the unknown keys an `object` gives a validator, and `""` for the validator itself.
 - **A recursive schema** is read once at each place it is used, and not again where it refers to itself. One built anew at every level, as `lazy(() => build())` builds it, never repeats, so `audit` throws a `TypeError` for it, as `toJsonSchema` does.
 - **`formData`** is read through, to what it holds.
 
@@ -3122,7 +3143,7 @@ What it does not judge:
 
 - Whether a `max` is small enough. Any number says someone decided.
 - Checks, since they run on a value that already passed, and anything a `guard` or a validator written by hand does inside.
-- What no option bounds. The keys an `object` with `unknownKeys: "passthrough"` keeps, and what `unknown()` accepts, are not reported. Use `"strip"` or `"strict"` for keys the schema does not name, and a validator of the type you expect in place of `unknown()`.
+- What no option bounds. How many keys an `object` with `unknownKeys: "passthrough"` or a validator keeps, and what `unknown()` accepts, are not reported. The validator itself is read, so its own bounds are. Use `"strip"` or `"strict"` for keys the schema does not name, and a validator of the type you expect in place of `unknown()`.
 
 ## Next
 

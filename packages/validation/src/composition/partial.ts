@@ -1,16 +1,16 @@
 import { assertShape } from "../core/objects";
 import type { AnyValidator, AsyncRest, AsyncSchema, Composed, Infer, InferInput, Rest } from "../core/types";
-import type { ObjectOptions, Shape } from "./object";
+import type { ObjectOptions, Shape, UnknownKeys, WithRest } from "./object";
 import { optional } from "./optional";
-import { mapping, type Reshaped } from "./reshape";
+import { mapping, type Listed, type Remade, type RemadeInput, type ReshapedWith, type Unlisted } from "./reshape";
 
 /** A shape with every property wrapped in `optional`. */
 export type PartialShape<TShape extends Shape> = {
   [K in keyof TShape]: Composed<TShape[K], Infer<TShape[K]> | undefined, InferInput<TShape[K]> | undefined>;
 };
 
-/** The object type with every property optional. */
-export type AllOptional<T> = { [K in keyof T]?: T[K] | undefined } & {};
+/** The object type with every property optional, and the index signature it had. */
+export type AllOptional<T> = WithRest<{ [K in keyof Listed<T>]?: Listed<T>[K] | undefined } & {}, Unlisted<T>>;
 
 /**
  * Makes every property optional, for a form or an update where any field may be left out. Given a shape,
@@ -40,14 +40,22 @@ export type AllOptional<T> = { [K in keyof T]?: T[K] | undefined } & {};
  * for a validator, when it was not made by `object` or has checks.
  */
 export function partial<TShape extends Shape>(shape: TShape): PartialShape<TShape>;
-export function partial<TValidator extends AnyValidator<object>>(
+export function partial<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(
   validator: TValidator,
-  ...rest: Rest<AllOptional<Infer<TValidator>>, ObjectOptions>
-): Reshaped<TValidator, AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
-export function partial<TValidator extends AnyValidator<object>>(
+  ...rest: Rest<Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>
+): ReshapedWith<
+  TValidator,
+  TUnknownKeys,
+  Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>,
+  RemadeInput<AllOptional<InferInput<TValidator>>, TUnknownKeys>
+>;
+export function partial<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(
   validator: TValidator,
-  ...rest: AsyncRest<AllOptional<Infer<TValidator>>, ObjectOptions>
-): AsyncSchema<AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
+  ...rest: AsyncRest<Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>
+): AsyncSchema<
+  Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>,
+  RemadeInput<AllOptional<InferInput<TValidator>>, TUnknownKeys>
+>;
 export function partial(shape: Shape | AnyValidator, ...rest: unknown[]): Shape | AnyValidator {
   if (typeof shape === "function") {
     return mapping("partial", shape, optional, rest);

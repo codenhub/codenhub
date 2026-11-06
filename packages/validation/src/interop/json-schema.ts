@@ -510,8 +510,11 @@ export function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOption
         if (required.length > 0) {
           schema["required"] = required;
         }
-        if (given["unknownKeys"] === "strict") {
+        const unknownKeys = given["unknownKeys"];
+        if (unknownKeys === "strict") {
           schema["additionalProperties"] = false;
+        } else if (typeof unknownKeys === "function") {
+          schema["additionalProperties"] = convert(unknownKeys, `${path}{}`);
         }
         return checked(schema);
       }

@@ -1,6 +1,6 @@
 import type { AnyValidator, AsyncRest, AsyncSchema, Infer, InferInput, Rest } from "../core/types";
-import type { ObjectOptions } from "./object";
-import { mapping, unwrapped, type AllRequired, type Reshaped } from "./reshape";
+import type { ObjectOptions, UnknownKeys } from "./object";
+import { mapping, unwrapped, type AllRequired, type Remade, type RemadeInput, type ReshapedWith } from "./reshape";
 
 /**
  * Creates an object validator whose properties are all required, from one where some are optional.
@@ -28,14 +28,22 @@ import { mapping, unwrapped, type AllRequired, type Reshaped } from "./reshape";
  * @returns A validator made by `object`, with every property required.
  * @throws {TypeError} When the validator was not made by `object` or has checks.
  */
-export function required<TValidator extends AnyValidator<object>>(
+export function required<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(
   validator: TValidator,
-  ...rest: Rest<AllRequired<Infer<TValidator>>, ObjectOptions>
-): Reshaped<TValidator, AllRequired<Infer<TValidator>>, AllRequired<InferInput<TValidator>>>;
-export function required<TValidator extends AnyValidator<object>>(
+  ...rest: Rest<Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>
+): ReshapedWith<
+  TValidator,
+  TUnknownKeys,
+  Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>,
+  RemadeInput<AllRequired<InferInput<TValidator>>, TUnknownKeys>
+>;
+export function required<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(
   validator: TValidator,
-  ...rest: AsyncRest<AllRequired<Infer<TValidator>>, ObjectOptions>
-): AsyncSchema<AllRequired<Infer<TValidator>>, AllRequired<InferInput<TValidator>>>;
+  ...rest: AsyncRest<Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>
+): AsyncSchema<
+  Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>,
+  RemadeInput<AllRequired<InferInput<TValidator>>, TUnknownKeys>
+>;
 export function required(validator: AnyValidator, ...rest: unknown[]): AnyValidator {
   return mapping("required", validator, unwrapped, rest);
 }

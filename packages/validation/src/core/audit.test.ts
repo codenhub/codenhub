@@ -125,6 +125,17 @@ describe("audit", () => {
     ]);
   });
 
+  it("should walk the validator an object gives its unknown keys, at the path of a record's values", () => {
+    expect(audit(object({ name }, { unknownKeys: string() }))).toEqual([
+      { rule: "unbounded_text", path: "{}", kind: "string" },
+    ]);
+    expect(audit(object({ tags: object({}, { unknownKeys: array(name) }) }))).toEqual([
+      { rule: "unbounded_size", path: "tags{}", kind: "array" },
+    ]);
+    // How many keys there are is bounded by no option of an object, as for passthrough.
+    expect(audit(object({ name }, { unknownKeys: number() }))).toEqual([]);
+  });
+
   it("should take a collection's max before it as bounding the count of items after it, not what they hold", () => {
     expect(audit(pipe(array(unknown(), { max: 1 }), array(string())))).toEqual([
       { rule: "unbounded_text", path: "[]", kind: "string" },

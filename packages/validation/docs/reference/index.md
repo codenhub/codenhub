@@ -58,7 +58,7 @@ Input that passes a validator is validated in full, so a body of a million items
 
 Text read by `coerceBigint` needs a bound on each side, since converting it takes longer than linear time in its length, and a bound limits the digits converted.
 
-It reads the schema and never calls it, though it calls the getter of each `lazy` twice, to tell a schema built anew at every level from one built once. Whether a `max` is small enough is not its to judge: any number says someone decided. A check is not read, since it runs on a value that already passed. It lists the bounds an option can set, so it does not report the keys an `object` with `unknownKeys: "passthrough"` keeps, nor what `unknown()` accepts: neither has an option that bounds it. Use `"strip"` or `"strict"` for keys the schema does not name, and a validator of the type you expect in place of `unknown()`.
+It reads the schema and never calls it, though it calls the getter of each `lazy` twice, to tell a schema built anew at every level from one built once. Whether a `max` is small enough is not its to judge: any number says someone decided. A check is not read, since it runs on a value that already passed. It lists the bounds an option can set, so it does not report the keys an `object` with `unknownKeys: "passthrough"` or a validator keeps, nor what `unknown()` accepts: none has an option that bounds it. Use `"strip"` or `"strict"` for keys the schema does not name, and a validator of the type you expect in place of `unknown()`. A validator given as `unknownKeys` is walked at the object's path followed by `{}`, as the values of a `record` are.
 
 **Parameters**
 
@@ -279,7 +279,7 @@ The kind of the part, as `describe` gives it, or `"unknown"` for a part that can
 readonly path: string;
 ```
 
-Where the part is in the schema: property names joined by `.`, `[]` for the items of an array or a set, `[0]` for an item of a tuple and `{}` for the keys and values of a record or a map, and `""` for the validator itself.
+Where the part is in the schema: property names joined by `.`, `[]` for the items of an array or a set, `[0]` for an item of a tuple and `{}` for the keys and values of a record or a map and the unknown keys of an object, and `""` for the validator itself.
 
 #### AuditFinding › rule
 

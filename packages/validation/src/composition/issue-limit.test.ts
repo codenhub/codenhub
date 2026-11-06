@@ -129,6 +129,36 @@ describe("the most issues a collection reports", () => {
     expect(issues.at(-1)?.path).toEqual(["a"]);
   });
 
+  it("should stop the keys an object gives its validator of unknown keys at the limit, after the properties", () => {
+    let calls = 0;
+    const counted: Validator<string> = (input) => {
+      calls += 1;
+      return string()(input);
+    };
+    const entries = Array.from({ length: COUNT }, (_, index) => [`k${index}`, index] as const);
+    const issues = issuesOf(object({ a: number() }, { unknownKeys: counted })(Object.fromEntries(entries)));
+    // The property that is missing, the unknown keys up to the limit, and then the limit.
+    expect(issues).toHaveLength(LIMIT + 2);
+    expect(issues[0]?.path).toEqual(["a"]);
+    expect(issues[LIMIT]?.path).toEqual([`k${LIMIT - 1}`]);
+    expect(issues[LIMIT + 1]).toEqual(stopped());
+    expect(calls).toBe(LIMIT);
+  });
+
+  it("should say an object stopped when its unknown keys reach the limit exactly and a key is left", () => {
+    let calls = 0;
+    const counted: Validator<string> = (input) => {
+      calls += 1;
+      return string()(input);
+    };
+    // The limit is reached by the last key that fails, and the key left would pass.
+    const entries = [...Array.from({ length: LIMIT }, (_, index) => [`k${index}`, index] as const), ["last", "ok"]];
+    const issues = issuesOf(object({}, { unknownKeys: counted })(Object.fromEntries(entries)));
+    expect(issues).toHaveLength(LIMIT + 1);
+    expect(issues[LIMIT]).toEqual(stopped());
+    expect(calls).toBe(LIMIT);
+  });
+
   it("should list the repeats that unique and a set find up to the limit", () => {
     const repeats = Array.from({ length: COUNT }, () => "a");
     expect(issuesOf(array(string(), unique())(repeats))).toHaveLength(LIMIT + 1);

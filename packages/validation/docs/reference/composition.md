@@ -168,13 +168,13 @@ encode(event, { name: "Launch", at: new Date(0) }); // { ok: true, value: { name
 ### extend
 
 ```ts
-export declare function extend<TValidator extends AnyValidator<object>, TShape extends Shape>(validator: TValidator, shape: TShape, ...rest: Rest<Extended<Infer<TValidator>, TShape>, ObjectOptions>): TValidator extends Validator<unknown> ? Composed<TShape[keyof TShape], Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>> : AsyncSchema<Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>>;
-export declare function extend<TValidator extends AnyValidator<object>, TShape extends Shape>(validator: TValidator, shape: TShape, ...rest: AsyncRest<Extended<Infer<TValidator>, TShape>, ObjectOptions>): AsyncSchema<Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>>;
+export declare function extend<TValidator extends AnyValidator<object>, TShape extends Shape, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, shape: TShape, ...rest: Rest<Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): TValidator extends Validator<unknown> ? Composed<TShape[keyof TShape] | RestIn<TUnknownKeys>, Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, RemadeInput<ExtendedInput<InferInput<TValidator>, TShape>, TUnknownKeys>> : AsyncSchema<Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, RemadeInput<ExtendedInput<InferInput<TValidator>, TShape>, TUnknownKeys>>;
+export declare function extend<TValidator extends AnyValidator<object>, TShape extends Shape, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, shape: TShape, ...rest: AsyncRest<Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, RemadeInput<ExtendedInput<InferInput<TValidator>, TShape>, TUnknownKeys>>;
 ```
 
 Creates an object validator with the properties of another and those given, as spreading the shape of one into another does for an object made from shapes.
 
-A module that exports an object validator, and not its shape, is extended with this. A property of the same name as one the object has replaces it, in its place. The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, and each option given here replaces the one of its name, so a strict object stays strict given only a `message`. One with checks is refused: a check reads the whole object and may read a property that is replaced, so give the checks the new object needs here instead.
+A module that exports an object validator, and not its shape, is extended with this. A property of the same name as one the object has replaces it, in its place. The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, and each option given here replaces the one of its name, so a strict object stays strict given only a `message`, and a validator of unknown keys is kept. One with checks is refused: a check reads the whole object and may read a property that is replaced, so give the checks the new object needs here instead.
 
 **Parameters**
 
@@ -572,13 +572,13 @@ nickname(undefined); // { ok: true, value: undefined }
 ### object
 
 ```ts
-export declare function object<TShape extends Shape>(shape: TShape, ...rest: Rest<InferShape<TShape>, ObjectOptions>): Composed<TShape[keyof TShape], InferShape<TShape>, InferShapeInput<TShape>>;
-export declare function object<TShape extends Shape>(shape: TShape, ...rest: AsyncRest<InferShape<TShape>, ObjectOptions>): AsyncSchema<InferShape<TShape>, InferShapeInput<TShape>>;
+export declare function object<TShape extends Shape, TUnknownKeys extends UnknownKeys = "strip">(shape: TShape, ...rest: Rest<InferObject<TShape, RestIn<TUnknownKeys>>, ObjectOptions<TUnknownKeys>>): Composed<TShape[keyof TShape] | RestIn<TUnknownKeys>, InferObject<TShape, RestIn<TUnknownKeys>>, InferObjectInput<TShape, RestIn<TUnknownKeys>>>;
+export declare function object<TShape extends Shape, TUnknownKeys extends UnknownKeys = "strip">(shape: TShape, ...rest: AsyncRest<InferObject<TShape, RestIn<TUnknownKeys>>, ObjectOptions<TUnknownKeys>>): AsyncSchema<InferObject<TShape, RestIn<TUnknownKeys>>, InferObjectInput<TShape, RestIn<TUnknownKeys>>>;
 ```
 
 Creates a validator for plain objects with the given properties.
 
-Only own properties are read, a listed one whether or not it is enumerable and an unlisted one only when it is, and class instances and arrays are not objects here. Every property is validated even when an earlier one failed, so the result lists every problem. Issue paths lead from the object down to the property. The output is a new object; the input is never modified. It is synchronous when every property validator is, and asynchronous otherwise. A getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does; data parsed from JSON has none.
+Only own properties are read, a listed one whether or not it is enumerable and an unlisted one only when it is, and class instances and arrays are not objects here. Every property is validated even when an earlier one failed, so the result lists every problem. Issue paths lead from the object down to the property. The output is a new object; the input is never modified. It is synchronous when every property validator, and a validator given as `unknownKeys`, is, and asynchronous otherwise. A getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does; data parsed from JSON has none.
 
 **Parameters**
 
@@ -588,10 +588,11 @@ Only own properties are read, a listed one whether or not it is enumerable and a
 **Type parameters**
 
 - `TShape` — Property validators.
+- `TUnknownKeys` — What `unknownKeys` is given, a mode or a validator.
 
 **Returns** — A validator that produces an object.
 
-**Throws** — `TypeError` — When `shape` is not a plain object, a property validator is not a function, or `unknownKeys` is not `"strip"`, `"strict"` or `"passthrough"`.
+**Throws** — `TypeError` — When `shape` is not a plain object, a property validator is not a function, or `unknownKeys` is not `"strip"`, `"strict"`, `"passthrough"` or a validator.
 
 **Example**
 
@@ -604,6 +605,9 @@ const signup = object(
   { password: string({ min: 8 }), confirm: string() },
   check((data) => data.password === data.confirm, { path: ["confirm"], message: "Passwords must match" }),
 );
+
+const flags = object({ name: string() }, { unknownKeys: boolean() });
+flags({ name: "Ada", beta: true }); // { ok: true, value: { name: "Ada", beta: true } }
 ```
 
 ### objectLike
@@ -643,13 +647,13 @@ feedback({ message: "" }); // { ok: false, error: { issues: [{ code: "too_small"
 ### omit
 
 ```ts
-export declare function omit<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(validator: TValidator, keys: readonly TKey[], ...rest: Rest<Omitted<Infer<TValidator>, TKey>, ObjectOptions>): Reshaped<TValidator, Omitted<Infer<TValidator>, TKey>, Omit<InferInput<TValidator>, TKey>>;
-export declare function omit<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Omitted<Infer<TValidator>, TKey>, ObjectOptions>): AsyncSchema<Omitted<Infer<TValidator>, TKey>, Omit<InferInput<TValidator>, TKey>>;
+export declare function omit<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, keys: readonly TKey[], ...rest: Rest<Remade<Omitted<Infer<TValidator>, TKey>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): ReshapedWith<TValidator, TUnknownKeys, Remade<Omitted<Infer<TValidator>, TKey>, TUnknownKeys>, RemadeInput<Omitted<InferInput<TValidator>, TKey>, TUnknownKeys>>;
+export declare function omit<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Remade<Omitted<Infer<TValidator>, TKey>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<Omitted<Infer<TValidator>, TKey>, TUnknownKeys>, RemadeInput<Omitted<InferInput<TValidator>, TKey>, TUnknownKeys>>;
 ```
 
 Creates an object validator without the named properties of another.
 
-The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, and each option given here replaces the one of its name, so a strict object stays strict given only a `message`. One with checks is refused: a check reads the whole object and may read a property that is left out, so give the checks the smaller object needs here instead.
+The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, and each option given here replaces the one of its name, so a strict object stays strict given only a `message`. A validator of unknown keys is kept too, and validates a property left out when the input has it. One with checks is refused: a check reads the whole object and may read a property that is left out, so give the checks the smaller object needs here instead.
 
 **Parameters**
 
@@ -773,7 +777,7 @@ const patch = partial(create); // the same, from the validator
 ```
 
 ```ts
-export declare function partial<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: Rest<AllOptional<Infer<TValidator>>, ObjectOptions>): Reshaped<TValidator, AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
+export declare function partial<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, ...rest: Rest<Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): ReshapedWith<TValidator, TUnknownKeys, Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, RemadeInput<AllOptional<InferInput<TValidator>>, TUnknownKeys>>;
 ```
 
 Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object` made, it returns a new object validator with the same options, each option given here replacing the one of its name.
@@ -802,7 +806,7 @@ const patch = partial(create); // the same, from the validator
 ```
 
 ```ts
-export declare function partial<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: AsyncRest<AllOptional<Infer<TValidator>>, ObjectOptions>): AsyncSchema<AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
+export declare function partial<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, ...rest: AsyncRest<Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, RemadeInput<AllOptional<InferInput<TValidator>>, TUnknownKeys>>;
 ```
 
 Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object` made, it returns a new object validator with the same options, each option given here replacing the one of its name.
@@ -833,13 +837,13 @@ const patch = partial(create); // the same, from the validator
 ### pick
 
 ```ts
-export declare function pick<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(validator: TValidator, keys: readonly TKey[], ...rest: Rest<Picked<Infer<TValidator>, TKey>, ObjectOptions>): Reshaped<TValidator, Picked<Infer<TValidator>, TKey>, Pick<InferInput<TValidator>, TKey & keyof InferInput<TValidator>>>;
-export declare function pick<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Picked<Infer<TValidator>, TKey>, ObjectOptions>): AsyncSchema<Picked<Infer<TValidator>, TKey>, Pick<InferInput<TValidator>, TKey & keyof InferInput<TValidator>>>;
+export declare function pick<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, keys: readonly TKey[], ...rest: Rest<Remade<Picked<Infer<TValidator>, TKey>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): ReshapedWith<TValidator, TUnknownKeys, Remade<Picked<Infer<TValidator>, TKey>, TUnknownKeys>, RemadeInput<Picked<InferInput<TValidator>, TKey & ListedKey<InferInput<TValidator>>>, TUnknownKeys>>;
+export declare function pick<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Remade<Picked<Infer<TValidator>, TKey>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<Picked<Infer<TValidator>, TKey>, TUnknownKeys>, RemadeInput<Picked<InferInput<TValidator>, TKey & ListedKey<InferInput<TValidator>>>, TUnknownKeys>>;
 ```
 
 Creates an object validator with only the named properties of another.
 
-The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, and each option given here replaces the one of its name, so a strict object stays strict given only a `message`. One with checks is refused: a check reads the whole object and may read a property that is left out, so give the checks the smaller object needs here instead.
+The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, and each option given here replaces the one of its name, so a strict object stays strict given only a `message`. A validator of unknown keys is kept too, and validates a property left out when the input has it. One with checks is refused: a check reads the whole object and may read a property that is left out, so give the checks the smaller object needs here instead.
 
 **Parameters**
 
@@ -975,8 +979,8 @@ scores({ ada: "3" }); // { ok: false, ... }, code "invalid_type" at path ["ada"]
 ### required
 
 ```ts
-export declare function required<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: Rest<AllRequired<Infer<TValidator>>, ObjectOptions>): Reshaped<TValidator, AllRequired<Infer<TValidator>>, AllRequired<InferInput<TValidator>>>;
-export declare function required<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: AsyncRest<AllRequired<Infer<TValidator>>, ObjectOptions>): AsyncSchema<AllRequired<Infer<TValidator>>, AllRequired<InferInput<TValidator>>>;
+export declare function required<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, ...rest: Rest<Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): ReshapedWith<TValidator, TUnknownKeys, Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, RemadeInput<AllRequired<InferInput<TValidator>>, TUnknownKeys>>;
+export declare function required<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, ...rest: AsyncRest<Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, RemadeInput<AllRequired<InferInput<TValidator>>, TUnknownKeys>>;
 ```
 
 Creates an object validator whose properties are all required, from one where some are optional.
@@ -1351,12 +1355,16 @@ A short name for the value.
 ### ObjectOptions
 
 ```ts
-export interface ObjectOptions extends MessageOptions {
-    unknownKeys?: "strip" | "strict" | "passthrough" | undefined;
+export interface ObjectOptions<TUnknownKeys extends UnknownKeys = UnknownKeys> extends MessageOptions {
+    unknownKeys?: TUnknownKeys | undefined;
 }
 ```
 
 Options for [`object`](#object).
+
+**Type parameters**
+
+- `TUnknownKeys` — What `unknownKeys` is given, a mode or a validator.
 
 #### ObjectOptions › message
 
@@ -1365,10 +1373,12 @@ Inherited from [`MessageOptions`](index.md#messageoptions--message).
 #### ObjectOptions › unknownKeys
 
 ```ts
-unknownKeys?: "strip" | "strict" | "passthrough" | undefined;
+unknownKeys?: TUnknownKeys | undefined;
 ```
 
 What to do with input properties the shape does not list. `"strip"` drops them from the output, `"strict"` rejects each with an `unrecognized_key` issue, up to the 1,000 issues a collection reports, and `"passthrough"` copies them to the output unchecked, except `__proto__`, which it rejects with an `invalid_key` issue: copied, it would become the prototype of any copy of the output made by assignment. A shape that lists `__proto__` keeps it, as data.
+
+A validator validates each of them, and the output keeps what it produces, after the listed properties and in the order of the input. Its issues are at the key's path, after those of the listed properties, and stop at the 1,000 issues a collection reports. An unlisted `__proto__` is rejected with an `invalid_key` issue, as a `record` rejects it, and its value is still validated. The object is asynchronous when this validator is. Its type gains an index signature that holds what the validator produces and what the listed properties hold, so that an object literal can be written with both.
 
 **Default** — "strip"
 
@@ -1444,22 +1454,22 @@ Validator for every position after the fixed ones. Without it the array must be 
 ### AllOptional
 
 ```ts
-export type AllOptional<T> = {
-    [K in keyof T]?: T[K] | undefined;
-} & {};
+export type AllOptional<T> = WithRest<{
+    [K in keyof Listed<T>]?: Listed<T>[K] | undefined;
+} & {}, Unlisted<T>>;
 ```
 
-The object type with every property optional.
+The object type with every property optional, and the index signature it had.
 
 ### AllRequired
 
 ```ts
-export type AllRequired<T> = Simplify<{
-    [K in keyof T]-?: Exclude<T[K], undefined>;
-}>;
+export type AllRequired<T> = WithRest<Simplify<{
+    [K in keyof Listed<T>]-?: Exclude<Listed<T>[K], undefined>;
+}>, Unlisted<T>>;
 ```
 
-The object type with every property present and none of them `undefined`. A property typed `unknown` or `any` still admits `undefined`, as `required` keeps an `unknown()` property unchanged.
+The object type with every property present and none of them `undefined`, and the index signature it had. A property typed `unknown` or `any` still admits `undefined`, as `required` keeps an `unknown()` property unchanged.
 
 ### Branded
 
@@ -1489,7 +1499,7 @@ The result of `encode`: ready for a synchronous validator, and to be awaited for
 ### Extended
 
 ```ts
-export type Extended<T, TShape extends Shape> = Simplify<Omit<T, keyof TShape> & InferShape<TShape>>;
+export type Extended<T, TShape extends Shape> = WithRest<Simplify<Omit<Listed<T>, keyof TShape> & InferShape<TShape>>, Unlisted<T>>;
 ```
 
 The object type with the properties of `TShape` added, replacing any of the same name.
@@ -1498,6 +1508,32 @@ The object type with the properties of `TShape` added, replacing any of the same
 
 - `T` — The object type extended.
 - `TShape` — The validators of the properties added.
+
+### InferObject
+
+```ts
+export type InferObject<TShape extends Shape, TRest extends AnyValidator = never> = WithRest<InferShape<TShape>, RestOf<TRest>>;
+```
+
+The object type [`object`](#object) produces: that of the shape and, with a validator of unknown keys, an index signature for the keys the shape does not list, which holds what that validator produces or any listed property's type, so the type can be written as an object literal.
+
+**Type parameters**
+
+- `TShape` — Property validators.
+- `TRest` — The validator of unknown keys, or `never` when there is none.
+
+### InferObjectInput
+
+```ts
+export type InferObjectInput<TShape extends Shape, TRest extends AnyValidator = never> = WithRest<InferShapeInput<TShape>, RestInputOf<TRest>>;
+```
+
+The object type that can pass [`object`](#object): that of the shape and, with a validator of unknown keys, an index signature for the keys the shape does not list, which holds what that validator accepts or any listed property's input type, so the type can be written as an object literal.
+
+**Type parameters**
+
+- `TShape` — Property validators.
+- `TRest` — The validator of unknown keys, or `never` when there is none.
 
 ### InferRecord
 
@@ -1622,10 +1658,10 @@ The array type that can pass a tuple: what each fixed item accepts, then any num
 ### Omitted
 
 ```ts
-export type Omitted<T, K extends keyof T> = Simplify<Omit<T, K>>;
+export type Omitted<T, K extends keyof T> = WithRest<Simplify<Omit<Listed<T>, K>>, Unlisted<T>>;
 ```
 
-The object type without the properties named.
+The object type without the properties named, and with the index signature it had.
 
 ### PartialShape
 
@@ -1640,10 +1676,10 @@ A shape with every property wrapped in `optional`.
 ### Picked
 
 ```ts
-export type Picked<T, K extends keyof T> = Simplify<Pick<T, K>>;
+export type Picked<T, K extends keyof Listed<T>> = WithRest<Simplify<Pick<Listed<T>, K>>, Unlisted<T>>;
 ```
 
-The object type with only the properties named.
+The object type with only the properties named, and the index signature it had.
 
 ### ReadonlyOutput
 
@@ -1672,6 +1708,14 @@ export type Shape = Record<string, AnyValidator>;
 ```
 
 Maps property names to the validators of their values.
+
+### UnknownKeys
+
+```ts
+export type UnknownKeys = "strip" | "strict" | "passthrough" | AnyValidator;
+```
+
+What `unknownKeys` may be given.
 
 ### Variants
 
@@ -1724,7 +1768,7 @@ Not exported; declared in `src/composition/tagged.ts`.
 ### ExtendedInput
 
 ```ts
-type ExtendedInput<T, TShape extends Shape> = Simplify<Omit<T, keyof TShape> & InferShapeInput<TShape>>;
+type ExtendedInput<T, TShape extends Shape> = WithRest<Simplify<Omit<Listed<T>, keyof TShape> & InferShapeInput<TShape>>, Unlisted<T>>;
 ```
 
 The input type with the properties of `TShape` added, replacing any of the same name.
@@ -1805,6 +1849,28 @@ type InferItems<TItems extends readonly AnyValidator[]> = {
 
 Not exported; declared in `src/composition/tuple.ts`.
 
+### Listed
+
+```ts
+type Listed<T> = {
+    [K in keyof T as string extends K ? never : number extends K ? never : K]: T[K];
+};
+```
+
+The properties an object type lists, without the index signature of an object with a validator of unknown keys.
+
+Not exported; declared in `src/composition/reshape.ts`.
+
+### ListedKey
+
+```ts
+type ListedKey<T> = keyof Listed<T>;
+```
+
+The names of the properties an object type lists, which `pick` and `omit` take.
+
+Not exported; declared in `src/composition/reshape.ts`.
+
 ### Marked
 
 ```ts
@@ -1848,6 +1914,36 @@ The type produced by the last validator of a list.
 
 Not exported; declared in `src/composition/pipe.ts`.
 
+### Reindexed
+
+```ts
+type Reindexed<T, TUnknownKeys, TValue> = [TUnknownKeys] extends [never] ? T : WithRest<Listed<T>, TValue>;
+```
+
+The object type with what its unlisted keys hold replaced by `TValue`, as an `unknownKeys` given to a reshaping function replaces the one the object had, or `T` as it is when none was given (`never`).
+
+Not exported; declared in `src/composition/reshape.ts`.
+
+### Remade
+
+```ts
+type Remade<T, TUnknownKeys> = Reindexed<T, TUnknownKeys, RestOf<RestIn<TUnknownKeys>>>;
+```
+
+`T` with its unlisted keys holding what the `unknownKeys` given, if any, produces.
+
+Not exported; declared in `src/composition/reshape.ts`.
+
+### RemadeInput
+
+```ts
+type RemadeInput<T, TUnknownKeys> = Reindexed<T, TUnknownKeys, RestInputOf<RestIn<TUnknownKeys>>>;
+```
+
+`T` with its unlisted keys holding what the `unknownKeys` given, if any, accepts.
+
+Not exported; declared in `src/composition/reshape.ts`.
+
 ### Replacement
 
 ```ts
@@ -1857,6 +1953,48 @@ type Replacement<T> = [Extract<T, AnyFunction>] extends [never] ? (T & LiteralVa
 A primitive fallback, or a function that receives the issues and returns the fallback. An object or a list would be shared by every result, so it is returned by a function. When a function is among the types of the fallback, only the function that returns it is accepted, since the fallback itself would be called.
 
 Not exported; declared in `src/composition/fallback.ts`.
+
+### ReshapedWith
+
+```ts
+type ReshapedWith<TValidator extends AnyValidator, TUnknownKeys, T, TInput> = [RestIn<TUnknownKeys>] extends [
+    never
+] ? Reshaped<TValidator, T, TInput> : Composed<TValidator | RestIn<TUnknownKeys>, T, TInput>;
+```
+
+A validator of `T` that is synchronous when the validator it was made from, and the validator of unknown keys in `TUnknownKeys` if it is one, are.
+
+Not exported; declared in `src/composition/reshape.ts`.
+
+### RestIn
+
+```ts
+type RestIn<TUnknownKeys> = Extract<TUnknownKeys, AnyValidator>;
+```
+
+The validator `unknownKeys` was given, or `never` when it was given a mode.
+
+Not exported; declared in `src/composition/object.ts`.
+
+### RestInputOf
+
+```ts
+type RestInputOf<TRest extends AnyValidator> = [TRest] extends [never] ? never : InferInput<TRest>;
+```
+
+What a validator of unknown keys accepts, or `never` when there is none.
+
+Not exported; declared in `src/composition/object.ts`.
+
+### RestOf
+
+```ts
+type RestOf<TRest extends AnyValidator> = [TRest] extends [never] ? never : Infer<TRest>;
+```
+
+What a validator of unknown keys produces, or `never` when there is none.
+
+Not exported; declared in `src/composition/object.ts`.
 
 ### Simplify
 
@@ -1879,3 +2017,25 @@ type Transformed<R, TInput> = 0 extends 1 & R ? Schema<R, TInput> : [unknown] ex
 What a synchronous validator becomes once `convert` runs on its value: still synchronous when `convert` never returns a promise, and asynchronous, producing what the promise settles to, when it may return one, such as a function typed `number | Promise<number>`. A function typed as returning `unknown` may return one too, so it makes the validator asynchronous, as does one that returns any value with a callable `then`, typed as a promise or not, since `await` treats it as one. One typed as returning `any`, such as `JSON.parse`, has opted out of type checking, and is taken at its word as synchronous: typing it asynchronous would make the most common conversion need an `await` it never needs.
 
 Not exported; declared in `src/composition/transform.ts`.
+
+### Unlisted
+
+```ts
+type Unlisted<T> = string extends keyof T ? T[string] : never;
+```
+
+What the index signature of an object type holds, or `never` when it has none.
+
+Not exported; declared in `src/composition/reshape.ts`.
+
+### WithRest
+
+```ts
+type WithRest<T, TValue> = [TValue] extends [never] ? T : Simplify<T & {
+    [key: string]: TValue | T[keyof T];
+}>;
+```
+
+An object type with an index signature for the keys it does not list, when `TValue` is not `never`. The signature holds `TValue` and the type of every listed property too, so a value of the type can be written as an object literal: a signature of `TValue` alone would also cover the listed keys, and refuse `{ name: "Ada" }` beside unlisted numbers.
+
+Not exported; declared in `src/composition/object.ts`.

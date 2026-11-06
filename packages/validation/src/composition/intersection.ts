@@ -130,7 +130,12 @@ function partsAt(record: Description, { segment, isKey }: Place): readonly unkno
     case "object":
     case "objectLike": {
       const shape = record["shape"] as Record<string, unknown>;
-      return typeof segment === "string" && Object.hasOwn(shape, segment) ? [shape[segment]] : [];
+      const rest = record.options?.["unknownKeys"];
+      return typeof segment === "string" && Object.hasOwn(shape, segment)
+        ? [shape[segment]]
+        : typeof rest === "function"
+          ? [rest]
+          : [];
     }
     case "array":
     case "set":

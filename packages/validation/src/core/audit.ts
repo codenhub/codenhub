@@ -18,8 +18,8 @@ export interface AuditFinding {
   readonly rule: "unbounded_size" | "unbounded_text" | "raised_limit" | "unreadable";
   /**
    * Where the part is in the schema: property names joined by `.`, `[]` for the items of an array or a
-   * set, `[0]` for an item of a tuple and `{}` for the keys and values of a record or a map, and `""` for
-   * the validator itself.
+   * set, `[0]` for an item of a tuple and `{}` for the keys and values of a record or a map and the
+   * unknown keys of an object, and `""` for the validator itself.
    */
   readonly path: string;
   /** The kind of the part, as `describe` gives it, or `"unknown"` for a part that cannot be read. */
@@ -156,8 +156,10 @@ function boundOf(part: unknown): Bound {
  * built anew at every level from one built once. Whether a `max` is small enough is not its to judge: any number
  * says someone decided. A check is not read, since it runs on a value that already passed. It lists the
  * bounds an option can set, so it does not report the keys an `object` with `unknownKeys: "passthrough"`
- * keeps, nor what `unknown()` accepts: neither has an option that bounds it. Use `"strip"` or `"strict"`
- * for keys the schema does not name, and a validator of the type you expect in place of `unknown()`.
+ * or a validator keeps, nor what `unknown()` accepts: none has an option that bounds it. Use `"strip"` or
+ * `"strict"` for keys the schema does not name, and a validator of the type you expect in place of
+ * `unknown()`. A validator given as `unknownKeys` is walked at the object's path followed by `{}`, as the
+ * values of a `record` are.
  *
  * @example
  * ```ts
@@ -250,6 +252,10 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
       case "objectLike":
         for (const [key, part] of Object.entries(record["shape"] as Record<string, unknown>)) {
           walk(part, at(path, key), held);
+        }
+        // The validator of the keys the shape does not list, at the place of a record's values.
+        if (typeof record.options?.["unknownKeys"] === "function") {
+          walk(record.options["unknownKeys"], `${path}{}`, held);
         }
         return;
       case "tagged":
