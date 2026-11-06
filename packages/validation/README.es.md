@@ -1,4 +1,4 @@
-<!-- source: 6f1f110570551d88793fa3ba58cb3ed297da4fba -->
+<!-- source: 3cb4792ff9e0a93258ed1abcced6f1c278753089 -->
 
 # @codenhub/validation
 
@@ -10,7 +10,7 @@ Validación para datos que no controlas: el cuerpo de una solicitud, una query s
 
 Cada validador es una función que importas por separado, así que un programa empaqueta solo los validadores que usa. Sin dependencias.
 
-> **Experimental:** anterior a 1.0. La API debería mantenerse en todas las versiones de parche de una versión menor, como cada 0.4.x. Un cambio que rompa el código que la usa, si llega a ser necesario, sale en la siguiente versión menor, y el [registro de cambios](docs/changelog/index.md) lo enumera, junto con las migraciones desde versiones anteriores.
+> [!WARNING] **Experimental:** anterior a 1.0. La API debería mantenerse en todas las versiones de parche de una versión menor, como cada 0.4.x. Un cambio que rompa el código que la usa, si llega a ser necesario, sale en la siguiente versión menor, y el [registro de cambios](docs/changelog/index.md) lo enumera, junto con las migraciones desde versiones anteriores.
 
 ## Instalación
 
@@ -68,4 +68,4 @@ Una entrada inválida no lanza excepciones: el resultado dice por qué falló. `
 
 ## Licencia
 
-Licencia Apache-2.0.
+Licencia [Apache-2.0](LICENSE).
