@@ -2,12 +2,12 @@
 title: Validadores personalizados
 description: Agrega reglas con verificaciones, crea validadores que se comportan como los integrados, valida de forma asíncrona y nombra los tipos que exporta una biblioteca de validadores.
 order: 6
-source: 821ea60ab863af2c39ee2eb1f1ff8c64ecb833ef
+source: af94592a6ca7df1e142842b835a6da5cf77e3251
 ---
 
 # Validadores personalizados
 
-Los validadores integrados cubren los casos comunes. Un registro real tiene reglas propias: un nombre reservado, un nombre de usuario que alguien ya tomó, un código que inventó tu empresa. Esta página muestra cómo escribirlas. Ninguno de los dos tipos necesita registrarse:
+Los validadores integrados cubren los casos comunes. Un registro real tiene reglas propias: un nombre reservado, un nombre de usuario que alguien ya tomó, un código de producto que tu empresa inventó hace años y que nadie se atreve a cambiar. Esta página muestra cómo escribirlas. Ninguno de los dos tipos necesita registrarse:
 
 - Una **verificación** agrega una regla a un validador que ya tienes, como que un nombre no esté tomado.
 - Un **validador** comprueba un tipo o un formato propio, como un código postal.
@@ -94,7 +94,7 @@ postcode({ message: "Enter a ZIP code" })("abc"); // { ok: false, ... }
 
 La prueba debe responder de inmediato. Una prueba que devuelve una promesa lanza un `TypeError` cuando el validador se ejecuta, ya que una respuesta pendiente dejaría pasar cualquier valor. Una regla que espera es una verificación, como muestra [Reglas asíncronas](#reglas-asíncronas).
 
-`name` forma parte del contrato del formato: quienes lo llaman se basan en él para decidir, y los mapas de mensajes lo usan para redactar, así que elígelo una sola vez. [JSON Schema](./json-schema.md) no escribe ningún `format` para él, ya que JSON Schema no conoce ese nombre.
+`name` forma parte del contrato del formato: quienes lo llaman se basan en él para decidir, y los mapas de mensajes lo usan para redactar, así que elígelo una sola vez: cambiarle el nombre después rompe a todos los que se basaron en él. [JSON Schema](./json-schema.md) no escribe ningún `format` para él, ya que JSON Schema no conoce ese nombre.
 
 ### Un tipo con `guard`
 
@@ -204,7 +204,7 @@ const result = await signup(input);
 
 No cambia nada más. Un validador que recibe una verificación asíncrona se convierte en un `AsyncValidator`, y lo mismo pasa con todo lo que lo contiene: `signup`, arriba, lo es porque `username` lo es.
 
-El tipo le dice al compilador que el resultado debe esperarse con `await`. Así, leer `signup(input).ok` sin `await` es un error que encuentras mientras escribes, no un bug que encuentras en producción. Una verificación escrita a mano que puede esperar se tipa como `AsyncCheck<T>`. Tiparla como `Check<T>` mantiene síncronos sus validadores, y el compilador te obliga a cumplirlo.
+El tipo le dice al compilador que el resultado debe esperarse con `await`. Así, leer `signup(input).ok` sin `await` es un error que encuentras mientras escribes, no un bug que encuentras en producción, donde una promesa no tiene `ok`: `!result.ok` rechazaría todos los registros, y `result.ok === false` los dejaría pasar todos. Una verificación escrita a mano que puede esperar se tipa como `AsyncCheck<T>`. Tiparla como `Check<T>` mantiene síncronos sus validadores, y el compilador te obliga a cumplirlo.
 
 También puedes escribir un validador asíncrono directamente:
 
@@ -274,7 +274,7 @@ Los tipos de las formas, que nombran lo que un compositor produce y acepta:
 - `Variants`, las variantes de una unión `tagged`, con `InferTagged` e `InferTaggedInput`.
 - Los tipos de `pick` y sus parientes, en [Dar forma a los valores](./shaping-values.md#reutilizar-formas).
 
-La maquinaria de las firmas:
+La maquinaria de las firmas, que casi siempre ves en los tooltips de tu editor:
 
 - `Factory<T, TOptions, TInput?>`, la fábrica que devuelve un builder como `format`: primero las opciones, luego las verificaciones.
 - `Rest<T, TOptions>` y `AsyncRest<T, TOptions>`, lo que sigue a los argumentos propios de un validador: opciones, luego verificaciones.
@@ -283,4 +283,4 @@ La maquinaria de las firmas:
 
 ## Siguiente
 
-Muchas reglas propias son formatos de texto. Antes de escribir una, revisa si el paquete ya la tiene: [Formatos](./formats.md) enumera direcciones de correo, URL, direcciones IP, fechas y el resto.
+Muchas reglas propias son formatos de texto. Antes de escribir una, revisa si el paquete ya la tiene, porque cada regex de correo que circula por internet está mal a su manera. [Formatos](./formats.md) enumera direcciones de correo, URL, direcciones IP, fechas y el resto.

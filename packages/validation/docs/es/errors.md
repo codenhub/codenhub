@@ -2,14 +2,14 @@
 title: Problemas y mensajes
 description: Qué contiene un resultado fallido, los códigos de problema integrados y sus params, y cómo convertir los problemas en texto en inglés, en portugués o con tus propias palabras.
 order: 5
-source: 05948497c973ec08784c6635902e20a10c08db22
+source: 7c3d1cece87a2afa6e15d3455f3522040965b8a1
 ---
 
 # Problemas y mensajes
 
 Cuando un valor no es válido, el resultado dice exactamente por qué. Esta página describe qué contiene un resultado fallido, los códigos que reportan los validadores integrados y cómo convertirlos en texto para una persona: los mensajes del formulario de registro, en inglés o en portugués, y el error que lanza un servidor ante una configuración incorrecta.
 
-Los validadores no escriben texto cuando fallan. El texto es una decisión que tomas donde lo muestras, así que un programa que nunca muestra un problema no carga ninguna redacción.
+Los validadores no escriben texto cuando fallan, salvo que le des a uno un [`message`](#redactar-los-mensajes-de-un-validador). Reportan los hechos y le dejan la prosa a quien los muestre, así que un programa que nunca muestra un problema no carga ninguna redacción.
 
 ## El resultado fallido
 
@@ -134,7 +134,10 @@ Tres códigos guardan en `params.issues` los problemas que tienen detrás: `inva
 
 - `invalid_key` con el primer problema que encontró el validador de claves, como en "Invalid key: Must be at least 3 characters". Una clave que aparece dos veces, en una query string o después de que un validador de claves volvió iguales dos claves, es "Must be given only once".
 - Una parte fallida de la misma forma, como en "Invalid email address domain: Expected one of "company.com"".
-- `invalid_union` con el primer problema de la única opción cuyo tipo tenía la entrada, cuando hay exactamente una: todas las demás opciones solo encontraron que la entrada no es de su tipo, o no es uno de los valores que acepta un `literal` o un `oneOf`. Así, `union([literal(""), email()])` con `"nope"` dice "Invalid email address". En otro caso, ninguna opción es la que se quiso decir, y dice "Does not match any of the allowed types". Los problemas de cada opción están en `params.issues` para un mensaje propio.
+- `invalid_union` con el primer problema de la única opción a la que iba dirigida la entrada, cuando la entrada deja exactamente una candidata. Una opción queda descartada cuando todo lo que encontró es que la entrada no es de su tipo, o no es uno de los valores que acepta un `literal` o un `oneOf`. Con más candidatas o con ninguna, dice "Does not match any of the allowed types". Un límite de `lazy`, `maxDepth` o `maxCalls`, que haya alcanzado una opción va antes que todo eso: el mensaje cita el límite, ya que detuvo la validación, tenga lo que tenga la entrada. Los problemas de cada opción están en `params.issues` para un mensaje propio. Por ejemplo:
+  - `union([string({ min: 3 }), number()])` con `"ab"`: `number()` solo encontró que `"ab"` no es un número, así que se quería la cadena, y el mensaje es "Must be at least 3 characters".
+  - `union([literal(""), email()])` con `"nope"`: `literal("")` solo encontró que `"nope"` no es su valor, así que el mensaje es "Invalid email address".
+  - `union([string({ min: 3 }), email()])` con `"ab"`: las dos opciones aceptan cadenas y las dos encontraron algo más que un tipo equivocado, así que cualquiera podría ser la buscada, y el mensaje es "Does not match any of the allowed types".
 
 El problema de detrás se redacta con el mismo mapa. Así, sobrescribir `too_small` en una copia de `englishMessages` también llega al mensaje de una clave. Un problema citado que está más adentro que el valor donde se muestra el problema exterior empieza con su ruta, como en "width: Must be at least 1" para el `width` de una opción objeto.
 
@@ -295,7 +298,7 @@ Recibe el mismo mapa de mensajes que `formatIssue`, `englishMessages` a menos qu
 
 ## Lanzar una excepción ante una configuración inválida
 
-Hay entradas que no se espera que sean inválidas. Un objeto de opciones que otro desarrollador le pasa a tu función, o el entorno de un servidor, solo está mal por error, y un error se lanza donde se cometió. `assert(validator, input, options?)` devuelve el valor que produjo el validador, o lanza un `TypeError`:
+Hay entradas que no se espera que sean inválidas. Un objeto de opciones que otro desarrollador le pasa a tu función, o el entorno de un servidor, solo está mal por error, y un error conviene lanzarlo donde se cometió, mientras quien lo cometió todavía está mirando. `assert(validator, input, options?)` devuelve el valor que produjo el validador, o lanza un `TypeError`:
 
 ```ts
 import { array, assert, invalidTypeMessage, object, string, tooSmallMessage } from "@codenhub/validation";

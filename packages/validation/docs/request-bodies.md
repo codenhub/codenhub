@@ -6,7 +6,7 @@ order: 3
 
 # Request bodies
 
-A server receives what any client chose to send. This page covers the shapes a request body holds beyond one flat object: JSON text, lists, dictionaries, a choice between shapes, and data that nests inside itself. The sign-up API gets a list of interests, a referral that can take two shapes, and a body that is still JSON text.
+A server receives what any client chose to send, and clients have range. This page covers the shapes a request body holds beyond one flat object: JSON text, lists, dictionaries, a choice between shapes, and data that nests inside itself. The sign-up API gets a list of interests, a referral that can take two shapes, and a body that is still JSON text.
 
 ## JSON text
 
@@ -39,7 +39,7 @@ signupBody("{"); // { ok: false, ... }, code "invalid_format"
 The text is parsed by `JSON.parse`, so two of its rules apply:
 
 - A key given twice keeps its last value: `{"a":1,"a":2}` gives `{ a: 2 }`.
-- A number beyond what a double holds exactly loses digits: `12345678901234567890` becomes `12345678901234567000`. Send such numbers as strings, and read them with `coerceBigint`.
+- A number beyond what a double holds exactly loses digits: `12345678901234567890` becomes `12345678901234567000`, an ID that now belongs to someone else. Send such numbers as strings, and read them with `coerceBigint`.
 
 The `string({ max: 100_000 })` in front bounds the text before it is parsed. [Limits](limits.md) explains why a body needs a bound like it.
 
@@ -123,7 +123,7 @@ const hours = record(oneOf(["mon", "tue"]), number()); // { mon?: number; tue?: 
 
 ### `union`
 
-`union(options)` accepts a value that passes any one of several validators, and produces what the first one that accepts it produced. So put the more specific options first:
+`union(options)` accepts a value that passes any one of several validators, and produces what the first one that accepts it produced. First come, first served, so put the more specific options first:
 
 ```ts
 import { coerceNumber, number, string, union } from "@codenhub/validation";
@@ -184,7 +184,15 @@ Each variant must produce a plain object, since that is what can carry the tag. 
 
 Where the outputs differ otherwise, as `"  ab "` does when one side trims it and the other uppercases it, no value satisfies both. Each such place fails with `invalid_intersection` at its path, instead of one side silently winning.
 
-The merged object is new. So an own `__proto__` key that one side passed on unchecked, as `unknown()` does, is reported as `invalid_key` with one issue inside, `{ reserved: true }`, as `record` reports it. A shape of either side that lists `__proto__` at that place keeps it, but only if that shape made the value there. A shape a `transform` runs before its function did not, nor did one in a `pipe` step followed by a step that makes a new object, nor the key validator of a `map` entry, for the entry's value. A value both sides passed on whole, such as through `unknown()` on both, is the input's own object, and is kept unchanged.
+The merged object is new. So an own `__proto__` key that one side passed on unchecked, as `unknown()` does, is reported as `invalid_key` with one issue inside, `{ reserved: true }`, as `record` reports it. Two cases keep the key:
+
+- **A side whose shape lists `__proto__` at that place, and made the value there.** The shape has to be the last thing that touched the value. It is not when something after it made a new value:
+  - A shape inside a `transform`. The value is what the transform's function returned, not what the shape checked.
+  - A shape in a `pipe` step that a later step replaces with a new object.
+  - The key validator of a `map` entry. It made the key, not the entry's value.
+- **A value both sides passed on whole,** such as through `unknown()` on both. It is the input's own object, and is kept unchanged.
+
+So `intersection(object({ ["__proto__"]: unknown() }), unknown())` keeps a `__proto__` key, since the left shape lists it and made the value. Wrap that `object` in a `transform` and the key is reported instead, unless the transform hands back the input object itself. The computed key matters: written as `{ __proto__: unknown() }`, the literal sets the shape's prototype and lists no key at all. Yes, really.
 
 Both validators see the whole input, so two `object`s with `unknownKeys: "strict"` pass together only when every key of the input is listed in both shapes: each rejects the keys only the other lists. To combine strict shapes, spread them into one: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
 

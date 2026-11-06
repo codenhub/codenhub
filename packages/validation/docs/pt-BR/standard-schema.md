@@ -1,13 +1,13 @@
 ---
 title: Standard Schema
 description: Use um validador em qualquer biblioteca que aceite um Standard Schema, como bibliotecas de formulário, frameworks de API e roteadores.
-source: 92bc96df75f26600314838cf5d08c2a5ed86ec28
+source: 099d82a1e299b95ac4f757c89d2e7cd0bfa86fed
 order: 9
 ---
 
 # Standard Schema
 
-O formulário de cadastro roda numa biblioteca de formulários, e o endpoint de cadastro num framework web. Nenhum dos dois deveria precisar de código próprio para cada biblioteca de validação. O [Standard Schema](https://standardschema.dev/) é uma pequena interface compartilhada que permite a uma biblioteca aceitar um validador sem depender da biblioteca que o criou. Bibliotecas de formulário, frameworks de API e roteadores que dão suporte a ela aceitam diretamente qualquer validador compatível, de qualquer biblioteca. Esta página mostra como um validador deste pacote é um Standard Schema e como escolher o texto das mensagens dele.
+O formulário de cadastro roda numa biblioteca de formulários, e o endpoint de cadastro num framework web. Nenhum dos dois deveria precisar de um adaptador para cada biblioteca de validação, e bibliotecas de validação não faltam. Sim, sabemos que fizemos mais uma. O [Standard Schema](https://standardschema.dev/) é uma pequena interface compartilhada que permite a uma biblioteca aceitar um validador sem depender da biblioteca que o criou. Bibliotecas de formulário, frameworks de API e roteadores que dão suporte a ela aceitam diretamente qualquer validador compatível, de qualquer biblioteca. Esta página mostra como um validador deste pacote é um Standard Schema e como escolher o texto das mensagens dele.
 
 Todo validador criado por uma factory deste pacote já é um Standard Schema:
 
@@ -101,7 +101,7 @@ forecast["~standard"].jsonSchema.input({ target: "draft-07" });
 
 ## Uma observação sobre funções
 
-Aqui, um validador é uma função, e `standard` anexa `~standard` a uma função. A especificação permite qualquer objeto, e as bibliotecas que a seguem leem a propriedade, então isso funciona. Uma biblioteca que exija `typeof schema === "object"` antes de olhar não o reconheceria; se você encontrar uma assim, envolva o validador num objeto seu: `{ "~standard": standard(validator)["~standard"] }`.
+Aqui, um validador é uma função, e `standard` anexa `~standard` a uma função. A especificação permite qualquer objeto, e em JavaScript uma função é um, diga o `typeof` o que disser. As bibliotecas que a seguem leem a propriedade, então isso funciona. Uma biblioteca que exija `typeof schema === "object"` antes de olhar não o reconheceria; se você encontrar uma assim, envolva o validador num objeto seu: `{ "~standard": standard(validator)["~standard"] }`.
 
 ## Próximos passos
 

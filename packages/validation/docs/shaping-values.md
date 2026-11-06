@@ -6,7 +6,7 @@ order: 8
 
 # Shaping values
 
-A validator does more than accept or reject. It can clean a value, convert it into another type, and later write it back. This page covers the tools that change what a validator produces, or how it is described, and the ways to build one object from another. In the sign-up, they read the time an invitation expires as a `Date`, mark a user's id so that no other string passes for one, and derive the profile update from the sign-up object.
+A validator does more than say yes or no. It can clean a value, convert it into another type, and later write it back. This page covers the tools that change what a validator produces, or how it is described, and the ways to build one object from another. In the sign-up, they read the time an invitation expires as a `Date`, mark a user's id so that no other string passes for one, and derive an account update from the shape that creates the account.
 
 ## `pipe`
 
@@ -39,7 +39,7 @@ length("Ada"); // { ok: true, value: 3 }
 - A `convert` that throws is a bug, and the exception propagates.
 - A `transform` goes one way. [`encode`](#encode) cannot write its value back, and throws, naming where it is. Where a value must go back, use a [`codec`](#codec).
 
-A `convert` that returns a promise makes the result asynchronous. So does one typed as possibly returning one, including one typed as returning `unknown`. So does any value with a `then` method, since `await` would treat it as a promise. Wrap such a value in an object before it is returned.
+A `convert` that returns a promise makes the result asynchronous. So does one typed as possibly returning one, including one typed as returning `unknown`. So does any value with a `then` method, since `await` would treat it as a promise, whether it meant to be one or not. Wrap such a value in an object before it is returned.
 
 A `convert` typed as returning `any`, such as `JSON.parse`, has opted out of type checking, and is typed synchronous. So `transform(string(), JSON.parse)` needs no `await`. If it can return a promise, say so in its return type.
 
@@ -102,7 +102,7 @@ So a value the validator could not have produced fails with the issues it has, a
 
 ## `brand`
 
-`brand(validator, name)` marks what a validator produces with a name, in the types alone. TypeScript treats two types of the same shape as one, so a function that takes a `string` it calls a user id also takes an email, or text nobody validated. With a brand, the only way to a value of the type is through the validator:
+`brand(validator, name)` marks what a validator produces with a name, in the types alone. TypeScript treats two types of the same shape as one, so a function that takes a `string` it calls a user id also takes an email, a session token, or the text of a 404 page. With a brand, the only way to a value of the type is through the validator:
 
 ```ts
 import { brand, uuid, type Infer } from "@codenhub/validation";
@@ -138,7 +138,7 @@ type Settings = Infer<typeof settings>; // { readonly theme: string; readonly ta
 
 - It freezes the value itself and not what is inside it, as `Object.freeze` does and as the type says. Wrap an inner validator too where its value must not change, as `tags` above.
 - A value that is the input itself is never frozen, since the caller owns it. `instanceOf`, `guard` and `unknown` produce what they were given, so `readonly` changes only their type. `object`, `objectLike`, `array`, `tuple`, `record`, `set` and `map` produce a new value, which is frozen.
-- A `Map` or a `Set` is typed `ReadonlyMap` or `ReadonlySet`, and only the type protects it: freezing one does not stop `set` or `add`. A typed array cannot be frozen, and is left unfrozen, and so is a `DataView`. The type covers properties and not methods, so a `Date` keeps its setters.
+- A `Map` or a `Set` is typed `ReadonlyMap` or `ReadonlySet`, and only the type protects it: freezing one does not stop `set` or `add`, which is JavaScript's idea of frozen. A typed array cannot be frozen, and is left unfrozen, and so is a `DataView`. The type covers properties and not methods, so a `Date` keeps its setters.
 - A value counts as the caller's only when it is the input itself. When a `transform` returns a value from inside the input, such as `(value) => value.tags`, that value is frozen. Copy it there when the caller must keep it changeable. The same goes for an object it returns from your own data: `readonly(transform(string(), (key) => cache[key]))` freezes the entry in `cache`, so return a copy there too.
 - `pick`, `omit`, `required` and `partial` read an `object`, so reshape first and wrap after: `readonly(pick(user, ["name"]))`.
 

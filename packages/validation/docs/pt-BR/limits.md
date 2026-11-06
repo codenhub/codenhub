@@ -1,13 +1,13 @@
 ---
 title: Limites
 description: Quanto custa uma entrada inválida, os limites dos schemas recursivos, os tamanhos que uma entrada não confiável exige e como audit encontra os limites que um schema deixa em aberto.
-source: 245de196e8904f5e3401f0222d0f4118e660b511
+source: a3150de56f84a1c4de175605afa3f34a51e94d8c
 order: 12
 ---
 
 # Limites
 
-Um endpoint de cadastro recebe o que qualquer pessoa enviar, inclusive entradas escritas para deixá-lo lento, esgotar a memória dele ou derrubá-lo. Esta página diz o que o pacote limita por você, o que deixa para você e como verificar se um schema define os limites de que precisa. Leia-a antes de validar entradas vindas de uma rede pública.
+Um endpoint de cadastro recebe o que qualquer pessoa enviar, inclusive entradas escritas para deixá-lo lento, esgotar a memória dele ou derrubá-lo. Esta página diz o que o pacote limita por você, o que deixa para você e como verificar se um schema define os limites de que precisa. Leia-a antes de validar entradas vindas de uma rede pública: ela é mais curta que o relatório do incidente.
 
 Em resumo:
 
@@ -195,4 +195,4 @@ O que ele não avalia:
 
 ## Próximos passos
 
-Esse é o fim do caminho de leitura. Para a assinatura exata de cada export, veja a [referência da API](../reference/index.md). Para o que mudou entre versões, e como atualizar, veja o [changelog](../changelog/index.md).
+Esse é o fim do caminho de leitura, e das nossas opiniões sobre `__proto__`. Para a assinatura exata de cada export, veja a [referência da API](../reference/index.md). Para o que mudou entre versões, e como atualizar, veja o [changelog](../changelog/index.md).

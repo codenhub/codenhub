@@ -1,7 +1,7 @@
 ---
 title: Visión general
 description: Para qué sirve el paquete de validación, cómo instalarlo y en qué orden leer sus páginas.
-source: 533571f419ed6de73fe8f241e415c797093db48d
+source: b740f4e453473d7b05f56526e86c13e78a07780d
 ---
 
 # Valida valores y formas
@@ -12,12 +12,12 @@ Funciona igual para un solo valor, como una dirección de correo o un número de
 
 ## Por qué validar
 
-Los datos que cruzan una frontera que no controlas pueden traer cualquier cosa: una solicitud, un formulario, una query string, una variable de entorno, un archivo, un mensaje de otro servicio. TypeScript revisa los tipos al compilar, no cuando el programa se ejecuta. Así que el tipo que escribiste para esos datos es una promesa que nada hace cumplir, hasta que lo hace un validador.
+Los datos que cruzan una frontera que no controlas pueden traer cualquier cosa: una solicitud, un formulario, una query string, una variable de entorno, un archivo, un mensaje de otro servicio. TypeScript revisa los tipos al compilar, no cuando el programa se ejecuta. Así que el tipo que escribiste para esos datos es una promesa, y los datos nunca la firmaron. Un validador es lo que la hace cumplir.
 
 El paquete está hecho para esa frontera, donde la entrada puede ser hostil:
 
 - **Un formato te da lo que leyó el parser.** `email()` y `url()` producen el valor que lee el parser de URL de la plataforma. El valor que guardas es el que usará una solicitud o un servidor de correo.
-- **Lo que reporta una entrada que falla está acotado.** Cada colección deja de reportar en 1000 problemas, como explica [Límites](./limits.md#una-entrada-que-falla-tiene-un-costo-acotado). Una entrada anidada demasiado profundo es un solo problema, no un desbordamiento de pila, siempre que el límite de profundidad quepa en la pila.
+- **Lo que reporta una entrada que falla está acotado.** Cada colección deja de reportar en 1000 problemas, como explica [Límites](./limits.md#una-entrada-que-falla-tiene-un-costo-acotado). Una entrada anidada demasiado profundo es un solo problema, no un desbordamiento de pila, siempre que el límite de profundidad de un esquema recursivo, [`maxDepth`](./limits.md#maxdepth), quepa en la pila.
 - **Un problema nunca contiene un valor de la entrada.** Un registro de fallos no contiene ninguna contraseña que se haya enviado. Un problema sí contiene aquello con lo que se configuró el esquema, como los valores que acepta un `oneOf` o el prefijo de un `startsWith`, y las claves de la entrada, en su `path`, como dice [El problema](./errors.md#el-problema).
 
 El límite de 1000 problemas de una colección acota su reporte, no el trabajo: una entrada que pasa, o que falla solo cerca de su final, se revisa igual elemento por elemento, así que una entrada grande cuesta lo que mide. [Límites](./limits.md) explica cómo acotar su tamaño y su profundidad.
@@ -41,10 +41,10 @@ const signup = object({
 });
 
 signup({ name: "  Ada ", email: "ada@example.com" }); // { ok: true, value: { name: "Ada", email: "ada@example.com" } }
-signup({ name: "A", email: "nope" }); // { ok: false, ... }, código "too_small"
+signup({ name: "A", email: "nope" }); // { ok: false, ... }: "too_small" para name, "invalid_format" para email
 ```
 
-Estas páginas siguen un único ejemplo: el registro de una aplicación web. Aquí empieza con dos campos. Cada página le agrega lo que esa página enseña, como un formulario con verificación de contraseña, el cuerpo JSON de una solicitud, la configuración del servidor y los mensajes que lee un usuario.
+Estas páginas siguen un único ejemplo: el registro de una aplicación web. Aquí empieza con dos campos y, como todo formulario de registro que se haya construido, crece un poco en cada página. Cada página le agrega lo que esa página enseña, como un formulario con verificación de contraseña, el cuerpo JSON de una solicitud, la configuración del servidor y los mensajes que lee un usuario.
 
 ## Orden de lectura
 

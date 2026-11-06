@@ -1,13 +1,13 @@
 ---
 title: Formatos
 description: Endereços de e-mail, URLs, nomes de domínio, endereços IP, datas, horários e os outros formatos de string, o que cada um aceita e o valor que produz.
-source: 5ac6fedbc6d4475eb4aab0f0bedbe55cdcdadb38
+source: 458673df9e7a08cfa16f67c583d6c618b5e2802a
 order: 7
 ---
 
 # Formatos
 
-Um formato é um validador para uma string com uma forma específica, como um endereço de e-mail ou uma URL. O cadastro precisa de um para o e-mail, e muitas regras que você escreveria por conta própria são um formato que o pacote já tem. Esta página lista os formatos, o que cada um aceita e o valor que cada um produz. Ela se demora mais em `email` e `url`, já que um endereço ou um link que um servidor segue é onde uma verificação descuidada custa mais caro.
+Um formato é um validador para uma string com uma forma específica, como um endereço de e-mail ou uma URL. O cadastro precisa de um para o e-mail, e muitas regras que você escreveria por conta própria são um formato que o pacote já tem. Esta página lista os formatos, o que cada um aceita e o valor que cada um produz. Ela se demora mais em `email` e `url`, já que um endereço ou um link que um servidor segue é onde uma verificação descuidada custa mais caro. Essas seções são longas porque as especificações por trás delas também são, e nós as lemos para você não precisar.
 
 Cada formato é importado separadamente, então um programa leva no bundle os que usa e nenhum outro. Cada um aceita a opção `message` e verificações.
 
@@ -74,7 +74,7 @@ As opções são `allowPlus`, por padrão `true`, que controla se `+` é aceito 
 
 A parte local, antes do `@`, precisa ser um dot-atom, como o que o campo de e-mail do HTML aceita:
 
-- Letras ASCII, dígitos e ``!#$%&'*+/=?^_`{|}~-``, com pontos isolados entre eles.
+- Letras ASCII, dígitos e ``!#$%&'*+/=?^_`{|}~-``, com pontos isolados entre eles. Sim, `{` e `|` valem ali; o e-mail é mais antigo que o bom gosto.
 - Uma parte local entre aspas, como `"a b"@example.com`, é rejeitada.
 - Também é rejeitado um endereço com outras letras antes do `@` (RFC 6531).
 - A parte local é limitada a 64 caracteres, e o endereço inteiro, como é entregue, a 254.

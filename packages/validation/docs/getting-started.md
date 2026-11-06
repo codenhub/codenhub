@@ -6,7 +6,7 @@ order: 1
 
 # Getting started
 
-This page covers the parts every other page builds on: how a validator is made and called, what it returns, and the validators for each basic kind of value. By the end of it you can write the first version of the sign-up: an object with a name, an email address and a password, and the TypeScript type that comes from it.
+This page is the foundation the others stand on, which is why it is the long one: how a validator is made and called, what it returns, and the validators for each basic kind of value. By the end of it you can write the first version of the sign-up: an object with a name, an email address and a password, and the TypeScript type that comes from it.
 
 ## A validator is a function
 
@@ -23,7 +23,7 @@ port(70000); // { ok: false, ... }, code "too_big"
 string({ min: 3 })("ab"); // { ok: false, ... }
 ```
 
-The first line runs once, when the module loads, and gives a function you can reuse for every value. To check a single value once, call both at once: `number({ int: true })(input)`.
+The `port` line runs once, when the module loads, and gives a function you can reuse for every value. To check a single value once, call both at once: `number({ int: true })(input)`.
 
 Because a validator is only a function, you can pass any validator wherever another one is expected, and you can write your own with no helper at all. [Custom validators](custom-validators.md) shows how.
 
@@ -39,7 +39,7 @@ The options can be left out when there are checks: `string(startsWith("a"))`. Ev
 
 ### Mistakes in options throw at once
 
-Options are read once, when the validator is created. An option that makes no sense is a mistake in your code, not in the input, so the factory throws a `RangeError` or a `TypeError` at that point, and the program fails where the mistake is:
+Options are read once, when the validator is created. An option that makes no sense is a mistake in your code, not in the input, so the factory throws a `RangeError` or a `TypeError` at that point, and the program fails where the mistake is. A crash at startup is rude, but it beats a schema that quietly accepts everything for six months. These throw:
 
 - A value no input can satisfy: a negative length, a `NaN` bound, or limits that contradict each other, such as `{ min: 5, max: 2 }`.
 - Options that are not a plain object, such as `string(/^a/)` where `string(pattern(/^a/))` was meant. Ignored, they would accept every string.
@@ -70,7 +70,7 @@ When something is wrong, the validator reports every problem it can find, not on
 
 ### Invalid input does not throw
 
-Invalid input is an expected outcome, not a bug, so a validator returns it in the result. If you would rather stop the program, that is one line: `if (!result.ok) throw new Error(...)`, or [`assert`](errors.md#throwing-for-invalid-configuration), which writes the message for you.
+Invalid input is an expected outcome, not a bug: a sign-up form sees typos about as often as it sees sign-ups. So a validator returns it in the result. If you would rather stop the program, that is one line: `if (!result.ok) throw new Error(...)`, or [`assert`](errors.md#throwing-for-invalid-configuration), which writes the message for you.
 
 One kind of input can still throw: input that runs code of its own while it is read, such as a getter or a `Proxy` trap that throws. That exception propagates, as one from your own callback does. Data parsed from JSON has no such code. Two validators differ:
 
@@ -113,7 +113,7 @@ Clean-up always happens first, and every option and check then sees the cleaned 
 
 - `trim` removes Unicode white space and line terminators, so a no-break space goes. A zero-width space (U+200B) is not white space and stays, so `string({ trim: true, min: 1 })` accepts it. The `nonBlank()` check rejects it.
 - `case` can change the length the other options see: `ß` in uppercase is `SS`, and `İ` in lowercase is two code units.
-- Lengths count UTF-16 code units, as `String.length` does, so an emoji can count as two.
+- Lengths count UTF-16 code units, as `String.length` does, so an emoji can count as two, and a family of four as eleven.
 
 Every option that fails reports its own issue:
 
@@ -165,7 +165,7 @@ Bounds are checked when the validator is created:
 - A bound that is not a number, or a `clamp` that is not a range with a number `min` and `max`, throws a `TypeError`.
 - A `clamp` throws a `RangeError` for a `NaN` bound, a minimum of `Infinity`, a maximum of `-Infinity`, a minimum above its maximum, or a range whose every value breaks a bound, such as `{ clamp: { min: 0, max: 10 }, min: 11 }`.
 
-Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught, since that check would add size to every program that uses `number`. Such a validator rejects every input.
+Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught, since that check would add size to every program that uses `number`. Such a validator rejects every input, which the first test of an input meant to pass will notice.
 
 | Failure             | `code`          | `params`                                         |
 | ------------------- | --------------- | ------------------------------------------------ |
@@ -208,7 +208,7 @@ A date before `min` fails with `too_small` and `{ minimum, inclusive: true, type
 
 - Any primitive works, and this is how `null` and `undefined` are validated: `literal(null)`.
 - It produces the declared value, not the input. The two differ only for zero: `===` matches `-0` to `0`, and `literal(0)` produces `0` for either.
-- `NaN` is refused with a `RangeError` when the validator is created. `NaN === NaN` is false, so `literal(NaN)` could accept nothing.
+- `NaN` is refused with a `RangeError` when the validator is created. `NaN === NaN` is false, so `literal(NaN)` could accept nothing, not even `NaN`.
 
 `oneOf(values)` accepts any one value of a list and produces their union: `oneOf(["admin", "user"])` produces `"admin" | "user"`.
 
@@ -388,4 +388,4 @@ You do not pick a mode. You write the rule, and the types follow: a validator th
 
 ## Next
 
-The sign-up now has a shape and a type. [Forms](forms.md) turns it into a form: a password typed twice, optional fields with defaults, an avatar file, and errors shown beside each field.
+The sign-up now has a shape and a type. Next it meets a browser: [Forms](forms.md) turns it into a form, with a password typed twice, optional fields with defaults, an avatar file, and errors shown beside each field.

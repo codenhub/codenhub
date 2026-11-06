@@ -6,7 +6,7 @@ order: 9
 
 # Standard Schema
 
-The sign-up form runs in a form library, and the sign-up endpoint in a web framework. Neither should need code of its own for each validation library. [Standard Schema](https://standardschema.dev/) is a small shared interface that lets libraries accept a validator without depending on the one that made it. Form libraries, API frameworks and routers that support it take any conforming validator, from any library, directly. This page covers how a validator of this package is one, and how to choose the wording of its messages.
+The sign-up form runs in a form library, and the sign-up endpoint in a web framework. Neither should need an adapter for each validation library, and there are a lot of validation libraries. We are aware we made one more. [Standard Schema](https://standardschema.dev/) is a small shared interface that lets libraries accept a validator without depending on the one that made it. Form libraries, API frameworks and routers that support it take any conforming validator, from any library, directly. This page covers how a validator of this package is one, and how to choose the wording of its messages.
 
 Every validator a factory of this package makes is already a Standard Schema:
 
@@ -100,7 +100,7 @@ It is a separate export so that `standard`, which a form in the browser uses, do
 
 ## A note on functions
 
-A validator here is a function, and `standard` attaches `~standard` to a function. The specification allows any object, and libraries that follow it read the property, so this works. A library that insists on `typeof schema === "object"` before looking would not recognize it; if you meet one, wrap the validator in an object of your own: `{ "~standard": standard(validator)["~standard"] }`.
+A validator here is a function, and `standard` attaches `~standard` to a function. The specification allows any object, and in JavaScript a function is one, whatever `typeof` says. Libraries that follow it read the property, so this works. A library that insists on `typeof schema === "object"` before looking would not recognize it; if you meet one, wrap the validator in an object of your own: `{ "~standard": standard(validator)["~standard"] }`.
 
 ## Next
 

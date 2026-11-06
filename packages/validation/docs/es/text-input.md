@@ -2,12 +2,12 @@
 title: Entrada de texto
 description: Lee números, flags, bigints y fechas a partir de texto, como variables de entorno, query strings y campos de formulario.
 order: 4
-source: 3a6ee8d9bd5a65e7d1b7449427a9e2f4bacb2548
+source: 064666ac4b45c870f700349d434130cdf4d09098
 ---
 
 # Entrada de texto
 
-Gran parte de los datos que recibe un programa es texto, aunque signifique otra cosa. Cada variable de entorno, cada parámetro de una query string y cada campo de texto de un formulario es una cadena, ya represente un número de puerto, un flag de sí o no o una fecha. Un campo de archivo es un `File`, que cubre [Archivos](./forms.md#archivos). Esta página cubre los validadores que leen un valor a partir de ese texto, y dos lugares de donde viene: una query string y el entorno. El servidor del registro lee su configuración del entorno, y su página de registro lee una invitación de la query string.
+Gran parte de los datos que recibe un programa es texto que se hace pasar por otra cosa. Cada variable de entorno, cada parámetro de una query string y cada campo de texto de un formulario es una cadena, ya represente un número de puerto, un flag de sí o no o una fecha. Un campo de archivo es un `File`, que cubre [Archivos](./forms.md#archivos). Esta página cubre los validadores que leen un valor a partir de ese texto, y dos lugares de donde viene: una query string y el entorno. El servidor del registro lee su configuración del entorno, y su página de registro lee una invitación de la query string.
 
 Un validador estricto como `number()` rechaza `"8080"`, porque es una cadena. Es lo correcto, y aquí no ayuda. Un validador que convierte primero transforma el texto y luego valida el resultado, así que una sola llamada te da un valor tipado o los motivos por los que no pudo serlo:
 
@@ -47,7 +47,7 @@ La conversión es estrecha a propósito, porque una conversión que adivina conv
 - **Números:** cadenas vacías, `"1e3"`, `"0x10"`, `"1,5"`, `"Infinity"` y `"NaN"`; texto que contiene un número entero mayor que `Number.MAX_SAFE_INTEGER`, que perdería dígitos sin avisar (usa `coerceBigint` para esos); un decimal distinto de cero demasiado pequeño para un double, que pasaría a ser `0` sin avisar; y booleanos, `null`, objetos y arrays. `Number(true)` es `1` y `Number("")` es `0`, y leer un flag o un valor ausente como una cantidad es justo como se esconden los bugs.
 - **Booleanos:** cualquier otra palabra. Un error de tipeo como `"ture"` es un error, no `false`.
 - **Bigints:** fracciones, números mayores que `Number.MAX_SAFE_INTEGER`, que ya perdieron precisión, y cualquier otro texto.
-- **Fechas:** texto libre como `"yesterday"` o `"09/28/2026"`, cuya lectura depende del runtime, y días que no existen, como `2026-02-30`.
+- **Fechas:** texto libre como `"yesterday"` o `"03/04/2026"`, cuya lectura depende del runtime y cuyo mes depende del continente, y días que no existen, como `2026-02-30`.
 
 Un valor que no se puede convertir falla con `invalid_type`, y sus `params` son `{ expected, received, coerced: true }`. El mensaje en inglés nombra ambos tipos, como en "Cannot convert string to a number". El valor en sí nunca está en el problema.
 
@@ -71,7 +71,7 @@ Algunos detalles de las conversiones:
 
 Esto es más amplio que `datetime()`, que acepta solo el separador `T`, y `Z` o, con `offset`, `+HH:MM`. Un conversor lee lo que programas y personas suelen escribir, mientras que un [formato](./formats.md#datetime-y-time) verifica una única forma exacta de escribirlo.
 
-Una fecha y hora sin zona falla. `2026-09-28T14:30` nombra una hora en algún reloj, no un instante. Leída en una zona cualquiera, daría a todos los demás un instante desfasado por horas, sin decir nada. Cuando sabes que ese texto está escrito en UTC, pasa `zoneless: "utc"`, el único valor que acepta esa opción:
+Una fecha y hora sin zona falla. `2026-09-28T14:30` nombra una hora en algún reloj, no un instante, y el paquete no va a adivinar de quién es el reloj. Leída en una zona cualquiera, daría a todos los demás un instante desfasado por horas, sin decir nada. Cuando sabes que ese texto está escrito en UTC, pasa `zoneless: "utc"`, el único valor que acepta esa opción:
 
 ```ts
 import { coerceDate } from "@codenhub/validation";
@@ -86,7 +86,7 @@ En cualquier caso, el resultado no depende de la zona horaria de la máquina. Al
 
 - Una fracción de segundo más allá de los milisegundos se trunca, no se redondea, igual en todos los runtimes.
 - Un timestamp con una fracción de milisegundo se rechaza, no se trunca.
-- Los segundos intercalares (`23:59:60`) se rechazan, porque un `Date` no puede representarlos.
+- Los segundos intercalares (`23:59:60`) se rechazan, porque un `Date` no puede representarlos y prefiere creer que no existen.
 
 ## Una query string
 
@@ -129,7 +129,7 @@ const result = env({ PORT: "8080", ORIGINS: "https://a.example,https://b.example
 
 En Node.js, pasa una copia del entorno: `env({ ...process.env })`. `process.env` en sí no es un objeto plano, porque su prototipo no es `Object.prototype`, así que `object` lo rechaza como rechaza una instancia de clase, con un mensaje que dice que lo copies. Una variable ausente es `undefined`, que un valor predeterminado reemplaza y que todos los demás validadores rechazan.
 
-El entorno es configuración, así que uno inválido es un error ante el que hay que detenerse. [`assert`](./errors.md#lanzar-una-excepción-ante-una-configuración-inválida) devuelve el valor o lanza un error que nombra la variable.
+El entorno es configuración, así que uno inválido es un error ante el que hay que detenerse: un servidor que se niega a arrancar es más fácil de depurar que uno que arranca y se porta mal a las 3 de la mañana. [`assert`](./errors.md#lanzar-una-excepción-ante-una-configuración-inválida) devuelve el valor o lanza un error que nombra la variable.
 
 ## Limpiar el texto primero
 
@@ -139,4 +139,4 @@ Para texto que contiene JSON, usa [`json`](./request-bodies.md#texto-json), que 
 
 ## Siguiente
 
-Todas las páginas hasta ahora han mostrado un resultado que falla. [Problemas y mensajes](./errors.md) explica qué contiene un resultado fallido, y cómo convertir sus problemas en texto que lee una persona.
+Todas las páginas hasta ahora han mostrado `{ ok: false, ... }` y se han saltado con mucha educación el `...`. [Problemas y mensajes](./errors.md) lo abre: qué contiene un resultado fallido, y cómo convertir sus problemas en texto que lee una persona.

@@ -36,7 +36,7 @@ The result is a new plain object that `JSON.stringify` can write. It is its own 
 
 ## What the schema promises
 
-A schema says less than a validator checks. `email()` refuses an address at `localhost`, and JSON Schema's `email` format has no such rule. So the schema is written to one promise: **a value the validator accepts passes the schema**. The schema may accept a value the validator then refuses, and the validator stays the check that counts. Validate what you receive with the validator, and give the schema to whoever needs to know the shape.
+A schema says less than a validator checks. `email()` refuses an address at `localhost`, and JSON Schema's `email` format has no opinion on the matter. So the schema is written to one promise: **a value the validator accepts passes the schema**. The schema may accept a value the validator then refuses, and the validator stays the check that counts. Validate what you receive with the validator, and give the schema to whoever needs to know the shape.
 
 Three places bend that promise. In two, the validator cleans a value before it checks it, which a schema cannot say, and in the other, the two count the length of text differently:
 
@@ -205,7 +205,7 @@ To send a date as JSON, validate the text it travels as, with `datetime()` or `i
 
 ## Reading a schema
 
-`toJsonSchema` writes one notation. To write another, or to build a form from a schema, read the validator yourself. `describe(validator)` returns what a validator is made of, as plain data, typed `Description`: its `kind`, the `options` it was given, its `checks`, and the validators inside it. A program walks a schema with it, to write the schema in another notation, to build a form from it, or to make another validator from its parts.
+`toJsonSchema` writes one notation, and there is always another. To write it, or to build a form from a schema, read the validator yourself. `describe(validator)` returns what a validator is made of, as plain data, typed `Description`: its `kind`, the `options` it was given, its `checks`, and the validators inside it. A program walks a schema with it, to write the schema in another notation, to build a form from it, or to make another validator from its parts.
 
 ```ts
 import { describe, email, object, optional, string, type AnyValidator } from "@codenhub/validation";
@@ -255,4 +255,4 @@ What `standard` returns is described as the validator it wraps, and so is what `
 
 ## Next
 
-The libraries that take a Standard Schema or a JSON Schema each have a few details of their own. [Integrations](integrations.md) shows the common ones, with the sign-up.
+The libraries that take a Standard Schema or a JSON Schema each have a few details of their own, which is the polite word for quirks. [Integrations](integrations.md) shows the common ones, with the sign-up.

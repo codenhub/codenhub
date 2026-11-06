@@ -6,7 +6,7 @@ order: 2
 
 # Forms
 
-A form is where invalid input is most common, and where the person who typed it needs to know what to fix. This page grows the sign-up into a form: a password typed twice, optional fields with defaults, an avatar file, and errors shown beside each field. It ends with the types a form library needs.
+A form is where invalid input is most common, since a person types it on a phone, in a hurry, with autofill helping in its own way. It is also where that person needs to know what to fix. This page grows the sign-up into a form: a password typed twice, optional fields with defaults, an avatar file, and errors shown beside each field. It ends with the types a form library needs.
 
 ## Fields that must agree
 
@@ -92,7 +92,7 @@ Inside an `object`, a property with a default is always present in the output ty
 
 - The default is trusted, and is not validated.
 - A primitive is used directly. A function is called each time, with no argument, to make the default.
-- An array or an object must come from a function, such as `() => []`. One value would be shared by every result, and a change to one would show up in the next. The types reject it, and `optional` throws a `TypeError` when it is given one from JavaScript.
+- An array or an object must come from a function, such as `() => []`. One value would be shared by every result, and a change to one would show up in the next: a bug that takes a week to find and one line to fix. The types reject it, and `optional` throws a `TypeError` when it is given one from JavaScript.
 - For the same reason, a default that is itself a function, such as a callback for `func()`, is returned from one: `optional(func(), () => noop)`. Given `noop` directly, `optional` would call it and use what it returns, so the types reject it whenever the validator inside can produce a function.
 - The type assumes the validator never produces `undefined` for a value that is present, which every built-in validator keeps. A `transform` that returns `undefined` is let through, and the default replaces only a missing value.
 
@@ -135,15 +135,15 @@ const signupUpload = formData(
 
 export const readSignup = async (request: Request) => {
   const form = await request.formData();
-  const avatar = form.get("avatar");
-  if (avatar instanceof File && avatar.name === "" && avatar.size === 0) {
+  const [avatar, ...others] = form.getAll("avatar");
+  if (others.length === 0 && avatar instanceof File && avatar.name === "" && avatar.size === 0) {
     form.delete("avatar");
   }
   return signupUpload(form);
 };
 ```
 
-A file input with no file chosen still sends a part: a `File` with no name and no content. `optional` sees a value, so `file` accepts it and `contentType` rejects it, since it holds no image. `readSignup` removes that part first, so a sign-up without an avatar passes.
+A file input with no file chosen still sends a part, because a browser's way of sending no file is to send an empty one: a `File` with no name and no content. `optional` sees a value, so `file` accepts it and `contentType` rejects it, since it holds no image. `readSignup` removes that part first, so a sign-up without an avatar passes.
 
 ### `formData`
 
@@ -210,4 +210,4 @@ A form library that takes a [Standard Schema](standard-schema.md) reads both typ
 
 ## Next
 
-The sign-up form is ready for the browser. The server receives the same data as a JSON body, and often more than a form sends: lists, dictionaries and shapes that vary. [Request bodies](request-bodies.md) covers those.
+The sign-up form is ready for the browser. The server is less trusting: it receives the same data as a JSON body, from any client at all, and often more than a form sends: lists, dictionaries and shapes that vary. [Request bodies](request-bodies.md) covers those.

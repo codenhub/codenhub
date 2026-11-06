@@ -1,13 +1,13 @@
 ---
 title: Formulários
 description: Regras entre campos, campos opcionais e valores padrão, erros mostrados ao lado de cada campo, arquivos e os tipos que um formulário guarda.
-source: a75deb597ac42bd968b1f0a21e531febcb054859
+source: 1ff0836cb731bb25d0500b44a4838571dc4d9066
 order: 2
 ---
 
 # Formulários
 
-O formulário é onde entrada inválida mais aparece, e onde a pessoa que digitou precisa saber o que corrigir. Esta página transforma o cadastro em um formulário: uma senha digitada duas vezes, campos opcionais com valores padrão, um arquivo de avatar e erros mostrados ao lado de cada campo. No fim, vêm os tipos de que uma biblioteca de formulários precisa.
+O formulário é onde entrada inválida mais aparece, já que uma pessoa a digita no celular, com pressa, com o preenchimento automático ajudando do jeito dele. É também onde essa pessoa precisa saber o que corrigir. Esta página transforma o cadastro em um formulário: uma senha digitada duas vezes, campos opcionais com valores padrão, um arquivo de avatar e erros mostrados ao lado de cada campo. No fim, vêm os tipos de que uma biblioteca de formulários precisa.
 
 ## Campos que precisam coincidir
 
@@ -93,7 +93,7 @@ Dentro de um `object`, uma propriedade com valor padrão está sempre presente n
 
 - O valor padrão é confiável e não é validado.
 - Um primitivo é usado diretamente. Uma função é chamada a cada vez, sem argumentos, para gerar o valor padrão.
-- Um array ou um objeto precisa vir de uma função, como `() => []`. Um valor único seria compartilhado por todos os resultados, e uma alteração em um apareceria no próximo. Os tipos rejeitam isso, e `optional` lança um `TypeError` quando recebe um desses a partir de JavaScript.
+- Um array ou um objeto precisa vir de uma função, como `() => []`. Um valor único seria compartilhado por todos os resultados, e uma alteração em um apareceria no próximo: um bug que leva uma semana para achar e uma linha para corrigir. Os tipos rejeitam isso, e `optional` lança um `TypeError` quando recebe um desses a partir de JavaScript.
 - Pelo mesmo motivo, um valor padrão que é ele mesmo uma função, como um callback para `func()`, é retornado por uma função: `optional(func(), () => noop)`. Recebendo `noop` diretamente, `optional` o chamaria e usaria o que ele retorna, então os tipos rejeitam isso sempre que o validador de dentro pode produzir uma função.
 - O tipo supõe que o validador nunca produz `undefined` para um valor presente, o que todo validador nativo respeita. Um `transform` que retorna `undefined` passa, e o valor padrão substitui só um valor ausente.
 
@@ -136,15 +136,15 @@ const signupUpload = formData(
 
 export const readSignup = async (request: Request) => {
   const form = await request.formData();
-  const avatar = form.get("avatar");
-  if (avatar instanceof File && avatar.name === "" && avatar.size === 0) {
+  const [avatar, ...others] = form.getAll("avatar");
+  if (others.length === 0 && avatar instanceof File && avatar.name === "" && avatar.size === 0) {
     form.delete("avatar");
   }
   return signupUpload(form);
 };
 ```
 
-Um campo de arquivo sem arquivo escolhido ainda envia uma parte: um `File` sem nome e sem conteúdo. `optional` vê um valor, então `file` o aceita e `contentType` o rejeita, já que ele não contém uma imagem. `readSignup` remove essa parte antes, então um cadastro sem avatar passa.
+Um campo de arquivo sem arquivo escolhido ainda envia uma parte, porque o jeito de um navegador não enviar arquivo é enviar um vazio: um `File` sem nome e sem conteúdo. `optional` vê um valor, então `file` o aceita e `contentType` o rejeita, já que ele não contém uma imagem. `readSignup` remove essa parte antes, então um cadastro sem avatar passa.
 
 ### `formData`
 
@@ -211,4 +211,4 @@ Uma biblioteca de formulários que aceita um [Standard Schema](standard-schema.m
 
 ## Próximos passos
 
-O formulário de cadastro está pronto para o navegador. O servidor recebe os mesmos dados como um corpo JSON, e muitas vezes mais do que um formulário envia: listas, dicionários e estruturas que variam. [Corpos de requisição](request-bodies.md) trata disso.
+O formulário de cadastro está pronto para o navegador. O servidor é mais desconfiado: ele recebe os mesmos dados como um corpo JSON, de qualquer cliente que aparecer, e muitas vezes mais do que um formulário envia: listas, dicionários e estruturas que variam. [Corpos de requisição](request-bodies.md) trata disso.
