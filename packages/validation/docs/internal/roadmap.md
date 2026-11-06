@@ -22,7 +22,7 @@ This records what `@codenhub/validation` is building toward, what it takes to re
 
 ## Current Focus
 
-**0.5.1 closes what the review after 0.5.0 found.** 0.5.0 was released on 2026-11-05, with the README and the guides in Brazilian Portuguese and Spanish. Since then, `spanishMessages` has been added, and `base64`, `jwt` and `creditCard` no longer overflow the stack on text of a few megabytes. An exclusive date bound that a custom validator reports is now worded without "on or". Each of these is a fix or an addition, so the next release is 0.5.1, as [Versioning until 1.0](#versioning-until-10) asks. The owner chose that number on 2026-11-05 over 0.6.0, since a minor version tells a reader to look for a breaking change.
+**0.5.1 closes what the review after 0.5.0 found.** 0.5.0 was released on 2026-11-05, with the README and the guides in Brazilian Portuguese and Spanish. Since then, `spanishMessages` has been added, and `base64`, `jwt` and `creditCard` no longer overflow the stack on text of a few megabytes. An exclusive date bound that a custom validator reports is now worded without "on or". Each of these is a fix or an addition, so the next release is 0.5.1, as [Versioning until 1.0](#versioning-until-10) asks, and the [0.5.1 changelog](../changelog/0.5.1.md) lists each change. The owner chose that number on 2026-11-05 over 0.6.0, since a minor version tells a reader to look for a breaking change.
 
 0.5.1 also takes in the work below, each decided by the owner on 2026-11-05 and settled as each says:
 

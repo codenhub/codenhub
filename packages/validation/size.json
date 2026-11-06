@@ -6,27 +6,26 @@
         "array": {
           "files": {
             "dist/index.js": {
-              "bytes": 8091,
+              "bytes": 7912,
               "declarations": {
                 "brief": 730,
                 "array": 536,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
-                "sizeIssues": 342,
-                "settle": 311,
+                "describeType$2": 365,
+                "settle": 310,
                 "limit": 294,
+                "sizeIssues": 285,
                 "childOf": 214,
+                "assertSizeOptions": 209,
                 "pathAt": 207,
                 "isPlainObject": 205,
-                "assertSizeOptions": 183,
-                "cap": 171,
+                "cap": 170,
                 "described": 168,
                 "runItems": 161,
                 "tail": 161,
                 "word": 152,
                 "placed": 151,
-                "toIssue": 140,
                 "assertSize": 132,
                 "chain": 131,
                 "assertOrder": 130,
@@ -40,7 +39,7 @@
                 "ownStandard": 103,
                 "weigh": 102,
                 "notResult": 101,
-                "(top level)": 94,
+                "(top level)": 88,
                 "toStandard": 87,
                 "isThenable": 85,
                 "isPath": 79,
@@ -75,8 +74,8 @@
               "bytes": 20
             }
           },
-          "gzip": 3281,
-          "minified": 8111
+          "gzip": 3252,
+          "minified": 7932
         },
         "assert": {
           "files": {
@@ -84,7 +83,7 @@
               "bytes": 2443,
               "declarations": {
                 "assert": 732,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "isPlainObject": 205,
                 "wordIssue": 204,
                 "assertMessages": 196,
@@ -111,9 +110,9 @@
         "audit": {
           "files": {
             "dist/index.js": {
-              "bytes": 3638,
+              "bytes": 3717,
               "declarations": {
-                "audit": 1869,
+                "audit": 1948,
                 "boundOf": 396,
                 "addGetters": 236,
                 "makesNewLazy": 195,
@@ -123,7 +122,7 @@
                 "FIXED_SIZE": 90,
                 "isFixedSize": 80,
                 "KEEPING_WRAPPERS": 79,
-                "COLLECTIONS$2": 58,
+                "COLLECTIONS$3": 58,
                 "hasBound": 57,
                 "isBoundedFormat": 48,
                 "isBoundedItem": 32,
@@ -139,22 +138,24 @@
               "bytes": 19
             }
           },
-          "gzip": 1574,
-          "minified": 3657
+          "gzip": 1596,
+          "minified": 3736
         },
         "base64": {
           "files": {
             "dist/index.js": {
-              "bytes": 4894,
+              "bytes": 5224,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
-                "base64": 210,
+                "isBase64": 210,
+                "base64": 207,
                 "isPlainObject": 205,
-                "formatLeaf": 185,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -163,14 +164,12 @@
                 "UNITS$1": 116,
                 "assertText": 113,
                 "ownStandard": 103,
-                "BASE64_PATTERN": 95,
                 "toStandard": 87,
                 "isThenable": 85,
                 "isPath": 79,
-                "BASE64URL_PATTERN": 77,
                 "issue": 65,
+                "(top level)": 64,
                 "enter": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
                 "collect": 48,
@@ -179,11 +178,17 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isString$1": 24,
+                "THREE_LEFT": 23,
                 "detached": 23,
+                "ALPHABET": 21,
                 "ROOT_PATH": 20,
                 "MISS": 17,
+                "isBase64url": 15,
                 "RULES": 14,
+                "URL_ALPHABET": 13,
+                "TWO_LEFT": 11,
                 "depth": 4,
                 "current": 2
               }
@@ -192,22 +197,23 @@
               "bytes": 20
             }
           },
-          "gzip": 2179,
-          "minified": 4914
+          "gzip": 2328,
+          "minified": 5244
         },
         "bigint": {
           "files": {
             "dist/index.js": {
-              "bytes": 5358,
+              "bytes": 5570,
               "declarations": {
                 "brief": 730,
                 "bigint": 486,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
-                "leaf": 230,
+                "leaf": 222,
                 "isPlainObject": 205,
+                "withRules": 184,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -224,14 +230,15 @@
                 "isPath": 79,
                 "issue": 65,
                 "enter": 59,
+                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
-                "(top level)": 52,
                 "collect": 48,
                 "withFast": 48,
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isBigint": 24,
                 "detached": 23,
                 "ROOT_PATH": 20,
@@ -245,21 +252,22 @@
               "bytes": 20
             }
           },
-          "gzip": 2315,
-          "minified": 5378
+          "gzip": 2378,
+          "minified": 5590
         },
         "boolean": {
           "files": {
             "dist/index.js": {
-              "bytes": 4488,
+              "bytes": 4700,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
-                "leaf": 230,
+                "leaf": 222,
                 "isPlainObject": 205,
+                "withRules": 184,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -273,14 +281,15 @@
                 "isPath": 79,
                 "issue": 65,
                 "enter": 59,
+                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
-                "(top level)": 52,
                 "collect": 48,
                 "withFast": 48,
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isBoolean": 25,
                 "detached": 23,
                 "ROOT_PATH": 20,
@@ -294,8 +303,8 @@
               "bytes": 21
             }
           },
-          "gzip": 2008,
-          "minified": 4509
+          "gzip": 2073,
+          "minified": 4721
         },
         "brand": {
           "files": {
@@ -402,20 +411,21 @@
         "cidr": {
           "files": {
             "dist/index.js": {
-              "bytes": 6019,
+              "bytes": 6231,
               "declarations": {
                 "brief": 730,
                 "isIpv6": 517,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "cidr": 274,
                 "toIpAddress": 206,
                 "isPlainObject": 205,
-                "formatLeaf": 185,
                 "toCidr": 185,
+                "withRules": 184,
                 "toCanonicalIpv6": 181,
+                "formatLeaf": 177,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -427,7 +437,7 @@
                 "toStandard": 87,
                 "isThenable": 85,
                 "isPath": 79,
-                "(top level)": 70,
+                "(top level)": 76,
                 "EMBEDDED_PATTERN": 68,
                 "issue": 65,
                 "enter": 59,
@@ -439,6 +449,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "PREFIX_PATTERN": 25,
                 "isString$1": 24,
                 "detached": 23,
@@ -455,8 +466,8 @@
               "bytes": 18
             }
           },
-          "gzip": 2707,
-          "minified": 6037
+          "gzip": 2775,
+          "minified": 6249
         },
         "codec": {
           "files": {
@@ -508,18 +519,19 @@
         "coerceBigint": {
           "files": {
             "dist/index.js": {
-              "bytes": 6263,
+              "bytes": 6475,
               "declarations": {
                 "brief": 730,
                 "coerceBigint": 498,
                 "bigint": 486,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "coercing": 272,
-                "leaf": 230,
+                "leaf": 222,
                 "isPlainObject": 205,
+                "withRules": 184,
                 "described": 155,
                 "word": 152,
                 "chain": 131,
@@ -535,8 +547,8 @@
                 "toStandard": 87,
                 "isThenable": 85,
                 "isPath": 79,
+                "(top level)": 70,
                 "issue": 65,
-                "(top level)": 64,
                 "enter": 59,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
@@ -545,6 +557,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isBigint": 24,
                 "detached": 23,
                 "ROOT_PATH": 20,
@@ -561,23 +574,24 @@
               "bytes": 26
             }
           },
-          "gzip": 2670,
-          "minified": 6289
+          "gzip": 2733,
+          "minified": 6501
         },
         "coerceBoolean": {
           "files": {
             "dist/index.js": {
-              "bytes": 5064,
+              "bytes": 5276,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "coercing": 272,
-                "leaf": 230,
+                "leaf": 222,
                 "isPlainObject": 205,
                 "coerceBoolean": 201,
+                "withRules": 184,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -591,9 +605,9 @@
                 "isPath": 79,
                 "issue": 65,
                 "enter": 59,
+                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
-                "(top level)": 52,
                 "FALSE_WORDS": 52,
                 "TRUE_WORDS": 51,
                 "collect": 48,
@@ -601,6 +615,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isBoolean": 25,
                 "detached": 23,
                 "ROOT_PATH": 20,
@@ -614,26 +629,27 @@
               "bytes": 27
             }
           },
-          "gzip": 2215,
-          "minified": 5091
+          "gzip": 2278,
+          "minified": 5303
         },
         "coerceDate": {
           "files": {
             "dist/index.js": {
-              "bytes": 6660,
+              "bytes": 6872,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "coerceDate": 440,
                 "date": 383,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "readIso": 309,
                 "limit": 294,
                 "coercing": 272,
-                "leaf": 230,
+                "leaf": 222,
                 "isPlainObject": 205,
                 "readBound": 188,
+                "withRules": 184,
                 "isCalendarDate": 172,
                 "described": 168,
                 "word": 152,
@@ -650,8 +666,8 @@
                 "isPath": 79,
                 "slot": 73,
                 "issue": 65,
+                "(top level)": 64,
                 "enter": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "isValidDate": 54,
                 "typeIssue": 54,
@@ -661,6 +677,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "detached": 23,
                 "ROOT_PATH": 20,
                 "MISS": 17,
@@ -673,24 +690,25 @@
               "bytes": 24
             }
           },
-          "gzip": 2829,
-          "minified": 6684
+          "gzip": 2888,
+          "minified": 6896
         },
         "coerceNumber": {
           "files": {
             "dist/index.js": {
-              "bytes": 7199,
+              "bytes": 7411,
               "declarations": {
                 "number": 1690,
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "coercing": 272,
                 "coerceNumber": 259,
-                "leaf": 230,
+                "leaf": 222,
                 "isPlainObject": 205,
+                "withRules": 184,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -707,9 +725,9 @@
                 "isPath": 79,
                 "issue": 65,
                 "enter": 59,
+                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
-                "(top level)": 52,
                 "invalidValue": 49,
                 "collect": 48,
                 "withFast": 48,
@@ -718,6 +736,7 @@
                 "DECIMAL_NUMBER_PATTERN": 35,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "detached": 23,
                 "ROOT_PATH": 20,
                 "MISS": 17,
@@ -731,23 +750,26 @@
               "bytes": 26
             }
           },
-          "gzip": 2915,
-          "minified": 7225
+          "gzip": 2980,
+          "minified": 7437
         },
         "coerceString": {
           "files": {
             "dist/index.js": {
-              "bytes": 6103,
+              "bytes": 6419,
               "declarations": {
-                "string": 815,
                 "brief": 730,
+                "string": 516,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
+                "sizeIssues": 284,
                 "coercing": 272,
-                "leaf": 230,
+                "leaf": 222,
+                "assertSizeOptions": 208,
                 "isPlainObject": 205,
+                "withRules": 184,
                 "described": 168,
                 "coerceString": 156,
                 "word": 152,
@@ -759,20 +781,20 @@
                 "UNITS$1": 116,
                 "assertText": 113,
                 "ownStandard": 103,
-                "lengthIssue": 89,
                 "toStandard": 87,
                 "isThenable": 85,
                 "isPath": 79,
                 "issue": 65,
                 "enter": 59,
+                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
-                "(top level)": 52,
                 "collect": 48,
                 "withFast": 48,
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isString": 24,
                 "detached": 23,
                 "ROOT_PATH": 20,
@@ -786,8 +808,8 @@
               "bytes": 26
             }
           },
-          "gzip": 2554,
-          "minified": 6129
+          "gzip": 2667,
+          "minified": 6445
         },
         "contentType": {
           "files": {
@@ -824,18 +846,19 @@
         "creditCard": {
           "files": {
             "dist/index.js": {
-              "bytes": 4791,
+              "bytes": 5016,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "isPlainObject": 205,
-                "formatLeaf": 185,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "described": 168,
                 "word": 152,
-                "creditCard": 137,
+                "creditCard": 150,
                 "chain": 131,
                 "runEach": 122,
                 "passesLuhn": 117,
@@ -847,8 +870,8 @@
                 "isThenable": 85,
                 "isPath": 79,
                 "issue": 65,
+                "(top level)": 64,
                 "enter": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
                 "collect": 48,
@@ -858,6 +881,7 @@
                 "CARD_PATTERN": 33,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isString$1": 24,
                 "detached": 23,
                 "ROOT_PATH": 20,
@@ -871,21 +895,22 @@
               "bytes": 24
             }
           },
-          "gzip": 2176,
-          "minified": 4815
+          "gzip": 2252,
+          "minified": 5040
         },
         "cuid2": {
           "files": {
             "dist/index.js": {
-              "bytes": 4582,
+              "bytes": 4794,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "isPlainObject": 205,
-                "formatLeaf": 185,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -898,8 +923,8 @@
                 "isThenable": 85,
                 "isPath": 79,
                 "issue": 65,
+                "(top level)": 64,
                 "enter": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
                 "cuid2": 51,
@@ -909,6 +934,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "CUID2_PATTERN": 27,
                 "isString$1": 24,
                 "detached": 23,
@@ -923,23 +949,24 @@
               "bytes": 19
             }
           },
-          "gzip": 2064,
-          "minified": 4601
+          "gzip": 2130,
+          "minified": 4813
         },
         "date": {
           "files": {
             "dist/index.js": {
-              "bytes": 5338,
+              "bytes": 5550,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "date": 383,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
-                "leaf": 230,
+                "leaf": 222,
                 "isPlainObject": 205,
                 "readBound": 188,
+                "withRules": 184,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -954,8 +981,8 @@
                 "isPath": 79,
                 "slot": 73,
                 "issue": 65,
+                "(top level)": 64,
                 "enter": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "isValidDate": 54,
                 "typeIssue": 54,
@@ -965,6 +992,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "detached": 23,
                 "ROOT_PATH": 20,
                 "MISS": 17,
@@ -977,22 +1005,23 @@
               "bytes": 18
             }
           },
-          "gzip": 2301,
-          "minified": 5356
+          "gzip": 2362,
+          "minified": 5568
         },
         "datetime": {
           "files": {
             "dist/index.js": {
-              "bytes": 5493,
+              "bytes": 5705,
               "declarations": {
                 "brief": 730,
                 "datetime": 508,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "isPlainObject": 205,
-                "formatLeaf": 185,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "isCalendarDate": 172,
                 "fractionPattern": 169,
                 "described": 168,
@@ -1008,8 +1037,8 @@
                 "isThenable": 85,
                 "isPath": 79,
                 "issue": 65,
+                "(top level)": 64,
                 "enter": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
                 "collect": 48,
@@ -1018,6 +1047,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isString$1": 24,
                 "detached": 23,
                 "ROOT_PATH": 20,
@@ -1031,8 +1061,8 @@
               "bytes": 22
             }
           },
-          "gzip": 2410,
-          "minified": 5515
+          "gzip": 2475,
+          "minified": 5727
         },
         "describe": {
           "files": {
@@ -1054,20 +1084,21 @@
         "domain": {
           "files": {
             "dist/index.js": {
-              "bytes": 7379,
+              "bytes": 7595,
               "declarations": {
                 "brief": 730,
                 "fromPunycode": 525,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
-                "SPECIAL_USE_NAME_PATTERN": 243,
+                "SPECIAL_USE_NAME_PATTERN": 244,
                 "keepsRule": 239,
                 "isPlainObject": 205,
                 "toAsciiHost": 204,
                 "isPunycodeHost": 193,
-                "formatLeaf": 185,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "described": 168,
                 "isBidiHost": 153,
                 "word": 152,
@@ -1079,17 +1110,17 @@
                 "formatFactory": 115,
                 "assertText": 113,
                 "ownStandard": 103,
-                "NEUTRAL_PATTERN": 101,
+                "NEUTRAL_PATTERN": 100,
                 "readUrl": 96,
+                "(top level)": 88,
                 "toStandard": 87,
                 "DOMAIN_NAME_PATTERN": 86,
                 "RIGHT_TO_LEFT_PATTERN": 85,
                 "isThenable": 85,
-                "(top level)": 82,
                 "digitOf": 82,
                 "domain": 82,
                 "isPath": 79,
-                "ARABIC_NUMBER_PATTERN": 71,
+                "ARABIC_NUMBER_PATTERN": 72,
                 "LEFT_TO_RIGHT_MARK_PATTERN": 65,
                 "issue": 65,
                 "isRightToLeft": 63,
@@ -1097,14 +1128,15 @@
                 "CHECK_RESULT_ERROR": 54,
                 "DOMAIN_TEXT_PATTERN": 54,
                 "typeIssue": 54,
+                "withFast": 49,
                 "collect": 48,
-                "withFast": 48,
                 "stringFormat": 42,
                 "NUMERIC_HOST_PATTERN": 38,
+                "isPublicHost": 36,
                 "pass": 36,
-                "isPublicHost": 35,
                 "failWith": 32,
-                "fasts": 30,
+                "fasts": 31,
+                "ruleTests": 30,
                 "isIdnHost": 29,
                 "LETTER_PATTERN": 25,
                 "isString$1": 24,
@@ -1127,21 +1159,22 @@
               "bytes": 21
             }
           },
-          "gzip": 3454,
-          "minified": 7400
+          "gzip": 3519,
+          "minified": 7616
         },
         "duration": {
           "files": {
             "dist/index.js": {
-              "bytes": 4656,
+              "bytes": 4868,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "isPlainObject": 205,
-                "formatLeaf": 185,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -1155,8 +1188,8 @@
                 "isThenable": 85,
                 "isPath": 79,
                 "issue": 65,
+                "(top level)": 64,
                 "enter": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "duration": 54,
                 "typeIssue": 54,
@@ -1166,6 +1199,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isString$1": 24,
                 "detached": 23,
                 "ROOT_PATH": 20,
@@ -1179,46 +1213,47 @@
               "bytes": 22
             }
           },
-          "gzip": 2090,
-          "minified": 4678
+          "gzip": 2156,
+          "minified": 4890
         },
         "email": {
           "files": {
             "dist/index.js": {
-              "bytes": 9524,
+              "bytes": 9733,
               "declarations": {
                 "brief": 730,
-                "partsFormat": 546,
+                "partsFormat": 531,
                 "fromPunycode": 525,
                 "split": 455,
-                "email": 449,
+                "email": 451,
                 "finish": 369,
-                "describeType$1": 366,
-                "nested": 338,
+                "describeType$2": 365,
+                "nested": 337,
                 "limit": 294,
                 "SPECIAL_USE_NAME_PATTERN": 244,
                 "keepsRule": 240,
                 "limitIn": 239,
-                "toEmailAddress": 217,
+                "toEmailAddress": 216,
                 "isPlainObject": 205,
-                "toAsciiHost": 204,
+                "toAsciiHost": 203,
                 "isPunycodeHost": 193,
-                "described": 168,
+                "withRules": 184,
+                "described": 170,
                 "isBidiHost": 156,
-                "word": 152,
+                "word": 153,
                 "adapt": 146,
                 "chain": 131,
-                "assertOption": 123,
+                "assertOption": 124,
+                "assertFunction": 122,
                 "runEach": 122,
-                "assertFunction": 121,
                 "UNITS$1": 116,
                 "directionOf": 116,
-                "assertText": 113,
-                "ownStandard": 103,
+                "assertText": 114,
+                "ownStandard": 104,
                 "HOSTNAME_PATTERN": 101,
-                "NEUTRAL_PATTERN": 101,
+                "NEUTRAL_PATTERN": 100,
                 "readUrl": 96,
-                "(top level)": 88,
+                "(top level)": 94,
                 "DOMAIN_NAME_PATTERN": 87,
                 "toStandard": 87,
                 "RIGHT_TO_LEFT_PATTERN": 85,
@@ -1226,17 +1261,17 @@
                 "digitOf": 82,
                 "isPath": 79,
                 "isLimit": 77,
+                "ARABIC_NUMBER_PATTERN": 72,
                 "EMAIL_LOCAL_PATTERN": 72,
-                "ARABIC_NUMBER_PATTERN": 71,
-                "assertParts": 66,
-                "partIssue": 66,
+                "assertParts": 67,
                 "LEFT_TO_RIGHT_MARK_PATTERN": 65,
                 "issue": 65,
+                "partIssue": 65,
                 "isRightToLeft": 64,
                 "enter": 59,
-                "typeIssue": 55,
                 "CHECK_RESULT_ERROR": 54,
                 "DOMAIN_TEXT_PATTERN": 54,
+                "typeIssue": 54,
                 "notFormat": 49,
                 "collect": 48,
                 "withFast": 48,
@@ -1248,6 +1283,7 @@
                 "NUMERIC_LAST_LABEL_PATTERN": 35,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isIdnHost": 29,
                 "LETTER_PATTERN": 25,
                 "EUROPEAN_NUMBER_PATTERN": 23,
@@ -1269,21 +1305,21 @@
               "bytes": 20
             }
           },
-          "gzip": 4150,
-          "minified": 9544
+          "gzip": 4212,
+          "minified": 9753
         },
         "encode": {
           "files": {
             "dist/index.js": {
-              "bytes": 28267,
+              "bytes": 30009,
               "declarations": {
-                "encode": 2451,
-                "object": 1516,
+                "encode": 2526,
+                "object": 2128,
                 "record": 1338,
                 "mergeOne": 1299,
                 "tuple": 1115,
                 "tagged": 1092,
-                "lazy": 1032,
+                "lazy": 1073,
                 "map": 882,
                 "brief": 730,
                 "union": 698,
@@ -1291,55 +1327,58 @@
                 "array": 534,
                 "split": 456,
                 "set": 443,
+                "runMixed": 440,
                 "intersection": 410,
+                "partsAt": 400,
                 "producersOf": 377,
                 "finish": 373,
-                "describeType$1": 365,
-                "partsAt": 350,
-                "sizeIssues": 344,
+                "describeType$2": 365,
                 "nested": 338,
                 "assertShape": 325,
                 "listsReserved": 316,
                 "settle": 311,
                 "spotOf": 301,
                 "limit": 294,
+                "sizeIssues": 284,
                 "optional": 255,
                 "pipe": 253,
                 "limitIn": 242,
-                "leaf": 233,
+                "leaf": 226,
                 "bigintIn": 224,
                 "merge": 219,
                 "childOf": 217,
+                "transform": 216,
+                "assertSizeOptions": 209,
                 "pathAt": 208,
                 "isPlainObject": 205,
-                "assertSizeOptions": 183,
+                "withRules": 186,
+                "(top level)": 174,
                 "PRODUCE_WHAT_THEY_ACCEPT": 174,
                 "cap": 169,
                 "decided": 169,
                 "tail": 164,
                 "toQuery": 164,
                 "runItems": 162,
-                "transform": 160,
                 "nullable": 159,
-                "(top level)": 158,
                 "described": 155,
                 "placed": 154,
                 "word": 153,
                 "nullish": 150,
                 "assertUnshared": 149,
-                "toIssue": 141,
                 "assertList": 138,
                 "assertSize": 134,
                 "placesOf": 133,
                 "chain": 131,
                 "assertLimit": 130,
                 "assertOrder": 130,
+                "keptAt": 130,
                 "resultsOf": 130,
                 "composed": 128,
                 "assertOption": 124,
                 "runEach": 122,
                 "assertFunction": 121,
                 "objectIssue": 121,
+                "moveFirst": 118,
                 "isResult": 117,
                 "UNITS$1": 116,
                 "checkReserved": 115,
@@ -1348,6 +1387,7 @@
                 "setOwn": 111,
                 "unknown": 111,
                 "timeOf": 108,
+                "keep": 105,
                 "pathOf": 104,
                 "ownStandard": 103,
                 "weigh": 102,
@@ -1358,6 +1398,7 @@
                 "toStandard": 87,
                 "isThenable": 85,
                 "isPath": 80,
+                "newPaths": 80,
                 "conflict": 79,
                 "fieldFailureOf": 78,
                 "isLimit": 78,
@@ -1373,7 +1414,6 @@
                 "typeIssue": 54,
                 "refundCall": 53,
                 "withFast": 50,
-                "newPaths": 49,
                 "within": 49,
                 "collect": 48,
                 "resolvedOf": 44,
@@ -1390,6 +1430,7 @@
                 "builders": 31,
                 "fasts": 31,
                 "resolvedLazies": 31,
+                "ruleTests": 31,
                 "runs": 31,
                 "countIssues": 30,
                 "report": 29,
@@ -1399,6 +1440,7 @@
                 "detached": 23,
                 "ROOT_PATH": 20,
                 "SIZE_OPTIONS": 20,
+                "useMixedRun": 20,
                 "DESCRIPTION": 17,
                 "MISS": 17,
                 "RESERVED_KEY": 15,
@@ -1406,10 +1448,12 @@
                 "openLevel": 13,
                 "closeLevel": 12,
                 "always": 10,
+                "mixedRunOf": 10,
                 "openLevels": 8,
                 "MAX_ISSUES": 7,
                 "started": 5,
                 "depth": 4,
+                "mixedRun": 3,
                 "building": 2,
                 "current": 2
               }
@@ -1418,52 +1462,53 @@
               "bytes": 21
             }
           },
-          "gzip": 9629,
-          "minified": 28288
+          "gzip": 10273,
+          "minified": 30030
         },
         "endsWith": {
           "files": {
             "dist/index.js": {
-              "bytes": 2349,
+              "bytes": 2404,
               "declarations": {
                 "brief": 730,
                 "limit": 294,
                 "described": 168,
                 "assertMessage": 162,
                 "word": 152,
+                "rule": 134,
                 "UNITS$1": 116,
-                "rule": 115,
                 "assertText": 113,
                 "endsWith": 113,
                 "ownStandard": 103,
                 "toStandard": 87,
                 "isThenable": 85,
                 "issue": 65,
+                "ruleTests": 30,
                 "ROOT_PATH": 20,
-                "RULES": 14,
-                "(top level)": 12
+                "(top level)": 18,
+                "RULES": 14
               }
             },
             "(unattributed)": {
               "bytes": 22
             }
           },
-          "gzip": 1144,
-          "minified": 2371
+          "gzip": 1184,
+          "minified": 2426
         },
         "englishMessages": {
           "files": {
             "dist/index.js": {
-              "bytes": 5703,
+              "bytes": 5729,
               "declarations": {
-                "describeLimit$1": 733,
+                "describeLimit$2": 759,
                 "FORMAT_NAMES": 529,
-                "describeFormat$1": 523,
-                "describeValue$1": 472,
+                "describeFormat$2": 523,
+                "describeValue$2": 472,
                 "invalidTypeMessage": 289,
                 "invalidValueMessage": 262,
                 "invalidKeyMessage": 247,
-                "describeUnion$1": 206,
+                "describeUnion$2": 206,
                 "wordIssue": 204,
                 "isOtherKind": 199,
                 "assertMessages": 196,
@@ -1474,7 +1519,7 @@
                 "assertText": 113,
                 "timeOf": 106,
                 "listOf": 97,
-                "COLLECTIONS$1": 91,
+                "COLLECTIONS$2": 91,
                 "quoteText": 90,
                 "isLazyLimit": 79,
                 "slot": 73,
@@ -1490,7 +1535,7 @@
                 "param": 31,
                 "(top level)": 24,
                 "invalidIntersectionMessage": 21,
-                "more$1": 20,
+                "more$2": 20,
                 "ROOT_PATH": 18,
                 "RULES": 14,
                 "tooBigMessage": 11,
@@ -1501,33 +1546,33 @@
               "bytes": 29
             }
           },
-          "gzip": 2403,
-          "minified": 5732
+          "gzip": 2414,
+          "minified": 5758
         },
         "extend": {
           "files": {
             "dist/index.js": {
-              "bytes": 8961,
+              "bytes": 9596,
               "declarations": {
-                "object": 1520,
+                "object": 2131,
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
                 "partsOf": 367,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "assertShape": 324,
                 "limit": 294,
                 "rebuild": 256,
                 "childOf": 214,
                 "pathAt": 207,
                 "isPlainObject": 205,
-                "cap": 169,
+                "cap": 168,
                 "tail": 161,
                 "described": 155,
                 "word": 152,
                 "placed": 151,
                 "chain": 131,
-                "composed": 126,
+                "composed": 127,
                 "runEach": 122,
                 "assertFunction": 121,
                 "objectIssue": 120,
@@ -1535,10 +1580,10 @@
                 "UNITS$1": 116,
                 "assertText": 113,
                 "setOwn": 111,
+                "(top level)": 104,
                 "ownStandard": 103,
                 "weigh": 102,
                 "notResult": 101,
-                "(top level)": 94,
                 "describe": 91,
                 "toStandard": 87,
                 "isThenable": 85,
@@ -1550,9 +1595,9 @@
                 "issue": 65,
                 "enter": 59,
                 "CHECK_RESULT_ERROR": 54,
+                "withFast": 49,
                 "within": 49,
                 "collect": 48,
-                "withFast": 48,
                 "fastOf": 42,
                 "append": 41,
                 "extend": 39,
@@ -1568,8 +1613,10 @@
                 "DESCRIPTION": 17,
                 "MISS": 17,
                 "RULES": 14,
+                "mixedRunOf": 10,
                 "MAX_ISSUES": 6,
                 "depth": 4,
+                "mixedRun": 3,
                 "current": 2
               }
             },
@@ -1577,8 +1624,8 @@
               "bytes": 21
             }
           },
-          "gzip": 3666,
-          "minified": 8982
+          "gzip": 3921,
+          "minified": 9617
         },
         "fail": {
           "files": {
@@ -1641,17 +1688,18 @@
         "file": {
           "files": {
             "dist/index.js": {
-              "bytes": 6208,
+              "bytes": 6420,
               "declarations": {
                 "brief": 730,
                 "file": 522,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "readTypes": 358,
                 "limit": 294,
-                "leaf": 230,
+                "leaf": 222,
                 "isPlainObject": 205,
+                "withRules": 184,
                 "fileOf": 171,
                 "described": 168,
                 "word": 152,
@@ -1669,9 +1717,9 @@
                 "isPath": 79,
                 "slot": 73,
                 "issue": 65,
+                "(top level)": 64,
                 "own": 64,
                 "enter": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
                 "MEDIA_TYPE_PATTERN": 52,
@@ -1682,6 +1730,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "detached": 23,
                 "ROOT_PATH": 20,
                 "MISS": 17,
@@ -1694,23 +1743,23 @@
               "bytes": 18
             }
           },
-          "gzip": 2622,
-          "minified": 6226
+          "gzip": 2686,
+          "minified": 6438
         },
         "flatten": {
           "files": {
             "dist/index.js": {
-              "bytes": 5913,
+              "bytes": 5939,
               "declarations": {
-                "describeLimit$1": 733,
+                "describeLimit$2": 759,
                 "FORMAT_NAMES": 529,
-                "describeFormat$1": 523,
-                "describeValue$1": 472,
+                "describeFormat$2": 523,
+                "describeValue$2": 472,
                 "invalidTypeMessage": 289,
                 "invalidValueMessage": 262,
                 "invalidKeyMessage": 247,
                 "flatten": 210,
-                "describeUnion$1": 206,
+                "describeUnion$2": 206,
                 "wordIssue": 204,
                 "isOtherKind": 199,
                 "assertMessages": 196,
@@ -1721,7 +1770,7 @@
                 "assertText": 113,
                 "timeOf": 106,
                 "listOf": 97,
-                "COLLECTIONS$1": 91,
+                "COLLECTIONS$2": 91,
                 "quoteText": 90,
                 "isLazyLimit": 79,
                 "slot": 73,
@@ -1737,7 +1786,7 @@
                 "param": 31,
                 "(top level)": 24,
                 "invalidIntersectionMessage": 21,
-                "more$1": 20,
+                "more$2": 20,
                 "ROOT_PATH": 18,
                 "RULES": 14,
                 "tooBigMessage": 11,
@@ -1748,8 +1797,8 @@
               "bytes": 21
             }
           },
-          "gzip": 2497,
-          "minified": 5934
+          "gzip": 2509,
+          "minified": 5960
         },
         "formData": {
           "files": {
@@ -1759,7 +1808,7 @@
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "formData": 321,
                 "limit": 294,
                 "readEntries": 246,
@@ -1823,15 +1872,16 @@
         "format": {
           "files": {
             "dist/index.js": {
-              "bytes": 5071,
+              "bytes": 5283,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "isPlainObject": 205,
-                "formatLeaf": 185,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "decided": 169,
                 "described": 155,
                 "format": 152,
@@ -1848,8 +1898,8 @@
                 "isThenable": 85,
                 "isPath": 79,
                 "issue": 65,
+                "(top level)": 64,
                 "enter": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
                 "collect": 48,
@@ -1859,6 +1909,7 @@
                 "failWith": 32,
                 "customFormats": 30,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isString$1": 24,
                 "detached": 23,
                 "ROOT_PATH": 20,
@@ -1873,22 +1924,22 @@
               "bytes": 20
             }
           },
-          "gzip": 2215,
-          "minified": 5091
+          "gzip": 2281,
+          "minified": 5303
         },
         "formatIssue": {
           "files": {
             "dist/index.js": {
-              "bytes": 5735,
+              "bytes": 5761,
               "declarations": {
-                "describeLimit$1": 733,
+                "describeLimit$2": 759,
                 "FORMAT_NAMES": 529,
-                "describeFormat$1": 523,
-                "describeValue$1": 472,
+                "describeFormat$2": 523,
+                "describeValue$2": 472,
                 "invalidTypeMessage": 289,
                 "invalidValueMessage": 262,
                 "invalidKeyMessage": 247,
-                "describeUnion$1": 206,
+                "describeUnion$2": 206,
                 "wordIssue": 204,
                 "isOtherKind": 199,
                 "assertMessages": 196,
@@ -1899,7 +1950,7 @@
                 "assertText": 113,
                 "timeOf": 106,
                 "listOf": 97,
-                "COLLECTIONS$1": 91,
+                "COLLECTIONS$2": 91,
                 "quoteText": 90,
                 "isLazyLimit": 79,
                 "slot": 73,
@@ -1916,7 +1967,7 @@
                 "param": 31,
                 "(top level)": 24,
                 "invalidIntersectionMessage": 21,
-                "more$1": 20,
+                "more$2": 20,
                 "ROOT_PATH": 18,
                 "RULES": 14,
                 "tooBigMessage": 11,
@@ -1927,8 +1978,8 @@
               "bytes": 25
             }
           },
-          "gzip": 2418,
-          "minified": 5760
+          "gzip": 2427,
+          "minified": 5786
         },
         "formatPath": {
           "files": {
@@ -1954,15 +2005,16 @@
         "func": {
           "files": {
             "dist/index.js": {
-              "bytes": 4500,
+              "bytes": 4712,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
-                "leaf": 230,
+                "leaf": 222,
                 "isPlainObject": 205,
+                "withRules": 184,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -1976,14 +2028,15 @@
                 "isPath": 79,
                 "issue": 65,
                 "enter": 59,
+                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
-                "(top level)": 52,
                 "collect": 48,
                 "withFast": 48,
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isFunction": 26,
                 "detached": 23,
                 "ROOT_PATH": 20,
@@ -1997,22 +2050,23 @@
               "bytes": 18
             }
           },
-          "gzip": 2009,
-          "minified": 4518
+          "gzip": 2072,
+          "minified": 4730
         },
         "guard": {
           "files": {
             "dist/index.js": {
-              "bytes": 4837,
+              "bytes": 5049,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
-                "leaf": 230,
+                "leaf": 222,
                 "isPlainObject": 205,
                 "guard": 191,
+                "withRules": 184,
                 "decided": 169,
                 "described": 168,
                 "word": 152,
@@ -2029,12 +2083,13 @@
                 "enter": 59,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
+                "(top level)": 52,
                 "collect": 48,
                 "withFast": 48,
-                "(top level)": 46,
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "detached": 23,
                 "ROOT_PATH": 20,
                 "MISS": 17,
@@ -2047,21 +2102,22 @@
               "bytes": 19
             }
           },
-          "gzip": 2128,
-          "minified": 4856
+          "gzip": 2193,
+          "minified": 5068
         },
         "hex": {
           "files": {
             "dist/index.js": {
-              "bytes": 4570,
+              "bytes": 4782,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "isPlainObject": 205,
-                "formatLeaf": 185,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -2074,8 +2130,8 @@
                 "isThenable": 85,
                 "isPath": 79,
                 "issue": 65,
+                "(top level)": 64,
                 "enter": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
                 "hex": 49,
@@ -2085,6 +2141,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isString$1": 24,
                 "detached": 23,
                 "ROOT_PATH": 20,
@@ -2099,28 +2156,29 @@
               "bytes": 17
             }
           },
-          "gzip": 2055,
-          "minified": 4587
+          "gzip": 2120,
+          "minified": 4799
         },
         "hostname": {
           "files": {
             "dist/index.js": {
-              "bytes": 6743,
+              "bytes": 6959,
               "declarations": {
                 "brief": 730,
-                "fromPunycode": 525,
+                "fromPunycode": 526,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "keepsRule": 239,
                 "isPlainObject": 205,
-                "isPunycodeHost": 194,
-                "formatLeaf": 185,
+                "isPunycodeHost": 193,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "described": 168,
                 "isBidiHost": 153,
                 "word": 152,
-                "adapt": 146,
+                "adapt": 147,
                 "chain": 131,
                 "runEach": 122,
                 "UNITS$1": 116,
@@ -2135,8 +2193,8 @@
                 "isThenable": 85,
                 "digitOf": 82,
                 "isPath": 79,
+                "(top level)": 76,
                 "ARABIC_NUMBER_PATTERN": 71,
-                "(top level)": 70,
                 "LEFT_TO_RIGHT_MARK_PATTERN": 65,
                 "hostname": 65,
                 "issue": 65,
@@ -2147,24 +2205,25 @@
                 "collect": 48,
                 "withFast": 48,
                 "stringFormat": 42,
+                "isHostname": 36,
                 "pass": 36,
                 "NUMERIC_LAST_LABEL_PATTERN": 35,
-                "isHostname": 35,
                 "failWith": 32,
                 "fasts": 30,
-                "isIdnHost": 28,
+                "isIdnHost": 30,
+                "ruleTests": 30,
                 "LETTER_PATTERN": 25,
                 "isString$1": 24,
                 "EUROPEAN_NUMBER_PATTERN": 23,
                 "detached": 23,
                 "MARK_PATTERN": 20,
                 "ROOT_PATH": 20,
-                "PUNYCODE_LABEL_PATTERN": 18,
+                "PUNYCODE_LABEL_PATTERN": 19,
                 "MISS": 17,
                 "NESTED_PUNYCODE_LABEL_PATTERN": 15,
                 "RULES": 14,
                 "MAX_INT": 13,
-                "PUNYCODE_LABEL_PATTERN$1": 12,
+                "PUNYCODE_LABEL_PATTERN$1": 11,
                 "depth": 4,
                 "current": 2
               }
@@ -2173,52 +2232,54 @@
               "bytes": 23
             }
           },
-          "gzip": 3113,
-          "minified": 6766
+          "gzip": 3178,
+          "minified": 6982
         },
         "includes": {
           "files": {
             "dist/index.js": {
-              "bytes": 2349,
+              "bytes": 2404,
               "declarations": {
                 "brief": 730,
                 "limit": 294,
                 "described": 168,
                 "assertMessage": 162,
                 "word": 152,
+                "rule": 134,
                 "UNITS$1": 116,
-                "rule": 115,
                 "assertText": 113,
                 "includes": 113,
                 "ownStandard": 103,
                 "toStandard": 87,
                 "isThenable": 85,
                 "issue": 65,
+                "ruleTests": 30,
                 "ROOT_PATH": 20,
-                "RULES": 14,
-                "(top level)": 12
+                "(top level)": 18,
+                "RULES": 14
               }
             },
             "(unattributed)": {
               "bytes": 22
             }
           },
-          "gzip": 1140,
-          "minified": 2371
+          "gzip": 1181,
+          "minified": 2426
         },
         "instanceOf": {
           "files": {
             "dist/index.js": {
-              "bytes": 5101,
+              "bytes": 5313,
               "declarations": {
                 "brief": 730,
                 "instanceOf": 546,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
-                "leaf": 230,
+                "leaf": 222,
                 "isPlainObject": 205,
+                "withRules": 184,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -2232,9 +2293,9 @@
                 "isPath": 79,
                 "issue": 65,
                 "enter": 59,
+                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
-                "(top level)": 52,
                 "collect": 48,
                 "withFast": 48,
                 "brand$1": 36,
@@ -2242,6 +2303,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "detached": 23,
                 "ROOT_PATH": 20,
                 "MISS": 17,
@@ -2254,21 +2316,21 @@
               "bytes": 24
             }
           },
-          "gzip": 2178,
-          "minified": 5125
+          "gzip": 2241,
+          "minified": 5337
         },
         "intersection": {
           "files": {
             "dist/index.js": {
-              "bytes": 9653,
+              "bytes": 9703,
               "declarations": {
                 "mergeOne": 1285,
                 "brief": 730,
                 "split": 455,
                 "intersection": 412,
+                "partsAt": 400,
                 "producersOf": 377,
                 "finish": 370,
-                "partsAt": 350,
                 "listsReserved": 313,
                 "limit": 294,
                 "merge": 219,
@@ -2340,8 +2402,8 @@
               "bytes": 27
             }
           },
-          "gzip": 3861,
-          "minified": 9680
+          "gzip": 3880,
+          "minified": 9730
         },
         "invalidFormatMessage": {
           "files": {
@@ -2349,7 +2411,7 @@
               "bytes": 2180,
               "declarations": {
                 "FORMAT_NAMES": 529,
-                "describeFormat$1": 520,
+                "describeFormat$2": 520,
                 "wordIssue": 204,
                 "assertMessages": 196,
                 "formatPath": 174,
@@ -2445,7 +2507,7 @@
               "bytes": 1864,
               "declarations": {
                 "wordIssue": 204,
-                "describeUnion$1": 203,
+                "describeUnion$2": 203,
                 "isOtherKind": 199,
                 "assertMessages": 196,
                 "meantIssue": 175,
@@ -2460,7 +2522,7 @@
                 "UNESCAPED_PATTERN": 33,
                 "AMBIGUOUS_KEY_PATTERN": 31,
                 "param": 31,
-                "more$1": 20,
+                "more$2": 20,
                 "(top level)": 18,
                 "ROOT_PATH": 18,
                 "RULES": 14,
@@ -2479,14 +2541,14 @@
             "dist/index.js": {
               "bytes": 1111,
               "declarations": {
-                "describeValue$1": 472,
+                "describeValue$2": 472,
                 "invalidValueMessage": 264,
                 "listOf": 97,
                 "quoteText": 90,
                 "formatValue": 66,
                 "UNESCAPED_PATTERN": 33,
                 "param": 31,
-                "more$1": 20,
+                "more$2": 20,
                 "ROOT_PATH": 18,
                 "RULES": 14,
                 "(top level)": 6
@@ -2502,19 +2564,20 @@
         "ip": {
           "files": {
             "dist/index.js": {
-              "bytes": 5803,
+              "bytes": 6015,
               "declarations": {
                 "brief": 730,
                 "isIpv6": 517,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "ip": 268,
                 "toIpAddress": 206,
                 "isPlainObject": 205,
-                "formatLeaf": 185,
+                "withRules": 184,
                 "toCanonicalIpv6": 181,
+                "formatLeaf": 177,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -2526,7 +2589,7 @@
                 "toStandard": 87,
                 "isThenable": 85,
                 "isPath": 79,
-                "(top level)": 70,
+                "(top level)": 76,
                 "EMBEDDED_PATTERN": 68,
                 "issue": 65,
                 "enter": 59,
@@ -2538,6 +2601,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isString$1": 24,
                 "detached": 23,
                 "IPV6_GROUP_PATTERN": 21,
@@ -2553,8 +2617,8 @@
               "bytes": 16
             }
           },
-          "gzip": 2622,
-          "minified": 5819
+          "gzip": 2690,
+          "minified": 6031
         },
         "is": {
           "files": {
@@ -2578,15 +2642,16 @@
         "isoDate": {
           "files": {
             "dist/index.js": {
-              "bytes": 4759,
+              "bytes": 4971,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "isPlainObject": 205,
-                "formatLeaf": 185,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "isCalendarDate": 172,
                 "described": 168,
                 "word": 152,
@@ -2600,9 +2665,9 @@
                 "isThenable": 85,
                 "isPath": 79,
                 "issue": 65,
+                "(top level)": 64,
                 "enter": 59,
                 "isoDate": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
                 "collect": 48,
@@ -2611,6 +2676,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "DATE_PATTERN": 24,
                 "isString$1": 24,
                 "detached": 23,
@@ -2625,8 +2691,8 @@
               "bytes": 21
             }
           },
-          "gzip": 2139,
-          "minified": 4780
+          "gzip": 2205,
+          "minified": 4992
         },
         "json": {
           "files": {
@@ -2637,7 +2703,7 @@
                 "split": 455,
                 "json": 376,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "pathAt": 207,
                 "isPlainObject": 205,
@@ -2690,18 +2756,20 @@
         "jwt": {
           "files": {
             "dist/index.js": {
-              "bytes": 5481,
+              "bytes": 5877,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "hasRepeatedKey": 394,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "readSegment": 252,
+                "isBase64": 210,
                 "isPlainObject": 205,
                 "jwt": 198,
-                "formatLeaf": 185,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -2713,9 +2781,8 @@
                 "toStandard": 87,
                 "isThenable": 85,
                 "isPath": 79,
-                "BASE64URL_PATTERN": 77,
+                "(top level)": 70,
                 "issue": 65,
-                "(top level)": 64,
                 "enter": 59,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
@@ -2726,13 +2793,18 @@
                 "JWT_PATTERN": 35,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isString$1": 24,
+                "THREE_LEFT": 23,
                 "detached": 23,
                 "ROOT_PATH": 20,
                 "MISS": 17,
-                "isEncoded": 15,
+                "isBase64url": 15,
                 "RULES": 14,
+                "URL_ALPHABET": 13,
+                "TWO_LEFT": 11,
                 "depth": 4,
+                "isEncoded": 4,
                 "current": 2
               }
             },
@@ -2740,15 +2812,15 @@
               "bytes": 17
             }
           },
-          "gzip": 2492,
-          "minified": 5498
+          "gzip": 2647,
+          "minified": 5894
         },
         "lazy": {
           "files": {
             "dist/index.js": {
-              "bytes": 6984,
+              "bytes": 7399,
               "declarations": {
-                "lazy": 1024,
+                "lazy": 1059,
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
@@ -2758,24 +2830,28 @@
                 "isPlainObject": 205,
                 "described": 168,
                 "tail": 161,
+                "placed": 152,
                 "word": 152,
-                "placed": 151,
                 "chain": 131,
                 "resultsOf": 130,
+                "keptAt": 129,
                 "assertLimit": 128,
                 "composed": 126,
                 "assertOption": 123,
                 "runEach": 122,
                 "assertFunction": 121,
-                "isResult": 117,
+                "isResult": 118,
                 "UNITS$1": 116,
+                "moveFirst": 115,
                 "spendCall": 115,
                 "assertText": 113,
                 "ownStandard": 103,
+                "keep": 102,
                 "notResult": 101,
                 "toStandard": 87,
                 "(top level)": 86,
                 "isThenable": 85,
+                "newPaths": 80,
                 "isPath": 79,
                 "call": 68,
                 "placeAll": 66,
@@ -2785,7 +2861,6 @@
                 "refundCall": 53,
                 "within": 49,
                 "collect": 48,
-                "newPaths": 48,
                 "withFast": 48,
                 "pass": 36,
                 "failWith": 32,
@@ -2811,21 +2886,22 @@
               "bytes": 19
             }
           },
-          "gzip": 2927,
-          "minified": 7003
+          "gzip": 3041,
+          "minified": 7418
         },
         "literal": {
           "files": {
             "dist/index.js": {
-              "bytes": 4208,
+              "bytes": 4415,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
                 "limit": 294,
                 "literal": 279,
-                "member": 228,
+                "member": 215,
                 "isPlainObject": 205,
+                "withRules": 184,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -2841,10 +2917,11 @@
                 "CHECK_RESULT_ERROR": 54,
                 "collect": 48,
                 "withFast": 48,
-                "(top level)": 40,
+                "(top level)": 46,
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "detached": 23,
                 "ROOT_PATH": 20,
                 "MISS": 17,
@@ -2857,51 +2934,53 @@
               "bytes": 21
             }
           },
-          "gzip": 1939,
-          "minified": 4229
+          "gzip": 2005,
+          "minified": 4436
         },
         "lowercase": {
           "files": {
             "dist/index.js": {
-              "bytes": 2323,
+              "bytes": 2378,
               "declarations": {
                 "brief": 730,
                 "limit": 294,
                 "described": 168,
                 "assertMessage": 162,
                 "word": 152,
+                "rule": 134,
                 "UNITS$1": 116,
-                "rule": 115,
                 "assertText": 113,
                 "ownStandard": 103,
                 "lowercase": 87,
                 "toStandard": 87,
                 "isThenable": 85,
                 "issue": 65,
+                "ruleTests": 30,
                 "ROOT_PATH": 20,
-                "RULES": 14,
-                "(top level)": 12
+                "(top level)": 18,
+                "RULES": 14
               }
             },
             "(unattributed)": {
               "bytes": 23
             }
           },
-          "gzip": 1137,
-          "minified": 2346
+          "gzip": 1178,
+          "minified": 2401
         },
         "mac": {
           "files": {
             "dist/index.js": {
-              "bytes": 4649,
+              "bytes": 4861,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "isPlainObject": 205,
-                "formatLeaf": 185,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -2915,9 +2994,9 @@
                 "mac": 83,
                 "isPath": 79,
                 "issue": 65,
+                "(top level)": 64,
                 "MAC_PATTERN": 62,
                 "enter": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
                 "collect": 48,
@@ -2926,6 +3005,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isString$1": 24,
                 "detached": 23,
                 "ROOT_PATH": 20,
@@ -2939,52 +3019,51 @@
               "bytes": 17
             }
           },
-          "gzip": 2099,
-          "minified": 4666
+          "gzip": 2163,
+          "minified": 4878
         },
         "map": {
           "files": {
             "dist/index.js": {
-              "bytes": 8884,
+              "bytes": 8705,
               "declarations": {
-                "map": 896,
+                "map": 898,
                 "brief": 730,
                 "split": 455,
                 "finish": 370,
-                "describeType$1": 365,
-                "sizeIssues": 342,
-                "nested": 337,
+                "describeType$2": 365,
+                "nested": 338,
                 "limit": 294,
-                "limitIn": 240,
+                "sizeIssues": 285,
+                "limitIn": 239,
+                "assertSizeOptions": 210,
                 "pathAt": 207,
                 "isPlainObject": 205,
-                "assertSizeOptions": 183,
-                "cap": 170,
-                "described": 169,
+                "cap": 171,
+                "described": 168,
                 "tail": 163,
                 "runItems": 162,
-                "word": 153,
+                "word": 152,
                 "placed": 151,
-                "toIssue": 140,
                 "assertSize": 133,
                 "chain": 131,
                 "assertOrder": 130,
                 "composed": 126,
-                "assertOption": 124,
+                "assertOption": 123,
                 "runEach": 122,
                 "assertFunction": 121,
                 "isResult": 117,
                 "UNITS$1": 116,
-                "assertText": 114,
-                "ownStandard": 104,
+                "assertText": 113,
+                "ownStandard": 103,
                 "weigh": 102,
                 "notResult": 101,
-                "(top level)": 100,
+                "(top level)": 94,
                 "sizeOf": 91,
                 "toStandard": 87,
                 "isThenable": 85,
                 "isPath": 79,
-                "isLimit": 78,
+                "isLimit": 77,
                 "slot": 73,
                 "call": 68,
                 "repeatedKey": 68,
@@ -3019,8 +3098,8 @@
               "bytes": 18
             }
           },
-          "gzip": 3531,
-          "minified": 8902
+          "gzip": 3504,
+          "minified": 8723
         },
         "meta": {
           "files": {
@@ -3066,7 +3145,7 @@
         "multipleOf": {
           "files": {
             "dist/index.js": {
-              "bytes": 2909,
+              "bytes": 2964,
               "declarations": {
                 "brief": 730,
                 "multipleOf": 309,
@@ -3075,16 +3154,17 @@
                 "described": 168,
                 "assertMessage": 162,
                 "word": 152,
+                "rule": 134,
                 "toDecimal": 134,
                 "UNITS$1": 116,
-                "rule": 115,
                 "assertText": 113,
                 "ownStandard": 103,
                 "toStandard": 87,
                 "isThenable": 85,
                 "issue": 65,
+                "ruleTests": 30,
+                "(top level)": 24,
                 "ROOT_PATH": 20,
-                "(top level)": 18,
                 "RULES": 14
               }
             },
@@ -3092,21 +3172,22 @@
               "bytes": 24
             }
           },
-          "gzip": 1370,
-          "minified": 2933
+          "gzip": 1409,
+          "minified": 2988
         },
         "nanoid": {
           "files": {
             "dist/index.js": {
-              "bytes": 4580,
+              "bytes": 4792,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "isPlainObject": 205,
-                "formatLeaf": 185,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -3119,8 +3200,8 @@
                 "isThenable": 85,
                 "isPath": 79,
                 "issue": 65,
+                "(top level)": 64,
                 "enter": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
                 "nanoid": 52,
@@ -3130,6 +3211,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "NANOID_PATTERN": 24,
                 "isString$1": 24,
                 "detached": 23,
@@ -3144,21 +3226,22 @@
               "bytes": 20
             }
           },
-          "gzip": 2062,
-          "minified": 4600
+          "gzip": 2127,
+          "minified": 4812
         },
         "never": {
           "files": {
             "dist/index.js": {
-              "bytes": 4474,
+              "bytes": 4686,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
-                "leaf": 230,
+                "leaf": 222,
                 "isPlainObject": 205,
+                "withRules": 184,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -3172,14 +3255,15 @@
                 "isPath": 79,
                 "issue": 65,
                 "enter": 59,
+                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
-                "(top level)": 52,
                 "collect": 48,
                 "withFast": 48,
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "detached": 23,
                 "ROOT_PATH": 20,
                 "MISS": 17,
@@ -3193,21 +3277,21 @@
               "bytes": 19
             }
           },
-          "gzip": 2013,
-          "minified": 4493
+          "gzip": 2077,
+          "minified": 4705
         },
         "nonBlank": {
           "files": {
             "dist/index.js": {
-              "bytes": 2365,
+              "bytes": 2420,
               "declarations": {
                 "brief": 730,
                 "limit": 294,
                 "described": 168,
                 "assertMessage": 162,
                 "word": 152,
+                "rule": 134,
                 "UNITS$1": 116,
-                "rule": 115,
                 "assertText": 113,
                 "ownStandard": 103,
                 "toStandard": 87,
@@ -3215,8 +3299,9 @@
                 "nonBlank": 76,
                 "issue": 65,
                 "NOT_BLANK_PATTERN": 47,
+                "ruleTests": 30,
+                "(top level)": 24,
                 "ROOT_PATH": 20,
-                "(top level)": 18,
                 "RULES": 14
               }
             },
@@ -3224,38 +3309,39 @@
               "bytes": 22
             }
           },
-          "gzip": 1183,
-          "minified": 2387
+          "gzip": 1222,
+          "minified": 2442
         },
         "nonZero": {
           "files": {
             "dist/index.js": {
-              "bytes": 2320,
+              "bytes": 2375,
               "declarations": {
                 "brief": 730,
                 "limit": 294,
                 "described": 168,
                 "assertMessage": 162,
                 "word": 152,
+                "rule": 134,
                 "UNITS$1": 116,
-                "rule": 115,
                 "assertText": 113,
                 "ownStandard": 103,
                 "toStandard": 87,
                 "isThenable": 85,
                 "nonZero": 84,
                 "issue": 65,
+                "ruleTests": 30,
                 "ROOT_PATH": 20,
-                "RULES": 14,
-                "(top level)": 12
+                "(top level)": 18,
+                "RULES": 14
               }
             },
             "(unattributed)": {
               "bytes": 21
             }
           },
-          "gzip": 1140,
-          "minified": 2341
+          "gzip": 1181,
+          "minified": 2396
         },
         "nullable": {
           "files": {
@@ -3350,16 +3436,17 @@
         "number": {
           "files": {
             "dist/index.js": {
-              "bytes": 6623,
+              "bytes": 6835,
               "declarations": {
                 "number": 1690,
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
-                "leaf": 230,
+                "leaf": 222,
                 "isPlainObject": 205,
+                "withRules": 184,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -3376,9 +3463,9 @@
                 "isPath": 79,
                 "issue": 65,
                 "enter": 59,
+                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
-                "(top level)": 52,
                 "invalidValue": 49,
                 "collect": 48,
                 "withFast": 48,
@@ -3386,6 +3473,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "detached": 23,
                 "ROOT_PATH": 20,
                 "MISS": 17,
@@ -3398,19 +3486,19 @@
               "bytes": 20
             }
           },
-          "gzip": 2699,
-          "minified": 6643
+          "gzip": 2764,
+          "minified": 6855
         },
         "object": {
           "files": {
             "dist/index.js": {
-              "bytes": 8119,
+              "bytes": 8753,
               "declarations": {
-                "object": 1518,
+                "object": 2131,
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "assertShape": 324,
                 "limit": 294,
                 "childOf": 214,
@@ -3433,9 +3521,9 @@
                 "ownStandard": 103,
                 "weigh": 102,
                 "notResult": 101,
+                "(top level)": 92,
                 "toStandard": 87,
                 "isThenable": 85,
-                "(top level)": 82,
                 "isPath": 79,
                 "fieldFailureOf": 76,
                 "reservedKey": 70,
@@ -3459,17 +3547,19 @@
                 "ROOT_PATH": 20,
                 "MISS": 17,
                 "RULES": 14,
+                "mixedRunOf": 9,
                 "MAX_ISSUES": 6,
                 "depth": 4,
-                "current": 2
+                "current": 2,
+                "mixedRun": 2
               }
             },
             "(unattributed)": {
-              "bytes": 20
+              "bytes": 21
             }
           },
-          "gzip": 3352,
-          "minified": 8139
+          "gzip": 3614,
+          "minified": 8774
         },
         "objectLike": {
           "files": {
@@ -3480,7 +3570,7 @@
                 "objectLike": 570,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "assertShape": 324,
                 "limit": 294,
                 "childOf": 214,
@@ -3541,29 +3631,29 @@
         "omit": {
           "files": {
             "dist/index.js": {
-              "bytes": 9422,
+              "bytes": 10057,
               "declarations": {
-                "object": 1520,
+                "object": 2132,
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
                 "partsOf": 367,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "assertShape": 324,
-                "select": 315,
+                "select": 314,
                 "limit": 294,
                 "rebuild": 256,
-                "childOf": 214,
+                "childOf": 215,
                 "pathAt": 207,
                 "isPlainObject": 205,
-                "cap": 169,
+                "cap": 168,
                 "tail": 161,
                 "described": 155,
+                "placed": 152,
                 "word": 152,
-                "placed": 151,
-                "assertList": 138,
+                "assertList": 137,
                 "chain": 131,
-                "composed": 126,
+                "composed": 127,
                 "runEach": 122,
                 "assertFunction": 121,
                 "objectIssue": 120,
@@ -3571,10 +3661,10 @@
                 "UNITS$1": 116,
                 "assertText": 113,
                 "setOwn": 111,
+                "(top level)": 110,
                 "ownStandard": 103,
                 "weigh": 102,
                 "notResult": 101,
-                "(top level)": 100,
                 "describe": 91,
                 "toStandard": 87,
                 "isThenable": 85,
@@ -3604,8 +3694,10 @@
                 "DESCRIPTION": 17,
                 "MISS": 17,
                 "RULES": 14,
+                "mixedRunOf": 10,
                 "MAX_ISSUES": 6,
                 "depth": 4,
+                "mixedRun": 3,
                 "current": 2
               }
             },
@@ -3613,21 +3705,22 @@
               "bytes": 19
             }
           },
-          "gzip": 3776,
-          "minified": 9441
+          "gzip": 4036,
+          "minified": 10076
         },
         "oneOf": {
           "files": {
             "dist/index.js": {
-              "bytes": 4894,
+              "bytes": 5101,
               "declarations": {
                 "oneOf": 870,
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
                 "limit": 294,
-                "member": 228,
+                "member": 215,
                 "isPlainObject": 205,
+                "withRules": 184,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -3642,12 +3735,13 @@
                 "issue": 65,
                 "enter": 59,
                 "CHECK_RESULT_ERROR": 54,
+                "(top level)": 52,
                 "collect": 48,
                 "withFast": 48,
-                "(top level)": 46,
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "detached": 23,
                 "ROOT_PATH": 20,
                 "MISS": 17,
@@ -3660,8 +3754,8 @@
               "bytes": 19
             }
           },
-          "gzip": 2132,
-          "minified": 4913
+          "gzip": 2197,
+          "minified": 5120
         },
         "optional": {
           "files": {
@@ -3713,30 +3807,30 @@
         "partial": {
           "files": {
             "dist/index.js": {
-              "bytes": 9572,
+              "bytes": 10207,
               "declarations": {
-                "object": 1521,
+                "object": 2133,
                 "brief": 730,
                 "split": 455,
-                "finish": 369,
+                "finish": 370,
                 "partsOf": 367,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "assertShape": 324,
                 "limit": 294,
                 "rebuild": 256,
-                "optional": 254,
-                "childOf": 215,
+                "optional": 253,
+                "childOf": 214,
                 "pathAt": 207,
                 "isPlainObject": 205,
-                "cap": 169,
-                "tail": 161,
+                "cap": 168,
+                "tail": 163,
                 "described": 155,
                 "word": 152,
                 "placed": 151,
-                "assertUnshared": 149,
+                "assertUnshared": 148,
                 "partial": 136,
                 "chain": 131,
-                "composed": 127,
+                "composed": 126,
                 "runEach": 122,
                 "assertFunction": 121,
                 "objectIssue": 120,
@@ -3745,30 +3839,30 @@
                 "assertText": 113,
                 "setOwn": 111,
                 "mapping": 109,
+                "(top level)": 104,
                 "ownStandard": 103,
                 "weigh": 102,
                 "notResult": 101,
-                "(top level)": 94,
                 "describe": 91,
                 "toStandard": 87,
                 "isThenable": 85,
                 "isPath": 79,
-                "fieldFailureOf": 76,
+                "fieldFailureOf": 78,
                 "reservedKey": 70,
                 "call": 68,
                 "placeAll": 66,
                 "issue": 65,
                 "enter": 59,
                 "CHECK_RESULT_ERROR": 54,
-                "withFast": 49,
                 "within": 49,
                 "collect": 48,
+                "withFast": 48,
                 "fastOf": 42,
                 "append": 41,
                 "pass": 36,
                 "below": 32,
                 "failWith": 32,
-                "builders": 30,
+                "builders": 31,
                 "fasts": 30,
                 "runs": 30,
                 "report": 28,
@@ -3777,8 +3871,10 @@
                 "DESCRIPTION": 17,
                 "MISS": 17,
                 "RULES": 14,
+                "mixedRunOf": 10,
                 "MAX_ISSUES": 6,
                 "depth": 4,
+                "mixedRun": 3,
                 "current": 2
               }
             },
@@ -3786,8 +3882,8 @@
               "bytes": 22
             }
           },
-          "gzip": 3859,
-          "minified": 9594
+          "gzip": 4115,
+          "minified": 10229
         },
         "pass": {
           "files": {
@@ -3809,7 +3905,7 @@
         "pattern": {
           "files": {
             "dist/index.js": {
-              "bytes": 2626,
+              "bytes": 2681,
               "declarations": {
                 "brief": 730,
                 "limit": 294,
@@ -3817,8 +3913,8 @@
                 "described": 168,
                 "assertMessage": 162,
                 "word": 152,
+                "rule": 134,
                 "UNITS$1": 116,
-                "rule": 115,
                 "assertText": 113,
                 "ownStandard": 103,
                 "sourceOfRegExp": 102,
@@ -3826,8 +3922,9 @@
                 "isThenable": 85,
                 "issue": 65,
                 "brand$1": 36,
+                "ruleTests": 30,
+                "(top level)": 24,
                 "ROOT_PATH": 20,
-                "(top level)": 18,
                 "RULES": 14
               }
             },
@@ -3835,21 +3932,22 @@
               "bytes": 21
             }
           },
-          "gzip": 1271,
-          "minified": 2647
+          "gzip": 1311,
+          "minified": 2702
         },
         "phone": {
           "files": {
             "dist/index.js": {
-              "bytes": 4715,
+              "bytes": 4927,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "isPlainObject": 205,
-                "formatLeaf": 185,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "described": 168,
                 "word": 152,
                 "phone": 151,
@@ -3863,8 +3961,8 @@
                 "isThenable": 85,
                 "isPath": 79,
                 "issue": 65,
+                "(top level)": 64,
                 "enter": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
                 "collect": 48,
@@ -3874,6 +3972,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isString$1": 24,
                 "detached": 23,
                 "ROOT_PATH": 20,
@@ -3889,35 +3988,35 @@
               "bytes": 19
             }
           },
-          "gzip": 2137,
-          "minified": 4734
+          "gzip": 2203,
+          "minified": 4946
         },
         "pick": {
           "files": {
             "dist/index.js": {
-              "bytes": 9422,
+              "bytes": 10057,
               "declarations": {
-                "object": 1520,
+                "object": 2132,
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
                 "partsOf": 367,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "assertShape": 324,
-                "select": 315,
+                "select": 314,
                 "limit": 294,
                 "rebuild": 256,
-                "childOf": 214,
+                "childOf": 215,
                 "pathAt": 207,
                 "isPlainObject": 205,
-                "cap": 169,
+                "cap": 168,
                 "tail": 161,
                 "described": 155,
+                "placed": 152,
                 "word": 152,
-                "placed": 151,
-                "assertList": 138,
+                "assertList": 137,
                 "chain": 131,
-                "composed": 126,
+                "composed": 127,
                 "runEach": 122,
                 "assertFunction": 121,
                 "objectIssue": 120,
@@ -3925,10 +4024,10 @@
                 "UNITS$1": 116,
                 "assertText": 113,
                 "setOwn": 111,
+                "(top level)": 110,
                 "ownStandard": 103,
                 "weigh": 102,
                 "notResult": 101,
-                "(top level)": 100,
                 "describe": 91,
                 "toStandard": 87,
                 "isThenable": 85,
@@ -3958,8 +4057,10 @@
                 "DESCRIPTION": 17,
                 "MISS": 17,
                 "RULES": 14,
+                "mixedRunOf": 10,
                 "MAX_ISSUES": 6,
                 "depth": 4,
+                "mixedRun": 3,
                 "current": 2
               }
             },
@@ -3967,8 +4068,8 @@
               "bytes": 19
             }
           },
-          "gzip": 3777,
-          "minified": 9441
+          "gzip": 4037,
+          "minified": 10076
         },
         "pipe": {
           "files": {
@@ -4017,15 +4118,16 @@
         "port": {
           "files": {
             "dist/index.js": {
-              "bytes": 4541,
+              "bytes": 4753,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "isPlainObject": 205,
-                "formatLeaf": 185,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "port": 174,
                 "described": 168,
                 "word": 152,
@@ -4038,8 +4140,8 @@
                 "isThenable": 85,
                 "isPath": 79,
                 "issue": 65,
+                "(top level)": 64,
                 "enter": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
                 "collect": 48,
@@ -4048,6 +4150,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "detached": 23,
                 "ROOT_PATH": 20,
                 "MISS": 17,
@@ -4060,22 +4163,22 @@
               "bytes": 18
             }
           },
-          "gzip": 2046,
-          "minified": 4559
+          "gzip": 2111,
+          "minified": 4771
         },
         "portugueseMessages": {
           "files": {
             "dist/index.js": {
-              "bytes": 6331,
+              "bytes": 6357,
               "declarations": {
-                "INVALID_FORMATS": 865,
-                "describeLimit": 833,
-                "describeValue": 801,
-                "describeFormat": 564,
-                "describeType": 308,
+                "INVALID_FORMATS$1": 865,
+                "describeLimit$1": 859,
+                "describeValue$1": 801,
+                "describeFormat$1": 564,
+                "describeType$1": 308,
                 "portugueseMessages": 285,
-                "describeKey": 270,
-                "describeUnion": 212,
+                "describeKey$1": 270,
+                "describeUnion$1": 212,
                 "wordIssue": 204,
                 "isOtherKind": 199,
                 "assertMessages": 196,
@@ -4085,12 +4188,12 @@
                 "assertText": 113,
                 "timeOf": 106,
                 "listOf": 97,
-                "COLLECTIONS": 95,
+                "COLLECTIONS$1": 95,
                 "quoteText": 90,
                 "isLazyLimit": 79,
                 "slot": 73,
                 "formatValue": 66,
-                "decimal": 61,
+                "decimal$1": 61,
                 "quote": 60,
                 "entryOf": 40,
                 "entryOf$1": 40,
@@ -4099,7 +4202,7 @@
                 "AMBIGUOUS_KEY_PATTERN": 31,
                 "param": 31,
                 "(top level)": 24,
-                "more": 19,
+                "more$1": 19,
                 "ROOT_PATH": 18,
                 "RULES": 14
               }
@@ -4108,8 +4211,8 @@
               "bytes": 32
             }
           },
-          "gzip": 2639,
-          "minified": 6363
+          "gzip": 2646,
+          "minified": 6389
         },
         "readonly": {
           "files": {
@@ -4158,29 +4261,28 @@
         "record": {
           "files": {
             "dist/index.js": {
-              "bytes": 9495,
+              "bytes": 9316,
               "declarations": {
-                "record": 1352,
+                "record": 1351,
                 "brief": 730,
                 "split": 455,
                 "finish": 370,
-                "describeType$1": 365,
-                "sizeIssues": 341,
+                "describeType$2": 365,
                 "nested": 337,
                 "limit": 294,
-                "limitIn": 239,
+                "sizeIssues": 284,
+                "limitIn": 240,
                 "childOf": 214,
+                "assertSizeOptions": 209,
                 "pathAt": 207,
                 "isPlainObject": 205,
-                "assertSizeOptions": 184,
                 "cap": 171,
                 "described": 168,
                 "runItems": 162,
-                "tail": 162,
+                "tail": 161,
                 "word": 152,
                 "placed": 151,
-                "toIssue": 140,
-                "assertSize": 134,
+                "assertSize": 133,
                 "chain": 131,
                 "assertOrder": 130,
                 "composed": 126,
@@ -4195,11 +4297,11 @@
                 "ownStandard": 103,
                 "weigh": 102,
                 "notResult": 101,
-                "(top level)": 88,
                 "toStandard": 87,
                 "isThenable": 85,
+                "(top level)": 82,
                 "isPath": 80,
-                "isLimit": 77,
+                "isLimit": 78,
                 "reservedKey": 70,
                 "repeatedKey": 68,
                 "placeAll": 66,
@@ -4230,20 +4332,20 @@
               "bytes": 21
             }
           },
-          "gzip": 3724,
-          "minified": 9516
+          "gzip": 3688,
+          "minified": 9337
         },
         "required": {
           "files": {
             "dist/index.js": {
-              "bytes": 9416,
+              "bytes": 10051,
               "declarations": {
-                "object": 1521,
+                "object": 2133,
                 "brief": 730,
                 "split": 455,
-                "finish": 370,
+                "finish": 369,
                 "partsOf": 367,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "assertShape": 324,
                 "limit": 294,
                 "rebuild": 256,
@@ -4251,33 +4353,33 @@
                 "pathAt": 207,
                 "isPlainObject": 205,
                 "unwrapped": 175,
-                "cap": 169,
+                "cap": 168,
                 "tail": 161,
-                "nullable": 158,
+                "nullable": 159,
                 "described": 155,
-                "placed": 152,
                 "word": 152,
+                "placed": 151,
                 "chain": 131,
                 "composed": 126,
                 "runEach": 122,
                 "assertFunction": 121,
                 "objectIssue": 120,
-                "isResult": 118,
+                "isResult": 117,
                 "UNITS$1": 116,
                 "assertText": 113,
                 "setOwn": 111,
                 "mapping": 109,
+                "(top level)": 104,
                 "ownStandard": 103,
                 "weigh": 102,
                 "notResult": 101,
-                "(top level)": 94,
                 "describe": 91,
                 "toStandard": 87,
                 "isThenable": 85,
-                "isPath": 80,
-                "fieldFailureOf": 77,
-                "reservedKey": 70,
-                "call": 68,
+                "isPath": 79,
+                "fieldFailureOf": 78,
+                "reservedKey": 71,
+                "call": 69,
                 "placeAll": 66,
                 "issue": 65,
                 "enter": 59,
@@ -4291,7 +4393,7 @@
                 "pass": 36,
                 "below": 32,
                 "failWith": 32,
-                "builders": 30,
+                "builders": 31,
                 "fasts": 30,
                 "runs": 30,
                 "report": 28,
@@ -4300,8 +4402,10 @@
                 "DESCRIPTION": 17,
                 "MISS": 17,
                 "RULES": 14,
+                "mixedRunOf": 10,
                 "MAX_ISSUES": 6,
                 "depth": 4,
+                "mixedRun": 3,
                 "current": 2
               }
             },
@@ -4309,8 +4413,8 @@
               "bytes": 23
             }
           },
-          "gzip": 3818,
-          "minified": 9439
+          "gzip": 4076,
+          "minified": 10074
         },
         "searchParams": {
           "files": {
@@ -4321,7 +4425,7 @@
                 "split": 455,
                 "searchParams": 370,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "readEntries": 246,
                 "pathAt": 207,
@@ -4383,15 +4487,16 @@
         "semver": {
           "files": {
             "dist/index.js": {
-              "bytes": 4781,
+              "bytes": 4993,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "isPlainObject": 205,
-                "formatLeaf": 185,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "described": 168,
                 "word": 152,
                 "SEMVER_PATTERN": 134,
@@ -4406,8 +4511,8 @@
                 "isPath": 79,
                 "isSemver": 71,
                 "issue": 65,
+                "(top level)": 64,
                 "enter": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
                 "collect": 48,
@@ -4417,6 +4522,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "LEADING_ZERO_PATTERN": 25,
                 "isString$1": 24,
                 "detached": 23,
@@ -4431,48 +4537,47 @@
               "bytes": 20
             }
           },
-          "gzip": 2147,
-          "minified": 4801
+          "gzip": 2211,
+          "minified": 5013
         },
         "set": {
           "files": {
             "dist/index.js": {
-              "bytes": 8208,
+              "bytes": 8029,
               "declarations": {
                 "brief": 730,
-                "set": 456,
+                "set": 457,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
-                "sizeIssues": 342,
+                "describeType$2": 366,
                 "settle": 311,
                 "limit": 294,
+                "sizeIssues": 285,
                 "childOf": 214,
+                "assertSizeOptions": 209,
                 "pathAt": 207,
                 "isPlainObject": 205,
-                "assertSizeOptions": 183,
                 "cap": 170,
-                "described": 169,
+                "described": 168,
                 "runItems": 162,
                 "tail": 161,
-                "word": 153,
+                "word": 152,
                 "placed": 151,
-                "toIssue": 140,
-                "assertSize": 133,
+                "assertSize": 132,
                 "chain": 131,
                 "assertOrder": 130,
                 "composed": 126,
-                "assertOption": 124,
+                "assertOption": 123,
                 "runEach": 122,
                 "assertFunction": 121,
                 "isResult": 117,
                 "UNITS$1": 116,
-                "assertText": 114,
-                "ownStandard": 104,
+                "assertText": 113,
+                "ownStandard": 103,
                 "weigh": 102,
                 "notResult": 101,
-                "(top level)": 94,
                 "sizeOf": 91,
+                "(top level)": 88,
                 "toStandard": 87,
                 "isThenable": 85,
                 "isPath": 79,
@@ -4480,8 +4585,8 @@
                 "placeAll": 66,
                 "issue": 65,
                 "enter": 59,
+                "typeIssue": 56,
                 "CHECK_RESULT_ERROR": 54,
-                "typeIssue": 54,
                 "within": 49,
                 "collect": 48,
                 "withFast": 48,
@@ -4509,21 +4614,22 @@
               "bytes": 18
             }
           },
-          "gzip": 3340,
-          "minified": 8226
+          "gzip": 3308,
+          "minified": 8047
         },
         "slug": {
           "files": {
             "dist/index.js": {
-              "bytes": 4585,
+              "bytes": 4797,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "isPlainObject": 205,
-                "formatLeaf": 185,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -4536,8 +4642,8 @@
                 "isThenable": 85,
                 "isPath": 79,
                 "issue": 65,
+                "(top level)": 64,
                 "enter": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
                 "slug": 50,
@@ -4548,6 +4654,7 @@
                 "failWith": 32,
                 "SLUG_PATTERN": 31,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isString$1": 24,
                 "detached": 23,
                 "ROOT_PATH": 20,
@@ -4561,25 +4668,73 @@
               "bytes": 18
             }
           },
-          "gzip": 2060,
-          "minified": 4603
+          "gzip": 2126,
+          "minified": 4815
+        },
+        "spanishMessages": {
+          "files": {
+            "dist/index.js": {
+              "bytes": 6475,
+              "declarations": {
+                "INVALID_FORMATS": 923,
+                "describeLimit": 888,
+                "describeValue": 808,
+                "describeFormat": 561,
+                "describeType": 309,
+                "spanishMessages": 283,
+                "describeKey": 268,
+                "describeUnion": 218,
+                "wordIssue": 204,
+                "isOtherKind": 199,
+                "assertMessages": 196,
+                "meantIssue": 175,
+                "formatPath": 174,
+                "COLLECTIONS": 119,
+                "momentOf": 119,
+                "assertText": 113,
+                "timeOf": 106,
+                "listOf": 97,
+                "quoteText": 90,
+                "isLazyLimit": 79,
+                "slot": 73,
+                "formatValue": 66,
+                "decimal": 61,
+                "quote": 60,
+                "entryOf": 40,
+                "entryOf$1": 40,
+                "brand$1": 36,
+                "UNESCAPED_PATTERN": 33,
+                "AMBIGUOUS_KEY_PATTERN": 31,
+                "param": 31,
+                "(top level)": 24,
+                "more": 19,
+                "ROOT_PATH": 18,
+                "RULES": 14
+              }
+            },
+            "(unattributed)": {
+              "bytes": 29
+            }
+          },
+          "gzip": 2658,
+          "minified": 6504
         },
         "standard": {
           "files": {
             "dist/index.js": {
-              "bytes": 7820,
+              "bytes": 7846,
               "declarations": {
-                "describeLimit$1": 733,
+                "describeLimit$2": 759,
                 "brief": 730,
                 "FORMAT_NAMES": 529,
-                "describeFormat$1": 523,
-                "describeValue$1": 472,
+                "describeFormat$2": 523,
+                "describeValue$2": 472,
                 "standard": 306,
                 "limit": 294,
                 "invalidTypeMessage": 289,
                 "invalidValueMessage": 262,
                 "invalidKeyMessage": 247,
-                "describeUnion$1": 206,
+                "describeUnion$2": 206,
                 "wordIssue": 204,
                 "isOtherKind": 199,
                 "assertMessages": 196,
@@ -4594,7 +4749,7 @@
                 "timeOf": 106,
                 "ownStandard": 103,
                 "listOf": 97,
-                "COLLECTIONS$1": 91,
+                "COLLECTIONS$2": 91,
                 "describe": 91,
                 "quoteText": 90,
                 "toStandard": 87,
@@ -4613,7 +4768,7 @@
                 "AMBIGUOUS_KEY_PATTERN": 31,
                 "param": 31,
                 "invalidIntersectionMessage": 21,
-                "more$1": 20,
+                "more$2": 20,
                 "ROOT_PATH": 18,
                 "DESCRIPTION": 17,
                 "RULES": 14,
@@ -4625,20 +4780,20 @@
               "bytes": 22
             }
           },
-          "gzip": 3077,
-          "minified": 7842
+          "gzip": 3083,
+          "minified": 7868
         },
         "standardJsonSchema": {
           "files": {
             "dist/index.js": {
-              "bytes": 16974,
+              "bytes": 17066,
               "declarations": {
-                "toJsonSchema": 6499,
-                "describeLimit$1": 733,
+                "toJsonSchema": 6565,
+                "describeLimit$2": 759,
                 "brief": 730,
                 "FORMAT_NAMES": 529,
-                "describeFormat$1": 523,
-                "describeValue$1": 473,
+                "describeFormat$2": 523,
+                "describeValue$2": 473,
                 "standardJsonSchema": 415,
                 "producesPrimitive": 333,
                 "holdsPrimitives": 320,
@@ -4648,7 +4803,7 @@
                 "invalidValueMessage": 263,
                 "invalidKeyMessage": 247,
                 "addGetters": 236,
-                "describeUnion$1": 206,
+                "describeUnion$2": 206,
                 "isPlainObject": 205,
                 "wordIssue": 204,
                 "isOtherKind": 199,
@@ -4669,7 +4824,7 @@
                 "ownStandard": 103,
                 "isBinaryExact": 99,
                 "listOf": 97,
-                "COLLECTIONS$1": 91,
+                "COLLECTIONS$2": 91,
                 "describe": 91,
                 "quoteText": 90,
                 "toStandard": 87,
@@ -4695,7 +4850,7 @@
                 "param": 31,
                 "customFormats": 30,
                 "invalidIntersectionMessage": 21,
-                "more$1": 20,
+                "more$2": 20,
                 "ROOT_PATH": 18,
                 "DESCRIPTION": 17,
                 "RULES": 14,
@@ -4707,52 +4862,56 @@
               "bytes": 33
             }
           },
-          "gzip": 6376,
-          "minified": 17007
+          "gzip": 6404,
+          "minified": 17099
         },
         "startsWith": {
           "files": {
             "dist/index.js": {
-              "bytes": 2355,
+              "bytes": 2410,
               "declarations": {
                 "brief": 730,
                 "limit": 294,
                 "described": 168,
                 "assertMessage": 162,
                 "word": 152,
+                "rule": 134,
                 "startsWith": 119,
                 "UNITS$1": 116,
-                "rule": 115,
                 "assertText": 113,
                 "ownStandard": 103,
                 "toStandard": 87,
                 "isThenable": 85,
                 "issue": 65,
+                "ruleTests": 30,
                 "ROOT_PATH": 20,
-                "RULES": 14,
-                "(top level)": 12
+                "(top level)": 18,
+                "RULES": 14
               }
             },
             "(unattributed)": {
               "bytes": 24
             }
           },
-          "gzip": 1146,
-          "minified": 2379
+          "gzip": 1187,
+          "minified": 2434
         },
         "string": {
           "files": {
             "dist/index.js": {
-              "bytes": 5675,
+              "bytes": 5991,
               "declarations": {
-                "string": 815,
                 "brief": 730,
+                "string": 516,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
-                "leaf": 230,
+                "sizeIssues": 284,
+                "leaf": 222,
+                "assertSizeOptions": 208,
                 "isPlainObject": 205,
+                "withRules": 184,
                 "described": 168,
                 "word": 152,
                 "assertSize": 132,
@@ -4763,20 +4922,20 @@
                 "UNITS$1": 116,
                 "assertText": 113,
                 "ownStandard": 103,
-                "lengthIssue": 89,
                 "toStandard": 87,
                 "isThenable": 85,
                 "isPath": 79,
                 "issue": 65,
                 "enter": 59,
+                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
-                "(top level)": 52,
                 "collect": 48,
                 "withFast": 48,
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isString": 24,
                 "detached": 23,
                 "ROOT_PATH": 20,
@@ -4790,21 +4949,22 @@
               "bytes": 20
             }
           },
-          "gzip": 2422,
-          "minified": 5695
+          "gzip": 2535,
+          "minified": 6011
         },
         "symbol": {
           "files": {
             "dist/index.js": {
-              "bytes": 4491,
+              "bytes": 4703,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
-                "leaf": 230,
+                "leaf": 222,
                 "isPlainObject": 205,
+                "withRules": 184,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -4818,14 +4978,15 @@
                 "isPath": 79,
                 "issue": 65,
                 "enter": 59,
+                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
-                "(top level)": 52,
                 "collect": 48,
                 "withFast": 48,
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isSymbol": 24,
                 "detached": 23,
                 "ROOT_PATH": 20,
@@ -4839,8 +5000,8 @@
               "bytes": 20
             }
           },
-          "gzip": 2012,
-          "minified": 4511
+          "gzip": 2076,
+          "minified": 4723
         },
         "tagged": {
           "files": {
@@ -4851,7 +5012,7 @@
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "assertShape": 324,
                 "limit": 294,
                 "pathAt": 207,
@@ -4907,16 +5068,17 @@
         "time": {
           "files": {
             "dist/index.js": {
-              "bytes": 5101,
+              "bytes": 5313,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "time": 288,
                 "isPlainObject": 205,
-                "formatLeaf": 185,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "fractionPattern": 169,
                 "described": 168,
                 "word": 152,
@@ -4931,8 +5093,8 @@
                 "isThenable": 85,
                 "isPath": 79,
                 "issue": 65,
+                "(top level)": 64,
                 "enter": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
                 "collect": 48,
@@ -4941,6 +5103,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isString$1": 24,
                 "detached": 23,
                 "ROOT_PATH": 20,
@@ -4954,15 +5117,15 @@
               "bytes": 18
             }
           },
-          "gzip": 2231,
-          "minified": 5119
+          "gzip": 2295,
+          "minified": 5331
         },
         "toJsonSchema": {
           "files": {
             "dist/index.js": {
-              "bytes": 9003,
+              "bytes": 9069,
               "declarations": {
-                "toJsonSchema": 6498,
+                "toJsonSchema": 6564,
                 "producesPrimitive": 333,
                 "holdsPrimitives": 320,
                 "addGetters": 236,
@@ -4990,18 +5153,18 @@
               "bytes": 26
             }
           },
-          "gzip": 3642,
-          "minified": 9029
+          "gzip": 3661,
+          "minified": 9095
         },
         "tooBigMessage": {
           "files": {
             "dist/index.js": {
-              "bytes": 1315,
+              "bytes": 1341,
               "declarations": {
-                "describeLimit$1": 733,
+                "describeLimit$2": 759,
                 "momentOf": 119,
                 "timeOf": 106,
-                "COLLECTIONS$1": 91,
+                "COLLECTIONS$2": 91,
                 "slot": 73,
                 "UNITS": 60,
                 "entryOf": 40,
@@ -5016,18 +5179,18 @@
               "bytes": 27
             }
           },
-          "gzip": 699,
-          "minified": 1342
+          "gzip": 711,
+          "minified": 1368
         },
         "tooSmallMessage": {
           "files": {
             "dist/index.js": {
-              "bytes": 1315,
+              "bytes": 1341,
               "declarations": {
-                "describeLimit$1": 733,
+                "describeLimit$2": 759,
                 "momentOf": 119,
                 "timeOf": 106,
-                "COLLECTIONS$1": 91,
+                "COLLECTIONS$2": 91,
                 "slot": 73,
                 "UNITS": 60,
                 "entryOf": 40,
@@ -5042,19 +5205,19 @@
               "bytes": 29
             }
           },
-          "gzip": 700,
-          "minified": 1344
+          "gzip": 711,
+          "minified": 1370
         },
         "transform": {
           "files": {
             "dist/index.js": {
-              "bytes": 3240,
+              "bytes": 3333,
               "declarations": {
                 "brief": 730,
                 "limit": 294,
+                "transform": 210,
                 "pathAt": 207,
                 "described": 168,
-                "transform": 159,
                 "placed": 151,
                 "chain": 131,
                 "composed": 126,
@@ -5071,6 +5234,7 @@
                 "within": 49,
                 "withFast": 48,
                 "(top level)": 46,
+                "fastOf": 42,
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
@@ -5087,8 +5251,8 @@
               "bytes": 23
             }
           },
-          "gzip": 1574,
-          "minified": 3263
+          "gzip": 1613,
+          "minified": 3356
         },
         "tuple": {
           "files": {
@@ -5099,7 +5263,7 @@
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "settle": 311,
                 "limit": 294,
                 "childOf": 214,
@@ -5166,15 +5330,16 @@
         "ulid": {
           "files": {
             "dist/index.js": {
-              "bytes": 4603,
+              "bytes": 4815,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "isPlainObject": 205,
-                "formatLeaf": 185,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -5187,9 +5352,9 @@
                 "isThenable": 85,
                 "isPath": 79,
                 "issue": 65,
+                "(top level)": 64,
                 "ulid": 64,
                 "enter": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
                 "collect": 48,
@@ -5199,6 +5364,7 @@
                 "ULID_PATTERN": 35,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isString$1": 24,
                 "detached": 23,
                 "ROOT_PATH": 20,
@@ -5212,8 +5378,8 @@
               "bytes": 18
             }
           },
-          "gzip": 2089,
-          "minified": 4621
+          "gzip": 2154,
+          "minified": 4833
         },
         "union": {
           "files": {
@@ -5315,15 +5481,16 @@
         "unknown": {
           "files": {
             "dist/index.js": {
-              "bytes": 4478,
+              "bytes": 4690,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
-                "leaf": 230,
+                "leaf": 222,
                 "isPlainObject": 205,
+                "withRules": 184,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -5337,14 +5504,15 @@
                 "isPath": 79,
                 "issue": 65,
                 "enter": 59,
+                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
-                "(top level)": 52,
                 "collect": 48,
                 "withFast": 48,
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "detached": 23,
                 "ROOT_PATH": 20,
                 "MISS": 17,
@@ -5358,8 +5526,8 @@
               "bytes": 21
             }
           },
-          "gzip": 2013,
-          "minified": 4499
+          "gzip": 2077,
+          "minified": 4711
         },
         "unrecognizedKeyMessage": {
           "files": {
@@ -5385,46 +5553,47 @@
         "uppercase": {
           "files": {
             "dist/index.js": {
-              "bytes": 2323,
+              "bytes": 2378,
               "declarations": {
                 "brief": 730,
                 "limit": 294,
                 "described": 168,
                 "assertMessage": 162,
                 "word": 152,
+                "rule": 134,
                 "UNITS$1": 116,
-                "rule": 115,
                 "assertText": 113,
                 "ownStandard": 103,
                 "toStandard": 87,
                 "uppercase": 87,
                 "isThenable": 85,
                 "issue": 65,
+                "ruleTests": 30,
                 "ROOT_PATH": 20,
-                "RULES": 14,
-                "(top level)": 12
+                "(top level)": 18,
+                "RULES": 14
               }
             },
             "(unattributed)": {
               "bytes": 23
             }
           },
-          "gzip": 1136,
-          "minified": 2346
+          "gzip": 1177,
+          "minified": 2401
         },
         "url": {
           "files": {
             "dist/index.js": {
-              "bytes": 14219,
+              "bytes": 14428,
               "declarations": {
                 "url": 1908,
                 "brief": 730,
                 "toMailto": 574,
-                "partsFormat": 547,
+                "partsFormat": 532,
                 "fromPunycode": 525,
                 "split": 457,
                 "finish": 370,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "nested": 338,
                 "limit": 294,
                 "readEntries": 248,
@@ -5435,17 +5604,18 @@
                 "pathAt": 208,
                 "isPlainObject": 206,
                 "toAsciiHost": 203,
-                "isPunycodeHost": 194,
+                "isPunycodeHost": 196,
+                "withRules": 184,
                 "toCanonicalIpv6": 183,
                 "cap": 171,
                 "described": 168,
                 "isBidiHost": 156,
                 "URN_PATTERN": 155,
                 "word": 152,
-                "toHostlessUrl": 147,
                 "adapt": 146,
+                "toHostlessUrl": 146,
+                "(top level)": 136,
                 "chain": 131,
-                "(top level)": 130,
                 "isPlainHost": 129,
                 "assertOption": 123,
                 "runEach": 122,
@@ -5505,12 +5675,13 @@
                 "failWith": 32,
                 "fasts": 30,
                 "isIdnHost": 30,
+                "ruleTests": 30,
                 "report": 29,
                 "DOTTED_IPV4_PATTERN": 26,
                 "HOSTLESS_SCHEMES": 26,
                 "LETTER_PATTERN": 26,
+                "SCHEME_PATTERN": 26,
                 "BARE_HEX_PATTERN": 25,
-                "SCHEME_PATTERN": 25,
                 "EUROPEAN_NUMBER_PATTERN": 24,
                 "detached": 23,
                 "MAILTO_ESCAPED_PATTERN": 21,
@@ -5522,10 +5693,10 @@
                 "PUNYCODE_LABEL_PATTERN": 18,
                 "ENCODED_SEPARATOR_PATTERN": 17,
                 "MISS": 17,
-                "NESTED_PUNYCODE_LABEL_PATTERN": 15,
+                "NESTED_PUNYCODE_LABEL_PATTERN": 16,
                 "RULES": 14,
                 "MAX_INT": 13,
-                "PUNYCODE_LABEL_PATTERN$1": 11,
+                "PUNYCODE_LABEL_PATTERN$1": 12,
                 "depth": 4,
                 "current": 2
               }
@@ -5534,22 +5705,23 @@
               "bytes": 18
             }
           },
-          "gzip": 6147,
-          "minified": 14237
+          "gzip": 6199,
+          "minified": 14446
         },
         "uuid": {
           "files": {
             "dist/index.js": {
-              "bytes": 5027,
+              "bytes": 5239,
               "declarations": {
                 "brief": 730,
                 "split": 455,
                 "uuid": 452,
                 "finish": 369,
-                "describeType$1": 365,
+                "describeType$2": 365,
                 "limit": 294,
                 "isPlainObject": 205,
-                "formatLeaf": 185,
+                "withRules": 184,
+                "formatLeaf": 177,
                 "described": 168,
                 "word": 152,
                 "chain": 131,
@@ -5562,9 +5734,9 @@
                 "isThenable": 85,
                 "isPath": 79,
                 "issue": 65,
+                "(top level)": 64,
                 "SPECIAL_UUID_PATTERN": 63,
                 "enter": 59,
-                "(top level)": 58,
                 "CHECK_RESULT_ERROR": 54,
                 "typeIssue": 54,
                 "collect": 48,
@@ -5573,6 +5745,7 @@
                 "pass": 36,
                 "failWith": 32,
                 "fasts": 30,
+                "ruleTests": 30,
                 "isString$1": 24,
                 "detached": 23,
                 "ROOT_PATH": 20,
@@ -5586,75 +5759,79 @@
               "bytes": 18
             }
           },
-          "gzip": 2231,
-          "minified": 5045
+          "gzip": 2297,
+          "minified": 5257
         }
       },
       "files": {
         "dist/index.js": {
-          "bytes": 88553,
+          "bytes": 94844,
           "declarations": {
-            "toJsonSchema": 6518,
-            "encode": 2451,
+            "toJsonSchema": 6581,
+            "encode": 2526,
+            "object": 2132,
+            "audit": 1956,
             "url": 1922,
-            "audit": 1877,
             "number": 1699,
-            "object": 1516,
             "record": 1346,
-            "mergeOne": 1297,
+            "mergeOne": 1299,
             "tuple": 1115,
             "tagged": 1091,
-            "lazy": 1041,
+            "lazy": 1079,
+            "INVALID_FORMATS": 924,
+            "describeLimit": 893,
             "map": 890,
             "oneOf": 873,
-            "INVALID_FORMATS": 866,
-            "describeLimit": 838,
-            "string": 822,
-            "describeValue": 804,
-            "describeLimit$1": 739,
+            "INVALID_FORMATS$1": 866,
+            "describeLimit$1": 864,
+            "describeValue": 811,
+            "describeValue$1": 804,
+            "describeLimit$2": 765,
             "assert": 736,
             "contentType": 736,
             "brief": 730,
             "union": 704,
             "toMailto": 574,
             "objectLike": 573,
-            "describeFormat": 567,
+            "describeFormat$1": 566,
+            "describeFormat": 563,
             "check": 555,
             "meta": 551,
-            "partsFormat": 550,
             "instanceOf": 548,
             "array": 536,
+            "partsFormat": 536,
             "FORMAT_NAMES": 530,
             "fromPunycode": 530,
             "file": 529,
-            "describeFormat$1": 527,
+            "describeFormat$2": 526,
             "isIpv6": 521,
+            "string": 520,
             "frozenJson": 517,
             "coerceBigint": 503,
             "bigint": 493,
-            "datetime": 484,
-            "describeValue$1": 475,
+            "datetime": 485,
+            "describeValue$2": 475,
             "split": 455,
-            "uuid": 454,
+            "uuid": 455,
             "email": 452,
-            "coerceDate": 445,
+            "coerceDate": 446,
             "set": 445,
+            "runMixed": 440,
             "standardJsonSchema": 417,
             "intersection": 410,
             "boundOf": 407,
+            "partsAt": 400,
             "checkFields": 398,
             "hasRepeatedKey": 395,
-            "date": 387,
+            "(top level)": 390,
+            "date": 388,
             "json": 377,
             "producersOf": 377,
             "finish": 373,
             "searchParams": 373,
-            "(top level)": 368,
             "partsOf": 367,
-            "describeType$1": 365,
+            "describeType$2": 365,
             "readTypes": 361,
-            "partsAt": 350,
-            "sizeIssues": 345,
             "nested": 339,
             "producesPrimitive": 338,
             "is": 336,
@@ -5668,26 +5845,30 @@
             "readIso": 312,
             "multipleOf": 311,
             "standard": 310,
+            "describeType": 309,
             "unique": 309,
-            "describeType": 308,
+            "describeType$1": 308,
             "spotOf": 301,
             "assertIssue": 300,
             "limit": 294,
             "invalidTypeMessage": 292,
             "portugueseMessages": 288,
+            "spanishMessages": 286,
+            "sizeIssues": 285,
             "literal": 281,
-            "cidr": 276,
+            "cidr": 277,
             "coercing": 273,
-            "describeKey": 271,
-            "ip": 270,
+            "ip": 271,
+            "describeKey$1": 270,
+            "describeKey": 268,
             "invalidValueMessage": 266,
             "coerceNumber": 264,
-            "time": 260,
+            "time": 261,
             "rebuild": 256,
             "optional": 255,
             "readSegment": 254,
             "pipe": 253,
-            "invalidKeyMessage": 252,
+            "invalidKeyMessage": 251,
             "pattern": 248,
             "readEntries": 248,
             "SPECIAL_USE_NAME_PATTERN": 244,
@@ -5697,17 +5878,21 @@
             "addGetters": 238,
             "SIGNATURES": 235,
             "fallback": 234,
-            "leaf": 232,
-            "member": 231,
             "isMultipleOf": 227,
+            "leaf": 225,
             "bigintIn": 224,
+            "describeUnion": 221,
             "childOf": 220,
+            "member": 219,
             "merge": 219,
             "toEmailAddress": 217,
-            "describeUnion": 216,
+            "transform": 216,
+            "describeUnion$1": 215,
             "flatten": 215,
-            "base64": 213,
-            "describeUnion$1": 211,
+            "isBase64": 213,
+            "base64": 212,
+            "assertSizeOptions": 210,
+            "describeUnion$2": 210,
             "toIpAddress": 210,
             "pathAt": 208,
             "wordIssue": 208,
@@ -5721,13 +5906,13 @@
             "isPunycodeHost": 197,
             "failWithFields": 195,
             "guard": 192,
-            "readBound": 189,
-            "formatLeaf": 188,
+            "readBound": 190,
             "toCidr": 188,
             "englishMessages": 187,
             "RULES": 186,
-            "assertSizeOptions": 184,
+            "withRules": 186,
             "toCanonicalIpv6": 183,
+            "formatLeaf": 181,
             "unwrapped": 181,
             "meantIssue": 178,
             "formatPath": 177,
@@ -5744,15 +5929,15 @@
             "assertMessage": 163,
             "tail": 163,
             "runItems": 162,
-            "transform": 160,
             "coerceString": 159,
             "nullable": 159,
             "isBidiHost": 158,
-            "described": 156,
             "placed": 156,
             "URN_PATTERN": 155,
+            "described": 155,
             "phone": 155,
             "format": 154,
+            "creditCard": 153,
             "word": 152,
             "nullish": 150,
             "assertUnshared": 149,
@@ -5760,9 +5945,9 @@
             "toHostlessUrl": 147,
             "BOUNDED_FORMATS": 145,
             "toIssue": 141,
-            "creditCard": 140,
             "partial": 139,
             "assertList": 138,
+            "rule": 136,
             "SEMVER_PATTERN": 135,
             "toDecimal": 135,
             "COERCED_TYPES": 133,
@@ -5772,6 +5957,7 @@
             "ISO_PATTERN": 130,
             "assertOrder": 130,
             "isPlainHost": 130,
+            "keptAt": 130,
             "resultsOf": 130,
             "assertLimit": 129,
             "composed": 128,
@@ -5780,18 +5966,19 @@
             "runEach": 122,
             "IPV4_PATTERN": 121,
             "assertFunction": 121,
+            "momentOf": 121,
             "objectIssue": 121,
-            "momentOf": 120,
+            "COLLECTIONS": 120,
             "startsWith": 120,
             "fail": 119,
             "assertBounds": 118,
             "isResult": 118,
+            "moveFirst": 118,
             "passesLuhn": 118,
             "outOfRange$1": 117,
             "UNITS$1": 116,
-            "rule": 116,
+            "formatFactory": 116,
             "checkReserved": 115,
-            "formatFactory": 115,
             "spendCall": 115,
             "endsWith": 114,
             "func": 114,
@@ -5801,9 +5988,10 @@
             "mapping": 109,
             "outOfRange": 109,
             "unknown": 109,
+            "timeOf": 108,
             "WRITTEN_IPV6_PATTERN": 107,
             "symbol": 107,
-            "timeOf": 107,
+            "keep": 105,
             "never": 105,
             "weigh": 105,
             "pathOf": 104,
@@ -5816,18 +6004,16 @@
             "isBinaryExact": 101,
             "DURATION_PATTERN": 99,
             "listOf": 98,
-            "BASE64_PATTERN": 96,
-            "COLLECTIONS": 96,
+            "COLLECTIONS$1": 96,
             "readUrl": 96,
             "TEL_PATTERN": 93,
             "hasOverlongHost": 93,
             "sizeOf": 93,
-            "COLLECTIONS$1": 92,
-            "describe": 92,
+            "COLLECTIONS$2": 92,
             "quoteText": 92,
             "FIXED_SIZE": 91,
+            "describe": 91,
             "isReverseMapping": 90,
-            "lengthIssue": 90,
             "reserved": 90,
             "lowercase": 88,
             "uppercase": 88,
@@ -5846,8 +6032,8 @@
             "KEEPING_WRAPPERS": 80,
             "isLazyLimit": 80,
             "isPath": 80,
+            "newPaths": 80,
             "conflict": 79,
-            "BASE64URL_PATTERN": 78,
             "fieldFailureOf": 78,
             "isLimit": 78,
             "nonBlank": 78,
@@ -5873,13 +6059,14 @@
             "own": 65,
             "SPECIAL_UUID_PATTERN": 64,
             "MAC_PATTERN": 63,
-            "quote": 63,
             "decimal": 62,
+            "decimal$1": 62,
             "isoDate": 62,
             "picking": 62,
+            "quote": 62,
             "UNITS": 61,
             "fieldFailure": 61,
-            "COLLECTIONS$2": 59,
+            "COLLECTIONS$3": 59,
             "HANGUL_FILLER_PATTERN": 59,
             "PASSING_KINDS": 59,
             "enter": 59,
@@ -5890,9 +6077,9 @@
             "duration": 56,
             "escapeForPattern": 56,
             "formEntriesOf": 56,
+            "isValidDate": 56,
             "CHECK_RESULT_ERROR": 55,
             "brand": 55,
-            "isValidDate": 55,
             "DOMAIN_TEXT_PATTERN": 54,
             "nanoid": 54,
             "typeIssue": 54,
@@ -5908,7 +6095,6 @@
             "invalidValue": 50,
             "notFormat": 50,
             "withFast": 50,
-            "newPaths": 49,
             "omit": 49,
             "pick": 49,
             "required": 49,
@@ -5919,11 +6105,11 @@
             "TEXT_VALUE_PATTERN": 47,
             "isNumber": 45,
             "isNumber$1": 45,
+            "stringFormat": 45,
             "unrecognizedKeyMessage": 45,
             "SPECIAL_SCHEMES": 44,
             "isUndefinedLiteral": 44,
             "resolvedOf": 44,
-            "stringFormat": 44,
             "essenceOf": 43,
             "fastOf": 43,
             "TIME": 42,
@@ -5968,6 +6154,7 @@
             "fasts": 31,
             "param": 31,
             "resolvedLazies": 31,
+            "ruleTests": 31,
             "runs": 31,
             "report": 29,
             "CUID2_PATTERN": 28,
@@ -5991,8 +6178,10 @@
             "isString$1": 25,
             "isSymbol": 25,
             "EUROPEAN_NUMBER_PATTERN": 24,
+            "THREE_LEFT": 24,
             "keepResolved": 24,
             "detached": 23,
+            "ALPHABET": 22,
             "IPV6_GROUP_PATTERN": 22,
             "IPV6_ZONE_PATTERN": 22,
             "NOT_JSON": 22,
@@ -6000,17 +6189,19 @@
             "MARK_PATTERN": 21,
             "RECIPIENT_FIELD_PATTERN": 21,
             "WRITTEN_URL_PATTERN": 21,
-            "more$1": 21,
+            "more$2": 21,
             "ASCII_HOST_PATTERN": 20,
             "ROOT_PATH": 20,
             "SIZE_OPTIONS": 20,
             "more": 20,
+            "more$1": 20,
+            "useMixedRun": 20,
             "PUNYCODE_LABEL_PATTERN": 19,
-            "DESCRIPTION": 18,
             "HEX_PATTERN": 18,
+            "isBase64url": 18,
+            "DESCRIPTION": 17,
             "ENCODED_SEPARATOR_PATTERN": 17,
             "MISS": 17,
-            "isEncoded": 17,
             "DECIMAL_INTEGER_PATTERN": 16,
             "NESTED_PUNYCODE_LABEL_PATTERN": 16,
             "RESERVED_KEY": 15,
@@ -6018,31 +6209,36 @@
             "tooSmallMessage": 15,
             "LEADING_PATTERN": 14,
             "MAX_INT": 14,
+            "URL_ALPHABET": 14,
             "openLevel": 13,
             "PUNYCODE_LABEL_PATTERN$1": 12,
             "SECOND_GROUP_PATTERN": 12,
+            "TWO_LEFT": 12,
             "closeLevel": 12,
             "NONZERO_DIGIT_PATTERN": 11,
             "TRUNK_PREFIX_PATTERN": 11,
             "always": 10,
+            "mixedRunOf": 10,
             "nothing": 10,
             "openLevels": 8,
             "MAX_ISSUES": 7,
             "invalidFormatMessage": 6,
             "invalidUnionMessage": 6,
+            "isEncoded": 6,
             "started": 5,
             "depth": 4,
             "building": 3,
+            "mixedRun": 3,
             "current": 2
           }
         },
         "(unattributed)": {
-          "bytes": 1630
+          "bytes": 1652
         }
       },
-      "gzip": 29982,
-      "minified": 90183,
-      "sha256": "b7d78f9825ab7904e2e7c25a79817b8281c3e3902476f81c0c0a1de8ad1d926b"
+      "gzip": 31536,
+      "minified": 96496,
+      "sha256": "cefd881219265962a6e71b82d6c22e3e3547744efe1ed3cf42638895124f398a"
     }
   }
 }
