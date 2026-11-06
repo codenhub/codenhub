@@ -1,7 +1,7 @@
 ---
 title: JSON Schema
 description: Escreva um validador como um JSON Schema, para o corpo de uma API HTTP, os argumentos de uma ferramenta que um modelo de linguagem chama ou um gerador de formulários.
-source: 7cffb6323c34985f02326fa5baac10fb40002fa0
+source: 570b31fc7ecacf0640ab75eefde0b230b30a2f95
 order: 10
 ---
 
@@ -120,7 +120,7 @@ Um formato é escrito com o nome que o JSON Schema dá a ele, e sem `format` ond
 
 Um formato fica de fora onde o do JSON Schema tem regras mais rígidas: `time` exige um offset, que uma hora do dia como `12:00` nunca tem; `duration` não permite fração, como em `PT0.5S`, nem semanas ao lado de dias, como em `P1W1D`; um endereço IPv6 pode ter uma zona, como em `fe80::1%eth0`, que `ipv6` não permite; e uma URL pode conter `|` ou `^`, que uma URI não pode. A entrada de `email` e `domain` pode ser internacionalizada, como em `user@bücher.example`, o que `email` e `hostname` recusam; `idn-email` e `idn-hostname` serviriam, mas o [ajv-formats](https://github.com/ajv-validator/ajv-formats) não os conhece, e o Ajv, no modo strict padrão, se recusa a compilar um schema com um formato que não conhece. É também por isso que um formato para o qual o JSON Schema não tem nome, como `phone`, `slug` ou um feito com `format`, é escrito sem nenhum.
 
-Um `object` escreve `additionalProperties: false` quando é strict, e o schema do validador ao qual passa as chaves desconhecidas quando tem um, como um `record` escreve o schema dos valores dele. Um objeto passthrough ou que descarta as chaves não escreve nenhum, já que qualquer outra chave passa.
+Um `object` escreve `additionalProperties: false` quando é strict, e o schema do validador ao qual passa as chaves desconhecidas quando tem um, como um `record` escreve o schema dos valores dele. Um objeto passthrough ou que descarta as chaves não escreve nenhum, já que qualquer outra chave passa. O schema não diz nada de `__proto__`, que um objeto passthrough, um com um validador das chaves desconhecidas dele e um `record` rejeitam, então um validador de schemas aceita essa chave ali.
 
 Uma propriedade fica de fora de `required` quando o validador dela aceita `undefined`: `optional`, `nullish`, `unknown`, `fallback`, um `literal` ou um `oneOf` de `undefined`, uma `union` com um desses, ou um `lazy`, `nullable`, `readonly`, `transform` ou `pipe` em volta de um deles. Uma `intersection` fica de fora quando todos os validadores dela aceitam `undefined`. JSON não tem `undefined`, então `literal(undefined)` numa `union` fica de fora do `anyOf` dela, e uma `union` ou um `oneOf` só com ele é escrito como `{ not: {} }`, em que nenhum valor passa.
 
