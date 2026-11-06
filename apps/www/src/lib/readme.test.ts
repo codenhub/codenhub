@@ -39,6 +39,18 @@ describe("renderReadme", () => {
     expect(html).toMatch(/^<h2 class="package-readme-title"[^>]*>@codenhub\/validation<\/h2>/u);
   });
 
+  it("demotes the leading H1 even when preceded by another HTML comment", async () => {
+    const html = await renderReadme(
+      "<!-- source: 783c4dee7188267518be702367f3a8cfe8476b67 -->\n\n<!-- note -->\n\n# @codenhub/validation\n\nValidação de dados.\n",
+      BASES,
+    );
+
+    expect(html).not.toContain("<h1");
+    expect(html).not.toContain("source:");
+    expect(html).toContain("<!-- note -->");
+    expect(html).toMatch(/<h2 class="package-readme-title"[^>]*>@codenhub\/validation<\/h2>/u);
+  });
+
   it("points package-relative links at the file in the release", async () => {
     const html = await renderReadme("See [the issue](docs/errors.md#the-issue) and [notice](./NOTICE).\n", BASES);
 
