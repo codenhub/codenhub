@@ -1,0 +1,51 @@
+---
+import { fillMessage } from "@codenhub/app-shell/messages";
+
+import { messagesFor, type Locale } from "../i18n";
+import { versionRoute, type PackageVersion } from "../lib/catalog";
+
+interface Props {
+  /** Version of the page being read. */
+  active: string;
+  locale: Locale;
+  /** English route path of the page being read, which each option keeps when that version has it. */
+  routePath: string;
+  versions: readonly PackageVersion[];
+}
+
+const { active, locale, routePath, versions } = Astro.props;
+const messages = messagesFor(locale).versions;
+const label = fillMessage(messages.label, { version: active });
+---
+
+{/* The shell's popover menu (`@codenhub/app-shell/popover-menu`), as the language menu is: plain links, so switching works without JavaScript. */}
+<details class="shell-menu version-menu" data-version-menu>
+  <summary aria-label={label} class="shell-menu-trigger version-menu-trigger" title={label}>
+    v{active}
+    <i aria-hidden="true" class="ic-lucide-chevron-down shell-menu-chevron"></i>
+  </summary>
+  <ul class="shell-menu-list">
+    {
+      versions.map((version) => (
+        <li>
+          <a
+            aria-current={version.version === active ? "page" : undefined}
+            class="shell-menu-option"
+            href={versionRoute(version, routePath, locale)}
+          >
+            v{version.version}
+            {version.version === active && <i aria-hidden="true" class="ic-lucide-check" />}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</details>
+
+<script>
+  import { enhancePopoverMenu } from "@codenhub/app-shell/popover-menu";
+
+  for (const menu of document.querySelectorAll<HTMLDetailsElement>("[data-version-menu]")) {
+    enhancePopoverMenu(menu);
+  }
+</script>

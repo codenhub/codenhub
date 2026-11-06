@@ -1,8 +1,12 @@
-import { buildPublishedSnapshot, type PublishedSnapshotOptions } from "@codenhub/tools/release";
+import {
+  buildPublishedSnapshot,
+  type PublishedSnapshotOptions,
+  type PublishedSnapshotResult,
+} from "@codenhub/tools/release";
 import type { AstroIntegration } from "astro";
 
 interface IntegrationOptions extends Pick<PublishedSnapshotOptions, "repoRoot" | "snapshotRoot"> {
-  build?: (options: PublishedSnapshotOptions) => Promise<void>;
+  build?: (options: PublishedSnapshotOptions) => Promise<PublishedSnapshotResult>;
 }
 
 /**
@@ -24,6 +28,10 @@ export function readsPublishedSnapshot(command: string): boolean {
 /**
  * Populates the tag-scoped documentation snapshot before a production build.
  *
+ * The snapshot includes each package's archived documentation versions
+ * (`docs/specs/packages-docs-versions.md`). A version the builder leaves out
+ * is logged as a warning and does not fail the build.
+ *
  * `astro dev` keeps `catalog.ts` reading `packages/*` live, so editing a
  * package's docs during local authoring still hot-reloads.
  * {@link readsPublishedSnapshot} decides, so this stays in step with the
@@ -36,11 +44,18 @@ export function createPublishedDocsSnapshotIntegration(options: IntegrationOptio
   return {
     name: "codenhub-published-docs-snapshot",
     hooks: {
-      "astro:config:setup": async ({ command }) => {
+      "astro:config:setup": async ({ command, logger }) => {
         if (!readsPublishedSnapshot(command)) {
           return;
         }
-        await build({ repoRoot: options.repoRoot, snapshotRoot: options.snapshotRoot });
+        const { warnings } = await build({
+          archives: true,
+          repoRoot: options.repoRoot,
+          snapshotRoot: options.snapshotRoot,
+        });
+        for (const warning of warnings) {
+          logger.warn(warning);
+        }
       },
     },
   };

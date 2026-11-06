@@ -1,6 +1,10 @@
 ---
+import { TRANSLATION_LOCALES } from "@codenhub/tools/documentation";
+
 import { localizePath, messagesFor, type Locale } from "../i18n";
 import BaseLayout from "../layouts/base-layout.astro";
+import { versionRedirectSources } from "../lib/catalog";
+import { buildVersionRedirects } from "../lib/version-redirects";
 import { siteConfig } from "../site-config";
 
 interface Props {
@@ -11,9 +15,23 @@ interface Props {
 const { locale } = Astro.props;
 const { notFound } = messagesFor(locale);
 const packagesHref = `${siteConfig.wwwUrl}${localizePath(locale, "/packages/")}`;
+
+/*
+ * A release the site does not serve redirects from here rather than from
+ * `_redirects`, whose 100-rule limit on wildcards two rules per release would
+ * outgrow (`docs/specs/packages-docs-versions.md`, "URLs"). The deployment
+ * serves this page for every missing path, so the script below sees each one.
+ * `<` is escaped so the JSON cannot close its own script element.
+ */
+const redirects = buildVersionRedirects(versionRedirectSources);
+const redirectData =
+  Object.keys(redirects).length === 0
+    ? undefined
+    : JSON.stringify({ localePrefixes: TRANSLATION_LOCALES, redirects }).replaceAll("<", "\\u003c");
 ---
 
 <BaseLayout description={notFound.description} locale={locale} title={notFound.title}>
+  {redirectData !== undefined && <script id="version-redirects" is:inline set:html={redirectData} type="application/json" />}
   <main aria-labelledby="not-found-title" class="section section-content wide" id="main-content">
     <p class="not-found-status">404</p>
     <h1 class="text-title-lg" id="not-found-title">{notFound.title}</h1>
@@ -23,3 +41,16 @@ const packagesHref = `${siteConfig.wwwUrl}${localizePath(locale, "/packages/")}`
     </p>
   </main>
 </BaseLayout>
+
+<script>
+  import { findVersionRedirect, type VersionRedirects } from "../lib/version-redirect-target";
+
+  const data = document.getElementById("version-redirects")?.textContent;
+  if (data !== undefined && data !== null) {
+    const { localePrefixes, redirects } = JSON.parse(data) as { localePrefixes: string[]; redirects: VersionRedirects };
+    const target = findVersionRedirect(window.location.pathname, redirects, localePrefixes);
+    if (target !== undefined) {
+      window.location.replace(`${target}${window.location.search}${window.location.hash}`);
+    }
+  }
+</script>

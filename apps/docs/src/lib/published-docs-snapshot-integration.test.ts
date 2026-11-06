@@ -29,18 +29,20 @@ describe("readsPublishedSnapshot", () => {
 });
 
 describe("Astro published-docs snapshot integration", () => {
-  it("builds the snapshot for a production build", async () => {
+  it("builds the snapshot with archived versions for a production build and logs what it left out", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    const build = vi.fn().mockResolvedValue(undefined);
+    const build = vi.fn().mockResolvedValue({ warnings: ["Left out the archived docs of @codenhub/x@1.0.0."] });
+    const logger = { warn: vi.fn() };
     const integration = createPublishedDocsSnapshotIntegration({ build, ...OPTIONS });
 
-    await integration.hooks["astro:config:setup"]!({ command: "build" } as never);
+    await integration.hooks["astro:config:setup"]!({ command: "build", logger } as never);
 
-    expect(build).toHaveBeenCalledWith(OPTIONS);
+    expect(build).toHaveBeenCalledWith({ ...OPTIONS, archives: true });
+    expect(logger.warn).toHaveBeenCalledWith("Left out the archived docs of @codenhub/x@1.0.0.");
   });
 
   it("does nothing for astro dev, so local doc edits keep hot-reloading live", async () => {
-    const build = vi.fn().mockResolvedValue(undefined);
+    const build = vi.fn().mockResolvedValue({ warnings: [] });
     const integration = createPublishedDocsSnapshotIntegration({ build, ...OPTIONS });
 
     await integration.hooks["astro:config:setup"]!({ command: "dev" } as never);

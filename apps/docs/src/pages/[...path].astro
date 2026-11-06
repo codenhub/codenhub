@@ -1,6 +1,6 @@
 ---
 import type { Locale } from "../i18n";
-import { packages, publishedPages, type PublicDocument, type PublicPackage } from "../lib/catalog";
+import { archivedPackages, packages, publishedPages, type PublicDocument, type PublicPackage } from "../lib/catalog";
 import DocsLayout from "../layouts/docs-layout.astro";
 
 interface Props {
@@ -10,7 +10,7 @@ interface Props {
 }
 
 export function getStaticPaths() {
-  return packages.flatMap((packageEntry) =>
+  return [...packages, ...archivedPackages].flatMap((packageEntry) =>
     publishedPages(packageEntry).map(({ document, locale }) => ({
       params: { path: document.route.slice(1, -1) },
       props: { currentPackage: packageEntry, document, locale },

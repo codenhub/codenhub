@@ -29,6 +29,7 @@ export default defineConfig({
     createDocumentationIntegration({
       packagesRoot,
       publishedPackagesRoot: snapshotPackagesRoot(publishedDocsSnapshotRoot),
+      publishedSnapshotRoot: publishedDocsSnapshotRoot,
     }),
     createLocaleNotFoundIntegration(TRANSLATION_LOCALES),
   ],

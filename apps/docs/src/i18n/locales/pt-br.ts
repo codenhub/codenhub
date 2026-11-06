@@ -32,6 +32,11 @@ export const ptBR: Dictionary = {
   inEnglish: "em inglês",
   untranslated: "Esta página ainda não foi traduzida para o português, por isso aparece em inglês.",
   onThisPage: "Nesta página",
+  versions: {
+    label: "Versão {version}, escolher outra",
+    archived: "Esta é a documentação da versão {version}, uma versão anterior.",
+    readCurrent: "Ver a versão atual",
+  },
   sections: { changelog: "Changelog", guides: "Guias", reference: "Referência" },
   demo: "Demo",
   backToTop: "Voltar ao topo",

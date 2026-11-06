@@ -51,6 +51,22 @@ html {
   @apply text-label-lg mb-0 font-bold;
 }
 
+/* The version selector beside the package title: a pill that opens the shell's
+   popover list (`.shell-menu`, as the language menu does). The list keeps the
+   shell's right alignment, opening back across the rail from the pill: the
+   rail's panel scrolls, so a list reaching past its edge would be clipped. */
+.version-menu {
+  @apply ml-auto shrink-0;
+}
+
+.version-menu-trigger {
+  @apply border-border text-text-secondary hover:text-text hover:border-border-hover cursor-pointer gap-1 rounded-full border px-2.5 py-0.5 text-sm font-medium transition-colors;
+}
+
+.version-menu .shell-menu-list {
+  @apply min-w-32;
+}
+
 /* The package's Guides / Reference / Changelog switcher: a short vertical list
    in a bordered box above the page tree, so it reads as its own control and not
    as three more links in the rail. Each row links to its section's entry page
@@ -235,7 +251,8 @@ html {
 }
 
 .document-body .markdown-content h1,
-.document-body > .untranslated-notice {
+.document-body > .untranslated-notice,
+.document-body > .archived-notice {
   padding-inline-end: calc(var(--page-actions-width) + 1rem);
 }
 
@@ -245,7 +262,8 @@ html {
   }
 
   .document-body .markdown-content h1,
-  .document-body > .untranslated-notice {
+  .document-body > .untranslated-notice,
+  .document-body > .archived-notice {
     padding-inline-end: 0;
   }
 }
@@ -254,12 +272,14 @@ html {
    the page reads in English. It is page metadata, not content, so it sits on
    the page actions' row at their size and tone (`top-1`, `h-9`, `text-sm`)
    instead of competing with the H1. */
-.untranslated-notice {
+.untranslated-notice,
+.archived-notice {
   @apply text-text-secondary mt-1 mb-6 flex min-h-9 items-center gap-2 text-sm leading-snug;
   --ic-size: 1rem;
 }
 
-.untranslated-notice > i {
+.untranslated-notice > i,
+.archived-notice > i {
   @apply shrink-0;
 }
 

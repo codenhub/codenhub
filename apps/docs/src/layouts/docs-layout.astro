@@ -5,7 +5,9 @@ import PageActions from "../components/page-actions.astro";
 import PageOutline from "../components/page-outline.astro";
 import PackageNavigation from "../components/package-navigation.astro";
 import { defaultLocale, messagesFor, type Locale } from "../i18n";
-import { isReferenceDocument, type PublicDocument, type PublicPackage } from "../lib/catalog";
+import { fillMessage } from "@codenhub/app-shell/messages";
+
+import { isReferenceDocument, versionRoute, type PublicDocument, type PublicPackage } from "../lib/catalog";
 import BaseLayout from "./base-layout.astro";
 
 interface Props {
@@ -28,6 +30,14 @@ const browserTitle =
   isReferenceDocument(document) && headingTitle !== undefined ? headingTitle : document.title;
 // An English body under a locale prefix (`docs/specs/packages-translations.md`, "Documentation site").
 const untranslated = document.lang !== locale;
+// An archived version's notice links the same page in the current version
+// (`docs/specs/packages-docs-versions.md`, "Presentation").
+const { archivedVersion } = currentPackage;
+const currentVersion = currentPackage.versions.find(({ current }) => current);
+const currentVersionRoute =
+  archivedVersion === undefined || currentVersion === undefined
+    ? undefined
+    : versionRoute(currentVersion, document.routePath, locale);
 ---
 
 <BaseLayout
@@ -36,6 +46,7 @@ const untranslated = document.lang !== locale;
   description={document.description ?? currentPackage.description}
   englishRoute={document.englishRoute}
   locale={locale}
+  noindex={archivedVersion !== undefined}
   sectionTitle={currentPackage.label}
   title={browserTitle}
   untranslated={untranslated}
@@ -43,19 +54,40 @@ const untranslated = document.lang !== locale;
   <details class="mobile-navigation">
     <summary>{messages.browse}</summary>
     <div class="mobile-navigation-panel">
-      <PackageNavigation currentPackage={currentPackage} currentRoute={document.route} locale={locale} />
+      <PackageNavigation
+        currentPackage={currentPackage}
+        currentRoute={document.route}
+        locale={locale}
+        routePath={document.routePath}
+      />
     </div>
   </details>
 
   <div class="docs-shell section-content wide">
     <aside class="left-rail">
-      <PackageNavigation currentPackage={currentPackage} currentRoute={document.route} locale={locale} />
+      <PackageNavigation
+        currentPackage={currentPackage}
+        currentRoute={document.route}
+        locale={locale}
+        routePath={document.routePath}
+      />
     </aside>
 
     <main class="document-column" id="main-content">
       <div class="document-body">
         {tocHeadings.length > 0 && <PageOutline headings={tocHeadings} label={messages.onThisPage} />}
         <PageActions locale={locale} route={document.route} />
+        {
+          archivedVersion !== undefined && (
+            <p class="archived-notice" role="note">
+              <i aria-hidden="true" class="ic-lucide-history" />
+              <span>
+                {fillMessage(messages.versions.archived, { version: archivedVersion })}{" "}
+                {currentVersionRoute !== undefined && <a href={currentVersionRoute}>{messages.versions.readCurrent}</a>}
+              </span>
+            </p>
+          )
+        }
         {
           untranslated && (
             <p class="untranslated-notice" role="note">

@@ -6,11 +6,15 @@ import {
   assertSingleH1,
   buildPackageDefinitions,
   comparePublicDocuments,
+  parseArchivedDocumentFrontmatter,
   parsePublicDocumentFrontmatter,
+  resolvePackageDocuments,
   TRANSLATION_LOCALES,
+  type PackageDefinition,
   type PackageStatus,
   type TranslationLocale,
 } from "@codenhub/tools/documentation";
+import type { SnapshotDocsVersions, SnapshotDocsVersionsFile } from "@codenhub/tools/release";
 import type { MarkdownHeading, MarkdownInstance } from "astro";
 
 import { defaultLocale, localizePath, messagesFor, type Locale } from "../i18n";
@@ -107,7 +111,24 @@ export function insertReferenceDeck(
   return `${html.slice(0, at)}<div class="reference-deck">${parts.join("")}</div>${html.slice(at)}`;
 }
 
+/** One documented version of a package, as the version selector lists it. */
+export interface PackageVersion {
+  /** Whether this is the current version, served at the package's unversioned route. */
+  current: boolean;
+  /** English route path of every page the version publishes, so switching keeps the reader's page. */
+  routePaths: ReadonlySet<string>;
+  /** The version's route prefix: the package slug, then `/<version>` for an archived version. */
+  routeSlug: string;
+  version: string;
+}
+
 export interface PublicPackage {
+  /**
+   * The archived version these pages are of (`docs/specs/packages-docs-versions.md`);
+   * absent for the current version. An archived package shares the current
+   * one's identity: label, slug, status, and links.
+   */
+  archivedVersion?: string;
   description?: string;
   documents: PublicDocument[];
   /** Scoped `demo.codenhub.dev` URL, only when this package publishes a `demo/`. */
@@ -130,6 +151,11 @@ export interface PublicPackage {
   npmLabel?: string;
   slug: string;
   status: PackageStatus;
+  /**
+   * The current version, then each archived one, newest first; empty when the
+   * package has no archived version, since a list of one is not a choice.
+   */
+  versions: PackageVersion[];
 }
 
 // Two roots, chosen by `import.meta.env.PROD`: `astro dev` keeps reading the
@@ -158,6 +184,21 @@ const documentModulesSnapshot = import.meta.glob<PublicDocumentModule>([
   "!../../.codenhub-published-docs/packages/**/docs/internal/**",
 ]);
 const documentModules = import.meta.env.PROD ? documentModulesSnapshot : documentModulesLive;
+// Archived versions exist only in the snapshot, so `astro dev` shows the
+// current version alone (`docs/specs/packages-docs-versions.md`).
+const ARCHIVED_ROOT = "../../.codenhub-published-docs/archived";
+const archivedDocumentModulesSnapshot = import.meta.glob<PublicDocumentModule>([
+  "../../.codenhub-published-docs/archived/**/docs/**/*.md",
+  "!../../.codenhub-published-docs/archived/**/docs/internal/**",
+]);
+const archivedDocumentModules = import.meta.env.PROD ? archivedDocumentModulesSnapshot : {};
+const docsVersionsSnapshot = Object.values(
+  import.meta.glob<SnapshotDocsVersionsFile>("../../.codenhub-published-docs/docs-versions.json", {
+    eager: true,
+    import: "default",
+  }),
+)[0];
+const docsVersions: SnapshotDocsVersionsFile = (import.meta.env.PROD ? docsVersionsSnapshot : undefined) ?? {};
 // Keys only: whether a package has a `demo/` at all is enough to decide
 // whether its scoped Demo link exists; the aggregator contract in
 // `docs/specs/packages-demo.md` is what actually mounts it.
@@ -197,16 +238,36 @@ interface LoadableDocument {
   sourcePath: string;
 }
 
-async function loadDocument(slug: string, definition: LoadableDocument): Promise<LoadedDocument> {
-  const load = documentModules[definition.sourcePath];
+/** One version of a package's documents and where to load them from. */
+interface VersionSource {
+  /**
+   * Whether this is an archived version, built leniently: frontmatter keeps
+   * what it can read and the documentation checks do not run
+   * (`docs/specs/packages-docs-versions.md`, "Building archived versions").
+   */
+  archived: boolean;
+  definition: Pick<PackageDefinition, "documents" | "translations">;
+  modules: Record<string, () => Promise<PublicDocumentModule>>;
+  /** The version's route prefix, which its links and Markdown resolve against. */
+  slug: string;
+}
+
+async function loadDocument(source: VersionSource, definition: LoadableDocument): Promise<LoadedDocument> {
+  const { slug } = source;
+  const load = source.modules[definition.sourcePath];
   if (load === undefined) {
     throw new Error(`Unable to load documentation source ${definition.sourcePath}.`);
   }
 
   const documentModule = await load();
   const headings = documentModule.getHeadings();
-  const frontmatter = parsePublicDocumentFrontmatter(documentModule.frontmatter, definition.sourcePath);
-  assertSingleH1(headings, definition.sourcePath);
+  const frontmatter = (source.archived ? parseArchivedDocumentFrontmatter : parsePublicDocumentFrontmatter)(
+    documentModule.frontmatter,
+    definition.sourcePath,
+  );
+  if (!source.archived) {
+    assertSingleH1(headings, definition.sourcePath);
+  }
   const rawHtml = await documentModule.compiledContent();
 
   const linkedHtml = rewritePackageMarkdownLinks(rawHtml, {
@@ -214,7 +275,9 @@ async function loadDocument(slug: string, definition: LoadableDocument): Promise
     pageLocale: definition.pageLocale,
     sourceRelativePath: definition.docsPath,
   });
-  const isReference = isReferenceDocument({ relativePath: definition.relativePath });
+  const isReference = isReferenceDocument({
+    relativePath: definition.relativePath,
+  });
   const englishRoute = `/${slug}/${definition.routePath}`.replace(/\/$/, "") + "/";
 
   return {
@@ -227,7 +290,10 @@ async function loadDocument(slug: string, definition: LoadableDocument): Promise
     englishRoute,
     headings,
     html: isReference
-      ? insertReferenceDeck(linkedHtml, { description: frontmatter.description, since: frontmatter.since })
+      ? insertReferenceDeck(linkedHtml, {
+          description: frontmatter.description,
+          since: frontmatter.since,
+        })
       : linkedHtml,
     lang: definition.lang,
     markdown: publishDocumentMarkdown({
@@ -317,76 +383,93 @@ function finishDocuments(loaded: readonly LoadedDocument[]): PublicDocument[] {
       const rest = relativePath.slice(folder.length);
       return relativePath.startsWith(folder) && rest !== "index.md" && !rest.includes("/");
     });
-    return { ...document, html: annotateCuratedLinks(document.html, siblings) };
+    return {
+      ...document,
+      html: annotateCuratedLinks(document.html, siblings),
+    };
   });
   return documents.sort(comparePublicDocuments);
+}
+
+/**
+ * Loads one version of a package: its English pages, and every page under each locale.
+ * @param source The version's documents and where they load from.
+ * @returns The English pages and each locale's pages.
+ */
+async function loadVersion(source: VersionSource): Promise<Pick<PublicPackage, "documents" | "localeDocuments">> {
+  const { definition: packageDefinition, slug } = source;
+  const englishDocuments = applyFolderCuration(
+    await Promise.all(
+      packageDefinition.documents.map((definition) =>
+        loadDocument(source, {
+          ...definition,
+          docsPath: definition.relativePath,
+          lang: defaultLocale,
+          pageLocale: defaultLocale,
+        }),
+      ),
+    ),
+  );
+  // Curation is the English document's: a translation of a page the English
+  // curated index leaves out is not published either.
+  const publishedPaths = new Set(englishDocuments.map(({ relativePath }) => relativePath));
+  const translatedDocuments = await Promise.all(
+    packageDefinition.translations
+      .filter(({ relativePath }) => publishedPaths.has(relativePath))
+      .map((definition) =>
+        loadDocument(source, {
+          ...definition,
+          docsPath: `${definition.locale}/${definition.relativePath}`,
+          lang: definition.locale,
+          pageLocale: definition.locale,
+        }),
+      ),
+  );
+
+  // Each version of a page names every version, itself included, as an alternate.
+  for (const english of englishDocuments) {
+    const translations = translatedDocuments.filter(({ relativePath }) => relativePath === english.relativePath);
+    const alternates = pageAlternates(english, translations);
+    for (const version of [english, ...translations]) {
+      version.alternates = alternates;
+    }
+  }
+
+  const documents = finishDocuments(englishDocuments);
+  // Every locale publishes every page: the translation where there is one,
+  // and the English body inside the locale's interface otherwise.
+  const localeEntries = await Promise.all(
+    TRANSLATION_LOCALES.map(async (locale) => {
+      const translations = new Map(
+        translatedDocuments.filter(({ lang }) => lang === locale).map((document) => [document.relativePath, document]),
+      );
+      // Curation sets a kept sibling's `order` from its link position in the
+      // English index, so the translation takes the English page's place.
+      const pages = await Promise.all(
+        englishDocuments.map((english) => {
+          const translation = translations.get(english.relativePath);
+          return translation === undefined
+            ? untranslatedPage(english, slug, locale)
+            : { ...translation, order: english.order };
+        }),
+      );
+      return [locale, finishDocuments(pages)] as const;
+    }),
+  );
+  const localeDocuments = Object.fromEntries(localeEntries) as Record<TranslationLocale, PublicDocument[]>;
+  return { documents, localeDocuments };
 }
 
 async function loadCatalog(): Promise<PublicPackage[]> {
   return Promise.all(
     packageDefinitions.map(async (packageDefinition) => {
       const { slug } = packageDefinition;
-      const englishDocuments = applyFolderCuration(
-        await Promise.all(
-          packageDefinition.documents.map((definition) =>
-            loadDocument(slug, {
-              ...definition,
-              docsPath: definition.relativePath,
-              lang: defaultLocale,
-              pageLocale: defaultLocale,
-            }),
-          ),
-        ),
-      );
-      // Curation is the English document's: a translation of a page the English
-      // curated index leaves out is not published either.
-      const publishedPaths = new Set(englishDocuments.map(({ relativePath }) => relativePath));
-      const translatedDocuments = await Promise.all(
-        packageDefinition.translations
-          .filter(({ relativePath }) => publishedPaths.has(relativePath))
-          .map((definition) =>
-            loadDocument(slug, {
-              ...definition,
-              docsPath: `${definition.locale}/${definition.relativePath}`,
-              lang: definition.locale,
-              pageLocale: definition.locale,
-            }),
-          ),
-      );
-
-      // Each version of a page names every version, itself included, as an alternate.
-      for (const english of englishDocuments) {
-        const translations = translatedDocuments.filter(({ relativePath }) => relativePath === english.relativePath);
-        const alternates = pageAlternates(english, translations);
-        for (const version of [english, ...translations]) {
-          version.alternates = alternates;
-        }
-      }
-
-      const documents = finishDocuments(englishDocuments);
-      // Every locale publishes every page: the translation where there is one,
-      // and the English body inside the locale's interface otherwise.
-      const localeEntries = await Promise.all(
-        TRANSLATION_LOCALES.map(async (locale) => {
-          const translations = new Map(
-            translatedDocuments
-              .filter(({ lang }) => lang === locale)
-              .map((document) => [document.relativePath, document]),
-          );
-          // Curation sets a kept sibling's `order` from its link position in the
-          // English index, so the translation takes the English page's place.
-          const pages = await Promise.all(
-            englishDocuments.map((english) => {
-              const translation = translations.get(english.relativePath);
-              return translation === undefined
-                ? untranslatedPage(english, slug, locale)
-                : { ...translation, order: english.order };
-            }),
-          );
-          return [locale, finishDocuments(pages)] as const;
-        }),
-      );
-      const localeDocuments = Object.fromEntries(localeEntries) as Record<TranslationLocale, PublicDocument[]>;
+      const { documents, localeDocuments } = await loadVersion({
+        archived: false,
+        definition: packageDefinition,
+        modules: documentModules,
+        slug,
+      });
 
       const manifest = manifestModules[packageDefinition.manifestPath];
       const name = readManifestString(manifest, "name");
@@ -410,9 +493,93 @@ async function loadCatalog(): Promise<PublicPackage[]> {
         npmUrl,
         slug,
         status: packageDefinition.status,
+        versions: [],
       };
     }),
   );
+}
+
+/**
+ * Builds a package's archived versions, leaving out each one that cannot be built.
+ *
+ * A tag cannot be fixed, so a version that still fails after lenient loading
+ * is dropped with a warning naming the package, the version, and the error,
+ * and its URLs redirect as for a release that is not kept
+ * (`docs/specs/packages-docs-versions.md`, "Building archived versions").
+ * @param currentPackage The package's current version, whose identity every archived version shares.
+ * @param entry The package's versions in the snapshot.
+ * @returns Each archived version that built, newest first.
+ */
+async function loadArchivedVersions(
+  currentPackage: PublicPackage,
+  entry: SnapshotDocsVersions,
+): Promise<PublicPackage[]> {
+  const sourcePaths = Object.keys(archivedDocumentModules);
+  const loaded = await Promise.all(
+    entry.archived.map(async (version): Promise<PublicPackage | undefined> => {
+      const routeSlug = `${currentPackage.slug}/${version}`;
+      const rootPath = `${ARCHIVED_ROOT}/${entry.location}/${version}`;
+      try {
+        const definition = resolvePackageDocuments(rootPath, sourcePaths, {
+          label: currentPackage.label,
+          manifestPath: `${rootPath}/package.json`,
+          slug: routeSlug,
+        });
+        const pages = await loadVersion({
+          archived: true,
+          definition,
+          modules: archivedDocumentModules,
+          slug: routeSlug,
+        });
+        return { ...currentPackage, ...pages, archivedVersion: version };
+      } catch (error) {
+        console.warn(
+          `Left out the archived docs of ${currentPackage.name ?? currentPackage.slug}@${version}: ${(error as Error).message}`,
+        );
+        return undefined;
+      }
+    }),
+  );
+  return loaded.filter((archived) => archived !== undefined);
+}
+
+/**
+ * The selector's list for a package: its current version, then each archived one.
+ * @param currentPackage The current version.
+ * @param currentVersion The current version's number.
+ * @param archived The archived versions that built, newest first.
+ * @returns The versions, or none when nothing is archived.
+ */
+function listVersions(
+  currentPackage: PublicPackage,
+  currentVersion: string,
+  archived: readonly PublicPackage[],
+): PackageVersion[] {
+  if (archived.length === 0) {
+    return [];
+  }
+  const describe = (publicPackage: PublicPackage, version: string, current: boolean): PackageVersion => ({
+    current,
+    routePaths: new Set(publicPackage.documents.map(({ routePath }) => routePath)),
+    routeSlug: current ? publicPackage.slug : `${publicPackage.slug}/${version}`,
+    version,
+  });
+  return [
+    describe(currentPackage, currentVersion, true),
+    ...archived.map((publicPackage) => describe(publicPackage, publicPackage.archivedVersion as string, false)),
+  ];
+}
+
+/**
+ * The route of a page in another version of its package.
+ * @param version The version to open.
+ * @param routePath The page's English route path.
+ * @param locale The page's language, whose prefix the route keeps.
+ * @returns The same page in that version, or that version's index when it has no such page.
+ */
+export function versionRoute(version: PackageVersion, routePath: string, locale: Locale): string {
+  const path = version.routePaths.has(routePath) ? routePath : "";
+  return localizePath(locale, `/${version.routeSlug}/${path}`.replace(/\/$/, "") + "/");
 }
 
 /**
@@ -436,13 +603,76 @@ export function navigationDocuments(publicPackage: PublicPackage, locale: Locale
  */
 export function publishedPages(publicPackage: PublicPackage): { document: PublicDocument; locale: Locale }[] {
   return [
-    ...publicPackage.documents.map((document) => ({ document, locale: defaultLocale as Locale })),
+    ...publicPackage.documents.map((document) => ({
+      document,
+      locale: defaultLocale as Locale,
+    })),
     ...TRANSLATION_LOCALES.flatMap((locale) =>
-      publicPackage.localeDocuments[locale].map((document) => ({ document, locale: locale as Locale })),
+      publicPackage.localeDocuments[locale].map((document) => ({
+        document,
+        locale: locale as Locale,
+      })),
     ),
   ];
 }
 
 const packageDefinitions = buildPackageDefinitions(manifestModules, Object.keys(documentModules));
 
-export const packages = await loadCatalog();
+const currentPackages = await loadCatalog();
+
+/** What the not-found page needs to send each release the site does not serve to one it does. */
+export interface VersionRedirectSource {
+  /** Archived versions that built. */
+  archived: string[];
+  current: string;
+  slug: string;
+  /** Every released version, pre-releases included. */
+  versions: string[];
+}
+
+const archivedEntries = await Promise.all(
+  currentPackages.map(async (currentPackage) => {
+    const entry = currentPackage.name === undefined ? undefined : docsVersions[currentPackage.name];
+    return entry === undefined
+      ? undefined
+      : {
+          archived: await loadArchivedVersions(currentPackage, entry),
+          currentPackage,
+          entry,
+        };
+  }),
+);
+
+/** The current version of every documented package. Search, the sitemap, and the root `llms.txt` list only these. */
+export const packages: PublicPackage[] = currentPackages.map((currentPackage) => {
+  const found = archivedEntries.find((archived) => archived?.currentPackage === currentPackage);
+  return found === undefined
+    ? currentPackage
+    : {
+        ...currentPackage,
+        versions: listVersions(currentPackage, found.entry.current, found.archived),
+      };
+});
+
+/** Every archived version that built, each with its package's version list. Rendered, but never indexed. */
+export const archivedPackages: PublicPackage[] = archivedEntries.flatMap((found) => {
+  if (found === undefined) {
+    return [];
+  }
+  const versions = listVersions(found.currentPackage, found.entry.current, found.archived);
+  return found.archived.map((archived) => ({ ...archived, versions }));
+});
+
+/** Each package with versions in the snapshot, for version redirects; empty outside a production build. */
+export const versionRedirectSources: VersionRedirectSource[] = archivedEntries.flatMap((found) =>
+  found === undefined
+    ? []
+    : [
+        {
+          archived: found.archived.map(({ archivedVersion }) => archivedVersion as string),
+          current: found.entry.current,
+          slug: found.currentPackage.slug,
+          versions: found.entry.versions,
+        },
+      ],
+);

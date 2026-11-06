@@ -32,6 +32,11 @@ export const es: Dictionary = {
   inEnglish: "en inglés",
   untranslated: "Esta página aún no está traducida al español, así que se muestra en inglés.",
   onThisPage: "En esta página",
+  versions: {
+    label: "Versión {version}, elegir otra",
+    archived: "Esta es la documentación de la versión {version}, una versión anterior.",
+    readCurrent: "Ver la versión actual",
+  },
   sections: { changelog: "Changelog", guides: "Guías", reference: "Referencia" },
   demo: "Demo",
   backToTop: "Volver arriba",

@@ -34,7 +34,9 @@ async function readPublishedResource(resource: PublicResource): Promise<Uint8Arr
   if (!LLMS_FILES.has(resource.packagePath)) {
     return content;
   }
-  const slug = resource.routePath.split("/")[1] as string;
+  // Everything between the leading slash and the file: an archived version's
+  // route keeps its version, `/<slug>/<version>/llms.txt`.
+  const slug = resource.routePath.slice(1, -(resource.packagePath.length + 1));
   return new TextEncoder().encode(publishLlmsText(content.toString("utf8"), { siteUrl: siteConfig.siteUrl, slug }));
 }
 
