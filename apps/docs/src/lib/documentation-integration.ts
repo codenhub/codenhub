@@ -4,10 +4,12 @@ import { fileURLToPath } from "node:url";
 import { loadWorkspaceDocumentation, type PublicResource } from "@codenhub/tools/documentation";
 import type { AstroIntegration } from "astro";
 
+import { loadArchivedResources, type ArchivedResources } from "./archived-resources";
 import { readsPublishedSnapshot } from "./published-docs-snapshot-integration";
 import { copyPublicResources, createResourceMiddleware } from "./resource-publisher";
 
 interface IntegrationOptions {
+  loadArchivedResources?: (snapshotRoot: string) => Promise<ArchivedResources>;
   loadDocumentation?: (packagesRoot: string) => Promise<PublicResource[]>;
   /** Packages read outside a production build: the working tree, so local edits show immediately. */
   packagesRoot: string;
@@ -17,6 +19,8 @@ interface IntegrationOptions {
    * exist when this integration's setup runs.
    */
   publishedPackagesRoot: string;
+  /** The snapshot directory, whose archived versions a production build also publishes. */
+  publishedSnapshotRoot: string;
 }
 
 interface ConnectRequest {
@@ -65,14 +69,21 @@ function createResourcePlugin(resources: PublicResource[]) {
 
 export function createDocumentationIntegration(options: IntegrationOptions): AstroIntegration {
   const loadDocumentation = options.loadDocumentation ?? loadWorkspaceDocumentation;
+  const loadArchived = options.loadArchivedResources ?? loadArchivedResources;
   let resources: PublicResource[] = [];
   return {
     name: "codenhub-package-documentation",
     hooks: {
-      "astro:config:setup": async ({ command, updateConfig }) => {
-        resources = await loadDocumentation(
-          readsPublishedSnapshot(command) ? options.publishedPackagesRoot : options.packagesRoot,
-        );
+      "astro:config:setup": async ({ command, logger, updateConfig }) => {
+        if (readsPublishedSnapshot(command)) {
+          const archived = await loadArchived(options.publishedSnapshotRoot);
+          for (const warning of archived.warnings) {
+            logger.warn(warning);
+          }
+          resources = [...(await loadDocumentation(options.publishedPackagesRoot)), ...archived.resources];
+        } else {
+          resources = await loadDocumentation(options.packagesRoot);
+        }
         updateConfig({ vite: { plugins: [createResourcePlugin(resources)] } });
       },
       "astro:build:done": async ({ dir }) => {

@@ -26,6 +26,8 @@ interface Props {
   title?: string;
   /** Whether the page shows an English body under a locale prefix, which names the English page as canonical. */
   untranslated?: boolean;
+  /** Whether search engines should leave the page out, as for an archived version's page. */
+  noindex?: boolean;
   /**
    * The package this page belongs to, when it is package-scoped. Scopes the
    * header's npm and GitHub links to this package. A package's demo is linked
@@ -40,6 +42,7 @@ const {
   description,
   englishRoute,
   locale = defaultLocale,
+  noindex = false,
   sectionTitle,
   title,
   untranslated = false,
@@ -87,6 +90,7 @@ const localLinks = [{ href: wwwPath("/packages/"), label: messages.packages }];
   title={title}
 >
   {locale === defaultLocale && englishRoute !== undefined && <LocaleRedirect slot="head" targets={redirectTargets} />}
+  {noindex && <meta content="noindex" name="robots" slot="head" />}
   {
     untranslated && englishRoute !== undefined && (
       <link href={new URL(englishRoute, siteConfig.siteUrl).href} rel="canonical" slot="head" />

@@ -23,10 +23,12 @@
     "github-slugger": "2.0.0",
     "remark-parse": "11.0.0",
     "rolldown": "1.2.16",
+    "semver": "7.8.5",
     "unified": "11.0.5"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "@types/semver": "7.8.0",
     "@vitest/coverage-v8": "catalog:",
     "prettier": "catalog:",
     "typedoc": "catalog:",

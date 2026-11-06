@@ -308,6 +308,39 @@ export function parsePublicDocumentFrontmatter(
 }
 
 /**
+ * Reads an archived version's frontmatter, keeping only what can be read.
+ *
+ * An archived version comes from a tag that cannot be edited, so a rule added
+ * since it was released must not stop it from building
+ * (`docs/specs/packages-docs-versions.md`, "Building archived versions"). An
+ * unknown field is ignored, and so is a known one that is malformed or not
+ * allowed where it is. Only the title is required, because the site cannot
+ * place a page without one.
+ * @param frontmatter Parsed frontmatter fields.
+ * @param sourcePath Document path used in error messages.
+ * @returns What the strict reader would return, minus whatever it would reject.
+ * @throws When the title is missing or empty.
+ */
+export function parseArchivedDocumentFrontmatter(
+  frontmatter: Record<string, unknown>,
+  sourcePath: string,
+): PublicDocumentFrontmatter {
+  const fields: Record<string, unknown> = { title: frontmatter.title };
+  for (const field of Object.keys(frontmatter)) {
+    if (field === "title" || !ALLOWED_FRONTMATTER_FIELDS.has(field)) {
+      continue;
+    }
+    try {
+      parsePublicDocumentFrontmatter({ ...fields, [field]: frontmatter[field] }, sourcePath);
+      fields[field] = frontmatter[field];
+    } catch {
+      // Rejected by a rule the version predates; render without it.
+    }
+  }
+  return parsePublicDocumentFrontmatter(fields, sourcePath);
+}
+
+/**
  * Asserts that a public document contains exactly one H1.
  * @param headings Headings parsed from the document.
  * @param sourcePath Document path used in error messages.

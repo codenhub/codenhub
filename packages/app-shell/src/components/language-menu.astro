@@ -2,8 +2,8 @@
 /**
  * The header's language menu: the current page in each language the host
  * lists, in the order given. Plain links in a `<details>`, so it works without
- * JavaScript; the script animates its close and closes it on an outside click
- * or Escape. A chosen option's locale is saved in the locale cookie
+ * JavaScript; `../popover-menu.ts` animates its close and closes it on an
+ * outside click or Escape. A chosen option's locale is saved in the locale cookie
  * (`../locales.ts`), shared by every CodenHub site, for a host that redirects
  * by the visitor's choice (`locale-redirect.astro`).
  *
@@ -26,18 +26,18 @@ interface Props {
 const { label, locale, options } = Astro.props;
 ---
 
-<details class="shell-language" data-language-menu>
-  <summary aria-label={label} class="shell-action shell-language-trigger" title={label}>
+<details class="shell-language shell-menu" data-language-menu>
+  <summary aria-label={label} class="shell-action shell-language-trigger shell-menu-trigger" title={label}>
     <i aria-hidden="true" class="ic-lucide-languages"></i>
-    <i aria-hidden="true" class="ic-lucide-chevron-down shell-language-chevron"></i>
+    <i aria-hidden="true" class="ic-lucide-chevron-down shell-menu-chevron"></i>
   </summary>
-  <ul class="shell-language-list">
+  <ul class="shell-menu-list">
     {
       options.map((option) => (
         <li>
           <a
             aria-current={option.locale === locale ? "true" : undefined}
-            class="shell-language-option"
+            class="shell-menu-option"
             href={option.href}
             hreflang={option.locale}
             lang={option.locale}
@@ -53,32 +53,10 @@ const { label, locale, options } = Astro.props;
 
 <script>
   import { LOCALE_COOKIE_DOMAIN, localeCookie } from "../locales.ts";
+  import { enhancePopoverMenu } from "../popover-menu.ts";
 
-  // Removing `open` hides the list at once, so a close first plays the list's
-  // out animation (`data-closing`, `styles.css`) and removes `open` after it.
   for (const menu of document.querySelectorAll<HTMLDetailsElement>("[data-language-menu]")) {
-    const summary = menu.querySelector("summary");
-    const list = menu.querySelector<HTMLElement>(".shell-language-list");
-
-    const finish = () => {
-      if (menu.hasAttribute("data-closing")) {
-        menu.removeAttribute("data-closing");
-        menu.open = false;
-      }
-    };
-
-    const close = async () => {
-      if (!menu.open || menu.hasAttribute("data-closing")) {
-        return;
-      }
-      menu.setAttribute("data-closing", "");
-      try {
-        await Promise.all(list?.getAnimations().map((animation) => animation.finished) ?? []);
-      } catch {
-        // Cancellation before the first frame rejects too, without an animationcancel event.
-      }
-      finish();
-    };
+    enhancePopoverMenu(menu);
 
     for (const option of menu.querySelectorAll<HTMLAnchorElement>("a[hreflang]")) {
       option.addEventListener("click", () => {
@@ -86,31 +64,5 @@ const { label, locale, options } = Astro.props;
         document.cookie = localeCookie(option.hreflang, location.hostname, LOCALE_COOKIE_DOMAIN);
       });
     }
-
-    summary?.addEventListener("click", (event) => {
-      if (!menu.open) {
-        return;
-      }
-      event.preventDefault();
-      if (menu.hasAttribute("data-closing")) {
-        // Pressed again mid-close: stay open.
-        menu.removeAttribute("data-closing");
-      } else {
-        void close();
-      }
-    });
-
-    document.addEventListener("click", (event) => {
-      if (event.target instanceof Node && !menu.contains(event.target)) {
-        void close();
-      }
-    });
-
-    menu.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && menu.open) {
-        void close();
-        summary?.focus();
-      }
-    });
   }
 </script>

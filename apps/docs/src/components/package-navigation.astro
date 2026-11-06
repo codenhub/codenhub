@@ -5,15 +5,20 @@ import { fillMessage } from "@codenhub/app-shell/messages";
 import { messagesFor, type Locale } from "../i18n";
 import { navigationDocuments, type PublicPackage } from "../lib/catalog";
 import { buildPackageSidebar, groupContainsRoute, type NavLink } from "../lib/package-navigation";
+import VersionMenu from "./version-menu.astro";
 
 interface Props {
   currentPackage: PublicPackage;
   currentRoute?: string;
   /** The page's language, which picks the navigation list and its labels. */
   locale?: Locale;
+  /** English route path of the page being read, which the version selector keeps. */
+  routePath?: string;
 }
 
-const { currentPackage, currentRoute, locale = "en" } = Astro.props;
+const { currentPackage, currentRoute, locale = "en", routePath = "" } = Astro.props;
+const activeVersion =
+  currentPackage.archivedVersion ?? currentPackage.versions.find(({ current }) => current)?.version;
 const messages = messagesFor(locale);
 const { tabs, tree } = buildPackageSidebar(
   navigationDocuments(currentPackage, locale),
@@ -38,6 +43,11 @@ const isEnglishFallback = (link: NavLink): boolean => link.lang !== locale;
   <div class="package-navigation-title">
     <p class="rail-title">{currentPackage.label}</p>
     <StatusBadge labels={messages.shell.status} status={currentPackage.status} />
+    {
+      activeVersion !== undefined && currentPackage.versions.length > 0 && (
+        <VersionMenu active={activeVersion} locale={locale} routePath={routePath} versions={currentPackage.versions} />
+      )
+    }
   </div>
 
   {

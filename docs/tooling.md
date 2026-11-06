@@ -401,6 +401,7 @@ Findings carry a `<rule>/<detail>` code and a severity. Only `error` findings fa
 | `dependencies`        | Declared where used, in the right field, with catalog ranges and no cycles.                                             |
 | `exports`             | Import paths shown in the README and public docs are declared in `exports`.                                             |
 | `documentation`       | Required surfaces, frontmatter, single H1, link targets, and slug uniqueness.                                           |
+| `docs-versions`       | Each `codenhub.docs.versions` entry matches a stable release tag; an entry that matches none is a warning.              |
 | `undocumented-export` | JSDoc/TSDoc presence on top-level typed package exports, following declaration barrels.                                 |
 | `llms-full`           | `llms-full.txt` still matches the documents it compiles.                                                                |
 | `readme`              | README status notices agree with `codenhub.status`.                                                                     |

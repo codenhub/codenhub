@@ -7,7 +7,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createDocumentationIntegration } from "./documentation-integration";
 
-const ROOTS = { packagesRoot: "C:/repo/packages", publishedPackagesRoot: "C:/snapshot/packages" };
+const ROOTS = {
+  loadArchivedResources: async () => ({ resources: [], warnings: [] }),
+  packagesRoot: "C:/repo/packages",
+  publishedPackagesRoot: "C:/snapshot/packages",
+  publishedSnapshotRoot: "C:/snapshot",
+};
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -35,6 +40,28 @@ describe("Astro package documentation integration", () => {
     await integration.hooks["astro:config:setup"]!({ command: "build", updateConfig: vi.fn() } as never);
 
     expect(loadDocumentation).toHaveBeenCalledWith("C:/snapshot/packages");
+  });
+
+  it("adds archived versions' resources to a production build and logs those it left out", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const archived = {
+      packagePath: "llms.txt",
+      rootPath: "C:/snapshot/archived",
+      routePath: "/example/1.0.0/llms.txt",
+    };
+    const loadArchivedResources = vi.fn().mockResolvedValue({ resources: [archived], warnings: ["Left out 2.0.0."] });
+    const logger = { warn: vi.fn() };
+    const updateConfig = vi.fn();
+    const integration = createDocumentationIntegration({
+      ...ROOTS,
+      loadArchivedResources,
+      loadDocumentation: vi.fn().mockResolvedValue([]),
+    });
+
+    await integration.hooks["astro:config:setup"]!({ command: "build", logger, updateConfig } as never);
+
+    expect(loadArchivedResources).toHaveBeenCalledWith("C:/snapshot");
+    expect(logger.warn).toHaveBeenCalledWith("Left out 2.0.0.");
   });
 
   it("reads resources from the working tree for a build whose pages do", async () => {

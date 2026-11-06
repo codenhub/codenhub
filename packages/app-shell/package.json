@@ -16,6 +16,7 @@
     "./package-grid": "./src/package-grid.ts",
     "./package-links": "./src/package-links.ts",
     "./copy-feedback": "./src/copy-feedback.ts",
+    "./popover-menu": "./src/popover-menu.ts",
     "./remark-alerts": "./src/remark-alerts.ts",
     "./search": "./src/search/search.ts",
     "./locales": "./src/locales.ts",

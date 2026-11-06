@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-04
+last_updated: 2026-11-05
 scope: Documentation for public workspace packages.
 ---
 
@@ -39,7 +39,7 @@ A package opts into the documentation site by declaring `codenhub.docs` in its `
 }
 ```
 
-The presence of `codenhub.docs` declares that the package has public documentation intended for publication. It MUST be an object; its only field is the OPTIONAL `reference`, defined by `docs/specs/packages-reference.md`. A package that declares it MUST also declare the package metadata defined by `docs/specs/packages-metadata.md`, which supplies the label, status, slug, description, listing, and order the documentation site presents. The site publishes each package's documents under `/<slug>/`, and its catalog follows that spec's `listed` rule.
+The presence of `codenhub.docs` declares that the package has public documentation intended for publication. It MUST be an object; its fields are the OPTIONAL `reference`, defined by `docs/specs/packages-reference.md`, and the OPTIONAL `versions`, defined by `docs/specs/packages-docs-versions.md`. A package that declares it MUST also declare the package metadata defined by `docs/specs/packages-metadata.md`, which supplies the label, status, slug, description, listing, and order the documentation site presents. The site publishes each package's current documents under `/<slug>/`, and its catalog follows that spec's `listed` rule. The documents of past versions it keeps, and where they are served, follow `docs/specs/packages-docs-versions.md`.
 
 ## Documentation ownership
 

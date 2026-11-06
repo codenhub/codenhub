@@ -20,6 +20,15 @@ export interface Dictionary {
   untranslated: string;
   /** The page outline's toggle and landmark. */
   onThisPage: string;
+  /** The package's version selector and an archived version's notice (`docs/specs/packages-docs-versions.md`). */
+  versions: {
+    /** The selector's accessible name. `{version}` is the version being read. */
+    label: string;
+    /** The notice above an archived version's page. `{version}` is its version. */
+    archived: string;
+    /** The notice's link to the same page in the current version. */
+    readCurrent: string;
+  };
   sections: { changelog: string; guides: string; reference: string };
   demo: string;
   backToTop: string;
@@ -68,6 +77,11 @@ export const en: Dictionary = {
   inEnglish: "in English",
   untranslated: "This page is not translated yet, so it is shown in English.",
   onThisPage: "On this page",
+  versions: {
+    label: "Version {version}, choose another",
+    archived: "These are the docs for version {version}, an older release.",
+    readCurrent: "Read the current version",
+  },
   sections: { changelog: "Changelog", guides: "Guides", reference: "Reference" },
   demo: "Demo",
   backToTop: "Back to top",

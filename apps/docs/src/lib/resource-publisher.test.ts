@@ -33,6 +33,18 @@ describe("package documentation resources", () => {
     expect(response?.headers.get("content-type")).toBe("text/plain; charset=utf-8");
   });
 
+  it("points an archived version's llms file inside that version's route", async () => {
+    const rootPath = await mkdtemp(path.join(tmpdir(), "codenhub-resource-llms-archived-"));
+    await writeFile(path.join(rootPath, "llms.txt"), "- [Overview](docs/index.md)\n");
+    const resources = discoverPublicResources("example/1.0.0", ["llms.txt"]).map((resource) => ({
+      ...resource,
+      rootPath,
+    }));
+    const response = await createResourceMiddleware(resources)(new Request("http://localhost/example/1.0.0/llms.txt"));
+
+    expect(await response?.text()).toBe("- [Overview](https://docs.codenhub.dev/example/1.0.0/)\n");
+  });
+
   it("does not serve undiscovered package files", async () => {
     const rootPath = await mkdtemp(path.join(tmpdir(), "codenhub-resource-traversal-"));
     await writeFile(path.join(rootPath, "NOTICE"), "Notice");
