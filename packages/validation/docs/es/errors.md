@@ -2,7 +2,7 @@
 title: Problemas y mensajes
 description: Qué contiene un resultado fallido, los códigos de problema integrados y sus params, y cómo convertir los problemas en texto en inglés, en portugués o con tus propias palabras.
 order: 5
-source: 7c3d1cece87a2afa6e15d3455f3522040965b8a1
+source: 69793f837599ffe8dd43014aa80301db06d62f20
 ---
 
 # Problemas y mensajes

@@ -1,7 +1,7 @@
 ---
 title: Standard Schema
 description: Use um validador em qualquer biblioteca que aceite um Standard Schema, como bibliotecas de formulário, frameworks de API e roteadores.
-source: 099d82a1e299b95ac4f757c89d2e7cd0bfa86fed
+source: 73e46b19be7edce0bf1530eb1b7febf6e6a3f8dd
 order: 9
 ---
 

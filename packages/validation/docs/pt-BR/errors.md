@@ -1,7 +1,7 @@
 ---
 title: Problemas e mensagens
 description: O que um resultado com falha contém, os códigos de problema nativos e seus params, e como transformar problemas em texto em inglês, em português ou com as suas próprias palavras.
-source: 7c3d1cece87a2afa6e15d3455f3522040965b8a1
+source: 69793f837599ffe8dd43014aa80301db06d62f20
 order: 5
 ---
 
