@@ -1,5 +1,5 @@
 import type { Maybe } from "../core/async";
-import { finish, split, word } from "../core/checks";
+import { finish, split, withRules, word } from "../core/checks";
 import { described } from "../core/describe";
 import { MISS, withFast } from "../core/nesting";
 import { failWith, issue, typeIssue } from "../core/result";
@@ -34,7 +34,7 @@ export const formatLeaf = <T>(
         ? failWith(word([issue("invalid_format", { format })], message))
         : finish(value, [], message, checks);
     },
-    !isQuick || checks.length > 0 ? undefined : (input) => (accepts(input) ? (read(input as T) ?? MISS) : MISS),
+    isQuick ? withRules((input) => (accepts(input) ? (read(input as T) ?? MISS) : MISS), checks) : undefined,
   );
 
 /** Builds the validator for a string format, as {@link formatLeaf} does for a string. */

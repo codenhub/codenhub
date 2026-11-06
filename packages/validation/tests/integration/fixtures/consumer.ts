@@ -61,6 +61,7 @@ import {
   extend,
   meta,
   portugueseMessages,
+  spanishMessages,
   readonly,
   required,
   pass,
@@ -692,6 +693,7 @@ frozenValue.seen.add(1);
 export const frozenInput: InferInput<typeof frozen> = { name: "Ada", tags: ["a"], seen: new Set([1]) };
 export const frozenUnknown: Infer<ReturnType<typeof readonly<Validator<unknown>>>> = Symbol("anything");
 export const inPortuguese: string = formatIssue({ code: "too_small", path: [] }, portugueseMessages);
+export const inSpanish: string = formatIssue({ code: "too_small", path: [] }, spanishMessages);
 
 // readonly keeps the mark of a brand on a Map, whose type it replaces with the read-only kind.
 const markedStock = readonly(brand(map(string(), number()), "Stock"));

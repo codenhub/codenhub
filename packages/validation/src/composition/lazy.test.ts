@@ -618,4 +618,21 @@ describe("lazy, given a getter that returns null", () => {
     expect(valueOf(object({ wrap: intersection(node, node) })({ wrap: { n: 1 } }))).toEqual({ wrap: { n: 1 } });
     expect(calls).toBe(2);
   });
+
+  it("should keep a result for each path of an object found again inside its own validation", () => {
+    let calls = 0;
+    type Loop = { next?: Loop };
+    const counted: Validator<Loop> = (input) => {
+      calls += 1;
+      return object({ next: optional(node) })(input);
+    };
+    const node: Validator<Loop> = lazy(() => counted, { maxDepth: 4 });
+    const loop: Loop = {};
+    loop.next = loop;
+    const either = union([object({ child: node, tag: literal("a") }), object({ child: node, tag: literal("b") })]);
+    const result = either({ child: loop, tag: "b" });
+    expect(result.ok).toBe(false);
+    // Each of the four levels of the loop is a path of its own, validated once however many options reach it.
+    expect(calls).toBe(4);
+  });
 });

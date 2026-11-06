@@ -2,7 +2,7 @@
 title: Problemas y mensajes
 description: Qué contiene un resultado fallido, los códigos de problema integrados y sus params, y cómo convertir los problemas en texto en inglés, en portugués o con tus propias palabras.
 order: 5
-source: 7c3d1cece87a2afa6e15d3455f3522040965b8a1
+source: 26b9372b8ed6dc021bb23316751fb9be0df05b96
 ---
 
 # Problemas y mensajes
@@ -177,14 +177,15 @@ Un problema que lleva un mensaje se redacta primero con él, antes que con cualq
 
 ## Idiomas integrados
 
-El paquete incluye dos mapas. Cada uno es un valor independiente, así que un programa empaqueta los idiomas que importa y ningún otro:
+El paquete incluye tres mapas. Cada uno es un valor independiente, así que un programa empaqueta los idiomas que importa y ningún otro, salvo el inglés que `formatIssue`, `flatten` y `standard` usan cuando no reciben un mapa:
 
 | Mapa                 | Idioma                                   | `number({ min: 18 })(15)` |
 | -------------------- | ---------------------------------------- | ------------------------- |
 | `englishMessages`    | Inglés                                   | "Must be at least 18"     |
 | `portugueseMessages` | Portugués, tal como se escribe en Brasil | "Deve ser no mínimo 18"   |
+| `spanishMessages`    | Español                                  | "Debe ser como mínimo 18" |
 
-Ambos redactan los mismos nueve códigos. `formatIssue`, `flatten` y `standard` reciben el mapa como argumento, y `assert` lo recibe como su opción `messages`. Para un programa en varios idiomas, elige el mapa donde muestras el problema:
+Los tres redactan los mismos nueve códigos. `formatIssue`, `flatten` y `standard` reciben el mapa como argumento, y `assert` lo recibe como su opción `messages`. Para un programa en varios idiomas, elige el mapa donde muestras el problema:
 
 ```ts
 import { englishMessages, formatIssue, portugueseMessages, type Messages } from "@codenhub/validation";

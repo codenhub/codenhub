@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { format } from "../builders/format";
 import { guard } from "../builders/guard";
+import { endsWith } from "../checks/ends-with";
+import { multipleOf } from "../checks/multiple-of";
+import { pattern } from "../checks/pattern";
+import { startsWith } from "../checks/starts-with";
 import { fastOf } from "../core/nesting";
 import type { AnyValidator } from "../core/types";
 import { email } from "../formats/email";
@@ -141,6 +145,72 @@ describe("the fast path of valid input", () => {
     }
     calls = 0;
     expect(object({ a: instanceOf(Tagged), b: string() })({ a: "tagged", b: 1 }).ok).toBe(false);
+    expect(calls).toBe(1);
+  });
+
+  it("should answer an object with checks from its properties' fast tests, and run each check once", () => {
+    let calls = 0;
+    const differ = (value: { a: string; b: string }) => {
+      calls += 1;
+      return value.a === value.b ? [{ code: "custom", path: ["b"] }] : undefined;
+    };
+    const quick = object({ a: string(), b: string() }, differ);
+    const full = object({ a: slow(string()), b: string() }, differ);
+    // The object has no fast test of its own, so a parent that missed later would run its checks again.
+    expect(fastOf(quick)).toBeUndefined();
+    for (const input of [{ a: "x", b: "y" }, { a: "x", b: "x" }, { a: 1, b: "x" }, { a: "x", b: "y", c: 1 }, "no"]) {
+      calls = 0;
+      const answer = quick(input);
+      const quickCalls = calls;
+      calls = 0;
+      expect(answer).toEqual(full(input));
+      expect(quickCalls).toBe(calls);
+    }
+    calls = 0;
+    const parent = object({ items: array(quick), other: string() });
+    expect(
+      parent({
+        items: [
+          { a: "x", b: "y" },
+          { a: "x", b: "x" },
+        ],
+        other: 1,
+      }),
+    ).toEqual(
+      object({ items: array(full), other: string() })({
+        items: [
+          { a: "x", b: "y" },
+          { a: "x", b: "x" },
+        ],
+        other: 1,
+      }),
+    );
+    expect(calls).toBe(4);
+  });
+
+  it("should exist for a leaf whose every check is built in, and give what the full work gives", () => {
+    expect(fastOf(string(startsWith("x"), pattern(/y$/)))).toBeDefined();
+    expect(fastOf(email(endsWith(".com")))).toBeDefined();
+    expect(fastOf(string(startsWith("x"), (value) => (value === "" ? [] : undefined)))).toBeUndefined();
+    const quick = object({ a: string({ trim: true }, startsWith("x"), pattern(/y$/)), b: number(multipleOf(2)) });
+    const full = object({ a: slow(string({ trim: true }, startsWith("x"), pattern(/y$/))), b: number(multipleOf(2)) });
+    for (const input of [
+      { a: " xy ", b: 4 },
+      { a: "zy", b: 4 },
+      { a: "xz", b: 3 },
+      { a: 1, b: 4 },
+    ]) {
+      expect(quick(input)).toEqual(full(input));
+    }
+  });
+
+  it("should word a built-in check's failure once, when its message is a function", () => {
+    let calls = 0;
+    const message = () => {
+      calls += 1;
+      return "Must start with x";
+    };
+    expect(object({ a: string(startsWith("x", message)), b: string() })({ a: "y", b: "z" }).ok).toBe(false);
     expect(calls).toBe(1);
   });
 

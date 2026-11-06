@@ -8,7 +8,22 @@
  * since the engine has then seen the shared helpers called with one kind of child only: on Node.js 24.19
  * an `array` of 100 strings ran 0.9 M ops/s alone and 0.55 M in a whole run, of the same build.
  */
-import { array, email, number, object, optional, record, string, tagged, tuple, union } from "../dist/index.js";
+import {
+  array,
+  check,
+  email,
+  lazy,
+  number,
+  object,
+  optional,
+  record,
+  startsWith,
+  string,
+  tagged,
+  transform,
+  tuple,
+  union,
+} from "../dist/index.js";
 
 const signup = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });
 const strings = Array.from({ length: 100 }, (_, index) => `item ${index}`);
@@ -16,6 +31,10 @@ const event = tagged("type", {
   click: object({ x: number(), y: number() }),
   key: object({ code: string() }),
 });
+
+const node = object({ name: string(), children: array(lazy(() => node)) });
+// A full binary tree of 127 nodes, seven levels deep.
+const tree = (depth) => ({ name: `level ${depth}`, children: depth === 1 ? [] : [tree(depth - 1), tree(depth - 1)] });
 
 const scenarios = [
   ["string", string(), "hello"],
@@ -25,6 +44,24 @@ const scenarios = [
   [
     "object of three strings, strict",
     object({ a: string(), b: string(), c: string() }, { unknownKeys: "strict" }),
+    { a: "x", b: "y", c: "z" },
+  ],
+  [
+    "object of three strings and a check",
+    object(
+      { a: string(), b: string(), c: string() },
+      check((value) => value.a !== value.b),
+    ),
+    { a: "x", b: "y", c: "z" },
+  ],
+  [
+    "object with a startsWith",
+    object({ a: string(startsWith("x")), b: string(), c: string() }),
+    { a: "x", b: "y", c: "z" },
+  ],
+  [
+    "object with a transform",
+    object({ a: transform(string(), (text) => text.length), b: string(), c: string() }),
     { a: "x", b: "y", c: "z" },
   ],
   [
@@ -42,6 +79,7 @@ const scenarios = [
   ["email", email(), "ada@example.com"],
   ["union, second option", union([number(), string()]), "hello"],
   ["tagged", event, { type: "key", code: "Enter" }],
+  ["lazy tree of 127 nodes", node, tree(7)],
   ["signup, valid", signup, { name: "Ada Lovelace", email: "ada@example.com", age: 36 }],
   ["signup, invalid", signup, { name: "A", email: "nope", age: 1.5 }],
   ["array of strings, a hundred bad items", array(string()), strings.map((_, index) => index)],
@@ -76,7 +114,7 @@ for (const [name, validator, input] of scenarios) {
   if (kept?.ok !== !fails) {
     throw new Error(`${name} should ${fails ? "fail" : "pass"}`);
   }
-  console.log(`${name.padEnd(36)} ${(perSecond / 1e6).toFixed(2).padStart(8)} M ops/s`);
+  console.log(`${name.padEnd(36)} ${(perSecond / 1e6).toFixed(perSecond < 1e5 ? 4 : 2).padStart(8)} M ops/s`);
 }
 
 if (ran === 0) {

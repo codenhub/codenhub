@@ -62,6 +62,22 @@ describe("portugueseMessages", () => {
     expect(said(string({ length: 1 })("ab"))).toEqual(["Deve ter exatamente 1 caractere"]);
   });
 
+  it("should word an exclusive date bound without allowing the bound itself", () => {
+    const moment = new Date(0);
+    const after: ValidationIssue = {
+      code: "too_small",
+      path: [],
+      params: { minimum: moment, inclusive: false, type: "date" },
+    };
+    const before: ValidationIssue = {
+      code: "too_big",
+      path: [],
+      params: { maximum: moment, inclusive: false, type: "date" },
+    };
+    expect(formatIssue(after, portugueseMessages)).toBe("Deve ser posterior a 1970-01-01T00:00:00.000Z");
+    expect(formatIssue(before, portugueseMessages)).toBe("Deve ser anterior a 1970-01-01T00:00:00.000Z");
+  });
+
   it("should word the limits of numbers with their inclusivity, and of dates as a moment", () => {
     expect(said(number({ min: 18 })(15))).toEqual(["Deve ser no mínimo 18"]);
     expect(said(number({ max: 1 })(2))).toEqual(["Deve ser no máximo 1"]);

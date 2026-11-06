@@ -382,6 +382,22 @@ describe("formatIssue", () => {
     );
   });
 
+  it("should word an exclusive date bound without allowing the bound itself", () => {
+    const moment = new Date(0);
+    const after: ValidationIssue = {
+      code: "too_small",
+      path: [],
+      params: { minimum: moment, inclusive: false, type: "date" },
+    };
+    const before: ValidationIssue = {
+      code: "too_big",
+      path: [],
+      params: { maximum: moment, inclusive: false, type: "date" },
+    };
+    expect(formatIssue(after)).toBe("Must be after 1970-01-01T00:00:00.000Z");
+    expect(formatIssue(before)).toBe("Must be before 1970-01-01T00:00:00.000Z");
+  });
+
   it("should word a date bound the same after the issue is sent as JSON", () => {
     const earliest = new Date("2026-01-01T00:00:00Z");
     const [found] = issuesOf(date({ min: earliest })(new Date("2025-01-01")));

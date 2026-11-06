@@ -95,13 +95,60 @@ interface Spot {
   results?: Map<number, Map<object, Maybe<ValidationResult<unknown>>>>;
 }
 
-/** The paths a `lazy` has met in one validation: the root's, and the one each place it has seen leads to. */
+/** Where an object was first found in one validation, and what was found for it there. */
+interface First {
+  readonly place: Place;
+  readonly depth: number;
+  readonly result: Maybe<ValidationResult<unknown>>;
+}
+
+/**
+ * The paths a `lazy` has met in one validation: the root's, and the one each place it has seen leads to,
+ * and each object found once, with where. Most objects are found once, so the paths are made only for
+ * one found again, which is what they are for: making them for every object took a fifth of the time of
+ * a recursive tree.
+ */
 interface Paths {
   readonly root: Spot;
   readonly spots: Map<object, Spot>;
+  readonly firsts: Map<object, First | undefined>;
 }
 
-const newPaths = (): Paths => ({ root: {}, spots: new Map() });
+const newPaths = (): Paths => ({ root: {}, spots: new Map(), firsts: new Map() });
+
+/** What was kept at a path, for objects found at that depth, made the first time it is asked for. */
+function keptAt(spot: Spot, depth: number): Map<object, Maybe<ValidationResult<unknown>>> {
+  const byDepth = (spot.results ??= new Map());
+  let kept = byDepth.get(depth);
+  if (kept === undefined) {
+    kept = new Map();
+    byDepth.set(depth, kept);
+  }
+  return kept;
+}
+
+/**
+ * Keeps the result found for an object at a place, as the first for that object or, once it has been
+ * found before, at its path. An undefined entry in `firsts` marks an object whose results are kept at
+ * their paths, the first one included.
+ */
+function keep(paths: Paths, input: object, first: First): void {
+  if (!paths.firsts.has(input)) {
+    paths.firsts.set(input, first);
+    return;
+  }
+  moveFirst(paths, input);
+  keptAt(spotOf(first.place, paths), first.depth).set(input, first.result);
+}
+
+/** Moves the first result kept for an object to its path, so it is found as every later one is. */
+function moveFirst(paths: Paths, input: object): void {
+  const first = paths.firsts.get(input);
+  if (first !== undefined) {
+    paths.firsts.set(input, undefined);
+    keptAt(spotOf(first.place, paths), first.depth).set(input, first.result);
+  }
+}
 
 /**
  * The path a place is at. It walks up to the nearest place already seen, the parent's in a recursion, and
@@ -279,20 +326,21 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
       }
       // Two options may reach the object here through different numbers of levels, and a result found
       // nearer `maxDepth` may have failed for that alone, so each is kept for the depth it was found at.
-      const spot = spotOf(place, paths);
       const depth = openLevels();
-      const byDepth = (spot.results ??= new Map());
-      let kept = byDepth.get(depth);
-      if (kept === undefined) {
-        kept = new Map();
-        byDepth.set(depth, kept);
-      }
-      const found = kept.get(input as object);
-      if (found !== undefined) {
-        return found;
+      const object = input as object;
+      if (paths.firsts.has(object)) {
+        const first = paths.firsts.get(object);
+        if (first !== undefined && first.place === place && first.depth === depth) {
+          return first.result;
+        }
+        moveFirst(paths, object);
+        const found = keptAt(spotOf(place, paths), depth).get(object);
+        if (found !== undefined) {
+          return found;
+        }
       }
       const result = validate(input, place, false);
-      kept.set(input as object, result);
+      keep(paths, object, { place, depth, result });
       return result;
     }),
     { kind: "lazy", options, checks, getter },

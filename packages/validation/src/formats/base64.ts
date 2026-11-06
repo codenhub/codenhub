@@ -7,11 +7,33 @@ import { stringFormat } from "./text-format";
 // The last character before padding holds only the bits the bytes need, so the rest are zero: `A`, `Q`,
 // `g` and `w` before `==`, and every fourth character before `=`. Anything else decodes to a value that
 // encodes back differently.
-const BASE64_PATTERN = /^(?!$)(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/][AQgw]==|[A-Za-z0-9+/]{2}[AEIMQUYcgkosw048]=)?$/;
+const TWO_LEFT = /[AQgw]/;
+const THREE_LEFT = /[AEIMQUYcgkosw048]/;
+const ALPHABET = /^[A-Za-z0-9+/]+$/;
+// The URL-safe alphabet of RFC 4648 section 5, `-` and `_` for `+` and `/`.
+const URL_ALPHABET = /^[\w-]+$/;
 
-// The URL-safe alphabet of RFC 4648 section 5, `-` and `_` for `+` and `/`, with the padding optional,
-// since most producers leave it out, and the same rule for the last character.
-export const BASE64URL_PATTERN = /^(?!$)(?:[\w-]{4})*(?:[\w-][AQgw](?:==)?|[\w-]{2}[AEIMQUYcgkosw048]=?)?$/;
+/**
+ * Tests text as base64 with the given alphabet, and the padding optional when `isPaddingOptional`, as the
+ * URL-safe form leaves it. Read by its length and its last characters, where a pattern repeating a group of
+ * four overflowed the stack on a few megabytes of text.
+ */
+const isBase64 = (text: string, alphabet: RegExp, isPaddingOptional: boolean): boolean => {
+  const padding = text.endsWith("==") ? 2 : text.endsWith("=") ? 1 : 0;
+  const body = text.slice(0, text.length - padding);
+  const left = body.length % 4;
+  const last = body.slice(-1);
+  const isPadded =
+    left === 0
+      ? padding === 0
+      : left === 2
+        ? TWO_LEFT.test(last) && (padding === 2 || (isPaddingOptional && padding === 0))
+        : left === 3 && THREE_LEFT.test(last) && (padding === 1 || (isPaddingOptional && padding === 0));
+  return isPadded && alphabet.test(body);
+};
+
+/** Tests text as base64url as an encoder writes it, with the padding optional, since most producers leave it out. */
+export const isBase64url = (text: string): boolean => isBase64(text, URL_ALPHABET, true);
 
 /** Options for {@link base64}. */
 export interface Base64Options extends MessageOptions {
@@ -43,11 +65,10 @@ export const base64 = ((...args: unknown[]) => {
   const [options, checks] = split<Base64Options, string>(args, "url");
   const { url, message } = options;
   assertOption("url", url, "boolean");
-  const pattern = url === true ? BASE64URL_PATTERN : BASE64_PATTERN;
   return described(
     stringFormat(
       url === true ? "base64url" : "base64",
-      (text) => (pattern.test(text) ? text : undefined),
+      (text) => ((url === true ? isBase64url(text) : isBase64(text, ALPHABET, false)) ? text : undefined),
       message,
       checks,
     ),

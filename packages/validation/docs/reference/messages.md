@@ -225,7 +225,7 @@ export declare const portugueseMessages: Messages;
 
 The built-in Portuguese wording for every issue the validators can report, as a message map.
 
-It is what [`englishMessages`](#englishmessages) is, in Portuguese as written in Brazil: pass it to `formatIssue`, `flatten`, `assert` or `standard` to get text such as "Deve ser no mínimo 18". It is a separate value, so a program bundles the wording of the languages it imports and no other. To change some of the wording, spread it and override the codes you want: `{ ...portugueseMessages, too_small: "Muito curto" }`. It is frozen. The names of types, such as `string` in "Esperado string, recebido number", are the ones the issue holds and are not translated, and a custom validator's own codes are not in it: one without a `message` on the issue or an entry of your own is worded "Valor inválido", by the entry `default`.
+It is what [`englishMessages`](#englishmessages) is, in Portuguese as written in Brazil: pass it to `formatIssue`, `flatten`, `assert` or `standard` to get text such as "Deve ser no mínimo 18". It is a separate value, so a program bundles the wording of the languages it imports and no other, apart from the English that `formatIssue`, `flatten` and `standard` fall back to. To change some of the wording, spread it and override the codes you want: `{ ...portugueseMessages, too_small: "Muito curto" }`. It is frozen. The names of types, such as `string` in "Esperado string, recebido number", are the ones the issue holds and are not translated, and a custom validator's own codes are not in it: one without a `message` on the issue or an entry of your own is worded "Valor inválido", by the entry `default`.
 
 **Example**
 
@@ -233,6 +233,25 @@ It is what [`englishMessages`](#englishmessages) is, in Portuguese as written in
 const result = number({ min: 18 })(15);
 if (!result.ok) {
   formatIssue(result.error.issues[0], portugueseMessages); // "Deve ser no mínimo 18"
+}
+```
+
+### spanishMessages
+
+```ts
+export declare const spanishMessages: Messages;
+```
+
+The built-in Spanish wording for every issue the validators can report, as a message map.
+
+It is what [`englishMessages`](#englishmessages) is, in Spanish: pass it to `formatIssue`, `flatten`, `assert` or `standard` to get text such as "Debe ser como mínimo 18". A bound or a step is written with a decimal comma, "0,1". It is a separate value, so a program bundles the wording of the languages it imports and no other, apart from the English that `formatIssue`, `flatten` and `standard` fall back to. To change some of the wording, spread it and override the codes you want: `{ ...spanishMessages, too_small: "Demasiado corto" }`. It is frozen. The names of types, such as `string` in "Se esperaba string, se recibió number", are the ones the issue holds and are not translated, and a custom validator's own codes are not in it: one without a `message` on the issue or an entry of your own is worded "Valor no válido", by the entry `default`.
+
+**Example**
+
+```ts
+const result = number({ min: 18 })(15);
+if (!result.ok) {
+  formatIssue(result.error.issues[0], spanishMessages); // "Debe ser como mínimo 18"
 }
 ```
 

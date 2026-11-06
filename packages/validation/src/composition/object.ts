@@ -131,44 +131,53 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
   }
 
   // Valid input is answered without a list or a result for each property, when every property has a fast
-  // test and no check waits for the whole object; any miss runs the full work below, which says why.
+  // test; any miss runs the full work below, which says why.
   const fastChildren = keys.map((key) => fastOf(read[key]));
-  const fast: Fast | undefined =
-    checks.length > 0 || fastChildren.includes(undefined)
-      ? undefined
-      : (input) => {
-          if (!isPlainObject(input)) {
+  const childrenFast: Fast | undefined = fastChildren.includes(undefined)
+    ? undefined
+    : (input) => {
+        if (!isPlainObject(input)) {
+          return MISS;
+        }
+        if (unknownKeys === "strict" && Object.keys(input).some((key) => !known.has(key))) {
+          return MISS;
+        }
+        const output: Record<string, unknown> = {};
+        for (let index = 0; index < keys.length; index += 1) {
+          const key = keys[index] as string;
+          const isPresent = Object.hasOwn(input, key);
+          const value = (fastChildren[index] as Fast)(isPresent ? input[key] : undefined);
+          if (value === MISS) {
             return MISS;
           }
-          if (unknownKeys === "strict" && Object.keys(input).some((key) => !known.has(key))) {
-            return MISS;
+          if (value !== undefined || isPresent) {
+            setOwn(output, key, value);
           }
-          const output: Record<string, unknown> = {};
-          for (let index = 0; index < keys.length; index += 1) {
-            const key = keys[index] as string;
-            const isPresent = Object.hasOwn(input, key);
-            const value = (fastChildren[index] as Fast)(isPresent ? input[key] : undefined);
-            if (value === MISS) {
-              return MISS;
-            }
-            if (value !== undefined || isPresent) {
-              setOwn(output, key, value);
-            }
-          }
-          if (unknownKeys === "passthrough") {
-            for (const key of Object.keys(input)) {
-              if (!known.has(key)) {
-                if (key === RESERVED_KEY) {
-                  return MISS;
-                }
-                setOwn(output, key, input[key]);
+        }
+        if (unknownKeys === "passthrough") {
+          for (const key of Object.keys(input)) {
+            if (!known.has(key)) {
+              if (key === RESERVED_KEY) {
+                return MISS;
               }
+              setOwn(output, key, input[key]);
             }
           }
-          return output;
-        };
+        }
+        return output;
+      };
+  // An object with checks has no fast test of its own, since a parent that missed would run them again.
+  // Its work still asks its properties' fast tests first, and runs the checks once on what they produced.
+  const fast = checks.length > 0 ? undefined : childrenFast;
+  const fastChecked = checks.length > 0 ? childrenFast : undefined;
 
   const validator = composed((input, place): Maybe<ValidationResult<unknown>> => {
+    if (fastChecked !== undefined) {
+      const value = fastChecked(input);
+      if (value !== MISS) {
+        return accept(value as Record<string, unknown>, place);
+      }
+    }
     if (!isPlainObject(input)) {
       return reject([objectIssue(input)], place);
     }

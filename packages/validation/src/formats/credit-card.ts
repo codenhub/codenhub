@@ -4,6 +4,9 @@ import { formatFactory } from "./text-format";
 const CARD_PATTERN = /^\d+(?:(?: \d+)*|(?:-\d+)*)$/;
 const MIN_DIGITS = 12;
 const MAX_DIGITS = 19;
+// The pattern allows one separator between two digits, so longer text has more than 19 digits. Refused by
+// its length first, since the pattern repeats a group and overflowed the stack on a few megabytes of text.
+const MAX_LENGTH = MAX_DIGITS * 2 - 1;
 
 /** The Luhn checksum every payment card number carries in its last digit. */
 const passesLuhn = (digits: string): boolean => {
@@ -32,7 +35,7 @@ const passesLuhn = (digits: string): boolean => {
  * ```
  */
 export const creditCard = /* @__PURE__ */ formatFactory("creditCard", (text) => {
-  if (!CARD_PATTERN.test(text)) {
+  if (text.length > MAX_LENGTH || !CARD_PATTERN.test(text)) {
     return undefined;
   }
   const digits = text.replace(/[ -]/g, "");

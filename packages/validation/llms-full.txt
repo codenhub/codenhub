@@ -1273,14 +1273,15 @@ An issue that carries a message is worded by it first, before any message map. T
 
 ## Built-in languages
 
-Two maps ship with the package. Each is a value of its own, so a program bundles the languages it imports and no other:
+Three maps ship with the package. Each is a value of its own, so a program bundles the languages it imports and no other, apart from the English that `formatIssue`, `flatten` and `standard` fall back to:
 
 | Map                  | Language                         | `number({ min: 18 })(15)` |
 | -------------------- | -------------------------------- | ------------------------- |
 | `englishMessages`    | English                          | "Must be at least 18"     |
 | `portugueseMessages` | Portuguese, as written in Brazil | "Deve ser no mínimo 18"   |
+| `spanishMessages`    | Spanish                          | "Debe ser como mínimo 18" |
 
-Both word the same nine codes. `formatIssue`, `flatten` and `standard` take the map as an argument, and `assert` takes it as its `messages` option. For a program in several languages, choose the map where you show the issue:
+All three word the same nine codes. `formatIssue`, `flatten` and `standard` take the map as an argument, and `assert` takes it as its `messages` option. For a program in several languages, choose the map where you show the issue:
 
 ```ts
 import { englishMessages, formatIssue, portugueseMessages, type Messages } from "@codenhub/validation";
@@ -2334,7 +2335,7 @@ Some issues get less than a sentence:
 `standard(validator, messages?)` gives the same validator with a `~standard` of its own that words issues as [`formatIssue`](docs/errors.md#turning-an-issue-into-text) does. Use it for:
 
 - **The full English**, such as "Invalid email address" and "Must contain at most 3 items", which is the default.
-- **Another language**, with `portugueseMessages` or a map of your own.
+- **Another language**, with `portugueseMessages`, `spanishMessages` or a map of your own.
 - **A validator you wrote by hand**, which has no `~standard` of its own, since this package did not make it.
 
 ```ts
