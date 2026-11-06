@@ -59,6 +59,36 @@ describe("string", () => {
       );
     });
 
+    it("should name the length in each message about a limit", () => {
+      expect(() => string({ min: -1 })).toThrow(
+        new RangeError("Minimum length must be a non-negative integer, received -1"),
+      );
+      expect(() => string({ max: null as never })).toThrow(
+        new TypeError("Maximum length must be a number, received null"),
+      );
+      expect(() => string({ length: 1.5 })).toThrow(
+        new RangeError("Length must be a non-negative integer, received 1.5"),
+      );
+      expect(() => string({ min: 3, length: 2 })).toThrow(new RangeError("No value can satisfy min 3 and length 2"));
+    });
+
+    it("should build each issue with its code, path and params in that order, and params in theirs", () => {
+      const issues = [...issuesOf(string({ min: 3 })("ab")), ...issuesOf(string({ max: 1 })("ab"))];
+      expect(issues.map((issue) => [Object.keys(issue), Object.keys(issue.params ?? {})])).toEqual([
+        [
+          ["code", "path", "params"],
+          ["minimum", "type"],
+        ],
+        [
+          ["code", "path", "params"],
+          ["maximum", "type"],
+        ],
+      ]);
+      const exact = issuesOf(string({ length: 2 })("abc"));
+      expect(exact).toStrictEqual([{ code: "too_big", path: [], params: { maximum: 2, exact: true, type: "string" } }]);
+      expect(Object.keys(exact[0]?.params ?? {})).toEqual(["maximum", "exact", "type"]);
+    });
+
     it("should reject limits no string can satisfy when the validator is created", () => {
       for (const options of [
         { min: 3, max: 2 },

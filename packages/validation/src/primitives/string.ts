@@ -1,7 +1,8 @@
+import { assertSizeOptions, sizeIssues } from "../composition/size";
 import { leaf, split } from "../core/checks";
 import { described } from "../core/describe";
-import { assertOption, assertOrder, assertSize, issue } from "../core/result";
-import type { Factory, MessageOptions, ValidationIssue } from "../core/types";
+import { assertOption } from "../core/result";
+import type { Factory, MessageOptions } from "../core/types";
 
 /**
  * Constraints and clean-up for {@link string}. Every option is optional. Rarer constraints, such as a
@@ -29,13 +30,6 @@ export interface StringOptions extends MessageOptions {
 
 const isString = (input: unknown): boolean => typeof input === "string";
 
-const lengthIssue = (code: "too_small" | "too_big", bound: number, isExact: boolean): ValidationIssue =>
-  issue(code, {
-    [code === "too_small" ? "minimum" : "maximum"]: bound,
-    ...(isExact && { exact: true }),
-    type: "string",
-  });
-
 /**
  * Creates a validator for strings.
  *
@@ -60,18 +54,7 @@ const lengthIssue = (code: "too_small" | "too_big", bound: number, isExact: bool
 export const string = ((...args: unknown[]) => {
   const [options, checks] = split<StringOptions, string>(args, "min max length trim case");
   const { min, max, length, trim, case: letterCase, message } = options;
-  for (const [name, size] of [
-    ["Minimum length", min],
-    ["Maximum length", max],
-    ["Length", length],
-  ] as const) {
-    if (size !== undefined) {
-      assertSize(name, size);
-    }
-  }
-  assertOrder("min", min, "max", max);
-  assertOrder("min", min, "length", length);
-  assertOrder("length", length, "max", max);
+  assertSizeOptions(options, "Length");
   assertOption("trim", trim, "boolean");
   if (letterCase !== undefined && letterCase !== "lower" && letterCase !== "upper") {
     throw new TypeError(`case must be "lower" or "upper", received "${String(letterCase)}"`);
@@ -92,17 +75,7 @@ export const string = ((...args: unknown[]) => {
           if (letterCase !== undefined) {
             value = letterCase === "lower" ? value.toLowerCase() : value.toUpperCase();
           }
-          if (min !== undefined && value.length < min) {
-            issues.push(lengthIssue("too_small", min, false));
-          }
-          if (max !== undefined && value.length > max) {
-            issues.push(lengthIssue("too_big", max, false));
-          }
-          if (length !== undefined && value.length !== length) {
-            issues.push(
-              value.length < length ? lengthIssue("too_small", length, true) : lengthIssue("too_big", length, true),
-            );
-          }
+          sizeIssues(value.length, "string", options, issues);
           return value;
         },
   );
