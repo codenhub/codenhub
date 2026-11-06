@@ -1,7 +1,7 @@
 ---
 title: Problemas e mensagens
 description: O que um resultado com falha contém, os códigos de problema nativos e seus params, e como transformar problemas em texto em inglês, em português ou com as suas próprias palavras.
-source: 26b9372b8ed6dc021bb23316751fb9be0df05b96
+source: 5f3c50beff8b77b5b46b7079817190f714e06411
 order: 5
 ---
 
@@ -214,6 +214,8 @@ if (!step.ok) {
 - Um limite ou um passo usa vírgula decimal.
 - Uma lista longa de valores permitidos termina com "e mais N", onde o inglês diz "or N more".
 - As mensagens sobre chaves usam o feminino, já que "chave" é feminino: "Chave não reconhecida".
+
+`spanishMessages` segue as mesmas três regras, com "y N más" e "la clave". A vírgula decimal dele é como a Espanha e a maior parte da América do Sul escrevem números. Onde o costume é o ponto, como no México, copie o mapa e substitua os códigos cujo texto tem um número: `too_small`, `too_big` e, para um passo, `invalid_value`.
 
 O que um mapa não traduz é o que o problema guarda como dado: os nomes de tipo, como em "Esperado string, recebido number", o nome de um formato que o pacote não conhece, e o nome de uma parte de uma URL ou de um endereço.
 
