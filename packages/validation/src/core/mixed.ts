@@ -29,8 +29,8 @@ export type MixedRun = (
 
 const runMixed: MixedRun = (keys, children, fastChildren, values, present, extra, place) => {
   // A property whose fast test passes its value is given what the test produced, which is what its child
-  // would produce, in place of the value; `asked` stops at the first that misses. Every test is asked
-  // before any other property runs, so no consumer code runs for input a fast test can reject.
+  // would produce, in place of the value; `asked` stops at the first that misses. These tests are asked
+  // before any property without one runs; on a miss, the full work below runs each such property once.
   let asked = 0;
   for (; asked < values.length; asked += 1) {
     const test = fastChildren[asked];

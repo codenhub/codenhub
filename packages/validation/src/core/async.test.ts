@@ -116,7 +116,11 @@ describe("a composer whose child throws after another returned a pending result"
         ["object", () => object({ a: rejecting, b: throwing })({ a: 1, b: 2 })],
         [
           "object with a property that has a fast test",
-          () => object({ a: rejecting, c: string(), b: throwing })({ a: 1, c: "x", b: 2 }),
+          () => {
+            // Calling transform switches on the run of an object with a property that has no fast test.
+            transform(string(), (text) => text);
+            return object({ a: rejecting, c: string(), b: throwing })({ a: 1, c: "x", b: 2 });
+          },
         ],
         ["array", () => array(mixed)([1, 2])],
         ["tuple", () => tuple([rejecting, throwing])([1, 2])],
