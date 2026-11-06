@@ -159,6 +159,23 @@ describe("cutRelease", () => {
     await expect(readFile(join(workspacePackage.directory, "size.json"), "utf8")).rejects.toThrow("ENOENT");
   });
 
+  it("updates package.json before measuring so builds that read the manifest see the new version", async () => {
+    const workspacePackage = await createPackageOnDisk("0.3.0");
+    let manifestDuringMeasure = "";
+    let versionDuringMeasure: unknown;
+
+    await cutRelease(workspacePackage, "minor", "2026-09-07", {
+      measure: async (pkg) => {
+        manifestDuringMeasure = await readFile(join(pkg.directory, "package.json"), "utf8");
+        versionDuringMeasure = pkg.manifest.version;
+        return SIZE;
+      },
+    });
+
+    expect(manifestDuringMeasure).toContain('"version": "0.4.0"');
+    expect(versionDuringMeasure).toBe("0.4.0");
+  });
+
   it("adds to an existing changelog rather than replacing it", async () => {
     const workspacePackage = await createPackageOnDisk("1.0.0");
     await mkdir(join(workspacePackage.directory, "docs/changelog"), { recursive: true });

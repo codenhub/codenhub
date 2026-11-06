@@ -210,8 +210,9 @@ const isTaggedLocally = async (tag: string, cwd: string): Promise<boolean> => (a
  * that says nothing — leaving the working tree dirty is what forces the one part
  * of a release a person has to write.
  *
- * The package is built and measured before anything is written, so a build
- * that fails leaves the working tree as it was. `size.json` is what the
+ * The manifest is written before the package is built and measured so a build
+ * that inlines `package.json.version` measures the new version, and restored if
+ * the build fails, leaving the working tree as it was. `size.json` is what the
  * publish check later compares against (`docs/specs/packages-lifecycle.md`,
  * "Bundle size").
  *
@@ -249,13 +250,21 @@ export async function cutRelease(
     return { isRecut: true, tag, version: current, written: [SIZE_FILE] };
   }
   const version = resolveNextVersion(current, requested);
-  const size = await (options.measure ?? measureSize)(workspacePackage, options.timeoutMs);
-  const written: string[] = [];
-
   const manifestPath = join(workspacePackage.directory, MANIFEST);
   const manifest = await readFile(manifestPath, "utf8");
   await writeFile(manifestPath, replaceManifestVersion(manifest, version));
-  written.push(MANIFEST);
+  const updatedPackage: WorkspacePackage = {
+    ...workspacePackage,
+    manifest: { ...workspacePackage.manifest, version },
+  };
+  let size: SizeReport;
+  try {
+    size = await (options.measure ?? measureSize)(updatedPackage, options.timeoutMs);
+  } catch (error) {
+    await writeFile(manifestPath, manifest);
+    throw error;
+  }
+  const written: string[] = [MANIFEST];
 
   const changelogRoot = join(workspacePackage.directory, CHANGELOG_DIR);
   await mkdir(changelogRoot, { recursive: true });
