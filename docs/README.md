@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-02
+last_updated: 2026-11-05
 scope: Index of repository-wide documentation.
 ---
 
@@ -37,6 +37,7 @@ Root `docs/` contains durable repository knowledge. Package-specific consumer an
 | [Documentation index template](specs/packages-index-template.md) | An advisory structure for a package documentation index.                                  |
 | [API reference](specs/packages-reference.md)                     | Generated package API reference contracts.                                                |
 | [Package translations](specs/packages-translations.md)           | Translated READMEs and docs, drift checks, and how translations publish.                  |
+| [Documentation versions](specs/packages-docs-versions.md)        | Which past package versions the documentation site keeps, their URLs, and how they build. |
 | [Package exceptions](specs/packages-exceptions.md)               | Scoped exceptions and compliance-check waivers.                                           |
 | [Package changelog](specs/packages-changelog.md)                 | Recommended changelog structure and release entries.                                      |
 | [Package development](specs/packages-development.md)             | Optional playground, dev, and debug environments.                                         |
