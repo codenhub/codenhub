@@ -20,6 +20,7 @@ Os termos legais do pacote estão em [NOTICE](../../NOTICE). Cada skill adaptada
 | `branding`                | Trabalho original da Coden Agency     | Apache-2.0       |
 | `caveman`                 | Adaptado de [JuliusBrussee/caveman]   | MIT              |
 | `caveman-commit`          | Adaptado de [JuliusBrussee/caveman]   | MIT              |
+| `coding`                  | Trabalho original da Coden Agency     | Apache-2.0       |
 | `design`                  | Trabalho original da Coden Agency     | Apache-2.0       |
 | `logo-design`             | Trabalho original da Coden Agency     | Apache-2.0       |
 | `motion-graphics`         | Trabalho original da Coden Agency     | Apache-2.0       |

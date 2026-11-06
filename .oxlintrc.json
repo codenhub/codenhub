@@ -8,7 +8,8 @@
     "**/coverage/**",
     "test-results/**",
     "**/test-results/**",
-    "**/tests/**/output.css"
+    "**/tests/**/output.css",
+    "packages/skills/evals/*/fixtures/**"
   ],
   "env": {
     "browser": true,

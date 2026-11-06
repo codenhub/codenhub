@@ -28,7 +28,7 @@ For a repeatable install without prompts, select skills and destinations explici
 pnpm dlx @codenhub/skills@latest --local --skills=brainstorming,test-driven-development --harnesses="Claude Workspace,Codex Workspace"
 ```
 
-The collection covers planning and implementation (`brainstorming`, `test-driven-development`, `ponytail`), review and delivery (`audit`, `babysit-pr`), creative work (`branding`, `design`, `logo-design`, `motion-graphics`, `naming`), and agent guidance and writing. See the [skill catalog](docs/skills.md) for every skill and when it applies.
+The collection covers planning and implementation (`brainstorming`, `test-driven-development`, `coding`, `ponytail`), review and delivery (`audit`, `babysit-pr`), creative work (`branding`, `design`, `logo-design`, `motion-graphics`, `naming`), and agent guidance and writing. See the [skill catalog](docs/skills.md) for every skill and when it applies.
 
 ## Documentation
 
@@ -118,6 +118,7 @@ The IDs in the first column are the directory names accepted by `--skills`. Choo
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `brainstorming`           | Before implementation, when requirements or behavior need collaborative design.                                                  |
 | `test-driven-development` | When changing code behavior: write a failing test, implement, then refactor.                                                     |
+| `coding`                  | When writing or changing code, to handle inputs, failures, state, and sibling paths, with tests that prove them.                 |
 | `ponytail`                | When coding, to choose the simplest working solution and avoid speculative code.                                                 |
 | `audit`                   | When reviewing code, packages, or pull requests for defects, vulnerabilities, contract problems, or readiness to ship.           |
 | `ponytail-review`         | When reviewing complexity, finding code to simplify or delete, or listing deferred work and shortcuts.                           |
@@ -428,6 +429,7 @@ The package-level legal terms are in [NOTICE](NOTICE). Each adapted skill also c
 | `branding`                | Original Coden Agency work             | Apache-2.0         |
 | `caveman`                 | Adapted from [JuliusBrussee/caveman]   | MIT                |
 | `caveman-commit`          | Adapted from [JuliusBrussee/caveman]   | MIT                |
+| `coding`                  | Original Coden Agency work             | Apache-2.0         |
 | `design`                  | Original Coden Agency work             | Apache-2.0         |
 | `logo-design`             | Original Coden Agency work             | Apache-2.0         |
 | `motion-graphics`         | Original Coden Agency work             | Apache-2.0         |

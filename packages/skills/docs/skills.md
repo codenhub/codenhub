@@ -18,6 +18,7 @@ The IDs in the first column are the directory names accepted by `--skills`. Choo
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `brainstorming`           | Before implementation, when requirements or behavior need collaborative design.                                                  |
 | `test-driven-development` | When changing code behavior: write a failing test, implement, then refactor.                                                     |
+| `coding`                  | When writing or changing code, to handle inputs, failures, state, and sibling paths, with tests that prove them.                 |
 | `ponytail`                | When coding, to choose the simplest working solution and avoid speculative code.                                                 |
 | `audit`                   | When reviewing code, packages, or pull requests for defects, vulnerabilities, contract problems, or readiness to ship.           |
 | `ponytail-review`         | When reviewing complexity, finding code to simplify or delete, or listing deferred work and shortcuts.                           |

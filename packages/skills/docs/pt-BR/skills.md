@@ -19,6 +19,7 @@ Os IDs na primeira coluna são os nomes de diretório aceitos por `--skills`. Es
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `brainstorming`           | Antes da implementação, quando é preciso definir requisitos ou comportamento em conjunto.                                                                             |
 | `test-driven-development` | Ao mudar o comportamento do código: escrever um teste que falha, implementar e depois refatorar.                                                                      |
+| `coding`                  | Ao escrever ou mudar código em qualquer linguagem, para tratar entradas, falhas, estado e caminhos irmãos, com testes que provem cada comportamento.                  |
 | `ponytail`                | Ao programar, para escolher a solução mais simples que funciona e evitar código especulativo.                                                                         |
 | `audit`                   | Ao revisar código, pacotes ou pull requests em busca de defeitos, vulnerabilidades, problemas de contrato ou para avaliar se estão prontos para entrega.              |
 | `ponytail-review`         | Ao revisar a complexidade, encontrar código para simplificar ou apagar, ou listar trabalho adiado e atalhos.                                                          |

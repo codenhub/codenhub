@@ -1,0 +1,7 @@
+{
+  "name": "task-runner",
+  "private": true,
+  "type": "module",
+  "bin": { "task-runner": "./src/cli.ts" },
+  "scripts": { "test": "node --test" }
+}

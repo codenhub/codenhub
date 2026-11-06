@@ -1,0 +1,4 @@
+interface:
+  display_name: "Coding"
+  short_description: "Write code that handles inputs, failures, and state"
+  default_prompt: "Use $coding to make this change: validate converted values against their consumer's limits, fail on missing input, cover every sibling path, commit state only after writes succeed, give every behavior decision a test you have watched fail, and report public API changes and the checks you ran."

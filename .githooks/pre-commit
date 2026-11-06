@@ -54,6 +54,8 @@ run_on() {
 }
 
 # oxlint reads code only, and exits non-zero when handed nothing it can parse.
+# --no-error-on-unmatched-pattern keeps that from failing a commit whose code
+# files its ignorePatterns all exclude, such as eval fixtures.
 select_code() {
   grep -E '\.(cjs|cts|js|jsx|mjs|mts|ts|tsx)$' "$1" >"$2" || true
 }
@@ -68,7 +70,7 @@ if [ -s "$work/fixable" ]; then
   select_md "$work/fixable" "$work/fixable-md"
   run_on "$work/fixable-md" pnpm exec prettier --write --log-level warn --
   select_code "$work/fixable" "$work/fixable-code"
-  run_on "$work/fixable-code" pnpm exec oxlint --fix --
+  run_on "$work/fixable-code" pnpm exec oxlint --fix --no-error-on-unmatched-pattern --
   run_on "$work/fixable" git add --
 fi
 
@@ -76,4 +78,4 @@ run_on "$work/staged" pnpm exec oxfmt --check --no-error-on-unmatched-pattern --
 select_md "$work/staged" "$work/md"
 run_on "$work/md" pnpm exec prettier --check --log-level warn --
 select_code "$work/staged" "$work/code"
-run_on "$work/code" pnpm exec oxlint --
+run_on "$work/code" pnpm exec oxlint --no-error-on-unmatched-pattern --

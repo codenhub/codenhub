@@ -28,7 +28,7 @@ Para repetir una instalación sin preguntas, selecciona explícitamente las skil
 pnpm dlx @codenhub/skills@latest --local --skills=brainstorming,test-driven-development --harnesses="Claude Workspace,Codex Workspace"
 ```
 
-La colección cubre planificación e implementación (`brainstorming`, `test-driven-development`, `ponytail`), revisión y entrega (`audit`, `babysit-pr`), trabajo creativo (`branding`, `design`, `logo-design`, `motion-graphics`, `naming`), e instrucciones para agentes y escritura. Consulta el [catálogo de skills](docs/es/skills.md) para conocer cada skill y cuándo se aplica.
+La colección cubre planificación e implementación (`brainstorming`, `test-driven-development`, `coding`, `ponytail`), revisión y entrega (`audit`, `babysit-pr`), trabajo creativo (`branding`, `design`, `logo-design`, `motion-graphics`, `naming`), e instrucciones para agentes y escritura. Consulta el [catálogo de skills](docs/es/skills.md) para conocer cada skill y cuándo se aplica.
 
 ## Documentación
 
