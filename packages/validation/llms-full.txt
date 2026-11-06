@@ -3149,6 +3149,28 @@ What it does not judge:
 
 That is the end of the reading path, and of our opinions about `__proto__`. For the exact signature of every export, see the [API reference](docs/reference/index.md). For what changed between versions, and how to upgrade, see the [changelog](docs/changelog/index.md).
 
+<!-- Source: docs/changelog/0.5.1.md -->
+
+# 0.5.1
+
+0.5.1 changes no signature, issue code or `params` shape, so upgrading from 0.5.0 needs no action. It adds a validator for the keys an object does not list and messages in Spanish, makes valid input to an object faster in three common cases, and fixes what the review after 0.5.0 found.
+
+## Added
+
+- `object(shape, { unknownKeys: validator })` validates each key the shape does not list with that validator and keeps what it produces, as zod's `catchall` and valibot's `objectWithRest` do: `object({ name: string() }, { unknownKeys: boolean() })` accepts `{ name: "Ada", beta: true }` and refuses `beta: "yes"` with `invalid_type` at `["beta"]`. Its issues follow those of the listed properties and stop at the 1,000 a collection reports. An unlisted `__proto__` is refused as `record` refuses it, and an asynchronous validator makes the object asynchronous. The type gains an index signature for the other keys. `pick`, `omit`, `partial`, `required` and `extend` keep it and accept one in their options, `toJsonSchema` writes it as `additionalProperties`, `audit` walks it and `encode` writes it back. [Getting started](docs/getting-started.md#keys-the-shape-does-not-list) covers it.
+- `spanishMessages`, the built-in wording in Spanish beside `englishMessages` and `portugueseMessages`: "Debe ser como mínimo 18". It writes a bound or a step with a decimal comma, ends a long list with "y 2 más", and words every message about a key as "la clave". It is a separate export, so only a program that imports it bundles it. [Issues and messages](docs/errors.md) says how to write a decimal point instead, as in Mexico.
+
+## Changed
+
+- Valid input to an `object` runs less of the full work in three cases. An object with a `check` asks its properties' fast tests first and runs the check once, from about 1.1 to 1.8 million validations a second for three strings and a check. A property with built-in checks, such as `string(startsWith("x"))`, keeps its fast test, from 1.2 to 3.4 million a second. An object with a `transform` property asks its other properties first and runs each one that has no fast test exactly once, from about 1.6 to 2.2 million a second. A `lazy` tree also builds its record of paths only for an object it reaches a second time. All measured with `pnpm bench` on Node.js 24.22.1; a `transform` or a check you wrote still runs once per validation, as before.
+- `size.json` records each export imported alone. The new `unknownKeys` path and the faster runs cost a lone `object()` 3.61 kB gzipped, from 3.35 kB in 0.5.0, and a lone `boolean()` 2.07 kB, from 2.01 kB.
+
+## Fixed
+
+- `base64()`, `base64url`, `jwt()` and `creditCard()` no longer throw `RangeError: Maximum call stack size exceeded` on text of a few megabytes, which `base64()` did from 5,000,000 characters and `creditCard()` from about 6,700,000. Each refuses or accepts what it did before; `creditCard()` refuses text longer than 37 characters without reading it, since such text holds more than 19 digits.
+- `transform` is typed asynchronous when its `convert` returns any value with a callable `then`, where it was typed synchronous unless the value was typed as `PromiseLike`, while `await` made the result a promise at run time. A program this changes was already given a promise where its type promised a result.
+- An exclusive date bound reported by a custom validator, with `inclusive: false`, is worded without "on or" in every message map, which said the bound itself was allowed.
+
 <!-- Source: docs/changelog/0.5.0.md -->
 
 # 0.5.0
