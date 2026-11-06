@@ -1515,7 +1515,7 @@ The object type with the properties of `TShape` added, replacing any of the same
 export type InferObject<TShape extends Shape, TRest extends AnyValidator = never> = WithRest<InferShape<TShape>, RestOf<TRest>>;
 ```
 
-The object type [`object`](#object) produces: that of the shape and, with a validator of unknown keys, an index signature for the keys the shape does not list, as [`WithRest`](#withrest) writes it.
+The object type [`object`](#object) produces: that of the shape and, with a validator of unknown keys, an index signature for the keys the shape does not list, which holds what that validator produces or any listed property's type, so the type can be written as an object literal.
 
 **Type parameters**
 
@@ -1528,7 +1528,7 @@ The object type [`object`](#object) produces: that of the shape and, with a vali
 export type InferObjectInput<TShape extends Shape, TRest extends AnyValidator = never> = WithRest<InferShapeInput<TShape>, RestInputOf<TRest>>;
 ```
 
-The object type that can pass [`object`](#object): that of the shape and, with a validator of unknown keys, an index signature for the keys the shape does not list, as [`WithRest`](#withrest) writes it.
+The object type that can pass [`object`](#object): that of the shape and, with a validator of unknown keys, an index signature for the keys the shape does not list, which holds what that validator accepts or any listed property's input type, so the type can be written as an object literal.
 
 **Type parameters**
 
@@ -1724,21 +1724,6 @@ export type Variants = Record<string, AnyValidator<object>>;
 ```
 
 The variants of a tagged union: a validator for each value the tag can have.
-
-### WithRest
-
-```ts
-export type WithRest<T, TValue> = [TValue] extends [never] ? T : Simplify<T & {
-    [key: string]: TValue | T[keyof T];
-}>;
-```
-
-An object type with an index signature for the keys it does not list, when `TValue` is not `never`. The signature holds `TValue` and the type of every listed property too, so a value of the type can be written as an object literal: a signature of `TValue` alone would also cover the listed keys, and refuse `{ name: "Ada" }` beside unlisted numbers.
-
-**Type parameters**
-
-- `T` — The listed properties.
-- `TValue` — What each unlisted key holds.
 
 ## Internal types
 
@@ -2042,3 +2027,15 @@ type Unlisted<T> = string extends keyof T ? T[string] : never;
 What the index signature of an object type holds, or `never` when it has none.
 
 Not exported; declared in `src/composition/reshape.ts`.
+
+### WithRest
+
+```ts
+type WithRest<T, TValue> = [TValue] extends [never] ? T : Simplify<T & {
+    [key: string]: TValue | T[keyof T];
+}>;
+```
+
+An object type with an index signature for the keys it does not list, when `TValue` is not `never`. The signature holds `TValue` and the type of every listed property too, so a value of the type can be written as an object literal: a signature of `TValue` alone would also cover the listed keys, and refuse `{ name: "Ada" }` beside unlisted numbers.
+
+Not exported; declared in `src/composition/object.ts`.

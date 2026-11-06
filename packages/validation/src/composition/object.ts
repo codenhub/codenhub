@@ -83,7 +83,8 @@ export type RestInputOf<TRest extends AnyValidator> = [TRest] extends [never] ? 
 
 /**
  * The object type {@link object} produces: that of the shape and, with a validator of unknown keys, an
- * index signature for the keys the shape does not list, as {@link WithRest} writes it.
+ * index signature for the keys the shape does not list, which holds what that validator produces or any
+ * listed property's type, so the type can be written as an object literal.
  *
  * @typeParam TShape - Property validators.
  * @typeParam TRest - The validator of unknown keys, or `never` when there is none.
@@ -95,7 +96,8 @@ export type InferObject<TShape extends Shape, TRest extends AnyValidator = never
 
 /**
  * The object type that can pass {@link object}: that of the shape and, with a validator of unknown keys,
- * an index signature for the keys the shape does not list, as {@link WithRest} writes it.
+ * an index signature for the keys the shape does not list, which holds what that validator accepts or any
+ * listed property's input type, so the type can be written as an object literal.
  *
  * @typeParam TShape - Property validators.
  * @typeParam TRest - The validator of unknown keys, or `never` when there is none.

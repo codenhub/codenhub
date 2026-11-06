@@ -47,7 +47,6 @@ export {
   type ObjectOptions,
   type Shape,
   type UnknownKeys,
-  type WithRest,
 } from "./composition/object";
 export { objectLike } from "./composition/object-like";
 export { optional } from "./composition/optional";
