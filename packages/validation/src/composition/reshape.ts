@@ -6,9 +6,17 @@
 import { describe } from "../core/describe";
 import { assertShape, isPlainObject } from "../core/objects";
 import { assertList } from "../core/result";
-import type { AnyValidator, AsyncSchema, Schema, Validator } from "../core/types";
+import type { AnyValidator, AsyncSchema, Composed, Schema, Validator } from "../core/types";
 import { nullable } from "./nullable";
-import { object, type ObjectOptions, type Shape } from "./object";
+import {
+  object,
+  type ObjectOptions,
+  type RestIn,
+  type RestInputOf,
+  type RestOf,
+  type Shape,
+  type WithRest,
+} from "./object";
 
 /** A validator of `T` that is synchronous when the validator it was made from is. */
 export type Reshaped<TValidator extends AnyValidator, T, TInput = unknown> =
@@ -16,17 +24,51 @@ export type Reshaped<TValidator extends AnyValidator, T, TInput = unknown> =
 
 type Simplify<T> = { [K in keyof T]: T[K] } & {};
 
-/** The object type with only the properties named. */
-export type Picked<T, K extends keyof T> = Simplify<Pick<T, K>>;
+/** The properties an object type lists, without the index signature of an object with a validator of unknown keys. */
+export type Listed<T> = {
+  [K in keyof T as string extends K ? never : number extends K ? never : K]: T[K];
+};
 
-/** The object type without the properties named. */
-export type Omitted<T, K extends keyof T> = Simplify<Omit<T, K>>;
+/** What the index signature of an object type holds, or `never` when it has none. */
+export type Unlisted<T> = string extends keyof T ? T[string] : never;
+
+/** The names of the properties an object type lists, which `pick` and `omit` take. */
+export type ListedKey<T> = keyof Listed<T>;
+
+/** The object type with `TValue` added to what its unlisted keys hold, as a validator of unknown keys given to a reshaping function adds it. */
+export type Reindexed<T, TValue> = [TValue] extends [never] ? T : WithRest<Listed<T>, Unlisted<T> | TValue>;
+
+/** `T` with what the validator of unknown keys in `TUnknownKeys`, if it is one, produces added to what its unlisted keys hold. */
+export type Remade<T, TUnknownKeys> = Reindexed<T, RestOf<RestIn<TUnknownKeys>>>;
+
+/** `T` with what the validator of unknown keys in `TUnknownKeys`, if it is one, accepts added to what its unlisted keys hold. */
+export type RemadeInput<T, TUnknownKeys> = Reindexed<T, RestInputOf<RestIn<TUnknownKeys>>>;
 
 /**
- * The object type with every property present and none of them `undefined`. A property typed `unknown`
- * or `any` still admits `undefined`, as `required` keeps an `unknown()` property unchanged.
+ * A validator of `T` that is synchronous when the validator it was made from, and the validator of
+ * unknown keys in `TUnknownKeys` if it is one, are.
  */
-export type AllRequired<T> = Simplify<{ [K in keyof T]-?: Exclude<T[K], undefined> }>;
+export type ReshapedWith<TValidator extends AnyValidator, TUnknownKeys, T, TInput> = [RestIn<TUnknownKeys>] extends [
+  never,
+]
+  ? Reshaped<TValidator, T, TInput>
+  : Composed<TValidator | RestIn<TUnknownKeys>, T, TInput>;
+
+/** The object type with only the properties named, and the index signature it had. */
+export type Picked<T, K extends keyof Listed<T>> = WithRest<Simplify<Pick<Listed<T>, K>>, Unlisted<T>>;
+
+/** The object type without the properties named, and with the index signature it had. */
+export type Omitted<T, K extends keyof T> = WithRest<Simplify<Omit<Listed<T>, K>>, Unlisted<T>>;
+
+/**
+ * The object type with every property present and none of them `undefined`, and the index signature it
+ * had. A property typed `unknown` or `any` still admits `undefined`, as `required` keeps an `unknown()`
+ * property unchanged.
+ */
+export type AllRequired<T> = WithRest<
+  Simplify<{ [K in keyof Listed<T>]-?: Exclude<Listed<T>[K], undefined> }>,
+  Unlisted<T>
+>;
 
 /**
  * The shape and the options of a validator `object` made, for the function named `name` to build on.

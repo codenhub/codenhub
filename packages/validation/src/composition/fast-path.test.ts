@@ -102,6 +102,18 @@ describe("the fast path of valid input", () => {
     }
   });
 
+  it("should give what the full work gives for an object with a validator of unknown keys", () => {
+    const quick = object({ a: string() }, { unknownKeys: number() });
+    const full = object({ a: slow(string()) }, { unknownKeys: slow(number()) });
+    const parsed = JSON.parse('{"a":"x","__proto__":1}') as unknown;
+    for (const input of [{ a: "x" }, { a: "x", b: 1 }, { b: 1, a: "x", c: 2 }, { a: "x", b: "1" }, { a: 1 }, parsed]) {
+      expect(quick(input)).toEqual(full(input));
+    }
+    expect(fastOf(quick)).toBeDefined();
+    // Without a fast test for the unknown keys, there is none for the object.
+    expect(fastOf(object({ a: string() }, { unknownKeys: slow(number()) }))).toBeUndefined();
+  });
+
   it("should give what the full work gives for arrays, holes included", () => {
     const quick = array(number(), { min: 1, max: 3 });
     const full = array(slow(number()), { min: 1, max: 3 });

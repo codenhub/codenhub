@@ -633,6 +633,36 @@ export const extended: Infer<typeof promoted> = { id: 1, role: "owner" };
 // @ts-expect-error an added property is typed by its validator
 export const unknownRole: Infer<typeof promoted> = { id: 1, role: "guest" };
 export const extendedAtOnce: boolean = promoted({}).ok;
+// A validator given for unknown keys types what they hold, and still lets a literal list its properties.
+const flagged = object({ name: string(), age: optional(number()) }, { unknownKeys: boolean() });
+export const flaggedValue: Infer<typeof flagged> = { name: "Ada", beta: true, age: undefined };
+export const flaggedIndex: { [key: string]: string | number | boolean | undefined } = {} as Infer<typeof flagged>;
+export const flaggedName: string = ({} as Infer<typeof flagged>).name;
+export const flaggedAtOnce: Validator<Infer<typeof flagged>> = flagged;
+// @ts-expect-error an unknown key holds what the validator gives
+export const flaggedWrong: Infer<typeof flagged> = { name: "Ada", beta: [] };
+const counted = object({}, { unknownKeys: coerceNumber() });
+export const countedValue: Infer<typeof counted> = { a: 1 };
+export const countedInput: InferInput<typeof counted> = { a: "1" };
+// @ts-expect-error a validator that waits for unknown keys makes the object wait
+export const restNotSync: Validator<unknown> = object({ name: string() }, { unknownKeys: checkedLater });
+const strictName = object({ name: string() }, { unknownKeys: "strict" });
+// @ts-expect-error a strict object has no index signature
+export const strictExtra: Infer<typeof strictName> = { name: "Ada", other: 1 };
+// Reshaping keeps the index signature and checks keys against the listed properties.
+const flaggedName2 = pick(flagged, ["name"]);
+export const pickedFlag: Infer<typeof flaggedName2> = { name: "Ada", beta: true };
+// @ts-expect-error only a listed property can be picked
+pick(flagged, ["beta"]);
+const flaggedNoAge = omit(flagged, ["age"]);
+export const omittedFlag: Infer<typeof flaggedNoAge> = { name: "Ada", beta: false };
+const flaggedPatch = partial(flagged);
+export const partialFlag: Infer<typeof flaggedPatch> = { beta: true };
+const tagged2 = extend(account, { name: string() }, { unknownKeys: array(string()) });
+export const extendedRest: Infer<typeof tagged2> = { id: 1, name: "Ada", tags: ["a"] };
+export const extendedRestAtOnce: boolean = tagged2({}).ok;
+// @ts-expect-error a validator given to a reshaping function types the unknown keys
+export const extendedRestWrong: Infer<typeof tagged2> = { id: 1, name: "Ada", tags: true };
 // A codec produces its output type from its input type, and encode goes back.
 const isoStamp = codec(datetime(), date(), {
   decode: (text) => new Date(text),

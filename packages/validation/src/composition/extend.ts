@@ -1,6 +1,6 @@
 import type { AnyValidator, AsyncRest, AsyncSchema, Composed, Infer, InferInput, Rest, Validator } from "../core/types";
-import type { InferShape, InferShapeInput, ObjectOptions, Shape } from "./object";
-import { extending } from "./reshape";
+import type { InferShape, InferShapeInput, ObjectOptions, RestIn, Shape, UnknownKeys, WithRest } from "./object";
+import { extending, type Listed, type Remade, type RemadeInput, type Unlisted } from "./reshape";
 
 type Simplify<T> = { [K in keyof T]: T[K] } & {};
 
@@ -10,10 +10,16 @@ type Simplify<T> = { [K in keyof T]: T[K] } & {};
  * @typeParam T - The object type extended.
  * @typeParam TShape - The validators of the properties added.
  */
-export type Extended<T, TShape extends Shape> = Simplify<Omit<T, keyof TShape> & InferShape<TShape>>;
+export type Extended<T, TShape extends Shape> = WithRest<
+  Simplify<Omit<Listed<T>, keyof TShape> & InferShape<TShape>>,
+  Unlisted<T>
+>;
 
 /** The input type with the properties of `TShape` added, replacing any of the same name. */
-type ExtendedInput<T, TShape extends Shape> = Simplify<Omit<T, keyof TShape> & InferShapeInput<TShape>>;
+type ExtendedInput<T, TShape extends Shape> = WithRest<
+  Simplify<Omit<Listed<T>, keyof TShape> & InferShapeInput<TShape>>,
+  Unlisted<T>
+>;
 
 /**
  * Creates an object validator with the properties of another and those given, as spreading the shape of
@@ -24,7 +30,8 @@ type ExtendedInput<T, TShape extends Shape> = Simplify<Omit<T, keyof TShape> & I
  * same name as one the object has replaces it, in its place. The validator must be one `object` made,
  * since its shape is read from what it describes itself with. The new object keeps its options,
  * `unknownKeys` and `message`, and each option given here replaces the one of its name, so a strict object
- * stays strict given only a `message`. One with checks is refused: a check reads
+ * stays strict given only a `message`, and a validator of unknown keys is kept. One with checks is refused:
+ * a check reads
  * the whole object and may read a property that is replaced, so give the checks the new object needs here
  * instead.
  *
@@ -44,18 +51,36 @@ type ExtendedInput<T, TShape extends Shape> = Simplify<Omit<T, keyof TShape> & I
  * @throws {TypeError} When the validator was not made by `object` or has checks, or `shape` is not a plain
  * object of validators.
  */
-export function extend<TValidator extends AnyValidator<object>, TShape extends Shape>(
+export function extend<
+  TValidator extends AnyValidator<object>,
+  TShape extends Shape,
+  TUnknownKeys extends UnknownKeys = "strip",
+>(
   validator: TValidator,
   shape: TShape,
-  ...rest: Rest<Extended<Infer<TValidator>, TShape>, ObjectOptions>
+  ...rest: Rest<Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>
 ): TValidator extends Validator<unknown>
-  ? Composed<TShape[keyof TShape], Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>>
-  : AsyncSchema<Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>>;
-export function extend<TValidator extends AnyValidator<object>, TShape extends Shape>(
+  ? Composed<
+      TShape[keyof TShape] | RestIn<TUnknownKeys>,
+      Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>,
+      RemadeInput<ExtendedInput<InferInput<TValidator>, TShape>, TUnknownKeys>
+    >
+  : AsyncSchema<
+      Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>,
+      RemadeInput<ExtendedInput<InferInput<TValidator>, TShape>, TUnknownKeys>
+    >;
+export function extend<
+  TValidator extends AnyValidator<object>,
+  TShape extends Shape,
+  TUnknownKeys extends UnknownKeys = "strip",
+>(
   validator: TValidator,
   shape: TShape,
-  ...rest: AsyncRest<Extended<Infer<TValidator>, TShape>, ObjectOptions>
-): AsyncSchema<Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>>;
+  ...rest: AsyncRest<Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>
+): AsyncSchema<
+  Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>,
+  RemadeInput<ExtendedInput<InferInput<TValidator>, TShape>, TUnknownKeys>
+>;
 export function extend(validator: AnyValidator, shape: Shape, ...rest: unknown[]): AnyValidator {
   return extending(validator, shape, rest);
 }

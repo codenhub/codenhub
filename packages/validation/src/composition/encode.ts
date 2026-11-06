@@ -234,8 +234,17 @@ export function encode<TValidator extends AnyValidator>(
           }),
         ) as AnyValidator;
       }
-      case "object":
-        return over((object as unknown as Make)(shape(), options));
+      case "object": {
+        const rest = options["unknownKeys"];
+        return over(
+          (object as unknown as Make)(
+            shape(),
+            typeof rest === "function"
+              ? { ...options, unknownKeys: encoderOf(rest as AnyValidator, `${path}{}`) }
+              : options,
+          ),
+        );
+      }
       case "objectLike":
         return over((objectLike as unknown as Make)(shape(), options));
       case "array":

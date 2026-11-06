@@ -61,6 +61,26 @@ describe("pick", () => {
     expect(issuesOf(loose(1))[0]?.message).toBe("Not that");
   });
 
+  it("should keep a validator of unknown keys as it is, which then sees every key the new shape does not list", () => {
+    const counts = number();
+    const scored = object({ a: string(), b: optional(string()) }, { unknownKeys: counts });
+    for (const made of [
+      pick(scored, ["a"]),
+      omit(scored, ["b"]),
+      partial(scored),
+      extend(scored, { c: optional(string()) }),
+    ] as Validator<object>[]) {
+      expect(describeValidator(made)?.options?.["unknownKeys"]).toBe(counts);
+      expect(valueOf(made({ a: "x", z: 1 }))).toEqual({ a: "x", z: 1 });
+      expect(issuesOf(made({ a: "x", z: "1" })).map((issue) => issue.path)).toEqual([["z"]]);
+    }
+    expect(describeValidator(required(scored))?.options?.["unknownKeys"]).toBe(counts);
+    expect(valueOf(required(scored)({ a: "x", b: "y", z: 1 }))).toEqual({ a: "x", b: "y", z: 1 });
+    // A key the new shape no longer lists is one of the unknown keys.
+    expect(issuesOf(omit(scored, ["b"])({ a: "x", b: "y" })).map((issue) => issue.path)).toEqual([["b"]]);
+    expect(valueOf(pick(scored, ["a"], { unknownKeys: "strip" })({ a: "x", z: "1" }))).toEqual({ a: "x" });
+  });
+
   it.each([undefined, null])(
     "should keep the options of the object when its own are given as %s, which is no options",
     (none) => {
