@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { check } from "../builders/check";
 import { format } from "../builders/format";
 import { guard } from "../builders/guard";
+import { fastOf } from "../core/nesting";
 import type { AsyncValidator, Validator } from "../core/types";
 import { boolean } from "../primitives/boolean";
 import { literal } from "../primitives/literal";
@@ -576,6 +577,23 @@ describe("lazy", () => {
       const tree = (nodes: number): Node => ({ kids: Array.from({ length: nodes - 1 }, () => ({ kids: [] })) });
       expect(node(tree(10_001)).ok).toBe(true);
       expect(issuesOf(node(tree(10_002)))[0]?.params).toEqual({ maximum: 10_000, type: "calls" });
+    });
+
+    it("should count the calls an option of a union spent before it failed, so lazy has no fast test", () => {
+      // The first option fails at `kind`, after its full work has spent six calls of `shared` on `kids`;
+      // the second reaches them one level deeper, where nothing kept is reused. A fast test would miss the
+      // first option at `kind` without a call, and pass what the full work rejects.
+      const shared = lazy(() => object({ n: number() }), { maxCalls: 10 });
+      const option = (kind: string, kids: Validator<unknown>) => object({ kind: literal(kind), kids: array(kids) });
+      const second = option(
+        "b",
+        lazy(() => shared),
+      );
+      const input = { kind: "b", kids: Array.from({ length: 6 }, (_, n) => ({ n })) };
+      expect(second(input).ok).toBe(true);
+      const result = union([option("a", shared), second])(input);
+      expect(JSON.stringify(result)).toContain('"maximum":10,"type":"calls"');
+      expect(fastOf(shared)).toBeUndefined();
     });
 
     it("should reject a limit that is not a positive integer, or not a number", () => {

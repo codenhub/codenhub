@@ -1,4 +1,4 @@
-import { assertOrder, assertSize, toIssue } from "../core/result";
+import { assertOrder, assertSize, issue } from "../core/result";
 import type { ValidationIssue } from "../core/types";
 
 /** The names of the size options, for the options a collection reads. */
@@ -16,13 +16,15 @@ export interface SizeOptions {
 
 /**
  * Rejects a size option that is not a number, or not a non-negative integer, and limits no size can satisfy
- * together, since each is a mistake in the schema and not in the input.
+ * together, since each is a mistake in the schema and not in the input. `noun` is what the messages call
+ * the size, such as the length of a string.
  */
-export function assertSizeOptions({ min, max, length }: SizeOptions): void {
+export function assertSizeOptions({ min, max, length }: SizeOptions, noun = "Size"): void {
+  const lower = noun.toLowerCase();
   for (const [name, size] of [
-    ["Minimum size", min],
-    ["Maximum size", max],
-    ["Size", length],
+    [`Minimum ${lower}`, min],
+    [`Maximum ${lower}`, max],
+    [noun, length],
   ] as const) {
     if (size !== undefined) {
       assertSize(name, size);
@@ -33,22 +35,27 @@ export function assertSizeOptions({ min, max, length }: SizeOptions): void {
   assertOrder("length", length, "max", max);
 }
 
-/** The issues for a collection whose size breaks a constraint, empty when it satisfies them all. */
-export function sizeIssues(size: number, type: string, { min, max, length }: SizeOptions): ValidationIssue[] {
-  const issues: ValidationIssue[] = [];
+/**
+ * The issues for a value whose size breaks a constraint, added to `issues`, which is a new list unless one
+ * is given, and empty when the size satisfies them all.
+ */
+export function sizeIssues(
+  size: number,
+  type: string,
+  { min, max, length }: SizeOptions,
+  issues: ValidationIssue[] = [],
+): ValidationIssue[] {
   if (min !== undefined && size < min) {
-    issues.push(toIssue({ code: "too_small", params: { minimum: min, type } }));
+    issues.push(issue("too_small", { minimum: min, type }));
   }
   if (max !== undefined && size > max) {
-    issues.push(toIssue({ code: "too_big", params: { maximum: max, type } }));
+    issues.push(issue("too_big", { maximum: max, type }));
   }
   if (length !== undefined && size !== length) {
     issues.push(
-      toIssue(
-        size < length
-          ? { code: "too_small", params: { minimum: length, exact: true, type } }
-          : { code: "too_big", params: { maximum: length, exact: true, type } },
-      ),
+      size < length
+        ? issue("too_small", { minimum: length, exact: true, type })
+        : issue("too_big", { maximum: length, exact: true, type }),
     );
   }
   return issues;

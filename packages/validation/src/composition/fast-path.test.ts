@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 
+import { check } from "../builders/check";
+import { checkFields } from "../builders/check-fields";
 import { format } from "../builders/format";
 import { guard } from "../builders/guard";
 import { endsWith } from "../checks/ends-with";
 import { multipleOf } from "../checks/multiple-of";
 import { pattern } from "../checks/pattern";
 import { startsWith } from "../checks/starts-with";
-import { fastOf } from "../core/nesting";
+import { fastOf, MISS, withFast } from "../core/nesting";
+import { fail, pass } from "../core/result";
 import type { AnyValidator } from "../core/types";
 import { email } from "../formats/email";
 import { uuid } from "../formats/uuid";
@@ -24,6 +27,7 @@ import { object } from "./object";
 import { optional } from "./optional";
 import { record } from "./record";
 import { tagged } from "./tagged";
+import { transform } from "./transform";
 import { tuple } from "./tuple";
 import { union } from "./union";
 
@@ -219,6 +223,251 @@ describe("the fast path of valid input", () => {
     const result = array(string())(list);
     expect(result.ok && result.value).toEqual(["a"]);
     expect(result.ok && result.value).not.toBe(list);
+  });
+
+  describe("an object some of whose properties have no fast test", () => {
+    const counted = () => {
+      const calls = { count: 0 };
+      const length = transform(string(), (text) => {
+        calls.count += 1;
+        return text.length;
+      });
+      return [calls, length] as const;
+    };
+    const inputs: unknown[] = [
+      { a: "four", b: "y", c: "z" },
+      { a: "four", b: 1, c: "z" },
+      { a: 4, b: "y", c: "z" },
+      { a: 4, b: 1, c: "z" },
+      { b: "y", c: "z" },
+      { a: "four", b: "y", c: "z", d: 1 },
+      { a: "four", b: "y", c: "z", ["__proto__"]: 1 },
+      JSON.parse('{"a":"four","b":"y","c":"z","__proto__":{"admin":true}}'),
+      "no",
+    ];
+
+    it("should give what the full work gives, and run the transform as often", () => {
+      for (const unknownKeys of ["strip", "strict", "passthrough"] as const) {
+        const [quickCalls, quickLength] = counted();
+        const [fullCalls, fullLength] = counted();
+        const quick = object({ a: quickLength, b: string(), c: optional(string()) }, { unknownKeys });
+        const full = object({ a: fullLength, b: slow(string()), c: optional(slow(string())) }, { unknownKeys });
+        for (const input of inputs) {
+          quickCalls.count = 0;
+          fullCalls.count = 0;
+          expect(quick(input)).toEqual(full(input));
+          expect(quickCalls.count).toBe(fullCalls.count);
+          expect(quickCalls.count).toBeLessThanOrEqual(1);
+        }
+      }
+    });
+
+    it("should give what the full work gives with several such properties, each run once", async () => {
+      const calls: string[] = [];
+      const build = (wrap: (validator: AnyValidator) => AnyValidator) =>
+        object({
+          a: transform(string(), (text) => {
+            calls.push(`a ${text}`);
+            return text.length;
+          }),
+          b: wrap(number()),
+          c: transform(string(), async (text) => {
+            calls.push(`c ${text}`);
+            return text.toUpperCase();
+          }),
+          d: wrap(optional(string())),
+          e: transform(optional(string()), (text) => {
+            calls.push(`e ${String(text)}`);
+            return text;
+          }),
+        });
+      const quick = build((validator) => validator);
+      const full = build(slow);
+      for (const input of [
+        { a: "x", b: 1, c: "y", d: "z", e: "w" },
+        { a: "x", b: 1, c: "y" },
+        { a: 1, b: 1, c: "y", d: "z", e: "w" },
+        { a: "x", b: "1", c: "y", d: "z", e: "w" },
+        { a: "x", b: 1, c: 2, d: "z", e: 3 },
+        { a: "x", b: 1, c: "y", d: 4, e: "w" },
+      ]) {
+        calls.length = 0;
+        // One at a time, since each reads the calls the one before it logged.
+        // oxlint-disable-next-line no-await-in-loop
+        const answer = await quick(input);
+        const quickCalls = [...calls];
+        calls.length = 0;
+        // oxlint-disable-next-line no-await-in-loop
+        expect(answer).toEqual(await full(input));
+        expect(quickCalls).toEqual(calls);
+      }
+    });
+
+    it("should give what the full work gives for a transform whose validator has a fast test", async () => {
+      let calls = 0;
+      const convert = (value: unknown) => {
+        calls += 1;
+        return [value];
+      };
+      const inners: [AnyValidator, unknown[]][] = [
+        [string({ trim: true, min: 2 }), [" ab ", " a ", 1]],
+        [object({ a: number() }), [{ a: 1 }, { a: "1" }, null]],
+        [array(string(), { max: 1 }), [["a"], ["a", "b"], [1]]],
+        [optional(number(), 3), [undefined, 1, "1"]],
+      ];
+      for (const [inner, inputs] of inners) {
+        expect(fastOf(inner)).toBeDefined();
+        for (const input of inputs) {
+          calls = 0;
+          const quick = transform(inner, convert)(input);
+          const quickCalls = calls;
+          calls = 0;
+          expect(quick).toEqual(transform(slow(inner), convert)(input));
+          expect(quickCalls).toBe(calls);
+          expect(object({ x: transform(inner, convert) })({ x: input })).toEqual(
+            object({ x: transform(slow(inner), convert) })({ x: input }),
+          );
+        }
+      }
+      expect(fastOf(transform(string(), convert))).toBeUndefined();
+    });
+
+    it("should give a property with a fast test what it produced, when a later one misses", () => {
+      // Produces a value its own test would not give again, so running it a second time, on what it
+      // produced, would be seen by the field check.
+      const doubled = withFast(
+        (input: unknown) =>
+          typeof input === "number" ? pass(input * 2) : fail({ code: "custom", message: "Not a number" }),
+        (input) => (typeof input === "number" ? input * 2 : MISS),
+      );
+      const [, length] = counted();
+      const quick = object(
+        { d: doubled, a: length, b: string() },
+        checkFields<{ d: number; a: number; b: string }, "d">(["d"], (value) => value.d !== 4),
+      );
+      const full = object(
+        { d: slow(doubled), a: length, b: slow(string()) },
+        checkFields<{ d: number; a: number; b: string }, "d">(["d"], (value) => value.d !== 4),
+      );
+      for (const input of [
+        { d: 2, a: "x", b: 1 },
+        { d: 2, a: 1, b: "y" },
+        { d: 2, a: "x", b: "y" },
+      ]) {
+        expect(quick(input)).toEqual(full(input));
+      }
+      expect(quick({ d: 2, a: "x", b: 1 }).ok).toBe(false);
+    });
+
+    it("should run the transform once when another property fails, and not when its own value does", () => {
+      const [calls, length] = counted();
+      const schema = object({ a: length, b: string() });
+      expect(schema({ a: "four", b: 1 }).ok).toBe(false);
+      expect(calls.count).toBe(1);
+      calls.count = 0;
+      expect(schema({ a: 4, b: "y" }).ok).toBe(false);
+      expect(calls.count).toBe(0);
+      calls.count = 0;
+      expect(schema({ a: "four", b: "y" })).toEqual({ ok: true, value: { a: 4, b: "y" } });
+      expect(calls.count).toBe(1);
+    });
+
+    it("should run the transform and each check once, for checks and field checks", () => {
+      let checks = 0;
+      const [calls, length] = counted();
+      const [fullCalls, fullLength] = counted();
+      const same = check<{ a: number; b: string }>((value) => {
+        checks += 1;
+        return value.a !== 1;
+      });
+      const fields = checkFields<{ a: number; b: string }, "a" | "b">(["a", "b"], (value) => {
+        checks += 1;
+        return value.a !== 2;
+      });
+      for (const extra of [[same], [fields], [same, fields]]) {
+        const quick = object({ a: length, b: string() }, ...(extra as []));
+        const full = object({ a: fullLength, b: slow(string()) }, ...(extra as []));
+        for (const input of [
+          { a: "x", b: "y" },
+          { a: "xy", b: "y" },
+          { a: "abc", b: "y" },
+          { a: "xy", b: 1 },
+          { a: 1, b: "y" },
+        ]) {
+          calls.count = 0;
+          checks = 0;
+          const answer = quick(input);
+          const quickChecks = checks;
+          expect(calls.count).toBeLessThanOrEqual(1);
+          fullCalls.count = 0;
+          checks = 0;
+          expect(answer).toEqual(full(input));
+          expect(calls.count).toBe(fullCalls.count);
+          expect(quickChecks).toBe(checks);
+        }
+      }
+    });
+
+    it("should run an asynchronous transform once, and give what the full work gives", async () => {
+      let calls = 0;
+      const later = (fast: boolean) =>
+        object({
+          a: transform(string(), async (text) => {
+            calls += 1;
+            return text.length;
+          }),
+          b: fast ? string() : slow(string()),
+        });
+      for (const input of [
+        { a: "four", b: "y" },
+        { a: "four", b: 1 },
+        { a: 4, b: "y" },
+      ]) {
+        calls = 0;
+        // One at a time, since each reads the calls the one before it counted.
+        // oxlint-disable-next-line no-await-in-loop
+        const answer = await later(true)(input);
+        const quickCalls = calls;
+        calls = 0;
+        // oxlint-disable-next-line no-await-in-loop
+        expect(answer).toEqual(await later(false)(input));
+        expect(quickCalls).toBe(calls);
+      }
+    });
+
+    it("should run the transform once for each item of a list, at the paths the full work gives", () => {
+      const [calls, length] = counted();
+      const [fullCalls, fullLength] = counted();
+      const quick = array(object({ a: length, b: string() }));
+      const full = array(object({ a: fullLength, b: slow(string()) }));
+      const input = [
+        { a: "x", b: "y" },
+        { a: "xy", b: 1 },
+        { a: 1, b: "y" },
+      ];
+      expect(quick(input)).toEqual(full(input));
+      expect(calls.count).toBe(2);
+      expect(fullCalls.count).toBe(2);
+    });
+
+    it("should read each property once, for input that passes and input that fails", () => {
+      const [, length] = counted();
+      for (const b of ["y", 1]) {
+        const reads = { a: 0, b: 0 };
+        const input = {
+          get a() {
+            reads.a += 1;
+            return "four";
+          },
+          get b() {
+            reads.b += 1;
+            return b;
+          },
+        };
+        object({ a: length, b: string() })(input);
+        expect(reads).toEqual({ a: 1, b: 1 });
+      }
+    });
   });
 
   it("should exist for a tuple, record, union and tagged whose every part has one, and not for one that cannot", () => {
