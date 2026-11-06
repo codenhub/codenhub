@@ -69,13 +69,21 @@ describe("documented exports rule", () => {
     expect((await runRule({ files })).map(({ location }) => location)).toEqual(["docs/index.md"]);
   });
 
-  it("reports an undeclared import shown in a translated README", async () => {
+  it("reports an undeclared import shown in a translated README while ignoring non-locale README files", async () => {
     const files = {
       "README.md": "# Example\n",
-      "README.pt-BR.md": '# Example\n\n```ts\nimport "@codenhub/example/node";\n```\n',
+      "README.pt-BR.md": '# Example\n\n```ts\nimport "@codenhub/example";\nimport "@codenhub/example/node";\n```\n',
+      "README.template.md": '# Example\n\n```ts\nimport "@codenhub/example/internal";\n```\n',
     };
 
-    expect((await runRule({ files })).map(({ location }) => location)).toEqual(["README.pt-BR.md"]);
+    expect(await runRule({ files })).toEqual([
+      {
+        code: "exports/undocumented-import",
+        location: "README.pt-BR.md",
+        message: `Documented import "@codenhub/example/node" is not declared in "exports".`,
+        severity: "error",
+      },
+    ]);
   });
 
   it("reports an undeclared import once however many examples show it", async () => {

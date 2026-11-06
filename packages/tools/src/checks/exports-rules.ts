@@ -1,6 +1,7 @@
 import { glob, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { parseTranslationPath } from "../documentation/translation-paths.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { isDocumentedPackage } from "../workspace/package-policy.ts";
 import type { CheckRule, Finding } from "./rule.ts";
@@ -65,7 +66,7 @@ async function readDocumentedSurfaces(rootPath: string): Promise<DocumentedSurfa
   ]);
   const paths = [
     README,
-    ...readmes.map((path) => path.replaceAll("\\", "/")),
+    ...readmes.map((path) => path.replaceAll("\\", "/")).filter((path) => parseTranslationPath(path) !== undefined),
     ...documents.map((path) => path.replaceAll("\\", "/")).filter((path) => !path.startsWith(INTERNAL_DOCS)),
   ].sort();
   const surfaces = await Promise.all(

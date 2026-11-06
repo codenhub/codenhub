@@ -193,6 +193,10 @@ describe("translation rule", () => {
     });
 
     const drift = await readTranslationDrift(workspacePackage.directory);
-    expect(drift.unsourced).toEqual(["docs/es/deleted.md", "docs/fr/index.md", "docs/pt-BR/reference/index.md"]);
+    expect(drift).toEqual({
+      stale: [],
+      translationCount: 3,
+      unsourced: ["docs/es/deleted.md", "docs/fr/index.md", "docs/pt-BR/reference/index.md"],
+    });
   });
 });

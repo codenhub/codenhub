@@ -2,7 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { UnsupportedFrontmatterError, parseMarkdown } from "../documentation/document-policy.ts";
-import { extractCuratedLinkTargets } from "../documentation/llms-full.ts";
+import { extractCuratedLinkTargets, stripMarkdownCode } from "../documentation/llms-full.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import type { CheckRule, Finding } from "./rule.ts";
 
@@ -42,7 +42,15 @@ async function readLinkedPages(packageRoot: string): Promise<string[] | undefine
   if (contents === undefined) {
     return undefined;
   }
-  return extractCuratedLinkTargets(contents).filter((name) => !name.includes("/") && name.endsWith(".md"));
+  let body = contents;
+  try {
+    ({ body } = parseMarkdown(contents, INDEX));
+  } catch (cause) {
+    if (cause instanceof UnsupportedFrontmatterError) {
+      ({ body } = cause);
+    }
+  }
+  return extractCuratedLinkTargets(body).filter((name) => !name.includes("/") && name.endsWith(".md"));
 }
 
 /**
@@ -77,7 +85,7 @@ async function checkPageFrontmatter(packageRoot: string, page: string): Promise<
     message: `Version page ${page} has no ${field} in its frontmatter. ${REQUIRED_FIELD_HINTS[field]} See docs/specs/packages-changelog.md.`,
     severity: "error",
   }));
-  if (BODY_PLACEHOLDER.test(body)) {
+  if (BODY_PLACEHOLDER.test(stripMarkdownCode(body))) {
     findings.push({
       code: "changelog/unfinished-entry",
       location,

@@ -21,6 +21,7 @@ export interface ReadmeBases {
 
 // A URL with a scheme, a protocol-relative URL, or an in-page fragment stays as written.
 const UNRESOLVED_URL = /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/iu;
+const HTML_COMMENT = /^<!--[\s\S]*-->$/u;
 const SOURCE_COMMENT = /^<!--\s*source:\s*(?:\S+)\s*-->$/u;
 
 function walk(node: MarkdownNode, visit: (node: MarkdownNode) => void): void {
@@ -48,7 +49,7 @@ function remarkPackageReadme({ baseUrl, imageBaseUrl }: ReadmeBases) {
     if (leading?.type === "html" && SOURCE_COMMENT.test(leading.value?.trim() ?? "")) {
       tree.children?.shift();
     }
-    const first = tree.children?.find((node) => node.type !== "html");
+    const first = tree.children?.find((node) => !(node.type === "html" && HTML_COMMENT.test(node.value?.trim() ?? "")));
     if (first?.type === "heading" && first.depth === 1) {
       first.depth = 2;
       first.data = { ...first.data, hProperties: { ...first.data?.hProperties, className: ["package-readme-title"] } };
