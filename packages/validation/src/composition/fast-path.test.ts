@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { format } from "../builders/format";
 import { guard } from "../builders/guard";
+import { endsWith } from "../checks/ends-with";
+import { multipleOf } from "../checks/multiple-of";
+import { pattern } from "../checks/pattern";
+import { startsWith } from "../checks/starts-with";
 import { fastOf } from "../core/nesting";
 import type { AnyValidator } from "../core/types";
 import { email } from "../formats/email";
@@ -182,6 +186,32 @@ describe("the fast path of valid input", () => {
       }),
     );
     expect(calls).toBe(4);
+  });
+
+  it("should exist for a leaf whose every check is built in, and give what the full work gives", () => {
+    expect(fastOf(string(startsWith("x"), pattern(/y$/)))).toBeDefined();
+    expect(fastOf(email(endsWith(".com")))).toBeDefined();
+    expect(fastOf(string(startsWith("x"), (value) => (value === "" ? [] : undefined)))).toBeUndefined();
+    const quick = object({ a: string({ trim: true }, startsWith("x"), pattern(/y$/)), b: number(multipleOf(2)) });
+    const full = object({ a: slow(string({ trim: true }, startsWith("x"), pattern(/y$/))), b: number(multipleOf(2)) });
+    for (const input of [
+      { a: " xy ", b: 4 },
+      { a: "zy", b: 4 },
+      { a: "xz", b: 3 },
+      { a: 1, b: 4 },
+    ]) {
+      expect(quick(input)).toEqual(full(input));
+    }
+  });
+
+  it("should word a built-in check's failure once, when its message is a function", () => {
+    let calls = 0;
+    const message = () => {
+      calls += 1;
+      return "Must start with x";
+    };
+    expect(object({ a: string(startsWith("x", message)), b: string() })({ a: "y", b: "z" }).ok).toBe(false);
+    expect(calls).toBe(1);
   });
 
   it("should make a fresh output, and never return the input itself", () => {

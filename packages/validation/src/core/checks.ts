@@ -1,6 +1,6 @@
 import { chain, collect, detached, runEach, type Maybe } from "./async";
 import { described, type Description } from "./describe";
-import { MISS, placeAll, withFast, type Place } from "./nesting";
+import { MISS, placeAll, withFast, type Fast, type Place } from "./nesting";
 import { isPlainObject } from "./objects";
 import { assertText, failWith, isPath, issue, pass, typeIssue } from "./result";
 import type {
@@ -142,6 +142,39 @@ export function finish<T>(
 }
 
 /**
+ * The test of each built-in check, which is the package's own code: it waits for nothing and calls no code
+ * a consumer wrote, as a check's message function would be on failure, so a leaf whose every check is one
+ * can keep a fast test.
+ */
+const ruleTests = new WeakMap<object, (value: never) => boolean>();
+
+/**
+ * A fast test that runs `fast` and then the test of every check, or undefined when a check is not a
+ * built-in one, or there is no `fast`.
+ */
+export function withRules<T>(fast: Fast | undefined, checks: readonly AsyncCheck<T>[]): Fast | undefined {
+  if (fast === undefined || checks.length === 0) {
+    return fast;
+  }
+  const tests = checks.map((check) => ruleTests.get(check) as ((value: T) => boolean) | undefined);
+  if (tests.includes(undefined)) {
+    return undefined;
+  }
+  return (input) => {
+    const value = fast(input);
+    if (value === MISS) {
+      return MISS;
+    }
+    for (const test of tests) {
+      if (!(test as (value: T) => boolean)(value as T)) {
+        return MISS;
+      }
+    }
+    return value;
+  };
+}
+
+/**
  * Builds a validator for a type: the input must pass `accepts`, then `inspect` reports the validator's
  * own constraints into the list and returns the value, cleaned if the validator cleans it, and then the
  * checks run on that value, once every constraint has passed. Every leaf and format is one of these.
@@ -161,21 +194,25 @@ export function leaf<T>(
     const issues: ValidationIssue[] = [];
     return finish(inspect === undefined ? (input as T) : inspect(input as T, issues), issues, message, checks);
   };
-  // Its fast test is the same work: a check could wait or call code a consumer wrote, so a leaf with one has none.
+  // Its fast test is the same work: a check could wait or call code a consumer wrote, so a leaf with one has
+  // none, unless every check is a built-in one, whose test the fast test runs.
   return withFast(
     validator,
-    !isQuick || checks.length > 0
+    !isQuick
       ? undefined
-      : inspect === undefined
-        ? (input) => (accepts(input) ? input : MISS)
-        : (input) => {
-            if (!accepts(input)) {
-              return MISS;
-            }
-            const issues: ValidationIssue[] = [];
-            const value = inspect(input as T, issues);
-            return issues.length === 0 ? value : MISS;
-          },
+      : withRules(
+          inspect === undefined
+            ? (input) => (accepts(input) ? input : MISS)
+            : (input) => {
+                if (!accepts(input)) {
+                  return MISS;
+                }
+                const issues: ValidationIssue[] = [];
+                const value = inspect(input as T, issues);
+                return issues.length === 0 ? value : MISS;
+              },
+          checks,
+        ),
   );
 }
 
@@ -191,11 +228,12 @@ export function rule<T>(
   message: Message | undefined,
 ): Check<T> {
   assertMessage(message);
-  return described<Check<T>>((value) => (test(value) ? undefined : word([issue(code, { ...params })], message)), {
-    kind: "check",
-    code,
-    params: Object.freeze(params),
-  });
+  const check = described<Check<T>>(
+    (value) => (test(value) ? undefined : word([issue(code, { ...params })], message)),
+    { kind: "check", code, params: Object.freeze(params) },
+  );
+  ruleTests.set(check, test);
+  return check;
 }
 
 /**
@@ -222,12 +260,10 @@ export function member<T>(
   return described(
     withFast(
       validator,
-      checks.length > 0
-        ? undefined
-        : (input) => {
-            const found = find(input);
-            return found === undefined ? MISS : found[0];
-          },
+      withRules((input) => {
+        const found = find(input);
+        return found === undefined ? MISS : found[0];
+      }, checks),
     ),
     { ...description, options, checks },
   );
