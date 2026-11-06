@@ -1,13 +1,13 @@
 ---
 title: Corpos de requisição
 description: Texto JSON, listas, tuplas, dicionários, sets e maps, uma escolha entre estruturas e dados recursivos.
-source: 65bf294a1b14a3d7ace2b4c620bd9494786c3beb
+source: cafb386ee90fc6dd3ca6b8e33415a1a57425b76a
 order: 3
 ---
 
 # Corpos de requisição
 
-Um servidor recebe o que qualquer cliente resolveu mandar. Esta página cobre as estruturas que um corpo de requisição tem além de um objeto plano: texto JSON, listas, dicionários, uma escolha entre estruturas e dados que se aninham dentro de si mesmos. A API de cadastro ganha uma lista de interesses, uma indicação que pode ter duas estruturas e um corpo que ainda é texto JSON.
+Um servidor recebe o que qualquer cliente resolveu mandar, e cliente é bicho criativo. Esta página cobre as estruturas que um corpo de requisição tem além de um objeto plano: texto JSON, listas, dicionários, uma escolha entre estruturas e dados que se aninham dentro de si mesmos. A API de cadastro ganha uma lista de interesses, uma indicação que pode ter duas estruturas e um corpo que ainda é texto JSON.
 
 ## Texto JSON
 
@@ -40,7 +40,7 @@ signupBody("{"); // { ok: false, ... }, code "invalid_format"
 O texto passa por `JSON.parse`, então duas regras dele valem aqui:
 
 - Uma chave repetida fica com o último valor: `{"a":1,"a":2}` dá `{ a: 2 }`.
-- Um número além do que um double guarda com exatidão perde dígitos: `12345678901234567890` vira `12345678901234567000`. Envie esses números como strings e leia-os com `coerceBigint`.
+- Um número além do que um double guarda com exatidão perde dígitos: `12345678901234567890` vira `12345678901234567000`, um ID que agora pertence a outra pessoa. Envie esses números como strings e leia-os com `coerceBigint`.
 
 O `string({ max: 100_000 })` na frente limita o texto antes do parse. [Limites](limits.md) explica por que um corpo precisa de um limite como esse.
 
@@ -124,7 +124,7 @@ const hours = record(oneOf(["mon", "tue"]), number()); // { mon?: number; tue?: 
 
 ### `union`
 
-`union(options)` aceita um valor que passa por qualquer um de vários validadores, e produz o que o primeiro que o aceitar produziu. Então coloque as opções mais específicas primeiro:
+`union(options)` aceita um valor que passa por qualquer um de vários validadores, e produz o que o primeiro que o aceitar produziu. Quem chega primeiro bebe água limpa, então coloque as opções mais específicas primeiro:
 
 ```ts
 import { coerceNumber, number, string, union } from "@codenhub/validation";
@@ -185,7 +185,15 @@ Cada variante precisa produzir um objeto simples, já que é ele que pode levar 
 
 Onde as saídas diferem de outra forma, como `"  ab "` difere quando um lado aplica trim e o outro passa para maiúsculas, nenhum valor satisfaz os dois. Cada um desses pontos falha com `invalid_intersection` no caminho dele, em vez de um lado vencer em silêncio.
 
-O objeto mesclado é novo. Então uma chave `__proto__` própria que um dos lados deixou passar sem verificar, como faz `unknown()`, é reportada como `invalid_key` com um problema dentro, `{ reserved: true }`, como `record` a reporta. Uma estrutura de qualquer um dos lados que lista `__proto__` naquele ponto a mantém, mas só se essa estrutura produziu o valor ali. Não o produziu uma estrutura que um `transform` executa antes da sua função, nem uma em uma etapa de `pipe` seguida de uma etapa que cria um objeto novo, nem o validador de chave de uma entrada de `map`, para o valor dessa entrada. Um valor que os dois lados deixaram passar inteiro, como por `unknown()` nos dois, é o próprio objeto da entrada, e é mantido sem alteração.
+O objeto mesclado é novo. Então uma chave `__proto__` própria que um dos lados deixou passar sem verificar, como faz `unknown()`, é reportada como `invalid_key` com um problema dentro, `{ reserved: true }`, como `record` a reporta. Dois casos mantêm a chave:
+
+- **Um lado cuja estrutura lista `__proto__` naquele ponto, e produziu o valor ali.** A estrutura tem que ser a última coisa que mexeu no valor. Ela não é quando algo depois dela produziu um valor novo:
+  - Uma estrutura dentro de um `transform`. O valor é o que a função do transform retornou, não o que a estrutura verificou.
+  - Uma estrutura numa etapa de `pipe` que uma etapa posterior substitui por um objeto novo.
+  - O validador de chave de uma entrada de `map`. Ele produziu a chave, não o valor da entrada.
+- **Um valor que os dois lados deixaram passar inteiro,** como por `unknown()` nos dois. Ele é o próprio objeto da entrada, e é mantido sem alteração.
+
+Então `intersection(object({ ["__proto__"]: unknown() }), unknown())` mantém uma chave `__proto__`, já que a estrutura da esquerda a lista e produziu o valor. Envolva esse `object` num `transform` e a chave passa a ser reportada, a não ser que o `transform` devolva o próprio objeto da entrada. A chave computada faz diferença: escrita como `{ __proto__: unknown() }`, o literal define o protótipo da estrutura e não lista chave nenhuma. Sim, é sério.
 
 Os dois validadores veem a entrada inteira, então dois `object`s com `unknownKeys: "strict"` só passam juntos quando toda chave da entrada está listada nas duas estruturas: cada um rejeita as chaves que só o outro lista. Para combinar estruturas estritas, espalhe-as em uma só: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
 

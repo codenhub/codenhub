@@ -11,12 +11,12 @@ It works the same for one value, such as an email address or a port number, and 
 
 ## Why validate
 
-Data that crosses a boundary you do not control can hold anything: a request, a form, a query string, an environment variable, a file, a message from another service. TypeScript checks types when you compile, not when the program runs. So the type you wrote for that data is a promise that nothing enforces, until a validator does.
+Data that crosses a boundary you do not control can hold anything: a request, a form, a query string, an environment variable, a file, a message from another service. TypeScript checks types when you compile, not when the program runs. So the type you wrote for that data is a promise, and the data never agreed to it. A validator is what makes it keep it.
 
 The package is built for that boundary, where the input may be hostile:
 
 - **A format gives you what the parser read.** `email()` and `url()` produce the value the platform's URL parser reads. The value you store is the one a request or a mail server will use.
-- **A failing input has a bounded report.** Each collection stops reporting at 1,000 issues, as [Limits](limits.md#a-failing-input-has-a-bounded-cost) explains. Input nested too deep is one issue, not a stack overflow, as long as the depth limit fits the stack.
+- **A failing input has a bounded report.** Each collection stops reporting at 1,000 issues, as [Limits](limits.md#a-failing-input-has-a-bounded-cost) explains. Input nested too deep is one issue, not a stack overflow, as long as the depth limit of a recursive schema, [`maxDepth`](limits.md#maxdepth), fits the stack.
 - **An issue never holds a value of the input.** A log of failures holds no password that was sent. An issue does hold what the schema was configured with, such as the values a `oneOf` accepts or the prefix of a `startsWith`, and the input's keys, in its `path`, as [The issue](errors.md#the-issue) says.
 
 The 1,000-issue limit of a collection bounds its report, not the work: an input that passes, or fails only near its end, is still checked item by item, so a large one costs its size. [Limits](limits.md) says how to bound its size and its depth.
@@ -40,10 +40,10 @@ const signup = object({
 });
 
 signup({ name: "  Ada ", email: "ada@example.com" }); // { ok: true, value: { name: "Ada", email: "ada@example.com" } }
-signup({ name: "A", email: "nope" }); // { ok: false, ... }, code "too_small"
+signup({ name: "A", email: "nope" }); // { ok: false, ... }: "too_small" for name, "invalid_format" for email
 ```
 
-These pages follow one example: the sign-up of a web app. It starts here as two fields. Each page adds what that page teaches, such as a form with a password check, a JSON request body, the server's configuration and the messages a user reads.
+These pages follow one example: the sign-up of a web app. It starts here as two fields and, like every sign-up form ever built, grows a little on each page. Each page adds what that page teaches, such as a form with a password check, a JSON request body, the server's configuration and the messages a user reads.
 
 ## Reading path
 

@@ -2,12 +2,12 @@
 title: Integraciones
 description: Usa un validador con bibliotecas de formularios, frameworks de RPC y HTTP, las herramientas de un modelo de lenguaje, OpenAPI y dentro de un esquema de zod o valibot, con un ejemplo para cada caso que se ejecutó con la biblioteca que nombra.
 order: 11
-source: 0ff1b6d8fe7f58ddc0b039eea6f27e06def3269e
+source: 683884d32d5982944aa45ef5e861fcef0bf00e43
 ---
 
 # Integraciones
 
-El registro se ejecuta dentro de otras bibliotecas: una biblioteca de formularios en el navegador, un framework en el servidor, quizás las herramientas de un modelo de lenguaje. Esta página muestra un validador en cada una de las más comunes, para que puedas copiar las pocas líneas que cada una necesita.
+El registro se ejecuta dentro de otras bibliotecas: una biblioteca de formularios en el navegador, un framework en el servidor y, ya que estamos en los años 2020, quizás las herramientas de un modelo de lenguaje. Esta página muestra un validador en cada una de las más comunes, para que puedas copiar las pocas líneas que cada una necesita.
 
 Un validador entra donde una biblioteca pide un esquema de una de estas tres formas:
 
@@ -15,7 +15,7 @@ Un validador entra donde una biblioteca pide un esquema de una de estas tres for
 - Como un [JSON Schema](./json-schema.md), el formato en que se escriben las herramientas de los modelos de lenguaje y los documentos de OpenAPI.
 - Llamado directamente, como cualquier función. Así es también como un campo de un [esquema de zod o valibot](#dentro-de-un-esquema-de-zod-o-valibot) puede usarlo.
 
-Todo validador que crea una fábrica de este paquete ya es un Standard Schema, con mensajes en inglés breve. Los ejemplos de formularios, RPC y HTTP lo pasan por `standard`, que redacta sus problemas en el inglés completo, y se ejecutaron así. Los demás ejemplos usan lo que nombra su sección: `standardJsonSchema`, `toJsonSchema` o el validador llamado directamente. Cada ejemplo se ejecutó con la versión de la biblioteca que nombra, el 2026-10-07: validó una entrada que pasa y una que falla, y dio lo que dice el texto que lo rodea.
+Todo validador que crea una fábrica de este paquete ya es un Standard Schema, con mensajes en inglés breve. Los ejemplos de formularios, RPC y HTTP lo pasan por `standard`, que redacta sus problemas en el inglés completo, y se ejecutaron así. Los demás ejemplos usan lo que nombra su sección: `standardJsonSchema`, `toJsonSchema` o el validador llamado directamente. Cada ejemplo se ejecutó con la versión de la biblioteca que nombra, el 2026-10-07: validó una entrada que pasa y una que falla, y dio lo que dice el texto que lo rodea. Las bibliotecas cambian, así que la fecha dice cuándo fue cierto esto por última vez.
 
 ## Formularios
 
@@ -204,7 +204,7 @@ export const document = {
 
 ## Dentro de un esquema de zod o valibot
 
-Un código basado en zod o valibot puede usar un validador de este paquete para un solo campo, como `url()` para un enlace que el servidor va a descargar o `email()` para una dirección que va a guardar, sin migrar sus demás esquemas. Ninguna de las dos bibliotecas acepta un Standard Schema como parte de sus propios esquemas, así que el validador se ejecuta en una transformación: lo que produce es el valor del campo, y cada problema que reporta se convierte en un problema de la otra biblioteca, redactado por `formatIssue`. Solo un validador síncrono encaja de esta forma.
+Un código basado en zod o valibot puede usar un validador de este paquete para un solo campo, como `url()` para un enlace que el servidor va a descargar o `email()` para una dirección que va a guardar, sin migrar sus demás esquemas, así que nadie tiene que reservar un fin de semana para la migración. Ninguna de las dos bibliotecas acepta un Standard Schema como parte de sus propios esquemas, así que el validador se ejecuta en una transformación: lo que produce es el valor del campo, y cada problema que reporta se convierte en un problema de la otra biblioteca, redactado por `formatIssue`. Solo un validador síncrono encaja de esta forma.
 
 El problema sigue entonces las reglas de la otra biblioteca: los problemas de valibot contienen la entrada que recibieron, así que lo que dice [Problemas y mensajes](./errors.md) sobre que los problemas nunca contienen un valor de la entrada aquí vale para el resultado del validador, no para el problema que reporta valibot.
 

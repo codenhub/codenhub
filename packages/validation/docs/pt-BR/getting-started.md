@@ -1,13 +1,13 @@
 ---
 title: Primeiros passos
 description: O que é um validador, como ler o resultado dele e os validadores para strings, números, datas, valores fixos e objetos.
-source: c75ad2300c395a779c01fac37ccbabdf2d9c403f
+source: 48e3039a7ada1fac57f4723b4349de7761bc429d
 order: 1
 ---
 
 # Primeiros passos
 
-Esta página cobre a base de todas as outras: como um validador é criado e chamado, o que ele devolve e os validadores para cada tipo básico de valor. Ao final, você consegue escrever a primeira versão do cadastro: um objeto com nome, endereço de e-mail e senha, e o tipo TypeScript que sai dele.
+Esta página é a base em que todas as outras se apoiam, e é por isso que ela é a comprida: como um validador é criado e chamado, o que ele devolve e os validadores para cada tipo básico de valor. Ao final, você consegue escrever a primeira versão do cadastro: um objeto com nome, endereço de e-mail e senha, e o tipo TypeScript que sai dele.
 
 ## Um validador é uma função
 
@@ -24,7 +24,7 @@ port(70000); // { ok: false, ... }, code "too_big"
 string({ min: 3 })("ab"); // { ok: false, ... }
 ```
 
-A primeira linha roda uma vez, quando o módulo carrega, e devolve uma função que você reaproveita para todos os valores. Para verificar um único valor uma única vez, faça as duas chamadas de uma vez: `number({ int: true })(input)`.
+A linha do `port` roda uma vez, quando o módulo carrega, e devolve uma função que você reaproveita para todos os valores. Para verificar um único valor uma única vez, faça as duas chamadas de uma vez: `number({ int: true })(input)`.
 
 Como um validador é só uma função, você pode passar qualquer validador onde outro é esperado, e pode escrever o seu sem helper nenhum. [Validadores personalizados](custom-validators.md) mostra como.
 
@@ -40,7 +40,7 @@ As opções podem ser omitidas quando há verificações: `string(startsWith("a"
 
 ### Erros nas opções lançam na hora
 
-As opções são lidas uma vez, quando o validador é criado. Uma opção sem sentido é um erro no seu código, não na entrada, então a factory lança um `RangeError` ou um `TypeError` nesse momento, e o programa falha onde está o erro:
+As opções são lidas uma vez, quando o validador é criado. Uma opção sem sentido é um erro no seu código, não na entrada, então a factory lança um `RangeError` ou um `TypeError` nesse momento, e o programa falha onde está o erro. Quebrar na subida é deselegante, mas é bem melhor que um schema aceitando tudo calado por seis meses. Estes lançam:
 
 - Um valor que nenhuma entrada consegue satisfazer: um comprimento negativo, um limite `NaN` ou limites que se contradizem, como `{ min: 5, max: 2 }`.
 - Opções que não são um objeto simples, como `string(/^a/)` quando a intenção era `string(pattern(/^a/))`. Se fossem ignoradas, aceitariam qualquer string.
@@ -71,7 +71,7 @@ Quando algo está errado, o validador reporta todos os problemas que consegue en
 
 ### Uma entrada inválida não lança exceção
 
-Uma entrada inválida é um resultado esperado, não um bug, então o validador a devolve no resultado. Se você prefere interromper o programa, é uma linha: `if (!result.ok) throw new Error(...)`, ou [`assert`](errors.md#lançando-um-erro-para-configuração-inválida), que escreve a mensagem por você.
+Uma entrada inválida é um resultado esperado, não um bug: um formulário de cadastro vê erro de digitação quase tanto quanto vê cadastro. Então o validador a devolve no resultado. Se você prefere interromper o programa, é uma linha: `if (!result.ok) throw new Error(...)`, ou [`assert`](errors.md#lançando-um-erro-para-configuração-inválida), que escreve a mensagem por você.
 
 Um tipo de entrada ainda pode lançar exceção: a entrada que executa código próprio enquanto é lida, como um getter ou um trap de `Proxy` que lança. Essa exceção se propaga, como uma vinda de um callback seu. Dados obtidos de JSON não têm código assim. Dois validadores se comportam diferente:
 
@@ -114,7 +114,7 @@ A limpeza sempre acontece primeiro, e todas as opções e verificações veem a 
 
 - `trim` remove os espaços em branco e os terminadores de linha do Unicode, então um espaço sem quebra (no-break space) sai. Um espaço de largura zero (U+200B) não é espaço em branco e fica, então `string({ trim: true, min: 1 })` o aceita. A verificação `nonBlank()` o rejeita.
 - `case` pode mudar o comprimento que as outras opções veem: `ß` em maiúsculas é `SS`, e `İ` em minúsculas são duas unidades de código.
-- Os comprimentos contam unidades de código UTF-16, como `String.length`, então um emoji pode contar como dois.
+- Os comprimentos contam unidades de código UTF-16, como `String.length`, então um emoji pode contar como dois, e uma família de quatro como onze.
 
 Cada opção que falha reporta um problema próprio:
 
@@ -166,7 +166,7 @@ Os limites são verificados quando o validador é criado:
 - Um limite que não é número, ou um `clamp` que não seja um intervalo com `min` e `max` numéricos, lança um `TypeError`.
 - Um `clamp` lança um `RangeError` para um limite `NaN`, um mínimo `Infinity`, um máximo `-Infinity`, um mínimo acima do máximo, ou um intervalo em que todo valor viola algum limite, como `{ clamp: { min: 0, max: 10 }, min: 11 }`.
 
-Limites que contêm números mas nenhum inteiro, como `{ int: true, gt: 1, lt: 2 }`, não são detectados, já que essa verificação aumentaria o tamanho de todo programa que usa `number`. Um validador assim rejeita qualquer entrada.
+Limites que contêm números mas nenhum inteiro, como `{ int: true, gt: 1, lt: 2 }`, não são detectados, já que essa verificação aumentaria o tamanho de todo programa que usa `number`. Um validador assim rejeita qualquer entrada, e o primeiro teste com uma entrada que deveria passar vai perceber.
 
 | Falha                   | `code`          | `params`                                         |
 | ----------------------- | --------------- | ------------------------------------------------ |
@@ -209,7 +209,7 @@ Uma data anterior a `min` falha com `too_small` e `{ minimum, inclusive: true, t
 
 - Qualquer primitivo funciona, e é assim que se validam `null` e `undefined`: `literal(null)`.
 - Ele produz o valor declarado, não a entrada. Os dois só diferem no zero: `===` considera `-0` igual a `0`, e `literal(0)` produz `0` para qualquer um dos dois.
-- `NaN` é recusado com um `RangeError` quando o validador é criado. `NaN === NaN` é falso, então `literal(NaN)` não aceitaria nada.
+- `NaN` é recusado com um `RangeError` quando o validador é criado. `NaN === NaN` é falso, então `literal(NaN)` não aceitaria nada, nem o próprio `NaN`.
 
 `oneOf(values)` aceita qualquer valor de uma lista e produz a união deles: `oneOf(["admin", "user"])` produz `"admin" | "user"`.
 
@@ -389,4 +389,4 @@ Você não escolhe um modo. Você escreve a regra, e os tipos acompanham: um val
 
 ## Próximos passos
 
-O cadastro agora tem uma estrutura e um tipo. [Formulários](forms.md) o transforma em um formulário: uma senha digitada duas vezes, campos opcionais com valores padrão, um arquivo de avatar e erros exibidos ao lado de cada campo.
+O cadastro agora tem uma estrutura e um tipo. Em seguida, ele encara um navegador: [Formulários](forms.md) o transforma em um formulário, com uma senha digitada duas vezes, campos opcionais com valores padrão, um arquivo de avatar e erros exibidos ao lado de cada campo.

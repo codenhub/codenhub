@@ -6,7 +6,7 @@ order: 12
 
 # Limits
 
-A sign-up endpoint receives whatever anybody sends it, including input written to make it slow, to exhaust its memory, or to crash it. This page says what the package bounds for you, what it leaves to you, and how to check that a schema sets the bounds it needs. Read it before you validate input from a public network.
+A sign-up endpoint receives whatever anybody sends it, including input written to make it slow, to exhaust its memory, or to crash it. This page says what the package bounds for you, what it leaves to you, and how to check that a schema sets the bounds it needs. Read it before you validate input from a public network: it is shorter than the incident report.
 
 In short:
 
@@ -194,4 +194,4 @@ What it does not judge:
 
 ## Next
 
-That is the end of the reading path. For the exact signature of every export, see the [API reference](reference/index.md). For what changed between versions, and how to upgrade, see the [changelog](changelog/index.md).
+That is the end of the reading path, and of our opinions about `__proto__`. For the exact signature of every export, see the [API reference](reference/index.md). For what changed between versions, and how to upgrade, see the [changelog](changelog/index.md).

@@ -2,7 +2,7 @@
 title: JSON Schema
 description: Escribe un validador como JSON Schema, para el cuerpo de una API HTTP, los argumentos de una herramienta que llama un modelo de lenguaje o un generador de formularios.
 order: 10
-source: d803b9b6b958da6617332343c97771eed2d675a4
+source: f900b56f7a8c8319899b73b773f639f5a9daf462
 ---
 
 # JSON Schema
@@ -37,7 +37,7 @@ El resultado es un objeto plano nuevo que `JSON.stringify` puede escribir. Se im
 
 ## Lo que promete el esquema
 
-Un esquema dice menos de lo que verifica un validador. `email()` rechaza una dirección en `localhost`, y el formato `email` de JSON Schema no tiene esa regla. Por eso el esquema se escribe para cumplir una promesa: **un valor que el validador acepta pasa el esquema**. El esquema puede aceptar un valor que luego el validador rechaza, y el validador sigue siendo la verificación que cuenta. Valida lo que recibes con el validador, y dale el esquema a quien necesite conocer la forma.
+Un esquema dice menos de lo que verifica un validador. `email()` rechaza una dirección en `localhost`, y el formato `email` de JSON Schema no tiene opinión al respecto. Por eso el esquema se escribe para cumplir una promesa: **un valor que el validador acepta pasa el esquema**. El esquema puede aceptar un valor que luego el validador rechaza, y el validador sigue siendo la verificación que cuenta. Valida lo que recibes con el validador, y dale el esquema a quien necesite conocer la forma.
 
 Hay tres casos que doblan esa promesa. En dos, el validador limpia un valor antes de verificarlo, algo que un esquema no puede expresar, y en el otro, los dos cuentan de forma distinta la longitud del texto:
 
@@ -206,7 +206,7 @@ Para enviar una fecha como JSON, valida el texto en que viaja, con `datetime()` 
 
 ## Leer un esquema
 
-`toJsonSchema` escribe una notación. Para escribir otra, o para construir un formulario a partir de un esquema, lee el validador por tu cuenta. `describe(validator)` devuelve de qué está hecho un validador, como datos planos, con el tipo `Description`: su `kind`, las `options` que recibió, sus `checks` y los validadores que contiene. Un programa recorre un esquema con él, para escribir el esquema en otra notación, para construir un formulario a partir de él o para crear otro validador a partir de sus partes.
+`toJsonSchema` escribe una notación, y siempre hay otra. Para escribirla, o para construir un formulario a partir de un esquema, lee el validador por tu cuenta. `describe(validator)` devuelve de qué está hecho un validador, como datos planos, con el tipo `Description`: su `kind`, las `options` que recibió, sus `checks` y los validadores que contiene. Un programa recorre un esquema con él, para escribir el esquema en otra notación, para construir un formulario a partir de él o para crear otro validador a partir de sus partes.
 
 ```ts
 import { describe, email, object, optional, string, type AnyValidator } from "@codenhub/validation";
@@ -256,4 +256,4 @@ Lo que devuelve `standard` se describe como el validador que envuelve, y lo mism
 
 ## Siguiente
 
-Las bibliotecas que reciben un Standard Schema o un JSON Schema tienen cada una algunos detalles propios. [Integraciones](./integrations.md) muestra las más comunes, con el registro.
+Las bibliotecas que reciben un Standard Schema o un JSON Schema tienen cada una algunos detalles propios, que es la forma educada de decir manías. [Integraciones](./integrations.md) muestra las más comunes, con el registro.

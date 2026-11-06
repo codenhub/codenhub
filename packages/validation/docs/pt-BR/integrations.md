@@ -1,13 +1,13 @@
 ---
 title: Integrações
 description: Use um validador com bibliotecas de formulário, frameworks de RPC e HTTP, as ferramentas de um modelo de linguagem, OpenAPI e dentro de um schema zod ou valibot, com um exemplo para cada, executado com a biblioteca que ele cita.
-source: 0ff1b6d8fe7f58ddc0b039eea6f27e06def3269e
+source: 683884d32d5982944aa45ef5e861fcef0bf00e43
 order: 11
 ---
 
 # Integrações
 
-O cadastro roda dentro de outras bibliotecas: uma biblioteca de formulários no navegador, um framework no servidor, talvez as ferramentas de um modelo de linguagem. Esta página mostra um validador em cada uma das mais comuns, para você copiar as poucas linhas que cada uma precisa.
+O cadastro roda dentro de outras bibliotecas: uma biblioteca de formulários no navegador, um framework no servidor e, como estamos nos anos 2020, talvez as ferramentas de um modelo de linguagem. Esta página mostra um validador em cada uma das mais comuns, para você copiar as poucas linhas que cada uma precisa.
 
 Um validador entra onde uma biblioteca pede um schema de uma de três formas:
 
@@ -15,7 +15,7 @@ Um validador entra onde uma biblioteca pede um schema de uma de três formas:
 - Como um [JSON Schema](json-schema.md), em que são escritas as ferramentas de modelos de linguagem e os documentos OpenAPI.
 - Chamado diretamente, como qualquer função. É também assim que um campo de um [schema zod ou valibot](#dentro-de-um-schema-zod-ou-valibot) pode usá-lo.
 
-Todo validador que uma factory deste pacote cria já é um Standard Schema, com mensagens em inglês curto. Os exemplos de formulários, RPC e HTTP o passam por `standard`, que escreve os problemas em inglês completo, e foram executados assim. Os outros exemplos usam o que a seção deles nomeia: `standardJsonSchema`, `toJsonSchema` ou o validador chamado diretamente. Cada exemplo foi executado com a versão da biblioteca que ele cita, em 2026-10-07: validou uma entrada que passa e uma que falha, e deu o que o texto em volta dele diz.
+Todo validador que uma factory deste pacote cria já é um Standard Schema, com mensagens em inglês curto. Os exemplos de formulários, RPC e HTTP o passam por `standard`, que escreve os problemas em inglês completo, e foram executados assim. Os outros exemplos usam o que a seção deles nomeia: `standardJsonSchema`, `toJsonSchema` ou o validador chamado diretamente. Cada exemplo foi executado com a versão da biblioteca que ele cita, em 2026-10-07: validou uma entrada que passa e uma que falha, e deu o que o texto em volta dele diz. Bibliotecas mudam, então a data diz quando tudo isso era verdade pela última vez.
 
 ## Formulários
 
@@ -204,7 +204,7 @@ export const document = {
 
 ## Dentro de um schema zod ou valibot
 
-Um código que usa zod ou valibot pode usar um validador deste pacote em um campo, como `url()` para um link que o servidor vai buscar ou `email()` para um endereço que ele vai guardar, sem migrar os outros schemas. Nenhuma das duas bibliotecas aceita um Standard Schema como parte dos próprios schemas, então o validador roda num transform: o que ele produz é o valor do campo, e cada problema que ele reporta vira um problema da outra biblioteca, com o texto de `formatIssue`. Só um validador síncrono funciona assim.
+Um código que usa zod ou valibot pode usar um validador deste pacote em um campo, como `url()` para um link que o servidor vai buscar ou `email()` para um endereço que ele vai guardar, sem migrar os outros schemas, e ninguém precisa sacrificar um fim de semana numa migração. Nenhuma das duas bibliotecas aceita um Standard Schema como parte dos próprios schemas, então o validador roda num transform: o que ele produz é o valor do campo, e cada problema que ele reporta vira um problema da outra biblioteca, com o texto de `formatIssue`. Só um validador síncrono funciona assim.
 
 O problema passa então a seguir as regras da outra biblioteca: os problemas do valibot guardam a entrada que receberam, então o que [Problemas e mensagens](errors.md) diz sobre problemas nunca guardarem um valor da entrada vale aqui para o resultado do validador, não para o problema que o valibot reporta.
 

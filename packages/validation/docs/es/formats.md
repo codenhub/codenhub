@@ -2,12 +2,12 @@
 title: Formatos
 description: Direcciones de correo, URL, nombres de dominio, direcciones IP, fechas, horas y los demás formatos de cadena, lo que acepta cada uno y el valor que produce.
 order: 7
-source: 5ac6fedbc6d4475eb4aab0f0bedbe55cdcdadb38
+source: 458673df9e7a08cfa16f67c583d6c618b5e2802a
 ---
 
 # Formatos
 
-Un formato es un validador para una cadena con una forma particular, como una dirección de correo o una URL. El registro necesita uno para su correo, y muchas reglas que podrías escribir tú son un formato que el paquete ya tiene. Esta página los enumera, junto con lo que acepta cada uno y el valor que produce. Se detiene más en `email` y `url`, ya que una dirección o un enlace que sigue un servidor es donde una verificación descuidada sale más cara.
+Un formato es un validador para una cadena con una forma particular, como una dirección de correo o una URL. El registro necesita uno para su correo, y muchas reglas que podrías escribir tú son un formato que el paquete ya tiene. Esta página los enumera, junto con lo que acepta cada uno y el valor que produce. Se detiene más en `email` y `url`, ya que una dirección o un enlace que sigue un servidor es donde una verificación descuidada sale más cara. Esas secciones son largas porque las especificaciones detrás de ellas también lo son, y las leímos para que tú no tuvieras que hacerlo.
 
 Cada formato se importa por separado, así que un programa empaqueta los que usa y ningún otro. Cada uno acepta una opción `message` y verificaciones.
 
@@ -74,7 +74,7 @@ Las opciones son `allowPlus`, con valor predeterminado `true`, que controla si s
 
 La parte local, antes de la `@`, debe ser un dot-atom, como lo acepta el input de email de HTML:
 
-- Letras ASCII, dígitos y ``!#$%&'*+/=?^_`{|}~-``, con puntos simples entre ellos.
+- Letras ASCII, dígitos y ``!#$%&'*+/=?^_`{|}~-``, con puntos simples entre ellos. Sí, `{` y `|` son válidos ahí; el correo es más viejo que el buen gusto.
 - Una parte local entre comillas, como `"a b"@example.com`, se rechaza.
 - También se rechaza una dirección con otras letras antes de la `@` (RFC 6531).
 - La parte local tiene un límite de 64 caracteres, y la dirección completa, tal como se entrega, de 254.

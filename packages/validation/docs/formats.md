@@ -6,7 +6,7 @@ order: 7
 
 # Formats
 
-A format is a validator for a string of a particular shape, such as an email address or a URL. The sign-up needs one for its email, and many rules you might write yourself are a format the package already has. This page lists them, what each accepts, and the value each produces. It spends the most time on `email` and `url`, since an address or a link a server follows is where a careless check costs the most.
+A format is a validator for a string of a particular shape, such as an email address or a URL. The sign-up needs one for its email, and many rules you might write yourself are a format the package already has. This page lists them, what each accepts, and the value each produces. It spends the most time on `email` and `url`, since an address or a link a server follows is where a careless check costs the most. Those sections are long because the specifications behind them are, and we read those so you would not have to.
 
 Each format is imported on its own, so a program bundles the ones it uses and no other. Each takes a `message` option and checks.
 
@@ -73,7 +73,7 @@ The options are `allowPlus`, default `true`, which controls whether `+` is accep
 
 The local part, before the `@`, must be a dot-atom, as the email input of HTML accepts:
 
-- ASCII letters, digits and ``!#$%&'*+/=?^_`{|}~-``, with single dots between them.
+- ASCII letters, digits and ``!#$%&'*+/=?^_`{|}~-``, with single dots between them. Yes, `{` and `|` are legal there; mail is older than taste.
 - A quoted local part, such as `"a b"@example.com`, is rejected.
 - So is an address with other letters before the `@` (RFC 6531).
 - The local part is limited to 64 characters, and the whole address, as delivered, to 254.
