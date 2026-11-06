@@ -11,7 +11,7 @@ Create a validator by calling a factory, then call it with the value: `email()(i
 - [Forms](docs/forms.md): Rules across fields with `check` and `checkFields`, `optional` and defaults, `flatten`, files with `formData`, `file` and `contentType`, and `InferInput`.
 - [Request bodies](docs/request-bodies.md): `json`, collections, `union`, `tagged`, `intersection`, and recursive data with `lazy`.
 - [Text input](docs/text-input.md): The `coerce*` validators, dates, `searchParams` for a query string, and the environment.
-- [Issues and messages](docs/errors.md): The issue, built-in codes and params, `formatIssue`, English and Portuguese messages, the `message` option, `assert`.
+- [Issues and messages](docs/errors.md): The issue, built-in codes and params, `formatIssue`, English, Portuguese and Spanish messages, the `message` option, `assert`.
 - [Custom validators](docs/custom-validators.md): `check`, `format`, `guard`, validators written by hand, asynchronous rules, and the exported types.
 - [Formats](docs/formats.md): `email`, `url` and their parts, `domain`, `hostname`, `ip`, `datetime`, `time`, and every other format.
 - [Shaping values](docs/shaping-values.md): `pipe`, `transform`, `codec`, `encode`, `brand`, `readonly`, `meta`, `fallback`, and `pick`, `omit`, `partial`, `required`, `extend`.
