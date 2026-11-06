@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-05
+last_updated: 2026-11-06
 scope: What `@codenhub/validation` builds toward, what it takes to release 0.5.1, and what it takes to reach 1.0.
 ---
 
@@ -24,13 +24,12 @@ This records what `@codenhub/validation` is building toward, what it takes to re
 
 **0.5.1 closes what the review after 0.5.0 found.** 0.5.0 was released on 2026-11-05, with the README and the guides in Brazilian Portuguese and Spanish. Since then, `spanishMessages` has been added, and `base64`, `jwt` and `creditCard` no longer overflow the stack on text of a few megabytes. An exclusive date bound that a custom validator reports is now worded without "on or". Each of these is a fix or an addition, so the next release is 0.5.1, as [Versioning until 1.0](#versioning-until-10) asks. The owner chose that number on 2026-11-05 over 0.6.0, since a minor version tells a reader to look for a breaking change.
 
-0.5.1 also takes in the work below, each decided by the owner on 2026-11-05:
+0.5.1 also takes in the work below, each decided by the owner on 2026-11-05 and settled as each says:
 
 - **The keys an `object` does not list, validated.** `unknownKeys` accepts a validator as well as `"strip"`, `"strict"` and `"passthrough"`, and each key the shape does not list is validated with it, as zod's `catchall` and valibot's `objectWithRest` do. `intersection(object, record)` is no way to write it, since the `record` validates the listed keys too. Rejected: a separate `rest` option, which would need a rule for when it meets `unknownKeys: "strict"`, and a separate `objectWithRest`, which repeats `object`.
 - **`transform` typed as it runs.** A `convert` that returns a value with a callable `then` makes the result asynchronous at run time, since `await` treats it as a promise, and the type says so too, even where the value is not typed as `PromiseLike`. A program it changes was already given a promise where its type promised a result.
-- **Closing the gap to zod/mini without changing what any validator returns.** The package is about 1.2 kB gzipped larger than zod/mini on a typical form, the bar [The bar for size](architecture.md#the-bar-for-size) sets, measured on 2026-11-05. The bytes come out of the core and the fast path, and every result and message stays as it is. The brief English messages that each validator's own `~standard` reports are 1.15 kB of that form; they stay as they are for now. Rejected: shorter wording for them, which changes what a Standard Schema consumer shows, and dropping the built-in `~standard`, which breaks callers. Each step is measured as that section measures, and the budgets reset from it.
-- **A fast test under `lazy`.** A `lazy` tree of 127 nodes runs at about 0.013 million validations a second, and what is left is the full work of each `object` and `array` in it, which a `lazy` asks no fast test of because it calls the consumer's function. A fast test that asks what that function returned, once it has, would need to count `maxDepth` and `maxCalls` as the full work does, and to give the same answer for an object found again.
-- **An `object` with a `transform` property.** It does its full work, since a `transform` runs the consumer's code and has no fast test: 1.43 million validations a second against 3.13 for an `object` of three strings, measured on 2026-11-05. Asking the other properties' fast tests first and running the `transform` once on the full path would need the same proof of one run that [an `object` with checks](architecture.md#valid-input-without-the-full-work) has.
+- **An `object` with a `transform` property.** Done: it asks its other properties' fast tests first and runs each property that has none once, so a `transform` never runs twice or not at all. An `object` with a `transform` property went from about 1.6 to 2.2 million validations a second, and a `lazy` tree of 127 nodes gained about a tenth, measured on 2026-11-05. It costs a plain `object` 59 bytes gzipped, since the run lives in its own module, which `transform` and `lazy` switch on when they are called; an `object` made before either is called does its full work, with the same results. The owner accepted that switch on 2026-11-06 for the bytes it saves: built into `object`, the run cost every bundle with an `object` 182 bytes. See [Valid input without the full work](architecture.md#valid-input-without-the-full-work).
+- **Part of the gap to zod/mini closed without changing what any validator returns.** `string` checks its length with the helpers of the collections' size, and the typical form went from 7.97 to 7.83 kB gzipped, measured on 2026-11-05. The rest is in `email`, and was moved to [Later / Possible](#later--possible) on 2026-11-06.
 
 0.5.1 is released when:
 
@@ -63,6 +62,8 @@ The measurements of 2026-10-07 stay in [0.4.0.md](0.4.0.md) as the evidence for 
 
 Each is additive, so it fits a 0.5.x release.
 
+- **The rest of the gap to zod/mini, which is in `email`.** The typical form is 1.39 kB gzipped larger than zod/mini's, measured on 2026-11-05, and without `email` it is 0.69 kB smaller: `email` adds 2.28 kB to it and 0.25 kB to zod/mini's, since it reads an internationalized domain as a resolver would, punycode, bidi rules and public hosts, where zod/mini tests one pattern ([The bar for size](architecture.md#the-bar-for-size)). Closing it needs a domain reader with less code that gives the same answers, or an `email` that checks less, which accepts addresses this one rejects and is the owner's call. The owner moved it here on 2026-11-06, since the core is already smaller than zod/mini's without it.
+
 - **A page on accepting a validator.** What a package that takes one from its caller declares, `Validator<T>` or a Standard Schema, how it reports a failure, and what it costs when the caller passes none.
 
 - **National phone numbers.** `phone({ country })` accepting national formats, still returning E.164, with the per-country rules in a module of their own so `phone()` alone never bundles them.
@@ -79,5 +80,6 @@ Each is additive, so it fits a 0.5.x release.
 - **Checks as steps of `pipe`.** A check is attached to the validator whose value it checks, so it is typed by it and reports with its other issues. In `pipe` it would stop at the first failure and need `pipe` to thread types from step to step.
 - **A message per option**, such as `min: [3, "Too short"]`. It makes every option a union and every validator heavier; a constraint that needs its own wording is written as a check.
 - **`abortEarly`, `includeInput` and a per-call `context`.** A validator is a plain `(input) => result`, so there is no channel for per-call options. The first issue is `issues[0]`, the input is already in the caller's hand, and a callback that needs context closes over it.
+- **A fast test under `lazy`.** Its limits count the calls the full work makes, and a `union` runs the whole of an option that fails, so a fast test that skipped that work would pass input the full work rejects with `too_big`; `src/composition/lazy.test.ts` has the case, and [Valid input without the full work](architecture.md#valid-input-without-the-full-work) the reasoning. Planned for 0.5.1 and rejected on 2026-11-05.
 - **Class names in `invalid_type`.** Naming a class takes reading the prototype in every validator, for a message that tells the reader little.
 - **Generating source code from a schema**, such as TypeScript types or another language's validators. It would add weight for a use this package is not for. JSON Schema generation was listed with it, and was built in 0.4.0, as [0.4.0.md](0.4.0.md#2-a-validator-can-be-described) says. Generating a faster function at run time was planned for 0.4.0 as `compile` and dropped for a fast path that needs no generated code, as [0.4.0.md](0.4.0.md#11-valid-input-without-the-full-work) says.
