@@ -2,7 +2,7 @@
 title: Problemas y mensajes
 description: Qué contiene un resultado fallido, los códigos de problema integrados y sus params, y cómo convertir los problemas en texto en inglés, en portugués o con tus propias palabras.
 order: 5
-source: 26b9372b8ed6dc021bb23316751fb9be0df05b96
+source: 5f3c50beff8b77b5b46b7079817190f714e06411
 ---
 
 # Problemas y mensajes
@@ -214,6 +214,8 @@ if (!step.ok) {
 - Un límite o un paso usa coma decimal.
 - Una lista larga de valores permitidos termina en "e mais N", donde el inglés dice "or N more".
 - Los mensajes sobre claves usan el femenino, porque "chave" es femenino en portugués: "Chave não reconhecida".
+
+`spanishMessages` sigue las mismas tres reglas, con "y N más" y "la clave". Su coma decimal es como escriben los números España y la mayor parte de Sudamérica. Donde se usa el punto, como en México, copia el mapa y reemplaza los códigos cuya redacción lleva un número: `too_small`, `too_big` y, para un paso, `invalid_value`.
 
 Lo que un mapa no traduce es lo que el problema contiene como datos: los nombres de los tipos, como en "Esperado string, recebido number", el nombre de un formato que el paquete no conoce, y el nombre de una parte de una URL o de una dirección.
 

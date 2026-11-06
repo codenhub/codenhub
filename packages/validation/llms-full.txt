@@ -1311,6 +1311,8 @@ if (!step.ok) {
 - A long list of allowed values ends "e mais N", where English says "or N more".
 - The messages about keys use the feminine, since "chave" is feminine: "Chave não reconhecida".
 
+`spanishMessages` keeps the same three rules, with "y N más" and "la clave". Its decimal comma is how Spain and most of South America write a number. Where a point is the custom, as in Mexico, spread the map and override the codes whose wording holds a number: `too_small`, `too_big` and, for a step, `invalid_value`.
+
 What a map does not translate is what the issue holds as data: the names of types, as in "Esperado string, recebido number", the name of a format the package does not know, and the name of a part of a URL or an address.
 
 An issue whose code the map lacks, such as a custom check's, is worded by the map's `default` entry, "Valor inválido" in `portugueseMessages`. `englishMessages` has no `default`, since the last wording of `formatIssue`, "Invalid value", is English already.

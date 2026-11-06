@@ -1,14 +1,14 @@
 ---
 status: APPROVED
 last_updated: 2026-11-05
-scope: What `@codenhub/validation` builds toward, what it takes to release 0.5.0, and what it takes to reach 1.0.
+scope: What `@codenhub/validation` builds toward, what it takes to release 0.5.1, and what it takes to reach 1.0.
 ---
 
 # Roadmap
 
 ## Purpose
 
-This records what `@codenhub/validation` is building toward, what it takes to release 0.5.0, and what it takes to reach 1.0. The design it builds toward, and why, is in [architecture.md](architecture.md). Nothing in it names a consuming package: the package is for any package or app that has to check a value, and a list of expected adopters would go stale and imply they are the only ones.
+This records what `@codenhub/validation` is building toward, what it takes to release 0.5.1, and what it takes to reach 1.0. The design it builds toward, and why, is in [architecture.md](architecture.md). Nothing in it names a consuming package: the package is for any package or app that has to check a value, and a list of expected adopters would go stale and imply they are the only ones.
 
 ## Direction
 
@@ -22,13 +22,21 @@ This records what `@codenhub/validation` is building toward, what it takes to re
 
 ## Current Focus
 
-**0.5.0 fixes what the audit before release found in 0.4.x.** 0.4.0 was released on 2026-10-09 and 0.4.1, which changed no code, on 2026-11-03. Since then, fixes have landed that break a caller, so the next release is 0.5.0 rather than 0.4.2, as [Versioning until 1.0](#versioning-until-10) asks. Several of them break a caller, among them `pick`, `omit` and their kin merging the options given to them, `encode` writing a codec back through its output, the JSON Schema `toJsonSchema` writes, and a recursion that waits between levels being held to `maxDepth`. The [0.5.0 changelog](../changelog/0.5.0.md) marks each one.
+**0.5.1 closes what the review after 0.5.0 found.** 0.5.0 was released on 2026-11-05, with the README and the guides in Brazilian Portuguese and Spanish. Since then, `spanishMessages` has been added, and `base64`, `jwt` and `creditCard` no longer overflow the stack on text of a few megabytes. An exclusive date bound that a custom validator reports is now worded without "on or". Each of these is a fix or an addition, so the next release is 0.5.1, as [Versioning until 1.0](#versioning-until-10) asks. The owner chose that number on 2026-11-05 over 0.6.0, since a minor version tells a reader to look for a breaking change.
 
-0.5.0 is released when:
+0.5.1 also takes in the work below, each decided by the owner on 2026-11-05:
 
-- Its README and public pages are translated into pt-BR and es, and the tools and both sites support translations as [the translations spec](../../../../docs/specs/packages-translations.md) defines, so the translations ship with the release. The owner decided on 2026-11-04 that 0.5.0 is not released without them. Rejected: releasing 0.5.0 first and the translations with 0.5.1, which the spec allows, since the release is where the translations reach readers.
-- `README.md` and every public page describe 0.5.0 as it ships, the translations are current with them, `llms.txt` and `llms-full.txt` are current, and the examples of the docs type-check and run against the built package.
-- `pnpm verify` passes, the changelog entry describes the release as it ships, with its date, and `hub release validation` reports it ready.
+- **The keys an `object` does not list, validated.** `unknownKeys` accepts a validator as well as `"strip"`, `"strict"` and `"passthrough"`, and each key the shape does not list is validated with it, as zod's `catchall` and valibot's `objectWithRest` do. `intersection(object, record)` is no way to write it, since the `record` validates the listed keys too. Rejected: a separate `rest` option, which would need a rule for when it meets `unknownKeys: "strict"`, and a separate `objectWithRest`, which repeats `object`.
+- **`transform` typed as it runs.** A `convert` that returns a value with a callable `then` makes the result asynchronous at run time, since `await` treats it as a promise, and the type says so too, even where the value is not typed as `PromiseLike`. A program it changes was already given a promise where its type promised a result.
+- **Closing the gap to zod/mini without changing what any validator returns.** The package is about 1.2 kB gzipped larger than zod/mini on a typical form, the bar [The bar for size](architecture.md#the-bar-for-size) sets, measured on 2026-11-05. The bytes come out of the core and the fast path, and every result and message stays as it is. The brief English messages that each validator's own `~standard` reports are 1.15 kB of that form; they stay as they are for now. Rejected: shorter wording for them, which changes what a Standard Schema consumer shows, and dropping the built-in `~standard`, which breaks callers. Each step is measured as that section measures, and the budgets reset from it.
+- **A fast test under `lazy`.** A `lazy` tree of 127 nodes runs at about 0.013 million validations a second, and what is left is the full work of each `object` and `array` in it, which a `lazy` asks no fast test of because it calls the consumer's function. A fast test that asks what that function returned, once it has, would need to count `maxDepth` and `maxCalls` as the full work does, and to give the same answer for an object found again.
+- **An `object` with a `transform` property.** It does its full work, since a `transform` runs the consumer's code and has no fast test: 1.43 million validations a second against 3.13 for an `object` of three strings, measured on 2026-11-05. Asking the other properties' fast tests first and running the `transform` once on the full path would need the same proof of one run that [an `object` with checks](architecture.md#valid-input-without-the-full-work) has.
+
+0.5.1 is released when:
+
+- The work above has landed or been moved back to [Later / Possible](#later--possible) with the reason.
+- `README.md`, every public page and the translations describe 0.5.1 as it ships, and `llms.txt` and `llms-full.txt` are current.
+- `pnpm verify` passes, the changelog entry describes the release as it ships, with its date, and `hub release validation` reports it ready. `size.json` is measured again by that cut, since the `size` rule skips a released version.
 
 ### No comparison with other libraries
 
@@ -42,7 +50,7 @@ The measurements of 2026-10-07 stay in [0.4.0.md](0.4.0.md) as the evidence for 
 
 ## Versioning until 1.0
 
-0.5.0 is the API, and everything after its release is a 0.5.x release: fixes, new validators, new checks, new options, better messages. A change that would break a caller means the design missed something, as 0.4.0 was for 0.3.0, which had no type for what a validator accepts, and 0.5.0 for 0.4.x, whose audit found values passed or failed wrongly; it is the next minor and a signal to revisit [architecture.md](architecture.md), not a routine event. What counts as breaking for a format is set by [Compatibility of a format](architecture.md#compatibility-of-a-format).
+0.5.0 is the API, released on 2026-11-05, and everything after it is a 0.5.x release: fixes, new validators, new checks, new options, better messages. A change that would break a caller means the design missed something, as 0.4.0 was for 0.3.0, which had no type for what a validator accepts, and 0.5.0 for 0.4.x, whose audit found values passed or failed wrongly; it is the next minor and a signal to revisit [architecture.md](architecture.md), not a routine event. What counts as breaking for a format is set by [Compatibility of a format](architecture.md#compatibility-of-a-format).
 
 1.0 is not a date and not a promise made on release day. It is declared when the API has been used for real, by more than one consumer, through enough releases to have shown where it was wrong:
 
@@ -60,11 +68,6 @@ Each is additive, so it fits a 0.5.x release.
 - **National phone numbers.** `phone({ country })` accepting national formats, still returning E.164, with the per-country rules in a module of their own so `phone()` alone never bundles them.
 - **File paths.** A `filepath({ platform })` that checks syntax only. Left out because what a valid path is depends on the operating system and the file system, and checking the text says nothing about whether it is safe to open.
 - **The fragment of a URL.** A `hash` part for `url`, if a consumer needs one.
-
-- **Closing the gap to zod/mini.** The package is about 1.2 kB gzipped larger than zod/mini on a typical form, the bar [The bar for size](architecture.md#the-bar-for-size) sets, measured on 2026-11-05. The first two steps are the brief English messages that `standard` reports, 1.15 kB of that form, and the fast tests that walk a composer's children a second time beside its full work. Each step is measured as that section measures, and the budgets reset from it.
-- **A fast test under `lazy`.** A `lazy` tree of 127 nodes runs about 0.013 million validations a second since its bookkeeping was cut on 2026-11-05, and what is left is the full work of each `object` and `array` in it, which a `lazy` asks no fast test of because it calls the consumer's function. A fast test that asks what that function returned, once it has, would need to count `maxDepth` and `maxCalls` as the full work does, and to give the same answer for an object found again.
-- **An `object` with a `transform` property.** It does its full work, since a `transform` runs the consumer's code and has no fast test: measured in one whole run on 2026-11-05, 1.43 million validations a second against 3.13 for an `object` of three strings. Asking the other properties' fast tests first and running the `transform` once on the full path would need the same proof of one run that [an `object` with checks](architecture.md#valid-input-without-the-full-work) has.
-- **The keys an `object` does not list, validated.** A rest validator for them, as zod's `catchall` and valibot's `objectWithRest`. `intersection(object, record)` is no way to write it, since the `record` validates the listed keys too. Deferred on 2026-11-05 until a consumer asks for it.
 
 ## Not Planned
 

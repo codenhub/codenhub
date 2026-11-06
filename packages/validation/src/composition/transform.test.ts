@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
+import type { AsyncSchema } from "../core/types";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { codesOf, isFree, isPending, valueOf } from "../test-utils";
@@ -42,6 +43,20 @@ describe("transform", () => {
     const result = shout("a");
     expect(isPending(result)).toBe(true);
     expect(valueOf(await result)).toBe("A");
+  });
+
+  it("should be typed asynchronous when the function returns a thenable not typed as a promise", async () => {
+    const thenable = {
+      // oxlint-disable-next-line unicorn/no-thenable -- a thenable is what is under test
+      then(resolve: (value: string) => void): void {
+        resolve("done");
+      },
+    };
+    const later = transform(string(), () => thenable);
+    expectTypeOf(later).toEqualTypeOf<AsyncSchema<string, string>>();
+    const result = later("a");
+    expect(isPending(result)).toBe(true);
+    expect(valueOf(await result)).toBe("done");
   });
 
   it("should stay asynchronous over an asynchronous validator", async () => {
