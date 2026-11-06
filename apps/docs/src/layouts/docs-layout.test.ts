@@ -281,7 +281,7 @@ describe("documentation chrome", () => {
 
   it("lists a translated page's languages in the header's language menu", async () => {
     const html = await readOutput("pt-BR/styles/index.html");
-    const menu = html.match(/<details class="shell-language"[^>]*>(.*?)<\/details>/)?.[1] ?? "";
+    const menu = html.match(/<details class="shell-language[^"]*"[^>]*>(.*?)<\/details>/)?.[1] ?? "";
     const options = [...menu.matchAll(/<a ([^>]*)>/g)].map((match) => match[1]);
 
     expect(menu).toContain('aria-label="Idioma"');
@@ -294,7 +294,7 @@ describe("documentation chrome", () => {
 
   it("offers every language on a page without a translation, and sends an arriving reader to theirs", async () => {
     const html = await readOutput("error/index.html");
-    const menu = html.match(/<details class="shell-language"[^>]*>(.*?)<\/details>/)?.[1] ?? "";
+    const menu = html.match(/<details class="shell-language[^"]*"[^>]*>(.*?)<\/details>/)?.[1] ?? "";
 
     expect(menu).toContain('href="/pt-BR/error/" hreflang="pt-BR"');
     expect(menu).toContain('href="/es/error/" hreflang="es"');
@@ -314,7 +314,7 @@ describe("documentation chrome", () => {
     expect(html).not.toContain('rel="alternate"');
     // The reader stays in their language on the page's links and its section strip.
     expect(html).toContain('class="package-tab" href="/pt-BR/error/reference/"');
-    expect(html.replace(/<details class="shell-language".*?<\/details>/, "")).not.toContain('href="/error/');
+    expect(html.replace(/<details class="shell-language[^"]*".*?<\/details>/, "")).not.toContain('href="/error/');
     // The controls added to the English body speak the page's language, and say so.
     expect(html).toMatch(/<a aria-label="Link para [^"]+" class="heading-anchor" href="#[^"]+" lang="pt-BR">/);
     expect(html).not.toContain("location.replace(");
