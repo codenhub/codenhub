@@ -140,6 +140,7 @@ describe("engines rules", () => {
       "README.md": COMPLIANT_README,
       "docs/changelog/0.1.0.md": "- An `engines` field requiring Node.js 22 or newer.\n",
       "docs/internal/notes.md": "Tested on Node.js 22 or newer.\n",
+      "docs/pt-BR/cli.md": "Node.js 22 or newer is required.\n",
     };
 
     await expect(codes({ node: ">=24" }, files)).resolves.toEqual([]);

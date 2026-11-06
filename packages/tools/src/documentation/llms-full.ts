@@ -64,9 +64,26 @@ function siblingFileName(sourcePath: string): string {
  * that still holds a slash — `../x`, `sub/x`, `/x`, `https://…/x` — keeps it and
  * so never matches a bare sibling name, the same rule `folder-curation.ts`
  * applies on the documentation site.
+ * @param target Raw link target.
+ * @returns Normalized target.
  */
-function normalizeCuratedLinkTarget(target: string): string {
+export function normalizeCuratedLinkTarget(target: string): string {
   return target.replace(/^\.\//, "").replace(/[?#].*$/, "");
+}
+
+/**
+ * Extracts normalized sibling targets linked from a curated Markdown index body.
+ * @param body Authored Markdown body of the curated index.
+ * @returns Normalized targets in document order, without duplicates.
+ */
+export function extractCuratedLinkTargets(body: string): string[] {
+  const linkedNames = new Set<string>();
+  for (const pattern of [INLINE_TARGET, DEFINITION_TARGET]) {
+    for (const match of body.matchAll(pattern)) {
+      linkedNames.add(normalizeCuratedLinkTarget(match.groups?.target ?? ""));
+    }
+  }
+  return [...linkedNames];
 }
 
 /**
@@ -114,12 +131,7 @@ export function curateLlmsFullDocuments(documents: readonly LlmsFullDocument[]):
         .filter((document) => document !== indexDocument)
         .map((document) => [siblingFileName(document.sourcePath), document]),
     );
-    const linkedNames = new Set<string>();
-    for (const pattern of [INLINE_TARGET, DEFINITION_TARGET]) {
-      for (const match of indexDocument.body.matchAll(pattern)) {
-        linkedNames.add(normalizeCuratedLinkTarget(match.groups?.target ?? ""));
-      }
-    }
+    const linkedNames = extractCuratedLinkTargets(indexDocument.body);
 
     let position = 0;
     for (const name of linkedNames) {

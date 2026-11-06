@@ -367,12 +367,14 @@ export async function readTranslationDrift(
       translations.map(async ({ packagePath }) => [packagePath, await readFile(join(rootPath, packagePath), "utf8")]),
     ),
   );
+  const sourced = listSourcedTranslations(files, sources);
+  const sourcedPaths = new Set(sourced.map(({ packagePath }) => packagePath));
   return {
-    stale: await findStaleTranslations(rootPath, listSourcedTranslations(files, sources), hash),
+    stale: await findStaleTranslations(rootPath, sourced, hash),
     translationCount: translations.length,
     unsourced: translations
-      .filter((translation) => !isBlobId(readTranslationSource(translation, sources[translation.packagePath] ?? "")))
-      .map(({ packagePath }) => packagePath),
+      .map(({ packagePath }) => packagePath)
+      .filter((packagePath) => !sourcedPaths.has(packagePath)),
   };
 }
 

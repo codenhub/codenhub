@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { readTranslationDrift } from "../documentation/translations.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import type { Finding } from "./rule.ts";
 import { createTranslationRules } from "./translation-rules.ts";
@@ -179,5 +180,19 @@ describe("translation rule", () => {
       "docs/es/start.md": translatedDocument(`title: Inicio\norder: 1\nsource: ${blobId(START)}`, "# Inicio\n"),
     });
     expect(findings).toEqual([]);
+  });
+
+  it("reports a translation with no English counterpart or in an unlisted locale as unverifiable in readTranslationDrift", async () => {
+    const workspacePackage = await createPackage({
+      "docs/es/deleted.md": translatedDocument(`title: Removido\nsource: ${"a".repeat(40)}`, "# Removido\n"),
+      "docs/fr/index.md": translatedDocument(`title: Exemple\nsource: ${blobId(INDEX)}`, "# Exemple\n"),
+      "docs/pt-BR/reference/index.md": translatedDocument(
+        `title: Referência\nsource: ${"b".repeat(40)}`,
+        "# Referência\n",
+      ),
+    });
+
+    const drift = await readTranslationDrift(workspacePackage.directory);
+    expect(drift.unsourced).toEqual(["docs/es/deleted.md", "docs/fr/index.md", "docs/pt-BR/reference/index.md"]);
   });
 });

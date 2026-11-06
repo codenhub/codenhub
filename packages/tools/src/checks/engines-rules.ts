@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { parseTranslationPath } from "../documentation/translation-paths.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import type { CheckRule, Finding } from "./rule.ts";
 
@@ -50,7 +51,7 @@ async function readText(path: string): Promise<string | undefined> {
 }
 
 /**
- * Lists the package's public Markdown documents, relative to the package.
+ * Lists the package's English public Markdown documents, relative to the package.
  * @param directory Absolute package directory.
  * @returns Package-relative POSIX paths.
  */
@@ -60,6 +61,7 @@ async function publicDocs(directory: string): Promise<string[]> {
     .map((entry) => entry.split("\\").join("/"))
     .filter((entry) => entry.endsWith(".md") && !UNSTATED_DOCS.has(entry.split("/")[0] ?? ""))
     .map((entry) => `${DOCS_DIRECTORY}/${entry}`)
+    .filter((path) => parseTranslationPath(path) === undefined)
     .sort();
 }
 
