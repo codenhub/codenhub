@@ -40,7 +40,7 @@ export type AllOptional<T> = WithRest<{ [K in keyof Listed<T>]?: Listed<T>[K] | 
  * for a validator, when it was not made by `object` or has checks.
  */
 export function partial<TShape extends Shape>(shape: TShape): PartialShape<TShape>;
-export function partial<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = "strip">(
+export function partial<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(
   validator: TValidator,
   ...rest: Rest<Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>
 ): ReshapedWith<
@@ -49,7 +49,7 @@ export function partial<TValidator extends AnyValidator<object>, TUnknownKeys ex
   Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>,
   RemadeInput<AllOptional<InferInput<TValidator>>, TUnknownKeys>
 >;
-export function partial<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = "strip">(
+export function partial<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(
   validator: TValidator,
   ...rest: AsyncRest<Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>
 ): AsyncSchema<

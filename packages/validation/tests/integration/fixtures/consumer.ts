@@ -663,6 +663,16 @@ export const extendedRest: Infer<typeof tagged2> = { id: 1, name: "Ada", tags: [
 export const extendedRestAtOnce: boolean = tagged2({}).ok;
 // @ts-expect-error a validator given to a reshaping function types the unknown keys
 export const extendedRestWrong: Infer<typeof tagged2> = { id: 1, name: "Ada", tags: true };
+// unknownKeys given to a reshaping function replaces the one the object had, in the types as it does when run.
+const renumbered = omit(flagged, ["age"], { unknownKeys: number() });
+export const renumberedValue: Infer<typeof renumbered> = { name: "Ada", count: 1 };
+// @ts-expect-error the replaced validator of unknown keys no longer types them
+export const renumberedOld: InferInput<typeof renumbered> = { name: "Ada", beta: true };
+const unflagged = partial(flagged, { unknownKeys: "strict" });
+// @ts-expect-error a mode given in place of a validator leaves no index signature
+export const unflaggedExtra: Infer<typeof unflagged> = { name: "Ada", beta: true };
+const kept = pick(flagged, ["name"], { unknownKeys: undefined });
+export const keptFlag: Infer<typeof kept> = { name: "Ada", beta: true };
 // A codec produces its output type from its input type, and encode goes back.
 const isoStamp = codec(datetime(), date(), {
   decode: (text) => new Date(text),

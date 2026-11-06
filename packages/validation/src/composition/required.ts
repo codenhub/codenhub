@@ -28,7 +28,7 @@ import { mapping, unwrapped, type AllRequired, type Remade, type RemadeInput, ty
  * @returns A validator made by `object`, with every property required.
  * @throws {TypeError} When the validator was not made by `object` or has checks.
  */
-export function required<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = "strip">(
+export function required<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(
   validator: TValidator,
   ...rest: Rest<Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>
 ): ReshapedWith<
@@ -37,7 +37,7 @@ export function required<TValidator extends AnyValidator<object>, TUnknownKeys e
   Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>,
   RemadeInput<AllRequired<InferInput<TValidator>>, TUnknownKeys>
 >;
-export function required<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = "strip">(
+export function required<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(
   validator: TValidator,
   ...rest: AsyncRest<Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>
 ): AsyncSchema<

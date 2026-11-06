@@ -31,7 +31,7 @@ import { picking, type ListedKey, type Omitted, type Remade, type RemadeInput, t
 export function omit<
   TValidator extends AnyValidator<object>,
   const TKey extends ListedKey<Infer<TValidator>>,
-  TUnknownKeys extends UnknownKeys = "strip",
+  TUnknownKeys extends UnknownKeys = never,
 >(
   validator: TValidator,
   keys: readonly TKey[],
@@ -45,7 +45,7 @@ export function omit<
 export function omit<
   TValidator extends AnyValidator<object>,
   const TKey extends ListedKey<Infer<TValidator>>,
-  TUnknownKeys extends UnknownKeys = "strip",
+  TUnknownKeys extends UnknownKeys = never,
 >(
   validator: TValidator,
   keys: readonly TKey[],

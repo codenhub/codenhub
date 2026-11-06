@@ -35,14 +35,17 @@ export type Unlisted<T> = string extends keyof T ? T[string] : never;
 /** The names of the properties an object type lists, which `pick` and `omit` take. */
 export type ListedKey<T> = keyof Listed<T>;
 
-/** The object type with `TValue` added to what its unlisted keys hold, as a validator of unknown keys given to a reshaping function adds it. */
-export type Reindexed<T, TValue> = [TValue] extends [never] ? T : WithRest<Listed<T>, Unlisted<T> | TValue>;
+/**
+ * The object type with what its unlisted keys hold replaced by `TValue`, as an `unknownKeys` given to a
+ * reshaping function replaces the one the object had, or `T` as it is when none was given (`never`).
+ */
+export type Reindexed<T, TUnknownKeys, TValue> = [TUnknownKeys] extends [never] ? T : WithRest<Listed<T>, TValue>;
 
-/** `T` with what the validator of unknown keys in `TUnknownKeys`, if it is one, produces added to what its unlisted keys hold. */
-export type Remade<T, TUnknownKeys> = Reindexed<T, RestOf<RestIn<TUnknownKeys>>>;
+/** `T` with its unlisted keys holding what the `unknownKeys` given, if any, produces. */
+export type Remade<T, TUnknownKeys> = Reindexed<T, TUnknownKeys, RestOf<RestIn<TUnknownKeys>>>;
 
-/** `T` with what the validator of unknown keys in `TUnknownKeys`, if it is one, accepts added to what its unlisted keys hold. */
-export type RemadeInput<T, TUnknownKeys> = Reindexed<T, RestInputOf<RestIn<TUnknownKeys>>>;
+/** `T` with its unlisted keys holding what the `unknownKeys` given, if any, accepts. */
+export type RemadeInput<T, TUnknownKeys> = Reindexed<T, TUnknownKeys, RestInputOf<RestIn<TUnknownKeys>>>;
 
 /**
  * A validator of `T` that is synchronous when the validator it was made from, and the validator of

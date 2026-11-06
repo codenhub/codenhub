@@ -54,7 +54,7 @@ type ExtendedInput<T, TShape extends Shape> = WithRest<
 export function extend<
   TValidator extends AnyValidator<object>,
   TShape extends Shape,
-  TUnknownKeys extends UnknownKeys = "strip",
+  TUnknownKeys extends UnknownKeys = never,
 >(
   validator: TValidator,
   shape: TShape,
@@ -72,7 +72,7 @@ export function extend<
 export function extend<
   TValidator extends AnyValidator<object>,
   TShape extends Shape,
-  TUnknownKeys extends UnknownKeys = "strip",
+  TUnknownKeys extends UnknownKeys = never,
 >(
   validator: TValidator,
   shape: TShape,

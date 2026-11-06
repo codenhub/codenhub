@@ -168,8 +168,8 @@ encode(event, { name: "Launch", at: new Date(0) }); // { ok: true, value: { name
 ### extend
 
 ```ts
-export declare function extend<TValidator extends AnyValidator<object>, TShape extends Shape, TUnknownKeys extends UnknownKeys = "strip">(validator: TValidator, shape: TShape, ...rest: Rest<Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): TValidator extends Validator<unknown> ? Composed<TShape[keyof TShape] | RestIn<TUnknownKeys>, Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, RemadeInput<ExtendedInput<InferInput<TValidator>, TShape>, TUnknownKeys>> : AsyncSchema<Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, RemadeInput<ExtendedInput<InferInput<TValidator>, TShape>, TUnknownKeys>>;
-export declare function extend<TValidator extends AnyValidator<object>, TShape extends Shape, TUnknownKeys extends UnknownKeys = "strip">(validator: TValidator, shape: TShape, ...rest: AsyncRest<Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, RemadeInput<ExtendedInput<InferInput<TValidator>, TShape>, TUnknownKeys>>;
+export declare function extend<TValidator extends AnyValidator<object>, TShape extends Shape, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, shape: TShape, ...rest: Rest<Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): TValidator extends Validator<unknown> ? Composed<TShape[keyof TShape] | RestIn<TUnknownKeys>, Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, RemadeInput<ExtendedInput<InferInput<TValidator>, TShape>, TUnknownKeys>> : AsyncSchema<Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, RemadeInput<ExtendedInput<InferInput<TValidator>, TShape>, TUnknownKeys>>;
+export declare function extend<TValidator extends AnyValidator<object>, TShape extends Shape, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, shape: TShape, ...rest: AsyncRest<Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, RemadeInput<ExtendedInput<InferInput<TValidator>, TShape>, TUnknownKeys>>;
 ```
 
 Creates an object validator with the properties of another and those given, as spreading the shape of one into another does for an object made from shapes.
@@ -647,8 +647,8 @@ feedback({ message: "" }); // { ok: false, error: { issues: [{ code: "too_small"
 ### omit
 
 ```ts
-export declare function omit<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>, TUnknownKeys extends UnknownKeys = "strip">(validator: TValidator, keys: readonly TKey[], ...rest: Rest<Remade<Omitted<Infer<TValidator>, TKey>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): ReshapedWith<TValidator, TUnknownKeys, Remade<Omitted<Infer<TValidator>, TKey>, TUnknownKeys>, RemadeInput<Omitted<InferInput<TValidator>, TKey>, TUnknownKeys>>;
-export declare function omit<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>, TUnknownKeys extends UnknownKeys = "strip">(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Remade<Omitted<Infer<TValidator>, TKey>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<Omitted<Infer<TValidator>, TKey>, TUnknownKeys>, RemadeInput<Omitted<InferInput<TValidator>, TKey>, TUnknownKeys>>;
+export declare function omit<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, keys: readonly TKey[], ...rest: Rest<Remade<Omitted<Infer<TValidator>, TKey>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): ReshapedWith<TValidator, TUnknownKeys, Remade<Omitted<Infer<TValidator>, TKey>, TUnknownKeys>, RemadeInput<Omitted<InferInput<TValidator>, TKey>, TUnknownKeys>>;
+export declare function omit<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Remade<Omitted<Infer<TValidator>, TKey>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<Omitted<Infer<TValidator>, TKey>, TUnknownKeys>, RemadeInput<Omitted<InferInput<TValidator>, TKey>, TUnknownKeys>>;
 ```
 
 Creates an object validator without the named properties of another.
@@ -777,7 +777,7 @@ const patch = partial(create); // the same, from the validator
 ```
 
 ```ts
-export declare function partial<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = "strip">(validator: TValidator, ...rest: Rest<Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): ReshapedWith<TValidator, TUnknownKeys, Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, RemadeInput<AllOptional<InferInput<TValidator>>, TUnknownKeys>>;
+export declare function partial<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, ...rest: Rest<Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): ReshapedWith<TValidator, TUnknownKeys, Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, RemadeInput<AllOptional<InferInput<TValidator>>, TUnknownKeys>>;
 ```
 
 Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object` made, it returns a new object validator with the same options, each option given here replacing the one of its name.
@@ -806,7 +806,7 @@ const patch = partial(create); // the same, from the validator
 ```
 
 ```ts
-export declare function partial<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = "strip">(validator: TValidator, ...rest: AsyncRest<Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, RemadeInput<AllOptional<InferInput<TValidator>>, TUnknownKeys>>;
+export declare function partial<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, ...rest: AsyncRest<Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, RemadeInput<AllOptional<InferInput<TValidator>>, TUnknownKeys>>;
 ```
 
 Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object` made, it returns a new object validator with the same options, each option given here replacing the one of its name.
@@ -837,8 +837,8 @@ const patch = partial(create); // the same, from the validator
 ### pick
 
 ```ts
-export declare function pick<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>, TUnknownKeys extends UnknownKeys = "strip">(validator: TValidator, keys: readonly TKey[], ...rest: Rest<Remade<Picked<Infer<TValidator>, TKey>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): ReshapedWith<TValidator, TUnknownKeys, Remade<Picked<Infer<TValidator>, TKey>, TUnknownKeys>, RemadeInput<Picked<InferInput<TValidator>, TKey & ListedKey<InferInput<TValidator>>>, TUnknownKeys>>;
-export declare function pick<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>, TUnknownKeys extends UnknownKeys = "strip">(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Remade<Picked<Infer<TValidator>, TKey>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<Picked<Infer<TValidator>, TKey>, TUnknownKeys>, RemadeInput<Picked<InferInput<TValidator>, TKey & ListedKey<InferInput<TValidator>>>, TUnknownKeys>>;
+export declare function pick<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, keys: readonly TKey[], ...rest: Rest<Remade<Picked<Infer<TValidator>, TKey>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): ReshapedWith<TValidator, TUnknownKeys, Remade<Picked<Infer<TValidator>, TKey>, TUnknownKeys>, RemadeInput<Picked<InferInput<TValidator>, TKey & ListedKey<InferInput<TValidator>>>, TUnknownKeys>>;
+export declare function pick<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Remade<Picked<Infer<TValidator>, TKey>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<Picked<Infer<TValidator>, TKey>, TUnknownKeys>, RemadeInput<Picked<InferInput<TValidator>, TKey & ListedKey<InferInput<TValidator>>>, TUnknownKeys>>;
 ```
 
 Creates an object validator with only the named properties of another.
@@ -979,8 +979,8 @@ scores({ ada: "3" }); // { ok: false, ... }, code "invalid_type" at path ["ada"]
 ### required
 
 ```ts
-export declare function required<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = "strip">(validator: TValidator, ...rest: Rest<Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): ReshapedWith<TValidator, TUnknownKeys, Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, RemadeInput<AllRequired<InferInput<TValidator>>, TUnknownKeys>>;
-export declare function required<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = "strip">(validator: TValidator, ...rest: AsyncRest<Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, RemadeInput<AllRequired<InferInput<TValidator>>, TUnknownKeys>>;
+export declare function required<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, ...rest: Rest<Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): ReshapedWith<TValidator, TUnknownKeys, Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, RemadeInput<AllRequired<InferInput<TValidator>>, TUnknownKeys>>;
+export declare function required<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, ...rest: AsyncRest<Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, RemadeInput<AllRequired<InferInput<TValidator>>, TUnknownKeys>>;
 ```
 
 Creates an object validator whose properties are all required, from one where some are optional.
@@ -1932,30 +1932,30 @@ Not exported; declared in `src/composition/pipe.ts`.
 ### Reindexed
 
 ```ts
-type Reindexed<T, TValue> = [TValue] extends [never] ? T : WithRest<Listed<T>, Unlisted<T> | TValue>;
+type Reindexed<T, TUnknownKeys, TValue> = [TUnknownKeys] extends [never] ? T : WithRest<Listed<T>, TValue>;
 ```
 
-The object type with `TValue` added to what its unlisted keys hold, as a validator of unknown keys given to a reshaping function adds it.
+The object type with what its unlisted keys hold replaced by `TValue`, as an `unknownKeys` given to a reshaping function replaces the one the object had, or `T` as it is when none was given (`never`).
 
 Not exported; declared in `src/composition/reshape.ts`.
 
 ### Remade
 
 ```ts
-type Remade<T, TUnknownKeys> = Reindexed<T, RestOf<RestIn<TUnknownKeys>>>;
+type Remade<T, TUnknownKeys> = Reindexed<T, TUnknownKeys, RestOf<RestIn<TUnknownKeys>>>;
 ```
 
-`T` with what the validator of unknown keys in `TUnknownKeys`, if it is one, produces added to what its unlisted keys hold.
+`T` with its unlisted keys holding what the `unknownKeys` given, if any, produces.
 
 Not exported; declared in `src/composition/reshape.ts`.
 
 ### RemadeInput
 
 ```ts
-type RemadeInput<T, TUnknownKeys> = Reindexed<T, RestInputOf<RestIn<TUnknownKeys>>>;
+type RemadeInput<T, TUnknownKeys> = Reindexed<T, TUnknownKeys, RestInputOf<RestIn<TUnknownKeys>>>;
 ```
 
-`T` with what the validator of unknown keys in `TUnknownKeys`, if it is one, accepts added to what its unlisted keys hold.
+`T` with its unlisted keys holding what the `unknownKeys` given, if any, accepts.
 
 Not exported; declared in `src/composition/reshape.ts`.
 
