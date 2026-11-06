@@ -8,7 +8,7 @@ order: 5
 
 When a value is not valid, the result says exactly why. This page describes what a failed result holds, the codes the built-in validators report, and how to turn them into text for a person: the messages of the sign-up form, in English or in Portuguese, and the error a server throws for a bad configuration.
 
-Validators do not write text when they fail. Text is a choice you make where you show it, so a program that never shows an issue carries no wording.
+Validators do not write text when they fail. They report the facts and leave the prose to whoever shows it, so a program that never shows an issue carries no wording.
 
 ## The failed result
 
@@ -133,7 +133,10 @@ Three codes hold the issues behind them in `params.issues`: `invalid_key`, `inva
 
 - `invalid_key` with the first issue the key validator found, as in "Invalid key: Must be at least 3 characters". A key given twice, in a query string or after a key validator made two keys the same, is "Must be given only once".
 - A failed part the same way, as in "Invalid email address domain: Expected one of "company.com"".
-- `invalid_union` with the first issue of the one option whose kind the input had, when there is exactly one: every other option found only that the input is not its type, or not one of the values a `literal` or `oneOf` accepts. So `union([literal(""), email()])` given `"nope"` says "Invalid email address". Otherwise no option is the one meant, and it says "Does not match any of the allowed types". The issues of each option are in `params.issues` for a message of your own.
+- `invalid_union` with the first issue of the one option the input was meant for, when the input leaves exactly one candidate. An option is ruled out when all it found is that the input is not its type, or not one of the values a `literal` or `oneOf` accepts. With more candidates or none, it says "Does not match any of the allowed types". The issues of each option are in `params.issues` for a message of your own. For example:
+  - `union([string({ min: 3 }), number()])` given `"ab"`: `number()` found only that `"ab"` is not a number, so the string was meant, and the message is "Must be at least 3 characters".
+  - `union([literal(""), email()])` given `"nope"`: `literal("")` found only that `"nope"` is not its value, so the message is "Invalid email address".
+  - `union([string({ min: 3 }), email()])` given `"ab"`: both options take strings and both found more than a wrong type, so either could be meant, and the message is "Does not match any of the allowed types".
 
 The issue behind is worded with the same map. So an override of `too_small` in a copy of `englishMessages` reaches the message of a key too. A quoted issue deeper than the value the outer issue is shown at starts with its path, as in "width: Must be at least 1" for the `width` of an object option.
 
@@ -293,7 +296,7 @@ It takes the same message map as `formatIssue`, `englishMessages` unless another
 
 ## Throwing for invalid configuration
 
-Some input is not expected to be invalid. An options object another developer passes to your function, or the environment of a server, is wrong only by mistake, and a mistake is thrown where it was made. `assert(validator, input, options?)` returns the value the validator produced, or throws a `TypeError`:
+Some input is not expected to be invalid. An options object another developer passes to your function, or the environment of a server, is wrong only by mistake, and a mistake is best thrown where it was made, while the person who made it is still looking. `assert(validator, input, options?)` returns the value the validator produced, or throws a `TypeError`:
 
 ```ts
 import { array, assert, invalidTypeMessage, object, string, tooSmallMessage } from "@codenhub/validation";

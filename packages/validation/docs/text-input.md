@@ -6,7 +6,7 @@ order: 4
 
 # Text input
 
-Much of the data a program receives is text, even when it means something else. Every environment variable, query-string parameter and text field of a form is a string, whether it stands for a port number, a yes-or-no flag or a date. A file field is a `File` instead, which [Files](forms.md#files) covers. This page covers the validators that read a value from such text, and two places it comes from: a query string and the environment. The sign-up server reads its configuration from the environment, and its sign-up page reads an invitation from the query string.
+Much of the data a program receives is text pretending to be something else. Every environment variable, query-string parameter and text field of a form is a string, whether it stands for a port number, a yes-or-no flag or a date. A file field is a `File` instead, which [Files](forms.md#files) covers. This page covers the validators that read a value from such text, and two places it comes from: a query string and the environment. The sign-up server reads its configuration from the environment, and its sign-up page reads an invitation from the query string.
 
 A strict validator such as `number()` rejects `"8080"`, because it is a string. That is correct, and no help here. A coercing validator converts the text first and then validates the result, so one call gives you a typed value or the reasons it could not be one:
 
@@ -46,7 +46,7 @@ Coercion is deliberately narrow, because a conversion that guesses turns a bug i
 - **Numbers:** empty strings, `"1e3"`, `"0x10"`, `"1,5"`, `"Infinity"` and `"NaN"`; text that holds a whole number beyond `Number.MAX_SAFE_INTEGER`, which would silently lose digits (use `coerceBigint` for those); a nonzero decimal too small for a double, which would silently be `0`; and booleans, `null`, objects and arrays. `Number(true)` is `1` and `Number("")` is `0`, and reading a flag or a missing value as a count is how bugs hide.
 - **Booleans:** every other word. A typo such as `"ture"` is an error, not `false`.
 - **Bigints:** fractions, numbers beyond `Number.MAX_SAFE_INTEGER`, which have already lost precision, and any other text.
-- **Dates:** free-form text such as `"yesterday"` or `"09/28/2026"`, whose reading depends on the runtime, and days that do not exist, such as `2026-02-30`.
+- **Dates:** free-form text such as `"yesterday"` or `"03/04/2026"`, whose reading depends on the runtime, and whose month depends on the continent, and days that do not exist, such as `2026-02-30`.
 
 A value that cannot be converted fails with `invalid_type`, and its `params` are `{ expected, received, coerced: true }`. The English message names both types, as in "Cannot convert string to a number". The value itself is never in the issue.
 
@@ -70,7 +70,7 @@ Some details of the conversions:
 
 This is wider than `datetime()`, which accepts only the `T` separator, and `Z` or, with `offset`, `+HH:MM`. A converter reads what programs and people commonly write, while a [format](formats.md#datetime-and-time) checks one exact spelling.
 
-A date-time without a zone fails. `2026-09-28T14:30` names a time on some clock, not a moment. Read in any one zone, it would give everyone elsewhere a moment hours off, without a word. When you know such text is written in UTC, pass `zoneless: "utc"`, the only value that option takes:
+A date-time without a zone fails. `2026-09-28T14:30` names a time on some clock, not a moment, and the package will not guess whose clock. Read in any one zone, it would give everyone elsewhere a moment hours off, without a word. When you know such text is written in UTC, pass `zoneless: "utc"`, the only value that option takes:
 
 ```ts
 import { coerceDate } from "@codenhub/validation";
@@ -85,7 +85,7 @@ Either way, the result does not depend on the time zone of the machine. Some mor
 
 - A fraction of a second beyond milliseconds is cut, not rounded, the same way on every runtime.
 - A timestamp with a fraction of a millisecond is rejected, not cut.
-- Leap seconds (`23:59:60`) are rejected, since a `Date` cannot hold one.
+- Leap seconds (`23:59:60`) are rejected, since a `Date` cannot hold one and prefers to believe they never happen.
 
 ## A query string
 
@@ -128,7 +128,7 @@ const result = env({ PORT: "8080", ORIGINS: "https://a.example,https://b.example
 
 In Node.js, pass a copy of the environment: `env({ ...process.env })`. `process.env` itself is not a plain object, since its prototype is not `Object.prototype`, so `object` rejects it as it rejects a class instance, with a message that says to copy it. A missing variable is `undefined`, which a default replaces and every other validator rejects.
 
-The environment is configuration, so an invalid one is a mistake to stop at. [`assert`](errors.md#throwing-for-invalid-configuration) returns the value or throws an error that names the variable.
+The environment is configuration, so an invalid one is a mistake to stop at: a server that refuses to start is easier to debug than one that starts and misbehaves at 3 a.m. [`assert`](errors.md#throwing-for-invalid-configuration) returns the value or throws an error that names the variable.
 
 ## Cleaning text first
 
@@ -138,4 +138,4 @@ For text that holds JSON, use [`json`](request-bodies.md#json-text), which parse
 
 ## Next
 
-Every page so far has shown a result that fails. [Issues and messages](errors.md) explains what a failed result holds, and how to turn its issues into text a person reads.
+Every page so far has shown `{ ok: false, ... }` and politely skipped the `...`. [Issues and messages](errors.md) opens it: what a failed result holds, and how to turn its issues into text a person reads.

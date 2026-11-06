@@ -6,7 +6,7 @@ order: 11
 
 # Integrations
 
-The sign-up runs inside other libraries: a form library in the browser, a framework on the server, perhaps the tools of a language model. This page shows a validator in each of the common ones, so you can copy the few lines each needs.
+The sign-up runs inside other libraries: a form library in the browser, a framework on the server and, this being the 2020s, perhaps the tools of a language model. This page shows a validator in each of the common ones, so you can copy the few lines each needs.
 
 A validator goes where a library asks for a schema in one of three ways:
 
@@ -14,7 +14,7 @@ A validator goes where a library asks for a schema in one of three ways:
 - As a [JSON Schema](json-schema.md), in which the tools of language models and OpenAPI documents are written.
 - Called directly, as any function is. That is also how one field of a [zod or valibot schema](#inside-a-zod-or-valibot-schema) can use it.
 
-Every validator a factory of this package makes is already a Standard Schema, worded in short English. The examples for forms, RPC and HTTP pass it through `standard`, which words its issues in the full English, and were run that way. The other examples use what their section names: `standardJsonSchema`, `toJsonSchema`, or the validator called directly. Each example was run against the version of the library it names, on 2026-10-07: it validated input that passes and input that fails, and gave what the text around it says.
+Every validator a factory of this package makes is already a Standard Schema, worded in short English. The examples for forms, RPC and HTTP pass it through `standard`, which words its issues in the full English, and were run that way. The other examples use what their section names: `standardJsonSchema`, `toJsonSchema`, or the validator called directly. Each example was run against the version of the library it names, on 2026-10-07: it validated input that passes and input that fails, and gave what the text around it says. Libraries move, so the date says when these were last true.
 
 ## Forms
 
@@ -203,7 +203,7 @@ export const document = {
 
 ## Inside a zod or valibot schema
 
-A codebase on zod or valibot can use a validator of this package for one field, such as `url()` for a link the server will fetch or `email()` for an address it will store, without moving its other schemas. Neither library takes a Standard Schema as part of its own schemas, so the validator runs in a transform: what it produces is the field's value, and each issue it reports becomes an issue of the other library, worded by `formatIssue`. Only a synchronous validator fits this way.
+A codebase on zod or valibot can use a validator of this package for one field, such as `url()` for a link the server will fetch or `email()` for an address it will store, without moving its other schemas, so nobody has to book a migration weekend. Neither library takes a Standard Schema as part of its own schemas, so the validator runs in a transform: what it produces is the field's value, and each issue it reports becomes an issue of the other library, worded by `formatIssue`. Only a synchronous validator fits this way.
 
 The issue then follows the other library's rules: valibot's issues hold the input they were given, so what [Issues and messages](errors.md) says about issues never holding a value of the input is true of the validator's result here, not of the issue valibot reports.
 

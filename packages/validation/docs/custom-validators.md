@@ -6,7 +6,7 @@ order: 6
 
 # Custom validators
 
-The built-in validators cover common cases. A real sign-up has rules of its own: a name that is reserved, a username somebody already took, a code your company invented. This page shows how to write those. Neither kind needs registration:
+The built-in validators cover common cases. A real sign-up has rules of its own: a name that is reserved, a username somebody already took, a product code your company invented years ago that nobody dares to change. This page shows how to write those. Neither kind needs registration:
 
 - A **check** adds a rule to a validator you already have, such as a name not being taken.
 - A **validator** checks a type or a format of your own, such as a postcode.
@@ -93,7 +93,7 @@ postcode({ message: "Enter a ZIP code" })("abc"); // { ok: false, ... }
 
 The test must answer at once. A test that returns a promise throws a `TypeError` when the validator runs, since a pending answer would pass every value. A rule that waits is a check, as [Asynchronous rules](#asynchronous-rules) shows.
 
-`name` is part of the format's contract: callers branch on it and message maps word it, so choose it once. [JSON Schema](json-schema.md) writes no `format` for it, since JSON Schema does not know the name.
+`name` is part of the format's contract: callers branch on it and message maps word it, so choose it once: renaming it later breaks every caller that branched on it. [JSON Schema](json-schema.md) writes no `format` for it, since JSON Schema does not know the name.
 
 ### A type with `guard`
 
@@ -203,7 +203,7 @@ const result = await signup(input);
 
 Nothing else changes. A validator given an asynchronous check becomes an `AsyncValidator`, and so does everything that contains it: `signup` above is one because `username` is.
 
-The type tells the compiler the result must be awaited. So reading `signup(input).ok` without `await` is an error you find while writing, not a bug you find in production. A check written by hand that may wait is typed `AsyncCheck<T>`. Typing it `Check<T>` keeps its validators synchronous, and the compiler holds you to it.
+The type tells the compiler the result must be awaited. So reading `signup(input).ok` without `await` is an error you find while writing, not a bug you find in production, where a promise has no `ok` and every sign-up would read as a failure. A check written by hand that may wait is typed `AsyncCheck<T>`. Typing it `Check<T>` keeps its validators synchronous, and the compiler holds you to it.
 
 You can also write an asynchronous validator directly:
 
@@ -273,7 +273,7 @@ The types of shapes, which name what a composer produces and accepts:
 - `Variants`, the variants of a `tagged` union, with `InferTagged` and `InferTaggedInput`.
 - The types of `pick` and its kin, in [Shaping values](shaping-values.md#reusing-shapes).
 
-The machinery of the signatures:
+The machinery of the signatures, which you mostly meet in your editor's tooltips:
 
 - `Factory<T, TOptions, TInput?>`, the factory a builder such as `format` returns: options first, then checks.
 - `Rest<T, TOptions>` and `AsyncRest<T, TOptions>`, what follows a validator's own arguments: options, then checks.
@@ -282,4 +282,4 @@ The machinery of the signatures:
 
 ## Next
 
-Many rules of your own are formats of text. Before you write one, check whether the package has it: [Formats](formats.md) lists email addresses, URLs, IP addresses, dates and the rest.
+Many rules of your own are formats of text. Before you write one, check whether the package has it, since every email regex on the internet is wrong in its own way. [Formats](formats.md) lists email addresses, URLs, IP addresses, dates and the rest.

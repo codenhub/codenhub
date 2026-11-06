@@ -3,10 +3,10 @@
 Validation for data you do not control: a request body, a query string, a form, a message from another origin. A validator gives you either the typed value or the reasons it is not one, and is built for input that may be hostile:
 
 - **Formats return what a parser read.** `email()` and `url()` produce what the URL parser of the platform sees, so the value you store is the one a request or a mail server will use.
-- **What a failing input reports is bounded.** Each collection stops reporting at 1,000 issues, as [Limits](docs/limits.md#a-failing-input-has-a-bounded-cost) explains, and input nested too deep is one issue, not a stack overflow, as long as the depth limit fits the stack.
+- **What a failing input reports is bounded.** Each collection stops reporting at 1,000 issues, as [Limits](docs/limits.md#a-failing-input-has-a-bounded-cost) explains, and input nested too deep is one issue, not a stack overflow, as long as the depth limit of a recursive schema, [`maxDepth`](docs/limits.md#maxdepth), fits the stack.
 - **Issues never hold a value of the input**, so logging a failed validation cannot log a password that was sent. They do hold what the schema was configured with, such as the values a `oneOf` accepts or the prefix of a `startsWith`, and the input's keys, in `path`, as [The issue](docs/errors.md#the-issue) says.
 
-Each validator is a function you import on its own, so a program bundles only the validators it uses. No dependencies.
+Each validator is a function you import on its own, so a program bundles only the validators it uses. No dependencies, so the only code to audit is ours.
 
 > [!WARNING] **Experimental:** pre-1.0. The API is meant to hold for every patch release of a minor version, such as each 0.4.x. A change that breaks callers, if one proves necessary, ships in the next minor version, and the [changelog](docs/changelog/index.md) lists it, with the migrations from earlier versions.
 
@@ -18,7 +18,7 @@ pnpm add @codenhub/validation
 
 ## Usage
 
-A validator is a function. Build one for the shape you expect, call it with any value, and read the result:
+A validator is a function. That is most of the design. Build one for the shape you expect, call it with any value, and read the result:
 
 ```ts
 import { email, flatten, object, string, type Infer } from "@codenhub/validation";
