@@ -1,13 +1,13 @@
 ---
 title: Validadores personalizados
 description: Adicione regras com verificações, crie validadores que se comportam como os nativos, valide de forma assíncrona e nomeie os tipos que uma biblioteca de validadores exporta.
-source: 821ea60ab863af2c39ee2eb1f1ff8c64ecb833ef
+source: 1b095972d82ce64515adcb5c4586056616338ef6
 order: 6
 ---
 
 # Validadores personalizados
 
-Os validadores nativos cobrem os casos comuns. Um cadastro de verdade tem regras próprias: um nome reservado, um nome de usuário que alguém já pegou, um código que a sua empresa inventou. Esta página mostra como escrevê-las. Nenhum dos dois tipos precisa de registro:
+Os validadores nativos cobrem os casos comuns. Um cadastro de verdade tem regras próprias: um nome reservado, um nome de usuário que alguém já pegou, um código de produto que a sua empresa inventou anos atrás e que ninguém se atreve a mudar. Esta página mostra como escrevê-las. Nenhum dos dois tipos precisa de registro:
 
 - Uma **verificação** adiciona uma regra a um validador que você já tem, como a de um nome não estar em uso.
 - Um **validador** verifica um tipo ou um formato seu, como um código postal.
@@ -94,7 +94,7 @@ postcode({ message: "Enter a ZIP code" })("abc"); // { ok: false, ... }
 
 O teste precisa responder na hora. Um teste que retorna uma promise lança um `TypeError` quando o validador roda, já que uma resposta pendente deixaria passar todo valor. Uma regra que espera é uma verificação, como mostra [Regras assíncronas](#regras-assíncronas).
 
-`name` faz parte do contrato do formato: quem chama decide com base nele e os mapas de mensagens o descrevem, então escolha-o uma vez só. O [JSON Schema](json-schema.md) não escreve nenhum `format` para ele, já que o JSON Schema não conhece o nome.
+`name` faz parte do contrato do formato: quem chama decide com base nele e os mapas de mensagens o descrevem, então escolha-o uma vez só: renomeá-lo depois quebra todo código que decidia com base nele. O [JSON Schema](json-schema.md) não escreve nenhum `format` para ele, já que o JSON Schema não conhece o nome.
 
 ### Um tipo com `guard`
 
@@ -204,7 +204,7 @@ const result = await signup(input);
 
 Nada mais muda. Um validador que recebe uma verificação assíncrona vira um `AsyncValidator`, e o mesmo acontece com tudo que o contém: o `signup` acima é um porque `username` é.
 
-O tipo diz ao compilador que o resultado precisa ser aguardado. Então ler `signup(input).ok` sem `await` é um erro que você encontra enquanto escreve, não um bug que você encontra em produção. Uma verificação escrita à mão que pode esperar é tipada como `AsyncCheck<T>`. Tipá-la como `Check<T>` mantém os validadores dela síncronos, e o compilador cobra isso de você.
+O tipo diz ao compilador que o resultado precisa ser aguardado. Então ler `signup(input).ok` sem `await` é um erro que você encontra enquanto escreve, não um bug que você encontra em produção, onde uma promise não tem `ok` e todo cadastro seria lido como falha. Uma verificação escrita à mão que pode esperar é tipada como `AsyncCheck<T>`. Tipá-la como `Check<T>` mantém os validadores dela síncronos, e o compilador cobra isso de você.
 
 Você também pode escrever um validador assíncrono diretamente:
 
@@ -274,7 +274,7 @@ Os tipos de estruturas, que nomeiam o que um compositor produz e aceita:
 - `Variants`, as variantes de uma união `tagged`, com `InferTagged` e `InferTaggedInput`.
 - Os tipos de `pick` e companhia, em [Moldando valores](shaping-values.md#reaproveitando-estruturas).
 
-A engrenagem das assinaturas:
+A engrenagem das assinaturas, que você encontra mais nos tooltips do editor:
 
 - `Factory<T, TOptions, TInput?>`, a factory que um builder como `format` retorna: primeiro as opções, depois as verificações.
 - `Rest<T, TOptions>` e `AsyncRest<T, TOptions>`, o que vem depois dos argumentos próprios de um validador: opções, depois verificações.
@@ -283,4 +283,4 @@ A engrenagem das assinaturas:
 
 ## Próximos passos
 
-Muitas regras próprias são formatos de texto. Antes de escrever uma, veja se o pacote já a tem: [Formatos](formats.md) lista endereços de e-mail, URLs, endereços IP, datas e o resto.
+Muitas regras próprias são formatos de texto. Antes de escrever uma, veja se o pacote já a tem, já que toda regex de e-mail que circula por aí está errada de um jeito diferente. [Formatos](formats.md) lista endereços de e-mail, URLs, endereços IP, datas e o resto.

@@ -1,14 +1,14 @@
-<!-- source: 3cb4792ff9e0a93258ed1abcced6f1c278753089 -->
+<!-- source: b7881a69629b5a13ce538a5599d74c4808da5f0f -->
 
 # @codenhub/validation
 
 Validación para datos que no controlas: el cuerpo de una solicitud, una query string, un formulario, un mensaje de otro origen. Un validador te da el valor tipado o las razones por las que no lo es, y está hecho para una entrada que puede ser hostil:
 
 - **Los formatos devuelven lo que leyó un parser.** `email()` y `url()` producen lo que ve el parser de URL de la plataforma, así que el valor que guardas es el que usará una solicitud o un servidor de correo.
-- **Lo que reporta una entrada que falla está acotado.** Cada colección deja de reportar en 1000 problemas, como explica [Límites](docs/es/limits.md#una-entrada-que-falla-tiene-un-costo-acotado), y una entrada anidada demasiado profundo es un solo problema, no un desbordamiento de pila, siempre que el límite de profundidad quepa en la pila.
+- **Lo que reporta una entrada que falla está acotado.** Cada colección deja de reportar en 1000 problemas, como explica [Límites](docs/es/limits.md#una-entrada-que-falla-tiene-un-costo-acotado), y una entrada anidada demasiado profundo es un solo problema, no un desbordamiento de pila, siempre que el límite de profundidad de un esquema recursivo, [`maxDepth`](docs/es/limits.md#maxdepth), quepa en la pila.
 - **Los problemas nunca contienen un valor de la entrada**, así que registrar una validación fallida no puede registrar una contraseña que se envió. Sí contienen aquello con lo que se configuró el esquema, como los valores que acepta un `oneOf` o el prefijo de un `startsWith`, y las claves de la entrada, en `path`, como explica [El problema](docs/es/errors.md#el-problema).
 
-Cada validador es una función que importas por separado, así que un programa empaqueta solo los validadores que usa. Sin dependencias.
+Cada validador es una función que importas por separado, así que un programa empaqueta solo los validadores que usa. Sin dependencias, así que el único código que auditar es el nuestro.
 
 > [!WARNING] **Experimental:** anterior a 1.0. La API debería mantenerse en todas las versiones de parche de una versión menor, como cada 0.4.x. Un cambio que rompa el código que la usa, si llega a ser necesario, sale en la siguiente versión menor, y el [registro de cambios](docs/changelog/index.md) lo enumera, junto con las migraciones desde versiones anteriores.
 
@@ -20,7 +20,7 @@ pnpm add @codenhub/validation
 
 ## Uso
 
-Un validador es una función. Crea uno para la forma que esperas, llámalo con cualquier valor y lee el resultado:
+Un validador es una función. Eso es casi todo el diseño. Crea uno para la forma que esperas, llámalo con cualquier valor y lee el resultado:
 
 ```ts
 import { email, flatten, object, string, type Infer } from "@codenhub/validation";

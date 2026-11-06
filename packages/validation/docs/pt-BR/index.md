@@ -1,7 +1,7 @@
 ---
 title: Visão geral
 description: Para que serve o pacote de validação, como instalá-lo e em que ordem ler as páginas.
-source: 533571f419ed6de73fe8f241e415c797093db48d
+source: b740f4e453473d7b05f56526e86c13e78a07780d
 ---
 
 # Valide valores e estruturas
@@ -12,12 +12,12 @@ Funciona do mesmo jeito para um valor só, como um endereço de e-mail ou um nú
 
 ## Por que validar
 
-Dados que cruzam uma fronteira que você não controla podem conter qualquer coisa: uma requisição, um formulário, uma query string, uma variável de ambiente, um arquivo, uma mensagem de outro serviço. O TypeScript verifica tipos quando você compila, não quando o programa roda. Então o tipo que você escreveu para esses dados é uma promessa que nada garante, até que um validador garanta.
+Dados que cruzam uma fronteira que você não controla podem conter qualquer coisa: uma requisição, um formulário, uma query string, uma variável de ambiente, um arquivo, uma mensagem de outro serviço. O TypeScript verifica tipos quando você compila, não quando o programa roda. Então o tipo que você escreveu para esses dados é uma promessa, e os dados nunca concordaram com ela. Um validador é o que faz eles cumprirem.
 
 O pacote foi feito para essa fronteira, onde a entrada pode ser hostil:
 
 - **Um formato devolve o que o parser leu.** `email()` e `url()` produzem o valor que o parser de URL da plataforma lê. O valor que você guarda é o mesmo que uma requisição ou um servidor de e-mail vai usar.
-- **O que uma entrada inválida reporta é limitado.** Cada coleção para de reportar em 1.000 problemas, como explica [Limites](limits.md#uma-entrada-inválida-tem-custo-limitado). Uma entrada aninhada fundo demais vira um problema só, não um estouro de pilha, desde que o limite de profundidade caiba na pilha.
+- **O que uma entrada inválida reporta é limitado.** Cada coleção para de reportar em 1.000 problemas, como explica [Limites](limits.md#uma-entrada-inválida-tem-custo-limitado). Uma entrada aninhada fundo demais vira um problema só, não um estouro de pilha, desde que o limite de profundidade de um schema recursivo, [`maxDepth`](limits.md#maxdepth), caiba na pilha.
 - **Um problema nunca guarda um valor da entrada.** Um log de falhas não contém nenhuma senha que foi enviada. Um problema guarda, sim, aquilo com que o schema foi configurado, como os valores que um `oneOf` aceita ou o prefixo de um `startsWith`, e as chaves da entrada, no seu `path`, como diz [O problema](errors.md#o-problema).
 
 O limite de 1.000 problemas de uma coleção restringe o relatório dela, não o trabalho: uma entrada que passa, ou que falha só perto do fim, ainda é verificada item por item, então uma entrada grande custa o seu tamanho. [Limites](limits.md) explica como limitar o tamanho e a profundidade dela.
@@ -41,10 +41,10 @@ const signup = object({
 });
 
 signup({ name: "  Ada ", email: "ada@example.com" }); // { ok: true, value: { name: "Ada", email: "ada@example.com" } }
-signup({ name: "A", email: "nope" }); // { ok: false, ... }, code "too_small"
+signup({ name: "A", email: "nope" }); // { ok: false, ... }: "too_small" for name, "invalid_format" for email
 ```
 
-Estas páginas seguem um exemplo só: o cadastro de uma aplicação web. Ele começa aqui com dois campos. Cada página acrescenta o que ensina, como um formulário com confirmação de senha, o corpo JSON de uma requisição, a configuração do servidor e as mensagens que um usuário lê.
+Estas páginas seguem um exemplo só: o cadastro de uma aplicação web. Ele começa aqui com dois campos e, como todo formulário de cadastro já feito, cresce um pouco a cada página. Cada página acrescenta o que ensina, como um formulário com confirmação de senha, o corpo JSON de uma requisição, a configuração do servidor e as mensagens que um usuário lê.
 
 ## Caminho de leitura
 

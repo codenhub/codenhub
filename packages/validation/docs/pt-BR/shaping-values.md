@@ -1,13 +1,13 @@
 ---
 title: Moldando valores
 description: Encadeie validadores, converta valores, escreva-os de volta, marque e congele valores, descreva-os, troque uma falha por um fallback e reaproveite a estrutura de um objeto.
-source: a72339831656b6b15e8e578f57e702615555bf6b
+source: 3153f42ba602763a0c2f593e3fa938c2f1066472
 order: 8
 ---
 
 # Moldando valores
 
-Um validador faz mais que aceitar ou rejeitar. Ele pode limpar um valor, convertê-lo em outro tipo e, depois, escrevê-lo de volta. Esta página trata das ferramentas que mudam o que um validador produz, ou como ele é descrito, e das formas de construir um objeto a partir de outro. No cadastro, elas leem como `Date` o horário em que um convite expira, marcam o id de um usuário para que nenhuma outra string passe por um, e derivam a atualização de perfil a partir do objeto do cadastro.
+Um validador faz mais que dizer sim ou não. Ele pode limpar um valor, convertê-lo em outro tipo e, depois, escrevê-lo de volta. Esta página trata das ferramentas que mudam o que um validador produz, ou como ele é descrito, e das formas de construir um objeto a partir de outro. No cadastro, elas leem como `Date` o horário em que um convite expira, marcam o id de um usuário para que nenhuma outra string passe por um, e derivam a atualização de uma conta a partir da estrutura que cria a conta.
 
 ## `pipe`
 
@@ -40,7 +40,7 @@ length("Ada"); // { ok: true, value: 3 }
 - Um `convert` que lança uma exceção é um bug, e a exceção se propaga.
 - Um `transform` só vai num sentido. [`encode`](#encode) não consegue escrever o valor dele de volta, e lança uma exceção que indica onde ele está. Onde um valor precisa voltar, use um [`codec`](#codec).
 
-Um `convert` que retorna uma promise torna o resultado assíncrono. O mesmo vale para um tipado como podendo retornar uma, inclusive um tipado como retornando `unknown`. E também para qualquer valor com um método `then`, já que `await` o trataria como uma promise. Envolva um valor desses num objeto antes de retorná-lo.
+Um `convert` que retorna uma promise torna o resultado assíncrono. O mesmo vale para um tipado como podendo retornar uma, inclusive um tipado como retornando `unknown`. E também para qualquer valor com um método `then`, já que `await` o trataria como uma promise, querendo ele ser uma ou não. Envolva um valor desses num objeto antes de retorná-lo.
 
 Um `convert` tipado como retornando `any`, como `JSON.parse`, abriu mão da checagem de tipos, e é tipado como síncrono. Então `transform(string(), JSON.parse)` não precisa de `await`. Se ele puder retornar uma promise, diga isso no tipo de retorno.
 
@@ -103,7 +103,7 @@ Assim, um valor que o validador não poderia ter produzido falha com os problema
 
 ## `brand`
 
-`brand(validator, name)` marca com um nome o que um validador produz, só nos tipos. O TypeScript trata dois tipos com a mesma estrutura como um só, então uma função que recebe uma `string` que ela chama de id de usuário também recebe um e-mail, ou um texto que ninguém validou. Com uma marca, o único caminho para um valor do tipo passa pelo validador:
+`brand(validator, name)` marca com um nome o que um validador produz, só nos tipos. O TypeScript trata dois tipos com a mesma estrutura como um só, então uma função que recebe uma `string` que ela chama de id de usuário também recebe um e-mail, um token de sessão ou o texto de uma página 404. Com uma marca, o único caminho para um valor do tipo passa pelo validador:
 
 ```ts
 import { brand, uuid, type Infer } from "@codenhub/validation";
@@ -139,7 +139,7 @@ type Settings = Infer<typeof settings>; // { readonly theme: string; readonly ta
 
 - Ele congela o próprio valor, e não o que está dentro dele, como faz `Object.freeze` e como diz o tipo. Envolva também um validador interno onde o valor dele não puder mudar, como `tags` acima.
 - Um valor que é a própria entrada nunca é congelado, já que pertence a quem chamou. `instanceOf`, `guard` e `unknown` produzem o que receberam, então `readonly` muda só o tipo deles. `object`, `objectLike`, `array`, `tuple`, `record`, `set` e `map` produzem um valor novo, que é congelado.
-- Um `Map` ou um `Set` é tipado como `ReadonlyMap` ou `ReadonlySet`, e só o tipo o protege: congelar um deles não impede `set` nem `add`. Um typed array não pode ser congelado, e fica sem congelar, assim como um `DataView`. O tipo cobre propriedades e não métodos, então um `Date` mantém seus setters.
+- Um `Map` ou um `Set` é tipado como `ReadonlyMap` ou `ReadonlySet`, e só o tipo o protege: congelar um deles não impede `set` nem `add`, que é o que o JavaScript entende por congelado. Um typed array não pode ser congelado, e fica sem congelar, assim como um `DataView`. O tipo cobre propriedades e não métodos, então um `Date` mantém seus setters.
 - Um valor só conta como de quem chamou quando é a própria entrada. Quando um `transform` retorna um valor de dentro da entrada, como `(value) => value.tags`, esse valor é congelado. Faça uma cópia ali quando quem chamou precisar mantê-lo alterável. O mesmo vale para um objeto que ele retorne dos seus próprios dados: `readonly(transform(string(), (key) => cache[key]))` congela a entrada em `cache`, então retorne uma cópia ali também.
 - `pick`, `omit`, `required` e `partial` leem um `object`, então mude a estrutura primeiro e envolva depois: `readonly(pick(user, ["name"]))`.
 

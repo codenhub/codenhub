@@ -2,12 +2,12 @@
 title: Formularios
 description: Reglas entre campos, campos opcionales y valores predeterminados, errores junto a cada campo, archivos y los tipos que contiene un formulario.
 order: 2
-source: a75deb597ac42bd968b1f0a21e531febcb054859
+source: b1f6f80451737ff83bbf79c2d7f151f43033dec6
 ---
 
 # Formularios
 
-Un formulario es donde más abunda la entrada inválida, y donde la persona que la escribió necesita saber qué corregir. Esta página convierte el registro en un formulario: una contraseña escrita dos veces, campos opcionales con valores predeterminados, un archivo de avatar y errores que se muestran junto a cada campo. Termina con los tipos que necesita una biblioteca de formularios.
+Un formulario es donde más abunda la entrada inválida, ya que una persona la escribe en el teléfono, con prisa y con el autocompletado ayudando a su manera. También es donde esa persona necesita saber qué corregir. Esta página convierte el registro en un formulario: una contraseña escrita dos veces, campos opcionales con valores predeterminados, un archivo de avatar y errores que se muestran junto a cada campo. Termina con los tipos que necesita una biblioteca de formularios.
 
 ## Campos que deben coincidir
 
@@ -93,7 +93,7 @@ Dentro de un `object`, una propiedad con valor predeterminado siempre está pres
 
 - El valor predeterminado se considera confiable, y no se valida.
 - Un primitivo se usa directamente. Una función se llama cada vez, sin argumentos, para crear el valor predeterminado.
-- Un array o un objeto debe venir de una función, como `() => []`. Un único valor quedaría compartido por todos los resultados, y un cambio en uno aparecería en el siguiente. Los tipos lo rechazan, y `optional` lanza un `TypeError` cuando recibe uno desde JavaScript.
+- Un array o un objeto debe venir de una función, como `() => []`. Un único valor quedaría compartido por todos los resultados, y un cambio en uno aparecería en el siguiente: un bug que tarda una semana en encontrarse y una línea en arreglarse. Los tipos lo rechazan, y `optional` lanza un `TypeError` cuando recibe uno desde JavaScript.
 - Por la misma razón, un valor predeterminado que es en sí una función, como un callback para `func()`, se devuelve desde otra función: `optional(func(), () => noop)`. Si recibiera `noop` directamente, `optional` lo llamaría y usaría lo que devuelve, así que los tipos lo rechazan siempre que el validador interno pueda producir una función.
 - El tipo supone que el validador nunca produce `undefined` para un valor presente, algo que todos los validadores integrados cumplen. Un `transform` que devuelve `undefined` se deja pasar, y el valor predeterminado reemplaza solo un valor que falta.
 
@@ -144,7 +144,7 @@ export const readSignup = async (request: Request) => {
 };
 ```
 
-Un campo de archivo sin un archivo elegido igual envía una parte: un `File` sin nombre y sin contenido. `optional` ve un valor, así que `file` lo acepta y `contentType` lo rechaza, ya que no contiene ninguna imagen. `readSignup` quita esa parte primero, así que un registro sin avatar pasa.
+Un campo de archivo sin un archivo elegido igual envía una parte, porque la forma que tiene un navegador de no enviar ningún archivo es enviar uno vacío: un `File` sin nombre y sin contenido. `optional` ve un valor, así que `file` lo acepta y `contentType` lo rechaza, ya que no contiene ninguna imagen. `readSignup` quita esa parte primero, así que un registro sin avatar pasa.
 
 ### `formData`
 
@@ -211,4 +211,4 @@ Una biblioteca de formularios que acepta un [Standard Schema](./standard-schema.
 
 ## Siguiente
 
-El formulario de registro está listo para el navegador. El servidor recibe los mismos datos como un cuerpo JSON, y a menudo más de lo que envía un formulario: listas, diccionarios y formas que varían. [Cuerpos de solicitud](./request-bodies.md) cubre todo eso.
+El formulario de registro está listo para el navegador. El servidor desconfía más: recibe los mismos datos como un cuerpo JSON, de cualquier cliente, y a menudo más de lo que envía un formulario: listas, diccionarios y formas que varían. [Cuerpos de solicitud](./request-bodies.md) cubre todo eso.

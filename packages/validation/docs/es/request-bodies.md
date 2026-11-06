@@ -2,12 +2,12 @@
 title: Cuerpos de solicitud
 description: Texto JSON, listas, tuplas, diccionarios, sets y maps, elegir entre formas, y datos recursivos.
 order: 3
-source: 65bf294a1b14a3d7ace2b4c620bd9494786c3beb
+source: a9a1377afa3528c02b0cc4a8f492fa57c5772860
 ---
 
 # Cuerpos de solicitud
 
-Un servidor recibe lo que cualquier cliente haya decidido enviar. Esta página cubre las formas que un cuerpo de solicitud contiene más allá de un objeto plano de un solo nivel: texto JSON, listas, diccionarios, elegir entre formas y datos que se anidan dentro de sí mismos. La API de registro recibe una lista de intereses, una referencia que puede tener dos formas y un cuerpo que todavía es texto JSON.
+Un servidor recibe lo que cualquier cliente haya decidido enviar, y entre los clientes hay de todo. Esta página cubre las formas que un cuerpo de solicitud contiene más allá de un objeto plano de un solo nivel: texto JSON, listas, diccionarios, elegir entre formas y datos que se anidan dentro de sí mismos. La API de registro recibe una lista de intereses, una referencia que puede tener dos formas y un cuerpo que todavía es texto JSON.
 
 ## Texto JSON
 
@@ -40,7 +40,7 @@ signupBody("{"); // { ok: false, ... }, código "invalid_format"
 El texto lo parsea `JSON.parse`, así que se aplican dos de sus reglas:
 
 - Una clave que aparece dos veces conserva su último valor: `{"a":1,"a":2}` da `{ a: 2 }`.
-- Un número que excede lo que un double representa con exactitud pierde dígitos: `12345678901234567890` se convierte en `12345678901234567000`. Envía esos números como cadenas y léelos con `coerceBigint`.
+- Un número que excede lo que un double representa con exactitud pierde dígitos: `12345678901234567890` se convierte en `12345678901234567000`, un ID que ahora es de otra persona. Envía esos números como cadenas y léelos con `coerceBigint`.
 
 El `string({ max: 100_000 })` del principio limita el texto antes de parsearlo. [Límites](./limits.md) explica por qué un cuerpo necesita un límite como ese.
 
@@ -124,7 +124,7 @@ const hours = record(oneOf(["mon", "tue"]), number()); // { mon?: number; tue?: 
 
 ### `union`
 
-`union(options)` acepta un valor que pasa cualquiera de varios validadores, y produce lo que produjo el primero que lo acepta. Así que pon primero las opciones más específicas:
+`union(options)` acepta un valor que pasa cualquiera de varios validadores, y produce lo que produjo el primero que lo acepta. Quien llega primero gana, así que pon primero las opciones más específicas:
 
 ```ts
 import { coerceNumber, number, string, union } from "@codenhub/validation";
@@ -185,7 +185,15 @@ Cada variante debe producir un objeto plano, ya que eso es lo que puede llevar l
 
 Donde las salidas difieren de cualquier otra forma, como `"  ab "` cuando un lado le quita los espacios y el otro lo pasa a mayúsculas, ningún valor satisface a ambos. Cada uno de esos lugares falla con `invalid_intersection` en su ruta, en lugar de que un lado gane sin avisar.
 
-El objeto fusionado es nuevo. Así que una clave `__proto__` propia que un lado dejó pasar sin verificar, como hace `unknown()`, se reporta como `invalid_key` con un problema dentro, `{ reserved: true }`, igual que la reporta `record`. Si la forma de alguno de los lados incluye `__proto__` en ese lugar, la conserva, pero solo si esa forma produjo el valor ahí. No lo produjo una forma que un `transform` ejecuta antes de su función, ni una en un paso de `pipe` seguido de un paso que crea un objeto nuevo, ni el validador de claves de una entrada de `map`, para el valor de esa entrada. Un valor que ambos lados dejaron pasar entero, por ejemplo con `unknown()` en los dos, es el propio objeto de la entrada, y se conserva sin cambios.
+El objeto fusionado es nuevo. Así que una clave `__proto__` propia que un lado dejó pasar sin verificar, como hace `unknown()`, se reporta como `invalid_key` con un problema dentro, `{ reserved: true }`, igual que la reporta `record`. Dos casos conservan la clave:
+
+- **Un lado cuya forma incluye `__proto__` en ese lugar y produjo el valor ahí.** La forma tiene que ser lo último que tocó el valor. No lo es cuando algo después de ella creó un valor nuevo:
+  - Una forma dentro de un `transform`. El valor es lo que devolvió la función del transform, no lo que verificó la forma.
+  - Una forma en un paso de `pipe` que un paso posterior reemplaza por un objeto nuevo.
+  - El validador de claves de una entrada de `map`. Produjo la clave, no el valor de la entrada.
+- **Un valor que ambos lados dejaron pasar entero,** por ejemplo con `unknown()` en los dos. Es el propio objeto de la entrada, y se conserva sin cambios.
+
+Así, `intersection(object({ ["__proto__"]: unknown() }), unknown())` conserva una clave `__proto__`, ya que la forma de la izquierda la incluye y produjo el valor. Envuelve ese `object` en un `transform` y la clave se reporta en su lugar. La clave computada importa: escrito como `{ __proto__: unknown() }`, el literal fija el prototipo de la forma y no incluye ninguna clave. Sí, en serio.
 
 Ambos validadores ven la entrada completa, así que dos `object` con `unknownKeys: "strict"` solo pasan juntos cuando cada clave de la entrada está incluida en ambas formas: cada uno rechaza las claves que solo incluye el otro. Para combinar formas estrictas, expándelas en una sola: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
 

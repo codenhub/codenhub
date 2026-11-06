@@ -2,12 +2,12 @@
 title: Límites
 description: Lo que cuesta una entrada que falla, los límites de los esquemas recursivos, los tamaños que necesita una entrada no confiable y cómo audit encuentra los límites que un esquema deja abiertos.
 order: 12
-source: 245de196e8904f5e3401f0222d0f4118e660b511
+source: a3150de56f84a1c4de175605afa3f34a51e94d8c
 ---
 
 # Límites
 
-Un endpoint de registro recibe lo que cualquiera le envíe, incluida una entrada escrita para volverlo lento, agotar su memoria o hacerlo caer. Esta página dice qué limita el paquete por ti, qué te deja a ti y cómo comprobar que un esquema fija los límites que necesita. Léela antes de validar entradas que llegan de una red pública.
+Un endpoint de registro recibe lo que cualquiera le envíe, incluida una entrada escrita para volverlo lento, agotar su memoria o hacerlo caer. Esta página dice qué limita el paquete por ti, qué te deja a ti y cómo comprobar que un esquema fija los límites que necesita. Léela antes de validar entradas que llegan de una red pública: es más corta que el informe del incidente.
 
 En resumen:
 
@@ -195,4 +195,4 @@ Lo que no juzga:
 
 ## Siguiente
 
-Aquí termina el orden de lectura. Para la firma exacta de cada exportación, consulta la [referencia de la API](../reference/index.md). Para lo que cambió entre versiones y cómo actualizar, consulta el [registro de cambios](../changelog/index.md).
+Aquí termina el orden de lectura, y también nuestras opiniones sobre `__proto__`. Para la firma exacta de cada exportación, consulta la [referencia de la API](../reference/index.md). Para lo que cambió entre versiones y cómo actualizar, consulta el [registro de cambios](../changelog/index.md).
