@@ -145,6 +145,20 @@ describe("the most issues a collection reports", () => {
     expect(calls).toBe(LIMIT);
   });
 
+  it("should say an object stopped when its unknown keys reach the limit exactly and a key is left", () => {
+    let calls = 0;
+    const counted: Validator<string> = (input) => {
+      calls += 1;
+      return string()(input);
+    };
+    // The limit is reached by the last key that fails, and the key left would pass.
+    const entries = [...Array.from({ length: LIMIT }, (_, index) => [`k${index}`, index] as const), ["last", "ok"]];
+    const issues = issuesOf(object({}, { unknownKeys: counted })(Object.fromEntries(entries)));
+    expect(issues).toHaveLength(LIMIT + 1);
+    expect(issues[LIMIT]).toEqual(stopped());
+    expect(calls).toBe(LIMIT);
+  });
+
   it("should list the repeats that unique and a set find up to the limit", () => {
     const repeats = Array.from({ length: COUNT }, () => "a");
     expect(issuesOf(array(string(), unique())(repeats))).toHaveLength(LIMIT + 1);

@@ -19,7 +19,7 @@ export const MAX_ISSUES = 1000;
  * issue of a `union` holds every option's: counted as one, a thousand items that each failed a union of
  * lists held two million. Issues nest at most three deep, so this does too.
  */
-const weigh = (found: unknown): number => {
+export const weigh = (found: unknown): number => {
   if (Array.isArray(found)) {
     let weight = 0;
     for (const each of found) {

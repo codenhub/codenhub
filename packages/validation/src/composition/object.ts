@@ -1,8 +1,8 @@
-import { chain, collect, runEach, type Maybe } from "../core/async";
+import { chain, collect, isThenable, runEach, type Maybe } from "../core/async";
 import { report, tail } from "../core/checks";
 import { described } from "../core/describe";
 import { fieldFailureOf } from "../core/field-hook";
-import { cap, countIssues, MAX_ISSUES, runItems } from "../core/limit";
+import { cap, MAX_ISSUES, weigh } from "../core/limit";
 import { mixedRunOf } from "../core/mixed";
 import { append, childOf, composed, fastOf, MISS, type Child, type Fast } from "../core/nesting";
 import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
@@ -209,9 +209,10 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
   // Valid input is answered without a list or a result for each property, when every property, and the
   // validator of the unknown keys, has a fast test; any miss runs the full work below, which says why.
   const fastChildren = keys.map((key) => fastOf(read[key]));
-  const fastRest = fastOf(unknownKeys);
+  // Passthrough keeps each unknown key as it is.
+  const fastRest = restChild === undefined ? (value: unknown) => value : fastOf(unknownKeys);
   const childrenFast: Fast | undefined =
-    fastChildren.includes(undefined) || (restChild !== undefined && fastRest === undefined)
+    fastChildren.includes(undefined) || fastRest === undefined
       ? undefined
       : (input) => {
           if (!isPlainObject(input)) {
@@ -235,7 +236,7 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
           if (isKept) {
             for (const key of Object.keys(input)) {
               if (!known.has(key)) {
-                const value = key === RESERVED_KEY ? MISS : fastRest === undefined ? input[key] : fastRest(input[key]);
+                const value = key === RESERVED_KEY ? MISS : fastRest(input[key]);
                 if (value === MISS) {
                   return MISS;
                 }
@@ -266,6 +267,9 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
     }
 
     const issues: ValidationIssue[] = [];
+    // Kept or copied, `__proto__` would be the prototype of whatever the output is next assigned to.
+    const refuse = (list: ValidationIssue[]) =>
+      append(list, report([reservedKey(RESERVED_KEY)], place, options.message));
     if (unknownKeys === "strict") {
       const unrecognized = Object.keys(input).filter((key) => !known.has(key));
       // The sender adds as many keys as it likes, so they are listed up to the limit of a collection.
@@ -291,62 +295,52 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
           .map((key) => [key, input[key]] as const)
       : [];
     if (restChild === undefined && extra.some(([key]) => key === RESERVED_KEY)) {
-      // Copied, it would be the prototype of whatever the output is next assigned to.
-      append(issues, report([reservedKey(RESERVED_KEY)], place, options.message));
-    }
-    const shaped =
-      mixedRun === undefined || issues.length > 0
-        ? runEach(values.length, (index) => (children[index] as Child)(values[index], place, keys[index] as string))
-        : mixedRun(keys, children, fastChildren, values, present, extra, place);
-    if (!Array.isArray(shaped)) {
-      return accept(shaped, place);
+      refuse(issues);
     }
     // The unknown keys follow the properties in one list, and stop at the limit of a collection, since the
-    // sender adds as many as it likes.
-    const results =
-      restChild === undefined
-        ? shaped
-        : runItems(
-            extra.length,
-            (index) => restChild(extra[index]?.[1], place, extra[index]?.[0] as string),
-            countIssues,
-            0,
-            0,
-            shaped,
-          );
+    // sender adds as many as it likes: past it, an unknown key is not run and its place in the list is empty.
+    let weight = 0;
+    const results: Maybe<ValidationResult<unknown> | undefined>[] | Record<string, unknown> =
+      mixedRun === undefined || issues.length > 0
+        ? runEach(keys.length + (restChild === undefined ? 0 : extra.length), (index) => {
+            if (index < keys.length) {
+              return (children[index] as Child)(values[index], place, keys[index] as string);
+            }
+            if (weight < MAX_ISSUES) {
+              const [key, value] = extra[index - keys.length] as readonly [string, unknown];
+              const result = (restChild as Child)(value, place, key);
+              weight += isThenable(result) || result.ok ? 0 : weigh(result.error.issues);
+              return result;
+            }
+            return undefined;
+          })
+        : mixedRun(keys, children, fastChildren, values, present, extra, place);
+    if (!Array.isArray(results)) {
+      return accept(results, place);
+    }
     return chain(collect(results), (settled) => {
       const output: Record<string, unknown> = {};
-      for (let index = 0; index < keys.length; index += 1) {
-        const result = settled[index] as ValidationResult<unknown>;
-        if (!result.ok) {
-          append(issues, result.error.issues);
-        } else if (result.value !== undefined || present[index]) {
-          setOwn(output, keys[index] as string, result.value);
-        }
-      }
-      // What the validator of the unknown keys found, listed and cut as a record lists and cuts it.
+      // What the validator of the unknown keys found, which follows the properties, is listed and cut as a
+      // record lists and cuts it. An empty place is one the limit left unrun.
       const found: ValidationIssue[] = [];
-      for (let index = keys.length; index < settled.length; index += 1) {
+      for (let index = 0; index < settled.length && settled[index] !== undefined; index += 1) {
         const result = settled[index] as ValidationResult<unknown>;
-        const key = extra[index - keys.length]?.[0] as string;
+        const isListed = index < keys.length;
+        const key = isListed ? (keys[index] as string) : (extra[index - keys.length] as readonly [string, unknown])[0];
         if (!result.ok) {
-          append(found, result.error.issues);
+          append(isListed ? issues : found, result.error.issues);
         }
-        if (key === RESERVED_KEY) {
-          // Kept, it would be the prototype of whatever the output is next assigned to, as in a record.
-          append(found, report([reservedKey(key)], place, options.message));
-        } else if (result.ok) {
+        if (!isListed && key === RESERVED_KEY) {
+          refuse(found);
+        } else if (result.ok && (result.value !== undefined || present[index] !== false)) {
           setOwn(output, key, result.value);
         }
       }
-      append(
-        issues,
-        cap(found, place, options.message, restChild !== undefined && settled.length < keys.length + extra.length),
-      );
+      append(issues, cap(found, place, options.message, settled.includes(undefined)));
       if (issues.length > 0) {
         return failFields === undefined
           ? failWith(issues)
-          : failFields(issues, settled, output, options.message, place);
+          : failFields(issues, settled as ValidationResult<unknown>[], output, options.message, place);
       }
       if (restChild === undefined) {
         for (const [key, value] of extra) {
