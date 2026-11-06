@@ -56,7 +56,7 @@ const describeLimit = ({ params }: ValidationIssue, isMin: boolean): string => {
   const type = String(params?.type);
   const moment = momentOf(limit, type);
   if (moment !== undefined) {
-    return `Must be on or ${isMin ? "after" : "before"} ${moment}`;
+    return `Must be ${params?.inclusive === false ? "" : "on or "}${isMin ? "after" : "before"} ${moment}`;
   }
   if (type === "depth") {
     return `Must be nested at most ${bound} levels deep`;

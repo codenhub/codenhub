@@ -59,7 +59,7 @@ const describeLimit = ({ params }: ValidationIssue, isMin: boolean): string => {
   const type = String(params?.type);
   const moment = momentOf(limit, type);
   if (moment !== undefined) {
-    return `Debe ser igual o ${isMin ? "posterior" : "anterior"} a ${moment}`;
+    return `Debe ser ${params?.inclusive === false ? "" : "igual o "}${isMin ? "posterior" : "anterior"} a ${moment}`;
   }
   if (type === "depth") {
     return `Debe tener como máximo ${bound} niveles de anidamiento`;
