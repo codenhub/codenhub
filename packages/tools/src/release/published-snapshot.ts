@@ -4,6 +4,8 @@ import path from "node:path";
 import { parsePackageMetadata, type PackageMetadata } from "../documentation/package-metadata.ts";
 import { isTranslationLocale, parseTranslationPath } from "../documentation/translation-paths.ts";
 import { discoverWorkspace, type WorkspacePackage } from "../workspace/discover.ts";
+import { selectDocsVersions } from "./docs-versions.ts";
+import { parseReleaseTag } from "./publish.ts";
 import {
   collectReleases,
   fetchReleaseTags,
@@ -29,6 +31,35 @@ export interface PublishedSnapshotOptions {
    * packages that declare `codenhub.docs`.
    */
   includes?: (manifest: Record<string, unknown>, metadata: PackageMetadata | null) => boolean;
+  /**
+   * Whether to also materialize each kept package's archived documentation
+   * versions (`docs/specs/packages-docs-versions.md`) under
+   * {@link snapshotArchivedRoot}, and list them in {@link snapshotDocsVersionsPath}.
+   */
+  archives?: boolean;
+}
+
+/** The documentation versions one snapshotted package serves, as `docs-versions.json` records them. */
+export interface SnapshotDocsVersions {
+  /** Archived versions materialized under {@link snapshotArchivedRoot}, newest first. */
+  archived: string[];
+  /** Version of the release tag the package's current docs come from. */
+  current: string;
+  /** Repository-relative package directory, which each archived version sits under. */
+  location: string;
+  /** Documentation slug from the current release's metadata, which archived versions use too. */
+  slug: string;
+  /** Every released version of the package, pre-releases included. */
+  versions: string[];
+}
+
+/** Archived documentation versions keyed by package name. */
+export type SnapshotDocsVersionsFile = Record<string, SnapshotDocsVersions>;
+
+/** What a snapshot build reports besides the tree it writes. */
+export interface PublishedSnapshotResult {
+  /** Archived versions that could not be materialized and were left out, one message each. */
+  warnings: string[];
 }
 
 /** Collaborators the snapshot builder calls through, injected by tests. */
@@ -70,6 +101,8 @@ function isListedTranslatedReadme(entry: string): boolean {
 }
 
 const RELEASES_FILE = "releases.json";
+const DOCS_VERSIONS_FILE = "docs-versions.json";
+const ARCHIVED_DIRECTORY = "archived";
 
 const defaultDeps: PublishedSnapshotDeps = {
   discoverWorkspace,
@@ -86,6 +119,24 @@ const defaultDeps: PublishedSnapshotDeps = {
  */
 export function snapshotPackagesRoot(snapshotRoot: string): string {
   return path.join(snapshotRoot, "packages");
+}
+
+/**
+ * Where the snapshot keeps archived documentation versions: `<location>/<version>/` below it.
+ * @param snapshotRoot Directory the snapshot is written into.
+ * @returns Absolute directory of the archived versions.
+ */
+export function snapshotArchivedRoot(snapshotRoot: string): string {
+  return path.join(snapshotRoot, ARCHIVED_DIRECTORY);
+}
+
+/**
+ * Where the snapshot lists each package's documentation versions.
+ * @param snapshotRoot Directory the snapshot is written into.
+ * @returns Absolute path of the {@link SnapshotDocsVersionsFile} JSON file.
+ */
+export function snapshotDocsVersionsPath(snapshotRoot: string): string {
+  return path.join(snapshotRoot, DOCS_VERSIONS_FILE);
 }
 
 /**
@@ -119,18 +170,20 @@ export async function buildReleaseHistory(
   );
 }
 
+type SnapshotContext = Required<PublishedSnapshotOptions> & { tags: readonly string[]; warnings: string[] };
+
 async function snapshotPackage(
   deps: PublishedSnapshotDeps,
   workspacePackage: WorkspacePackage,
-  context: Required<PublishedSnapshotOptions> & { tags: readonly string[] },
-): Promise<void> {
+  context: SnapshotContext,
+): Promise<SnapshotDocsVersions | undefined> {
   const { includes, repoRoot, snapshotRoot, tags } = context;
   const tag = deps.resolveLatestPublishedTag(workspacePackage.name, tags);
   if (tag === undefined) {
     // No tag means no release, so there is nothing published to show. The
     // working tree is never a fallback: it is exactly the unreleased content
     // this snapshot exists to keep off the site.
-    return;
+    return undefined;
   }
 
   const destination = path.join(snapshotRoot, workspacePackage.location);
@@ -157,7 +210,7 @@ async function snapshotPackage(
   const metadata = parsePackageMetadata(manifest, `${workspacePackage.location}/package.json`);
   if (!includes(manifest as Record<string, unknown>, metadata)) {
     await rm(destination, { force: true, recursive: true });
-    return;
+    return undefined;
   }
   const logo = metadata?.logo === undefined ? undefined : await readLogo(destination, metadata.logo, tag);
   await pruneToPublishedSurfaces(destination);
@@ -165,6 +218,97 @@ async function snapshotPackage(
     await mkdir(path.dirname(logo.path), { recursive: true });
     await writeFile(logo.path, logo.content);
   }
+  return context.archives && metadata !== null
+    ? snapshotArchivedVersions(deps, workspacePackage, metadata, context)
+    : undefined;
+}
+
+/**
+ * Materializes a package's archived documentation versions, each pruned like the current one.
+ *
+ * Which versions are kept comes from the working-tree manifest, not a tag, so
+ * changing the list needs no release (`docs/specs/packages-docs-versions.md`).
+ * A tag that has no package at the location, or another package there, cannot
+ * be built and is left out with a warning; a tag git cannot read still throws.
+ * @param deps Collaborators to call through.
+ * @param workspacePackage Package in the working tree.
+ * @param metadata Metadata from the current release, whose slug archived versions use.
+ * @param context Snapshot options, tags, and the warnings to add to.
+ * @returns The versions the package serves.
+ */
+async function snapshotArchivedVersions(
+  deps: PublishedSnapshotDeps,
+  workspacePackage: WorkspacePackage,
+  metadata: PackageMetadata,
+  context: SnapshotContext,
+): Promise<SnapshotDocsVersions> {
+  const versions = context.tags.flatMap((tag) => {
+    const release = parseReleaseTag(tag);
+    return release?.name === workspacePackage.name ? [release.version] : [];
+  });
+  const entries =
+    parsePackageMetadata(workspacePackage.manifest, `${workspacePackage.location}/package.json`)?.docsVersions ?? [];
+  const kept = selectDocsVersions(versions, entries);
+  // Each version has its own destination, so they materialize in parallel.
+  const outcomes = await Promise.all(
+    kept.archived.map(async (version) => ({
+      version,
+      warning: await snapshotArchivedVersion(deps, workspacePackage, version, context),
+    })),
+  );
+  const archived: string[] = [];
+  for (const { version, warning } of outcomes) {
+    if (warning === undefined) {
+      archived.push(version);
+    } else {
+      context.warnings.push(warning);
+    }
+  }
+  return {
+    archived,
+    current: kept.current ?? "",
+    location: workspacePackage.location,
+    slug: metadata.slug,
+    versions,
+  };
+}
+
+/**
+ * Materializes one archived version, pruned like the current one.
+ * @param deps Collaborators to call through.
+ * @param workspacePackage Package in the working tree.
+ * @param version Version to materialize.
+ * @param context Snapshot options and tags.
+ * @returns A warning when the version is left out, or `undefined` when it is kept.
+ */
+async function snapshotArchivedVersion(
+  deps: PublishedSnapshotDeps,
+  workspacePackage: WorkspacePackage,
+  version: string,
+  context: SnapshotContext,
+): Promise<string | undefined> {
+  const tag = `${workspacePackage.name}@${version}`;
+  const destination = path.join(snapshotArchivedRoot(context.snapshotRoot), workspacePackage.location, version);
+  const isFound = await deps.materializeTreeAtRef({
+    cwd: context.repoRoot,
+    destination,
+    ref: tag,
+    treePath: workspacePackage.location,
+  });
+  // Old content the site can no longer read is left out, not fatal.
+  const manifest = isFound
+    ? await readFile(path.join(destination, "package.json"), "utf8").then(
+        (text) => JSON.parse(text) as unknown,
+        () => undefined,
+      )
+    : undefined;
+  const name = typeof manifest === "object" && manifest !== null ? (manifest as { name?: unknown }).name : undefined;
+  if (name !== workspacePackage.name) {
+    await rm(destination, { force: true, recursive: true });
+    return `Left out the archived docs of ${tag}: the tag has ${isFound ? String(name) : "nothing"} at ${workspacePackage.location}.`;
+  }
+  await pruneToPublishedSurfaces(destination);
+  return undefined;
 }
 
 /**
@@ -233,14 +377,18 @@ async function pruneToPublishedSurfaces(packageDirectory: string): Promise<void>
  * a package no longer where its tag put it — throws rather than dropping the
  * package. A published package missing from the site is a failure to report,
  * not a state to ship.
+ *
+ * With `archives`, each kept package's archived documentation versions are
+ * written beside it, as `docs/specs/packages-docs-versions.md` defines.
  * @param options Where the repository and the snapshot live.
  * @param deps Collaborators to call through, defaulting to the real filesystem and `git`.
+ * @returns Warnings for archived versions that were left out.
  * @throws When tags cannot be fetched, a tag cannot be read, or a package's location or name at its tag disagrees with the workspace.
  */
 export async function buildPublishedSnapshot(
   options: PublishedSnapshotOptions,
   deps: PublishedSnapshotDeps = defaultDeps,
-): Promise<void> {
+): Promise<PublishedSnapshotResult> {
   const { repoRoot, snapshotRoot } = options;
   const includes = options.includes ?? ((_manifest, metadata) => metadata?.documented === true);
   await rm(snapshotRoot, { force: true, recursive: true });
@@ -256,14 +404,26 @@ export async function buildPublishedSnapshot(
   const [workspace, tagDates] = await Promise.all([deps.discoverWorkspace(repoRoot), deps.listTagDates(repoRoot)]);
   const tags = [...tagDates.keys()];
 
-  await Promise.all(
+  const warnings: string[] = [];
+  const archives = options.archives ?? false;
+  const docsVersions = await Promise.all(
     workspace.packages.map((workspacePackage) =>
-      snapshotPackage(deps, workspacePackage, { includes, repoRoot, snapshotRoot, tags }),
+      snapshotPackage(deps, workspacePackage, { archives, includes, repoRoot, snapshotRoot, tags, warnings }),
     ),
   );
+  if (archives) {
+    const file: SnapshotDocsVersionsFile = Object.fromEntries(
+      workspace.packages.flatMap((workspacePackage, index) => {
+        const entry = docsVersions[index];
+        return entry === undefined ? [] : [[workspacePackage.name, entry] as const];
+      }),
+    );
+    await writeFile(snapshotDocsVersionsPath(snapshotRoot), `${JSON.stringify(file, undefined, 2)}\n`, "utf8");
+  }
   const history = await buildReleaseHistory(repoRoot, {
     discoverWorkspace: async () => workspace,
     listTagDates: async () => tagDates,
   });
   await writeFile(snapshotReleasesPath(snapshotRoot), `${JSON.stringify(history, undefined, 2)}\n`, "utf8");
+  return { warnings };
 }

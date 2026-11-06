@@ -2,6 +2,7 @@ import { createBrandSource } from "../assets/brand-source.ts";
 import type { Workspace } from "../workspace/discover.ts";
 import { createChangelogRules } from "./changelog-rules.ts";
 import { createDependencyRules, createReleaseSources } from "./dependency-rules.ts";
+import { createDocsVersionRules, createDocsVersionTagSource } from "./docs-version-rules.ts";
 import { createDocumentationRules } from "./documentation-rules.ts";
 import { createEnginesRules } from "./engines-rules.ts";
 import { createExportsRules } from "./exports-rules.ts";
@@ -29,6 +30,7 @@ export function createCheckRules(workspace: Workspace): CheckRule[] {
     ...createDependencyRules(workspace.packages, createReleaseSources(workspace.root)),
     ...createExportsRules(),
     ...createDocumentationRules(workspace.packages),
+    ...createDocsVersionRules(createDocsVersionTagSource(workspace.root)),
     ...createUndocumentedExportRules(),
     ...createReadmeRules(),
     ...createReferenceRules(),

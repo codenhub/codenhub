@@ -1,3 +1,5 @@
+import { validRange } from "semver";
+
 import { isTranslationLocale, splitTranslatedDocsPath, type TranslationLocale } from "./translation-paths.ts";
 
 const STATUSES = ["active", "experimental", "deprecated"] as const;
@@ -5,6 +7,7 @@ const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 // Identity fields `codenhub.docs` held before they moved to `codenhub` itself.
 const LEGACY_FIELDS = ["demoUrl", "description", "label", "listed", "order", "slug", "status"] as const;
 const IDENTITY_FIELDS = [...LEGACY_FIELDS, "logo"] as const;
+const DOCS_FIELDS = new Set(["reference", "versions"]);
 
 /** Package status declared by `codenhub.status`. */
 export type PackageStatus = (typeof STATUSES)[number];
@@ -22,6 +25,12 @@ export interface PackageMetadata {
   demoUrl?: string;
   /** Catalog description, falling back to the package description. */
   description?: string;
+  /**
+   * SemVer ranges from `codenhub.docs.versions`, each keeping the newest stable
+   * release it matches on the documentation site
+   * (`docs/specs/packages-docs-versions.md`). Absent when the package lists none.
+   */
+  docsVersions?: string[];
   /** Whether the package declares `codenhub.docs`, opting into the documentation site. */
   documented: boolean;
   /** Human-readable package label. */
@@ -134,6 +143,26 @@ function getOptionalText(value: unknown, field: string, manifestPath: string): s
   return value;
 }
 
+function getDocsVersions(value: unknown, manifestPath: string): string[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(value)) {
+    throw new Error(`Invalid codenhub.docs.versions in ${manifestPath}: expected an array of SemVer ranges.`);
+  }
+  const entries = new Set<string>();
+  for (const entry of value as unknown[]) {
+    if (typeof entry !== "string" || entry.trim() === "" || validRange(entry) === null) {
+      throw new Error(`Invalid codenhub.docs.versions in ${manifestPath}: "${String(entry)}" is not a SemVer range.`);
+    }
+    if (entries.has(entry)) {
+      throw new Error(`Invalid codenhub.docs.versions in ${manifestPath}: "${entry}" is listed twice.`);
+    }
+    entries.add(entry);
+  }
+  return [...entries];
+}
+
 function getLogo(value: unknown, manifestPath: string): string | undefined {
   const logo = getOptionalText(value, "codenhub.logo", manifestPath);
   if (logo === undefined) {
@@ -180,10 +209,10 @@ export function parsePackageMetadata(value: unknown, manifestPath: string): Pack
   }
 
   const legacy = usesLegacyMetadata(manifest);
-  const unknownDocsField = legacy ? undefined : Object.keys(docs ?? {}).find((field) => field !== "reference");
+  const unknownDocsField = legacy ? undefined : Object.keys(docs ?? {}).find((field) => !DOCS_FIELDS.has(field));
   if (unknownDocsField !== undefined) {
     throw new Error(
-      `Invalid codenhub.docs.${unknownDocsField} in ${manifestPath}: codenhub.docs only holds "reference".`,
+      `Invalid codenhub.docs.${unknownDocsField} in ${manifestPath}: codenhub.docs only holds "reference" and "versions".`,
     );
   }
   if (legacy && declaresAny(codenhub, IDENTITY_FIELDS)) {
@@ -235,6 +264,7 @@ export function parsePackageMetadata(value: unknown, manifestPath: string): Pack
   return {
     demoUrl,
     description: getOptionalText(source.description, `${prefix}.description`, manifestPath) ?? packageDescription,
+    docsVersions: legacy ? undefined : getDocsVersions(docs?.versions, manifestPath),
     documented: docs !== undefined,
     label,
     listed: (source.listed as boolean | undefined) ?? true,
@@ -259,6 +289,65 @@ export function getDocumentRoute(relativePath: string): string {
 }
 
 /**
+ * Resolves one package's public documents and translations from document paths.
+ * @param rootPath Package directory, as the paths in `sourcePaths` spell it.
+ * @param sourcePaths Every Markdown path considered for publication.
+ * @param context What error messages name the package by.
+ * @returns The package's English documents and their translations in listed locales.
+ * @throws When `docs/index.md` is missing or a route repeats.
+ */
+export function resolvePackageDocuments(
+  rootPath: string,
+  sourcePaths: readonly string[],
+  context: { label: string; manifestPath: string; slug: string },
+): Pick<PackageDefinition, "documents" | "translations"> {
+  const docsPrefix = `${rootPath}/docs/`;
+  const candidates = sourcePaths
+    .map(normalizePath)
+    .filter((sourcePath) => sourcePath.startsWith(docsPrefix))
+    .map((sourcePath) => ({ sourcePath, relativePath: sourcePath.slice(docsPrefix.length) }))
+    .filter(({ relativePath }) => !relativePath.startsWith("internal/"));
+  const documents = candidates
+    .filter(({ relativePath }) => splitTranslatedDocsPath(relativePath) === undefined)
+    .map(({ sourcePath, relativePath }) => ({
+      relativePath,
+      routePath: getDocumentRoute(relativePath),
+      sourcePath,
+    }));
+  const englishPaths = new Set(documents.map(({ relativePath }) => relativePath));
+  const translations = candidates.flatMap(({ sourcePath, relativePath }): TranslatedDocumentDefinition[] => {
+    const translation = splitTranslatedDocsPath(relativePath);
+    return translation !== undefined &&
+      isTranslationLocale(translation.locale) &&
+      englishPaths.has(translation.relativePath)
+      ? [
+          {
+            locale: translation.locale,
+            relativePath: translation.relativePath,
+            routePath: getDocumentRoute(translation.relativePath),
+            sourcePath,
+          },
+        ]
+      : [];
+  });
+
+  if (!documents.some(({ relativePath }) => relativePath === "index.md")) {
+    throw new Error(`Missing docs/index.md for ${context.label} (${context.manifestPath}).`);
+  }
+
+  const routes = new Set<string>();
+  for (const document of documents) {
+    if (routes.has(document.routePath)) {
+      throw new Error(
+        `Duplicate documentation route /${context.slug}/${document.routePath} in ${context.manifestPath}.`,
+      );
+    }
+    routes.add(document.routePath);
+  }
+  return { documents, translations };
+}
+
+/**
  * Builds the documented packages of a workspace from manifests and document paths.
  * @param manifests Parsed manifests keyed by manifest path.
  * @param sourcePaths Every Markdown path considered for publication.
@@ -277,48 +366,11 @@ export function buildPackageDefinitions(
     }
 
     const rootPath = manifestPath.slice(0, -"/package.json".length);
-    const docsPrefix = `${rootPath}/docs/`;
-    const candidates = sourcePaths
-      .map(normalizePath)
-      .filter((sourcePath) => sourcePath.startsWith(docsPrefix))
-      .map((sourcePath) => ({ sourcePath, relativePath: sourcePath.slice(docsPrefix.length) }))
-      .filter(({ relativePath }) => !relativePath.startsWith("internal/"));
-    const documents = candidates
-      .filter(({ relativePath }) => splitTranslatedDocsPath(relativePath) === undefined)
-      .map(({ sourcePath, relativePath }) => ({
-        relativePath,
-        routePath: getDocumentRoute(relativePath),
-        sourcePath,
-      }));
-    const englishPaths = new Set(documents.map(({ relativePath }) => relativePath));
-    const translations = candidates.flatMap(({ sourcePath, relativePath }): TranslatedDocumentDefinition[] => {
-      const translation = splitTranslatedDocsPath(relativePath);
-      return translation !== undefined &&
-        isTranslationLocale(translation.locale) &&
-        englishPaths.has(translation.relativePath)
-        ? [
-            {
-              locale: translation.locale,
-              relativePath: translation.relativePath,
-              routePath: getDocumentRoute(translation.relativePath),
-              sourcePath,
-            },
-          ]
-        : [];
+    const { documents, translations } = resolvePackageDocuments(rootPath, sourcePaths, {
+      label: metadata.label,
+      manifestPath,
+      slug: metadata.slug,
     });
-
-    if (!documents.some(({ relativePath }) => relativePath === "index.md")) {
-      throw new Error(`Missing docs/index.md for ${metadata.label} (${manifestPath}).`);
-    }
-
-    const routes = new Set<string>();
-    for (const document of documents) {
-      if (routes.has(document.routePath)) {
-        throw new Error(`Duplicate documentation route /${metadata.slug}/${document.routePath} in ${manifestPath}.`);
-      }
-      routes.add(document.routePath);
-    }
-
     return [{ ...metadata, documents, manifestPath, rootPath, translations }];
   });
 

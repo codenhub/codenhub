@@ -20,6 +20,7 @@ export {
   comparePublicDocumentPaths,
   comparePublicDocuments,
   parseMarkdown,
+  parseArchivedDocumentFrontmatter,
   parsePublicDocumentFrontmatter,
   type OrderablePublicDocument,
   type ParsedMarkdown,
@@ -45,6 +46,7 @@ export {
 } from "./pack-inventory.ts";
 export {
   inspectPackageDocumentation,
+  listPackageFiles,
   loadPackageDocumentation,
   loadWorkspaceDocumentation,
   type InspectPackageOptions,
@@ -56,6 +58,7 @@ export {
   buildPublicPackageSummaries,
   getDocumentRoute,
   parsePackageMetadata,
+  resolvePackageDocuments,
   usesLegacyMetadata,
   type DocumentDefinition,
   type PackageDefinition,

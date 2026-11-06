@@ -8,6 +8,8 @@ import type { Workspace, WorkspacePackage } from "../workspace/discover.ts";
 import {
   buildPublishedSnapshot,
   buildReleaseHistory,
+  snapshotArchivedRoot,
+  snapshotDocsVersionsPath,
   snapshotPackagesRoot,
   snapshotReleasesPath,
   type PublishedSnapshotDeps,
@@ -321,6 +323,101 @@ describe("buildPublishedSnapshot", () => {
     );
 
     await expect(readdir(snapshotPackagesRoot(snapshotRoot))).resolves.toEqual(["router"]);
+  });
+});
+
+describe("buildPublishedSnapshot archives", () => {
+  const TAG_DATES = new Map([
+    ["@codenhub/error@0.3.0", "2026-10-01T12:00:00+00:00"],
+    ["@codenhub/error@0.4.2", "2026-10-02T12:00:00+00:00"],
+    ["@codenhub/error@0.4.3", "2026-10-03T12:00:00+00:00"],
+    ["@codenhub/error@0.5.0", "2026-10-04T12:00:00+00:00"],
+  ]);
+
+  /** Writes a manifest and an index naming the ref, or nothing for the refs in `missing`. */
+  function materializeByRef(missing: readonly string[] = []) {
+    return vi.fn(async ({ destination, ref }: MaterializeTreeOptions) => {
+      if (missing.includes(ref)) {
+        return false;
+      }
+      await mkdir(path.join(destination, "docs"), { recursive: true });
+      await mkdir(path.join(destination, "src"), { recursive: true });
+      await writeFile(path.join(destination, "package.json"), JSON.stringify(DOCS_MANIFEST), "utf8");
+      await writeFile(path.join(destination, "docs/index.md"), `# ${ref}\n`, "utf8");
+      await writeFile(path.join(destination, "src/index.ts"), "export {};\n", "utf8");
+      return true;
+    });
+  }
+
+  function createArchivedPackage(root: string, versions: string[]): WorkspacePackage {
+    const workspacePackage = createPackage(root, "packages/error", "@codenhub/error");
+    return {
+      ...workspacePackage,
+      manifest: { codenhub: { docs: { versions }, label: "Error", status: "active" }, name: "@codenhub/error" },
+    };
+  }
+
+  it("materializes the versions the working-tree list keeps, pruned, and lists them", async () => {
+    const repoRoot = await createTempDir();
+    const snapshotRoot = await createTempDir();
+    const deps = createDeps([createArchivedPackage(repoRoot, ["^0.4.0"])], {
+      listTagDates: vi.fn().mockResolvedValue(TAG_DATES),
+      materializeTreeAtRef: materializeByRef(),
+      resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/error@0.5.0"),
+    });
+
+    await expect(buildPublishedSnapshot({ archives: true, repoRoot, snapshotRoot }, deps)).resolves.toEqual({
+      warnings: [],
+    });
+
+    const archived = path.join(snapshotArchivedRoot(snapshotRoot), "packages/error/0.4.3");
+    await expect(readFile(path.join(archived, "docs/index.md"), "utf8")).resolves.toBe("# @codenhub/error@0.4.3\n");
+    await expect(readdir(archived)).resolves.toEqual(["docs", "package.json"]);
+    await expect(readFile(snapshotDocsVersionsPath(snapshotRoot), "utf8").then(JSON.parse)).resolves.toEqual({
+      "@codenhub/error": {
+        archived: ["0.4.3"],
+        current: "0.5.0",
+        location: "packages/error",
+        slug: "error",
+        versions: ["0.3.0", "0.4.2", "0.4.3", "0.5.0"],
+      },
+    });
+  });
+
+  it("leaves out a version whose tag has no package at its location, with a warning", async () => {
+    const repoRoot = await createTempDir();
+    const snapshotRoot = await createTempDir();
+    const deps = createDeps([createArchivedPackage(repoRoot, ["0.3.0", "^0.4.0"])], {
+      listTagDates: vi.fn().mockResolvedValue(TAG_DATES),
+      materializeTreeAtRef: materializeByRef(["@codenhub/error@0.3.0"]),
+      resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/error@0.5.0"),
+    });
+
+    const result = await buildPublishedSnapshot({ archives: true, repoRoot, snapshotRoot }, deps);
+
+    expect(result.warnings).toEqual([
+      "Left out the archived docs of @codenhub/error@0.3.0: the tag has nothing at packages/error.",
+    ]);
+    const file = JSON.parse(await readFile(snapshotDocsVersionsPath(snapshotRoot), "utf8")) as Record<
+      string,
+      { archived: string[] }
+    >;
+    expect(file["@codenhub/error"]?.archived).toEqual(["0.4.3"]);
+  });
+
+  it("writes no archived versions unless asked", async () => {
+    const repoRoot = await createTempDir();
+    const snapshotRoot = await createTempDir();
+    const deps = createDeps([createArchivedPackage(repoRoot, ["^0.4.0"])], {
+      listTagDates: vi.fn().mockResolvedValue(TAG_DATES),
+      materializeTreeAtRef: materializeByRef(),
+      resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/error@0.5.0"),
+    });
+
+    await buildPublishedSnapshot({ repoRoot, snapshotRoot }, deps);
+
+    expect(deps.materializeTreeAtRef).toHaveBeenCalledTimes(1);
+    await expect(readdir(snapshotRoot)).resolves.toEqual(["packages", "releases.json"]);
   });
 });
 

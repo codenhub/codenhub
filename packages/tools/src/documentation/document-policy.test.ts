@@ -4,6 +4,7 @@ import {
   assertSingleH1,
   comparePublicDocumentPaths,
   comparePublicDocuments,
+  parseArchivedDocumentFrontmatter,
   parseMarkdown,
   parsePublicDocumentFrontmatter,
 } from "./document-policy.ts";
@@ -251,6 +252,23 @@ describe("public document policy", () => {
       "about.md",
       "concepts.md",
     ]);
+  });
+});
+
+describe("parseArchivedDocumentFrontmatter", () => {
+  it("drops unknown and rejected fields and keeps the rest", () => {
+    expect(
+      parseArchivedDocumentFrontmatter(
+        { description: "Old page.", order: -1, removedField: true, title: "API" },
+        "docs/api.md",
+      ),
+    ).toEqual(parsePublicDocumentFrontmatter({ description: "Old page.", title: "API" }, "docs/api.md"));
+  });
+
+  it("still requires a title", () => {
+    expect(() => parseArchivedDocumentFrontmatter({ description: "Old page." }, "docs/api.md")).toThrow(
+      "Invalid title frontmatter in docs/api.md",
+    );
   });
 });
 

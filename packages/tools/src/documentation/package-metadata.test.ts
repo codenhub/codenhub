@@ -294,6 +294,22 @@ describe("package documentation catalog", () => {
     expect(buildPackageDefinitions({ "../../packages/example/package.json": manifest }, [])).toEqual([]);
   });
 
+  it("reads codenhub.docs.versions as SemVer ranges", () => {
+    const manifest = (versions: unknown) => ({
+      name: "@codenhub/example",
+      codenhub: { label: "Example", status: "active", docs: { versions } },
+    });
+    expect(parsePackageMetadata(manifest(["^0.4.0", "0.3.2"]), "package.json")?.docsVersions).toEqual([
+      "^0.4.0",
+      "0.3.2",
+    ]);
+    expect(parsePackageMetadata(createManifest(), "package.json")?.docsVersions).toBeUndefined();
+    expect(() => parsePackageMetadata(manifest("^0.4.0"), "package.json")).toThrow("expected an array");
+    expect(() => parsePackageMetadata(manifest(["latest"]), "package.json")).toThrow('"latest" is not a SemVer range');
+    expect(() => parsePackageMetadata(manifest([""]), "package.json")).toThrow("is not a SemVer range");
+    expect(() => parsePackageMetadata(manifest(["^1.0.0", "^1.0.0"]), "package.json")).toThrow("listed twice");
+  });
+
   it("rejects a codenhub.docs field other than reference", () => {
     expect(() =>
       parsePackageMetadata(
