@@ -1871,9 +1871,11 @@ Not exported; declared in `src/composition/extend.ts`, `src/composition/object.t
 ### Transformed
 
 ```ts
-type Transformed<R, TInput> = 0 extends 1 & R ? Schema<R, TInput> : [unknown] extends [R] ? AsyncSchema<Awaited<R>, TInput> : [Extract<R, PromiseLike<unknown>>] extends [never] ? Schema<R, TInput> : AsyncSchema<Awaited<R>, TInput>;
+type Transformed<R, TInput> = 0 extends 1 & R ? Schema<R, TInput> : [unknown] extends [R] ? AsyncSchema<Awaited<R>, TInput> : [Extract<R, {
+    then: (...args: never[]) => unknown;
+}>] extends [never] ? Schema<R, TInput> : AsyncSchema<Awaited<R>, TInput>;
 ```
 
-What a synchronous validator becomes once `convert` runs on its value: still synchronous when `convert` never returns a promise, and asynchronous, producing what the promise settles to, when it may return one, such as a function typed `number | Promise<number>`. A function typed as returning `unknown` may return one too, so it makes the validator asynchronous. One typed as returning `any`, such as `JSON.parse`, has opted out of type checking, and is taken at its word as synchronous: typing it asynchronous would make the most common conversion need an `await` it never needs.
+What a synchronous validator becomes once `convert` runs on its value: still synchronous when `convert` never returns a promise, and asynchronous, producing what the promise settles to, when it may return one, such as a function typed `number | Promise<number>`. A function typed as returning `unknown` may return one too, so it makes the validator asynchronous, as does one that returns any value with a callable `then`, typed as a promise or not, since `await` treats it as one. One typed as returning `any`, such as `JSON.parse`, has opted out of type checking, and is taken at its word as synchronous: typing it asynchronous would make the most common conversion need an `await` it never needs.
 
 Not exported; declared in `src/composition/transform.ts`.
