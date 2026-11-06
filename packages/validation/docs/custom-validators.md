@@ -203,7 +203,7 @@ const result = await signup(input);
 
 Nothing else changes. A validator given an asynchronous check becomes an `AsyncValidator`, and so does everything that contains it: `signup` above is one because `username` is.
 
-The type tells the compiler the result must be awaited. So reading `signup(input).ok` without `await` is an error you find while writing, not a bug you find in production, where a promise has no `ok` and every sign-up would read as a failure. A check written by hand that may wait is typed `AsyncCheck<T>`. Typing it `Check<T>` keeps its validators synchronous, and the compiler holds you to it.
+The type tells the compiler the result must be awaited. So reading `signup(input).ok` without `await` is an error you find while writing, not a bug you find in production, where a promise has no `ok`: `!result.ok` would turn every sign-up away, and `result.ok === false` would let every one through. A check written by hand that may wait is typed `AsyncCheck<T>`. Typing it `Check<T>` keeps its validators synchronous, and the compiler holds you to it.
 
 You can also write an asynchronous validator directly:
 

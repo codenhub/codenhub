@@ -8,7 +8,9 @@ Validation for data you do not control: a request body, a query string, a form, 
 
 Each validator is a function you import on its own, so a program bundles only the validators it uses. No dependencies, so the only code to audit is ours.
 
-> [!WARNING] **Experimental:** pre-1.0. The API is meant to hold for every patch release of a minor version, such as each 0.4.x. A change that breaks callers, if one proves necessary, ships in the next minor version, and the [changelog](docs/changelog/index.md) lists it, with the migrations from earlier versions.
+> [!WARNING]
+>
+> **Experimental:** pre-1.0. The API is meant to hold for every patch release of a minor version, such as each 0.4.x. A change that breaks callers, if one proves necessary, ships in the next minor version, and the [changelog](docs/changelog/index.md) lists it, with the migrations from earlier versions.
 
 ## Installation
 

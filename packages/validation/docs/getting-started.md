@@ -165,7 +165,7 @@ Bounds are checked when the validator is created:
 - A bound that is not a number, or a `clamp` that is not a range with a number `min` and `max`, throws a `TypeError`.
 - A `clamp` throws a `RangeError` for a `NaN` bound, a minimum of `Infinity`, a maximum of `-Infinity`, a minimum above its maximum, or a range whose every value breaks a bound, such as `{ clamp: { min: 0, max: 10 }, min: 11 }`.
 
-Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught, since that check would add size to every program that uses `number`. Such a validator rejects every input, which the first test you write will notice.
+Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught, since that check would add size to every program that uses `number`. Such a validator rejects every input, which the first test of an input meant to pass will notice.
 
 | Failure             | `code`          | `params`                                         |
 | ------------------- | --------------- | ------------------------------------------------ |

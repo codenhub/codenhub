@@ -1,4 +1,4 @@
-<!-- source: b7881a69629b5a13ce538a5599d74c4808da5f0f -->
+<!-- source: 8b6a2bc0d318fab0e498b4bcc66249a8ac563b48 -->
 
 # @codenhub/validation
 
@@ -10,7 +10,9 @@ Validação para dados que você não controla: o corpo de uma requisição, uma
 
 Cada validador é uma função que você importa separadamente, então um programa leva para o bundle só os validadores que usa. Sem dependências, então o único código a auditar é o nosso.
 
-> [!WARNING] **Experimental:** anterior à 1.0. A API deve se manter estável em todas as versões de patch de uma versão minor, como em cada 0.4.x. Uma mudança que quebre quem chama, se for mesmo necessária, sai na próxima versão minor, e o [changelog](docs/changelog/index.md) a lista, junto com as migrações a partir das versões anteriores.
+> [!WARNING]
+>
+> **Experimental:** anterior à 1.0. A API deve se manter estável em todas as versões de patch de uma versão minor, como em cada 0.4.x. Uma mudança que quebre quem chama, se for mesmo necessária, sai na próxima versão minor, e o [changelog](docs/changelog/index.md) a lista, junto com as migrações a partir das versões anteriores.
 
 ## Instalação
 

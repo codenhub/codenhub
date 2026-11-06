@@ -1,4 +1,4 @@
-<!-- source: b7881a69629b5a13ce538a5599d74c4808da5f0f -->
+<!-- source: 8b6a2bc0d318fab0e498b4bcc66249a8ac563b48 -->
 
 # @codenhub/validation
 
@@ -10,7 +10,9 @@ Validación para datos que no controlas: el cuerpo de una solicitud, una query s
 
 Cada validador es una función que importas por separado, así que un programa empaqueta solo los validadores que usa. Sin dependencias, así que el único código que auditar es el nuestro.
 
-> [!WARNING] **Experimental:** anterior a 1.0. La API debería mantenerse en todas las versiones de parche de una versión menor, como cada 0.4.x. Un cambio que rompa el código que la usa, si llega a ser necesario, sale en la siguiente versión menor, y el [registro de cambios](docs/changelog/index.md) lo enumera, junto con las migraciones desde versiones anteriores.
+> [!WARNING]
+>
+> **Experimental:** anterior a 1.0. La API debería mantenerse en todas las versiones de parche de una versión menor, como cada 0.4.x. Un cambio que rompa el código que la usa, si llega a ser necesario, sale en la siguiente versión menor, y el [registro de cambios](docs/changelog/index.md) lo enumera, junto con las migraciones desde versiones anteriores.
 
 ## Instalación
 

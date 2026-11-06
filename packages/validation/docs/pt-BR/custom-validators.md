@@ -1,7 +1,7 @@
 ---
 title: Validadores personalizados
 description: Adicione regras com verificações, crie validadores que se comportam como os nativos, valide de forma assíncrona e nomeie os tipos que uma biblioteca de validadores exporta.
-source: 1b095972d82ce64515adcb5c4586056616338ef6
+source: af94592a6ca7df1e142842b835a6da5cf77e3251
 order: 6
 ---
 
@@ -204,7 +204,7 @@ const result = await signup(input);
 
 Nada mais muda. Um validador que recebe uma verificação assíncrona vira um `AsyncValidator`, e o mesmo acontece com tudo que o contém: o `signup` acima é um porque `username` é.
 
-O tipo diz ao compilador que o resultado precisa ser aguardado. Então ler `signup(input).ok` sem `await` é um erro que você encontra enquanto escreve, não um bug que você encontra em produção, onde uma promise não tem `ok` e todo cadastro seria lido como falha. Uma verificação escrita à mão que pode esperar é tipada como `AsyncCheck<T>`. Tipá-la como `Check<T>` mantém os validadores dela síncronos, e o compilador cobra isso de você.
+O tipo diz ao compilador que o resultado precisa ser aguardado. Então ler `signup(input).ok` sem `await` é um erro que você encontra enquanto escreve, não um bug que você encontra em produção, onde uma promise não tem `ok`: `!result.ok` barraria todo cadastro, e `result.ok === false` deixaria todos passarem. Uma verificação escrita à mão que pode esperar é tipada como `AsyncCheck<T>`. Tipá-la como `Check<T>` mantém os validadores dela síncronos, e o compilador cobra isso de você.
 
 Você também pode escrever um validador assíncrono diretamente:
 

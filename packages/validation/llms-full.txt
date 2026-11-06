@@ -10,7 +10,9 @@ Validation for data you do not control: a request body, a query string, a form, 
 
 Each validator is a function you import on its own, so a program bundles only the validators it uses. No dependencies, so the only code to audit is ours.
 
-> [!WARNING] **Experimental:** pre-1.0. The API is meant to hold for every patch release of a minor version, such as each 0.4.x. A change that breaks callers, if one proves necessary, ships in the next minor version, and the [changelog](docs/changelog/index.md) lists it, with the migrations from earlier versions.
+> [!WARNING]
+>
+> **Experimental:** pre-1.0. The API is meant to hold for every patch release of a minor version, such as each 0.4.x. A change that breaks callers, if one proves necessary, ships in the next minor version, and the [changelog](docs/changelog/index.md) lists it, with the migrations from earlier versions.
 
 ## Installation
 
@@ -296,7 +298,7 @@ Bounds are checked when the validator is created:
 - A bound that is not a number, or a `clamp` that is not a range with a number `min` and `max`, throws a `TypeError`.
 - A `clamp` throws a `RangeError` for a `NaN` bound, a minimum of `Infinity`, a maximum of `-Infinity`, a minimum above its maximum, or a range whose every value breaks a bound, such as `{ clamp: { min: 0, max: 10 }, min: 11 }`.
 
-Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught, since that check would add size to every program that uses `number`. Such a validator rejects every input, which the first test you write will notice.
+Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught, since that check would add size to every program that uses `number`. Such a validator rejects every input, which the first test of an input meant to pass will notice.
 
 | Failure             | `code`          | `params`                                         |
 | ------------------- | --------------- | ------------------------------------------------ |
@@ -654,8 +656,8 @@ const signupUpload = formData(
 
 export const readSignup = async (request: Request) => {
   const form = await request.formData();
-  const avatar = form.get("avatar");
-  if (avatar instanceof File && avatar.name === "" && avatar.size === 0) {
+  const [avatar, ...others] = form.getAll("avatar");
+  if (others.length === 0 && avatar instanceof File && avatar.name === "" && avatar.size === 0) {
     form.delete("avatar");
   }
   return signupUpload(form);
@@ -921,7 +923,7 @@ The merged object is new. So an own `__proto__` key that one side passed on unch
   - The key validator of a `map` entry. It made the key, not the entry's value.
 - **A value both sides passed on whole,** such as through `unknown()` on both. It is the input's own object, and is kept unchanged.
 
-So `intersection(object({ ["__proto__"]: unknown() }), unknown())` keeps a `__proto__` key, since the left shape lists it and made the value. Wrap that `object` in a `transform` and the key is reported instead. The computed key matters: written as `{ __proto__: unknown() }`, the literal sets the shape's prototype and lists no key at all. Yes, really.
+So `intersection(object({ ["__proto__"]: unknown() }), unknown())` keeps a `__proto__` key, since the left shape lists it and made the value. Wrap that `object` in a `transform` and the key is reported instead, unless the transform hands back the input object itself. The computed key matters: written as `{ __proto__: unknown() }`, the literal sets the shape's prototype and lists no key at all. Yes, really.
 
 Both validators see the whole input, so two `object`s with `unknownKeys: "strict"` pass together only when every key of the input is listed in both shapes: each rejects the keys only the other lists. To combine strict shapes, spread them into one: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
 
@@ -1103,7 +1105,7 @@ Every page so far has shown `{ ok: false, ... }` and politely skipped the `...`.
 
 When a value is not valid, the result says exactly why. This page describes what a failed result holds, the codes the built-in validators report, and how to turn them into text for a person: the messages of the sign-up form, in English or in Portuguese, and the error a server throws for a bad configuration.
 
-Validators do not write text when they fail. They report the facts and leave the prose to whoever shows it, so a program that never shows an issue carries no wording.
+Validators do not write text when they fail, unless you give one a [`message`](#wording-one-validator). They report the facts and leave the prose to whoever shows it, so a program that never shows an issue carries no wording.
 
 ## The failed result
 
@@ -1228,7 +1230,7 @@ Three codes hold the issues behind them in `params.issues`: `invalid_key`, `inva
 
 - `invalid_key` with the first issue the key validator found, as in "Invalid key: Must be at least 3 characters". A key given twice, in a query string or after a key validator made two keys the same, is "Must be given only once".
 - A failed part the same way, as in "Invalid email address domain: Expected one of "company.com"".
-- `invalid_union` with the first issue of the one option the input was meant for, when the input leaves exactly one candidate. An option is ruled out when all it found is that the input is not its type, or not one of the values a `literal` or `oneOf` accepts. With more candidates or none, it says "Does not match any of the allowed types". The issues of each option are in `params.issues` for a message of your own. For example:
+- `invalid_union` with the first issue of the one option the input was meant for, when the input leaves exactly one candidate. An option is ruled out when all it found is that the input is not its type, or not one of the values a `literal` or `oneOf` accepts. With more candidates or none, it says "Does not match any of the allowed types". A limit of `lazy`, `maxDepth` or `maxCalls`, that an option hit comes before all of that: the message quotes the limit, since it stopped the validation whatever the input holds. The issues of each option are in `params.issues` for a message of your own. For example:
   - `union([string({ min: 3 }), number()])` given `"ab"`: `number()` found only that `"ab"` is not a number, so the string was meant, and the message is "Must be at least 3 characters".
   - `union([literal(""), email()])` given `"nope"`: `literal("")` found only that `"nope"` is not its value, so the message is "Invalid email address".
   - `union([string({ min: 3 }), email()])` given `"ab"`: both options take strings and both found more than a wrong type, so either could be meant, and the message is "Does not match any of the allowed types".
@@ -1669,7 +1671,7 @@ const result = await signup(input);
 
 Nothing else changes. A validator given an asynchronous check becomes an `AsyncValidator`, and so does everything that contains it: `signup` above is one because `username` is.
 
-The type tells the compiler the result must be awaited. So reading `signup(input).ok` without `await` is an error you find while writing, not a bug you find in production, where a promise has no `ok` and every sign-up would read as a failure. A check written by hand that may wait is typed `AsyncCheck<T>`. Typing it `Check<T>` keeps its validators synchronous, and the compiler holds you to it.
+The type tells the compiler the result must be awaited. So reading `signup(input).ok` without `await` is an error you find while writing, not a bug you find in production, where a promise has no `ok`: `!result.ok` would turn every sign-up away, and `result.ok === false` would let every one through. A check written by hand that may wait is typed `AsyncCheck<T>`. Typing it `Check<T>` keeps its validators synchronous, and the compiler holds you to it.
 
 You can also write an asynchronous validator directly:
 

@@ -2,7 +2,7 @@
 title: Primeros pasos
 description: Qué es un validador, cómo leer su resultado, y los validadores de cadenas, números, fechas, valores fijos y objetos.
 order: 1
-source: 871219e05718dc10d81dffdffe8724e3dbedb479
+source: 48e3039a7ada1fac57f4723b4349de7761bc429d
 ---
 
 # Primeros pasos
@@ -166,7 +166,7 @@ Los límites se verifican cuando se crea el validador:
 - Un límite que no es un número, o un `clamp` que no es un rango con `min` y `max` numéricos, lanza un `TypeError`.
 - Un `clamp` lanza un `RangeError` ante un límite `NaN`, un mínimo de `Infinity`, un máximo de `-Infinity`, un mínimo mayor que su máximo, o un rango en el que todo valor incumple un límite, como `{ clamp: { min: 0, max: 10 }, min: 11 }`.
 
-Los límites que admiten números pero ningún entero, como `{ int: true, gt: 1, lt: 2 }`, no se detectan, porque esa verificación agregaría tamaño a todo programa que use `number`. Un validador así rechaza toda entrada, algo que notará la primera prueba que escribas.
+Los límites que admiten números pero ningún entero, como `{ int: true, gt: 1, lt: 2 }`, no se detectan, porque esa verificación agregaría tamaño a todo programa que use `number`. Un validador así rechaza toda entrada, algo que notará la primera prueba con una entrada que debería pasar.
 
 | Falla                      | `code`          | `params`                                         |
 | -------------------------- | --------------- | ------------------------------------------------ |

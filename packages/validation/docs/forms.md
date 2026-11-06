@@ -135,8 +135,8 @@ const signupUpload = formData(
 
 export const readSignup = async (request: Request) => {
   const form = await request.formData();
-  const avatar = form.get("avatar");
-  if (avatar instanceof File && avatar.name === "" && avatar.size === 0) {
+  const [avatar, ...others] = form.getAll("avatar");
+  if (others.length === 0 && avatar instanceof File && avatar.name === "" && avatar.size === 0) {
     form.delete("avatar");
   }
   return signupUpload(form);

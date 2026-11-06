@@ -1,7 +1,7 @@
 ---
 title: Formulários
 description: Regras entre campos, campos opcionais e valores padrão, erros mostrados ao lado de cada campo, arquivos e os tipos que um formulário guarda.
-source: b1f6f80451737ff83bbf79c2d7f151f43033dec6
+source: 1ff0836cb731bb25d0500b44a4838571dc4d9066
 order: 2
 ---
 
@@ -136,8 +136,8 @@ const signupUpload = formData(
 
 export const readSignup = async (request: Request) => {
   const form = await request.formData();
-  const avatar = form.get("avatar");
-  if (avatar instanceof File && avatar.name === "" && avatar.size === 0) {
+  const [avatar, ...others] = form.getAll("avatar");
+  if (others.length === 0 && avatar instanceof File && avatar.name === "" && avatar.size === 0) {
     form.delete("avatar");
   }
   return signupUpload(form);

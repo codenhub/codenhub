@@ -1,7 +1,7 @@
 ---
 title: Problemas e mensagens
 description: O que um resultado com falha contém, os códigos de problema nativos e seus params, e como transformar problemas em texto em inglês, em português ou com as suas próprias palavras.
-source: 271bcfaa4882028d2d1e4c5284e1f1350b8b8ff6
+source: 7c3d1cece87a2afa6e15d3455f3522040965b8a1
 order: 5
 ---
 
@@ -9,7 +9,7 @@ order: 5
 
 Quando um valor não é válido, o resultado diz exatamente por quê. Esta página descreve o que um resultado com falha contém, os códigos que os validadores nativos reportam e como transformá-los em texto para uma pessoa: as mensagens do formulário de cadastro, em inglês ou em português, e o erro que um servidor lança para uma configuração errada.
 
-Os validadores não escrevem texto quando falham. Eles reportam os fatos e deixam a redação para quem os mostra, então um programa que nunca mostra um problema não carrega texto nenhum.
+Os validadores não escrevem texto quando falham, a não ser que você dê a um deles uma [`message`](#o-texto-de-um-validador). Eles reportam os fatos e deixam a redação para quem os mostra, então um programa que nunca mostra um problema não carrega texto nenhum.
 
 ## O resultado com falha
 
@@ -134,7 +134,7 @@ Três códigos guardam os problemas por trás deles em `params.issues`: `invalid
 
 - `invalid_key` com o primeiro problema que o validador de chave encontrou, como em "Invalid key: Must be at least 3 characters". Uma chave informada duas vezes, em uma query string ou depois que um validador de chave transformou duas chaves na mesma, é "Must be given only once".
 - Uma parte que falhou, do mesmo jeito, como em "Invalid email address domain: Expected one of "company.com"".
-- `invalid_union` com o primeiro problema da opção a que a entrada se destinava, quando a entrada deixa exatamente uma candidata. Uma opção é descartada quando tudo o que ela encontrou é que a entrada não é do seu tipo, ou não é um dos valores que um `literal` ou um `oneOf` aceita. Com mais candidatas ou nenhuma, a mensagem é "Does not match any of the allowed types". Os problemas de cada opção ficam em `params.issues`, para uma mensagem sua. Por exemplo:
+- `invalid_union` com o primeiro problema da opção a que a entrada se destinava, quando a entrada deixa exatamente uma candidata. Uma opção é descartada quando tudo o que ela encontrou é que a entrada não é do seu tipo, ou não é um dos valores que um `literal` ou um `oneOf` aceita. Com mais candidatas ou nenhuma, a mensagem é "Does not match any of the allowed types". Um limite de `lazy`, `maxDepth` ou `maxCalls`, que uma opção tenha atingido vem antes de tudo isso: a mensagem cita o limite, já que ele interrompeu a validação, tenha a entrada o que tiver. Os problemas de cada opção ficam em `params.issues`, para uma mensagem sua. Por exemplo:
   - `union([string({ min: 3 }), number()])` recebendo `"ab"`: `number()` só descobriu que `"ab"` não é um número, então a string era a pretendida, e a mensagem é "Must be at least 3 characters".
   - `union([literal(""), email()])` recebendo `"nope"`: `literal("")` só descobriu que `"nope"` não é o seu valor, então a mensagem é "Invalid email address".
   - `union([string({ min: 3 }), email()])` recebendo `"ab"`: as duas opções aceitam strings e as duas encontraram mais do que um tipo errado, então qualquer uma poderia ser a pretendida, e a mensagem é "Does not match any of the allowed types".

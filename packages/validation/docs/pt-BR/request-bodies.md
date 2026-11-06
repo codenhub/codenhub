@@ -1,7 +1,7 @@
 ---
 title: Corpos de requisição
 description: Texto JSON, listas, tuplas, dicionários, sets e maps, uma escolha entre estruturas e dados recursivos.
-source: a9a1377afa3528c02b0cc4a8f492fa57c5772860
+source: cafb386ee90fc6dd3ca6b8e33415a1a57425b76a
 order: 3
 ---
 
@@ -193,7 +193,7 @@ O objeto mesclado é novo. Então uma chave `__proto__` própria que um dos lado
   - O validador de chave de uma entrada de `map`. Ele produziu a chave, não o valor da entrada.
 - **Um valor que os dois lados deixaram passar inteiro,** como por `unknown()` nos dois. Ele é o próprio objeto da entrada, e é mantido sem alteração.
 
-Então `intersection(object({ ["__proto__"]: unknown() }), unknown())` mantém uma chave `__proto__`, já que a estrutura da esquerda a lista e produziu o valor. Envolva esse `object` num `transform` e a chave passa a ser reportada. A chave computada faz diferença: escrita como `{ __proto__: unknown() }`, o literal define o protótipo da estrutura e não lista chave nenhuma. Sim, é sério.
+Então `intersection(object({ ["__proto__"]: unknown() }), unknown())` mantém uma chave `__proto__`, já que a estrutura da esquerda a lista e produziu o valor. Envolva esse `object` num `transform` e a chave passa a ser reportada, a não ser que o `transform` devolva o próprio objeto da entrada. A chave computada faz diferença: escrita como `{ __proto__: unknown() }`, o literal define o protótipo da estrutura e não lista chave nenhuma. Sim, é sério.
 
 Os dois validadores veem a entrada inteira, então dois `object`s com `unknownKeys: "strict"` só passam juntos quando toda chave da entrada está listada nas duas estruturas: cada um rejeita as chaves que só o outro lista. Para combinar estruturas estritas, espalhe-as em uma só: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
 
