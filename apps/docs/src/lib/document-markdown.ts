@@ -48,7 +48,17 @@ export function publishDocumentMarkdown({
     return published;
   }
   const packageRoot = new URL(`/${slug}/`, siteUrl).href;
+  const localizedPrefix = `/${pageLocale}/${slug}/`;
+  const localizedRoot = new URL(localizedPrefix, siteUrl).href;
   return rewriteMarkdownTargets(published, (target) => {
+    if (target.startsWith(localizedRoot)) {
+      const url = new URL(target);
+      // A published file such as an image has one English URL (`markdown-links.ts`).
+      if (!url.pathname.endsWith("/")) {
+        url.pathname = `/${slug}/${url.pathname.slice(localizedPrefix.length)}`;
+      }
+      return url.href;
+    }
     if (!target.startsWith(packageRoot)) {
       return target;
     }

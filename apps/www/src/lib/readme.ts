@@ -22,6 +22,7 @@ export interface ReadmeBases {
 // A URL with a scheme, a protocol-relative URL, or an in-page fragment stays as written.
 const UNRESOLVED_URL = /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/iu;
 const HTML_COMMENT = /^<!--[\s\S]*-->$/u;
+const SOURCE_COMMENT = /^<!--\s*source:\s*(?:\S+)\s*-->$/u;
 
 function walk(node: MarkdownNode, visit: (node: MarkdownNode) => void): void {
   visit(node);
@@ -43,12 +44,12 @@ function walk(node: MarkdownNode, visit: (node: MarkdownNode) => void): void {
 function remarkPackageReadme({ baseUrl, imageBaseUrl }: ReadmeBases) {
   return () => (tree: MarkdownNode) => {
     // A translated README opens with its `<!-- source: … -->` line
-    // (docs/specs/packages-translations.md), which would hide its title.
+    // (docs/specs/packages-translations.md), which is metadata for drift checks.
     const leading = tree.children?.[0];
-    if (leading?.type === "html" && HTML_COMMENT.test(leading.value ?? "")) {
+    if (leading?.type === "html" && SOURCE_COMMENT.test(leading.value?.trim() ?? "")) {
       tree.children?.shift();
     }
-    const first = tree.children?.[0];
+    const first = tree.children?.find((node) => !(node.type === "html" && HTML_COMMENT.test(node.value?.trim() ?? "")));
     if (first?.type === "heading" && first.depth === 1) {
       first.depth = 2;
       first.data = { ...first.data, hProperties: { ...first.data?.hProperties, className: ["package-readme-title"] } };

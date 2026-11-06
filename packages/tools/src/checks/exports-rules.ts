@@ -1,11 +1,13 @@
 import { glob, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { parseTranslationPath } from "../documentation/translation-paths.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { isDocumentedPackage } from "../workspace/package-policy.ts";
 import type { CheckRule, Finding } from "./rule.ts";
 
 const README = "README.md";
+const TRANSLATED_READMES = "README.*.md";
 const PUBLIC_DOCS = "docs/**/*.md";
 const INTERNAL_DOCS = "docs/internal/";
 // Import statements only. A bare mention of a package path in prose is not a
@@ -58,9 +60,13 @@ interface DocumentedSurface {
 }
 
 async function readDocumentedSurfaces(rootPath: string): Promise<DocumentedSurface[]> {
-  const documents = await Array.fromAsync(glob(PUBLIC_DOCS, { cwd: rootPath }));
+  const [readmes, documents] = await Promise.all([
+    Array.fromAsync(glob(TRANSLATED_READMES, { cwd: rootPath })),
+    Array.fromAsync(glob(PUBLIC_DOCS, { cwd: rootPath })),
+  ]);
   const paths = [
     README,
+    ...readmes.map((path) => path.replaceAll("\\", "/")).filter((path) => parseTranslationPath(path) !== undefined),
     ...documents.map((path) => path.replaceAll("\\", "/")).filter((path) => !path.startsWith(INTERNAL_DOCS)),
   ].sort();
   const surfaces = await Promise.all(

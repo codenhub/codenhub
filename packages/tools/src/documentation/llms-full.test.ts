@@ -112,7 +112,7 @@ describe("curateLlmsFullDocuments", () => {
     const documents = [
       { body: "", sourcePath: "docs/index.md" },
       {
-        body: "# Changelog\n\n- [1.1.0](1.1.0.md)\n- [1.0.0](1.0.0.md)\n",
+        body: "# Changelog\n\n- [1.1.0][latest]\n- [1.0.0](1.0.0.md)\n\n[latest]: 1.1.0.md\n[unused]: 0.9.0.md\n",
         curated: true,
         sourcePath: "docs/changelog/index.md",
       },

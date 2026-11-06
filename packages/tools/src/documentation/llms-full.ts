@@ -64,9 +64,54 @@ function siblingFileName(sourcePath: string): string {
  * that still holds a slash — `../x`, `sub/x`, `/x`, `https://…/x` — keeps it and
  * so never matches a bare sibling name, the same rule `folder-curation.ts`
  * applies on the documentation site.
+ * @param target Raw link target.
+ * @returns Normalized target.
  */
-function normalizeCuratedLinkTarget(target: string): string {
-  return target.replace(/^\.\//, "").replace(/[?#].*$/, "");
+export function normalizeCuratedLinkTarget(target: string): string {
+  const trimmed = target.startsWith("./") ? target.slice(2) : target;
+  return trimmed.split(/[?#]/, 1)[0] ?? "";
+}
+
+interface MarkdownLinkNode {
+  children?: MarkdownLinkNode[];
+  identifier?: string;
+  type: string;
+  url?: string;
+}
+
+/**
+ * Extracts normalized sibling targets linked from a curated Markdown index body.
+ * @param body Authored Markdown body of the curated index.
+ * @returns Normalized targets in document order, without duplicates.
+ */
+export function extractCuratedLinkTargets(body: string): string[] {
+  const tree = unified().use(remarkParse).parse(body) as MarkdownLinkNode;
+  const definitions = new Map<string, string>();
+  const collectDefinitions = (node: MarkdownLinkNode): void => {
+    if (node.type === "definition" && node.identifier !== undefined && node.url !== undefined) {
+      const key = node.identifier.toLowerCase();
+      if (!definitions.has(key)) {
+        definitions.set(key, node.url);
+      }
+    }
+    node.children?.forEach(collectDefinitions);
+  };
+  collectDefinitions(tree);
+
+  const linkedNames = new Set<string>();
+  const collectLinks = (node: MarkdownLinkNode): void => {
+    if (node.type === "link" && node.url !== undefined) {
+      linkedNames.add(normalizeCuratedLinkTarget(node.url));
+    } else if (node.type === "linkReference" && node.identifier !== undefined) {
+      const url = definitions.get(node.identifier.toLowerCase());
+      if (url !== undefined) {
+        linkedNames.add(normalizeCuratedLinkTarget(url));
+      }
+    }
+    node.children?.forEach(collectLinks);
+  };
+  collectLinks(tree);
+  return [...linkedNames];
 }
 
 /**
@@ -114,12 +159,7 @@ export function curateLlmsFullDocuments(documents: readonly LlmsFullDocument[]):
         .filter((document) => document !== indexDocument)
         .map((document) => [siblingFileName(document.sourcePath), document]),
     );
-    const linkedNames = new Set<string>();
-    for (const pattern of [INLINE_TARGET, DEFINITION_TARGET]) {
-      for (const match of indexDocument.body.matchAll(pattern)) {
-        linkedNames.add(normalizeCuratedLinkTarget(match.groups?.target ?? ""));
-      }
-    }
+    const linkedNames = extractCuratedLinkTargets(indexDocument.body);
 
     let position = 0;
     for (const name of linkedNames) {
@@ -188,6 +228,22 @@ function findCodeRanges(body: string): CodeRange[] {
 
   visit(tree);
   return ranges.sort((left, right) => left.start - right.start);
+}
+
+/**
+ * Returns a Markdown body with code blocks and inline code spans removed.
+ * @param body Authored Markdown body.
+ * @returns Non-code slices of the body.
+ */
+export function stripMarkdownCode(body: string): string {
+  const parts: string[] = [];
+  let cursor = 0;
+  for (const { end, start } of findCodeRanges(body)) {
+    parts.push(body.slice(cursor, start));
+    cursor = end;
+  }
+  parts.push(body.slice(cursor));
+  return parts.join("");
 }
 
 /**

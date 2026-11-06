@@ -29,7 +29,9 @@ export {
 export {
   buildLlmsFull,
   curateLlmsFullDocuments,
+  extractCuratedLinkTargets,
   listLlmsFullSources,
+  normalizeCuratedLinkTarget,
   orderLlmsFullDocuments,
   orderLlmsFullSources,
   rebaseMarkdownTargets,

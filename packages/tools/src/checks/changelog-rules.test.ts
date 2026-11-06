@@ -128,6 +128,45 @@ describe("changelog rule run", () => {
     expect(await run(workspacePackage)).toMatchObject([{ code: "changelog/missing-description" }]);
   });
 
+  it("reports a version page whose body still carries a cut TODO bullet, but ignores fenced code", async () => {
+    const workspacePackage = await createPackageOnDisk("1.2.0", {
+      index: "# Changelog\n\n- [1.2.0](1.2.0.md)\n",
+      pages: ["1.2.0.md"],
+    });
+    await writeFile(
+      join(workspacePackage.directory, "docs/changelog/1.2.0.md"),
+      `---\ntitle: 1.2.0\n${COMPLETE_FRONTMATTER}---\n\n# 1.2.0\n\n## Added\n\n- TODO: feat(example): add widget\n`,
+    );
+
+    expect(await run(workspacePackage)).toMatchObject([{ code: "changelog/unfinished-entry" }]);
+
+    await writeFile(
+      join(workspacePackage.directory, "docs/changelog/1.2.0.md"),
+      `---\ntitle: 1.2.0\n${COMPLETE_FRONTMATTER}---\n\n# 1.2.0\n\n## Added\n\n- Added example.\n\n\`\`\`md\n- TODO: example inside code block\n\`\`\`\n`,
+    );
+
+    expect(await run(workspacePackage)).toEqual([]);
+  });
+
+  it("accepts a link with a fragment or leading ./ and rejects an unused definition or cross-directory link", async () => {
+    const withFragment = await createPackageOnDisk("1.2.0", {
+      index: "# Changelog\n\n- [1.2.0](./1.2.0.md#added)\n",
+      pages: ["1.2.0.md"],
+    });
+    const wrongDirectory = await createPackageOnDisk("1.2.0", {
+      index: "# Changelog\n\n- [1.2.0](../other/1.2.0.md)\n",
+      pages: ["1.2.0.md"],
+    });
+    const unusedDefinition = await createPackageOnDisk("1.2.0", {
+      index: "# Changelog\n\n[unused]: 1.2.0.md\n",
+      pages: ["1.2.0.md"],
+    });
+
+    expect(await run(withFragment)).toEqual([]);
+    expect(await run(wrongDirectory)).toMatchObject([{ code: "changelog/unlinked-entry" }]);
+    expect(await run(unusedDefinition)).toMatchObject([{ code: "changelog/unlinked-entry" }]);
+  });
+
   it("leaves an older version page without them alone", async () => {
     const workspacePackage = await createPackageOnDisk("1.2.0", {
       frontmatter: "",

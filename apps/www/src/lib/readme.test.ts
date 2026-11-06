@@ -39,6 +39,18 @@ describe("renderReadme", () => {
     expect(html).toMatch(/^<h2 class="package-readme-title"[^>]*>@codenhub\/validation<\/h2>/u);
   });
 
+  it("demotes the leading H1 when preceded by a non-source HTML comment, but not after visible HTML", async () => {
+    const withComment = await renderReadme("<!-- note -->\n\n# @codenhub/validation\n\nValidação de dados.\n", BASES);
+
+    expect(withComment).not.toContain("<h1");
+    expect(withComment).toContain("<!-- note -->");
+    expect(withComment).toMatch(/<h2 class="package-readme-title"[^>]*>@codenhub\/validation<\/h2>/u);
+
+    const withVisibleHtml = await renderReadme("<p>Banner</p>\n\n# @codenhub/validation\n", BASES);
+
+    expect(withVisibleHtml).toContain("<h1");
+  });
+
   it("points package-relative links at the file in the release", async () => {
     const html = await renderReadme("See [the issue](docs/errors.md#the-issue) and [notice](./NOTICE).\n", BASES);
 

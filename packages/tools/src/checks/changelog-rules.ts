@@ -2,15 +2,16 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { UnsupportedFrontmatterError, parseMarkdown } from "../documentation/document-policy.ts";
+import { extractCuratedLinkTargets, stripMarkdownCode } from "../documentation/llms-full.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import type { CheckRule, Finding } from "./rule.ts";
 
 const CHANGELOG_DIR = "docs/changelog";
 const INDEX = `${CHANGELOG_DIR}/index.md`;
-const LINK_PATTERN = /\]\(\s*(?<target>[^)\s]+)/gu;
-// `hub release --cut` scaffolds the description as a TODO, which tells a reader
-// as little as no description at all.
+// `hub release --cut` scaffolds the description and bullet entries as TODOs,
+// which tell a reader as little as no entry at all.
 const PLACEHOLDER = /^TODO\b/iu;
+const BODY_PLACEHOLDER = /^[ \t]*-\s+TODO\b/imu;
 const REQUIRED_FIELDS = ["date", "description"] as const;
 const REQUIRED_FIELD_HINTS: Record<(typeof REQUIRED_FIELDS)[number], string> = {
   date: "Set it to the release date in ISO YYYY-MM-DD form.",
@@ -41,27 +42,33 @@ async function readLinkedPages(packageRoot: string): Promise<string[] | undefine
   if (contents === undefined) {
     return undefined;
   }
-  return [...contents.matchAll(LINK_PATTERN)]
-    .map((match) => match.groups?.target ?? "")
-    .map((target) => target.split("/").at(-1) ?? "")
-    .filter((name) => name.endsWith(".md"));
+  let body = contents;
+  try {
+    ({ body } = parseMarkdown(contents, INDEX));
+  } catch (cause) {
+    if (cause instanceof UnsupportedFrontmatterError) {
+      ({ body } = cause);
+    }
+  }
+  return extractCuratedLinkTargets(body).filter((name) => !name.includes("/") && name.endsWith(".md"));
 }
 
 /**
- * Reports the frontmatter a version page must carry and does not.
+ * Reports the frontmatter and body a version page must carry and does not.
  *
  * Only presence is checked. The `documentation` rule already rejects a `date`
  * that is not ISO and a `description` that is empty.
  * @param packageRoot Absolute package directory.
  * @param page Version page file name, such as `1.2.0.md`.
- * @returns One finding per missing field.
+ * @returns One finding per missing field or unfinished body placeholder.
  */
 async function checkPageFrontmatter(packageRoot: string, page: string): Promise<Finding[]> {
   const location = `${CHANGELOG_DIR}/${page}`;
   const contents = await readFile(join(packageRoot, location), "utf8").catch(() => "");
+  let body: string;
   let frontmatter: Record<string, unknown>;
   try {
-    ({ frontmatter } = parseMarkdown(contents, location));
+    ({ body, frontmatter } = parseMarkdown(contents, location));
   } catch (cause) {
     if (!(cause instanceof UnsupportedFrontmatterError)) {
       throw cause;
@@ -69,7 +76,7 @@ async function checkPageFrontmatter(packageRoot: string, page: string): Promise<
     // The documentation rule reports this page's frontmatter, because a changelog version page is a validation surface.
     return [];
   }
-  return REQUIRED_FIELDS.filter((field) => {
+  const findings: Finding[] = REQUIRED_FIELDS.filter((field) => {
     const value = frontmatter[field];
     return typeof value !== "string" || value.trim() === "" || PLACEHOLDER.test(value);
   }).map((field) => ({
@@ -78,6 +85,15 @@ async function checkPageFrontmatter(packageRoot: string, page: string): Promise<
     message: `Version page ${page} has no ${field} in its frontmatter. ${REQUIRED_FIELD_HINTS[field]} See docs/specs/packages-changelog.md.`,
     severity: "error",
   }));
+  if (BODY_PLACEHOLDER.test(stripMarkdownCode(body))) {
+    findings.push({
+      code: "changelog/unfinished-entry",
+      location,
+      message: `Version page ${page} still has a scaffolded TODO entry. Replace every "- TODO:" bullet with prose; see docs/specs/packages-changelog.md.`,
+      severity: "error",
+    });
+  }
+  return findings;
 }
 
 async function run(workspacePackage: WorkspacePackage): Promise<Finding[]> {
