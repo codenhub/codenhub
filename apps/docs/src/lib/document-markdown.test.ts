@@ -34,6 +34,15 @@ describe("publishDocumentMarkdown", () => {
     );
   });
 
+  it("keeps a translated document's asset links at their English URL and localizes page links", () => {
+    const body =
+      "See [setup](./setup.md#install), [changelog](../changelog/index.md), the [license](../../LICENSE), and ![Diagram](assets/flow.svg).";
+
+    expect(publishDocumentMarkdown({ ...site, body, pageLocale: "pt-BR", relativePath: "pt-BR/index.md" })).toBe(
+      "See [setup](https://docs.example.dev/pt-BR/kit/setup/#install), [changelog](https://docs.example.dev/pt-BR/kit/changelog/), the [license](https://docs.example.dev/kit/LICENSE), and ![Diagram](https://docs.example.dev/kit/assets/flow.svg).",
+    );
+  });
+
   it("keeps external links, fragments, and code as written", () => {
     const body = "[npm](https://npmjs.com) [below](#usage) `./setup.md`\n\n```md\n[x](./setup.md)\n```\n";
 

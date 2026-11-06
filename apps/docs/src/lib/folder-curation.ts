@@ -1,3 +1,5 @@
+import { normalizeCuratedLinkTarget } from "@codenhub/tools/documentation";
+
 const ANCHOR_HREF = /<a\b[^>]*\bhref=(['"])([^'"]+)\1[^>]*>/gi;
 
 /** A document's fields relevant to curated-folder membership and ordering. */
@@ -32,16 +34,6 @@ function basename(relativePath: string): string {
  */
 function extractLinkTargets(html: string): string[] {
   return [...html.matchAll(ANCHOR_HREF)].map((match) => match[2]!);
-}
-
-/**
- * Reduces a link target to the filename a sibling document can be matched
- * against, stripping a leading `./`, and any query string or fragment.
- * @param target Raw `href` attribute value.
- * @returns The bare filename the target points at.
- */
-function normalizeLinkTarget(target: string): string {
-  return target.replace(/^\.\//, "").replace(/[?#].*$/, "");
 }
 
 /**
@@ -94,7 +86,7 @@ export function applyFolderCuration<T extends CuratableDocument>(documents: read
     );
     const linkedNames = new Set<string>();
     for (const target of extractLinkTargets(indexDocument.rawHtml)) {
-      linkedNames.add(normalizeLinkTarget(target));
+      linkedNames.add(normalizeCuratedLinkTarget(target));
     }
 
     // The curated index leads as the folder's overview page, followed by only
