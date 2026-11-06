@@ -209,7 +209,8 @@ const describeKey = (issue: ValidationIssue, messages: Messages): string => {
  * @remarks
  * It is what {@link englishMessages} is, in Portuguese as written in Brazil: pass it to `formatIssue`,
  * `flatten`, `assert` or `standard` to get text such as "Deve ser no mínimo 18". It is a separate value,
- * so a program bundles the wording of the languages it imports and no other. To change some of the
+ * so a program bundles the wording of the languages it imports and no other, apart from the English
+ * that `formatIssue`, `flatten` and `standard` fall back to. To change some of the
  * wording, spread it and override the codes you want:
  * `{ ...portugueseMessages, too_small: "Muito curto" }`. It is frozen. The names of types, such as
  * `string` in "Esperado string, recebido number", are the ones the issue holds and are not translated,

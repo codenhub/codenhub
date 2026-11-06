@@ -544,7 +544,7 @@ Recorded on 2026-11-05 by the owner's decision: the size the package holds itsel
 
 - **Valibot is out of reach without dropping guarantees.** Even the lean factories rejected above, 3.4 kB for an `object` of three fields, would be about twice its form, and they keep fewer guarantees than the package does.
 - **zod/mini was passed and is now ahead.** At 0.3.0, measured on 2026-10-07, the package was smaller than zod/mini on its form of three fields; it is now about 1.2 kB larger on the typical form. No budget caught it, since each budget is reset from this package's own measurement when a change it accepts passes it.
-- **Where the bytes go**, on that form: `core/result` and the core around it, 2.7 kB; the brief English messages that `standard` reports (`messages/brief`), 1.15 kB; the punycode and bidi rules that `email`, `url` and `domain` read a domain with, 2.0 kB; and the fast path, whose test of each composer walks its children a second time beside the full work.
+- **Where the bytes go**, on that form: `core/result` and the core around it, 2.7 kB; the brief English messages that each validator's own `~standard` reports (`messages/brief`), 1.15 kB; the punycode and bidi rules that `email`, `url` and `domain` read a domain with, 2.0 kB; and the fast path, whose test of each composer walks its children a second time beside the full work.
 
 The measurement is internal, and only to set the bar: [No comparison with other libraries](roadmap.md#no-comparison-with-other-libraries) still holds for what is published. [roadmap.md](roadmap.md#later--possible) has the step that closes the gap. Rejected: valibot as the bar, for the reason above, and no outside bar at all, which is how the 1.2 kB grew unseen.
 

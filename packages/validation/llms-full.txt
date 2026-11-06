@@ -1273,7 +1273,7 @@ An issue that carries a message is worded by it first, before any message map. T
 
 ## Built-in languages
 
-Three maps ship with the package. Each is a value of its own, so a program bundles the languages it imports and no other:
+Three maps ship with the package. Each is a value of its own, so a program bundles the languages it imports and no other, apart from the English that `formatIssue`, `flatten` and `standard` fall back to:
 
 | Map                  | Language                         | `number({ min: 18 })(15)` |
 | -------------------- | -------------------------------- | ------------------------- |

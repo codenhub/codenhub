@@ -1,7 +1,7 @@
 ---
 title: Problemas e mensagens
 description: O que um resultado com falha contém, os códigos de problema nativos e seus params, e como transformar problemas em texto em inglês, em português ou com as suas próprias palavras.
-source: 69793f837599ffe8dd43014aa80301db06d62f20
+source: 26b9372b8ed6dc021bb23316751fb9be0df05b96
 order: 5
 ---
 
@@ -177,7 +177,7 @@ Um problema que traz uma mensagem é descrito por ela primeiro, antes de qualque
 
 ## Idiomas nativos
 
-Três mapas vêm com o pacote. Cada um é um valor separado, então um programa inclui no bundle os idiomas que importa e nenhum outro:
+Três mapas vêm com o pacote. Cada um é um valor separado, então um programa inclui no bundle os idiomas que importa e nenhum outro, fora o inglês que `formatIssue`, `flatten` e `standard` usam quando não recebem um mapa:
 
 | Mapa                 | Idioma                               | `number({ min: 18 })(15)` |
 | -------------------- | ------------------------------------ | ------------------------- |

@@ -2,7 +2,7 @@
 title: Problemas y mensajes
 description: Qué contiene un resultado fallido, los códigos de problema integrados y sus params, y cómo convertir los problemas en texto en inglés, en portugués o con tus propias palabras.
 order: 5
-source: 69793f837599ffe8dd43014aa80301db06d62f20
+source: 26b9372b8ed6dc021bb23316751fb9be0df05b96
 ---
 
 # Problemas y mensajes
@@ -177,7 +177,7 @@ Un problema que lleva un mensaje se redacta primero con él, antes que con cualq
 
 ## Idiomas integrados
 
-El paquete incluye tres mapas. Cada uno es un valor independiente, así que un programa empaqueta los idiomas que importa y ningún otro:
+El paquete incluye tres mapas. Cada uno es un valor independiente, así que un programa empaqueta los idiomas que importa y ningún otro, salvo el inglés que `formatIssue`, `flatten` y `standard` usan cuando no reciben un mapa:
 
 | Mapa                 | Idioma                                   | `number({ min: 18 })(15)` |
 | -------------------- | ---------------------------------------- | ------------------------- |
