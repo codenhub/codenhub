@@ -11,7 +11,7 @@ Traps that the general rules point at, as they show up in TypeScript, JavaScript
 - Write `async`/`await` rather than `.then` chains, run independent work with `Promise.all`, and await or explicitly handle every promise; a floating promise loses its error.
 - `Promise.all` rejects on the first failure and leaves the other work running. Use `Promise.allSettled` when every result or failure matters, and abort the rest through a shared `AbortSignal` when one failure ends the work.
 - Name files in kebab-case, types and classes in PascalCase, values and functions in camelCase, and constants with domain meaning in UPPER_SNAKE_CASE.
-- Document exported symbols with TSDoc: a one-sentence summary, `@param`, `@returns`, one `@throws` per error type with its condition, and `@defaultValue` for optional settings.
+- Document the public API, what `package.json` `exports` exposes, with TSDoc: a one-sentence summary, `@param`, `@returns`, one `@throws` per error type with its condition, and `@defaultValue` for optional settings.
 
 ## Numbers and conversion
 
@@ -42,8 +42,9 @@ Traps that the general rules point at, as they show up in TypeScript, JavaScript
 
 ## Child processes and streams
 
-- With `shell: true`, `child.kill()` stops the shell, not the command it started. To stop the tree, spawn with `detached: true` on POSIX and call `process.kill(-child.pid, signal)`; on Windows run `taskkill /pid <pid> /T /F`. A detached group no longer receives the terminal's Ctrl+C, so forward `SIGINT` and `SIGTERM` to it, and report the change.
-- `spawnSync`'s `timeout` signals only the direct child, which is the shell under `shell: true`.
+- With `shell: true`, `child.kill()` stops the shell, not the command it started. To stop the tree, spawn with `detached: true` on POSIX and call `process.kill(-child.pid, signal)`; on Windows run `taskkill /pid <pid> /T /F`. A detached group no longer receives the terminal's Ctrl+C, so forward `SIGINT` and `SIGTERM` to it, and report the change. A `process.on("SIGINT")` listener replaces Node's default exit, so after forwarding, exit with the signal's code (130 for `SIGINT`) instead of continuing to the next command.
+- `spawnSync`'s `timeout` signals only the direct child, which is the shell under `shell: true`, and the command's tree keeps running. Run a command whose tree must stop on timeout with `spawn` and a timer, through the same tree kill as every other command.
+- On Windows, a grandchild also dies when the Node process that spawned its parent exits, so a tree-kill test that waits for the runner to finish passes without the tree kill. Assert the grandchild is gone while the runner is still running, and test signal forwarding by sending `SIGINT` to a running runner (POSIX only; skip it elsewhere and report it unverified).
 - On Windows, `shell: true` runs `cmd.exe`, which mangles quotes and braces in inline code such as `node -e "..."`. Write test helper programs to files in the test's temporary directory and run those.
 - Settle a child's promise once: `error` and `close` can both fire, and a timer must be cleared on every exit path.
 - A stream without an `'error'` listener crashes the process on `EPIPE` or `ECONNRESET`. Attach one to every stream you create or pipe.

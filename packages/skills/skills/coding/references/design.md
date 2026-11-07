@@ -1,6 +1,6 @@
 # Design and Architecture
 
-Defaults for structuring software when nobody else is deciding. The project's existing architecture and the user's stated constraints come first; where they are silent, take the default here, build the smallest version of it, and record the choice (see Recording Decisions).
+Defaults for structuring software when nobody else is deciding. The project's existing architecture and the user's stated constraints come first; where they are silent, take the default here, build the smallest version of it, and record the choice (see Recording Decisions). A default for a part applies only once the program has that part: the API rules when it serves an API, migrations once it stores data an earlier version wrote, and configuration rules once it has settings that differ between environments. Do not add a part to apply its default.
 
 ## Contents
 
