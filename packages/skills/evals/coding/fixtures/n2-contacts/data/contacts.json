@@ -1,0 +1,8 @@
+[
+  { "id": 1, "name": "Ana Souza", "phone": "+1 (555) 010-0100", "email": "ana@example.com" },
+  { "id": 2, "name": "Bruno Lima", "phone": "555-010-0100", "email": "bruno@example.com" },
+  { "id": 3, "name": "Carla Mendes", "phone": "+1 555 010 0200", "email": "carla@example.com" },
+  { "id": 4, "name": "Carla Mendes", "phone": "+15550100200", "email": "carla.mendes@work.example.com" },
+  { "id": 5, "name": "Davi Rocha", "phone": "", "email": "davi@example.com" },
+  { "id": 6, "name": "Elisa Prado", "phone": "", "email": "elisa@example.com" }
+]
