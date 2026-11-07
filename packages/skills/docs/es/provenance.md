@@ -2,7 +2,7 @@
 title: Procedencia
 description: Consulta los orígenes, las licencias y los avisos que acompañan a las skills incluidas.
 order: 4
-source: 0debfb956199f5cf59bcf273ad292511238f766d
+source: e20f559e52f15baf12660aa964dcfc420b25926a
 ---
 
 # Procedencia de las skills

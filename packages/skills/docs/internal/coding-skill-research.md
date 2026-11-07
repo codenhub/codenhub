@@ -278,3 +278,39 @@ The loop stopped after round 6 to save quota, short of the planned two consecuti
 What stayed weak across rounds: gemini-3.8-flash ignored the stop-and-ask instruction in S5, the `spawnSync` timeout trap in S1, and the scale rule in S4 (39, then 52, then 93 lines). Every strong-model run asked before refactoring in S5 and kept S4 short.
 
 Graded runs, grade reports and mutant helpers stayed in the local temp directory and are not committed.
+
+## Restructure after round 6
+
+A review after round 6 found that `SKILL.md` had grown to about 4,300 words while the last rounds' failures were rules the skill already had, not missing ones, which points to dilution. The skill was restructured without new rules and has not been run since:
+
+- `SKILL.md` was cut to about 2,000 words. Test technique moved to `references/testing.md` and the edge checklist to `references/edges.md`, both loaded when they apply. Overlap with `references/design.md` was removed.
+- Tests come first: each behavior decision gets a test written first and seen failing. Breaking the code to watch a test fail now applies only to tests written after their code, and runs only the affected test file. The previous rule broke the code for every decision.
+- A one-off local script that the request itself calls throwaway counts as approval to skip tests, unless it deletes, moves, or overwrites files or data. The test-first and minimal-code skills in this collection were changed to the same rule. The minimal-code skill now defers to another loaded instruction on structure, validation, tests, documentation, and reports, and no longer caps its report at three lines.
+- A change with no behavior decision and no public change reports only its checks.
+- Three TypeScript items were added without a recorded occurrence in this repository: `sort()` without a comparator, `noUncheckedIndexedAccess`, and `Promise.all` failing fast. They are general traps, not findings; remove them if an eval shows they cost more than they catch.
+
+A content review by gpt-6.1-sol then led to these changes:
+
+- A local change goes ahead in flawed structure and names the problem in the report; asking first is required only for a refactor beyond the change or one that changes behavior. This matches S5.2, which passes either path.
+- Entry-point failures and tests follow each boundary's contract (CLI, HTTP, library) instead of assuming a CLI.
+- Path confinement applies only where a path's contract confines it, and paths a person passes resolve from the working directory.
+- Unparseable stored data is replaced only after a copy is kept, unless it is a rebuildable cache.
+- Tests the user approves skipping for an exact change are honored, verification covers the changed packages and mandatory gates, and the report names only defaults a later reader might question.
+
+The review's claim that ASCII whitespace includes vertical tab was rejected: the WHATWG definition is tab, LF, FF, CR, and space.
+
+A second review found every earlier fix sufficient and led to three more: input order and contract order are kept and only unspecified order is sorted; cancellation goes to calls that accept it, with checks between calls that do not; and the test-first skill allows a test that a removed route stays unreachable when that is a security contract.
+
+The skill was then aligned with [the coding guidelines](../../../../docs/guidelines/code.md): more than two parameters take an options object, a wrong lint finding may get a scoped exception, and a few lines of own code come before a dependency. The guidelines gained an "Inputs, failures, and state" section and narrowed their mocking rule so file-system and database code is tested against real temporary resources where practical.
+
+The held-out scenarios in [coding-skill-eval.md](coding-skill-eval.md#held-out-scenarios) are the check on this restructure.
+
+## Adding a language reference
+
+Each language gets one file, `skills/coding/references/languages/<language>.md`, named in the routing line in `SKILL.md`. Use the sections of `typescript.md`, dropping any with nothing to say:
+
+1. A short intro naming the runtime and compiler versions the unmarked items hold for, and where to find the project's version.
+2. **Conventions when the project has none:** compiler or linter settings, type and module conventions, naming, and the doc comment format.
+3. One section per trap family the general rules point at: numbers and conversion, maps and absent values, text in other languages, dates and locale, processes and streams, errors, types, and packages.
+
+Each item is a trap with the version it needs, not style advice the language's own tooling already enforces. Prefer items seen at least twice in reviews or eval runs, as the JS/TS list above was, and mark any item added without that evidence in this document.

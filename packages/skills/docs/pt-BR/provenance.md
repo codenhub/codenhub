@@ -2,7 +2,7 @@
 title: Origem
 description: Confira as origens, as licenças e os avisos que acompanham as skills incluídas.
 order: 4
-source: 0debfb956199f5cf59bcf273ad292511238f766d
+source: e20f559e52f15baf12660aa964dcfc420b25926a
 ---
 
 # Origem das skills

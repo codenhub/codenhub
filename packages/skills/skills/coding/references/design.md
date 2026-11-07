@@ -29,7 +29,7 @@ Before choosing structure, write down in a few lines: who uses the software and 
 
 - Use the language, framework, and tools the ecosystem treats as standard for this kind of program, and the versions currently supported. A user who cannot judge a choice is best served by the one with the most documentation and the most people who can maintain it.
 - Build one program, deployed as one unit, until a measured need says otherwise.
-- Prefer the standard library, then the platform, then one well-known dependency, then your own code.
+- Prefer the standard library, then the platform, then your own code for what a few lines do, then one well-known dependency.
 - Store application data in a database, not in hand-rolled files. SQLite for data on one machine, including several local processes; PostgreSQL when several servers write or the write load outgrows one file. Files are for documents, media, exports, and configuration.
 
 ## Shape of a Program
@@ -45,9 +45,9 @@ Wire the parts together in one place at startup, passing adapters into the code 
 ## Modules
 
 - Group by feature, not by kind: `orders/` holds the order handler, rules, storage, and tests, rather than spreading them across `controllers/`, `models/`, and `services/`.
-- Each module has one entry point that exposes what other modules may use. Never import another module's internals.
+- Never import another module's internals; go through its entry point.
 - A module is too big when its parts change for unrelated reasons, or when a reader cannot say in one sentence what it does. Split along those reasons.
-- Shared code lives in its own module and never imports feature code. Keep it small: code is shared once two features use it, not before.
+- Shared code lives in its own module. Keep it small: code is shared once two features use it, not before.
 
 ## Data
 
@@ -60,7 +60,7 @@ Wire the parts together in one place at startup, passing adapters into the code 
 
 ## State and Concurrency
 
-- Give every piece of mutable state one owner, and change it only through that owner. Avoid global mutable state.
+- Give every piece of mutable state one owner, and change it only through that owner.
 - When two requests, processes, or tabs can change the same data, use the database's transactions or constraints, or a single writer, not checks in application code that race.
 - Make operations that can be retried idempotent: an order request carries an ID so a repeated request does not charge twice.
 - Put a timeout on every call that waits on something outside the process.
@@ -94,9 +94,8 @@ Classify each failure by who can fix it, and respond accordingly:
 
 ## Dependencies
 
-- Before adding one, check that it is maintained (a release in the last year), widely used, has a license compatible with the project, and does not pull in many transitive dependencies. Prefer one library per job.
+- Before adding one, check that it is maintained (issues and security reports get responses), widely used, has a license compatible with the project, and does not pull in many transitive dependencies. Prefer one library per job.
 - Commit the lockfile so every install gets the same versions.
-- Keep a dependency that does I/O behind an adapter, so it can be replaced or faked in tests.
 - When a library and the application that uses it must share one copy of a dependency, use the ecosystem's mechanism for that and check the versions are compatible.
 
 ## Security
@@ -125,7 +124,7 @@ Classify each failure by who can fix it, and respond accordingly:
 - Most tests cover the core with plain inputs and outputs; they are fast and need no fakes.
 - Fewer tests cover adapters against the real thing where practical (a temporary database or directory), or against a faithful fake.
 - A few end-to-end tests cover the journeys that matter most, such as signing up or paying.
-- Every bug fix adds a test that failed before the fix.
+- Every bug fix starts with a test that reproduces the bug and fails.
 
 ## Growing the Design
 

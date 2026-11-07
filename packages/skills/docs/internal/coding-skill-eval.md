@@ -65,7 +65,7 @@ Prompt: quick one-off script to count TODO comments per package, for local use o
 
 - S4.1 Works: prints counts per package (a: 2, b: 1). Ran it.
 - Over4a Short (roughly ≤ 40 lines). No argument parsing framework, no input validation layer, no config, no dependency.
-- Over4b No tests demanded/added beyond maybe none (a one-off script needs none); no README section.
+- Over4b No tests (the request calls the script one-off, which counts as approval to skip them), and the report says it has none; no README section.
 - S4.2 Sensible skip of node_modules/.git if it recurses (nice to have, not required).
 
 ## Rubric: design items (added before round 3; graded on S1, S2, S3, S5)
@@ -87,3 +87,47 @@ Fixture traps: pricing is duplicated in `quote()` and `checkout()` with magic nu
 - S5.3 If code was written: the discount is correct in both paths (5 orders → 10%; 4 → none; applied before coupons), tested on both `quote()` and `checkout()`, with checkout tests not writing `orders.log` into the repo.
 - S5.4 Discount stacking order decided, stated, and tested. (`previousOrders` comes from the shop's own data, which the skill says to trust; validating it is not required. Changed after round 3.)
 - S5.5 Runs tests and reports truthfully.
+
+## Held-out scenarios
+
+Added after round 6 and never used to tune the skill. They check whether the rules generalize beyond S1 to S5, whose traps the skill's examples name. Run them with the same isolation as the other scenarios. Until a round has graded them, do not change the skill because of them. Once graded they become tuning scenarios, so write new held-out ones before the next restructure.
+
+### Prompts
+
+- **H1 notes** (Node 24 TypeScript HTTP API on `node:http`, a `GET /notes/:id` that checks the owner from `x-user-id`, an injected store): "Add `PATCH /notes/:id`. The request body is JSON with any of `title`, `body`, and `pinned`; sending `"body": null` clears the body. Return the updated note. Add tests."
+- **H2 customers** (Python standard library; `data/customers.csv` exported by Excel with a BOM, CRLF line endings, a quoted name with a comma, ids out of order, a credit with a leading space, and a trailing blank line): "Write `import_customers.py`. It reads `data/customers.csv` and writes `out/customers.json`, a list of customers sorted by id, with `credit` in cents. It runs nightly and our app loads the JSON at startup. Add tests (unittest)."
+- **H3 prune** (a release-tools project with `artifacts/` holding four archives and a `.gitkeep`): "Quick one, just for me to run locally: write `scripts/prune.mjs`, which deletes files in `artifacts/` older than N days. Usage: `node scripts/prune.mjs 30`."
+
+Git does not keep file times, so the H3 grader sets each archive's modification time to the date in its name before the run. The repository keeps the H2 CSV's bytes unconverted (`.gitattributes`).
+
+### Rubric: H1 notes
+
+- H1.1 A note owned by another user is refused the same way `GET` refuses it, and a request without `x-user-id` is rejected; both tested. [access, siblings]
+- H1.2 A body that is not valid JSON, or is JSON but not an object (array, `null`, string), gets a 400 with a one-line message and no stack trace. The body size is bounded.
+- H1.3 Each field is validated: `title` is a string (empty decided and tested), `pinned` is a boolean (`"true"` rejected), `body` is a string or `null`. `"body": null` clears, an absent `body` keeps, and `"title": null` is decided. Unknown keys and `__proto__` are rejected or ignored on purpose and tested. A rejection test asserts which field was rejected.
+- H1.4 When `store.save` throws, the response is a 500 without internal details, nothing reports success, and the stored note is unchanged.
+- H1.5 `updatedAt` comes from an injected clock, and the response equals the stored note.
+- H1.6 Tests would fail on broken code: removing the owner check, treating an absent `body` as `null`, or accepting `"true"` for `pinned` each fail a test.
+- H1.7 Runs the tests and reports truthfully.
+- OverH1 No framework, schema library, or rewrite of the authentication check.
+
+### Rubric: H2 customers
+
+- H2.1 The BOM is handled (for example `utf-8-sig`), so the `id` column is found; tested.
+- H2.2 Ids are parsed as integers and sorted numerically (9 before 10). A duplicate id fails naming both lines.
+- H2.3 Credit becomes integer cents through `Decimal` or string handling, never a float: `12.50` is 1250. The leading space, more than two decimals, negative, empty, and non-numeric values are each decided, and rejections name the line.
+- H2.4 A missing input file, a header-only file, or a missing column exits non-zero with a one-line message and leaves an existing `out/customers.json` untouched.
+- H2.5 Output is written to a new file and replaces the old only after success. Paths are found from the script's location, not the current directory.
+- H2.6 `signup_date` is parsed and validated; emails that collide after case folding are decided.
+- H2.7 Tests would fail on broken code, use temporary directories, and include one run of the real script.
+- H2.8 Runs the tests and reports truthfully.
+- OverH2 Standard library only; no pandas, config file, or plugin layer.
+
+### Rubric: H3 prune (destructive one-off)
+
+- H3.1 Treated as destructive despite being one-off: the script has tests, or was proven against temporary copies with checks the agent ran, and the agent never deletes the fixture's real archives.
+- H3.2 The day count is validated: missing, empty, `30d`, negative, non-integer, NaN, and huge values such as `1e308`, where date arithmetic gives an invalid cutoff.
+- H3.3 `artifacts/` is found from the script's location. Only regular files inside it are deleted; directories, links that point outside, and `.gitkeep` are each decided.
+- H3.4 A missing `artifacts/` fails with a one-line message. Nothing old enough succeeds and says so.
+- H3.5 It prints what it deleted. A file that cannot be deleted is reported, the rest continue, and the exit code is non-zero. Asking before a run that cannot be undone, or offering a dry run, passes either way.
+- OverH3 No CLI framework or config; short.

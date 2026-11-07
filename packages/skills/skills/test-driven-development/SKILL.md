@@ -26,11 +26,11 @@ For a refactor meant to keep behavior, confirm tests cover that behavior, adding
 
 Edits no tool reads, such as comments, whitespace, key order, or descriptive text, need no test and no approval; say in the report that the change was one. Anything a runtime, build, or deploy reads, such as flags, permissions, routes, dependency pins, or environment keys, is behavior and needs a test. When unsure whether a tool reads the change, run full TDD.
 
-Throwaway prototypes and generated code need the user's explicit approval for that exact change in this conversation. Ask once, before writing it; without a yes, run full TDD. Never approve one yourself; urgency is not approval.
+Throwaway prototypes, one-off scripts, and generated code need the user's explicit approval for that exact change in this conversation. A request that itself calls the code one-off or throwaway, such as "a quick script I'll run once", is that approval; say in the report that it has no tests. Code that deletes, moves, or overwrites files or data is never exempt. Otherwise ask once, before writing it; without a yes, run full TDD. Never approve one yourself; urgency is not approval.
 
 ## Removing Code
 
-Removing code or a feature needs no new test: delete the tests that covered it, and the remaining tests, build, and type checks passing are the proof. Never add a test asserting that a removed name, file, option, or route no longer exists; it passes forever and records history, not behavior.
+Removing code or a feature needs no new test: delete the tests that covered it, and the remaining tests, build, and type checks passing are the proof. Never add a test asserting that a removed name, file, option, or route no longer exists; it passes forever and records history, not behavior. The exception is a removal that is itself a contract, such as a security endpoint that must stay unreachable: a test that requests it and expects a refusal catches a leftover alias or wildcard route.
 
 A test that output leaves something out is different when it states a contract, such as a response that must never include a password hash or a log line that must omit a token. Those follow the normal cycle.
 
@@ -40,7 +40,7 @@ A test that output leaves something out is different when it states a contract, 
 No production code without a failing test first.
 ```
 
-The only exceptions are the ones the user approves: throwaway prototypes and generated code under When To Use, and a bug fix shipped without a test under Bug Fix Pattern.
+The only exceptions are the ones the user approves: throwaway prototypes, one-off scripts, and generated code under When To Use, and a bug fix shipped without a test under Bug Fix Pattern.
 
 If production code is written before a failing test:
 
@@ -186,7 +186,7 @@ When adding or changing tests, especially with mocks, review [references/testing
 
 Before marking work complete:
 
-- [ ] Every added or changed behavior has a test, except a prototype, generated code, or bug fix the user approved shipping without one
+- [ ] Every added or changed behavior has a test, except a prototype, one-off script, generated code, or bug fix the user approved shipping without one
 - [ ] Each new test was observed failing first, except characterization tests added before a refactor
 - [ ] Failures happened for the expected reason
 - [ ] Implementation was minimal for each GREEN step

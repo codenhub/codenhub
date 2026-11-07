@@ -4,11 +4,12 @@ Traps that the general rules point at, as they show up in TypeScript, JavaScript
 
 ## Conventions when the project has none
 
-- Turn on `strict` in `tsconfig.json`. Prefer `unknown` to `any`, narrow it where the value enters, and keep any cast narrow and at that boundary.
+- Turn on `strict` in `tsconfig.json`, and `noUncheckedIndexedAccess` in a new project, so `arr[i]` and `record[key]` include `undefined`. Prefer `unknown` to `any`, narrow it where the value enters, and keep any cast narrow and at that boundary.
 - Use `interface` for object shapes and `type` for unions and intersections. Import types with `import type`.
 - Use named exports. An `index.ts` re-exports a folder's public surface and nothing else; never import another package's files except through its `exports`.
 - Use `const`, `let` only when the binding is reassigned, never `var`.
 - Write `async`/`await` rather than `.then` chains, run independent work with `Promise.all`, and await or explicitly handle every promise; a floating promise loses its error.
+- `Promise.all` rejects on the first failure and leaves the other work running. Use `Promise.allSettled` when every result or failure matters, and abort the rest through a shared `AbortSignal` when one failure ends the work.
 - Name files in kebab-case, types and classes in PascalCase, values and functions in camelCase, and constants with domain meaning in UPPER_SNAKE_CASE.
 - Document exported symbols with TSDoc: a one-sentence summary, `@param`, `@returns`, one `@throws` per error type with its condition, and `@defaultValue` for optional settings.
 
@@ -16,6 +17,7 @@ Traps that the general rules point at, as they show up in TypeScript, JavaScript
 
 - `Number("")` and `Number("  ")` are `0`, `parseInt("10s")` is `10`, `Number("0x10")` is `16`, and `Number("1e3")` is `1000`. Reject empty and whitespace-only strings first, convert with `Number`, then check `Number.isFinite` (and `Number.isInteger` when only integers make sense). Use a regex on the raw string when the accepted spelling matters.
 - `setTimeout` and `setInterval` accept at most 2,147,483,647 ms. Node replaces a larger delay with 1 ms and only prints a warning, so a timeout of 25 days fires at once. Check the delay after converting units.
+- `arr.sort()` without a comparator compares as strings: `[10, 9, 1].sort()` is `[1, 10, 9]`. Pass a comparator, `(a, b) => a - b` for numbers or `Intl.Collator` with a locale for text, and use `toSorted` (Node 20+) when the original array must not change.
 - Array lengths, `Buffer.alloc`, and `String.prototype.repeat` throw `RangeError` past their limits; check sizes that come from input.
 
 ## Objects used as maps
@@ -62,7 +64,7 @@ Traps that the general rules point at, as they show up in TypeScript, JavaScript
 
 ## Packages
 
-- When publishing a library that shares state or identity with the application, such as a framework, a registry, or a class checked with `instanceof`, declare it in `peerDependencies` so only one copy is installed.
+- When publishing a library that shares state or identity with the application, such as a framework, a registry, or a class checked with `instanceof`, declare it in `peerDependencies` with a range compatible with the application's version, and check the installed tree (`npm ls <name>`, `pnpm why <name>`) for a single copy; incompatible ranges still install two.
 
 ## Running TypeScript directly in Node
 
