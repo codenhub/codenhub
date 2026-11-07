@@ -1,8 +1,8 @@
 # @codenhub/error
 
 > Normalizes any caught value into a typed `AppError` through a registry of
-> known failures, with opt-in browser, Node.js, and Supabase presets and
-> result helpers.
+> known failures, with opt-in browser, Node.js, HTTP, and Supabase presets,
+> result helpers, and React and Svelte error boundaries.
 
 Register known failures by code, name, exact message, message prefix, or
 regular expression, then call `createAppError(caught)`. Deterministic matches
@@ -24,9 +24,11 @@ code into a `Result`.
   serialization, and options.
 - [Registries](docs/registries.md): Buckets, identifier matching, match
   priority, global versus isolated registries, and patterns.
-- [Presets](docs/presets.md): Every browser, Node.js, and Supabase mapping with
-  its `messageKey` and retry flag.
+- [Presets](docs/presets.md): Every browser, Node.js, HTTP, and Supabase
+  mapping with its `messageKey` and retry flag.
 - [Results](docs/results.md): `Result`, `attempt`, and the chaining helpers.
+- [Error boundaries](docs/frameworks.md): `AppErrorBoundary` for React and
+  `createAppErrorBoundary` for Svelte, and what a boundary does not catch.
 - [Recipes](docs/recipes.md): HTTP status codes, Supabase calls, retries,
   translations, error reporting, and tests.
 - [Caveats and limitations](docs/caveats.md): Surprising behavior and the

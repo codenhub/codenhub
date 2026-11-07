@@ -6,7 +6,7 @@ order: 8
 
 # Caveats and limitations
 
-Everything on this page is deliberate, but each item has surprised someone. Each one says what happens, why, and what to do instead.
+Everything on this page is deliberate, and every item on it has surprised someone at least once. Each one says what happens, why, and what to do instead. Skim the headings now; when something looks wrong later, the answer is probably here.
 
 ## Unmatched text never becomes the message
 
@@ -80,7 +80,7 @@ Everything on this page is deliberate, but each item has surprised someone. Each
 
 ## Retryable is narrower than "might work next time"
 
-**What happens:** a timeout, a reset connection, or a failed `fetch` in the browser is never marked retryable, even though trying again often works.
+**What happens:** a response timeout, a reset connection, or a failed `fetch` in the browser is never marked retryable, even though trying again often works.
 
 **Why:** each of those can happen after the server already acted on the request, and repeating a request that already ran can charge a card twice. `isRetryable` promises safety, not likelihood.
 
@@ -107,3 +107,11 @@ Every preset mapping has a stable `messageKey`, but ErrorKit includes only the E
 ## Patterns you write can be slow
 
 A pattern runs against every message `createAppError` sees, and a message can be crafted by someone trying to slow your server down. A pattern with nested repetition, such as `/(a+)+$/`, can take seconds on the wrong input. Keep custom patterns anchored and simple; see [Registries](registries.md#writing-patterns). The built-in patterns are all anchored, with no nested repetition.
+
+## Next
+
+That is the whole package. From here:
+
+- The [API reference](reference/index.md) has every export with its exact signature, for when you need to look something up.
+- [Recipes](recipes.md) has the complete solutions, for when you need to build something.
+- The [overview](index.md) has the reading path, for when you send this to a colleague.

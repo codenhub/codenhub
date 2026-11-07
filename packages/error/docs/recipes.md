@@ -6,11 +6,11 @@ order: 7
 
 # Recipes
 
-Each recipe here solves one problem from start to finish. Copy the parts you need; none of them depends on another.
+Each recipe here solves one problem from start to finish, using the pieces from the earlier pages. They are the questions that come up in the first week of using ErrorKit, usually in this order. Copy the parts you need; none of them depends on another.
 
 ## Classify HTTP responses
 
-`fetch` only rejects when the request could not be made at all. A response with status `404` or `500` resolves normally, so `createAppError(response)` has nothing to recognize and returns an `"unknown"` error. Status codes need a mapping of their own.
+`fetch` only rejects when the request could not be made at all. A response with status `404` or `500` resolves normally: the server answered, and `fetch` considers its job done. So `createAppError(response)` has nothing to recognize and returns an `"unknown"` error. Status codes need a mapping of their own.
 
 Pass the status as the `code` and classify it against the HTTP preset. Keep that preset out of the global registry: status codes are short numbers that could collide with other services' codes, and they only mean something for responses.
 
@@ -68,7 +68,7 @@ Database errors work the same way: `supabase.from("projects").insert(row)` retur
 
 ## Raise your own errors
 
-An error you raise with a code is only as good as its registration: `err({ code: "project.name_mising" })`, with a typo or a mapping nobody added, is an `"unknown"` error whose `code` is `null`, and a check for `error.code === "project.name_missing"` never fires. Nothing warns you.
+An error you raise with a code is only as good as its registration. `err({ code: "project.name_mising" })`, with a typo or a mapping nobody added, is an `"unknown"` error whose `code` is `null`, and a check for `error.code === "project.name_missing"` never fires. Nothing warns you. Spot the typo? Neither will the code review.
 
 Keep your codes and their feedback in one object, register it from there, and raise errors through a function that only accepts its keys. A typo is then a type error, and every code you can raise is registered:
 
@@ -115,6 +115,8 @@ const users = await withRetry(() => db.query("select * from users"));
 
 Wrap the single database query or the single `fetch`, not a `publish()` function that uploads a file and then saves a record. If the save fails with a retryable `ECONNREFUSED`, repeating `publish()` uploads the file a second time. [The AppError](app-error.md#isretryable) explains why the flag is this strict.
 
+The loop waits 500 ms, then 1 s, between attempts. Add jitter if many clients can fail at the same moment, so they do not all come back at the same moment too.
+
 ## Translate messages
 
 Every preset mapping, and any mapping you register with one, carries a `messageKey`. Look the key up in your catalog and fall back to the English message when the catalog has no entry:
@@ -135,7 +137,7 @@ import { browserErrorNames, browserErrorPatterns } from "@codenhub/error/registr
 const browserKeys = new Set([...Object.values(browserErrorNames).map((feedback) => feedback.messageKey), ...browserErrorPatterns.map(([, feedback]) => feedback.messageKey)]);
 ```
 
-ErrorKit does not ship translations.
+ErrorKit does not ship translations. The keys are the contract; the words are yours.
 
 ## Report to an error tracker
 
@@ -145,7 +147,7 @@ Report what nobody described yet, plus the failures you have described that are 
 import type { AppError } from "@codenhub/error";
 
 // Failures only a developer can fix. The presets give them all one shared message.
-const BUG_CODES = new Set(["42P01", "42703", "unexpected_failure", "InvalidStateError"]);
+const BUG_CODES = new Set(["42P01", "42703", "unexpected_failure", "InvalidStateError", "500"]);
 
 export function shouldReport(error: AppError): boolean {
   return error.type === "unknown" || (error.code !== null && BUG_CODES.has(error.code));
@@ -158,7 +160,7 @@ if (shouldReport(error)) {
 
 Report `originalError`, not the `AppError`: the original carries the real message and stack. Most trackers also follow an error's `cause`, and an `AppError`'s `cause` is the same original value, so reporting the `AppError` itself works too.
 
-Do not report on `type === "heuristic"` alone. A heuristic match is usually a network failure on the reader's side, which is not something you can fix.
+Do not report on `type === "heuristic"` alone. A heuristic match is usually a network failure on the reader's side, and no deploy of yours is going to fix their train going into a tunnel.
 
 ## Ignore cancelled requests
 
@@ -188,7 +190,7 @@ beforeEach(() => {
 });
 ```
 
-Assert on `code`, `messageKey`, or `type` rather than on `message`. Messages are written for people and get reworded; codes and keys are the stable part.
+Assert on `code`, `messageKey`, or `type` rather than on `message`. Messages are written for people and get reworded; codes and keys are the stable part. A test that breaks because someone fixed a comma is a test people learn to ignore.
 
 To catch a code your application raises but never registered, list them and check each one against the registry your application builds at startup:
 
@@ -204,3 +206,7 @@ it.each(RAISED_CODES)("registers %s", (code) => {
   expect(getErrorRegistry().codes.get(code)).toBeDefined();
 });
 ```
+
+## Next
+
+The recipes cover the common paths. [Caveats and limitations](caveats.md) covers the uncommon ones: each surprise the package can cause, why it works that way, and what to do instead. Read it once now, and it will save you a debugging session later.

@@ -1,12 +1,14 @@
 ---
 title: Getting started
-description: Set up a registry for a real application, normalize failures where they enter, and show the result.
+description: Set up a registry for a real application, normalize failures where they enter, and decide what to show and what to report.
 order: 1
 ---
 
 # Getting started
 
-This page builds the error handling for a small web application that signs people in with Supabase and calls its own API with `fetch`. By the end, every failure the application catches turns into a message a person can act on, and every failure nobody planned for still reaches your logs intact.
+This page builds the error handling for the project tracker from the [overview](index.md): a web application where people sign in with Supabase, create projects, and call the app's own API with `fetch`. By the end, every failure the application catches turns into a message a person can act on, and every failure nobody planned for still reaches your logs intact.
+
+It takes five steps, and only one of them involves writing actual messages.
 
 ## 1. Install the package
 
@@ -33,17 +35,17 @@ registry.merge(supabaseErrorRegistry);
 // 2. Your own mappings last, so they win wherever they overlap with a preset.
 registry.codes.addList([
   [
-    "cart.out_of_stock",
+    "project.limit_reached",
     {
-      message: "One of the items in your cart just sold out. Review your cart, then check out again.",
-      messageKey: "error.cart.outOfStock",
-      source: "my-app.cart",
+      message: "You've reached the project limit on your plan. Archive a project, then try again.",
+      messageKey: "error.project.limitReached",
+      source: "my-app.projects",
     },
   ],
   [
     "23505",
     {
-      message: "That name is already taken. Choose a different one.",
+      message: "You already have a project with that name. Choose a different one.",
       messageKey: "error.project.nameTaken",
       source: "my-app.projects",
     },
@@ -57,21 +59,27 @@ import "./errors";
 // …the rest of your application
 ```
 
-Order matters. When two mappings use the same identifier, the one added last replaces the other, so the `23505` mapping above replaces the generic "unique violation" message the Supabase preset ships with something specific to this application.
+Order matters here. When two mappings use the same identifier, the one added last replaces the other. That is why the `23505` mapping above comes after the Supabase preset: the preset's message for that code is a generic one about a duplicate value, since the preset cannot know which value collided, and in this application the only unique value people can collide on is a project name, so ours says so.
 
-Pick presets for where the code runs: the browser preset for code in a browser, the Node.js preset for code on a server, and the Supabase preset wherever you call Supabase. [Presets](presets.md) lists exactly what each one covers.
+Pick presets for where the code runs:
+
+- The browser preset for code that runs in a browser.
+- The Node.js preset for code that runs on a server.
+- The Supabase preset wherever you call Supabase.
+
+[Presets](presets.md) lists exactly what each one covers. Merging all of them "just in case" is how a browser message about checking your Wi-Fi ends up in a server log, so pick on purpose.
 
 ## 3. Normalize where failures enter your code
 
-Call `createAppError` at the boundary where a failure reaches code that has to decide what to do with it, usually an event handler, a route handler, or a data loader:
+Call `createAppError` at the boundary where a failure reaches code that has to decide what to do about it. That is usually an event handler, a route handler, or a data loader:
 
 ```ts
 import { createAppError } from "@codenhub/error";
 
 async function onSubmit(form: FormData) {
   try {
-    await saveProject(form);
-    showToast("Project saved.");
+    await createProject(form);
+    showToast("Project created.");
   } catch (caught) {
     const error = createAppError(caught);
 
@@ -81,20 +89,22 @@ async function onSubmit(form: FormData) {
 }
 ```
 
-You do not need to unwrap anything first. `createAppError` looks inside the value for wrapped errors, in `cause`, `originalError`, `error`, `err`, `inner`, `innerError`, and the first ten entries of an `errors` list, so a `23505` buried two `cause`s deep still resolves to "That name is already taken."
+You do not need to unwrap anything first. `createAppError` looks inside the value for wrapped errors in `cause`, `originalError`, `error`, `err`, `inner`, `innerError`, and the first ten entries of an `errors` list. A `23505` buried two `cause`s deep still resolves to "You already have a project with that name."
 
 ## 4. Decide what to show
 
-Every `AppError` has a `message`, and it is always safe to show:
+Every `AppError` has a `message`, and that message is always safe to show:
 
 - When a mapping matched, it is the message you or the preset registered.
-- When nothing matched, it is `"An unexpected error occurred."`, never the raw text of the failure. Raw messages often contain table names, stack details, or user data, so ErrorKit refuses to surface them.
+- When nothing matched, it is `"An unexpected error occurred."`, never the raw text of the failure.
 
-You can replace that generic text where you know more about the context:
+That second rule is deliberate. Raw messages are written for developers, and they often contain table names, file paths, stack details, or somebody else's data. ErrorKit only shows text that someone registered on purpose.
+
+Where you know more about the context than "something failed", replace the generic text:
 
 ```ts
 const error = createAppError(caught, {
-  fallbackMessage: "We couldn't save your project. Try again in a moment.",
+  fallbackMessage: "We couldn't create your project. Try again in a moment.",
 });
 ```
 
@@ -108,7 +118,7 @@ const error = createAppError(caught, {
 | `"heuristic"` | Only a regular expression matched, such as the browser's "Failed to fetch". |
 | `"unknown"`   | Nothing matched. The message is the fallback.                               |
 
-An `"unknown"` error is the one you most want in your error tracker, because it is a failure nobody described yet. The raw value is on `error.originalError`, and also on `error.cause`, which most error trackers already follow:
+An `"unknown"` error is the one you most want in your error tracker, because it is a failure nobody has described yet. The raw value is on `error.originalError`, and also on `error.cause`, which most error trackers already follow:
 
 ```ts
 import type { AppError } from "@codenhub/error";
@@ -120,10 +130,8 @@ function reportIfUnexpected(error: AppError) {
 }
 ```
 
-`type` says how the error matched, not how serious it is. A missing database table is `"known"` once its code is registered, and it is still a bug. [Recipes](recipes.md#report-to-an-error-tracker) shows how to report those too.
+One thing to keep in mind: `type` says how the error matched, not how serious it is. A missing database table is `"known"` once its code is registered, and it is still very much a bug. [Recipes](recipes.md#report-to-an-error-tracker) shows how to report those too.
 
-## Where to go next
+## Next
 
-- [The AppError](app-error.md) explains every field, including `code` for branching and `isRetryable` for retries.
-- [Registries](registries.md) explains which match wins when several could.
-- [Recipes](recipes.md) covers `fetch` status codes, Supabase calls, retries, and translations.
+You now have the whole loop: describe, normalize, show, report. The next page, [The AppError](app-error.md), goes through every field you just used, including `code` for branching on a specific failure and `isRetryable` for deciding when a retry is safe.
