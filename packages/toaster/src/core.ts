@@ -160,7 +160,7 @@ class ToastManager {
     const loadingOpts = typeof options.loading === "string" ? { message: options.loading } : options.loading;
     const handle = this.loading({
       ...options,
-      ...loadingOpts,
+      ...withoutUndefined(loadingOpts),
       duration: options.duration,
     });
 

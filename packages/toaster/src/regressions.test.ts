@@ -345,6 +345,20 @@ describe("explicit undefined options", () => {
     toaster.destroy();
   });
 
+  it("keeps a promise call's position when its loading options set position to undefined", () => {
+    const toaster = createToaster();
+    void toaster.promise(new Promise(() => {}), {
+      position: "top-left",
+      loading: { message: "Saving", position: undefined },
+      success: "Saved",
+      error: "Failed",
+    });
+
+    expect(document.body.querySelector(".toaster-toast-stack-top-left .toaster-toast")).not.toBeNull();
+    expect(document.body.querySelector(".toaster-toast-stack-top-right")).toBeNull();
+    toaster.destroy();
+  });
+
   it("keeps instance dialog labels when a per-call label is undefined", async () => {
     const dialogs = createDialogs({ labels: { confirm: "Confirmar", cancel: "Cancelar", submit: "Enviar", ok: "Ok" } });
 
