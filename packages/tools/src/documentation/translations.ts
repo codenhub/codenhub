@@ -145,6 +145,30 @@ function addStructureIssues(graph: DocumentGraph, translation: TranslationFile, 
       });
     }
   }
+  const headingIssue = describeHeadingMismatch(translated.headings, english.headings, translation.englishPath);
+  if (headingIssue !== undefined) {
+    issues.push({
+      code: "structure-mismatch",
+      message: `${headingIssue}; the documentation site matches an English section link to the translated section by heading position.`,
+      severity: "error",
+      sourcePath: translation.packagePath,
+      target: translation.englishPath,
+    });
+  }
+}
+
+function describeHeadingMismatch(
+  ours: readonly { depth: number }[],
+  theirs: readonly { depth: number }[],
+  englishPath: string,
+): string | undefined {
+  const index = ours.findIndex(({ depth }, position) => depth !== theirs[position]?.depth);
+  if (index !== -1 && index < theirs.length) {
+    return `heading ${index + 1} is an H${ours[index]!.depth} here but an H${theirs[index]!.depth} in ${englishPath}`;
+  }
+  return ours.length === theirs.length
+    ? undefined
+    : `${ours.length} headings here but ${theirs.length} in ${englishPath}`;
 }
 
 function addEnglishLinkIssues(graph: DocumentGraph, translation: TranslationFile, issues: TranslationIssue[]): void {
