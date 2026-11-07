@@ -68,7 +68,7 @@ Wire the parts together in one place at startup, passing adapters into the code 
 - Errors are part of the interface. Document which errors each operation returns and when, and keep their codes or types stable.
 - Add, do not change: a new optional field or endpoint keeps existing callers working. Removing or changing the meaning of a field, default, or error is a breaking change and needs a new version, a migration path, and a note to callers.
 - Return the same shapes for the same concepts across the whole interface: one date format, one error shape, one naming style.
-- For HTTP APIs: nouns for resources, the standard methods and status codes, pagination on every list, and input validated against a schema at the edge.
+- For HTTP APIs: nouns for resources, the standard methods and status codes, pagination on every list that grows with use, such as orders or messages, and input validated against a schema at the edge.
 
 ## Failure Strategy
 
