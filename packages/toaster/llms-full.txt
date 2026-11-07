@@ -282,7 +282,7 @@ await toast.promise(syncNotes(), {
 - **`position`**, **`className`**, and **`margin`** apply to the toast the whole way through.
 - **`duration`** and **`dismissible`** apply to the result toast. Left unset, they come from the instance's `semantic` defaults, then from the instance itself. [Per-kind defaults](docs/instances.md#per-kind-defaults) explains that chain.
 
-The result toast closes on its own after its `duration`, even though the loading toast before it didn't, unless the instance's `semantic.autoDismiss` is `false`. To decide per call, return `autoDismiss` from `success` or `error`; that beats both.
+The result toast closes on its own after its `duration`, even though the loading toast before it didn't, unless the instance sets `autoDismiss: false` in its `semantic` group or, when that group leaves it unset, instance-wide. To decide per call, return `autoDismiss` from `success` or `error`; that beats both.
 
 If your `success` or `error` function throws, the loading toast is dismissed and the error is reported to the browser as an uncaught error, so it shows in the console and in error trackers. `toast.promise()` still resolves or rejects with the original promise's outcome, so a typo in a message doesn't break the save.
 
@@ -789,10 +789,7 @@ A plain `toast()` call uses only the instance-wide settings. For every other kin
 
 With the configuration above, `notesToaster.error("Sync failed")` stays for 8 seconds with a close button, `notesToaster("Saved")` stays for 4, and `notesToaster.error("Sync failed", { duration: 2000 })` stays for 2. An option set to `undefined` in a call counts as not set, so it doesn't erase the per-kind default.
 
-The result of `promise` bends these rules in two places, because it's the loading toast updated in place rather than a new toast:
-
-- **Position** never changes, so it's wherever the loading toast went: the `loading` options object, then the call's `position`, then the `loading` group, then the instance. `semantic.position` never applies.
-- **`autoDismiss`** comes from the result's own options, then `semantic.autoDismiss`, then `true`. The instance-wide `autoDismiss` is skipped, so `createToaster({ autoDismiss: false })` alone doesn't keep promise results open; set `semantic: { autoDismiss: false }` for that.
+The result of `promise` bends these rules for position, because it's the loading toast updated in place rather than a new toast. Its position never changes, so it's wherever the loading toast went: the `loading` options object, then the call's `position`, then the `loading` group, then the instance. `semantic.position` never applies.
 
 ## Changing settings later
 

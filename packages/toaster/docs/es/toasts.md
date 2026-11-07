@@ -151,7 +151,7 @@ await toast.promise(syncNotes(), {
 - **`position`**, **`className`** y **`margin`** se aplican al toast de principio a fin.
 - **`duration`** y **`dismissible`** se aplican al toast del resultado. Si no las pones, salen de los valores por defecto `semantic` de la instancia y, después, de la propia instancia. [Valores por defecto por tipo](instances.md#valores-por-defecto-por-tipo) explica esa cadena.
 
-El toast del resultado se cierra solo pasado su `duration`, aunque el toast de carga anterior no lo hiciera, salvo que el `semantic.autoDismiss` de la instancia sea `false`. Para decidirlo por llamada, devuelve `autoDismiss` desde `success` o `error`; eso gana a ambos.
+El toast del resultado se cierra solo pasado su `duration`, aunque el toast de carga anterior no lo hiciera, salvo que la instancia ponga `autoDismiss: false` en su grupo `semantic` o, si el grupo no lo define, para toda la instancia. Para decidirlo por llamada, devuelve `autoDismiss` desde `success` o `error`; eso gana a ambos.
 
 Si tu función `success` o `error` lanza una excepción, el toast de carga se cierra y el error se reporta al navegador como error no capturado, así que aparece en la consola y en los rastreadores de errores. `toast.promise()` igualmente se resuelve o se rechaza con el resultado de la promesa original, así que una errata en un mensaje no rompe el guardado.
 

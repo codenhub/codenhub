@@ -151,7 +151,7 @@ await toast.promise(syncNotes(), {
 - **`position`**, **`className`** e **`margin`** valem para o toast do começo ao fim.
 - **`duration`** e **`dismissible`** valem para o toast de resultado. Se não forem definidas, vêm dos padrões `semantic` da instância e, depois, da própria instância. [Padrões por tipo](instances.md#padrões-por-tipo) explica essa cadeia.
 
-O toast de resultado fecha sozinho depois da sua `duration`, mesmo que o toast de carregamento antes dele não fechasse, a não ser que o `semantic.autoDismiss` da instância seja `false`. Para decidir por chamada, devolva `autoDismiss` em `success` ou `error`; isso ganha dos dois.
+O toast de resultado fecha sozinho depois da sua `duration`, mesmo que o toast de carregamento antes dele não fechasse, a não ser que a instância defina `autoDismiss: false` no grupo `semantic` ou, se o grupo não definir, para a instância toda. Para decidir por chamada, devolva `autoDismiss` em `success` ou `error`; isso ganha dos dois.
 
 Se a sua função `success` ou `error` lançar um erro, o toast de carregamento é fechado e o erro é reportado ao navegador como erro não capturado, então ele aparece no console e nas ferramentas de monitoramento de erros. `toast.promise()` ainda resolve ou rejeita com o desfecho da promise original, então um erro de digitação numa mensagem não quebra o salvamento.
 

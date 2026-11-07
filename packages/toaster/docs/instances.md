@@ -95,10 +95,7 @@ A plain `toast()` call uses only the instance-wide settings. For every other kin
 
 With the configuration above, `notesToaster.error("Sync failed")` stays for 8 seconds with a close button, `notesToaster("Saved")` stays for 4, and `notesToaster.error("Sync failed", { duration: 2000 })` stays for 2. An option set to `undefined` in a call counts as not set, so it doesn't erase the per-kind default.
 
-The result of `promise` bends these rules in two places, because it's the loading toast updated in place rather than a new toast:
-
-- **Position** never changes, so it's wherever the loading toast went: the `loading` options object, then the call's `position`, then the `loading` group, then the instance. `semantic.position` never applies.
-- **`autoDismiss`** comes from the result's own options, then `semantic.autoDismiss`, then `true`. The instance-wide `autoDismiss` is skipped, so `createToaster({ autoDismiss: false })` alone doesn't keep promise results open; set `semantic: { autoDismiss: false }` for that.
+The result of `promise` bends these rules for position, because it's the loading toast updated in place rather than a new toast. Its position never changes, so it's wherever the loading toast went: the `loading` options object, then the call's `position`, then the `loading` group, then the instance. `semantic.position` never applies.
 
 ## Changing settings later
 

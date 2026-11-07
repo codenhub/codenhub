@@ -345,6 +345,20 @@ describe("explicit undefined options", () => {
     toaster.destroy();
   });
 
+  it("keeps a promise call's position when its loading options set position to undefined", () => {
+    const toaster = createToaster();
+    void toaster.promise(new Promise(() => {}), {
+      position: "top-left",
+      loading: { message: "Saving", position: undefined },
+      success: "Saved",
+      error: "Failed",
+    });
+
+    expect(document.body.querySelector(".toaster-toast-stack-top-left .toaster-toast")).not.toBeNull();
+    expect(document.body.querySelector(".toaster-toast-stack-top-right")).toBeNull();
+    toaster.destroy();
+  });
+
   it("keeps instance dialog labels when a per-call label is undefined", async () => {
     const dialogs = createDialogs({ labels: { confirm: "Confirmar", cancel: "Cancelar", submit: "Enviar", ok: "Ok" } });
 
@@ -398,6 +412,43 @@ describe("promise outcome defaults", () => {
     vi.advanceTimersByTime(20000);
     flushAnimations();
     expect(document.body.querySelector(".toaster-toast")).not.toBeNull();
+    toaster.destroy();
+  });
+
+  it("falls back to the instance-wide autoDismiss", async () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ autoDismiss: false });
+    await toaster.promise(Promise.resolve(1), { loading: "Saving", success: "Saved", error: "Failed" });
+    flushAnimations();
+    vi.advanceTimersByTime(20000);
+    flushAnimations();
+    expect(document.body.querySelector(".toaster-toast")?.textContent).toContain("Saved");
+    expect(document.body.querySelector(".toaster-toast-spinner")).toBeNull();
+    toaster.destroy();
+  });
+
+  it("falls back to the instance-wide autoDismiss for a rejected promise", async () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ autoDismiss: false });
+    await expect(
+      toaster.promise(Promise.reject(new Error("nope")), { loading: "Saving", success: "Saved", error: "Failed" }),
+    ).rejects.toThrow("nope");
+    flushAnimations();
+    vi.advanceTimersByTime(20000);
+    flushAnimations();
+    expect(document.body.querySelector(".toaster-toast")?.textContent).toContain("Failed");
+    expect(document.body.querySelector(".toaster-toast-spinner")).toBeNull();
+    toaster.destroy();
+  });
+
+  it("lets semantic.autoDismiss beat the instance-wide autoDismiss", async () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ autoDismiss: false, semantic: { autoDismiss: true } });
+    await toaster.promise(Promise.resolve(1), { loading: "Saving", success: "Saved", error: "Failed" });
+    flushAnimations();
+    vi.advanceTimersByTime(5100);
+    flushAnimations();
+    expect(document.body.querySelector(".toaster-toast")).toBeNull();
     toaster.destroy();
   });
 });
