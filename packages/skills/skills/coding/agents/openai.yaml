@@ -1,4 +1,4 @@
 interface:
   display_name: "Coding"
   short_description: "Write code that handles inputs, failures, and state"
-  default_prompt: "Use $coding to make this change the way this project already writes code, decide what the request leaves open and report it, and ask only before anything that deletes or rewrites existing data, costs money, touches security, refactors beyond the change or changes behavior, or is hard to undo."
+  default_prompt: "Use $coding to make this change the way this project already writes code, decide what the request leaves open and report it, and ask only before anything that deletes or rewrites existing data, costs money, touches security, is a refactor beyond the change or one that changes behavior, or is hard to undo."
