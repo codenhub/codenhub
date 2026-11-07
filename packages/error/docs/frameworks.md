@@ -6,18 +6,20 @@ order: 6
 
 # Error boundaries
 
-When a component throws while rendering, React and Svelte replace the failed subtree with a fallback you write. The value they hand that fallback is whatever was thrown, so showing `error.message` leaks raw text to the reader. The two adapters normalize the caught value into an `AppError` first, with the same registry and options as `createAppError`, so the fallback shows a message that is safe to show and your error reporter receives the original value.
+When a component throws while rendering, React and Svelte replace the broken part of the page with a fallback you write. The value they hand that fallback is whatever was thrown, so a fallback that shows `error.message` leaks raw text to the reader. This page covers the two adapters that fix that: they normalize the caught value into an `AppError` first, so the fallback shows a message that is safe to show, and your error tracker still gets the original value.
 
-Each adapter is its own entrypoint. The framework is an optional peer dependency: install the package next to the framework you already use, and nothing else is pulled in.
+They use the same registry and options as `createAppError`, so nothing new to configure.
+
+Each adapter is its own entrypoint. The framework is an optional peer dependency: install the package next to the framework you already use, and nothing else comes along.
 
 | Import path              | What it holds                                     | Needs               |
 | ------------------------ | ------------------------------------------------- | ------------------- |
-| `@codenhub/error/react`  | The `AppErrorBoundary` component                  | React 18 or 19      |
+| `@codenhub/error/react`  | The `AppErrorBoundary` component                  | React 18 or newer   |
 | `@codenhub/error/svelte` | `createAppErrorBoundary`, for `<svelte:boundary>` | Svelte 5.3 or newer |
 
 ## React
 
-`AppErrorBoundary` is an error boundary component. It renders its children until one of them throws, then renders `fallback` with the normalized error and a `reset` function:
+`AppErrorBoundary` is an error boundary component. It renders its children until one of them throws, then renders `fallback` with the normalized error and a `reset` function. Here it guards the project tracker's project page:
 
 ```tsx
 import { AppErrorBoundary } from "@codenhub/error/react";
@@ -31,7 +33,7 @@ export function ProjectPage({ id }: { id: string }) {
           {error.isRetryable && <button onClick={reset}>Try again</button>}
         </div>
       )}
-      onError={(error, info) => tracker.captureException(error.originalError, { extra: info })}
+      onError={(error, info) => tracker.captureException(error.originalError ?? error, { extra: info })}
       resetKeys={[id]}
     >
       <Project id={id} />
@@ -48,19 +50,26 @@ export function ProjectPage({ id }: { id: string }) {
 | `resetKeys` | Values that reset the boundary when one of them changes, compared with `Object.is`, such as the route or an id. |
 | `onReset`   | Called when the boundary resets, through `reset` or a change of `resetKeys`.                                    |
 
-`reset` renders the children again. If whatever made them throw has not changed, they throw again and the fallback comes back; reset after the state that caused the failure changes, or let `resetKeys` do it when the reader navigates.
+The prop types are exported as `AppErrorBoundaryProps`, and the object `fallback` receives as `AppErrorBoundaryFallbackProps`, for when you wrap the boundary in a component of your own.
+
+A few details worth knowing:
+
+- **`options` are only checked when an error is caught.** An invalid option then throws while the fallback renders, so the boundary above this one gets a `TypeError` instead of the original error, and `onError` is not called. Try the options with `createAppError` in a test to catch that before an outage does.
+- **`reset` renders the children again.** If whatever made them throw has not changed, they throw again and the fallback comes right back. Reset after the state that caused the failure changes, or let `resetKeys` do it when the reader navigates. In the example above, opening another project resets the boundary.
+- **The fallback and `onError` get the same `AppError` instance,** so what the reader sees and what you report always agree.
+- **Thrown `null` or `undefined` counts as an error too.** Throwing them is legal JavaScript, if not a good idea, and the boundary still shows the fallback with the generic message.
 
 ## Svelte
 
-Svelte 5 has `<svelte:boundary>` built in. `createAppErrorBoundary` returns the two pieces it needs: an `onerror` handler and a `toAppError` function for the `failed` snippet.
+Svelte 5 has `<svelte:boundary>` built in. `createAppErrorBoundary` returns the two pieces it needs: an `onerror` handler, and a `toAppError` function for the `failed` snippet.
 
 ```svelte
 <script>
   import { createAppErrorBoundary } from "@codenhub/error/svelte";
 
   const boundary = createAppErrorBoundary({
-    options: { fallbackMessage: "This page failed to load." },
-    onError: (error) => tracker.captureException(error.originalError),
+    options: { fallbackMessage: "This project failed to load." },
+    onError: (error) => tracker.captureException(error.originalError ?? error),
   });
 </script>
 
@@ -76,9 +85,13 @@ Svelte 5 has `<svelte:boundary>` built in. `createAppErrorBoundary` returns the 
 </svelte:boundary>
 ```
 
-`onError` receives the `AppError` and the boundary's `reset`. `toAppError` returns the same `AppError` instance for the error `onerror` saw, so the snippet and the reporter agree. The options are validated when you call `createAppErrorBoundary`, not when the first error arrives. The helper does not import Svelte; it only follows the shape the boundary calls.
+`createAppErrorBoundary` takes an `AppErrorBoundaryConfig` and returns `AppErrorBoundaryHandlers`:
 
-Create one set of handlers per boundary: each remembers the last error it normalized.
+- **`options`** are the normalization options, as for `createAppError`. An invalid value throws when you call `createAppErrorBoundary`, not when the first error arrives, so it fails while the component is set up rather than in the middle of an outage. A misspelled option name is ignored, though, as it is in `createAppError`.
+- **`onError`** receives the `AppError` and the boundary's `reset`, once per caught error. Passing something that is not a function throws `TypeError` right away.
+- **`toAppError`** returns the same `AppError` instance for the error `onerror` saw, so the snippet and the reporter agree.
+
+Create one set of handlers per boundary: each one remembers the last error it normalized. The helper does not import Svelte; it only follows the shape the boundary calls.
 
 ## What a boundary does not catch
 
@@ -97,3 +110,7 @@ async function save() {
 ```
 
 For a whole-page failure in a framework with its own error page, such as a SvelteKit `+error.svelte` or a Next.js `error.tsx`, call `createAppError` on the error that page receives.
+
+## Next
+
+That covers every piece of the package. [Recipes](recipes.md) puts them together into complete solutions for problems you will meet sooner or later: HTTP statuses, Supabase calls, retries, translations, error reporting, and tests.

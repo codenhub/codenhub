@@ -6,7 +6,7 @@ order: 8
 
 # Caveats and limitations
 
-Everything on this page is deliberate, but each item has surprised someone. Each one says what happens, why, and what to do instead.
+Everything on this page is deliberate, and every item on it has surprised someone at least once. Each one says what happens, why, and what to do instead. Skim the headings now; when something looks wrong later, the answer is probably here.
 
 ## Unmatched text never becomes the message
 
@@ -80,7 +80,7 @@ Everything on this page is deliberate, but each item has surprised someone. Each
 
 ## Retryable is narrower than "might work next time"
 
-**What happens:** a timeout, a reset connection, or a failed `fetch` in the browser is never marked retryable, even though trying again often works.
+**What happens:** a response timeout, a reset connection, or a failed `fetch` in the browser is never marked retryable, even though trying again often works.
 
 **Why:** each of those can happen after the server already acted on the request, and repeating a request that already ran can charge a card twice. `isRetryable` promises safety, not likelihood.
 
@@ -90,7 +90,7 @@ Everything on this page is deliberate, but each item has surprised someone. Each
 
 - The browser preset recognizes a failed `fetch` and a failed `import()` by the messages Chromium, Firefox, and Safari produce today. A browser that rewords them falls back to `"unknown"` until the preset catches up.
 - The Node.js preset covers network failures and the errors an `AbortSignal` raises, and was observed on Node.js 24. Other server runtimes may report the same failures differently.
-- The Supabase preset covers the Auth codes a person can act on, six PostgreSQL codes, and the client's own error names. It maps the few developer faults a running application commonly hits, such as a missing table or column, to one shared message, so they are `"known"`: report them by `code`, not by type (see [Recipes](recipes.md#report-to-an-error-tracker)). Other codes only a developer can fix, such as `bad_jwt`, are left unmapped on purpose and reach your error tracker as `"unknown"`.
+- The Supabase preset covers the Auth codes a person can act on, six PostgreSQL codes, and the client's own error names. It maps the few developer faults a running application commonly hits, such as a missing table or column, to one shared message, so they are `"known"`: report them by `messageKey`, not by type (see [Recipes](recipes.md#report-to-an-error-tracker)). Other codes only a developer can fix, such as `bad_jwt`, are left unmapped on purpose and reach your error tracker as `"unknown"`.
 
 Register your own mapping for anything a preset misses. [Presets](presets.md) lists exactly what each one covers.
 
@@ -107,3 +107,11 @@ Every preset mapping has a stable `messageKey`, but ErrorKit includes only the E
 ## Patterns you write can be slow
 
 A pattern runs against every message `createAppError` sees, and a message can be crafted by someone trying to slow your server down. A pattern with nested repetition, such as `/(a+)+$/`, can take seconds on the wrong input. Keep custom patterns anchored and simple; see [Registries](registries.md#writing-patterns). The built-in patterns are all anchored, with no nested repetition.
+
+## Next
+
+That is the whole package. From here:
+
+- The [API reference](reference/index.md) has every export with its exact signature, for when you need to look something up.
+- [Recipes](recipes.md) has the complete solutions, for when you need to build something.
+- The [overview](index.md) has the reading path, for when you send this to a colleague.

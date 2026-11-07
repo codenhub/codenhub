@@ -6,7 +6,9 @@ order: 4
 
 # Presets
 
-A preset is a ready-made, read-only registry for failures that come from a platform or a service rather than from your own code. There are four: browser, Node.js, HTTP, and Supabase. Each is a separate import, so an application only loads the ones it uses, and importing one changes nothing until you merge it:
+A preset is a ready-made, read-only registry for failures that come from a platform or a service rather than from your own code. Somebody already read the browser, Node.js, HTTP, and Supabase error lists so you do not have to; this page is what they found.
+
+There are four presets. Each is a separate import, so an application only loads the ones it uses, and importing one changes nothing until you merge it:
 
 ```ts
 import { getErrorRegistry } from "@codenhub/error";
@@ -15,7 +17,7 @@ import { browserErrorRegistry } from "@codenhub/error/registries/browser";
 getErrorRegistry().merge(browserErrorRegistry);
 ```
 
-Each preset also exports its raw mappings, frozen, for when you want to build something of your own from part of a preset:
+Each preset also exports its raw mappings, frozen, for when you want to build something of your own from part of a preset. The code and name mappings are plain objects keyed by identifier; the pattern mappings are lists of `[pattern, feedback]` pairs:
 
 | Import path                           | Registry                | Raw mappings                                            |
 | ------------------------------------- | ----------------------- | ------------------------------------------------------- |
@@ -27,13 +29,19 @@ Each preset also exports its raw mappings, frozen, for when you want to build so
 
 ## How the messages are written
 
-Every preset message says what happened and what the reader can do next, in plain words, and claims only what the matched identifier proves. None of them assumes your application has a password reset page, a support chat, or any other feature; where the reader can do nothing else, a message says to contact support without naming how.
+Every preset message says what happened and what the reader can do next, in plain words, and claims only what the matched identifier proves. None of them assumes your application has a password reset page, a support chat, or any other feature. Where the reader can do nothing else, a message says to contact support without naming how, because the preset has no idea whether your support is a chat widget or one very patient person.
 
-Failures only a developer can fix, such as a missing table or column, share one message that says the problem is not the reader's doing and names no internals: "Something went wrong on our side, and it isn't caused by anything you did. Contact support if it keeps happening." The details stay on `originalError` for your logs.
+Failures only a developer can fix, such as a missing table or column, share one message that says the problem is not the reader's doing and names no internals:
 
-When your application can say something more useful, register your own mapping for the same identifier after merging the preset; the later one wins.
+> Something went wrong on our side, and it isn't caused by anything you did. Contact support if it keeps happening.
 
-Every mapping has a `messageKey`. The keys are stable, and each key always carries the same message, so a translation catalog can rely on them. Several identifiers can share one key when they mean the same thing to the reader. ErrorKit does not ship translations; see [Recipes](recipes.md#translate-messages).
+The details stay on `originalError` for your logs.
+
+When your application can say something more useful, register your own mapping for the same identifier after merging the preset. The later one wins, as [Getting started](getting-started.md#2-create-one-module-that-configures-errors) does for `23505`.
+
+Every mapping has a `messageKey`. The keys are stable: each key keeps its meaning across releases, even when its English wording changes, so a translation catalog can rely on them. Several identifiers share one key when they mean the same thing to the reader: Supabase has four different codes for "your session ended", and the reader only needs to hear it once. ErrorKit does not ship translations; see [Recipes](recipes.md#translate-messages).
+
+The tables below list every mapping, so you can also build a catalog straight from this page.
 
 ## Browser
 
@@ -54,7 +62,7 @@ For code that runs in a browser. It recognizes the `DOMException` names the Web 
 | `EncodingError`      | `error.browser.encoding`             | No        |
 | `ChunkLoadError`     | `error.browser.moduleLoadFailed`     | No        |
 
-Its patterns match whole messages only, so text that merely contains the same words is not classified:
+Its `fetch` patterns match whole messages only, and its `import()` pattern matches the start of the message, so text that merely contains the same words is not classified:
 
 | Message                                                                                                                                                                                  | `messageKey`                     | Retryable |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- | --------- |
@@ -64,7 +72,7 @@ Its patterns match whole messages only, so text that merely contains the same wo
 Notes:
 
 - **Nothing is retryable.** A failed `fetch` looks the same whether the connection never opened or the response was lost after the server acted on the request, as a CORS block or a dropped connection does. A `TimeoutError` from `AbortSignal.timeout()` can fire after the server received the request. The messages ask the reader to check whether the action went through before trying again.
-- **A failed chunk is usually a tab left open across a deploy**: the page asks for a file the new deploy removed. The message tells the reader to reload. `ChunkLoadError` is what webpack throws; Vite and other bundlers that use native `import()` produce the browser's message.
+- **A failed chunk is usually a tab left open across a deploy**: the page asks for a file the new deploy removed. The message tells the reader to reload. Somebody always has that tab open from last Thursday. `ChunkLoadError` is what webpack throws; Vite and other bundlers that use native `import()` produce the browser's message.
 - **`AbortError` is often deliberate.** It also fires when your own code cancels a request, such as an effect cleanup or a newer search replacing an older one. See [Caveats](caveats.md#cancelled-requests-are-errors-too).
 
 ## Node.js
@@ -105,7 +113,7 @@ Notes:
 
 ## HTTP
 
-For the status of a failed response. `fetch` resolves on a `404` or a `500`, so a status is not something `createAppError` finds by itself: pass it as the `code`, and pass this preset as the `registry` for that call rather than merging it into the global one. Statuses are short numbers that only mean something for a response, and could collide with another service's codes.
+For the status of a failed response. `fetch` resolves on a `404` or a `500`, because as far as `fetch` is concerned the request went fine, so a status is not something `createAppError` finds by itself. Pass the status as the `code`, and pass this preset as the `registry` for that call rather than merging it into the global one. Statuses are short numbers that only mean something for a response, and they could collide with another service's codes.
 
 ```ts
 import { err } from "@codenhub/error";
@@ -214,4 +222,8 @@ Notes:
 - **Nothing is retryable.** Rate-limit errors need a wait the flag cannot express, so retrying on them at once only counts against the limit again; their messages tell the reader how long to wait. Edge Function errors arrive after the function may have run.
 - **`AuthSessionMissingError` has no code.** It is what most Auth calls return when nobody is signed in, and it is classified as an ended session. `pkce_code_verifier_not_found` is raised by the client itself, when a sign-in link is opened in a different browser from the one that asked for it.
 - **Not covered:** Auth codes only a developer can resolve, such as `bad_jwt` and the `hook_*` and `saml_*` families. They resolve to `"unknown"`, which is what you want reported.
-- **`23505` is generic on purpose.** "A unique value is taken" cannot say which value. Register your own `23505` mapping where you know, or classify a specific table's errors against its own registry.
+- **`23505` is generic on purpose.** "A unique value is taken" cannot say which value. Register your own `23505` mapping where you know, as the project tracker does in [Getting started](getting-started.md#2-create-one-module-that-configures-errors), or classify a specific table's errors against its own registry.
+
+## Next
+
+Presets and your own mappings cover what a failure means. [Results](results.md) covers a different question: how a failure travels through your code, as a value in the return type instead of an exception someone has to remember to catch.
