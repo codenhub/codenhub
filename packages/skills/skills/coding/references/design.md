@@ -14,9 +14,6 @@ Defaults for structuring software when nobody else is deciding. The project's ex
 - Failure Strategy
 - Configuration and Secrets
 - Dependencies
-- Security
-- Performance
-- Observability
 - Testing Strategy
 - Growing the Design
 - Recording Decisions
@@ -97,27 +94,6 @@ Classify each failure by who can fix it, and respond accordingly:
 - Before adding one, check that it is maintained (issues and security reports get responses), widely used, has a license compatible with the project, and does not pull in many transitive dependencies. Prefer one library per job.
 - Commit the lockfile so every install gets the same versions.
 - When a library and the application that uses it must share one copy of a dependency, use the ecosystem's mechanism for that and check the versions are compatible.
-
-## Security
-
-- Check authentication (who is calling) and authorization (may they do this, on this record) on the server for every request. Never trust the client to enforce either.
-- Send data to databases, shells, and other languages through their parameterized or escaping APIs, never by building strings.
-- Hash passwords with a password hashing function (Argon2, scrypt, or bcrypt), never a plain hash or encryption.
-- Give each process and credential only the permissions it needs.
-- Limit request sizes and rate-limit endpoints that send email, cost money, or check passwords.
-
-## Performance
-
-- Measure before optimizing, and optimize the measured hot path only.
-- Avoid one query per item in a loop; load related data in one query.
-- Paginate or stream every collection that grows with use.
-- Add a cache only for a measured slow path, with a stated rule for when entries expire or are invalidated.
-
-## Observability
-
-- Log one structured line per significant event at entry points and adapters: what happened, the IDs involved, and the duration. Use log levels consistently.
-- Carry a request or job ID through every log line it causes.
-- Expose a health check for anything that runs as a service.
 
 ## Testing Strategy
 

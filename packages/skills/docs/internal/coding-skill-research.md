@@ -208,18 +208,6 @@ These are candidates for a language adapter. Each item has at least two occurren
 - **Node type stripping.** Node rejects parameter properties and `enum`, while tsc and Vitest accept them. This is a trap in `packages/tools/AGENTS.md`. `erasableSyntaxOnly` is off.
 - **Accessibility in demo HTML.** Dialog focus, accessible names, `aria-current`, reduced motion, and focus indicators were missing.
 
-## Mechanical check candidates
-
-Rules a tool can check belong in the tool, not in a skill. To stay OS-agnostic and dependency-light, prefer compiler flags and the existing linter (oxlint), then CodeQL in CI. A skill script is the last option, and it should be a dependency-free Node script.
-
-| Check                                                                               | How                        | Catches                                  |
-| ----------------------------------------------------------------------------------- | -------------------------- | ---------------------------------------- |
-| `exactOptionalPropertyTypes` repo-wide                                              | tsconfig                   | Part of pattern 7                        |
-| `erasableSyntaxOnly` in `packages/tools`                                            | tsconfig                   | The Node type-stripping trap             |
-| `prefer-object-has-own`, no `innerHTML` with template literals, no `waitForTimeout` | oxlint rules, if available | Parts of patterns 4, 12, and flaky tests |
-| Polynomial regex                                                                    | CodeQL (already in CI)     | Pattern 8                                |
-| Type tests for exported generics                                                    | `expectTypeOf` in Vitest   | Pattern 11                               |
-
 ## Baseline without the skill
 
 Run on 2026-11-06 with the four scenarios in [coding-skill-eval.md](coding-skill-eval.md), on haiku, sonnet, and opus, with the other installed skills available. Graders checked each run by probing with hostile inputs and by breaking the code to see whether its tests failed. They did not rely on the agents' summaries.
@@ -279,31 +267,13 @@ What stayed weak across rounds: gemini-3.8-flash ignored the stop-and-ask instru
 
 Graded runs, grade reports and mutant helpers stayed in the local temp directory and are not committed.
 
-## Restructure after round 6
+## Since round 6
 
-A review after round 6 found that `SKILL.md` had grown to about 4,300 words while the last rounds' failures were rules the skill already had, not missing ones, which points to dilution. The skill was restructured without new rules and has not been run since:
+Nothing below has run against a model; run the [held-out scenarios](coding-skill-eval.md#held-out-scenarios) before relying on it. To cut dilution, `SKILL.md` went from about 4,300 to 2,100 words, with test technique and the edge checklist moved to references, and it was then revised after two content reviews. These outcomes stand:
 
-- `SKILL.md` was cut to about 2,000 words. Test technique moved to `references/testing.md` and the edge checklist to `references/edges.md`, both loaded when they apply. Overlap with `references/design.md` was removed.
-- Tests come first: each behavior decision gets a test written first and seen failing. Breaking the code to watch a test fail now applies only to tests written after their code, and runs only the affected test file. The previous rule broke the code for every decision.
-- A one-off local script that the request itself calls throwaway counts as approval to skip tests, unless it deletes, moves, or overwrites files or data. The test-first and minimal-code skills in this collection were changed to the same rule. The minimal-code skill now defers to another loaded instruction on structure, validation, tests, documentation, and reports, and no longer caps its report at three lines.
-- A change with no behavior decision and no public change reports only its checks.
-- Three TypeScript items were added without a recorded occurrence in this repository: `sort()` without a comparator, `noUncheckedIndexedAccess`, and `Promise.all` failing fast. They are general traps, not findings; remove them if an eval shows they cost more than they catch.
-
-A content review by gpt-6.1-sol then led to these changes:
-
-- A local change goes ahead in flawed structure and names the problem in the report; asking first is required only for a refactor beyond the change or one that changes behavior. This matches S5.2, which passes either path.
-- Entry-point failures and tests follow each boundary's contract (CLI, HTTP, library) instead of assuming a CLI.
-- Path confinement applies only where a path's contract confines it, and paths a person passes resolve from the working directory.
-- Unparseable stored data is replaced only after a copy is kept, unless it is a rebuildable cache.
-- Tests the user approves skipping for an exact change are honored, verification covers the changed packages and mandatory gates, and the report names only defaults a later reader might question.
-
-The review's claim that ASCII whitespace includes vertical tab was rejected: the WHATWG definition is tab, LF, FF, CR, and space.
-
-A second review found every earlier fix sufficient and led to three more: input order and contract order are kept and only unspecified order is sorted; cancellation goes to calls that accept it, with checks between calls that do not; and the test-first skill allows a test that a removed route stays unreachable when that is a security contract.
-
-The skill was then aligned with [the coding guidelines](../../../../docs/guidelines/code.md): more than two parameters take an options object, a wrong lint finding may get a scoped exception, and a few lines of own code come before a dependency. The guidelines gained an "Inputs, failures, and state" section and narrowed their mocking rule so file-system and database code is tested against real temporary resources where practical.
-
-The held-out scenarios in [coding-skill-eval.md](coding-skill-eval.md#held-out-scenarios) are the check on this restructure.
+- Asking before a refactor is now required only for one beyond the change or one that changes behavior, so S5 runs may no longer stop to ask; S5.2 passes either way.
+- Three TypeScript items have no recorded occurrence here: `sort()` without a comparator, `noUncheckedIndexedAccess`, and `Promise.all` failing fast. Remove them if an eval shows they cost more than they catch.
+- Rejected review finding: ASCII whitespace does not include vertical tab. The WHATWG definition is tab, LF, FF, CR, and space.
 
 ## Adding a language reference
 
