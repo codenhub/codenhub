@@ -1,0 +1,5 @@
+{
+  "name": "release-tools",
+  "private": true,
+  "type": "module"
+}

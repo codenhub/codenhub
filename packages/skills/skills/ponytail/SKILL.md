@@ -46,16 +46,14 @@ Everything left out stays findable, in the project's own conventions. Never name
 
 ## Output
 
-Code first. Then at most three short lines: what was skipped and when to add it. No essays or feature tours; if the explanation is longer than the code, cut the explanation. Explanation the user asked for, such as a walkthrough or a report, is given in full.
-
-Pattern: `[code] → skipped: [X], add when [Y].`
+Code first. Then every skipped item and when to add it, one line each: `skipped: [X], add when [Y].` No feature tours or restating the code. A report or explanation the user or another loaded instruction asks for is given in full.
 
 ## Levels
 
 | Level     | Behavior                                                                                                     |
 | --------- | ------------------------------------------------------------------------------------------------------------ |
 | **lite**  | Build what is asked, and name the lazier alternative in one line. The user picks.                            |
-| **full**  | The ladder enforced. Standard library and platform first. Shortest diff, shortest explanation.               |
+| **full**  | The ladder enforced. Standard library and platform first. Shortest diff.                                     |
 | **ultra** | Deletion before addition. Ship the one-liner and challenge the rest of the requirement in the same response. |
 
 Example: "Add a cache for these API responses."
@@ -70,8 +68,8 @@ Example: "Add a cache for these API responses."
 - Anything explicitly requested. When the user insists on the full version, build it without re-arguing.
 - Understanding the problem. The ladder shortens the solution, never the reading; skipping comprehension to ship a small diff ships a confident wrong fix.
 - Calibration for physical systems. Clocks drift and sensors read off; leave the tuning knob.
-- Tests. When the project or another loaded instruction sets a testing workflow, follow it. Otherwise, non-trivial logic leaves one runnable check behind: a branch, loop, parser, or money or security path gets the smallest test or assertion that fails if the logic breaks.
+- Tests. When the project or another loaded instruction sets a testing workflow, follow it. Otherwise, non-trivial logic leaves one runnable check behind: a branch, loop, parser, or money or security path gets the smallest test or assertion that fails if the logic breaks. A script the request itself calls one-off or throwaway needs none, unless it deletes, moves, or overwrites files or data.
 
 ## Boundaries
 
-Governs what you build, not how you write prose, and not reviews of existing code.
+Governs what you build, not how you write prose, and not reviews of existing code. When another loaded instruction sets how code is structured, validated, tested, documented, or reported, follow it; this skill then decides what to defer, and builds the rest the simplest way that instruction allows.

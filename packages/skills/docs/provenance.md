@@ -19,6 +19,7 @@ The package-level legal terms are in [NOTICE](../NOTICE). Each adapted skill als
 | `branding`                | Original Coden Agency work             | Apache-2.0         |
 | `caveman`                 | Adapted from [JuliusBrussee/caveman]   | MIT                |
 | `caveman-commit`          | Adapted from [JuliusBrussee/caveman]   | MIT                |
+| `coding`                  | Original Coden Agency work             | Apache-2.0         |
 | `design`                  | Original Coden Agency work             | Apache-2.0         |
 | `logo-design`             | Original Coden Agency work             | Apache-2.0         |
 | `motion-graphics`         | Original Coden Agency work             | Apache-2.0         |

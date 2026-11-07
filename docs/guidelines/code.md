@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-30
+last_updated: 2026-11-06
 ---
 
 # Coding guidelines
@@ -12,7 +12,7 @@ This document outlines patterns, conventions and guidelines to follow when worki
 - Files & Folders: kebab-case (`user-service.ts`, `api-routes/`)
 - Variables & Functions: camelCase (`getUserById`, `isValid`)
 - Classes & Types: PascalCase (`UserService`, `ApiResponse`)
-- Constants & Enums: UPPER_SNAKE_CASE (`MAX_RETRY_ATTEMPTS`)
+- Constants: UPPER_SNAKE_CASE (`MAX_RETRY_ATTEMPTS`)
 - Booleans: prefix with is/has/can/should (`isLoading`, `hasPermission`)
 - Arrays: plural nouns (`users`, `items`)
 - Functions: verb phrases (`calculateTotal`, `fetchUser`)
@@ -56,6 +56,7 @@ Exceptions: framework callbacks, test helpers, tiny local functions, and APIs wh
 - Prefer `unknown` over `any`.
 - Prefer interfaces for object shapes and type aliases for unions/intersections.
 - Use type-only imports when importing only types.
+- Prefer string-literal unions or `as const` objects to `enum`. Node.js type stripping rejects `enum`, so code that `tsc` and Vitest accept can fail at load (trap in `packages/tools/AGENTS.md`). Tests of `enum` support are the exception. This replaces the earlier UPPER_SNAKE_CASE naming rule for enums.
 - Validate `unknown` at boundaries before use.
 - Keep casts close to the boundary and make them narrow.
 - Do not export types or values that are not part of the package API.
@@ -76,14 +77,30 @@ Exceptions: framework callbacks, test helpers, tiny local functions, and APIs wh
 - Do not log secrets, tokens, credentials, or private user data.
 - `console` is allowed for examples, CLIs, debugging utilities, and deliberate diagnostics. Do not use casual logging as a substitute for error handling.
 
+## Inputs, failures, and state
+
+Most accepted review comments in this repository were about these, not about style. The evidence is in [coding-skill-research.md](../../packages/skills/docs/internal/coding-skill-research.md).
+
+- Validate input from outside the code's control after it is converted, against the limits of what consumes it: `--timeout 1e308` passes "positive number" and becomes an infinite timer. Reject empty, whitespace-only, NaN, Infinity, and partial numbers such as `10s`.
+- When required input is missing or matches nothing, fail with a message naming it. A run whose required input was absent never reports success.
+- Update in-memory state only after a write succeeds, and never swallow a write error.
+- Apply a new option or fix to every path the same input or behavior flows through: each source of the value, sync and async variants, create and update, and every caller. Name any path left out, with the reason.
+- A hand-written parser rejects syntax it does not support, naming the file and line, instead of reading it as data.
+- Keep input order and any order a contract defines; sort output whose order is unspecified by a defined key with a tie-breaker.
+
 ## Testing
 
 - Test behavior, edge cases, and error paths (not just happy paths).
 - One behavior per test. Use descriptive names (e.g., `shouldReturnEmptyWhenNull`).
 - Test files are colocated with the code they test.
-- Mock external dependencies such as network, storage, filesystem, timers, and browser APIs.
+- Mock the network, timers, and browser APIs. Test code whose job is file-system or database access against a real temporary directory or database where practical, and mock them elsewhere.
+- Give each behavior decision a test that fails when the decision is reversed, and see a new test fail before keeping it.
+- A test that writes files uses its own directory under the system temporary directory, never the package or the current directory, and removes it afterwards.
+- Poll for a condition instead of sleeping a fixed time.
 - Prefer observable behavior over implementation details.
 - Update affected tests when changing behavior.
+
+Mocking the file system and storage everywhere was the earlier rule. It was narrowed because a mock answers only what the test tells it, so it cannot show the containment, symlink, and stale-output bugs recorded in PR 24, PR 25, and PR 293; a real temporary directory does.
 
 The [testing specification](../specs/tests.md) defines test categories, configuration requirements, and coverage targets.
 

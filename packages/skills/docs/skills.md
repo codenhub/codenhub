@@ -14,26 +14,27 @@ For our Claude and Codex project, start with `brainstorming` when a feature need
 
 The IDs in the first column are the directory names accepted by `--skills`. Choose by the work you want the agent to do:
 
-| Skill ID                  | When the agent uses it                                                                                                           |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `brainstorming`           | Before implementation, when requirements or behavior need collaborative design.                                                  |
-| `test-driven-development` | When changing code behavior: write a failing test, implement, then refactor.                                                     |
-| `ponytail`                | When coding, to choose the simplest working solution and avoid speculative code.                                                 |
-| `audit`                   | When reviewing code, packages, or pull requests for defects, vulnerabilities, contract problems, or readiness to ship.           |
-| `ponytail-review`         | When reviewing complexity, finding code to simplify or delete, or listing deferred work and shortcuts.                           |
-| `babysit-pr`              | When asked to see a GitHub pull request through CI and review, fixing checks and answering reviewers until it can merge.         |
-| `subagent-specialist`     | When work can be delegated: choose tasks, brief workers, review their results, and integrate them.                               |
-| `agents-md-improver`      | When writing, auditing, or trimming repository agent instructions, including `AGENTS.md` and files that load it.                 |
-| `project-template`        | When creating, adopting, syncing, or auditing a project based on the shared project template, or changing a template-owned file. |
-| `writing-skills`          | When authoring, reviewing, or fixing agent skills and evaluating whether their instructions work.                                |
-| `branding`                | When defining brand strategy, voice, messaging, or a visual identity system and its guidelines.                                  |
-| `naming`                  | When generating, researching, comparing, or choosing names, including names in code.                                             |
-| `design`                  | When building or reviewing visual interfaces, typography, layout, color, accessibility, or interface motion in any medium.       |
-| `logo-design`             | When creating or refining a logo, mark, favicon, or app icon, through SVG files and usage rules.                                 |
-| `motion-graphics`         | When storyboarding, animating, or rendering a video built with web technology.                                                   |
-| `caveman`                 | When the user asks for shorter answers or a compressed communication mode.                                                       |
-| `caveman-commit`          | When writing a commit message or preparing staged changes for a commit, using the project's convention.                          |
-| `playful-tone`            | When the user asks for or agrees to a lighter, humorous tone in docs or other public text.                                       |
+| Skill ID                  | When the agent uses it                                                                                                                               |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `brainstorming`           | Before implementation, when requirements or behavior need collaborative design.                                                                      |
+| `test-driven-development` | When changing code behavior: write a failing test, implement, then refactor.                                                                         |
+| `coding`                  | When writing or changing code, to build it with consistent defaults and handle inputs, failures, state, and sibling paths, with tests written first. |
+| `ponytail`                | When coding, to choose the simplest working solution and avoid speculative code.                                                                     |
+| `audit`                   | When reviewing code, packages, or pull requests for defects, vulnerabilities, contract problems, or readiness to ship.                               |
+| `ponytail-review`         | When reviewing complexity, finding code to simplify or delete, or listing deferred work and shortcuts.                                               |
+| `babysit-pr`              | When asked to see a GitHub pull request through CI and review, fixing checks and answering reviewers until it can merge.                             |
+| `subagent-specialist`     | When work can be delegated: choose tasks, brief workers, review their results, and integrate them.                                                   |
+| `agents-md-improver`      | When writing, auditing, or trimming repository agent instructions, including `AGENTS.md` and files that load it.                                     |
+| `project-template`        | When creating, adopting, syncing, or auditing a project based on the shared project template, or changing a template-owned file.                     |
+| `writing-skills`          | When authoring, reviewing, or fixing agent skills and evaluating whether their instructions work.                                                    |
+| `branding`                | When defining brand strategy, voice, messaging, or a visual identity system and its guidelines.                                                      |
+| `naming`                  | When generating, researching, comparing, or choosing names, including names in code.                                                                 |
+| `design`                  | When building or reviewing visual interfaces, typography, layout, color, accessibility, or interface motion in any medium.                           |
+| `logo-design`             | When creating or refining a logo, mark, favicon, or app icon, through SVG files and usage rules.                                                     |
+| `motion-graphics`         | When storyboarding, animating, or rendering a video built with web technology.                                                                       |
+| `caveman`                 | When the user asks for shorter answers or a compressed communication mode.                                                                           |
+| `caveman-commit`          | When writing a commit message or preparing staged changes for a commit, using the project's convention.                                              |
+| `playful-tone`            | When the user asks for or agrees to a lighter, humorous tone in docs or other public text.                                                           |
 
 Planning and coding skills cover the path from a proposed change to implementation. Review and delivery skills help inspect that work and move it through a pull request. Creative skills cover the name, identity, interface, and video around a product. The guidance and writing skills help maintain the instructions and text that surround the work. Pick the parts you use; a full collection is optional.
 

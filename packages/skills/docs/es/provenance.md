@@ -2,7 +2,7 @@
 title: Procedencia
 description: Consulta los orígenes, las licencias y los avisos que acompañan a las skills incluidas.
 order: 4
-source: 0debfb956199f5cf59bcf273ad292511238f766d
+source: e20f559e52f15baf12660aa964dcfc420b25926a
 ---
 
 # Procedencia de las skills
@@ -20,6 +20,7 @@ Los términos legales del paquete están en [NOTICE](../../NOTICE). Cada skill a
 | `branding`                | Trabajo original de Coden Agency      | Apache-2.0       |
 | `caveman`                 | Adaptado de [JuliusBrussee/caveman]   | MIT              |
 | `caveman-commit`          | Adaptado de [JuliusBrussee/caveman]   | MIT              |
+| `coding`                  | Trabajo original de Coden Agency      | Apache-2.0       |
 | `design`                  | Trabajo original de Coden Agency      | Apache-2.0       |
 | `logo-design`             | Trabajo original de Coden Agency      | Apache-2.0       |
 | `motion-graphics`         | Trabajo original de Coden Agency      | Apache-2.0       |

@@ -14,3 +14,6 @@
 *.webp binary
 *.woff binary
 *.woff2 binary
+
+# Eval fixture data whose exact bytes are a trap the scenario tests (CRLF, BOM).
+packages/skills/evals/*/fixtures/**/*.csv -text

@@ -2,7 +2,7 @@
 title: Skills incluidas
 description: Elige flujos de trabajo del catálogo y conoce el formato, la calidad y el versionado de las skills.
 order: 1
-source: 499b417fd0bb2d1c2b9c439aefa26f63f3edb1fc
+source: c84c01f1d9da2e054f19b73f8ddb349222e165ac
 ---
 
 # Elige tus skills
@@ -15,26 +15,27 @@ Para nuestro proyecto con Claude y Codex, empieza con `brainstorming` cuando hay
 
 Los IDs de la primera columna son los nombres de directorio que acepta `--skills`. Elige según el trabajo que quieres que haga el agente:
 
-| ID de skill               | Cuándo la usa el agente                                                                                                                                                        |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `brainstorming`           | Antes de implementar, cuando los requisitos o el comportamiento necesitan definirse en colaboración.                                                                           |
-| `test-driven-development` | Al cambiar el comportamiento del código: escribe una prueba que falle, implementa y luego refactoriza.                                                                         |
-| `ponytail`                | Al programar, para elegir la solución más simple que funcione y evitar código especulativo.                                                                                    |
-| `audit`                   | Al revisar código, paquetes o pull requests en busca de defectos, vulnerabilidades, problemas de contrato o para evaluar si están listos para publicarse.                      |
-| `ponytail-review`         | Al revisar la complejidad, buscar código que simplificar o eliminar, o enumerar trabajo pospuesto y atajos.                                                                    |
-| `babysit-pr`              | Cuando se le pide acompañar un pull request de GitHub durante la CI y la revisión, corrigiendo verificaciones y respondiendo a quienes lo revisan hasta que se pueda integrar. |
-| `subagent-specialist`     | Cuando se puede delegar trabajo: elige tareas, da instrucciones a los agentes que las realizarán, revisa sus resultados y los integra.                                         |
-| `agents-md-improver`      | Al escribir, auditar o recortar instrucciones para agentes del repositorio, incluidos `AGENTS.md` y los archivos que lo cargan.                                                |
-| `project-template`        | Al crear, adoptar, sincronizar o auditar un proyecto basado en la plantilla de proyecto compartida, o al cambiar un archivo gestionado por ella.                               |
-| `writing-skills`          | Al crear, revisar o corregir skills para agentes y evaluar si sus instrucciones funcionan.                                                                                     |
-| `branding`                | Al definir la estrategia de marca, la voz, los mensajes o un sistema de identidad visual y sus lineamientos.                                                                   |
-| `naming`                  | Al generar, investigar, comparar o elegir nombres, incluidos los nombres en el código.                                                                                         |
-| `design`                  | Al construir o revisar interfaces visuales, tipografía, layout, color, accesibilidad o movimiento de la interfaz en cualquier medio.                                           |
-| `logo-design`             | Al crear o refinar un logo, símbolo, favicon o icono de aplicación, mediante archivos SVG y reglas de uso.                                                                     |
-| `motion-graphics`         | Al crear el storyboard, animar o renderizar un video hecho con tecnología web.                                                                                                 |
-| `caveman`                 | Cuando el usuario pide respuestas más cortas o un modo de comunicación más conciso.                                                                                            |
-| `caveman-commit`          | Al escribir un mensaje de commit o preparar cambios en staging para un commit, siguiendo la convención del proyecto.                                                           |
-| `playful-tone`            | Cuando el usuario pide o acepta un tono más ligero y con humor en documentación u otros textos públicos.                                                                       |
+| ID de skill               | Cuándo la usa el agente                                                                                                                                                                        |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `brainstorming`           | Antes de implementar, cuando los requisitos o el comportamiento necesitan definirse en colaboración.                                                                                           |
+| `test-driven-development` | Al cambiar el comportamiento del código: escribe una prueba que falle, implementa y luego refactoriza.                                                                                         |
+| `coding`                  | Al escribir o cambiar código en cualquier lenguaje, para construirlo con valores predeterminados coherentes y manejar entradas, fallos, estado y rutas hermanas, con pruebas escritas primero. |
+| `ponytail`                | Al programar, para elegir la solución más simple que funcione y evitar código especulativo.                                                                                                    |
+| `audit`                   | Al revisar código, paquetes o pull requests en busca de defectos, vulnerabilidades, problemas de contrato o para evaluar si están listos para publicarse.                                      |
+| `ponytail-review`         | Al revisar la complejidad, buscar código que simplificar o eliminar, o enumerar trabajo pospuesto y atajos.                                                                                    |
+| `babysit-pr`              | Cuando se le pide acompañar un pull request de GitHub durante la CI y la revisión, corrigiendo verificaciones y respondiendo a quienes lo revisan hasta que se pueda integrar.                 |
+| `subagent-specialist`     | Cuando se puede delegar trabajo: elige tareas, da instrucciones a los agentes que las realizarán, revisa sus resultados y los integra.                                                         |
+| `agents-md-improver`      | Al escribir, auditar o recortar instrucciones para agentes del repositorio, incluidos `AGENTS.md` y los archivos que lo cargan.                                                                |
+| `project-template`        | Al crear, adoptar, sincronizar o auditar un proyecto basado en la plantilla de proyecto compartida, o al cambiar un archivo gestionado por ella.                                               |
+| `writing-skills`          | Al crear, revisar o corregir skills para agentes y evaluar si sus instrucciones funcionan.                                                                                                     |
+| `branding`                | Al definir la estrategia de marca, la voz, los mensajes o un sistema de identidad visual y sus lineamientos.                                                                                   |
+| `naming`                  | Al generar, investigar, comparar o elegir nombres, incluidos los nombres en el código.                                                                                                         |
+| `design`                  | Al construir o revisar interfaces visuales, tipografía, layout, color, accesibilidad o movimiento de la interfaz en cualquier medio.                                                           |
+| `logo-design`             | Al crear o refinar un logo, símbolo, favicon o icono de aplicación, mediante archivos SVG y reglas de uso.                                                                                     |
+| `motion-graphics`         | Al crear el storyboard, animar o renderizar un video hecho con tecnología web.                                                                                                                 |
+| `caveman`                 | Cuando el usuario pide respuestas más cortas o un modo de comunicación más conciso.                                                                                                            |
+| `caveman-commit`          | Al escribir un mensaje de commit o preparar cambios en staging para un commit, siguiendo la convención del proyecto.                                                                           |
+| `playful-tone`            | Cuando el usuario pide o acepta un tono más ligero y con humor en documentación u otros textos públicos.                                                                                       |
 
 Las skills de planificación y programación cubren el camino desde una propuesta de cambio hasta su implementación. Las de revisión y entrega ayudan a inspeccionar ese trabajo y a llevarlo a través de un pull request. Las creativas cubren el nombre, la identidad, la interfaz y los videos de un producto. Las de instrucciones y escritura ayudan a mantener las instrucciones y los textos que acompañan el trabajo. Elige las partes que uses; instalar toda la colección es opcional.
 
