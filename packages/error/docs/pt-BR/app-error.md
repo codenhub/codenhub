@@ -1,7 +1,7 @@
 ---
 title: O AppError
 description: Cada campo de um AppError, o que cada um promete, o que acontece quando um erro é normalizado duas vezes e como mandar um do servidor para o cliente.
-source: eeb05e8f69faec3858164657b09a67e9d07fb1f2
+source: 22c25e35a2fe369705cc18d5d5ed7003bd1e2bed
 order: 2
 ---
 
@@ -137,7 +137,7 @@ Passar um `registry` é o único jeito de mudar a classificação. Aí o valor c
 
 - Uma correspondência por pattern substitui um erro `"unknown"`.
 - Uma correspondência conhecida substitui qualquer coisa da qual ela seja diferente.
-- Todo o resto devolve o mesmo objeto.
+- Todo o resto mantém a classificação que já tem.
 
 Um `AppError` embrulhado dentro de outro erro, como em `new Error("checkout failed", { cause: appError })`, é um candidato entre os valores que o `createAppError` encontra. A classificação dele é usada como está, a não ser que você passe um `registry`, mas uma correspondência conhecida em um embrulho de fora ainda pode vencer, porque vence a correspondência conhecida mais de fora.
 

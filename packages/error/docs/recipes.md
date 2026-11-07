@@ -28,8 +28,7 @@ export async function getJson<T>(url: string): Promise<Result<T>> {
   const response = sent.value;
 
   if (!response.ok) {
-    const body: unknown = await response.json().catch(() => null);
-    return err({ code: response.status, body }, { registry: httpErrorRegistry });
+    return err({ code: response.status }, { registry: httpErrorRegistry });
   }
 
   return attemptAsync(() => response.json() as Promise<T>);
@@ -38,7 +37,7 @@ export async function getJson<T>(url: string): Promise<Result<T>> {
 
 `fetch` itself rejects only when no response arrived, such as a network failure, a CORS block, or an abort, and the request may still have reached the server. Any response, `404` and `500` included, resolves, so the status check is yours.
 
-Keeping the body under `body` puts it on `originalError` for your logs, so keep it only when it is safe to log. Do not pass it as `cause`: `createAppError` looks inside `cause`, and a `code` in the body could then win over the status. A status the preset does not map, such as `418`, resolves to the fallback message. [Presets](presets.md#http) lists what it maps. To word a status for one endpoint, such as a `401` from a sign-in form, build a registry from the preset and add your own: `createErrorRegistry([httpErrorRegistry])`, then `.codes.add("401", …)`.
+The body is left out on purpose: it ends up on `originalError`, and from there in your error tracker, so add it as `body` only when it is safe to log. Never pass it as `cause`: `createAppError` looks inside `cause`, and a `code` in the body could then win over the status. A status the preset does not map, such as `418`, resolves to the fallback message. [Presets](presets.md#http) lists what it maps. To word a status for one endpoint, such as a `401` from a sign-in form, build a registry from the preset and add your own: `createErrorRegistry([httpErrorRegistry])`, then `.codes.add("401", …)`.
 
 When the server is your own and sends `{ error: error.toJSON() }`, rebuild its error instead: `appErrorFromJSON(body.error)`. When the whole body is the serialized error, pass `appErrorFromJSON(body)`. See [The AppError](app-error.md#sending-an-error-across-a-boundary).
 
@@ -160,7 +159,7 @@ if (shouldReport(error)) {
 }
 ```
 
-Report `originalError`, not the `AppError`: the original carries the real message and stack. Most trackers also follow an error's `cause`, and an `AppError`'s `cause` is the same original value, so reporting the `AppError` itself works too. The one exception is the [HTTP recipe](#classify-http-responses): its `originalError` is a plain object with no stack, and it carries the response body.
+Report `originalError`, not the `AppError`: the original carries the real message and stack. Most trackers also follow an error's `cause`, and an `AppError`'s `cause` is the same original value, so reporting the `AppError` itself works too. The one exception is the [HTTP recipe](#classify-http-responses): its `originalError` is a plain `{ code }` object with no stack.
 
 Do not report on `type === "heuristic"` alone. A heuristic match is usually a network failure on the reader's side, and no deploy of yours is going to fix their train going into a tunnel.
 

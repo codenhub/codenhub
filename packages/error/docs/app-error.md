@@ -134,7 +134,7 @@ Passing a `registry` is the only way to change the classification. Then the raw 
 
 - A pattern match replaces an `"unknown"` error.
 - A known match replaces anything it differs from.
-- Everything else returns the same object.
+- Everything else keeps the classification it has.
 
 An `AppError` wrapped inside another error, as in `new Error("checkout failed", { cause: appError })`, is one candidate among the values `createAppError` finds. Its classification is used as it stands unless you pass a `registry`, but a known match on an outer wrapper can still win, because the outermost known match does.
 

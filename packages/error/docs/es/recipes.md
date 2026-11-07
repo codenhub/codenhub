@@ -2,7 +2,7 @@
 title: Recetas
 description: Ejemplos completos para fetch y los códigos de estado HTTP, llamadas a Supabase, tus propios códigos de error, reintentos seguros, traducciones, reporte de errores y pruebas.
 order: 7
-source: ed5cbf9442a9f1bf10c7c558aada9bb1aa3c6686
+source: 62f3b3080e7bab16f71a7232436d7ca36492fd90
 ---
 
 # Recetas
@@ -29,8 +29,7 @@ export async function getJson<T>(url: string): Promise<Result<T>> {
   const response = sent.value;
 
   if (!response.ok) {
-    const body: unknown = await response.json().catch(() => null);
-    return err({ code: response.status, body }, { registry: httpErrorRegistry });
+    return err({ code: response.status }, { registry: httpErrorRegistry });
   }
 
   return attemptAsync(() => response.json() as Promise<T>);
@@ -39,7 +38,7 @@ export async function getJson<T>(url: string): Promise<Result<T>> {
 
 `fetch` en sí solo se rechaza cuando no llegó ninguna respuesta, como en un fallo de red, un bloqueo de CORS o una cancelación, y la solicitud igual pudo haber llegado al servidor. Cualquier respuesta, incluidas `404` y `500`, se resuelve, así que revisar el estado te toca a ti.
 
-Guardar el cuerpo en `body` lo deja en `originalError` para tus logs, así que guárdalo solo cuando sea seguro registrarlo. No lo pases como `cause`: `createAppError` busca dentro de `cause`, y un `code` en el cuerpo podría entonces ganarle al estado. Un estado que el preset no mapea, como `418`, se resuelve con el mensaje de respaldo. [Presets](presets.md#http) enumera lo que mapea. Para redactar un estado en un endpoint concreto, como un `401` de un formulario de inicio de sesión, crea un registro a partir del preset y agrega el tuyo: `createErrorRegistry([httpErrorRegistry])`, y después `.codes.add("401", …)`.
+El cuerpo queda fuera a propósito: terminaría en `originalError` y, de ahí, en tu tracker de errores, así que agrégalo como `body` solo cuando sea seguro registrarlo. Nunca lo pases como `cause`: `createAppError` busca dentro de `cause`, y un `code` en el cuerpo podría entonces ganarle al estado. Un estado que el preset no mapea, como `418`, se resuelve con el mensaje de respaldo. [Presets](presets.md#http) enumera lo que mapea. Para redactar un estado en un endpoint concreto, como un `401` de un formulario de inicio de sesión, crea un registro a partir del preset y agrega el tuyo: `createErrorRegistry([httpErrorRegistry])`, y después `.codes.add("401", …)`.
 
 Cuando el servidor es tuyo y envía `{ error: error.toJSON() }`, reconstruye su error: `appErrorFromJSON(body.error)`. Cuando todo el cuerpo es el error serializado, pasa `appErrorFromJSON(body)`. Consulta [El AppError](app-error.md#enviar-un-error-a-otro-entorno).
 
@@ -161,7 +160,7 @@ if (shouldReport(error)) {
 }
 ```
 
-Reporta `originalError`, no el `AppError`: el original trae el mensaje y el stack reales. La mayoría de los trackers también siguen el `cause` de un error, y el `cause` de un `AppError` es ese mismo valor original, así que reportar el propio `AppError` también funciona. La única excepción es la [receta de HTTP](#clasificar-respuestas-http): su `originalError` es un objeto plano sin stack, y trae el cuerpo de la respuesta.
+Reporta `originalError`, no el `AppError`: el original trae el mensaje y el stack reales. La mayoría de los trackers también siguen el `cause` de un error, y el `cause` de un `AppError` es ese mismo valor original, así que reportar el propio `AppError` también funciona. La única excepción es la [receta de HTTP](#clasificar-respuestas-http): su `originalError` es un objeto plano `{ code }`, sin stack.
 
 No reportes solo porque `type === "heuristic"`. Una coincidencia heurística suele ser un fallo de red del lado de quien lee, y ningún deploy tuyo va a arreglar el wifi del aeropuerto.
 
