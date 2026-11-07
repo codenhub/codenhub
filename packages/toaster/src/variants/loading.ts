@@ -3,7 +3,7 @@ import type { ResolvedToastConfig } from "../options";
 import { Toast } from "../toast-base";
 import type { LoadingToastOptions } from "../types";
 
-const LOADING_ROOT_CLASS = `${TOAST_SHAPE_CLASS} coden-toast-default`;
+const LOADING_ROOT_CLASS = `${TOAST_SHAPE_CLASS} toaster-toast-default`;
 
 /**
  * Toast variant for progress/loading status alerts.

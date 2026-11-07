@@ -78,13 +78,13 @@ export function assertToastRole(value: unknown): asserts value is ToastRole {
  * Each variant (semantic/loading/custom) prepends this and appends its own
  * spacing + color class (e.g. `toast-success`).
  */
-export const TOAST_SHAPE_CLASS = "coden-toast";
+export const TOAST_SHAPE_CLASS = "toaster-toast";
 
 /**
  * Full root class for the default (custom/no-variant) toast.
  * Used as the fallback when no variant-specific rootClassName is provided.
  */
-export const DEFAULT_TOAST_CLASS = `${TOAST_SHAPE_CLASS} coden-toast-default`;
+export const DEFAULT_TOAST_CLASS = `${TOAST_SHAPE_CLASS} toaster-toast-default`;
 
 /**
  * Shared severity mappings for the four semantic categories, used both by
@@ -94,11 +94,11 @@ export const DEFAULT_TOAST_CLASS = `${TOAST_SHAPE_CLASS} coden-toast-default`;
  * into a success toast).
  */
 export const SEMANTIC_ROOT_CLASS_NAMES: Record<SemanticType | "default", string> = {
-  success: `${TOAST_SHAPE_CLASS} coden-toast-success`,
-  error: `${TOAST_SHAPE_CLASS} coden-toast-error`,
-  warning: `${TOAST_SHAPE_CLASS} coden-toast-warning`,
-  info: `${TOAST_SHAPE_CLASS} coden-toast-info`,
-  default: `${TOAST_SHAPE_CLASS} coden-toast-default`,
+  success: `${TOAST_SHAPE_CLASS} toaster-toast-success`,
+  error: `${TOAST_SHAPE_CLASS} toaster-toast-error`,
+  warning: `${TOAST_SHAPE_CLASS} toaster-toast-warning`,
+  info: `${TOAST_SHAPE_CLASS} toaster-toast-info`,
+  default: `${TOAST_SHAPE_CLASS} toaster-toast-default`,
 };
 
 export const SEMANTIC_ICONS: Record<SemanticType | "default", ToastIcon | null> = {

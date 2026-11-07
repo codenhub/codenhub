@@ -76,7 +76,7 @@
    `var(--toast-margin-y)` -- and thus back to the old doubled value -- the
    moment a consumer sets an explicit margin, since only its own value
    remains reachable once the `env()` fallback is no longer selected. */
-:where([data-toast-instance].coden-toast-stack) {
+:where([data-toast-instance].toaster-toast-stack) {
   position: fixed;
   z-index: 9999;
   display: flex;
@@ -94,7 +94,7 @@
   -ms-overflow-style: none;
 }
 
-:where([data-toast-instance].coden-toast-stack)::-webkit-scrollbar {
+:where([data-toast-instance].toaster-toast-stack)::-webkit-scrollbar {
   display: none;
 }
 
@@ -113,25 +113,25 @@
    top-anchored positions instead (see `toast-base.ts`'s `render()`), so it
    still renders first -- immediately below the anchored top edge -- with
    no need for `-reverse` to achieve that. */
-:where([data-toast-instance].coden-toast-stack-top-left) {
+:where([data-toast-instance].toaster-toast-stack-top-left) {
   top: var(--toast-margin-y, max(1rem, env(safe-area-inset-top, 0px)));
   left: var(--toast-margin-x, max(1rem, env(safe-area-inset-left, 0px)));
   flex-direction: column;
 }
 
-:where([data-toast-instance].coden-toast-stack-top-right) {
+:where([data-toast-instance].toaster-toast-stack-top-right) {
   top: var(--toast-margin-y, max(1rem, env(safe-area-inset-top, 0px)));
   right: var(--toast-margin-x, max(1rem, env(safe-area-inset-right, 0px)));
   flex-direction: column;
 }
 
-:where([data-toast-instance].coden-toast-stack-bottom-left) {
+:where([data-toast-instance].toaster-toast-stack-bottom-left) {
   bottom: var(--toast-margin-y, max(1rem, env(safe-area-inset-bottom, 0px)));
   left: var(--toast-margin-x, max(1rem, env(safe-area-inset-left, 0px)));
   flex-direction: column;
 }
 
-:where([data-toast-instance].coden-toast-stack-bottom-right) {
+:where([data-toast-instance].toaster-toast-stack-bottom-right) {
   right: var(--toast-margin-x, max(1rem, env(safe-area-inset-right, 0px)));
   bottom: var(--toast-margin-y, max(1rem, env(safe-area-inset-bottom, 0px)));
   flex-direction: column;
@@ -148,12 +148,12 @@
    container follow `direction`, so `flex-end` would silently flip to the
    physical *left* edge in a right-to-left document, away from the
    physical `right` this stack is actually anchored to. */
-:where([data-toast-instance].coden-toast-stack-top-right) > .coden-toast,
-:where([data-toast-instance].coden-toast-stack-bottom-right) > .coden-toast {
+:where([data-toast-instance].toaster-toast-stack-top-right) > .toaster-toast,
+:where([data-toast-instance].toaster-toast-stack-bottom-right) > .toaster-toast {
   margin-left: auto;
 }
 
-:where([data-toast-instance].coden-toast-stack-top-center) {
+:where([data-toast-instance].toaster-toast-stack-top-center) {
   top: var(--toast-margin-y, max(1rem, env(safe-area-inset-top, 0px)));
   left: 50%;
   align-items: center;
@@ -161,7 +161,7 @@
   transform: translateX(-50%);
 }
 
-:where([data-toast-instance].coden-toast-stack-bottom-center) {
+:where([data-toast-instance].toaster-toast-stack-bottom-center) {
   bottom: var(--toast-margin-y, max(1rem, env(safe-area-inset-bottom, 0px)));
   left: 50%;
   align-items: center;
@@ -178,7 +178,7 @@
    falling to this package's own generated-defaults.css only when that token
    is not defined. A border equal to the color is intent.css's own mapping
    for every *named* severity; only neutral's differs. */
-:where([data-toast-instance].coden-toast-success) {
+:where([data-toast-instance].toaster-toast-success) {
   --_toast-intent: var(--color-success, var(--toast-default-color-success));
   --_toast-intent-contrast: var(--color-success-contrast, var(--toast-default-color-success-contrast));
   --_toast-intent-strong: var(--color-success-strong, var(--toast-default-color-success-strong));
@@ -186,7 +186,7 @@
   --_toast-intent-fill-max: 100%;
 }
 
-:where([data-toast-instance].coden-toast-error) {
+:where([data-toast-instance].toaster-toast-error) {
   --_toast-intent: var(--color-destructive, var(--toast-default-color-destructive));
   --_toast-intent-contrast: var(--color-destructive-contrast, var(--toast-default-color-destructive-contrast));
   --_toast-intent-strong: var(--color-destructive-strong, var(--toast-default-color-destructive-strong));
@@ -194,7 +194,7 @@
   --_toast-intent-fill-max: 100%;
 }
 
-:where([data-toast-instance].coden-toast-warning) {
+:where([data-toast-instance].toaster-toast-warning) {
   --_toast-intent: var(--color-warning, var(--toast-default-color-warning));
   --_toast-intent-contrast: var(--color-warning-contrast, var(--toast-default-color-warning-contrast));
   --_toast-intent-strong: var(--color-warning-strong, var(--toast-default-color-warning-strong));
@@ -202,7 +202,7 @@
   --_toast-intent-fill-max: 100%;
 }
 
-:where([data-toast-instance].coden-toast-info) {
+:where([data-toast-instance].toaster-toast-info) {
   --_toast-intent: var(--color-info, var(--toast-default-color-info));
   --_toast-intent-contrast: var(--color-info-contrast, var(--toast-default-color-info-contrast));
   --_toast-intent-strong: var(--color-info-strong, var(--toast-default-color-info-strong));
@@ -210,7 +210,7 @@
   --_toast-intent-fill-max: 100%;
 }
 
-:where([data-toast-instance].coden-toast-default) {
+:where([data-toast-instance].toaster-toast-default) {
   --_toast-intent: var(--color-text, var(--toast-default-color-neutral));
   --_toast-intent-contrast: var(--color-text-contrast, var(--toast-default-color-neutral-contrast));
   --_toast-intent-strong: var(--color-text-strong, var(--toast-default-color-neutral-strong));
@@ -226,7 +226,7 @@
    two against the intent this severity just declared. Registry defaults
    (--_d-*) match @codenhub/styles' own `.alert`: a soft, edged surface
    grounded on the page, no elevation. */
-:where([data-toast-instance].coden-toast) {
+:where([data-toast-instance].toaster-toast) {
   --_d-fill: 12%;
   --_d-fg-on-fill: 0%;
   --_d-border: 100%;
@@ -267,7 +267,7 @@
   gap: 1rem;
   /* One width for every toast, so a stack has straight edges. It stays
      within what the stack's margin leaves on a narrow viewport (see
-     .coden-toast-stack's matching max-width). `--toast-margin-x` inherits
+     .toaster-toast-stack's matching max-width). `--toast-margin-x` inherits
      from the stack container this toast renders inside. */
   width: min(22.25rem, calc(100vw - (2 * var(--toast-margin-x, 1rem))));
   padding: 0.75rem;
@@ -287,49 +287,49 @@
 /* A consumer's own --toast-color-* value always wins over the composed result --
    the same precedence this package has always given an explicit override,
    now sitting in front of a live formula instead of a baked palette cell. */
-:where([data-toast-instance].coden-toast-success) {
+:where([data-toast-instance].toaster-toast-success) {
   background: var(--toast-color-success-bg, var(--_bg));
   color: var(--toast-color-success-fg, var(--_fg));
   border-color: var(--toast-color-success-edge, var(--_edge));
 }
 
-:where([data-toast-instance].coden-toast-error) {
+:where([data-toast-instance].toaster-toast-error) {
   background: var(--toast-color-error-bg, var(--_bg));
   color: var(--toast-color-error-fg, var(--_fg));
   border-color: var(--toast-color-error-edge, var(--_edge));
 }
 
-:where([data-toast-instance].coden-toast-warning) {
+:where([data-toast-instance].toaster-toast-warning) {
   background: var(--toast-color-warning-bg, var(--_bg));
   color: var(--toast-color-warning-fg, var(--_fg));
   border-color: var(--toast-color-warning-edge, var(--_edge));
 }
 
-:where([data-toast-instance].coden-toast-info) {
+:where([data-toast-instance].toaster-toast-info) {
   background: var(--toast-color-info-bg, var(--_bg));
   color: var(--toast-color-info-fg, var(--_fg));
   border-color: var(--toast-color-info-edge, var(--_edge));
 }
 
-:where([data-toast-instance].coden-toast-default) {
+:where([data-toast-instance].toaster-toast-default) {
   background: var(--toast-color-default-bg, var(--_bg));
   color: var(--toast-color-default-fg, var(--_fg));
   border-color: var(--toast-color-default-edge, var(--_edge));
 }
 
-:where([data-toast-instance] .coden-toast-icon) {
+:where([data-toast-instance] .toaster-toast-icon) {
   width: 1.25rem;
   height: 1.25rem;
   flex: 0 0 auto;
   align-self: flex-start;
 }
 
-:where([data-toast-instance] .coden-toast-spinner) {
+:where([data-toast-instance] .toaster-toast-spinner) {
   transform-origin: center;
-  animation: coden-toast-spin 1.2s linear infinite;
+  animation: toaster-toast-spin 1.2s linear infinite;
 }
 
-:where([data-toast-instance] .coden-toast-dismiss) {
+:where([data-toast-instance] .toaster-toast-dismiss) {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -355,21 +355,21 @@
   opacity: 0.75;
 }
 
-:where([data-toast-instance] .coden-toast-dismiss:hover) {
+:where([data-toast-instance] .toaster-toast-dismiss:hover) {
   opacity: 1;
 }
 
-:where([data-toast-instance] .coden-toast-dismiss:focus-visible) {
+:where([data-toast-instance] .toaster-toast-dismiss:focus-visible) {
   outline: 2px solid currentColor;
   outline-offset: 2px;
 }
 
-:where([data-toast-instance] .coden-toast-dismiss svg) {
+:where([data-toast-instance] .toaster-toast-dismiss svg) {
   width: 1rem;
   height: 1rem;
 }
 
-:where([data-toast-instance] .coden-toast-main) {
+:where([data-toast-instance] .toaster-toast-main) {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
@@ -377,7 +377,7 @@
   min-width: 0;
 }
 
-:where([data-toast-instance] .coden-toast-content) {
+:where([data-toast-instance] .toaster-toast-content) {
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
@@ -385,18 +385,18 @@
   flex: 1 1 auto;
 }
 
-:where([data-toast-instance] .coden-toast-title) {
+:where([data-toast-instance] .toaster-toast-title) {
   font-weight: 600;
   line-height: 1.35;
 }
 
-:where([data-toast-instance] .coden-toast-description) {
+:where([data-toast-instance] .toaster-toast-description) {
   font-size: 0.8125rem;
   line-height: 1.35;
   opacity: 0.85;
 }
 
-:where([data-toast-instance] .coden-toast-actions) {
+:where([data-toast-instance] .toaster-toast-actions) {
   display: flex;
   align-items: center;
   gap: 0.375rem;
@@ -404,11 +404,11 @@
   margin-inline-start: auto;
 }
 
-:where([data-toast-instance] .coden-toast-actions .coden-toast-dismiss) {
+:where([data-toast-instance] .toaster-toast-actions .toaster-toast-dismiss) {
   margin-inline: 0 -0.25rem;
 }
 
-:where([data-toast-instance] .coden-toast-action) {
+:where([data-toast-instance] .toaster-toast-action) {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -431,13 +431,13 @@
   opacity: 0.9;
 }
 
-:where([data-toast-instance] .coden-toast-action:hover) {
+:where([data-toast-instance] .toaster-toast-action:hover) {
   opacity: 1;
   border-color: currentColor;
   background: color-mix(in oklab, currentColor 15%, transparent);
 }
 
-:where([data-toast-instance] .coden-toast-action:focus-visible) {
+:where([data-toast-instance] .toaster-toast-action:focus-visible) {
   outline: 2px solid currentColor;
   outline-offset: 2px;
 }
@@ -734,14 +734,14 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
   color: var(--toast-color-text, var(--color-text, var(--toast-default-color-text)));
 }
 
-@keyframes coden-toast-spin {
+@keyframes toaster-toast-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :where([data-toast-instance] .coden-toast-spinner) {
+  :where([data-toast-instance] .toaster-toast-spinner) {
     animation: none;
   }
 

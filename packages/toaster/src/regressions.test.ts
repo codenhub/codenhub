@@ -167,7 +167,7 @@ describe("toast lifecycle", () => {
     const toaster = createToaster({ duration: 2000 });
     const handle = toaster.success("Timed");
     flushAnimations();
-    const element = document.body.querySelector(".coden-toast")!;
+    const element = document.body.querySelector(".toaster-toast")!;
 
     vi.advanceTimersByTime(1000);
     element.dispatchEvent(new MouseEvent("mouseenter"));
@@ -184,7 +184,7 @@ describe("toast lifecycle", () => {
     vi.useFakeTimers();
     const toaster = createToaster({ duration: 2000 });
     const handle = toaster.success("Entering");
-    const element = document.body.querySelector(".coden-toast")!;
+    const element = document.body.querySelector(".toaster-toast")!;
 
     element.dispatchEvent(new MouseEvent("mouseenter"));
     element.dispatchEvent(new MouseEvent("mouseleave"));
@@ -339,9 +339,9 @@ describe("explicit undefined options", () => {
     toaster.success("Saved", { position: undefined });
     toaster.custom("<b>Hi</b>", { position: undefined });
 
-    expect(document.body.querySelector(".coden-toast-stack-bottom-left .coden-toast")).not.toBeNull();
-    expect(document.body.querySelector(".coden-toast-stack-top-left .coden-toast")).not.toBeNull();
-    expect(document.body.querySelector(".coden-toast-stack-top-right")).toBeNull();
+    expect(document.body.querySelector(".toaster-toast-stack-bottom-left .toaster-toast")).not.toBeNull();
+    expect(document.body.querySelector(".toaster-toast-stack-top-left .toaster-toast")).not.toBeNull();
+    expect(document.body.querySelector(".toaster-toast-stack-top-right")).toBeNull();
     toaster.destroy();
   });
 
@@ -373,16 +373,16 @@ describe("promise outcome defaults", () => {
     const toaster = createToaster({ semantic: { duration: 10000, dismissible: true } });
     await toaster.promise(Promise.resolve(1), { loading: "Saving", success: "Saved", error: "Failed" });
     flushAnimations();
-    const element = document.body.querySelector(".coden-toast")!;
-    expect(element.querySelector(".coden-toast-dismiss")).not.toBeNull();
+    const element = document.body.querySelector(".toaster-toast")!;
+    expect(element.querySelector(".toaster-toast-dismiss")).not.toBeNull();
 
     vi.advanceTimersByTime(5000);
     flushAnimations();
-    expect(document.body.querySelector(".coden-toast")).not.toBeNull();
+    expect(document.body.querySelector(".toaster-toast")).not.toBeNull();
 
     vi.advanceTimersByTime(5100);
     flushAnimations();
-    expect(document.body.querySelector(".coden-toast")).toBeNull();
+    expect(document.body.querySelector(".toaster-toast")).toBeNull();
     toaster.destroy();
   });
 
@@ -397,7 +397,7 @@ describe("promise outcome defaults", () => {
     flushAnimations();
     vi.advanceTimersByTime(20000);
     flushAnimations();
-    expect(document.body.querySelector(".coden-toast")).not.toBeNull();
+    expect(document.body.querySelector(".toaster-toast")).not.toBeNull();
     toaster.destroy();
   });
 });
@@ -409,12 +409,12 @@ describe("custom content updates", () => {
     flushAnimations();
 
     handle.update({ type: "success" });
-    const element = document.body.querySelector(".coden-toast")!;
-    expect(element.querySelector(".coden-toast-icon")).toBeNull();
-    expect(element.classList.contains("coden-toast-success")).toBe(true);
+    const element = document.body.querySelector(".toaster-toast")!;
+    expect(element.querySelector(".toaster-toast-icon")).toBeNull();
+    expect(element.classList.contains("toaster-toast-success")).toBe(true);
 
     handle.update({ icon: "info" });
-    expect(element.querySelector(".coden-toast-icon")).toBeNull();
+    expect(element.querySelector(".toaster-toast-icon")).toBeNull();
     toaster.destroy();
   });
 });
@@ -431,7 +431,7 @@ describe("toast layers under queued dialogs", () => {
     toaster.error("Save failed", { autoDismiss: false });
     flushAnimations();
 
-    expect(document.querySelector(".coden-toast")!.closest("dialog")).toBe(dialog);
+    expect(document.querySelector(".toaster-toast")!.closest("dialog")).toBe(dialog);
     dialogs.destroy();
     toaster.destroy();
   });
@@ -474,9 +474,9 @@ describe("focus across updates", () => {
     const toaster = createToaster();
     toaster("Deleted", { autoDismiss: false, dismissible: true });
     flushAnimations();
-    document.querySelector<HTMLButtonElement>(".coden-toast-dismiss")!.focus();
+    document.querySelector<HTMLButtonElement>(".toaster-toast-dismiss")!.focus();
 
-    document.querySelector<HTMLButtonElement>(".coden-toast-dismiss")!.click();
+    document.querySelector<HTMLButtonElement>(".toaster-toast-dismiss")!.click();
     editor.focus();
     flushAnimations();
 
@@ -510,10 +510,10 @@ describe("updates from an onShow subscriber", () => {
     first.dismiss();
     flushAnimations();
 
-    const toasts = Array.from(document.querySelectorAll(".coden-toast"));
+    const toasts = Array.from(document.querySelectorAll(".toaster-toast"));
     expect(toasts).toHaveLength(1);
     expect(toasts[0]!.querySelectorAll("[data-toast-main]")).toHaveLength(1);
-    expect(toasts[0]!.querySelectorAll(".coden-toast-dismiss")).toHaveLength(1);
+    expect(toasts[0]!.querySelectorAll(".toaster-toast-dismiss")).toHaveLength(1);
     expect(toasts[0]!.querySelector("[data-toast-description]")!.textContent).toBe("More detail");
     toaster.destroy();
   });

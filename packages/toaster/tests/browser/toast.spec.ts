@@ -6,7 +6,7 @@ test("renders accessible toast controls within the viewport", async ({ page }) =
   await page.locator("#check-auto-dismiss").uncheck();
   await page.getByRole("button", { name: "Success Toast" }).click();
 
-  const toast = page.locator(".coden-toast");
+  const toast = page.locator(".toaster-toast");
   await expect(toast).toContainText("Changes saved successfully");
   const dismissButton = toast.getByRole("button", { name: "Dismiss toast" });
   const box = await dismissButton.boundingBox();
@@ -45,7 +45,7 @@ test("keeps toasts at the viewport corner and clickable while a dialog is open",
   await page.getByRole("button", { name: "Confirm Dialog" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
 
-  const toast = page.locator("dialog .coden-toast");
+  const toast = page.locator("dialog .toaster-toast");
   await expect(toast).toBeVisible();
   // Hit testing skips inert content and finds whatever covers a point, so
   // this shows the toast is above the backdrop and can take a click.
@@ -101,7 +101,7 @@ test("dismisses a dialog from its visual backdrop", async ({ page }) => {
 test("propagates a live styles color customization to a toast", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Success Toast" }).click();
-  const toast = page.locator(".coden-toast");
+  const toast = page.locator(".toaster-toast");
   await expect(toast).toBeVisible();
 
   const before = await toast.evaluate((el) => getComputedStyle(el).backgroundColor);
@@ -114,7 +114,7 @@ test("propagates a live styles color customization to a toast", async ({ page })
 test("colors a toast from a --toast-color-* property a consumer sets", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Success Toast" }).click();
-  const toast = page.locator(".coden-toast");
+  const toast = page.locator(".toaster-toast");
   await expect(toast).toBeVisible();
 
   await page.evaluate(() => document.documentElement.style.setProperty("--toast-color-success-bg", "rgb(255, 0, 255)"));
@@ -126,7 +126,7 @@ test("colors a toast from a --toast-color-* property a consumer sets", async ({ 
 test("a toast's own presentation class overrides an inherited one", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Success Toast" }).click();
-  const toast = page.locator(".coden-toast");
+  const toast = page.locator(".toaster-toast");
   await expect(toast).toBeVisible();
 
   const withoutGhostAncestor = await toast.evaluate((el) => {
@@ -154,7 +154,7 @@ test("resolves theme against a nested light/dark section, not just the root", as
     document.documentElement.style.colorScheme = "dark";
   });
   await page.getByRole("button", { name: "Success Toast" }).click();
-  const toast = page.locator(".coden-toast");
+  const toast = page.locator(".toaster-toast");
   await expect(toast).toBeVisible();
 
   const darkBackground = await toast.evaluate((el) => getComputedStyle(el).backgroundColor);
@@ -222,7 +222,7 @@ test("announces toasts through hidden live regions that exist before their text"
 
   const box = await polite.boundingBox();
   expect(box?.width ?? 0).toBeLessThanOrEqual(1);
-  await expect(page.locator(".coden-toast").first()).not.toHaveAttribute("role", /.*/);
+  await expect(page.locator(".toaster-toast").first()).not.toHaveAttribute("role", /.*/);
 });
 
 test("keeps its fallback presentation classes below a layered rule on the page", async ({ page }) => {
@@ -249,7 +249,7 @@ test("gives every toast in a stack the same width, within a narrow viewport", as
   await page.getByRole("button", { name: "Success Toast" }).click();
   await page.getByRole("button", { name: "Error Toast" }).click();
   await page.getByRole("button", { name: "Info Toast" }).click();
-  const toasts = page.locator(".coden-toast");
+  const toasts = page.locator(".toaster-toast");
   await expect(toasts).toHaveCount(3);
 
   // offsetWidth ignores the entry animation's transform.
@@ -275,7 +275,7 @@ test("restores focus to the trigger after dismissing a focused toast", async ({ 
   await trigger.focus();
   await page.keyboard.press("Enter");
 
-  const toast = page.locator(".coden-toast");
+  const toast = page.locator(".toaster-toast");
   await expect(toast).toBeVisible();
   const dismissButton = toast.getByRole("button", { name: "Dismiss toast" });
   await dismissButton.focus();
@@ -293,7 +293,7 @@ test("keeps the dismiss button at the trailing edge in a right-to-left layout", 
   });
   await page.getByRole("button", { name: "Success Toast" }).click();
 
-  const toast = page.locator(".coden-toast");
+  const toast = page.locator(".toaster-toast");
   await expect(toast).toBeVisible();
   const dismissButton = toast.getByRole("button", { name: "Dismiss toast" });
   const toastBox = (await toast.boundingBox())!;
@@ -350,7 +350,7 @@ test("scrolls an overflowing stack instead of running off-screen, keeping the ne
   // isTopAnchoredPosition in dom.ts) and should already be visible without
   // any further scrolling -- the whole point of scrolling-to-reveal on
   // dispatch.
-  await expect(page.locator(".coden-toast").first()).toBeInViewport();
+  await expect(page.locator(".toaster-toast").first()).toBeInViewport();
 
   await page.locator("#check-auto-dismiss").check();
 });
@@ -395,13 +395,13 @@ test("keeps a narrower toast flush against the stack's anchored edge when a wide
   // read meaningless regardless of the fix this test is for.
   const settled = () =>
     page.evaluate(() =>
-      Array.from(document.querySelectorAll(".coden-toast")).every((el) =>
+      Array.from(document.querySelectorAll(".toaster-toast")).every((el) =>
         el.getAnimations().every((animation) => animation.playState !== "running"),
       ),
     );
 
   // Default position is Bottom Right, anchored via a physical `right`.
-  const successToast = page.locator(".coden-toast").filter({ hasText: "Changes saved successfully!" });
+  const successToast = page.locator(".toaster-toast").filter({ hasText: "Changes saved successfully!" });
   await page.getByRole("button", { name: "Success Toast" }).click();
   await expect(successToast).toBeVisible();
   await expect.poll(settled).toBe(true);
@@ -415,7 +415,7 @@ test("keeps a narrower toast flush against the stack's anchored edge when a wide
   // Warning, so both toasts share the "status" role (warning is "alert")
   // and the count assertion below actually covers both.
   await page.getByRole("button", { name: "Info Toast" }).click();
-  await expect(page.locator(".coden-toast")).toHaveCount(2);
+  await expect(page.locator(".toaster-toast")).toHaveCount(2);
   await expect.poll(settled).toBe(true);
   const after = (await successToast.boundingBox())!;
 
@@ -432,18 +432,18 @@ test("computes the stack-push animation's delta from the new toast's real height
   await page.locator("#check-auto-dismiss").uncheck();
 
   await page.getByRole("button", { name: "Success Toast" }).click();
-  await expect(page.locator(".coden-toast")).toHaveCount(1);
+  await expect(page.locator(".toaster-toast")).toHaveCount(1);
 
   // The new toast's own entrance keyframes and the sibling's push keyframes
   // are both created synchronously in the same render() call, so reading
   // them right after dispatch (no wait) is fine -- unlike a live bounding
   // box, a keyframe's own recorded values never change after creation.
   await page.getByRole("button", { name: "Info Toast" }).click();
-  await expect(page.locator(".coden-toast")).toHaveCount(2);
+  await expect(page.locator(".toaster-toast")).toHaveCount(2);
 
   const { deltaFromKeyframe, expectedDelta } = await page.evaluate(() => {
     const stack = document.querySelector("[data-toast-container]") as HTMLElement;
-    const [firstToast, secondToast] = Array.from(document.querySelectorAll(".coden-toast")) as HTMLElement[];
+    const [firstToast, secondToast] = Array.from(document.querySelectorAll(".toaster-toast")) as HTMLElement[];
     const pushAnimation = firstToast
       .getAnimations()
       .find(
@@ -475,7 +475,7 @@ test.describe("reduced motion", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Show Persistent Loader" }).click();
 
-    const spinner = page.locator(".coden-toast-spinner");
+    const spinner = page.locator(".toaster-toast-spinner");
     await expect(spinner).toHaveCSS("animation-name", "none");
   });
 });

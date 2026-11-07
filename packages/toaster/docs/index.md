@@ -1,91 +1,69 @@
 ---
 title: Overview
-description: Overview, architecture, quick start, and documentation guide for @codenhub/toaster.
+description: What Toaster is for, how to install it, and the order to read its pages in.
 ---
 
-# Toaster documentation
+# Toaster
 
-`@codenhub/toaster` provides browser notifications and native interactive modal dialogs with zero-boilerplate singletons, isolated container instances, live `@codenhub/styles` token composition, and strict Content Security Policy compliance.
+Every app eventually needs to say two kinds of things to the person using it. Some news can wait in a corner: "Saved", "Copied", "Sync failed, retrying". Some questions can't: "Delete this note forever?" `@codenhub/toaster` handles both. Toasts are small notifications that stack in a corner of the screen and leave on their own. Dialogs are modal questions that block the page until someone answers.
 
-## Why Toaster?
+What it saves you from writing by hand:
 
-Modern applications frequently balance transient notifications (build status, sync alerts) and synchronous user interruptions (confirming destructive actions, entering credentials). Most libraries compromise on either accessibility, styling flexibility, or memory safety.
+- **The stack.** Toasts line up at one of six screen positions. Extra ones wait in a queue, and the oldest leaves to make room. A toast stays put while someone is hovering over it, has focus inside it, or is waiting on a loading spinner.
+- **The timers.** Each toast closes after a set time. The countdown pauses while the pointer is on it, while it has focus, and while the browser tab is in the background, so time nobody could spend reading doesn't count.
+- **The async dance.** `toast.promise()` shows a spinner while your work runs and turns into a success or error toast when it's done. Dialogs return something you can `await`, so `if (await dialog.confirm("Delete?"))` really is `true` or `false`.
+- **The accessibility plumbing.** Screen readers hear every toast. Dialogs use the browser's own `<dialog>` element, so focus trapping, <kbd>Escape</kbd>, and returning focus afterward all come from the platform.
+- **The security homework.** Strings are always shown as plain text and never parsed as HTML. The package injects no `<style>` element, so a strict Content Security Policy needs no exceptions for it.
 
-`@codenhub/toaster` coordinates both feedback models through specialized browser primitives:
+It's plain TypeScript working directly with the DOM. There's no framework to adopt and no runtime dependency to install.
 
-- **Dual-layer architecture**: Floating toast stacks render in light DOM containers with FLIP animations and FIFO eviction, while confirmation and prompt dialogs render into the browser's native top layer using HTML5 `<dialog>`.
-- **Zero-boilerplate singletons**: Import `toast` from `@codenhub/toaster` and `dialog` from `@codenhub/toaster/dialog` for application-wide notifications and dialogs, or use `createToaster()` and `createDialogs()` for isolated instances. An app that only shows toasts does not bundle the dialog code.
-- **First-class Promise workflows**: `toast.promise` coordinates pending, success, and error transitions with automatic timer re-arming; dialog methods return `DialogHandle<T>` implementing `PromiseLike<T>` so you can `await dialog.confirm(...)` directly.
-- **Live token composition**: Toast colors, presentation axes (`.solid`, `.soft`, `.ghost`, `.edged`), and dark mode compose live with `@codenhub/styles` or fall back to standalone generated defaults.
-
-## Setup
-
-### Installation
-
-Install the package using your package manager:
+## Installation
 
 ```sh
 pnpm add @codenhub/toaster
 ```
 
-### Quick start
+`npm install`, `yarn add`, and `bun add` work too. The package is ESM only and has two entry points plus a stylesheet:
 
-Import the required global stylesheet once in your client entrypoint, then use the pre-configured singletons anywhere in your application:
+| Import                     | What you get                                                       |
+| -------------------------- | ------------------------------------------------------------------ |
+| `@codenhub/toaster`        | `toast`, a ready-made toaster, and `createToaster()` to make more. |
+| `@codenhub/toaster/dialog` | `dialog`, a ready-made dialogs instance, and `createDialogs()`.    |
+| `@codenhub/toaster/styles` | The stylesheet. Required; nothing looks right without it.          |
+
+Dialogs live in their own entry point so an app that only shows toasts doesn't bundle them. A toast-only bundle costs about 9 KB gzipped.
+
+## A first toast
+
+Load the stylesheet once, in the file where your app starts, then call `toast` anywhere:
 
 ```ts
-import { toast } from "@codenhub/toaster";
-import { dialog } from "@codenhub/toaster/dialog";
 import "@codenhub/toaster/styles";
+import { toast } from "@codenhub/toaster";
 
-// 1. Plain neutral or semantic notifications
-toast("Draft saved to cache");
-toast.success("Profile updated");
-toast.error("Failed to sync database");
-
-// 2. Structured notification with action button
-toast.success("Branch merged", {
-  description: "Pull request #42 was merged into main.",
-  action: {
-    label: "Undo",
-    onClick: (_event, handle) => {
-      revertMerge();
-      handle.dismiss();
-    },
-  },
-});
-
-// 3. Automated Promise lifecycle binding
-await toast.promise(publishArticle(), {
-  loading: "Publishing article...",
-  success: "Article published live!",
-  error: (err) => `Publication failed: ${err instanceof Error ? err.message : String(err)}`,
-});
-
-// 4. Interactive modal dialogs with native await
-if (await dialog.confirm("Delete this workspace permanently?")) {
-  await deleteWorkspace();
-}
+toast.success("Note saved");
 ```
 
-## Documentation guide
+That's the whole setup. There's no provider to mount and no container to create. The first toast creates its own stack in `document.body`.
 
-Explore the focused guides below to master every aspect of the package:
+Toaster needs a browser. Importing it during server-side rendering is safe, but showing a toast there throws, because there is no page to put it on. [Toaster instances](instances.md#server-side-rendering) covers how to handle that.
 
-| Guide                               | Description                                                                                                               |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| [Concepts](concepts.md)             | The dual-layer mental model, lifecycle states (`queued`, `visible`, `hiding`, `hidden`), settled promises, and thenables. |
-| [Toasts](toasts.md)                 | Complete guide to dispatching neutral, semantic, loading, structured, and promise-driven notifications.                   |
-| [Dialogs](dialogs.md)               | Deep dive into native modal confirmations, prompts, alerts, thenable handles, and label localization.                     |
-| [Styling](styling.md)               | CSS custom property composition with `@codenhub/styles`, presentation classes, standalone fallback, dark mode, and CSP.   |
-| [Accessibility](accessibility.md)   | Screen reader announcements, native dialog focus trapping, reduced motion, and custom content boundaries.                 |
-| [Scoped Instances](instances.md)    | Creating isolated instances with `createToaster()`, custom DOM containers, micro-frontends, and SSR safety.               |
-| [API Reference](reference/index.md) | Complete TypeScript API catalogue generated automatically from package declarations.                                      |
-| [Changelog](changelog/index.md)     | Release history, breaking changes, and migration notes across versions.                                                   |
+## Reading path
 
-## Requirements and runtime compatibility
+The pages build on each other, and together they follow one small example: a notes app that saves, syncs, renames, and deletes notes. Read them in order the first time.
 
-- **Browser DOM**: Rendering notifications and modal dialogs requires a browser DOM environment. Construction is SSR-safe, but invoking rendering methods in Node.js or SSR runtimes throws an error.
-- **Native `<dialog>`**: Interactive dialogs require browser support for `HTMLDialogElement.showModal()`.
-- **CSS Import**: `@codenhub/toaster/styles` must be loaded once in the application to render layout, positioning, and animation rules.
-- **Styles Integration**: `@codenhub/styles >=0.3.0` is an optional peer dependency. When present, toaster colors and presentation axes compose live; when absent, toaster renders using built-in standalone palette defaults.
-- **Content Security Policy**: The package injects no `<style>` element and uses no HTML-parsing sink, so a strict `style-src` or Trusted Types policy needs no nonce or policy for it.
+1. [Toasts](toasts.md): every kind of toast, actions, loading and promise toasts, updating a toast after it's shown, and how stacking, queueing, and timers behave.
+2. [Dialogs](dialogs.md): `confirm`, `prompt`, and `alert`, what they resolve to, how they queue, translating their buttons, and what happens to toasts while a dialog is open.
+3. [Toaster instances](instances.md): every configuration option and its default, per-kind defaults, scoped toasters for panels and widgets, cleanup with `destroy()`, and server-side rendering.
+4. [Styling](styling.md): the stylesheet, colors, presentation classes, dark mode, and Content Security Policy.
+5. [Accessibility and security](accessibility.md): what screen readers hear, keyboard and focus behavior, reduced motion, and the trust boundary of custom content.
+
+The [API reference](reference/index.md) lists every exported symbol and signature, generated from the source. The [changelog](changelog/index.md) says what changed in each release.
+
+## Requirements
+
+- A browser with native `<dialog>` support (`HTMLDialogElement.showModal()`) if you use dialogs. Every current browser has it.
+- `@codenhub/toaster/styles` loaded once on the page.
+- Optional: `@codenhub/styles` 0.3.0 or newer. When it's on the page, toasts and dialogs take their colors and look from its theme. Without it, the package uses its own built-in colors. [Styling](styling.md) explains both.
+
+The package is experimental. Its API, rendering, and CSS class names can still change before a stable release, and the [changelog](changelog/index.md) says what changed each time.

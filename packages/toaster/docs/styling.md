@@ -1,168 +1,205 @@
 ---
 title: Styling
-description: Guide to CSS styling, color custom properties, live composition with @codenhub/styles, presentation axes, dark mode, and CSP.
+description: The stylesheet, colors with and without @codenhub/styles, presentation classes, size, dark mode, color overrides, Content Security Policy, and stylesheet order.
 order: 4
 ---
 
-# Styling and theming
+# Styling
 
-`@codenhub/toaster` uses an adaptable CSS architecture built on runtime CSS custom property composition. It composes seamlessly with `@codenhub/styles` design tokens when present, but remains fully usable standalone with zero external dependencies.
+Toasts and dialogs should look like part of your app, not like a library that wandered in. This page covers the stylesheet, where the colors come from, the presentation classes, size, dark mode, overriding colors yourself, and Content Security Policy. Everything here is plain CSS: no build plugin, no theme object, no runtime styling API.
 
-## The required stylesheet
+## The stylesheet
 
-Import `@codenhub/toaster/styles` once in your application entrypoint:
+Load the stylesheet once, where your app starts:
 
 ```ts
 import "@codenhub/toaster/styles";
 ```
 
-This stylesheet provides layout containers, responsive positioning, FLIP animation primitives, native `<dialog>` styles, and color formula rules. No Tailwind configuration or build plugins are required.
+It holds everything visual: the stacks and their positions, toast and dialog layout, animations, and colors. Without it, toasts are still added to the page, but with no positioning, layout, or color. If your first toast shows up looking like a forgotten paragraph at the bottom of the page, this import is the reason.
 
-## Live composition with `@codenhub/styles`
+The import works with any bundler that handles CSS imports, such as Vite, webpack, or esbuild. Without a bundler, link `dist/styles/index.css` from the package with a `<link rel="stylesheet">` tag.
 
-If your project installs `@codenhub/styles >=0.3.0`, toaster components participate automatically in its live theme and aesthetic system:
+### What it sets outside toasts
 
-- **Semantic intents**: Toast and dialog colors read directly from `--color-<intent>` (`--color-success`, `--color-error`, `--color-warning`, `--color-info`, `--color-primary`).
-- **Presentation axes**: Toasts adapt to `--ui-fill` and `--ui-border` percentages.
-- **Aesthetic materials**: Active aesthetic classes (such as `.glass` or `.neobrutalism`) pass through their `--ui-radius`, `--ui-border-width`, `--ui-surface-shadow`, `--ui-clip`, and `--ui-elevation` properties.
+Almost every rule is scoped to the package's own elements, but a few are page-wide, and it's better to hear about them here than from a confused teammate:
 
-### Component role defaults
+- **`color-scheme` on the root.** The stylesheet sets `color-scheme: light dark` on `:root`, so the browser draws built-in controls such as scrollbars and form fields in dark mode when the operating system prefers dark. The `dark`, `light`, `theme-dark`, and `theme-light` classes and the `data-theme` attribute set it too, on whatever element carries them; see [Dark mode](#dark-mode). If your page sets its own `color-scheme`, yours applies wherever your rule is more specific or loads later.
+- **Presentation classes.** It defines `.solid`, `.soft`, `.ghost`, `.edged`, and `.edgeless` globally, in the CSS `@layer components`. They only set the `--ui-fill`, `--ui-fg-on-fill`, and `--ui-border` custom properties, which nothing else reads unless you use `@codenhub/styles`, so they won't restyle an element of your own that happens to share a class name.
 
-To match the wider ecosystem, toaster components mirror the base styling conventions of `@codenhub/styles`:
+## Where the colors come from
 
-- **Toast body**: Composes like an unstyled `.alert` component: a soft surface (12% intent fill), edged border, grounded on the page background with elevation 0.
-- **Dialog action buttons**: Compose like an unstyled `.btn` component: a solid surface (100% intent fill), edgeless border, and raised elevation 1.
+Toasts and dialogs pick their colors in one of two ways, depending on whether `@codenhub/styles` is on the page.
 
-Every toast is 22.25rem (356px) wide, narrowed to fit the viewport inside the stack's margin, so a stack keeps straight edges. Set `width` through `className` to change it.
+### Standalone
 
-### Presentation classes
+Without `@codenhub/styles`, the stylesheet uses built-in colors: a neutral surface for default toasts, green for success, red for error, amber for warning, and blue for info, each with a light and a dark version. You don't need to set anything up.
 
-Presentation helper classes (`.solid`, `.soft`, `.ghost`, `.edged`, `.edgeless`) adjust how background fills and borders render:
+### With `@codenhub/styles`
+
+[`@codenhub/styles`](https://www.npmjs.com/package/@codenhub/styles) is an optional design system. When its stylesheet, version 0.3.0 or newer, is on the page, toasts and dialogs build their colors from its theme instead:
+
+- **Intent colors**: toasts read `--color-success`, `--color-error`, `--color-warning`, `--color-info`, and `--color-primary`, so changing your theme's colors changes the toasts.
+- **Presentation**: how much color fills the background and the border follows `--ui-fill` and `--ui-border`.
+- **Look and feel**: a theme's corner radius, border width, shadow, clipping, and elevation (`--ui-radius`, `--ui-border-width`, `--ui-surface-shadow`, `--ui-clip`, `--ui-elevation`) apply to toasts and dialogs too, so a glassy or neobrutalist theme reaches them as well.
+
+These are read live. Change a theme variable or class at runtime and toasts already on screen update with it.
+
+By default a toast looks like a `@codenhub/styles` alert: a lightly tinted surface with a border and no shadow. Dialog buttons look like its buttons: solid color, no border, slightly raised.
+
+## Presentation classes
+
+Pass a presentation class through `className` to change how strongly a toast is colored:
+
+| Class      | Effect                                    |
+| ---------- | ----------------------------------------- |
+| `solid`    | Fully colored background.                 |
+| `soft`     | Lightly tinted background. Toast default. |
+| `ghost`    | No background fill.                       |
+| `edged`    | Draws the border. Toast default.          |
+| `edgeless` | Removes the border.                       |
 
 ```ts
 import { toast } from "@codenhub/toaster";
-import { dialog } from "@codenhub/toaster/dialog";
 
-// Render a high-contrast solid toast:
-toast.success("Build deployed", {
-  className: "solid",
-});
-
-// Render a ghost notification:
-toast.info("Syncing...", {
-  className: "ghost",
-});
+toast.error("Note could not be saved", { className: "solid" });
+toast.info("Syncing in the background", { className: "ghost edgeless" });
 ```
 
-Because presentation classes set CSS custom properties (`--ui-fill`, `--ui-border`), a class applied directly to a toast element overrides any presentation class declared on an ancestor element.
+These classes work standalone and with `@codenhub/styles`. They set `--ui-fill` and `--ui-border`, so a class on the toast itself beats one on any ancestor. To apply one to every toast from a toaster, use the toaster's `className` option.
 
-## Standalone fallback
+## Size
 
-When `@codenhub/styles` is not installed, `@codenhub/toaster/styles` executes the exact same color-mixing formulas against internal, pre-computed defaults (`generated-defaults.css`). These defaults are generated directly from the canonical `@codenhub/styles` palette at build time, ensuring pixel-consistent aesthetics without introducing runtime dependencies.
+Every toast is 22.25rem (356px) wide. On a narrow screen it shrinks to fit, keeping the stack's margin on both sides. All toasts in a stack share the same width, so the stack keeps straight edges.
 
-## Dark mode support
+To change the width, set `width` in a class and pass it through `className`:
 
-Dark mode styling activates automatically when an ancestor element (typically `<html>`) carries either:
+```css
+.wide-toast {
+  width: 28rem;
+}
+```
 
-- The `.dark` class
-- The `data-theme="dark"` attribute
+```ts
+toast.info("A longer message that needs more room", { className: "wide-toast" });
+```
 
-Because colors resolve through CSS `light-dark()` against the element's computed `color-scheme`, dark mode works consistently in both standalone and composed modes.
+## Animation speed
 
-### Nested themes
+Toasts slide in and out over 400ms, and dialogs fade over 200ms. Both read the same motion custom properties `@codenhub/styles` uses, so you can change them with or without it:
 
-Theme resolution is computed locally. If your application embeds a `.light` or `.dark` section inside an oppositely-themed parent, toasts or dialogs rendered inside that container inherit the correct local colors:
+| Property                   | Default                      | Controls                                      |
+| -------------------------- | ---------------------------- | --------------------------------------------- |
+| `--motion-duration-slow`   | `400ms`                      | Toast entrance, exit, and sliding in a stack. |
+| `--motion-ease`            | `cubic-bezier(0.2, 0, 0, 1)` | Easing of those toast animations.             |
+| `--motion-duration-normal` | `200ms`                      | Dialog and backdrop fades.                    |
+
+```css
+:root {
+  --motion-duration-slow: 250ms;
+}
+```
+
+Reduced motion turns all of these off regardless; see [Reduced motion](accessibility.md#reduced-motion).
+
+## Dark mode
+
+With no theme set, toasts and dialogs follow the operating system's light or dark preference. To choose explicitly, put one of these on an ancestor, usually `<html>`:
+
+- Dark: the `dark` or `theme-dark` class, or `data-theme="dark"`.
+- Light: the `light` or `theme-light` class, or `data-theme="light"`.
+
+That's what `@codenhub/theme` sets, and what most theme switchers set too.
+
+Colors are resolved with CSS `light-dark()` against each element's own `color-scheme`, so a light section inside a dark page works. Toasts rendered inside it, by a [toaster scoped to that section](instances.md), use light colors:
 
 ```html
 <html class="dark">
   <body>
-    <!-- Nested light-themed workspace panel -->
-    <div id="light-panel" class="light" style="color-scheme: light">
-      <!-- Toaster anchored inside this panel uses light-mode tokens -->
-    </div>
+    <aside id="preview" class="light" style="color-scheme: light">
+      <!-- A toaster created with { container: preview } shows light toasts here. -->
+    </aside>
   </body>
 </html>
 ```
 
 ## Color overrides
 
-When you need colors that deviate from the active theme, set the package's `--toast-color-*` CSS custom properties in your own stylesheet. The stylesheet reads each one ahead of the composed formula, so a property you set always supersedes the composed color for that specific value. Custom properties inherit, so where you set one decides what it reaches:
+When a color has to differ from the theme, set the matching `--toast-color-*` custom property in your own CSS. It replaces the computed color for that one value, standalone or with `@codenhub/styles`. Each value is final: it's used exactly as given, not mixed with anything.
+
+Custom properties are inherited, so where you set one decides what it affects:
 
 ```css
-/* Globally: every toast and dialog on the page. */
+/* Every toast and dialog on the page. */
 :root {
   --toast-color-success-bg: #0f2e1b;
   --toast-color-success-fg: #4ade80;
   --toast-color-success-edge: #166534;
 }
 
-/* Scoped: only toasts rendered inside this container. */
-#billing-panel {
+/* Only toasts inside the sidebar, from a toaster created with { container: sidebar }. */
+#sidebar {
   --toast-color-error-bg: #450a0a;
   --toast-color-error-fg: #fca5a5;
-  --toast-color-error-edge: #991b1b;
 }
 
-/* Per toast: a class passed through `className`. */
-.storage-alert {
+/* One toast, through className. */
+.quota-alert {
   --toast-color-error-bg: #7f1d1d;
 }
 ```
 
 ```ts
-import { toast, createToaster } from "@codenhub/toaster";
-
-// Scoped: a toaster whose stacks render inside #billing-panel.
-const billingToaster = createToaster({ container: document.querySelector<HTMLElement>("#billing-panel")! });
-
-// Per toast:
-toast.error("Critical storage alert", { className: "storage-alert" });
+toast.error("Storage almost full", { className: "quota-alert" });
 ```
 
-`ToasterConfig.className` applies a class to every toast of an instance, and `DialogsConfig.className` or a dialog's own `className` applies one to the `<dialog>` element. The package sets these properties nowhere itself, so it injects no `<style>` element for them.
+For dialogs, put the class on the dialog with the call's `className` or the instance's `className`.
 
-### Available properties
+| Property                     | What it colors                                                                          |
+| ---------------------------- | --------------------------------------------------------------------------------------- |
+| `--toast-color-default-bg`   | Background of a neutral toast.                                                          |
+| `--toast-color-default-fg`   | Text and icon of a neutral toast.                                                       |
+| `--toast-color-default-edge` | Border of a neutral toast.                                                              |
+| `--toast-color-success-bg`   | Background of a success toast.                                                          |
+| `--toast-color-success-fg`   | Text and icon of a success toast.                                                       |
+| `--toast-color-success-edge` | Border of a success toast.                                                              |
+| `--toast-color-error-bg`     | Background of an error toast.                                                           |
+| `--toast-color-error-fg`     | Text and icon of an error toast.                                                        |
+| `--toast-color-error-edge`   | Border of an error toast.                                                               |
+| `--toast-color-warning-bg`   | Background of a warning toast.                                                          |
+| `--toast-color-warning-fg`   | Text and icon of a warning toast.                                                       |
+| `--toast-color-warning-edge` | Border of a warning toast.                                                              |
+| `--toast-color-info-bg`      | Background of an info toast.                                                            |
+| `--toast-color-info-fg`      | Text and icon of an info toast.                                                         |
+| `--toast-color-info-edge`    | Border of an info toast.                                                                |
+| `--toast-color-surface`      | Background of a dialog and its cancel button.                                           |
+| `--toast-color-text`         | Text of a dialog and its cancel button.                                                 |
+| `--toast-color-border`       | Border of a dialog and its cancel button under `edged`, and of the prompt's text field. |
+| `--toast-color-primary-bg`   | Focus ring and focused border of the prompt's text field.                               |
 
-| Property                     | What it colors                                                                            |
-| ---------------------------- | ----------------------------------------------------------------------------------------- |
-| `--toast-color-default-bg`   | Background of a default (no-severity) toast.                                              |
-| `--toast-color-default-fg`   | Text and icon color of a default toast.                                                   |
-| `--toast-color-default-edge` | Border of a default toast.                                                                |
-| `--toast-color-success-bg`   | Background of a success toast.                                                            |
-| `--toast-color-success-fg`   | Text and icon color of a success toast.                                                   |
-| `--toast-color-success-edge` | Border of a success toast.                                                                |
-| `--toast-color-error-bg`     | Background of an error toast.                                                             |
-| `--toast-color-error-fg`     | Text and icon color of an error toast.                                                    |
-| `--toast-color-error-edge`   | Border of an error toast.                                                                 |
-| `--toast-color-warning-bg`   | Background of a warning toast.                                                            |
-| `--toast-color-warning-fg`   | Text and icon color of a warning toast.                                                   |
-| `--toast-color-warning-edge` | Border of a warning toast.                                                                |
-| `--toast-color-info-bg`      | Background of an info toast.                                                              |
-| `--toast-color-info-fg`      | Text and icon color of an info toast.                                                     |
-| `--toast-color-info-edge`    | Border of an info toast.                                                                  |
-| `--toast-color-surface`      | Background of the dialog container and its cancel button.                                 |
-| `--toast-color-text`         | Text color of the dialog container and its cancel button.                                 |
-| `--toast-color-border`       | Border of the dialog container and cancel button under `.edged`, and of the prompt input. |
-| `--toast-color-primary-bg`   | Focus ring and focused border of the prompt input.                                        |
+The package never sets these properties itself. They're entirely yours.
 
-Every value is final, a background, border, or foreground exactly as it renders, never an ingredient the package mixes further. Unset, each one matches the composed `@codenhub/styles` look, or the package's generated defaults without it.
+## Content Security Policy
 
-## Content Security Policy (CSP)
-
-`@codenhub/toaster` injects no `<style>` element: the stylesheet is one you load, and the package writes only individual inline properties through the CSSOM (`element.style.setProperty`), which a `style-src` policy does not block. A strict policy such as the following needs no nonce for the package:
+The package injects no `<style>` element. The stylesheet is one you load, and the only styles the package writes are individual properties on elements through `element.style.setProperty()`, which a `style-src` policy doesn't block. A strict policy such as this one needs no nonce or exception for it:
 
 ```http
 Content-Security-Policy: style-src 'self';
 ```
 
-## Classless native button stylesheet ordering
+The package also never parses HTML, so it works under Trusted Types as well; see [Accessibility and security](accessibility.md#trusted-types).
 
-If your application uses `@codenhub/styles`' classless native-element mappings (`@codenhub/styles/native` or `@codenhub/styles/tw/native`), be mindful of stylesheet import order:
+## Stylesheet order with `@codenhub/styles/native`
+
+If you use `@codenhub/styles`' native-element stylesheet (`@codenhub/styles/native` or `@codenhub/styles/tw/native`), import it **before** the toaster stylesheet:
 
 ```ts
-// Correct import order:
 import "@codenhub/styles/native";
 import "@codenhub/toaster/styles";
 ```
 
-`@codenhub/styles/native` resets every bare `<button>` element to neutral intent at zero specificity. Because `@codenhub/toaster`'s dialog buttons are bare `<button>` elements that also use zero specificity, importing native mappings _after_ `@codenhub/toaster/styles` will overwrite dialog button colors. Always import the native mappings first.
+The native stylesheet styles every plain `<button>` as a neutral button. Dialog buttons are plain `<button>` elements, and both stylesheets style them with equally weak selectors, so whichever loads last wins. Load the native stylesheet last and every dialog button turns neutral, including the red "Delete" one, which is exactly the button that most needs to look dangerous.
+
+## Next
+
+The notes app looks the part. The last page, [Accessibility and security](accessibility.md), covers what screen reader users hear, how focus moves, reduced motion, and the trust boundary of custom content.

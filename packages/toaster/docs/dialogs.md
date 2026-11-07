@@ -1,129 +1,145 @@
 ---
 title: Dialogs
-description: Guide to native modal dialogs, confirm, prompt, alert, thenable handles, and localization.
-order: 3
+description: confirm, prompt, and alert dialogs, what they resolve to, handles, queueing, button labels, dialog instances, and toasts while a dialog is open.
+order: 2
 ---
 
-# Interactive modal dialogs
+# Dialogs
 
-`@codenhub/toaster/dialog` provides native HTML5 modal dialogs through the `dialog` singleton and independent instances made with `createDialogs()`. Dialogs have their own entry point so an app that only shows toasts does not bundle them. Dialogs render directly into the browser's top layer via `HTMLDialogElement.showModal()`, guaranteeing proper accessibility, focus containment, backdrop styling, and keyboard handling.
+A toast tells; a dialog asks. Dialogs block the page until someone answers, so they're for the moments that need a decision: "Delete this note?", "What should we call it?", "Your session expired." This page covers the three dialog kinds, what each one resolves to, how they line up when several are opened, translating their buttons, and how they get along with toasts.
 
-## Why native dialogs?
+Dialogs come from their own entry point, so an app that only shows toasts doesn't pay for them:
 
-Rather than simulating modal overlays with complex `z-index` stacks and manual focus traps, `@codenhub/toaster` uses the browser's native `<dialog>` platform primitive:
+```ts
+import { dialog } from "@codenhub/toaster/dialog";
+```
 
-- **Browser Top Layer**: Always renders above every other element in the DOM tree, regardless of ancestor `z-index` or `overflow: hidden` rules.
-- **Inert Document**: The browser automatically disables user interaction with the background document while the modal is open. The toasts of every toaster rendering into the same parent element move into the dialog for that time, so they stay usable (see [Concepts](concepts.md#the-two-presentation-layers)). Your own modal dialogs need a scoped toaster for that (see [Your own modal dialogs](concepts.md#your-own-modal-dialogs)).
-- **Focus Trap & Restoration**: Focus is automatically confined within the dialog, and restored to the triggering element when the dialog closes.
-- **Escape Key Handling**: Pressing Escape triggers standard dialog dismissal, resolving the operation with its cancel value.
+They use the same stylesheet as toasts, `@codenhub/toaster/styles`.
 
-## Confirmation dialogs (`dialog.confirm`)
+## Confirm
 
-`dialog.confirm()` prompts the user to confirm or cancel an operation, returning a promise that resolves to a boolean:
+`dialog.confirm()` asks a yes-or-no question and resolves to a boolean:
 
 ```ts
 import { dialog } from "@codenhub/toaster/dialog";
 
-if (await dialog.confirm("Are you sure you want to discard unsaved changes?")) {
-  revertForm();
+if (await dialog.confirm("Delete this note? This can't be undone.")) {
+  await deleteNote(note.id);
 }
 ```
 
-### Custom button labels and destructive variants
+It resolves to `true` when the confirm button is pressed and `false` on any way out: the cancel button, <kbd>Escape</kbd>, a click on the backdrop, or `dismiss()`.
 
-You can customize the confirm and cancel button text, and specify `type: "error"` for destructive actions (which tints the confirm button with error intent styling):
+Make it clear what's at stake with a title, specific button labels, and `type: "error"`, which colors the confirm button as destructive:
 
 ```ts
-import { dialog } from "@codenhub/toaster/dialog";
-
-const confirmed = await dialog.confirm("Permanently delete this project and all its databases?", {
-  title: "Delete Project",
+const confirmed = await dialog.confirm('Delete "Groceries"? This can\'t be undone.', {
+  title: "Delete note",
   type: "error",
-  confirmLabel: "Delete project",
-  cancelLabel: "Keep project",
+  confirmLabel: "Delete note",
+  cancelLabel: "Keep it",
 });
-
-if (confirmed) {
-  await deleteProject();
-}
 ```
 
-## Prompt dialogs (`dialog.prompt`)
+"Delete note" and "Keep it" beat "OK" and "Cancel": nobody has ever had to reread a button that says exactly what it does.
 
-`dialog.prompt()` displays an interactive text input, resolving to the entered `string` if submitted or `null` if cancelled:
+## Prompt
+
+`dialog.prompt()` asks for a line of text. It resolves to the text when submitted, or `null` when cancelled:
 
 ```ts
 import { dialog } from "@codenhub/toaster/dialog";
 
-const branchName = await dialog.prompt("Enter a name for the new branch:", {
-  title: "Create Branch",
-  defaultValue: "feature/",
-  placeholder: "feature/branch-name",
-  submitLabel: "Create branch",
-  cancelLabel: "Cancel",
+const name = await dialog.prompt("New name for this note", {
+  title: "Rename note",
+  defaultValue: note.title,
+  placeholder: "Untitled",
+  submitLabel: "Rename",
 });
 
-if (branchName !== null && branchName.trim().length > 0) {
-  await git.createBranch(branchName);
+if (name !== null && name.trim() !== "") {
+  await renameNote(note.id, name.trim());
 }
 ```
 
-Pressing <kbd>Enter</kbd> inside the prompt's text input automatically submits the form, and <kbd>Escape</kbd> cancels the prompt and resolves to `null`.
+The text comes back exactly as typed, spaces included, and may be empty, so check it before you use it. <kbd>Enter</kbd> in the text field submits, unless the person is in the middle of composing a character with an input method editor, as when typing Japanese or Chinese. <kbd>Escape</kbd> cancels. The message is the text field's label, so screen readers announce it with the field.
 
-## Alert dialogs (`dialog.alert`)
+## Alert
 
-`dialog.alert()` provides an accessible replacement for `window.alert()`. It interrupts the user with a message and resolves to `void` when acknowledged:
+`dialog.alert()` delivers a message that must be acknowledged before anything else happens. It's an accessible replacement for `window.alert()`, and it resolves to `undefined` once closed:
 
 ```ts
 import { dialog } from "@codenhub/toaster/dialog";
 
-await dialog.alert("Your session has expired. Please sign in again.", {
-  title: "Session Expired",
+await dialog.alert("Your session has expired. Sign in again to keep editing.", {
+  title: "Session expired",
   okLabel: "Sign in",
 });
 
-redirectToLogin();
+goToSignIn();
 ```
 
-## The thenable handle contract
+An alert has one button, but <kbd>Escape</kbd> and the backdrop close it too. All three resolve the same way, because an alert has nothing to decide.
 
-All dialog methods return an `DialogHandle<T>`. This handle implements `PromiseLike<T>`, meaning you can either `await` the method call directly or capture the handle object for programmatic control:
+## Dialog options
+
+All three methods take the message first and an options object second:
+
+| Option            | Dialogs             | Default     | What it does                                                                     |
+| ----------------- | ------------------- | ----------- | -------------------------------------------------------------------------------- |
+| `title`           | All                 | None        | A heading above the message.                                                     |
+| `type`            | All                 | `"primary"` | Color of the main button: `"primary"`, `"secondary"`, `"success"`, or `"error"`. |
+| `backdropDismiss` | All                 | `true`      | Whether a click on the backdrop closes the dialog as a cancel.                   |
+| `className`       | All                 | None        | Extra CSS classes on the `<dialog>` element.                                     |
+| `confirmLabel`    | `confirm`           | `"Confirm"` | Text of the confirm button.                                                      |
+| `cancelLabel`     | `confirm`, `prompt` | `"Cancel"`  | Text of the cancel button.                                                       |
+| `submitLabel`     | `prompt`            | `"Submit"`  | Text of the submit button.                                                       |
+| `okLabel`         | `alert`             | `"OK"`      | Text of the only button.                                                         |
+| `defaultValue`    | `prompt`            | `""`        | Text already in the field when the dialog opens.                                 |
+| `placeholder`     | `prompt`            | None        | Hint shown while the field is empty.                                             |
+
+Set `backdropDismiss: false` when a stray click shouldn't count as an answer, such as in a form someone spent time filling in. <kbd>Escape</kbd> still cancels; that's how the browser's `<dialog>` works, and keyboard users depend on it.
+
+The message must not be empty. An empty or whitespace-only message throws `Interactive dialog message must not be empty.`
+
+## Handles
+
+Each method returns a `DialogHandle`. You can `await` it directly, as every example so far does. You can also keep it and control the dialog while it's open:
 
 ```ts
 import { dialog } from "@codenhub/toaster/dialog";
 
-// Approach 1: Direct await (resolves to boolean)
-const confirmed = await dialog.confirm("Proceed with update?");
+const question = dialog.confirm("Discard unsaved changes?");
 
-// Approach 2: Retain the handle
-const handle = dialog.confirm("Proceed with update?");
+// Close it if the note gets saved some other way in the meantime.
+onAutosave(() => question.dismiss());
 
-// Inspect dialog state:
-console.log(handle.state); // "visible"
-
-// Dismiss programmatically after a timeout:
-setTimeout(() => {
-  if (handle.state === "visible") {
-    handle.dismiss(); // Settles the promise with `false`
-  }
-}, 10000);
-
-// Await the outcome when needed:
-const result = await handle;
-await handle.settled; // Resolves once exit animation and cleanup finish
+const discard = await question;
 ```
 
-### Cancellation fallbacks
+| Member      | What it is                                                                                                                       |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `await`     | The answer: `boolean` for confirm, `string \| null` for prompt, `undefined` for alert.                                           |
+| `result`    | The same answer as a real `Promise`, for code that wants one rather than a promise-like value.                                   |
+| `dismiss()` | Closes the dialog as a cancel. Works on queued dialogs too. Safe to call more than once.                                         |
+| `state`     | `"queued"`, `"visible"`, `"hiding"`, or `"hidden"`, the same states [toasts have](toasts.md#state-settled-and-lifecycle-events). |
+| `settled`   | A promise that resolves once the closing animation is done and the dialog is cleaned up.                                         |
 
-When a dialog is dismissed without confirmation (by clicking the Cancel button, pressing <kbd>Escape</kbd>, or calling `handle.dismiss()`), it settles deterministically with:
+The handle being awaitable is the point. Many dialog libraries return an object from `confirm()`, and `if (await confirm(...))` is then always true, because an object is always truthy. That bug ships the "Cancel" button that deletes anyway. Here, `await` gives you the actual answer.
 
-- `false` for `dialog.confirm()`
-- `null` for `dialog.prompt()`
-- `undefined` for `dialog.alert()`
+Dismissing gives each kind its cancel value: `false` for confirm, `null` for prompt, `undefined` for alert.
 
-## Localization and default labels
+## One at a time
 
-Instead of configuring `confirmLabel`, `cancelLabel`, `submitLabel`, and `okLabel` on every call, you can set default dialog labels on an instance using `DialogsConfig.labels`:
+A dialogs instance shows one dialog at a time. Calling `confirm()` while another dialog is open doesn't stack a second dialog on top: the new one waits in a queue, with state `"queued"`, and opens when the current one closes. Dismissing a queued dialog removes it from the queue with its cancel value; it never appears.
+
+When the last dialog in a sequence closes, focus goes back to the element that had it before the first one opened.
+
+If the browser refuses to open a dialog, which is when `showModal()` throws, that dialog's handle rejects with the browser's error, and the next queued dialog still gets its turn. Wrap the `await` in `try`/`catch` if your page can get into a state where that happens.
+
+## Button labels and translation
+
+Rather than passing labels to every call, set them once on a dialogs instance with `createDialogs()`:
 
 ```ts
 import { createDialogs } from "@codenhub/toaster/dialog";
@@ -137,26 +153,60 @@ const dialogs = createDialogs({
   },
 });
 
-// All dialogs opened from this instance use Portuguese button labels:
-if (await dialogs.confirm("Deseja prosseguir?")) {
-  salvarAlteracoes();
+if (await dialogs.confirm("¿Borrar esta nota?")) {
+  await deleteNote(note.id);
 }
 ```
 
-A label passed directly to a dialog call (`ConfirmOptions.confirmLabel`, etc.) always overrides the instance-level default. The `dismiss` and `notifications` labels belong to toasts; set them with `ToasterConfig.labels` (see [Instances](instances.md)).
+A label passed to a single call still wins over the instance's label. The toast labels, for the close button and the stack's name, are set on the toaster instead; see [Toaster instances](instances.md#configuration).
 
-## Dialog instances (`createDialogs`)
+## Dialog instances
 
-`createDialogs()` returns an independent instance with the same `confirm`, `prompt`, and `alert` methods as the `dialog` singleton. Each instance opens its dialogs one at a time, queuing later calls until the open one closes.
+`createDialogs()` makes an independent instance with the same `confirm`, `prompt`, and `alert` methods as `dialog`, which is itself just an instance made with no options. Each instance has its own queue.
 
-| Option      | Type           | Default          | Description                                                                |
-| :---------- | :------------- | :--------------- | :------------------------------------------------------------------------- |
-| `container` | `HTMLElement`  | `document.body`  | Element the dialogs are appended to. Cannot be changed after construction. |
-| `labels`    | `DialogLabels` | English defaults | Default button labels: `confirm`, `cancel`, `submit`, `ok`.                |
-| `className` | `string`       | `undefined`      | Class appended to every dialog in this instance.                           |
+| Option      | Default         | What it does                                                             |
+| ----------- | --------------- | ------------------------------------------------------------------------ |
+| `container` | `document.body` | The element the `<dialog>` is added to. Can't be changed after creation. |
+| `labels`    | English         | Default button labels: `confirm`, `cancel`, `submit`, `ok`.              |
+| `className` | None            | Extra CSS classes on every dialog from this instance.                    |
 
-`dialogs.configure({...})` changes any option except `container`. `dialogs.destroy()` closes the open dialog and drops queued ones, settling each with its cancel value, and removes the instance's `<dialog>` element; later calls throw. To recolor dialogs, set the `--toast-color-*` custom properties in CSS (see [Styling](styling.md#color-overrides)).
+`configure()` changes `labels` and `className` later. It applies to dialogs that open afterwards. Passing `container` to it throws `Dialogs container cannot be changed after construction.`
+
+`destroy()` closes the open dialog and drops the queued ones, resolving each with its cancel value, and removes the instance's `<dialog>` element. Calling it twice does nothing. Any other call after it throws `This dialogs instance has been destroyed. Create a new one with createDialogs().`
+
+Opening a dialog outside a browser throws `DOM document is not available. Dialogs require a browser environment.` Like toasts, dialogs are safe to import during server-side rendering, just not to open.
 
 ## Toasts while a dialog is open
 
-A modal dialog makes the rest of the page inert, so a toast rendered outside it can be neither clicked nor announced. While a dialog from `@codenhub/toaster/dialog` is open, the toast stacks and live regions of every toaster rendering into the same parent element move inside it, and move back once it starts closing. Nested dialogs hand the toasts to the most recently opened one. The two entry points coordinate through an attribute on the open dialog, so using both costs nothing extra in either bundle.
+A modal dialog makes the rest of the page inert: nothing behind it can be clicked, focused, or heard by a screen reader. A toast stuck behind the backdrop would be useless, so while a dialog from this package is open, the toasts move into it.
+
+More precisely: every toaster that renders into the same element as the dialog moves its stacks and its screen reader announcements inside the open dialog. Toasts stay in their usual corner, above the backdrop, and remain clickable and announced. They move back as soon as the dialog starts closing. With dialogs opened inside dialogs, the toasts follow the most recent one.
+
+```ts
+const deleting = dialog.confirm("Delete this note?");
+toast.info("Autosave paused"); // shown above the backdrop, still clickable
+```
+
+Toasters with a different container, such as one scoped to a sidebar, don't move. Their toasts stay behind the backdrop, inert and not announced, until the dialog closes, and they aren't announced again afterward.
+
+### Your own modal dialogs
+
+This only works with dialogs from this package. A `<dialog>` your app opens with `showModal()` makes the page inert too, and the package won't move toasts into it. Toasts shown while it's open render behind its backdrop, where nobody can click them and screen readers skip them.
+
+The fix is a toaster that lives inside your dialog. Create it when the dialog opens and destroy it when it closes:
+
+```ts
+import { createToaster } from "@codenhub/toaster";
+
+const settings = document.querySelector<HTMLDialogElement>("#settings")!;
+const settingsToaster = createToaster({ container: settings });
+
+settings.showModal();
+settingsToaster.success("Preferences saved");
+
+settings.addEventListener("close", () => settingsToaster.destroy(), { once: true });
+```
+
+## Next
+
+The notes app now has toasts and dialogs from the ready-made instances. [Toaster instances](instances.md) covers every configuration option, defaults per toast kind, and separate toasters like the one above.
