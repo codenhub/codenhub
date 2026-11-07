@@ -21,7 +21,7 @@ describe("overflow protection", () => {
     const toaster = createToaster({ maxVisible: 1 });
     const first = toaster.success("Hovered");
     flushAnimations();
-    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
+    const element = document.body.querySelector(".toaster-toast") as HTMLDivElement;
     element.dispatchEvent(new MouseEvent("mouseenter"));
 
     const second = toaster.success("Waiting");
@@ -35,7 +35,7 @@ describe("overflow protection", () => {
     const toaster = createToaster({ maxVisible: 1 });
     const first = toaster.success("Focused");
     flushAnimations();
-    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
+    const element = document.body.querySelector(".toaster-toast") as HTMLDivElement;
     element.dispatchEvent(new FocusEvent("focusin"));
 
     const second = toaster.success("Waiting");
@@ -59,7 +59,7 @@ describe("overflow protection", () => {
     const toaster = createToaster({ maxVisible: 1 });
     const first = toaster.success("Hovered");
     flushAnimations();
-    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
+    const element = document.body.querySelector(".toaster-toast") as HTMLDivElement;
     element.dispatchEvent(new MouseEvent("mouseenter"));
     const second = toaster.success("Waiting");
     expect(second.state).toBe("queued");
@@ -86,7 +86,7 @@ describe("overflow protection", () => {
     const toaster = createToaster({ maxVisible: 1 });
     const first = toaster.success("Persistent", { autoDismiss: false });
     flushAnimations();
-    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
+    const element = document.body.querySelector(".toaster-toast") as HTMLDivElement;
     element.dispatchEvent(new MouseEvent("mouseenter"));
 
     const second = toaster.success("Waiting");
@@ -100,7 +100,7 @@ describe("overflow protection", () => {
     const toaster = createToaster({ maxVisible: 1 });
     const first = toaster.success("Persistent", { autoDismiss: false });
     flushAnimations();
-    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
+    const element = document.body.querySelector(".toaster-toast") as HTMLDivElement;
     element.dispatchEvent(new FocusEvent("focusin"));
 
     const second = toaster.success("Waiting");
@@ -114,7 +114,7 @@ describe("overflow protection", () => {
     const toaster = createToaster({ maxVisible: 1 });
     const first = toaster.success("Interactive", { autoDismiss: false });
     flushAnimations();
-    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
+    const element = document.body.querySelector(".toaster-toast") as HTMLDivElement;
     // Simulates a second focusable element inside the toast, e.g. a link in
     // custom content alongside the dismiss button.
     const innerButton = document.createElement("button");
@@ -141,7 +141,7 @@ describe("overflow protection", () => {
     const toaster = createToaster({ maxVisible: 1 });
     const first = toaster.success("Persistent", { autoDismiss: false });
     flushAnimations();
-    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
+    const element = document.body.querySelector(".toaster-toast") as HTMLDivElement;
     element.dispatchEvent(new MouseEvent("mouseenter"));
     const second = toaster.success("Waiting");
     expect(second.state).toBe("queued");
@@ -158,7 +158,7 @@ describe("overflow protection", () => {
     const toaster = createToaster({ maxVisible: 1, duration: 100000 });
     const first = toaster.success("Hovered");
     flushAnimations();
-    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
+    const element = document.body.querySelector(".toaster-toast") as HTMLDivElement;
     element.dispatchEvent(new MouseEvent("mouseenter"));
     const second = toaster.success("Waiting");
     expect(second.state).toBe("queued");
@@ -175,7 +175,7 @@ describe("overflow protection", () => {
     const toaster = createToaster({ maxVisible: 1 });
     const first = toaster.success("Both", { autoDismiss: false });
     flushAnimations();
-    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
+    const element = document.body.querySelector(".toaster-toast") as HTMLDivElement;
     element.dispatchEvent(new MouseEvent("mouseenter"));
     element.dispatchEvent(new FocusEvent("focusin"));
 
@@ -320,8 +320,8 @@ describe("queued toast updates", () => {
     flushAnimations();
 
     expect(queued.state).toBe("visible");
-    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
-    expect(element.className).toContain("coden-toast-success");
+    const element = document.body.querySelector<HTMLDivElement>(".toaster-toast")!;
+    expect(element.className).toContain("toaster-toast-success");
     expect(element.textContent).toContain("Done");
     toaster.destroy();
   });
@@ -346,7 +346,7 @@ describe("option mutation safety", () => {
   it("does not apply a partial update when validation fails", () => {
     const toaster = createToaster();
     const handle = toaster.success("Original message");
-    const element = document.body.querySelector(".coden-toast");
+    const element = document.body.querySelector(".toaster-toast");
 
     expect(() => handle.update({ message: "Changed message", duration: -1 })).toThrow(/duration/);
 

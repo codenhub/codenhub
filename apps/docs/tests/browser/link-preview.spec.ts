@@ -7,7 +7,7 @@ import { expect, test } from "./fixtures";
 test("draws every icon in a site link's preview card", async ({ page }) => {
   await page.goto("/toaster/");
 
-  await page.locator('.markdown-content a[href="/toaster/concepts/"]').first().hover();
+  await page.locator('.markdown-content a[href="/toaster/toasts/"]').first().hover();
   const card = page.locator("[data-link-preview]");
   await expect(card).toBeVisible();
 

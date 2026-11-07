@@ -26,7 +26,7 @@ describe("screen reader announcements", () => {
   it("does not make the toast element itself a live region", () => {
     const toaster = createToaster();
     toaster.success("Saved");
-    const element = document.body.querySelector(".coden-toast")!;
+    const element = document.body.querySelector(".toaster-toast")!;
     expect(element.hasAttribute("role")).toBe(false);
     expect(element.hasAttribute("aria-live")).toBe(false);
     toaster.destroy();

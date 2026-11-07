@@ -1,19 +1,20 @@
 # @codenhub/toaster
 
-> Experimental instance-based browser toasts and native dialogs with required
-> CSS, isolated DOM/queues/tokens, and explicit lifecycle handles.
+> Experimental browser toasts and native modal dialogs: queued, auto-dismissing
+> toast stacks, awaitable confirm/prompt/alert dialogs, accessible by default,
+> no framework, no injected styles.
 
-Import `@codenhub/toaster/styles`, dispatch only in a browser, treat custom nodes
-as trusted content, and call `destroy()` to release all owned resources.
+Import `@codenhub/toaster/styles` once, show toasts and dialogs only in a
+browser, treat DOM nodes passed as custom content as trusted, and call
+`destroy()` on instances you create when their area goes away.
 
 ## Documentation
 
-- [Documentation overview](docs/index.md): Entrypoint to all guides, architecture, and quick start.
-- [Concepts](docs/concepts.md): Dual-layer architecture, lifecycle handles, and thenables.
-- [Toasts guide](docs/toasts.md): Neutral, semantic, loading, structured, and promise notifications.
-- [Dialogs guide](docs/dialogs.md): Confirmations, prompts, alerts, and label localization.
-- [Styling guide](docs/styling.md): Design tokens, @codenhub/styles live composition, presentation classes, and CSP.
-- [Accessibility and security](docs/accessibility.md): ARIA live regions, focus restoration, reduced motion, and content sanitization.
-- [Scoped instances](docs/instances.md): Multi-instance coordination, custom containers, and lifecycle teardown.
-- [API reference](docs/reference/index.md): Complete TypeScript symbol catalogue compiled from declarations.
-- [Changelog](docs/changelog/index.md): Release history, breaking changes, and migration notes.
+- [Documentation overview](docs/index.md): What the package does and the reading order.
+- [Toasts](docs/toasts.md): Kinds of toasts, actions, loading and promise toasts, handles and updates, positions, queueing, timers, errors.
+- [Dialogs](docs/dialogs.md): confirm, prompt, alert, results, handles, queueing, labels, dialog instances, toasts under dialogs.
+- [Toaster instances](docs/instances.md): Every option and default, per-kind defaults, configure(), destroy(), SSR.
+- [Styling](docs/styling.md): Stylesheet, colors with and without @codenhub/styles, presentation classes, size, motion, dark mode, color overrides, CSP.
+- [Accessibility and security](docs/accessibility.md): Screen reader announcements, focus, reduced motion, consumer responsibilities, custom content trust.
+- [API reference](docs/reference/index.md): Every exported symbol, generated from declarations.
+- [Changelog](docs/changelog/index.md): Release history and migration notes.

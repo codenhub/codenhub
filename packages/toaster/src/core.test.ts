@@ -121,7 +121,7 @@ describe("instance-level className", () => {
     const toaster = createToaster({ className: "glass" });
     toaster.success("Styled");
 
-    const element = document.body.querySelector(".coden-toast");
+    const element = document.body.querySelector(".toaster-toast");
     expect(element?.className).toContain("glass");
     toaster.destroy();
   });
@@ -130,7 +130,7 @@ describe("instance-level className", () => {
     const toaster = createToaster({ className: "glass" });
     toaster.success("Styled", { className: "urgent" });
 
-    const element = document.body.querySelector<HTMLDivElement>(".coden-toast");
+    const element = document.body.querySelector<HTMLDivElement>(".toaster-toast");
     expect(element?.className).toContain("glass");
     expect(element?.className).toContain("urgent");
     expect(element!.className.indexOf("glass")).toBeLessThan(element!.className.indexOf("urgent"));
@@ -166,7 +166,7 @@ describe("instance-level className", () => {
     const toaster = createToaster({ className: "glass" });
     const handle = toaster.success("Styled", { className: "class-one" });
 
-    const element = document.body.querySelector(".coden-toast");
+    const element = document.body.querySelector(".toaster-toast");
     expect(element?.className).toContain("glass");
     expect(element?.className).toContain("class-one");
 
@@ -186,8 +186,8 @@ describe("callable toaster and neutral notifications", () => {
     expect(document.body.innerHTML).toContain("Default neutral message");
     const element = document.body.querySelector("[data-toast-message]");
     expect(element).not.toBeNull();
-    const root = element?.closest(".coden-toast");
-    expect(root?.classList.contains("coden-toast-default")).toBe(true);
+    const root = element?.closest(".toaster-toast");
+    expect(root?.classList.contains("toaster-toast-default")).toBe(true);
     handle.dismiss();
     toaster.destroy();
   });
@@ -281,7 +281,7 @@ describe("structured content and actions", () => {
 describe("toast.promise", () => {
   // Reads only the toasts: the hidden announcement regions repeat their text.
   const toastText = (): string =>
-    Array.from(document.body.querySelectorAll(".coden-toast"), (element) => element.textContent).join(" ");
+    Array.from(document.body.querySelectorAll(".toaster-toast"), (element) => element.textContent).join(" ");
 
   it("manages promise success lifecycle with autoDismiss re-arming", async () => {
     vi.useFakeTimers();
@@ -299,8 +299,8 @@ describe("toast.promise", () => {
     });
 
     expect(toastText()).toContain("Saving...");
-    const loaderRoot = document.body.querySelector(".coden-toast");
-    expect(loaderRoot?.classList.contains("coden-toast-default")).toBe(true);
+    const loaderRoot = document.body.querySelector(".toaster-toast");
+    expect(loaderRoot?.classList.contains("toaster-toast-default")).toBe(true);
 
     resolvePromise({ name: "Doc" });
     const result = await toastPromise;
@@ -308,8 +308,8 @@ describe("toast.promise", () => {
 
     flushAnimations();
     expect(toastText()).toContain("Saved Doc!");
-    const successRoot = document.body.querySelector(".coden-toast");
-    expect(successRoot?.classList.contains("coden-toast-success")).toBe(true);
+    const successRoot = document.body.querySelector(".toaster-toast");
+    expect(successRoot?.classList.contains("toaster-toast-success")).toBe(true);
 
     // Re-armed auto-dismiss should dismiss it after default duration
     vi.advanceTimersByTime(5000);
@@ -342,8 +342,8 @@ describe("toast.promise", () => {
 
     flushAnimations();
     expect(toastText()).toContain("Error: Network timeout");
-    const errorRoot = document.body.querySelector(".coden-toast");
-    expect(errorRoot?.classList.contains("coden-toast-error")).toBe(true);
+    const errorRoot = document.body.querySelector(".toaster-toast");
+    expect(errorRoot?.classList.contains("toaster-toast-error")).toBe(true);
 
     vi.advanceTimersByTime(5000);
     flushAnimations();
@@ -370,7 +370,7 @@ describe("toast.promise", () => {
 
     await expect(toastPromise).rejects.toBe(original);
     flushAnimations();
-    expect(document.body.querySelector(".coden-toast-spinner")).toBeNull();
+    expect(document.body.querySelector(".toaster-toast-spinner")).toBeNull();
     expect(document.body.textContent).not.toContain("Saving");
     expect(reportError).toHaveBeenCalledWith(formatterError);
 
@@ -394,7 +394,7 @@ describe("toast.promise", () => {
 
     await expect(toastPromise).resolves.toBe(42);
     flushAnimations();
-    expect(document.body.querySelector(".coden-toast-spinner")).toBeNull();
+    expect(document.body.querySelector(".toaster-toast-spinner")).toBeNull();
     expect(document.body.textContent).not.toContain("Saving");
     expect(reportError).toHaveBeenCalledWith(formatterError);
 
@@ -417,7 +417,7 @@ describe("toast.promise", () => {
       error: "Error",
     });
 
-    const loadingMain = document.body.querySelector(".coden-toast-main")!;
+    const loadingMain = document.body.querySelector(".toaster-toast-main")!;
     expect(loadingMain.textContent).toContain("Saving");
     expect(loadingMain.textContent).toContain("Please wait");
 
@@ -425,7 +425,7 @@ describe("toast.promise", () => {
     await Promise.resolve();
     flushAnimations();
 
-    const successMain = document.body.querySelector(".coden-toast-main")!;
+    const successMain = document.body.querySelector(".toaster-toast-main")!;
     expect(successMain.textContent).toContain("Saved");
     expect(successMain.textContent).not.toContain("Please wait");
 
@@ -452,7 +452,7 @@ describe("toast.promise", () => {
     await Promise.resolve();
     flushAnimations();
 
-    const successMain = document.body.querySelector(".coden-toast-main")!;
+    const successMain = document.body.querySelector(".toaster-toast-main")!;
     expect(successMain.textContent).toContain("Finished!");
     expect(successMain.textContent).not.toContain("Working...");
     expect(successMain.textContent).not.toContain("Hang tight");
@@ -505,7 +505,7 @@ describe("toaster semantic variants", () => {
     const toaster = createToaster();
     const h = toaster.success("Saved");
     expect(document.body.innerHTML).toContain("Saved");
-    const el = document.body.querySelector(".coden-toast-success");
+    const el = document.body.querySelector(".toaster-toast-success");
     expect(el).not.toBeNull();
     h.dismiss();
     toaster.destroy();
@@ -515,7 +515,7 @@ describe("toaster semantic variants", () => {
     const toaster = createToaster();
     const h = toaster.error("Failed");
     expect(document.body.innerHTML).toContain("Failed");
-    const el = document.body.querySelector(".coden-toast-error");
+    const el = document.body.querySelector(".toaster-toast-error");
     expect(el).not.toBeNull();
     h.dismiss();
     toaster.destroy();
@@ -525,7 +525,7 @@ describe("toaster semantic variants", () => {
     const toaster = createToaster();
     const h = toaster.warning("Warning");
     expect(document.body.innerHTML).toContain("Warning");
-    const el = document.body.querySelector(".coden-toast-warning");
+    const el = document.body.querySelector(".toaster-toast-warning");
     expect(el).not.toBeNull();
     h.dismiss();
     toaster.destroy();
@@ -535,7 +535,7 @@ describe("toaster semantic variants", () => {
     const toaster = createToaster();
     const h = toaster.info("Info");
     expect(document.body.innerHTML).toContain("Info");
-    const el = document.body.querySelector(".coden-toast-info");
+    const el = document.body.querySelector(".toaster-toast-info");
     expect(el).not.toBeNull();
     h.dismiss();
     toaster.destroy();
@@ -568,7 +568,7 @@ describe("toaster.custom", () => {
     const toaster = createToaster();
     const markup = '<span onclick="alert(1)">Custom!</span><script>alert(2)</script>';
     const h = toaster.custom(markup);
-    const element = document.body.querySelector(".coden-toast")!;
+    const element = document.body.querySelector(".toaster-toast")!;
     expect(element.textContent).toContain(markup);
     expect(element.querySelector("script, [onclick]")).toBeNull();
     h.dismiss();
@@ -597,7 +597,7 @@ describe("toaster.clear() and dismiss()", () => {
     toaster.clear();
     flushAnimations();
 
-    expect(document.body.querySelector(".coden-toast")).toBeNull();
+    expect(document.body.querySelector(".toaster-toast")).toBeNull();
     toaster.destroy();
   });
 
@@ -609,7 +609,7 @@ describe("toaster.clear() and dismiss()", () => {
     toaster.dismiss();
     flushAnimations();
 
-    expect(document.body.querySelector(".coden-toast")).toBeNull();
+    expect(document.body.querySelector(".toaster-toast")).toBeNull();
     toaster.destroy();
   });
 
@@ -839,8 +839,8 @@ describe("positioning and margins", () => {
       "[data-toast-container*='bottom-center']",
     ) as HTMLDivElement;
 
-    expect(topCenterContainer.className).toContain("coden-toast-stack-top-center");
-    expect(bottomCenterContainer.className).toContain("coden-toast-stack-bottom-center");
+    expect(topCenterContainer.className).toContain("toaster-toast-stack-top-center");
+    expect(bottomCenterContainer.className).toContain("toaster-toast-stack-bottom-center");
 
     h1.dismiss();
     h2.dismiss();
@@ -948,7 +948,7 @@ describe("focus restoration on dismiss", () => {
     const handle = toaster.success("Focus me", { dismissible: true });
     flushAnimations();
 
-    const dismissButton = document.body.querySelector<HTMLButtonElement>(".coden-toast-dismiss")!;
+    const dismissButton = document.body.querySelector<HTMLButtonElement>(".toaster-toast-dismiss")!;
     dismissButton.focus();
     expect(document.activeElement).toBe(dismissButton);
 
@@ -989,7 +989,7 @@ describe("focus restoration on dismiss", () => {
     const handle = toaster.success("Focus me", { dismissible: true });
     flushAnimations();
 
-    const dismissButton = document.body.querySelector<HTMLButtonElement>(".coden-toast-dismiss")!;
+    const dismissButton = document.body.querySelector<HTMLButtonElement>(".toaster-toast-dismiss")!;
     dismissButton.focus();
     trigger.remove();
 
@@ -1005,7 +1005,7 @@ describe("Toast update", () => {
     const toaster = createToaster();
     const handle = toaster.success("Initial message");
 
-    const element = document.body.querySelector(".coden-toast");
+    const element = document.body.querySelector(".toaster-toast");
     expect(element?.textContent).toContain("Initial message");
 
     handle.update({ message: "Updated message" });
@@ -1021,7 +1021,7 @@ describe("Toast update", () => {
       className: "class-one",
     });
 
-    const element = document.body.querySelector(".coden-toast");
+    const element = document.body.querySelector(".toaster-toast");
     expect(element?.className).toContain("class-one");
     expect(element?.className).not.toContain("class-two");
 
@@ -1038,15 +1038,15 @@ describe("Toast update", () => {
     const handle = toaster.loading("Uploading…");
     flushAnimations();
 
-    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
-    expect(element.className).toContain("coden-toast-default");
+    const element = document.body.querySelector<HTMLDivElement>(".toaster-toast")!;
+    expect(element.className).toContain("toaster-toast-default");
 
     handle.update({ type: "success", message: "Uploaded", duration: 2000, autoDismiss: true });
 
-    expect(element.className).toContain("coden-toast-success");
-    expect(element.className).not.toContain("coden-toast-default");
+    expect(element.className).toContain("toaster-toast-success");
+    expect(element.className).not.toContain("toaster-toast-default");
     expect(element.textContent).toContain("Uploaded");
-    expect(element.querySelector("svg.coden-toast-icon")).not.toBeNull();
+    expect(element.querySelector("svg.toaster-toast-icon")).not.toBeNull();
 
     vi.advanceTimersByTime(2500);
     flushAnimations();
@@ -1079,12 +1079,12 @@ describe("Toast update", () => {
     const toaster = createToaster();
     const handle = toaster.success("Working");
     flushAnimations();
-    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
+    const element = document.body.querySelector<HTMLDivElement>(".toaster-toast")!;
 
     handle.update({ type: "error", icon: "success" });
 
-    expect(element.className).toContain("coden-toast-error");
-    const icon = element.querySelector("svg.coden-toast-icon");
+    expect(element.className).toContain("toaster-toast-error");
+    const icon = element.querySelector("svg.toaster-toast-icon");
     expect(icon?.children.length).toBe(2);
 
     toaster.destroy();
@@ -1094,11 +1094,11 @@ describe("Toast update", () => {
     const toaster = createToaster();
     const handle = toaster.success("Working");
     flushAnimations();
-    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
-    expect(element.querySelector("svg.coden-toast-icon")).not.toBeNull();
+    const element = document.body.querySelector<HTMLDivElement>(".toaster-toast")!;
+    expect(element.querySelector("svg.toaster-toast-icon")).not.toBeNull();
 
     handle.update({ icon: null });
-    expect(element.querySelector("svg.coden-toast-icon")).toBeNull();
+    expect(element.querySelector("svg.toaster-toast-icon")).toBeNull();
 
     toaster.destroy();
   });
@@ -1107,7 +1107,7 @@ describe("Toast update", () => {
     const toaster = createToaster();
     const handle = toaster.success("Old message");
     flushAnimations();
-    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
+    const element = document.body.querySelector<HTMLDivElement>(".toaster-toast")!;
     expect(element.textContent).toContain("Old message");
 
     const replacement = document.createElement("span");
@@ -1175,7 +1175,7 @@ describe("Toast update", () => {
     const toaster = createToaster();
     const handle = toaster.success("Original");
     flushAnimations();
-    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
+    const element = document.body.querySelector<HTMLDivElement>(".toaster-toast")!;
 
     handle.update({ content: "<script>alert(1)</script>" });
     expect(element.textContent).toContain("<script>alert(1)</script>");
@@ -1188,7 +1188,7 @@ describe("Toast update", () => {
     const toaster = createToaster();
     const handle = toaster("Persistent message");
     flushAnimations();
-    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
+    const element = document.body.querySelector<HTMLDivElement>(".toaster-toast")!;
     expect(element.textContent).toContain("Persistent message");
 
     handle.update({ title: "" });
@@ -1203,12 +1203,12 @@ describe("Toast update", () => {
     // @ts-expect-error see above
     const handle = toaster("No close button", { closeButton: true });
     flushAnimations();
-    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
-    expect(element.querySelector(".coden-toast-dismiss")).toBeNull();
+    const element = document.body.querySelector<HTMLDivElement>(".toaster-toast")!;
+    expect(element.querySelector(".toaster-toast-dismiss")).toBeNull();
 
     // @ts-expect-error see above
     handle.update({ closeButton: true });
-    expect(element.querySelector(".coden-toast-dismiss")).toBeNull();
+    expect(element.querySelector(".toaster-toast-dismiss")).toBeNull();
 
     toaster.destroy();
   });
@@ -1218,7 +1218,7 @@ describe("Toast update", () => {
     const customWrapper = document.createElement("div");
     customWrapper.className = "custom-wrapper";
     const nestedSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    nestedSvg.setAttribute("class", "coden-toast-icon");
+    nestedSvg.setAttribute("class", "toaster-toast-icon");
     nestedSvg.setAttribute("data-test", "user-icon");
     customWrapper.appendChild(nestedSvg);
 
@@ -1239,7 +1239,7 @@ describe("Toast update", () => {
     const handle = toaster({ title: "Title Only" });
     flushAnimations();
 
-    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
+    const element = document.body.querySelector<HTMLDivElement>(".toaster-toast")!;
     expect(element.textContent).toContain("Title Only");
     expect(element.querySelector("[data-toast-content]")).toBeNull();
 
@@ -1256,7 +1256,7 @@ describe("Toast update", () => {
     const handle = toaster("Initial body", { title: "Preserved Title" });
     flushAnimations();
 
-    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
+    const element = document.body.querySelector<HTMLDivElement>(".toaster-toast")!;
     const titleEl = element.querySelector("[data-toast-title]");
     const descEl = element.querySelector("[data-toast-description]");
     expect(titleEl?.textContent).toBe("Preserved Title");
@@ -1306,7 +1306,7 @@ describe("background-tab auto-dismiss pause", () => {
     const toaster = createToaster({ duration: 1000 });
     const handle = toaster.success("Hover then hide");
     flushAnimations();
-    const element = document.body.querySelector<HTMLDivElement>(".coden-toast")!;
+    const element = document.body.querySelector<HTMLDivElement>(".toaster-toast")!;
 
     element.dispatchEvent(new MouseEvent("mouseenter"));
     Object.defineProperty(document, "hidden", { value: true, configurable: true });
@@ -1332,7 +1332,7 @@ describe("instance-level labels", () => {
     const toaster = createToaster({ labels: { dismiss: "Fechar" }, dismissible: true });
     toaster.success("Localized");
 
-    const button = document.body.querySelector(".coden-toast-dismiss");
+    const button = document.body.querySelector(".toaster-toast-dismiss");
     expect(button?.getAttribute("aria-label")).toBe("Fechar");
 
     toaster.destroy();
@@ -1342,7 +1342,7 @@ describe("instance-level labels", () => {
     const toaster = createToaster({ dismissible: true });
     toaster.success("Default label");
 
-    const button = document.body.querySelector(".coden-toast-dismiss");
+    const button = document.body.querySelector(".toaster-toast-dismiss");
     expect(button?.getAttribute("aria-label")).toBe("Dismiss toast");
 
     toaster.destroy();
@@ -1587,7 +1587,7 @@ describe("WCAG Accessibility", () => {
     const handle = toaster.success("Hover Test");
     flushAnimations();
 
-    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
+    const element = document.body.querySelector(".toaster-toast") as HTMLDivElement;
     expect(element).toBeTruthy();
 
     vi.advanceTimersByTime(1000);
@@ -1614,7 +1614,7 @@ describe("WCAG Accessibility", () => {
     const handle = toaster.success("Focus Test");
     flushAnimations();
 
-    const element = document.body.querySelector(".coden-toast") as HTMLDivElement;
+    const element = document.body.querySelector(".toaster-toast") as HTMLDivElement;
     expect(element).toBeTruthy();
 
     element.dispatchEvent(new FocusEvent("focusin"));

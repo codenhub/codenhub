@@ -45,7 +45,7 @@ function makeToast(options: RawToastOptions): Toast {
 
 function renderToast(toast: Toast): HTMLDivElement {
   toast.show();
-  const element = document.body.querySelector(".coden-toast");
+  const element = document.body.querySelector(".toaster-toast");
   if (!(element instanceof HTMLDivElement)) {
     throw new Error("Expected toast element to render.");
   }
@@ -67,8 +67,8 @@ describe("Toast rendering", () => {
     const element = renderToast(makeToast({ message: "Saved successfully", dismissible: true }));
 
     expect(element.children).toHaveLength(2);
-    expect(element.querySelector(".coden-toast-main")).not.toBeNull();
-    expect(element.querySelector(".coden-toast-actions")).not.toBeNull();
+    expect(element.querySelector(".toaster-toast-main")).not.toBeNull();
+    expect(element.querySelector(".toaster-toast-actions")).not.toBeNull();
     expect(element.hasAttribute("role")).toBe(false);
     expect(element.hasAttribute("aria-live")).toBe(false);
   });
@@ -78,8 +78,8 @@ describe("Toast rendering", () => {
     const dismissButton = element.querySelector("button");
     const dismissIcon = dismissButton?.querySelector("svg");
 
-    expect(element.className).toContain("coden-toast");
-    expect(dismissButton?.className).toBe("coden-toast-dismiss");
+    expect(element.className).toContain("toaster-toast");
+    expect(dismissButton?.className).toBe("toaster-toast-dismiss");
     expect(dismissIcon).toBeInstanceOf(SVGElement);
     expect(dismissIcon?.getAttribute("aria-hidden")).toBe("true");
   });
@@ -89,8 +89,8 @@ describe("Toast rendering", () => {
     const icon = element.querySelector("svg");
 
     expect(icon).toBeInstanceOf(SVGElement);
-    expect(icon?.getAttribute("class")).toContain("coden-toast-icon");
-    expect(element.querySelector(".coden-toast-main")?.firstElementChild).toBe(icon);
+    expect(icon?.getAttribute("class")).toContain("toaster-toast-icon");
+    expect(element.querySelector(".toaster-toast-main")?.firstElementChild).toBe(icon);
   });
 
   it("should append className as the only public style hook", () => {

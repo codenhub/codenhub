@@ -409,8 +409,8 @@ export class Toast {
     const hadFocus = focused !== null && element.contains(focused);
     const focusedSelector = focused?.matches("[data-toast-action]")
       ? "[data-toast-action]"
-      : focused?.matches(".coden-toast-dismiss")
-        ? ".coden-toast-dismiss"
+      : focused?.matches(".toaster-toast-dismiss")
+        ? ".toaster-toast-dismiss"
         : null;
     element.replaceChildren();
     populateToastContent(element, this.contentOptions, () => this.hide(), documentRef, this.handle);
@@ -419,7 +419,7 @@ export class Toast {
     }
     const replacement =
       (focusedSelector === null ? null : element.querySelector<HTMLElement>(focusedSelector)) ??
-      element.querySelector<HTMLElement>("[data-toast-action], .coden-toast-dismiss");
+      element.querySelector<HTMLElement>("[data-toast-action], .toaster-toast-dismiss");
     if (replacement) {
       replacement.focus();
     } else {

@@ -99,7 +99,7 @@ const OUTLINE_CIRCLE: SvgChildSpec = { tag: "circle", attributes: { cx: "12", cy
 
 /** A semantic icon: stroked outline, drawn from `children`. */
 function strokeIcon(...children: SvgChildSpec[]): SvgSpec {
-  return { className: "coden-toast-icon", rootAttributes: STROKE_ICON_ATTRIBUTES, children };
+  return { className: "toaster-toast-icon", rootAttributes: STROKE_ICON_ATTRIBUTES, children };
 }
 
 const ICON_SPECS: Record<ToastIcon, SvgSpec> = {
@@ -112,7 +112,7 @@ const ICON_SPECS: Record<ToastIcon, SvgSpec> = {
   ),
   info: strokeIcon(OUTLINE_CIRCLE, svgPath("M12 16v-4"), svgPath("M12 8h.01")),
   loader: {
-    className: "coden-toast-icon coden-toast-spinner",
+    className: "toaster-toast-icon toaster-toast-spinner",
     rootAttributes: { stroke: "currentColor" },
     children: [
       {
@@ -159,7 +159,7 @@ function buildSvg(spec: SvgSpec, documentRef: Document): SVGElement {
 function createDismissButton(onDismiss: () => void, documentRef: Document, dismissLabel: string): HTMLButtonElement {
   const button = documentRef.createElement("button");
   button.type = "button";
-  button.className = "coden-toast-dismiss";
+  button.className = "toaster-toast-dismiss";
   button.appendChild(buildSvg(CLOSE_ICON_SPEC, documentRef));
   button.setAttribute("aria-label", dismissLabel);
   button.addEventListener("click", onDismiss);
@@ -174,11 +174,11 @@ function createIcon(icon: ToastIcon, documentRef: Document): SVGElement {
   return element;
 }
 
-/** Finds the message-icon `<svg>` created by {@link createIcon}, if any -- never the dismiss button's own icon, which carries no `coden-toast-icon` class, and never custom user-provided SVGs. */
+/** Finds the message-icon `<svg>` created by {@link createIcon}, if any -- never the dismiss button's own icon, which carries no `toaster-toast-icon` class, and never custom user-provided SVGs. */
 function findToastIcon(container: HTMLDivElement): Element | null {
   const isToastIcon = (child: Element) =>
-    child.tagName.toLowerCase() === "svg" && child.classList.contains("coden-toast-icon");
-  const main = Array.from(container.children).find((child) => child.classList.contains("coden-toast-main"));
+    child.tagName.toLowerCase() === "svg" && child.classList.contains("toaster-toast-icon");
+  const main = Array.from(container.children).find((child) => child.classList.contains("toaster-toast-main"));
   return (
     (main && Array.from(main.children).find(isToastIcon)) ?? Array.from(container.children).find(isToastIcon) ?? null
   );
@@ -206,7 +206,7 @@ export function updateToastIcon(container: HTMLDivElement, icon: ToastIcon | nul
     return;
   }
 
-  const targetParent = container.querySelector<HTMLElement>(".coden-toast-main") ?? container;
+  const targetParent = container.querySelector<HTMLElement>(".toaster-toast-main") ?? container;
   const contentEl =
     targetParent.querySelector("[data-toast-content]") ?? targetParent.querySelector("[data-toast-message]");
   // Before the child of `targetParent` holding the text, else first; an
@@ -219,8 +219,8 @@ export function updateToastIcon(container: HTMLDivElement, icon: ToastIcon | nul
 }
 
 /**
- * Swaps a toast element's severity root class (e.g. `coden-toast-default`
- * -> `coden-toast-success`) in place, leaving every other class -- the
+ * Swaps a toast element's severity root class (e.g. `toaster-toast-default`
+ * -> `toaster-toast-success`) in place, leaving every other class -- the
  * instance default and any per-call extra class -- untouched. Used by
  * `Toast.update()`'s `type` field.
  */
@@ -260,10 +260,10 @@ export function createToastShell(
   return container;
 }
 
-/** A `<div>` for one named part of a toast, with its `coden-toast-<part>` class and `data-toast-<part>` marker. */
+/** A `<div>` for one named part of a toast, with its `toaster-toast-<part>` class and `data-toast-<part>` marker. */
 function createToastPart(documentRef: Document, part: string): HTMLDivElement {
   const element = documentRef.createElement("div");
-  element.className = `coden-toast-${part}`;
+  element.className = `toaster-toast-${part}`;
   element.setAttribute(`data-toast-${part}`, "");
   return element;
 }
@@ -337,7 +337,7 @@ export function populateToastContent(
     if (options.action) {
       const actionButton = documentRef.createElement("button");
       actionButton.type = "button";
-      actionButton.className = "coden-toast-action";
+      actionButton.className = "toaster-toast-action";
       actionButton.setAttribute("data-toast-action", "");
       actionButton.textContent = options.action.label;
       actionButton.addEventListener("click", (event) => {
@@ -468,7 +468,7 @@ export function getOrCreateContainer(params: ContainerParams): HTMLDivElement {
     container = parent.ownerDocument.createElement("div");
     container.setAttribute("data-toast-container", id);
     container.setAttribute("data-toast-instance", instanceId);
-    container.className = `coden-toast-stack coden-toast-stack-${position}`;
+    container.className = `toaster-toast-stack toaster-toast-stack-${position}`;
     // A labeled landmark, so a screen reader or keyboard user can find a
     // toast, and its action, after the announcement.
     container.setAttribute("role", "region");

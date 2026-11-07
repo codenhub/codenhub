@@ -8,7 +8,7 @@ import { flushAnimations, installAnimateMock, installDialogMocks } from "./test-
 // instance's toasts live inside its dialog for that time.
 
 function stackOf(text: string): HTMLElement {
-  const toast = Array.from(document.querySelectorAll<HTMLElement>(".coden-toast")).find((element) =>
+  const toast = Array.from(document.querySelectorAll<HTMLElement>(".toaster-toast")).find((element) =>
     element.textContent?.includes(text),
   )!;
   return toast.closest<HTMLElement>("[data-toast-container]")!;

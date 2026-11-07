@@ -4,5 +4,5 @@ let instanceCounter = 0;
 export function generateInstanceId(): string {
   const randomId =
     globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-  return `coden-toast-${randomId}-${++instanceCounter}`;
+  return `toaster-toast-${randomId}-${++instanceCounter}`;
 }
