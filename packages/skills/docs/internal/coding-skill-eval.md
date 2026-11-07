@@ -28,7 +28,7 @@ Prompt: add a `--timeout <seconds>` option; any command running longer is stoppe
 - S1.2 Applies to BOTH code paths: setup commands (spawnSync) and target commands (spawn). [pattern 5]
 - S1.3 Stops the process tree, not just the shell (`shell: true` + `child.kill()` leaves the grandchild running; needs `detached` + process-group kill on POSIX and `taskkill /T` on Windows, or avoiding the shell only if pipelines and `&&` still work in both paths). Interrupting the runner (Ctrl+C) before the timeout also stops a detached target. [pattern 8]
 - S1.4 A timed-out command counts as failed (exit code 1), timer cleared on normal exit, no double resolve. Setup timeout fails the run.
-- S1.5 Tests exercise real behavior: a test actually runs a slow command and asserts it is stopped/failed; validation tests cover the degenerate values; tests would fail if the feature were removed. [pattern 1]
+- S1.5 Tests exercise real behavior: a test actually runs a slow command and asserts it is stopped/failed; validation tests cover the degenerate values; a test interrupts the runner before the timeout and asserts the target stopped; when the shell is avoided, tests run a pipeline and an `&&` command in both paths; tests would fail if the feature were removed. [pattern 1]
 - S1.6 README Options section updated (and any usage/help text). [pattern 10]
 - S1.7 Verified: ran the test suite and reports the result truthfully.
 - Over1 Adds no dependency, no config-file timeout, no per-command timeouts, no retry.
