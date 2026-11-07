@@ -2,7 +2,7 @@
 title: Toasts
 description: Todos os tipos de toast, ações, toasts de carregamento e de promise, handles e atualizações, posições, fila, timers e os erros que os toasts lançam.
 order: 1
-source: 49a9bdb1e380985becf003127960f11cf4f7bd76
+source: e4e8c7475ceb8429ab134abd131773608a806278
 ---
 
 # Toasts
@@ -41,7 +41,7 @@ Um toast se fecha sozinho depois de 4 segundos. Se você prefere que ele fique, 
 
 ### Duas formas de chamar
 
-Todo método de toast aceita uma mensagem mais um objeto de opções opcional, ou um único objeto de opções:
+`toast()`, `success()`, `error()`, `warning()`, `info()` e `loading()` aceitam uma mensagem mais um objeto de opções opcional, ou um único objeto de opções:
 
 ```ts
 toast.success("Nota salva", { duration: 6000 });
@@ -151,13 +151,13 @@ await toast.promise(syncNotes(), {
 - **`position`**, **`className`** e **`margin`** valem para o toast do começo ao fim.
 - **`duration`** e **`dismissible`** valem para o toast de resultado. Se não forem definidas, vêm dos padrões `semantic` da instância e, depois, da própria instância. [Padrões por tipo](instances.md#padrões-por-tipo) explica essa cadeia.
 
-O toast de resultado fecha sozinho depois da sua `duration`, mesmo que o toast de carregamento antes dele não fechasse. Para mantê-lo aberto, devolva `autoDismiss: false` em `success` ou `error`.
+O toast de resultado fecha sozinho depois da sua `duration`, mesmo que o toast de carregamento antes dele não fechasse, a não ser que o `semantic.autoDismiss` da instância seja `false`. Para decidir por chamada, devolva `autoDismiss` em `success` ou `error`; isso ganha dos dois.
 
 Se a sua função `success` ou `error` lançar um erro, o toast de carregamento é fechado e o erro é reportado ao navegador como erro não capturado, então ele aparece no console e nas ferramentas de monitoramento de erros. `toast.promise()` ainda resolve ou rejeita com o desfecho da promise original, então um erro de digitação numa mensagem não quebra o salvamento.
 
 ## Handles: controlando um toast depois que ele aparece
 
-Todo método de toast devolve um `ToastHandle`. Guarde-o quando quiser mudar, fechar ou acompanhar o toast depois:
+Todo método de toast, menos `toast.promise()` (que devolve o resultado da promise), devolve um `ToastHandle`. Guarde-o quando quiser mudar, fechar ou acompanhar o toast depois:
 
 ```ts
 import { toast } from "@codenhub/toaster";

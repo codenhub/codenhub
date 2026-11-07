@@ -16,6 +16,8 @@ Most apps never need more than `toast`, configured once. Create a separate toast
 - You're building a widget that gets embedded in pages you don't control, and its toasts shouldn't mix with the host page's.
 - You want a fresh toaster per test, so one test's leftover toasts can't fail the next.
 
+A container decides where the stacks live in the page, not where they're drawn. Stacks are `position: fixed`, so they still sit at the edges of the viewport, unless the container is a containing block for fixed elements, as one with `transform` or `contain: layout` is. Inside a dialog that's exactly what you want; for a side panel, add `contain: layout` to the panel so the corners are the panel's.
+
 For different settings in different parts of one page, per-call options on `toast` are usually enough. More toasters mean more stacks, and [two toasters in the same corner](#instances-are-independent) end up on top of each other.
 
 ## Configuration
@@ -95,7 +97,7 @@ With the configuration above, `notesToaster.error("Sync failed")` stays for 8 se
 
 The result of `promise` bends these rules in two places, because it's the loading toast updated in place rather than a new toast:
 
-- **Position** never changes, so it comes from the `loading` group or the instance, not from `semantic`.
+- **Position** never changes, so it's wherever the loading toast went: the `loading` options object, then the call's `position`, then the `loading` group, then the instance. `semantic.position` never applies.
 - **`autoDismiss`** comes from the result's own options, then `semantic.autoDismiss`, then `true`. The instance-wide `autoDismiss` is skipped, so `createToaster({ autoDismiss: false })` alone doesn't keep promise results open; set `semantic: { autoDismiss: false }` for that.
 
 ## Changing settings later
@@ -142,7 +144,7 @@ function mountSidebar(sidebar: HTMLElement) {
 1. Every toast, visible or queued, closes at once. Their state becomes `"hidden"` and their `settled` promises resolve.
 2. The toaster's stacks and screen reader regions are removed from the page.
 3. Its timers and listeners are removed.
-4. Every later call on it throws `This toaster instance has been destroyed. Create a new one with createToaster().`
+4. Every later call on it, except another `destroy()`, throws `This toaster instance has been destroyed. Create a new one with createToaster().`
 
 Calling `destroy()` again does nothing, so it's safe in cleanup code that might run twice. Destroying a toaster doesn't affect any dialogs instance, and destroying a dialogs instance doesn't affect toasters.
 
@@ -177,7 +179,15 @@ In Next.js, Remix, SvelteKit, Astro, and similar frameworks, show toasts from co
 import { toast } from "@codenhub/toaster";
 
 export function SaveButton({ onSave }: { onSave: () => Promise<void> }) {
-  return <button onClick={() => toast.promise(onSave(), { loading: "Saving…", success: "Saved", error: "Save failed" })}>Save</button>;
+  async function save() {
+    try {
+      await toast.promise(onSave(), { loading: "Saving…", success: "Saved", error: "Save failed" });
+    } catch {
+      // The error toast already broke the news.
+    }
+  }
+
+  return <button onClick={save}>Save</button>;
 }
 ```
 

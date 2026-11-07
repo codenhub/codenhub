@@ -75,11 +75,11 @@ Every app eventually needs to say two kinds of things to the person using it. So
 
 What it saves you from writing by hand:
 
-- **The stack.** Toasts line up at one of six screen positions. Extra ones wait in a queue, and the oldest leaves to make room. A toast stays put while someone is hovering over it, has focus inside it, or is waiting on a loading spinner.
-- **The timers.** Each toast closes after a set time. The countdown pauses while the pointer is on it, while it has focus, and while the browser tab is in the background, so time nobody could spend reading doesn't count.
+- **The stack.** Toasts line up at one of six screen positions. Extra ones wait in a queue, and the oldest one that isn't busy leaves to make room. A toast stays put while someone is hovering over it, has focus inside it, or is waiting on a loading spinner.
+- **The timers.** By default, each toast closes after a set time. The countdown pauses while the pointer is on it, while it has focus, and while the browser tab is in the background, so time nobody could spend reading doesn't count.
 - **The async dance.** `toast.promise()` shows a spinner while your work runs and turns into a success or error toast when it's done. Dialogs return something you can `await`, so `if (await dialog.confirm("Delete?"))` really is `true` or `false`.
-- **The accessibility plumbing.** Screen readers hear every toast. Dialogs use the browser's own `<dialog>` element, so focus trapping, <kbd>Escape</kbd>, and returning focus afterward all come from the platform.
-- **The security homework.** Strings are always shown as plain text and never parsed as HTML. The package injects no `<style>` element, so a strict Content Security Policy needs no exceptions for it.
+- **The accessibility plumbing.** Screen readers hear every toast, with [one catch while a modal dialog is open](docs/dialogs.md#toasts-while-a-dialog-is-open). Dialogs use the browser's own `<dialog>` element, so focus trapping, <kbd>Escape</kbd>, and returning focus afterward all come from the platform.
+- **The security homework.** Strings are always shown as plain text and never parsed as HTML. The package injects no `<style>` element, so a strict Content Security Policy needs no exceptions for it, as long as the stylesheet itself [loads as a file](docs/styling.md#content-security-policy).
 
 It's plain TypeScript working directly with the DOM. There's no framework to adopt and no runtime dependency to install.
 
@@ -172,7 +172,7 @@ A toast closes itself after 4 seconds. If you'd rather it stayed, read [Timers](
 
 ### Two ways to call it
 
-Every toast method takes either a message plus an optional options object, or a single options object:
+`toast()`, `success()`, `error()`, `warning()`, `info()`, and `loading()` all take either a message plus an optional options object, or a single options object:
 
 ```ts
 toast.success("Note saved", { duration: 6000 });
@@ -282,13 +282,13 @@ await toast.promise(syncNotes(), {
 - **`position`**, **`className`**, and **`margin`** apply to the toast the whole way through.
 - **`duration`** and **`dismissible`** apply to the result toast. Left unset, they come from the instance's `semantic` defaults, then from the instance itself. [Per-kind defaults](docs/instances.md#per-kind-defaults) explains that chain.
 
-The result toast closes on its own after its `duration`, even though the loading toast before it didn't. To keep it open, return `autoDismiss: false` from `success` or `error`.
+The result toast closes on its own after its `duration`, even though the loading toast before it didn't, unless the instance's `semantic.autoDismiss` is `false`. To decide per call, return `autoDismiss` from `success` or `error`; that beats both.
 
 If your `success` or `error` function throws, the loading toast is dismissed and the error is reported to the browser as an uncaught error, so it shows in the console and in error trackers. `toast.promise()` still resolves or rejects with the original promise's outcome, so a typo in a message doesn't break the save.
 
 ## Handles: controlling a toast after it appears
 
-Every toast method returns a `ToastHandle`. Keep it when you want to change, close, or watch the toast later:
+Every toast method except `toast.promise()`, which returns the promise's result, returns a `ToastHandle`. Keep it when you want to change, close, or watch the toast later:
 
 ```ts
 import { toast } from "@codenhub/toaster";
@@ -710,6 +710,8 @@ Most apps never need more than `toast`, configured once. Create a separate toast
 - You're building a widget that gets embedded in pages you don't control, and its toasts shouldn't mix with the host page's.
 - You want a fresh toaster per test, so one test's leftover toasts can't fail the next.
 
+A container decides where the stacks live in the page, not where they're drawn. Stacks are `position: fixed`, so they still sit at the edges of the viewport, unless the container is a containing block for fixed elements, as one with `transform` or `contain: layout` is. Inside a dialog that's exactly what you want; for a side panel, add `contain: layout` to the panel so the corners are the panel's.
+
 For different settings in different parts of one page, per-call options on `toast` are usually enough. More toasters mean more stacks, and [two toasters in the same corner](#instances-are-independent) end up on top of each other.
 
 ## Configuration
@@ -789,7 +791,7 @@ With the configuration above, `notesToaster.error("Sync failed")` stays for 8 se
 
 The result of `promise` bends these rules in two places, because it's the loading toast updated in place rather than a new toast:
 
-- **Position** never changes, so it comes from the `loading` group or the instance, not from `semantic`.
+- **Position** never changes, so it's wherever the loading toast went: the `loading` options object, then the call's `position`, then the `loading` group, then the instance. `semantic.position` never applies.
 - **`autoDismiss`** comes from the result's own options, then `semantic.autoDismiss`, then `true`. The instance-wide `autoDismiss` is skipped, so `createToaster({ autoDismiss: false })` alone doesn't keep promise results open; set `semantic: { autoDismiss: false }` for that.
 
 ## Changing settings later
@@ -836,7 +838,7 @@ function mountSidebar(sidebar: HTMLElement) {
 1. Every toast, visible or queued, closes at once. Their state becomes `"hidden"` and their `settled` promises resolve.
 2. The toaster's stacks and screen reader regions are removed from the page.
 3. Its timers and listeners are removed.
-4. Every later call on it throws `This toaster instance has been destroyed. Create a new one with createToaster().`
+4. Every later call on it, except another `destroy()`, throws `This toaster instance has been destroyed. Create a new one with createToaster().`
 
 Calling `destroy()` again does nothing, so it's safe in cleanup code that might run twice. Destroying a toaster doesn't affect any dialogs instance, and destroying a dialogs instance doesn't affect toasters.
 
@@ -871,7 +873,15 @@ In Next.js, Remix, SvelteKit, Astro, and similar frameworks, show toasts from co
 import { toast } from "@codenhub/toaster";
 
 export function SaveButton({ onSave }: { onSave: () => Promise<void> }) {
-  return <button onClick={() => toast.promise(onSave(), { loading: "Saving…", success: "Saved", error: "Save failed" })}>Save</button>;
+  async function save() {
+    try {
+      await toast.promise(onSave(), { loading: "Saving…", success: "Saved", error: "Save failed" });
+    } catch {
+      // The error toast already broke the news.
+    }
+  }
+
+  return <button onClick={save}>Save</button>;
 }
 ```
 
@@ -1063,6 +1073,8 @@ The package injects no `<style>` element. The stylesheet is one you load, and th
 ```http
 Content-Security-Policy: style-src 'self';
 ```
+
+That covers the package. How you load the stylesheet is between you and your policy: a `<link>` or a CSS file your bundler emits is fine under `style-src 'self'`, but some setups, such as dev servers or `style-loader`, inject CSS as a `<style>` element, which this policy blocks. If toasts show up unstyled under CSP, check that first.
 
 The package also never parses HTML, so it works under Trusted Types as well; see [Accessibility and security](docs/accessibility.md#trusted-types).
 

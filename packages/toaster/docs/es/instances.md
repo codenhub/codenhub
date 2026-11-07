@@ -2,7 +2,7 @@
 title: Instancias de toaster
 description: Cada opción del toaster y su valor por defecto, valores por defecto por tipo, cambiar la configuración después, toasters acotados, limpieza con destroy() y renderizado del lado del servidor.
 order: 3
-source: b05de81b814ec6c33eb246f3e2fd489e0f1f273c
+source: 9665c796424fd0e565d94ae7e12ed5a9aa223104
 ---
 
 # Instancias de toaster
@@ -16,6 +16,8 @@ La mayoría de las apps nunca necesitan más que `toast`, configurado una vez. C
 - Los toasts tienen que ir dentro de un elemento concreto, como un panel lateral, un widget embebido o [tu propio diálogo modal](dialogs.md#tus-propios-diálogos-modales), en vez de sobre toda la página.
 - Estás construyendo un widget que se embebe en páginas que no controlas, y sus toasts no deberían mezclarse con los de la página que lo aloja.
 - Quieres un toaster nuevo por test, para que los toasts que deja un test no puedan hacer fallar al siguiente.
+
+Un container decide dónde viven los stacks en la página, no dónde se dibujan. Los stacks son `position: fixed`, así que siguen en los bordes del viewport, salvo que el container sea un bloque contenedor para elementos fijos, como uno con `transform` o `contain: layout`. Dentro de un diálogo es justo lo que quieres; para un panel lateral, añade `contain: layout` al panel para que las esquinas sean las del panel.
 
 Para tener ajustes distintos en distintas partes de una misma página, normalmente bastan las opciones por llamada de `toast`. Más toasters son más stacks, y [dos toasters en la misma esquina](#las-instancias-son-independientes) acaban uno encima del otro.
 
@@ -96,7 +98,7 @@ Con la configuración de arriba, `notesToaster.error("Falló la sincronización"
 
 El resultado de `promise` se salta estas reglas en dos puntos, porque es el mismo toast de carga actualizado en su sitio, no un toast nuevo:
 
-- **La posición** nunca cambia, así que viene del grupo `loading` o de la instancia, no de `semantic`.
+- **La posición** nunca cambia, así que es donde acabó el toast de carga: el objeto de opciones de `loading`, luego el `position` de la llamada, luego el grupo `loading` y luego la instancia. `semantic.position` nunca se aplica.
 - **`autoDismiss`** viene de las opciones del propio resultado, luego de `semantic.autoDismiss` y luego `true`. El `autoDismiss` de la instancia se ignora, así que `createToaster({ autoDismiss: false })` por sí solo no mantiene abiertos los resultados de promise; para eso, define `semantic: { autoDismiss: false }`.
 
 ## Cambiar la configuración después
@@ -143,7 +145,7 @@ function mountSidebar(sidebar: HTMLElement) {
 1. Todos los toasts, visibles o en cola, se cierran de golpe. Su estado pasa a `"hidden"` y sus promesas `settled` se resuelven.
 2. Los stacks y las regiones para lectores de pantalla del toaster se quitan de la página.
 3. Se eliminan sus temporizadores y listeners.
-4. Cualquier llamada posterior sobre él lanza `This toaster instance has been destroyed. Create a new one with createToaster().`
+4. Cualquier llamada posterior sobre él, salvo otro `destroy()`, lanza `This toaster instance has been destroyed. Create a new one with createToaster().`
 
 Volver a llamar a `destroy()` no hace nada, así que es seguro en código de limpieza que podría ejecutarse dos veces. Destruir un toaster no afecta a ninguna instancia de diálogos, y destruir una instancia de diálogos no afecta a los toasters.
 
@@ -178,7 +180,15 @@ En Next.js, Remix, SvelteKit, Astro y frameworks parecidos, muestra los toasts d
 import { toast } from "@codenhub/toaster";
 
 export function SaveButton({ onSave }: { onSave: () => Promise<void> }) {
-  return <button onClick={() => toast.promise(onSave(), { loading: "Guardando…", success: "Guardado", error: "No se pudo guardar" })}>Guardar</button>;
+  async function save() {
+    try {
+      await toast.promise(onSave(), { loading: "Guardando…", success: "Guardado", error: "No se pudo guardar" });
+    } catch {
+      // El toast de error ya dio la mala noticia.
+    }
+  }
+
+  return <button onClick={save}>Guardar</button>;
 }
 ```
 

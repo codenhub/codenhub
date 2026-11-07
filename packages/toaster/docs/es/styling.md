@@ -2,7 +2,7 @@
 title: Estilos
 description: La hoja de estilos, los colores con y sin @codenhub/styles, las clases de presentación, el tamaño, el modo oscuro, sobrescribir colores, la Content Security Policy y el orden de las hojas de estilos.
 order: 4
-source: 5109dc3d6a5cf4410d38b9f06056e75b74ea7d16
+source: 32c8c7de11fdec8467b0e7b5c3f16e67193f1551
 ---
 
 # Estilos
@@ -187,6 +187,8 @@ El paquete no inyecta ningún elemento `<style>`. La hoja de estilos la cargas t
 ```http
 Content-Security-Policy: style-src 'self';
 ```
+
+Eso cubre al paquete. Cómo cargas la hoja de estilos es cosa tuya y de tu política: un `<link>` o un archivo CSS que genere tu bundler pasan sin problema con `style-src 'self'`, pero algunos montajes, como los servidores de desarrollo o `style-loader`, inyectan el CSS como un elemento `<style>`, que esta política bloquea. Si los toasts salen sin estilo bajo CSP, revisa eso primero.
 
 Además, el paquete nunca interpreta HTML, así que también funciona con Trusted Types; consulta [Accesibilidad y seguridad](accessibility.md#trusted-types).
 

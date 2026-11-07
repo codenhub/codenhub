@@ -467,6 +467,30 @@ test("computes the stack-push animation's delta from the new toast's real height
   await page.locator("#check-auto-dismiss").check();
 });
 
+test("runs the loader's spin keyframes", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Show Persistent Loader" }).click();
+
+  // Browsers create the CSSAnimation even when no @keyframes rule matches its
+  // name, but its effect then has no keyframes, so check those too: this fails
+  // if the name and the keyframes drift apart.
+  const spinner = page.locator(".toaster-toast-spinner");
+  await expect
+    .poll(() =>
+      spinner.evaluate((el) =>
+        el
+          .getAnimations()
+          .some(
+            (a) =>
+              a instanceof CSSAnimation &&
+              a.animationName === "toaster-toast-spin" &&
+              (a.effect as KeyframeEffect | null)?.getKeyframes().length,
+          ),
+      ),
+    )
+    .toBe(true);
+});
+
 test.describe("reduced motion", () => {
   test.use({ reducedMotion: "reduce" });
 

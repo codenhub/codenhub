@@ -2,7 +2,7 @@
 title: Estilização
 description: A folha de estilos, as cores com e sem @codenhub/styles, classes de apresentação, tamanho, modo escuro, sobrescrita de cores, Content Security Policy e a ordem das folhas de estilo.
 order: 4
-source: 5109dc3d6a5cf4410d38b9f06056e75b74ea7d16
+source: 32c8c7de11fdec8467b0e7b5c3f16e67193f1551
 ---
 
 # Estilização
@@ -187,6 +187,8 @@ O pacote não injeta nenhum elemento `<style>`. A folha de estilos é uma que vo
 ```http
 Content-Security-Policy: style-src 'self';
 ```
+
+Isso vale para o pacote. Como você carrega a folha de estilos é entre você e a sua política: um `<link>` ou um arquivo CSS gerado pelo bundler passa tranquilo com `style-src 'self'`, mas alguns setups, como servidores de desenvolvimento ou o `style-loader`, injetam o CSS como um elemento `<style>`, que essa política bloqueia. Se os toasts aparecerem sem estilo sob CSP, comece por aí.
 
 O pacote também nunca interpreta HTML, então funciona com Trusted Types também; veja [Acessibilidade e segurança](accessibility.md#trusted-types).
 

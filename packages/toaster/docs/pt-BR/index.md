@@ -1,7 +1,7 @@
 ---
 title: Visão geral
 description: Para que serve o Toaster, como instalá-lo e em que ordem ler as páginas.
-source: e7b22a43874e8eb5ff4fa4cbf1b0fe3c66733a95
+source: f546b2174525474ecf742bd9c7daf8622b50071e
 ---
 
 # Toaster
@@ -10,11 +10,11 @@ Todo app, cedo ou tarde, precisa dizer dois tipos de coisa para quem está usand
 
 O que ele te poupa de escrever na mão:
 
-- **A stack.** Os toasts se alinham em uma de seis posições da tela. Os que sobram esperam numa fila, e o mais antigo sai para abrir espaço. Um toast fica parado enquanto alguém está com o ponteiro em cima dele, enquanto tem foco dentro dele ou enquanto está esperando um spinner de carregamento.
-- **Os timers.** Cada toast fecha depois de um tempo definido. A contagem pausa enquanto o ponteiro está em cima dele, enquanto ele tem foco e enquanto a aba do navegador está em segundo plano, então o tempo em que ninguém conseguiria ler não conta.
+- **A stack.** Os toasts se alinham em uma de seis posições da tela. Os que sobram esperam numa fila, e o mais antigo que não estiver ocupado sai para abrir espaço. Um toast fica parado enquanto alguém está com o ponteiro em cima dele, enquanto tem foco dentro dele ou enquanto está esperando um spinner de carregamento.
+- **Os timers.** Por padrão, cada toast fecha depois de um tempo definido. A contagem pausa enquanto o ponteiro está em cima dele, enquanto ele tem foco e enquanto a aba do navegador está em segundo plano, então o tempo em que ninguém conseguiria ler não conta.
 - **O malabarismo assíncrono.** `toast.promise()` mostra um spinner enquanto o seu trabalho roda e vira um toast de sucesso ou de erro quando ele termina. Os diálogos devolvem algo que você pode usar com `await`, então `if (await dialog.confirm("Apagar?"))` é mesmo `true` ou `false`.
-- **O encanamento da acessibilidade.** Leitores de tela ouvem cada toast. Os diálogos usam o próprio elemento `<dialog>` do navegador, então prender o foco, a tecla <kbd>Escape</kbd> e devolver o foco depois vêm todos da plataforma.
-- **O dever de casa de segurança.** Strings são sempre mostradas como texto puro e nunca interpretadas como HTML. O pacote não injeta nenhum elemento `<style>`, então uma Content Security Policy rígida não precisa de exceção nenhuma para ele.
+- **O encanamento da acessibilidade.** Leitores de tela ouvem cada toast, com [uma pegadinha enquanto um diálogo modal está aberto](dialogs.md#toasts-enquanto-um-diálogo-está-aberto). Os diálogos usam o próprio elemento `<dialog>` do navegador, então prender o foco, a tecla <kbd>Escape</kbd> e devolver o foco depois vêm todos da plataforma.
+- **O dever de casa de segurança.** Strings são sempre mostradas como texto puro e nunca interpretadas como HTML. O pacote não injeta nenhum elemento `<style>`, então uma Content Security Policy rígida não precisa de exceção nenhuma para ele, desde que a própria folha de estilos [carregue como arquivo](styling.md#content-security-policy).
 
 É TypeScript puro trabalhando direto com o DOM. Não tem framework para adotar nem dependência de runtime para instalar.
 

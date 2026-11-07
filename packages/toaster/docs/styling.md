@@ -187,6 +187,8 @@ The package injects no `<style>` element. The stylesheet is one you load, and th
 Content-Security-Policy: style-src 'self';
 ```
 
+That covers the package. How you load the stylesheet is between you and your policy: a `<link>` or a CSS file your bundler emits is fine under `style-src 'self'`, but some setups, such as dev servers or `style-loader`, inject CSS as a `<style>` element, which this policy blocks. If toasts show up unstyled under CSP, check that first.
+
 The package also never parses HTML, so it works under Trusted Types as well; see [Accessibility and security](accessibility.md#trusted-types).
 
 ## Stylesheet order with `@codenhub/styles/native`

@@ -2,7 +2,7 @@
 title: Instâncias do toaster
 description: Cada opção do toaster e seu padrão, padrões por tipo, mudar as configurações depois, toasters com escopo, limpeza com destroy() e renderização no servidor.
 order: 3
-source: b05de81b814ec6c33eb246f3e2fd489e0f1f273c
+source: 9665c796424fd0e565d94ae7e12ed5a9aa223104
 ---
 
 # Instâncias do toaster
@@ -16,6 +16,8 @@ A maioria dos apps nunca precisa de mais do que `toast`, configurado uma vez. Cr
 - Os toasts pertencem a um elemento específico, como um painel lateral, um widget embutido ou [o seu próprio diálogo modal](dialogs.md#os-seus-próprios-diálogos-modais), e não à página inteira.
 - Você está fazendo um widget que vai ser embutido em páginas que você não controla, e os toasts dele não devem se misturar com os da página hospedeira.
 - Você quer um toaster novo por teste, para que os toasts que sobraram de um teste não derrubem o próximo.
+
+Um container decide onde as stacks ficam na página, não onde elas são desenhadas. As stacks são `position: fixed`, então continuam nas bordas da viewport, a não ser que o container seja um bloco de contenção para elementos fixos, como um com `transform` ou `contain: layout`. Dentro de um diálogo, é exatamente isso que você quer; para um painel lateral, adicione `contain: layout` ao painel para que os cantos sejam os do painel.
 
 Para configurações diferentes em partes diferentes de uma mesma página, as opções por chamada em `toast` costumam bastar. Mais toasters significam mais stacks, e [dois toasters no mesmo canto](#instâncias-são-independentes) acabam um em cima do outro.
 
@@ -96,7 +98,7 @@ Com a configuração acima, `notesToaster.error("Falha na sincronização")` fic
 
 O resultado de `promise` dribla essas regras em dois pontos, porque ele é o próprio toast de carregamento atualizado no lugar, e não um toast novo:
 
-- **Posição** nunca muda, então vem do grupo `loading` ou da instância, não de `semantic`.
+- **Posição** nunca muda, então é onde o toast de carregamento foi parar: o objeto de opções de `loading`, depois o `position` da chamada, depois o grupo `loading`, depois a instância. `semantic.position` nunca vale.
 - **`autoDismiss`** vem das opções do próprio resultado, depois de `semantic.autoDismiss`, depois `true`. O `autoDismiss` da instância é pulado, então `createToaster({ autoDismiss: false })` sozinho não mantém os resultados de promise abertos; para isso, defina `semantic: { autoDismiss: false }`.
 
 ## Mudando as configurações depois
@@ -143,7 +145,7 @@ function mountSidebar(sidebar: HTMLElement) {
 1. Todos os toasts, visíveis ou na fila, fecham de uma vez. O estado deles vira `"hidden"` e as promises `settled` resolvem.
 2. As stacks e as regiões de leitor de tela do toaster são removidas da página.
 3. Os timers e listeners dele são removidos.
-4. Toda chamada posterior a ele lança `This toaster instance has been destroyed. Create a new one with createToaster().`
+4. Toda chamada posterior a ele, menos outro `destroy()`, lança `This toaster instance has been destroyed. Create a new one with createToaster().`
 
 Chamar `destroy()` de novo não faz nada, então ele é seguro em código de limpeza que pode rodar duas vezes. Destruir um toaster não afeta nenhuma instância de diálogos, e destruir uma instância de diálogos não afeta os toasters.
 
@@ -178,7 +180,15 @@ Em Next.js, Remix, SvelteKit, Astro e frameworks parecidos, mostre os toasts a p
 import { toast } from "@codenhub/toaster";
 
 export function SaveButton({ onSave }: { onSave: () => Promise<void> }) {
-  return <button onClick={() => toast.promise(onSave(), { loading: "Salvando…", success: "Salvo", error: "Falha ao salvar" })}>Salvar</button>;
+  async function save() {
+    try {
+      await toast.promise(onSave(), { loading: "Salvando…", success: "Salvo", error: "Falha ao salvar" });
+    } catch {
+      // O toast de erro já deu a má notícia.
+    }
+  }
+
+  return <button onClick={save}>Salvar</button>;
 }
 ```
 

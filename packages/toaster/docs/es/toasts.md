@@ -2,7 +2,7 @@
 title: Toasts
 description: Cada tipo de toast, acciones, toasts de carga y con promesas, handles y actualizaciones, posiciones, cola, temporizadores y los errores que lanzan los toasts.
 order: 1
-source: 49a9bdb1e380985becf003127960f11cf4f7bd76
+source: e4e8c7475ceb8429ab134abd131773608a806278
 ---
 
 # Toasts
@@ -41,7 +41,7 @@ Un toast se cierra solo a los 4 segundos. Si prefieres que se quede, lee [Tempor
 
 ### Dos formas de llamarlo
 
-Cada método de toast recibe o bien un mensaje más un objeto de opciones opcional, o bien un único objeto de opciones:
+`toast()`, `success()`, `error()`, `warning()`, `info()` y `loading()` reciben o bien un mensaje más un objeto de opciones opcional, o bien un único objeto de opciones:
 
 ```ts
 toast.success("Nota guardada", { duration: 6000 });
@@ -151,13 +151,13 @@ await toast.promise(syncNotes(), {
 - **`position`**, **`className`** y **`margin`** se aplican al toast de principio a fin.
 - **`duration`** y **`dismissible`** se aplican al toast del resultado. Si no las pones, salen de los valores por defecto `semantic` de la instancia y, después, de la propia instancia. [Valores por defecto por tipo](instances.md#valores-por-defecto-por-tipo) explica esa cadena.
 
-El toast del resultado se cierra solo pasado su `duration`, aunque el toast de carga anterior no lo hiciera. Para mantenerlo abierto, devuelve `autoDismiss: false` desde `success` o `error`.
+El toast del resultado se cierra solo pasado su `duration`, aunque el toast de carga anterior no lo hiciera, salvo que el `semantic.autoDismiss` de la instancia sea `false`. Para decidirlo por llamada, devuelve `autoDismiss` desde `success` o `error`; eso gana a ambos.
 
 Si tu función `success` o `error` lanza una excepción, el toast de carga se cierra y el error se reporta al navegador como error no capturado, así que aparece en la consola y en los rastreadores de errores. `toast.promise()` igualmente se resuelve o se rechaza con el resultado de la promesa original, así que una errata en un mensaje no rompe el guardado.
 
 ## Handles: controlar un toast después de que aparece
 
-Cada método de toast devuelve un `ToastHandle`. Guárdalo cuando quieras cambiar, cerrar u observar el toast más tarde:
+Cada método de toast, salvo `toast.promise()` (que devuelve el resultado de la promesa), devuelve un `ToastHandle`. Guárdalo cuando quieras cambiar, cerrar u observar el toast más tarde:
 
 ```ts
 import { toast } from "@codenhub/toaster";

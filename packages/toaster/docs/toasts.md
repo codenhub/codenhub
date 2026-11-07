@@ -40,7 +40,7 @@ A toast closes itself after 4 seconds. If you'd rather it stayed, read [Timers](
 
 ### Two ways to call it
 
-Every toast method takes either a message plus an optional options object, or a single options object:
+`toast()`, `success()`, `error()`, `warning()`, `info()`, and `loading()` all take either a message plus an optional options object, or a single options object:
 
 ```ts
 toast.success("Note saved", { duration: 6000 });
@@ -150,13 +150,13 @@ await toast.promise(syncNotes(), {
 - **`position`**, **`className`**, and **`margin`** apply to the toast the whole way through.
 - **`duration`** and **`dismissible`** apply to the result toast. Left unset, they come from the instance's `semantic` defaults, then from the instance itself. [Per-kind defaults](instances.md#per-kind-defaults) explains that chain.
 
-The result toast closes on its own after its `duration`, even though the loading toast before it didn't. To keep it open, return `autoDismiss: false` from `success` or `error`.
+The result toast closes on its own after its `duration`, even though the loading toast before it didn't, unless the instance's `semantic.autoDismiss` is `false`. To decide per call, return `autoDismiss` from `success` or `error`; that beats both.
 
 If your `success` or `error` function throws, the loading toast is dismissed and the error is reported to the browser as an uncaught error, so it shows in the console and in error trackers. `toast.promise()` still resolves or rejects with the original promise's outcome, so a typo in a message doesn't break the save.
 
 ## Handles: controlling a toast after it appears
 
-Every toast method returns a `ToastHandle`. Keep it when you want to change, close, or watch the toast later:
+Every toast method except `toast.promise()`, which returns the promise's result, returns a `ToastHandle`. Keep it when you want to change, close, or watch the toast later:
 
 ```ts
 import { toast } from "@codenhub/toaster";
