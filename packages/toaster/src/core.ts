@@ -168,9 +168,9 @@ class ToastManager {
     // dismissible nor evictable) or replace the caller's outcome, so its
     // error is reported and the loader is dismissed instead.
     // The outcome is a semantic toast, so the call's own settings win, then
-    // the instance's `semantic` defaults. `autoDismiss` falls back to the
-    // instance-wide setting here, because the loader's own `false` would
-    // otherwise carry over.
+    // the instance's `semantic` defaults. `autoDismiss` also falls back to
+    // the instance-wide setting, because `update()` would otherwise reset it
+    // to `true` when the toast leaves the loading state.
     const outcomeDefaults: PromiseOutcomeDefaults = {
       duration: options.duration ?? this.config.semantic?.duration,
       dismissible: options.dismissible ?? this.config.semantic?.dismissible,
