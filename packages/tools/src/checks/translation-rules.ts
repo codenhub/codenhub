@@ -34,12 +34,12 @@ async function run(workspacePackage: WorkspacePackage, hash: BlobHasher): Promis
   const graph = createDocumentGraph(
     Object.fromEntries(files.map((packagePath) => [packagePath, sources[packagePath] ?? ""])),
   );
-  const issues = validateTranslations(graph, sources);
   const stale = await findStaleTranslations(
     workspacePackage.directory,
     listSourcedTranslations(graph.files, sources),
     hash,
   );
+  const issues = validateTranslations(graph, sources, new Set(stale.map(({ packagePath }) => packagePath)));
   return [
     ...issues.map((issue): Finding => ({
       code: `translation/${issue.code}`,

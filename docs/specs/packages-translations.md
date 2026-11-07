@@ -188,11 +188,12 @@ The main site's package page in a locale shows `README.<locale>.md` when the rel
 - A `docs/<locale>/reference/`, `docs/<locale>/changelog/`, or `docs/<locale>/internal/` area.
 - A translation whose `source` is missing or is not a 40-character hexadecimal blob ID.
 - A translated document whose `order` or `curated` differs from its English counterpart's.
-- A translated document whose headings differ from its English counterpart's in number or in level at any position.
+- A translated document whose headings differ from its English counterpart's in number or in level at any position, unless the translation is stale.
 
 It reports as warnings:
 
 - A stale translation, which `hub release` and `hub publish` treat as a blocker (see "Drift").
+- A stale translation whose headings differ from its English counterpart's. A change that adds or removes an English heading can then merge before its translations follow, as "Drift" allows for any other change to the English, and the release gate still keeps the mismatch from being published.
 - A link from a translation to an English document that has a translation in the same locale.
 
 Translations are also validation surfaces for the link checks in `docs/specs/packages-documentation.md`, with the same requirements as the English.
