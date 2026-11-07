@@ -25,6 +25,7 @@ import { rewritePackageMarkdownLinks } from "./markdown-links";
 import { rendererFor } from "./markdown/processor";
 import { pageAlternates, type PageAlternate } from "./page-alternates";
 import { localizeReferenceHeadings, localizeReferenceHtml } from "./reference-labels";
+import { translatedFragments } from "./translated-fragments";
 
 type PublicDocumentModule = MarkdownInstance<Record<string, unknown>>;
 
@@ -49,6 +50,11 @@ export interface PublicDocument {
   /** Whether this is a curated folder's overview page, which lists its published siblings. */
   curated?: boolean;
   description?: string;
+  /**
+   * A translated page's heading ids by the English page's, where they differ,
+   * so an English section link reaches the translated section.
+   */
+  englishFragments?: Record<string, string>;
   /** Section label from a folder `index.md`, when it sets one. */
   group?: string;
   headings: MarkdownHeading[];
@@ -450,7 +456,11 @@ async function loadVersion(source: VersionSource): Promise<Pick<PublicPackage, "
           const translation = translations.get(english.relativePath);
           return translation === undefined
             ? untranslatedPage(english, slug, locale)
-            : { ...translation, order: english.order };
+            : {
+                ...translation,
+                englishFragments: translatedFragments(english.headings, translation.headings),
+                order: english.order,
+              };
         }),
       );
       return [locale, finishDocuments(pages)] as const;

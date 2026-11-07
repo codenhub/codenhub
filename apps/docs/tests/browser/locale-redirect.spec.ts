@@ -15,6 +15,20 @@ test("sends a visitor arriving from elsewhere to the language they chose", async
   await context.close();
 });
 
+test("follows an English section link to the translated section", async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ baseURL, locale: "en-US" });
+  await context.addCookies([{ name: "codenhub-locale", value: "es", url: baseURL! }]);
+  const page = await context.newPage();
+
+  await page.goto("/skills/cli/#install-destinations", { referer: outside });
+
+  await expect(page).toHaveURL(/\/es\/skills\/cli\/#destinos-de-instalaci%C3%B3n$/);
+  // Not `:target`: Firefox scrolls to the section but leaves `:target` unset
+  // when the fragment changes while the page is still loading.
+  await expect(page.getByRole("heading", { name: "Destinos de instalación" })).toBeInViewport();
+  await context.close();
+});
+
 test("falls back to the browser's language without a saved choice", async ({ browser, baseURL }) => {
   const context = await browser.newContext({ baseURL, locale: "pt-PT" });
   const page = await context.newPage();
