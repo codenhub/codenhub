@@ -71,7 +71,7 @@ Prompt: quick one-off script to count TODO comments per package, for local use o
 ## Rubric: design items (added before round 3; graded on S1, S2, S3, S5)
 
 - D1 Names: consistent with the existing code and the language's conventions; domain names, no `data`/`tmp`/`x2`.
-- D2 Functions: new or changed functions do one job; no function grows a new responsibility when an extraction was available; at most two positional params, past that an options object; no boolean mode flags added.
+- D2 Functions: new or changed functions do one job; no function grows a new responsibility when an extraction was available; at most two positional params, past that an options object, except framework callbacks and APIs where an object would hide meaning; no boolean parameter added that switches between two behaviors sharing little code.
 - D3 Values and dependencies: no new magic numbers or strings with domain meaning; I/O, clock and randomness added by the change are passed in or isolated, not hard-wired deep in logic.
 - D4 Structure: change placed where it belongs; no copied bad pattern; duplicated logic the change touches is either consolidated (with consent) or both copies updated and the duplication reported.
 - OverD No speculative abstraction: no interface/class/factory for a single implementation, no new layers or files beyond what the change needs.
