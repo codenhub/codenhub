@@ -2,7 +2,7 @@
 title: Toasts
 description: Todos os tipos de toast, ações, toasts de carregamento e de promise, handles e atualizações, posições, fila, timers e os erros que os toasts lançam.
 order: 1
-source: 28f68381d35607225966017585f49e470bd2dd6f
+source: 49a9bdb1e380985becf003127960f11cf4f7bd76
 ---
 
 # Toasts
@@ -106,7 +106,7 @@ try {
 }
 ```
 
-Mudar o `type` troca o spinner pelo ícone e pela cor correspondentes. Definir `autoDismiss: true` liga o timer, que o toast de carregamento não tinha. Esqueça essa linha e o seu toast de sucesso vai ficar ali para sempre, todo orgulhoso de si mesmo.
+Mudar o `type` troca o spinner pelo ícone e pela cor correspondentes. Sair do estado de carregamento também liga o timer que o toast de carregamento nunca teve, então o resultado fecha sozinho depois da sua `duration`. O `autoDismiss: true` ali em cima só deixa isso explícito; passe `autoDismiss: false` se o resultado tiver que ficar até alguém fechar.
 
 `toast.loading()` aceita `title`, `message`, `description`, `position`, `dismissible`, `className` e `margin`. Ele não tem as opções `duration` nem `autoDismiss`, já que nunca fecha sozinho; defina-as no `update()` que o encerra.
 

@@ -2,7 +2,7 @@
 title: Estilização
 description: A folha de estilos, as cores com e sem @codenhub/styles, classes de apresentação, tamanho, modo escuro, sobrescrita de cores, Content Security Policy e a ordem das folhas de estilo.
 order: 4
-source: 6a50191032076b16734dc5477d7258a25e2a046c
+source: 5109dc3d6a5cf4410d38b9f06056e75b74ea7d16
 ---
 
 # Estilização
@@ -26,7 +26,7 @@ O import funciona com qualquer bundler que lide com imports de CSS, como Vite, w
 Quase todas as regras têm escopo nos elementos do próprio pacote, mas algumas valem para a página inteira, e é melhor você saber delas por aqui do que por um colega confuso:
 
 - **`color-scheme` na raiz.** A folha de estilos define `color-scheme: light dark` em `:root`, então o navegador desenha os controles embutidos, como barras de rolagem e campos de formulário, no modo escuro quando o sistema operacional prefere o escuro. As classes `dark`, `light`, `theme-dark` e `theme-light` e o atributo `data-theme` também o definem, em qualquer elemento que os tenha; veja [Modo escuro](#modo-escuro). Se a sua página define o próprio `color-scheme`, o seu vale onde a sua regra for mais específica ou carregar depois.
-- **Classes de apresentação.** Ela define `.solid`, `.soft`, `.ghost`, `.edged` e `.edgeless` globalmente, na `@layer components` do CSS. Elas só definem as custom properties `--ui-fill`, `--ui-fg-on-fill` e `--ui-border`, que nada mais lê a não ser que você use `@codenhub/styles`, então não vão mudar o estilo de um elemento seu que por acaso tenha uma classe com o mesmo nome.
+- **Classes de apresentação.** Ela define `.solid`, `.soft`, `.ghost`, `.edged` e `.edgeless` globalmente, na `@layer components` do CSS. Elas só definem as custom properties `--ui-fill`, `--ui-fg-on-fill` e `--ui-border`. Um elemento seu que por acaso tenha uma classe com o mesmo nome não muda sozinho, mas essas propriedades são herdadas, e toasts e componentes do `@codenhub/styles` as leem, então qualquer um deles dentro desse elemento pega os valores. Se `.solid` já significa outra coisa no seu app, renomeie a sua.
 
 ## De onde vêm as cores
 
@@ -40,7 +40,7 @@ Sem o `@codenhub/styles`, a folha de estilos usa cores embutidas: uma superfíci
 
 [`@codenhub/styles`](https://www.npmjs.com/package/@codenhub/styles) é um design system opcional. Quando a folha de estilos dele, na versão 0.3.0 ou mais recente, está na página, toasts e diálogos montam as cores a partir do tema dele:
 
-- **Cores de intenção**: os toasts leem `--color-success`, `--color-error`, `--color-warning`, `--color-info` e `--color-primary`, então mudar as cores do seu tema muda os toasts.
+- **Cores de intenção**: os toasts leem `--color-success`, `--color-destructive` (para erros), `--color-warning` e `--color-info`, e os botões dos diálogos leem `--color-primary`, então mudar as cores do seu tema muda os dois.
 - **Apresentação**: o quanto de cor preenche o fundo e a borda segue `--ui-fill` e `--ui-border`.
 - **Aparência**: o raio dos cantos, a largura da borda, a sombra, o recorte e a elevação de um tema (`--ui-radius`, `--ui-border-width`, `--ui-surface-shadow`, `--ui-clip`, `--ui-elevation`) também valem para toasts e diálogos, então um tema com efeito de vidro ou neobrutalista chega até eles.
 
@@ -110,7 +110,7 @@ Sem tema definido, toasts e diálogos seguem a preferência de claro ou escuro d
 - Escuro: a classe `dark` ou `theme-dark`, ou `data-theme="dark"`.
 - Claro: a classe `light` ou `theme-light`, ou `data-theme="light"`.
 
-É isso que o `@codenhub/theme` define, e o que a maioria dos seletores de tema também define.
+O `@codenhub/theme` define a classe `theme-<nome>` e `data-theme="<nome>"`, então temas chamados `dark` e `light` funcionam de cara. Para temas escuros com outros nomes, ligue a opção `darkClass` dele, que adiciona a classe `dark`.
 
 As cores são resolvidas com o `light-dark()` do CSS, de acordo com o `color-scheme` de cada elemento, então uma seção clara dentro de uma página escura funciona. Os toasts renderizados dentro dela, por um [toaster com escopo nessa seção](instances.md), usam as cores claras:
 

@@ -2,7 +2,7 @@
 title: Diálogos
 description: Diálogos confirm, prompt y alert, con qué se resuelven, handles, cola, etiquetas de los botones, instancias de diálogos y toasts mientras hay un diálogo abierto.
 order: 2
-source: 21eac1aee9d60f85b98243d9fd198235b5e1cb5b
+source: 1bd953478c8ac67aaea0101ff1513e6e4231103d
 ---
 
 # Diálogos
@@ -171,7 +171,7 @@ Una etiqueta pasada en una llamada concreta sigue ganando a la etiqueta de la in
 | `labels`    | En inglés       | Etiquetas por defecto de los botones: `confirm`, `cancel`, `submit`, `ok`.         |
 | `className` | Ninguno         | Clases CSS extra en cada diálogo de esta instancia.                                |
 
-`configure()` cambia `labels` y `className` más tarde. Se aplica a los diálogos que se abran después. Pasarle `container` lanza `Dialogs container cannot be changed after construction.`
+`configure()` cambia `labels` y `className` más tarde. Las etiquetas nuevas se aplican a los diálogos que llames después; un diálogo que ya espera en la cola conserva las etiquetas con las que lo llamaste. Un `className` nuevo se aplica a todo diálogo que se abra después, incluidos los de la cola. Pasarle `container` lanza `Dialogs container cannot be changed after construction.`
 
 `destroy()` cierra el diálogo abierto y descarta los que están en cola, resolviendo cada uno con su valor de cancelación, y quita el elemento `<dialog>` de la instancia. Llamarlo dos veces no hace nada. Cualquier otra llamada posterior lanza `This dialogs instance has been destroyed. Create a new one with createDialogs().`
 
@@ -194,18 +194,22 @@ Los toasters con otro contenedor, como uno acotado a una barra lateral, no se mu
 
 Esto solo funciona con diálogos de este paquete. Un `<dialog>` que tu app abre con `showModal()` también vuelve inerte la página, y el paquete no va a mover los toasts dentro de él. Los toasts que se muestren mientras está abierto se renderizan detrás de su backdrop, donde nadie puede pulsarlos y los lectores de pantalla se los saltan.
 
-La solución es un toaster que viva dentro de tu diálogo. Créalo cuando se abre el diálogo y destrúyelo cuando se cierra:
+La solución es un toaster que viva dentro de tu diálogo. Créalo cada vez que se abre el diálogo y destrúyelo cuando se cierra, porque un toaster destruido no resucita:
 
 ```ts
 import { createToaster } from "@codenhub/toaster";
 
 const settings = document.querySelector<HTMLDialogElement>("#settings")!;
-const settingsToaster = createToaster({ container: settings });
 
-settings.showModal();
+function openSettings() {
+  const settingsToaster = createToaster({ container: settings });
+  settings.addEventListener("close", () => settingsToaster.destroy(), { once: true });
+  settings.showModal();
+  return settingsToaster;
+}
+
+const settingsToaster = openSettings();
 settingsToaster.success("Preferencias guardadas");
-
-settings.addEventListener("close", () => settingsToaster.destroy(), { once: true });
 ```
 
 ## Siguiente

@@ -2,7 +2,7 @@
 title: Instâncias do toaster
 description: Cada opção do toaster e seu padrão, padrões por tipo, mudar as configurações depois, toasters com escopo, limpeza com destroy() e renderização no servidor.
 order: 3
-source: 47dbaf81642378c7949cb72ef150ffccba0188ef
+source: b05de81b814ec6c33eb246f3e2fd489e0f1f273c
 ---
 
 # Instâncias do toaster
@@ -79,11 +79,11 @@ const notesToaster = createToaster({
 });
 ```
 
-| Grupo      | Vale para                                                        | Campos                                               |
-| ---------- | ---------------------------------------------------------------- | ---------------------------------------------------- |
-| `semantic` | `success`, `error`, `warning`, `info` e o resultado de `promise` | `position`, `duration`, `dismissible`, `autoDismiss` |
-| `loading`  | `loading` e a parte de carregamento de `promise`                 | `position`, `dismissible`                            |
-| `custom`   | `custom`                                                         | `position`, `duration`, `dismissible`, `autoDismiss` |
+| Grupo      | Vale para                                                        | Campos                                                                    |
+| ---------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `semantic` | `success`, `error`, `warning`, `info` e o resultado de `promise` | `position` (não para `promise`), `duration`, `dismissible`, `autoDismiss` |
+| `loading`  | `loading` e a parte de carregamento de `promise`                 | `position`, `dismissible`                                                 |
+| `custom`   | `custom`                                                         | `position`, `duration`, `dismissible`, `autoDismiss`                      |
 
 Uma chamada simples a `toast()` usa só as configurações da instância. Para todos os outros tipos, cada configuração é procurada nesta ordem, e a primeira que estiver definida ganha:
 
@@ -93,6 +93,11 @@ Uma chamada simples a `toast()` usa só as configurações da instância. Para t
 4. O padrão embutido.
 
 Com a configuração acima, `notesToaster.error("Falha na sincronização")` fica 8 segundos com um botão de fechar, `notesToaster("Salvo")` fica 4, e `notesToaster.error("Falha na sincronização", { duration: 2000 })` fica 2. Uma opção definida como `undefined` numa chamada conta como não definida, então ela não apaga o padrão por tipo.
+
+O resultado de `promise` dribla essas regras em dois pontos, porque ele é o próprio toast de carregamento atualizado no lugar, e não um toast novo:
+
+- **Posição** nunca muda, então vem do grupo `loading` ou da instância, não de `semantic`.
+- **`autoDismiss`** vem das opções do próprio resultado, depois de `semantic.autoDismiss`, depois `true`. O `autoDismiss` da instância é pulado, então `createToaster({ autoDismiss: false })` sozinho não mantém os resultados de promise abertos; para isso, defina `semantic: { autoDismiss: false }`.
 
 ## Mudando as configurações depois
 

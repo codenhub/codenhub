@@ -170,7 +170,7 @@ A label passed to a single call still wins over the instance's label. The toast 
 | `labels`    | English         | Default button labels: `confirm`, `cancel`, `submit`, `ok`.              |
 | `className` | None            | Extra CSS classes on every dialog from this instance.                    |
 
-`configure()` changes `labels` and `className` later. It applies to dialogs that open afterwards. Passing `container` to it throws `Dialogs container cannot be changed after construction.`
+`configure()` changes `labels` and `className` later. New labels apply to dialogs called afterwards; a dialog already waiting in the queue keeps the labels it was called with. A new `className` applies to every dialog that opens afterwards, queued ones included. Passing `container` to it throws `Dialogs container cannot be changed after construction.`
 
 `destroy()` closes the open dialog and drops the queued ones, resolving each with its cancel value, and removes the instance's `<dialog>` element. Calling it twice does nothing. Any other call after it throws `This dialogs instance has been destroyed. Create a new one with createDialogs().`
 
@@ -193,18 +193,22 @@ Toasters with a different container, such as one scoped to a sidebar, don't move
 
 This only works with dialogs from this package. A `<dialog>` your app opens with `showModal()` makes the page inert too, and the package won't move toasts into it. Toasts shown while it's open render behind its backdrop, where nobody can click them and screen readers skip them.
 
-The fix is a toaster that lives inside your dialog. Create it when the dialog opens and destroy it when it closes:
+The fix is a toaster that lives inside your dialog. Create it each time the dialog opens and destroy it when it closes, since a destroyed toaster can't be reused:
 
 ```ts
 import { createToaster } from "@codenhub/toaster";
 
 const settings = document.querySelector<HTMLDialogElement>("#settings")!;
-const settingsToaster = createToaster({ container: settings });
 
-settings.showModal();
+function openSettings() {
+  const settingsToaster = createToaster({ container: settings });
+  settings.addEventListener("close", () => settingsToaster.destroy(), { once: true });
+  settings.showModal();
+  return settingsToaster;
+}
+
+const settingsToaster = openSettings();
 settingsToaster.success("Preferences saved");
-
-settings.addEventListener("close", () => settingsToaster.destroy(), { once: true });
 ```
 
 ## Next

@@ -105,7 +105,7 @@ try {
 }
 ```
 
-Changing `type` swaps the spinner for the matching icon and color. Setting `autoDismiss: true` starts the timer, which a loading toast didn't have. Forget that line and your success toast will sit there forever, quietly proud of itself.
+Changing `type` swaps the spinner for the matching icon and color. Leaving the loading state also starts the timer the loading toast never had, so the result closes after its `duration` on its own. The `autoDismiss: true` above just says so out loud; pass `autoDismiss: false` instead if the result should stay until someone dismisses it.
 
 `toast.loading()` takes `title`, `message`, `description`, `position`, `dismissible`, `className`, and `margin`. It has no `duration` or `autoDismiss` option, since it never closes on its own; set them in the `update()` that finishes it.
 

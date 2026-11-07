@@ -2,7 +2,7 @@
 title: Diálogos
 description: Diálogos confirm, prompt e alert, para o que resolvem, handles, fila, rótulos dos botões, instâncias de diálogos e toasts enquanto um diálogo está aberto.
 order: 2
-source: 21eac1aee9d60f85b98243d9fd198235b5e1cb5b
+source: 1bd953478c8ac67aaea0101ff1513e6e4231103d
 ---
 
 # Diálogos
@@ -126,7 +126,7 @@ const discard = await question;
 | `state`     | `"queued"`, `"visible"`, `"hiding"` ou `"hidden"`, os mesmos estados que [os toasts têm](toasts.md#estado-settled-e-eventos-de-ciclo-de-vida). |
 | `settled`   | Uma promise que resolve quando a animação de fechamento termina e o diálogo é limpo.                                                           |
 
-O handle aceitar `await` é a questão toda. Muitas bibliotecas de diálogo devolvem um objeto em `confirm()`, e aí `if (await confirm(...))` é sempre verdadeiro, porque um objeto é sempre truthy. É esse bug que coloca em produção o botão "Cancelar" que apaga mesmo assim. Aqui, `await` te dá a resposta de verdade.
+Poder dar `await` direto no handle é o pulo do gato. Muitas bibliotecas de diálogo devolvem um objeto em `confirm()`, e aí `if (await confirm(...))` é sempre verdadeiro, porque um objeto é sempre truthy. É esse bug que coloca em produção o botão "Cancelar" que apaga mesmo assim. Aqui, `await` te dá a resposta de verdade.
 
 Fechar com dismiss dá a cada tipo o seu valor de cancelamento: `false` para confirm, `null` para prompt, `undefined` para alert.
 
@@ -171,7 +171,7 @@ Um rótulo passado numa chamada específica continua ganhando do rótulo da inst
 | `labels`    | Inglês          | Rótulos padrão dos botões: `confirm`, `cancel`, `submit`, `ok`.                     |
 | `className` | Nenhum          | Classes CSS extras em todo diálogo desta instância.                                 |
 
-`configure()` muda `labels` e `className` depois. Vale para os diálogos que abrirem a partir daí. Passar `container` para ele lança `Dialogs container cannot be changed after construction.`
+`configure()` muda `labels` e `className` depois. Os rótulos novos valem para os diálogos chamados a partir daí; um diálogo que já está esperando na fila fica com os rótulos de quando foi chamado. Um `className` novo vale para todo diálogo que abrir a partir daí, inclusive os da fila. Passar `container` para ele lança `Dialogs container cannot be changed after construction.`
 
 `destroy()` fecha o diálogo aberto e descarta os da fila, resolvendo cada um com o seu valor de cancelamento, e remove o elemento `<dialog>` da instância. Chamá-lo duas vezes não faz nada. Qualquer outra chamada depois dele lança `This dialogs instance has been destroyed. Create a new one with createDialogs().`
 
@@ -194,18 +194,22 @@ Toasters com outro container, como um com escopo numa barra lateral, não se mud
 
 Isso só funciona com os diálogos deste pacote. Um `<dialog>` que o seu app abre com `showModal()` também deixa a página inerte, e o pacote não vai mover os toasts para dentro dele. Os toasts mostrados enquanto ele está aberto ficam atrás do backdrop dele, onde ninguém consegue clicar neles e os leitores de tela os pulam.
 
-A solução é um toaster que mora dentro do seu diálogo. Crie-o quando o diálogo abrir e destrua-o quando ele fechar:
+A solução é um toaster que mora dentro do seu diálogo. Crie-o toda vez que o diálogo abrir e destrua-o quando ele fechar, já que um toaster destruído não volta à vida:
 
 ```ts
 import { createToaster } from "@codenhub/toaster";
 
 const settings = document.querySelector<HTMLDialogElement>("#settings")!;
-const settingsToaster = createToaster({ container: settings });
 
-settings.showModal();
+function openSettings() {
+  const settingsToaster = createToaster({ container: settings });
+  settings.addEventListener("close", () => settingsToaster.destroy(), { once: true });
+  settings.showModal();
+  return settingsToaster;
+}
+
+const settingsToaster = openSettings();
 settingsToaster.success("Preferências salvas");
-
-settings.addEventListener("close", () => settingsToaster.destroy(), { once: true });
 ```
 
 ## Próximos passos

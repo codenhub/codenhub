@@ -2,7 +2,7 @@
 title: Instancias de toaster
 description: Cada opción del toaster y su valor por defecto, valores por defecto por tipo, cambiar la configuración después, toasters acotados, limpieza con destroy() y renderizado del lado del servidor.
 order: 3
-source: 47dbaf81642378c7949cb72ef150ffccba0188ef
+source: b05de81b814ec6c33eb246f3e2fd489e0f1f273c
 ---
 
 # Instancias de toaster
@@ -79,11 +79,11 @@ const notesToaster = createToaster({
 });
 ```
 
-| Grupo      | Se aplica a                                                       | Campos                                               |
-| ---------- | ----------------------------------------------------------------- | ---------------------------------------------------- |
-| `semantic` | `success`, `error`, `warning`, `info` y el resultado de `promise` | `position`, `duration`, `dismissible`, `autoDismiss` |
-| `loading`  | `loading` y la parte de carga de `promise`                        | `position`, `dismissible`                            |
-| `custom`   | `custom`                                                          | `position`, `duration`, `dismissible`, `autoDismiss` |
+| Grupo      | Se aplica a                                                       | Campos                                                                   |
+| ---------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `semantic` | `success`, `error`, `warning`, `info` y el resultado de `promise` | `position` (no para `promise`), `duration`, `dismissible`, `autoDismiss` |
+| `loading`  | `loading` y la parte de carga de `promise`                        | `position`, `dismissible`                                                |
+| `custom`   | `custom`                                                          | `position`, `duration`, `dismissible`, `autoDismiss`                     |
 
 Una llamada simple a `toast()` usa solo los ajustes de la instancia. Para todos los demás tipos, cada ajuste se busca en este orden, y gana el primero que esté definido:
 
@@ -93,6 +93,11 @@ Una llamada simple a `toast()` usa solo los ajustes de la instancia. Para todos 
 4. El valor por defecto integrado.
 
 Con la configuración de arriba, `notesToaster.error("Falló la sincronización")` dura 8 segundos con botón de cerrar, `notesToaster("Guardado")` dura 4, y `notesToaster.error("Falló la sincronización", { duration: 2000 })` dura 2. Una opción puesta a `undefined` en una llamada cuenta como no definida, así que no borra el valor por defecto del tipo.
+
+El resultado de `promise` se salta estas reglas en dos puntos, porque es el mismo toast de carga actualizado en su sitio, no un toast nuevo:
+
+- **La posición** nunca cambia, así que viene del grupo `loading` o de la instancia, no de `semantic`.
+- **`autoDismiss`** viene de las opciones del propio resultado, luego de `semantic.autoDismiss` y luego `true`. El `autoDismiss` de la instancia se ignora, así que `createToaster({ autoDismiss: false })` por sí solo no mantiene abiertos los resultados de promise; para eso, define `semantic: { autoDismiss: false }`.
 
 ## Cambiar la configuración después
 
