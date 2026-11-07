@@ -39,7 +39,7 @@ The details stay on `originalError` for your logs.
 
 When your application can say something more useful, register your own mapping for the same identifier after merging the preset. The later one wins, as [Getting started](getting-started.md#2-create-one-module-that-configures-errors) does for `23505`.
 
-Every mapping has a `messageKey`. The keys are stable, and each key always carries the same message, so a translation catalog can rely on them. Several identifiers share one key when they mean the same thing to the reader: Supabase has four different codes for "your session ended", and the reader only needs to hear it once. ErrorKit does not ship translations; see [Recipes](recipes.md#translate-messages).
+Every mapping has a `messageKey`. The keys are stable: each key keeps its meaning across releases, even when its English wording changes, so a translation catalog can rely on them. Several identifiers share one key when they mean the same thing to the reader: Supabase has four different codes for "your session ended", and the reader only needs to hear it once. ErrorKit does not ship translations; see [Recipes](recipes.md#translate-messages).
 
 The tables below list every mapping, so you can also build a catalog straight from this page.
 
@@ -62,7 +62,7 @@ For code that runs in a browser. It recognizes the `DOMException` names the Web 
 | `EncodingError`      | `error.browser.encoding`             | No        |
 | `ChunkLoadError`     | `error.browser.moduleLoadFailed`     | No        |
 
-Its patterns match whole messages only, so text that merely contains the same words is not classified:
+Its `fetch` patterns match whole messages only, and its `import()` pattern matches the start of the message, so text that merely contains the same words is not classified:
 
 | Message                                                                                                                                                                                  | `messageKey`                     | Retryable |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- | --------- |

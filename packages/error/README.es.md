@@ -49,8 +49,8 @@ Un fallo que nadie registró se convierte en `type: "unknown"` con el mensaje `"
 - [Error boundaries](docs/es/frameworks.md): fallbacks de React y Svelte que muestran un error normalizado.
 - [Recetas](docs/es/recipes.md): estados HTTP, Supabase, reintentos, traducciones, reporte de errores y pruebas.
 - [Salvedades y limitaciones](docs/es/caveats.md): lo que el paquete no hace, y cómo arreglártelas.
-- [Referencia de la API](docs/reference/index.md): cada export, generado a partir del código fuente.
-- [Registro de cambios](docs/changelog/index.md): qué cambió en cada versión.
+- [Referencia de la API](docs/reference/index.md) (en inglés): cada export, generado a partir del código fuente.
+- [Registro de cambios](docs/changelog/index.md) (en inglés): qué cambió en cada versión.
 
 ## Requisitos
 

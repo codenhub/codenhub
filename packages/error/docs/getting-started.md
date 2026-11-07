@@ -8,7 +8,7 @@ order: 1
 
 This page builds the error handling for the project tracker from the [overview](index.md): a web application where people sign in with Supabase, create projects, and call the app's own API with `fetch`. By the end, every failure the application catches turns into a message a person can act on, and every failure nobody planned for still reaches your logs intact.
 
-It takes five steps, and only one of them involves writing actual messages.
+It takes five steps, and the presets write most of the messages for you.
 
 ## 1. Install the package
 
@@ -18,7 +18,7 @@ pnpm add @codenhub/error
 
 ## 2. Create one module that configures errors
 
-Put all registry setup in one module and import it once, before anything else runs. The registry is ordinary module state: whatever you register is visible to every later `createAppError` call in the same JavaScript runtime.
+Put all registry setup in one module and import it once, before anything else runs. The registry is ordinary module state: whatever you register is visible to every later `createAppError` call that uses the same copy of the package.
 
 ```ts
 // src/errors.ts
@@ -59,7 +59,7 @@ import "./errors";
 // …the rest of your application
 ```
 
-Order matters here. When two mappings use the same identifier, the one added last replaces the other. That is why the `23505` mapping above comes after the Supabase preset: the preset's message for that code is a generic one about a duplicate value, since the preset cannot know which value collided, and in this application the only unique value people can collide on is a project name, so ours says so.
+Order matters here. When two mappings in the same bucket use the same identifier, the one added last replaces the other. That is why the `23505` mapping above comes after the Supabase preset: the preset's message for that code is a generic one about a duplicate value, since the preset cannot know which value collided, and in this application the only unique value people can collide on is a project name, so ours says so.
 
 Pick presets for where the code runs:
 
@@ -89,13 +89,13 @@ async function onSubmit(form: FormData) {
 }
 ```
 
-You do not need to unwrap anything first. `createAppError` looks inside the value for wrapped errors in `cause`, `originalError`, `error`, `err`, `inner`, `innerError`, and the first ten entries of an `errors` list. A `23505` buried two `cause`s deep still resolves to "You already have a project with that name."
+You do not need to unwrap anything first. `createAppError` looks inside the value for wrapped errors in `cause`, `originalError`, `error`, `err`, `inner`, `innerError`, and the first ten entries of an `errors` list. A `23505` buried two `cause`s deep still resolves to "You already have a project with that name.", as long as nothing outside it matched first.
 
 ## 4. Decide what to show
 
-Every `AppError` has a `message`, and that message is always safe to show:
+Every `AppError` has a `message`, and that message is safe to show as long as the messages you register are:
 
-- When a mapping matched, it is the message you or the preset registered.
+- When a mapping matched, it is the message you or the preset registered. An error rebuilt with `appErrorFromJSON` carries its sender's message, so rebuild only what a trusted sender sent.
 - When nothing matched, it is `"An unexpected error occurred."`, never the raw text of the failure.
 
 That second rule is deliberate. Raw messages are written for developers, and they often contain table names, file paths, stack details, or somebody else's data. ErrorKit only shows text that someone registered on purpose.

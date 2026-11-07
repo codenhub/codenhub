@@ -116,7 +116,7 @@ The package never touches browser or Node.js globals, so it runs the same in a b
 
 ErrorKit decides what a failure means. What happens next is up to you:
 
-- **It does not report errors.** It tells you which ones are worth reporting and keeps the raw value for your error tracker; see [Recipes](recipes.md#report-to-an-error-tracker).
+- **It does not report errors.** It gives you the fields to decide which ones are worth reporting, and keeps the raw value for your error tracker; see [Recipes](recipes.md#report-to-an-error-tracker).
 - **It does not retry.** `isRetryable` says when a retry is safe, and [Recipes](recipes.md#retry-safely) shows a small loop that uses it.
 - **It does not ship translations.** Every preset message has a stable translation key for your own catalog; see [Recipes](recipes.md#translate-messages).
 - **It does not read HTTP statuses on its own.** `fetch` resolves on a `404`, so you pass the status in; see [Recipes](recipes.md#classify-http-responses).

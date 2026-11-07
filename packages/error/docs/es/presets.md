@@ -2,7 +2,7 @@
 title: Presets
 description: Cada fallo que reconocen los presets del navegador, de Node.js, de HTTP y de Supabase, con su clave de traducción, y lo que deja fuera cada preset.
 order: 4
-source: f0ccf3a11cfa15fc079750d8ea0e0fb24e8244cf
+source: 518329420d7f1c7075340d363850a388c230cdcc
 ---
 
 # Presets
@@ -40,7 +40,7 @@ Los mensajes de los presets están en inglés, porque el paquete solo trae mensa
 
 Cuando tu aplicación puede decir algo más útil, registra tu propio mapeo para el mismo identificador después de fusionar el preset. Gana el último, como hace [Primeros pasos](getting-started.md#2-crea-un-módulo-que-configure-los-errores) con `23505`.
 
-Cada mapeo tiene un `messageKey`. Las claves son estables, y cada clave lleva siempre el mismo mensaje, así que un catálogo de traducciones puede confiar en ellas. Varios identificadores comparten una clave cuando significan lo mismo para quien lee: Supabase tiene cuatro códigos distintos para "tu sesión terminó", y a quien lee le basta con escucharlo una vez. ErrorKit no trae traducciones; consulta [Recetas](recipes.md#traducir-los-mensajes).
+Cada mapeo tiene un `messageKey`. Las claves son estables: cada clave conserva su significado entre versiones, aunque cambie su redacción en inglés, así que un catálogo de traducciones puede confiar en ellas. Varios identificadores comparten una clave cuando significan lo mismo para quien lee: Supabase tiene cuatro códigos distintos para "tu sesión terminó", y a quien lee le basta con escucharlo una vez. ErrorKit no trae traducciones; consulta [Recetas](recipes.md#traducir-los-mensajes).
 
 Las tablas de abajo enumeran todos los mapeos, así que también puedes armar un catálogo directamente desde esta página.
 
@@ -63,7 +63,7 @@ Para el código que se ejecuta en un navegador. Reconoce los nombres de `DOMExce
 | `EncodingError`      | `error.browser.encoding`             | No           |
 | `ChunkLoadError`     | `error.browser.moduleLoadFailed`     | No           |
 
-Sus patrones solo coinciden con mensajes completos, así que un texto que simplemente contiene las mismas palabras no se clasifica:
+Sus patrones de `fetch` solo coinciden con mensajes completos, y su patrón de `import()` coincide con el comienzo del mensaje, así que un texto que simplemente contiene las mismas palabras no se clasifica:
 
 | Mensaje                                                                                                                                                                                    | `messageKey`                     | Reintentable |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------- | ------------ |

@@ -2,7 +2,7 @@
 title: El AppError
 description: Cada campo de un AppError, lo que promete cada uno, qué pasa cuando un error se normaliza dos veces y cómo enviar uno de un servidor a un cliente.
 order: 2
-source: 1c68bfb499fb668957c685fe3421e451621615ad
+source: eeb05e8f69faec3858164657b09a67e9d07fb1f2
 ---
 
 # El AppError
@@ -90,16 +90,16 @@ const result = err({ code: "project.name_missing" }, { details: { field: "name" 
 result.error.details; // { field: "name" }
 ```
 
-Las reglas de lo que puede contener:
+La opción tiene que ser un objeto plano, y las reglas de lo que puede contener son:
 
 - **Solo valores JSON:** strings, números finitos, booleanos, `null`, listas y objetos planos, con un anidamiento de ocho niveles como máximo.
 - **Las claves `undefined` se descartan,** como las descarta `JSON.stringify`, así que no tienes que revisar antes un campo opcional.
 - **Cualquier otra cosa lanza `TypeError`,** como un `Date` o una entrada `undefined` en una lista.
 - **Se copia y se congela,** así que cambiar después el objeto que pasaste no cambia nada.
 
-A diferencia del error crudo, `details` forma parte de `toJSON()`, así que llega al cliente. Nunca se lee del valor que se está normalizando, solo de la opción, así que no entra nada que tu código no haya puesto ahí. Deja fuera cualquier cosa secreta.
+A diferencia del error crudo, `details` forma parte de `toJSON()`, así que llega al cliente. Nunca se lee del valor crudo que se está normalizando, solo de la opción y de un `AppError` que tu código ya creó, así que no entra nada que tu código no haya puesto ahí. Deja fuera cualquier cosa secreta.
 
-Cuando un error pasa por varias capas, cada una puede agregar claves. Una clave que el error ya tiene conserva su valor, así que una capa externa nunca sobrescribe lo que registró una interna.
+Cuando un error pasa por varias capas, cada una puede agregar claves, y un `AppError` envuelto dentro del valor trae consigo sus propios `details`. Una clave que el error ya tiene conserva su valor, así que una capa externa nunca sobrescribe lo que registró una interna.
 
 ### `originalError` y `cause`
 
@@ -124,7 +124,7 @@ const again = createAppError(first, { fallbackMessage: "Falló el pago." });
 again === first; // true, cuando billingRegistry coincidió con `caught`
 ```
 
-Pasar un `AppError` devuelve el mismo objeto, y `fallbackMessage` y `maxDepth` nunca cambian su clasificación. La redacción todavía se puede completar, una sola vez: un `fallbackMessage` sí redacta un error `"unknown"` que todavía tiene el mensaje por defecto, porque ninguna capa anterior eligió una redacción. Una vez que alguna capa la eligió, su mensaje se queda:
+Pasar un `AppError` devuelve el mismo objeto, salvo que un `fallbackMessage` lo vuelva a redactar o que `details` agregue claves, y en ese caso recibes uno nuevo con la misma clasificación. `fallbackMessage` y `maxDepth` nunca cambian la clasificación. La redacción todavía se puede completar, una sola vez: un `fallbackMessage` sí redacta un error `"unknown"` que todavía tiene el mensaje por defecto, porque ninguna capa anterior eligió una redacción. Una vez que alguna capa la eligió, su mensaje se queda:
 
 ```ts
 const inner = await attemptAsync(() => db.loadProject(id)); // aquí no hay mensaje de respaldo
@@ -139,7 +139,7 @@ Pasar un `registry` es la única forma de cambiar la clasificación. En ese caso
 - Una coincidencia conocida reemplaza a cualquier cosa de la que difiera.
 - Todo lo demás devuelve el mismo objeto.
 
-Un `AppError` envuelto dentro de otro error, como en `new Error("checkout failed", { cause: appError })`, sigue la misma regla: su clasificación se usa tal cual, salvo que pases un `registry`.
+Un `AppError` envuelto dentro de otro error, como en `new Error("checkout failed", { cause: appError })`, es un candidato más entre los valores que encuentra `createAppError`. Su clasificación se usa tal cual, salvo que pases un `registry`, pero una coincidencia conocida en un envoltorio externo todavía puede ganar, porque gana la coincidencia conocida más externa.
 
 ## Enviar un error a otro entorno
 
@@ -166,7 +166,7 @@ const error = appErrorFromJSON(body.error);
 Se aplican tres reglas:
 
 - **No consulta ningún registro.** El error reconstruido trae el mensaje que eligió quien lo envió, así que úsalo solo con datos de una fuente en la que confíes para redactar tus errores, como tu propio servidor.
-- **`isRetryable` siempre vuelve como `false`.** El flag del emisor describía su propia llamada, no la solicitud que trajo el error de vuelta.
+- **`isRetryable` siempre vuelve como `false` para datos serializados.** El flag del emisor describía su propia llamada, no la solicitud que trajo el error de vuelta. Un `AppError` que le pases se devuelve tal cual.
 - **Cualquier cosa que no sea exactamente la forma serializada** se normaliza como entrada cruda, como haría `createAppError`.
 
 Para pasarle un error a un worker, mediante `postMessage`, `structuredClone` o IndexedDB, envía también `error.toJSON()`. Un structured clone copia un `AppError` como un `Error` común sin sus campos, y en algunos motores arrastra además el `cause` crudo.

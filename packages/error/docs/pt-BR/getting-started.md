@@ -1,7 +1,7 @@
 ---
 title: Primeiros passos
 description: Configure um registro para uma aplicação real, normalize as falhas onde elas entram e decida o que mostrar e o que reportar.
-source: 478ffce5fb94e2f68d8b01bac1e7cf2d3b2862b9
+source: 1927cadc1838a78c330d1b7d9e828e3fbe030c10
 order: 1
 ---
 
@@ -9,7 +9,7 @@ order: 1
 
 Esta página monta o tratamento de erros do gerenciador de projetos da [visão geral](index.md): uma aplicação web em que as pessoas entram com o Supabase, criam projetos e chamam a API da própria aplicação com `fetch`. No final, toda falha que a aplicação captura vira uma mensagem com a qual uma pessoa consegue fazer alguma coisa, e toda falha que ninguém previu ainda chega inteira aos seus logs.
 
-São cinco passos, e só um deles envolve escrever mensagens de verdade.
+São cinco passos, e os presets escrevem a maior parte das mensagens por você.
 
 ## 1. Instale o pacote
 
@@ -19,7 +19,7 @@ pnpm add @codenhub/error
 
 ## 2. Crie um módulo que configura os erros
 
-Coloque toda a configuração do registro em um módulo e importe-o uma vez, antes de qualquer outra coisa rodar. O registro é estado comum de módulo: tudo o que você registra fica visível para todas as chamadas seguintes de `createAppError` no mesmo runtime JavaScript.
+Coloque toda a configuração do registro em um módulo e importe-o uma vez, antes de qualquer outra coisa rodar. O registro é estado comum de módulo: tudo o que você registra fica visível para todas as chamadas seguintes de `createAppError` que usam a mesma cópia do pacote.
 
 ```ts
 // src/errors.ts
@@ -60,7 +60,7 @@ import "./errors";
 // …o resto da sua aplicação
 ```
 
-A ordem importa aqui. Quando dois mapeamentos usam o mesmo identificador, o adicionado por último substitui o outro. É por isso que o mapeamento de `23505` acima vem depois do preset do Supabase: a mensagem do preset para esse código é genérica, sobre um valor duplicado, porque o preset não tem como saber qual valor colidiu, e nesta aplicação o único valor único em que as pessoas podem esbarrar é o nome do projeto, então a nossa diz isso.
+A ordem importa aqui. Quando dois mapeamentos no mesmo bucket usam o mesmo identificador, o adicionado por último substitui o outro. É por isso que o mapeamento de `23505` acima vem depois do preset do Supabase: a mensagem do preset para esse código é genérica, sobre um valor duplicado, porque o preset não tem como saber qual valor colidiu, e nesta aplicação o único valor único em que as pessoas podem esbarrar é o nome do projeto, então a nossa diz isso.
 
 Escolha os presets conforme onde o código roda:
 
@@ -90,13 +90,13 @@ async function onSubmit(form: FormData) {
 }
 ```
 
-Você não precisa desembrulhar nada antes. `createAppError` procura erros embrulhados dentro do valor em `cause`, `originalError`, `error`, `err`, `inner`, `innerError` e nas dez primeiras entradas de uma lista `errors`. Um `23505` enterrado dois `cause`s abaixo ainda vira "Você já tem um projeto com esse nome."
+Você não precisa desembrulhar nada antes. `createAppError` procura erros embrulhados dentro do valor em `cause`, `originalError`, `error`, `err`, `inner`, `innerError` e nas dez primeiras entradas de uma lista `errors`. Um `23505` enterrado dois `cause`s abaixo ainda vira "Você já tem um projeto com esse nome.", desde que nada do lado de fora tenha correspondido antes.
 
 ## 4. Decida o que mostrar
 
-Todo `AppError` tem uma `message`, e essa mensagem é sempre segura para mostrar:
+Todo `AppError` tem uma `message`, e essa mensagem é segura para mostrar desde que as mensagens que você registra também sejam:
 
-- Quando um mapeamento correspondeu, é a mensagem que você ou o preset registrou.
+- Quando um mapeamento correspondeu, é a mensagem que você ou o preset registrou. Um erro reconstruído com `appErrorFromJSON` traz a mensagem de quem enviou, então reconstrua só o que veio de quem você confia.
 - Quando nada correspondeu, é `"An unexpected error occurred."`, nunca o texto cru da falha.
 
 Essa segunda regra é proposital. Mensagens cruas são escritas para desenvolvedores, e muitas vezes trazem nomes de tabela, caminhos de arquivo, detalhes de stack ou dados de outra pessoa. O ErrorKit só mostra texto que alguém registrou de propósito.

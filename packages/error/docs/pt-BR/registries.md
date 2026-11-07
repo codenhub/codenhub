@@ -1,7 +1,7 @@
 ---
 title: Registros
 description: Os cinco buckets, como os identificadores são comparados, qual correspondência vence e quando usar um registro próprio em vez do global.
-source: d6f1ffe9188fb9264823b1f0b93e13ff24dbecdd
+source: fe8b2fa94a77dd5c39e190922da020b0c0963f4a
 order: 3
 ---
 
@@ -64,7 +64,7 @@ Cada bucket dá uma pequena arrumada nos identificadores antes de compará-los, 
 - **Prefixos** correspondem quando a mensagem começa com o prefixo. Quando vários correspondem, o mais longo vence.
 - **Patterns** rodam contra a mensagem crua, na ordem em que foram adicionados, e o primeiro que corresponder vence. As flags `g` e `y` são removidas quando um pattern é adicionado, porque elas fazem o `test()` lembrar a última posição e dar respostas diferentes para o mesmo texto. Use a flag `i` para comparar sem diferenciar maiúsculas de minúsculas.
 
-Um `DOMException` é comparado só pelo nome. Ele também carrega um `code` numérico legado (`20` para `AbortError`, por exemplo), da época em que as Web APIs numeravam os seus erros, e esse número, de outro modo, corresponderia a códigos que não têm nada a ver.
+Um `DOMException` é comparado como qualquer outro erro, por nome, mensagem, prefixo e pattern, exceto pelo `code` numérico, que é pulado. Esse é um número legado (`20` para `AbortError`, por exemplo), da época em que as Web APIs numeravam os seus erros, e esse número, de outro modo, corresponderia a códigos que não têm nada a ver.
 
 Adicionar um identificador que já existe substitui o feedback dele. Para patterns, "o mesmo" quer dizer o mesmo source e as mesmas flags.
 
@@ -122,7 +122,7 @@ const apiRegistry = createErrorRegistry([nodeErrorRegistry, myApiRegistry]);
 
 `registry.merge(other)` copia todas as entradas de `other` para `registry`, substituindo as entradas com o mesmo identificador. Ele verifica a origem inteira antes, então uma entrada ruim deixa o destino como estava. `registry.clear()` esvazia todos os buckets.
 
-`freezeRegistry(registry)` devolve um snapshot somente leitura, tipado como `ReadonlyErrorRegistry`. Ele tem só os métodos de leitura, `get` e `values`, mesmo que você vá procurar com reflection, e mudanças posteriores no original não chegam até ele. Os presets nativos são snapshots congelados, e congelar é o jeito de compartilhar um conjunto de mapeamentos entre pacotes ou times sem que ninguém o mude por acidente:
+`freezeRegistry(registry)` devolve um snapshot somente leitura, tipado como `ReadonlyErrorRegistry`. Ele tem só os métodos de leitura, mesmo que você vá procurar com reflection: `get` e `values` em `codes`, `names` e `messages`, e só `values` em `prefixes` e `patterns`. Mudanças posteriores no original não chegam até ele. Os presets nativos são snapshots congelados, e congelar é o jeito de compartilhar um conjunto de mapeamentos entre pacotes ou times sem que ninguém o mude por acidente:
 
 ```ts
 import { createErrorRegistry, freezeRegistry } from "@codenhub/error";
@@ -135,7 +135,7 @@ export const projectErrors = freezeRegistry(registry);
 
 Um registro congelado funciona em qualquer lugar em que um registro é lido: como a opção `registry`, no `merge` e na lista que você passa para `createErrorRegistry`.
 
-Tudo o que um bucket devolve também é congelado. `values()` devolve a mesma lista congelada até o bucket mudar, e as entradas, os objetos de feedback e as expressões regulares dela são todos congelados. Espalhe um deles em um objeto novo quando precisar de uma cópia que possa alterar.
+Tudo o que um bucket devolve também é congelado. `values()` devolve a mesma lista congelada até o bucket mudar, e as entradas, os objetos de feedback e as expressões regulares dela são todos congelados. Espalhe um deles em um objeto novo quando precisar de uma cópia que possa alterar, e copie um pattern com `new RegExp(pattern.source, pattern.flags)`.
 
 ## Escrevendo patterns
 

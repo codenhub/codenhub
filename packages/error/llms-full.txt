@@ -185,7 +185,7 @@ The package never touches browser or Node.js globals, so it runs the same in a b
 
 ErrorKit decides what a failure means. What happens next is up to you:
 
-- **It does not report errors.** It tells you which ones are worth reporting and keeps the raw value for your error tracker; see [Recipes](docs/recipes.md#report-to-an-error-tracker).
+- **It does not report errors.** It gives you the fields to decide which ones are worth reporting, and keeps the raw value for your error tracker; see [Recipes](docs/recipes.md#report-to-an-error-tracker).
 - **It does not retry.** `isRetryable` says when a retry is safe, and [Recipes](docs/recipes.md#retry-safely) shows a small loop that uses it.
 - **It does not ship translations.** Every preset message has a stable translation key for your own catalog; see [Recipes](docs/recipes.md#translate-messages).
 - **It does not read HTTP statuses on its own.** `fetch` resolves on a `404`, so you pass the status in; see [Recipes](docs/recipes.md#classify-http-responses).
@@ -213,7 +213,7 @@ The [API reference](docs/reference/index.md) lists every export with its signatu
 
 This page builds the error handling for the project tracker from the [overview](docs/index.md): a web application where people sign in with Supabase, create projects, and call the app's own API with `fetch`. By the end, every failure the application catches turns into a message a person can act on, and every failure nobody planned for still reaches your logs intact.
 
-It takes five steps, and only one of them involves writing actual messages.
+It takes five steps, and the presets write most of the messages for you.
 
 ## 1. Install the package
 
@@ -223,7 +223,7 @@ pnpm add @codenhub/error
 
 ## 2. Create one module that configures errors
 
-Put all registry setup in one module and import it once, before anything else runs. The registry is ordinary module state: whatever you register is visible to every later `createAppError` call in the same JavaScript runtime.
+Put all registry setup in one module and import it once, before anything else runs. The registry is ordinary module state: whatever you register is visible to every later `createAppError` call that uses the same copy of the package.
 
 ```ts
 // src/errors.ts
@@ -264,7 +264,7 @@ import "./errors";
 // …the rest of your application
 ```
 
-Order matters here. When two mappings use the same identifier, the one added last replaces the other. That is why the `23505` mapping above comes after the Supabase preset: the preset's message for that code is a generic one about a duplicate value, since the preset cannot know which value collided, and in this application the only unique value people can collide on is a project name, so ours says so.
+Order matters here. When two mappings in the same bucket use the same identifier, the one added last replaces the other. That is why the `23505` mapping above comes after the Supabase preset: the preset's message for that code is a generic one about a duplicate value, since the preset cannot know which value collided, and in this application the only unique value people can collide on is a project name, so ours says so.
 
 Pick presets for where the code runs:
 
@@ -294,13 +294,13 @@ async function onSubmit(form: FormData) {
 }
 ```
 
-You do not need to unwrap anything first. `createAppError` looks inside the value for wrapped errors in `cause`, `originalError`, `error`, `err`, `inner`, `innerError`, and the first ten entries of an `errors` list. A `23505` buried two `cause`s deep still resolves to "You already have a project with that name."
+You do not need to unwrap anything first. `createAppError` looks inside the value for wrapped errors in `cause`, `originalError`, `error`, `err`, `inner`, `innerError`, and the first ten entries of an `errors` list. A `23505` buried two `cause`s deep still resolves to "You already have a project with that name.", as long as nothing outside it matched first.
 
 ## 4. Decide what to show
 
-Every `AppError` has a `message`, and that message is always safe to show:
+Every `AppError` has a `message`, and that message is safe to show as long as the messages you register are:
 
-- When a mapping matched, it is the message you or the preset registered.
+- When a mapping matched, it is the message you or the preset registered. An error rebuilt with `appErrorFromJSON` carries its sender's message, so rebuild only what a trusted sender sent.
 - When nothing matched, it is `"An unexpected error occurred."`, never the raw text of the failure.
 
 That second rule is deliberate. Raw messages are written for developers, and they often contain table names, file paths, stack details, or somebody else's data. ErrorKit only shows text that someone registered on purpose.
@@ -426,16 +426,16 @@ const result = err({ code: "project.name_missing" }, { details: { field: "name" 
 result.error.details; // { field: "name" }
 ```
 
-The rules for what it can hold:
+The option must be a plain object, and the rules for what it can hold are:
 
 - **JSON values only:** strings, finite numbers, booleans, `null`, lists, and plain objects, nested at most eight levels deep.
 - **`undefined` keys are dropped,** as `JSON.stringify` drops them, so you do not have to check an optional field first.
 - **Anything else throws `TypeError`,** such as a `Date` or an `undefined` list entry.
 - **It is copied and frozen,** so changing the object you passed afterwards changes nothing.
 
-Unlike the raw error, `details` is part of `toJSON()`, so it reaches a client. It is never read from the value being normalized, only from the option, so nothing gets into it that your code did not put there. Keep anything secret out of it.
+Unlike the raw error, `details` is part of `toJSON()`, so it reaches a client. It is never read from the raw value being normalized, only from the option and from an `AppError` your code already made, so nothing gets into it that your code did not put there. Keep anything secret out of it.
 
-When an error passes through several layers, each one can add keys. A key the error already has keeps its value, so an outer layer never overwrites what an inner one recorded.
+When an error passes through several layers, each one can add keys, and an `AppError` wrapped inside the value brings its own `details` along. A key the error already has keeps its value, so an outer layer never overwrites what an inner one recorded.
 
 ### `originalError` and `cause`
 
@@ -460,7 +460,7 @@ const again = createAppError(first, { fallbackMessage: "Checkout failed." });
 again === first; // true, when billingRegistry matched `caught`
 ```
 
-Passing an `AppError` returns the same object, and `fallbackMessage` and `maxDepth` never change its classification. The wording can still be filled in, once: a `fallbackMessage` does word an `"unknown"` error that still carries the default message, because no layer before it chose any wording. Once a layer has, its message stays:
+Passing an `AppError` returns the same object unless a `fallbackMessage` rewords it or `details` adds keys, and then you get a new one with the same classification. `fallbackMessage` and `maxDepth` never change the classification. The wording can still be filled in, once: a `fallbackMessage` does word an `"unknown"` error that still carries the default message, because no layer before it chose any wording. Once a layer has, its message stays:
 
 ```ts
 const inner = await attemptAsync(() => db.loadProject(id)); // no fallback here
@@ -475,7 +475,7 @@ Passing a `registry` is the only way to change the classification. Then the raw 
 - A known match replaces anything it differs from.
 - Everything else returns the same object.
 
-An `AppError` wrapped inside another error, as in `new Error("checkout failed", { cause: appError })`, follows the same rule: its classification is used as it stands unless you pass a `registry`.
+An `AppError` wrapped inside another error, as in `new Error("checkout failed", { cause: appError })`, is one candidate among the values `createAppError` finds. Its classification is used as it stands unless you pass a `registry`, but a known match on an outer wrapper can still win, because the outermost known match does.
 
 ## Sending an error across a boundary
 
@@ -502,7 +502,7 @@ const error = appErrorFromJSON(body.error);
 Three rules apply:
 
 - **It consults no registry.** The rebuilt error carries the message the sender chose, so use it only on data from a source you trust to word your errors, such as your own server.
-- **`isRetryable` always comes back `false`.** The sender's flag described the sender's own call, not the request that carried the error back.
+- **`isRetryable` always comes back `false` for serialized data.** The sender's flag described the sender's own call, not the request that carried the error back. An `AppError` passed in is returned as it is.
 - **Anything that is not exactly the serialized shape** is normalized as raw input, as `createAppError` would do.
 
 To pass an error to a worker, through `postMessage`, `structuredClone`, or IndexedDB, send `error.toJSON()` too. A structured clone copies an `AppError` as a plain `Error` without its fields, and on some engines it carries the raw `cause` along with it.
@@ -589,7 +589,7 @@ Each bucket cleans up identifiers a little before comparing them, the same way w
 - **Prefixes** match when the message starts with the prefix. When several match, the longest wins.
 - **Patterns** run against the raw message, in the order they were added, and the first one that matches wins. The `g` and `y` flags are removed when a pattern is added, because they make `test()` remember its last position and give different answers on the same text. Use the `i` flag for case-insensitive matching.
 
-A `DOMException` is matched by its name only. It also carries a legacy numeric `code` (`20` for `AbortError`, for instance) from the days when web APIs numbered their errors, and that number would otherwise match unrelated codes.
+A `DOMException` is matched like any other error, by name, message, prefix, and pattern, except for its numeric `code`, which is skipped. That is a legacy number (`20` for `AbortError`, for instance) from the days when web APIs numbered their errors, and that number would otherwise match unrelated codes.
 
 Adding an identifier that already exists replaces its feedback. For patterns, "the same" means the same source and the same flags.
 
@@ -647,7 +647,7 @@ const apiRegistry = createErrorRegistry([nodeErrorRegistry, myApiRegistry]);
 
 `registry.merge(other)` copies every entry of `other` into `registry`, replacing entries with the same identifier. It checks the whole source first, so a bad entry leaves the target unchanged. `registry.clear()` empties every bucket.
 
-`freezeRegistry(registry)` returns a read-only snapshot, typed as `ReadonlyErrorRegistry`. It has only the reading methods, `get` and `values`, even if you go looking with reflection, and later changes to the original do not reach it. The built-in presets are frozen snapshots, and freezing is the way to share a set of mappings between packages or teams without anyone changing it by accident:
+`freezeRegistry(registry)` returns a read-only snapshot, typed as `ReadonlyErrorRegistry`. It has only the reading methods, even if you go looking with reflection: `get` and `values` on codes, names, and messages, and only `values` on prefixes and patterns. Later changes to the original do not reach it. The built-in presets are frozen snapshots, and freezing is the way to share a set of mappings between packages or teams without anyone changing it by accident:
 
 ```ts
 import { createErrorRegistry, freezeRegistry } from "@codenhub/error";
@@ -660,7 +660,7 @@ export const projectErrors = freezeRegistry(registry);
 
 A frozen registry works anywhere a registry is read: as the `registry` option, in `merge`, and in the list you pass to `createErrorRegistry`.
 
-Everything a bucket returns is frozen too. `values()` returns the same frozen list until the bucket changes, and its entries, feedback objects, and regular expressions are all frozen. Spread one into a new object when you need a copy you can change.
+Everything a bucket returns is frozen too. `values()` returns the same frozen list until the bucket changes, and its entries, feedback objects, and regular expressions are all frozen. Spread one into a new object when you need a copy you can change, and copy a pattern with `new RegExp(pattern.source, pattern.flags)`.
 
 ## Writing patterns
 
@@ -726,7 +726,7 @@ The details stay on `originalError` for your logs.
 
 When your application can say something more useful, register your own mapping for the same identifier after merging the preset. The later one wins, as [Getting started](docs/getting-started.md#2-create-one-module-that-configures-errors) does for `23505`.
 
-Every mapping has a `messageKey`. The keys are stable, and each key always carries the same message, so a translation catalog can rely on them. Several identifiers share one key when they mean the same thing to the reader: Supabase has four different codes for "your session ended", and the reader only needs to hear it once. ErrorKit does not ship translations; see [Recipes](docs/recipes.md#translate-messages).
+Every mapping has a `messageKey`. The keys are stable: each key keeps its meaning across releases, even when its English wording changes, so a translation catalog can rely on them. Several identifiers share one key when they mean the same thing to the reader: Supabase has four different codes for "your session ended", and the reader only needs to hear it once. ErrorKit does not ship translations; see [Recipes](docs/recipes.md#translate-messages).
 
 The tables below list every mapping, so you can also build a catalog straight from this page.
 
@@ -749,7 +749,7 @@ For code that runs in a browser. It recognizes the `DOMException` names the Web 
 | `EncodingError`      | `error.browser.encoding`             | No        |
 | `ChunkLoadError`     | `error.browser.moduleLoadFailed`     | No        |
 
-Its patterns match whole messages only, so text that merely contains the same words is not classified:
+Its `fetch` patterns match whole messages only, and its `import()` pattern matches the start of the message, so text that merely contains the same words is not classified:
 
 | Message                                                                                                                                                                                  | `messageKey`                     | Retryable |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- | --------- |
@@ -959,7 +959,7 @@ function validateName(name: string): Result<string> {
 
 Both return frozen objects.
 
-Raise your own failures by code, as above, rather than by message. A string passed to `err` is matched as message text against the `messages`, `prefixes`, and `patterns` buckets, never against `codes`. And an unmatched string does not become the message: `err("Name is required")` gives you `"An unexpected error occurred."` unless that exact message is registered. It is the same rule that keeps raw text off the screen, applied to your own strings too. ErrorKit does not play favorites, not even with you.
+Raise your own failures by code, as above, rather than by message. A string passed to `err` is matched as message text against the `messages`, `prefixes`, and `patterns` buckets, never against `codes`. And an unmatched string does not become the message: `err("Name is required")` gives you `"An unexpected error occurred."` unless a registered message, prefix, or pattern matches it. It is the same rule that keeps raw text off the screen, applied to your own strings too. ErrorKit does not play favorites, not even with you.
 
 ## Reading results
 
@@ -1019,8 +1019,8 @@ Put together, a small pipeline reads top to bottom. This one reads the port from
 import { andThen, attempt, err, map, match, ok } from "@codenhub/error";
 
 const port = andThen(
-  attempt(() => JSON.parse(text) as { port?: unknown }),
-  (config) => (typeof config.port === "number" ? ok(config.port) : err({ code: "config.port_missing" })),
+  attempt(() => JSON.parse(text) as { port?: unknown } | null),
+  (config) => (typeof config?.port === "number" ? ok(config.port) : err({ code: "config.port_missing" })),
 );
 
 const label = match(
@@ -1032,7 +1032,7 @@ const label = match(
 );
 ```
 
-`orElse` handles the failures you can do something about and passes the rest on. Return `err(error)` for every failure the recovery does not handle; it is already an `AppError`, so it comes back as it is. Here the project tracker falls back to its cached project list when the network is down:
+`orElse` handles the failures you can do something about and passes the rest on. Return `err(error)` for every failure the recovery does not handle; it is already an `AppError`, so it comes back as it is. Here the project tracker falls back to its cached project list when the browser reports a failed fetch:
 
 ```ts
 import { attemptAsync, err, ok, orElse } from "@codenhub/error";
@@ -1043,6 +1043,8 @@ const projects = orElse(await attemptAsync(() => api.listProjects()), (error) =>
 `all` turns several results into one, and keeps each position's type when you pass a tuple. For calls that run in parallel, await them together first:
 
 ```ts
+import { all, attemptAsync } from "@codenhub/error";
+
 const loaded = all(await Promise.all([attemptAsync(() => api.user(id)), attemptAsync(() => api.projects(id))]));
 
 if (loaded.ok) {
@@ -1089,7 +1091,7 @@ export function ProjectPage({ id }: { id: string }) {
           {error.isRetryable && <button onClick={reset}>Try again</button>}
         </div>
       )}
-      onError={(error, info) => tracker.captureException(error.originalError, { extra: info })}
+      onError={(error, info) => tracker.captureException(error.originalError ?? error, { extra: info })}
       resetKeys={[id]}
     >
       <Project id={id} />
@@ -1110,10 +1112,10 @@ The prop types are exported as `AppErrorBoundaryProps`, and the object `fallback
 
 A few details worth knowing:
 
+- **`options` are only checked when an error is caught.** An invalid option then throws while the fallback renders, so the boundary above this one gets a `TypeError` instead of the original error, and `onError` is not called. Try the options with `createAppError` in a test to catch that before an outage does.
 - **`reset` renders the children again.** If whatever made them throw has not changed, they throw again and the fallback comes right back. Reset after the state that caused the failure changes, or let `resetKeys` do it when the reader navigates. In the example above, opening another project resets the boundary.
 - **The fallback and `onError` get the same `AppError` instance,** so what the reader sees and what you report always agree.
 - **Thrown `null` or `undefined` counts as an error too.** Throwing them is legal JavaScript, if not a good idea, and the boundary still shows the fallback with the generic message.
-- **Invalid `options` throw while the boundary renders,** to the next boundary up. It is a programming mistake, so it fails loudly instead of quietly rendering a broken fallback.
 
 ## Svelte
 
@@ -1125,7 +1127,7 @@ Svelte 5 has `<svelte:boundary>` built in. `createAppErrorBoundary` returns the 
 
   const boundary = createAppErrorBoundary({
     options: { fallbackMessage: "This project failed to load." },
-    onError: (error) => tracker.captureException(error.originalError),
+    onError: (error) => tracker.captureException(error.originalError ?? error),
   });
 </script>
 
@@ -1143,7 +1145,7 @@ Svelte 5 has `<svelte:boundary>` built in. `createAppErrorBoundary` returns the 
 
 `createAppErrorBoundary` takes an `AppErrorBoundaryConfig` and returns `AppErrorBoundaryHandlers`:
 
-- **`options`** are the normalization options, as for `createAppError`. They are validated when you call `createAppErrorBoundary`, not when the first error arrives, so a typo fails while the component is set up rather than in the middle of an outage.
+- **`options`** are the normalization options, as for `createAppError`. An invalid value throws when you call `createAppErrorBoundary`, not when the first error arrives, so it fails while the component is set up rather than in the middle of an outage. A misspelled option name is ignored, though, as it is in `createAppError`.
 - **`onError`** receives the `AppError` and the boundary's `reset`, once per caught error. Passing something that is not a function throws `TypeError` right away.
 - **`toAppError`** returns the same `AppError` instance for the error `onerror` saw, so the snippet and the reporter agree.
 
@@ -1198,16 +1200,18 @@ export async function getJson<T>(url: string): Promise<Result<T>> {
 
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null);
-    return err({ code: response.status, cause: body }, { registry: httpErrorRegistry });
+    return err({ code: response.status, body }, { registry: httpErrorRegistry });
   }
 
   return attemptAsync(() => response.json() as Promise<T>);
 }
 ```
 
-Passing the body as `cause` keeps it on `originalError` for your logs. A status the preset does not map, such as `418`, resolves to the fallback message. [Presets](docs/presets.md#http) lists what it maps. To word a status for one endpoint, such as a `401` from a sign-in form, build a registry from the preset and add your own: `createErrorRegistry([httpErrorRegistry])`, then `.codes.add("401", …)`.
+`fetch` itself rejects only when no response arrived, such as a network failure, a CORS block, or an abort, and the request may still have reached the server. Any response, `404` and `500` included, resolves, so the status check is yours.
 
-When the server is your own and sends `error.toJSON()`, rebuild its error instead: `appErrorFromJSON(body.error)`. See [The AppError](docs/app-error.md#sending-an-error-across-a-boundary).
+Keeping the body under `body` puts it on `originalError` for your logs, so keep it only when it is safe to log. Do not pass it as `cause`: `createAppError` looks inside `cause`, and a `code` in the body could then win over the status. A status the preset does not map, such as `418`, resolves to the fallback message. [Presets](docs/presets.md#http) lists what it maps. To word a status for one endpoint, such as a `401` from a sign-in form, build a registry from the preset and add your own: `createErrorRegistry([httpErrorRegistry])`, then `.codes.add("401", …)`.
+
+When the server is your own and sends `{ error: error.toJSON() }`, rebuild its error instead: `appErrorFromJSON(body.error)`. When the whole body is the serialized error, pass `appErrorFromJSON(body)`. See [The AppError](docs/app-error.md#sending-an-error-across-a-boundary).
 
 ## Handle Supabase calls
 
@@ -1271,7 +1275,7 @@ export async function withRetry<T>(call: () => Promise<T>, attempts = 3): Promis
   for (let attempt = 1; ; attempt += 1) {
     const result = await attemptAsync(call);
 
-    if (result.ok || !result.error.isRetryable || attempt === attempts) {
+    if (result.ok || !result.error.isRetryable || attempt >= attempts) {
       return result;
     }
 
@@ -1298,7 +1302,7 @@ export function errorText(error: AppError, translate: (key: string) => string | 
 }
 ```
 
-The keys are stable across releases, and each always carries the same message. [Presets](docs/presets.md) lists every built-in key. To build a catalog in code, read them from the raw mappings:
+The keys are stable across releases, and each keeps its meaning even when its English wording changes. [Presets](docs/presets.md) lists every built-in key. To build a catalog in code, read them from the raw mappings:
 
 ```ts
 import { browserErrorNames, browserErrorPatterns } from "@codenhub/error/registries/browser";
@@ -1315,11 +1319,11 @@ Report what nobody described yet, plus the failures you have described that are 
 ```ts
 import type { AppError } from "@codenhub/error";
 
-// Failures only a developer can fix. The presets give them all one shared message.
-const BUG_CODES = new Set(["42P01", "42703", "unexpected_failure", "InvalidStateError", "500"]);
+// Failures only a developer can fix. The keys name the preset, so another service's "500" does not count.
+const BUG_KEYS = new Set(["error.supabase.database.undefinedTable", "error.supabase.database.undefinedColumn", "error.supabase.auth.unexpectedFailure", "error.browser.invalidState", "error.http.serverError"]);
 
 export function shouldReport(error: AppError): boolean {
-  return error.type === "unknown" || (error.code !== null && BUG_CODES.has(error.code));
+  return error.type === "unknown" || (error.messageKey !== null && BUG_KEYS.has(error.messageKey));
 }
 
 if (shouldReport(error)) {
@@ -1327,7 +1331,7 @@ if (shouldReport(error)) {
 }
 ```
 
-Report `originalError`, not the `AppError`: the original carries the real message and stack. Most trackers also follow an error's `cause`, and an `AppError`'s `cause` is the same original value, so reporting the `AppError` itself works too.
+Report `originalError`, not the `AppError`: the original carries the real message and stack. Most trackers also follow an error's `cause`, and an `AppError`'s `cause` is the same original value, so reporting the `AppError` itself works too. The one exception is the [HTTP recipe](#classify-http-responses): its `originalError` is a plain object with no stack, and it carries the response body.
 
 Do not report on `type === "heuristic"` alone. A heuristic match is usually a network failure on the reader's side, and no deploy of yours is going to fix their train going into a tunnel.
 
@@ -1343,7 +1347,7 @@ if (!result.ok && signal.aborted) {
 }
 ```
 
-Checking `signal.aborted` works with or without the browser preset, and it does not hide an abort that came from somewhere else.
+Here `signal` must come from an `AbortController` this code owns. Checking `signal.aborted` then works with or without the browser preset, and it does not hide an abort that came from somewhere else.
 
 ## Set up errors in tests
 
@@ -1468,7 +1472,7 @@ Everything on this page is deliberate, and every item on it has surprised someon
 
 - The browser preset recognizes a failed `fetch` and a failed `import()` by the messages Chromium, Firefox, and Safari produce today. A browser that rewords them falls back to `"unknown"` until the preset catches up.
 - The Node.js preset covers network failures and the errors an `AbortSignal` raises, and was observed on Node.js 24. Other server runtimes may report the same failures differently.
-- The Supabase preset covers the Auth codes a person can act on, six PostgreSQL codes, and the client's own error names. It maps the few developer faults a running application commonly hits, such as a missing table or column, to one shared message, so they are `"known"`: report them by `code`, not by type (see [Recipes](docs/recipes.md#report-to-an-error-tracker)). Other codes only a developer can fix, such as `bad_jwt`, are left unmapped on purpose and reach your error tracker as `"unknown"`.
+- The Supabase preset covers the Auth codes a person can act on, six PostgreSQL codes, and the client's own error names. It maps the few developer faults a running application commonly hits, such as a missing table or column, to one shared message, so they are `"known"`: report them by `messageKey`, not by type (see [Recipes](docs/recipes.md#report-to-an-error-tracker)). Other codes only a developer can fix, such as `bad_jwt`, are left unmapped on purpose and reach your error tracker as `"unknown"`.
 
 Register your own mapping for anything a preset misses. [Presets](docs/presets.md) lists exactly what each one covers.
 

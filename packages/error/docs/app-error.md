@@ -87,16 +87,16 @@ const result = err({ code: "project.name_missing" }, { details: { field: "name" 
 result.error.details; // { field: "name" }
 ```
 
-The rules for what it can hold:
+The option must be a plain object, and the rules for what it can hold are:
 
 - **JSON values only:** strings, finite numbers, booleans, `null`, lists, and plain objects, nested at most eight levels deep.
 - **`undefined` keys are dropped,** as `JSON.stringify` drops them, so you do not have to check an optional field first.
 - **Anything else throws `TypeError`,** such as a `Date` or an `undefined` list entry.
 - **It is copied and frozen,** so changing the object you passed afterwards changes nothing.
 
-Unlike the raw error, `details` is part of `toJSON()`, so it reaches a client. It is never read from the value being normalized, only from the option, so nothing gets into it that your code did not put there. Keep anything secret out of it.
+Unlike the raw error, `details` is part of `toJSON()`, so it reaches a client. It is never read from the raw value being normalized, only from the option and from an `AppError` your code already made, so nothing gets into it that your code did not put there. Keep anything secret out of it.
 
-When an error passes through several layers, each one can add keys. A key the error already has keeps its value, so an outer layer never overwrites what an inner one recorded.
+When an error passes through several layers, each one can add keys, and an `AppError` wrapped inside the value brings its own `details` along. A key the error already has keeps its value, so an outer layer never overwrites what an inner one recorded.
 
 ### `originalError` and `cause`
 
@@ -121,7 +121,7 @@ const again = createAppError(first, { fallbackMessage: "Checkout failed." });
 again === first; // true, when billingRegistry matched `caught`
 ```
 
-Passing an `AppError` returns the same object, and `fallbackMessage` and `maxDepth` never change its classification. The wording can still be filled in, once: a `fallbackMessage` does word an `"unknown"` error that still carries the default message, because no layer before it chose any wording. Once a layer has, its message stays:
+Passing an `AppError` returns the same object unless a `fallbackMessage` rewords it or `details` adds keys, and then you get a new one with the same classification. `fallbackMessage` and `maxDepth` never change the classification. The wording can still be filled in, once: a `fallbackMessage` does word an `"unknown"` error that still carries the default message, because no layer before it chose any wording. Once a layer has, its message stays:
 
 ```ts
 const inner = await attemptAsync(() => db.loadProject(id)); // no fallback here
@@ -136,7 +136,7 @@ Passing a `registry` is the only way to change the classification. Then the raw 
 - A known match replaces anything it differs from.
 - Everything else returns the same object.
 
-An `AppError` wrapped inside another error, as in `new Error("checkout failed", { cause: appError })`, follows the same rule: its classification is used as it stands unless you pass a `registry`.
+An `AppError` wrapped inside another error, as in `new Error("checkout failed", { cause: appError })`, is one candidate among the values `createAppError` finds. Its classification is used as it stands unless you pass a `registry`, but a known match on an outer wrapper can still win, because the outermost known match does.
 
 ## Sending an error across a boundary
 
@@ -163,7 +163,7 @@ const error = appErrorFromJSON(body.error);
 Three rules apply:
 
 - **It consults no registry.** The rebuilt error carries the message the sender chose, so use it only on data from a source you trust to word your errors, such as your own server.
-- **`isRetryable` always comes back `false`.** The sender's flag described the sender's own call, not the request that carried the error back.
+- **`isRetryable` always comes back `false` for serialized data.** The sender's flag described the sender's own call, not the request that carried the error back. An `AppError` passed in is returned as it is.
 - **Anything that is not exactly the serialized shape** is normalized as raw input, as `createAppError` would do.
 
 To pass an error to a worker, through `postMessage`, `structuredClone`, or IndexedDB, send `error.toJSON()` too. A structured clone copies an `AppError` as a plain `Error` without its fields, and on some engines it carries the raw `cause` along with it.

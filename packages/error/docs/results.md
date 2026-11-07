@@ -46,7 +46,7 @@ function validateName(name: string): Result<string> {
 
 Both return frozen objects.
 
-Raise your own failures by code, as above, rather than by message. A string passed to `err` is matched as message text against the `messages`, `prefixes`, and `patterns` buckets, never against `codes`. And an unmatched string does not become the message: `err("Name is required")` gives you `"An unexpected error occurred."` unless that exact message is registered. It is the same rule that keeps raw text off the screen, applied to your own strings too. ErrorKit does not play favorites, not even with you.
+Raise your own failures by code, as above, rather than by message. A string passed to `err` is matched as message text against the `messages`, `prefixes`, and `patterns` buckets, never against `codes`. And an unmatched string does not become the message: `err("Name is required")` gives you `"An unexpected error occurred."` unless a registered message, prefix, or pattern matches it. It is the same rule that keeps raw text off the screen, applied to your own strings too. ErrorKit does not play favorites, not even with you.
 
 ## Reading results
 
@@ -106,8 +106,8 @@ Put together, a small pipeline reads top to bottom. This one reads the port from
 import { andThen, attempt, err, map, match, ok } from "@codenhub/error";
 
 const port = andThen(
-  attempt(() => JSON.parse(text) as { port?: unknown }),
-  (config) => (typeof config.port === "number" ? ok(config.port) : err({ code: "config.port_missing" })),
+  attempt(() => JSON.parse(text) as { port?: unknown } | null),
+  (config) => (typeof config?.port === "number" ? ok(config.port) : err({ code: "config.port_missing" })),
 );
 
 const label = match(
@@ -119,7 +119,7 @@ const label = match(
 );
 ```
 
-`orElse` handles the failures you can do something about and passes the rest on. Return `err(error)` for every failure the recovery does not handle; it is already an `AppError`, so it comes back as it is. Here the project tracker falls back to its cached project list when the network is down:
+`orElse` handles the failures you can do something about and passes the rest on. Return `err(error)` for every failure the recovery does not handle; it is already an `AppError`, so it comes back as it is. Here the project tracker falls back to its cached project list when the browser reports a failed fetch:
 
 ```ts
 import { attemptAsync, err, ok, orElse } from "@codenhub/error";
@@ -130,6 +130,8 @@ const projects = orElse(await attemptAsync(() => api.listProjects()), (error) =>
 `all` turns several results into one, and keeps each position's type when you pass a tuple. For calls that run in parallel, await them together first:
 
 ```ts
+import { all, attemptAsync } from "@codenhub/error";
+
 const loaded = all(await Promise.all([attemptAsync(() => api.user(id)), attemptAsync(() => api.projects(id))]));
 
 if (loaded.ok) {

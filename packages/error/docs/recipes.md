@@ -29,16 +29,18 @@ export async function getJson<T>(url: string): Promise<Result<T>> {
 
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null);
-    return err({ code: response.status, cause: body }, { registry: httpErrorRegistry });
+    return err({ code: response.status, body }, { registry: httpErrorRegistry });
   }
 
   return attemptAsync(() => response.json() as Promise<T>);
 }
 ```
 
-Passing the body as `cause` keeps it on `originalError` for your logs. A status the preset does not map, such as `418`, resolves to the fallback message. [Presets](presets.md#http) lists what it maps. To word a status for one endpoint, such as a `401` from a sign-in form, build a registry from the preset and add your own: `createErrorRegistry([httpErrorRegistry])`, then `.codes.add("401", …)`.
+`fetch` itself rejects only when no response arrived, such as a network failure, a CORS block, or an abort, and the request may still have reached the server. Any response, `404` and `500` included, resolves, so the status check is yours.
 
-When the server is your own and sends `error.toJSON()`, rebuild its error instead: `appErrorFromJSON(body.error)`. See [The AppError](app-error.md#sending-an-error-across-a-boundary).
+Keeping the body under `body` puts it on `originalError` for your logs, so keep it only when it is safe to log. Do not pass it as `cause`: `createAppError` looks inside `cause`, and a `code` in the body could then win over the status. A status the preset does not map, such as `418`, resolves to the fallback message. [Presets](presets.md#http) lists what it maps. To word a status for one endpoint, such as a `401` from a sign-in form, build a registry from the preset and add your own: `createErrorRegistry([httpErrorRegistry])`, then `.codes.add("401", …)`.
+
+When the server is your own and sends `{ error: error.toJSON() }`, rebuild its error instead: `appErrorFromJSON(body.error)`. When the whole body is the serialized error, pass `appErrorFromJSON(body)`. See [The AppError](app-error.md#sending-an-error-across-a-boundary).
 
 ## Handle Supabase calls
 
@@ -102,7 +104,7 @@ export async function withRetry<T>(call: () => Promise<T>, attempts = 3): Promis
   for (let attempt = 1; ; attempt += 1) {
     const result = await attemptAsync(call);
 
-    if (result.ok || !result.error.isRetryable || attempt === attempts) {
+    if (result.ok || !result.error.isRetryable || attempt >= attempts) {
       return result;
     }
 
@@ -129,7 +131,7 @@ export function errorText(error: AppError, translate: (key: string) => string | 
 }
 ```
 
-The keys are stable across releases, and each always carries the same message. [Presets](presets.md) lists every built-in key. To build a catalog in code, read them from the raw mappings:
+The keys are stable across releases, and each keeps its meaning even when its English wording changes. [Presets](presets.md) lists every built-in key. To build a catalog in code, read them from the raw mappings:
 
 ```ts
 import { browserErrorNames, browserErrorPatterns } from "@codenhub/error/registries/browser";
@@ -146,11 +148,11 @@ Report what nobody described yet, plus the failures you have described that are 
 ```ts
 import type { AppError } from "@codenhub/error";
 
-// Failures only a developer can fix. The presets give them all one shared message.
-const BUG_CODES = new Set(["42P01", "42703", "unexpected_failure", "InvalidStateError", "500"]);
+// Failures only a developer can fix. The keys name the preset, so another service's "500" does not count.
+const BUG_KEYS = new Set(["error.supabase.database.undefinedTable", "error.supabase.database.undefinedColumn", "error.supabase.auth.unexpectedFailure", "error.browser.invalidState", "error.http.serverError"]);
 
 export function shouldReport(error: AppError): boolean {
-  return error.type === "unknown" || (error.code !== null && BUG_CODES.has(error.code));
+  return error.type === "unknown" || (error.messageKey !== null && BUG_KEYS.has(error.messageKey));
 }
 
 if (shouldReport(error)) {
@@ -158,7 +160,7 @@ if (shouldReport(error)) {
 }
 ```
 
-Report `originalError`, not the `AppError`: the original carries the real message and stack. Most trackers also follow an error's `cause`, and an `AppError`'s `cause` is the same original value, so reporting the `AppError` itself works too.
+Report `originalError`, not the `AppError`: the original carries the real message and stack. Most trackers also follow an error's `cause`, and an `AppError`'s `cause` is the same original value, so reporting the `AppError` itself works too. The one exception is the [HTTP recipe](#classify-http-responses): its `originalError` is a plain object with no stack, and it carries the response body.
 
 Do not report on `type === "heuristic"` alone. A heuristic match is usually a network failure on the reader's side, and no deploy of yours is going to fix their train going into a tunnel.
 
@@ -174,7 +176,7 @@ if (!result.ok && signal.aborted) {
 }
 ```
 
-Checking `signal.aborted` works with or without the browser preset, and it does not hide an abort that came from somewhere else.
+Here `signal` must come from an `AbortController` this code owns. Checking `signal.aborted` then works with or without the browser preset, and it does not hide an abort that came from somewhere else.
 
 ## Set up errors in tests
 

@@ -1,7 +1,7 @@
 ---
 title: Visão geral
 description: Para que o ErrorKit serve, a ideia por trás dele, um tour de cinco minutos e a ordem em que ler o resto da documentação.
-source: 3befe8f648a0655c38454c66e925b32a472128a1
+source: 2f96329b1cd9629ce0b944a81f0dfd91ea08a4b3
 ---
 
 # Transforme o que você capturou em um erro que dá para usar
@@ -117,7 +117,7 @@ O pacote nunca mexe em globais do navegador ou do Node.js, então roda igual no 
 
 O ErrorKit decide o que uma falha significa. O que acontece depois é com você:
 
-- **Ele não reporta erros.** Ele diz quais valem a pena reportar e guarda o valor cru para o seu error tracker; veja [Receitas](recipes.md#reportar-para-um-error-tracker).
+- **Ele não reporta erros.** Ele te dá os campos para decidir quais valem a pena reportar e guarda o valor cru para o seu error tracker; veja [Receitas](recipes.md#reportar-para-um-error-tracker).
 - **Ele não tenta de novo.** `isRetryable` diz quando uma nova tentativa é segura, e [Receitas](recipes.md#tentar-de-novo-com-segurança) mostra um loop pequeno que usa isso.
 - **Ele não vem com traduções.** Toda mensagem de preset tem uma chave de tradução estável para o seu próprio catálogo; veja [Receitas](recipes.md#traduzir-mensagens).
 - **Ele não lê status HTTP sozinho.** O `fetch` resolve normalmente com um `404`, então você passa o status; veja [Receitas](recipes.md#classificar-respostas-http).

@@ -1,7 +1,7 @@
 ---
 title: Ressalvas e limitações
 description: O que o ErrorKit não faz, as surpresas que ele pode causar e como contornar cada uma.
-source: b8a8740a6bd791d7442ab975a05a28a48120544b
+source: 6f024af842dc897b5d6318419a12ba88efc3b6a1
 order: 8
 ---
 
@@ -91,7 +91,7 @@ Tudo nesta página é proposital, e cada item dela já surpreendeu alguém pelo 
 
 - O preset de navegador reconhece um `fetch` e um `import()` que falharam pelas mensagens que o Chromium, o Firefox e o Safari produzem hoje. Um navegador que reescrever essas mensagens cai em `"unknown"` até o preset alcançá-lo.
 - O preset do Node.js cobre falhas de rede e os erros que um `AbortSignal` levanta, e foi observado no Node.js 24. Outros runtimes de servidor podem reportar as mesmas falhas de outro jeito.
-- O preset do Supabase cobre os códigos de Auth sobre os quais uma pessoa pode agir, seis códigos do PostgreSQL e os nomes de erro do próprio cliente. Ele mapeia as poucas falhas de desenvolvedor que uma aplicação em produção costuma encontrar, como uma tabela ou coluna inexistente, para uma mensagem compartilhada, então elas são `"known"`: reporte-as pelo `code`, não pelo tipo (veja [Receitas](recipes.md#reportar-para-um-error-tracker)). Outros códigos que só um desenvolvedor consegue resolver, como `bad_jwt`, ficam sem mapeamento de propósito e chegam ao seu error tracker como `"unknown"`.
+- O preset do Supabase cobre os códigos de Auth sobre os quais uma pessoa pode agir, seis códigos do PostgreSQL e os nomes de erro do próprio cliente. Ele mapeia as poucas falhas de desenvolvedor que uma aplicação em produção costuma encontrar, como uma tabela ou coluna inexistente, para uma mensagem compartilhada, então elas são `"known"`: reporte-as pelo `messageKey`, não pelo tipo (veja [Receitas](recipes.md#reportar-para-um-error-tracker)). Outros códigos que só um desenvolvedor consegue resolver, como `bad_jwt`, ficam sem mapeamento de propósito e chegam ao seu error tracker como `"unknown"`.
 
 Registre o seu próprio mapeamento para qualquer coisa que um preset não cubra. [Presets](presets.md) lista exatamente o que cada um cobre.
 

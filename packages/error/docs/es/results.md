@@ -2,7 +2,7 @@
 title: Resultados
 description: Devuelve los fallos en lugar de lanzarlos, con Result, attempt y los helpers que los encadenan.
 order: 5
-source: 01f341c6456e7b0ebe5207982191462e13e8d0f6
+source: a4432271d6805a005f249d0937b11f1d0c70dd1e
 ---
 
 # Resultados
@@ -47,7 +47,7 @@ function validateName(name: string): Result<string> {
 
 Ambos devuelven objetos congelados.
 
-Levanta tus propios fallos por código, como arriba, no por mensaje. Un string que se le pasa a `err` se compara como texto de mensaje contra los buckets `messages`, `prefixes` y `patterns`, nunca contra `codes`. Y un string que no coincide no se convierte en el mensaje: `err("Name is required")` te da `"An unexpected error occurred."`, salvo que ese mensaje exacto esté registrado. Es la misma regla que mantiene el texto crudo fuera de la pantalla, aplicada también a tus propios strings. ErrorKit no hace excepciones, ni siquiera contigo.
+Levanta tus propios fallos por código, como arriba, no por mensaje. Un string que se le pasa a `err` se compara como texto de mensaje contra los buckets `messages`, `prefixes` y `patterns`, nunca contra `codes`. Y un string que no coincide no se convierte en el mensaje: `err("Name is required")` te da `"An unexpected error occurred."`, salvo que coincida con un mensaje, prefijo o patrón registrado. Es la misma regla que mantiene el texto crudo fuera de la pantalla, aplicada también a tus propios strings. ErrorKit no hace excepciones, ni siquiera contigo.
 
 ## Leer resultados
 
@@ -107,8 +107,8 @@ Juntos, forman un pequeño pipeline que se lee de arriba abajo. Este lee el puer
 import { andThen, attempt, err, map, match, ok } from "@codenhub/error";
 
 const port = andThen(
-  attempt(() => JSON.parse(text) as { port?: unknown }),
-  (config) => (typeof config.port === "number" ? ok(config.port) : err({ code: "config.port_missing" })),
+  attempt(() => JSON.parse(text) as { port?: unknown } | null),
+  (config) => (typeof config?.port === "number" ? ok(config.port) : err({ code: "config.port_missing" })),
 );
 
 const label = match(
@@ -120,7 +120,7 @@ const label = match(
 );
 ```
 
-`orElse` se encarga de los fallos con los que puedes hacer algo y deja pasar el resto. Devuelve `err(error)` para cada fallo que la recuperación no maneje; ya es un `AppError`, así que vuelve tal cual. Aquí el gestor de proyectos recurre a su lista de proyectos en caché cuando la red está caída:
+`orElse` se encarga de los fallos con los que puedes hacer algo y deja pasar el resto. Devuelve `err(error)` para cada fallo que la recuperación no maneje; ya es un `AppError`, así que vuelve tal cual. Aquí el gestor de proyectos recurre a su lista de proyectos en caché cuando el navegador reporta un fetch fallido:
 
 ```ts
 import { attemptAsync, err, ok, orElse } from "@codenhub/error";
@@ -131,6 +131,8 @@ const projects = orElse(await attemptAsync(() => api.listProjects()), (error) =>
 `all` convierte varios resultados en uno, y conserva el tipo de cada posición cuando le pasas una tupla. Para llamadas que se ejecutan en paralelo, espéralas juntas primero:
 
 ```ts
+import { all, attemptAsync } from "@codenhub/error";
+
 const loaded = all(await Promise.all([attemptAsync(() => api.user(id)), attemptAsync(() => api.projects(id))]));
 
 if (loaded.ok) {

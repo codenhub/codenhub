@@ -1,7 +1,7 @@
 ---
 title: Error boundaries
 description: Mostre um AppError normalizado quando um componente React ou Svelte falha ao renderizar, e reporte-o uma vez só.
-source: d29f50375b1a8d447f7bae71d69bcc83a91dc524
+source: b79c2fbe8461bf4fb2c01ba061645170f356c595
 order: 6
 ---
 
@@ -34,7 +34,7 @@ export function ProjectPage({ id }: { id: string }) {
           {error.isRetryable && <button onClick={reset}>Tentar de novo</button>}
         </div>
       )}
-      onError={(error, info) => tracker.captureException(error.originalError, { extra: info })}
+      onError={(error, info) => tracker.captureException(error.originalError ?? error, { extra: info })}
       resetKeys={[id]}
     >
       <Project id={id} />
@@ -55,10 +55,10 @@ Os tipos das props são exportados como `AppErrorBoundaryProps`, e o objeto que 
 
 Alguns detalhes que vale saber:
 
+- **`options` só são conferidas quando um erro é capturado.** Uma opção inválida então lança exceção enquanto o fallback renderiza, e aí o boundary acima deste recebe um `TypeError` no lugar do erro original, e o `onError` não é chamado. Experimente as opções com `createAppError` em um teste para pegar isso antes que um incidente pegue.
 - **`reset` renderiza os filhos de novo.** Se o que os fez lançar exceção não mudou, eles lançam de novo e o fallback volta na hora. Resete depois que o estado que causou a falha mudar, ou deixe o `resetKeys` fazer isso quando a pessoa navegar. No exemplo acima, abrir outro projeto reseta o boundary.
 - **O fallback e o `onError` recebem a mesma instância de `AppError`,** então o que a pessoa vê e o que você reporta sempre batem.
 - **`null` ou `undefined` lançados também contam como erro.** Lançar esses valores é JavaScript válido, ainda que não seja boa ideia, e o boundary mostra o fallback com a mensagem genérica mesmo assim.
-- **`options` inválidas lançam exceção enquanto o boundary renderiza,** para o próximo boundary acima. É um erro de programação, então falha alto em vez de renderizar em silêncio um fallback quebrado.
 
 ## Svelte
 
@@ -70,7 +70,7 @@ O Svelte 5 tem o `<svelte:boundary>` embutido. `createAppErrorBoundary` devolve 
 
   const boundary = createAppErrorBoundary({
     options: { fallbackMessage: "Não foi possível carregar este projeto." },
-    onError: (error) => tracker.captureException(error.originalError),
+    onError: (error) => tracker.captureException(error.originalError ?? error),
   });
 </script>
 
@@ -88,7 +88,7 @@ O Svelte 5 tem o `<svelte:boundary>` embutido. `createAppErrorBoundary` devolve 
 
 `createAppErrorBoundary` recebe um `AppErrorBoundaryConfig` e devolve `AppErrorBoundaryHandlers`:
 
-- **`options`** são as opções de normalização, como as de `createAppError`. Elas são validadas quando você chama `createAppErrorBoundary`, e não quando o primeiro erro chega, então um erro de digitação falha enquanto o componente é montado, e não no meio de um incidente.
+- **`options`** são as opções de normalização, como as de `createAppError`. Um valor inválido lança exceção quando você chama `createAppErrorBoundary`, e não quando o primeiro erro chega, então ele falha enquanto o componente é montado, e não no meio de um incidente. Um nome de opção escrito errado, por outro lado, é ignorado, como no `createAppError`.
 - **`onError`** recebe o `AppError` e o `reset` do boundary, uma vez por erro capturado. Passar algo que não é função lança `TypeError` na hora.
 - **`toAppError`** devolve a mesma instância de `AppError` para o erro que o `onerror` viu, então o snippet e quem reporta concordam.
 

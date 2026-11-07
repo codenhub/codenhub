@@ -63,7 +63,7 @@ Each bucket cleans up identifiers a little before comparing them, the same way w
 - **Prefixes** match when the message starts with the prefix. When several match, the longest wins.
 - **Patterns** run against the raw message, in the order they were added, and the first one that matches wins. The `g` and `y` flags are removed when a pattern is added, because they make `test()` remember its last position and give different answers on the same text. Use the `i` flag for case-insensitive matching.
 
-A `DOMException` is matched by its name only. It also carries a legacy numeric `code` (`20` for `AbortError`, for instance) from the days when web APIs numbered their errors, and that number would otherwise match unrelated codes.
+A `DOMException` is matched like any other error, by name, message, prefix, and pattern, except for its numeric `code`, which is skipped. That is a legacy number (`20` for `AbortError`, for instance) from the days when web APIs numbered their errors, and that number would otherwise match unrelated codes.
 
 Adding an identifier that already exists replaces its feedback. For patterns, "the same" means the same source and the same flags.
 
@@ -121,7 +121,7 @@ const apiRegistry = createErrorRegistry([nodeErrorRegistry, myApiRegistry]);
 
 `registry.merge(other)` copies every entry of `other` into `registry`, replacing entries with the same identifier. It checks the whole source first, so a bad entry leaves the target unchanged. `registry.clear()` empties every bucket.
 
-`freezeRegistry(registry)` returns a read-only snapshot, typed as `ReadonlyErrorRegistry`. It has only the reading methods, `get` and `values`, even if you go looking with reflection, and later changes to the original do not reach it. The built-in presets are frozen snapshots, and freezing is the way to share a set of mappings between packages or teams without anyone changing it by accident:
+`freezeRegistry(registry)` returns a read-only snapshot, typed as `ReadonlyErrorRegistry`. It has only the reading methods, even if you go looking with reflection: `get` and `values` on codes, names, and messages, and only `values` on prefixes and patterns. Later changes to the original do not reach it. The built-in presets are frozen snapshots, and freezing is the way to share a set of mappings between packages or teams without anyone changing it by accident:
 
 ```ts
 import { createErrorRegistry, freezeRegistry } from "@codenhub/error";
@@ -134,7 +134,7 @@ export const projectErrors = freezeRegistry(registry);
 
 A frozen registry works anywhere a registry is read: as the `registry` option, in `merge`, and in the list you pass to `createErrorRegistry`.
 
-Everything a bucket returns is frozen too. `values()` returns the same frozen list until the bucket changes, and its entries, feedback objects, and regular expressions are all frozen. Spread one into a new object when you need a copy you can change.
+Everything a bucket returns is frozen too. `values()` returns the same frozen list until the bucket changes, and its entries, feedback objects, and regular expressions are all frozen. Spread one into a new object when you need a copy you can change, and copy a pattern with `new RegExp(pattern.source, pattern.flags)`.
 
 ## Writing patterns
 

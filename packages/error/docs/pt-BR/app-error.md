@@ -1,7 +1,7 @@
 ---
 title: O AppError
 description: Cada campo de um AppError, o que cada um promete, o que acontece quando um erro é normalizado duas vezes e como mandar um do servidor para o cliente.
-source: 1c68bfb499fb668957c685fe3421e451621615ad
+source: eeb05e8f69faec3858164657b09a67e9d07fb1f2
 order: 2
 ---
 
@@ -90,16 +90,16 @@ const result = err({ code: "project.name_missing" }, { details: { field: "name" 
 result.error.details; // { field: "name" }
 ```
 
-As regras do que ele pode guardar:
+A opção precisa ser um objeto simples, e as regras do que ela pode guardar são:
 
 - **Só valores JSON:** strings, números finitos, booleanos, `null`, listas e objetos simples, aninhados em até oito níveis.
 - **Chaves `undefined` são descartadas,** como o `JSON.stringify` faz, então você não precisa checar antes um campo opcional.
 - **Qualquer outra coisa lança `TypeError`,** como um `Date` ou uma entrada `undefined` em uma lista.
 - **Ele é copiado e congelado,** então mudar depois o objeto que você passou não muda nada.
 
-Diferente do erro cru, `details` faz parte do `toJSON()`, então chega ao cliente. Ele nunca é lido do valor que está sendo normalizado, só da opção, então nada entra ali que o seu código não tenha colocado. Mantenha qualquer segredo fora dele.
+Diferente do erro cru, `details` faz parte do `toJSON()`, então chega ao cliente. Ele nunca é lido do valor cru que está sendo normalizado, só da opção e de um `AppError` que o seu código já criou, então nada entra ali que o seu código não tenha colocado. Mantenha qualquer segredo fora dele.
 
-Quando um erro passa por várias camadas, cada uma pode acrescentar chaves. Uma chave que o erro já tem mantém o valor, então uma camada de fora nunca sobrescreve o que uma de dentro registrou.
+Quando um erro passa por várias camadas, cada uma pode acrescentar chaves, e um `AppError` embrulhado dentro do valor traz os próprios `details` junto. Uma chave que o erro já tem mantém o valor, então uma camada de fora nunca sobrescreve o que uma de dentro registrou.
 
 ### `originalError` e `cause`
 
@@ -124,7 +124,7 @@ const again = createAppError(first, { fallbackMessage: "O checkout falhou." });
 again === first; // true, quando billingRegistry reconheceu `caught`
 ```
 
-Passar um `AppError` devolve o mesmo objeto, e `fallbackMessage` e `maxDepth` nunca mudam a classificação dele. O texto ainda pode ser preenchido, uma vez: um `fallbackMessage` dá texto, sim, a um erro `"unknown"` que ainda tem a mensagem padrão, porque nenhuma camada antes dele escolheu texto nenhum. Depois que uma camada escolheu, a mensagem fica:
+Passar um `AppError` devolve o mesmo objeto, a não ser que um `fallbackMessage` mude o texto dele ou `details` acrescente chaves, e aí você recebe um novo com a mesma classificação. `fallbackMessage` e `maxDepth` nunca mudam a classificação. O texto ainda pode ser preenchido, uma vez: um `fallbackMessage` dá texto, sim, a um erro `"unknown"` que ainda tem a mensagem padrão, porque nenhuma camada antes dele escolheu texto nenhum. Depois que uma camada escolheu, a mensagem fica:
 
 ```ts
 const inner = await attemptAsync(() => db.loadProject(id)); // sem fallback aqui
@@ -139,7 +139,7 @@ Passar um `registry` é o único jeito de mudar a classificação. Aí o valor c
 - Uma correspondência conhecida substitui qualquer coisa da qual ela seja diferente.
 - Todo o resto devolve o mesmo objeto.
 
-Um `AppError` embrulhado dentro de outro erro, como em `new Error("checkout failed", { cause: appError })`, segue a mesma regra: a classificação dele é usada como está, a não ser que você passe um `registry`.
+Um `AppError` embrulhado dentro de outro erro, como em `new Error("checkout failed", { cause: appError })`, é um candidato entre os valores que o `createAppError` encontra. A classificação dele é usada como está, a não ser que você passe um `registry`, mas uma correspondência conhecida em um embrulho de fora ainda pode vencer, porque vence a correspondência conhecida mais de fora.
 
 ## Mandando um erro para o outro lado
 
@@ -166,7 +166,7 @@ const error = appErrorFromJSON(body.error);
 Valem três regras:
 
 - **Ele não consulta nenhum registro.** O erro reconstruído traz a mensagem que quem enviou escolheu, então use-o só com dados de uma origem em que você confia para escrever os seus erros, como o seu próprio servidor.
-- **`isRetryable` sempre volta `false`.** A flag de quem enviou descrevia a chamada de quem enviou, não a requisição que trouxe o erro de volta.
+- **`isRetryable` sempre volta `false` para dados serializados.** A flag de quem enviou descrevia a chamada de quem enviou, não a requisição que trouxe o erro de volta. Um `AppError` passado direto é devolvido como está.
 - **Qualquer coisa que não seja exatamente o formato serializado** é normalizada como entrada crua, como `createAppError` faria.
 
 Para passar um erro para um worker, por `postMessage`, `structuredClone` ou IndexedDB, mande `error.toJSON()` também. Um structured clone copia um `AppError` como um `Error` simples sem os campos dele, e em algumas engines leva junto o `cause` cru.
@@ -182,7 +182,7 @@ Para passar um erro para um worker, por `postMessage`, `structuredClone` ou Inde
 | `maxDepth`        | `3`                               | Até que profundidade procurar dentro de erros embrulhados, de `0` a `3`. |
 | `details`         | Nenhum                            | Dados para anexar como `details`. Veja [`details`](#details).            |
 
-Na profundidade padrão, uma cadeia de `cause` sozinha é seguida mais longe, até a profundidade `8`, porque uma falha embrulhada uma vez por camada da aplicação muitas vezes fica mais funda que três. Um `maxDepth` menor para todos os campos, `cause` incluído, nessa profundidade.
+Na profundidade padrão, uma cadeia de `cause` sozinha é seguida mais longe, até a profundidade `8`, porque uma falha embrulhada uma vez por camada da aplicação muitas vezes fica mais funda que três. Um `maxDepth` menor interrompe todos os campos, incluindo `cause`, nessa profundidade.
 
 A mensagem padrão é exportada como `DEFAULT_APP_ERROR_MESSAGE`, para testes e para comparar.
 

@@ -2,14 +2,14 @@
 title: Primeros pasos
 description: Configura un registro para una aplicación real, normaliza los fallos por donde entran y decide qué mostrar y qué reportar.
 order: 1
-source: 478ffce5fb94e2f68d8b01bac1e7cf2d3b2862b9
+source: 1927cadc1838a78c330d1b7d9e828e3fbe030c10
 ---
 
 # Primeros pasos
 
 Esta página arma el manejo de errores del gestor de proyectos de la [visión general](index.md): una aplicación web donde la gente inicia sesión con Supabase, crea proyectos y llama a la API propia de la app con `fetch`. Al final, cada fallo que atrapa la aplicación se convierte en un mensaje con el que una persona puede hacer algo, y cada fallo que nadie previó sigue llegando intacto a tus logs.
 
-Son cinco pasos, y solo uno de ellos implica escribir mensajes de verdad.
+Son cinco pasos, y los presets escriben la mayoría de los mensajes por ti.
 
 ## 1. Instala el paquete
 
@@ -19,7 +19,7 @@ pnpm add @codenhub/error
 
 ## 2. Crea un módulo que configure los errores
 
-Pon toda la configuración del registro en un solo módulo e impórtalo una vez, antes de que se ejecute cualquier otra cosa. El registro es estado de módulo común y corriente: lo que registres es visible para cada llamada posterior a `createAppError` en el mismo runtime de JavaScript.
+Pon toda la configuración del registro en un solo módulo e impórtalo una vez, antes de que se ejecute cualquier otra cosa. El registro es estado de módulo común y corriente: lo que registres es visible para cada llamada posterior a `createAppError` que use la misma copia del paquete.
 
 ```ts
 // src/errors.ts
@@ -60,7 +60,7 @@ import "./errors";
 // …el resto de tu aplicación
 ```
 
-Aquí el orden importa. Cuando dos mapeos usan el mismo identificador, el que se agregó último reemplaza al otro. Por eso el mapeo de `23505` de arriba va después del preset de Supabase: el mensaje del preset para ese código es uno genérico sobre un valor duplicado, porque el preset no puede saber qué valor chocó, y en esta aplicación el único valor único con el que la gente puede chocar es el nombre de un proyecto, así que el nuestro lo dice.
+Aquí el orden importa. Cuando dos mapeos del mismo bucket usan el mismo identificador, el que se agregó último reemplaza al otro. Por eso el mapeo de `23505` de arriba va después del preset de Supabase: el mensaje del preset para ese código es uno genérico sobre un valor duplicado, porque el preset no puede saber qué valor chocó, y en esta aplicación el único valor único con el que la gente puede chocar es el nombre de un proyecto, así que el nuestro lo dice.
 
 Elige los presets según dónde se ejecuta el código:
 
@@ -90,13 +90,13 @@ async function onSubmit(form: FormData) {
 }
 ```
 
-No necesitas desenvolver nada antes. `createAppError` busca dentro del valor errores envueltos en `cause`, `originalError`, `error`, `err`, `inner`, `innerError` y las primeras diez entradas de una lista `errors`. Un `23505` enterrado dos `cause` más adentro igual se resuelve como "Ya tienes un proyecto con ese nombre."
+No necesitas desenvolver nada antes. `createAppError` busca dentro del valor errores envueltos en `cause`, `originalError`, `error`, `err`, `inner`, `innerError` y las primeras diez entradas de una lista `errors`. Un `23505` enterrado dos `cause` más adentro igual se resuelve como "Ya tienes un proyecto con ese nombre.", siempre que nada por fuera de él haya coincidido antes.
 
 ## 4. Decide qué mostrar
 
-Todo `AppError` tiene un `message`, y ese mensaje siempre se puede mostrar sin riesgo:
+Todo `AppError` tiene un `message`, y ese mensaje se puede mostrar sin riesgo siempre que los mensajes que registras también se puedan mostrar:
 
-- Cuando un mapeo coincidió, es el mensaje que registraste tú o el preset.
+- Cuando un mapeo coincidió, es el mensaje que registraste tú o el preset. Un error reconstruido con `appErrorFromJSON` trae el mensaje de quien lo envió, así que reconstruye solo lo que envió un emisor de confianza.
 - Cuando nada coincidió, es `"An unexpected error occurred."`, nunca el texto crudo del fallo.
 
 Esa segunda regla es deliberada. Los mensajes crudos están escritos para desarrolladores, y a menudo contienen nombres de tablas, rutas de archivos, detalles del stack o datos de otra persona. ErrorKit solo muestra texto que alguien registró a propósito.

@@ -1,7 +1,7 @@
 ---
 title: Presets
 description: Todas as falhas que os presets de navegador, Node.js, HTTP e Supabase reconhecem, com a chave de tradução de cada uma, e o que cada preset deixa de fora.
-source: f0ccf3a11cfa15fc079750d8ea0e0fb24e8244cf
+source: 518329420d7f1c7075340d363850a388c230cdcc
 order: 4
 ---
 
@@ -40,7 +40,7 @@ Ou seja: algo deu errado do nosso lado, não foi nada que você fez, e se contin
 
 Quando a sua aplicação tiver algo mais útil a dizer, registre o seu próprio mapeamento para o mesmo identificador depois de fazer o merge do preset. O último vence, como [Primeiros passos](getting-started.md#2-crie-um-módulo-que-configura-os-erros) faz com o `23505`.
 
-Todo mapeamento tem um `messageKey`. As chaves são estáveis, e cada chave carrega sempre a mesma mensagem, então um catálogo de traduções pode confiar nelas. Vários identificadores compartilham uma chave quando significam a mesma coisa para quem lê: o Supabase tem quatro códigos diferentes para "a sua sessão terminou", e a pessoa só precisa ouvir isso uma vez. O ErrorKit não vem com traduções; veja [Receitas](recipes.md#traduzir-mensagens).
+Todo mapeamento tem um `messageKey`. As chaves são estáveis: cada chave mantém o significado entre versões, mesmo quando o texto em inglês muda, então um catálogo de traduções pode confiar nelas. Vários identificadores compartilham uma chave quando significam a mesma coisa para quem lê: o Supabase tem quatro códigos diferentes para "a sua sessão terminou", e a pessoa só precisa ouvir isso uma vez. O ErrorKit não vem com traduções; veja [Receitas](recipes.md#traduzir-mensagens).
 
 As tabelas abaixo listam todos os mapeamentos, então dá para montar um catálogo direto desta página.
 
@@ -63,7 +63,7 @@ Para código que roda no navegador. Ele reconhece os nomes de `DOMException` que
 | `EncodingError`      | `error.browser.encoding`             | Não          |
 | `ChunkLoadError`     | `error.browser.moduleLoadFailed`     | Não          |
 
-Os patterns dele só correspondem a mensagens inteiras, então um texto que apenas contém as mesmas palavras não é classificado:
+Os patterns de `fetch` dele só correspondem a mensagens inteiras, e o pattern de `import()` corresponde ao começo da mensagem, então um texto que apenas contém as mesmas palavras não é classificado:
 
 | Mensagem                                                                                                                                                                                      | `messageKey`                     | Pode repetir |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- | ------------ |

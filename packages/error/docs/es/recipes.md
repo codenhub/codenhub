@@ -2,7 +2,7 @@
 title: Recetas
 description: Ejemplos completos para fetch y los códigos de estado HTTP, llamadas a Supabase, tus propios códigos de error, reintentos seguros, traducciones, reporte de errores y pruebas.
 order: 7
-source: 5ba3a1cf6af91494fe3f087e91d41cdafb163eaf
+source: ed5cbf9442a9f1bf10c7c558aada9bb1aa3c6686
 ---
 
 # Recetas
@@ -30,16 +30,18 @@ export async function getJson<T>(url: string): Promise<Result<T>> {
 
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null);
-    return err({ code: response.status, cause: body }, { registry: httpErrorRegistry });
+    return err({ code: response.status, body }, { registry: httpErrorRegistry });
   }
 
   return attemptAsync(() => response.json() as Promise<T>);
 }
 ```
 
-Pasar el cuerpo como `cause` lo deja en `originalError` para tus logs. Un estado que el preset no mapea, como `418`, se resuelve con el mensaje de respaldo. [Presets](presets.md#http) enumera lo que mapea. Para redactar un estado en un endpoint concreto, como un `401` de un formulario de inicio de sesión, crea un registro a partir del preset y agrega el tuyo: `createErrorRegistry([httpErrorRegistry])`, y después `.codes.add("401", …)`.
+`fetch` en sí solo se rechaza cuando no llegó ninguna respuesta, como en un fallo de red, un bloqueo de CORS o una cancelación, y la solicitud igual pudo haber llegado al servidor. Cualquier respuesta, incluidas `404` y `500`, se resuelve, así que revisar el estado te toca a ti.
 
-Cuando el servidor es tuyo y envía `error.toJSON()`, reconstruye su error: `appErrorFromJSON(body.error)`. Consulta [El AppError](app-error.md#enviar-un-error-a-otro-entorno).
+Guardar el cuerpo en `body` lo deja en `originalError` para tus logs, así que guárdalo solo cuando sea seguro registrarlo. No lo pases como `cause`: `createAppError` busca dentro de `cause`, y un `code` en el cuerpo podría entonces ganarle al estado. Un estado que el preset no mapea, como `418`, se resuelve con el mensaje de respaldo. [Presets](presets.md#http) enumera lo que mapea. Para redactar un estado en un endpoint concreto, como un `401` de un formulario de inicio de sesión, crea un registro a partir del preset y agrega el tuyo: `createErrorRegistry([httpErrorRegistry])`, y después `.codes.add("401", …)`.
+
+Cuando el servidor es tuyo y envía `{ error: error.toJSON() }`, reconstruye su error: `appErrorFromJSON(body.error)`. Cuando todo el cuerpo es el error serializado, pasa `appErrorFromJSON(body)`. Consulta [El AppError](app-error.md#enviar-un-error-a-otro-entorno).
 
 ## Manejar llamadas a Supabase
 
@@ -103,7 +105,7 @@ export async function withRetry<T>(call: () => Promise<T>, attempts = 3): Promis
   for (let attempt = 1; ; attempt += 1) {
     const result = await attemptAsync(call);
 
-    if (result.ok || !result.error.isRetryable || attempt === attempts) {
+    if (result.ok || !result.error.isRetryable || attempt >= attempts) {
       return result;
     }
 
@@ -130,7 +132,7 @@ export function errorText(error: AppError, translate: (key: string) => string | 
 }
 ```
 
-Las claves son estables entre versiones, y cada una lleva siempre el mismo mensaje. [Presets](presets.md) enumera todas las claves integradas. Para armar un catálogo en código, léelas de los mapeos crudos:
+Las claves son estables entre versiones, y cada una conserva su significado aunque cambie su redacción en inglés. [Presets](presets.md) enumera todas las claves integradas. Para armar un catálogo en código, léelas de los mapeos crudos:
 
 ```ts
 import { browserErrorNames, browserErrorPatterns } from "@codenhub/error/registries/browser";
@@ -147,11 +149,11 @@ Reporta lo que nadie describió todavía, más los fallos que sí describiste pe
 ```ts
 import type { AppError } from "@codenhub/error";
 
-// Fallos que solo un desarrollador puede arreglar. Los presets les dan a todos un mismo mensaje compartido.
-const BUG_CODES = new Set(["42P01", "42703", "unexpected_failure", "InvalidStateError", "500"]);
+// Fallos que solo un desarrollador puede arreglar. Las claves nombran el preset, así que el "500" de otro servicio no cuenta.
+const BUG_KEYS = new Set(["error.supabase.database.undefinedTable", "error.supabase.database.undefinedColumn", "error.supabase.auth.unexpectedFailure", "error.browser.invalidState", "error.http.serverError"]);
 
 export function shouldReport(error: AppError): boolean {
-  return error.type === "unknown" || (error.code !== null && BUG_CODES.has(error.code));
+  return error.type === "unknown" || (error.messageKey !== null && BUG_KEYS.has(error.messageKey));
 }
 
 if (shouldReport(error)) {
@@ -159,7 +161,7 @@ if (shouldReport(error)) {
 }
 ```
 
-Reporta `originalError`, no el `AppError`: el original trae el mensaje y el stack reales. La mayoría de los trackers también siguen el `cause` de un error, y el `cause` de un `AppError` es ese mismo valor original, así que reportar el propio `AppError` también funciona.
+Reporta `originalError`, no el `AppError`: el original trae el mensaje y el stack reales. La mayoría de los trackers también siguen el `cause` de un error, y el `cause` de un `AppError` es ese mismo valor original, así que reportar el propio `AppError` también funciona. La única excepción es la [receta de HTTP](#clasificar-respuestas-http): su `originalError` es un objeto plano sin stack, y trae el cuerpo de la respuesta.
 
 No reportes solo porque `type === "heuristic"`. Una coincidencia heurística suele ser un fallo de red del lado de quien lee, y ningún deploy tuyo va a arreglar el wifi del aeropuerto.
 
@@ -175,7 +177,7 @@ if (!result.ok && signal.aborted) {
 }
 ```
 
-Revisar `signal.aborted` funciona con o sin el preset del navegador, y no oculta una cancelación que vino de otro lado.
+Aquí `signal` tiene que venir de un `AbortController` que sea de este código. Así, revisar `signal.aborted` funciona con o sin el preset del navegador, y no oculta una cancelación que vino de otro lado.
 
 ## Configurar los errores en las pruebas
 
