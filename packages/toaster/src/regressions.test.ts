@@ -422,7 +422,22 @@ describe("promise outcome defaults", () => {
     flushAnimations();
     vi.advanceTimersByTime(20000);
     flushAnimations();
-    expect(document.body.querySelector(".toaster-toast")).not.toBeNull();
+    expect(document.body.querySelector(".toaster-toast")?.textContent).toContain("Saved");
+    expect(document.body.querySelector(".toaster-toast-spinner")).toBeNull();
+    toaster.destroy();
+  });
+
+  it("falls back to the instance-wide autoDismiss for a rejected promise", async () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ autoDismiss: false });
+    await expect(
+      toaster.promise(Promise.reject(new Error("nope")), { loading: "Saving", success: "Saved", error: "Failed" }),
+    ).rejects.toThrow("nope");
+    flushAnimations();
+    vi.advanceTimersByTime(20000);
+    flushAnimations();
+    expect(document.body.querySelector(".toaster-toast")?.textContent).toContain("Failed");
+    expect(document.body.querySelector(".toaster-toast-spinner")).toBeNull();
     toaster.destroy();
   });
 
