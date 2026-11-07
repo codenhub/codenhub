@@ -36,7 +36,7 @@ A test written after its code, such as one that pins existing behavior before a 
 
 ## Every Check Where It Applies
 
-Before writing tests, list every pair of check and input source (arguments, query string, stored data, files) and give each pair a test or a reason it cannot occur. Test an edge case such as `undefined` on every field it applies to. A check tested in one place can vanish from another unnoticed.
+Before writing tests, list every pair of check and input source (arguments, query string, stored data, files) and give each pair a test or a reason it cannot occur. Test an edge case such as `undefined` on every field it applies to. A check tested in one place can vanish from another unnoticed. Pairs that run through the same code, such as fields checked by one validator, share one table-driven test with a row per pair, so the count of tests follows the code paths, not the fields.
 
 ## What a Test Looks At
 
