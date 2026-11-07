@@ -143,7 +143,7 @@ Added with the rules on what to decide and what to ask. N1 is the fallback for a
 
 ### Rubric: N1 bakery
 
-- N1.1 Boring defaults: one program in a widely used language, run locally; data in SQLite or one standard-format file with the choice explained; no server, framework, or cloud service unless explained by the request.
+- N1.1 Boring defaults: one program in a widely used language, run locally; data in SQLite, as the design reference's storage default says, with where it lives and how to back it up; no server, framework, or cloud service unless explained by the request.
 - N1.2 Prices are integer cents or a decimal type. Pickup dates are parsed and validated, and "due on a day" uses the local date on purpose.
 - N1.3 Structure fits the size: rules separate from I/O, or one short file; names consistent.
 - N1.4 Bad input (an invalid date, a negative or non-numeric price, an unknown order) gets a one-line message and a non-zero exit, never a stack trace.
@@ -165,4 +165,4 @@ Added with the rules on what to decide and what to ask. N1 is the fallback for a
 ## Rubric: every scenario
 
 - X1 Doc comments go only on the public API: what a package exports to its users. Internal functions in an application, CLI, or script carry no doc-comment blocks.
-- X2 The agent decides and reports behavior the task left open, and asks only about data deleted or rewritten, money, security and access, or something hard to undo, including public API changes the task did not ask for. A question about anything else fails.
+- X2 The agent decides and reports behavior the task left open, and asks only about data deleted or rewritten, money, security and access, or something hard to undo, including public API changes the task did not ask for, or before a refactor beyond the change or one that changes behavior, as S5.2 allows. A question about anything else fails.

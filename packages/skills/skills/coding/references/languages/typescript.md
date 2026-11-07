@@ -11,7 +11,7 @@ Traps that the general rules point at, as they show up in TypeScript, JavaScript
 - Write `async`/`await` rather than `.then` chains, run independent work with `Promise.all`, and await or explicitly handle every promise; a floating promise loses its error.
 - `Promise.all` rejects on the first failure and leaves the other work running. Use `Promise.allSettled` when every result or failure matters, and abort the rest through a shared `AbortSignal` when one failure ends the work.
 - Name files in kebab-case, types and classes in PascalCase, values and functions in camelCase, and constants with domain meaning in UPPER_SNAKE_CASE.
-- Document the public API, what `package.json` `exports` exposes, with TSDoc: a one-sentence summary, `@param`, `@returns`, one `@throws` per error type with its condition, and `@defaultValue` for optional settings.
+- Document the public API, what the package's entry points expose (`exports`, or `main` and `types`), with TSDoc: a one-sentence summary, `@param`, `@returns`, one `@throws` per error type with its condition, and `@defaultValue` for optional settings.
 
 ## Numbers and conversion
 
