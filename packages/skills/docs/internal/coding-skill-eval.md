@@ -26,7 +26,7 @@ Prompt: add a `--timeout <seconds>` option; any command running longer is stoppe
 
 - S1.1 Validation of the final value: rejects missing value, empty, non-numeric ("abc", "10s"), 0 or negative, NaN, Infinity; and checks the value AFTER conversion to ms (e.g. 1e308 → Infinity ms, or > setTimeout max 2147483647 ms which Node clamps to 1ms). [pattern 2]
 - S1.2 Applies to BOTH code paths: setup commands (spawnSync) and target commands (spawn). [pattern 5]
-- S1.3 Stops the process tree, not just the shell (`shell: true` + `child.kill()` leaves the grandchild running; needs `detached` + process-group kill on POSIX and `taskkill /T` on Windows, or avoiding the shell). [pattern 8]
+- S1.3 Stops the process tree, not just the shell (`shell: true` + `child.kill()` leaves the grandchild running; needs `detached` + process-group kill on POSIX and `taskkill /T` on Windows, or avoiding the shell only if pipelines and `&&` still work in both paths). Interrupting the runner (Ctrl+C) before the timeout also stops a detached target. [pattern 8]
 - S1.4 A timed-out command counts as failed (exit code 1), timer cleared on normal exit, no double resolve. Setup timeout fails the run.
 - S1.5 Tests exercise real behavior: a test actually runs a slow command and asserts it is stopped/failed; validation tests cover the degenerate values; tests would fail if the feature were removed. [pattern 1]
 - S1.6 README Options section updated (and any usage/help text). [pattern 10]
@@ -40,7 +40,7 @@ Prompt: createPreferences({ defaults, storage }) with get/set/reset/setFromQuery
 - S2.1 `set({ theme: undefined })` (explicit undefined) does not wipe the value or store `undefined`/null; behavior is deliberate and tested or documented. [pattern 7]
 - S2.2 Query keys `__proto__`, `constructor`, `toString`, and unknown keys are ignored safely (own-key checks / allowlist; no prototype pollution; no inherited property read as a value). [JS adapter]
 - S2.3 Validates every field from untrusted sources (query AND stored JSON): enum membership; fontSize rejects "", "18px", "NaN", "Infinity", non-integers if chosen, out of range; language rejects empty/garbage. Validation of the final converted value. [pattern 2]
-- S2.4 Storage failure: setItem throwing (quota/private mode) leaves state consistent (commit last, or deliberate in-memory-first with surfaced error), not silently swallowed; getItem/JSON.parse failure on corrupt data handled deliberately. [patterns 3, 6]
+- S2.4 Storage failure: setItem throwing (quota/private mode) leaves state consistent (commit last, or deliberate in-memory-first with surfaced error), not silently swallowed; getItem/JSON.parse failure on corrupt data handled deliberately. After a failed read falls back to defaults, a later `set` does not overwrite the saved preferences before a read succeeds; tested with a transient read failure over saved preferences. [patterns 3, 6]
 - S2.5 No shared mutable state: `get()` result mutation does not change internal state; `defaults` object not mutated by set/reset; caller's `defaults` copied. [pattern 6]
 - S2.6 Tests cover the edge cases above with assertions that would fail on broken code. [pattern 1]
 - S2.7 Runs the tests and reports truthfully.
@@ -104,7 +104,7 @@ Git does not keep file times, so the H3 grader sets each archive's modification 
 
 - H1.1 A note owned by another user is refused the same way `GET` refuses it, and a request without `x-user-id` is rejected; both tested. [access, siblings]
 - H1.2 A body that is not valid JSON, or is JSON but not an object (array, `null`, string), gets a 400 with a one-line message and no stack trace. The body size is bounded.
-- H1.3 Each field is validated: `title` is a string (empty decided and tested), `pinned` is a boolean (`"true"` rejected), `body` is a string or `null`. `"body": null` clears, an absent `body` keeps, and `"title": null` is decided. Unknown keys and `__proto__` are rejected or ignored on purpose and tested. A rejection test asserts which field was rejected.
+- H1.3 Each field is validated: `title` is a string (empty decided and tested), `pinned` is a boolean (`"true"` rejected), `body` is a string or `null`. `"body": null` clears, an absent `body` keeps, and `"title": null` is decided. A body-only PATCH keeps `title` and `pinned` in both the response and the stored note; tested against their original values. Unknown keys and `__proto__` are rejected or ignored on purpose and tested. A rejection test asserts which field was rejected.
 - H1.4 When `store.save` throws, the response is a 500 without internal details, nothing reports success, and the stored note is unchanged.
 - H1.5 `updatedAt` comes from an injected clock, and the response equals the stored note.
 - H1.6 Tests would fail on broken code: removing the owner check, treating an absent `body` as `null`, or accepting `"true"` for `pinned` each fail a test.
@@ -115,11 +115,11 @@ Git does not keep file times, so the H3 grader sets each archive's modification 
 
 - H2.1 The BOM is handled (for example `utf-8-sig`), so the `id` column is found; tested.
 - H2.2 Ids are parsed as integers and sorted numerically (9 before 10). A duplicate id fails naming both lines.
-- H2.3 Credit becomes integer cents through `Decimal` or string handling, never a float: `12.50` is 1250. The leading space, more than two decimals, negative, empty, and non-numeric values are each decided, and rejections name the line.
+- H2.3 Credit becomes integer cents through `Decimal` or string handling, never a float: `12.50` is 1250. The supplied file imports: ` 7.10` is 710. More than two decimals, negative, empty, and non-numeric values are each decided, and rejections name the line.
 - H2.4 A missing input file, a header-only file, or a missing column exits non-zero with a one-line message and leaves an existing `out/customers.json` untouched.
 - H2.5 Output is written to a new file and replaces the old only after success. Paths are found from the script's location, not the current directory.
 - H2.6 `signup_date` is parsed and validated; emails that collide after case folding are decided.
-- H2.7 Tests would fail on broken code, use temporary directories, and include one run of the real script.
+- H2.7 Tests would fail on broken code, use temporary directories, and include a successful run of the real script on the supplied file that checks all three customers.
 - H2.8 Runs the tests and reports truthfully.
 - OverH2 Standard library only; no pandas, config file, or plugin layer.
 

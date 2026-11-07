@@ -194,7 +194,7 @@ Reviewers rejected these. A rule that pushes toward them adds review work instea
 
 These are candidates for a language adapter. Each item has at least two occurrences.
 
-- **Object keys.** Plain-object maps keyed by input break on `__proto__`, `constructor`, and `toString`. Use `Map`, `Object.create(null)`, or `Object.hasOwn`, and use `Reflect.ownKeys` when symbol keys matter. This pattern is rising in recent PRs.
+- **Object keys.** Plain-object maps keyed by input break on `__proto__`, `constructor`, and `toString`. Store input-keyed entries in a `Map` or `Object.create(null)`, because `Object.hasOwn` only makes reads safe: writing an object under `__proto__` changes a plain object's prototype. Read with `Object.hasOwn`, and use `Reflect.ownKeys` when symbol keys matter. This pattern is rising in recent PRs.
 - **`undefined` in spreads.** `{...defaults, ...options}` copies `undefined` over the default. `exactOptionalPropertyTypes` is enabled only in `packages/theme`.
 - **`String.prototype.replace`.** A string replacement expands `$&`, so use the function form.
 - **Inline scripts.** `JSON.stringify` inside an inline `<script>` must also escape `<`, U+2028, and U+2029.
