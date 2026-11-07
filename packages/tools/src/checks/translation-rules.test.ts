@@ -154,6 +154,68 @@ describe("translation rule", () => {
     expect(findings[0]?.message).toContain("order is 2 here but 1");
   });
 
+  it("errors when a translation's headings differ in number or level from the English", async () => {
+    const english = "---\ntitle: Start\norder: 1\n---\n\n# Start\n\n## Install\n\n### From npm\n\n## Use\n";
+    const fields = `title: Inicio\norder: 1\nsource: ${blobId(english)}`;
+    const findings = await check({
+      "docs/start.md": english,
+      "docs/es/start.md": translatedDocument(fields, "# Inicio\n\n## Instalar\n\n## Desde npm\n\n## Usar\n"),
+      "docs/pt-BR/start.md": translatedDocument(
+        fields,
+        "# Início\n\n## Instalar\n\n### Pelo npm\n\n## Usar\n\n```md\n## Not a heading\n```\n",
+      ),
+    });
+    expect(findings).toEqual([
+      expect.objectContaining({ code: "translation/structure-mismatch", location: "docs/es/start.md" }),
+    ]);
+    expect(findings[0]?.message).toContain("heading 3 is an H2 here but an H3");
+  });
+
+  it("errors when a translation has fewer headings than the English", async () => {
+    const english = "---\ntitle: Start\norder: 1\n---\n\n# Start\n\n## Install\n\n## Use\n";
+    const findings = await check({
+      "docs/start.md": english,
+      "docs/es/start.md": translatedDocument(
+        `title: Inicio\norder: 1\nsource: ${blobId(english)}`,
+        "# Inicio\n\n## Instalar\n",
+      ),
+    });
+    expect(findings).toEqual([
+      expect.objectContaining({ code: "translation/structure-mismatch", location: "docs/es/start.md" }),
+    ]);
+    expect(findings[0]?.message).toContain("2 headings here but 3");
+  });
+
+  it("errors when a translation has more headings than the English", async () => {
+    const english = "---\ntitle: Start\norder: 1\n---\n\n# Start\n\n## Install\n\n## Use\n";
+    const findings = await check({
+      "docs/start.md": english,
+      "docs/es/start.md": translatedDocument(
+        `title: Inicio\norder: 1\nsource: ${blobId(english)}`,
+        "# Inicio\n\n## Instalar\n\n## Usar\n\n## Extra\n",
+      ),
+    });
+    expect(findings).toEqual([
+      expect.objectContaining({ code: "translation/structure-mismatch", location: "docs/es/start.md" }),
+    ]);
+    expect(findings[0]?.message).toContain("4 headings here but 3");
+  });
+
+  it("only warns about headings a stale translation has not caught up with", async () => {
+    const before = "---\ntitle: Start\norder: 1\n---\n\n# Start\n\n## Install\n";
+    const findings = await check({
+      "docs/start.md": `${before}\n## Use\n`,
+      "docs/es/start.md": translatedDocument(
+        `title: Inicio\norder: 1\nsource: ${blobId(before)}`,
+        "# Inicio\n\n## Instalar\n",
+      ),
+    });
+    expect(findings.map(({ code, severity }) => [code, severity])).toEqual([
+      ["translation/structure-mismatch", "warning"],
+      ["translation/stale", "warning"],
+    ]);
+  });
+
   it("warns about a link to an English page that has a translation in the same locale", async () => {
     const findings = await check({
       "docs/pt-BR/index.md": translatedDocument(

@@ -30,6 +30,7 @@ const browserTitle =
   isReferenceDocument(document) && headingTitle !== undefined ? headingTitle : document.title;
 // An English body under a locale prefix (`docs/specs/packages-translations.md`, "Documentation site").
 const untranslated = document.lang !== locale;
+const { englishFragments } = document;
 // An archived version's notice links the same page in the current version
 // (`docs/specs/packages-docs-versions.md`, "Presentation").
 const { archivedVersion } = currentPackage;
@@ -99,6 +100,25 @@ const currentVersionRoute =
         <article class="markdown-content" lang={untranslated ? document.lang : undefined}>
           <slot />
         </article>
+        {
+          englishFragments !== undefined && Object.keys(englishFragments).length > 0 && (
+            <script define:vars={{ englishFragments }} is:inline>
+              // An English section link, such as one the locale redirect kept,
+              // moves to the translated section (`translated-fragments.ts`).
+              // Inline, right after the body, so it runs before the page settles.
+              const englishId = (() => {
+                try {
+                  return decodeURIComponent(location.hash.slice(1));
+                } catch {
+                  return "";
+                }
+              })();
+              if (Object.hasOwn(englishFragments, englishId) && document.getElementById(englishId) === null) {
+                location.replace("#" + encodeURIComponent(englishFragments[englishId]));
+              }
+            </script>
+          )
+        }
       </div>
     </main>
 

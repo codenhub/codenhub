@@ -126,7 +126,12 @@ function localeArea(translation: TranslationFile): string {
   return translation.kind === "readme" ? translation.packagePath : `docs/${translation.locale}/`;
 }
 
-function addStructureIssues(graph: DocumentGraph, translation: TranslationFile, issues: TranslationIssue[]): void {
+function addStructureIssues(
+  graph: DocumentGraph,
+  translation: TranslationFile,
+  isStale: boolean,
+  issues: TranslationIssue[],
+): void {
   const translated = graph.documents.find(({ path }) => path === translation.packagePath);
   const english = graph.documents.find(({ path }) => path === translation.englishPath);
   if (translated === undefined || english === undefined || translation.kind !== "document") {
@@ -145,6 +150,32 @@ function addStructureIssues(graph: DocumentGraph, translation: TranslationFile, 
       });
     }
   }
+  const headingIssue = describeHeadingMismatch(translated.headings, english.headings, translation.englishPath);
+  // A stale translation may trail the English's headings until it is updated,
+  // as it may trail its text: only a current one is published.
+  if (headingIssue !== undefined) {
+    issues.push({
+      code: "structure-mismatch",
+      message: `${headingIssue}; the documentation site matches an English section link to the translated section by heading position.`,
+      severity: isStale ? "warning" : "error",
+      sourcePath: translation.packagePath,
+      target: translation.englishPath,
+    });
+  }
+}
+
+function describeHeadingMismatch(
+  ours: readonly { depth: number }[],
+  theirs: readonly { depth: number }[],
+  englishPath: string,
+): string | undefined {
+  const index = ours.findIndex(({ depth }, position) => depth !== theirs[position]?.depth);
+  if (index !== -1 && index < theirs.length) {
+    return `heading ${index + 1} is an H${ours[index]!.depth} here but an H${theirs[index]!.depth} in ${englishPath}`;
+  }
+  return ours.length === theirs.length
+    ? undefined
+    : `${ours.length} headings here but ${theirs.length} in ${englishPath}`;
 }
 
 function addEnglishLinkIssues(graph: DocumentGraph, translation: TranslationFile, issues: TranslationIssue[]): void {
@@ -179,11 +210,13 @@ function addEnglishLinkIssues(graph: DocumentGraph, translation: TranslationFile
  * it, the fix is to remove or move it.
  * @param graph Parsed validation surfaces of the package and its file list.
  * @param sources Raw contents of every translated README and Markdown document, keyed by package-relative path.
+ * @param stalePaths Package-relative paths of the stale translations, whose headings only warn when they differ.
  * @returns Every problem found, errors and warnings, in path order.
  */
 export function validateTranslations(
   graph: DocumentGraph,
   sources: Readonly<Record<string, string>>,
+  stalePaths: ReadonlySet<string> = new Set(),
 ): TranslationIssue[] {
   const issues: TranslationIssue[] = [];
   const reportedAreas = new Set<string>();
@@ -238,7 +271,7 @@ export function validateTranslations(
         sourcePath: translation.packagePath,
       });
     }
-    addStructureIssues(graph, translation, issues);
+    addStructureIssues(graph, translation, stalePaths.has(translation.packagePath), issues);
     addEnglishLinkIssues(graph, translation, issues);
   }
   return issues;

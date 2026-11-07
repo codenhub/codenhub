@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-05
+last_updated: 2026-11-07
 scope: Translations of package READMEs and public package documentation.
 ---
 
@@ -82,7 +82,7 @@ What is not translated:
 
 ## Translated documents
 
-A translated public document follows the same rules as its English counterpart: the frontmatter schema, exactly one H1, and the writing guidance in `docs/guidelines/public-docs-writing.md`. Its `title`, `description`, and `group` are translated. Its `order` and `curated` MUST match the English document's, so a locale cannot reorder or reshape what the English publishes.
+A translated public document follows the same rules as its English counterpart: the frontmatter schema, exactly one H1, and the writing guidance in `docs/guidelines/public-docs-writing.md`. Its `title`, `description`, and `group` are translated. Its `order` and `curated` MUST match the English document's, so a locale cannot reorder or reshape what the English publishes. Its headings MUST match the English document's in number and level, in the same order, so each section has one counterpart in every language (see "Section links").
 
 Its frontmatter also MUST carry `source`, a field valid only on a document under `docs/<locale>/`:
 
@@ -154,6 +154,19 @@ The locale is the outermost path segment so that the version segment (`docs/spec
 
 Rejected: a locale route only for a translated document, linking each untranslated page to its English route. A reader who opened an untranslated page, which every reference and changelog page is, landed on the English site and stayed there: the section links, the language menu and the next page they opened were all English, and the interface around the page changed language under them. It was chosen to avoid serving the same content at two URLs and to let the URL say whether a page is a translation; the canonical link answers the first and the notice the second.
 
+### Section links
+
+A heading's id comes from its text, in a translation as in English, so it matches the id GitHub gives the same heading and a link within a translation resolves on GitHub, in the npm tarball, and on the site alike. An English section link therefore names no element on the translated page. Such a link reaches a translated page whenever the locale redirect (see "Language choice") keeps the fragment of an English deep link.
+
+A translated page on the documentation site moves an English section link to the translated section: the build pairs each English heading id with the translated heading at the same position, which the matching heading structure (see "Translated documents") makes exact, and the page swaps an English fragment it has no element for with the paired id as it loads. A page whose structure does not match pairs nothing, rather than send a reader to the wrong section.
+
+Rejected:
+
+- English ids on translated headings. Translations would need explicit heading ids, which GitHub does not support: the id syntax would render as text there, or every link within a translation would break outside the site.
+- Leaving an English section link at the top of the translated page. The reader still gets the right page in their language, but the link was to a section and a shared section link is a common way into documentation.
+
+Deferred: the locale redirect rewriting the fragment itself, through a fragment map passed to it. On the documentation site it would repeat what the translated page already does, and the main site's README pages have no heading ids to map. It is worth adding once a site that uses the redirect has section ids and no page script of its own.
+
 The site's search index is built per locale and covers what each locale's navigation lists, untranslated pages included, at their locale routes.
 
 ### Language choice
@@ -175,10 +188,12 @@ The main site's package page in a locale shows `README.<locale>.md` when the rel
 - A `docs/<locale>/reference/`, `docs/<locale>/changelog/`, or `docs/<locale>/internal/` area.
 - A translation whose `source` is missing or is not a 40-character hexadecimal blob ID.
 - A translated document whose `order` or `curated` differs from its English counterpart's.
+- A translated document whose headings differ from its English counterpart's in number or in level at any position, unless the translation is stale.
 
 It reports as warnings:
 
 - A stale translation, which `hub release` and `hub publish` treat as a blocker (see "Drift").
+- A stale translation whose headings differ from its English counterpart's. A change that adds or removes an English heading can then merge before its translations follow, as "Drift" allows for any other change to the English, and the release gate still keeps the mismatch from being published.
 - A link from a translation to an English document that has a translation in the same locale.
 
 Translations are also validation surfaces for the link checks in `docs/specs/packages-documentation.md`, with the same requirements as the English.
