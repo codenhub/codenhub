@@ -85,7 +85,7 @@ function parseCustomArgs(
 interface PromiseOutcomeDefaults {
   duration?: number;
   dismissible?: boolean;
-  autoDismiss?: boolean;
+  autoDismiss: boolean;
 }
 
 function toStructuredPromiseUpdate(
@@ -96,7 +96,7 @@ function toStructuredPromiseUpdate(
   const options = typeof result === "string" ? { message: result } : result;
   return {
     type,
-    autoDismiss: options.autoDismiss ?? defaults.autoDismiss ?? true,
+    autoDismiss: options.autoDismiss ?? defaults.autoDismiss,
     message: options.message ?? null,
     title: options.title ?? null,
     description: options.description ?? null,
@@ -168,11 +168,13 @@ class ToastManager {
     // dismissible nor evictable) or replace the caller's outcome, so its
     // error is reported and the loader is dismissed instead.
     // The outcome is a semantic toast, so the call's own settings win, then
-    // the instance's `semantic` defaults.
+    // the instance's `semantic` defaults. `autoDismiss` falls back to the
+    // instance-wide setting here, because the loader's own `false` would
+    // otherwise carry over.
     const outcomeDefaults: PromiseOutcomeDefaults = {
       duration: options.duration ?? this.config.semantic?.duration,
       dismissible: options.dismissible ?? this.config.semantic?.dismissible,
-      autoDismiss: this.config.semantic?.autoDismiss,
+      autoDismiss: this.config.semantic?.autoDismiss ?? this.resolved.autoDismiss,
     };
     const settle = (type: SemanticType, format: () => string | ToastOptions): void => {
       try {

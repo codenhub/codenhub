@@ -414,6 +414,28 @@ describe("promise outcome defaults", () => {
     expect(document.body.querySelector(".toaster-toast")).not.toBeNull();
     toaster.destroy();
   });
+
+  it("falls back to the instance-wide autoDismiss", async () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ autoDismiss: false });
+    await toaster.promise(Promise.resolve(1), { loading: "Saving", success: "Saved", error: "Failed" });
+    flushAnimations();
+    vi.advanceTimersByTime(20000);
+    flushAnimations();
+    expect(document.body.querySelector(".toaster-toast")).not.toBeNull();
+    toaster.destroy();
+  });
+
+  it("lets semantic.autoDismiss beat the instance-wide autoDismiss", async () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ autoDismiss: false, semantic: { autoDismiss: true } });
+    await toaster.promise(Promise.resolve(1), { loading: "Saving", success: "Saved", error: "Failed" });
+    flushAnimations();
+    vi.advanceTimersByTime(5100);
+    flushAnimations();
+    expect(document.body.querySelector(".toaster-toast")).toBeNull();
+    toaster.destroy();
+  });
 });
 
 describe("custom content updates", () => {

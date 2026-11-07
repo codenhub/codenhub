@@ -96,10 +96,7 @@ Uma chamada simples a `toast()` usa só as configurações da instância. Para t
 
 Com a configuração acima, `notesToaster.error("Falha na sincronização")` fica 8 segundos com um botão de fechar, `notesToaster("Salvo")` fica 4, e `notesToaster.error("Falha na sincronização", { duration: 2000 })` fica 2. Uma opção definida como `undefined` numa chamada conta como não definida, então ela não apaga o padrão por tipo.
 
-O resultado de `promise` dribla essas regras em dois pontos, porque ele é o próprio toast de carregamento atualizado no lugar, e não um toast novo:
-
-- **Posição** nunca muda, então é onde o toast de carregamento foi parar: o objeto de opções de `loading`, depois o `position` da chamada, depois o grupo `loading`, depois a instância. `semantic.position` nunca vale.
-- **`autoDismiss`** vem das opções do próprio resultado, depois de `semantic.autoDismiss`, depois `true`. O `autoDismiss` da instância é pulado, então `createToaster({ autoDismiss: false })` sozinho não mantém os resultados de promise abertos; para isso, defina `semantic: { autoDismiss: false }`.
+O resultado de `promise` dribla essas regras na posição, porque ele é o próprio toast de carregamento atualizado no lugar, e não um toast novo. A posição nunca muda, então é onde o toast de carregamento foi parar: o objeto de opções de `loading`, depois o `position` da chamada, depois o grupo `loading`, depois a instância. `semantic.position` nunca vale.
 
 ## Mudando as configurações depois
 
