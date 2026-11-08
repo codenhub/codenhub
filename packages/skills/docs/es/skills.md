@@ -2,7 +2,7 @@
 title: Skills incluidas
 description: Elige flujos de trabajo del catálogo y conoce el formato, la calidad y el versionado de las skills.
 order: 1
-source: c84c01f1d9da2e054f19b73f8ddb349222e165ac
+source: 4e6fad97c8c69abab14de0a654e3089b3eda6910
 ---
 
 # Elige tus skills
@@ -26,7 +26,7 @@ Los IDs de la primera columna son los nombres de directorio que acepta `--skills
 | `babysit-pr`              | Cuando se le pide acompañar un pull request de GitHub durante la CI y la revisión, corrigiendo verificaciones y respondiendo a quienes lo revisan hasta que se pueda integrar.                 |
 | `subagent-specialist`     | Cuando se puede delegar trabajo: elige tareas, da instrucciones a los agentes que las realizarán, revisa sus resultados y los integra.                                                         |
 | `agents-md-improver`      | Al escribir, auditar o recortar instrucciones para agentes del repositorio, incluidos `AGENTS.md` y los archivos que lo cargan.                                                                |
-| `project-template`        | Al crear, adoptar, sincronizar o auditar un proyecto basado en la plantilla de proyecto compartida, o al cambiar un archivo gestionado por ella.                                               |
+| `project-template`        | Al crear un proyecto a partir de la plantilla de proyecto compartida, al comparar con ella un proyecto existente o al migrar uno desde su antiguo manifiesto.                                  |
 | `writing-skills`          | Al crear, revisar o corregir skills para agentes y evaluar si sus instrucciones funcionan.                                                                                                     |
 | `branding`                | Al definir la estrategia de marca, la voz, los mensajes o un sistema de identidad visual y sus lineamientos.                                                                                   |
 | `naming`                  | Al generar, investigar, comparar o elegir nombres, incluidos los nombres en el código.                                                                                                         |

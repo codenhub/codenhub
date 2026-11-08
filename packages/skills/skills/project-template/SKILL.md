@@ -1,23 +1,27 @@
 ---
 name: project-template
-description: Creates, syncs, adopts, and audits projects built on the shared project template (codenhub/template), a pnpm workspace with docs-first guidelines, agent instructions, git hooks, and CI whose files are tracked in `.template/manifest.json`. Use when starting a new project or repository from the template, when asked to sync or update a project with the template, adopt the template in an existing project, or audit a template-based project's structure, and when a task changes a file the template owns. Not for unrelated work in a project that happens to use the template.
+description: Creates projects from the shared project template (codenhub/template), a pnpm workspace with docs-first guidelines, agent instructions, git hooks, and CI, compares existing projects with it, and migrates projects off its earlier `.template/manifest.json` design. Use when starting a new project or repository from the template, when asked to sync, update, compare, or audit a project against the template, to adopt the template in an existing project, or to remove a project's template manifest, markers, or conformance check. Not for unrelated work in a project that happens to come from the template.
 ---
 
 # Project Template
 
-The template repository is the source of truth for the shared project structure. Its `.template/README.md`, which every project keeps a copy of, defines the file classes (`canonical`, `blocks`, `seed`), project blocks, placeholders, `synced`, and `exceptions`, says how to sync, and documents `node .template/check.mjs`, which reports drift. Read it before any of the work below, and follow it rather than restating it; this skill adds what an agent needs around it.
+The template is a starting point and a reference. A project created from it keeps no tie to it: no `.template/` directory, no record of a sync, nothing in CI. Comparing a project with the template is something someone chooses to do, and each difference is judged on which side is better.
 
-The template is the GitHub repository named, as an `owner/repo` string, in `.template/manifest.json#template`, or `codenhub/template` when a project has no manifest yet. `FETCH_HEAD` below is the template fetched without adding a remote, `git fetch https://github.com/<template> HEAD`; fetch it again before reading it, since any other fetch overwrites it. The steps use `git`, `pnpm`, and an authenticated GitHub CLI (`gh`). Without `gh`, use the local start and ask the user to create the repository.
+The procedure lives in the template's `.template/README.md`. A project created from the current template has no `.template/`, and a project from the manifest design has an outdated copy, so always read the fetched one: it is the authority. Fetch the template without adding a remote and read it before any of the work below; follow it rather than restating it, since this skill adds only what an agent needs around it:
 
-A project last synced before the template gained the check and the sync procedure has neither. Read the procedure from the fetched template, `git show FETCH_HEAD:.template/README.md`, and run the fetched check from the project root: save `git show FETCH_HEAD:.template/check.mjs` to a file outside the repository and run `node <that file>`. Both reach the project with its next sync.
+```sh
+git fetch --no-tags https://github.com/<template> HEAD
+git show FETCH_HEAD:.template/README.md
+```
+
+`<template>` is `codenhub/template` unless the user names another `owner/repo`; use the same one in every command below, and in the README's commands, which name `codenhub/template`. Any other fetch overwrites `FETCH_HEAD`, so fetch the template again before reading it. The steps use `git`, `pnpm`, and an authenticated GitHub CLI (`gh`); without `gh`, use the local start and ask the user to create the repository.
 
 A project brings its own name, brand, and domain. Never carry a name, owner, or brand from the template or from another project into this one.
 
 ## When To Act
 
-- Starting a new project, or asked to sync, adopt, or audit a project's structure: follow the matching section.
-- A task needs a change to a `canonical` file, or to the template-owned part of a `blocks` file: follow Upstream.
-- Any other task in a project that uses the template: do not sync, adopt, or restructure anything. When `node .template/check.mjs` fails or reports the project behind, or you notice a local edit to a template-owned file, say so once in your closing report.
+- Starting a new project, comparing a project with the template, or migrating one: follow the matching section. A request to sync or update a project with the template is a comparison.
+- Any other task in a project that came from the template: compare, migrate, or restructure nothing. When you notice the project still has `.template/manifest.json`, say once in your closing report that it can be migrated.
 
 ## Approval
 
@@ -25,19 +29,16 @@ Creating a repository, pushing, and opening a pull request or an issue are outwa
 
 ## New Project
 
-1. **Collect the placeholder values** listed in the template's `.template/README.md`. Derive what you can, use the current year for `{{year}}`, and ask for the rest, including the GitHub owner and the repository's visibility. Never guess the copyright holder.
-2. **Create the repository.** Prefer GitHub's template creation, which keeps the hooks' executable bits. Read the template's commit first, then create the repository with the visibility the user chose, `--private` or `--public`:
+1. **Collect the placeholder values** in the README's table. Derive what you can, use the current year for `{{year}}`, and ask for the rest, including the GitHub owner and the repository's visibility. Never guess the copyright holder.
+2. **Create the repository.** Prefer GitHub's template creation, which keeps the hooks' executable bits, with the visibility the user chose, `--private` or `--public`:
 
    ```sh
-   git ls-remote https://github.com/codenhub/template HEAD
-   gh repo create <owner>/<slug> --template codenhub/template --<visibility> --clone
+   gh repo create <owner>/<slug> --template <template> --<visibility> --clone
    ```
 
-   The order matters. Read after creation, the commit can be newer than the copy GitHub made, and the next sync then skips that change without a trace. Read before, it can only be older, and the next sync re-applies a change the project already has, which the three-way merge shows.
+   It fails when `<owner>/<slug>` already exists. Check what is there: an empty repository takes the local start below, and one with content is an existing project to compare.
 
-   It fails when `<owner>/<slug>` already exists. Check what is there: an empty repository takes the local start below, and one with content is an existing project to sync or adopt.
-
-   For a local start, clone the template, record `git rev-parse HEAD` for step 3, and note which files `git ls-files -s .githooks` shows as `100755`, then remove its `.git`, run `git init -b main`, and stage everything. Hooks staged from a Windows checkout lose their executable bit, and git on Linux and macOS then skips them, so stage each of those files again with `git add --chmod=+x .githooks/<hook>`, and only those. `git ls-files -s .githooks` must then match the template's modes.
+   For a local start, clone the template, note which files `git ls-files -s .githooks` shows as `100755`, then remove its `.git`, run `git init -b main`, add the new repository as `origin` with `git remote add origin https://github.com/<owner>/<slug>.git`, and stage everything. Hooks staged from a Windows checkout lose their executable bit, and git on Linux and macOS then skips them, so stage each of those files again with `git add --chmod=+x .githooks/<hook>`, and only those. `git ls-files -s .githooks` must then match the template's modes.
 
    Then, whichever way the repository was created, turn on "Automatically delete head branches", so merged branches, starting with the bootstrap branch, do not pile up on the remote. It is part of creating the repository; for a repository that already existed, ask first:
 
@@ -47,46 +48,34 @@ Creating a repository, pushing, and opening a pull request or an issue are outwa
 
    Without `gh`, ask the user to turn it on under the repository's Settings, General, Pull Requests.
 
-3. **Record the template commit** as the full SHA in `.template/manifest.json#synced`: the SHA recorded during the local start, or for GitHub's creation the commit read before creating the repository.
-4. **Replace every placeholder** in seed files and project blocks. Leave `.template/README.md` alone, since it documents the placeholders, and leave GitHub Actions expressions such as `${{ github.ref }}` alone. A value the user has not decided yet, such as the license of a private repository, stays a placeholder only when the user says so, and goes in the report.
-5. **Install and verify:** `pnpm install`, which also points git at the hooks, then `node .template/check.mjs` and `pnpm verify`. The check fails on a placeholder left behind.
-6. **Commit** the untouched template first and the placeholder replacement second, so the second commit shows exactly what the project changed. For a local start, the untouched template is the first commit on `main`, and the placeholder replacement and any further setup go on a bootstrap branch, such as `chore/bootstrap`, merged by pull request.
+3. **Follow "Creating a project"** in the README: replace the placeholders, delete `.template/`, run the placeholder check, then `pnpm install`, which also points git at the hooks, and `pnpm verify`. Leave GitHub Actions expressions such as `${{ github.ref }}` alone. A value the user has not decided yet, such as the license of a private repository, stays a placeholder only when the user says so, and goes in the report.
+4. **Fill the prompts** the documentation guidelines describe, the HTML comments in the documents, from what the user has told you about the project. Leave a prompt you have nothing for, and list it in the report for the user to fill or delete.
+5. **Commit** the untouched template first and the rest second, so the second commit shows exactly what the project changed. GitHub's template creation already made the first commit on `main`. For a local start, the untouched template is the first commit on `main`. Either way, the placeholder replacement, the deletion of `.template/`, and any further setup go on a bootstrap branch, such as `chore/bootstrap`, merged by pull request.
 
 The template's pre-push hook refuses any push to `main`, including the first push into an empty repository. Tell the user; pushing with `--no-verify` is their decision, never yours.
 
-## Sync
+## Compare
 
-Follow "How to sync" in the fetched template's `.template/README.md`. When `synced` is `null`, nothing records where the project started; treat it as an adoption.
+Follow "Comparing a project with the template" in the README, from the project's repository. A project that still has `.template/manifest.json` is migrated first, as its own commit; see Migrate.
 
-Read it from `git show FETCH_HEAD:.template/README.md` before applying anything rather than from the project's copy: when the template changed the procedure, the one that applies is the new one, and a project from before it has none.
+- **Judge each hunk, not each file.** For each one, decide which side is better: the template's, the project's, or a difference that is the project's own, such as its name, its packages, or a rule only it needs. Judge on what each version does for this project, not on which is newer; the template's version of a file is not the correct one by default.
+- **Take the template's side on a branch.** Apply each hunk where the template is better, then run `pnpm install` when `package.json` or `pnpm-workspace.yaml` changed, and `pnpm verify`. A hunk that would change the project's behavior, public contract, or a decision its documentation records is presented as a choice, with your recommendation, rather than taken.
+- **Keep the project's side without recording it.** Nothing in the project records which differences were kept; a kept difference shows up again in the next comparison, and that is intended. Do not add a file, comment, or list to suppress it.
+- **When asked only to audit or report,** change nothing: report the judgments below and ask before applying any.
 
-Report what was applied, each conflict and how it was resolved, each block a clean merge changed and was restored, the seed changes proposed and which the user took, and any local edit to a template-owned file, with whether to take it upstream.
+A project that predates the template is compared the same way. The diff is large, and a file shown as removed is one the project never had: judge whether to add it. Present the result as a branch for review, never as a finished change, since it rewrites files the project has relied on. When the project is not a pnpm workspace, or its tooling differs at the core, adopting the template is a restructuring decision: describe what would change and ask before starting. A project file that does the job of a template file under another name, such as a different hooks directory or lint config, is proposed for replacement, not replaced.
 
-## Adopt
+Report per file, and per hunk where a file has more than one verdict, which side won and why. Then list what was taken, what was kept, what is suggested upstream, and the choices left for the user. Leave out the placeholder values, which are not differences to judge.
 
-A project that predates the template has no `.template/`, so read the conventions from the fetched template, `git show FETCH_HEAD:.template/README.md`. Adoption rewrites files the project has relied on, so present the result as a branch for review and never as a finished change. When the project is not a pnpm workspace, or its tooling differs at the core, adoption is a restructuring decision: describe what would change and ask before starting.
+## Migrate
 
-1. Fetch the template; its `FETCH_HEAD` is the commit you adopt.
-2. Map every file in the template's manifest to the project with `git diff FETCH_HEAD -- <path>`:
-   - **Missing:** add `canonical` and `blocks` files, with their project blocks filled from the project or left empty, and propose `seed` files.
-   - **`canonical`:** take the template's version. Sort each project difference into outdated (drop), an improvement (Upstream), or project-specific (move it to a project-owned file).
-   - **`blocks`:** take the template's text and move the project-specific content into the project blocks. Content that fits no block goes in a project-owned file, or becomes a proposal for a new block in the template.
-   - **`seed`:** keep the project's file, and propose template changes worth taking.
-   - A project file that does the job of a template file under another name, such as a different hooks directory or lint config, is proposed for replacement, not replaced.
-   - A template file the project deliberately does without, or keeps its own version of, is an exception: propose it, with the reason, rather than leaving it as drift.
-3. Copy `.template/README.md`, `.template/manifest.json`, and the rest of `.template/` from the template, with `synced` set to the adopted SHA and any accepted exceptions recorded, replace placeholders as for a new project, and run `pnpm install`, `node .template/check.mjs`, and `pnpm verify`.
-4. Report per file whether it was kept, replaced, moved into a block, or recorded as an exception, and list everything dropped. Nothing leaves the project without appearing in that list.
+A project created before the template became a reference still has `.template/`, a manifest, `project:start`/`project:end` markers, and a "Template conformance" CI step. Follow "Projects from the manifest design" in the fetched README, not the project's own `.template/README.md`, which describes the old design.
 
-## Audit
-
-Report and change nothing. Run `node .template/check.mjs`, or the fetched check when the project has none, and report its output: how far `synced` is behind the template, and every failure with the file and line it names. Each failure is resolved by syncing, proposing the change upstream, recording an exception, or a local fix, as the README says; name which applies, and ask before acting on any of them.
+Before deleting `.template/`, note the reasons in its manifest's `exceptions`, if any: they explain differences the next comparison will show again, and help judge them. Commit the migration on its own, before any comparison, so the removal of the ties is reviewable apart from any change in content. Migrating changes nothing the project's code does, but CI stops checking for template drift, which is the point; say so in the report. When the README's final `git grep` prints something, a document that describes the manifest, the markers, or the checker, such as a paragraph in `docs/ci.md` about the conformance step, is updated or removed in the same commit; report anything else it prints rather than deleting text you have not judged.
 
 ## Upstream
 
-When a task improves a `canonical` file or the template-owned part of a `blocks` file, propose making the change in the template instead of keeping a local edit; the next sync then brings it to every project.
+Proposing a change to the template is optional; keeping a better version only in the project is always acceptable. Suggest an upstream change when there is evidence for it, and name the evidence: the same improvement made in two projects, a trap a project hit that comes from a file it took from the template, or a gap in the template that caused a mistake. Do not suggest changes on taste.
 
-- Prepare it on a branch in a checkout of the template, following the template's contributor guide. Pushing it and opening the pull request follow Approval.
-- Keep it brand-neutral: no project name, brand, or domain rule. An improvement that holds only for this project belongs in a project block or a project-owned file, not in the template.
-- When the task cannot wait for the template, a local edit lands only with the user's agreement, and the report names it as pending upstream. A user who asked for that fix in this project has agreed to the local edit; still propose the template change. Until the sync that brings it, the check reports the edit; that failure is expected and goes in the report.
-
-Suggest a template improvement when there is evidence for it: the same change needed in two projects, a trap hit in a project that comes from a template-owned file, or a gap in the template that caused a mistake. Name the evidence; do not suggest changes on taste.
+- Prepare it on a branch in a checkout of the template, following the template's contributor guide. Filing an issue, pushing, and opening the pull request follow Approval.
+- Keep it brand-neutral: no project name, brand, or domain rule. An improvement that holds only for this project stays in the project.

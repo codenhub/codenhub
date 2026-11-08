@@ -25,7 +25,7 @@ The IDs in the first column are the directory names accepted by `--skills`. Choo
 | `babysit-pr`              | When asked to see a GitHub pull request through CI and review, fixing checks and answering reviewers until it can merge.                             |
 | `subagent-specialist`     | When work can be delegated: choose tasks, brief workers, review their results, and integrate them.                                                   |
 | `agents-md-improver`      | When writing, auditing, or trimming repository agent instructions, including `AGENTS.md` and files that load it.                                     |
-| `project-template`        | When creating, adopting, syncing, or auditing a project based on the shared project template, or changing a template-owned file.                     |
+| `project-template`        | When creating a project from the shared project template, comparing an existing project with it, or migrating off its old manifest.                  |
 | `writing-skills`          | When authoring, reviewing, or fixing agent skills and evaluating whether their instructions work.                                                    |
 | `branding`                | When defining brand strategy, voice, messaging, or a visual identity system and its guidelines.                                                      |
 | `naming`                  | When generating, researching, comparing, or choosing names, including names in code.                                                                 |
