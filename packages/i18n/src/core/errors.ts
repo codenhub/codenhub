@@ -43,7 +43,7 @@ export class I18nError extends Error {
  */
 export const i18nErrors = {
   "i18n.locale_load_failed": {
-    message: "Translations could not be loaded.",
+    message: "We couldn't load the text for this language. Try again.",
     messageKey: "error.i18n.loader.localeLoadFailed",
     source: "i18n.loader",
   },

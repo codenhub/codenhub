@@ -19,7 +19,7 @@ describe("I18nError", () => {
   it("exports deterministic safe feedback for loader failures", () => {
     expect(i18nErrors).toEqual({
       "i18n.locale_load_failed": {
-        message: "Translations could not be loaded.",
+        message: "We couldn't load the text for this language. Try again.",
         messageKey: "error.i18n.loader.localeLoadFailed",
         source: "i18n.loader",
       },
