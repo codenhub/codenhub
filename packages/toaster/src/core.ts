@@ -51,12 +51,10 @@ function parseToastArgs(
   return { message: messageOrOptions.message, options: messageOrOptions };
 }
 
-type InternalLoadingOptions = LoadingToastOptions & { duration?: number };
-
 function parseLoadingArgs(
-  messageOrOptions?: string | InternalLoadingOptions,
-  options?: InternalLoadingOptions,
-): { message?: string; options: InternalLoadingOptions } {
+  messageOrOptions?: string | LoadingToastOptions,
+  options?: LoadingToastOptions,
+): { message?: string; options: LoadingToastOptions } {
   if (typeof messageOrOptions === "string") {
     return { message: messageOrOptions, options: options ?? {} };
   }
@@ -81,22 +79,26 @@ function parseCustomArgs(
   return { content: opts.content, options: opts };
 }
 
+/** What a promise's `success` or `error` can set on its result toast. */
+type PromiseOutcomeOptions = Omit<ToastOptions, "position" | "margin" | "role" | "type">;
+
 /** The settings a promise's outcome falls back to when its own options leave them unset. */
 interface PromiseOutcomeDefaults {
   duration?: number;
-  dismissible?: boolean;
-  autoDismiss: boolean;
+  dismissible: boolean;
 }
 
 function toStructuredPromiseUpdate(
-  result: string | ToastOptions,
+  result: string | PromiseOutcomeOptions,
   type: SemanticType,
   defaults: PromiseOutcomeDefaults,
 ): ToastUpdateOptions {
   const options = typeof result === "string" ? { message: result } : result;
   return {
     type,
-    autoDismiss: options.autoDismiss ?? defaults.autoDismiss,
+    // Left unset, the toast falls back to the instance's `semantic` defaults
+    // on its own as it leaves the loading state.
+    autoDismiss: options.autoDismiss,
     message: options.message ?? null,
     title: options.title ?? null,
     description: options.description ?? null,
@@ -131,7 +133,7 @@ class ToastManager {
     return this.showMessage(SemanticToast, this.config.semantic, type, messageOrOptions, options);
   }
 
-  public loading(messageOrOptions?: string | InternalLoadingOptions, options?: InternalLoadingOptions): ToastHandle {
+  public loading(messageOrOptions?: string | LoadingToastOptions, options?: LoadingToastOptions): ToastHandle {
     this.assertAlive();
     const { message, options: parsedOpts } = parseLoadingArgs(messageOrOptions, options);
     return this.dispatch(LoadingToast, {
@@ -157,24 +159,24 @@ class ToastManager {
 
   public promise<T>(promise: PromiseLike<T>, options: PromiseToastOptions<T>): Promise<T> {
     this.assertAlive();
+    const { position, dismissible, className, margin } = options;
     const loadingOpts = typeof options.loading === "string" ? { message: options.loading } : options.loading;
     const handle = this.loading({
-      ...options,
+      ...withoutUndefined({ position, dismissible, className, margin }),
       ...withoutUndefined(loadingOpts),
-      duration: options.duration,
     });
 
     // A throwing formatter must not strand the loader (it is neither
     // dismissible nor evictable) or replace the caller's outcome, so its
     // error is reported and the loader is dismissed instead.
     // The outcome is a semantic toast, so the call's own settings win, then
-    // the instance's `semantic` defaults. `autoDismiss` also falls back to
-    // the instance-wide setting, because `update()` would otherwise reset it
-    // to `true` when the toast leaves the loading state.
+    // the instance's `semantic` defaults, then the instance-wide ones. The
+    // toast resolves `duration` and `autoDismiss` that way on its own as it
+    // leaves the loading state, but it keeps the loader's `dismissible`, so
+    // that one is resolved here.
     const outcomeDefaults: PromiseOutcomeDefaults = {
-      duration: options.duration ?? this.config.semantic?.duration,
-      dismissible: options.dismissible ?? this.config.semantic?.dismissible,
-      autoDismiss: this.config.semantic?.autoDismiss ?? this.resolved.autoDismiss,
+      duration: options.duration,
+      dismissible: dismissible ?? this.config.semantic?.dismissible ?? this.resolved.dismissible,
     };
     const settle = (type: SemanticType, format: () => string | ToastOptions): void => {
       try {

@@ -426,15 +426,26 @@ export interface CustomDefaults {
 export interface PromiseToastOptions<T> {
   /** Content to display while the promise is pending: a message, or the options a `loading()` toast takes. */
   loading: string | LoadingToastOptions;
-  /** Content to display when the promise successfully resolves. */
-  success: string | ToastOptions | ((data: T) => string | ToastOptions);
-  /** Content to display when the promise rejects. */
-  error: string | ToastOptions | ((error: unknown) => string | ToastOptions);
-  /** Viewport position for the toast. */
+  /**
+   * Content to display when the promise successfully resolves. The result
+   * is the loading toast updated in place, so it keeps its stack, and its
+   * type and role come from the outcome: `position`, `margin`, `role`, and
+   * `type` are left out.
+   */
+  success:
+    | string
+    | Omit<ToastOptions, "position" | "margin" | "role" | "type">
+    | ((data: T) => string | Omit<ToastOptions, "position" | "margin" | "role" | "type">);
+  /** Content to display when the promise rejects. Takes the same options as `success`. */
+  error:
+    | string
+    | Omit<ToastOptions, "position" | "margin" | "role" | "type">
+    | ((error: unknown) => string | Omit<ToastOptions, "position" | "margin" | "role" | "type">);
+  /** Viewport position for the toast, while pending and after. */
   position?: ToastPosition;
   /** Visibility duration in milliseconds for the resolved state. Defaults to `ToasterConfig.semantic.duration`, then the instance's `duration`. */
   duration?: number;
-  /** Whether to render a close button, while pending and after. The resolved state defaults to `ToasterConfig.semantic.dismissible` when this is unset. */
+  /** Whether to render a close button, while pending and after. The resolved state defaults to `ToasterConfig.semantic.dismissible`, then the instance's `dismissible`, when this is unset. */
   dismissible?: boolean;
   /** Extra CSS classes. */
   className?: string;

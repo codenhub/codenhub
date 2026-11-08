@@ -673,3 +673,14 @@ describe("leaving the loading state through update()", () => {
     toaster.destroy();
   });
 });
+
+describe("promise outcome dismissible", () => {
+  it("falls back to the instance-wide dismissible, not the loading one", async () => {
+    const toaster = createToaster({ dismissible: true, loading: { dismissible: false } });
+    const pending = toaster.promise(Promise.resolve(1), { loading: "Saving", success: "Saved", error: "Failed" });
+    expect(document.body.querySelector(".toaster-toast-dismiss")).toBeNull();
+    await pending;
+    expect(document.body.querySelector(".toaster-toast-dismiss")).not.toBeNull();
+    toaster.destroy();
+  });
+});
