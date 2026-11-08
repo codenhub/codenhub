@@ -94,6 +94,13 @@
   -ms-overflow-style: none;
 }
 
+/* An empty stack leaves the page and the accessibility tree, so screen
+   reader landmark navigation does not stop at a "Notifications" region with
+   nothing in it. The element itself stays, keeping the stack's margin. */
+:where([data-toast-instance].toaster-toast-stack):empty {
+  display: none;
+}
+
 :where([data-toast-instance].toaster-toast-stack)::-webkit-scrollbar {
   display: none;
 }

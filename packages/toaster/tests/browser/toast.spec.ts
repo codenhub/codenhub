@@ -503,3 +503,17 @@ test.describe("reduced motion", () => {
     await expect(spinner).toHaveCSS("animation-name", "none");
   });
 });
+
+test("takes an empty stack out of landmark navigation", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Dismiss Button").check();
+  await page.locator("#check-auto-dismiss").uncheck();
+  await page.getByRole("button", { name: "Success Toast" }).click();
+
+  const region = page.getByRole("region", { name: "Notifications" });
+  await expect(region).toHaveCount(1);
+  await region.getByRole("button", { name: "Dismiss toast" }).click();
+  await expect(page.locator(".toaster-toast")).toHaveCount(0);
+  await expect(region).toHaveCount(0);
+  await expect(page.locator("[data-toast-container]")).toHaveCount(1);
+});
