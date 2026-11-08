@@ -132,6 +132,10 @@ export class Toast {
   private shouldRestoreFocus = false;
   private readonly parent: HTMLElement;
   private readonly maxVisible: number;
+  /** The timing this toast takes if an update turns it from a loader into a semantic toast. */
+  private readonly semanticOutcome: ResolvedToastConfig["semanticOutcome"];
+  /** The timing this toast takes if an update turns it from a loader into a default toast. */
+  private readonly defaultOutcome: ResolvedToastConfig["semanticOutcome"];
 
   private settledResolve!: () => void;
   /**
@@ -154,6 +158,8 @@ export class Toast {
     const { options, config, parent } = params;
     this.parent = parent;
     this.maxVisible = config.maxVisible;
+    this.semanticOutcome = config.semanticOutcome;
+    this.defaultOutcome = { duration: config.duration, autoDismiss: config.autoDismiss };
     const settledPromise = new Promise<void>((resolve) => {
       this.settledResolve = resolve;
     });
@@ -270,17 +276,21 @@ export class Toast {
     }
 
     const transitionedFromLoader = wasLoader && this.currentIcon !== "loader";
+    // Leaving the loading state, a toast takes the timing of the kind it
+    // turned into: a semantic toast's, or a default toast's.
+    const outcome =
+      this.currentRootClassName === SEMANTIC_ROOT_CLASS_NAMES.default ? this.defaultOutcome : this.semanticOutcome;
 
     if (normalized.autoDismiss !== undefined) {
       this.currentAutoDismiss = normalized.autoDismiss;
     } else if (transitionedFromLoader) {
-      this.currentAutoDismiss = true;
+      this.currentAutoDismiss = outcome.autoDismiss;
     }
 
     if (normalized.duration !== undefined) {
       this.remainingDuration = normalized.duration;
     } else if (transitionedFromLoader) {
-      this.remainingDuration = this.options.duration;
+      this.remainingDuration = outcome.duration;
     }
 
     if (this.internalState === "queued" || this.isAwaitingContent) {

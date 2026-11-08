@@ -306,6 +306,10 @@ class ToastManager {
       duration: config.duration ?? DEFAULT_CONFIG.duration,
       dismissible: config.dismissible ?? DEFAULT_CONFIG.dismissible,
       autoDismiss: config.autoDismiss ?? DEFAULT_CONFIG.autoDismiss,
+      semanticOutcome: {
+        duration: config.semantic?.duration ?? config.duration ?? DEFAULT_CONFIG.duration,
+        autoDismiss: config.semantic?.autoDismiss ?? config.autoDismiss ?? DEFAULT_CONFIG.autoDismiss,
+      },
       maxVisible: config.maxVisible ?? DEFAULT_CONFIG.maxVisible,
       margin: config.margin,
       className: config.className,

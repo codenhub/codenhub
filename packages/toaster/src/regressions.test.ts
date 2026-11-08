@@ -630,3 +630,46 @@ describe("teardown after clear", () => {
     expect(cancel).toHaveBeenCalled();
   });
 });
+
+describe("leaving the loading state through update()", () => {
+  it("keeps the instance-wide autoDismiss: false", () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ autoDismiss: false });
+    const handle = toaster.loading("Syncing");
+    flushAnimations();
+    handle.update({ type: "success", message: "Synced" });
+    vi.advanceTimersByTime(20000);
+    flushAnimations();
+    expect(document.body.querySelector(".toaster-toast")?.textContent).toContain("Synced");
+    toaster.destroy();
+  });
+
+  it("takes semantic.duration for a semantic result", () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ semantic: { duration: 10000 } });
+    const handle = toaster.loading("Syncing");
+    flushAnimations();
+    handle.update({ type: "success", message: "Synced" });
+
+    vi.advanceTimersByTime(5000);
+    flushAnimations();
+    expect(document.body.querySelector(".toaster-toast")).not.toBeNull();
+
+    vi.advanceTimersByTime(5100);
+    flushAnimations();
+    expect(document.body.querySelector(".toaster-toast")).toBeNull();
+    toaster.destroy();
+  });
+
+  it("takes the instance-wide timing for a default result, not semantic's", () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ duration: 2000, semantic: { duration: 10000 } });
+    const handle = toaster.loading("Syncing");
+    flushAnimations();
+    handle.update({ icon: null, message: "Synced" });
+    vi.advanceTimersByTime(2100);
+    flushAnimations();
+    expect(document.body.querySelector(".toaster-toast")).toBeNull();
+    toaster.destroy();
+  });
+});

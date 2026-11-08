@@ -28,6 +28,12 @@ export interface ResolvedToastConfig {
   readonly dismissible: boolean;
   /** Whether toasts automatically dismiss after duration. */
   readonly autoDismiss: boolean;
+  /**
+   * The timing a loading toast takes when an update turns it into a
+   * semantic one: the instance's `semantic` defaults, then the
+   * instance-wide ones.
+   */
+  readonly semanticOutcome: { readonly duration: number; readonly autoDismiss: boolean };
   /** Maximum number of active toasts displayed simultaneously. */
   readonly maxVisible: number;
   /** Viewport margin configurations. */
@@ -40,7 +46,10 @@ export interface ResolvedToastConfig {
   readonly regionLabel: string;
 }
 
-export const DEFAULT_CONFIG: Omit<ResolvedToastConfig, "instanceId" | "margin" | "dismissLabel" | "regionLabel"> = {
+export const DEFAULT_CONFIG: Omit<
+  ResolvedToastConfig,
+  "instanceId" | "margin" | "dismissLabel" | "regionLabel" | "semanticOutcome"
+> = {
   position: "top-right",
   duration: 4000,
   dismissible: false,
