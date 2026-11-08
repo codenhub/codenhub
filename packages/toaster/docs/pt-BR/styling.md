@@ -2,7 +2,7 @@
 title: Estilização
 description: A folha de estilos, as cores com e sem @codenhub/styles, classes de apresentação, tamanho, modo escuro, sobrescrita de cores, Content Security Policy e a ordem das folhas de estilo.
 order: 4
-source: 32c8c7de11fdec8467b0e7b5c3f16e67193f1551
+source: d6079abe49e29d1f3fc1f994a6fdb31384bb4d37
 ---
 
 # Estilização
@@ -26,13 +26,24 @@ O import funciona com qualquer bundler que lide com imports de CSS, como Vite, w
 Quase todas as regras têm escopo nos elementos do próprio pacote, mas algumas valem para a página inteira, e é melhor você saber delas por aqui do que por um colega confuso:
 
 - **`color-scheme` na raiz.** A folha de estilos define `color-scheme: light dark` em `:root`, então o navegador desenha os controles embutidos, como barras de rolagem e campos de formulário, no modo escuro quando o sistema operacional prefere o escuro. As classes `dark`, `light`, `theme-dark` e `theme-light` e o atributo `data-theme` também o definem, em qualquer elemento que os tenha; veja [Modo escuro](#modo-escuro). Se a sua página define o próprio `color-scheme`, o seu vale onde a sua regra for mais específica ou carregar depois.
+
+  A regra existe porque as cores embutidas são pares `light-dark()`, que seguem o `color-scheme`: sem ela, os toasts sem o `@codenhub/styles` continuariam claros num sistema escuro. Se a sua página só tem um design claro, o efeito colateral são barras de rolagem e campos de formulário escuros para quem tem o sistema no modo escuro. Para desligar, use a classe `light` no `<html>`, ou uma regra sua, carregada depois desta folha de estilos e fora de qualquer `@layer`, já que a regra do toaster também não está numa:
+
+  ```css
+  :root {
+    color-scheme: light;
+  }
+  ```
+
+  Os toasts acompanham e também ficam claros, então nada na página troca de tema pelas suas costas.
+
 - **Classes de apresentação.** Ela define `.solid`, `.soft`, `.ghost`, `.edged` e `.edgeless` globalmente, na `@layer components` do CSS. Elas só definem as custom properties `--ui-fill`, `--ui-fg-on-fill` e `--ui-border`. Um elemento seu que por acaso tenha uma classe com o mesmo nome não muda sozinho, mas essas propriedades são herdadas, e toasts e componentes do `@codenhub/styles` as leem, então qualquer um deles dentro desse elemento pega os valores. Se `.solid` já significa outra coisa no seu app, renomeie a sua.
 
 ## De onde vêm as cores
 
 Toasts e diálogos escolhem as cores de um de dois jeitos, dependendo de o `@codenhub/styles` estar ou não na página.
 
-### Sozinho
+### Sem o `@codenhub/styles`
 
 Sem o `@codenhub/styles`, a folha de estilos usa cores embutidas: uma superfície neutra para os toasts padrão, verde para sucesso, vermelho para erro, âmbar para aviso e azul para informação, cada uma com uma versão clara e uma escura. Você não precisa configurar nada.
 
@@ -40,7 +51,7 @@ Sem o `@codenhub/styles`, a folha de estilos usa cores embutidas: uma superfíci
 
 [`@codenhub/styles`](https://www.npmjs.com/package/@codenhub/styles) é um design system opcional. Quando a folha de estilos dele, na versão 0.3.0 ou mais recente, está na página, toasts e diálogos montam as cores a partir do tema dele:
 
-- **Cores de intenção**: os toasts leem `--color-success`, `--color-destructive` (para erros), `--color-warning` e `--color-info`, e os botões dos diálogos leem `--color-primary`, então mudar as cores do seu tema muda os dois.
+- **Cores de intenção**: os toasts leem `--color-success`, `--color-destructive` (para erros), `--color-warning` e `--color-info`, e os botões dos diálogos leem `--color-primary`, `--color-accent` (para `type: "secondary"`), `--color-success` e `--color-destructive`, então mudar as cores do seu tema muda os dois.
 - **Apresentação**: o quanto de cor preenche o fundo e a borda segue `--ui-fill` e `--ui-border`.
 - **Aparência**: o raio dos cantos, a largura da borda, a sombra, o recorte e a elevação de um tema (`--ui-radius`, `--ui-border-width`, `--ui-surface-shadow`, `--ui-clip`, `--ui-elevation`) também valem para toasts e diálogos, então um tema com efeito de vidro ou neobrutalista chega até eles.
 

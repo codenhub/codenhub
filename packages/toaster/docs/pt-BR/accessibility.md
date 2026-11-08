@@ -2,7 +2,7 @@
 title: Acessibilidade e segurança
 description: O que os leitores de tela ouvem, como funcionam o foco e o teclado, movimento reduzido, o que fica por sua conta e a fronteira de confiança do conteúdo personalizado.
 order: 5
-source: 9d6cd71bd7f37c5430ab5261d35e504cba0a20d6
+source: a4a94504951a058faf893bf4ac37976089a68259
 ---
 
 # Acessibilidade e segurança
@@ -40,11 +40,17 @@ Dois detalhes de tempo explicam comportamentos que você pode notar ao testar:
 - **O primeiro anúncio tem um pequeno atraso.** Os leitores de tela muitas vezes perdem uma live region que aparece já com texto dentro, porque eles só anunciam mudanças em regiões que já estão observando. Então cada região é adicionada vazia, e o primeiro texto dela chega 100ms depois, seguindo a [técnica ARIA22 do W3C](https://www.w3.org/WAI/WCAG21/Techniques/aria/ARIA22.html).
 - **O texto anunciado é apagado depois de 7 segundos**, para que as regiões ocultas não acumulem mensagens velhas.
 
-O toast visível em si não é uma live region e não tem atributo `role`. Testes que procuram toasts por `role="status"` ou `aria-live` precisam de outro seletor.
+O toast visível em si não é uma live region e não tem atributo `role`. Testes que procuram toasts por `role="status"` ou `aria-live` precisam de outro seletor. Encontre-os do jeito que quem usa leitor de tela encontra, pelo landmark da stack, descrito a seguir:
+
+```ts
+// Playwright; o getByRole da Testing Library funciona do mesmo jeito.
+const notifications = page.getByRole("region", { name: "Notifications" });
+await expect(notifications.getByText("Nota salva")).toBeVisible();
+```
 
 ### Encontrando os toasts
 
-Cada stack é uma região landmark chamada "Notifications". Quem usa leitor de tela pode pular para ela pela lista de landmarks para chegar aos botões de um toast. Traduza o nome com os `labels` do toaster:
+Cada stack é uma região landmark chamada "Notifications". Quem usa leitor de tela pode pular para ela pela lista de landmarks para chegar aos botões de um toast. Uma stack sem toasts sai da lista, para que ninguém caia numa região vazia. Traduza o nome com os `labels` do toaster:
 
 ```ts
 import { createToaster } from "@codenhub/toaster";
@@ -57,7 +63,7 @@ const toaster = createToaster({
 });
 ```
 
-`dismiss` é o nome acessível do botão de fechar nos toasts [que podem ser fechados](toasts.md#timers-e-fechamento-automático). O padrão é "Dismiss toast".
+`dismiss` é o nome acessível do botão de fechar nos toasts com [`dismissible`](toasts.md#timers-e-fechamento-automático). O padrão é "Dismiss toast".
 
 ### Toasts debaixo de um diálogo
 
@@ -96,7 +102,7 @@ Não tem nada para configurar. A preferência é lida ao vivo, então mudá-la c
 
 O pacote cuida da mecânica, mas algumas escolhas só você pode fazer:
 
-- **Tempo de leitura.** Um toast que fecha depois de 4 segundos serve para "Salvo" e é rápido demais para qualquer coisa que alguém precise fazer algo a respeito ou ler duas vezes. Dê uma `duration` maior aos toasts importantes, ou `autoDismiss: false` com `dismissible: true`. Melhor ainda: não coloque nada que uma pessoa não pode perder só num toast.
+- **Tempo de leitura.** Um toast que fecha depois de 4 segundos serve para "Salvo" e é rápido demais para qualquer coisa que peça uma ação ou uma segunda leitura. Dê uma `duration` maior aos toasts importantes, ou `autoDismiss: false` com `dismissible: true`. Melhor ainda: não coloque só num toast nada que uma pessoa não possa perder.
 - **Rótulos em outros idiomas.** Os rótulos embutidos estão em inglês. Defina os `labels` do toaster e os `labels` dos diálogos, como [Diálogos](dialogs.md#rótulos-dos-botões-e-tradução) mostra.
 - **Conteúdo personalizado.** Os nós que você passa para `toast.custom()` são seus: dê nomes acessíveis a botões e links, mantenha uma ordem de leitura que faça sentido e deixe os elementos interativos alcançáveis pelo teclado.
 - **Sobrescrita de cores.** As cores que você define com `--toast-color-*` precisam de contraste suficiente entre si. As cores embutidas foram pensadas para isso; as suas sobrescritas são responsabilidade sua.
