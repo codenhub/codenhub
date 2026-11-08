@@ -5,24 +5,39 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
 # Dependencies
 node_modules
 
-# Build output
+# Build output and caches
 dist
-**/.palette-tmp
+coverage
+*.tsbuildinfo
+test-results
+playwright-report
+
+# Local environment and credentials; an example file is committed instead.
+.env
+.env.*
+!.env.example
+
+# AI agents: local settings, sessions, and worktrees.
+.agents
+.antigravity
+.claude
+.codex
+.cursor
+.gemini
+.opencode
+
+# Short-lived plans (docs/guidelines/documentation.md, "What belongs here").
+docs/plans
+
+# project:start
+# Framework caches and generated test output.
 .astro
 .wrangler
-coverage
-**/coverage
-*.tsbuildinfo
-**/*.tsbuildinfo
-test-results
-**/test-results
-playwright-report
-**/playwright-report
+**/.palette-tmp
 **/tests/**/output.css
 
 # Build-time tag-scoped snapshots and their logo copies (docs/ci.md, "Publish-scoped content")
@@ -41,15 +56,6 @@ playwright-report
 /packages/*/demo/public/assets/
 /packages/*/demo/public/favicon.ico
 
-# AI agents
-.agents
-.antigravity
-.claude
-.codex
-.cursor
-.gemini
-.opencode
-docs/plans
-
 # Svelte components the @codenhub/error tests compile
 **/.svelte-test
+# project:end

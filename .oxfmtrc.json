@@ -1,23 +1,20 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  // project:start
+  // Tailwind class strings read in a stable order.
+  "sortTailwindcss": true,
+  // project:end
   "bracketSpacing": true,
   "htmlWhitespaceSensitivity": "ignore",
   "ignorePatterns": [
-    "dist/**",
-    "**/.wrangler/**",
-    "coverage/**",
-    "**/coverage/**",
-    "test-results/**",
-    "**/test-results/**",
-    "**/tests/**/output.css",
-    "packages/icons/data/**",
-    "packages/skills/evals/*/fixtures/**",
+    // project:start
+    // Committed paths to leave unformatted. oxfmt already skips what .gitignore and .prettierignore list.
+    // project:end
     "**/*.md"
   ],
   "printWidth": 120,
   "semi": true,
   "singleQuote": false,
-  "sortTailwindcss": true,
   "sortImports": true,
   "sortPackageJson": true,
   "trailingComma": "all"

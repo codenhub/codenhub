@@ -21,7 +21,7 @@ const WORKSPACE_WIDE_PATHS: readonly string[] = [
   ".npmrc",
   ".oxlintrc.json",
   ".oxfmtrc.json",
-  ".prettierrc.json",
+  ".prettierrc.json5",
   ".prettierignore",
 ];
 
