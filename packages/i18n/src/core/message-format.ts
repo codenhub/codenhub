@@ -418,8 +418,9 @@ const copyOptions = (options: object, names: readonly string[]): Record<string, 
 
 /**
  * Keys copied options whose values are primitives, which `Intl` reads the same way every time, by type and text, so
- * `null` and `NaN` differ. Any other value, such as an object with a `toString`, has no key, and its formatter is created
- * each time, so `Intl` checks it each time.
+ * `null` and `NaN` differ. The text is quoted, so a string holding the separator can't spell out another option. Any
+ * other value, such as an object with a `toString`, has no key, and its formatter is created each time, so `Intl` checks
+ * it each time.
  */
 const optionsKey = (copy: Readonly<Record<string, unknown>>): string | undefined => {
   let key = "";
@@ -427,7 +428,7 @@ const optionsKey = (copy: Readonly<Record<string, unknown>>): string | undefined
     if ((typeof value === "object" && value !== null) || typeof value === "function" || typeof value === "symbol") {
       return undefined;
     }
-    key += `\0${name}=${typeof value}:${String(value)}`;
+    key += `\0${name}=${typeof value}:${JSON.stringify(String(value))}`;
   }
   return key;
 };

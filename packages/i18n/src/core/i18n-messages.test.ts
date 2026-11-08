@@ -314,6 +314,16 @@ describe("formatters", () => {
     );
   });
 
+  it("should not reuse a formatter for a string option that spells out another option", async () => {
+    const i18n = create();
+    await i18n.init();
+    const forged = { hour12: "x\0dateStyle=string:full" } as unknown as Intl.DateTimeFormatOptions;
+    const full: Intl.DateTimeFormatOptions = { hour12: "x" as never, dateStyle: "full" };
+
+    expect(i18n.formatDate(0, forged)).toBe(new Intl.DateTimeFormat("en", forged).format(0));
+    expect(i18n.formatDate(0, full)).toBe(new Intl.DateTimeFormat("en", full).format(0));
+  });
+
   it("should read inherited number options without changing later calls", async () => {
     const i18n = create();
     const other = create();
