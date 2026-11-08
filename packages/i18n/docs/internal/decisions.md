@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-02
+last_updated: 2026-11-08
 scope: Why `@codenhub/i18n` behaves as it does, with the alternatives each decision rejected, for whoever changes it next.
 ---
 
@@ -22,6 +22,8 @@ A key missing from both dictionaries returns the trimmed key. It used to return 
 
 `getLocaleDirection` used to be required, which made nearly every configuration repeat `() => "ltr"`, and an application that later added Arabic kept that wrong answer. The default reads fixed lists of right-to-left scripts and languages rather than `Intl.Locale.prototype.getTextInfo()`, because not every supported engine provides it and direction must be the same in every runtime.
 
+**The script comes from likely subtags (2026-11-08).** The fixed lists did not weigh locales that imply a right-to-left script through a region or dialect instead of a script subtag: `pa-PK`, `az-IR`, `uz-AF`, `ku-IQ`, `kk-CN`, `ha-SD`, and dialect codes such as `arz` or `prs` all defaulted to `ltr`. A language list cannot fix that, because `pa` is Gurmukhi but `pa-PK` is Arabic. The script now comes from the explicit script subtag, else from `Intl.Locale.prototype.maximize()`, which every supported engine provides and which fallback and matching already use, checked against a fixed list of right-to-left scripts that includes the historic ones. The language list remains for tags `Intl.Locale` rejects. Measured against `getTextInfo()` on Node 24, every 2- and 3-letter language with likely-subtag data and every right-to-left script now agree, where 268 languages and 26 scripts disagreed before. `sd-IN` follows its likely script, Devanagari, and is `ltr`. Rejected: a language list that grows with each dialect, and `getTextInfo()` where available, which answers differently by runtime.
+
 ### Empty dictionaries are allowed
 
 Empty dictionaries used to be rejected. That made `init()` reject for a locale added before it was translated, which in a browser stops the application from starting. An empty dictionary now falls back to the default dictionary for every key.
@@ -29,6 +31,8 @@ Empty dictionaries used to be rejected. That made `init()` reject for a locale a
 ### `matchLocale` lives in core and takes a list
 
 Matching used to live only in the browser entry point, so a server resolving `Accept-Language: pt-BR` with `resolveLocale()` rendered the default locale for a visitor the browser would have served in `pt`. It takes a parsed list rather than a header string, because header parsing, quality sorting, and size limits belong to the server that receives the header.
+
+**Order breaks ties between regions (2026-11-08).** Among configured locales that share a preference's language and script, with no exact or likely-region match, the first in `locales` wins, and the docs say so: list `es-419` before `es-ES` to serve `es-MX` from `es-419`. Choosing by region containment was rejected because it needs CLDR region data that `Intl` does not expose, and ordering already gives the right result.
 
 ### Interpolation came before ICU, with ICU syntax
 
@@ -76,6 +80,8 @@ Every text is read as an ICU message: `{name}`, `number` (`integer`, `percent`),
 - **`{name}` stays compatible**: a text without `{` or `'` is returned as is, and an argument without a usable value is left as written, as placeholders were. The one change is that `'` before a brace and `''` now quote, which a text written for 0.1.0 rarely contains.
 - **A `Date` is a value**, formatted as `{name, date}`, so a plain `{when}` shows a readable date rather than `Date.prototype.toString()`.
 - **Plural groups stay**: they keep each form an ordinary key, which some translation tools need.
+- **Formatter options are copied by name (2026-11-08).** Formatters are cached per process. The key was `JSON.stringify(options)`, which sees only own properties while `Intl` also reads inherited ones, so `formatNumber(x, Object.create({ style: "percent" }))` turned every later call, in every manager, into a percentage. The options `Intl` reads are now copied by name, inherited ones included, and that copy is both the cache key and what `Intl` receives, so the two cannot disagree. Values that are not primitives are never cached, so `Intl` validates them on every call. Trade-off: an `Intl` option newer than ES2025 is ignored until it is added to the list.
+- **Exact plural values compare as numbers (2026-11-08)**, as in ICU, so `=1.0` and `=01` select 1, and two spellings of one value are a repeated option. They used to compare as text and silently never matched. `offset` still matches the raw value.
 
 ### Values are typed from literal messages (0.2.0)
 
@@ -84,6 +90,7 @@ Every text is read as an ICU message: `{name}`, `number` (`integer`, `percent`),
 - **No generator.** TypeScript types JSON string values as `string`, so a JSON default dictionary checks keys only. A `.d.ts` generator, as a CLI or bundler plugin, would cover it, but needs a watch step in every app. Deferred, not rejected: it can be added later without changing these types, since it would only produce a literal dictionary type.
 - **Loose where the type can't know**: a key union, a `string` message, a message the types can't read, and an `I18n` typed without its third type argument accept any values, as before.
 - **Every typed dictionary that has the key contributes**, so a translation that uses another argument requires it too. Extra values are allowed.
+- **Reading gives up rather than failing the build (2026-11-08).** A message over 900 type-level steps, about 900 apostrophes, 450 arguments, or 900 spaces inside one argument, accepts any values. Before, it failed every `t()` call that used it with TS2589. Argument names must be ASCII letters, digits, or `_`, as at runtime, and `''` inside quoted text is an apostrophe, so the types no longer require a value the runtime prints as written.
 
 ### `timeZone` is a manager option (0.2.0)
 
@@ -103,6 +110,8 @@ Rejected: documenting the `t(key) === key` comparison, because of the reported m
 
 **A string no dictionary can hold is a miss (0.2.1).** `has()` first threw a `TypeError` for an invalid key, as `t()` does. That was not weighed against its own example, ``has(`errors.${code}`)``: a `code` from a response or a query string with a line break, or over 1,000 characters, threw from the very check meant to guard it. Such a key can't be in a dictionary, so `has()` returns `false`, silently. It still throws for a non-string, which is a mistake in the calling code, and `t()` still throws for an invalid key, since a call that passes one has skipped the check. Rejected: keeping the throw and documenting it, which leaves every caller to validate the code before checking it.
 
+**A group counts only with an `other` form (2026-11-08).** `has()` picked a plural form for count 0, so `{ one, two }` was a key in Portuguese and French, where 0 is `one`, but not in English, while `t()` showed the raw key in every locale. It now counts a group only when it has an `other` form, the definition plural groups and typed keys already use. Rejected: keeping count-based selection, because the answer for one dictionary must not change with the active locale.
+
 ## Browser
 
 ### Detected locales are not persisted
@@ -116,6 +125,10 @@ When the loader rejects for a stored or detected locale, the binding warns and s
 ### One data attribute per translated attribute
 
 `data-i18n-<attribute>` was chosen over a single list attribute, such as `data-i18n-attrs="placeholder:search.hint"`, because it needs no parsing and a `MutationObserver` can watch exactly those names. Attributes are limited to text read by people or assistive technology, so a translation can never set a URL, a style, or an event handler.
+
+### A missing document fails before initialization (2026-11-08)
+
+In a Web Worker, `initializeBrowserI18n()` initialized the manager and then rejected with a `ReferenceError` from document synchronization, which left the manager ready but unbound. It now throws a `TypeError` naming the requirement before touching the manager, but only when `syncDocument` is on. With `syncDocument: false` and no `root`, initialization already worked without a document, so it keeps working. Rejected: requiring a document for the whole `./browser` entry, which breaks a combination that works, and adding an option, which nothing needs.
 
 ## Routing
 
@@ -181,3 +194,11 @@ Rejected:
 
 - Adding a catch that answers 400 to every guide example, for the reason above.
 - Returning `undefined` for every invalid value, including a full URL, for the `request.url` case.
+
+### `parse` checks the canonical path's length too (2026-11-08)
+
+`parse` returns `undefined` when the canonical path, not only its URL, would be longer than 8,192 characters. The URL check did not weigh that a short translated URL can read back to a longer canonical path, such as `/pt/b/…` for `/aaaa…/:id`, and `localize` refuses an input that long, so such a request answered 500 through the guide's redirect. Rejected: raising the limit for canonical paths, which would let `localize` accept what no request can carry.
+
+### A listed page comes back in one spelling (2026-11-08)
+
+A listed page's fixed segments come back from `parse` the way a URL writes the table's words, the same in every locale, so `/%61/x` and `/pt/%61/x` both give `/a/x`. Before, a request matched through its canonical words kept the request's spelling, in a prefixed locale and also in the default locale when the table gives it its own form, so two requests for one page gave two `pathname`s. The length limit applies to the path `parse` returns, after this re-spelling. Parameters and unlisted segments are still returned as written.
