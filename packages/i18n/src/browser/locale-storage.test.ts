@@ -114,6 +114,36 @@ describe("initializeBrowserI18n locale resolution", () => {
     expect(i18n.isReady).toBe(false);
   });
 
+  it("rejects document synchronization without a page document before initializing core", async () => {
+    const i18n = createManager();
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, "document")!;
+    Object.defineProperty(globalThis, "document", { value: undefined, configurable: true });
+
+    try {
+      await expect(initializeBrowserI18n({ i18n, locale: "fr", persistLocale: false })).rejects.toThrow(
+        new TypeError(
+          "[I18n] Document synchronization requires a page document; pass syncDocument: false without one.",
+        ),
+      );
+    } finally {
+      Object.defineProperty(globalThis, "document", descriptor);
+    }
+    expect(i18n.isReady).toBe(false);
+  });
+
+  it("initializes without a page document when document synchronization is disabled", async () => {
+    const i18n = createManager();
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, "document")!;
+    Object.defineProperty(globalThis, "document", { value: undefined, configurable: true });
+
+    try {
+      await initializeBrowserI18n({ i18n, locale: "fr", persistLocale: false, syncDocument: false });
+    } finally {
+      Object.defineProperty(globalThis, "document", descriptor);
+    }
+    expect(i18n.locale).toBe("fr");
+  });
+
   it.each([null, 42])(
     "rejects authoritative invalid explicit locale %j without falling through and releases ownership",
     async (invalidLocale) => {

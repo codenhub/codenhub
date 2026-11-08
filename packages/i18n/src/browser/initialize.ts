@@ -113,10 +113,13 @@ const getMutationObserver = (root: ParentNode): typeof MutationObserver => {
  * @typeParam TLocale - Union of supported canonical locale identifiers.
  * @param options - Core manager, locale inputs, persistence, document, and optional DOM behavior.
  * @returns A binding that disconnects browser-owned listeners and observation.
- * @throws {TypeError} When observation lacks a root, the manager was not created by `createI18n()`, or it already has a
- * browser binding.
+ * @throws {TypeError} When observation lacks a root, `syncDocument` is on where no global `document` exists, such as in
+ * a Web Worker, the manager was not created by `createI18n()`, or it already has a browser binding. These are thrown
+ * before the manager is initialized.
  * @throws {RangeError} When an explicit locale is unsupported or is not a string at runtime.
- * @throws {Error} When another core initialization supersedes this call before its locale becomes active.
+ * @throws {Error} With the message "[I18n] Browser initialization was superseded before its locale became active." when
+ * a later `init()` or `setLocale()` call on the manager, including `setLocale()` to the locale already active, starts
+ * before this call's locale becomes active. The manager keeps the later call's result.
  * @throws {TypeError} When a required dictionary is invalid.
  * @throws {TypeError} When direction resolution returns a value other than `ltr` or `rtl`.
  * @throws {I18nError} When the loader rejects for an explicit locale or the default locale.
@@ -137,6 +140,12 @@ export async function initializeBrowserI18n<TLocale extends string>(
 
   if (observe && root === undefined) {
     throw new TypeError("[I18n] Browser observation requires a root.");
+  }
+
+  if (shouldSyncDocument && typeof document === "undefined") {
+    throw new TypeError(
+      "[I18n] Document synchronization requires a page document; pass syncDocument: false without one.",
+    );
   }
 
   if (BOUND_MANAGERS.has(i18n)) {
