@@ -32,7 +32,7 @@ Locale selection uses explicit input, valid persisted state, navigator preferenc
 
 **Throws**
 
-- `TypeError` — When observation lacks a root, `syncDocument` is on where no global `document` exists, such as in a Web Worker, the manager was not created by `createI18n()`, or it already has a browser binding. These are thrown before the manager is initialized.
+- `TypeError` — When observation lacks a root, when `syncDocument` is on without a global `document`, such as in a Web Worker, when the manager was not created by `createI18n()`, or when it already has a browser binding. These are thrown before the manager is initialized.
 - `RangeError` — When an explicit locale is unsupported or is not a string at runtime.
 - `Error` — With the message "[I18n] Browser initialization was superseded before its locale became active." when a later `init()` or `setLocale()` call on the manager, including `setLocale()` to the locale already active, starts before this call's locale becomes active. The manager keeps the later call's result.
 - `TypeError` — When a required dictionary is invalid.
