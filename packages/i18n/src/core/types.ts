@@ -13,7 +13,11 @@ export interface LocaleDictionary {
  * The 1,000-character flattened-key limit is fixed, because `translate()` and DOM keys share it.
  */
 export interface LocaleDictionaryLimits {
-  /** Maximum nesting levels below the root object. Defaults to 100. */
+  /**
+   * Maximum nesting levels below the root object. Defaults to 100. Each level adds at least 2 characters to a
+   * flattened key, a name and a dot, so with the 1,000-character key limit, a translation more than 499 levels deep
+   * can't be loaded whatever this is set to.
+   */
   maxDepth?: number;
   /** Maximum string translations. Defaults to 10,000. */
   maxTranslations?: number;
@@ -333,39 +337,70 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   /**
    * Joins strings into a list, such as "a, b, and c", for the active locale with `Intl.ListFormat`.
    *
+   * @param values - Strings to join, in order.
+   * @param options - `Intl.ListFormat` options, such as `{ type: "disjunction" }` for "a, b, or c".
+   * @returns The joined list, or an empty string for no values.
    * @throws {RangeError} When `options` is invalid, as `Intl.ListFormat` throws.
    * @throws {TypeError} When a value is not a string, as `Intl.ListFormat` throws.
    */
   formatList(values: Iterable<string>, options?: Intl.ListFormatOptions): string;
 
   /**
-   * Calls a listener after every applied initialization and locale change, such as to re-render a framework.
+   * Calls a listener after every applied `init()` and every applied locale change, such as to re-render a framework.
+   * A stale or same-locale request, which changes nothing, does not call it.
    *
-   * @param listener - Called without arguments; exceptions are reported as for any `EventTarget` listener.
+   * @param listener - Called without arguments. An exception is reported as for any `EventTarget` listener: in a
+   * browser, as an uncaught error that neither stops other listeners nor rejects the change; in Node.js, it crashes the
+   * process.
    * @returns A function that removes the listener; calling it again does nothing.
    */
   subscribe(listener: () => void): () => void;
 
-  /** Adds a typed lifecycle event listener. */
+  /**
+   * Adds a typed lifecycle event listener.
+   *
+   * @param type - `ready`, dispatched after every applied `init()`, or `locale-change`, after every applied locale change.
+   * @param callback - Receives the event, whose `detail` holds the locale. An exception is reported as by
+   * {@link I18n.subscribe}.
+   * @param options - Standard `EventTarget` listener options, such as `{ once: true }`.
+   */
   addEventListener<K extends keyof I18nEventMap<TLocale>>(
     type: K,
     callback: (this: I18n<TLocale, TKey>, event: I18nEventMap<TLocale>[K]) => void,
     options?: AddEventListenerOptions | boolean,
   ): void;
-  /** Adds a standard event listener for interoperability with EventTarget. */
+  /**
+   * Adds a standard event listener for interoperability with EventTarget.
+   *
+   * @param type - Event type; only `ready` and `locale-change` are dispatched.
+   * @param callback - Standard listener, or `null`, which adds nothing.
+   * @param options - Standard `EventTarget` listener options.
+   */
   addEventListener(
     type: string,
     callback: EventListener | EventListenerObject | null,
     options?: AddEventListenerOptions | boolean,
   ): void;
 
-  /** Removes a typed lifecycle event listener. */
+  /**
+   * Removes a typed lifecycle event listener.
+   *
+   * @param type - Event type the listener was added for.
+   * @param callback - The listener that was added.
+   * @param options - Standard `EventTarget` options; `capture` must match the one it was added with.
+   */
   removeEventListener<K extends keyof I18nEventMap<TLocale>>(
     type: K,
     callback: (this: I18n<TLocale, TKey>, event: I18nEventMap<TLocale>[K]) => void,
     options?: EventListenerOptions | boolean,
   ): void;
-  /** Removes a standard event listener registered through EventTarget. */
+  /**
+   * Removes a standard event listener registered through EventTarget.
+   *
+   * @param type - Event type the listener was added for.
+   * @param callback - The listener that was added, or `null`, which removes nothing.
+   * @param options - Standard `EventTarget` options; `capture` must match the one it was added with.
+   */
   removeEventListener(
     type: string,
     callback: EventListener | EventListenerObject | null,
