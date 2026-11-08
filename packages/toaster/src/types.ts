@@ -69,13 +69,16 @@ export interface ToastUpdateOptions {
    * toast: `update({ type: "success" })`.
    */
   type?: SemanticType | "default";
-  /** New visibility duration in milliseconds, applied the next time an auto-dismiss timer would run. */
+  /** New visibility duration in milliseconds. On a showing toast, the timer restarts with it right away. */
   duration?: number;
   /** Enables or disables automatic dismissal after `duration`. */
   autoDismiss?: boolean;
   /** Enables or disables the dismiss button. */
   dismissible?: boolean;
-  /** Extra CSS classes to append. */
+  /**
+   * Replaces the classes the toast was called with. The toast's own classes
+   * and the instance's `className` stay.
+   */
   className?: string;
 }
 
@@ -119,7 +122,8 @@ export interface ToastHandle {
   readonly state: ToastState;
 
   /**
-   * Registers a callback to trigger when the toast is initially requested to show.
+   * Registers a callback to trigger when the toast is added to the page,
+   * which for a queued toast is when a slot opens for it.
    *
    * @param subscriber Callback subscriber function.
    * @returns Unsubscribe function.
@@ -191,6 +195,9 @@ export interface DialogHandle<T> extends PromiseLike<T> {
    * - `confirm`: resolves with `boolean`.
    * - `prompt`: resolves with `string` (input value) or `null` (canceled).
    * - `alert`: resolves with `void` when acknowledged.
+   *
+   * Rejects with the browser's error if the dialog cannot open, which is
+   * when `showModal()` throws.
    */
   readonly result: Promise<T>;
 }
@@ -527,47 +534,74 @@ export interface Toaster {
    *
    * @param message Message text to display.
    * @param options Scoped options including duration, position, dismissible, etc.
+   * @returns A handle to update, dismiss, or watch the toast.
+   * @throws {Error} If the instance is destroyed, no DOM is available, the
+   *   toast has neither a message nor a title, or `duration`, `type`,
+   *   `position`, or `role` is invalid.
    */
   (message: string, options?: ToastOptions): ToastHandle;
   /**
    * Dispatches a default neutral notification via options object.
    *
    * @param options Scoped options including message, title, duration, etc.
+   * @returns A handle to update, dismiss, or watch the toast.
+   * @throws {Error} For the same reasons as the call with a message.
    */
   (options: ToastOptions): ToastHandle;
 
   /**
    * Displays a success notification.
+   *
+   * @returns A handle to update, dismiss, or watch the toast.
+   * @throws {Error} For the same reasons as calling the toaster itself.
    */
   success(message: string, options?: ToastOptions): ToastHandle;
   success(options: ToastOptions): ToastHandle;
 
   /**
    * Displays an error notification.
+   *
+   * @returns A handle to update, dismiss, or watch the toast.
+   * @throws {Error} For the same reasons as calling the toaster itself.
    */
   error(message: string, options?: ToastOptions): ToastHandle;
   error(options: ToastOptions): ToastHandle;
 
   /**
    * Displays a warning notification.
+   *
+   * @returns A handle to update, dismiss, or watch the toast.
+   * @throws {Error} For the same reasons as calling the toaster itself.
    */
   warning(message: string, options?: ToastOptions): ToastHandle;
   warning(options: ToastOptions): ToastHandle;
 
   /**
    * Displays an informational notification.
+   *
+   * @returns A handle to update, dismiss, or watch the toast.
+   * @throws {Error} For the same reasons as calling the toaster itself.
    */
   info(message: string, options?: ToastOptions): ToastHandle;
   info(options: ToastOptions): ToastHandle;
 
   /**
    * Displays a stateful progress loader toast. By default, loading toasts do not auto-dismiss.
+   *
+   * @returns A handle to update the toast into its result, or dismiss it.
+   * @throws {Error} If the instance is destroyed, no DOM is available, the
+   *   toast has neither a message nor a title, or `position` is invalid.
    */
   loading(message: string, options?: LoadingToastOptions): ToastHandle;
   loading(options?: LoadingToastOptions): ToastHandle;
 
   /**
    * Displays custom content: a string as plain text, or a DOM node as is.
+   *
+   * @returns A handle to update, dismiss, or watch the toast.
+   * @throws {Error} If the instance is destroyed, no DOM is available, the
+   *   content is empty or not an element, text, or fragment, or `duration`,
+   *   `position`, or `role` is invalid.
    */
   custom(content: ToastContent, options?: Omit<CustomToastOptions, "content">): ToastHandle;
   custom(options: CustomToastOptions): ToastHandle;
@@ -578,33 +612,40 @@ export interface Toaster {
    *
    * @param promise The Promise or PromiseLike to track.
    * @param options State configurations for loading, success, and error.
-   * @returns The original Promise result.
+   * @returns A promise that settles the same way as `promise`.
+   * @throws {Error} Synchronously, if the loading toast cannot be shown, for
+   *   the same reasons as `loading()`.
    */
   promise<T>(promise: PromiseLike<T>, options: PromiseToastOptions<T>): Promise<T>;
 
   /**
-   * Clears all active and queued non-interactive toasts.
+   * Dismisses every showing and queued toast of this instance.
    *
-   * @throws {Error} If the toaster instance has been destroyed.
+   * @throws {Error} If the instance is destroyed.
    */
   clear(): void;
 
   /**
-   * Dismisses a specific toast handle, or all active toasts if handle is omitted.
+   * Dismisses one toast, or every toast of this instance, the same as
+   * `clear()`, when `handle` is omitted.
    *
    * @param handle Optional handle of the toast to dismiss.
+   * @throws {Error} If the instance is destroyed.
    */
   dismiss(handle?: ToastHandle): void;
 
   /**
-   * Reconfigures the toaster at runtime.
+   * Reconfigures the toaster at runtime. An option given as `undefined`
+   * resets to its default, on the toasts already showing too.
    *
    * @param config Runtime configuration to validate and apply.
+   * @throws {Error} If the instance is destroyed, `container` is given, or a
+   *   position, a duration, or `maxVisible` is invalid.
    */
   configure(config: ToasterRuntimeConfig): void;
 
   /**
-   * Fully tears down this toaster instance.
+   * Fully tears down this toaster instance. Calling it again does nothing.
    */
   destroy(): void;
 }

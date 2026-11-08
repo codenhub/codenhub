@@ -1,4 +1,6 @@
-/* @codenhub/toaster consumer stylesheet. Every element selector is instance-scoped. */
+/* @codenhub/toaster consumer stylesheet. Every selector for this package's own
+   elements is instance-scoped; the presentation classes below are page-wide on
+   purpose, as their comment explains. */
 
 /* The same layer order @codenhub/styles declares. Stated first so that
    loading this sheet before that one cannot register `components` ahead

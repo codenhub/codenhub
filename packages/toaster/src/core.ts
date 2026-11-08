@@ -373,7 +373,7 @@ class ToastManager {
  *
  * @param config Optional initial configuration overrides for the toaster.
  * @returns An independent Toaster instance controller.
- * @throws {Error} If duration, max-visible count, or token colors are invalid.
+ * @throws {Error} If a position, a duration, or `maxVisible` is invalid.
  */
 export function createToaster(config?: ToasterConfig): Toaster {
   const manager = new ToastManager(config);
