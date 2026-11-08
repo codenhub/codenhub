@@ -106,10 +106,14 @@ pnpm test:coverage
 
 Narrow a run while working on one area. A path after the script is forwarded to Vitest, so a single directory or file runs on its own:
 
+<!-- project:start -->
+
 ```sh
 pnpm test packages/<name>
 pnpm test packages/<name>/src/<file>.test.ts
 pnpm test:watch packages/<name>
 ```
+
+<!-- project:end -->
 
 [Tooling](../tooling.md) describes the other ways to narrow a run.

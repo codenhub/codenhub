@@ -34,10 +34,20 @@ report() {
 }
 trap report EXIT
 
+# project:start
+# Formatters the template does not run. PROJECT_EXTENSIONS lists the extensions they own, as a `grep -E`
+# alternation such as `rs` or `go|proto`; those files go to them instead of oxfmt. project_fix rewrites and
+# project_check checks the newline-delimited file list in "$1", typically through run_on, as in
+# `run_on "$1" rustfmt --check --`. Empty, the hook runs only the template's tools.
+PROJECT_EXTENSIONS=
+project_fix() { :; }
+project_check() { :; }
+# project:end
+
 # `core.quotePath=false` lists a path with non-ASCII characters as it is. Quoted, as
 # `"caf\303\251.md"`, it would match no extension below and go unchecked.
 git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMR |
-  grep -E '\.(astro|cjs|css|cts|html|js|json|jsx|md|mjs|mts|svelte|ts|tsx)$' >"$work/staged" || true
+  grep -E "\.(astro|cjs|css|cts|html|js|json|jsx|md|mjs|mts|svelte|ts|tsx${PROJECT_EXTENSIONS:+|$PROJECT_EXTENSIONS})\$" >"$work/staged" || true
 
 if [ ! -s "$work/staged" ]; then
   exit 0
@@ -68,8 +78,25 @@ select_md() {
   grep -E '\.md$' "$1" >"$2" || true
 }
 
+# Splits a file list between the project's formatters and oxfmt.
+select_project() {
+  if [ -n "$PROJECT_EXTENSIONS" ]; then
+    grep -E "\.($PROJECT_EXTENSIONS)\$" "$1" >"$2" || true
+  else
+    : >"$2"
+  fi
+}
+select_web() {
+  grep -Fxv -f "$3" "$1" >"$2" || true
+}
+
 if [ -s "$work/fixable" ]; then
-  run_on "$work/fixable" pnpm exec oxfmt --no-error-on-unmatched-pattern --
+  select_project "$work/fixable" "$work/fixable-project"
+  select_web "$work/fixable" "$work/fixable-web" "$work/fixable-project"
+  run_on "$work/fixable-web" pnpm exec oxfmt --no-error-on-unmatched-pattern --
+  if [ -s "$work/fixable-project" ]; then
+    project_fix "$work/fixable-project"
+  fi
   select_md "$work/fixable" "$work/fixable-md"
   run_on "$work/fixable-md" pnpm exec prettier --write --log-level warn --
   select_code "$work/fixable" "$work/fixable-code"
@@ -79,7 +106,12 @@ if [ -s "$work/fixable" ]; then
   run_on "$work/fixable" git --literal-pathspecs add --
 fi
 
-run_on "$work/staged" pnpm exec oxfmt --check --no-error-on-unmatched-pattern --
+select_project "$work/staged" "$work/project"
+select_web "$work/staged" "$work/web" "$work/project"
+run_on "$work/web" pnpm exec oxfmt --check --no-error-on-unmatched-pattern --
+if [ -s "$work/project" ]; then
+  project_check "$work/project"
+fi
 select_md "$work/staged" "$work/md"
 run_on "$work/md" pnpm exec prettier --check --log-level warn --
 select_code "$work/staged" "$work/code"

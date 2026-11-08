@@ -85,6 +85,26 @@ export function markerProblems(text) {
 }
 
 /**
+ * Lists the paths whose mode changed in the output of `git diff --raw -z`, where each entry is
+ * `:<old mode> <new mode> <old sha> <new sha> <status>` followed by its path, NUL-separated. A file added or
+ * deleted has a zero mode on one side; the missing-file check reports it instead.
+ * @param {string} output The git output.
+ * @returns {{ path: string, theirs: string, ours: string }[]} Each changed path and both modes.
+ */
+function modeChanges(output) {
+  const fields = output.split("\0");
+  const result = [];
+  for (let index = 0; index + 1 < fields.length; index += 2) {
+    const [theirs = "", ours = ""] = (fields[index] ?? "").slice(1).split(" ");
+    const path = fields[index + 1] ?? "";
+    if (theirs !== ours && theirs !== "000000" && ours !== "000000") {
+      result.push({ path, theirs, ours });
+    }
+  }
+  return result;
+}
+
+/**
  * Keeps the template-owned lines of a `blocks` file: everything outside its project blocks, with the
  * markers themselves, and for a Markdown document its frontmatter keys without their values.
  * @param {string} text The file's text.
@@ -309,6 +329,29 @@ export function check({ cwd = process.cwd(), templateUrl } = {}) {
     if (index !== -1 || ours.length !== expected.length) {
       const line = (ours[index] ?? ours.at(-1))?.line ?? 1;
       report(path, `${path}:${line}: differs from the template's text outside the project blocks`);
+    }
+  }
+
+  // A blocks file may differ inside its blocks, but not in its mode, as for a hook that must stay executable.
+  // The working tree is compared, as for canonical files: git reads its mode where `core.fileMode` is set, and
+  // the index's elsewhere, as on Windows.
+  if (blocks.length > 0) {
+    const changed = git(cwd, [
+      "-c",
+      "core.quotePath=false",
+      "diff",
+      "--no-ext-diff",
+      "--raw",
+      "-z",
+      synced,
+      "--",
+      ...blocks,
+    ]);
+    if (changed.status !== 0) {
+      problems.push(`could not compare the modes of blocks files with ${synced.slice(0, 7)}: ${changed.stderr}`);
+    }
+    for (const { path, theirs, ours } of modeChanges(changed.stdout)) {
+      report(path, `${path}: mode ${ours}, but the template at ${synced.slice(0, 7)} has ${theirs}`);
     }
   }
 
