@@ -1,7 +1,7 @@
 ---
 title: Receitas
 description: Exemplos completos para fetch e códigos de status HTTP, chamadas ao Supabase, os seus próprios códigos de erro, novas tentativas seguras, traduções, envio para um error tracker e testes.
-source: 5d25737842495114ae8911b3d821c7c799c2d135
+source: dafb18aafc4badff0516e1a1c33f780b45206f6d
 order: 7
 ---
 
@@ -148,7 +148,7 @@ import { createAppError, DEFAULT_APP_ERROR_MESSAGE } from "@codenhub/error";
 const error = createAppError(caught, { fallbackMessage: translate("error.unexpected") || DEFAULT_APP_ERROR_MESSAGE });
 ```
 
-Isso cobre só os erros `"unknown"`. Um mapeamento que você registrou sem `messageKey` já tem mensagem, então o `fallbackMessage` o deixa em inglês. Dê uma chave a cada mapeamento que você registrar.
+Isso cobre só os erros `"unknown"`. Um mapeamento que você registrou sem `messageKey` já tem mensagem, então o `fallbackMessage` o deixa em inglês. Dê uma chave a cada mapeamento que você registrar. Além disso, o fallback só dá texto a um erro `"unknown"` que nenhuma camada ainda redigiu, então toda camada que passa um `fallbackMessage` deveria passar um traduzido.
 
 O ErrorKit não vem com traduções. As chaves são o contrato; as palavras são suas.
 

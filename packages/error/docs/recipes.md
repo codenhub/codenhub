@@ -147,7 +147,7 @@ import { createAppError, DEFAULT_APP_ERROR_MESSAGE } from "@codenhub/error";
 const error = createAppError(caught, { fallbackMessage: translate("error.unexpected") || DEFAULT_APP_ERROR_MESSAGE });
 ```
 
-That covers only `"unknown"` errors. A mapping you registered without a `messageKey` already has a message, so `fallbackMessage` leaves it in English. Give every mapping you register a key.
+That covers only `"unknown"` errors. A mapping you registered without a `messageKey` already has a message, so `fallbackMessage` leaves it in English. Give every mapping you register a key. The fallback also words only an `"unknown"` error no layer has worded yet, so every layer that passes a `fallbackMessage` should pass a translated one.
 
 ErrorKit does not ship translations. The keys are the contract; the words are yours.
 
