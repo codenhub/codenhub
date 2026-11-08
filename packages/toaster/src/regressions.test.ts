@@ -685,6 +685,23 @@ describe("promise outcome dismissible", () => {
   });
 });
 
+describe("configure() without a document", () => {
+  it("stores the settings without throwing", () => {
+    const originalDoc = globalThis.document;
+    // @ts-expect-error simulating SSR
+    delete globalThis.document;
+    try {
+      const toaster = createToaster();
+      expect(() => toaster.configure({ labels: { notifications: "Avisos" } })).not.toThrow();
+      expect(() => toaster.configure({ maxVisible: 2 })).not.toThrow();
+      expect(() => toaster.configure({ margin: "24px" })).not.toThrow();
+      toaster.destroy();
+    } finally {
+      globalThis.document = originalDoc;
+    }
+  });
+});
+
 describe("duration limit", () => {
   const tooLong = 2_147_483_648;
 

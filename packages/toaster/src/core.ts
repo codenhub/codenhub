@@ -227,24 +227,23 @@ class ToastManager {
     this.config = copyConfig(merged);
     this.resolved = this.buildResolvedConfig(this.config);
 
+    // Without a page there are no stacks to update; the new settings apply
+    // once toasts render.
+    const parent = this.findParent();
+    if (!parent) {
+      return;
+    }
+
     if (config.maxVisible !== undefined) {
-      reconcileCapacity({
-        parent: this.getParent(),
-        instanceId: this.instanceId,
-        maxVisible: this.resolved.maxVisible,
-      });
+      reconcileCapacity({ parent, instanceId: this.instanceId, maxVisible: this.resolved.maxVisible });
     }
 
     if ("labels" in config) {
-      applyInstanceRegionLabel({
-        parent: this.getParent(),
-        instanceId: this.instanceId,
-        label: this.resolved.regionLabel,
-      });
+      applyInstanceRegionLabel({ parent, instanceId: this.instanceId, label: this.resolved.regionLabel });
     }
 
     if (config.margin !== undefined) {
-      applyInstanceMargin({ parent: this.getParent(), instanceId: this.instanceId, margin: config.margin });
+      applyInstanceMargin({ parent, instanceId: this.instanceId, margin: config.margin });
     }
   }
 
@@ -257,8 +256,8 @@ class ToastManager {
     this.activeToasts.forEach((t) => t.destroyImmediately());
     this.activeToasts.clear();
 
-    if (this.config.container || typeof document !== "undefined") {
-      const parent = this.getParent();
+    const parent = this.findParent();
+    if (parent) {
       removeInstanceContainers({ parent, instanceId: this.instanceId });
     }
   }
@@ -294,13 +293,22 @@ class ToastManager {
   }
 
   private getParent(): HTMLElement {
+    const parent = this.findParent();
+    if (!parent) {
+      throw new Error("DOM document is not available. Toaster operations require a browser environment.");
+    }
+    return parent;
+  }
+
+  /** The element stacks render into, or `null` when there is no page, as during server-side rendering. */
+  private findParent(): HTMLElement | null {
     if (this.config.container) {
       return this.config.container;
     }
     if (typeof document !== "undefined") {
       return document.body ?? document.documentElement;
     }
-    throw new Error("DOM document is not available. Toaster operations require a browser environment.");
+    return null;
   }
 
   private buildResolvedConfig(config: ToasterConfig): ResolvedToastConfig {
