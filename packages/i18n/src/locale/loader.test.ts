@@ -77,4 +77,12 @@ describe("createLocaleLoader", () => {
     await expect(loader.loadLocale("en")).resolves.toEqual({ key: "valid" });
     expect(loadLocale).toHaveBeenCalledTimes(2);
   });
+
+  it("names the locale whose dictionary is invalid", async () => {
+    const loader = createLocaleLoader({ loadLocale: () => ({ " title": "Olá" }) });
+
+    await expect(loader.loadLocale("pt")).rejects.toThrow(
+      new TypeError('[I18n] Invalid locale dictionary key " title" in locale "pt".'),
+    );
+  });
 });
