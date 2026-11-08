@@ -72,13 +72,14 @@ A project that deliberately departs from a `canonical` or `blocks` file, or does
 }
 ```
 
-An exception excuses that file's differences from the template, including its absence. It does not excuse a placeholder left behind or a `files` map that disagrees with the template's. A `seed` file needs no exception: the project already owns it. An exception whose file matches the template again fails the check, so it is removed once the reason is gone.
+An exception excuses that file's differences from the template, including its absence. It does not excuse a placeholder left behind, unbalanced markers, or a `files` map that disagrees with the template's. A `seed` file needs no exception: the project already owns it. An exception whose file matches the template again fails the check, so it is removed once the reason is gone.
 
 ## Checking
 
 `node .template/check.mjs` compares this project with the template at `synced` and changes nothing. It fails on:
 
 - a `files` map that differs from the template's at `synced`, or a manifest of the wrong shape;
+- a `synced` commit outside the history of the template's default branch, which is where a sync takes it from; a commit that only this repository has proves nothing about the template, so `synced` is set to the template commit the project last synced with;
 - a `canonical` or `blocks` file that is missing;
 - a `canonical` file that differs from the template's, including its mode, as for a hook that lost its executable bit;
 - a `blocks` file whose text outside its project blocks differs, or whose markers are unbalanced;
@@ -86,9 +87,9 @@ An exception excuses that file's differences from the template, including its ab
 - `core.hooksPath` not set to `.githooks`;
 - an exception that is no longer needed.
 
-It also reports how many commits the template is ahead of `synced`, without failing on it: a template change reaches the project when someone syncs, not when CI notices it. It fetches the template, so it needs the network; it adds no remote, ref, or `FETCH_HEAD`. With `synced` still `null`, as in the template itself, it checks only the manifest, the files, and the markers. CI runs it on every change.
+It also reports how many commits the template is ahead of `synced`, without failing on it: a template change reaches the project when someone syncs, not when CI notices it. It fetches the template, so it needs the network; it adds no remote, ref, or `FETCH_HEAD`. With `synced` still `null`, as in the template itself, it checks only the manifest, the files, and the markers. The `Verify` job runs it whenever CI runs: on pull requests and merge-queue checks, and on pushes to `main` unless the project removed that trigger.
 
-Each failure has one of three resolutions: sync, when the template changed; propose the change to the template, when the project improved a template-owned text; or list the file in `exceptions`, when the project departs from it on purpose.
+A difference from the template has one of three resolutions: sync, when the template changed; propose the change to the template, when the project improved a template-owned text; or list the file in `exceptions`, when the project departs from it on purpose. The other failures, a malformed manifest, broken markers, a placeholder, `core.hooksPath`, or an exception no longer needed, are fixed in the project.
 
 ## Syncing
 
@@ -107,14 +108,14 @@ Start on a branch, with a clean working tree and a passing `node .template/check
    git diff --stat <synced> FETCH_HEAD
    ```
 
-2. Keep a copy of the current `files` map, then copy the `files` map of `git show FETCH_HEAD:.template/manifest.json` into this manifest, keeping `template`, `synced`, and `exceptions`. A file whose class changed is handled under its new class. A file the old map lists and the new one does not was removed or renamed by the template.
+2. Keep a copy of the current `files` map, then copy the `files` map of `git show FETCH_HEAD:.template/manifest.json` into this manifest, keeping `template`, `synced`, and `exceptions`. A file whose class changed is handled under its new class. For one that became `canonical`, the project's changes to it are considered for proposing upstream, then either the file takes the template's version, `git checkout FETCH_HEAD -- <path>`, or the project keeps its version and lists the file in `exceptions` with the reason; one that became `blocks` takes the template's text outside its blocks, with the project's text moved into them. A file the old map lists and the new one does not was removed or renamed by the template.
 3. Apply the `canonical` and `blocks` changes with a three-way merge, taking the paths from the old map and the new one, so a file the template removed is deleted too:
 
    ```sh
    git diff --full-index --binary <synced> FETCH_HEAD -- <canonical and blocks paths> | git apply --3way
    ```
 
-   A conflict in a `canonical` file is a local edit: the template's version wins, after the local change is considered for proposing upstream. A conflict in a `blocks` file keeps the text inside every project block exactly as it was and takes the template's text outside them. A placeholder the new template text brings is filled with the project's value. A file listed in `exceptions` is left out of the diff, and its exception reviewed against what the template changed.
+   A conflict in a `canonical` file is a local edit: the template's version wins, after the local change is considered for proposing upstream. A conflict in a `blocks` file keeps the text inside every project block exactly as it was and takes the template's text outside them. A clean merge needs the same care: where the project kept a block's old default, a change to that default applies without a conflict and overwrites the project's text, so compare each block with `git diff HEAD -- <blocks paths>` and restore any block the patch changed. The check cannot see this; it compares only the text outside the blocks. A placeholder the new template text brings is filled with the project's value. A file listed in `exceptions` is left out of the diff, and its exception reviewed against what the template changed.
 
 4. Review `git diff <synced> FETCH_HEAD -- <seed paths>` file by file and apply only the changes the project wants. `pnpm-lock.yaml` is never patched; `pnpm install` regenerates it after a change to `package.json` or `pnpm-workspace.yaml`. A `seed` file the template removed belongs to the project, which decides whether to delete it.
 5. Set `synced` to `git rev-parse FETCH_HEAD`, then run `pnpm install`, `node .template/check.mjs`, and `pnpm verify`, and commit. The commit message names the template commit, and the pull request lists the conflicts and how each was resolved, and the `seed` changes taken and declined.

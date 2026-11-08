@@ -88,7 +88,8 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-describe("check", () => {
+// Each test runs git a dozen times or more, which takes seconds on Windows under load.
+describe("check", { timeout: 60_000 }, () => {
   it("passes a project that matches the template and reports it up to date", () => {
     const { run } = setUp();
 
@@ -116,6 +117,15 @@ describe("check", () => {
       "AGENTS.md": TEMPLATE_FILES["AGENTS.md"]
         .replace("status: DRAFT", "status: APPROVED")
         .replace("<!-- project:start -->\n", "<!-- project:start -->\n\nAcme's own rules.\n"),
+    });
+
+    expect(run().problems).toEqual([]);
+  });
+
+  it("accepts a frontmatter value the project writes over several lines", () => {
+    const { project, run } = setUp();
+    write(project, {
+      "AGENTS.md": TEMPLATE_FILES["AGENTS.md"].replace("status: DRAFT", "status: >\n  APPROVED\n\n  for Acme"),
     });
 
     expect(run().problems).toEqual([]);
@@ -180,7 +190,63 @@ describe("check", () => {
     const { project, run } = setUp();
     write(project, { ".template/manifest.json": manifest({ synced: "0".repeat(40) }) });
 
-    expect(run().problems).toEqual([expect.stringMatching(/synced 0{40} is not a commit of/)]);
+    expect(run().problems).toEqual([expect.stringMatching(/synced 0{40} is not in the history of/)]);
+  });
+
+  it("reports a synced commit that exists only in the project", () => {
+    const { project, run } = setUp();
+    const local = git(project, "rev-parse", "HEAD");
+    write(project, { ".template/manifest.json": manifest({ synced: local }) });
+
+    expect(run().problems).toEqual([expect.stringMatching(new RegExp(`synced ${local} is not in the history of`))]);
+  });
+
+  it("reports a placeholder in a file not yet committed", () => {
+    const { project, run } = setUp();
+    git(project, "rm", "--quiet", "--cached", "README.md");
+    write(project, { "README.md": `# ${placeholder("name")}\n` });
+
+    expect(run().problems).toEqual(["README.md:1: placeholder left behind"]);
+  });
+
+  it("reports a synced commit the template has only on another branch", () => {
+    const { template, project, run } = setUp();
+    git(template, "switch", "--quiet", "-c", "side");
+    const side = commit(template, { "side.txt": "1\n" });
+    git(template, "switch", "--quiet", "main");
+    git(project, "fetch", "--quiet", template, "side");
+    write(project, { ".template/manifest.json": manifest({ synced: side }) });
+
+    expect(run().problems).toEqual([expect.stringMatching(new RegExp(`synced ${side} is not in the history of`))]);
+  });
+
+  it("reports a placeholder in a file git ignores", () => {
+    const { project, run } = setUp();
+    git(project, "rm", "--quiet", "--cached", "README.md");
+    write(project, { ".gitignore": "README.md\n", "README.md": `# ${placeholder("name")}\n` });
+
+    expect(run().problems).toEqual(["README.md:1: placeholder left behind"]);
+  });
+
+  it("reports unbalanced markers even in a file listed in exceptions", () => {
+    const { project, synced, run } = setUp();
+    write(project, {
+      ".template/manifest.json": manifest({ synced, exceptions: { "AGENTS.md": "Acme rewrote it." } }),
+      "AGENTS.md": "# Acme\n\n<!-- project:start -->\n",
+    });
+
+    expect(run().problems).toEqual(["AGENTS.md: line 3: project:start is never closed"]);
+  });
+
+  it("reports a malformed marker as a difference instead of hiding the text after it", () => {
+    const { project, run } = setUp();
+    write(project, {
+      "AGENTS.md": TEMPLATE_FILES["AGENTS.md"]
+        .replace("<!-- project:start -->", "<!-- project:start")
+        .replace("<!-- project:end -->", "<!-- project:end"),
+    });
+
+    expect(run().problems).toEqual(["AGENTS.md:7: differs from the template's text outside the project blocks"]);
   });
 
   it("reports a template it cannot reach", () => {
@@ -222,6 +288,7 @@ describe("markerProblems", () => {
 
   it("ignores a marker quoted in prose", () => {
     expect(markerProblems("Open a block with `<!-- project:start -->`.\n")).toEqual([]);
+    expect(markerProblems("<!-- project:start\n# project:end -->\n")).toEqual([]);
   });
 });
 
