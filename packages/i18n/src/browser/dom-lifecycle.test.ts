@@ -320,6 +320,182 @@ describe("initializeBrowserI18n document integration", () => {
     binding.disconnect();
   });
 
+  it("translates an element a custom-element root adds while the binding translates its attribute", async () => {
+    class BindingWidget extends HTMLElement {
+      static observedAttributes = ["title"];
+      attributeChangedCallback() {
+        if (this.isConnected && this.querySelector("span") === null) {
+          const span = document.createElement("span");
+          span.dataset.i18n = "greeting";
+          span.textContent = "Span fallback";
+          this.append(span);
+        }
+      }
+    }
+    customElements.define("binding-widget", BindingWidget);
+    document.body.innerHTML = '<binding-widget data-i18n-title="greeting" title="Hint"></binding-widget>';
+    const widget = document.querySelector("binding-widget")!;
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "en", root: widget, observe: true });
+    widget.querySelector("span")?.remove();
+    await flushMutations();
+
+    await i18n.setLocale("fr");
+    await flushMutations();
+
+    expect(widget.getAttribute("title")).toBe("Bonjour");
+    expect(widget.querySelector("span")?.textContent).toBe("Bonjour");
+    binding.disconnect();
+  });
+
+  it("stops handling an element that re-sets its key whenever the binding translates its attribute", async () => {
+    // Without a bound, each pass would queue the next and the binding would never stop.
+    const callbackLimit = 1_000;
+    let callbackCount = 0;
+    class EchoButton extends HTMLButtonElement {
+      static observedAttributes = ["aria-label"];
+      attributeChangedCallback() {
+        callbackCount += 1;
+        if (callbackCount > callbackLimit) {
+          return;
+        }
+        // Normalizes the translated label and reflects its own key back unchanged.
+        const label = this.getAttribute("aria-label") ?? "";
+        if (label !== label.toUpperCase()) {
+          this.setAttribute("aria-label", label.toUpperCase());
+        }
+        this.setAttribute("data-i18n-aria-label", this.getAttribute("data-i18n-aria-label") ?? "");
+      }
+    }
+    customElements.define("echo-button", EchoButton, { extends: "button" });
+    document.body.innerHTML = "<div></div>";
+    const root = document.querySelector("div")!;
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root, observe: true });
+    const button = document.createElement("button", { is: "echo-button" });
+    button.setAttribute("data-i18n-aria-label", "greeting");
+
+    root.append(button);
+    await flushMutations();
+    await flushMutations();
+
+    expect(callbackCount).toBeLessThan(callbackLimit);
+    expect(button.getAttribute("aria-label")).toBe("BONJOUR");
+    binding.disconnect();
+  });
+
+  it("translates an element missing-key handling adds while the binding translates", async () => {
+    document.body.innerHTML = '<p data-i18n="missing">Fallback</p>';
+    const added = document.createElement("span");
+    added.dataset.i18n = "greeting";
+    const i18n = createManager({
+      onMissingKey: () => {
+        if (!added.isConnected) {
+          document.body.append(added);
+        }
+      },
+    });
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+
+    expect(added.textContent).toBe("Bonjour");
+    binding.disconnect();
+  });
+
+  it("does not translate an element added to the root and moved outside it before observation runs", async () => {
+    document.body.innerHTML = '<div id="root"></div><div id="outside"></div>';
+    const root = document.querySelector("#root")!;
+    const outside = document.querySelector("#outside")!;
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root, observe: true });
+    const moved = document.createElement("p");
+    moved.dataset.i18n = "greeting";
+    moved.textContent = "Outside fallback";
+
+    root.append(moved);
+    outside.append(moved);
+    await flushMutations();
+
+    expect(moved.textContent).toBe("Outside fallback");
+    binding.disconnect();
+  });
+
+  it("does not restore an element whose key was removed after it moved outside the root", async () => {
+    document.body.innerHTML = '<div id="root"><p data-i18n="greeting">Fallback</p></div><div id="outside"></div>';
+    const paragraph = document.querySelector("p")!;
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({
+      i18n,
+      locale: "fr",
+      root: document.querySelector("#root")!,
+      observe: true,
+    });
+
+    paragraph.removeAttribute("data-i18n");
+    document.querySelector("#outside")?.append(paragraph);
+    await flushMutations();
+
+    expect(paragraph.textContent).toBe("Bonjour");
+    binding.disconnect();
+  });
+
+  it("does not restore an element moved outside the root when the locale changes", async () => {
+    document.body.innerHTML = '<div id="root"><p data-i18n="greeting">Fallback</p></div><div id="outside"></div>';
+    const paragraph = document.querySelector("p")!;
+    const i18n = createManager();
+    i18n.addEventListener("locale-change", () => {
+      paragraph.removeAttribute("data-i18n");
+      document.querySelector("#outside")?.append(paragraph);
+    });
+    const binding = await initializeBrowserI18n({
+      i18n,
+      locale: "fr",
+      root: document.querySelector("#root")!,
+      observe: true,
+    });
+
+    await i18n.setLocale("pt-BR");
+    await flushMutations();
+
+    expect(paragraph.textContent).toBe("Bonjour");
+    binding.disconnect();
+  });
+
+  it("translates and observes a shadow root passed as the root", async () => {
+    document.body.innerHTML = "<div></div>";
+    const shadowRoot = document.querySelector("div")!.attachShadow({ mode: "open" });
+    shadowRoot.innerHTML = '<p data-i18n="greeting">Fallback</p>';
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: shadowRoot, observe: true });
+    const added = document.createElement("span");
+    added.dataset.i18n = "greeting";
+
+    shadowRoot.append(added);
+    await flushMutations();
+
+    expect(shadowRoot.querySelector("p")?.textContent).toBe("Bonjour");
+    expect(added.textContent).toBe("Bonjour");
+    binding.disconnect();
+  });
+
+  it("observes a root from another window with that window's MutationObserver", async () => {
+    const iframe = document.createElement("iframe");
+    document.body.append(iframe);
+    const frameWindow = iframe.contentWindow as Window & typeof globalThis;
+    const frameBody = frameWindow.document.body;
+    const observe = vi.spyOn(frameWindow.MutationObserver.prototype, "observe");
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: frameBody, observe: true });
+    const added = frameWindow.document.createElement("p");
+    added.dataset.i18n = "greeting";
+
+    frameBody.append(added);
+    await flushMutations();
+
+    expect(observe).toHaveBeenCalledTimes(1);
+    expect(added.textContent).toBe("Bonjour");
+    binding.disconnect();
+  });
+
   it("retranslates, persists, and synchronizes after locale changes", async () => {
     document.body.innerHTML = '<p data-i18n="greeting">Fallback</p>';
     const i18n = createManager();

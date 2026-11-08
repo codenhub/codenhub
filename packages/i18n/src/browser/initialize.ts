@@ -12,6 +12,13 @@ const ELEMENT_NODE = 1;
 const isElement = (node: Node): node is Element => node.nodeType === ELEMENT_NODE;
 const hasTranslationKey = (element: Element): boolean =>
   TRANSLATION_KEY_ATTRIBUTES.some((attribute) => element.hasAttribute(attribute));
+/**
+ * The binding's own writes only replace leaf text and set translated attributes, which the observer does not watch, so a
+ * record that adds an element or changes a key came from other code during a pass, such as a custom element's
+ * `attributeChangedCallback` or `onMissingKey`.
+ */
+const isForeignChange = (mutation: MutationRecord): boolean =>
+  mutation.type === "attributes" || Array.from(mutation.addedNodes).some(isElement);
 
 /**
  * Optional browser integrations applied around a consumer-owned i18n manager.
@@ -165,8 +172,9 @@ export async function initializeBrowserI18n<TLocale extends string>(
     }
     if (root !== undefined) {
       // The full pass covers pending additions and key changes but does not find an element whose last key was removed,
-      // so only those are handled first; the other pending records are dropped with the pass's own writes below.
+      // so only those are handled first; the pass covers the other pending records.
       if (observer !== undefined) {
+        const observedRoot = root;
         const keyRemovedElements = new Set<Element>();
 
         for (const mutation of observer.takeRecords()) {
@@ -175,6 +183,9 @@ export async function initializeBrowserI18n<TLocale extends string>(
           }
         }
         for (const element of keyRemovedElements) {
+          if (!observedRoot.contains(element)) {
+            continue;
+          }
           domTranslator.translateRoot({
             root: element,
             boundary: root,
@@ -186,7 +197,20 @@ export async function initializeBrowserI18n<TLocale extends string>(
         root,
         translate: (key) => internals.lookup(key),
       });
-      // The records left are the full pass's own writes, which need no second pass.
+      handleChangesDuringPass();
+    }
+  };
+  /**
+   * Handles changes other code made during a pass once and drops the pass's own writes, which need no second pass.
+   * Records queued by that follow-up are dropped too: code that answers each translation with another key change, such
+   * as a custom element re-setting its key in `attributeChangedCallback`, would otherwise keep the binding translating
+   * forever.
+   */
+  const handleChangesDuringPass = (): void => {
+    const foreignChanges = observer?.takeRecords().filter(isForeignChange) ?? [];
+
+    if (foreignChanges.length > 0) {
+      handleMutations(foreignChanges);
       observer?.takeRecords();
     }
   };
@@ -223,6 +247,11 @@ export async function initializeBrowserI18n<TLocale extends string>(
     }
 
     for (const changedRoot of changedRoots) {
+      // A record outlives its node's place: an element added and then moved out of the root is no longer the binding's.
+      if (!observedRoot.contains(changedRoot)) {
+        continue;
+      }
+
       let ancestor = changedRoot.parentElement;
       let hasChangedAncestor = false;
 
@@ -320,8 +349,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
       const observedRoot = root;
       observer = new (getMutationObserver(observedRoot))((mutations) => {
         handleMutations(mutations);
-        // The records left are the handler's own writes, which need no second pass.
-        observer?.takeRecords();
+        handleChangesDuringPass();
       });
       observer.observe(observedRoot, {
         attributes: true,
