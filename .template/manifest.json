@@ -1,6 +1,6 @@
 {
   "template": "codenhub/template",
-  "synced": "762782500014da0808a98d681796dfb5bfcde14e",
+  "synced": "c3848d23bb4b1c894ad2e17b9b120456b3fd4609",
   "exceptions": {
     "tsconfig.base.json": "This repository predates the template's TypeScript layout: the packages extend the root tsconfig.json, which sets the shared flags. Adopting tsconfig.base.json means its stricter flags, noUncheckedIndexedAccess and verbatimModuleSyntax, which raised over 160 type errors on 2026-11-08.",
     "tsconfig.root.json": "This repository predates the template's TypeScript layout: the packages extend the root tsconfig.json, which sets the shared flags. Adopting tsconfig.base.json means its stricter flags, noUncheckedIndexedAccess and verbatimModuleSyntax, which raised over 160 type errors on 2026-11-08."
@@ -28,6 +28,8 @@
     ".prettierignore": "blocks",
     ".prettierrc.json5": "blocks",
     ".template/README.md": "canonical",
+    ".template/check.mjs": "canonical",
+    ".template/check.test.mjs": "canonical",
     "AGENTS.md": "blocks",
     "CLAUDE.md": "canonical",
     "CONTRIBUTING.md": "blocks",

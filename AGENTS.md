@@ -14,6 +14,7 @@ This repository is docs-first. [`docs/README.md`](docs/README.md) indexes every 
 - Ask when different interpretations would lead to different work. Do not settle an unstated choice about behavior, public API, a security property, or a recorded decision by assuming it. Do everything independent of the answer first, then ask at the point the answer is needed.
 - Keep changes small and within the requested scope. Preserve unrelated work.
 - A defect found while working on something else is filed and worked around, not fixed on the spot, as [`CONTRIBUTING.md`](CONTRIBUTING.md#a-defect-found-mid-task) describes. That includes a defect in a dependency you also maintain: the fix belongs in that dependency's repository.
+- Files listed in `.template/manifest.json` come from a shared template, and the manifest says which parts the project owns. Before changing one, or when asked to sync with the template, read [`.template/README.md`](.template/README.md); `node .template/check.mjs` reports drift.
 - Never put a secret, token, password, or personal data in a log, an error, a test snapshot, a commit, or a message to the user, including test values you generate. [`docs/guidelines/security.md`](docs/guidelines/security.md) has the rest.
 - Report failing checks, skipped steps, and unfinished work plainly, with the output that shows it. Never describe a partial result as complete.
 - Close by listing material judgment calls and assumptions so they can be confirmed or reversed.
