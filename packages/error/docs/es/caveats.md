@@ -15,7 +15,7 @@ Todo lo que hay en esta página es deliberado, y cada punto ya sorprendió a alg
 
 **Por qué:** los mensajes de error crudos están escritos para desarrolladores y a menudo contienen nombres de tablas, rutas de archivos, fragmentos de consultas o datos de otras personas. ErrorKit solo muestra texto que alguien registró a propósito.
 
-**En su lugar:** levanta tus propios fallos con un código registrado, `err({ code: "signup.email_missing" })`, o pasa un `fallbackMessage` que encaje con el lugar donde estás.
+**En su lugar:** lanza tus propios fallos con un código registrado, `err({ code: "signup.email_missing" })`, o pasa un `fallbackMessage` que encaje con el lugar donde estás.
 
 ## Un código que nadie registró se pierde
 
@@ -23,7 +23,7 @@ Todo lo que hay en esta página es deliberado, y cada punto ya sorprendió a alg
 
 **Por qué:** `code` nombra el mapeo que clasificó el error, así que una rama que dependa de él solo ve códigos que alguien describió. Conservar el código crudo, además, enviaría al cliente en `toJSON()` cualquier código que haya producido una base de datos o un servicio.
 
-**En su lugar:** levanta tus propios errores a partir de un único objeto de códigos, para que una errata sea un error de tipos, o comprueba los códigos en una prueba; consulta [Recetas](recipes.md#crear-tus-propios-errores).
+**En su lugar:** lanza tus propios errores a partir de un único objeto de códigos, para que una errata sea un error de tipos, o comprueba los códigos en una prueba; consulta [Recetas](recipes.md#crear-tus-propios-errores).
 
 ## El registro global es estado compartido
 

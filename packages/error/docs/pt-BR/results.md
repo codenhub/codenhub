@@ -1,7 +1,7 @@
 ---
 title: Resultados
 description: Devolva falhas em vez de lançá-las, com Result, attempt e os helpers que os encadeiam.
-source: a4432271d6805a005f249d0937b11f1d0c70dd1e
+source: ffdc4781d5f79dcb413f86b99dddb898b29b0716
 order: 5
 ---
 
@@ -47,7 +47,7 @@ function validateName(name: string): Result<string> {
 
 Os dois devolvem objetos congelados.
 
-Levante as suas próprias falhas por código, como acima, e não por mensagem. Uma string passada para `err` é comparada como texto de mensagem com os buckets `messages`, `prefixes` e `patterns`, nunca com `codes`. E uma string que não corresponde a nada não vira a mensagem: `err("Name is required")` te dá `"An unexpected error occurred."`, a não ser que uma mensagem, um prefixo ou um pattern registrado corresponda a ela. É a mesma regra que mantém texto cru longe da tela, aplicada às suas próprias strings também. O ErrorKit não faz panelinha, nem com você.
+Lance as suas próprias falhas por código, como acima, e não por mensagem. Uma string passada para `err` é comparada como texto de mensagem com os buckets `messages`, `prefixes` e `patterns`, nunca com `codes`. E uma string que não corresponde a nada não vira a mensagem: `err("Name is required")` te dá `"An unexpected error occurred."`, a não ser que uma mensagem, um prefixo ou um pattern registrado corresponda a ela. É a mesma regra que mantém texto cru longe da tela, aplicada às suas próprias strings também. O ErrorKit não faz panelinha, nem com você.
 
 ## Lendo resultados
 
@@ -128,17 +128,20 @@ import { attemptAsync, err, ok, orElse } from "@codenhub/error";
 const projects = orElse(await attemptAsync(() => api.listProjects()), (error) => (error.messageKey === "error.browser.requestFailed" ? ok(cache.projects) : err(error)));
 ```
 
-`all` transforma vários resultados em um só, e mantém o tipo de cada posição quando você passa uma tupla. Para chamadas que rodam em paralelo, faça o `await` delas juntas antes:
+`all` transforma vários resultados em um só, e mantém o tipo de cada posição quando você passa uma tupla. Para chamadas que rodam em paralelo, faça o `await` delas juntas antes, em uma linha só para isso:
 
 ```ts
 import { all, attemptAsync } from "@codenhub/error";
 
-const loaded = all(await Promise.all([attemptAsync(() => api.user(id)), attemptAsync(() => api.projects(id))]));
+const settled = await Promise.all([attemptAsync(() => api.user(id)), attemptAsync(() => api.projects(id))]);
+const loaded = all(settled);
 
 if (loaded.ok) {
   const [user, projects] = loaded.value;
 }
 ```
+
+A linha extra não é enfeite. Escrito de uma vez só, `all(await Promise.all([...]))`, o TypeScript deduz o tipo da lista a partir do que `all` aceita, e não do que as chamadas devolvem, e toda posição sai como "um usuário ou uma lista de projetos". A versão em duas linhas mantém `user` como um usuário.
 
 Os helpers não capturam exceções. Se um mapper ou um callback de `match` lançar, a exceção se propaga como se propagaria de qualquer outra função. Quando um passo pode lançar, embrulhe esse passo em `attempt` ou `attemptAsync`.
 

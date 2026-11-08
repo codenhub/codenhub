@@ -2,7 +2,7 @@
 title: Resultados
 description: Devuelve los fallos en lugar de lanzarlos, con Result, attempt y los helpers que los encadenan.
 order: 5
-source: a4432271d6805a005f249d0937b11f1d0c70dd1e
+source: ffdc4781d5f79dcb413f86b99dddb898b29b0716
 ---
 
 # Resultados
@@ -47,7 +47,7 @@ function validateName(name: string): Result<string> {
 
 Ambos devuelven objetos congelados.
 
-Levanta tus propios fallos por código, como arriba, no por mensaje. Un string que se le pasa a `err` se compara como texto de mensaje contra los buckets `messages`, `prefixes` y `patterns`, nunca contra `codes`. Y un string que no coincide no se convierte en el mensaje: `err("Name is required")` te da `"An unexpected error occurred."`, salvo que coincida con un mensaje, prefijo o patrón registrado. Es la misma regla que mantiene el texto crudo fuera de la pantalla, aplicada también a tus propios strings. ErrorKit no hace excepciones, ni siquiera contigo.
+Lanza tus propios fallos por código, como arriba, no por mensaje. Un string que se le pasa a `err` se compara como texto de mensaje contra los buckets `messages`, `prefixes` y `patterns`, nunca contra `codes`. Y un string que no coincide no se convierte en el mensaje: `err("Name is required")` te da `"An unexpected error occurred."`, salvo que coincida con un mensaje, prefijo o patrón registrado. Es la misma regla que mantiene el texto crudo fuera de la pantalla, aplicada también a tus propios strings. ErrorKit no hace excepciones, ni siquiera contigo.
 
 ## Leer resultados
 
@@ -128,17 +128,20 @@ import { attemptAsync, err, ok, orElse } from "@codenhub/error";
 const projects = orElse(await attemptAsync(() => api.listProjects()), (error) => (error.messageKey === "error.browser.requestFailed" ? ok(cache.projects) : err(error)));
 ```
 
-`all` convierte varios resultados en uno, y conserva el tipo de cada posición cuando le pasas una tupla. Para llamadas que se ejecutan en paralelo, espéralas juntas primero:
+`all` convierte varios resultados en uno, y conserva el tipo de cada posición cuando le pasas una tupla. Para llamadas que se ejecutan en paralelo, espéralas juntas primero, en una línea aparte:
 
 ```ts
 import { all, attemptAsync } from "@codenhub/error";
 
-const loaded = all(await Promise.all([attemptAsync(() => api.user(id)), attemptAsync(() => api.projects(id))]));
+const settled = await Promise.all([attemptAsync(() => api.user(id)), attemptAsync(() => api.projects(id))]);
+const loaded = all(settled);
 
 if (loaded.ok) {
   const [user, projects] = loaded.value;
 }
 ```
+
+La línea extra no es decoración. Escrito de una sola vez, `all(await Promise.all([...]))`, TypeScript deduce el tipo de la lista a partir de lo que acepta `all` y no de lo que devuelven las llamadas, y cada posición termina siendo "un usuario o una lista de proyectos". La versión en dos líneas mantiene a `user` como un usuario.
 
 Los helpers no atrapan nada. Si un mapper o un callback de `match` lanza una excepción, esta se propaga como lo haría desde cualquier otra función. Cuando un paso puede lanzar, envuelve ese paso en `attempt` o `attemptAsync`.
 

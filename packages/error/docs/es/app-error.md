@@ -2,7 +2,7 @@
 title: El AppError
 description: Cada campo de un AppError, lo que promete cada uno, qué pasa cuando un error se normaliza dos veces y cómo enviar uno de un servidor a un cliente.
 order: 2
-source: 22c25e35a2fe369705cc18d5d5ed7003bd1e2bed
+source: 68f6384e4038acf989b325414981fcc56f2d4c52
 ---
 
 # El AppError
@@ -76,7 +76,7 @@ El flag es estricto a propósito. Un fallo que pudo ocurrir después de que el s
 Hay dos consecuencias fáciles de pasar por alto:
 
 - **El flag describe la llamada que falló, que puede estar varias capas más adentro.** Supongamos que una función `publish()` sube un archivo y después no logra guardar un registro, con `ECONNREFUSED`. El error es reintentable, pero eso vale para el guardado, no para `publish()`: repetir `publish()` vuelve a subir el archivo. Reintenta según el flag solo donde tu código hizo la llamada que falló.
-- **El flag habla de un error que levantó tu propio runtime.** Un servidor que reenvía su fallo upstream como `{ "code": "ECONNREFUSED" }` en el cuerpo de una respuesta coincide con el mismo mapeo, pero esa solicitud sí llegó al servidor. Clasifica los cuerpos de respuesta contra un registro que tenga los códigos de ese servicio y ningún preset de red; consulta [Recetas](recipes.md#clasificar-respuestas-http).
+- **El flag habla de un error que lanzó tu propio runtime.** Un servidor que reenvía su fallo upstream como `{ "code": "ECONNREFUSED" }` en el cuerpo de una respuesta coincide con el mismo mapeo, pero esa solicitud sí llegó al servidor. Clasifica los cuerpos de respuesta contra un registro que tenga los códigos de ese servicio y ningún preset de red, como hace el registro de facturación en [Registros](registries.md#el-registro-global-o-uno-propio).
 
 ### `details`
 
@@ -124,7 +124,15 @@ const again = createAppError(first, { fallbackMessage: "Falló el pago." });
 again === first; // true, cuando billingRegistry coincidió con `caught`
 ```
 
-Pasar un `AppError` devuelve el mismo objeto, salvo que un `fallbackMessage` lo vuelva a redactar o que `details` agregue claves, y en ese caso recibes uno nuevo con la misma clasificación. `fallbackMessage` y `maxDepth` nunca cambian la clasificación. La redacción todavía se puede completar, una sola vez: un `fallbackMessage` sí redacta un error `"unknown"` que todavía tiene el mensaje por defecto, porque ninguna capa anterior eligió una redacción. Una vez que alguna capa la eligió, su mensaje se queda:
+Lo que recibes depende de las opciones que pasas junto con el `AppError`:
+
+- **Sin opciones:** el mismo objeto.
+- **`maxDepth`:** el mismo objeto. La profundidad solo importa cuando hay algo que buscar, y sin un `registry` no se vuelve a buscar nada.
+- **`fallbackMessage`:** el mismo objeto, con una excepción. Un error `"unknown"` que todavía tiene el mensaje por defecto recibe un `AppError` nuevo redactado con tu mensaje de respaldo, porque ninguna capa anterior a la tuya eligió una redacción. Una vez que alguna capa la eligió, su mensaje se queda. Un mensaje de respaldo igual al mensaje por defecto no cambia nada, así que devuelve el mismo objeto.
+- **`details`:** un `AppError` nuevo con la misma clasificación cuando tus detalles agregan claves que le faltan. Las claves que ya tiene conservan sus valores.
+- **`registry`:** la única forma de cambiar la clasificación, que se explica más abajo.
+
+La excepción de `fallbackMessage` es lo que permite que una capa externa redacte un fallo que la interna dejó genérico:
 
 ```ts
 const inner = await attemptAsync(() => db.loadProject(id)); // aquí no hay mensaje de respaldo
@@ -186,7 +194,7 @@ Con la profundidad por defecto, una cadena de `cause` por sí sola se sigue más
 
 El mensaje por defecto se exporta como `DEFAULT_APP_ERROR_MESSAGE`, para las pruebas y para comparar.
 
-Una opción inválida es un error de programación, así que lanza `TypeError` antes de empezar cualquier trabajo. La entrada común nunca lanza excepciones: `createAppError` acepta cualquier valor, incluidos `null`, números y objetos cuyas propiedades lanzan una excepción al leerlas. Normalizar un error no debería ser una nueva forma de fallar.
+Una opción inválida es un error de programación, así que lanza `TypeError` antes de empezar cualquier trabajo. La entrada común nunca lanza excepciones: `createAppError` acepta cualquier valor, incluidos `null`, números y objetos cuyas propiedades lanzan una excepción al leerlas. Normalizar un error no debería ser una nueva forma de fallar. La única excepción es un registro que escribiste a mano y que no respeta la forma de un registro, como uno cuyas búsquedas lanzan una excepción o devuelven feedback sin mensaje; consulta [Registros](registries.md#combinar-y-congelar).
 
 ## Siguiente
 

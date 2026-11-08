@@ -1,7 +1,7 @@
 ---
 title: O AppError
 description: Cada campo de um AppError, o que cada um promete, o que acontece quando um erro é normalizado duas vezes e como mandar um do servidor para o cliente.
-source: 22c25e35a2fe369705cc18d5d5ed7003bd1e2bed
+source: 68f6384e4038acf989b325414981fcc56f2d4c52
 order: 2
 ---
 
@@ -76,7 +76,7 @@ A flag é rígida de propósito. Uma falha que pode ter acontecido depois que o 
 Duas consequências passam batido com facilidade:
 
 - **A flag descreve a chamada que falhou, que pode estar vários wrappers abaixo.** Digamos que uma função `publish()` faz upload de um arquivo e depois falha ao salvar um registro com `ECONNREFUSED`. O erro é retryable, mas isso vale para o salvamento, não para `publish()`: repetir `publish()` faz o upload do arquivo de novo. Use a flag para tentar de novo só onde o seu código fez a chamada que falhou.
-- **A flag é sobre um erro que o seu próprio runtime levantou.** Um servidor que repassa a falha de um serviço do qual depende como `{ "code": "ECONNREFUSED" }` no corpo da resposta corresponde ao mesmo mapeamento, mas aquela requisição chegou, sim, ao servidor. Classifique corpos de resposta contra um registro que tenha os códigos daquele serviço e nenhum preset de rede; veja [Receitas](recipes.md#classificar-respostas-http).
+- **A flag é sobre um erro que o seu próprio runtime lançou.** Um servidor que repassa a falha de um serviço do qual depende como `{ "code": "ECONNREFUSED" }` no corpo da resposta corresponde ao mesmo mapeamento, mas aquela requisição chegou, sim, ao servidor. Classifique corpos de resposta contra um registro que tenha os códigos daquele serviço e nenhum preset de rede, como faz o registro de cobrança em [Registros](registries.md#o-registro-global-ou-um-próprio).
 
 ### `details`
 
@@ -124,7 +124,15 @@ const again = createAppError(first, { fallbackMessage: "O checkout falhou." });
 again === first; // true, quando billingRegistry reconheceu `caught`
 ```
 
-Passar um `AppError` devolve o mesmo objeto, a não ser que um `fallbackMessage` mude o texto dele ou `details` acrescente chaves, e aí você recebe um novo com a mesma classificação. `fallbackMessage` e `maxDepth` nunca mudam a classificação. O texto ainda pode ser preenchido, uma vez: um `fallbackMessage` dá texto, sim, a um erro `"unknown"` que ainda tem a mensagem padrão, porque nenhuma camada antes dele escolheu texto nenhum. Depois que uma camada escolheu, a mensagem fica:
+O que você recebe de volta depende das opções que passa junto com o `AppError`:
+
+- **Sem opções:** o mesmo objeto.
+- **`maxDepth`:** o mesmo objeto. A profundidade só importa quando há algo para vasculhar, e nada é vasculhado de novo sem um `registry`.
+- **`fallbackMessage`:** o mesmo objeto, com uma exceção. Um erro `"unknown"` que ainda tem a mensagem padrão vira um novo `AppError` com o texto do seu fallback, porque nenhuma camada antes da sua escolheu texto nenhum. Depois que uma camada escolheu, a mensagem fica. Um fallback igual à mensagem padrão não muda nada, então devolve o mesmo objeto.
+- **`details`:** um novo `AppError` com a mesma classificação, quando os seus details acrescentam chaves que ele não tem. Chaves que ele já tem mantêm os valores.
+- **`registry`:** o único jeito de mudar a classificação, explicado mais abaixo.
+
+A exceção do `fallbackMessage` é o que permite a uma camada de fora dar texto a uma falha que a de dentro deixou genérica:
 
 ```ts
 const inner = await attemptAsync(() => db.loadProject(id)); // sem fallback aqui
@@ -186,7 +194,7 @@ Na profundidade padrão, uma cadeia de `cause` sozinha é seguida mais longe, at
 
 A mensagem padrão é exportada como `DEFAULT_APP_ERROR_MESSAGE`, para testes e para comparar.
 
-Uma opção inválida é um erro de programação, então lança `TypeError` antes de qualquer trabalho começar. Entrada comum nunca lança: `createAppError` aceita qualquer valor, incluindo `null`, números e objetos cujas propriedades lançam exceção quando lidas. Normalizar um erro não deveria ser um jeito novo de falhar.
+Uma opção inválida é um erro de programação, então lança `TypeError` antes de qualquer trabalho começar. Entrada comum nunca lança: `createAppError` aceita qualquer valor, incluindo `null`, números e objetos cujas propriedades lançam exceção quando lidas. Normalizar um erro não deveria ser um jeito novo de falhar. A única exceção é um registro que você escreveu à mão e que foge do formato de um registro, como um cujas buscas lançam exceção ou devolvem feedback sem mensagem; veja [Registros](registries.md#combinando-e-congelando).
 
 ## Próximos passos
 

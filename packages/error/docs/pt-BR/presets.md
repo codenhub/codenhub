@@ -46,7 +46,7 @@ As tabelas abaixo listam todos os mapeamentos, então dá para montar um catálo
 
 ## Navegador
 
-Para código que roda no navegador. Ele reconhece os nomes de `DOMException` que as Web APIs levantam, um `fetch` que falhou e um chunk de code splitting que não carregou.
+Para código que roda no navegador. Ele reconhece os nomes de `DOMException` que as Web APIs lançam, um `fetch` que falhou e um chunk de code splitting que não carregou.
 
 | Nome                 | `messageKey`                         | Pode repetir |
 | -------------------- | ------------------------------------ | ------------ |
@@ -78,7 +78,7 @@ Observações:
 
 ## Node.js
 
-Para código de servidor. Ele reconhece falhas de rede de sockets, de consultas DNS e do `fetch` nativo, que coloca a falha de verdade no `cause` do seu `TypeError: fetch failed`, e os erros que um `AbortSignal` levanta.
+Para código de servidor. Ele reconhece falhas de rede de sockets, de consultas DNS e do `fetch` nativo, que coloca a falha de verdade no `cause` do seu `TypeError: fetch failed`, e os erros que um `AbortSignal` lança.
 
 | Código                    | `messageKey`                             | Pode repetir |
 | ------------------------- | ---------------------------------------- | ------------ |
@@ -107,9 +107,9 @@ Para código de servidor. Ele reconhece falhas de rede de sockets, de consultas 
 Observações:
 
 - **As mensagens falam de "um serviço do qual isto depende".** No servidor, a chamada que falha é o seu servidor chamando outra coisa, então quem lê a mensagem não é quem teve a conexão com problema, e as mensagens não pedem que essa pessoa confira a conexão dela.
-- **Só falhas antes de a conexão ser feita podem ser repetidas**: conexão recusada, um endereço que não foi resolvido, um host inalcançável, um timeout de conexão. Um reset, um socket fechado ou um timeout de resposta podem vir depois de uma requisição sobre a qual o outro lado já agiu. `ETIMEDOUT` também não pode ser repetido, porque o Node.js o levanta tanto em uma tentativa de conexão quanto em um socket que já levou a requisição.
+- **Só falhas antes de a conexão ser feita podem ser repetidas**: conexão recusada, um endereço que não foi resolvido, um host inalcançável, um timeout de conexão. Um reset, um socket fechado ou um timeout de resposta podem vir depois de uma requisição sobre a qual o outro lado já agiu. `ETIMEDOUT` também não pode ser repetido, porque o Node.js o lança tanto em uma tentativa de conexão quanto em um socket que já levou a requisição.
 - **Fora da cobertura:** códigos de sistema de arquivos como `ENOENT`, porque a mensagem certa depende do que a aplicação estava fazendo, e códigos de certificado TLS, que só quem opera o sistema consegue resolver.
-- **`TimeoutError` e `AbortError` também são nomes do preset de navegador.** Eles são os nomes de `DOMException` que um `AbortSignal` levanta, como em `fetch(url, { signal: AbortSignal.timeout(5000) })`. Código de servidor deve usar este preset para eles: a mensagem de `TimeoutError` do preset de navegador pede para a pessoa conferir a conexão com a internet. Quando você faz o merge dos dois, vence o último.
+- **`TimeoutError` e `AbortError` também são nomes do preset de navegador.** Eles são os nomes de `DOMException` que um `AbortSignal` lança, como em `fetch(url, { signal: AbortSignal.timeout(5000) })`. Código de servidor deve usar este preset para eles: a mensagem de `TimeoutError` do preset de navegador pede para a pessoa conferir a conexão com a internet. Quando você faz o merge dos dois, vence o último.
 - Os códigos foram observados no Node.js 24. Outros runtimes de servidor, como Deno ou Bun, podem reportar falhas de rede de outro jeito.
 
 ## HTTP
@@ -150,7 +150,7 @@ Observações:
 
 ## Supabase
 
-Para código que chama o Supabase. Ele reconhece os códigos de erro do Supabase Auth com que uma pessoa usando a sua aplicação pode esbarrar e sobre os quais pode fazer algo, alguns códigos de erro do PostgreSQL e os nomes de erro que o cliente do Supabase levanta.
+Para código que chama o Supabase. Ele reconhece os códigos de erro do Supabase Auth com que uma pessoa usando a sua aplicação pode esbarrar e sobre os quais pode fazer algo, alguns códigos de erro do PostgreSQL e os nomes de erro que o cliente do Supabase lança.
 
 Códigos do Supabase Auth:
 
@@ -209,7 +209,7 @@ Códigos do PostgreSQL, como a API de banco de dados do Supabase os devolve:
 | `42703` | Uma coluna não existe                        | `error.supabase.database.undefinedColumn`     | Não          |
 | `57014` | Uma consulta demorou demais                  | `error.supabase.database.timeout`             | Não          |
 
-Nomes de erro levantados pelo cliente do Supabase:
+Nomes de erro lançados pelo cliente do Supabase:
 
 | Nome                      | `messageKey`                       | Pode repetir |
 | ------------------------- | ---------------------------------- | ------------ |
@@ -221,7 +221,7 @@ Nomes de erro levantados pelo cliente do Supabase:
 Observações:
 
 - **Nada pode ser repetido.** Erros de rate limit precisam de uma espera que a flag não consegue expressar, então tentar de novo na hora só conta contra o limite outra vez; as mensagens deles dizem quanto tempo esperar. Erros de Edge Functions chegam depois que a função pode já ter rodado.
-- **`AuthSessionMissingError` não tem código.** É o que a maioria das chamadas de Auth devolve quando ninguém está logado, e ele é classificado como sessão encerrada. `pkce_code_verifier_not_found` é levantado pelo próprio cliente, quando um link de login é aberto em um navegador diferente do que o pediu.
+- **`AuthSessionMissingError` não tem código.** É o que a maioria das chamadas de Auth devolve quando ninguém está logado, e ele é classificado como sessão encerrada. `pkce_code_verifier_not_found` é lançado pelo próprio cliente, quando um link de login é aberto em um navegador diferente do que o pediu.
 - **Fora da cobertura:** códigos de Auth que só um desenvolvedor consegue resolver, como `bad_jwt` e as famílias `hook_*` e `saml_*`. Eles resultam em `"unknown"`, que é exatamente o que você quer ver reportado.
 - **`23505` é genérico de propósito.** "Um valor único já está em uso" não tem como dizer qual valor. Registre o seu próprio mapeamento de `23505` onde você souber, como o gerenciador de projetos faz em [Primeiros passos](getting-started.md#2-crie-um-módulo-que-configura-os-erros), ou classifique os erros de uma tabela específica contra um registro só dela.
 

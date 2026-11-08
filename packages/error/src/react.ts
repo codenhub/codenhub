@@ -95,8 +95,14 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
     }
   }
 
-  override componentDidUpdate(previousProps: AppErrorBoundaryProps): void {
-    if (this.state.caught !== null && haveKeysChanged(previousProps.resetKeys, this.props.resetKeys)) {
+  override componentDidUpdate(previousProps: AppErrorBoundaryProps, previousState: AppErrorBoundaryState): void {
+    // Only an error already on screen before this update is reset. When the key change is what made
+    // a child throw, resetting now would render the same child, throw again, and report it twice.
+    if (
+      previousState.caught !== null &&
+      this.state.caught !== null &&
+      haveKeysChanged(previousProps.resetKeys, this.props.resetKeys)
+    ) {
       this.reset();
     }
   }

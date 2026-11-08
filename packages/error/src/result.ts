@@ -329,8 +329,10 @@ type OkValues<R extends readonly Result<unknown>[]> = {
  * Combines a list of Results into one: an `Ok` holding every value in order, or the first `Err`.
  *
  * A tuple keeps each position's type, so `all([ok(1), ok("a")] as const)` is a
- * `Result<readonly [number, string]>`. For calls that run in parallel, await them first:
- * `all(await Promise.all([attemptAsync(a), attemptAsync(b)]))`.
+ * `Result<readonly [number, string]>`. For calls that run in parallel, await them in a statement of
+ * their own, `const settled = await Promise.all([attemptAsync(a), attemptAsync(b)])`, then call
+ * `all(settled)`. Written inline as `all(await Promise.all([...]))`, the list is inferred against
+ * `all`'s parameter and each position widens to a union of every value type.
  *
  * @typeParam R - The list of Results to combine.
  * @param results - The Results to combine.

@@ -1,7 +1,7 @@
 ---
 title: Receitas
 description: Exemplos completos para fetch e códigos de status HTTP, chamadas ao Supabase, os seus próprios códigos de erro, novas tentativas seguras, traduções, envio para um error tracker e testes.
-source: 62f3b3080e7bab16f71a7232436d7ca36492fd90
+source: dafb18aafc4badff0516e1a1c33f780b45206f6d
 order: 7
 ---
 
@@ -11,7 +11,7 @@ Cada receita aqui resolve um problema do começo ao fim, usando as peças das p�
 
 ## Classificar respostas HTTP
 
-O `fetch` só rejeita quando a requisição nem chegou a ser feita. Uma resposta com status `404` ou `500` resolve normalmente: o servidor respondeu, e o `fetch` considera o trabalho dele feito. Então `createAppError(response)` não tem nada para reconhecer e devolve um erro `"unknown"`. Códigos de status precisam de um mapeamento próprio.
+O `fetch` só rejeita quando nenhuma resposta chegou. Uma resposta com status `404` ou `500` resolve normalmente: o servidor respondeu, e o `fetch` considera o trabalho dele feito. Então `createAppError(response)` não tem nada para reconhecer e devolve um erro `"unknown"`. Códigos de status precisam de um mapeamento próprio.
 
 Passe o status como `code` e classifique-o contra o preset de HTTP. Mantenha esse preset fora do registro global: códigos de status são números curtos que poderiam colidir com os códigos de outros serviços, e só significam algo para respostas.
 
@@ -36,11 +36,13 @@ export async function getJson<T>(url: string): Promise<Result<T>> {
 }
 ```
 
-O `fetch` em si só rejeita quando nenhuma resposta chegou, como numa falha de rede, num bloqueio de CORS ou num abort, e a requisição pode ter chegado ao servidor mesmo assim. Qualquer resposta, `404` e `500` incluídos, resolve, então conferir o status é com você.
+Nenhuma resposta pode significar uma falha de rede, um bloqueio de CORS ou um abort, e em qualquer um desses casos a requisição pode ter chegado ao servidor mesmo assim. Toda resposta que chegou resolve, então conferir o status é com você.
 
 O corpo fica de fora de propósito: ele iria parar em `originalError` e, de lá, no seu error tracker, então acrescente como `body` só quando for seguro logá-lo. Nunca passe o corpo como `cause`: o `createAppError` procura dentro de `cause`, e um `code` no corpo poderia vencer o status. Um status que o preset não mapeia, como `418`, resulta na mensagem de fallback. [Presets](presets.md#http) lista o que ele mapeia. Para dar um texto próprio a um status em um endpoint, como um `401` de um formulário de login, monte um registro a partir do preset e acrescente o seu: `createErrorRegistry([httpErrorRegistry])`, depois `.codes.add("401", …)`.
 
 Quando o servidor é seu e manda `{ error: error.toJSON() }`, reconstrua o erro dele: `appErrorFromJSON(body.error)`. Quando o corpo inteiro é o erro serializado, passe `appErrorFromJSON(body)`. Veja [O AppError](app-error.md#mandando-um-erro-para-o-outro-lado).
+
+Escolha um dos dois por endpoint, não os dois. O `appErrorFromJSON` não tem como te dizer se reconheceu o formato: um valor que ele não reconhece é classificado como entrada crua e vai parar em `originalError` do jeito que está, que é justamente o que a chamada só com o status, acima, mantém longe do seu tracker. Use `appErrorFromJSON` em endpoints que sempre mandam um erro serializado, e o status em todo o resto.
 
 ## Lidar com chamadas ao Supabase
 
@@ -70,26 +72,25 @@ Erros de banco funcionam do mesmo jeito: `supabase.from("projects").insert(row)`
 
 ## Lançar os seus próprios erros
 
-Um erro que você levanta com um código é tão bom quanto o registro dele. `err({ code: "project.name_mising" })`, com um erro de digitação ou com um mapeamento que ninguém adicionou, é um erro `"unknown"` cujo `code` é `null`, e uma checagem `error.code === "project.name_missing"` nunca dispara. Nada te avisa. Achou o erro de digitação? Pois é, o code review também não vai achar.
+Um erro que você lança com um código é tão bom quanto o registro dele. `err({ code: "project.name_mising" })`, com um erro de digitação ou com um mapeamento que ninguém adicionou, é um erro `"unknown"` cujo `code` é `null`, e uma checagem `error.code === "project.name_missing"` nunca dispara. Nada te avisa, e um erro de digitação de uma letra passa batido pelo code review.
 
-Mantenha os seus códigos e o feedback deles em um único objeto, registre-os a partir dele e levante erros por uma função que só aceita as chaves desse objeto. Aí um erro de digitação vira erro de tipo, e todo código que você consegue levantar está registrado:
+Mantenha os seus códigos e o feedback deles em um único objeto, registre-os a partir dele e lance erros por uma função que só aceita as chaves desse objeto. Aí um erro de digitação vira erro de tipo, e todo código que você consegue lançar está registrado:
 
 ```ts
-import { err, getErrorRegistry, type ErrorFeedback } from "@codenhub/error";
+// src/project-errors.ts
+import { err, type ErrorFeedback } from "@codenhub/error";
 
 export const projectErrors = {
-  "project.name_missing": { message: "Dê um nome ao projeto e salve de novo.", source: "my-app.projects" },
-  "project.not_found": { message: "Não encontramos esse projeto.", source: "my-app.projects" },
+  "project.name_missing": { messageKey: "error.project.nameMissing", message: "Dê um nome ao projeto e salve de novo.", source: "my-app.projects" },
+  "project.not_found": { messageKey: "error.project.notFound", message: "Não encontramos esse projeto.", source: "my-app.projects" },
 } satisfies Record<string, ErrorFeedback>;
 
 export type ProjectErrorCode = keyof typeof projectErrors;
 
-getErrorRegistry().codes.addList(Object.entries(projectErrors));
-
 export const projectError = (code: ProjectErrorCode, details?: Record<string, unknown>) => err({ code }, { details });
 ```
 
-Assim, `projectError("project.name_missing", { field: "name" })` diz exatamente o que é, e `error.code` pode ser comparado com um `ProjectErrorCode`.
+Registre o objeto na função `setUpErrors` de [Primeiros passos](getting-started.md#2-crie-um-módulo-que-configura-os-erros), com `registry.codes.addList(Object.entries(projectErrors))`. Assim, `projectError("project.name_missing", { field: "name" })` diz exatamente o que é, e `error.code` pode ser comparado com um `ProjectErrorCode`.
 
 Quando os códigos são registrados em mais de um lugar, confira-os em um teste; veja [Configurar erros nos testes](#configurar-erros-nos-testes).
 
@@ -139,6 +140,16 @@ import { browserErrorNames, browserErrorPatterns } from "@codenhub/error/registr
 const browserKeys = new Set([...Object.values(browserErrorNames).map((feedback) => feedback.messageKey), ...browserErrorPatterns.map(([, feedback]) => feedback.messageKey)]);
 ```
 
+Um erro `"unknown"` não tem chave: nada correspondeu, então nada deu nome a ele. Traduza esse erro pela mensagem que você passa, para que a falha mais comum não seja justamente a que fica em inglês:
+
+```ts
+import { createAppError, DEFAULT_APP_ERROR_MESSAGE } from "@codenhub/error";
+
+const error = createAppError(caught, { fallbackMessage: translate("error.unexpected") || DEFAULT_APP_ERROR_MESSAGE });
+```
+
+Isso cobre só os erros `"unknown"`. Um mapeamento que você registrou sem `messageKey` já tem mensagem, então o `fallbackMessage` o deixa em inglês. Dê uma chave a cada mapeamento que você registrar. Além disso, o fallback só dá texto a um erro `"unknown"` que nenhuma camada ainda redigiu, então toda camada que passa um `fallbackMessage` deveria passar um traduzido.
+
 O ErrorKit não vem com traduções. As chaves são o contrato; as palavras são suas.
 
 ## Reportar para um error tracker
@@ -180,34 +191,38 @@ Aqui o `signal` precisa vir de um `AbortController` que este código controla. A
 
 ## Configurar erros nos testes
 
-O registro global é compartilhado por todos os testes do mesmo arquivo. Substitua-o em um hook de setup para que cada teste comece com os mesmos mapeamentos:
+O registro global é compartilhado por todos os testes do mesmo arquivo. Substitua-o em um hook de setup para que cada teste comece com os mesmos mapeamentos, e depois rode a sua configuração de novo no registro novo:
 
 ```ts
 import { createErrorRegistry, setErrorRegistry } from "@codenhub/error";
-import { supabaseErrorRegistry } from "@codenhub/error/registries/supabase";
 import { beforeEach } from "vitest";
 
+import { setUpErrors } from "../src/errors";
+
 beforeEach(() => {
-  setErrorRegistry(createErrorRegistry([supabaseErrorRegistry]));
+  setErrorRegistry(createErrorRegistry());
+  setUpErrors();
 });
 ```
 
+A segunda linha é a que todo mundo esquece. Um registro novo começa vazio, então sem ela todo código que a sua aplicação registra vira `"unknown"`, e testes que passam no navegador falham no test runner sem nenhum motivo aparente. Se a sua `setUpErrors` recebe um preset de runtime, passe o do lugar onde os seus testes rodam.
+
 Faça as asserções sobre `code`, `messageKey` ou `type`, e não sobre `message`. Mensagens são escritas para pessoas e acabam sendo reescritas; códigos e chaves são a parte estável. Um teste que quebra porque alguém corrigiu uma vírgula é um teste que o time aprende a ignorar.
 
-Para pegar um código que a sua aplicação levanta mas nunca registrou, liste-os e confira cada um contra o registro que a sua aplicação monta na inicialização:
+Para pegar um código que a sua aplicação lança mas nunca registrou, confira cada um contra o registro que a sua configuração monta. Com o hook acima no lugar, os códigos de [Lançar os seus próprios erros](#lançar-os-seus-próprios-erros) estão a um `Object.keys` de distância:
 
 ```ts
 import { getErrorRegistry } from "@codenhub/error";
 import { expect, it } from "vitest";
 
-import { RAISED_CODES } from "../src/errors";
-import { setUpErrors } from "../src/setup-errors";
+import { projectErrors } from "../src/project-errors";
 
-it.each(RAISED_CODES)("registers %s", (code) => {
-  setUpErrors();
+it.each(Object.keys(projectErrors))("registers %s", (code) => {
   expect(getErrorRegistry().codes.get(code)).toBeDefined();
 });
 ```
+
+Isso confere cada código de `projectErrors`. Um código lançado sem `projectError`, como um `err({ code })` escrito à mão, fica de fora tanto do tipo quanto deste teste, então lance todo erro do projeto por essa função.
 
 ## Próximos passos
 

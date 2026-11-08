@@ -49,7 +49,7 @@ Catches exceptions generated in descendant components. Unhandled exceptions will
 #### AppErrorBoundary › componentDidUpdate
 
 ```ts
-componentDidUpdate(previousProps: AppErrorBoundaryProps): void;
+componentDidUpdate(previousProps: AppErrorBoundaryProps, previousState: AppErrorBoundaryState): void;
 ```
 
 Called immediately after updating occurs. Not called for the initial render.

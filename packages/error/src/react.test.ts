@@ -178,6 +178,34 @@ describe("AppErrorBoundary", () => {
     expect(container.textContent).toBe("recovered");
   });
 
+  it("should not reset when the reset key change is what made a child throw", () => {
+    const onError = vi.fn();
+    const onReset = vi.fn();
+    const Page = ({ route }: { route: string }): ReactNode => {
+      if (route === "/broken") {
+        throw new Error("broken page");
+      }
+      return route;
+    };
+    let setRoute: (route: string) => void = () => {};
+    const App = (): ReactNode => {
+      const [route, setRouteState] = useState("/");
+      setRoute = setRouteState;
+      return createElement(
+        AppErrorBoundary,
+        { fallback: () => "failed", onError, onReset, resetKeys: [route] },
+        createElement(Page, { route }),
+      );
+    };
+
+    render(createElement(App));
+    act(() => setRoute("/broken"));
+
+    expect(container.textContent).toBe("failed");
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onReset).not.toHaveBeenCalled();
+  });
+
   it("should call onReset when it resets", () => {
     const onReset = vi.fn();
     let reset: () => void = () => {};

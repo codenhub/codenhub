@@ -201,6 +201,8 @@ export const setErrorRegistry = (registry: ErrorRegistry): void => {
  *
  * @param registry - The ErrorRegistry instance to freeze.
  * @returns An immutable `ReadonlyErrorRegistry` snapshot.
+ * @throws {TypeError} If `registry` does not implement the readable registry interface or contains
+ * an invalid registry entry.
  */
 export const freezeRegistry = (registry: ErrorRegistry): ReadonlyErrorRegistry => {
   const snapshot = createErrorRegistry([registry]);

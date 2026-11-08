@@ -1,7 +1,7 @@
 ---
 title: Primeiros passos
 description: Configure um registro para uma aplicação real, normalize as falhas onde elas entram e decida o que mostrar e o que reportar.
-source: 1927cadc1838a78c330d1b7d9e828e3fbe030c10
+source: c9d1b5e107a70c3c663bc9c847dc853be4390dea
 order: 1
 ---
 
@@ -19,7 +19,7 @@ pnpm add @codenhub/error
 
 ## 2. Crie um módulo que configura os erros
 
-Coloque toda a configuração do registro em um módulo e importe-o uma vez, antes de qualquer outra coisa rodar. O registro é estado comum de módulo: tudo o que você registra fica visível para todas as chamadas seguintes de `createAppError` que usam a mesma cópia do pacote.
+Coloque toda a configuração do registro em uma função e chame-a uma vez, antes de qualquer outra coisa rodar. O registro é estado comum de módulo: tudo o que você registra fica visível para todas as chamadas seguintes de `createAppError` que usam a mesma cópia do pacote. Uma função, em vez de código que roda na importação, permite que um teste a chame de novo depois de substituir o registro; veja [Configurar erros nos testes](recipes.md#configurar-erros-nos-testes).
 
 ```ts
 // src/errors.ts
@@ -27,38 +27,44 @@ import { getErrorRegistry } from "@codenhub/error";
 import { browserErrorRegistry } from "@codenhub/error/registries/browser";
 import { supabaseErrorRegistry } from "@codenhub/error/registries/supabase";
 
-const registry = getErrorRegistry();
+export function setUpErrors(): void {
+  const registry = getErrorRegistry();
 
-// 1. Presets primeiro: eles descrevem falhas que vêm da plataforma e do Supabase.
-registry.merge(browserErrorRegistry);
-registry.merge(supabaseErrorRegistry);
+  // 1. Presets primeiro: eles descrevem falhas que vêm da plataforma e do Supabase.
+  registry.merge(browserErrorRegistry);
+  registry.merge(supabaseErrorRegistry);
 
-// 2. Os seus mapeamentos por último, para que vençam onde se sobrepõem a um preset.
-registry.codes.addList([
-  [
-    "project.limit_reached",
-    {
-      message: "Você atingiu o limite de projetos do seu plano. Arquive um projeto e tente de novo.",
-      messageKey: "error.project.limitReached",
-      source: "my-app.projects",
-    },
-  ],
-  [
-    "23505",
-    {
-      message: "Você já tem um projeto com esse nome. Escolha outro.",
-      messageKey: "error.project.nameTaken",
-      source: "my-app.projects",
-    },
-  ],
-]);
+  // 2. Os seus mapeamentos por último, para que vençam onde se sobrepõem a um preset.
+  registry.codes.addList([
+    [
+      "project.limit_reached",
+      {
+        message: "Você atingiu o limite de projetos do seu plano. Arquive um projeto e tente de novo.",
+        messageKey: "error.project.limitReached",
+        source: "my-app.projects",
+      },
+    ],
+    [
+      "23505",
+      {
+        message: "Você já tem um projeto com esse nome. Escolha outro.",
+        messageKey: "error.project.nameTaken",
+        source: "my-app.projects",
+      },
+    ],
+  ]);
+}
 ```
 
 ```ts
 // src/main.ts
-import "./errors";
+import { setUpErrors } from "./errors";
+
+setUpErrors();
 // …o resto da sua aplicação
 ```
+
+Chame a função antes de qualquer outra coisa no entry point. Os imports estáticos ainda rodam antes dela, então um módulo que normaliza um erro enquanto é importado, e não dentro de uma função que exporta, vê o registro vazio.
 
 A ordem importa aqui. Quando dois mapeamentos no mesmo bucket usam o mesmo identificador, o adicionado por último substitui o outro. É por isso que o mapeamento de `23505` acima vem depois do preset do Supabase: a mensagem do preset para esse código é genérica, sobre um valor duplicado, porque o preset não tem como saber qual valor colidiu, e nesta aplicação o único valor único em que as pessoas podem esbarrar é o nome do projeto, então a nossa diz isso.
 
@@ -69,6 +75,23 @@ Escolha os presets conforme onde o código roda:
 - O preset do Supabase onde quer que você chame o Supabase.
 
 [Presets](presets.md) lista exatamente o que cada um cobre. Fazer merge de todos "só por garantia" é como uma mensagem de navegador pedindo para checar o Wi-Fi vai parar em um log de servidor, então escolha de propósito.
+
+Quando a mesma configuração roda em um servidor e em um navegador, como em uma aplicação Next.js ou SvelteKit, receba o preset de runtime como parâmetro e passe o certo a partir de cada entry point. Adivinhar o runtime por globais dá errado justamente nos lugares que você menos testa, como um web worker, que não tem `window`. Esta versão substitui a de cima:
+
+```ts
+// src/errors.ts
+import { getErrorRegistry, type ReadonlyErrorRegistry } from "@codenhub/error";
+
+export function setUpErrors(runtimePreset: ReadonlyErrorRegistry): void {
+  const registry = getErrorRegistry();
+
+  registry.merge(runtimePreset);
+  // …o preset do Supabase e os seus mapeamentos, como acima
+}
+
+// No entry do cliente, de "@codenhub/error/registries/browser": setUpErrors(browserErrorRegistry);
+// No entry do servidor, de "@codenhub/error/registries/node": setUpErrors(nodeErrorRegistry);
+```
 
 ## 3. Normalize onde as falhas entram no seu código
 
@@ -90,7 +113,7 @@ async function onSubmit(form: FormData) {
 }
 ```
 
-Você não precisa desembrulhar nada antes. `createAppError` procura erros embrulhados dentro do valor em `cause`, `originalError`, `error`, `err`, `inner`, `innerError` e nas dez primeiras entradas de uma lista `errors`. Um `23505` enterrado dois `cause`s abaixo ainda vira "Você já tem um projeto com esse nome.", desde que nada do lado de fora tenha correspondido antes.
+Você não precisa desembrulhar nada antes. `createAppError` procura erros embrulhados dentro do valor em `cause`, `originalError`, `error`, `err`, `inner`, `innerError` e nas dez primeiras entradas de uma lista `errors`. Um `23505` enterrado dois `cause`s abaixo ainda vira "Você já tem um projeto com esse nome.", desde que nada do que é verificado antes dele tenha uma correspondência conhecida própria, como um embrulho do lado de fora ou uma entrada anterior da mesma lista `errors`. Uma correspondência por pattern do lado de fora não interrompe a busca; [Qual correspondência vence](registries.md#qual-correspondência-vence) traz a ordem completa.
 
 ## 4. Decida o que mostrar
 

@@ -15,7 +15,7 @@ Tudo nesta página é proposital, e cada item dela já surpreendeu alguém pelo 
 
 **Por quê:** mensagens de erro cruas são escritas para desenvolvedores e muitas vezes trazem nomes de tabela, caminhos de arquivo, pedaços de query ou dados de outras pessoas. O ErrorKit só mostra texto que alguém registrou de propósito.
 
-**Em vez disso:** levante as suas próprias falhas com um código registrado, `err({ code: "signup.email_missing" })`, ou passe um `fallbackMessage` que faça sentido no lugar em que você está.
+**Em vez disso:** lance as suas próprias falhas com um código registrado, `err({ code: "signup.email_missing" })`, ou passe um `fallbackMessage` que faça sentido no lugar em que você está.
 
 ## Um código que ninguém registrou se perde
 
@@ -23,7 +23,7 @@ Tudo nesta página é proposital, e cada item dela já surpreendeu alguém pelo 
 
 **Por quê:** `code` nomeia o mapeamento que classificou o erro, então uma decisão baseada nele só enxerga códigos que alguém descreveu. Manter o código cru também mandaria para o cliente, no `toJSON()`, qualquer código que um banco de dados ou serviço produzisse.
 
-**Em vez disso:** levante os seus próprios erros a partir de um único objeto de códigos, para que um erro de digitação vire erro de tipo, ou confira os códigos em um teste; veja [Receitas](recipes.md#lançar-os-seus-próprios-erros).
+**Em vez disso:** lance os seus próprios erros a partir de um único objeto de códigos, para que um erro de digitação vire erro de tipo, ou confira os códigos em um teste; veja [Receitas](recipes.md#lançar-os-seus-próprios-erros).
 
 ## O registro global é estado compartilhado
 
@@ -90,7 +90,7 @@ Tudo nesta página é proposital, e cada item dela já surpreendeu alguém pelo 
 ## Os presets não cobrem tudo
 
 - O preset de navegador reconhece um `fetch` e um `import()` que falharam pelas mensagens que o Chromium, o Firefox e o Safari produzem hoje. Um navegador que reescrever essas mensagens cai em `"unknown"` até o preset alcançá-lo.
-- O preset do Node.js cobre falhas de rede e os erros que um `AbortSignal` levanta, e foi observado no Node.js 24. Outros runtimes de servidor podem reportar as mesmas falhas de outro jeito.
+- O preset do Node.js cobre falhas de rede e os erros que um `AbortSignal` lança, e foi observado no Node.js 24. Outros runtimes de servidor podem reportar as mesmas falhas de outro jeito.
 - O preset do Supabase cobre os códigos de Auth sobre os quais uma pessoa pode agir, seis códigos do PostgreSQL e os nomes de erro do próprio cliente. Ele mapeia as poucas falhas de desenvolvedor que uma aplicação em produção costuma encontrar, como uma tabela ou coluna inexistente, para uma mensagem compartilhada, então elas são `"known"`: reporte-as pelo `messageKey`, não pelo tipo (veja [Receitas](recipes.md#reportar-para-um-error-tracker)). Outros códigos que só um desenvolvedor consegue resolver, como `bad_jwt`, ficam sem mapeamento de propósito e chegam ao seu error tracker como `"unknown"`.
 
 Registre o seu próprio mapeamento para qualquer coisa que um preset não cubra. [Presets](presets.md) lista exatamente o que cada um cobre.

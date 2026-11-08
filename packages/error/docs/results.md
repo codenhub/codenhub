@@ -127,17 +127,20 @@ import { attemptAsync, err, ok, orElse } from "@codenhub/error";
 const projects = orElse(await attemptAsync(() => api.listProjects()), (error) => (error.messageKey === "error.browser.requestFailed" ? ok(cache.projects) : err(error)));
 ```
 
-`all` turns several results into one, and keeps each position's type when you pass a tuple. For calls that run in parallel, await them together first:
+`all` turns several results into one, and keeps each position's type when you pass a tuple. For calls that run in parallel, await them together first, in a line of their own:
 
 ```ts
 import { all, attemptAsync } from "@codenhub/error";
 
-const loaded = all(await Promise.all([attemptAsync(() => api.user(id)), attemptAsync(() => api.projects(id))]));
+const settled = await Promise.all([attemptAsync(() => api.user(id)), attemptAsync(() => api.projects(id))]);
+const loaded = all(settled);
 
 if (loaded.ok) {
   const [user, projects] = loaded.value;
 }
 ```
+
+The extra line is not decoration. Written in one go, `all(await Promise.all([...]))`, TypeScript works out the list's type from what `all` accepts rather than from what the calls return, and every position comes out as "a user or a project list". The two-line version keeps `user` a user.
 
 The helpers do not catch. If a mapper or a `match` callback throws, the exception propagates as it would from any other function. When a step can throw, wrap that step in `attempt` or `attemptAsync`.
 

@@ -2,7 +2,7 @@
 title: Error boundaries
 description: Muestra un AppError normalizado cuando un componente de React o Svelte falla al renderizar, y repórtalo una sola vez.
 order: 6
-source: b79c2fbe8461bf4fb2c01ba061645170f356c595
+source: 7c089a14a60e0e6aa8332a148059264556b71cce
 ---
 
 # Error boundaries
@@ -31,7 +31,7 @@ export function ProjectPage({ id }: { id: string }) {
       fallback={({ error, reset }) => (
         <div role="alert">
           <p>{error.message}</p>
-          {error.isRetryable && <button onClick={reset}>Reintentar</button>}
+          <button onClick={reset}>Reintentar</button>
         </div>
       )}
       onError={(error, info) => tracker.captureException(error.originalError ?? error, { extra: info })}
@@ -56,7 +56,7 @@ Los tipos de las props se exportan como `AppErrorBoundaryProps`, y el objeto que
 Algunos detalles que vale la pena conocer:
 
 - **Las `options` solo se revisan cuando se atrapa un error.** Una opción inválida lanza entonces una excepción mientras se renderiza el fallback, así que el boundary de arriba recibe un `TypeError` en lugar del error original, y `onError` no se llama. Prueba las opciones con `createAppError` en una prueba para detectarlo antes de que lo haga una caída del servicio.
-- **`reset` vuelve a renderizar los hijos.** Si lo que los hizo fallar no cambió, vuelven a lanzar y el fallback reaparece al instante. Reinicia después de que cambie el estado que causó el fallo, o deja que `resetKeys` lo haga cuando quien lee navega. En el ejemplo de arriba, abrir otro proyecto reinicia el boundary.
+- **`reset` vuelve a renderizar los hijos.** Si lo que los hizo fallar no cambió, vuelven a lanzar y el fallback reaparece al instante. Reinicia después de que cambie el estado que causó el fallo, o deja que `resetKeys` lo haga cuando quien lee navega. En el ejemplo de arriba, abrir otro proyecto reinicia el boundary. Un cambio de clave solo reinicia un error que ya estaba en pantalla: cuando lo que lanza es abrir el proyecto en sí, aparece el fallback y se queda, en lugar de que el boundary se reinicie directo hacia el mismo fallo y lo reporte dos veces. `reset` no es un reintento de una llamada fallida, y no depende de `isRetryable`, que trata de llamadas, no de renderizados.
 - **El fallback y `onError` reciben la misma instancia de `AppError`,** así que lo que ve quien lee y lo que reportas siempre coinciden.
 - **Lanzar `null` o `undefined` también cuenta como error.** Lanzarlos es JavaScript válido, aunque no sea buena idea, y el boundary igual muestra el fallback con el mensaje genérico.
 
@@ -96,7 +96,7 @@ Crea un juego de handlers por cada boundary: cada uno recuerda el último error 
 
 ## Lo que un boundary no atrapa
 
-Ambos frameworks atrapan los errores que se lanzan durante el renderizado y, en Svelte, durante la ejecución de efectos. Ninguno atrapa un error lanzado en un manejador de eventos, en un `setTimeout` o en una promesa que nadie esperó durante el renderizado, y los boundaries de React no se ejecutan durante el renderizado en el servidor. Maneja esos casos donde ocurren, con `attempt` o `attemptAsync`:
+Ambos frameworks atrapan los errores que se lanzan durante el renderizado y durante la ejecución de efectos, y React también atrapa los que se lanzan en los métodos del ciclo de vida. Ninguno atrapa un error lanzado en un manejador de eventos, en un `setTimeout` o en una promesa que nadie esperó durante el renderizado, y los boundaries de React no se ejecutan durante el renderizado en el servidor. Maneja esos casos donde ocurren, con `attempt` o `attemptAsync`:
 
 ```ts
 import { attemptAsync } from "@codenhub/error";

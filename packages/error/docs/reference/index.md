@@ -18,7 +18,7 @@ export declare const all: <const R extends readonly Result<unknown>[]>(results: 
 
 Combines a list of Results into one: an `Ok` holding every value in order, or the first `Err`.
 
-A tuple keeps each position's type, so `all([ok(1), ok("a")] as const)` is a `Result<readonly [number, string]>`. For calls that run in parallel, await them first: `all(await Promise.all([attemptAsync(a), attemptAsync(b)]))`.
+A tuple keeps each position's type, so `all([ok(1), ok("a")] as const)` is a `Result<readonly [number, string]>`. For calls that run in parallel, await them in a statement of their own, `const settled = await Promise.all([attemptAsync(a), attemptAsync(b)])`, then call `all(settled)`. Written inline as `all(await Promise.all([...]))`, the list is inferred against `all`'s parameter and each position widens to a union of every value type.
 
 **Parameters**
 
@@ -140,7 +140,7 @@ Runs an async callback and captures a thrown or rejected value as a normalized `
 export declare function createAppError(error: unknown, options?: AppErrorOptions): AppError;
 ```
 
-Normalizes an unknown error value into a predictable, immutable `AppError`.
+Normalizes an unknown error value into a predictable `AppError` whose own fields, other than `stack`, cannot change.
 
 Unrolls nested wrapper fields (`cause`, `originalError`, `error`, `err`, `inner`, `innerError`) up to the configured depth, and a `cause` chain alone past the default depth, then resolves a classification in priority order across every candidate found:
 
@@ -160,7 +160,7 @@ Ordinary unknown input never throws, including objects and proxies whose inspect
 
 **Returns** — An AppError whose own properties cannot be changed or removed. An existing AppError is returned as-is unless a `registry` is supplied and finds something that improves on it: only a heuristic match replaces an unknown error, and only a known match that differs replaces a classified one. A `fallbackMessage` or `maxDepth` alone never changes a classification; a `fallbackMessage` only words an unknown AppError that still carries the default message.
 
-**Throws** — `TypeError` — If `options` is not an object, `fallbackMessage` is not a non-empty string, `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer from 0 through 3.
+**Throws** — `TypeError` — If `options` is not an object, `fallbackMessage` is not a non-empty string, `registry` does not expose the read-facing registry surface, `maxDepth` is not an integer from 0 through 3, `details` is not a plain object of JSON values nested at most 8 levels deep, or a hand-written `registry` returns feedback without a non-empty message.
 
 ### createErrorRegistry
 
@@ -212,6 +212,8 @@ Creates an immutable snapshot containing only read-facing bucket methods.
 - `registry` — The ErrorRegistry instance to freeze.
 
 **Returns** — An immutable `ReadonlyErrorRegistry` snapshot.
+
+**Throws** — `TypeError` — If `registry` does not implement the readable registry interface or contains an invalid registry entry.
 
 ### getErrorRegistry
 
@@ -459,7 +461,7 @@ export interface AppError extends Error {
 }
 ```
 
-A predictable, immutable error shape representing a normalized application error.
+A predictable error shape representing a normalized application error. Its own fields other than `stack` cannot be changed or removed, though frameworks can still add properties of their own.
 
 Implements the standard JavaScript `Error` interface and adds classification, localization support, and original error wrapping. An explicit `toJSON` keeps JSON serialization limited to the normalized fields, excluding diagnostic `cause` and `originalError` values on every engine.
 
@@ -565,7 +567,9 @@ Structured data to attach to the error as `details`, such as `{ field: "email" }
 fallbackMessage?: string;
 ```
 
-The fallback error message to use when the error cannot be matched in the registry. Must be a non-empty string. Defaults to `DEFAULT_APP_ERROR_MESSAGE`.
+The fallback error message to use when the error cannot be matched in the registry. Must be a non-empty string.
+
+**Default** — `DEFAULT_APP_ERROR_MESSAGE`
 
 #### AppErrorOptions › maxDepth
 
@@ -573,7 +577,9 @@ The fallback error message to use when the error cannot be matched in the regist
 maxDepth?: number;
 ```
 
-The maximum depth to unwrap nested error wrappers (e.g. cause, originalError). Must be an integer from 0 through 3. Defaults to 3. At 3, a `cause` chain alone is followed further, to a depth of 8; a lower value stops every field at that depth.
+The maximum depth to unwrap nested error wrappers (e.g. cause, originalError). Must be an integer from 0 through 3. At 3, a `cause` chain alone is followed further, to a depth of 8; a lower value stops every field at that depth.
+
+**Default** — 3
 
 #### AppErrorOptions › registry
 
@@ -581,7 +587,9 @@ The maximum depth to unwrap nested error wrappers (e.g. cause, originalError). M
 registry?: ErrorRegistry | ReadonlyErrorRegistry;
 ```
 
-The specific error registry to query for classifications. Must expose the read-facing registry surface. Defaults to the global registry retrieved by `getErrorRegistry()`.
+The specific error registry to query for classifications. Must expose the read-facing registry surface.
+
+**Default** — The global registry retrieved by `getErrorRegistry()`.
 
 ### Err
 
@@ -625,7 +633,9 @@ The structured feedback returned when a registry matches an error. Defines the s
 isRetryable?: boolean;
 ```
 
-Whether the call that raises this failure can be repeated as it is, without user intervention and without the risk that it runs twice. Defaults to `false`.
+Whether the call that raises this failure can be repeated as it is, without user intervention and without the risk that it runs twice.
+
+**Default** — `false`
 
 #### ErrorFeedback › message
 
