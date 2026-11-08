@@ -2,7 +2,7 @@
 title: Toasts
 description: Todos os tipos de toast, ações, toasts de carregamento e de promise, handles e atualizações, posições, fila, timers e os erros que os toasts lançam.
 order: 1
-source: 389a6700b4ea25524e8094f71861f08c366f23be
+source: 28415d86936ff991e2341c6665241efc4b58111e
 ---
 
 # Toasts
@@ -118,7 +118,7 @@ try {
 }
 ```
 
-Mudar o `type` troca o spinner pelo ícone e pela cor correspondentes. Sair do estado de carregamento também liga o timer que o toast de carregamento nunca teve, com as mesmas configurações que um toast novo daquele tipo receberia: um resultado `"success"` fecha depois da `duration` do grupo `semantic` da instância, ou da `duration` simples dela quando o grupo `semantic` não define uma, e fica aberto se a instância disser `autoDismiss: false`. O `autoDismiss: true` ali em cima faz este resultado fechar de qualquer jeito; passe `autoDismiss: false` se ele tiver que ficar até alguém fechar. [Padrões por tipo](instances.md#padrões-por-tipo) explica o grupo `semantic`.
+Mudar o `type` troca o spinner pelo ícone e pela cor correspondentes. Sair do estado de carregamento também liga o timer que o toast de carregamento nunca teve, com as mesmas configurações que o atalho correspondente, como `toast.success()`, receberia: um resultado `"success"` fecha depois da `duration` do grupo `semantic` da instância, ou da `duration` simples dela quando o grupo `semantic` não define uma, e fica aberto se a instância disser `autoDismiss: false`. O `autoDismiss: true` ali em cima faz este resultado fechar de qualquer jeito; passe `autoDismiss: false` se ele tiver que ficar até alguém fechar. [Padrões por tipo](instances.md#padrões-por-tipo) explica o grupo `semantic`.
 
 `toast.loading()` aceita `title`, `message`, `description`, `position`, `dismissible`, `className` e `margin`. Ele não tem as opções `duration` nem `autoDismiss`, já que nunca fecha sozinho; defina-as no `update()` que o encerra.
 

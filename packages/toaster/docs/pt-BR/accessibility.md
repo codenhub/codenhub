@@ -2,7 +2,7 @@
 title: Acessibilidade e segurança
 description: O que os leitores de tela ouvem, como funcionam o foco e o teclado, movimento reduzido, o que fica por sua conta e a fronteira de confiança do conteúdo personalizado.
 order: 5
-source: a4a94504951a058faf893bf4ac37976089a68259
+source: 47be97a3841114ce9a3e4cc52471cde4fc7514f0
 ---
 
 # Acessibilidade e segurança
@@ -44,7 +44,7 @@ O toast visível em si não é uma live region e não tem atributo `role`. Teste
 
 ```ts
 // Playwright; o getByRole da Testing Library funciona do mesmo jeito.
-const notifications = page.getByRole("region", { name: "Notifications" });
+const notifications = page.getByRole("region", { name: "Notifications" }); // ou o seu labels.notifications
 await expect(notifications.getByText("Nota salva")).toBeVisible();
 ```
 

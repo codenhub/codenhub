@@ -2,7 +2,7 @@
 title: Toasts
 description: Cada tipo de toast, acciones, toasts de carga y con promesas, handles y actualizaciones, posiciones, cola, temporizadores y los errores que lanzan los toasts.
 order: 1
-source: 389a6700b4ea25524e8094f71861f08c366f23be
+source: 28415d86936ff991e2341c6665241efc4b58111e
 ---
 
 # Toasts
@@ -118,7 +118,7 @@ try {
 }
 ```
 
-Cambiar `type` sustituye el spinner por el icono y el color correspondientes. Salir del estado de carga también arranca el temporizador que el toast de carga nunca tuvo, con la misma configuración que recibiría un toast nuevo de ese tipo: un resultado `"success"` se cierra pasado el `duration` del grupo `semantic` de la instancia, o su `duration` general cuando el grupo `semantic` no define uno, y se queda abierto si la instancia dice `autoDismiss: false`. El `autoDismiss: true` de arriba hace que este resultado se cierre en cualquier caso; pasa `autoDismiss: false` si tiene que quedarse hasta que alguien lo cierre. [Valores por defecto por tipo](instances.md#valores-por-defecto-por-tipo) explica el grupo `semantic`.
+Cambiar `type` sustituye el spinner por el icono y el color correspondientes. Salir del estado de carga también arranca el temporizador que el toast de carga nunca tuvo, con la misma configuración que recibiría el atajo correspondiente, como `toast.success()`: un resultado `"success"` se cierra pasado el `duration` del grupo `semantic` de la instancia, o su `duration` general cuando el grupo `semantic` no define uno, y se queda abierto si la instancia dice `autoDismiss: false`. El `autoDismiss: true` de arriba hace que este resultado se cierre en cualquier caso; pasa `autoDismiss: false` si tiene que quedarse hasta que alguien lo cierre. [Valores por defecto por tipo](instances.md#valores-por-defecto-por-tipo) explica el grupo `semantic`.
 
 `toast.loading()` acepta `title`, `message`, `description`, `position`, `dismissible`, `className` y `margin`. No tiene opción `duration` ni `autoDismiss`, porque nunca se cierra solo; ponlas en el `update()` que lo termina.
 

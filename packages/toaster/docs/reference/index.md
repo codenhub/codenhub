@@ -475,7 +475,7 @@ Dismisses every showing and queued toast of this instance.
 configure(config: ToasterRuntimeConfig): void;
 ```
 
-Reconfigures the toaster at runtime. An option given as `undefined` resets to its default, on the toasts already showing too.
+Reconfigures the toaster at runtime. An option given as `undefined` resets to its default. Stacks already showing take a new `maxVisible`, `labels`, or `margin` right away; every other option applies to the toasts shown afterwards.
 
 **Parameters**
 
@@ -572,7 +572,7 @@ Binds a notification to a Promise lifecycle, automatically managing transition s
 
 **Returns** — A promise that settles the same way as `promise`.
 
-**Throws** — `Error` — Synchronously, if the loading toast cannot be shown, for the same reasons as `loading()`.
+**Throws** — `Error` — Synchronously, if `duration` is invalid or the loading toast cannot be shown, for the same reasons as `loading()`.
 
 #### Toaster › success
 

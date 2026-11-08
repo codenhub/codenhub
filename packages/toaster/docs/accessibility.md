@@ -43,7 +43,7 @@ The visible toast itself isn't a live region and has no `role` attribute. Tests 
 
 ```ts
 // Playwright; Testing Library's getByRole works the same way.
-const notifications = page.getByRole("region", { name: "Notifications" });
+const notifications = page.getByRole("region", { name: "Notifications" }); // or your labels.notifications
 await expect(notifications.getByText("Note saved")).toBeVisible();
 ```
 

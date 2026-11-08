@@ -117,7 +117,7 @@ try {
 }
 ```
 
-Changing `type` swaps the spinner for the matching icon and color. Leaving the loading state also starts the timer the loading toast never had, with the same settings a fresh toast of that type would get: a `"success"` result closes after the instance's `semantic` duration, or its plain `duration` when the `semantic` group doesn't set one, and stays open if the instance says `autoDismiss: false`. The `autoDismiss: true` above makes this result close either way; pass `autoDismiss: false` instead if it should stay until someone dismisses it. [Per-kind defaults](instances.md#per-kind-defaults) explains the `semantic` group.
+Changing `type` swaps the spinner for the matching icon and color. Leaving the loading state also starts the timer the loading toast never had, with the same settings the matching shortcut, such as `toast.success()`, would get: a `"success"` result closes after the instance's `semantic` duration, or its plain `duration` when the `semantic` group doesn't set one, and stays open if the instance says `autoDismiss: false`. The `autoDismiss: true` above makes this result close either way; pass `autoDismiss: false` instead if it should stay until someone dismisses it. [Per-kind defaults](instances.md#per-kind-defaults) explains the `semantic` group.
 
 `toast.loading()` takes `title`, `message`, `description`, `position`, `dismissible`, `className`, and `margin`. It has no `duration` or `autoDismiss` option, since it never closes on its own; set them in the `update()` that finishes it.
 

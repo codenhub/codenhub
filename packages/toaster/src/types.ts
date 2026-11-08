@@ -196,8 +196,8 @@ export interface DialogHandle<T> extends PromiseLike<T> {
    * - `prompt`: resolves with `string` (input value) or `null` (canceled).
    * - `alert`: resolves with `void` when acknowledged.
    *
-   * Rejects with the browser's error if the dialog cannot open, which is
-   * when `showModal()` throws.
+   * Rejects with the error that kept the dialog from opening: building or
+   * rendering it failed, or `showModal()` threw.
    */
   readonly result: Promise<T>;
 }
@@ -636,7 +636,9 @@ export interface Toaster {
 
   /**
    * Reconfigures the toaster at runtime. An option given as `undefined`
-   * resets to its default, on the toasts already showing too.
+   * resets to its default. Stacks already showing take a new `maxVisible`,
+   * `labels`, or `margin` right away; every other option applies to the
+   * toasts shown afterwards.
    *
    * @param config Runtime configuration to validate and apply.
    * @throws {Error} If the instance is destroyed, `container` is given, or a
