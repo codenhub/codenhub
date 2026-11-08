@@ -2633,39 +2633,7 @@
       ]
     },
     "badge-alert": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z\" /><line x1=\"12\" x2=\"12\" y1=\"8\" y2=\"12\" /><line x1=\"12\" x2=\"12.01\" y1=\"16\" y2=\"16\" /></g>",
-      "tags": [
-        "seal",
-        "emblem",
-        "rosette",
-        "insignia",
-        "sticker",
-        "stamp",
-        "label",
-        "award",
-        "achievement",
-        "certification",
-        "official",
-        "status",
-        "starburst",
-        "scalloped",
-        "shape",
-        "alert",
-        "warning",
-        "danger",
-        "caution",
-        "notice",
-        "error",
-        "risk",
-        "concern",
-        "hazard",
-        "exclamation mark",
-        "exclamation point",
-        "!",
-        "security",
-        "safety",
-        "issue"
-      ]
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z\" /><line x1=\"12\" x2=\"12\" y1=\"8\" y2=\"12\" /><line x1=\"12\" x2=\"12.01\" y1=\"16\" y2=\"16\" /></g>"
     },
     "badge-cent": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z\" /><path d=\"M12 7v10\" /><path d=\"M15.4 10a4 4 0 1 0 0 4\" /></g>",
@@ -2780,6 +2748,41 @@
         "tag",
         "marketing",
         "€"
+      ]
+    },
+    "badge-exclamation-point": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z\" /><line x1=\"12\" x2=\"12\" y1=\"8\" y2=\"12\" /><line x1=\"12\" x2=\"12.01\" y1=\"16\" y2=\"16\" /></g>",
+      "tags": [
+        "seal",
+        "emblem",
+        "rosette",
+        "insignia",
+        "sticker",
+        "stamp",
+        "label",
+        "award",
+        "achievement",
+        "certification",
+        "official",
+        "status",
+        "starburst",
+        "scalloped",
+        "shape",
+        "alert",
+        "warning",
+        "danger",
+        "caution",
+        "notice",
+        "error",
+        "risk",
+        "concern",
+        "hazard",
+        "exclamation mark",
+        "exclamation point",
+        "!",
+        "security",
+        "safety",
+        "issue"
       ]
     },
     "badge-help": {
@@ -3508,6 +3511,28 @@
         "charge"
       ]
     },
+    "battery-exclamation-point": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10 17h.01\" /><path d=\"M10 7v6\" /><path d=\"M14 6h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2\" /><path d=\"M22 14v-4\" /><path d=\"M6 18H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2\" /></g>",
+      "tags": [
+        "power",
+        "electricity",
+        "energy",
+        "accumulator",
+        "charge",
+        "alert",
+        "warning",
+        "danger",
+        "caution",
+        "notice",
+        "error",
+        "risk",
+        "concern",
+        "hazard",
+        "exclamation mark",
+        "exclamation point",
+        "!"
+      ]
+    },
     "battery-full": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10 10v4\" /><path d=\"M14 10v4\" /><path d=\"M22 14v-4\" /><path d=\"M6 10v4\" /><rect x=\"2\" y=\"6\" width=\"16\" height=\"12\" rx=\"2\" /></g>",
       "tags": [
@@ -3564,26 +3589,7 @@
       ]
     },
     "battery-warning": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10 17h.01\" /><path d=\"M10 7v6\" /><path d=\"M14 6h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2\" /><path d=\"M22 14v-4\" /><path d=\"M6 18H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2\" /></g>",
-      "tags": [
-        "power",
-        "electricity",
-        "energy",
-        "accumulator",
-        "charge",
-        "alert",
-        "warning",
-        "danger",
-        "caution",
-        "notice",
-        "error",
-        "risk",
-        "concern",
-        "hazard",
-        "exclamation mark",
-        "exclamation point",
-        "!"
-      ]
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10 17h.01\" /><path d=\"M10 7v6\" /><path d=\"M14 6h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2\" /><path d=\"M22 14v-4\" /><path d=\"M6 18H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2\" /></g>"
     },
     "battery": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M 22 14 L 22 10\" /><rect x=\"2\" y=\"6\" width=\"16\" height=\"12\" rx=\"2\" /></g>",
@@ -4504,50 +4510,7 @@
       ]
     },
     "book-alert": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 13h.01\" /><path d=\"M12 6v3\" /><path d=\"M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20\" /></g>",
-      "tags": [
-        "reading",
-        "paperback",
-        "booklet",
-        "magazine",
-        "leaflet",
-        "pamphlet",
-        "tome",
-        "library",
-        "writing",
-        "written",
-        "writer",
-        "author",
-        "story",
-        "script",
-        "fiction",
-        "novel",
-        "information",
-        "knowledge",
-        "education",
-        "high school",
-        "university",
-        "college",
-        "academy",
-        "student",
-        "study",
-        "learning",
-        "homework",
-        "research",
-        "documentation",
-        "alert",
-        "warning",
-        "danger",
-        "caution",
-        "notice",
-        "error",
-        "risk",
-        "concern",
-        "hazard",
-        "exclamation mark",
-        "exclamation point",
-        "!"
-      ]
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 13h.01\" /><path d=\"M12 6v3\" /><path d=\"M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20\" /></g>"
     },
     "book-audio": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 6v7\" /><path d=\"M16 8v3\" /><path d=\"M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20\" /><path d=\"M8 8v3\" /></g>",
@@ -4872,6 +4835,52 @@
         "git",
         "repository",
         "pull"
+      ]
+    },
+    "book-exclamation-point": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 13h.01\" /><path d=\"M12 6v3\" /><path d=\"M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20\" /></g>",
+      "tags": [
+        "reading",
+        "paperback",
+        "booklet",
+        "magazine",
+        "leaflet",
+        "pamphlet",
+        "tome",
+        "library",
+        "writing",
+        "written",
+        "writer",
+        "author",
+        "story",
+        "script",
+        "fiction",
+        "novel",
+        "information",
+        "knowledge",
+        "education",
+        "high school",
+        "university",
+        "college",
+        "academy",
+        "student",
+        "study",
+        "learning",
+        "homework",
+        "research",
+        "documentation",
+        "alert",
+        "warning",
+        "danger",
+        "caution",
+        "notice",
+        "error",
+        "risk",
+        "concern",
+        "hazard",
+        "exclamation mark",
+        "exclamation point",
+        "!"
       ]
     },
     "book-headphones": {
@@ -8846,12 +8855,36 @@
       ]
     },
     "chef-hat": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z\" /><path d=\"M6 17h12\" /></g>",
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10 11v5\" /><path d=\"M14 11v5\" /><path d=\"M6 12.65c0-.457-.316-.844-.727-1.041A4 4 0 017.52 4.034a1.53 1.53 0 001.367-.547 4 4 0 016.225 0 1.53 1.53 0 001.367.547 4 4 0 012.248 7.575c-.411.197-.727.584-.727 1.04V19a2 2 0 01-2 2H8a2 2 0 01-2-2z\" /><path d=\"M6 16h12\" /></g>",
       "tags": [
+        "toque blanche",
+        "culinary cap",
         "cooking",
+        "baking",
+        "culinary",
+        "gastronomy",
         "food",
         "kitchen",
-        "restaurant"
+        "restaurant",
+        "cuisine",
+        "catering",
+        "meal",
+        "dining",
+        "gourmet",
+        "apron",
+        "uniform",
+        "menu",
+        "toque",
+        "cook",
+        "baker",
+        "cookery",
+        "headwear",
+        "headgear",
+        "cap",
+        "kitchen staff",
+        "culinary professional",
+        "food service",
+        "hospitality"
       ]
     },
     "cherry": {
@@ -9317,21 +9350,7 @@
       ]
     },
     "circle-alert": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\" /><line x1=\"12\" x2=\"12\" y1=\"8\" y2=\"12\" /><line x1=\"12\" x2=\"12.01\" y1=\"16\" y2=\"16\" /></g>",
-      "tags": [
-        "alert",
-        "warning",
-        "danger",
-        "caution",
-        "notice",
-        "error",
-        "risk",
-        "concern",
-        "hazard",
-        "exclamation mark",
-        "exclamation point",
-        "!"
-      ]
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\" /><line x1=\"12\" x2=\"12\" y1=\"8\" y2=\"12\" /><line x1=\"12\" x2=\"12.01\" y1=\"16\" y2=\"16\" /></g>"
     },
     "circle-arrow-down": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"M12 8v8\" /><path d=\"m8 12 4 4 4-4\" /></g>",
@@ -9964,6 +9983,23 @@
         "coin"
       ]
     },
+    "circle-exclamation-point": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\" /><line x1=\"12\" x2=\"12\" y1=\"8\" y2=\"12\" /><line x1=\"12\" x2=\"12.01\" y1=\"16\" y2=\"16\" /></g>",
+      "tags": [
+        "alert",
+        "warning",
+        "danger",
+        "caution",
+        "notice",
+        "error",
+        "risk",
+        "concern",
+        "hazard",
+        "exclamation mark",
+        "exclamation point",
+        "!"
+      ]
+    },
     "circle-fading-arrow-up": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 2a10 10 0 0 1 7.38 16.75\" /><path d=\"m16 12-4-4-4 4\" /><path d=\"M12 16V8\" /><path d=\"M2.5 8.875a10 10 0 0 0-.5 3\" /><path d=\"M2.83 16a10 10 0 0 0 2.43 3.4\" /><path d=\"M4.636 5.235a10 10 0 0 1 .891-.857\" /><path d=\"M8.644 21.42a10 10 0 0 0 7.631-.38\" /></g>",
       "tags": [
@@ -9980,6 +10016,31 @@
         "improve",
         "circle",
         "button"
+      ]
+    },
+    "circle-fading-check": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 2a10 10 0 017.38 16.75\" /><path d=\"m16 9-5.5 5.5L8 12\" /><path d=\"M2.5 8.875a10 10 0 00-.5 3\" /><path d=\"M2.83 16a10 10 0 002.43 3.4\" /><path d=\"M4.636 5.235a10 10 0 01.891-.857\" /><path d=\"M8.644 21.42a10 10 0 007.631-.38\" /></g>",
+      "tags": [
+        "checkmark",
+        "done",
+        "completed",
+        "finished",
+        "successful",
+        "confirmed",
+        "verified",
+        "validated",
+        "approved",
+        "accepted",
+        "correct",
+        "valid",
+        "ticked",
+        "task",
+        "todo",
+        "pending",
+        "progress",
+        "processing",
+        "verifying",
+        "loading"
       ]
     },
     "circle-fading-play": {
@@ -10218,7 +10279,7 @@
       ]
     },
     "circle-letter-j": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 8v5a3 3 0 1 1-6 0\" /><circle cx=\"12\" cy=\"12\" r=\"10\" /></g>",
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M14 8v5.5a1 1 0 01-5 0V13\" /><circle cx=\"12\" cy=\"12\" r=\"10\" /></g>",
       "tags": [
         "alphabet",
         "character",
@@ -11635,39 +11696,7 @@
       ]
     },
     "clock-alert": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 6v6l4 2\" /><path d=\"M20 12v5\" /><path d=\"M20 21h.01\" /><path d=\"M21.25 8.2A10 10 0 1 0 16 21.16\" /></g>",
-      "tags": [
-        "clock",
-        "time",
-        "hour",
-        "minute",
-        "second",
-        "timestamp",
-        "timer",
-        "duration",
-        "interval",
-        "frequency",
-        "schedule",
-        "deadline",
-        "pending",
-        "delayed",
-        "watch",
-        "history",
-        "alarm",
-        "alert",
-        "warning",
-        "danger",
-        "caution",
-        "notice",
-        "error",
-        "risk",
-        "concern",
-        "hazard",
-        "exclamation mark",
-        "exclamation point",
-        "!",
-        "wrong"
-      ]
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 6v6l4 2\" /><path d=\"M20 12v5\" /><path d=\"M20 21h.01\" /><path d=\"M21.25 8.2A10 10 0 1 0 16 21.16\" /></g>"
     },
     "clock-arrow-down": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 6v6l2 1\" /><path d=\"M12.337 21.994a10 10 0 1 1 9.588-8.767\" /><path d=\"m14 18 4 4 4-4\" /><path d=\"M18 14v8\" /></g>",
@@ -11856,6 +11885,41 @@
         "todo"
       ]
     },
+    "clock-exclamation-point": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 6v6l4 2\" /><path d=\"M20 12v5\" /><path d=\"M20 21h.01\" /><path d=\"M21.25 8.2A10 10 0 1 0 16 21.16\" /></g>",
+      "tags": [
+        "clock",
+        "time",
+        "hour",
+        "minute",
+        "second",
+        "timestamp",
+        "timer",
+        "duration",
+        "interval",
+        "frequency",
+        "schedule",
+        "deadline",
+        "pending",
+        "delayed",
+        "watch",
+        "history",
+        "alarm",
+        "alert",
+        "warning",
+        "danger",
+        "caution",
+        "notice",
+        "error",
+        "risk",
+        "concern",
+        "hazard",
+        "exclamation mark",
+        "exclamation point",
+        "!",
+        "wrong"
+      ]
+    },
     "clock-fading": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 2a10 10 0 0 1 7.38 16.75\" /><path d=\"M12 6v6l4 2\" /><path d=\"M2.5 8.875a10 10 0 0 0-.5 3\" /><path d=\"M2.83 16a10 10 0 0 0 2.43 3.4\" /><path d=\"M4.636 5.235a10 10 0 0 1 .891-.857\" /><path d=\"M8.644 21.42a10 10 0 0 0 7.631-.38\" /></g>",
       "tags": [
@@ -11954,24 +12018,7 @@
       ]
     },
     "cloud-alert": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 12v4\" /><path d=\"M12 20h.01\" /><path d=\"M8.128 16.949A7 7 0 1 1 15.71 8h1.79a1 1 0 0 1 0 9h-1.642\" /></g>",
-      "tags": [
-        "weather",
-        "alert",
-        "warning",
-        "danger",
-        "caution",
-        "notice",
-        "error",
-        "risk",
-        "concern",
-        "hazard",
-        "exclamation mark",
-        "exclamation point",
-        "!",
-        "sync",
-        "network"
-      ]
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 12v4\" /><path d=\"M12 20h.01\" /><path d=\"M8.128 16.949A7 7 0 1 1 15.71 8h1.79a1 1 0 0 1 0 9h-1.642\" /></g>"
     },
     "cloud-backup": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 15.251A4.5 4.5 0 0 0 17.5 8h-1.79A7 7 0 1 0 3 13.607\" /><path d=\"M7 11v4h4\" /><path d=\"M8 19a5 5 0 0 0 9-3 4.5 4.5 0 0 0-4.5-4.5 4.82 4.82 0 0 0-3.41 1.41L7 15\" /></g>",
@@ -12054,6 +12101,26 @@
       "tags": [
         "weather",
         "shower"
+      ]
+    },
+    "cloud-exclamation-point": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 12v4\" /><path d=\"M12 20h.01\" /><path d=\"M8.128 16.949A7 7 0 1 1 15.71 8h1.79a1 1 0 0 1 0 9h-1.642\" /></g>",
+      "tags": [
+        "weather",
+        "alert",
+        "warning",
+        "danger",
+        "caution",
+        "notice",
+        "error",
+        "risk",
+        "concern",
+        "hazard",
+        "exclamation mark",
+        "exclamation point",
+        "!",
+        "sync",
+        "network"
       ]
     },
     "cloud-fog": {
@@ -13853,6 +13920,58 @@
         "sugar",
         "food",
         "sweet"
+      ]
+    },
+    "diagram-flow-horizontal": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8 12h.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 003.5 3.5h.5\" /><path d=\"M8.5 12A3.5 3.5 0 0012 8.5 3.5 3.5 0 0115.5 5h.5\" /><rect x=\"16\" y=\"16\" width=\"6\" height=\"6\" rx=\"1\" /><rect x=\"16\" y=\"2\" width=\"6\" height=\"6\" rx=\"1\" /><rect x=\"2\" y=\"9\" width=\"6\" height=\"6\" rx=\"1\" /></g>",
+      "tags": [
+        "network",
+        "nodes",
+        "edges",
+        "links",
+        "connections",
+        "relationships",
+        "structure",
+        "topology",
+        "mind map",
+        "visualization",
+        "brainstorm",
+        "brainstorming",
+        "ideas",
+        "concepts",
+        "planning",
+        "hierarchy",
+        "branches",
+        "organization",
+        "tree",
+        "workflow",
+        "flowchart",
+        "process",
+        "process mapping",
+        "sequence"
+      ]
+    },
+    "diagram-flow-vertical": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 8.5a3.5 3.5 0 003.5 3.5 3.5 3.5 0 013.5 3.5v.5\" /><path d=\"M12 8v.5A3.5 3.5 0 018.5 12 3.5 3.5 0 005 15.5v.5\" /><rect x=\"16\" y=\"16\" width=\"6\" height=\"6\" rx=\"1\" /><rect x=\"2\" y=\"16\" width=\"6\" height=\"6\" rx=\"1\" /><rect x=\"9\" y=\"2\" width=\"6\" height=\"6\" rx=\"1\" /></g>",
+      "tags": [
+        "network",
+        "nodes",
+        "edges",
+        "links",
+        "connections",
+        "relationships",
+        "structure",
+        "topology",
+        "flowchart",
+        "workflow",
+        "hierarchy",
+        "branches",
+        "tree",
+        "parent",
+        "child",
+        "process",
+        "sequence",
+        "decision tree"
       ]
     },
     "diameter": {
@@ -18360,92 +18479,24 @@
     "globe-2": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21.54 15H17a2 2 0 0 0-2 2v4.54\" /><path d=\"M7 3.34V5a3 3 0 0 0 3 3a2 2 0 0 1 2 2c0 1.1.9 2 2 2a2 2 0 0 0 2-2c0-1.1.9-2 2-2h3.17\" /><path d=\"M11 21.95V18a2 2 0 0 0-2-2a2 2 0 0 1-2-2v-1a2 2 0 0 0-2-2H2.05\" /><circle cx=\"12\" cy=\"12\" r=\"10\" /></g>"
     },
-    "globe-check": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m15 6 2 2 4-4\" /><path d=\"M2 12h20A10 10 0 1 1 12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 4-10\" /></g>",
+    "globe-ban": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 22a14.48 14.48 0 01-4.008-10C7.993 9.136 9 5.258 11 2.05A10 10 0 0012 22\" /><path d=\"m15.172 3.172 5.656 5.656\" /><path d=\"M15.86 14a14.5 14.5 0 01-3.859 8 10 10 0 009.949-9\" /><path d=\"M2 12h10.5\" /><circle cx=\"18\" cy=\"6\" r=\"4\" /></g>",
       "tags": [
         "world",
         "browser",
         "language",
         "translate",
-        "checkmark",
-        "done",
-        "completed",
-        "finished",
-        "successful",
-        "confirmed",
-        "verified",
-        "validated",
-        "approved",
-        "accepted",
-        "correct",
-        "valid",
-        "ticked",
-        "task",
-        "todo",
-        "internet",
-        "web",
-        "available",
-        "online",
-        "status"
-      ]
-    },
-    "globe-code": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15.5 10 13 7.5 15.5 5\" /><path d=\"M15.861 14A14.5 14.5 0 0112 22a14.48 14.48 0 010-20 10 10 0 109.888 11.5\" /><path d=\"M19.5 5 22 7.5 19.5 10\" /><path d=\"M2 12h8.5\" /></g>",
-      "tags": [
-        "world",
-        "browser",
-        "language",
-        "translate",
-        "coding",
-        "programming",
-        "development",
-        "website",
-        "internet",
-        "globe",
+        "location",
+        "country",
+        "coverage",
+        "publish",
         "connection",
-        "network",
-        "digital",
-        "access",
         "global",
-        "link"
-      ]
-    },
-    "globe-lock": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15.686 15A14.5 14.5 0 0 1 12 22a14.5 14.5 0 0 1 0-20 10 10 0 1 0 9.542 13\" /><path d=\"M2 12h8.5\" /><path d=\"M20 6V4a2 2 0 1 0-4 0v2\" /><rect width=\"8\" height=\"5\" x=\"14\" y=\"6\" rx=\"1\" /></g>",
-      "tags": [
-        "world",
-        "browser",
-        "language",
-        "translate",
-        "lock",
-        "padlock",
-        "private",
-        "privacy",
-        "protection",
-        "password",
-        "secure",
-        "security",
-        "safety",
-        "protected",
-        "restricted",
-        "encrypted",
-        "authorization",
-        "read-only",
-        "blocked",
-        "locked",
-        "vpn",
+        "earth",
+        "globe",
+        "internet",
+        "planet",
         "network",
-        "encryption",
-        "connection"
-      ]
-    },
-    "globe-off": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10.114 4.462A14.5 14.5 0 0 1 12 2a10 10 0 0 1 9.313 13.643\" /><path d=\"M15.557 15.556A14.5 14.5 0 0 1 12 22 10 10 0 0 1 4.929 4.929\" /><path d=\"M15.892 10.234A14.5 14.5 0 0 0 12 2a10 10 0 0 0-3.643.687\" /><path d=\"M17.656 12H22\" /><path d=\"M19.071 19.071A10 10 0 0 1 12 22 14.5 14.5 0 0 1 8.44 8.45\" /><path d=\"M2 12h10\" /><path d=\"m2 2 20 20\" /></g>",
-      "tags": [
-        "world",
-        "browser",
-        "language",
-        "translate",
         "off",
         "disable",
         "hide",
@@ -18470,19 +18521,204 @@
         "strikethrough",
         "crossed out",
         "diagonal line",
-        "globe",
+        "web",
+        "website",
+        "banned",
+        "geo blocking",
+        "offline",
+        "parental controls",
+        "content filter",
+        "region lock",
+        "public access",
+        "access control",
+        "domain blocking",
+        "region restriction"
+      ]
+    },
+    "globe-check": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m15 6 2 2 4-4\" /><path d=\"M2 12h20A10 10 0 1 1 12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 4-10\" /></g>",
+      "tags": [
+        "world",
+        "browser",
+        "language",
+        "translate",
+        "location",
+        "country",
+        "coverage",
+        "publish",
+        "connection",
+        "global",
         "earth",
+        "globe",
+        "internet",
         "planet",
+        "network",
+        "checkmark",
+        "done",
+        "completed",
+        "finished",
+        "successful",
+        "confirmed",
+        "verified",
+        "validated",
+        "approved",
+        "accepted",
+        "correct",
+        "valid",
+        "ticked",
+        "task",
+        "todo",
+        "web",
+        "available",
+        "online",
+        "status"
+      ]
+    },
+    "globe-code": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15.5 10 13 7.5 15.5 5\" /><path d=\"M15.861 14A14.5 14.5 0 0112 22a14.48 14.48 0 010-20 10 10 0 109.888 11.5\" /><path d=\"M19.5 5 22 7.5 19.5 10\" /><path d=\"M2 12h8.5\" /></g>",
+      "tags": [
+        "world",
+        "browser",
+        "language",
+        "translate",
+        "location",
+        "country",
+        "coverage",
+        "publish",
+        "connection",
+        "global",
+        "earth",
+        "globe",
+        "internet",
+        "planet",
+        "network",
+        "coding",
+        "programming",
+        "development",
+        "website",
+        "digital",
+        "access",
+        "link"
+      ]
+    },
+    "globe-lock": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15.686 15A14.5 14.5 0 0 1 12 22a14.5 14.5 0 0 1 0-20 10 10 0 1 0 9.542 13\" /><path d=\"M2 12h8.5\" /><path d=\"M20 6V4a2 2 0 1 0-4 0v2\" /><rect width=\"8\" height=\"5\" x=\"14\" y=\"6\" rx=\"1\" /></g>",
+      "tags": [
+        "world",
+        "browser",
+        "language",
+        "translate",
+        "location",
+        "country",
+        "coverage",
+        "publish",
+        "connection",
+        "global",
+        "earth",
+        "globe",
+        "internet",
+        "planet",
+        "network",
+        "lock",
+        "padlock",
+        "private",
+        "privacy",
+        "protection",
+        "password",
+        "secure",
+        "security",
+        "safety",
+        "protected",
+        "restricted",
+        "encrypted",
+        "authorization",
+        "read-only",
+        "blocked",
+        "locked",
+        "vpn",
+        "encryption"
+      ]
+    },
+    "globe-off": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10.114 4.462A14.5 14.5 0 0 1 12 2a10 10 0 0 1 9.313 13.643\" /><path d=\"M15.557 15.556A14.5 14.5 0 0 1 12 22 10 10 0 0 1 4.929 4.929\" /><path d=\"M15.892 10.234A14.5 14.5 0 0 0 12 2a10 10 0 0 0-3.643.687\" /><path d=\"M17.656 12H22\" /><path d=\"M19.071 19.071A10 10 0 0 1 12 22 14.5 14.5 0 0 1 8.44 8.45\" /><path d=\"M2 12h10\" /><path d=\"m2 2 20 20\" /></g>",
+      "tags": [
+        "world",
+        "browser",
+        "language",
+        "translate",
+        "location",
+        "country",
+        "coverage",
+        "publish",
+        "connection",
+        "global",
+        "earth",
+        "globe",
+        "internet",
+        "planet",
+        "network",
+        "off",
+        "disable",
+        "hide",
+        "restricted",
+        "turn off",
+        "block",
+        "/",
+        "cancel",
+        "cancelled",
+        "disabled",
+        "inactive",
+        "unavailable",
+        "deactivated",
+        "slash",
+        "blocked",
+        "ban",
+        "prohibited",
+        "forbidden",
+        "disallowed",
+        "hidden",
+        "invisible",
+        "strikethrough",
+        "crossed out",
+        "diagonal line",
         "mute",
         "avoid",
-        "internet",
         "offline",
         "disconnected",
-        "network",
-        "connection",
         "no connection",
         "network failure",
         "signal off"
+      ]
+    },
+    "globe-plus": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15.929 10.563A14.5 14.5 0 0112 22a1 1 0 010-20 15 15 0 01.68.768\" /><path d=\"M19 2v6\" /><path d=\"M21.92 10.734A10 10 0 0112 22a14.5 14.5 0 010-20 10 10 0 011.266.08\" /><path d=\"M22 12H2\" /><path d=\"M22 5h-6\" /></g>",
+      "tags": [
+        "world",
+        "browser",
+        "language",
+        "translate",
+        "location",
+        "country",
+        "coverage",
+        "publish",
+        "connection",
+        "global",
+        "earth",
+        "globe",
+        "internet",
+        "planet",
+        "network",
+        "plus",
+        "add",
+        "new",
+        "create",
+        "+",
+        "increase",
+        "increment",
+        "extra",
+        "insert",
+        "addition",
+        "added"
       ]
     },
     "globe-x": {
@@ -18492,6 +18728,17 @@
         "browser",
         "language",
         "translate",
+        "location",
+        "country",
+        "coverage",
+        "publish",
+        "connection",
+        "global",
+        "earth",
+        "globe",
+        "internet",
+        "planet",
+        "network",
         "x",
         "remove",
         "delete",
@@ -18510,12 +18757,8 @@
         "times",
         "ex",
         "×",
-        "globe",
-        "internet",
         "offline",
         "disconnected",
-        "network",
-        "connection",
         "no connection",
         "network failure",
         "signal off"
@@ -18527,7 +18770,18 @@
         "world",
         "browser",
         "language",
-        "translate"
+        "translate",
+        "location",
+        "country",
+        "coverage",
+        "publish",
+        "connection",
+        "global",
+        "earth",
+        "globe",
+        "internet",
+        "planet",
+        "network"
       ]
     },
     "goal": {
@@ -22836,6 +23090,9 @@
         "snap"
       ]
     },
+    "mail-alert": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 10.5V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h12.5\" /><path d=\"m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7\" /><path d=\"M20 14v4\" /><path d=\"M20 22v.01\" /></g>"
+    },
     "mail-badge": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 7.7V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8.25\" /><path d=\"M12 12.996a1.94 1.94 0 0 1-1.03-.296L2 7\" /><path d=\"m20.69 16.479 1.29 4.88a.5.5 0 0 1-.698.591l-1.843-.849a1 1 0 0 0-.879.001l-1.846.85a.5.5 0 0 1-.692-.593l1.29-4.88\" /><circle cx=\"19\" cy=\"14\" r=\"3\" /></g>",
       "tags": [
@@ -22937,6 +23194,28 @@
         "post",
         "send",
         "address"
+      ]
+    },
+    "mail-exclamation-point": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 10.5V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h12.5\" /><path d=\"m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7\" /><path d=\"M20 14v4\" /><path d=\"M20 22v.01\" /></g>",
+      "tags": [
+        "email",
+        "message",
+        "letter",
+        "unread",
+        "alert",
+        "warning",
+        "danger",
+        "caution",
+        "notice",
+        "error",
+        "risk",
+        "concern",
+        "hazard",
+        "exclamation mark",
+        "exclamation point",
+        "!",
+        "delivery error"
       ]
     },
     "mail-minus": {
@@ -23079,26 +23358,7 @@
       ]
     },
     "mail-warning": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 10.5V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h12.5\" /><path d=\"m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7\" /><path d=\"M20 14v4\" /><path d=\"M20 22v.01\" /></g>",
-      "tags": [
-        "email",
-        "message",
-        "letter",
-        "unread",
-        "alert",
-        "warning",
-        "danger",
-        "caution",
-        "notice",
-        "error",
-        "risk",
-        "concern",
-        "hazard",
-        "exclamation mark",
-        "exclamation point",
-        "!",
-        "delivery error"
-      ]
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 10.5V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h12.5\" /><path d=\"m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7\" /><path d=\"M20 14v4\" /><path d=\"M20 22v.01\" /></g>"
     },
     "mail-x": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 12.532V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8.792\" /><path d=\"m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7\" /><path d=\"m16.5 16.5 5 5\" /><path d=\"m21.5 16.5-5 5\" /></g>",
@@ -23156,6 +23416,23 @@
         "mailing list",
         "newsletter",
         "copy"
+      ]
+    },
+    "mango": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m17 6 3-3\" /><path d=\"M7 22a4 4 0 01-2.62-7.023A2 2 0 005 13.383V10a8 8 0 1116 0A12 12 0 019 22z\" /></g>",
+      "tags": [
+        "fruit",
+        "food",
+        "tropical",
+        "summer",
+        "exotic",
+        "healthy",
+        "ripe",
+        "yellow",
+        "juice",
+        "smoothie",
+        "snack",
+        "produce"
       ]
     },
     "map-minus": {
@@ -23889,6 +24166,9 @@
         "unite"
       ]
     },
+    "message-circle-alert": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719\" /><path d=\"M12 8v4\" /><path d=\"M12 16h.01\" /></g>"
+    },
     "message-circle-check": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719\" /><path d=\"m16 9-5.5 5.5L8 12\" /></g>",
       "tags": [
@@ -23976,6 +24256,33 @@
         "feedback",
         "speech bubble",
         "draft"
+      ]
+    },
+    "message-circle-exclamation-point": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719\" /><path d=\"M12 8v4\" /><path d=\"M12 16h.01\" /></g>",
+      "tags": [
+        "comment",
+        "chat",
+        "conversation",
+        "dialog",
+        "feedback",
+        "speech bubble",
+        "alert",
+        "warning",
+        "danger",
+        "caution",
+        "notice",
+        "error",
+        "risk",
+        "concern",
+        "hazard",
+        "exclamation mark",
+        "exclamation point",
+        "!",
+        "report",
+        "abuse",
+        "offense",
+        "protected"
       ]
     },
     "message-circle-heart": {
@@ -24165,31 +24472,7 @@
       ]
     },
     "message-circle-warning": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719\" /><path d=\"M12 8v4\" /><path d=\"M12 16h.01\" /></g>",
-      "tags": [
-        "comment",
-        "chat",
-        "conversation",
-        "dialog",
-        "feedback",
-        "speech bubble",
-        "alert",
-        "warning",
-        "danger",
-        "caution",
-        "notice",
-        "error",
-        "risk",
-        "concern",
-        "hazard",
-        "exclamation mark",
-        "exclamation point",
-        "!",
-        "report",
-        "abuse",
-        "offense",
-        "protected"
-      ]
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719\" /><path d=\"M12 8v4\" /><path d=\"M12 16h.01\" /></g>"
     },
     "message-circle-x": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719\" /><path d=\"m15 9-6 6\" /><path d=\"m9 9 6 6\" /></g>",
@@ -24233,6 +24516,9 @@
         "feedback",
         "speech bubble"
       ]
+    },
+    "message-square-alert": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z\" /><path d=\"M12 15h.01\" /><path d=\"M12 7v4\" /></g>"
     },
     "message-square-check": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.7.7 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z\" /><path d=\"m9 11 2 2 4-4\" /></g>",
@@ -24333,6 +24619,33 @@
         "unread",
         "current",
         "unresolved"
+      ]
+    },
+    "message-square-exclamation-point": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z\" /><path d=\"M12 15h.01\" /><path d=\"M12 7v4\" /></g>",
+      "tags": [
+        "comment",
+        "chat",
+        "conversation",
+        "dialog",
+        "feedback",
+        "speech bubble",
+        "alert",
+        "warning",
+        "danger",
+        "caution",
+        "notice",
+        "error",
+        "risk",
+        "concern",
+        "hazard",
+        "exclamation mark",
+        "exclamation point",
+        "!",
+        "report",
+        "abuse",
+        "offense",
+        "protected"
       ]
     },
     "message-square-heart": {
@@ -24535,31 +24848,7 @@
       ]
     },
     "message-square-warning": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z\" /><path d=\"M12 15h.01\" /><path d=\"M12 7v4\" /></g>",
-      "tags": [
-        "comment",
-        "chat",
-        "conversation",
-        "dialog",
-        "feedback",
-        "speech bubble",
-        "alert",
-        "warning",
-        "danger",
-        "caution",
-        "notice",
-        "error",
-        "risk",
-        "concern",
-        "hazard",
-        "exclamation mark",
-        "exclamation point",
-        "!",
-        "report",
-        "abuse",
-        "offense",
-        "protected"
-      ]
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z\" /><path d=\"M12 15h.01\" /><path d=\"M12 7v4\" /></g>"
     },
     "message-square-x": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z\" /><path d=\"m14.5 8.5-5 5\" /><path d=\"m9.5 8.5 5 5\" /></g>",
@@ -26477,6 +26766,9 @@
       ]
     },
     "octagon-alert": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 16h.01\" /><path d=\"M12 8v4\" /><path d=\"M15.312 2a2 2 0 0 1 1.414.586l4.688 4.688A2 2 0 0 1 22 8.688v6.624a2 2 0 0 1-.586 1.414l-4.688 4.688a2 2 0 0 1-1.414.586H8.688a2 2 0 0 1-1.414-.586l-4.688-4.688A2 2 0 0 1 2 15.312V8.688a2 2 0 0 1 .586-1.414l4.688-4.688A2 2 0 0 1 8.688 2z\" /></g>"
+    },
+    "octagon-exclamation-point": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 16h.01\" /><path d=\"M12 8v4\" /><path d=\"M15.312 2a2 2 0 0 1 1.414.586l4.688 4.688A2 2 0 0 1 22 8.688v6.624a2 2 0 0 1-.586 1.414l-4.688 4.688a2 2 0 0 1-1.414.586H8.688a2 2 0 0 1-1.414-.586l-4.688-4.688A2 2 0 0 1 2 15.312V8.688a2 2 0 0 1 .586-1.414l4.688-4.688A2 2 0 0 1 8.688 2z\" /></g>",
       "tags": [
         "alert",
@@ -26586,6 +26878,24 @@
         "philosophy"
       ]
     },
+    "opacity": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 3h.01\" /><path d=\"M12 9h.01\" /><path d=\"M15 6h.01\" /><path d=\"M18 3h.01\" /><path d=\"M21 6v13a2 2 0 0 1-2 2H6\" /><path d=\"M3 12h.01\" /><path d=\"M3 18h.01\" /><path d=\"M3 6h.01\" /><path d=\"M6 15h.01\" /><path d=\"M6 3h.01\" /><path d=\"M6 9h.01\" /><path d=\"M9 12h.01\" /><path d=\"M9 6h.01\" /></g>",
+      "tags": [
+        "opacity",
+        "opaque",
+        "transparency",
+        "visibility",
+        "fade",
+        "lens",
+        "glass",
+        "blur",
+        "filter",
+        "clear",
+        "mask",
+        "cover",
+        "gradient"
+      ]
+    },
     "option": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M14 3h7\" /><path d=\"M3 3h5.28a1 1 0 0 1 .948.684l5.544 16.632a1 1 0 0 0 .949.684H21\" /></g>",
       "tags": [
@@ -26629,7 +26939,14 @@
         "packed",
         "archive",
         "zip",
-        "module"
+        "module",
+        "shipping",
+        "recipient",
+        "inventory",
+        "logistics",
+        "tracking",
+        "order",
+        "product"
       ]
     },
     "package-check": {
@@ -26646,6 +26963,13 @@
         "archive",
         "zip",
         "module",
+        "shipping",
+        "recipient",
+        "inventory",
+        "logistics",
+        "tracking",
+        "order",
+        "product",
         "checkmark",
         "done",
         "completed",
@@ -26678,6 +27002,13 @@
         "archive",
         "zip",
         "module",
+        "shipping",
+        "recipient",
+        "inventory",
+        "logistics",
+        "tracking",
+        "order",
+        "product",
         "minus",
         "remove",
         "delete",
@@ -26703,6 +27034,51 @@
         "delivered"
       ]
     },
+    "package-pen": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 14.34V12l8.71-5\" /><path d=\"M16.511 21.141a2 2 0 0 0 .854-.506l4.013-4.009a1 1 0 1 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .599.626z\" /><path d=\"M21 9.114V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l5.087 2.907\" /><path d=\"M3.29 7 12 12\" /><path d=\"m7.5 4.27 9 5.15\" /></g>",
+      "tags": [
+        "box",
+        "container",
+        "storage",
+        "sealed",
+        "delivery",
+        "undelivered",
+        "unopened",
+        "packed",
+        "archive",
+        "zip",
+        "module",
+        "shipping",
+        "recipient",
+        "inventory",
+        "logistics",
+        "tracking",
+        "order",
+        "product",
+        "edit",
+        "modify",
+        "update",
+        "revise",
+        "amend",
+        "create",
+        "change",
+        "write",
+        "writer",
+        "writing",
+        "pencil",
+        "compose",
+        "draft",
+        "author",
+        "annotate",
+        "comment",
+        "note",
+        "draw",
+        "sketch",
+        "doodle",
+        "rename",
+        "customize"
+      ]
+    },
     "package-plus": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 22V12\" /><path d=\"M16 17h6\" /><path d=\"M19 14v6\" /><path d=\"M21 10.535V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.729l7 4a2 2 0 0 0 2 .001l1.675-.955\" /><path d=\"M3.29 7 12 12l8.71-5\" /><path d=\"m7.5 4.27 8.997 5.148\" /></g>",
       "tags": [
@@ -26717,6 +27093,13 @@
         "archive",
         "zip",
         "module",
+        "shipping",
+        "recipient",
+        "inventory",
+        "logistics",
+        "tracking",
+        "order",
+        "product",
         "plus",
         "add",
         "new",
@@ -26728,6 +27111,49 @@
         "insert",
         "addition",
         "added"
+      ]
+    },
+    "package-question-mark": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 22V12l8.71-5\" /><path d=\"M17 15.27c.2-.4.5-.8.9-1a2.1 2.1 0 0 1 2.6.4c.3.4.5.8.5 1.3 0 1.3-2 2-2 2\" /><path d=\"M19 21.99h.01\" /><path d=\"M21 10.342V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2.33-1.332\" /><path d=\"M3.29 7 12 12\" /><path d=\"m7.5 4.27 9 5.15\" /></g>",
+      "tags": [
+        "box",
+        "container",
+        "storage",
+        "sealed",
+        "delivery",
+        "undelivered",
+        "unopened",
+        "packed",
+        "archive",
+        "zip",
+        "module",
+        "shipping",
+        "recipient",
+        "inventory",
+        "logistics",
+        "tracking",
+        "order",
+        "product",
+        "help",
+        "guide",
+        "tutorial",
+        "manual",
+        "unknown",
+        "unidentified",
+        "unspecified",
+        "uncertain",
+        "undetermined",
+        "missing",
+        "to be determined",
+        "mystery",
+        "question",
+        "question mark",
+        "?",
+        "unresolved",
+        "placeholder",
+        "pending",
+        "lost",
+        "dependency"
       ]
     },
     "package-search": {
@@ -26744,6 +27170,13 @@
         "archive",
         "zip",
         "module",
+        "shipping",
+        "recipient",
+        "inventory",
+        "logistics",
+        "tracking",
+        "order",
+        "product",
         "search",
         "magnifier",
         "scan",
@@ -26780,6 +27213,13 @@
         "archive",
         "zip",
         "module",
+        "shipping",
+        "recipient",
+        "inventory",
+        "logistics",
+        "tracking",
+        "order",
+        "product",
         "x",
         "remove",
         "delete",
@@ -26813,7 +27253,14 @@
         "packed",
         "archive",
         "zip",
-        "module"
+        "module",
+        "shipping",
+        "recipient",
+        "inventory",
+        "logistics",
+        "tracking",
+        "order",
+        "product"
       ]
     },
     "paint-bucket": {
@@ -31228,43 +31675,7 @@
       ]
     },
     "search-alert": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"11\" cy=\"11\" r=\"8\" /><path d=\"m21 21-4.3-4.3\" /><path d=\"M11 7v4\" /><path d=\"M11 15h.01\" /></g>",
-      "tags": [
-        "search",
-        "magnifier",
-        "scan",
-        "scanning",
-        "browsing",
-        "finding",
-        "find",
-        "lookup",
-        "query",
-        "locate",
-        "explore",
-        "discover",
-        "browse",
-        "inspect",
-        "examine",
-        "investigate",
-        "magnifying glass",
-        "lens",
-        "zoom",
-        "enlarge",
-        "alert",
-        "warning",
-        "danger",
-        "caution",
-        "notice",
-        "error",
-        "risk",
-        "concern",
-        "hazard",
-        "exclamation mark",
-        "exclamation point",
-        "!",
-        "stop",
-        "anomaly"
-      ]
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"11\" cy=\"11\" r=\"8\" /><path d=\"m21 21-4.3-4.3\" /><path d=\"M11 7v4\" /><path d=\"M11 15h.01\" /></g>"
     },
     "search-check": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m8 11 2 2 4-4\" /><circle cx=\"11\" cy=\"11\" r=\"8\" /><path d=\"m21 21-4.3-4.3\" /></g>",
@@ -31336,6 +31747,45 @@
         "grep",
         "chevrons",
         "<>"
+      ]
+    },
+    "search-exclamation-point": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"11\" cy=\"11\" r=\"8\" /><path d=\"m21 21-4.3-4.3\" /><path d=\"M11 7v4\" /><path d=\"M11 15h.01\" /></g>",
+      "tags": [
+        "search",
+        "magnifier",
+        "scan",
+        "scanning",
+        "browsing",
+        "finding",
+        "find",
+        "lookup",
+        "query",
+        "locate",
+        "explore",
+        "discover",
+        "browse",
+        "inspect",
+        "examine",
+        "investigate",
+        "magnifying glass",
+        "lens",
+        "zoom",
+        "enlarge",
+        "alert",
+        "warning",
+        "danger",
+        "caution",
+        "notice",
+        "error",
+        "risk",
+        "concern",
+        "hazard",
+        "exclamation mark",
+        "exclamation point",
+        "!",
+        "stop",
+        "anomaly"
       ]
     },
     "search-slash": {
@@ -31737,112 +32187,7 @@
       ]
     },
     "shield-alert": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\" /><path d=\"M12 8v4\" /><path d=\"M12 16h.01\" /></g>",
-      "tags": [
-        "shield",
-        "privacy",
-        "safeguard",
-        "security",
-        "cybersecurity",
-        "secure",
-        "safety",
-        "protection",
-        "protected",
-        "guard",
-        "guardian",
-        "defense",
-        "defence",
-        "defender",
-        "prevention",
-        "armored",
-        "armoured",
-        "block",
-        "threat",
-        "antivirus",
-        "vigilance",
-        "vigilant",
-        "detection",
-        "scan",
-        "find",
-        "strength",
-        "strong",
-        "tough",
-        "invincible",
-        "invincibility",
-        "invulnerable",
-        "undamaged",
-        "audit",
-        "admin",
-        "verification",
-        "crest",
-        "bravery",
-        "knight",
-        "foot soldier",
-        "infantry",
-        "trooper",
-        "pawn",
-        "battle",
-        "war",
-        "military",
-        "army",
-        "cadet",
-        "scout",
-        "alert",
-        "warning",
-        "danger",
-        "caution",
-        "notice",
-        "error",
-        "risk",
-        "concern",
-        "hazard",
-        "exclamation mark",
-        "exclamation point",
-        "!",
-        "unshielded",
-        "insecure",
-        "unsecured",
-        "unsafe",
-        "unprotected",
-        "unguarded",
-        "unarmored",
-        "unarmoured",
-        "defenseless",
-        "defenceless",
-        "undefended",
-        "blocked",
-        "stopped",
-        "intercepted",
-        "interception",
-        "saved",
-        "thwarted",
-        "unprevented",
-        "detected",
-        "scanned",
-        "found",
-        "exploit",
-        "vulnerability",
-        "vulnerable",
-        "weakness",
-        "infection",
-        "infected",
-        "compromised",
-        "data leak",
-        "audited",
-        "unverified",
-        "uncertified",
-        "emergency",
-        "attention",
-        "urgent",
-        "alarm",
-        "attacked",
-        "damaged",
-        "injured",
-        "hit",
-        "expired",
-        "disabled",
-        "inactive"
-      ]
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\" /><path d=\"M12 8v4\" /><path d=\"M12 16h.01\" /></g>"
     },
     "shield-ban": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\" /><path d=\"m4.243 5.21 14.39 12.472\" /></g>",
@@ -32259,6 +32604,114 @@
         "etc",
         "...",
         "…"
+      ]
+    },
+    "shield-exclamation-point": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\" /><path d=\"M12 8v4\" /><path d=\"M12 16h.01\" /></g>",
+      "tags": [
+        "shield",
+        "privacy",
+        "safeguard",
+        "security",
+        "cybersecurity",
+        "secure",
+        "safety",
+        "protection",
+        "protected",
+        "guard",
+        "guardian",
+        "defense",
+        "defence",
+        "defender",
+        "prevention",
+        "armored",
+        "armoured",
+        "block",
+        "threat",
+        "antivirus",
+        "vigilance",
+        "vigilant",
+        "detection",
+        "scan",
+        "find",
+        "strength",
+        "strong",
+        "tough",
+        "invincible",
+        "invincibility",
+        "invulnerable",
+        "undamaged",
+        "audit",
+        "admin",
+        "verification",
+        "crest",
+        "bravery",
+        "knight",
+        "foot soldier",
+        "infantry",
+        "trooper",
+        "pawn",
+        "battle",
+        "war",
+        "military",
+        "army",
+        "cadet",
+        "scout",
+        "alert",
+        "warning",
+        "danger",
+        "caution",
+        "notice",
+        "error",
+        "risk",
+        "concern",
+        "hazard",
+        "exclamation mark",
+        "exclamation point",
+        "!",
+        "unshielded",
+        "insecure",
+        "unsecured",
+        "unsafe",
+        "unprotected",
+        "unguarded",
+        "unarmored",
+        "unarmoured",
+        "defenseless",
+        "defenceless",
+        "undefended",
+        "blocked",
+        "stopped",
+        "intercepted",
+        "interception",
+        "saved",
+        "thwarted",
+        "unprevented",
+        "detected",
+        "scanned",
+        "found",
+        "exploit",
+        "vulnerability",
+        "vulnerable",
+        "weakness",
+        "infection",
+        "infected",
+        "compromised",
+        "data leak",
+        "audited",
+        "unverified",
+        "uncertified",
+        "emergency",
+        "attention",
+        "urgent",
+        "alarm",
+        "attacked",
+        "damaged",
+        "injured",
+        "hit",
+        "expired",
+        "disabled",
+        "inactive"
       ]
     },
     "shield-half": {
@@ -35316,7 +35769,7 @@
       ]
     },
     "square-letter-j": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 8v5a3 3 0 1 1-6 0\" /><rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /></g>",
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M14 8v5.5a1 1 0 01-5 0V13\" /><rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /></g>",
       "tags": [
         "alphabet",
         "character",
@@ -39053,6 +39506,20 @@
       ]
     },
     "triangle-alert": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\" /><path d=\"M12 9v4\" /><path d=\"M12 17h.01\" /></g>"
+    },
+    "triangle-dashed": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10.17 4.193a2 2 0 0 1 3.666.013\" /><path d=\"M14 21h2\" /><path d=\"m15.874 7.743 1 1.732\" /><path d=\"m18.849 12.952 1 1.732\" /><path d=\"M21.824 18.18a2 2 0 0 1-1.835 2.824\" /><path d=\"M4.024 21a2 2 0 0 1-1.839-2.839\" /><path d=\"m5.136 12.952-1 1.732\" /><path d=\"M8 21h2\" /><path d=\"m8.102 7.743-1 1.732\" /></g>",
+      "tags": [
+        "equilateral",
+        "delta",
+        "shape",
+        "pyramid",
+        "hierarchy",
+        "dashed"
+      ]
+    },
+    "triangle-exclamation-point": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\" /><path d=\"M12 9v4\" /><path d=\"M12 17h.01\" /></g>",
       "tags": [
         "alert",
@@ -39068,17 +39535,6 @@
         "exclamation point",
         "!",
         "linter"
-      ]
-    },
-    "triangle-dashed": {
-      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10.17 4.193a2 2 0 0 1 3.666.013\" /><path d=\"M14 21h2\" /><path d=\"m15.874 7.743 1 1.732\" /><path d=\"m18.849 12.952 1 1.732\" /><path d=\"M21.824 18.18a2 2 0 0 1-1.835 2.824\" /><path d=\"M4.024 21a2 2 0 0 1-1.839-2.839\" /><path d=\"m5.136 12.952-1 1.732\" /><path d=\"M8 21h2\" /><path d=\"m8.102 7.743-1 1.732\" /></g>",
-      "tags": [
-        "equilateral",
-        "delta",
-        "shape",
-        "pyramid",
-        "hierarchy",
-        "dashed"
       ]
     },
     "triangle-right": {
@@ -42329,10 +42785,10 @@
     },
     "name": "Lucide",
     "tier": "core",
-    "total": 2292,
+    "total": 2317,
     "upstream": {
       "package": "lucide-static",
-      "version": "1.66.0"
+      "version": "1.69.0"
     },
     "strokeWidth": 2,
     "style": "outlined",
