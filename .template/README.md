@@ -82,7 +82,7 @@ An exception excuses that file's differences from the template, including its ab
 - a `synced` commit outside the history of the template's default branch, which is where a sync takes it from; a commit that only this repository has proves nothing about the template, so `synced` is set to the template commit the project last synced with;
 - a `canonical` or `blocks` file that is missing;
 - a `canonical` file that differs from the template's, including its mode, as for a hook that lost its executable bit;
-- a `blocks` file whose text outside its project blocks differs, or whose markers are unbalanced;
+- a `blocks` file whose text outside its project blocks differs, whose mode differs, or whose markers are unbalanced;
 - a placeholder left in a `seed` or `blocks` file;
 - `core.hooksPath` not set to `.githooks`;
 - an exception that is no longer needed.

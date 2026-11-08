@@ -101,7 +101,7 @@ Most review findings that hold up are about these, not about style: the [review 
 ## Testing
 
 - Test behavior, edge cases, and error paths, not just the happy path.
-- One behavior per test, with a descriptive name (`shouldReturnEmptyWhenNull`).
+- One behavior per test, named by the behavior it proves, as a sentence (`returns an empty list when the input is null`).
 - Unit tests sit next to the code they test.
 - Mock the network, timers, and browser APIs. Test code whose job is file or database access against a real temporary directory or database where practical, and mock them elsewhere. Pure logic is tested directly.
 - Give each behavior decision a test that fails when the decision is reversed, and see a new test fail before keeping it.
