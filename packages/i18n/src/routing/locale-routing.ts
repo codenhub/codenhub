@@ -50,8 +50,9 @@ export interface ParsedLocalePath<TLocale extends string> {
   locale: TLocale;
   /**
    * The canonical application pathname: the locale prefix removed and translated segments read back. A listed page's
-   * fixed segments are written as a URL writes the table's words, the same in every locale, so `/%61/x` and
-   * `/pt/%61/x` both read as `/a/x` when `/a/:q` is listed; other segments are kept as written.
+   * fixed segments are written as a URL writes the table's words, the same in every locale, so `/pt/%61/x` reads as
+   * `/a/x` when `/a/:q` is listed, and so does `/%61/x` where the default locale has no prefix; other segments are kept
+   * as written.
    */
   pathname: string;
 }
