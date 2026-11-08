@@ -21,22 +21,24 @@ export interface Pattern {
 export interface Route<TLocale extends string> {
   readonly canonical: Pattern;
   readonly forms: ReadonlyMap<TLocale, Pattern>;
-  /** Locales whose form needs no prefix under `when-ambiguous`. */
+  /** Locales whose form needs no prefix under `when-ambiguous`; empty under any other policy. */
   readonly unprefixed: ReadonlySet<TLocale>;
 }
 
 /**
- * Items grouped by their pattern's segment count and first fixed segment, so a lookup visits only the items that could
- * match. Items come out in the order they went in.
+ * Items stored by their pattern's segments, so a lookup visits only the branches that could match. Where several items
+ * match, the one that went in first wins.
  *
  * @internal
  */
 export interface ShapeIndex<T> {
-  /**
-   * Items that can match `length` segments whose first segment is `first` or a parameter; all that can match that
-   * length when `first` is `undefined`. A catch-all pattern can match any length from its own up.
-   */
-  candidates(length: number, first: string | undefined): Iterable<T>;
+  /** The first item whose pattern matches the normalized segments `keys`, with its parameters read from `segments`. */
+  find(
+    keys: readonly string[],
+    segments: readonly string[],
+  ): { readonly item: T; readonly parameters: Parameters } | undefined;
+  /** Whether an item whose pattern matches some path that `pattern` matches satisfies `predicate`. */
+  someOverlapping(pattern: Pattern, predicate: (item: T) => boolean): boolean;
 }
 
 /** The compiled table. Indexes keep a fixed segment ahead of a parameter. @internal */
@@ -56,20 +58,10 @@ export interface Pathnames<TLocale extends string> {
 export type Parameters = ReadonlyMap<string, string>;
 
 /**
- * Matches normalized segments against a pattern, returning the raw text of each parameter.
- *
- * @internal
+ * Reads the raw text of each parameter of the pattern that the index found for these segments; the index already
+ * matched the segment count and every fixed segment.
  */
-export const matchPattern = (
-  pattern: Pattern,
-  keys: readonly string[],
-  segments: readonly string[],
-): Parameters | undefined => {
-  const { length } = pattern.segments;
-  if (hasRest(pattern) ? keys.length < length : keys.length !== length) {
-    return undefined;
-  }
-
+const readParameters = (pattern: Pattern, segments: readonly string[]): Parameters => {
   const parameters = new Map<string, string>();
 
   for (const [index, segment] of pattern.segments.entries()) {
@@ -77,8 +69,6 @@ export const matchPattern = (
       parameters.set(segment.name, segments[index]!);
     } else if (segment.kind === "rest") {
       parameters.set(segment.name, segments.slice(index).join("/"));
-    } else if (segment.value !== keys[index]) {
-      return undefined;
     }
   }
 
@@ -100,115 +90,94 @@ interface IndexEntry<T> {
   readonly order: number;
 }
 
-interface ShapeBucket<T> {
-  readonly all: IndexEntry<T>[];
-  readonly byFirst: Map<string, IndexEntry<T>[]>;
-  /** Items whose first segment is a parameter, or that have none. */
-  readonly open: IndexEntry<T>[];
+/** The items whose patterns start with the segments that lead to this node. */
+interface ShapeNode<T> {
+  readonly byValue: Map<string, ShapeNode<T>>;
+  param: ShapeNode<T> | undefined;
+  /** Items whose pattern ends here, in the order they went in. */
+  readonly ends: IndexEntry<T>[];
+  /** Items whose catch-all starts here, in the order they went in. */
+  readonly rests: IndexEntry<T>[];
 }
 
-interface RestEntry<T> extends IndexEntry<T> {
-  readonly minLength: number;
-  readonly first: string | undefined;
-}
+const createShapeNode = <T>(): ShapeNode<T> => ({ byValue: new Map(), param: undefined, ends: [], rests: [] });
+
+const childrenOf = <T>(node: ShapeNode<T>): ShapeNode<T>[] =>
+  node.param === undefined ? [...node.byValue.values()] : [...node.byValue.values(), node.param];
 
 const indexByShape = <T>(items: readonly T[], patternOf: (item: T) => Pattern): ShapeIndex<T> => {
-  const buckets = new Map<number, ShapeBucket<T>>();
-  // Catch-all patterns match many lengths, so they are kept apart and checked against each lookup.
-  const rests: RestEntry<T>[] = [];
+  const root = createShapeNode<T>();
 
   for (const [order, item] of items.entries()) {
     const pattern = patternOf(item);
-    const { segments } = pattern;
-    if (hasRest(pattern)) {
-      rests.push({ item, order, minLength: segments.length, first: firstFixed(pattern) });
-      continue;
-    }
-    let bucket = buckets.get(segments.length);
-    if (bucket === undefined) {
-      bucket = { all: [], byFirst: new Map(), open: [] };
-      buckets.set(segments.length, bucket);
-    }
-
-    const entry = { item, order };
-    const first = segments[0];
-    bucket.all.push(entry);
-    if (first === undefined || first.kind !== "static") {
-      bucket.open.push(entry);
-    } else {
-      const list = bucket.byFirst.get(first.value);
-      if (list === undefined) {
-        bucket.byFirst.set(first.value, [entry]);
-      } else {
-        list.push(entry);
+    const isRest = hasRest(pattern);
+    let node = root;
+    for (const segment of isRest ? pattern.segments.slice(0, -1) : pattern.segments) {
+      if (segment.kind !== "static") {
+        node = node.param ??= createShapeNode();
+        continue;
       }
+      let child = node.byValue.get(segment.value);
+      if (child === undefined) {
+        child = createShapeNode();
+        node.byValue.set(segment.value, child);
+      }
+      node = child;
     }
+    (isRest ? node.rests : node.ends).push({ item, order });
   }
 
-  const exactCandidates = (length: number, first: string | undefined): readonly IndexEntry<T>[] => {
-    const bucket = buckets.get(length);
-    if (bucket === undefined) {
-      return [];
-    }
-    if (first === undefined) {
-      return bucket.all;
-    }
-
-    // Merge the two lists back into the order the items went in.
-    const fixed = bucket.byFirst.get(first) ?? [];
-    const { open } = bucket;
-    const merged: IndexEntry<T>[] = [];
-    let fixedIndex = 0;
-    let openIndex = 0;
-    while (fixedIndex < fixed.length || openIndex < open.length) {
-      const isFixedNext =
-        openIndex === open.length || (fixedIndex < fixed.length && fixed[fixedIndex]!.order < open[openIndex]!.order);
-      merged.push(isFixedNext ? fixed[fixedIndex++]! : open[openIndex++]!);
-    }
-    return merged;
-  };
+  const isAnyBelow = (node: ShapeNode<T>, predicate: (item: T) => boolean): boolean =>
+    [...node.ends, ...node.rests].some((entry) => predicate(entry.item)) ||
+    childrenOf(node).some((child) => isAnyBelow(child, predicate));
 
   return {
-    *candidates(length, first) {
-      const exact = exactCandidates(length, first);
-      const rest = rests.filter(
-        (entry) =>
-          entry.minLength <= length && (first === undefined || entry.first === undefined || entry.first === first),
-      );
-      const entries = rest.length === 0 ? exact : [...exact, ...rest].sort((a, b) => a.order - b.order);
+    find(keys, segments) {
+      // The first item of each matching node, since items at one node match the same paths.
+      const matches: IndexEntry<T>[] = [];
+      const visit = (node: ShapeNode<T> | undefined, depth: number): void => {
+        if (node === undefined) {
+          return;
+        }
+        if (depth === keys.length) {
+          matches.push(...node.ends.slice(0, 1));
+          return;
+        }
+        matches.push(...node.rests.slice(0, 1)); // A catch-all takes this segment and the rest.
+        visit(node.byValue.get(keys[depth]!), depth + 1);
+        visit(node.param, depth + 1);
+      };
 
-      for (const entry of entries) {
-        yield entry.item;
-      }
+      visit(root, 0);
+      const found = matches.reduce<IndexEntry<T> | undefined>(
+        (first, entry) => (first === undefined || entry.order < first.order ? entry : first),
+        undefined,
+      );
+      return found && { item: found.item, parameters: readParameters(patternOf(found.item), segments) };
+    },
+
+    someOverlapping(pattern, predicate) {
+      const visit = (node: ShapeNode<T> | undefined, depth: number): boolean => {
+        if (node === undefined) {
+          return false;
+        }
+        const segment = pattern.segments[depth];
+        if (segment === undefined) {
+          return node.ends.some((entry) => predicate(entry.item));
+        }
+        if (node.rests.some((entry) => predicate(entry.item))) {
+          return true; // Another catch-all takes this segment and the rest.
+        }
+        if (segment.kind === "rest") {
+          return childrenOf(node).some((child) => isAnyBelow(child, predicate));
+        }
+        const next = segment.kind === "param" ? childrenOf(node) : [node.byValue.get(segment.value), node.param];
+        return next.some((child) => visit(child, depth + 1));
+      };
+
+      return visit(root, 0);
     },
   };
-};
-
-/** The first segment's fixed value, or `undefined` when it is a parameter or there is none. */
-const firstFixed = (pattern: Pattern): string | undefined => {
-  const first = pattern.segments[0];
-  return first?.kind === "static" ? first.value : undefined;
-};
-
-/** Whether some path matches both patterns. */
-const overlaps = (a: Pattern, b: Pattern): boolean => {
-  const aMax = hasRest(a) ? Infinity : a.segments.length;
-  const bMax = hasRest(b) ? Infinity : b.segments.length;
-  if (Math.max(a.segments.length, b.segments.length) > Math.min(aMax, bMax)) {
-    return false;
-  }
-
-  for (let index = 0; index < Math.min(a.segments.length, b.segments.length); index += 1) {
-    const segment = a.segments[index]!;
-    const other = b.segments[index]!;
-    if (segment.kind === "rest" || other.kind === "rest") {
-      return true; // A catch-all takes whatever the other pattern has left.
-    }
-    if (segment.kind === "static" && other.kind === "static" && segment.value !== other.value) {
-      return false;
-    }
-  }
-  return true;
 };
 
 /** A key that two patterns share exactly when they match the same paths. */
@@ -281,18 +250,29 @@ const parsePattern = (pathname: string, path: string, isLocale: (segment: string
   return { segments };
 };
 
+/** The table and the routing configuration it is compiled for. @internal */
+export interface CompilePathnamesOptions<TLocale extends string> {
+  readonly entries: readonly CheckedPathnameEntry[];
+  readonly locales: readonly TLocale[];
+  readonly defaultLocale: TLocale;
+  readonly localePrefix: "always" | "except-default" | "when-ambiguous";
+  /** Whether a normalized first segment is a locale, which a path must not start with. */
+  readonly isLocale: (segment: string) => boolean;
+}
+
 /**
  * Compiles the translated-path table, rejecting paths that are invalid, parameters that differ between forms, and two
  * entries that would share a path in one locale. Problems are thrown with `fail`, for `assertConfig` to word.
  *
  * @internal
  */
-export const compilePathnames = <TLocale extends string>(
-  entries: readonly CheckedPathnameEntry[],
-  locales: readonly TLocale[],
-  defaultLocale: TLocale,
-  isLocale: (segment: string) => boolean,
-): Pathnames<TLocale> => {
+export const compilePathnames = <TLocale extends string>({
+  entries,
+  locales,
+  defaultLocale,
+  localePrefix,
+  isLocale,
+}: CompilePathnamesOptions<TLocale>): Pathnames<TLocale> => {
   const routes: Route<TLocale>[] = [];
   const translated = new Map<Route<TLocale>, readonly TLocale[]>();
   // The canonical path of the first page with each shape, overall and in each locale.
@@ -345,21 +325,24 @@ export const compilePathnames = <TLocale extends string>(
     );
   }
 
-  // A translated form drops the prefix only when it has a fixed segment and no other locale's path could match it.
-  const formList = routes.flatMap((route) => locales.map((locale) => ({ locale, pattern: route.forms.get(locale)! })));
-  const allForms = indexByShape(formList, (form) => form.pattern);
-  for (const route of routes) {
-    for (const locale of translated.get(route)!) {
-      const form = route.forms.get(locale)!;
-      // A catch-all can overlap forms of any length from its own up, which the index doesn't look up by length.
-      const others = hasRest(form) ? formList : allForms.candidates(form.segments.length, firstFixed(form));
-      const isUnambiguous =
-        locale !== defaultLocale &&
-        form.segments.some((segment) => segment.kind === "static") &&
-        [...others].every((other) => other.locale === locale || !overlaps(form, other.pattern));
+  // Under `when-ambiguous`, a translated form drops the prefix only when it has a fixed segment and no other locale's
+  // path could match it. No other policy reads the decision, so it is not made.
+  if (localePrefix === "when-ambiguous") {
+    const allForms = indexByShape(
+      routes.flatMap((route) => locales.map((locale) => ({ locale, pattern: route.forms.get(locale)! }))),
+      (form) => form.pattern,
+    );
+    for (const route of routes) {
+      for (const locale of translated.get(route)!) {
+        const form = route.forms.get(locale)!;
+        const isUnambiguous =
+          locale !== defaultLocale &&
+          form.segments.some((segment) => segment.kind === "static") &&
+          !allForms.someOverlapping(form, (other) => other.locale !== locale);
 
-      if (isUnambiguous) {
-        (route.unprefixed as Set<TLocale>).add(locale);
+        if (isUnambiguous) {
+          (route.unprefixed as Set<TLocale>).add(locale);
+        }
       }
     }
   }

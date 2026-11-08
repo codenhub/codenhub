@@ -140,6 +140,21 @@ describe("translated pathnames", () => {
       });
     });
 
+    it("should write a listed canonical word the same way in every locale, however the request encodes it", () => {
+      const routing = create({ pathnames: { "/a/:q": { pt: "/b/:q" } } });
+
+      expect(routing.parse("/%61/x")).toEqual({ locale: "en", pathname: "/a/x" });
+      expect(routing.parse("/pt/%61/x")).toEqual({ locale: "pt", pathname: "/a/x" });
+      expect(routing.parse("/es/%61/x")).toEqual({ locale: "es", pathname: "/a/x" });
+    });
+
+    it("should keep the trailing slash of a page whose translated path is the root", () => {
+      const routing = create({ pathnames: { "/home": { pt: "/" } } });
+
+      expect(routing.parse("/pt/")).toEqual({ locale: "pt", pathname: "/home/" });
+      expect(routing.parse("/pt")).toEqual({ locale: "pt", pathname: "/home" });
+    });
+
     it("should prefer a fixed segment over a parameter whatever the table order", () => {
       const routing = create({
         pathnames: {
@@ -370,9 +385,56 @@ describe("translated pathnames", () => {
       expect(routing.parse(`/pt/configurações/${id(8_182)}`)?.pathname).toBe(`/settings/${id(8_182)}`);
     });
 
+    it("should return undefined for a path whose canonical path would be longer than 8,192 characters", () => {
+      const canonicalWord = "a".repeat(100);
+      const routing = create({ pathnames: { [`/${canonicalWord}/:id`]: { pt: "/b/:id" } } });
+      const id = (length: number) => "x".repeat(length - `/${canonicalWord}/`.length);
+
+      expect(routing.parse(`/pt/b/${id(8_193)}`)).toBeUndefined();
+      expect(routing.parse(`/pt/b/${id(8_192)}`)).toEqual({ locale: "pt", pathname: `/${canonicalWord}/${id(8_192)}` });
+    });
+
+    it("should return undefined for a path whose returned canonical path would be longer than 8,192 characters", () => {
+      // `url.pathname` leaves `|` raw, but the returned canonical path writes the table's `|` as `%7C`.
+      const routing = create({ pathnames: { "/a||||b/:rest*": { pt: "/b/:rest*" } } });
+      // A rest that makes the canonical path `length` characters long.
+      const rest = (length: number) => "x".repeat(length - "/a%7C%7C%7C%7Cb/".length);
+
+      expect(routing.parse(`/pt/a||||b/${rest(8_193)}`)).toBeUndefined();
+      expect(routing.parse(`/pt/a||||b/${rest(8_192)}`)).toEqual({
+        locale: "pt",
+        pathname: `/a%7C%7C%7C%7Cb/${rest(8_192)}`,
+      });
+    });
+
+    it("should return undefined for a catch-all path whose canonical path would be longer than 8,192 characters", () => {
+      const routing = create({
+        localePrefix: "when-ambiguous",
+        pathnames: { "/documentation/:path*": { pt: "/d/:path*" } },
+      });
+      // Segments `x/…/y` that make the canonical path `length` characters long, an even number.
+      const rest = (length: number) => `${"x/".repeat((length - "/documentation/".length - "y".length) / 2)}y`;
+
+      expect(routing.parse(`/d/${rest(8_194)}`)).toBeUndefined();
+      expect(routing.parse(`/d/${rest(8_192)}`)).toEqual({ locale: "pt", pathname: `/documentation/${rest(8_192)}` });
+    });
+
     it("should give every parsed path a canonical URL that localize builds", () => {
+      const longWord = "a".repeat(100);
+      const pathnames = {
+        ...PATHNAMES,
+        [`/${longWord}/:id`]: { pt: "/b/:id" },
+        "/documentation/:path*": { pt: "/d/:path*" },
+      };
       const words = ["about", "sobre", "acerca", "products", "produtos", "42", "reviews", "en", "pt", "es", "PT", "x"];
       const paths = ["/"];
+      // Paths whose canonical path is around the 8,192-character limit, with and without a prefix.
+      for (const length of [8_080, 8_089, 8_090, 8_091, 8_150]) {
+        paths.push(`/b/${"x".repeat(length)}`, `/pt/b/${"x".repeat(length)}`, `/pt/b/${"x".repeat(length)}/`);
+      }
+      for (const count of [4_085, 4_088, 4_089, 4_093]) {
+        paths.push(`/d/${"x/".repeat(count)}y`, `/pt/d/${"x/".repeat(count)}y`);
+      }
       for (const a of words) {
         paths.push(`/${a}`);
         for (const b of words) {
@@ -384,7 +446,7 @@ describe("translated pathnames", () => {
       }
 
       for (const localePrefix of ["always", "except-default", "when-ambiguous"] as const) {
-        const routing = create({ localePrefix });
+        const routing = create({ localePrefix, pathnames });
         const failures = paths.filter((path) => {
           const route = routing.parse(path);
           try {
@@ -402,7 +464,12 @@ describe("translated pathnames", () => {
   });
 
   describe("with a large table", () => {
-    it("should build and read 2,000 routes in well under a second", () => {
+    // A scan over every route of a first segment once took about 3.5 s for these tables, against about 0.1 s for the
+    // index. That scan runs inside the index and calls nothing a test can count without an internal hook, so the bound
+    // is time, set far above the index's cost so that a slow machine passes and a scan still fails.
+    const maxMilliseconds = 2_000;
+
+    it("should build and read 2,000 routes without scanning them", () => {
       const pathnames: Record<string, Partial<Record<Locale, string>>> = {};
       for (let index = 0; index < 2_000; index += 1) {
         pathnames[`/section${index}/:id/page${index}`] = {
@@ -420,8 +487,28 @@ describe("translated pathnames", () => {
         });
       }
 
-      expect(performance.now() - start).toBeLessThan(1_000);
+      expect(performance.now() - start).toBeLessThan(maxMilliseconds);
     });
+
+    for (const localePrefix of ["except-default", "when-ambiguous"] as const) {
+      it(`should build and read 2,000 routes under one first segment without scanning them with \`${localePrefix}\``, () => {
+        const pathnames: Record<string, Partial<Record<Locale, string>>> = {};
+        for (let index = 0; index < 2_000; index += 1) {
+          pathnames[`/docs/page${index}`] = { pt: `/documentos/pagina${index}`, es: `/documentos/pagina-es${index}` };
+        }
+
+        const start = performance.now();
+        const routing = create({ localePrefix, pathnames });
+        for (let index = 0; index < 2_000; index += 1) {
+          expect(routing.parse(`/pt/documentos/pagina${index}`)).toEqual({
+            locale: "pt",
+            pathname: `/docs/page${index}`,
+          });
+        }
+
+        expect(performance.now() - start).toBeLessThan(maxMilliseconds);
+      });
+    }
   });
 
   describe("catch-all parameters", () => {
