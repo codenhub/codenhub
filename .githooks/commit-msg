@@ -26,8 +26,10 @@ if [ -f "$(git rev-parse --git-path MERGE_MSG)" ]; then
   exit 0
 fi
 
-# The first line that is neither blank nor a git comment.
-subject=$(grep -vE '^[[:space:]]*#' "$message_file" | grep -vE '^[[:space:]]*$' | head -n 1 || true)
+# The first line that is neither blank nor a git comment, without the carriage
+# return an editor on Windows may leave, which would count toward the limit and
+# hide a trailing period.
+subject=$(grep -vE '^[[:space:]]*#' "$message_file" | grep -vE '^[[:space:]]*$' | head -n 1 | tr -d '\r' || true)
 
 case "$subject" in
   "Merge "* | "Revert "* | "fixup!"* | "squash!"* | "amend!"*) exit 0 ;;
@@ -40,9 +42,9 @@ reject() {
   printf '\ncommit-msg: %s\n\n' "$1" >&2
   printf '  %s\n\n' "$subject" >&2
   printf 'Expected `<type>(<scope>)!: <subject>`, for example:\n\n' >&2
-  printf '  feat(styles): ship the glass aesthetic\n' >&2
-  printf '  fix(tools)!: drop the legacy selector\n' >&2
-  printf '  docs(ci): record the deployment watch paths\n\n' >&2
+  printf '  feat(core): add the export command\n' >&2
+  printf '  fix(api)!: rename the session option\n' >&2
+  printf '  docs(ci): record the required checks\n\n' >&2
   printf 'Types: %s\n' "$(printf '%s' "$TYPES" | tr '|' ' ')" >&2
   printf 'See CONTRIBUTING.md, or commit with --no-verify.\n' >&2
   exit 1

@@ -2,9 +2,15 @@
 
 ## Reporting a vulnerability
 
-Report it privately through [GitHub's private vulnerability reporting](https://github.com/codenhub/codenhub/security/advisories/new), not in a public issue. Name the package and version, describe the impact, and include the smallest reproduction you have.
+Report it privately through [GitHub's private vulnerability reporting](https://github.com/codenhub/codenhub/security/advisories/new), not in a public issue. Name the package and version, describe the impact, and include the smallest reproduction you have. Remove secrets, tokens, and personal data from anything you paste.
 
 A report is acknowledged on GitHub, and the advisory stays private until a fixed version is on npm.
+
+A vulnerability in a dependency that a CodenHub package uses goes to that dependency's maintainers. If you are not sure which side it is on, report it here.
+
+## What is in scope
+
+A way to make a published `@codenhub/*` package break a guarantee its documentation makes is a vulnerability, such as `@codenhub/jwt` accepting a token its docs say it rejects, or `@codenhub/validation` putting an input value in an issue. A package's public docs state its guarantees, and [the security guidelines](docs/guidelines/security.md) describe the rules every change follows.
 
 ## Supported versions
 

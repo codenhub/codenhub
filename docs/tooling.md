@@ -1,12 +1,12 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-07
+last_updated: 2026-11-08
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
 # Repository tooling
 
-Root workspace scripts are thin wrappers around `hub`, the workspace-aware CLI in `packages/tools`. It owns package selection, execution order, and reporting so package manifests stay minimal and root scripts stay short.
+[Workspace](workspace.md) names the root scripts, what each one guarantees, and the shared tool configurations; this document is how they are implemented. Root workspace scripts are thin wrappers around `hub`, the workspace-aware CLI in `packages/tools`. It owns package selection, execution order, and reporting so package manifests stay minimal and root scripts stay short.
 
 ## Why it exists
 
@@ -77,7 +77,7 @@ Only file paths are forwarded to the underlying tool, and only for commands that
 
 `--changed` narrows an explicit selection and replaces an empty one, so `hub test --changed` runs changed packages and `hub test error --changed` runs `error` only when it changed.
 
-A change to a workspace-wide file counts as a change to every package. The files are the root `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `package.json`, `tsconfig.json`, `.nvmrc`, `.npmrc`, `.oxlintrc.json`, `.oxfmtrc.json`, `.prettierrc.json`, and `.prettierignore`; the list is the `WORKSPACE_WIDE_PATHS` constant in `packages/tools/src/workspace/select-packages.ts`. Only root files count, so `packages/error/package.json` changes `error` alone. An explicit selection still narrows the result, so `hub test error --changed` with a lockfile change runs `error`.
+A change to a workspace-wide file counts as a change to every package. The files are the root `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `package.json`, `tsconfig.json`, `.nvmrc`, `.npmrc`, `.oxlintrc.json`, `.oxfmtrc.json`, `.prettierrc.json5`, and `.prettierignore`; the list is the `WORKSPACE_WIDE_PATHS` constant in `packages/tools/src/workspace/select-packages.ts`. Only root files count, so `packages/error/package.json` changes `error` alone. An explicit selection still narrows the result, so `hub test error --changed` with a lockfile change runs `error`.
 
 These files change what every package installs, compiles, lints, or copies, so a change to one is a change to all: before they widened the selection, a pull request that only bumped a dependency selected nothing and passed unverified. The brand at `coden.agency/brand` is not on the list: it changes outside this repository, so no path here records the change, and a file it stops publishing surfaces when a package that declares the file next builds or is checked. Two alternatives were rejected. Widening only in `.github/workflows/ci.yml`, as it does for a change to CI itself, leaves the gap in the local `pnpm verify --changed` that `CONTRIBUTING.md` requires before a pull request. Widening on any file no package owns makes a root README edit verify the whole workspace.
 
@@ -174,7 +174,7 @@ A package run whose script is still running when it exceeds `--timeout` is kille
 
 `lint`, `format`, and `cloc` run from the repository root over resolved paths rather than once per package. Selecting nothing falls back to the whole repository, which is why `pnpm cloc` needs no argument.
 
-`format` runs two formatters in sequence: `oxfmt` over every resolved path, then Prettier over the Markdown among them. `oxfmt` does not format Markdown, and Prettier is the one holding the `proseWrap` rule `docs/guidelines/documentation.md` sets. Both always run, so a failure in one still surfaces the other's findings or fixes. Tool arguments after `--` reach `oxfmt` only, because Prettier shares none of its flags. Markdown that `.prettierignore` lists, the vendored icon attributions, is left as received. In agent skills (`packages/skills/skills/` and `drafts/`), `.prettierrc.json` turns off `embeddedLanguageFormatting`, so fenced examples keep their line breaks.
+`format` runs two formatters in sequence: `oxfmt` over every resolved path, then Prettier over the Markdown among them. `oxfmt` does not format Markdown, and Prettier is the one holding the `proseWrap` rule `docs/guidelines/documentation.md` sets. Both always run, so a failure in one still surfaces the other's findings or fixes. Tool arguments after `--` reach `oxfmt` only, because Prettier shares none of its flags. Markdown that `.prettierignore` lists, the vendored icon attributions, is left as received. In agent skills (`packages/skills/skills/` and `drafts/`), `.prettierrc.json5` turns off `embeddedLanguageFormatting`, so fenced examples keep their line breaks.
 
 ## Browser tests
 
@@ -251,23 +251,7 @@ Tool arguments are not forwarded, because the steps run different executables an
 
 ## Git hooks
 
-A `pre-commit` hook formats and lints the staged files, fixes what it can, and re-stages the result. Formatting is `oxfmt` for the code and Prettier for the staged Markdown; linting is `oxlint`. It runs those checks and no others: type checking and tests take minutes, and a hook that slow gets bypassed until it may as well not exist. `pnpm verify` is where the rest belongs.
-
-`pre-commit` reads files from the working tree rather than from the index. For a file that is only partly staged that matters: the hook never rewrites it, because re-staging would sweep in the parts deliberately left out of the commit, and it checks the file as it sits on disk. A commit whose staged content is already clean can therefore still fail. The alternative — skipping such files — would let unformatted code through the one check meant to stop it.
-
-A `commit-msg` hook checks the subject line against the Conventional Commits shape `CONTRIBUTING.md` describes: a known type, an optional lowercase scope, an imperative lowercase subject, no trailing period, and 72 characters at most. It checks the subject and nothing else. A body is optional, and no hook can tell whether a message describes the commit honestly, so the mechanical half is automated and the rest stays with review.
-
-Merges, reverts, and `fixup!` markers pass unchecked. Git composes those subjects, and rejecting a message nobody wrote would only train people to reach for `--no-verify` out of habit, which costs the checks that do matter.
-
-72 characters is where the repository already sits rather than a number picked from a style guide: replaying the 200 commits before the hook, it rejects six. Three of those are merely long, and the other three join two changes with "and" or "+", which is the split the convention asks for anyway.
-
-The hooks live in `.githooks/` and are wired by `core.hooksPath`, which the root `prepare` script sets on every install. That is a local git setting rather than a tracked one, so a fresh clone runs no hooks until something sets it; doing it from `prepare` keeps a hook manager out of the dependency list. The setup step never fails an install: a tree without git, or without permission to write its config, reports and carries on.
-
-A `pre-push` hook refuses a push whose destination is `refs/heads/main`. What it reads is the destination ref rather than the branch you are standing on, so it holds for a push from `main`, for an explicit refspec that targets it from somewhere else, and for a `--delete`. `CONTRIBUTING.md` states the rule and why `main` is the branch that gets one; this is what makes it more than advice.
-
-The same hook refuses a push to a branch whose name is not `<type>/<slug>`, with the type list `commit-msg` uses. The check sits in a hook rather than in wording alone because the name is often not a choice anyone made: an agent harness creates `claude/...` or `codex/...` before the agent has read a file, and a rule about naming a branch does not read as applying to a branch that already has a name. Deleting a remote branch passes whatever it is called, since removing a misnamed branch is the cleanup, and tags are not checked.
-
-`--no-verify` bypasses these: on `git commit` for the first two, on `git push` for the last. It is for the change that genuinely has to land unfixed, and it is worth saying out loud when it is used, since the whole point of a hook is that skipping one is visible.
+The hooks live in `.githooks/` and run no `hub` command: `pre-commit` calls `oxfmt`, Prettier, and `oxlint` on the staged files directly. [Workspace](workspace.md#git-hooks) records what each hook checks and why it does that much and no more.
 
 ## Hosted previews
 
@@ -451,7 +435,7 @@ A finding is waived only by a `Checks bypassed` bullet in `docs/specs/packages-e
 
 - `<package>/llms-full.txt`, compiled from the package README, then `docs/index.md`, then the remaining public documents in the same order the sidebar shows them — by frontmatter `order`, then path. Presentation frontmatter is stripped, `docs/internal/`, the generated `docs/reference/` area, every `docs/<locale>/` translation, and every `README.<locale>.md` are excluded, each section is introduced by a `<!-- Source: ... -->` marker, and relative link targets are rebased so they resolve from the package root.
 - The root `README.md` package list, between its `<!-- generated: packages start -->` and `<!-- generated: packages end -->` markers. Descriptions come from package manifests, so the list cannot drift from what each package says about itself.
-- `<package>/docs/reference/`, for a package that opts in through `codenhub.docs.reference` — one Markdown page per documented, type-resolvable `exports` subpath (every such subpath by default, or the `entrypoints` list when the config names one), plus the split pages its `pages` config declares, compiled from TypeDoc and the package's emitted declarations per `docs/specs/packages-reference.md`. Each page is run through Prettier as written, with `embeddedLanguageFormatting` off for `docs/reference/**` (in `.prettierrc.json`) so a signature block stays byte-for-byte what the compiler emitted.
+- `<package>/docs/reference/`, for a package that opts in through `codenhub.docs.reference` — one Markdown page per documented, type-resolvable `exports` subpath (every such subpath by default, or the `entrypoints` list when the config names one), plus the split pages its `pages` config declares, compiled from TypeDoc and the package's emitted declarations per `docs/specs/packages-reference.md`. Each page is run through Prettier as written, with `embeddedLanguageFormatting` off for `docs/reference/**` (in `.prettierrc.json5`) so a signature block stays byte-for-byte what the compiler emitted.
 
 `llms.txt` stays hand-authored. It is a router whose value is the editorial summary a generator cannot write; `hub check` validates it like any other documentation surface.
 

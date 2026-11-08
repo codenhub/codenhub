@@ -2,15 +2,16 @@ name: CI
 
 on:
   pull_request:
-  # The merge queue runs the full workspace on the merge result before it lands,
-  # so a suite a pull request's `--changed` selection skipped fails there rather
-  # than on `main`. Any event other than `pull_request` gets an empty SELECTOR.
-  # There is no `push` trigger for `main`: the queue lands the exact commit it
-  # tested, so a run there would repeat a passed check (`docs/ci.md`).
+  # A merge queue's check of the merge result before it lands. It never fires in a repository without a queue.
   merge_group:
+  # project:start
+  # No `push` trigger for `main`: the merge queue is required, it runs the full workspace on the merge
+  # result (any event other than `pull_request` gets an empty SELECTOR), and it lands the exact commit it
+  # tested, so a run there would repeat a passed check (`docs/ci.md`).
+  # project:end
 
-# A pull request that is pushed to again abandons the run it just superseded;
-# the queue keeps every run, because each is the authoritative check of a commit.
+# A pull request pushed to again abandons the run it superseded; a merge-queue run or a push to `main` keeps every
+# run, because each is the authoritative check of a commit.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -18,28 +19,35 @@ concurrency:
 permissions:
   contents: read
 
+# project:start
 env:
   # A pull request verifies what it changed against its base branch; the merge
   # queue verifies the whole workspace, so nothing reaches `main` unverified
   # because it happened to sit outside a changed package.
   SELECTOR: ${{ github.event_name == 'pull_request' && format('--changed=origin/{0}', github.base_ref) || '' }}
+# project:end
 
 jobs:
   verify:
     name: Verify
     runs-on: ubuntu-latest
+    # project:start
     timeout-minutes: 30
+    # project:end
     steps:
-      # Full history: `--changed` compares against a base branch ref, which a
-      # shallow clone does not contain.
       - name: Check out the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # project:start
+        # Full history: `--changed` compares against a base branch ref, which a
+        # shallow clone does not contain.
         with:
           fetch-depth: 0
+        # project:end
 
       - name: Set up the workspace
         uses: ./.github/actions/setup
 
+      # project:start
       # `--changed` falls back to working-tree changes when its base ref is
       # missing, which in CI would mean verifying nothing and passing. Fail loudly
       # instead.
@@ -56,12 +64,30 @@ jobs:
           if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -q '^\.github/'; then
             echo "SELECTOR=" >> "$GITHUB_ENV"
           fi
+      # project:end
 
-      # Browser tests are skipped here because the browser job owns them; running
-      # them twice would double the slowest step of the run.
+      # The same command a contributor runs: format, lint, build, typecheck and test, stopping at the first
+      # failure. A step only CI can run is a step nobody can reproduce before pushing.
       - name: Verify
+        # project:start
+        # Browser tests are skipped here because the browser job owns them; running
+        # them twice would double the slowest step of the run.
         run: pnpm verify --skip=test:browser $SELECTOR
+        # project:end
 
+      # A check that writes a file has changed what it was checking, so the run fails. `--untracked-files=all`
+      # lists a new file, not only the directory that holds it.
+      - name: Working tree is clean
+        run: |
+          changes="$(git status --porcelain --untracked-files=all)"
+          if [ -n "$changes" ]; then
+            echo "$changes"
+            echo "::error::A check left the working tree changed."
+            exit 1
+          fi
+        shell: bash
+
+  # project:start
   # The browser jobs run in Playwright's own image, which carries the system
   # libraries and the browsers of one Playwright version. Installing them on a
   # bare runner meant about 130 MB from the runner's Ubuntu package mirror on
@@ -154,6 +180,18 @@ jobs:
           PLAYWRIGHT_WORKERS: 2
         run: pnpm test:browser $SELECTOR -- --project='*${{ matrix.engine }}*'
 
+      # This checkout is not the one `verify` checks, so a browser test that
+      # writes a file is caught here. Playwright's output directories are ignored.
+      - name: Working tree is clean
+        run: |
+          changes="$(git status --porcelain --untracked-files=all)"
+          if [ -n "$changes" ]; then
+            echo "$changes"
+            echo "::error::A browser test left the working tree changed."
+            exit 1
+          fi
+        shell: bash
+
       - name: Upload failure artifacts
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -228,3 +266,4 @@ jobs:
             echo "::error::The dry run left files in the working tree."
             exit 1
           fi
+  # project:end

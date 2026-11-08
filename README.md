@@ -52,7 +52,6 @@ A pnpm workspace of packages, applications, and shared project standards:
 - `packages/`: libraries and primitives, including framework plugins under `packages/plugins/` and the `hub` CLI under `packages/tools/`.
 - `apps/`: the documentation site, package demo aggregator, and site index.
 - `docs/`: repository-wide technical contracts, guidelines, and references.
-- `assets/`: shared fonts, logos, and icons.
 - Each package's `README.md` and `docs/`: consumer documentation and package-local maintainer knowledge.
 
 ## Tooling
@@ -66,3 +65,8 @@ Root pnpm scripts use `hub`, the workspace-aware CLI in `@codenhub/tools`. It pr
 - [Contributing](CONTRIBUTING.md): setup, contributor workflow, validation, branches, commits, and releases.
 - [Agent instructions](AGENTS.md): agent behavior, communication, and context discipline.
 - [Repository documentation](docs/README.md): the map of technical guidelines, specifications, and repository references.
+- [Security](SECURITY.md): how to report a vulnerability.
+
+## License
+
+[Apache-2.0](LICENSE).

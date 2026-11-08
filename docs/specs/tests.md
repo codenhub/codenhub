@@ -1,110 +1,115 @@
 ---
 status: APPROVED
-last_updated: 2026-11-03
+last_updated: 2026-11-08
+scope: Test categories, where each lives, tooling, scripts, and coverage expectations.
 ---
 
-# Testing specification
+# Tests
 
-This document outlines the testing strategy, architecture, and standards for this repository. It defines test categories, tooling, configuration requirements, and code coverage targets.
+This document defines how the project is tested: what kinds of tests exist, where they live, how they run, and what they are expected to cover. The conventions for writing an individual test are in the [coding guidelines](../guidelines/code.md#testing).
 
-## Philosophy
+## Principles
 
-- **Test Behavior, Not Implementation**: Write tests that verify the observable behavior of your API or component, rather than its internal implementation details.
-- **No Permanent Absence Checks**: A test asserting only that a removed name, class, or token is gone (e.g. `not.toContain("old-name")`) verifies nothing about current behavior — it is indistinguishable from asserting the absence of a string that never existed. Such a check earns its keep only while a rename or removal is in flight, as a guard against a forgotten reference; delete it once the change is verified, in the same pull request. If the check encodes a durable rule (e.g. "no backward-compat aliases"), express that as a repository lint/check in `packages/tools`, not as a permanent unit test.
-- **Fast and Deterministic**: Tests must run quickly and yield consistent, predictable results. Flaky tests are unacceptable.
-- **Fail Fast**: Test inputs and edge cases early. Ensure error paths are tested alongside happy paths.
+- **Test behavior, not implementation.** A test verifies what a caller can observe, not how the code produces it.
+- **Fast and deterministic.** A flaky test is a bug. Time, randomness, and the network come from sources a test controls; a test that depends on real timing, the network, or a real window does not belong in the default suite.
+- **Error paths count.** Failure cases are tested as carefully as the happy path, and inputs and edge cases early.
+- **No permanent absence checks.** A test asserting only that a removed name, class, or token is gone (`not.toContain("old-name")`) verifies nothing about current behavior: it is indistinguishable from asserting the absence of a string that never existed. Such a check earns its place only while a rename or removal is in flight, as a guard against a forgotten reference; delete it once the change is verified, in the same pull request. A durable rule, such as "no compatibility aliases", is a lint rule or repository check, not a permanent unit test.
 
-## Test Categorization
+## Categories
 
-Tests in this repository are divided into three distinct categories based on their scope and isolation level.
+| Category    | Where                                                | Runs with             | Covers                                                                       |
+| ----------- | ---------------------------------------------------- | --------------------- | ---------------------------------------------------------------------------- |
+| Unit        | Next to the code: `src/<file>.test.ts` or `.tsx`     | `pnpm test`           | One module, its boundaries replaced by fakes.                                |
+| Integration | `<package>/tests/integration/`                       | `pnpm test`           | Several modules together, or a real boundary such as a database or a server. |
+| Browser     | `<package>/tests/e2e/` or `<package>/tests/browser/` | Its own script, below | Full user journeys, rendering, and visual regression in real browsers.       |
 
-Manual package usage scenarios are outside this categorization. Use the optional `playground`, `dev`, and `debug` workflow from `docs/specs/packages-development.md` for real usage scenarios that are meant for development or pre-ship debugging rather than automated test execution.
+Unit and integration tests use [Vitest](https://vitest.dev/); browser tests use [Playwright](https://playwright.dev/). Add a category only when the project has tests for it: an empty suite, or a script that passes without running anything, misleads more than a missing one.
 
-### 1. Unit Tests
+Manual usage scenarios, such as a playground used during development, are outside these categories.
 
-Unit tests verify the correctness of small, isolated blocks of code (such as individual functions, classes, or hooks) in isolation.
+### Unit tests
 
-- **Location**: Colocated in the same directory as the source code they verify.
-- **File Naming**: `[filename].test.ts` or `[filename].test.tsx` (e.g., `src/normalize.test.ts`).
-- **Tooling**: [Vitest](https://vitest.dev/).
-- **Conventions**:
-  - Mock external dependencies (network APIs, local storage, databases, file system, timers, and browser-specific globals).
-  - Do not cross-import test utilities across distant packages unless exposed via explicit shared test packages.
-  - Run automatically during local development and on every pull request.
+- A test file is named after the file it covers: `store.ts` is tested by `store.test.ts`.
+- What to mock, and what to test against real temporary state instead, is owned by the [coding guidelines](../guidelines/code.md#testing).
+- Do not import test utilities across distant packages, except from a package or subpath that exists to share them.
 
-### 2. Integration Tests
+### Integration tests
 
-Integration tests verify that multiple modules or packages interact correctly, including boundaries such as database adapters, network middleware, or cache layers.
+- Integration tests live inside the package or app they belong to. Do not add a repository-root `tests/` directory by default.
+- When a journey or orchestration genuinely spans packages, a dedicated workspace package for those tests is allowed, rather than placing them in one of the packages they cross.
 
-- **Location**: Housed in a `tests/integration/` directory inside the package or application root (e.g., `packages/store/tests/integration/`).
-- **Tooling**: [Vitest](https://vitest.dev/).
-- **Conventions**:
-  - Do not use a repository-root global `tests/` directory by default. Keep tests colocated within the package/app scope.
-  - Do not create a hard rule banning global repository-level integration directories if complex, multi-package orchestration tests become necessary in the future.
+### Browser tests
 
-### 3. End-to-End (E2E) & Visual Tests
+- Browser suites are configured and run apart from `pnpm test`, so the loop everyone runs constantly stays fast and needs no browser installed. `pnpm test`, `pnpm test:watch`, and `pnpm test:coverage` MUST NOT reach a browser suite, directly or through another script.
+- A project with a browser suite adds a `test:browser` script, at the root and in each package that has one. [Tooling](../tooling.md) records whether `pnpm verify` runs it and how browsers are installed. A package does not install browsers from its own scripts.
+- Every Playwright project name ends in the engine it runs on, `chromium`, `firefox`, or `webkit`, optionally prefixed to distinguish surfaces (`app-chromium`). CI can then run one engine per job by selecting on the name, and a project named anything else cannot silently drop out of that selection. [CI](../ci.md) describes how jobs select engines.
+- A suite SHOULD cover every engine its users run, because catching what one engine does differently is what the suite is for.
+- Add visual regression tests once a component has an agreed visual design, not for placeholder interfaces.
+- A Playwright config MUST set `retries: process.env.CI ? 1 : 0`, unless it states why it needs more. A test that passes on its retry is reported as `flaky`, not as passed, so the retry keeps one timing failure from failing a merge without hiding it, and a test that fails twice still fails the run. Locally there is no retry, so a flake shows up where it can be fixed. The cost is that a flaky test stays green until someone reads the summary line; a test that shows up there is fixed rather than retried more. Without retries, codenhub/codenhub's full run failed 3 of 30 merges on 2026-11-03, each on one timing-sensitive Firefox test ([codenhub/codenhub@702af904](https://github.com/codenhub/codenhub/commit/702af904)).
+- A suite whose tests do not read cookies, storage, or permissions left by an earlier test SHOULD share one browser context per worker and take a fresh page per test. Playwright builds a context per test by default, and the engines price that very differently: on one codenhub/codenhub suite a fresh context cost Firefox about 2.6 s against Chromium's 0.3 s, the whole gap between them. Writing such state does not disqualify a suite; reading it back across a test boundary does. A suite whose assertions rely on state an earlier test left behind MUST keep the default. A suite that shares a context MUST reset whatever the page under test persists before each test, not after, so the reset holds even when a test fails partway.
 
-E2E tests verify full user journeys, page transitions, rendering, and visual regression across real browser environments.
+## Configuration
 
-- **Location**: Housed in `tests/e2e/` or `tests/browser/` directories within the target application or specialized styling packages.
-- **Tooling**: [Playwright](https://playwright.dev/).
-- **Conventions**:
-  - Use visual regression testing for style sheets and components to capture visual changes before merge.
-  - Since E2E tests are slower and require browser environments, configure them separately to avoid blocking fast unit test loops.
-  - Browser suites MUST be reachable only through `test:browser`. A package that declares a Playwright config MUST define that script, and `test`, `test:coverage`, and `test:watch` MUST NOT reach a browser suite, directly or through another script. `hub check` reports both.
-  - Browsers are installed by `hub browsers`, which `hub test:browser` runs first. A package MUST NOT install browsers from its own scripts, because two packages doing that would download into one shared cache twice.
-  - Every Playwright project name MUST end in the engine it runs on — `chromium`, `firefox`, or `webkit` — optionally prefixed to distinguish surfaces, as `@codenhub/toaster` does with `source-chromium` and `package-chromium`. CI runs one engine per job and selects it across every package with `--project='*<engine>*'`, so a project named anything else drops out of that job silently rather than failing it. `docs/ci.md` describes engine selection.
-  - A package with a browser suite SHOULD cover all three engines. The suites exist to catch what one engine does differently from another, which a single-engine run cannot do.
-  - A Playwright config MUST set `retries: process.env.CI ? 1 : 0`, unless it states why it needs more. A test that passes on its retry is reported as `flaky`, not as passed, so the retry keeps one timing failure from failing a merge without hiding it, and a test that fails twice still fails the run. Locally there is no retry, so a flake shows up where it can be fixed. The cost is that a flaky test stays green until someone reads the summary line; a test that shows up there is fixed rather than retried more. Without retries, the full-workspace run on `main` failed 3 of 30 merges on 2026-11-03, each on one timing-sensitive Firefox test that its pull request had not run.
-  - A browser suite whose tests do not depend on cookies, storage, or permissions surviving from one test into the next SHOULD share one browser context per worker and take a fresh page per test, as `packages/styles` does in `tests/browser/fixtures.ts`. Playwright builds a context per test by default, and the engines price that very differently: on that suite a fresh context cost Firefox about 2.6s against Chromium’s 0.3s, which was the whole of the gap between them. Writing such state is not what disqualifies a suite; reading it back across a test boundary is. A suite whose assertions rely on state an earlier test left behind MUST keep the default. A suite that shares a context MUST reset whatever the page under test persists, before each test rather than after — the styles playground stores its theme and aesthetic in local storage, so the fixture empties it as each document starts, which costs no round trip and holds even when a test fails partway.
+- A package or app that needs custom options, such as path aliases, environment variables, plugins, or a DOM environment, MUST include its own explicit configuration file, `vitest.config.ts` or `playwright.config.ts`, and not `vite.config.ts`: a runner that discovers packages by their `vitest.config.ts` would silently leave one configured through `vite.config.ts` out of `pnpm test`. Do not rely on implicit or undocumented fallback behavior. How the runs are put together is [tooling](../tooling.md)'s.
+- Test scripts MUST NOT chain their own build step. Build ordering belongs to the root tooling, as [Tooling](../tooling.md) describes.
+- A package that defines its own test scripts uses the root names and meanings:
+  - `test`: runs unit and integration tests once, and nothing that needs a browser.
+  - `test:watch`: runs those tests in watch mode.
+  - `test:coverage`: runs those tests and writes a coverage report.
+  - `test:browser`: runs the browser suite, when the package has one.
+  - `test:browser:watch`: runs the browser suite in an interactive or UI mode, when the project offers one.
 
-## Configuration Requirements
+## Coverage
 
-To maintain clean and explicit testing setups, follow these configuration rules:
+`pnpm test:coverage` writes a V8 coverage report to `coverage/`. The suggested target is **80%**. It guides development and review; it is not a gate and never fails a build, because a coverage threshold that blocks merges gets satisfied with tests that execute lines without asserting anything.
 
-- **Config Files**:
-  - If a package or application requires custom options (such as path aliases, environment variables, vitest plugins, or specific setups), it **MUST** include an explicit configuration file (`vite.config.ts`, `vitest.config.ts`, or `playwright.config.ts`).
-  - Do not rely on implicit or undocumented fallback behavior.
-- **Package Scripts**:
-  - Every testable package or app `package.json` must expose standard test scripts:
-    - `"test"`: Runs unit and integration tests once, and nothing that needs a browser.
-    - `"test:watch"`: Runs those tests in interactive watch mode.
-    - `"test:coverage"`: Runs those tests and outputs a coverage report.
-  - A package with a browser suite must also expose:
-    - `"test:browser"`: Runs the browser suite once.
-    - `"test:browser:watch"`: Runs the browser suite in Playwright's UI mode.
+## Not covered by automated tests
 
-## Code Coverage
+Behavior that no automated test reaches is listed here with how it is verified instead, usually by hand, and why a suite was not added. A gap that is written down can be judged; a gap nobody recorded is found by a user.
 
-- **Suggested Target**: **80%** code coverage.
-- **Non-Blocking Target**: Code coverage is a target to guide development and review discussions. It must not block the CI/CD pipeline or fail builds due to minor discrepancies, preventing false-positive failures and unnecessary development overhead.
+<!-- project:start -->
 
-## Execution Commands
+### Codenhub specifics
 
-Always run tests from the repository root. Test scripts MUST NOT chain their own build step; `docs/tooling.md` defines how build ordering is owned by the root tooling instead.
+Manual package usage scenarios use the optional `playground`, `dev`, and `debug` workflow in [`docs/specs/packages-development.md`](packages-development.md), meant for development or pre-ship debugging rather than automated runs.
 
-### Workspace-wide Checks
+Browser suites here:
 
-```sh
-pnpm test
-pnpm test:browser
-pnpm test:coverage
-```
+- `pnpm verify` runs `pnpm test` and `pnpm test:browser` both. A package that declares a Playwright config MUST define `test:browser`, and `hub check` reports a missing one as it reports a `test`, `test:coverage`, or `test:watch` script that reaches a browser suite.
+- Browsers are installed by `hub browsers`, which `hub test:browser` runs first. A package MUST NOT install browsers from its own scripts, because two packages doing that would download into one shared cache twice.
+- Every package's browser suite SHOULD cover all three engines. `@codenhub/toaster` shows the prefixed naming, with `source-chromium` and `package-chromium`.
+- Style sheets and components use visual regression tests to capture visual changes before merge.
+- `packages/styles` shares one context per worker in `tests/browser/fixtures.ts`, which brought its Firefox run from 285 s to 84 s. Its playground stores the theme and aesthetic in local storage, so the fixture empties it as each document starts, which costs no round trip.
 
-`pnpm test` covers unit and integration tests, and `pnpm test:browser` covers the browser suites of the packages that have one, installing their browsers first. `pnpm verify` runs both. Keeping them apart is what lets the loop everyone runs constantly stay a few seconds long.
-
-### Narrowed Checks
-
-Prefer a narrowed run when working on a single package, a single file, or a set of changed packages:
+A target may be a package name, a workspace directory, a path, or a glob, and `--changed` selects the packages a branch changed:
 
 ```sh
 pnpm test error
 pnpm test packages/error/src/bucket.test.ts
-pnpm test:watch error
 pnpm test:coverage error
 pnpm test:browser styles
 pnpm test:browser:watch styles
 pnpm test --changed
 ```
 
-A target may be a package name, a workspace directory, a path, or a glob. File paths are forwarded to Vitest, so a single test file runs on its own. `docs/tooling.md` describes the full selector and option surface.
+<!-- project:end -->
+
+## Commands
+
+Run tests from the repository root.
+
+```sh
+pnpm test
+pnpm test:watch
+pnpm test:coverage
+```
+
+Narrow a run while working on one area. A path after the script is forwarded to Vitest, so a single directory or file runs on its own:
+
+```sh
+pnpm test packages/<name>
+pnpm test packages/<name>/src/<file>.test.ts
+pnpm test:watch packages/<name>
+```
+
+[Tooling](../tooling.md) describes the other ways to narrow a run.

@@ -1,0 +1,20 @@
+// Prettier formats Markdown only; oxfmt owns every other format. JSON5, rather than JSON, so this file can
+// hold the project block below.
+{
+  $schema: "https://json.schemastore.org/prettierrc",
+  // project:start
+  overrides: [
+    // Generated API reference: a signature block stays byte-for-byte what the compiler emitted.
+    {
+      files: "**/docs/reference/**/*.md",
+      options: { embeddedLanguageFormatting: "off" },
+    },
+    // Agent skills: fenced examples keep their line breaks.
+    {
+      files: ["packages/skills/skills/**/*.md", "packages/skills/drafts/**/*.md"],
+      options: { embeddedLanguageFormatting: "off" },
+    },
+  ],
+  // project:end
+  proseWrap: "never",
+}

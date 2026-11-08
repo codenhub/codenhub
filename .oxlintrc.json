@@ -1,15 +1,14 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "ignorePatterns": [
-    "dist/**",
-    "**/.astro/**",
-    "**/.wrangler/**",
-    "coverage/**",
+    // project:start
+    // Eval fixtures: projects an agent works on, kept byte-for-byte because their flaws are what the eval tests.
+    "packages/skills/evals/*/fixtures/**",
+    // project:end
+    "**/dist/**",
     "**/coverage/**",
-    "test-results/**",
     "**/test-results/**",
-    "**/tests/**/output.css",
-    "packages/skills/evals/*/fixtures/**"
+    "**/playwright-report/**"
   ],
   "env": {
     "browser": true,
@@ -17,6 +16,10 @@
   },
   "plugins": ["typescript", "oxc", "jsdoc", "unicorn", "promise", "vitest"],
   "rules": {
+    // project:start
+    // Rules the template does not set. A later duplicate key wins, so a rule the template sets
+    // changes in the template.
+    // project:end
     "curly": ["error", "all"],
     "eqeqeq": ["error", "always"],
     "jsdoc/check-access": "error",
@@ -32,6 +35,7 @@
     "jsdoc/require-returns-description": "error",
     "jsdoc/require-throws-description": "error",
     "no-await-in-loop": "error",
+    "no-console": ["error", { "allow": ["warn", "error"] }],
     "no-empty": "error",
     "no-empty-function": "off",
     "no-var": "error",
@@ -43,5 +47,22 @@
     "unicorn/filename-case": ["error", { "case": "kebabCase" }],
     "vitest/no-identical-title": "error",
     "vitest/require-mock-type-parameters": "off"
-  }
+  },
+  "overrides": [
+    // project:start
+    // Code whose output is the point: the skills CLI, benchmarks, and test support such as reporters and servers.
+    {
+      "files": ["packages/skills/src/cli.ts", "packages/skills/src/cli-helpers.ts", "**/bench/**", "**/tests/**"],
+      "rules": {
+        "no-console": "off"
+      }
+    },
+    // project:end
+    {
+      "files": [".githooks/**", "**/scripts/**", "**/*.test.ts", "**/*.test.tsx"],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ]
 }

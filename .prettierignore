@@ -1,18 +1,20 @@
 # Prettier governs Markdown only in this repository; oxfmt owns every other
-# format. `hub format` always hands Prettier an explicit `**/*.md` target set,
-# so this file only has to carve out the paths within that set to leave alone.
+# format. The root scripts always hand Prettier `**/*.md`, so this file only
+# carves out paths within that set to leave alone. oxfmt reads this file too,
+# so a path listed here is left alone by both formatters.
 
 # Build output and caches.
 **/node_modules/
 **/dist/
 **/coverage/
 **/test-results/
-**/.wrangler/
+**/playwright-report/
 
-# Third-party Markdown, kept byte-for-byte as received from upstream. Agent
-# skills are formatted; .prettierrc.json keeps their fenced examples as written.
+# project:start
+# Third-party Markdown, kept byte-for-byte as received from upstream.
 packages/icons/data/
 
 # Eval fixtures: projects an agent works on, kept byte-for-byte because their
 # formatting and flaws are part of what the eval tests.
 packages/skills/evals/*/fixtures/
+# project:end

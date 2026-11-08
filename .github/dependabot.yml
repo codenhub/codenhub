@@ -1,4 +1,5 @@
-# Weekly update pull requests, labelled with the repository's own `type:chore`.
+# Weekly update pull requests, labelled with the repository's own `type:chore` rather than labels Dependabot
+# would create. npm updates arrive as catalog changes in pnpm-workspace.yaml, with the lockfile.
 #
 # The groups take minor and patch updates only, so one week is one grouped pull request per directory: one for
 # npm, and up to two for actions, because Dependabot groups each listed directory on its own. A major update
@@ -23,10 +24,14 @@ updates:
     schedule:
       interval: weekly
     labels: ["type:chore"]
-    # TypeScript 7 drops the JavaScript compiler API that typedoc, `@astrojs/check`, and `packages/tools`'s
-    # reference generator call, and both tools declare `typescript` peers up to 6. Remove this once they
-    # support 7.
     ignore:
+      # Node's types follow the Node release in `engines` and `.nvmrc`, so they move when Node does, not on
+      # their own: types for a newer Node accept APIs the pinned runtime does not have.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # TypeScript 7 drops the JavaScript compiler API that typedoc, `@astrojs/check`, and `packages/tools`'s
+      # reference generator call, and both tools declare `typescript` peers up to 6. Remove this once they
+      # support 7.
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
       # With Playwright 1.64's WebKit, the WebKit CI job runs out of memory and is killed (exit 137)

@@ -1,19 +1,39 @@
 # Agent instructions
 
+<!-- project:start -->
+
+CodenHub is the workspace behind [coden.agency](https://coden.agency): the `@codenhub/*` packages published to npm, and the sites in `apps/` that document and demonstrate them. A published version can be deprecated but never replaced, so a mistake that reaches a release stays in every app that installed it. Read [`docs/specs/packages-lifecycle.md`](docs/specs/packages-lifecycle.md) before changing a published package's exports, behavior, or version.
+
+<!-- project:end -->
+
+This repository is docs-first. [`docs/README.md`](docs/README.md) indexes every document. [`CONTRIBUTING.md`](CONTRIBUTING.md) is the workflow every change follows, and [`docs/tooling.md`](docs/tooling.md) lists the commands. Before delivering a change, run the gate [`CONTRIBUTING.md`](CONTRIBUTING.md#validation) names, `pnpm verify` unless the project narrows it.
+
 ## Working agreement
 
-- Use the task's scope and your judgment to choose which documentation and code to inspect. Applicable contributor rules, coding standards, and specifications remain binding; reading less does not waive them.
-- Ask when different interpretations would lead to different work. Do not settle an unstated choice about behavior, public API, or a recorded decision by assuming it. Do everything independent of the answer first, then ask at the point the answer is needed.
+- Use the task's scope and your judgment to choose which documentation and code to inspect. Applicable contributor rules, guidelines, and specifications remain binding; reading less does not waive them.
+- Ask when different interpretations would lead to different work. Do not settle an unstated choice about behavior, public API, a security property, or a recorded decision by assuming it. Do everything independent of the answer first, then ask at the point the answer is needed.
 - Keep changes small and within the requested scope. Preserve unrelated work.
-- Report failing checks, skipped steps, and unfinished work plainly. Never describe a partial result as complete.
+- A defect found while working on something else is filed and worked around, not fixed on the spot, as [`CONTRIBUTING.md`](CONTRIBUTING.md#a-defect-found-mid-task) describes. That includes a defect in a dependency you also maintain: the fix belongs in that dependency's repository.
+- Never put a secret, token, password, or personal data in a log, an error, a test snapshot, a commit, or a message to the user, including test values you generate. [`docs/guidelines/security.md`](docs/guidelines/security.md) has the rest.
+- Report failing checks, skipped steps, and unfinished work plainly, with the output that shows it. Never describe a partial result as complete.
 - Close by listing material judgment calls and assumptions so they can be confirmed or reversed.
 
 ## Judgment
 
-- Documentation records decisions; it does not prove them right. Follow a decision while it stands, and judge it too: when reviewing or auditing, ask both whether the work matches the decision and whether the decision is right, and report each finding as the one it is. `docs/guidelines/documentation.md` owns this distinction and the rules for recording and reversing decisions.
+- Documentation records decisions; it does not prove them right. Follow a decision while it stands, and judge it too: when reviewing or auditing, ask both whether the work matches the decision and whether the decision is right, and report each finding as the one it is. [`docs/guidelines/documentation.md`](docs/guidelines/documentation.md) owns this distinction and the rules for recording and reversing decisions.
 - Recorded decisions carry across sessions; a session's preferences do not. Do not reverse a recorded decision, or recommend reversing it, without naming what it did not weigh.
 - Ground each finding in a realistic case: the input or calling code, what goes wrong, and for whom. A concern you cannot ground is a question; state it as one.
-- A fix that adds or changes public surface, such as an export, an option, a default, or a limit, is a decision, not a fix. Present it as the problem, the options, your recommendation, and why, and wait for approval before making it.
+- A fix that adds or changes a contract, such as an export, an option, a default, a limit, a persisted format, or a dependency, is a decision, not a fix. Present it as the problem, the options, your recommendation, and why, and wait for approval before making it.
+
+## Project specifics
+
+<!-- project:start -->
+
+- **The delivery gate is the branch selection.** `pnpm verify --changed` is the gate before delivering a change, not the whole workspace, which CI runs on every merge; [`CONTRIBUTING.md`](CONTRIBUTING.md#validation) says when the whole workspace is needed instead.
+- **Generated files are regenerated, not edited.** A file marked as generated is derived from package READMEs, `docs/`, and manifests. Change its source and run `pnpm generate <target>`; a change to package metadata also needs an unfiltered `pnpm generate`, since the root README package list is regenerated only for the whole workspace. CI fails on drift rather than fixing it. [Tooling](docs/tooling.md#generated-files) lists the generators.
+- **Root tooling selects packages.** Run scripts from the repository root through `hub`'s selectors rather than `pnpm --filter` or from a package directory; it owns the build order of workspace dependencies.
+
+<!-- project:end -->
 
 ## Knowledge
 
@@ -27,10 +47,10 @@
 
 - Start with filenames, headings, and focused searches; read the sections needed to understand the change and its dependencies. Expand inspection when evidence leaves a question unresolved.
 - Reuse information already inspected in the session. Re-read material when it changed or when a specific uncertainty requires it.
-- Prefer canonical sources. Generated compilations and references are alternate views, not additional contracts to read alongside their inputs.
+- Prefer canonical sources. Generated files, compilations, and references are alternate views, not additional contracts to read alongside their inputs.
 - Find code with focused searches (`grep -n`, `rg`) and read the line ranges they point to. Read a whole file only when the change needs all of it, and do not dump several files or a directory in one command (`cat a.ts b.ts`, `for f in …; do cat "$f"; done`).
 - Batch independent inspections as parallel tool calls, each kept focused, not as one command whose output is the sum of all of them.
-- Narrow commands during development and reserve broad verification for the completed change. Retain the checks the contributor workflow requires.
+- Narrow commands during development, as [tooling](docs/tooling.md) describes, and reserve the delivery gate [contributing](CONTRIBUTING.md#validation) names for the completed change. Retain the checks the contributor workflow requires.
 - Read test, build, and CI output as a summary first: filter to failures or the tail, and treat a background task's output file the same way. Open the full log only when the summary leaves a failure unexplained. Keep machine-readable and interactive output usable.
 - At a natural boundary, such as an audit finished before fixes start, record what the next phase needs in the repository or the pull request, and suggest continuing in a new session. Every turn resends the whole context.
 
@@ -38,4 +58,5 @@
 
 - State material findings and remaining uncertainties as work progresses.
 - Resolve conflicts between instructions and authoritative documentation explicitly rather than silently choosing a reading.
-- Request approval for outward-facing actions where the contributor workflow requires it.
+- Never commit to `main` unless asked to, for that commit, in the moment.
+- Pushing a branch, opening a pull request, filing an issue, pushing a release tag, and deploying are outward-facing. Ask first, every time; an earlier approval does not carry over. [`CONTRIBUTING.md`](CONTRIBUTING.md) has the rules.
