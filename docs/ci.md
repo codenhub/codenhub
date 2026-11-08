@@ -78,13 +78,13 @@ The scripts the workflow runs are `hub` commands: `hub verify`, `hub generate --
 
 The jobs run in parallel except that `browser` and `drift` wait for `playwright`, which takes seconds, and `browser-result` waits on `browser`, so a stale generated file is reported without waiting for the slowest test suite.
 
-| Job              | Runs                                                                                                                     |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `verify`         | `pnpm verify --skip=test:browser <selector>`                                                                             |
-| `playwright`     | Reads the `playwright-core` version from `pnpm-lock.yaml` and names the Playwright image for it                          |
-| `browser`        | In that image: `pnpm hub browsers <selector> -- <engine>`, then `pnpm test:browser <selector> -- --project='*<engine>*'` |
-| `drift`          | `pnpm generate --dry-run`, then an assertion that the working tree is unchanged                                          |
-| `browser-result` | Nothing; it passes only when every `browser` job passed                                                                  |
+| Job              | Runs                                                                                                                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `verify`         | `pnpm verify --skip=test:browser <selector>`                                                                                                                                   |
+| `playwright`     | Reads the `playwright-core` version from `pnpm-lock.yaml` and names the Playwright image for it                                                                                |
+| `browser`        | In that image: `pnpm hub browsers <selector> -- <engine>`, then `pnpm test:browser <selector> -- --project='*<engine>*'`, then an assertion that the working tree is unchanged |
+| `drift`          | `pnpm generate --dry-run`, then an assertion that the working tree is unchanged                                                                                                |
+| `browser-result` | Nothing; it passes only when every `browser` job passed                                                                                                                        |
 
 `verify` skips the browser step because the `browser` job owns it. Running it in both would double the slowest part of the run for no extra signal.
 

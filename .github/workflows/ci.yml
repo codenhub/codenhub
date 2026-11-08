@@ -180,6 +180,18 @@ jobs:
           PLAYWRIGHT_WORKERS: 2
         run: pnpm test:browser $SELECTOR -- --project='*${{ matrix.engine }}*'
 
+      # This checkout is not the one `verify` checks, so a browser test that
+      # writes a file is caught here. Playwright's output directories are ignored.
+      - name: Working tree is clean
+        run: |
+          changes="$(git status --porcelain --untracked-files=all)"
+          if [ -n "$changes" ]; then
+            echo "$changes"
+            echo "::error::A browser test left the working tree changed."
+            exit 1
+          fi
+        shell: bash
+
       - name: Upload failure artifacts
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

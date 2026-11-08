@@ -30,7 +30,7 @@ Keep these names as they are: CI, the git hooks and the agent instructions call 
 
 <!-- project:start -->
 
-Every root script here is a thin wrapper around `hub`, and [Tooling](tooling.md#running-it) maps each one to its command. Beyond the scripts above:
+Every root script here except `prepare` is a thin wrapper around `hub`, and [Tooling](tooling.md#running-it) maps each one to its command. Beyond the scripts above:
 
 | Script                    | Guarantees                                                                                               |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -46,7 +46,7 @@ Every root script here is a thin wrapper around `hub`, and [Tooling](tooling.md#
 | `pnpm status:pack`        | Each public package's publishable contents are reported.                                                 |
 | `pnpm hub`                | Runs any `hub` command, including the occasional ones with no script of their own, such as `hub labels`. |
 
-`pnpm verify` runs `test:browser` and then `check` after `test`. Every script takes `hub`'s selectors, so `pnpm verify --changed` verifies a branch and `pnpm test error` one package; [Tooling](tooling.md#targets) describes them.
+`pnpm verify` runs `test:browser` and then `check` after `test`. Every script but `prepare` takes `hub`'s selectors, so `pnpm verify --changed` verifies a branch and `pnpm test error` one package; [Tooling](tooling.md#targets) describes them.
 
 <!-- project:end -->
 
