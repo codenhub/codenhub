@@ -7,14 +7,14 @@ description: Creates projects from the shared project template (codenhub/templat
 
 The template is a starting point and a reference. A project created from it keeps no tie to it: no `.template/` directory, no record of a sync, nothing in CI. Comparing a project with the template is something someone chooses to do, and each difference is judged on which side is better.
 
-The procedure lives in the template's `.template/README.md`, which only the template repository has. Fetch the template without adding a remote and read it before any of the work below; follow it rather than restating it, since this skill adds only what an agent needs around it:
+The procedure lives in the template's `.template/README.md`. A project created from the current template has no `.template/`, and a project from the manifest design has an outdated copy, so always read the fetched one: it is the authority. Fetch the template without adding a remote and read it before any of the work below; follow it rather than restating it, since this skill adds only what an agent needs around it:
 
 ```sh
-git fetch --no-tags https://github.com/codenhub/template HEAD
+git fetch --no-tags https://github.com/<template> HEAD
 git show FETCH_HEAD:.template/README.md
 ```
 
-The template is `codenhub/template` unless the user names another `owner/repo`. Any other fetch overwrites `FETCH_HEAD`, so fetch the template again before reading it. The steps use `git`, `pnpm`, and an authenticated GitHub CLI (`gh`); without `gh`, use the local start and ask the user to create the repository.
+`<template>` is `codenhub/template` unless the user names another `owner/repo`; use the same one in every command below, and in the README's commands, which name `codenhub/template`. Any other fetch overwrites `FETCH_HEAD`, so fetch the template again before reading it. The steps use `git`, `pnpm`, and an authenticated GitHub CLI (`gh`); without `gh`, use the local start and ask the user to create the repository.
 
 A project brings its own name, brand, and domain. Never carry a name, owner, or brand from the template or from another project into this one.
 
@@ -33,12 +33,12 @@ Creating a repository, pushing, and opening a pull request or an issue are outwa
 2. **Create the repository.** Prefer GitHub's template creation, which keeps the hooks' executable bits, with the visibility the user chose, `--private` or `--public`:
 
    ```sh
-   gh repo create <owner>/<slug> --template codenhub/template --<visibility> --clone
+   gh repo create <owner>/<slug> --template <template> --<visibility> --clone
    ```
 
    It fails when `<owner>/<slug>` already exists. Check what is there: an empty repository takes the local start below, and one with content is an existing project to compare.
 
-   For a local start, clone the template, note which files `git ls-files -s .githooks` shows as `100755`, then remove its `.git`, run `git init -b main`, and stage everything. Hooks staged from a Windows checkout lose their executable bit, and git on Linux and macOS then skips them, so stage each of those files again with `git add --chmod=+x .githooks/<hook>`, and only those. `git ls-files -s .githooks` must then match the template's modes.
+   For a local start, clone the template, note which files `git ls-files -s .githooks` shows as `100755`, then remove its `.git`, run `git init -b main`, add the new repository as `origin` with `git remote add origin https://github.com/<owner>/<slug>.git`, and stage everything. Hooks staged from a Windows checkout lose their executable bit, and git on Linux and macOS then skips them, so stage each of those files again with `git add --chmod=+x .githooks/<hook>`, and only those. `git ls-files -s .githooks` must then match the template's modes.
 
    Then, whichever way the repository was created, turn on "Automatically delete head branches", so merged branches, starting with the bootstrap branch, do not pile up on the remote. It is part of creating the repository; for a repository that already existed, ask first:
 
@@ -71,7 +71,7 @@ Report per file, and per hunk where a file has more than one verdict, which side
 
 A project created before the template became a reference still has `.template/`, a manifest, `project:start`/`project:end` markers, and a "Template conformance" CI step. Follow "Projects from the manifest design" in the fetched README, not the project's own `.template/README.md`, which describes the old design.
 
-Before deleting `.template/`, note the reasons in its manifest's `exceptions`, if any: they explain differences the next comparison will show again, and help judge them. Commit the migration on its own, before any comparison, so the removal of the ties is reviewable apart from any change in content. Migrating changes no behavior; when the README's final `git grep` prints something, report it rather than deleting text you have not judged.
+Before deleting `.template/`, note the reasons in its manifest's `exceptions`, if any: they explain differences the next comparison will show again, and help judge them. Commit the migration on its own, before any comparison, so the removal of the ties is reviewable apart from any change in content. Migrating changes nothing the project's code does, but CI stops checking for template drift, which is the point; say so in the report. When the README's final `git grep` prints something, a document that describes the manifest, the markers, or the checker, such as a paragraph in `docs/ci.md` about the conformance step, is updated or removed in the same commit; report anything else it prints rather than deleting text you have not judged.
 
 ## Upstream
 
