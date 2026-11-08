@@ -626,15 +626,15 @@
               }
             },
             "dist/data/material-symbols-rounded.js": {
-              "bytes": 2875189,
+              "bytes": 2877175,
               "declarations": {
-                "default": 2875189
+                "default": 2877175
               }
             },
             "dist/data/material-symbols-rounded-fill.js": {
-              "bytes": 2485442,
+              "bytes": 2486471,
               "declarations": {
-                "default": 2485442
+                "default": 2486471
               }
             },
             "dist/data/line-md.js": {
@@ -644,33 +644,33 @@
               }
             },
             "dist/data/material-symbols-outlined.js": {
-              "bytes": 1793739,
+              "bytes": 1795519,
               "declarations": {
-                "default": 1793739
+                "default": 1795519
               }
             },
             "dist/data/material-symbols-sharp.js": {
-              "bytes": 1533683,
+              "bytes": 1535176,
               "declarations": {
-                "default": 1533683
+                "default": 1535176
               }
             },
             "dist/data/material-symbols-outlined-fill.js": {
-              "bytes": 1502137,
+              "bytes": 1502989,
               "declarations": {
-                "default": 1502137
+                "default": 1502989
               }
             },
             "dist/data/material-symbols-sharp-fill.js": {
-              "bytes": 1274149,
+              "bytes": 1274641,
               "declarations": {
-                "default": 1274149
+                "default": 1274641
               }
             },
             "dist/data/lucide.js": {
-              "bytes": 1018130,
+              "bytes": 1030104,
               "declarations": {
-                "default": 1018130
+                "default": 1030104
               }
             },
             "dist/data/phosphor-duotone.js": {
@@ -806,8 +806,8 @@
               "bytes": 55
             }
           },
-          "gzip": 8731795,
-          "minified": 28925938
+          "gzip": 8736383,
+          "minified": 28945544
         }
       },
       "files": {
@@ -824,15 +824,15 @@
           }
         },
         "dist/data/material-symbols-rounded.js": {
-          "bytes": 2875189,
+          "bytes": 2877175,
           "declarations": {
-            "default": 2875189
+            "default": 2877175
           }
         },
         "dist/data/material-symbols-rounded-fill.js": {
-          "bytes": 2485442,
+          "bytes": 2486471,
           "declarations": {
-            "default": 2485442
+            "default": 2486471
           }
         },
         "dist/data/line-md.js": {
@@ -842,33 +842,33 @@
           }
         },
         "dist/data/material-symbols-outlined.js": {
-          "bytes": 1793739,
+          "bytes": 1795519,
           "declarations": {
-            "default": 1793739
+            "default": 1795519
           }
         },
         "dist/data/material-symbols-sharp.js": {
-          "bytes": 1533683,
+          "bytes": 1535176,
           "declarations": {
-            "default": 1533683
+            "default": 1535176
           }
         },
         "dist/data/material-symbols-outlined-fill.js": {
-          "bytes": 1502137,
+          "bytes": 1502989,
           "declarations": {
-            "default": 1502137
+            "default": 1502989
           }
         },
         "dist/data/material-symbols-sharp-fill.js": {
-          "bytes": 1274149,
+          "bytes": 1274641,
           "declarations": {
-            "default": 1274149
+            "default": 1274641
           }
         },
         "dist/data/lucide.js": {
-          "bytes": 1018130,
+          "bytes": 1030104,
           "declarations": {
-            "default": 1018130
+            "default": 1030104
           }
         },
         "dist/data/phosphor-duotone.js": {
@@ -1004,9 +1004,9 @@
           "bytes": 55
         }
       },
-      "gzip": 8731795,
-      "minified": 28925938,
-      "sha256": "9daa987a3477814ed33ee616bbd7695416eae8888b1309c8b38976cb42f42fa6"
+      "gzip": 8736383,
+      "minified": 28945544,
+      "sha256": "a75bbbcbb55589329b093bb1cb1338e835b6c02bc7ad06aa0304e8e2731e711b"
     },
     "./play": {
       "exports": {

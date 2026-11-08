@@ -10,7 +10,7 @@ packages:
 catalog:
   "@astrojs/check": ^0.9.12
   "@astrojs/markdown-remark": 7.3.5
-  "@cloudflare/workers-types": ^5.20261019.1
+  "@cloudflare/workers-types": ^5.20261104.1
   "@codenhub/error": ^0.3.0
   "@codenhub/jwt": ^0.0.1
   "@codenhub/store": ^0.0.2
@@ -18,8 +18,8 @@ catalog:
   "@codenhub/theme": ^0.2.2
   "@codenhub/validation": ^0.3.0
   "@tauri-apps/api": ^2.0.0
-  "@tailwindcss/cli": ^4.3.2
-  "@tailwindcss/vite": ^4.3.2
+  "@tailwindcss/cli": ^4.3.4
+  "@tailwindcss/vite": ^4.3.4
   # Tilde, not caret: Dependabot holds the target below 1.64 (`.github/dependabot.yml`), but a caret range
   # it raises to ^1.63 still resolves to 1.64, as on #352.
   "@playwright/test": ~1.63.0
@@ -31,21 +31,21 @@ catalog:
   esbuild: ^0.28.1
   jose: ^6.2.14
   oidc-provider: ^9.13.3
-  openid-client: ^6.8.8
+  openid-client: ^6.8.9
   jsdom: ^30.1.3
   miniflare: ^5.20261023.3-beta
-  oxfmt: ^0.75.0
-  oxlint: ^1.90.0
+  oxfmt: ^0.76.0
+  oxlint: ^1.91.0
   prettier: ^3.6.0
   react: ^19.0.0
   react-dom: ^19.0.0
-  tailwindcss: ^4.3.2
-  tsdown: ^0.23.4
+  tailwindcss: ^4.3.4
+  tsdown: ^0.23.5
   typedoc: ^0.28.20
   typescript: ^6.0.3
-  vite: ^8.3.5
+  vite: ^8.3.6
   vitest: ^4.1.10
-  wrangler: ^4.156.0
+  wrangler: ^4.157.0
 
 # TypeDoc still requires minimatch 10, which is affected by GHSA-g3hv-75wg-m249.
 # The TypeDoc patch adapts its glob walker to minimatch 11. Remove both once
