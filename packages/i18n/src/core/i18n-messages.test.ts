@@ -275,6 +275,74 @@ describe("formatters", () => {
     expect(() => i18n.formatNumber(1, { maximumFractionDigits: 200 })).toThrow(RangeError);
     expect(() => i18n.formatDate(Number.NaN)).toThrow(RangeError);
   });
+
+  it("should throw Intl's own error for null options", async () => {
+    const i18n = create();
+    await i18n.init();
+    const intlError = (construct: () => unknown): unknown => {
+      try {
+        construct();
+      } catch (error) {
+        return error;
+      }
+      throw new Error("Intl accepted null options");
+    };
+    const nullOptions = null as never;
+
+    expect(() => i18n.formatNumber(1, nullOptions)).toThrow(
+      intlError(() => new Intl.NumberFormat("en", nullOptions)) as Error,
+    );
+    expect(() => i18n.formatDate(0, nullOptions)).toThrow(
+      intlError(() => new Intl.DateTimeFormat("en", nullOptions)) as Error,
+    );
+  });
+
+  it("should read inherited number options without changing later calls", async () => {
+    const i18n = create();
+    const other = create();
+    await i18n.init();
+    await other.init();
+    // Intl reads options through the prototype chain, as from a class instance's defaults.
+    const percent = Object.create({ style: "percent" }) as Intl.NumberFormatOptions;
+
+    expect(i18n.formatNumber(0.5, percent)).toBe("50%");
+    expect(i18n.formatNumber(0.5)).toBe("0.5");
+    expect(other.formatNumber(0.25)).toBe("0.25");
+  });
+
+  it("should read inherited date options, with or without a configured time zone", async () => {
+    const when = new Date(Date.UTC(2026, 10, 2, 12));
+    const full = (): Intl.DateTimeFormatOptions => Object.create({ dateStyle: "full" }) as Intl.DateTimeFormatOptions;
+    const utc = createI18n({ defaultLocale: "en", locales: ["en"], loadLocale: () => ({}), timeZone: "UTC" });
+    const local = create();
+    await utc.init();
+    await local.init();
+
+    expect(utc.formatDate(when, full())).toBe("Monday, November 2, 2026");
+    expect(local.formatDate(when, full())).toBe(new Intl.DateTimeFormat("en", { dateStyle: "full" }).format(when));
+    expect(local.formatDate(when)).toBe(new Intl.DateTimeFormat("en").format(when));
+  });
+
+  it("should throw for an option Intl rejects even after a similar valid one", async () => {
+    const i18n = create();
+    await i18n.init();
+    // `null` reads as 0, while NaN is out of range; both serialize to JSON as null.
+    const zero = { maximumFractionDigits: null } as unknown as Intl.NumberFormatOptions;
+
+    expect(i18n.formatNumber(1.5, zero)).toBe("2");
+    expect(() => i18n.formatNumber(1.5, { maximumFractionDigits: Number.NaN })).toThrow(RangeError);
+    expect(i18n.formatNumber(1)).toBe("1");
+    expect(() => i18n.formatNumber(1, { style: (() => "percent") as never })).toThrow(RangeError);
+  });
+
+  it("should ignore a circular property Intl does not read", async () => {
+    const i18n = create();
+    await i18n.init();
+    const options: Intl.NumberFormatOptions & { self?: unknown } = { style: "percent" };
+    options.self = options;
+
+    expect(i18n.formatNumber(0.5, options)).toBe("50%");
+  });
 });
 
 describe("parseCachedMessage", () => {

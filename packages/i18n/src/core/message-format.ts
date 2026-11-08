@@ -353,10 +353,99 @@ export const isPlainMessage = (message: string): boolean =>
 const MAX_CACHED_FORMATTERS = 500;
 const formatters = new Map<string, Intl.NumberFormat | Intl.DateTimeFormat | Intl.PluralRules | undefined>();
 
+// Every option `Intl.NumberFormat` and `Intl.DateTimeFormat` read, as of ES2025.
+const NUMBER_FORMAT_OPTIONS = [
+  "localeMatcher",
+  "numberingSystem",
+  "style",
+  "currency",
+  "currencyDisplay",
+  "currencySign",
+  "unit",
+  "unitDisplay",
+  "notation",
+  "compactDisplay",
+  "signDisplay",
+  "useGrouping",
+  "minimumIntegerDigits",
+  "minimumFractionDigits",
+  "maximumFractionDigits",
+  "minimumSignificantDigits",
+  "maximumSignificantDigits",
+  "roundingPriority",
+  "roundingIncrement",
+  "roundingMode",
+  "trailingZeroDisplay",
+];
+const DATE_TIME_FORMAT_OPTIONS = [
+  "localeMatcher",
+  "calendar",
+  "numberingSystem",
+  "hour12",
+  "hourCycle",
+  "timeZone",
+  "weekday",
+  "era",
+  "year",
+  "month",
+  "day",
+  "dayPeriod",
+  "hour",
+  "minute",
+  "second",
+  "fractionalSecondDigits",
+  "timeZoneName",
+  "formatMatcher",
+  "dateStyle",
+  "timeStyle",
+];
+
+/**
+ * Copies the options `Intl` reads, by name and through the prototype chain as `Intl` reads them, so the copy both keys
+ * the cache and creates the formatter, and the two always agree.
+ */
+const copyOptions = (options: object, names: readonly string[]): Record<string, unknown> => {
+  const copy: Record<string, unknown> = {};
+  for (const name of names) {
+    const value: unknown = (options as Record<string, unknown>)[name];
+    if (value !== undefined) {
+      copy[name] = value;
+    }
+  }
+  return copy;
+};
+
+/**
+ * Keys copied options whose values are primitives, which `Intl` reads the same way every time, by type and text, so
+ * `null` and `NaN` differ. Any other value, such as an object with a `toString`, has no key, and its formatter is created
+ * each time, so `Intl` checks it each time.
+ */
+const optionsKey = (copy: Readonly<Record<string, unknown>>): string | undefined => {
+  let key = "";
+  for (const [name, value] of Object.entries(copy)) {
+    if ((typeof value === "object" && value !== null) || typeof value === "function" || typeof value === "symbol") {
+      return undefined;
+    }
+    key += `\0${name}=${typeof value}:${String(value)}`;
+  }
+  return key;
+};
+
+/**
+ * Copies the options `Intl.DateTimeFormat` reads, including inherited ones, into a plain object.
+ *
+ * @internal
+ */
+export const copyDateTimeFormatOptions = (options: Intl.DateTimeFormatOptions = {}): Intl.DateTimeFormatOptions =>
+  copyOptions(options, DATE_TIME_FORMAT_OPTIONS);
+
 const cachedFormatter = <T extends Intl.NumberFormat | Intl.DateTimeFormat | Intl.PluralRules>(
-  key: string,
+  key: string | undefined,
   create: () => T,
 ): T => {
+  if (key === undefined) {
+    return create();
+  }
   let formatter = formatters.get(key) as T | undefined;
   if (formatter === undefined) {
     formatter = create();
@@ -382,16 +471,40 @@ export const intlLocale = (locale: string): string => {
   }
 };
 
-/** @internal */
-export const getNumberFormat = (locale: string, options: Intl.NumberFormatOptions = {}): Intl.NumberFormat =>
-  cachedFormatter(`n\0${locale}\0${JSON.stringify(options)}`, () => new Intl.NumberFormat(intlLocale(locale), options));
+const prefixKey = (prefix: string, key: string | undefined): string | undefined =>
+  key === undefined ? undefined : `${prefix}${key}`;
+
+/**
+ * Whether `Intl` reads named options from `options`; for `null` it throws its own error, which callers keep.
+ *
+ * @internal
+ */
+export const isOptionsObject = (options: unknown): options is object =>
+  (typeof options === "object" && options !== null) || typeof options === "function";
 
 /** @internal */
-export const getDateTimeFormat = (locale: string, options: Intl.DateTimeFormatOptions = {}): Intl.DateTimeFormat =>
-  cachedFormatter(
-    `d\0${locale}\0${JSON.stringify(options)}`,
-    () => new Intl.DateTimeFormat(intlLocale(locale), options),
+export const getNumberFormat = (locale: string, options: Intl.NumberFormatOptions = {}): Intl.NumberFormat => {
+  if (!isOptionsObject(options)) {
+    return new Intl.NumberFormat(intlLocale(locale), options);
+  }
+  const copy = copyOptions(options, NUMBER_FORMAT_OPTIONS);
+  return cachedFormatter(
+    prefixKey(`n\0${locale}`, optionsKey(copy)),
+    () => new Intl.NumberFormat(intlLocale(locale), copy),
   );
+};
+
+/** @internal */
+export const getDateTimeFormat = (locale: string, options: Intl.DateTimeFormatOptions = {}): Intl.DateTimeFormat => {
+  if (!isOptionsObject(options)) {
+    return new Intl.DateTimeFormat(intlLocale(locale), options);
+  }
+  const copy = copyOptions(options, DATE_TIME_FORMAT_OPTIONS);
+  return cachedFormatter(
+    prefixKey(`d\0${locale}`, optionsKey(copy)),
+    () => new Intl.DateTimeFormat(intlLocale(locale), copy),
+  );
+};
 
 const getPluralRules = (locale: string, isOrdinal: boolean): Intl.PluralRules =>
   cachedFormatter(

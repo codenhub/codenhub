@@ -59,6 +59,13 @@ describe("timeZone", () => {
     expect(i18n.formatDate(when, { dateStyle: "long", timeZone: forwarded.timeZone })).toBe(expected);
   });
 
+  it("should pass timeZone: null to Intl, which rejects it, instead of using the configured time zone", async () => {
+    const i18n = create("UTC");
+    await i18n.init();
+
+    expect(() => i18n.formatDate(when, { timeZone: null as never })).toThrow(RangeError);
+  });
+
   it("should not reuse a formatter across inherited time zones", async () => {
     const i18n = create("UTC");
     await i18n.init();

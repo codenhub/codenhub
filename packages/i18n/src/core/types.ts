@@ -289,8 +289,13 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   /**
    * Formats a number for the active locale with `Intl.NumberFormat`.
    *
+   * @param value - Number or bigint to format.
+   * @param options - `Intl.NumberFormat` options, such as `{ style: "percent" }`, read by name, including inherited
+   * properties, as `Intl` reads them; other properties are ignored.
+   * @returns The formatted number.
    * @throws {RangeError} When `options` is out of range, as `Intl.NumberFormat` throws.
-   * @throws {TypeError} When `options` is incomplete, such as a currency style without `currency`.
+   * @throws {TypeError} When `options` is `null` or incomplete, such as a currency style without `currency`, as
+   * `Intl.NumberFormat` throws.
    */
   formatNumber(value: number | bigint, options?: Intl.NumberFormatOptions): string;
 
@@ -298,13 +303,25 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * Formats a date, or a timestamp in milliseconds, for the active locale with `Intl.DateTimeFormat`, in the
    * configured `timeZone` unless `options.timeZone` names another.
    *
-   * @throws {RangeError} When `options` or the date is invalid, as `Intl.DateTimeFormat` throws.
+   * @param value - Date, or milliseconds since the epoch.
+   * @param options - `Intl.DateTimeFormat` options, such as `{ dateStyle: "long" }`, read by name, including inherited
+   * properties, as `Intl` reads them; other properties are ignored. A `timeZone` of `undefined` keeps the configured
+   * one.
+   * @returns The formatted date.
+   * @throws {RangeError} When an option or the date is invalid, such as an unknown time zone or an invalid `Date`, as
+   * `Intl.DateTimeFormat` throws.
+   * @throws {TypeError} When `options` is `null` or options conflict, such as `dateStyle` with `year`, as
+   * `Intl.DateTimeFormat` throws.
    */
   formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
 
   /**
    * Formats a relative time, such as `-1, "day"` for "1 day ago", for the active locale with `Intl.RelativeTimeFormat`.
    *
+   * @param value - Amount of `unit`, negative for the past.
+   * @param unit - Unit of `value`, such as `"day"` or `"hours"`.
+   * @param options - `Intl.RelativeTimeFormat` options, such as `{ numeric: "auto" }` for "yesterday".
+   * @returns The formatted relative time.
    * @throws {RangeError} When `value`, `unit`, or `options` is invalid, as `Intl.RelativeTimeFormat` throws.
    */
   formatRelativeTime(

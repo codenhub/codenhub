@@ -4,10 +4,12 @@ import { matchConfiguredLocale } from "../locale/matching";
 import { validateI18nConfig, type ValidatedI18nConfig } from "../locale/resolution";
 import { registerI18nInternals } from "./internals";
 import {
+  copyDateTimeFormatOptions,
   formatMessage,
   getDateTimeFormat,
   getNumberFormat,
   intlLocale,
+  isOptionsObject,
   isPlainMessage,
   MessageSyntaxError,
   type MessageValues,
@@ -212,13 +214,17 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     return getNumberFormat(this.currentLocale, options).format(value);
   }
 
-  formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string {
-    // `timeZone: undefined`, as forwarded options often carry, names no zone, so the configured one still applies. The
-    // zone is copied as an own property, which the formatter cache's key sees, even when the options inherit it.
-    const timeZone = options?.timeZone ?? this.config.timeZone;
-    return getDateTimeFormat(this.currentLocale, timeZone === undefined ? options : { ...options, timeZone }).format(
-      value,
-    );
+  formatDate(value: Date | number, options: Intl.DateTimeFormatOptions = {}): string {
+    if (!isOptionsObject(options)) {
+      return getDateTimeFormat(this.currentLocale, options).format(value);
+    }
+    // The copy holds inherited options too, which a spread would drop. `timeZone: undefined`, as forwarded options often
+    // carry, names no zone, so the configured one still applies; any other value, even `null`, is Intl's to judge.
+    const copy = copyDateTimeFormatOptions(options);
+    return getDateTimeFormat(
+      this.currentLocale,
+      copy.timeZone === undefined ? { ...copy, timeZone: this.config.timeZone } : copy,
+    ).format(value);
   }
 
   formatRelativeTime(
