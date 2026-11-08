@@ -79,8 +79,10 @@ export interface I18nConfig<TLocale extends string = string, TMessages = unknown
   /**
    * Resolves `ltr` or `rtl`; called during creation and state changes, with failures propagated unchanged.
    *
-   * @defaultValue `rtl` for a right-to-left script subtag, such as `uz-Arab`, or, without a script subtag, a
-   * right-to-left language, such as `ar`, `he`, `fa`, or `ur`; otherwise `ltr`.
+   * @defaultValue `rtl` when the locale's script is right-to-left, otherwise `ltr`. The script is its script subtag,
+   * such as `uz-Arab`, else the likely script `Intl.Locale` gives for its language and region, such as Arabic for
+   * `pa-PK` and `arz` and Devanagari for `sd-IN`; for a tag `Intl.Locale` rejects, a right-to-left language, such as
+   * `ar` or `he`, gives `rtl`.
    */
   getLocaleDirection?(locale: NoInfer<TLocale>): LocaleDirection;
   /**
