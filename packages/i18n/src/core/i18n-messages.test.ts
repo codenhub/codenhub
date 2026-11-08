@@ -297,6 +297,23 @@ describe("formatters", () => {
     );
   });
 
+  it("should read formatter options in the order Intl reads them", async () => {
+    const i18n = create();
+    await i18n.init();
+    const recordReads = (use: (options: object) => unknown): string[] => {
+      const reads: string[] = [];
+      use(new Proxy({}, { get: (_, name) => void reads.push(String(name)) }));
+      return reads;
+    };
+
+    expect(recordReads((options) => i18n.formatNumber(1, options))).toEqual(
+      recordReads((options) => new Intl.NumberFormat("en", options)),
+    );
+    expect(recordReads((options) => i18n.formatDate(0, options))).toEqual(
+      recordReads((options) => new Intl.DateTimeFormat("en", options)),
+    );
+  });
+
   it("should read inherited number options without changing later calls", async () => {
     const i18n = create();
     const other = create();

@@ -353,7 +353,8 @@ export const isPlainMessage = (message: string): boolean =>
 const MAX_CACHED_FORMATTERS = 500;
 const formatters = new Map<string, Intl.NumberFormat | Intl.DateTimeFormat | Intl.PluralRules | undefined>();
 
-// Every option `Intl.NumberFormat` and `Intl.DateTimeFormat` read, as of ES2025.
+// Every option `Intl.NumberFormat` and `Intl.DateTimeFormat` read, as of ES2025, in the order they read them, so a getter
+// that depends on an earlier read sees the same state as with `Intl` alone.
 const NUMBER_FORMAT_OPTIONS = [
   "localeMatcher",
   "numberingSystem",
@@ -364,18 +365,18 @@ const NUMBER_FORMAT_OPTIONS = [
   "unit",
   "unitDisplay",
   "notation",
-  "compactDisplay",
-  "signDisplay",
-  "useGrouping",
   "minimumIntegerDigits",
   "minimumFractionDigits",
   "maximumFractionDigits",
   "minimumSignificantDigits",
   "maximumSignificantDigits",
-  "roundingPriority",
   "roundingIncrement",
   "roundingMode",
+  "roundingPriority",
   "trailingZeroDisplay",
+  "compactDisplay",
+  "useGrouping",
+  "signDisplay",
 ];
 const DATE_TIME_FORMAT_OPTIONS = [
   "localeMatcher",
