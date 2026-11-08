@@ -65,6 +65,63 @@ describe("typed placeholder values", () => {
     expectTypeOf<TranslateParams<unknown, "greeting">>().toEqualTypeOf<Loose>();
   });
 
+  it("should not require an argument the runtime prints as quoted text", () => {
+    type Loose = [params?: Readonly<Record<string, string | number | Date>>];
+    // `''` inside quoted text is an apostrophe, so the quote still ends at the last `'`.
+    expectTypeOf<TranslateParams<{ readonly m: "'{it''s {x}'" }, "m">>().toEqualTypeOf<Loose>();
+    expectTypeOf<{ x: 1 }>().toExtend<NonNullable<TranslateParams<{ readonly m: "'{it''s}' {x}" }, "m">[0]>>();
+    expectTypeOf<{}>().not.toExtend<NonNullable<TranslateParams<{ readonly m: "'{it''s}' {x}" }, "m">[0]>>();
+  });
+
+  it("should accept any values for an argument name the runtime can't read", () => {
+    type Loose = [params?: Readonly<Record<string, string | number | Date>>];
+    expectTypeOf<TranslateParams<{ readonly m: "{first-name}" }, "m">>().toEqualTypeOf<Loose>();
+    expectTypeOf<TranslateParams<{ readonly m: "{nome_ç}" }, "m">>().toEqualTypeOf<Loose>();
+    expectTypeOf<Value<"spaced", "name">>().toEqualTypeOf<string | number | Date>();
+    expectTypeOf<TranslateParams<{ readonly m: "{Name_2}" }, "m">["length"]>().toEqualTypeOf<1>();
+  });
+
+  it("should accept any values for a message too long to read, without failing to compile", () => {
+    type Loose = [params?: Readonly<Record<string, string | number | Date>>];
+    type Apostrophes10 = "l'a l'a l'a l'a l'a l'a l'a l'a l'a l'a ";
+    type Apostrophes100 =
+      `${Apostrophes10}${Apostrophes10}${Apostrophes10}${Apostrophes10}${Apostrophes10}${Apostrophes10}${Apostrophes10}${Apostrophes10}${Apostrophes10}${Apostrophes10}`;
+    type Apostrophes1100 =
+      `${Apostrophes100}${Apostrophes100}${Apostrophes100}${Apostrophes100}${Apostrophes100}${Apostrophes100}${Apostrophes100}${Apostrophes100}${Apostrophes100}${Apostrophes100}${Apostrophes100}{name}`;
+    type Arguments10 = "{a} {b} {c} {d} {e} {f} {g} {h} {i} {j} ";
+    type Arguments100 =
+      `${Arguments10}${Arguments10}${Arguments10}${Arguments10}${Arguments10}${Arguments10}${Arguments10}${Arguments10}${Arguments10}${Arguments10}`;
+    type Arguments600 = `${Arguments100}${Arguments100}${Arguments100}${Arguments100}${Arguments100}${Arguments100}`;
+    type Long = { readonly apostrophes: Apostrophes1100; readonly arguments: Arguments600 };
+
+    expectTypeOf<TranslateParams<Long, "apostrophes">>().toEqualTypeOf<Loose>();
+    expectTypeOf<TranslateParams<Long, "arguments">>().toEqualTypeOf<Loose>();
+    // Within the budget, a long message is still read.
+    type Arguments300 = `${Arguments100}${Arguments100}${Arguments100}`;
+    expectTypeOf<{}>().not.toExtend<NonNullable<TranslateParams<{ readonly m: Arguments300 }, "m">[0]>>();
+  });
+
+  it("should accept any values for an argument with too many spaces to read, without failing to compile", () => {
+    type Loose = [params?: Readonly<Record<string, string | number | Date>>];
+    type Spaces10 = "          ";
+    type Spaces100 =
+      `${Spaces10}${Spaces10}${Spaces10}${Spaces10}${Spaces10}${Spaces10}${Spaces10}${Spaces10}${Spaces10}${Spaces10}`;
+    type Spaces1100 =
+      `${Spaces100}${Spaces100}${Spaces100}${Spaces100}${Spaces100}${Spaces100}${Spaces100}${Spaces100}${Spaces100}${Spaces100}${Spaces100}`;
+    type Spaced = {
+      readonly before: `{${Spaces1100}x}`;
+      readonly after: `{x${Spaces1100}}`;
+      readonly typed: `{x, ${Spaces1100}number}`;
+      readonly near: `{${Spaces100}x${Spaces100}}`;
+    };
+
+    expectTypeOf<TranslateParams<Spaced, "before">>().toEqualTypeOf<Loose>();
+    expectTypeOf<TranslateParams<Spaced, "after">>().toEqualTypeOf<Loose>();
+    expectTypeOf<TranslateParams<Spaced, "typed">>().toEqualTypeOf<Loose>();
+    // Within the budget, the spaces are trimmed and the argument is still required.
+    expectTypeOf<{}>().not.toExtend<NonNullable<TranslateParams<Spaced, "near">[0]>>();
+  });
+
   it("should check t() calls on a manager", async () => {
     const i18n = createI18n({
       defaultLocale: "en",
