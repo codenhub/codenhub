@@ -2,7 +2,7 @@
 title: Recetas
 description: Ejemplos completos para fetch y los códigos de estado HTTP, llamadas a Supabase, tus propios códigos de error, reintentos seguros, traducciones, reporte de errores y pruebas.
 order: 7
-source: 1d662008b543d9841ab2a293312a88d91198006c
+source: 5d25737842495114ae8911b3d821c7c799c2d135
 ---
 
 # Recetas
@@ -81,8 +81,8 @@ Guarda tus códigos y su feedback en un solo objeto, regístralos desde ahí y l
 import { err, type ErrorFeedback } from "@codenhub/error";
 
 export const projectErrors = {
-  "project.name_missing": { message: "Ponle un nombre al proyecto y vuelve a guardar.", source: "my-app.projects" },
-  "project.not_found": { message: "No encontramos ese proyecto.", source: "my-app.projects" },
+  "project.name_missing": { messageKey: "error.project.nameMissing", message: "Ponle un nombre al proyecto y vuelve a guardar.", source: "my-app.projects" },
+  "project.not_found": { messageKey: "error.project.notFound", message: "No encontramos ese proyecto.", source: "my-app.projects" },
 } satisfies Record<string, ErrorFeedback>;
 
 export type ProjectErrorCode = keyof typeof projectErrors;
@@ -145,7 +145,7 @@ Un error `"unknown"` no tiene clave: nada coincidió, así que nada lo nombró. 
 ```ts
 import { createAppError, DEFAULT_APP_ERROR_MESSAGE } from "@codenhub/error";
 
-const error = createAppError(caught, { fallbackMessage: translate("error.unexpected") ?? DEFAULT_APP_ERROR_MESSAGE });
+const error = createAppError(caught, { fallbackMessage: translate("error.unexpected") || DEFAULT_APP_ERROR_MESSAGE });
 ```
 
 Eso solo cubre los errores `"unknown"`. Un mapeo que registraste sin `messageKey` ya tiene mensaje, así que `fallbackMessage` lo deja en inglés. Dale una clave a cada mapeo que registres.
@@ -221,6 +221,8 @@ it.each(Object.keys(projectErrors))("registra %s", (code) => {
   expect(getErrorRegistry().codes.get(code)).toBeDefined();
 });
 ```
+
+Esto revisa cada código de `projectErrors`. Un código lanzado sin `projectError`, como un `err({ code })` escrito a mano, queda fuera tanto del tipo como de esta prueba, así que lanza cada error del proyecto a través de esa función.
 
 ## Siguiente
 

@@ -1,7 +1,7 @@
 ---
 title: Primeiros passos
 description: Configure um registro para uma aplicação real, normalize as falhas onde elas entram e decida o que mostrar e o que reportar.
-source: b3987f9858b83a8e0f1ef31626e30f78e7976e33
+source: c9d1b5e107a70c3c663bc9c847dc853be4390dea
 order: 1
 ---
 
@@ -113,7 +113,7 @@ async function onSubmit(form: FormData) {
 }
 ```
 
-Você não precisa desembrulhar nada antes. `createAppError` procura erros embrulhados dentro do valor em `cause`, `originalError`, `error`, `err`, `inner`, `innerError` e nas dez primeiras entradas de uma lista `errors`. Um `23505` enterrado dois `cause`s abaixo ainda vira "Você já tem um projeto com esse nome.", desde que nenhum embrulho do lado de fora tenha uma correspondência conhecida própria. Uma correspondência por pattern do lado de fora não interrompe a busca; [Qual correspondência vence](registries.md#qual-correspondência-vence) traz a ordem completa.
+Você não precisa desembrulhar nada antes. `createAppError` procura erros embrulhados dentro do valor em `cause`, `originalError`, `error`, `err`, `inner`, `innerError` e nas dez primeiras entradas de uma lista `errors`. Um `23505` enterrado dois `cause`s abaixo ainda vira "Você já tem um projeto com esse nome.", desde que nada do que é verificado antes dele tenha uma correspondência conhecida própria, como um embrulho do lado de fora ou uma entrada anterior da mesma lista `errors`. Uma correspondência por pattern do lado de fora não interrompe a busca; [Qual correspondência vence](registries.md#qual-correspondência-vence) traz a ordem completa.
 
 ## 4. Decida o que mostrar
 

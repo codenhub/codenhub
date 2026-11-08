@@ -80,8 +80,8 @@ Keep your codes and their feedback in one object, register it from there, and ra
 import { err, type ErrorFeedback } from "@codenhub/error";
 
 export const projectErrors = {
-  "project.name_missing": { message: "Give the project a name, then save again.", source: "my-app.projects" },
-  "project.not_found": { message: "We couldn't find that project.", source: "my-app.projects" },
+  "project.name_missing": { messageKey: "error.project.nameMissing", message: "Give the project a name, then save again.", source: "my-app.projects" },
+  "project.not_found": { messageKey: "error.project.notFound", message: "We couldn't find that project.", source: "my-app.projects" },
 } satisfies Record<string, ErrorFeedback>;
 
 export type ProjectErrorCode = keyof typeof projectErrors;
@@ -144,7 +144,7 @@ An `"unknown"` error has no key: nothing matched, so nothing named it. Translate
 ```ts
 import { createAppError, DEFAULT_APP_ERROR_MESSAGE } from "@codenhub/error";
 
-const error = createAppError(caught, { fallbackMessage: translate("error.unexpected") ?? DEFAULT_APP_ERROR_MESSAGE });
+const error = createAppError(caught, { fallbackMessage: translate("error.unexpected") || DEFAULT_APP_ERROR_MESSAGE });
 ```
 
 That covers only `"unknown"` errors. A mapping you registered without a `messageKey` already has a message, so `fallbackMessage` leaves it in English. Give every mapping you register a key.
@@ -220,6 +220,8 @@ it.each(Object.keys(projectErrors))("registers %s", (code) => {
   expect(getErrorRegistry().codes.get(code)).toBeDefined();
 });
 ```
+
+This checks every code in `projectErrors`. A code raised without `projectError`, such as a hand-written `err({ code })`, is outside both the type and this test, so raise every project error through it.
 
 ## Next
 

@@ -112,7 +112,7 @@ async function onSubmit(form: FormData) {
 }
 ```
 
-You do not need to unwrap anything first. `createAppError` looks inside the value for wrapped errors in `cause`, `originalError`, `error`, `err`, `inner`, `innerError`, and the first ten entries of an `errors` list. A `23505` buried two `cause`s deep still resolves to "You already have a project with that name.", as long as no wrapper outside it has a known match of its own. A pattern match outside it does not stop the search; [Which match wins](registries.md#which-match-wins) has the full order.
+You do not need to unwrap anything first. `createAppError` looks inside the value for wrapped errors in `cause`, `originalError`, `error`, `err`, `inner`, `innerError`, and the first ten entries of an `errors` list. A `23505` buried two `cause`s deep still resolves to "You already have a project with that name.", as long as nothing searched before it has a known match of its own, such as a wrapper outside it or an earlier entry in the same `errors` list. A pattern match outside it does not stop the search; [Which match wins](registries.md#which-match-wins) has the full order.
 
 ## 4. Decide what to show
 

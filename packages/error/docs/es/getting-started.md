@@ -2,7 +2,7 @@
 title: Primeros pasos
 description: Configura un registro para una aplicación real, normaliza los fallos por donde entran y decide qué mostrar y qué reportar.
 order: 1
-source: b3987f9858b83a8e0f1ef31626e30f78e7976e33
+source: c9d1b5e107a70c3c663bc9c847dc853be4390dea
 ---
 
 # Primeros pasos
@@ -113,7 +113,7 @@ async function onSubmit(form: FormData) {
 }
 ```
 
-No necesitas desenvolver nada antes. `createAppError` busca dentro del valor errores envueltos en `cause`, `originalError`, `error`, `err`, `inner`, `innerError` y las primeras diez entradas de una lista `errors`. Un `23505` enterrado dos `cause` más adentro igual se resuelve como "Ya tienes un proyecto con ese nombre.", siempre que ningún envoltorio por fuera de él tenga una coincidencia conocida propia. Una coincidencia por patrón por fuera de él no detiene la búsqueda; [Qué coincidencia gana](registries.md#qué-coincidencia-gana) tiene el orden completo.
+No necesitas desenvolver nada antes. `createAppError` busca dentro del valor errores envueltos en `cause`, `originalError`, `error`, `err`, `inner`, `innerError` y las primeras diez entradas de una lista `errors`. Un `23505` enterrado dos `cause` más adentro igual se resuelve como "Ya tienes un proyecto con ese nombre.", siempre que nada de lo que se revisa antes tenga una coincidencia conocida propia, como un envoltorio por fuera de él o una entrada anterior de la misma lista `errors`. Una coincidencia por patrón por fuera de él no detiene la búsqueda; [Qué coincidencia gana](registries.md#qué-coincidencia-gana) tiene el orden completo.
 
 ## 4. Decide qué mostrar
 

@@ -1,7 +1,7 @@
 ---
 title: Receitas
 description: Exemplos completos para fetch e códigos de status HTTP, chamadas ao Supabase, os seus próprios códigos de erro, novas tentativas seguras, traduções, envio para um error tracker e testes.
-source: 1d662008b543d9841ab2a293312a88d91198006c
+source: 5d25737842495114ae8911b3d821c7c799c2d135
 order: 7
 ---
 
@@ -81,8 +81,8 @@ Mantenha os seus códigos e o feedback deles em um único objeto, registre-os a 
 import { err, type ErrorFeedback } from "@codenhub/error";
 
 export const projectErrors = {
-  "project.name_missing": { message: "Dê um nome ao projeto e salve de novo.", source: "my-app.projects" },
-  "project.not_found": { message: "Não encontramos esse projeto.", source: "my-app.projects" },
+  "project.name_missing": { messageKey: "error.project.nameMissing", message: "Dê um nome ao projeto e salve de novo.", source: "my-app.projects" },
+  "project.not_found": { messageKey: "error.project.notFound", message: "Não encontramos esse projeto.", source: "my-app.projects" },
 } satisfies Record<string, ErrorFeedback>;
 
 export type ProjectErrorCode = keyof typeof projectErrors;
@@ -145,7 +145,7 @@ Um erro `"unknown"` não tem chave: nada correspondeu, então nada deu nome a el
 ```ts
 import { createAppError, DEFAULT_APP_ERROR_MESSAGE } from "@codenhub/error";
 
-const error = createAppError(caught, { fallbackMessage: translate("error.unexpected") ?? DEFAULT_APP_ERROR_MESSAGE });
+const error = createAppError(caught, { fallbackMessage: translate("error.unexpected") || DEFAULT_APP_ERROR_MESSAGE });
 ```
 
 Isso cobre só os erros `"unknown"`. Um mapeamento que você registrou sem `messageKey` já tem mensagem, então o `fallbackMessage` o deixa em inglês. Dê uma chave a cada mapeamento que você registrar.
@@ -221,6 +221,8 @@ it.each(Object.keys(projectErrors))("registers %s", (code) => {
   expect(getErrorRegistry().codes.get(code)).toBeDefined();
 });
 ```
+
+Isso confere cada código de `projectErrors`. Um código lançado sem `projectError`, como um `err({ code })` escrito à mão, fica de fora tanto do tipo quanto deste teste, então lance todo erro do projeto por essa função.
 
 ## Próximos passos
 
