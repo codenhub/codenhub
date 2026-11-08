@@ -509,6 +509,18 @@ describe("translated pathnames", () => {
         expect(performance.now() - start).toBeLessThan(maxMilliseconds);
       });
     }
+
+    it("should build and read a route as long as a request may be, next to a catch-all it overlaps", () => {
+      // 4,094 segments, so the prefixed request is just within the 8,192-character limit; recursion over them once
+      // overflowed the stack.
+      const long = "/x".repeat(4_094);
+      const routing = create({
+        localePrefix: "when-ambiguous",
+        pathnames: { [long]: { pt: long }, "/a/:rest*": { pt: "/x/:rest*" } },
+      });
+
+      expect(routing.parse(`/pt${long}`)).toEqual({ locale: "pt", pathname: long });
+    });
   });
 
   describe("catch-all parameters", () => {

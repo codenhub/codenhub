@@ -127,28 +127,39 @@ const indexByShape = <T>(items: readonly T[], patternOf: (item: T) => Pattern): 
     (isRest ? node.rests : node.ends).push({ item, order });
   }
 
-  const isAnyBelow = (node: ShapeNode<T>, predicate: (item: T) => boolean): boolean =>
-    [...node.ends, ...node.rests].some((entry) => predicate(entry.item)) ||
-    childrenOf(node).some((child) => isAnyBelow(child, predicate));
+  // The walks below keep their own stack: a pattern may have about 4,000 segments, and a call per segment overflows the
+  // call stack.
+  const isAnyBelow = (start: ShapeNode<T>, predicate: (item: T) => boolean): boolean => {
+    const pending = [start];
+    for (let node = pending.pop(); node !== undefined; node = pending.pop()) {
+      if (node.ends.some((entry) => predicate(entry.item)) || node.rests.some((entry) => predicate(entry.item))) {
+        return true;
+      }
+      for (const child of childrenOf(node)) {
+        pending.push(child);
+      }
+    }
+    return false;
+  };
 
   return {
     find(keys, segments) {
       // The first item of each matching node, since items at one node match the same paths.
       const matches: IndexEntry<T>[] = [];
-      const visit = (node: ShapeNode<T> | undefined, depth: number): void => {
+      const pending: [ShapeNode<T> | undefined, number][] = [[root, 0]];
+      for (let next = pending.pop(); next !== undefined; next = pending.pop()) {
+        const [node, depth] = next;
         if (node === undefined) {
-          return;
+          continue;
         }
         if (depth === keys.length) {
           matches.push(...node.ends.slice(0, 1));
-          return;
+          continue;
         }
         matches.push(...node.rests.slice(0, 1)); // A catch-all takes this segment and the rest.
-        visit(node.byValue.get(keys[depth]!), depth + 1);
-        visit(node.param, depth + 1);
-      };
+        pending.push([node.byValue.get(keys[depth]!), depth + 1], [node.param, depth + 1]);
+      }
 
-      visit(root, 0);
       const found = matches.reduce<IndexEntry<T> | undefined>(
         (first, entry) => (first === undefined || entry.order < first.order ? entry : first),
         undefined,
@@ -157,25 +168,35 @@ const indexByShape = <T>(items: readonly T[], patternOf: (item: T) => Pattern): 
     },
 
     someOverlapping(pattern, predicate) {
-      const visit = (node: ShapeNode<T> | undefined, depth: number): boolean => {
+      const pending: [ShapeNode<T> | undefined, number][] = [[root, 0]];
+      for (let next = pending.pop(); next !== undefined; next = pending.pop()) {
+        const [node, depth] = next;
         if (node === undefined) {
-          return false;
+          continue;
         }
         const segment = pattern.segments[depth];
         if (segment === undefined) {
-          return node.ends.some((entry) => predicate(entry.item));
+          if (node.ends.some((entry) => predicate(entry.item))) {
+            return true;
+          }
+          continue;
         }
         if (node.rests.some((entry) => predicate(entry.item))) {
           return true; // Another catch-all takes this segment and the rest.
         }
         if (segment.kind === "rest") {
-          return childrenOf(node).some((child) => isAnyBelow(child, predicate));
+          if (childrenOf(node).some((child) => isAnyBelow(child, predicate))) {
+            return true;
+          }
+          continue;
         }
-        const next = segment.kind === "param" ? childrenOf(node) : [node.byValue.get(segment.value), node.param];
-        return next.some((child) => visit(child, depth + 1));
-      };
+        const children = segment.kind === "param" ? childrenOf(node) : [node.byValue.get(segment.value), node.param];
+        for (const child of children) {
+          pending.push([child, depth + 1]);
+        }
+      }
 
-      return visit(root, 0);
+      return false;
     },
   };
 };
