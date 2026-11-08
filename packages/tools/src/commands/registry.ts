@@ -85,6 +85,7 @@ const COMMANDS: readonly CommandDefinition[] = [
     summary: "Upload a package as a preview version and print its URL.",
   }),
   createRootToolCommand({
+    checkArgs: ["--deny-warnings"],
     command: "oxlint",
     fixArgs: ["--fix"],
     name: "lint",
