@@ -354,6 +354,11 @@ describe("createLocaleRouting", () => {
       prefixed: `/pt-BR/documentos/${segments.join("/")}`,
       unprefixed: `/docs/${segments.join("/")}/`,
     };
+    // A rejected request could normalize nothing, so the results show that each request was read in full.
+    const expected = {
+      prefixed: { locale: "pt-BR", pathname: `/${canonical.join("/")}` },
+      unprefixed: { locale: "en-US", pathname: `/${canonical.join("/")}/` },
+    };
 
     for (const localePrefix of ["always", "except-default", "when-ambiguous"] as const) {
       const routing = createLocaleRouting({
@@ -363,9 +368,14 @@ describe("createLocaleRouting", () => {
         pathnames: { "/docs/:path*": { "pt-BR": "/documentos/:path*" } },
       });
 
-      for (const [kind, request] of Object.entries(requests)) {
+      for (const kind of ["prefixed", "unprefixed"] as const) {
+        const request = requests[kind];
         vi.mocked(normalizeSegment).mockClear();
-        routing.parse(request);
+        const result = routing.parse(request);
+        // `always` has no unprefixed paths.
+        expect(result, `${localePrefix}, ${kind}`).toEqual(
+          localePrefix === "always" && kind === "unprefixed" ? undefined : expected[kind],
+        );
         const distinct = new Set([...request.split("/").filter(Boolean), ...canonical]);
 
         expect(vi.mocked(normalizeSegment).mock.calls.length, `${localePrefix}, ${kind}`).toBeLessThanOrEqual(
