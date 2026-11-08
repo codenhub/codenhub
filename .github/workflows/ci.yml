@@ -75,6 +75,11 @@ jobs:
         run: pnpm verify --skip=test:browser $SELECTOR
         # project:end
 
+      # The project's files against the template commit it last synced with, as .template/README.md describes.
+      # It needs the network to fetch the template, and writes nothing.
+      - name: Template conformance
+        run: node .template/check.mjs
+
       # A check that writes a file has changed what it was checking, so the run fails. `--untracked-files=all`
       # lists a new file, not only the directory that holds it.
       - name: Working tree is clean

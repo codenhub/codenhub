@@ -1,6 +1,10 @@
 {
   "template": "codenhub/template",
-  "synced": "762782500014da0808a98d681796dfb5bfcde14e",
+  "synced": "48110d8b3198e15ec5d3711f867a9174399e0f0e",
+  "exceptions": {
+    "tsconfig.base.json": "This repository predates the template's TypeScript layout: its packages extend the root tsconfig.json, which sets the shared flags. Moving them to tsconfig.base.json brings its stricter flags, noUncheckedIndexedAccess and verbatimModuleSyntax, which raised over 160 type errors on 2026-11-08.",
+    "tsconfig.root.json": "Part of the same TypeScript layout as tsconfig.base.json, which this repository does not use: the root tsconfig.json covers the root's own files. tsconfig.root.json extends tsconfig.base.json, so it is adopted together with that file and its stricter flags."
+  },
   "files": {
     ".editorconfig": "canonical",
     ".gitattributes": "blocks",
@@ -24,6 +28,8 @@
     ".prettierignore": "blocks",
     ".prettierrc.json5": "blocks",
     ".template/README.md": "canonical",
+    ".template/check.mjs": "canonical",
+    ".template/check.test.mjs": "canonical",
     "AGENTS.md": "blocks",
     "CLAUDE.md": "canonical",
     "CONTRIBUTING.md": "blocks",
