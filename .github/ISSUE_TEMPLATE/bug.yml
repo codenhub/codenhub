@@ -1,22 +1,27 @@
 name: Bug
-description: A package does not behave the way its documentation says.
+description: Something does not behave the way its documentation says.
 labels: ["type:bug", "status:needs-triage"]
 body:
-  - type: input
-    id: package
+  - type: markdown
     attributes:
-      label: Package
-      placeholder: "@codenhub/error"
-    validations:
-      required: true
+      value: |
+        A security vulnerability is not a bug report. Report it privately, as SECURITY.md describes.
+
+        Everyone who can read this repository can read this issue. Remove secrets, tokens, and personal data from everything you write or paste below.
+  - type: input
+    id: area
+    attributes:
+      label: Area
+      description: The package or app it is in, if you know.
   - type: input
     id: version
     attributes:
       label: Version
-      description: The installed version, or the commit when you hit it inside this repository.
-      placeholder: "0.3.0"
+      description: The released version, or the commit from `git rev-parse --short HEAD` when running from a checkout.
     validations:
       required: true
+  # project:start
+  # Where it surfaced decides the `found-in:` label (CONTRIBUTING.md, "Issues").
   - type: dropdown
     id: found-in
     attributes:
@@ -26,6 +31,7 @@ body:
         - An app outside this repository
     validations:
       required: true
+  # project:end
   - type: textarea
     id: actual
     attributes:
@@ -42,8 +48,9 @@ body:
     id: reproduction
     attributes:
       label: Reproduction
-      description: The smallest code or steps that show it.
-      render: ts
+      description: The smallest code or the shortest steps that show it.
+    validations:
+      required: true
   - type: textarea
     id: workaround
     attributes:
