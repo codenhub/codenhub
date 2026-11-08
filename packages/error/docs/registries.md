@@ -134,7 +134,7 @@ export const projectErrors = freezeRegistry(registry);
 
 A frozen registry works anywhere a registry is only read: as the `registry` option, in `merge`, and in the list you pass to `createErrorRegistry`. It does not work in `setErrorRegistry`, which needs one it can add to.
 
-Those read-only places also accept an object you write yourself, as long as it has the same shape as a `ReadonlyErrorRegistry`: `get` and `values` on `codes`, `names`, and `messages`, and `values` on `prefixes` and `patterns`. That is how you would back a registry with something other than memory. Your object's answers are trusted less than the built-in buckets' are: feedback without a non-empty `message` makes `createAppError` throw `TypeError`, since the alternative is an `AppError` with nothing to say.
+Those read-only places also accept an object you write yourself, as long as it has the same shape as a `ReadonlyErrorRegistry`: `get` and `values` on `codes`, `names`, and `messages`, and `values` on `prefixes` and `patterns`. That is how you would back a registry with something other than memory. Your object's answers are trusted less than the built-in buckets' are: a lookup that returns anything other than `undefined` or feedback with a non-empty `message` makes `createAppError` throw `TypeError`, since the alternative is an `AppError` with nothing to say. A lookup that throws is not caught either.
 
 Everything a bucket returns is frozen too. `values()` returns the same frozen list until the bucket changes, and its entries, feedback objects, and regular expressions are all frozen. Spread one into a new object when you need a copy you can change, and copy a pattern with `new RegExp(pattern.source, pattern.flags)`.
 

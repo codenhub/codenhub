@@ -2,7 +2,7 @@
 title: Recetas
 description: Ejemplos completos para fetch y los códigos de estado HTTP, llamadas a Supabase, tus propios códigos de error, reintentos seguros, traducciones, reporte de errores y pruebas.
 order: 7
-source: a90c460d0ce1901873944917bbfaba9f4f5205df
+source: 1d662008b543d9841ab2a293312a88d91198006c
 ---
 
 # Recetas
@@ -140,13 +140,15 @@ import { browserErrorNames, browserErrorPatterns } from "@codenhub/error/registr
 const browserKeys = new Set([...Object.values(browserErrorNames).map((feedback) => feedback.messageKey), ...browserErrorPatterns.map(([, feedback]) => feedback.messageKey)]);
 ```
 
-Un error `"unknown"` no tiene clave: nada coincidió, así que nada lo nombró. Tampoco la tiene un mapeo que registraste sin una. Traduce esos a través del mensaje que pasas, para que el fallo más común no sea el que se queda en inglés:
+Un error `"unknown"` no tiene clave: nada coincidió, así que nada lo nombró. Tradúcelo a través del mensaje que pasas, para que el fallo más común no sea el que se queda en inglés:
 
 ```ts
 import { createAppError, DEFAULT_APP_ERROR_MESSAGE } from "@codenhub/error";
 
 const error = createAppError(caught, { fallbackMessage: translate("error.unexpected") ?? DEFAULT_APP_ERROR_MESSAGE });
 ```
+
+Eso solo cubre los errores `"unknown"`. Un mapeo que registraste sin `messageKey` ya tiene mensaje, así que `fallbackMessage` lo deja en inglés. Dale una clave a cada mapeo que registres.
 
 ErrorKit no trae traducciones. Las claves son el contrato; las palabras las pones tú.
 
@@ -203,7 +205,7 @@ beforeEach(() => {
 });
 ```
 
-La segunda línea es la que la gente olvida. Un registro nuevo empieza vacío, así que sin ella cada código que registra tu aplicación se resuelve como `"unknown"`, y las pruebas que pasan en el navegador fallan en el test runner sin ningún motivo visible.
+La segunda línea es la que la gente olvida. Un registro nuevo empieza vacío, así que sin ella cada código que registra tu aplicación se resuelve como `"unknown"`, y las pruebas que pasan en el navegador fallan en el test runner sin ningún motivo visible. Si tu `setUpErrors` recibe un preset del runtime, pasa el del lugar donde se ejecutan tus pruebas.
 
 Haz las aserciones sobre `code`, `messageKey` o `type`, no sobre `message`. Los mensajes están escritos para personas y se reescriben; los códigos y las claves son la parte estable. Una prueba que se rompe porque alguien corrigió una coma es una prueba que todo el mundo aprende a ignorar.
 

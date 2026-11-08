@@ -63,6 +63,8 @@ setUpErrors();
 // …the rest of your application
 ```
 
+Call it first thing in the entry point. Static imports still run before it, so a module that normalizes an error while it is being imported, rather than inside a function it exports, sees the empty registry.
+
 Order matters here. When two mappings in the same bucket use the same identifier, the one added last replaces the other. That is why the `23505` mapping above comes after the Supabase preset: the preset's message for that code is a generic one about a duplicate value, since the preset cannot know which value collided, and in this application the only unique value people can collide on is a project name, so ours says so.
 
 Pick presets for where the code runs:
@@ -73,7 +75,7 @@ Pick presets for where the code runs:
 
 [Presets](presets.md) lists exactly what each one covers. Merging all of them "just in case" is how a browser message about checking your Wi-Fi ends up in a server log, so pick on purpose.
 
-When the same setup runs on a server and in a browser, as in a Next.js or SvelteKit app, take the runtime preset as a parameter and pass the right one from each entry point. Guessing the runtime from globals goes wrong in the places you test least, such as a web worker, which has no `window`:
+When the same setup runs on a server and in a browser, as in a Next.js or SvelteKit app, take the runtime preset as a parameter and pass the right one from each entry point. Guessing the runtime from globals goes wrong in the places you test least, such as a web worker, which has no `window`. This version replaces the one above:
 
 ```ts
 // src/errors.ts
@@ -86,8 +88,8 @@ export function setUpErrors(runtimePreset: ReadonlyErrorRegistry): void {
   // …the Supabase preset and your own mappings, as above
 }
 
-// In the client entry: setUpErrors(browserErrorRegistry);
-// In the server entry: setUpErrors(nodeErrorRegistry);
+// In the client entry, from "@codenhub/error/registries/browser": setUpErrors(browserErrorRegistry);
+// In the server entry, from "@codenhub/error/registries/node": setUpErrors(nodeErrorRegistry);
 ```
 
 ## 3. Normalize where failures enter your code

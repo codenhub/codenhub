@@ -1,7 +1,7 @@
 ---
 title: Registros
 description: Os cinco buckets, como os identificadores são comparados, qual correspondência vence e quando usar um registro próprio em vez do global.
-source: e8d003f5fb4dc1002602b2eccc97015c4a65e4f3
+source: 7893791736449b5f8d3475c4fa9d25342d41128a
 order: 3
 ---
 
@@ -135,7 +135,7 @@ export const projectErrors = freezeRegistry(registry);
 
 Um registro congelado funciona em qualquer lugar em que um registro é só lido: como a opção `registry`, no `merge` e na lista que você passa para `createErrorRegistry`. Ele não funciona em `setErrorRegistry`, que precisa de um ao qual consiga acrescentar mapeamentos.
 
-Esses lugares de só leitura também aceitam um objeto que você mesmo escreve, desde que ele tenha o mesmo formato de um `ReadonlyErrorRegistry`: `get` e `values` em `codes`, `names` e `messages`, e `values` em `prefixes` e `patterns`. É assim que você apoiaria um registro em algo que não seja a memória. As respostas do seu objeto recebem menos confiança que as dos buckets nativos: feedback sem uma `message` não vazia faz o `createAppError` lançar `TypeError`, já que a alternativa seria um `AppError` sem nada a dizer.
+Esses lugares de só leitura também aceitam um objeto que você mesmo escreve, desde que ele tenha o mesmo formato de um `ReadonlyErrorRegistry`: `get` e `values` em `codes`, `names` e `messages`, e `values` em `prefixes` e `patterns`. É assim que você apoiaria um registro em algo que não seja a memória. As respostas do seu objeto recebem menos confiança que as dos buckets nativos: uma busca que devolve algo diferente de `undefined` ou de feedback com uma `message` não vazia faz o `createAppError` lançar `TypeError`, já que a alternativa seria um `AppError` sem nada a dizer. Uma busca que lança exceção também não é capturada.
 
 Tudo o que um bucket devolve também é congelado. `values()` devolve a mesma lista congelada até o bucket mudar, e as entradas, os objetos de feedback e as expressões regulares dela são todos congelados. Espalhe um deles em um objeto novo quando precisar de uma cópia que possa alterar, e copie um pattern com `new RegExp(pattern.source, pattern.flags)`.
 

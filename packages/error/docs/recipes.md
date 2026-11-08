@@ -139,13 +139,15 @@ import { browserErrorNames, browserErrorPatterns } from "@codenhub/error/registr
 const browserKeys = new Set([...Object.values(browserErrorNames).map((feedback) => feedback.messageKey), ...browserErrorPatterns.map(([, feedback]) => feedback.messageKey)]);
 ```
 
-An `"unknown"` error has no key: nothing matched, so nothing named it. Neither does a mapping you registered without one. Translate those through the message you pass in, so the most common failure is not the one left in English:
+An `"unknown"` error has no key: nothing matched, so nothing named it. Translate it through the message you pass in, so the most common failure is not the one left in English:
 
 ```ts
 import { createAppError, DEFAULT_APP_ERROR_MESSAGE } from "@codenhub/error";
 
 const error = createAppError(caught, { fallbackMessage: translate("error.unexpected") ?? DEFAULT_APP_ERROR_MESSAGE });
 ```
+
+That covers only `"unknown"` errors. A mapping you registered without a `messageKey` already has a message, so `fallbackMessage` leaves it in English. Give every mapping you register a key.
 
 ErrorKit does not ship translations. The keys are the contract; the words are yours.
 
@@ -202,7 +204,7 @@ beforeEach(() => {
 });
 ```
 
-The second line is the one people forget. A new registry starts empty, so without it every code your application registers resolves to `"unknown"`, and tests that pass in the browser fail in the test runner for no visible reason.
+The second line is the one people forget. A new registry starts empty, so without it every code your application registers resolves to `"unknown"`, and tests that pass in the browser fail in the test runner for no visible reason. If your `setUpErrors` takes a runtime preset, pass the one for where your tests run.
 
 Assert on `code`, `messageKey`, or `type` rather than on `message`. Messages are written for people and get reworded; codes and keys are the stable part. A test that breaks because someone fixed a comma is a test people learn to ignore.
 

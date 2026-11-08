@@ -1,7 +1,7 @@
 ---
 title: Primeiros passos
 description: Configure um registro para uma aplicação real, normalize as falhas onde elas entram e decida o que mostrar e o que reportar.
-source: 48a886958cad7b0bbb662f9118351aa06933b552
+source: b3987f9858b83a8e0f1ef31626e30f78e7976e33
 order: 1
 ---
 
@@ -64,6 +64,8 @@ setUpErrors();
 // …o resto da sua aplicação
 ```
 
+Chame a função antes de qualquer outra coisa no entry point. Os imports estáticos ainda rodam antes dela, então um módulo que normaliza um erro enquanto é importado, e não dentro de uma função que exporta, vê o registro vazio.
+
 A ordem importa aqui. Quando dois mapeamentos no mesmo bucket usam o mesmo identificador, o adicionado por último substitui o outro. É por isso que o mapeamento de `23505` acima vem depois do preset do Supabase: a mensagem do preset para esse código é genérica, sobre um valor duplicado, porque o preset não tem como saber qual valor colidiu, e nesta aplicação o único valor único em que as pessoas podem esbarrar é o nome do projeto, então a nossa diz isso.
 
 Escolha os presets conforme onde o código roda:
@@ -74,7 +76,7 @@ Escolha os presets conforme onde o código roda:
 
 [Presets](presets.md) lista exatamente o que cada um cobre. Fazer merge de todos "só por garantia" é como uma mensagem de navegador pedindo para checar o Wi-Fi vai parar em um log de servidor, então escolha de propósito.
 
-Quando a mesma configuração roda em um servidor e em um navegador, como em uma aplicação Next.js ou SvelteKit, receba o preset de runtime como parâmetro e passe o certo a partir de cada entry point. Adivinhar o runtime por globais dá errado justamente nos lugares que você menos testa, como um web worker, que não tem `window`:
+Quando a mesma configuração roda em um servidor e em um navegador, como em uma aplicação Next.js ou SvelteKit, receba o preset de runtime como parâmetro e passe o certo a partir de cada entry point. Adivinhar o runtime por globais dá errado justamente nos lugares que você menos testa, como um web worker, que não tem `window`. Esta versão substitui a de cima:
 
 ```ts
 // src/errors.ts
@@ -87,8 +89,8 @@ export function setUpErrors(runtimePreset: ReadonlyErrorRegistry): void {
   // …o preset do Supabase e os seus mapeamentos, como acima
 }
 
-// No entry do cliente: setUpErrors(browserErrorRegistry);
-// No entry do servidor: setUpErrors(nodeErrorRegistry);
+// No entry do cliente, de "@codenhub/error/registries/browser": setUpErrors(browserErrorRegistry);
+// No entry do servidor, de "@codenhub/error/registries/node": setUpErrors(nodeErrorRegistry);
 ```
 
 ## 3. Normalize onde as falhas entram no seu código

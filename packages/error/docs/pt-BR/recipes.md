@@ -1,7 +1,7 @@
 ---
 title: Receitas
 description: Exemplos completos para fetch e códigos de status HTTP, chamadas ao Supabase, os seus próprios códigos de erro, novas tentativas seguras, traduções, envio para um error tracker e testes.
-source: a90c460d0ce1901873944917bbfaba9f4f5205df
+source: 1d662008b543d9841ab2a293312a88d91198006c
 order: 7
 ---
 
@@ -140,13 +140,15 @@ import { browserErrorNames, browserErrorPatterns } from "@codenhub/error/registr
 const browserKeys = new Set([...Object.values(browserErrorNames).map((feedback) => feedback.messageKey), ...browserErrorPatterns.map(([, feedback]) => feedback.messageKey)]);
 ```
 
-Um erro `"unknown"` não tem chave: nada correspondeu, então nada deu nome a ele. Um mapeamento que você registrou sem chave também não tem. Traduza esses pela mensagem que você passa, para que a falha mais comum não seja justamente a que fica em inglês:
+Um erro `"unknown"` não tem chave: nada correspondeu, então nada deu nome a ele. Traduza esse erro pela mensagem que você passa, para que a falha mais comum não seja justamente a que fica em inglês:
 
 ```ts
 import { createAppError, DEFAULT_APP_ERROR_MESSAGE } from "@codenhub/error";
 
 const error = createAppError(caught, { fallbackMessage: translate("error.unexpected") ?? DEFAULT_APP_ERROR_MESSAGE });
 ```
+
+Isso cobre só os erros `"unknown"`. Um mapeamento que você registrou sem `messageKey` já tem mensagem, então o `fallbackMessage` o deixa em inglês. Dê uma chave a cada mapeamento que você registrar.
 
 O ErrorKit não vem com traduções. As chaves são o contrato; as palavras são suas.
 
@@ -203,7 +205,7 @@ beforeEach(() => {
 });
 ```
 
-A segunda linha é a que todo mundo esquece. Um registro novo começa vazio, então sem ela todo código que a sua aplicação registra vira `"unknown"`, e testes que passam no navegador falham no test runner sem nenhum motivo aparente.
+A segunda linha é a que todo mundo esquece. Um registro novo começa vazio, então sem ela todo código que a sua aplicação registra vira `"unknown"`, e testes que passam no navegador falham no test runner sem nenhum motivo aparente. Se a sua `setUpErrors` recebe um preset de runtime, passe o do lugar onde os seus testes rodam.
 
 Faça as asserções sobre `code`, `messageKey` ou `type`, e não sobre `message`. Mensagens são escritas para pessoas e acabam sendo reescritas; códigos e chaves são a parte estável. Um teste que quebra porque alguém corrigiu uma vírgula é um teste que o time aprende a ignorar.
 

@@ -268,6 +268,8 @@ setUpErrors();
 // …the rest of your application
 ```
 
+Call it first thing in the entry point. Static imports still run before it, so a module that normalizes an error while it is being imported, rather than inside a function it exports, sees the empty registry.
+
 Order matters here. When two mappings in the same bucket use the same identifier, the one added last replaces the other. That is why the `23505` mapping above comes after the Supabase preset: the preset's message for that code is a generic one about a duplicate value, since the preset cannot know which value collided, and in this application the only unique value people can collide on is a project name, so ours says so.
 
 Pick presets for where the code runs:
@@ -278,7 +280,7 @@ Pick presets for where the code runs:
 
 [Presets](docs/presets.md) lists exactly what each one covers. Merging all of them "just in case" is how a browser message about checking your Wi-Fi ends up in a server log, so pick on purpose.
 
-When the same setup runs on a server and in a browser, as in a Next.js or SvelteKit app, take the runtime preset as a parameter and pass the right one from each entry point. Guessing the runtime from globals goes wrong in the places you test least, such as a web worker, which has no `window`:
+When the same setup runs on a server and in a browser, as in a Next.js or SvelteKit app, take the runtime preset as a parameter and pass the right one from each entry point. Guessing the runtime from globals goes wrong in the places you test least, such as a web worker, which has no `window`. This version replaces the one above:
 
 ```ts
 // src/errors.ts
@@ -291,8 +293,8 @@ export function setUpErrors(runtimePreset: ReadonlyErrorRegistry): void {
   // …the Supabase preset and your own mappings, as above
 }
 
-// In the client entry: setUpErrors(browserErrorRegistry);
-// In the server entry: setUpErrors(nodeErrorRegistry);
+// In the client entry, from "@codenhub/error/registries/browser": setUpErrors(browserErrorRegistry);
+// In the server entry, from "@codenhub/error/registries/node": setUpErrors(nodeErrorRegistry);
 ```
 
 ## 3. Normalize where failures enter your code
@@ -485,7 +487,7 @@ What you get back depends on the options you pass with the `AppError`:
 
 - **No options:** the same object.
 - **`maxDepth`:** the same object. Depth only matters when there is something to search, and nothing is searched again without a `registry`.
-- **`fallbackMessage`:** the same object, with one exception. An `"unknown"` error that still carries the default message gets a new `AppError` worded with your fallback, because no layer before yours chose any wording. Once a layer has, its message stays.
+- **`fallbackMessage`:** the same object, with one exception. An `"unknown"` error that still carries the default message gets a new `AppError` worded with your fallback, because no layer before yours chose any wording. Once a layer has, its message stays. A fallback equal to the default message changes nothing, so it returns the same object.
 - **`details`:** a new `AppError` with the same classification when your details add keys it lacks. Keys it already has keep their values.
 - **`registry`:** the only way to change the classification, covered below.
 
@@ -551,7 +553,7 @@ At the default depth, a `cause` chain alone is followed further, to a depth of `
 
 The default message is exported as `DEFAULT_APP_ERROR_MESSAGE`, for tests and for comparing against.
 
-An invalid option is a programming mistake, so it throws `TypeError` before any work starts. Ordinary input never throws: `createAppError` accepts any value, including `null`, numbers, and objects whose properties throw when read. Normalizing an error should not be a new way to fail. The one exception is a registry you wrote by hand that returns feedback without a message; see [Registries](docs/registries.md#combining-and-freezing).
+An invalid option is a programming mistake, so it throws `TypeError` before any work starts. Ordinary input never throws: `createAppError` accepts any value, including `null`, numbers, and objects whose properties throw when read. Normalizing an error should not be a new way to fail. The one exception is a registry you wrote by hand that breaks the registry shape, such as one whose lookups throw or return feedback without a message; see [Registries](docs/registries.md#combining-and-freezing).
 
 ## Next
 
@@ -689,7 +691,7 @@ export const projectErrors = freezeRegistry(registry);
 
 A frozen registry works anywhere a registry is only read: as the `registry` option, in `merge`, and in the list you pass to `createErrorRegistry`. It does not work in `setErrorRegistry`, which needs one it can add to.
 
-Those read-only places also accept an object you write yourself, as long as it has the same shape as a `ReadonlyErrorRegistry`: `get` and `values` on `codes`, `names`, and `messages`, and `values` on `prefixes` and `patterns`. That is how you would back a registry with something other than memory. Your object's answers are trusted less than the built-in buckets' are: feedback without a non-empty `message` makes `createAppError` throw `TypeError`, since the alternative is an `AppError` with nothing to say.
+Those read-only places also accept an object you write yourself, as long as it has the same shape as a `ReadonlyErrorRegistry`: `get` and `values` on `codes`, `names`, and `messages`, and `values` on `prefixes` and `patterns`. That is how you would back a registry with something other than memory. Your object's answers are trusted less than the built-in buckets' are: a lookup that returns anything other than `undefined` or feedback with a non-empty `message` makes `createAppError` throw `TypeError`, since the alternative is an `AppError` with nothing to say. A lookup that throws is not caught either.
 
 Everything a bucket returns is frozen too. `values()` returns the same frozen list until the bucket changes, and its entries, feedback objects, and regular expressions are all frozen. Spread one into a new object when you need a copy you can change, and copy a pattern with `new RegExp(pattern.source, pattern.flags)`.
 
@@ -1344,13 +1346,15 @@ import { browserErrorNames, browserErrorPatterns } from "@codenhub/error/registr
 const browserKeys = new Set([...Object.values(browserErrorNames).map((feedback) => feedback.messageKey), ...browserErrorPatterns.map(([, feedback]) => feedback.messageKey)]);
 ```
 
-An `"unknown"` error has no key: nothing matched, so nothing named it. Neither does a mapping you registered without one. Translate those through the message you pass in, so the most common failure is not the one left in English:
+An `"unknown"` error has no key: nothing matched, so nothing named it. Translate it through the message you pass in, so the most common failure is not the one left in English:
 
 ```ts
 import { createAppError, DEFAULT_APP_ERROR_MESSAGE } from "@codenhub/error";
 
 const error = createAppError(caught, { fallbackMessage: translate("error.unexpected") ?? DEFAULT_APP_ERROR_MESSAGE });
 ```
+
+That covers only `"unknown"` errors. A mapping you registered without a `messageKey` already has a message, so `fallbackMessage` leaves it in English. Give every mapping you register a key.
 
 ErrorKit does not ship translations. The keys are the contract; the words are yours.
 
@@ -1407,7 +1411,7 @@ beforeEach(() => {
 });
 ```
 
-The second line is the one people forget. A new registry starts empty, so without it every code your application registers resolves to `"unknown"`, and tests that pass in the browser fail in the test runner for no visible reason.
+The second line is the one people forget. A new registry starts empty, so without it every code your application registers resolves to `"unknown"`, and tests that pass in the browser fail in the test runner for no visible reason. If your `setUpErrors` takes a runtime preset, pass the one for where your tests run.
 
 Assert on `code`, `messageKey`, or `type` rather than on `message`. Messages are written for people and get reworded; codes and keys are the stable part. A test that breaks because someone fixed a comma is a test people learn to ignore.
 

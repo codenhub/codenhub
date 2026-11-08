@@ -2,7 +2,7 @@
 title: El AppError
 description: Cada campo de un AppError, lo que promete cada uno, qué pasa cuando un error se normaliza dos veces y cómo enviar uno de un servidor a un cliente.
 order: 2
-source: 83b4d999bed4707094de09d64ba758717d21775c
+source: 68f6384e4038acf989b325414981fcc56f2d4c52
 ---
 
 # El AppError
@@ -128,7 +128,7 @@ Lo que recibes depende de las opciones que pasas junto con el `AppError`:
 
 - **Sin opciones:** el mismo objeto.
 - **`maxDepth`:** el mismo objeto. La profundidad solo importa cuando hay algo que buscar, y sin un `registry` no se vuelve a buscar nada.
-- **`fallbackMessage`:** el mismo objeto, con una excepción. Un error `"unknown"` que todavía tiene el mensaje por defecto recibe un `AppError` nuevo redactado con tu mensaje de respaldo, porque ninguna capa anterior a la tuya eligió una redacción. Una vez que alguna capa la eligió, su mensaje se queda.
+- **`fallbackMessage`:** el mismo objeto, con una excepción. Un error `"unknown"` que todavía tiene el mensaje por defecto recibe un `AppError` nuevo redactado con tu mensaje de respaldo, porque ninguna capa anterior a la tuya eligió una redacción. Una vez que alguna capa la eligió, su mensaje se queda. Un mensaje de respaldo igual al mensaje por defecto no cambia nada, así que devuelve el mismo objeto.
 - **`details`:** un `AppError` nuevo con la misma clasificación cuando tus detalles agregan claves que le faltan. Las claves que ya tiene conservan sus valores.
 - **`registry`:** la única forma de cambiar la clasificación, que se explica más abajo.
 
@@ -194,7 +194,7 @@ Con la profundidad por defecto, una cadena de `cause` por sí sola se sigue más
 
 El mensaje por defecto se exporta como `DEFAULT_APP_ERROR_MESSAGE`, para las pruebas y para comparar.
 
-Una opción inválida es un error de programación, así que lanza `TypeError` antes de empezar cualquier trabajo. La entrada común nunca lanza excepciones: `createAppError` acepta cualquier valor, incluidos `null`, números y objetos cuyas propiedades lanzan una excepción al leerlas. Normalizar un error no debería ser una nueva forma de fallar. La única excepción es un registro que escribiste a mano y que devuelve feedback sin mensaje; consulta [Registros](registries.md#combinar-y-congelar).
+Una opción inválida es un error de programación, así que lanza `TypeError` antes de empezar cualquier trabajo. La entrada común nunca lanza excepciones: `createAppError` acepta cualquier valor, incluidos `null`, números y objetos cuyas propiedades lanzan una excepción al leerlas. Normalizar un error no debería ser una nueva forma de fallar. La única excepción es un registro que escribiste a mano y que no respeta la forma de un registro, como uno cuyas búsquedas lanzan una excepción o devuelven feedback sin mensaje; consulta [Registros](registries.md#combinar-y-congelar).
 
 ## Siguiente
 

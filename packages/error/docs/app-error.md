@@ -125,7 +125,7 @@ What you get back depends on the options you pass with the `AppError`:
 
 - **No options:** the same object.
 - **`maxDepth`:** the same object. Depth only matters when there is something to search, and nothing is searched again without a `registry`.
-- **`fallbackMessage`:** the same object, with one exception. An `"unknown"` error that still carries the default message gets a new `AppError` worded with your fallback, because no layer before yours chose any wording. Once a layer has, its message stays.
+- **`fallbackMessage`:** the same object, with one exception. An `"unknown"` error that still carries the default message gets a new `AppError` worded with your fallback, because no layer before yours chose any wording. Once a layer has, its message stays. A fallback equal to the default message changes nothing, so it returns the same object.
 - **`details`:** a new `AppError` with the same classification when your details add keys it lacks. Keys it already has keep their values.
 - **`registry`:** the only way to change the classification, covered below.
 
@@ -191,7 +191,7 @@ At the default depth, a `cause` chain alone is followed further, to a depth of `
 
 The default message is exported as `DEFAULT_APP_ERROR_MESSAGE`, for tests and for comparing against.
 
-An invalid option is a programming mistake, so it throws `TypeError` before any work starts. Ordinary input never throws: `createAppError` accepts any value, including `null`, numbers, and objects whose properties throw when read. Normalizing an error should not be a new way to fail. The one exception is a registry you wrote by hand that returns feedback without a message; see [Registries](registries.md#combining-and-freezing).
+An invalid option is a programming mistake, so it throws `TypeError` before any work starts. Ordinary input never throws: `createAppError` accepts any value, including `null`, numbers, and objects whose properties throw when read. Normalizing an error should not be a new way to fail. The one exception is a registry you wrote by hand that breaks the registry shape, such as one whose lookups throw or return feedback without a message; see [Registries](registries.md#combining-and-freezing).
 
 ## Next
 
