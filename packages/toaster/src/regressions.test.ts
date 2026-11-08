@@ -751,6 +751,16 @@ describe("duration limit", () => {
     );
     toaster.destroy();
   });
+
+  it("rejects it in promise() when called, before any toast shows", () => {
+    const toaster = createToaster();
+    const pending = new Promise<void>(() => {});
+    expect(() =>
+      toaster.promise(pending, { loading: "Saving", success: "Saved", error: "Failed", duration: -1 }),
+    ).toThrow("Toast duration must be a number from 0 to 2147483647.");
+    expect(document.querySelector(".toaster-toast")).toBeNull();
+    toaster.destroy();
+  });
 });
 
 describe("announcements after destroy", () => {

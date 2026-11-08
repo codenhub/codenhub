@@ -613,8 +613,8 @@ export interface Toaster {
    * @param promise The Promise or PromiseLike to track.
    * @param options State configurations for loading, success, and error.
    * @returns A promise that settles the same way as `promise`.
-   * @throws {Error} Synchronously, if the loading toast cannot be shown, for
-   *   the same reasons as `loading()`.
+   * @throws {Error} Synchronously, if `duration` is invalid or the loading
+   *   toast cannot be shown, for the same reasons as `loading()`.
    */
   promise<T>(promise: PromiseLike<T>, options: PromiseToastOptions<T>): Promise<T>;
 

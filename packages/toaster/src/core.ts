@@ -5,6 +5,7 @@ import {
   DEFAULT_DISMISS_LABEL,
   DEFAULT_REGION_LABEL,
   MAX_DURATION,
+  assertDuration,
   assertToastPosition,
   isValidDuration,
   withoutUndefined,
@@ -161,6 +162,10 @@ class ToastManager {
 
   public promise<T>(promise: PromiseLike<T>, options: PromiseToastOptions<T>): Promise<T> {
     this.assertAlive();
+    // Only the outcome uses `duration`, so it is checked here, before the
+    // loader shows, rather than when the promise settles, where an error
+    // could only dismiss the loader.
+    assertDuration(options.duration);
     const { position, dismissible, className, margin } = options;
     const loadingOpts = typeof options.loading === "string" ? { message: options.loading } : options.loading;
     const handle = this.loading({
