@@ -125,8 +125,9 @@ const getMutationObserver = (root: ParentNode): typeof MutationObserver => {
  * thrown before the manager is initialized.
  * @throws {RangeError} When an explicit locale is unsupported or is not a string at runtime.
  * @throws {Error} With the message "[I18n] Browser initialization was superseded before its locale became active." when
- * a later `init()` or `setLocale()` call on the manager, including `setLocale()` to the locale already active, starts
- * before this call's locale becomes active. The manager keeps the later call's result.
+ * a later `init()` call starts before this call's locale becomes active, or a later `setLocale()` call does on a manager
+ * that was already initialized, even to the locale already active. The manager keeps the later call's result. On a
+ * manager that was not yet initialized, `setLocale()` throws its own error instead and supersedes nothing.
  * @throws {TypeError} When a required dictionary is invalid.
  * @throws {TypeError} When direction resolution returns a value other than `ltr` or `rtl`.
  * @throws {I18nError} When the loader rejects for an explicit locale or the default locale.
