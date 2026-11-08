@@ -51,11 +51,19 @@ const isValidKey = (key: string): boolean => {
   });
 };
 
+// Characters JSON leaves as written that a log viewer may still break a line at: DEL, C1 controls such as NEL, and the
+// Unicode line and paragraph separators.
+const UNESCAPED_LINE_BREAKS = /[\u007f-\u009f\u2028\u2029]/g;
+
+const quoteKey = (key: string): string =>
+  JSON.stringify(key).replace(
+    UNESCAPED_LINE_BREAKS,
+    (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
+
 /** Quotes a rejected key, escaping control characters so it cannot forge log lines, and truncates a long one. */
 const formatReportedKey = (key: string): string =>
-  key.length > MAX_REPORTED_KEY_LENGTH
-    ? `${JSON.stringify(key.slice(0, MAX_REPORTED_KEY_LENGTH))}...`
-    : JSON.stringify(key);
+  key.length > MAX_REPORTED_KEY_LENGTH ? `${quoteKey(key.slice(0, MAX_REPORTED_KEY_LENGTH))}...` : quoteKey(key);
 
 /** How a payload is checked, and the locale its rejections name. @internal */
 export interface NormalizeDictionaryOptions {

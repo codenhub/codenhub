@@ -80,14 +80,13 @@ describe("normalizeDictionary", () => {
     expect(() => normalizeDictionary({ [key]: "value" })).toThrow(TypeError);
   });
 
-  it.each(["key\nforged", "key\u001bhidden", "key\u007fhidden"])(
-    "rejects ASCII control characters in key %s",
-    (key) => {
-      expect(() => normalizeDictionary({ [key]: "value" })).toThrow(
-        `[I18n] Invalid locale dictionary key ${JSON.stringify(key)}.`,
-      );
-    },
-  );
+  it.each([
+    ["key\nforged", '"key\\nforged"'],
+    ["key\u001bhidden", '"key\\u001bhidden"'],
+    ["key\u007fhidden", '"key\\u007fhidden"'],
+  ])("rejects ASCII control characters in key %j", (key, reported) => {
+    expect(() => normalizeDictionary({ [key]: "value" })).toThrow(`[I18n] Invalid locale dictionary key ${reported}.`);
+  });
 
   it("names an invalid key in quotes", () => {
     expect(() => normalizeDictionary({ " title": "value" })).toThrow('[I18n] Invalid locale dictionary key " title".');
@@ -102,6 +101,12 @@ describe("normalizeDictionary", () => {
   it("escapes control characters in an invalid key so the message stays on one line", () => {
     expect(() => normalizeDictionary({ "key\nforged": "value" })).toThrow(
       '[I18n] Invalid locale dictionary key "key\\nforged".',
+    );
+  });
+
+  it("escapes Unicode line separators and C1 controls in an invalid key, which JSON leaves as written", () => {
+    expect(() => normalizeDictionary({ "\u2028forged\u2029\u0085\u007f ": "value" })).toThrow(
+      '[I18n] Invalid locale dictionary key "\\u2028forged\\u2029\\u0085\\u007f ".',
     );
   });
 
