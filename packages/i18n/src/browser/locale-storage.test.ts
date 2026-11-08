@@ -196,6 +196,45 @@ describe("initializeBrowserI18n storage integration", () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
+  it("warns and ignores a persisted value that is not valid JSON", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    localStorage.setItem("i18n", "{bad");
+    setNavigatorLocales(["fr"]);
+    const i18n = createManager();
+
+    await initializeBrowserI18n({ i18n });
+
+    expect(i18n.locale).toBe("fr");
+    expect(warn).toHaveBeenCalledWith("[I18n] Could not read persisted locale.", expect.any(SyntaxError));
+  });
+
+  it.each([
+    ["a bare JSON string", '"fr"'],
+    ["null", "null"],
+    ["a number", "42"],
+    ["an object without a string locale", '{"locale":{"toString":1}}'],
+    ["a locale that is no longer configured", '{"locale":"de"}'],
+  ])("ignores a persisted value that is %s", async (_description, storedValue) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    localStorage.setItem("i18n", storedValue);
+    setNavigatorLocales(["pt-BR"]);
+    const i18n = createManager();
+
+    await initializeBrowserI18n({ i18n });
+
+    expect(i18n.locale).toBe("pt-BR");
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("resolves a persisted locale with surrounding whitespace and different case", async () => {
+    localStorage.setItem("i18n", JSON.stringify({ locale: " FR " }));
+    const i18n = createManager();
+
+    await initializeBrowserI18n({ i18n });
+
+    expect(i18n.locale).toBe("fr");
+  });
+
   it("does not persist a locale detected from navigator preferences", async () => {
     setNavigatorLocales(["en-US"]);
     const firstVisit = createManager();
