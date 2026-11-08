@@ -2,12 +2,12 @@
 title: Diálogos
 description: Diálogos confirm, prompt y alert, con qué se resuelven, handles, cola, etiquetas de los botones, instancias de diálogos y toasts mientras hay un diálogo abierto.
 order: 2
-source: 1bd953478c8ac67aaea0101ff1513e6e4231103d
+source: b8f33aa9248e5aafc7585379cd4e2462e0f6e085
 ---
 
 # Diálogos
 
-Un toast avisa; un diálogo pregunta. Los diálogos bloquean la página hasta que alguien responde, así que son para los momentos que piden una decisión: "¿Borrar esta nota?", "¿Cómo la llamamos?", "Tu sesión caducó". Esta página cubre los tres tipos de diálogo, con qué se resuelve cada uno, cómo se ponen en fila cuando se abren varios, cómo traducir sus botones y cómo se llevan con los toasts.
+Un toast avisa; un diálogo pregunta. Los diálogos bloquean la página hasta que alguien responde, así que son para los momentos que piden una decisión: "¿Borrar esta nota?", "¿Cómo la llamamos?", "Tu sesión expiró". Esta página cubre los tres tipos de diálogo, con qué se resuelve cada uno, cómo hacen cola cuando se abren varios, cómo traducir sus botones y cómo se llevan con los toasts.
 
 Los diálogos vienen de su propio punto de entrada, así que una app que solo muestra toasts no paga por ellos:
 
@@ -34,15 +34,15 @@ Se resuelve con `true` cuando se pulsa el botón de confirmar y con `false` ante
 Deja claro qué está en juego con un título, etiquetas de botón concretas y `type: "error"`, que colorea el botón de confirmar como destructivo:
 
 ```ts
-const confirmed = await dialog.confirm('¿Borrar "Lista de la compra"? No se puede deshacer.', {
+const confirmed = await dialog.confirm('¿Borrar "Lista de compras"? No se puede deshacer.', {
   title: "Borrar nota",
   type: "error",
   confirmLabel: "Borrar nota",
-  cancelLabel: "Mejor no",
+  cancelLabel: "Conservar nota",
 });
 ```
 
-"Borrar nota" y "Mejor no" ganan a "Aceptar" y "Cancelar": nadie ha tenido que releer jamás un botón que dice exactamente lo que hace.
+"Borrar nota" y "Conservar nota" ganan a "Aceptar" y "Cancelar": nadie ha tenido que releer jamás un botón que dice exactamente lo que hace.
 
 ## Prompt
 
@@ -72,8 +72,8 @@ El texto vuelve exactamente como se escribió, espacios incluidos, y puede venir
 ```ts
 import { dialog } from "@codenhub/toaster/dialog";
 
-await dialog.alert("Tu sesión ha caducado. Vuelve a iniciar sesión para seguir editando.", {
-  title: "Sesión caducada",
+await dialog.alert("Tu sesión expiró. Vuelve a iniciar sesión para seguir editando.", {
+  title: "Sesión expirada",
   okLabel: "Iniciar sesión",
 });
 
@@ -99,7 +99,7 @@ Los tres métodos reciben primero el mensaje y después un objeto de opciones:
 | `defaultValue`    | `prompt`            | `""`        | Texto que ya está en el campo cuando se abre el diálogo.                        |
 | `placeholder`     | `prompt`            | Ninguno     | Pista que se muestra mientras el campo está vacío.                              |
 
-Pon `backdropDismiss: false` cuando un clic perdido no deba contar como respuesta, por ejemplo en un formulario que a alguien le costó rellenar. <kbd>Escape</kbd> sigue cancelando; así funciona el `<dialog>` del navegador, y los usuarios de teclado dependen de ello.
+Pon `backdropDismiss: false` cuando un clic perdido no deba contar como respuesta, por ejemplo en un formulario que a alguien le costó llenar. <kbd>Escape</kbd> sigue cancelando; así funciona el `<dialog>` del navegador, y los usuarios de teclado dependen de ello.
 
 El mensaje no puede estar vacío. Un mensaje vacío o solo con espacios lanza `Interactive dialog message must not be empty.`
 
@@ -133,6 +133,8 @@ Cerrar con `dismiss()` le da a cada tipo su valor de cancelación: `false` para 
 ## Uno a la vez
 
 Una instancia de diálogos muestra un diálogo a la vez. Llamar a `confirm()` mientras hay otro diálogo abierto no apila un segundo diálogo encima: el nuevo espera en una cola, con estado `"queued"`, y se abre cuando se cierra el actual. Cerrar un diálogo en cola lo saca de la cola con su valor de cancelación; nunca llega a aparecer.
+
+Cuando se abre un diálogo, el foco va a su botón principal: el de confirmar, o el de OK en un `alert()`. Un prompt enfoca su campo de texto, para que se pueda empezar a escribir de inmediato. Un `confirm()` con `type: "error"` enfoca en cambio el botón de **cancelar**, así que un <kbd>Enter</kbd> por reflejo sobre un "Borrar" en rojo cancela en vez de borrar.
 
 Cuando se cierra el último diálogo de una secuencia, el foco vuelve al elemento que lo tenía antes de que se abriera el primero.
 
@@ -181,7 +183,7 @@ Abrir un diálogo fuera de un navegador lanza `DOM document is not available. Di
 
 Un diálogo modal vuelve inerte el resto de la página: nada detrás de él se puede pulsar, enfocar ni oír con un lector de pantalla. Un toast atascado detrás del backdrop no serviría de nada, así que mientras hay abierto un diálogo de este paquete, los toasts se mudan dentro de él.
 
-Más en detalle: cada toaster que renderiza en el mismo elemento que el diálogo mueve sus stacks y sus anuncios para lectores de pantalla dentro del diálogo abierto. Los toasts se quedan en su esquina de siempre, por encima del backdrop, y siguen siendo clicables y anunciados. Vuelven a su sitio en cuanto el diálogo empieza a cerrarse. Con diálogos abiertos dentro de diálogos, los toasts siguen al más reciente.
+Más en detalle: cada toaster que renderiza en el mismo elemento que el diálogo mueve sus stacks y sus anuncios para lectores de pantalla dentro del diálogo abierto. Los toasts se quedan en su esquina de siempre, por encima del backdrop, y siguen siendo clicables y anunciados. Vuelven a su lugar en cuanto el diálogo empieza a cerrarse. Con diálogos abiertos dentro de diálogos, los toasts siguen al más reciente.
 
 ```ts
 const deleting = dialog.confirm("¿Borrar esta nota?");

@@ -2,11 +2,11 @@
 
 # @codenhub/toaster
 
-Notificaciones toast y diálogos modales nativos para el navegador. Los toasts se apilan en una esquina, hacen cola cuando hay demasiados y se cierran solos. Los diálogos hacen una pregunta y te dan una respuesta a la que le puedes hacer `await`. Los dos son accesibles de serie, los dos funcionan con una Content Security Policy estricta y ninguno necesita un framework.
+Notificaciones toast y diálogos modales nativos para el navegador. Los toasts se apilan en una esquina, hacen cola cuando hay demasiados y se cierran solos. Los diálogos hacen una pregunta y te dan una respuesta a la que le puedes hacer `await`. Los dos son accesibles de fábrica, los dos funcionan con una Content Security Policy estricta y ninguno necesita un framework.
 
 > [!WARNING]
 >
-> Este paquete es experimental. Su API, su renderizado y los nombres de sus clases CSS pueden cambiar antes de una versión estable. El [registro de cambios](docs/changelog/index.md) enumera cada cambio.
+> Este paquete es experimental. Su API, su renderizado y los nombres de sus clases CSS pueden cambiar antes de una versión estable. El [registro de cambios](docs/changelog/index.md) (en inglés) enumera cada cambio.
 
 ## Instalación
 
@@ -50,13 +50,13 @@ Las llamadas validan su entrada y lanzan una excepción en el acto ante un error
 - [Instancias de toaster](docs/es/instances.md): cada opción y su valor por defecto, toasters acotados, `destroy()` y SSR.
 - [Estilos](docs/es/styling.md): colores, clases de presentación, modo oscuro y CSP.
 - [Accesibilidad y seguridad](docs/es/accessibility.md): lectores de pantalla, foco, movimiento reducido y contenido personalizado.
-- [Referencia de la API](docs/reference/index.md): cada símbolo exportado, generado a partir del código fuente.
-- [Registro de cambios](docs/changelog/index.md): qué cambió en cada versión.
+- [Referencia de la API](docs/reference/index.md) (en inglés): cada símbolo exportado, generado a partir del código fuente.
+- [Registro de cambios](docs/changelog/index.md) (en inglés): qué cambió en cada versión.
 
 ## Requisitos
 
 - Un navegador. Importar y crear instancias es seguro durante el renderizado del lado del servidor, pero mostrar un toast o un diálogo necesita un `document`.
-- `@codenhub/toaster/styles` cargado una vez. Sin él, los toasts no tienen posición, maquetación ni color.
+- `@codenhub/toaster/styles` cargado una vez. Sin él, los toasts no tienen posición, layout ni color.
 - Soporte nativo de `<dialog>` para los diálogos, que tienen todos los navegadores actuales.
 - Opcional: `@codenhub/styles` 0.3.0 o posterior. Cuando está presente, los toasts y los diálogos toman sus colores y su aspecto de su tema; si no, se usan los colores integrados. Si usas su hoja de estilos para elementos nativos, impórtala **antes** de `@codenhub/toaster/styles`, o los botones de los diálogos pierden sus colores. Consulta [Estilos](docs/es/styling.md).
 - Las instancias que creas son dueñas de elementos del DOM, temporizadores y listeners. Llama a `destroy()` cuando desaparezca la zona a la que pertenecen.

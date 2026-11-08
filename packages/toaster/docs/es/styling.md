@@ -2,7 +2,7 @@
 title: Estilos
 description: La hoja de estilos, los colores con y sin @codenhub/styles, las clases de presentación, el tamaño, el modo oscuro, sobrescribir colores, la Content Security Policy y el orden de las hojas de estilos.
 order: 4
-source: 32c8c7de11fdec8467b0e7b5c3f16e67193f1551
+source: d6079abe49e29d1f3fc1f994a6fdb31384bb4d37
 ---
 
 # Estilos
@@ -17,7 +17,7 @@ Carga la hoja de estilos una vez, donde arranca tu app:
 import "@codenhub/toaster/styles";
 ```
 
-Contiene todo lo visual: los stacks y sus posiciones, la maquetación de toasts y diálogos, las animaciones y los colores. Sin ella, los toasts se siguen añadiendo a la página, pero sin posición, sin maquetación y sin color. Si tu primer toast aparece como un párrafo olvidado al final de la página, la culpa es de este import.
+Contiene todo lo visual: los stacks y sus posiciones, el layout de toasts y diálogos, las animaciones y los colores. Sin ella, los toasts se siguen añadiendo a la página, pero sin posición, sin layout y sin color. Si tu primer toast aparece como un párrafo olvidado al final de la página, la culpa es de este import.
 
 El import funciona con cualquier bundler que maneje imports de CSS, como Vite, webpack o esbuild. Sin bundler, enlaza `dist/styles/index.css` del paquete con una etiqueta `<link rel="stylesheet">`.
 
@@ -26,6 +26,17 @@ El import funciona con cualquier bundler que maneje imports de CSS, como Vite, w
 Casi todas las reglas están acotadas a los elementos del propio paquete, pero unas pocas afectan a toda la página, y es mejor que te enteres aquí que por un compañero desconcertado:
 
 - **`color-scheme` en la raíz.** La hoja de estilos pone `color-scheme: light dark` en `:root`, así que el navegador dibuja los controles integrados, como las barras de desplazamiento y los campos de formulario, en modo oscuro cuando el sistema operativo prefiere el oscuro. Las clases `dark`, `light`, `theme-dark` y `theme-light` y el atributo `data-theme` también lo definen, en el elemento que los lleve; consulta [Modo oscuro](#modo-oscuro). Si tu página define su propio `color-scheme`, el tuyo se aplica allí donde tu regla sea más específica o se cargue después.
+
+  La regla está ahí porque los colores integrados son pares `light-dark()`, que siguen a `color-scheme`: sin ella, los toasts sin `@codenhub/styles` se quedarían claros en un sistema oscuro. Si tu página solo tiene un diseño claro, el efecto secundario son barras de desplazamiento y campos de formulario oscuros para los visitantes cuyo sistema prefiere el oscuro. Para desactivarlo, usa la clase `light` en `<html>`, o una regla tuya cargada después de esta hoja de estilos y fuera de cualquier `@layer`, ya que la regla del toaster tampoco está en una:
+
+  ```css
+  :root {
+    color-scheme: light;
+  }
+  ```
+
+  Los toasts se adaptan y también se quedan claros, así que nada en la página cambia de tema a tus espaldas.
+
 - **Clases de presentación.** Define `.solid`, `.soft`, `.ghost`, `.edged` y `.edgeless` de forma global, en la `@layer components` de CSS. Solo definen las custom properties `--ui-fill`, `--ui-fg-on-fill` y `--ui-border`. Un elemento tuyo que casualmente comparta nombre de clase no cambia por sí solo, pero esas propiedades se heredan, y los toasts y los componentes de `@codenhub/styles` las leen, así que cualquiera de ellos dentro de ese elemento recoge los valores. Si `.solid` ya significa otra cosa en tu app, cambia el nombre de la tuya.
 
 ## De dónde salen los colores
@@ -40,8 +51,8 @@ Sin `@codenhub/styles`, la hoja de estilos usa colores integrados: una superfici
 
 [`@codenhub/styles`](https://www.npmjs.com/package/@codenhub/styles) es un sistema de diseño opcional. Cuando su hoja de estilos, versión 0.3.0 o posterior, está en la página, los toasts y los diálogos construyen sus colores a partir de su tema:
 
-- **Colores de intención**: los toasts leen `--color-success`, `--color-destructive` (para errores), `--color-warning` y `--color-info`, y los botones de los diálogos leen `--color-primary`, así que cambiar los colores de tu tema cambia ambos.
-- **Presentación**: cuánto color rellena el fondo y el borde sigue a `--ui-fill` y `--ui-border`.
+- **Colores de intención**: los toasts leen `--color-success`, `--color-destructive` (para errores), `--color-warning` y `--color-info`, y los botones de los diálogos leen `--color-primary`, `--color-accent` (para `type: "secondary"`), `--color-success` y `--color-destructive`, así que cambiar los colores de tu tema cambia ambos.
+- **Presentación**: cuánto color llena el fondo y el borde sigue a `--ui-fill` y `--ui-border`.
 - **Aspecto**: el radio de las esquinas, el grosor del borde, la sombra, el recorte y la elevación de un tema (`--ui-radius`, `--ui-border-width`, `--ui-surface-shadow`, `--ui-clip`, `--ui-elevation`) también se aplican a toasts y diálogos, así que un tema de cristal o neobrutalista también les llega.
 
 Se leen en vivo. Cambia una variable o una clase del tema en runtime y los toasts que ya están en pantalla se actualizan con ella.
@@ -205,4 +216,4 @@ La hoja de estilos nativa estiliza cada `<button>` simple como un botón neutro.
 
 ## Siguiente
 
-La app de notas ya tiene buena pinta. La última página, [Accesibilidad y seguridad](accessibility.md), cubre lo que oyen los usuarios de lectores de pantalla, cómo se mueve el foco, el movimiento reducido y el límite de confianza del contenido personalizado.
+La app de notas ya se ve bien. La última página, [Accesibilidad y seguridad](accessibility.md), cubre lo que oyen los usuarios de lectores de pantalla, cómo se mueve el foco, el movimiento reducido y el límite de confianza del contenido personalizado.

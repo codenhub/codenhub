@@ -10,13 +10,13 @@ Tarde o temprano, toda app necesita decirle dos tipos de cosas a quien la usa. A
 
 Lo que te ahorras escribir a mano:
 
-- **El stack.** Los toasts se alinean en una de seis posiciones de la pantalla. Los que sobran esperan en una cola, y el más antiguo que no esté ocupado se va para hacer sitio. Un toast se queda donde está mientras alguien tiene el puntero encima, tiene el foco dentro de él o mientras espera con un spinner de carga.
-- **Los temporizadores.** Por defecto, cada toast se cierra después de un tiempo fijo. La cuenta atrás se pausa mientras el puntero está encima, mientras tiene el foco y mientras la pestaña del navegador está en segundo plano, así que el tiempo en el que nadie podía leerlo no cuenta.
+- **El stack.** Los toasts se alinean en una de seis posiciones de la pantalla. Los que sobran esperan en una cola, y el más antiguo que no esté ocupado se va para hacer lugar. Un toast se queda donde está mientras alguien tiene el puntero encima, tiene el foco dentro de él o mientras espera con un spinner de carga.
+- **Los temporizadores.** Por defecto, cada toast se cierra después de un tiempo fijo. La cuenta regresiva se pausa mientras el puntero está encima, mientras tiene el foco y mientras la pestaña del navegador está en segundo plano, así que el tiempo en el que nadie podía leerlo no cuenta.
 - **El malabarismo asíncrono.** `toast.promise()` muestra un spinner mientras tu trabajo corre y se convierte en un toast de éxito o de error cuando termina. Los diálogos devuelven algo a lo que le puedes hacer `await`, así que `if (await dialog.confirm("¿Borrar?"))` de verdad es `true` o `false`.
-- **El trabajo sucio de la accesibilidad.** Los lectores de pantalla oyen cada toast, con [una pega mientras hay un diálogo modal abierto](dialogs.md#toasts-mientras-hay-un-diálogo-abierto). Los diálogos usan el propio elemento `<dialog>` del navegador, así que atrapar el foco, <kbd>Escape</kbd> y devolver el foco al final vienen de la plataforma.
-- **Los deberes de seguridad.** Los strings siempre se muestran como texto plano y nunca se interpretan como HTML. El paquete no inyecta ningún elemento `<style>`, así que una Content Security Policy estricta no necesita excepciones por él, siempre que la propia hoja de estilos [se cargue como archivo](styling.md#content-security-policy).
+- **El trabajo sucio de la accesibilidad.** Los lectores de pantalla oyen cada toast, con [una salvedad mientras hay un diálogo modal abierto](dialogs.md#toasts-mientras-hay-un-diálogo-abierto). Los diálogos usan el propio elemento `<dialog>` del navegador, así que atrapar el foco, <kbd>Escape</kbd> y devolver el foco al final vienen de la plataforma.
+- **Las tareas de seguridad.** Los strings siempre se muestran como texto plano y nunca se interpretan como HTML. El paquete no inyecta ningún elemento `<style>`, así que una Content Security Policy estricta no necesita excepciones por él, siempre que la propia hoja de estilos [se cargue como archivo](styling.md#content-security-policy).
 
-Es TypeScript a pelo trabajando directamente con el DOM. No hay framework que adoptar ni dependencia de runtime que instalar.
+Es TypeScript puro trabajando directamente con el DOM. No hay framework que adoptar ni dependencia de runtime que instalar.
 
 ## Instalación
 
@@ -59,7 +59,7 @@ Las páginas se apoyan unas en otras y, juntas, siguen un mismo ejemplo pequeño
 4. [Estilos](styling.md): la hoja de estilos, los colores, las clases de presentación, el modo oscuro y la Content Security Policy.
 5. [Accesibilidad y seguridad](accessibility.md): lo que oyen los lectores de pantalla, el comportamiento del teclado y del foco, el movimiento reducido y el límite de confianza del contenido personalizado.
 
-La [referencia de la API](../reference/index.md) enumera cada símbolo exportado y su firma, generada a partir del código fuente. El [registro de cambios](../changelog/index.md) cuenta qué cambió en cada versión.
+La [referencia de la API](../reference/index.md) (en inglés) enumera cada símbolo exportado y su firma, generada a partir del código fuente. El [registro de cambios](../changelog/index.md) (en inglés) cuenta qué cambió en cada versión.
 
 ## Requisitos
 
@@ -67,4 +67,4 @@ La [referencia de la API](../reference/index.md) enumera cada símbolo exportado
 - `@codenhub/toaster/styles` cargado una vez en la página.
 - Opcional: `@codenhub/styles` 0.3.0 o posterior. Cuando está en la página, los toasts y los diálogos toman sus colores y su aspecto de su tema. Sin él, el paquete usa sus propios colores integrados. [Estilos](styling.md) explica los dos casos.
 
-El paquete es experimental. Su API, su renderizado y los nombres de sus clases CSS todavía pueden cambiar antes de una versión estable, y el [registro de cambios](../changelog/index.md) dice qué cambió cada vez.
+El paquete es experimental. Su API, su renderizado y los nombres de sus clases CSS todavía pueden cambiar antes de una versión estable, y el [registro de cambios](../changelog/index.md) (en inglés) dice qué cambió cada vez.
