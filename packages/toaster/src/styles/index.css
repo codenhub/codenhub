@@ -83,7 +83,7 @@
   gap: 0.5rem;
   max-width: calc(100vw - (2 * var(--toast-margin-x, 1rem)));
   max-height: calc(
-    100vh - var(--toast-margin-y, max(1rem, env(safe-area-inset-top, 0px))) -
+    100dvh - var(--toast-margin-y, max(1rem, env(safe-area-inset-top, 0px))) -
       var(--toast-margin-y, max(1rem, env(safe-area-inset-bottom, 0px)))
   );
   overflow-x: hidden;
