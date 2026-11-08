@@ -684,3 +684,29 @@ describe("promise outcome dismissible", () => {
     toaster.destroy();
   });
 });
+
+describe("duration limit", () => {
+  const tooLong = 2_147_483_648;
+
+  it("rejects a toast duration a browser timer cannot hold", () => {
+    const toaster = createToaster();
+    expect(() => toaster("Hello", { duration: tooLong })).toThrow(
+      "Toast duration must be a number from 0 to 2147483647.",
+    );
+    expect(() => toaster("Hello", { duration: 2_147_483_647 })).not.toThrow();
+    toaster.destroy();
+  });
+
+  it("rejects it in update() and in the instance config", () => {
+    const toaster = createToaster();
+    const handle = toaster("Hello");
+    expect(() => handle.update({ duration: tooLong })).toThrow(/from 0 to 2147483647/);
+    expect(() => createToaster({ duration: tooLong })).toThrow(
+      "Toaster duration must be a number from 0 to 2147483647.",
+    );
+    expect(() => createToaster({ semantic: { duration: tooLong } })).toThrow(
+      "Toaster nested duration must be a number from 0 to 2147483647.",
+    );
+    toaster.destroy();
+  });
+});

@@ -214,7 +214,7 @@ export class Toast {
    * discarded. This is a no-op once the toast has settled.
    *
    * @param updateOpts Scoped updates to apply to the toast.
-   * @throws {Error} If `updateOpts.duration` is not a finite number >= 0,
+   * @throws {Error} If `updateOpts.duration` is not a number from 0 to 2147483647,
    *   `updateOpts.type` is not a recognized severity, or
    *   `updateOpts.content` resolves to nothing renderable.
    */

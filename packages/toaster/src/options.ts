@@ -213,12 +213,19 @@ export function resolveToastContent(
   return Object.freeze([resolved]);
 }
 
+/**
+ * The longest duration a timer can run: browsers store `setTimeout` delays
+ * as signed 32-bit integers and fire a longer one at once.
+ */
+export const MAX_DURATION = 2_147_483_647;
+
+export function isValidDuration(duration: number): boolean {
+  return Number.isFinite(duration) && duration >= 0 && duration <= MAX_DURATION;
+}
+
 export function assertDuration(duration: number | undefined): void {
-  if (duration === undefined) {
-    return;
-  }
-  if (!Number.isFinite(duration) || duration < 0) {
-    throw new Error("Toast duration must be a finite number greater than or equal to 0.");
+  if (duration !== undefined && !isValidDuration(duration)) {
+    throw new Error(`Toast duration must be a number from 0 to ${MAX_DURATION}.`);
   }
 }
 

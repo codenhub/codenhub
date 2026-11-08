@@ -101,7 +101,7 @@ export interface ToastHandle {
    * opens rather than discarded. Has no effect once the toast has settled.
    *
    * @param options Partial updates to apply.
-   * @throws {Error} If `options.duration` is not a finite number >= 0,
+   * @throws {Error} If `options.duration` is not a number from 0 to 2147483647,
    *   `options.type` is not a recognized severity, or `options.content`
    *   resolves to nothing renderable.
    */

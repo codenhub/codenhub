@@ -4,7 +4,9 @@ import {
   DEFAULT_CONFIG,
   DEFAULT_DISMISS_LABEL,
   DEFAULT_REGION_LABEL,
+  MAX_DURATION,
   assertToastPosition,
+  isValidDuration,
   withoutUndefined,
 } from "./options";
 import type { RawToastOptions, ResolvedToastConfig } from "./options";
@@ -38,7 +40,7 @@ function copyConfig(config: ToasterConfig): ToasterConfig {
 }
 
 function isInvalidDuration(duration: number | undefined): boolean {
-  return duration !== undefined && (!Number.isFinite(duration) || duration < 0);
+  return duration !== undefined && !isValidDuration(duration);
 }
 
 function parseToastArgs(
@@ -329,14 +331,14 @@ class ToastManager {
       },
     );
     if (isInvalidDuration(config.duration)) {
-      throw new Error("Toaster duration must be a finite number greater than or equal to 0.");
+      throw new Error(`Toaster duration must be a number from 0 to ${MAX_DURATION}.`);
     }
     if (config.maxVisible !== undefined && (!Number.isInteger(config.maxVisible) || config.maxVisible <= 0)) {
       throw new Error("Toaster maxVisible must be a positive integer.");
     }
     for (const duration of [config.semantic?.duration, config.custom?.duration]) {
       if (isInvalidDuration(duration)) {
-        throw new Error("Toaster nested duration must be a finite number greater than or equal to 0.");
+        throw new Error(`Toaster nested duration must be a number from 0 to ${MAX_DURATION}.`);
       }
     }
   }
