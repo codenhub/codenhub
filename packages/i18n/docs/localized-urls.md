@@ -314,7 +314,13 @@ Then render, on the default locale's pages only:
     if (target === undefined) {
       const preferences = navigator.languages.length > 0 ? navigator.languages : [navigator.language];
       for (const preference of preferences) {
-        const language = (preference ?? "").split("-")[0].toLowerCase();
+        let language;
+        try {
+          // Reads old codes as `matchLocale()` does, such as `iw-IL` as Hebrew, `he`.
+          language = new Intl.Locale(preference).language;
+        } catch {
+          continue; // Not a language tag.
+        }
         if (Object.hasOwn(config.languages, language)) {
           target = config.languages[language];
           break;
