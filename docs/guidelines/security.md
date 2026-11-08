@@ -65,7 +65,7 @@ When the project serves web requests:
 ### Tokens in `@codenhub/jwt` and `@codenhub/oidc`
 
 - **A token is untrusted until verified.** No claim, header, or `kid` from a token decides how it is verified. The algorithm comes from the key, never from the token, and `none` is not an algorithm in any casing ([`@codenhub/jwt`](../../packages/jwt/README.md)).
-- **A token that is ambiguous is rejected.** A header member name repeated at any depth fails as `duplicate_key`, where `JSON.parse` would silently keep the last one, and a `kid` no key set holds fails as `unknown_kid` ([Verifying](../../packages/jwt/docs/verifying.md), [Key sets](../../packages/jwt/docs/key-sets.md)).
+- **A token that is ambiguous is rejected.** A header member name repeated at any depth fails as `duplicate_key`, where `JSON.parse` would silently keep the last one, and a `kid` that no key set holds fails as `unknown_kid` ([Verifying](../../packages/jwt/docs/verifying.md), [Key sets](../../packages/jwt/docs/key-sets.md)).
 - **Every input from the other side has a stated outcome.** A change to a provider endpoint or a client request updates [Hostile input](../../packages/oidc/docs/security.md) and the test that proves the outcome.
 
 ### Bounded cost in `@codenhub/validation`

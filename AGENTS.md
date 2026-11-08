@@ -30,7 +30,7 @@ This repository is docs-first. [`docs/README.md`](docs/README.md) indexes every 
 <!-- project:start -->
 
 - **The delivery gate is the branch selection.** `pnpm verify --changed` is the gate before delivering a change, not the whole workspace, which CI runs on every merge; [`CONTRIBUTING.md`](CONTRIBUTING.md#validation) says when the whole workspace is needed instead.
-- **Generated files are regenerated, not edited.** A file marked as generated is derived from package READMEs, `docs/`, and manifests. Change its source and run `pnpm generate <target>`; CI fails on drift rather than fixing it. [Tooling](docs/tooling.md#generated-files) lists the generators.
+- **Generated files are regenerated, not edited.** A file marked as generated is derived from package READMEs, `docs/`, and manifests. Change its source and run `pnpm generate <target>`; a change to package metadata also needs an unfiltered `pnpm generate`, since the root README package list is regenerated only for the whole workspace. CI fails on drift rather than fixing it. [Tooling](docs/tooling.md#generated-files) lists the generators.
 - **Root tooling selects packages.** Run scripts from the repository root through `hub`'s selectors rather than `pnpm --filter` or from a package directory; it owns the build order of workspace dependencies.
 
 <!-- project:end -->

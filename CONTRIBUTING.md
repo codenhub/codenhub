@@ -30,7 +30,7 @@ Browser suites need Playwright's browsers, which `pnpm hub browsers` installs an
 
 <!-- project:start -->
 
-- A breaking change to a published package takes the version [`docs/specs/packages-lifecycle.md`](docs/specs/packages-lifecycle.md) governs, and its commit says what breaks in the body.
+- A breaking change to a published package takes the version that [`docs/specs/packages-lifecycle.md`](docs/specs/packages-lifecycle.md) governs, and its commit says what breaks in the body.
 - A change to a package README or anything under a package's `docs/` regenerates the derived files in the same change, as [Validation](#validation) describes.
 
 <!-- project:end -->
