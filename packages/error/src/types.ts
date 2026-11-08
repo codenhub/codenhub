@@ -1,5 +1,6 @@
 /**
- * A predictable, immutable error shape representing a normalized application error.
+ * A predictable error shape representing a normalized application error. Its own fields cannot be
+ * changed or removed, though frameworks can still add properties of their own.
  *
  * Implements the standard JavaScript `Error` interface and adds classification,
  * localization support, and original error wrapping. An explicit `toJSON` keeps JSON
@@ -83,20 +84,26 @@ export interface AppError extends Error {
 export interface AppErrorOptions {
   /**
    * The fallback error message to use when the error cannot be matched in the registry.
-   * Must be a non-empty string. Defaults to `DEFAULT_APP_ERROR_MESSAGE`.
+   * Must be a non-empty string.
+   *
+   * @defaultValue `DEFAULT_APP_ERROR_MESSAGE`
    */
   fallbackMessage?: string;
 
   /**
    * The specific error registry to query for classifications. Must expose the read-facing
-   * registry surface. Defaults to the global registry retrieved by `getErrorRegistry()`.
+   * registry surface.
+   *
+   * @defaultValue The global registry retrieved by `getErrorRegistry()`.
    */
   registry?: ErrorRegistry | ReadonlyErrorRegistry;
 
   /**
    * The maximum depth to unwrap nested error wrappers (e.g. cause, originalError).
-   * Must be an integer from 0 through 3. Defaults to 3. At 3, a `cause` chain alone is followed
-   * further, to a depth of 8; a lower value stops every field at that depth.
+   * Must be an integer from 0 through 3. At 3, a `cause` chain alone is followed further, to a
+   * depth of 8; a lower value stops every field at that depth.
+   *
+   * @defaultValue 3
    */
   maxDepth?: number;
 
@@ -153,7 +160,9 @@ export interface ErrorFeedback {
 
   /**
    * Whether the call that raises this failure can be repeated as it is, without user intervention
-   * and without the risk that it runs twice. Defaults to `false`.
+   * and without the risk that it runs twice.
+   *
+   * @defaultValue `false`
    */
   isRetryable?: boolean;
 }

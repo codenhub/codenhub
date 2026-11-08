@@ -407,7 +407,7 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
 };
 
 /**
- * Normalizes an unknown error value into a predictable, immutable `AppError`.
+ * Normalizes an unknown error value into a predictable `AppError` whose own fields cannot change.
  *
  * Unrolls nested wrapper fields (`cause`, `originalError`, `error`, `err`, `inner`, `innerError`)
  * up to the configured depth, and a `cause` chain alone past the default depth, then resolves a classification in priority order across every
@@ -435,8 +435,9 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
  * classified one. A `fallbackMessage` or `maxDepth` alone never changes a classification; a
  * `fallbackMessage` only words an unknown AppError that still carries the default message.
  * @throws {TypeError} If `options` is not an object, `fallbackMessage` is not a non-empty string,
- * `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer
- * from 0 through 3.
+ * `registry` does not expose the read-facing registry surface, `maxDepth` is not an integer
+ * from 0 through 3, `details` is not a plain object of JSON values nested at most 8 levels deep, or
+ * a hand-written `registry` returns feedback without a non-empty message.
  */
 export function createAppError(error: unknown, options: AppErrorOptions = {}): AppError {
   return normalizeAppError(error, options);
