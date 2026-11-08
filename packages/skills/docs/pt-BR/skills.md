@@ -2,7 +2,7 @@
 title: Skills incluídas
 description: Escolha fluxos de trabalho no catálogo e entenda o formato, a qualidade e o versionamento das skills.
 order: 1
-source: c84c01f1d9da2e054f19b73f8ddb349222e165ac
+source: 4e6fad97c8c69abab14de0a654e3089b3eda6910
 ---
 
 # Escolha suas skills
@@ -26,7 +26,7 @@ Os IDs na primeira coluna são os nomes de diretório aceitos por `--skills`. Es
 | `babysit-pr`              | Quando recebe o pedido de acompanhar um pull request do GitHub pelo CI e pela revisão, corrigindo verificações e respondendo a revisores até que possa ser integrado.           |
 | `subagent-specialist`     | Quando o trabalho pode ser delegado: escolher tarefas, orientar quem vai executá-las, revisar os resultados e integrá-los.                                                      |
 | `agents-md-improver`      | Ao escrever, auditar ou enxugar instruções de repositório para agentes, incluindo `AGENTS.md` e arquivos que o carregam.                                                        |
-| `project-template`        | Ao criar, adotar, sincronizar ou auditar um projeto baseado no template de projeto compartilhado, ou alterar um arquivo mantido pelo template.                                  |
+| `project-template`        | Ao criar um projeto a partir do template de projeto compartilhado, comparar com ele um projeto existente ou migrar um projeto do seu antigo manifesto.                          |
 | `writing-skills`          | Ao criar, revisar ou corrigir skills para agentes e avaliar se suas instruções funcionam.                                                                                       |
 | `branding`                | Ao definir estratégia, voz e mensagens de marca, ou um sistema de identidade visual e suas diretrizes.                                                                          |
 | `naming`                  | Ao gerar, pesquisar, comparar ou escolher nomes, incluindo nomes no código.                                                                                                     |

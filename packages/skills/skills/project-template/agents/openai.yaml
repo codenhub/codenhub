@@ -1,4 +1,4 @@
 interface:
   display_name: "Project Template"
-  short_description: "Create, sync, and adopt the shared project template"
-  default_prompt: "Use $project-template to bring this project in line with its template: sync it from the recorded commit, or adopt the template if it has none, keep project blocks untouched, propose seed changes instead of applying them, verify, and report what changed and what needs my decision."
+  short_description: "Create, compare, and migrate projects from the shared template"
+  default_prompt: "Use $project-template to compare this project with the template: migrate it off the old manifest first if it still has one, judge each difference on which side is better, take the template's better changes on a branch, verify, and report what was taken, what was kept, and what is worth proposing upstream."
