@@ -76,7 +76,7 @@ Every app eventually needs to say two kinds of things to the person using it. So
 What it saves you from writing by hand:
 
 - **The stack.** Toasts line up at one of six screen positions. Extra ones wait in a queue, and the oldest one that isn't busy leaves to make room. A toast stays put while someone is hovering over it, has focus inside it, or is waiting on a loading spinner.
-- **The timers.** By default, each toast closes after a set time. The countdown pauses while the pointer is on it, while it has focus, and while the browser tab is in the background, so time nobody could spend reading doesn't count.
+- **The timers.** By default, each toast closes after a set time, except a loading one, which waits for its result. The countdown pauses while the pointer is on it, while it has focus, and while the browser tab is in the background, so time nobody could spend reading doesn't count.
 - **The async dance.** `toast.promise()` shows a spinner while your work runs and turns into a success or error toast when it's done. Dialogs return something you can `await`, so `if (await dialog.confirm("Delete?"))` really is `true` or `false`.
 - **The accessibility plumbing.** Screen readers hear every toast, with [one catch while a modal dialog is open](docs/dialogs.md#toasts-while-a-dialog-is-open). Dialogs use the browser's own `<dialog>` element, so focus trapping, <kbd>Escape</kbd>, and returning focus afterward all come from the platform.
 - **The security homework.** Strings are always shown as plain text and never parsed as HTML. The package injects no `<style>` element, so a strict Content Security Policy needs no exceptions for it, as long as the stylesheet itself [loads as a file](docs/styling.md#content-security-policy).
