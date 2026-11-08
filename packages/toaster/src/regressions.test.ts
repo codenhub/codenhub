@@ -752,3 +752,22 @@ describe("duration limit", () => {
     toaster.destroy();
   });
 });
+
+describe("announcements after destroy", () => {
+  it("does not announce into an open dialog once the toaster is destroyed", async () => {
+    vi.useFakeTimers();
+    const dialogs = createDialogs();
+    const pending = dialogs.alert("Heads up");
+    const dialog = document.body.querySelector("dialog")!;
+    const toaster = createToaster();
+    toaster.error("Lost connection");
+    toaster.destroy();
+
+    vi.advanceTimersByTime(200);
+    expect(dialog.querySelector("[data-toast-announcer]")).toBeNull();
+    pending.dismiss();
+    vi.useRealTimers();
+    await pending.settled;
+    dialogs.destroy();
+  });
+});
