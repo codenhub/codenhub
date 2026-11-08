@@ -5,6 +5,8 @@ packages:
   - "packages/*/{dev,debug}/*"
   - "packages/plugins/**"
 
+# Every version is declared once, here, and packages refer to it as `catalog:`, so the workspace can never
+# hold two versions of one dependency by accident. A new third-party dependency adds its version here.
 catalog:
   "@astrojs/check": ^0.9.12
   "@astrojs/markdown-remark": 7.3.5
@@ -51,13 +53,18 @@ catalog:
 overrides:
   "typedoc>minimatch": ^11.0.4
 
+# Supply-chain rules, applied to every install, local and in CI alike (docs/ci.md, "Dependency installs").
+# Refuses a transitive dependency that resolves to a git repository or a tarball URL instead of the registry.
 blockExoticSubdeps: true
+# Refuses a version published with weaker trust evidence (provenance, trusted publishing) than an earlier
+# version of the same package, a common sign of a compromised publish.
 trustPolicy: no-downgrade
-# @astrojs/check needs chokidar ^4.0.3. chokidar 4.0.1 shipped with provenance;
-# 4.0.2 and 4.0.3 were published by hand by the same maintainer, which the
-# policy reads as a downgrade. Remove once @astrojs/check moves to chokidar 5.
-trustPolicyExclude:
-  - "chokidar@4.0.3"
+# Seven days, in minutes: a version published longer ago than this is no longer held to the trust policy, so
+# a long-standing release that predates provenance is not refused as a downgrade. It is what lets
+# chokidar@4.0.3, published by hand in 2024 after a release with provenance, resolve without an exclude.
+trustPolicyIgnoreAfter: 10080
+# The only dependencies whose install scripts may run. Each fetches or builds a native binary on install:
+# esbuild and workerd their executables, @parcel/watcher its file-watching addon.
 allowBuilds:
   "@parcel/watcher": true
   esbuild: true
