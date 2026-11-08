@@ -39,11 +39,17 @@ Two timing details explain behavior you might notice while testing:
 - **The first announcement is slightly delayed.** Screen readers often miss a live region that appears with its text already in it, because they only announce changes to regions they're already watching. So each region is added empty, and its first text arrives 100ms later, following the [W3C ARIA22 technique](https://www.w3.org/WAI/WCAG21/Techniques/aria/ARIA22.html).
 - **Announced text is cleared after 7 seconds**, so the hidden regions don't pile up old messages.
 
-The visible toast itself isn't a live region and has no `role` attribute. Tests that find toasts by `role="status"` or `aria-live` need another selector.
+The visible toast itself isn't a live region and has no `role` attribute. Tests that find toasts by `role="status"` or `aria-live` need another selector. Find them the way a screen reader user does, through the stack's landmark, described next:
+
+```ts
+// Playwright; Testing Library's getByRole works the same way.
+const notifications = page.getByRole("region", { name: "Notifications" });
+await expect(notifications.getByText("Note saved")).toBeVisible();
+```
 
 ### Finding the toasts
 
-Each stack is a landmark region named "Notifications". Screen reader users can jump to it from their landmarks list to reach a toast's buttons. Translate the name with the toaster's `labels`:
+Each stack is a landmark region named "Notifications". Screen reader users can jump to it from their landmarks list to reach a toast's buttons. A stack with no toasts leaves the list, so nobody lands in an empty region. Translate the name with the toaster's `labels`:
 
 ```ts
 import { createToaster } from "@codenhub/toaster";

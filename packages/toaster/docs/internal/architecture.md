@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-02
+last_updated: 2026-11-07
 scope: Internal engine architecture, invariants, and implementation design for @codenhub/toaster.
 ---
 
@@ -54,10 +54,13 @@ The two entries share helpers (ids, `layer-host.ts`) but neither imports the oth
 
 ### 3. Layout, Internal Scrolling, and Animations
 
-- **FLIP Layout Transitions**: When toasts are added, dismissed, or updated in size, sibling toasts adjust position using First-Last-Invert-Play (FLIP) layout calculations.
+- **FLIP Layout Transitions**: When a toast is added or removed, sibling toasts slide to their new positions using First-Last-Invert-Play (FLIP) layout calculations. An `update()` that changes a toast's size moves its siblings without animating them.
 - **Web Animations API**: Toast entrance, exit, and displacement animations use the Web Animations API when available. If unsupported, or if an animation throws, transitions resolve immediately without hanging promises.
 - **Reduced Motion**: If `matchMedia("(prefers-reduced-motion: reduce)")` matches, animation durations drop to 0ms and transitions resolve synchronously.
-- **Internal Scroll Container**: When the cumulative height of toasts exceeds the viewport's available space, the stack container scrolls internally without displaying default platform scrollbars, keeping all notifications reachable.
+- **Internal Scroll Container**: When the cumulative height of toasts exceeds the viewport's available space, the stack container scrolls internally without displaying default platform scrollbars, keeping all notifications reachable. The available space is measured in `dvh`, the height left by a mobile browser's toolbars, the same unit dialogs use.
+- **Empty Stacks**: A stack with no toasts is hidden with `display: none`, which also takes its region landmark out of the accessibility tree.
+  - **Why**: an empty "Notifications" region stayed in landmark navigation after the last toast left, one per position used. Hiding it in CSS covers every way a toast leaves, and the element keeps its margin.
+  - **Rejected**: removing the element when it empties, which needs the same check on every removal path and loses a margin set by an earlier dispatch.
 
 ### 4. Thenable Interactive Handles (`PromiseLike<T>`)
 
@@ -75,6 +78,11 @@ The two entries share helpers (ids, `layer-host.ts`) but neither imports the oth
   - **Why**: the stylesheet already read these properties, so they were the styling contract; the runtime `tokens` option only wrote them through an injected `<style>` element and inline styles, which cost a toast-only bundle about 2.8 KB minified and 870 bytes gzipped (measured 2026-11-02), needed a CSP nonce, and duplicated what plain CSS does.
   - **Rejected**: keeping the runtime `tokens` and `nonce` options, which validated colors and managed an owned `<style>` element per instance for values a consumer can set in CSS with no package code.
 
+- **Root `color-scheme`**: `generated-defaults.css` sets `color-scheme: light dark` on `:root`, and `light` or `dark` under the `.light`, `.dark`, `.theme-light`, `.theme-dark`, and `[data-theme]` selectors, the same rules `@codenhub/styles` sets.
+  - **Why**: every standalone default color is a `light-dark()` pair, which resolves against the element's computed `color-scheme`. Without the root rule, standalone toasts would stay light under a dark system preference, and a nested `.light` section in a `.dark` page would not resolve back to light.
+  - **Cost**: the rule is page-wide, so a light-only page that loads the stylesheet gets dark scrollbars, form fields, and canvas under a dark system preference. Such a page sets `:root { color-scheme: light; }` after the stylesheet, which keeps its toasts light as well. `docs/styling.md` says so.
+  - **Rejected**: scoping the rule to the package's own elements, which breaks a theme class set on a page ancestor; and defaulting to light with dark mode as an opt-in, which leaves standalone toasts light on dark pages until each consumer finds the option.
+
 ### 6. Security and Content Boundaries
 
 - **Text Strings**: Custom content passed as a string becomes one text node, never parsed as HTML, so markup in it renders literally. An empty or whitespace-only string throws.
@@ -88,6 +96,20 @@ The two entries share helpers (ids, `layer-host.ts`) but neither imports the oth
 
 - Calling `toaster.destroy()` is idempotent and executes synchronous cleanup:
   - All active toasts settle immediately (`state` becomes `"hidden"` and `settled` resolves), canceling pending animations.
-  - Owned container elements, event listeners, and resize observers are removed from the DOM.
+  - Owned container elements and live regions are removed from the DOM, and event listeners are detached. A first announcement still waiting for its delay is dropped.
   - Any subsequent API call on a destroyed instance throws synchronously.
 - Calling `dialogs.destroy()` on a dialogs instance closes its open dialog and drops queued ones, settling each with its cancel value, removes its `<dialog>` element, and makes later calls throw. Destroying a toaster leaves dialogs alone, and the reverse.
+
+### 8. Option Semantics
+
+- **`undefined` resets**: an option passed as `undefined`, to `createToaster()` or `configure()`, takes its default, the same as leaving it out of the constructor. `configure()` applies the reset to the stacks already showing too, so `configure({ margin: undefined })` clears their margin.
+  - **Why**: `configure({ position: undefined })` already reset `position`, while `margin` and `maxVisible` given as `undefined` changed new toasts but left the showing stacks as they were, so one call left the page in two states. Conditional code such as `configure({ margin: compact ? "8px" : undefined })` expects the reset.
+  - **Rejected**: treating `undefined` as "leave unchanged", which would make `position: undefined` stop resetting and would need a separate way to clear an option.
+- **Duration limit**: every `duration` must be a number from 0 to 2147483647 milliseconds (about 24.8 days), or the call throws.
+  - **Why**: browsers store a `setTimeout` delay as a signed 32-bit integer and fire a longer one at once, so `duration: 3_000_000_000` closed the toast immediately in Chromium and Firefox (measured 2026-11-07).
+  - **Rejected**: clamping to the limit, which silently changes a value instead of reporting it; `autoDismiss: false` already means "never".
+- **Leaving the loading state**: when an `update()` turns a loading toast into another kind, its `autoDismiss` and `duration` fall back to the kind it became: a semantic type takes the instance's `semantic` defaults, then the instance-wide ones; `"default"` takes the instance-wide ones. A value given in the same `update()` wins. `toast.promise()` goes through the same path.
+  - **Why**: the loading toast has no timer of its own, and forcing `autoDismiss: true` with the instance `duration` ignored `createToaster({ autoDismiss: false })` and `semantic.duration`, which the same toast shown with `toast.success()` respects.
+- **Promise outcome options**: `success` and `error` take `ToastOptions` without `position`, `margin`, `role`, and `type`.
+  - **Why**: the result is the loading toast updated in place, so it keeps its stack, and the outcome sets its type and role. Those four options were accepted and silently ignored.
+  - **Rejected**: honoring `position` and `margin` by moving the toast to another stack mid-flight, which no consumer asked for and which `update()` does not support either.

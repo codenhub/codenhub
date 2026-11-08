@@ -26,7 +26,7 @@ Each call returns a fresh instance. Consumers who want a singleton can use the d
 
 **Returns** — An independent Toaster instance controller.
 
-**Throws** — `Error` — If duration, max-visible count, or token colors are invalid.
+**Throws** — `Error` — If a position, a duration, or `maxVisible` is invalid.
 
 ## Interfaces
 
@@ -272,8 +272,8 @@ Optional title to display above the progress message.
 ```ts
 export interface PromiseToastOptions<T> {
     loading: string | LoadingToastOptions;
-    success: string | ToastOptions | ((data: T) => string | ToastOptions);
-    error: string | ToastOptions | ((error: unknown) => string | ToastOptions);
+    success: string | Omit<ToastOptions, "position" | "margin" | "role" | "type"> | ((data: T) => string | Omit<ToastOptions, "position" | "margin" | "role" | "type">);
+    error: string | Omit<ToastOptions, "position" | "margin" | "role" | "type"> | ((error: unknown) => string | Omit<ToastOptions, "position" | "margin" | "role" | "type">);
     position?: ToastPosition;
     duration?: number;
     dismissible?: boolean;
@@ -301,7 +301,7 @@ Extra CSS classes.
 dismissible?: boolean;
 ```
 
-Whether to render a close button, while pending and after. The resolved state defaults to `ToasterConfig.semantic.dismissible` when this is unset.
+Whether to render a close button, while pending and after. The resolved state defaults to `ToasterConfig.semantic.dismissible`, then the instance's `dismissible`, when this is unset.
 
 #### PromiseToastOptions › duration
 
@@ -314,10 +314,10 @@ Visibility duration in milliseconds for the resolved state. Defaults to `Toaster
 #### PromiseToastOptions › error
 
 ```ts
-error: string | ToastOptions | ((error: unknown) => string | ToastOptions);
+error: string | Omit<ToastOptions, "position" | "margin" | "role" | "type"> | ((error: unknown) => string | Omit<ToastOptions, "position" | "margin" | "role" | "type">);
 ```
 
-Content to display when the promise rejects.
+Content to display when the promise rejects. Takes the same options as `success`.
 
 #### PromiseToastOptions › loading
 
@@ -344,15 +344,15 @@ Viewport margin configurations.
 position?: ToastPosition;
 ```
 
-Viewport position for the toast.
+Viewport position for the toast, while pending and after.
 
 #### PromiseToastOptions › success
 
 ```ts
-success: string | ToastOptions | ((data: T) => string | ToastOptions);
+success: string | Omit<ToastOptions, "position" | "margin" | "role" | "type"> | ((data: T) => string | Omit<ToastOptions, "position" | "margin" | "role" | "type">);
 ```
 
-Content to display when the promise successfully resolves.
+Content to display when the promise successfully resolves. The result is the loading toast updated in place, so it keeps its stack, and its type and role come from the outcome: `position`, `margin`, `role`, and `type` are left out.
 
 ### SemanticDefaults
 
@@ -465,9 +465,9 @@ Represents the Toaster instance controller.
 clear(): void;
 ```
 
-Clears all active and queued non-interactive toasts.
+Dismisses every showing and queued toast of this instance.
 
-**Throws** — `Error` — If the toaster instance has been destroyed.
+**Throws** — `Error` — If the instance is destroyed.
 
 #### Toaster › configure
 
@@ -475,11 +475,13 @@ Clears all active and queued non-interactive toasts.
 configure(config: ToasterRuntimeConfig): void;
 ```
 
-Reconfigures the toaster at runtime.
+Reconfigures the toaster at runtime. An option given as `undefined` resets to its default, on the toasts already showing too.
 
 **Parameters**
 
 - `config` — Runtime configuration to validate and apply.
+
+**Throws** — `Error` — If the instance is destroyed, `container` is given, or a position, a duration, or `maxVisible` is invalid.
 
 #### Toaster › custom
 
@@ -490,13 +492,17 @@ custom(options: CustomToastOptions): ToastHandle;
 
 Displays custom content: a string as plain text, or a DOM node as is.
 
+**Returns** — A handle to update, dismiss, or watch the toast.
+
+**Throws** — `Error` — If the instance is destroyed, no DOM is available, the content is empty or not an element, text, or fragment, or `duration`, `position`, or `role` is invalid.
+
 #### Toaster › destroy
 
 ```ts
 destroy(): void;
 ```
 
-Fully tears down this toaster instance.
+Fully tears down this toaster instance. Calling it again does nothing.
 
 #### Toaster › dismiss
 
@@ -504,11 +510,13 @@ Fully tears down this toaster instance.
 dismiss(handle?: ToastHandle): void;
 ```
 
-Dismisses a specific toast handle, or all active toasts if handle is omitted.
+Dismisses one toast, or every toast of this instance, the same as `clear()`, when `handle` is omitted.
 
 **Parameters**
 
 - `handle` — Optional handle of the toast to dismiss.
+
+**Throws** — `Error` — If the instance is destroyed.
 
 #### Toaster › error
 
@@ -519,6 +527,10 @@ error(options: ToastOptions): ToastHandle;
 
 Displays an error notification.
 
+**Returns** — A handle to update, dismiss, or watch the toast.
+
+**Throws** — `Error` — For the same reasons as calling the toaster itself.
+
 #### Toaster › info
 
 ```ts
@@ -528,6 +540,10 @@ info(options: ToastOptions): ToastHandle;
 
 Displays an informational notification.
 
+**Returns** — A handle to update, dismiss, or watch the toast.
+
+**Throws** — `Error` — For the same reasons as calling the toaster itself.
+
 #### Toaster › loading
 
 ```ts
@@ -536,6 +552,10 @@ loading(options?: LoadingToastOptions): ToastHandle;
 ```
 
 Displays a stateful progress loader toast. By default, loading toasts do not auto-dismiss.
+
+**Returns** — A handle to update the toast into its result, or dismiss it.
+
+**Throws** — `Error` — If the instance is destroyed, no DOM is available, the toast has neither a message nor a title, or `position` is invalid.
 
 #### Toaster › promise
 
@@ -550,7 +570,9 @@ Binds a notification to a Promise lifecycle, automatically managing transition s
 - `promise` — The Promise or PromiseLike to track.
 - `options` — State configurations for loading, success, and error.
 
-**Returns** — The original Promise result.
+**Returns** — A promise that settles the same way as `promise`.
+
+**Throws** — `Error` — Synchronously, if the loading toast cannot be shown, for the same reasons as `loading()`.
 
 #### Toaster › success
 
@@ -561,6 +583,10 @@ success(options: ToastOptions): ToastHandle;
 
 Displays a success notification.
 
+**Returns** — A handle to update, dismiss, or watch the toast.
+
+**Throws** — `Error` — For the same reasons as calling the toaster itself.
+
 #### Toaster › warning
 
 ```ts
@@ -569,6 +595,10 @@ warning(options: ToastOptions): ToastHandle;
 ```
 
 Displays a warning notification.
+
+**Returns** — A handle to update, dismiss, or watch the toast.
+
+**Throws** — `Error` — For the same reasons as calling the toaster itself.
 
 ### ToasterConfig
 
@@ -768,7 +798,7 @@ Registers a callback to trigger when the toast begins to hide.
 onShow(subscriber: ToastLifecycleSubscriber): () => void;
 ```
 
-Registers a callback to trigger when the toast is initially requested to show.
+Registers a callback to trigger when the toast is added to the page, which for a queued toast is when a slot opens for it.
 
 **Parameters**
 
@@ -802,7 +832,7 @@ Patches the message, content, icon, severity, timing, or classes of a toast. App
 
 - `options` — Partial updates to apply.
 
-**Throws** — `Error` — If `options.duration` is not a finite number &gt;= 0, `options.type` is not a recognized severity, or `options.content` resolves to nothing renderable.
+**Throws** — `Error` — If `options.duration` is not a number from 0 to 2147483647, `options.type` is not a recognized severity, or `options.content` resolves to nothing renderable.
 
 ### ToastLabels
 
@@ -1005,7 +1035,7 @@ Enables or disables automatic dismissal after `duration`.
 className?: string;
 ```
 
-Extra CSS classes to append.
+Replaces the classes the toast was called with. The toast's own classes and the instance's `className` stay.
 
 #### ToastUpdateOptions › content
 
@@ -1037,7 +1067,7 @@ Enables or disables the dismiss button.
 duration?: number;
 ```
 
-New visibility duration in milliseconds, applied the next time an auto-dismiss timer would run.
+New visibility duration in milliseconds. On a showing toast, the timer restarts with it right away.
 
 #### ToastUpdateOptions › icon
 

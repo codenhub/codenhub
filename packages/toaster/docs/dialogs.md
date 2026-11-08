@@ -133,6 +133,8 @@ Dismissing gives each kind its cancel value: `false` for confirm, `null` for pro
 
 A dialogs instance shows one dialog at a time. Calling `confirm()` while another dialog is open doesn't stack a second dialog on top: the new one waits in a queue, with state `"queued"`, and opens when the current one closes. Dismissing a queued dialog removes it from the queue with its cancel value; it never appears.
 
+When a dialog opens, focus goes to its main button: the confirm button, or the OK button of an `alert()`. A prompt focuses its text field instead, so typing can start right away. A `confirm()` with `type: "error"` focuses the **cancel** button, so a reflexive <kbd>Enter</kbd> on a red "Delete" cancels instead of deleting.
+
 When the last dialog in a sequence closes, focus goes back to the element that had it before the first one opened.
 
 If the browser refuses to open a dialog, which is when `showModal()` throws, that dialog's handle rejects with the browser's error, and the next queued dialog still gets its turn. Wrap the `await` in `try`/`catch` if your page can get into a state where that happens.

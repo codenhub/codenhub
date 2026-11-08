@@ -44,7 +44,7 @@ sidebarToaster.success("Folder created");
 | `container`   | `document.body`                 | The element the toast stacks are added to. Can't be changed later.                                                                                   |
 | `position`    | `"top-right"`                   | Where toasts appear when a call doesn't say. One of the six [positions](toasts.md#positions-and-margins).                                            |
 | `maxVisible`  | `5`                             | How many toasts each position shows at once before the rest [queue](toasts.md#how-the-stack-fills-up). A whole number of 1 or more.                  |
-| `duration`    | `4000`                          | Milliseconds before a toast closes itself. 0 or more.                                                                                                |
+| `duration`    | `4000`                          | Milliseconds before a toast closes itself. From 0 to 2147483647.                                                                                     |
 | `autoDismiss` | `true`                          | Whether toasts close themselves after `duration`.                                                                                                    |
 | `dismissible` | `false`                         | Whether toasts get a close button.                                                                                                                   |
 | `margin`      | 1rem, or the device's safe area | Distance from the edge, as a CSS length or `{ x, y }`. See [margins](toasts.md#positions-and-margins).                                               |
@@ -60,9 +60,9 @@ The `toast` you import is a toaster created with no options, so these defaults a
 
 Bad values throw right away, when the toaster is created:
 
-- `Toaster duration must be a finite number greater than or equal to 0.`
+- `Toaster duration must be a number from 0 to 2147483647.`
 - `Toaster maxVisible must be a positive integer.` A `maxVisible` of 0, 2.5, or -1 all throw.
-- `Toaster nested duration must be a finite number greater than or equal to 0.` The same rule for `semantic.duration` and `custom.duration`.
+- `Toaster nested duration must be a number from 0 to 2147483647.` The same rule for `semantic.duration` and `custom.duration`.
 - `Invalid toast position: …` For `position` or any per-kind `position`.
 
 ## Per-kind defaults
@@ -116,6 +116,8 @@ Most changes apply to toasts shown afterwards. Three apply right away to toasts 
 - **`margin`**: existing stacks move.
 - **`labels.notifications`**: existing stacks are renamed.
 
+An option passed as `undefined` goes back to its default, the same as leaving it out of `createToaster()`, and that reaches the screen too: `configure({ margin: undefined })` puts existing stacks back at the default margin, and `configure({ maxVisible: undefined })` lets 5 show again. So `configure({ margin: compact ? "8px" : undefined })` does what it reads like.
+
 `configure()` validates like `createToaster()` does and throws the same errors. Passing `container` throws `Toaster container cannot be changed after construction.` To move toasts somewhere else, create a new toaster there and destroy the old one.
 
 ## Cleaning up with `destroy()`
@@ -163,7 +165,7 @@ Both stacks sit in the same corner and overlap. Give separate toasters separate 
 
 ## Server-side rendering
 
-Toaster can be imported anywhere. Creating a toaster, including the ready-made `toast`, doesn't touch the page, so it's safe while rendering on the server. Showing something needs a page, so a toast or dialog call made where there's no `document` throws:
+Toaster can be imported anywhere. Creating a toaster, including the ready-made `toast`, doesn't touch the page, so it's safe while rendering on the server. So is `configure()`: without a page it stores the settings, and they apply once toasts render in the browser. Showing something needs a page, so a toast or dialog call made where there's no `document` throws:
 
 - `DOM document is not available. Toaster operations require a browser environment.`
 - `DOM document is not available. Dialogs require a browser environment.`
@@ -180,7 +182,7 @@ export function SaveButton({ onSave }: { onSave: () => Promise<void> }) {
     try {
       await toast.promise(onSave(), { loading: "Saving…", success: "Saved", error: "Save failed" });
     } catch {
-      // The error toast already broke the news.
+      // toast.promise() already showed the error toast.
     }
   }
 
