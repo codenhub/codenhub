@@ -32,9 +32,9 @@ Locale selection uses explicit input, valid persisted state, navigator preferenc
 
 **Throws**
 
-- `TypeError` — When observation lacks a root, the manager was not created by `createI18n()`, or it already has a browser binding.
+- `TypeError` — When observation lacks a root, `syncDocument` is on where no global `document` exists, such as in a Web Worker, the manager was not created by `createI18n()`, or it already has a browser binding. These are thrown before the manager is initialized.
 - `RangeError` — When an explicit locale is unsupported or is not a string at runtime.
-- `Error` — When another core initialization supersedes this call before its locale becomes active.
+- `Error` — With the message "[I18n] Browser initialization was superseded before its locale became active." when a later `init()` or `setLocale()` call on the manager, including `setLocale()` to the locale already active, starts before this call's locale becomes active. The manager keeps the later call's result.
 - `TypeError` — When a required dictionary is invalid.
 - `TypeError` — When direction resolution returns a value other than `ltr` or `rtl`.
 - `I18nError` — When the loader rejects for an explicit locale or the default locale. Exceptions from the direction callback and required browser setup propagate unchanged.
@@ -95,7 +95,7 @@ Manager to initialize; it must not have another initializing or active browser b
 locale?: TLocale;
 ```
 
-Authoritative locale, which takes precedence over persisted and browser preferences. Only `undefined` omits this input; other non-string runtime values reject initialization.
+Authoritative locale, which takes precedence over persisted and browser preferences, and is persisted when `persistLocale` is on. Only `undefined` omits this input; other non-string runtime values reject initialization.
 
 #### BrowserI18nOptions › observe
 

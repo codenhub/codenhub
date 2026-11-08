@@ -1,25 +1,19 @@
 # @codenhub/i18n
 
-> Translations with typed keys and values, ICU messages, CLDR plurals, `Intl`
-> formatters, and regional and default-locale fallback, plus optional browser
-> and locale-path helpers.
+> Translations with typed keys and values, ICU messages, CLDR plurals, `Intl` formatters, and regional and default-locale fallback, plus an optional browser binding and localized-path routing with translated paths and a `localePrefix` of `"always"`, `"except-default"`, or `"when-ambiguous"`.
 
-Use only the root, `/browser`, and `/routing` entry points. Await `init()` (or
-`initializeBrowserI18n()`) before calling `t()`. Create one manager per request
-or page on a server or in a static build. A key missing from every dictionary
-returns the trimmed key.
+Use only the root, `/browser`, and `/routing` entry points. Await `init()`, or `initializeBrowserI18n()` in a browser, before calling `t()`, `has()`, or `setLocale()`. Create one manager per request or page on a server or in a static build. A key missing from every dictionary returns the trimmed key and warns once per locale and key unless `isSilent` is set. Messages do not render HTML and do not support number skeletons or styles such as `{n, number, currency}`; use `formatNumber()`. `createLocaleRouting()` requires `localePrefix`. In a Web Worker, pass `syncDocument: false` and no `root` to `initializeBrowserI18n()`.
 
 ## Documentation
 
-- [Overview](docs/index.md): Core ideas, a walkthrough, and missing-key behavior.
-- [Write your translations](docs/translations.md): Dictionary rules, JSON
-  loaders, regional variants, ICU messages, formatters, plurals, typed keys and
-  values, key-parity and message tests, and size limits.
-- [Translate a browser app](docs/browser.md): Locale detection order,
-  persistence, `lang`/`dir` sync, framework re-rendering, and `data-i18n`.
-- [Render on a server or at build time](docs/server-rendering.md): Per-request
-  managers, `Accept-Language` matching, logging, and static builds.
-- [Localized URLs](docs/localized-urls.md): `parse`, `localize`, `localizeAll`,
-  and accepted paths.
-- [Troubleshooting](docs/troubleshooting.md): Every error and warning, with fixes.
+- [Overview](docs/index.md): Core ideas, a walkthrough, missing-key behavior, right-to-left direction, manager state and events, and turning outside input into a locale.
+- [Write your translations](docs/translations.md): Dictionary rules, JSON loaders with timeouts, regional variants, ICU messages, formatters, plurals, typed keys and values, key-parity and message tests, and size limits.
+- [Translate a browser app](docs/browser.md): Locale detection order, persistence, `lang`/`dir` sync, framework re-rendering, `data-i18n` and form controls, and Web Workers.
+- [Render on a server or at build time](docs/server-rendering.md): Per-request managers, `Accept-Language` matching, logging, static builds, and handing the locale to the browser.
+- [Localized URLs](docs/localized-urls.md): Translated paths, `localePrefix` including `"when-ambiguous"`, `parse`, `localize`, `localizeAll`, static-site detection, and accepted paths.
+- [Troubleshooting](docs/troubleshooting.md): Every error and warning, with its message and fix.
 - [API reference](docs/reference/index.md): Generated reference for every export.
+
+## Optional
+
+- [Changelog](docs/changelog/index.md): What changed in each release and how to upgrade.
