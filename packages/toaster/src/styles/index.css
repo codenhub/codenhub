@@ -736,11 +736,6 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
   background: transparent;
 }
 
-:where(dialog[data-toast-instance] .toast-dialog-container) {
-  background: var(--toast-color-surface, var(--color-background, var(--toast-default-color-background)));
-  color: var(--toast-color-text, var(--color-text, var(--toast-default-color-text)));
-}
-
 @keyframes toaster-toast-spin {
   to {
     transform: rotate(360deg);
