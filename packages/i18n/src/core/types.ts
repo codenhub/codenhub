@@ -275,9 +275,9 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * ```
    *
    * @param key - Translation key, trimmed as `t()` trims it.
-   * @returns `true` when `t(key)` would find a text, or `t(key, { count })` a plural form, and `false` otherwise,
-   * including for a string no dictionary can hold, such as one that is blank, longer than 1,000 characters, or contains
-   * ASCII controls.
+   * @returns `true` when a dictionary has a text at `key`, or a plural group, one with an `other` form, and `false`
+   * otherwise, including for a group without an `other` form, whichever forms it has, and for a string no dictionary
+   * can hold, such as one that is blank, longer than 1,000 characters, or contains ASCII controls.
    * @throws {Error} When called before successful initialization.
    * @throws {TypeError} When the key is not a string.
    */

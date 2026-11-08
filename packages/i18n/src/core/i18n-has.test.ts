@@ -93,6 +93,19 @@ describe("has", () => {
     expect(i18n.t(key)).toBe("Long");
   });
 
+  // A count of 0 is `other` in English, and `one` in Portuguese and French.
+  it.each(["en", "pt", "fr"])("should not count a group without an other form as a key in %s", async (locale) => {
+    const i18n = createI18n({
+      defaultLocale: locale,
+      locales: [locale],
+      loadLocale: () => ({ step: { one: "Welcome", two: "Profile" } }),
+    });
+    await i18n.init();
+
+    expect(i18n.has("step")).toBe(false);
+    expect(i18n.has("step.one")).toBe(true);
+  });
+
   it("should still throw for a key that is not a string", async () => {
     const { i18n } = create();
     await i18n.init();

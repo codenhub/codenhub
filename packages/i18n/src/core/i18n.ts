@@ -36,6 +36,8 @@ const MAX_MISSING_KEY_DIAGNOSTICS = 1_000;
 const MAX_MESSAGE_DIAGNOSTICS = 1_000;
 const MAX_TRANSLATION_KEY_LENGTH = 1_000;
 const PLACEHOLDER_PATTERN = /{([A-Za-z0-9_]+)}/g;
+// The form every plural group has, used when the count's category has none.
+const PLURAL_FALLBACK_FORM = "other";
 
 /** Whether a string can name a dictionary entry: not blank, within the length limit, and free of ASCII controls. */
 const isValidTranslationKey = (key: string): boolean =>
@@ -198,8 +200,12 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     if (!isValidTranslationKey(key)) {
       return false;
     }
-    // Any count finds a plural group, since every group has an `other` form to fall back to.
-    return this.lookup("has", key, 0) !== undefined;
+    // Only a group with an `other` form is a plural group. Choosing a form by count would make a group without one, such
+    // as `{ one, two }`, a key in a locale where the count's category is a form it has, and not in others.
+    return (
+      this.lookup("has", key) !== undefined ||
+      this.dictionaries!.some(({ dictionary }) => dictionary[`${key.trim()}.${PLURAL_FALLBACK_FORM}`] !== undefined)
+    );
   }
 
   formatNumber(value: number | bigint, options?: Intl.NumberFormatOptions): string {
@@ -377,7 +383,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     }
 
     const category = this.getPluralRules(locale)?.select(count) ?? "other";
-    return dictionary[`${key}.${category}`] ?? dictionary[`${key}.other`];
+    return dictionary[`${key}.${category}`] ?? dictionary[`${key}.${PLURAL_FALLBACK_FORM}`];
   }
 
   private getPluralRules(locale: TLocale): Intl.PluralRules | undefined {
