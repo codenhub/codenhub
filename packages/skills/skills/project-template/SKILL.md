@@ -7,9 +7,9 @@ description: Creates, syncs, adopts, and audits projects built on the shared pro
 
 The template repository is the source of truth for the shared project structure. Its `.template/README.md`, which every project keeps a copy of, defines the file classes (`canonical`, `blocks`, `seed`), project blocks, placeholders, `synced`, and `exceptions`, says how to sync, and documents `node .template/check.mjs`, which reports drift. Read it before any of the work below, and follow it rather than restating it; this skill adds what an agent needs around it.
 
-A project last synced before the template gained the check and the sync procedure has neither. Read the procedure from the fetched template, `git show FETCH_HEAD:.template/README.md`, and run the fetched check from the project root: save `git show FETCH_HEAD:.template/check.mjs` to a file outside the repository and run `node <that file>`. Both reach the project with its next sync.
+The template is the GitHub repository named, as an `owner/repo` string, in `.template/manifest.json#template`, or `codenhub/template` when a project has no manifest yet. `FETCH_HEAD` below is the template fetched without adding a remote, `git fetch https://github.com/<template> HEAD`; fetch it again before reading it, since any other fetch overwrites it. The steps use `git`, `pnpm`, and an authenticated GitHub CLI (`gh`). Without `gh`, use the local start and ask the user to create the repository.
 
-The template is the GitHub repository named, as an `owner/repo` string, in `.template/manifest.json#template`, or `codenhub/template` when a project has no manifest yet. The steps use `git`, `pnpm`, and an authenticated GitHub CLI (`gh`). Without `gh`, use the local start and ask the user to create the repository.
+A project last synced before the template gained the check and the sync procedure has neither. Read the procedure from the fetched template, `git show FETCH_HEAD:.template/README.md`, and run the fetched check from the project root: save `git show FETCH_HEAD:.template/check.mjs` to a file outside the repository and run `node <that file>`. Both reach the project with its next sync.
 
 A project brings its own name, brand, and domain. Never carry a name, owner, or brand from the template or from another project into this one.
 
@@ -17,7 +17,7 @@ A project brings its own name, brand, and domain. Never carry a name, owner, or 
 
 - Starting a new project, or asked to sync, adopt, or audit a project's structure: follow the matching section.
 - A task needs a change to a `canonical` file, or to the template-owned part of a `blocks` file: follow Upstream.
-- Any other task in a project that uses the template: do not sync, adopt, or restructure anything. When `node .template/check.mjs` fails or reports the project behind, say so once in your closing report.
+- Any other task in a project that uses the template: do not sync, adopt, or restructure anything. When `node .template/check.mjs` fails or reports the project behind, or you notice a local edit to a template-owned file, say so once in your closing report.
 
 ## Approval
 
@@ -66,7 +66,7 @@ Report what was applied, each conflict and how it was resolved, each block a cle
 
 A project that predates the template has no `.template/`, so read the conventions from the fetched template, `git show FETCH_HEAD:.template/README.md`. Adoption rewrites files the project has relied on, so present the result as a branch for review and never as a finished change. When the project is not a pnpm workspace, or its tooling differs at the core, adoption is a restructuring decision: describe what would change and ask before starting.
 
-1. Fetch the template as the README's sync does; its `FETCH_HEAD` is the commit you adopt.
+1. Fetch the template; its `FETCH_HEAD` is the commit you adopt.
 2. Map every file in the template's manifest to the project with `git diff FETCH_HEAD -- <path>`:
    - **Missing:** add `canonical` and `blocks` files, with their project blocks filled from the project or left empty, and propose `seed` files.
    - **`canonical`:** take the template's version. Sort each project difference into outdated (drop), an improvement (Upstream), or project-specific (move it to a project-owned file).
