@@ -73,7 +73,7 @@ The flag is deliberately strict. A failure that may have happened after the serv
 Two consequences are easy to miss:
 
 - **The flag describes the call that failed, which can sit several wrappers down.** Say a `publish()` function uploads a file, then fails to save a record with `ECONNREFUSED`. The error is retryable, but that is true of the save, not of `publish()`: repeating `publish()` uploads the file again. Retry on the flag only where your code made the failing call itself.
-- **The flag is about an error your own runtime raised.** A server that forwards its upstream failure as `{ "code": "ECONNREFUSED" }` in a response body matches the same mapping, but that request did reach the server. Classify response bodies against a registry that holds that service's codes and no network preset; see [Recipes](recipes.md#classify-http-responses).
+- **The flag is about an error your own runtime raised.** A server that forwards its upstream failure as `{ "code": "ECONNREFUSED" }` in a response body matches the same mapping, but that request did reach the server. Classify response bodies against a registry that holds that service's codes and no network preset, as the billing registry in [Registries](registries.md#the-global-registry-or-your-own) does.
 
 ### `details`
 
@@ -121,7 +121,15 @@ const again = createAppError(first, { fallbackMessage: "Checkout failed." });
 again === first; // true, when billingRegistry matched `caught`
 ```
 
-Passing an `AppError` returns the same object unless a `fallbackMessage` rewords it or `details` adds keys, and then you get a new one with the same classification. `fallbackMessage` and `maxDepth` never change the classification. The wording can still be filled in, once: a `fallbackMessage` does word an `"unknown"` error that still carries the default message, because no layer before it chose any wording. Once a layer has, its message stays:
+What you get back depends on the options you pass with the `AppError`:
+
+- **No options:** the same object.
+- **`maxDepth`:** the same object. Depth only matters when there is something to search, and nothing is searched again without a `registry`.
+- **`fallbackMessage`:** the same object, with one exception. An `"unknown"` error that still carries the default message gets a new `AppError` worded with your fallback, because no layer before yours chose any wording. Once a layer has, its message stays.
+- **`details`:** a new `AppError` with the same classification when your details add keys it lacks. Keys it already has keep their values.
+- **`registry`:** the only way to change the classification, covered below.
+
+The `fallbackMessage` exception is what lets an outer layer word a failure the inner one left generic:
 
 ```ts
 const inner = await attemptAsync(() => db.loadProject(id)); // no fallback here
@@ -183,7 +191,7 @@ At the default depth, a `cause` chain alone is followed further, to a depth of `
 
 The default message is exported as `DEFAULT_APP_ERROR_MESSAGE`, for tests and for comparing against.
 
-An invalid option is a programming mistake, so it throws `TypeError` before any work starts. Ordinary input never throws: `createAppError` accepts any value, including `null`, numbers, and objects whose properties throw when read. Normalizing an error should not be a new way to fail.
+An invalid option is a programming mistake, so it throws `TypeError` before any work starts. Ordinary input never throws: `createAppError` accepts any value, including `null`, numbers, and objects whose properties throw when read. Normalizing an error should not be a new way to fail. The one exception is a registry you wrote by hand that returns feedback without a message; see [Registries](registries.md#combining-and-freezing).
 
 ## Next
 

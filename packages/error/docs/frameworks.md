@@ -30,7 +30,7 @@ export function ProjectPage({ id }: { id: string }) {
       fallback={({ error, reset }) => (
         <div role="alert">
           <p>{error.message}</p>
-          {error.isRetryable && <button onClick={reset}>Try again</button>}
+          <button onClick={reset}>Try again</button>
         </div>
       )}
       onError={(error, info) => tracker.captureException(error.originalError ?? error, { extra: info })}
@@ -55,7 +55,7 @@ The prop types are exported as `AppErrorBoundaryProps`, and the object `fallback
 A few details worth knowing:
 
 - **`options` are only checked when an error is caught.** An invalid option then throws while the fallback renders, so the boundary above this one gets a `TypeError` instead of the original error, and `onError` is not called. Try the options with `createAppError` in a test to catch that before an outage does.
-- **`reset` renders the children again.** If whatever made them throw has not changed, they throw again and the fallback comes right back. Reset after the state that caused the failure changes, or let `resetKeys` do it when the reader navigates. In the example above, opening another project resets the boundary.
+- **`reset` renders the children again.** If whatever made them throw has not changed, they throw again and the fallback comes right back. Reset after the state that caused the failure changes, or let `resetKeys` do it when the reader navigates. In the example above, opening another project resets the boundary. A key change only resets an error that was already on screen: when opening a project is itself what throws, the fallback appears and stays, instead of the boundary resetting straight into the same failure and reporting it twice. `reset` is not a retry of a failed call, and it does not depend on `isRetryable`, which is about calls, not renders.
 - **The fallback and `onError` get the same `AppError` instance,** so what the reader sees and what you report always agree.
 - **Thrown `null` or `undefined` counts as an error too.** Throwing them is legal JavaScript, if not a good idea, and the boundary still shows the fallback with the generic message.
 
@@ -95,7 +95,7 @@ Create one set of handlers per boundary: each one remembers the last error it no
 
 ## What a boundary does not catch
 
-Both frameworks catch errors thrown while rendering and, in Svelte, while running effects. Neither catches an error thrown in an event handler, a `setTimeout`, or a promise nobody awaited during rendering, and React's boundaries do not run during server rendering. Handle those where they happen, with `attempt` or `attemptAsync`:
+Both frameworks catch errors thrown while rendering and while running effects, and React also catches those thrown in lifecycle methods. Neither catches an error thrown in an event handler, a `setTimeout`, or a promise nobody awaited during rendering, and React's boundaries do not run during server rendering. Handle those where they happen, with `attempt` or `attemptAsync`:
 
 ```ts
 import { attemptAsync } from "@codenhub/error";

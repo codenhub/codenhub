@@ -18,7 +18,7 @@ pnpm add @codenhub/error
 
 ## 2. Create one module that configures errors
 
-Put all registry setup in one module and import it once, before anything else runs. The registry is ordinary module state: whatever you register is visible to every later `createAppError` call that uses the same copy of the package.
+Put all registry setup in one function and call it once, before anything else runs. The registry is ordinary module state: whatever you register is visible to every later `createAppError` call that uses the same copy of the package. A function rather than code that runs on import means a test can call it again after replacing the registry; see [Set up errors in tests](recipes.md#set-up-errors-in-tests).
 
 ```ts
 // src/errors.ts
@@ -26,36 +26,40 @@ import { getErrorRegistry } from "@codenhub/error";
 import { browserErrorRegistry } from "@codenhub/error/registries/browser";
 import { supabaseErrorRegistry } from "@codenhub/error/registries/supabase";
 
-const registry = getErrorRegistry();
+export function setUpErrors(): void {
+  const registry = getErrorRegistry();
 
-// 1. Presets first: they describe failures that come from the platform and from Supabase.
-registry.merge(browserErrorRegistry);
-registry.merge(supabaseErrorRegistry);
+  // 1. Presets first: they describe failures that come from the platform and from Supabase.
+  registry.merge(browserErrorRegistry);
+  registry.merge(supabaseErrorRegistry);
 
-// 2. Your own mappings last, so they win wherever they overlap with a preset.
-registry.codes.addList([
-  [
-    "project.limit_reached",
-    {
-      message: "You've reached the project limit on your plan. Archive a project, then try again.",
-      messageKey: "error.project.limitReached",
-      source: "my-app.projects",
-    },
-  ],
-  [
-    "23505",
-    {
-      message: "You already have a project with that name. Choose a different one.",
-      messageKey: "error.project.nameTaken",
-      source: "my-app.projects",
-    },
-  ],
-]);
+  // 2. Your own mappings last, so they win wherever they overlap with a preset.
+  registry.codes.addList([
+    [
+      "project.limit_reached",
+      {
+        message: "You've reached the project limit on your plan. Archive a project, then try again.",
+        messageKey: "error.project.limitReached",
+        source: "my-app.projects",
+      },
+    ],
+    [
+      "23505",
+      {
+        message: "You already have a project with that name. Choose a different one.",
+        messageKey: "error.project.nameTaken",
+        source: "my-app.projects",
+      },
+    ],
+  ]);
+}
 ```
 
 ```ts
 // src/main.ts
-import "./errors";
+import { setUpErrors } from "./errors";
+
+setUpErrors();
 // …the rest of your application
 ```
 
@@ -68,6 +72,23 @@ Pick presets for where the code runs:
 - The Supabase preset wherever you call Supabase.
 
 [Presets](presets.md) lists exactly what each one covers. Merging all of them "just in case" is how a browser message about checking your Wi-Fi ends up in a server log, so pick on purpose.
+
+When the same setup runs on a server and in a browser, as in a Next.js or SvelteKit app, take the runtime preset as a parameter and pass the right one from each entry point. Guessing the runtime from globals goes wrong in the places you test least, such as a web worker, which has no `window`:
+
+```ts
+// src/errors.ts
+import { getErrorRegistry, type ReadonlyErrorRegistry } from "@codenhub/error";
+
+export function setUpErrors(runtimePreset: ReadonlyErrorRegistry): void {
+  const registry = getErrorRegistry();
+
+  registry.merge(runtimePreset);
+  // …the Supabase preset and your own mappings, as above
+}
+
+// In the client entry: setUpErrors(browserErrorRegistry);
+// In the server entry: setUpErrors(nodeErrorRegistry);
+```
 
 ## 3. Normalize where failures enter your code
 
@@ -89,7 +110,7 @@ async function onSubmit(form: FormData) {
 }
 ```
 
-You do not need to unwrap anything first. `createAppError` looks inside the value for wrapped errors in `cause`, `originalError`, `error`, `err`, `inner`, `innerError`, and the first ten entries of an `errors` list. A `23505` buried two `cause`s deep still resolves to "You already have a project with that name.", as long as nothing outside it matched first.
+You do not need to unwrap anything first. `createAppError` looks inside the value for wrapped errors in `cause`, `originalError`, `error`, `err`, `inner`, `innerError`, and the first ten entries of an `errors` list. A `23505` buried two `cause`s deep still resolves to "You already have a project with that name.", as long as no wrapper outside it has a known match of its own. A pattern match outside it does not stop the search; [Which match wins](registries.md#which-match-wins) has the full order.
 
 ## 4. Decide what to show
 

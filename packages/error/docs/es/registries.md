@@ -2,7 +2,7 @@
 title: Registros
 description: Los cinco buckets, cómo se comparan los identificadores, qué coincidencia gana y cuándo usar un registro propio en lugar del global.
 order: 3
-source: fe8b2fa94a77dd5c39e190922da020b0c0963f4a
+source: e8d003f5fb4dc1002602b2eccc97015c4a65e4f3
 ---
 
 # Registros
@@ -116,7 +116,7 @@ import { nodeErrorRegistry } from "@codenhub/error/registries/node";
 const apiRegistry = createErrorRegistry([nodeErrorRegistry, myApiRegistry]);
 ```
 
-`setErrorRegistry(registry)` reemplaza por completo el registro global. Sirve sobre todo en las pruebas, para que cada prueba empiece desde un estado conocido.
+`setErrorRegistry(registry)` reemplaza por completo el registro global. Sirve sobre todo en las pruebas, para que cada prueba empiece desde un estado conocido. El registro global tiene que poder cambiarse, así que `setErrorRegistry` necesita uno al que se le pueda agregar, como uno de `createErrorRegistry`, y lanza `TypeError` con uno congelado, presets incluidos. En su lugar, envuelve el preset en un registro nuevo: `setErrorRegistry(createErrorRegistry([supabaseErrorRegistry]))`.
 
 ## Combinar y congelar
 
@@ -133,7 +133,9 @@ registry.codes.add("project.not_found", { message: "No encontramos ese proyecto.
 export const projectErrors = freezeRegistry(registry);
 ```
 
-Un registro congelado funciona en cualquier lugar donde se lee un registro: como la opción `registry`, en `merge` y en la lista que le pasas a `createErrorRegistry`.
+Un registro congelado funciona en cualquier lugar donde un registro solo se lee: como la opción `registry`, en `merge` y en la lista que le pasas a `createErrorRegistry`. No funciona en `setErrorRegistry`, que necesita uno al que se le pueda agregar.
+
+Esos lugares de solo lectura también aceptan un objeto que escribas tú, siempre que tenga la misma forma que un `ReadonlyErrorRegistry`: `get` y `values` en `codes`, `names` y `messages`, y `values` en `prefixes` y `patterns`. Así es como respaldarías un registro con algo que no sea la memoria. Las respuestas de tu objeto merecen menos confianza que las de los buckets integrados: un feedback sin un `message` no vacío hace que `createAppError` lance `TypeError`, porque la alternativa es un `AppError` que no tiene nada que decir.
 
 Todo lo que devuelve un bucket también está congelado. `values()` devuelve la misma lista congelada hasta que el bucket cambia, y sus entradas, objetos de feedback y expresiones regulares están todos congelados. Expande uno en un objeto nuevo cuando necesites una copia que puedas cambiar, y copia un patrón con `new RegExp(pattern.source, pattern.flags)`.
 

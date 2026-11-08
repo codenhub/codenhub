@@ -10,7 +10,7 @@ Each recipe here solves one problem from start to finish, using the pieces from 
 
 ## Classify HTTP responses
 
-`fetch` only rejects when the request could not be made at all. A response with status `404` or `500` resolves normally: the server answered, and `fetch` considers its job done. So `createAppError(response)` has nothing to recognize and returns an `"unknown"` error. Status codes need a mapping of their own.
+`fetch` rejects only when no response arrived. A response with status `404` or `500` resolves normally: the server answered, and `fetch` considers its job done. So `createAppError(response)` has nothing to recognize and returns an `"unknown"` error. Status codes need a mapping of their own.
 
 Pass the status as the `code` and classify it against the HTTP preset. Keep that preset out of the global registry: status codes are short numbers that could collide with other services' codes, and they only mean something for responses.
 
@@ -35,11 +35,13 @@ export async function getJson<T>(url: string): Promise<Result<T>> {
 }
 ```
 
-`fetch` itself rejects only when no response arrived, such as a network failure, a CORS block, or an abort, and the request may still have reached the server. Any response, `404` and `500` included, resolves, so the status check is yours.
+No response can mean a network failure, a CORS block, or an abort, and in each of those the request may still have reached the server. Every response that did arrive resolves, so the status check is yours.
 
 The body is left out on purpose: it ends up on `originalError`, and from there in your error tracker, so add it as `body` only when it is safe to log. Never pass it as `cause`: `createAppError` looks inside `cause`, and a `code` in the body could then win over the status. A status the preset does not map, such as `418`, resolves to the fallback message. [Presets](presets.md#http) lists what it maps. To word a status for one endpoint, such as a `401` from a sign-in form, build a registry from the preset and add your own: `createErrorRegistry([httpErrorRegistry])`, then `.codes.add("401", …)`.
 
 When the server is your own and sends `{ error: error.toJSON() }`, rebuild its error instead: `appErrorFromJSON(body.error)`. When the whole body is the serialized error, pass `appErrorFromJSON(body)`. See [The AppError](app-error.md#sending-an-error-across-a-boundary).
+
+Pick one of the two per endpoint, not both. `appErrorFromJSON` cannot tell you whether it recognized the shape: a value it does not recognize is classified as raw input and lands on `originalError` as it is, which is the very thing the status-only call above keeps out of your tracker. Use `appErrorFromJSON` for endpoints that always send a serialized error, and the status for everything else.
 
 ## Handle Supabase calls
 
@@ -69,12 +71,13 @@ Database errors work the same way: `supabase.from("projects").insert(row)` retur
 
 ## Raise your own errors
 
-An error you raise with a code is only as good as its registration. `err({ code: "project.name_mising" })`, with a typo or a mapping nobody added, is an `"unknown"` error whose `code` is `null`, and a check for `error.code === "project.name_missing"` never fires. Nothing warns you. Spot the typo? Neither will the code review.
+An error you raise with a code is only as good as its registration. `err({ code: "project.name_mising" })`, with a typo or a mapping nobody added, is an `"unknown"` error whose `code` is `null`, and a check for `error.code === "project.name_missing"` never fires. Nothing warns you, and a one-letter typo sails straight through code review.
 
 Keep your codes and their feedback in one object, register it from there, and raise errors through a function that only accepts its keys. A typo is then a type error, and every code you can raise is registered:
 
 ```ts
-import { err, getErrorRegistry, type ErrorFeedback } from "@codenhub/error";
+// src/project-errors.ts
+import { err, type ErrorFeedback } from "@codenhub/error";
 
 export const projectErrors = {
   "project.name_missing": { message: "Give the project a name, then save again.", source: "my-app.projects" },
@@ -83,12 +86,10 @@ export const projectErrors = {
 
 export type ProjectErrorCode = keyof typeof projectErrors;
 
-getErrorRegistry().codes.addList(Object.entries(projectErrors));
-
 export const projectError = (code: ProjectErrorCode, details?: Record<string, unknown>) => err({ code }, { details });
 ```
 
-Then `projectError("project.name_missing", { field: "name" })` reads like what it is, and `error.code` can be compared with a `ProjectErrorCode`.
+Register the object in the `setUpErrors` function from [Getting started](getting-started.md#2-create-one-module-that-configures-errors), with `registry.codes.addList(Object.entries(projectErrors))`. Then `projectError("project.name_missing", { field: "name" })` reads like what it is, and `error.code` can be compared with a `ProjectErrorCode`.
 
 When codes are registered in more than one place, check them in a test instead; see [Set up errors in tests](#set-up-errors-in-tests).
 
@@ -138,6 +139,14 @@ import { browserErrorNames, browserErrorPatterns } from "@codenhub/error/registr
 const browserKeys = new Set([...Object.values(browserErrorNames).map((feedback) => feedback.messageKey), ...browserErrorPatterns.map(([, feedback]) => feedback.messageKey)]);
 ```
 
+An `"unknown"` error has no key: nothing matched, so nothing named it. Neither does a mapping you registered without one. Translate those through the message you pass in, so the most common failure is not the one left in English:
+
+```ts
+import { createAppError, DEFAULT_APP_ERROR_MESSAGE } from "@codenhub/error";
+
+const error = createAppError(caught, { fallbackMessage: translate("error.unexpected") ?? DEFAULT_APP_ERROR_MESSAGE });
+```
+
 ErrorKit does not ship translations. The keys are the contract; the words are yours.
 
 ## Report to an error tracker
@@ -179,31 +188,33 @@ Here `signal` must come from an `AbortController` this code owns. Checking `sign
 
 ## Set up errors in tests
 
-The global registry is shared by every test in the same file. Replace it in a setup hook so each test starts from the same mappings:
+The global registry is shared by every test in the same file. Replace it in a setup hook so each test starts from the same mappings, then run your setup again on the fresh one:
 
 ```ts
 import { createErrorRegistry, setErrorRegistry } from "@codenhub/error";
-import { supabaseErrorRegistry } from "@codenhub/error/registries/supabase";
 import { beforeEach } from "vitest";
 
+import { setUpErrors } from "../src/errors";
+
 beforeEach(() => {
-  setErrorRegistry(createErrorRegistry([supabaseErrorRegistry]));
+  setErrorRegistry(createErrorRegistry());
+  setUpErrors();
 });
 ```
 
+The second line is the one people forget. A new registry starts empty, so without it every code your application registers resolves to `"unknown"`, and tests that pass in the browser fail in the test runner for no visible reason.
+
 Assert on `code`, `messageKey`, or `type` rather than on `message`. Messages are written for people and get reworded; codes and keys are the stable part. A test that breaks because someone fixed a comma is a test people learn to ignore.
 
-To catch a code your application raises but never registered, list them and check each one against the registry your application builds at startup:
+To catch a code your application raises but never registered, check each one against the registry your setup builds. With the hook above in place, the codes from [Raise your own errors](#raise-your-own-errors) are one `Object.keys` away:
 
 ```ts
 import { getErrorRegistry } from "@codenhub/error";
 import { expect, it } from "vitest";
 
-import { RAISED_CODES } from "../src/errors";
-import { setUpErrors } from "../src/setup-errors";
+import { projectErrors } from "../src/project-errors";
 
-it.each(RAISED_CODES)("registers %s", (code) => {
-  setUpErrors();
+it.each(Object.keys(projectErrors))("registers %s", (code) => {
   expect(getErrorRegistry().codes.get(code)).toBeDefined();
 });
 ```

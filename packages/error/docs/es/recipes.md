@@ -2,7 +2,7 @@
 title: Recetas
 description: Ejemplos completos para fetch y los códigos de estado HTTP, llamadas a Supabase, tus propios códigos de error, reintentos seguros, traducciones, reporte de errores y pruebas.
 order: 7
-source: 62f3b3080e7bab16f71a7232436d7ca36492fd90
+source: a90c460d0ce1901873944917bbfaba9f4f5205df
 ---
 
 # Recetas
@@ -11,7 +11,7 @@ Cada receta resuelve un problema de principio a fin, con las piezas de las pági
 
 ## Clasificar respuestas HTTP
 
-`fetch` solo se rechaza cuando la solicitud no se pudo hacer en absoluto. Una respuesta con estado `404` o `500` se resuelve con normalidad: el servidor respondió, y `fetch` da su trabajo por terminado. Así que `createAppError(response)` no tiene nada que reconocer y devuelve un error `"unknown"`. Los códigos de estado necesitan un mapeo propio.
+`fetch` solo se rechaza cuando no llegó ninguna respuesta. Una respuesta con estado `404` o `500` se resuelve con normalidad: el servidor respondió, y `fetch` da su trabajo por terminado. Así que `createAppError(response)` no tiene nada que reconocer y devuelve un error `"unknown"`. Los códigos de estado necesitan un mapeo propio.
 
 Pasa el estado como `code` y clasifícalo contra el preset de HTTP. Mantén ese preset fuera del registro global: los códigos de estado son números cortos que podrían chocar con los códigos de otros servicios, y solo significan algo para las respuestas.
 
@@ -36,11 +36,13 @@ export async function getJson<T>(url: string): Promise<Result<T>> {
 }
 ```
 
-`fetch` en sí solo se rechaza cuando no llegó ninguna respuesta, como en un fallo de red, un bloqueo de CORS o una cancelación, y la solicitud igual pudo haber llegado al servidor. Cualquier respuesta, incluidas `404` y `500`, se resuelve, así que revisar el estado te toca a ti.
+Que no llegue ninguna respuesta puede deberse a un fallo de red, un bloqueo de CORS o una cancelación, y en cualquiera de esos casos la solicitud igual pudo haber llegado al servidor. Toda respuesta que sí llegó se resuelve, así que revisar el estado te toca a ti.
 
 El cuerpo queda fuera a propósito: terminaría en `originalError` y, de ahí, en tu tracker de errores, así que agrégalo como `body` solo cuando sea seguro registrarlo. Nunca lo pases como `cause`: `createAppError` busca dentro de `cause`, y un `code` en el cuerpo podría entonces ganarle al estado. Un estado que el preset no mapea, como `418`, se resuelve con el mensaje de respaldo. [Presets](presets.md#http) enumera lo que mapea. Para redactar un estado en un endpoint concreto, como un `401` de un formulario de inicio de sesión, crea un registro a partir del preset y agrega el tuyo: `createErrorRegistry([httpErrorRegistry])`, y después `.codes.add("401", …)`.
 
 Cuando el servidor es tuyo y envía `{ error: error.toJSON() }`, reconstruye su error: `appErrorFromJSON(body.error)`. Cuando todo el cuerpo es el error serializado, pasa `appErrorFromJSON(body)`. Consulta [El AppError](app-error.md#enviar-un-error-a-otro-entorno).
+
+Elige una de las dos por endpoint, no ambas. `appErrorFromJSON` no puede decirte si reconoció la forma: un valor que no reconoce se clasifica como entrada cruda y queda tal cual en `originalError`, que es justo lo que la llamada de arriba, solo con el estado, mantiene fuera de tu tracker. Usa `appErrorFromJSON` para los endpoints que siempre envían un error serializado, y el estado para todo lo demás.
 
 ## Manejar llamadas a Supabase
 
@@ -70,12 +72,13 @@ Los errores de base de datos funcionan igual: `supabase.from("projects").insert(
 
 ## Crear tus propios errores
 
-Un error que levantas con un código vale lo que vale su registro. `err({ code: "project.name_mising" })`, con una errata o con un mapeo que nadie agregó, es un error `"unknown"` cuyo `code` es `null`, y una comprobación de `error.code === "project.name_missing"` nunca se cumple. Nada te avisa. ¿Viste la errata? El code review tampoco la va a ver.
+Un error que lanzas con un código vale lo que vale su registro. `err({ code: "project.name_mising" })`, con una errata o con un mapeo que nadie agregó, es un error `"unknown"` cuyo `code` es `null`, y una comprobación de `error.code === "project.name_missing"` nunca se cumple. Nada te avisa, y una errata de una sola letra pasa el code review sin que nadie la note.
 
-Guarda tus códigos y su feedback en un solo objeto, regístralos desde ahí y levanta los errores con una función que solo acepte sus claves. Así una errata es un error de tipos, y cada código que puedes levantar está registrado:
+Guarda tus códigos y su feedback en un solo objeto, regístralos desde ahí y lanza los errores con una función que solo acepte sus claves. Así una errata es un error de tipos, y cada código que puedes lanzar está registrado:
 
 ```ts
-import { err, getErrorRegistry, type ErrorFeedback } from "@codenhub/error";
+// src/project-errors.ts
+import { err, type ErrorFeedback } from "@codenhub/error";
 
 export const projectErrors = {
   "project.name_missing": { message: "Ponle un nombre al proyecto y vuelve a guardar.", source: "my-app.projects" },
@@ -84,12 +87,10 @@ export const projectErrors = {
 
 export type ProjectErrorCode = keyof typeof projectErrors;
 
-getErrorRegistry().codes.addList(Object.entries(projectErrors));
-
 export const projectError = (code: ProjectErrorCode, details?: Record<string, unknown>) => err({ code }, { details });
 ```
 
-Después, `projectError("project.name_missing", { field: "name" })` se lee como lo que es, y `error.code` se puede comparar con un `ProjectErrorCode`.
+Registra el objeto en la función `setUpErrors` de [Primeros pasos](getting-started.md#2-crea-un-módulo-que-configure-los-errores), con `registry.codes.addList(Object.entries(projectErrors))`. Después, `projectError("project.name_missing", { field: "name" })` se lee como lo que es, y `error.code` se puede comparar con un `ProjectErrorCode`.
 
 Cuando los códigos se registran en más de un lugar, compruébalos en una prueba; consulta [Configurar los errores en las pruebas](#configurar-los-errores-en-las-pruebas).
 
@@ -139,6 +140,14 @@ import { browserErrorNames, browserErrorPatterns } from "@codenhub/error/registr
 const browserKeys = new Set([...Object.values(browserErrorNames).map((feedback) => feedback.messageKey), ...browserErrorPatterns.map(([, feedback]) => feedback.messageKey)]);
 ```
 
+Un error `"unknown"` no tiene clave: nada coincidió, así que nada lo nombró. Tampoco la tiene un mapeo que registraste sin una. Traduce esos a través del mensaje que pasas, para que el fallo más común no sea el que se queda en inglés:
+
+```ts
+import { createAppError, DEFAULT_APP_ERROR_MESSAGE } from "@codenhub/error";
+
+const error = createAppError(caught, { fallbackMessage: translate("error.unexpected") ?? DEFAULT_APP_ERROR_MESSAGE });
+```
+
 ErrorKit no trae traducciones. Las claves son el contrato; las palabras las pones tú.
 
 ## Reportar a un tracker de errores
@@ -180,31 +189,33 @@ Aquí `signal` tiene que venir de un `AbortController` que sea de este código. 
 
 ## Configurar los errores en las pruebas
 
-El registro global lo comparten todas las pruebas del mismo archivo. Reemplázalo en un hook de setup para que cada prueba empiece con los mismos mapeos:
+El registro global lo comparten todas las pruebas del mismo archivo. Reemplázalo en un hook de setup para que cada prueba empiece con los mismos mapeos, y después vuelve a ejecutar tu configuración sobre el registro nuevo:
 
 ```ts
 import { createErrorRegistry, setErrorRegistry } from "@codenhub/error";
-import { supabaseErrorRegistry } from "@codenhub/error/registries/supabase";
 import { beforeEach } from "vitest";
 
+import { setUpErrors } from "../src/errors";
+
 beforeEach(() => {
-  setErrorRegistry(createErrorRegistry([supabaseErrorRegistry]));
+  setErrorRegistry(createErrorRegistry());
+  setUpErrors();
 });
 ```
 
+La segunda línea es la que la gente olvida. Un registro nuevo empieza vacío, así que sin ella cada código que registra tu aplicación se resuelve como `"unknown"`, y las pruebas que pasan en el navegador fallan en el test runner sin ningún motivo visible.
+
 Haz las aserciones sobre `code`, `messageKey` o `type`, no sobre `message`. Los mensajes están escritos para personas y se reescriben; los códigos y las claves son la parte estable. Una prueba que se rompe porque alguien corrigió una coma es una prueba que todo el mundo aprende a ignorar.
 
-Para detectar un código que tu aplicación levanta pero nunca registró, haz una lista y compara cada uno con el registro que arma tu aplicación al arrancar:
+Para detectar un código que tu aplicación lanza pero nunca registró, compara cada uno con el registro que arma tu configuración. Con el hook de arriba en su lugar, los códigos de [Crear tus propios errores](#crear-tus-propios-errores) están a un `Object.keys` de distancia:
 
 ```ts
 import { getErrorRegistry } from "@codenhub/error";
 import { expect, it } from "vitest";
 
-import { RAISED_CODES } from "../src/errors";
-import { setUpErrors } from "../src/setup-errors";
+import { projectErrors } from "../src/project-errors";
 
-it.each(RAISED_CODES)("registra %s", (code) => {
-  setUpErrors();
+it.each(Object.keys(projectErrors))("registra %s", (code) => {
   expect(getErrorRegistry().codes.get(code)).toBeDefined();
 });
 ```

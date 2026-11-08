@@ -34,3 +34,4 @@ code into a `Result`.
 - [Caveats and limitations](docs/caveats.md): Surprising behavior and the
   workaround for each.
 - [API reference](docs/reference/index.md): Every export with its signature.
+- [Changelog](docs/changelog/index.md): Changes in each release.
