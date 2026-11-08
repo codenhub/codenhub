@@ -685,6 +685,31 @@ describe("promise outcome dismissible", () => {
   });
 });
 
+describe("configure() with undefined", () => {
+  it("clears the margin of a stack already showing", () => {
+    const toaster = createToaster({ margin: "40px" });
+    toaster("Hello", { autoDismiss: false });
+    const stack = document.body.querySelector<HTMLElement>(".toaster-toast-stack")!;
+    expect(stack.style.getPropertyValue("--toast-margin-x")).toBe("40px");
+
+    toaster.configure({ margin: undefined });
+    expect(stack.style.getPropertyValue("--toast-margin-x")).toBe("");
+    expect(stack.style.getPropertyValue("--toast-margin-y")).toBe("");
+    toaster.destroy();
+  });
+
+  it("resets maxVisible on a stack already showing", () => {
+    const toaster = createToaster({ maxVisible: 1, autoDismiss: false });
+    toaster.loading("One");
+    toaster.loading("Two");
+    expect(document.body.querySelectorAll(".toaster-toast")).toHaveLength(1);
+
+    toaster.configure({ maxVisible: undefined });
+    expect(document.body.querySelectorAll(".toaster-toast")).toHaveLength(2);
+    toaster.destroy();
+  });
+});
+
 describe("configure() without a document", () => {
   it("stores the settings without throwing", () => {
     const originalDoc = globalThis.document;

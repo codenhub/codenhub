@@ -234,7 +234,9 @@ class ToastManager {
       return;
     }
 
-    if (config.maxVisible !== undefined) {
+    // An option given as `undefined` resets to its default, as it does in
+    // the constructor, so the stacks already showing reset too.
+    if ("maxVisible" in config) {
       reconcileCapacity({ parent, instanceId: this.instanceId, maxVisible: this.resolved.maxVisible });
     }
 
@@ -242,8 +244,8 @@ class ToastManager {
       applyInstanceRegionLabel({ parent, instanceId: this.instanceId, label: this.resolved.regionLabel });
     }
 
-    if (config.margin !== undefined) {
-      applyInstanceMargin({ parent, instanceId: this.instanceId, margin: config.margin });
+    if ("margin" in config) {
+      applyInstanceMargin({ parent, instanceId: this.instanceId, margin: this.resolved.margin ?? "" });
     }
   }
 
