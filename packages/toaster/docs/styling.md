@@ -25,6 +25,17 @@ The import works with any bundler that handles CSS imports, such as Vite, webpac
 Almost every rule is scoped to the package's own elements, but a few are page-wide, and it's better to hear about them here than from a confused teammate:
 
 - **`color-scheme` on the root.** The stylesheet sets `color-scheme: light dark` on `:root`, so the browser draws built-in controls such as scrollbars and form fields in dark mode when the operating system prefers dark. The `dark`, `light`, `theme-dark`, and `theme-light` classes and the `data-theme` attribute set it too, on whatever element carries them; see [Dark mode](#dark-mode). If your page sets its own `color-scheme`, yours applies wherever your rule is more specific or loads later.
+
+  The rule is there because the built-in colors are `light-dark()` pairs, which follow `color-scheme`: without it, standalone toasts would stay light on a dark system. If your page only has a light design, the side effect is dark scrollbars and form fields for visitors whose system prefers dark. Opt out with the `light` class on `<html>`, or with your own rule, loaded after this stylesheet and outside any `@layer`, since the toaster's rule isn't in one either:
+
+  ```css
+  :root {
+    color-scheme: light;
+  }
+  ```
+
+  Toasts follow along and stay light too, so nothing on the page changes theme behind your back.
+
 - **Presentation classes.** It defines `.solid`, `.soft`, `.ghost`, `.edged`, and `.edgeless` globally, in the CSS `@layer components`. They only set the `--ui-fill`, `--ui-fg-on-fill`, and `--ui-border` custom properties. An element of your own that happens to share a class name won't change by itself, but those properties are inherited, and toasts and `@codenhub/styles` components read them, so anything of that kind inside it picks them up. If `.solid` already means something else in your app, rename yours.
 
 ## Where the colors come from
@@ -39,7 +50,7 @@ Without `@codenhub/styles`, the stylesheet uses built-in colors: a neutral surfa
 
 [`@codenhub/styles`](https://www.npmjs.com/package/@codenhub/styles) is an optional design system. When its stylesheet, version 0.3.0 or newer, is on the page, toasts and dialogs build their colors from its theme instead:
 
-- **Intent colors**: toasts read `--color-success`, `--color-destructive` (for errors), `--color-warning`, and `--color-info`, and dialog buttons read `--color-primary`, so changing your theme's colors changes both.
+- **Intent colors**: toasts read `--color-success`, `--color-destructive` (for errors), `--color-warning`, and `--color-info`, and dialog buttons read `--color-primary`, `--color-accent` (for `type: "secondary"`), `--color-success`, and `--color-destructive`, so changing your theme's colors changes both.
 - **Presentation**: how much color fills the background and the border follows `--ui-fill` and `--ui-border`.
 - **Look and feel**: a theme's corner radius, border width, shadow, clipping, and elevation (`--ui-radius`, `--ui-border-width`, `--ui-surface-shadow`, `--ui-clip`, `--ui-elevation`) apply to toasts and dialogs too, so a glassy or neobrutalist theme reaches them as well.
 

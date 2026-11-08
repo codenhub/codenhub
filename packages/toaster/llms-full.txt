@@ -76,7 +76,7 @@ Every app eventually needs to say two kinds of things to the person using it. So
 What it saves you from writing by hand:
 
 - **The stack.** Toasts line up at one of six screen positions. Extra ones wait in a queue, and the oldest one that isn't busy leaves to make room. A toast stays put while someone is hovering over it, has focus inside it, or is waiting on a loading spinner.
-- **The timers.** By default, each toast closes after a set time. The countdown pauses while the pointer is on it, while it has focus, and while the browser tab is in the background, so time nobody could spend reading doesn't count.
+- **The timers.** By default, each toast closes after a set time, except a loading one, which waits for its result. The countdown pauses while the pointer is on it, while it has focus, and while the browser tab is in the background, so time nobody could spend reading doesn't count.
 - **The async dance.** `toast.promise()` shows a spinner while your work runs and turns into a success or error toast when it's done. Dialogs return something you can `await`, so `if (await dialog.confirm("Delete?"))` really is `true` or `false`.
 - **The accessibility plumbing.** Screen readers hear every toast, with [one catch while a modal dialog is open](docs/dialogs.md#toasts-while-a-dialog-is-open). Dialogs use the browser's own `<dialog>` element, so focus trapping, <kbd>Escape</kbd>, and returning focus afterward all come from the platform.
 - **The security homework.** Strings are always shown as plain text and never parsed as HTML. The package injects no `<style>` element, so a strict Content Security Policy needs no exceptions for it, as long as the stylesheet itself [loads as a file](docs/styling.md#content-security-policy).
@@ -170,6 +170,18 @@ Warnings and errors interrupt because they're usually the thing the person needs
 
 A toast closes itself after 4 seconds. If you'd rather it stayed, read [Timers](#timers-and-auto-dismiss) below.
 
+### Picking the look yourself
+
+The shortcuts are the quick way to give a toast a meaning, but `toast()` takes the same meaning as an option. `type` sets the icon, the color, and how urgently screen readers read it, exactly as the matching shortcut would:
+
+```ts
+toast("Storage almost full", { type: "warning" }); // looks and sounds like toast.warning()
+toast.success("Note shared", { icon: null }); // a success toast with no icon
+toast("Sync paused", { icon: "info" }); // a neutral toast with the info icon
+```
+
+`icon` picks one of `"success"`, `"error"`, `"warning"`, `"info"`, or `"loader"`, or `null` for none, whatever the type. The shortcuts always use their own type, so `toast.success("Saved", { type: "error" })` is still a success toast: if the meaning comes from data, call `toast()` with `type`.
+
 ### Two ways to call it
 
 `toast()`, `success()`, `error()`, `warning()`, `info()`, and `loading()` all take either a message plus an optional options object, or a single options object:
@@ -237,7 +249,7 @@ try {
 }
 ```
 
-Changing `type` swaps the spinner for the matching icon and color. Leaving the loading state also starts the timer the loading toast never had, so the result closes after its `duration` on its own. The `autoDismiss: true` above just says so out loud; pass `autoDismiss: false` instead if the result should stay until someone dismisses it.
+Changing `type` swaps the spinner for the matching icon and color. Leaving the loading state also starts the timer the loading toast never had, with the same settings the matching shortcut, such as `toast.success()`, would get: a `"success"` result closes after the instance's `semantic` duration, or its plain `duration` when the `semantic` group doesn't set one, and stays open if the instance says `autoDismiss: false`. The `autoDismiss: true` above makes this result close either way; pass `autoDismiss: false` instead if it should stay until someone dismisses it. [Per-kind defaults](docs/instances.md#per-kind-defaults) explains the `semantic` group.
 
 `toast.loading()` takes `title`, `message`, `description`, `position`, `dismissible`, `className`, and `margin`. It has no `duration` or `autoDismiss` option, since it never closes on its own; set them in the `update()` that finishes it.
 
@@ -262,7 +274,7 @@ The rejection reaches `error` typed as `unknown`, because JavaScript lets a prom
 What each option takes:
 
 - **`loading`**: a string, or the same options object `toast.loading()` takes.
-- **`success`** and **`error`**: a string, a toast options object, or a function that receives the result (or the error) and returns either one. Return an object when you want a title, description, or action:
+- **`success`** and **`error`**: a string, a toast options object, or a function that receives the result (or the error) and returns either one. Return an object when you want a title, description, or action. The result is the loading toast changed in place, so it stays in its stack and gets its type from the outcome: the object takes every toast option except `position`, `margin`, `role`, and `type`.
 
 ```ts
 await toast.promise(syncNotes(), {
@@ -315,8 +327,8 @@ cancelButton.addEventListener("click", () => upload.dismiss());
 - `type`: `"success"`, `"error"`, `"warning"`, `"info"`, or `"default"`. Changes the color, the icon, and how urgently screen readers announce it.
 - `icon`: `"success"`, `"error"`, `"warning"`, `"info"`, or `"loader"` to pick a different icon, or `null` for none. When you change `type` without `icon`, the icon follows the type.
 - `content`: replaces everything with custom content, as described in [Custom content](#custom-content). When given, `message` and `icon` in the same call are ignored.
-- `duration`, `autoDismiss`, `dismissible`: change timing and the close button.
-- `className`: adds more CSS classes.
+- `duration`, `autoDismiss`, `dismissible`: change timing and the close button. A new `duration` restarts the countdown right away, from the full new value.
+- `className`: replaces the classes the toast was called with. The toast's own classes and the toaster's `className` stay, so pass every per-toast class you still want, not just the new one.
 
 Some details that matter in practice:
 
@@ -324,8 +336,9 @@ Some details that matter in practice:
 - **A settled toast ignores updates.** Once the toast has fully closed, `update()` does nothing and doesn't throw. Calling it late is harmless.
 - **Focus stays where it was.** If someone has focus on the action button when an update changes only the text, focus stays on the button. If the update replaces the action itself, focus moves to the new button.
 - **Changed text is announced again**, so a screen reader hears both "Uploading…" and "Attachment uploaded".
+- **A message replaces a lone title.** When a toast has only a `title`, an update with only a `message` takes its place: `toast({ title: "Upload" }).update({ message: "50%" })` shows just "50%". A title-only toast shows its title where the message goes, so a new message takes that spot. Pass `title` in the same update to keep both.
 
-`update()` throws if `duration` isn't a finite number of 0 or more, if `type` isn't one of the five above, or if `content` is empty.
+`update()` throws if `duration` isn't a number from 0 to 2147483647, if `type` isn't one of the five above, or if `content` is empty.
 
 ### `dismiss()`
 
@@ -407,7 +420,7 @@ toast("Reminder set", { duration: 8000 });
 toast("Read this carefully", { autoDismiss: false });
 ```
 
-`autoDismiss: false` keeps a toast open until it's dismissed. `duration` must be a finite number of 0 or more, or the call throws.
+`autoDismiss: false` keeps a toast open until it's dismissed. `duration` must be a number from 0 to 2147483647, or the call throws. That ceiling is about 24.8 days, the longest a browser timer can wait; a longer one would fire at once, so a toast meant to stay for a month would vanish on the spot. For "never", `autoDismiss: false` is the honest way to say it.
 
 The countdown pauses while the pointer is over the toast, while focus is inside it, and while the browser tab is in the background. When it resumes, it continues with the time that was left; it doesn't start over. The clock also doesn't start until the entrance animation has finished.
 
@@ -468,16 +481,16 @@ What custom content can't be:
 
 Toasts check their input when you call them, so a mistake fails right where you made it, not some time later in the browser. Every error is a plain `Error`:
 
-| Message starts with                              | Cause                                         | Fix                                                                             |
-| ------------------------------------------------ | --------------------------------------------- | ------------------------------------------------------------------------------- |
-| `Toast requires a non-empty message or content.` | No `message` or `title`, or both are empty.   | Give the toast some text.                                                       |
-| `Toast duration must be a finite number…`        | `duration` is negative, `NaN`, or `Infinity`. | Use 0 or more. For "never", use `autoDismiss: false`.                           |
-| `Invalid toast position: …`                      | A position not in the list of six.            | Use one of the six [positions](#positions-and-margins).                         |
-| `Invalid toast role: …`                          | `role` is not `"status"` or `"alert"`.        | Use one of those two.                                                           |
-| `Invalid semantic toast type: …`                 | `type` isn't a known severity.                | Use `"success"`, `"error"`, `"warning"`, `"info"`, `"default"`.                 |
-| `Toast content …`                                | Empty or unsupported custom content.          | See [Custom content](#custom-content).                                          |
-| `DOM document is not available…`                 | Showing a toast where there's no `document`.  | Show toasts only in the browser; see [SSR](docs/instances.md#server-side-rendering). |
-| `This toaster instance has been destroyed…`      | Calling a toaster after `destroy()`.          | Create a new one with `createToaster()`.                                        |
+| Message starts with                              | Cause                                                          | Fix                                                                             |
+| ------------------------------------------------ | -------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `Toast requires a non-empty message or content.` | No `message` or `title`, or both are empty.                    | Give the toast some text.                                                       |
+| `Toast duration must be a number from 0…`        | `duration` is negative, `NaN`, `Infinity`, or over 2147483647. | Use 0 to 2147483647. For "never", use `autoDismiss: false`.                     |
+| `Invalid toast position: …`                      | A position not in the list of six.                             | Use one of the six [positions](#positions-and-margins).                         |
+| `Invalid toast role: …`                          | `role` is not `"status"` or `"alert"`.                         | Use one of those two.                                                           |
+| `Invalid semantic toast type: …`                 | `type` isn't a known severity.                                 | Use `"success"`, `"error"`, `"warning"`, `"info"`, `"default"`.                 |
+| `Toast content …`                                | Empty or unsupported custom content.                           | See [Custom content](#custom-content).                                          |
+| `DOM document is not available…`                 | Showing a toast where there's no `document`.                   | Show toasts only in the browser; see [SSR](docs/instances.md#server-side-rendering). |
+| `This toaster instance has been destroyed…`      | Calling a toaster after `destroy()`.                           | Create a new one with `createToaster()`.                                        |
 
 ## Next
 
@@ -614,6 +627,8 @@ Dismissing gives each kind its cancel value: `false` for confirm, `null` for pro
 
 A dialogs instance shows one dialog at a time. Calling `confirm()` while another dialog is open doesn't stack a second dialog on top: the new one waits in a queue, with state `"queued"`, and opens when the current one closes. Dismissing a queued dialog removes it from the queue with its cancel value; it never appears.
 
+When a dialog opens, focus goes to its main button: the confirm button, or the OK button of an `alert()`. A prompt focuses its text field instead, so typing can start right away. A `confirm()` with `type: "error"` focuses the **cancel** button, so a reflexive <kbd>Enter</kbd> on a red "Delete" cancels instead of deleting.
+
 When the last dialog in a sequence closes, focus goes back to the element that had it before the first one opened.
 
 If the browser refuses to open a dialog, which is when `showModal()` throws, that dialog's handle rejects with the browser's error, and the next queued dialog still gets its turn. Wrap the `await` in `try`/`catch` if your page can get into a state where that happens.
@@ -738,7 +753,7 @@ sidebarToaster.success("Folder created");
 | `container`   | `document.body`                 | The element the toast stacks are added to. Can't be changed later.                                                                                   |
 | `position`    | `"top-right"`                   | Where toasts appear when a call doesn't say. One of the six [positions](docs/toasts.md#positions-and-margins).                                            |
 | `maxVisible`  | `5`                             | How many toasts each position shows at once before the rest [queue](docs/toasts.md#how-the-stack-fills-up). A whole number of 1 or more.                  |
-| `duration`    | `4000`                          | Milliseconds before a toast closes itself. 0 or more.                                                                                                |
+| `duration`    | `4000`                          | Milliseconds before a toast closes itself. From 0 to 2147483647.                                                                                     |
 | `autoDismiss` | `true`                          | Whether toasts close themselves after `duration`.                                                                                                    |
 | `dismissible` | `false`                         | Whether toasts get a close button.                                                                                                                   |
 | `margin`      | 1rem, or the device's safe area | Distance from the edge, as a CSS length or `{ x, y }`. See [margins](docs/toasts.md#positions-and-margins).                                               |
@@ -754,9 +769,9 @@ The `toast` you import is a toaster created with no options, so these defaults a
 
 Bad values throw right away, when the toaster is created:
 
-- `Toaster duration must be a finite number greater than or equal to 0.`
+- `Toaster duration must be a number from 0 to 2147483647.`
 - `Toaster maxVisible must be a positive integer.` A `maxVisible` of 0, 2.5, or -1 all throw.
-- `Toaster nested duration must be a finite number greater than or equal to 0.` The same rule for `semantic.duration` and `custom.duration`.
+- `Toaster nested duration must be a number from 0 to 2147483647.` The same rule for `semantic.duration` and `custom.duration`.
 - `Invalid toast position: …` For `position` or any per-kind `position`.
 
 ## Per-kind defaults
@@ -810,6 +825,8 @@ Most changes apply to toasts shown afterwards. Three apply right away to toasts 
 - **`margin`**: existing stacks move.
 - **`labels.notifications`**: existing stacks are renamed.
 
+An option passed as `undefined` goes back to its default, the same as leaving it out of `createToaster()`, and that reaches the screen too: `configure({ margin: undefined })` puts existing stacks back at the default margin, and `configure({ maxVisible: undefined })` lets 5 show again. So `configure({ margin: compact ? "8px" : undefined })` does what it reads like.
+
 `configure()` validates like `createToaster()` does and throws the same errors. Passing `container` throws `Toaster container cannot be changed after construction.` To move toasts somewhere else, create a new toaster there and destroy the old one.
 
 ## Cleaning up with `destroy()`
@@ -857,7 +874,7 @@ Both stacks sit in the same corner and overlap. Give separate toasters separate 
 
 ## Server-side rendering
 
-Toaster can be imported anywhere. Creating a toaster, including the ready-made `toast`, doesn't touch the page, so it's safe while rendering on the server. Showing something needs a page, so a toast or dialog call made where there's no `document` throws:
+Toaster can be imported anywhere. Creating a toaster, including the ready-made `toast`, doesn't touch the page, so it's safe while rendering on the server. So is `configure()`: without a page it stores the settings, and they apply once toasts render in the browser. Showing something needs a page, so a toast or dialog call made where there's no `document` throws:
 
 - `DOM document is not available. Toaster operations require a browser environment.`
 - `DOM document is not available. Dialogs require a browser environment.`
@@ -874,7 +891,7 @@ export function SaveButton({ onSave }: { onSave: () => Promise<void> }) {
     try {
       await toast.promise(onSave(), { loading: "Saving…", success: "Saved", error: "Save failed" });
     } catch {
-      // The error toast already broke the news.
+      // toast.promise() already showed the error toast.
     }
   }
 
@@ -909,6 +926,17 @@ The import works with any bundler that handles CSS imports, such as Vite, webpac
 Almost every rule is scoped to the package's own elements, but a few are page-wide, and it's better to hear about them here than from a confused teammate:
 
 - **`color-scheme` on the root.** The stylesheet sets `color-scheme: light dark` on `:root`, so the browser draws built-in controls such as scrollbars and form fields in dark mode when the operating system prefers dark. The `dark`, `light`, `theme-dark`, and `theme-light` classes and the `data-theme` attribute set it too, on whatever element carries them; see [Dark mode](#dark-mode). If your page sets its own `color-scheme`, yours applies wherever your rule is more specific or loads later.
+
+  The rule is there because the built-in colors are `light-dark()` pairs, which follow `color-scheme`: without it, standalone toasts would stay light on a dark system. If your page only has a light design, the side effect is dark scrollbars and form fields for visitors whose system prefers dark. Opt out with the `light` class on `<html>`, or with your own rule, loaded after this stylesheet and outside any `@layer`, since the toaster's rule isn't in one either:
+
+  ```css
+  :root {
+    color-scheme: light;
+  }
+  ```
+
+  Toasts follow along and stay light too, so nothing on the page changes theme behind your back.
+
 - **Presentation classes.** It defines `.solid`, `.soft`, `.ghost`, `.edged`, and `.edgeless` globally, in the CSS `@layer components`. They only set the `--ui-fill`, `--ui-fg-on-fill`, and `--ui-border` custom properties. An element of your own that happens to share a class name won't change by itself, but those properties are inherited, and toasts and `@codenhub/styles` components read them, so anything of that kind inside it picks them up. If `.solid` already means something else in your app, rename yours.
 
 ## Where the colors come from
@@ -923,7 +951,7 @@ Without `@codenhub/styles`, the stylesheet uses built-in colors: a neutral surfa
 
 [`@codenhub/styles`](https://www.npmjs.com/package/@codenhub/styles) is an optional design system. When its stylesheet, version 0.3.0 or newer, is on the page, toasts and dialogs build their colors from its theme instead:
 
-- **Intent colors**: toasts read `--color-success`, `--color-destructive` (for errors), `--color-warning`, and `--color-info`, and dialog buttons read `--color-primary`, so changing your theme's colors changes both.
+- **Intent colors**: toasts read `--color-success`, `--color-destructive` (for errors), `--color-warning`, and `--color-info`, and dialog buttons read `--color-primary`, `--color-accent` (for `type: "secondary"`), `--color-success`, and `--color-destructive`, so changing your theme's colors changes both.
 - **Presentation**: how much color fills the background and the border follows `--ui-fill` and `--ui-border`.
 - **Look and feel**: a theme's corner radius, border width, shadow, clipping, and elevation (`--ui-radius`, `--ui-border-width`, `--ui-surface-shadow`, `--ui-clip`, `--ui-elevation`) apply to toasts and dialogs too, so a glassy or neobrutalist theme reaches them as well.
 
@@ -1127,11 +1155,17 @@ Two timing details explain behavior you might notice while testing:
 - **The first announcement is slightly delayed.** Screen readers often miss a live region that appears with its text already in it, because they only announce changes to regions they're already watching. So each region is added empty, and its first text arrives 100ms later, following the [W3C ARIA22 technique](https://www.w3.org/WAI/WCAG21/Techniques/aria/ARIA22.html).
 - **Announced text is cleared after 7 seconds**, so the hidden regions don't pile up old messages.
 
-The visible toast itself isn't a live region and has no `role` attribute. Tests that find toasts by `role="status"` or `aria-live` need another selector.
+The visible toast itself isn't a live region and has no `role` attribute. Tests that find toasts by `role="status"` or `aria-live` need another selector. Find them the way a screen reader user does, through the stack's landmark, described next:
+
+```ts
+// Playwright; Testing Library's getByRole works the same way.
+const notifications = page.getByRole("region", { name: "Notifications" }); // or your labels.notifications
+await expect(notifications.getByText("Note saved")).toBeVisible();
+```
 
 ### Finding the toasts
 
-Each stack is a landmark region named "Notifications". Screen reader users can jump to it from their landmarks list to reach a toast's buttons. Translate the name with the toaster's `labels`:
+Each stack is a landmark region named "Notifications". Screen reader users can jump to it from their landmarks list to reach a toast's buttons. A stack with no toasts leaves the list, so nobody lands in an empty region. Translate the name with the toaster's `labels`:
 
 ```ts
 import { createToaster } from "@codenhub/toaster";

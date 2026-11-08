@@ -38,6 +38,18 @@ Warnings and errors interrupt because they're usually the thing the person needs
 
 A toast closes itself after 4 seconds. If you'd rather it stayed, read [Timers](#timers-and-auto-dismiss) below.
 
+### Picking the look yourself
+
+The shortcuts are the quick way to give a toast a meaning, but `toast()` takes the same meaning as an option. `type` sets the icon, the color, and how urgently screen readers read it, exactly as the matching shortcut would:
+
+```ts
+toast("Storage almost full", { type: "warning" }); // looks and sounds like toast.warning()
+toast.success("Note shared", { icon: null }); // a success toast with no icon
+toast("Sync paused", { icon: "info" }); // a neutral toast with the info icon
+```
+
+`icon` picks one of `"success"`, `"error"`, `"warning"`, `"info"`, or `"loader"`, or `null` for none, whatever the type. The shortcuts always use their own type, so `toast.success("Saved", { type: "error" })` is still a success toast: if the meaning comes from data, call `toast()` with `type`.
+
 ### Two ways to call it
 
 `toast()`, `success()`, `error()`, `warning()`, `info()`, and `loading()` all take either a message plus an optional options object, or a single options object:
@@ -105,7 +117,7 @@ try {
 }
 ```
 
-Changing `type` swaps the spinner for the matching icon and color. Leaving the loading state also starts the timer the loading toast never had, so the result closes after its `duration` on its own. The `autoDismiss: true` above just says so out loud; pass `autoDismiss: false` instead if the result should stay until someone dismisses it.
+Changing `type` swaps the spinner for the matching icon and color. Leaving the loading state also starts the timer the loading toast never had, with the same settings the matching shortcut, such as `toast.success()`, would get: a `"success"` result closes after the instance's `semantic` duration, or its plain `duration` when the `semantic` group doesn't set one, and stays open if the instance says `autoDismiss: false`. The `autoDismiss: true` above makes this result close either way; pass `autoDismiss: false` instead if it should stay until someone dismisses it. [Per-kind defaults](instances.md#per-kind-defaults) explains the `semantic` group.
 
 `toast.loading()` takes `title`, `message`, `description`, `position`, `dismissible`, `className`, and `margin`. It has no `duration` or `autoDismiss` option, since it never closes on its own; set them in the `update()` that finishes it.
 
@@ -130,7 +142,7 @@ The rejection reaches `error` typed as `unknown`, because JavaScript lets a prom
 What each option takes:
 
 - **`loading`**: a string, or the same options object `toast.loading()` takes.
-- **`success`** and **`error`**: a string, a toast options object, or a function that receives the result (or the error) and returns either one. Return an object when you want a title, description, or action:
+- **`success`** and **`error`**: a string, a toast options object, or a function that receives the result (or the error) and returns either one. Return an object when you want a title, description, or action. The result is the loading toast changed in place, so it stays in its stack and gets its type from the outcome: the object takes every toast option except `position`, `margin`, `role`, and `type`.
 
 ```ts
 await toast.promise(syncNotes(), {
@@ -183,8 +195,8 @@ cancelButton.addEventListener("click", () => upload.dismiss());
 - `type`: `"success"`, `"error"`, `"warning"`, `"info"`, or `"default"`. Changes the color, the icon, and how urgently screen readers announce it.
 - `icon`: `"success"`, `"error"`, `"warning"`, `"info"`, or `"loader"` to pick a different icon, or `null` for none. When you change `type` without `icon`, the icon follows the type.
 - `content`: replaces everything with custom content, as described in [Custom content](#custom-content). When given, `message` and `icon` in the same call are ignored.
-- `duration`, `autoDismiss`, `dismissible`: change timing and the close button.
-- `className`: adds more CSS classes.
+- `duration`, `autoDismiss`, `dismissible`: change timing and the close button. A new `duration` restarts the countdown right away, from the full new value.
+- `className`: replaces the classes the toast was called with. The toast's own classes and the toaster's `className` stay, so pass every per-toast class you still want, not just the new one.
 
 Some details that matter in practice:
 
@@ -192,8 +204,9 @@ Some details that matter in practice:
 - **A settled toast ignores updates.** Once the toast has fully closed, `update()` does nothing and doesn't throw. Calling it late is harmless.
 - **Focus stays where it was.** If someone has focus on the action button when an update changes only the text, focus stays on the button. If the update replaces the action itself, focus moves to the new button.
 - **Changed text is announced again**, so a screen reader hears both "Uploading…" and "Attachment uploaded".
+- **A message replaces a lone title.** When a toast has only a `title`, an update with only a `message` takes its place: `toast({ title: "Upload" }).update({ message: "50%" })` shows just "50%". A title-only toast shows its title where the message goes, so a new message takes that spot. Pass `title` in the same update to keep both.
 
-`update()` throws if `duration` isn't a finite number of 0 or more, if `type` isn't one of the five above, or if `content` is empty.
+`update()` throws if `duration` isn't a number from 0 to 2147483647, if `type` isn't one of the five above, or if `content` is empty.
 
 ### `dismiss()`
 
@@ -275,7 +288,7 @@ toast("Reminder set", { duration: 8000 });
 toast("Read this carefully", { autoDismiss: false });
 ```
 
-`autoDismiss: false` keeps a toast open until it's dismissed. `duration` must be a finite number of 0 or more, or the call throws.
+`autoDismiss: false` keeps a toast open until it's dismissed. `duration` must be a number from 0 to 2147483647, or the call throws. That ceiling is about 24.8 days, the longest a browser timer can wait; a longer one would fire at once, so a toast meant to stay for a month would vanish on the spot. For "never", `autoDismiss: false` is the honest way to say it.
 
 The countdown pauses while the pointer is over the toast, while focus is inside it, and while the browser tab is in the background. When it resumes, it continues with the time that was left; it doesn't start over. The clock also doesn't start until the entrance animation has finished.
 
@@ -336,16 +349,16 @@ What custom content can't be:
 
 Toasts check their input when you call them, so a mistake fails right where you made it, not some time later in the browser. Every error is a plain `Error`:
 
-| Message starts with                              | Cause                                         | Fix                                                                             |
-| ------------------------------------------------ | --------------------------------------------- | ------------------------------------------------------------------------------- |
-| `Toast requires a non-empty message or content.` | No `message` or `title`, or both are empty.   | Give the toast some text.                                                       |
-| `Toast duration must be a finite number…`        | `duration` is negative, `NaN`, or `Infinity`. | Use 0 or more. For "never", use `autoDismiss: false`.                           |
-| `Invalid toast position: …`                      | A position not in the list of six.            | Use one of the six [positions](#positions-and-margins).                         |
-| `Invalid toast role: …`                          | `role` is not `"status"` or `"alert"`.        | Use one of those two.                                                           |
-| `Invalid semantic toast type: …`                 | `type` isn't a known severity.                | Use `"success"`, `"error"`, `"warning"`, `"info"`, `"default"`.                 |
-| `Toast content …`                                | Empty or unsupported custom content.          | See [Custom content](#custom-content).                                          |
-| `DOM document is not available…`                 | Showing a toast where there's no `document`.  | Show toasts only in the browser; see [SSR](instances.md#server-side-rendering). |
-| `This toaster instance has been destroyed…`      | Calling a toaster after `destroy()`.          | Create a new one with `createToaster()`.                                        |
+| Message starts with                              | Cause                                                          | Fix                                                                             |
+| ------------------------------------------------ | -------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `Toast requires a non-empty message or content.` | No `message` or `title`, or both are empty.                    | Give the toast some text.                                                       |
+| `Toast duration must be a number from 0…`        | `duration` is negative, `NaN`, `Infinity`, or over 2147483647. | Use 0 to 2147483647. For "never", use `autoDismiss: false`.                     |
+| `Invalid toast position: …`                      | A position not in the list of six.                             | Use one of the six [positions](#positions-and-margins).                         |
+| `Invalid toast role: …`                          | `role` is not `"status"` or `"alert"`.                         | Use one of those two.                                                           |
+| `Invalid semantic toast type: …`                 | `type` isn't a known severity.                                 | Use `"success"`, `"error"`, `"warning"`, `"info"`, `"default"`.                 |
+| `Toast content …`                                | Empty or unsupported custom content.                           | See [Custom content](#custom-content).                                          |
+| `DOM document is not available…`                 | Showing a toast where there's no `document`.                   | Show toasts only in the browser; see [SSR](instances.md#server-side-rendering). |
+| `This toaster instance has been destroyed…`      | Calling a toaster after `destroy()`.                           | Create a new one with `createToaster()`.                                        |
 
 ## Next
 

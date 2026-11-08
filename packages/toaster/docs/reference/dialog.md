@@ -175,6 +175,8 @@ A promise that resolves with the user's input/decision:
 - `prompt`: resolves with `string` (input value) or `null` (canceled).
 - `alert`: resolves with `void` when acknowledged.
 
+Rejects with the error that kept the dialog from opening: building or rendering it failed, or `showModal()` threw.
+
 #### DialogHandle › settled
 
 ```ts

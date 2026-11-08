@@ -2,7 +2,7 @@
 title: Toasts
 description: Todos os tipos de toast, ações, toasts de carregamento e de promise, handles e atualizações, posições, fila, timers e os erros que os toasts lançam.
 order: 1
-source: e4e8c7475ceb8429ab134abd131773608a806278
+source: 28415d86936ff991e2341c6665241efc4b58111e
 ---
 
 # Toasts
@@ -38,6 +38,18 @@ toast.info("Tem uma versão nova disponível");
 Avisos e erros interrompem porque costumam ser justamente o que a pessoa precisa ouvir agora. Dá para mudar isso por toast com `role`; [Acessibilidade](accessibility.md#o-que-os-leitores-de-tela-ouvem) explica como.
 
 Um toast se fecha sozinho depois de 4 segundos. Se você prefere que ele fique, leia [Timers](#timers-e-fechamento-automático) mais abaixo.
+
+### Escolhendo a aparência você mesmo
+
+Os atalhos são o jeito rápido de dar um significado a um toast, mas `toast()` aceita o mesmo significado como opção. `type` define o ícone, a cor e a urgência com que os leitores de tela o leem, exatamente como o atalho correspondente faria:
+
+```ts
+toast("Armazenamento quase cheio", { type: "warning" }); // aparece e soa como toast.warning()
+toast.success("Nota compartilhada", { icon: null }); // um toast de sucesso sem ícone
+toast("Sincronização pausada", { icon: "info" }); // um toast neutro com o ícone de info
+```
+
+`icon` escolhe um entre `"success"`, `"error"`, `"warning"`, `"info"` ou `"loader"`, ou `null` para nenhum, seja qual for o tipo. Os atalhos sempre usam o próprio tipo, então `toast.success("Salvo", { type: "error" })` continua sendo um toast de sucesso: se o significado vem dos dados, chame `toast()` com `type`.
 
 ### Duas formas de chamar
 
@@ -106,7 +118,7 @@ try {
 }
 ```
 
-Mudar o `type` troca o spinner pelo ícone e pela cor correspondentes. Sair do estado de carregamento também liga o timer que o toast de carregamento nunca teve, então o resultado fecha sozinho depois da sua `duration`. O `autoDismiss: true` ali em cima só deixa isso explícito; passe `autoDismiss: false` se o resultado tiver que ficar até alguém fechar.
+Mudar o `type` troca o spinner pelo ícone e pela cor correspondentes. Sair do estado de carregamento também liga o timer que o toast de carregamento nunca teve, com as mesmas configurações que o atalho correspondente, como `toast.success()`, receberia: um resultado `"success"` fecha depois da `duration` do grupo `semantic` da instância, ou da `duration` simples dela quando o grupo `semantic` não define uma, e fica aberto se a instância disser `autoDismiss: false`. O `autoDismiss: true` ali em cima faz este resultado fechar de qualquer jeito; passe `autoDismiss: false` se ele tiver que ficar até alguém fechar. [Padrões por tipo](instances.md#padrões-por-tipo) explica o grupo `semantic`.
 
 `toast.loading()` aceita `title`, `message`, `description`, `position`, `dismissible`, `className` e `margin`. Ele não tem as opções `duration` nem `autoDismiss`, já que nunca fecha sozinho; defina-as no `update()` que o encerra.
 
@@ -131,7 +143,7 @@ A rejeição chega a `error` com o tipo `unknown`, porque o JavaScript deixa uma
 O que cada opção aceita:
 
 - **`loading`**: uma string, ou o mesmo objeto de opções que `toast.loading()` aceita.
-- **`success`** e **`error`**: uma string, um objeto de opções de toast, ou uma função que recebe o resultado (ou o erro) e devolve uma das duas coisas. Devolva um objeto quando quiser um título, uma descrição ou uma ação:
+- **`success`** e **`error`**: uma string, um objeto de opções de toast, ou uma função que recebe o resultado (ou o erro) e devolve uma das duas coisas. Devolva um objeto quando quiser um título, uma descrição ou uma ação. O resultado é o próprio toast de carregamento alterado no lugar, então ele continua na stack dele e recebe o tipo a partir do desfecho: o objeto aceita todas as opções de toast, menos `position`, `margin`, `role` e `type`.
 
 ```ts
 await toast.promise(syncNotes(), {
@@ -184,8 +196,8 @@ cancelButton.addEventListener("click", () => upload.dismiss());
 - `type`: `"success"`, `"error"`, `"warning"`, `"info"` ou `"default"`. Muda a cor, o ícone e a urgência com que os leitores de tela anunciam o toast.
 - `icon`: `"success"`, `"error"`, `"warning"`, `"info"` ou `"loader"` para escolher outro ícone, ou `null` para nenhum. Quando você muda o `type` sem passar `icon`, o ícone acompanha o tipo.
 - `content`: substitui tudo por conteúdo personalizado, como descrito em [Conteúdo personalizado](#conteúdo-personalizado). Quando é passado, `message` e `icon` na mesma chamada são ignorados.
-- `duration`, `autoDismiss`, `dismissible`: mudam o tempo e o botão de fechar.
-- `className`: adiciona mais classes CSS.
+- `duration`, `autoDismiss`, `dismissible`: mudam o tempo e o botão de fechar. Uma `duration` nova reinicia a contagem na hora, a partir do valor novo inteiro.
+- `className`: substitui as classes passadas na chamada do toast. As classes próprias do toast e o `className` do toaster continuam, então passe todas as classes por toast que você ainda quer, não só a nova.
 
 Alguns detalhes que fazem diferença na prática:
 
@@ -193,8 +205,9 @@ Alguns detalhes que fazem diferença na prática:
 - **Um toast já encerrado ignora atualizações.** Depois que o toast fechou por completo, `update()` não faz nada e não lança erro. Chamar atrasado não faz mal.
 - **O foco fica onde estava.** Se alguém está com o foco no botão de ação quando uma atualização muda só o texto, o foco continua no botão. Se a atualização substitui a própria ação, o foco vai para o botão novo.
 - **Texto alterado é anunciado de novo**, então um leitor de tela ouve tanto "Enviando…" quanto "Anexo enviado".
+- **Uma mensagem substitui um título sozinho.** Quando um toast tem só um `title`, uma atualização só com `message` toma o lugar dele: `toast({ title: "Envio" }).update({ message: "50%" })` mostra só "50%". Um toast só com título mostra o título onde vai a mensagem, então uma mensagem nova ocupa esse lugar. Passe `title` na mesma atualização para manter os dois.
 
-`update()` lança um erro se `duration` não for um número finito maior ou igual a 0, se `type` não for um dos cinco acima, ou se `content` estiver vazio.
+`update()` lança um erro se `duration` não for um número de 0 a 2147483647, se `type` não for um dos cinco acima, ou se `content` estiver vazio.
 
 ### `dismiss()`
 
@@ -276,7 +289,7 @@ toast("Lembrete criado", { duration: 8000 });
 toast("Leia isto com atenção", { autoDismiss: false });
 ```
 
-`autoDismiss: false` mantém o toast aberto até ele ser fechado. `duration` precisa ser um número finito maior ou igual a 0, ou a chamada lança um erro.
+`autoDismiss: false` mantém o toast aberto até ele ser fechado. `duration` precisa ser um número de 0 a 2147483647, ou a chamada lança um erro. Esse teto dá uns 24,8 dias, o máximo que um timer do navegador consegue esperar; um valor maior dispararia na hora, então um toast pensado para ficar um mês sumiria no mesmo instante. Para "nunca", `autoDismiss: false` é o jeito honesto de dizer isso.
 
 A contagem pausa enquanto o ponteiro está em cima do toast, enquanto o foco está dentro dele e enquanto a aba do navegador está em segundo plano. Quando volta, ela continua com o tempo que faltava; não recomeça do zero. O relógio também só começa depois que a animação de entrada termina.
 
@@ -325,7 +338,7 @@ toast.custom((handle) => {
 
 Uma string nunca é interpretada como HTML: `toast.custom("<b>Oi</b>")` mostra as tags como caracteres. Isso torna strings seguras para texto que você não controla, como o título de uma nota. Um nó entra exatamente como você o montou, então a segurança dele é responsabilidade sua. [Acessibilidade e segurança](accessibility.md#conteúdo-personalizado-e-confiança) explica essa fronteira.
 
-`toast.custom()` aceita `position`, `duration`, `dismissible`, `autoDismiss`, `className`, `role` e `margin`, seja como segundo argumento, seja junto com `content` num único objeto. Um toast personalizado não tem ícone e, por padrão, é anunciado sem interromper (`"status"`).
+`toast.custom()` aceita `position`, `duration`, `dismissible`, `autoDismiss`, `className`, `role` e `margin`, seja como segundo argumento, seja junto com `content` num único objeto. Um toast personalizado não tem ícone e, por padrão, é anunciado sem interromper.
 
 O que o conteúdo personalizado não pode ser:
 
@@ -337,16 +350,16 @@ O que o conteúdo personalizado não pode ser:
 
 Os toasts validam a entrada no momento da chamada, então um erro estoura exatamente onde você o cometeu, e não algum tempo depois no navegador. Todo erro é um `Error` comum:
 
-| A mensagem começa com                            | Causa                                               | Correção                                                                          |
-| ------------------------------------------------ | --------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `Toast requires a non-empty message or content.` | Nem `message` nem `title`, ou os dois estão vazios. | Dê algum texto ao toast.                                                          |
-| `Toast duration must be a finite number…`        | `duration` é negativo, `NaN` ou `Infinity`.         | Use 0 ou mais. Para "nunca", use `autoDismiss: false`.                            |
-| `Invalid toast position: …`                      | Uma posição fora da lista das seis.                 | Use uma das seis [posições](#posições-e-margens).                                 |
-| `Invalid toast role: …`                          | `role` não é `"status"` nem `"alert"`.              | Use um desses dois.                                                               |
-| `Invalid semantic toast type: …`                 | `type` não é uma severidade conhecida.              | Use `"success"`, `"error"`, `"warning"`, `"info"`, `"default"`.                   |
-| `Toast content …`                                | Conteúdo personalizado vazio ou não suportado.      | Veja [Conteúdo personalizado](#conteúdo-personalizado).                           |
-| `DOM document is not available…`                 | Mostrar um toast onde não existe `document`.        | Mostre toasts só no navegador; veja [SSR](instances.md#renderização-no-servidor). |
-| `This toaster instance has been destroyed…`      | Chamar um toaster depois de `destroy()`.            | Crie um novo com `createToaster()`.                                               |
+| A mensagem começa com                            | Causa                                                             | Correção                                                                          |
+| ------------------------------------------------ | ----------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `Toast requires a non-empty message or content.` | Nem `message` nem `title`, ou os dois estão vazios.               | Dê algum texto ao toast.                                                          |
+| `Toast duration must be a number from 0…`        | `duration` é negativo, `NaN`, `Infinity` ou maior que 2147483647. | Use de 0 a 2147483647. Para "nunca", use `autoDismiss: false`.                    |
+| `Invalid toast position: …`                      | Uma posição fora da lista das seis.                               | Use uma das seis [posições](#posições-e-margens).                                 |
+| `Invalid toast role: …`                          | `role` não é `"status"` nem `"alert"`.                            | Use um desses dois.                                                               |
+| `Invalid semantic toast type: …`                 | `type` não é uma severidade conhecida.                            | Use `"success"`, `"error"`, `"warning"`, `"info"`, `"default"`.                   |
+| `Toast content …`                                | Conteúdo personalizado vazio ou não suportado.                    | Veja [Conteúdo personalizado](#conteúdo-personalizado).                           |
+| `DOM document is not available…`                 | Mostrar um toast onde não existe `document`.                      | Mostre toasts só no navegador; veja [SSR](instances.md#renderização-no-servidor). |
+| `This toaster instance has been destroyed…`      | Chamar um toaster depois de `destroy()`.                          | Crie um novo com `createToaster()`.                                               |
 
 ## Próximos passos
 

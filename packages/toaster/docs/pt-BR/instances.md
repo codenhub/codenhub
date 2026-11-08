@@ -2,7 +2,7 @@
 title: Instâncias do toaster
 description: Cada opção do toaster e seu padrão, padrões por tipo, mudar as configurações depois, toasters com escopo, limpeza com destroy() e renderização no servidor.
 order: 3
-source: 9665c796424fd0e565d94ae7e12ed5a9aa223104
+source: 5d50a878b094fabdfb3943e2a0b1d514074b1ad0
 ---
 
 # Instâncias do toaster
@@ -45,7 +45,7 @@ sidebarToaster.success("Pasta criada");
 | `container`   | `document.body`                       | O elemento ao qual as stacks de toasts são adicionadas. Não pode ser mudado depois.                                                                         |
 | `position`    | `"top-right"`                         | Onde os toasts aparecem quando a chamada não diz. Uma das seis [posições](toasts.md#posições-e-margens).                                                    |
 | `maxVisible`  | `5`                                   | Quantos toasts cada posição mostra ao mesmo tempo antes de o resto [entrar na fila](toasts.md#como-a-stack-enche). Um número inteiro maior ou igual a 1.    |
-| `duration`    | `4000`                                | Milissegundos até um toast se fechar sozinho. 0 ou mais.                                                                                                    |
+| `duration`    | `4000`                                | Milissegundos até um toast se fechar sozinho. De 0 a 2147483647.                                                                                            |
 | `autoDismiss` | `true`                                | Se os toasts se fecham sozinhos depois de `duration`.                                                                                                       |
 | `dismissible` | `false`                               | Se os toasts ganham um botão de fechar.                                                                                                                     |
 | `margin`      | 1rem, ou a área segura do dispositivo | Distância da borda, como um comprimento CSS ou `{ x, y }`. Veja [margens](toasts.md#posições-e-margens).                                                    |
@@ -61,9 +61,9 @@ O `toast` que você importa é um toaster criado sem opções, então esses padr
 
 Valores inválidos lançam um erro na hora, quando o toaster é criado:
 
-- `Toaster duration must be a finite number greater than or equal to 0.`
+- `Toaster duration must be a number from 0 to 2147483647.`
 - `Toaster maxVisible must be a positive integer.` Um `maxVisible` de 0, 2.5 ou -1 lança, em todos os casos.
-- `Toaster nested duration must be a finite number greater than or equal to 0.` A mesma regra para `semantic.duration` e `custom.duration`.
+- `Toaster nested duration must be a number from 0 to 2147483647.` A mesma regra para `semantic.duration` e `custom.duration`.
 - `Invalid toast position: …` Para `position` ou qualquer `position` por tipo.
 
 ## Padrões por tipo
@@ -117,6 +117,8 @@ A maioria das mudanças vale para os toasts mostrados depois. Três valem na hor
 - **`margin`**: as stacks existentes se movem.
 - **`labels.notifications`**: as stacks existentes são renomeadas.
 
+Uma opção passada como `undefined` volta ao padrão, igual a deixá-la de fora de `createToaster()`, e isso também chega à tela: `configure({ margin: undefined })` devolve as stacks existentes à margem padrão, e `configure({ maxVisible: undefined })` deixa 5 aparecerem de novo. Então `configure({ margin: compact ? "8px" : undefined })` faz exatamente o que parece.
+
 `configure()` valida do mesmo jeito que `createToaster()` e lança os mesmos erros. Passar `container` lança `Toaster container cannot be changed after construction.` Para mover os toasts para outro lugar, crie um toaster novo lá e destrua o antigo.
 
 ## Limpando com `destroy()`
@@ -164,7 +166,7 @@ As duas stacks ficam no mesmo canto e se sobrepõem. Dê posições ou container
 
 ## Renderização no servidor
 
-O Toaster pode ser importado em qualquer lugar. Criar um toaster, inclusive o `toast` pronto, não mexe na página, então é seguro durante a renderização no servidor. Mostrar alguma coisa precisa de uma página, então uma chamada de toast ou de diálogo feita onde não existe `document` lança:
+O Toaster pode ser importado em qualquer lugar. Criar um toaster, inclusive o `toast` pronto, não mexe na página, então é seguro durante a renderização no servidor. O mesmo vale para `configure()`: sem uma página, ele guarda as configurações, e elas passam a valer quando os toasts forem renderizados no navegador. Mostrar alguma coisa precisa de uma página, então uma chamada de toast ou de diálogo feita onde não existe `document` lança:
 
 - `DOM document is not available. Toaster operations require a browser environment.`
 - `DOM document is not available. Dialogs require a browser environment.`
@@ -181,7 +183,7 @@ export function SaveButton({ onSave }: { onSave: () => Promise<void> }) {
     try {
       await toast.promise(onSave(), { loading: "Salvando…", success: "Salvo", error: "Falha ao salvar" });
     } catch {
-      // O toast de erro já deu a má notícia.
+      // toast.promise() já mostrou o toast de erro.
     }
   }
 

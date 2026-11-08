@@ -40,7 +40,7 @@ if (await dialog.confirm("Apagar esta nota?", { type: "error", confirmLabel: "Ap
 
 Sem provider e sem chamada de setup: o primeiro toast cria a própria stack. Para toasts dentro de um elemento específico, ou configurações separadas por área, crie as suas próprias instâncias com `createToaster()` e `createDialogs()`.
 
-As chamadas validam a entrada e lançam um erro na hora quando algo está errado, como uma mensagem vazia ou uma posição desconhecida. Mostrar um toast ou um diálogo fora do navegador também lança.
+As chamadas validam a entrada e lançam um erro na hora quando algo está errado, como uma mensagem vazia ou uma posição desconhecida. Mostrar um toast ou um diálogo fora do navegador também lança um erro.
 
 ## Documentação
 

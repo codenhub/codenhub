@@ -630,3 +630,154 @@ describe("teardown after clear", () => {
     expect(cancel).toHaveBeenCalled();
   });
 });
+
+describe("leaving the loading state through update()", () => {
+  it("keeps the instance-wide autoDismiss: false", () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ autoDismiss: false });
+    const handle = toaster.loading("Syncing");
+    flushAnimations();
+    handle.update({ type: "success", message: "Synced" });
+    vi.advanceTimersByTime(20000);
+    flushAnimations();
+    expect(document.body.querySelector(".toaster-toast")?.textContent).toContain("Synced");
+    toaster.destroy();
+  });
+
+  it("takes semantic.duration for a semantic result", () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ semantic: { duration: 10000 } });
+    const handle = toaster.loading("Syncing");
+    flushAnimations();
+    handle.update({ type: "success", message: "Synced" });
+
+    vi.advanceTimersByTime(5000);
+    flushAnimations();
+    expect(document.body.querySelector(".toaster-toast")).not.toBeNull();
+
+    vi.advanceTimersByTime(5100);
+    flushAnimations();
+    expect(document.body.querySelector(".toaster-toast")).toBeNull();
+    toaster.destroy();
+  });
+
+  it("takes the instance-wide timing for a default result, not semantic's", () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ duration: 2000, semantic: { duration: 10000 } });
+    const handle = toaster.loading("Syncing");
+    flushAnimations();
+    handle.update({ icon: null, message: "Synced" });
+    vi.advanceTimersByTime(2100);
+    flushAnimations();
+    expect(document.body.querySelector(".toaster-toast")).toBeNull();
+    toaster.destroy();
+  });
+});
+
+describe("promise outcome dismissible", () => {
+  it("falls back to the instance-wide dismissible, not the loading one", async () => {
+    const toaster = createToaster({ dismissible: true, loading: { dismissible: false } });
+    const pending = toaster.promise(Promise.resolve(1), { loading: "Saving", success: "Saved", error: "Failed" });
+    expect(document.body.querySelector(".toaster-toast-dismiss")).toBeNull();
+    await pending;
+    expect(document.body.querySelector(".toaster-toast-dismiss")).not.toBeNull();
+    toaster.destroy();
+  });
+});
+
+describe("configure() with undefined", () => {
+  it("clears the margin of a stack already showing", () => {
+    const toaster = createToaster({ margin: "40px" });
+    toaster("Hello", { autoDismiss: false });
+    const stack = document.body.querySelector<HTMLElement>(".toaster-toast-stack")!;
+    expect(stack.style.getPropertyValue("--toast-margin-x")).toBe("40px");
+
+    toaster.configure({ margin: undefined });
+    expect(stack.style.getPropertyValue("--toast-margin-x")).toBe("");
+    expect(stack.style.getPropertyValue("--toast-margin-y")).toBe("");
+    toaster.destroy();
+  });
+
+  it("resets maxVisible on a stack already showing", () => {
+    const toaster = createToaster({ maxVisible: 1, autoDismiss: false });
+    toaster.loading("One");
+    toaster.loading("Two");
+    expect(document.body.querySelectorAll(".toaster-toast")).toHaveLength(1);
+
+    toaster.configure({ maxVisible: undefined });
+    expect(document.body.querySelectorAll(".toaster-toast")).toHaveLength(2);
+    toaster.destroy();
+  });
+});
+
+describe("configure() without a document", () => {
+  it("stores the settings without throwing", () => {
+    const originalDoc = globalThis.document;
+    // @ts-expect-error simulating SSR
+    delete globalThis.document;
+    try {
+      const toaster = createToaster();
+      expect(() => toaster.configure({ labels: { notifications: "Avisos" } })).not.toThrow();
+      expect(() => toaster.configure({ maxVisible: 2 })).not.toThrow();
+      expect(() => toaster.configure({ margin: "24px" })).not.toThrow();
+      toaster.destroy();
+    } finally {
+      globalThis.document = originalDoc;
+    }
+  });
+});
+
+describe("duration limit", () => {
+  const tooLong = 2_147_483_648;
+
+  it("rejects a toast duration a browser timer cannot hold", () => {
+    const toaster = createToaster();
+    expect(() => toaster("Hello", { duration: tooLong })).toThrow(
+      "Toast duration must be a number from 0 to 2147483647.",
+    );
+    expect(() => toaster("Hello", { duration: 2_147_483_647 })).not.toThrow();
+    toaster.destroy();
+  });
+
+  it("rejects it in update() and in the instance config", () => {
+    const toaster = createToaster();
+    const handle = toaster("Hello");
+    expect(() => handle.update({ duration: tooLong })).toThrow(/from 0 to 2147483647/);
+    expect(() => createToaster({ duration: tooLong })).toThrow(
+      "Toaster duration must be a number from 0 to 2147483647.",
+    );
+    expect(() => createToaster({ semantic: { duration: tooLong } })).toThrow(
+      "Toaster nested duration must be a number from 0 to 2147483647.",
+    );
+    toaster.destroy();
+  });
+
+  it("rejects it in promise() when called, before any toast shows", () => {
+    const toaster = createToaster();
+    const pending = new Promise<void>(() => {});
+    expect(() =>
+      toaster.promise(pending, { loading: "Saving", success: "Saved", error: "Failed", duration: -1 }),
+    ).toThrow("Toast duration must be a number from 0 to 2147483647.");
+    expect(document.querySelector(".toaster-toast")).toBeNull();
+    toaster.destroy();
+  });
+});
+
+describe("announcements after destroy", () => {
+  it("does not announce into an open dialog once the toaster is destroyed", async () => {
+    vi.useFakeTimers();
+    const dialogs = createDialogs();
+    const pending = dialogs.alert("Heads up");
+    const dialog = document.body.querySelector("dialog")!;
+    const toaster = createToaster();
+    toaster.error("Lost connection");
+    toaster.destroy();
+
+    vi.advanceTimersByTime(200);
+    expect(dialog.querySelector("[data-toast-announcer]")).toBeNull();
+    pending.dismiss();
+    vi.useRealTimers();
+    await pending.settled;
+    dialogs.destroy();
+  });
+});

@@ -2,7 +2,7 @@
 title: Diálogos
 description: Diálogos confirm, prompt e alert, para o que resolvem, handles, fila, rótulos dos botões, instâncias de diálogos e toasts enquanto um diálogo está aberto.
 order: 2
-source: 1bd953478c8ac67aaea0101ff1513e6e4231103d
+source: b8f33aa9248e5aafc7585379cd4e2462e0f6e085
 ---
 
 # Diálogos
@@ -128,11 +128,13 @@ const discard = await question;
 
 Poder dar `await` direto no handle é o pulo do gato. Muitas bibliotecas de diálogo devolvem um objeto em `confirm()`, e aí `if (await confirm(...))` é sempre verdadeiro, porque um objeto é sempre truthy. É esse bug que coloca em produção o botão "Cancelar" que apaga mesmo assim. Aqui, `await` te dá a resposta de verdade.
 
-Fechar com dismiss dá a cada tipo o seu valor de cancelamento: `false` para confirm, `null` para prompt, `undefined` para alert.
+Um diálogo fechado como cancelamento devolve o valor de cancelamento do seu tipo: `false` para confirm, `null` para prompt, `undefined` para alert.
 
 ## Um de cada vez
 
 Uma instância de diálogos mostra um diálogo de cada vez. Chamar `confirm()` enquanto outro diálogo está aberto não empilha um segundo diálogo por cima: o novo espera numa fila, com o estado `"queued"`, e abre quando o atual fecha. Fechar um diálogo que está na fila o tira da fila com o seu valor de cancelamento; ele nunca aparece.
+
+Quando um diálogo abre, o foco vai para o botão principal dele: o de confirmar, ou o de OK num `alert()`. Um prompt foca o campo de texto, para que dê para começar a digitar na hora. Um `confirm()` com `type: "error"` foca o botão de **cancelar**, para que um <kbd>Enter</kbd> no reflexo, num "Apagar" vermelho, cancele em vez de apagar.
 
 Quando o último diálogo de uma sequência fecha, o foco volta para o elemento que o tinha antes de o primeiro abrir.
 

@@ -2,7 +2,7 @@
 title: Accesibilidad y seguridad
 description: Lo que oyen los lectores de pantalla, cómo funcionan el foco y el teclado, el movimiento reducido, lo que te toca a ti y el límite de confianza del contenido personalizado.
 order: 5
-source: 9d6cd71bd7f37c5430ab5261d35e504cba0a20d6
+source: 47be97a3841114ce9a3e4cc52471cde4fc7514f0
 ---
 
 # Accesibilidad y seguridad
@@ -40,11 +40,17 @@ Dos detalles de tiempos explican comportamientos que quizá notes al probar:
 - **El primer anuncio llega con un pequeño retraso.** Los lectores de pantalla a menudo se pierden una live region que aparece con el texto ya dentro, porque solo anuncian cambios en regiones que ya están vigilando. Por eso cada región se añade vacía y su primer texto llega 100ms después, siguiendo la [técnica ARIA22 del W3C](https://www.w3.org/WAI/WCAG21/Techniques/aria/ARIA22.html).
 - **El texto anunciado se borra a los 7 segundos**, para que las regiones ocultas no acumulen mensajes viejos.
 
-El toast visible en sí no es una live region y no tiene atributo `role`. Los tests que buscan toasts por `role="status"` o `aria-live` necesitan otro selector.
+El toast visible en sí no es una live region y no tiene atributo `role`. Los tests que buscan toasts por `role="status"` o `aria-live` necesitan otro selector. Búscalos como lo hace quien usa un lector de pantalla, a través del landmark del stack, que se describe a continuación:
+
+```ts
+// Playwright; getByRole de Testing Library funciona igual.
+const notifications = page.getByRole("region", { name: "Notifications" }); // o tu labels.notifications
+await expect(notifications.getByText("Nota guardada")).toBeVisible();
+```
 
 ### Encontrar los toasts
 
-Cada stack es una región landmark llamada "Notifications". Los usuarios de lectores de pantalla pueden saltar a ella desde su lista de landmarks para llegar a los botones de un toast. Traduce el nombre con las `labels` del toaster:
+Cada stack es una región landmark llamada "Notifications". Los usuarios de lectores de pantalla pueden saltar a ella desde su lista de landmarks para llegar a los botones de un toast. Un stack sin toasts sale de la lista, así que nadie cae en una región vacía. Traduce el nombre con las `labels` del toaster:
 
 ```ts
 import { createToaster } from "@codenhub/toaster";
@@ -57,7 +63,7 @@ const toaster = createToaster({
 });
 ```
 
-`dismiss` es el nombre accesible del botón de cerrar de los toasts [con botón de cerrar](toasts.md#temporizadores-y-cierre-automático). Por defecto es "Dismiss toast".
+`dismiss` es el nombre accesible del botón de cerrar de los toasts [con `dismissible: true`](toasts.md#temporizadores-y-cierre-automático). Por defecto es "Dismiss toast".
 
 ### Toasts bajo un diálogo
 
@@ -65,13 +71,13 @@ Mientras hay abierto un diálogo de este paquete, los toasts de los toasters que
 
 ## Teclado y foco
 
-Los toasts nunca roban el foco. Mostrar uno no mueve el teclado a ningún sitio, que es lo que quieres de algo que se supone que no debe estorbar.
+Los toasts nunca roban el foco. Mostrar uno no mueve el teclado a ninguna parte, que es lo que quieres de algo que se supone que no debe estorbar.
 
 Cuando alguien sí mueve el foco a un toast, por ejemplo tabulando hasta su botón de acción:
 
 - Su temporizador se pausa, y queda [protegido para que no lo echen](toasts.md#cómo-se-llena-el-stack) de un stack lleno.
 - Si una actualización cambia solo su texto, el foco se queda en el botón. Si la actualización sustituye la acción, el foco pasa al botón nuevo.
-- Cuando se cierra, el foco vuelve a lo que tenía el foco cuando apareció el toast, siempre que ese elemento siga en la página. Si mientras tanto el foco ya se movió a otro sitio, se queda allí.
+- Cuando se cierra, el foco vuelve a lo que tenía el foco cuando apareció el toast, siempre que ese elemento siga en la página. Si mientras tanto el foco ya se movió a otra parte, se queda allí.
 
 Los diálogos usan el elemento `<dialog>` nativo del navegador con `showModal()`, así que es el propio navegador el que se encarga de:
 
@@ -118,8 +124,8 @@ Un string se convierte en un único nodo de texto. Las etiquetas que contenga ap
 ```ts
 import { toast } from "@codenhub/toaster";
 
-// Muestra los caracteres <b>Lista de la compra</b>, no texto en negrita.
-toast.custom("<b>Lista de la compra</b>");
+// Muestra los caracteres <b>Lista de compras</b>, no texto en negrita.
+toast.custom("<b>Lista de compras</b>");
 ```
 
 Eso hace que los strings sean seguros para cualquier cosa que controlen los usuarios o los servidores, como títulos de notas, nombres de usuario y mensajes de error de una API. Lo mismo vale para todas las demás opciones de texto: `message`, `title`, `description`, las etiquetas de las acciones y el texto de los diálogos se insertan como texto.
@@ -149,7 +155,7 @@ toast.custom((handle) => {
 });
 ```
 
-Los event listeners que añades a tus propios nodos los gestionas tú. Se liberan con el nodo cuando nada más lo referencia, pero cualquier cosa que retengan en otro sitio, como una suscripción o un temporizador, necesita tu propia limpieza, por ejemplo en `handle.onHidden()`.
+Los event listeners que añades a tus propios nodos los gestionas tú. Se liberan con el nodo cuando nada más lo referencia, pero cualquier cosa que retengan en otra parte, como una suscripción o un temporizador, necesita tu propia limpieza, por ejemplo en `handle.onHidden()`.
 
 ### Trusted Types
 
@@ -157,4 +163,4 @@ El paquete nunca asigna a `innerHTML` ni a ninguna otra propiedad que interprete
 
 ## Siguiente
 
-Hasta aquí el recorrido. Para las firmas y los tipos exactos, consulta la [referencia de la API](../reference/index.md). Para ver qué cambió entre versiones, consulta el [registro de cambios](../changelog/index.md). Para empezar otra vez desde arriba, vuelve a la [visión general](index.md).
+Hasta aquí el recorrido. Para las firmas y los tipos exactos, consulta la [referencia de la API](../reference/index.md) (en inglés). Para ver qué cambió entre versiones, consulta el [registro de cambios](../changelog/index.md) (en inglés). Para empezar otra vez desde arriba, vuelve a la [visión general](index.md).

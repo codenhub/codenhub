@@ -4,7 +4,10 @@ import {
   DEFAULT_CONFIG,
   DEFAULT_DISMISS_LABEL,
   DEFAULT_REGION_LABEL,
+  MAX_DURATION,
+  assertDuration,
   assertToastPosition,
+  isValidDuration,
   withoutUndefined,
 } from "./options";
 import type { RawToastOptions, ResolvedToastConfig } from "./options";
@@ -38,7 +41,7 @@ function copyConfig(config: ToasterConfig): ToasterConfig {
 }
 
 function isInvalidDuration(duration: number | undefined): boolean {
-  return duration !== undefined && (!Number.isFinite(duration) || duration < 0);
+  return duration !== undefined && !isValidDuration(duration);
 }
 
 function parseToastArgs(
@@ -51,12 +54,10 @@ function parseToastArgs(
   return { message: messageOrOptions.message, options: messageOrOptions };
 }
 
-type InternalLoadingOptions = LoadingToastOptions & { duration?: number };
-
 function parseLoadingArgs(
-  messageOrOptions?: string | InternalLoadingOptions,
-  options?: InternalLoadingOptions,
-): { message?: string; options: InternalLoadingOptions } {
+  messageOrOptions?: string | LoadingToastOptions,
+  options?: LoadingToastOptions,
+): { message?: string; options: LoadingToastOptions } {
   if (typeof messageOrOptions === "string") {
     return { message: messageOrOptions, options: options ?? {} };
   }
@@ -81,22 +82,26 @@ function parseCustomArgs(
   return { content: opts.content, options: opts };
 }
 
+/** What a promise's `success` or `error` can set on its result toast. */
+type PromiseOutcomeOptions = Omit<ToastOptions, "position" | "margin" | "role" | "type">;
+
 /** The settings a promise's outcome falls back to when its own options leave them unset. */
 interface PromiseOutcomeDefaults {
   duration?: number;
-  dismissible?: boolean;
-  autoDismiss: boolean;
+  dismissible: boolean;
 }
 
 function toStructuredPromiseUpdate(
-  result: string | ToastOptions,
+  result: string | PromiseOutcomeOptions,
   type: SemanticType,
   defaults: PromiseOutcomeDefaults,
 ): ToastUpdateOptions {
   const options = typeof result === "string" ? { message: result } : result;
   return {
     type,
-    autoDismiss: options.autoDismiss ?? defaults.autoDismiss,
+    // Left unset, the toast falls back to the instance's `semantic` defaults
+    // on its own as it leaves the loading state.
+    autoDismiss: options.autoDismiss,
     message: options.message ?? null,
     title: options.title ?? null,
     description: options.description ?? null,
@@ -131,7 +136,7 @@ class ToastManager {
     return this.showMessage(SemanticToast, this.config.semantic, type, messageOrOptions, options);
   }
 
-  public loading(messageOrOptions?: string | InternalLoadingOptions, options?: InternalLoadingOptions): ToastHandle {
+  public loading(messageOrOptions?: string | LoadingToastOptions, options?: LoadingToastOptions): ToastHandle {
     this.assertAlive();
     const { message, options: parsedOpts } = parseLoadingArgs(messageOrOptions, options);
     return this.dispatch(LoadingToast, {
@@ -157,24 +162,28 @@ class ToastManager {
 
   public promise<T>(promise: PromiseLike<T>, options: PromiseToastOptions<T>): Promise<T> {
     this.assertAlive();
+    // Only the outcome uses `duration`, so it is checked here, before the
+    // loader shows, rather than when the promise settles, where an error
+    // could only dismiss the loader.
+    assertDuration(options.duration);
+    const { position, dismissible, className, margin } = options;
     const loadingOpts = typeof options.loading === "string" ? { message: options.loading } : options.loading;
     const handle = this.loading({
-      ...options,
+      ...withoutUndefined({ position, dismissible, className, margin }),
       ...withoutUndefined(loadingOpts),
-      duration: options.duration,
     });
 
     // A throwing formatter must not strand the loader (it is neither
     // dismissible nor evictable) or replace the caller's outcome, so its
     // error is reported and the loader is dismissed instead.
     // The outcome is a semantic toast, so the call's own settings win, then
-    // the instance's `semantic` defaults. `autoDismiss` also falls back to
-    // the instance-wide setting, because `update()` would otherwise reset it
-    // to `true` when the toast leaves the loading state.
+    // the instance's `semantic` defaults, then the instance-wide ones. The
+    // toast resolves `duration` and `autoDismiss` that way on its own as it
+    // leaves the loading state, but it keeps the loader's `dismissible`, so
+    // that one is resolved here.
     const outcomeDefaults: PromiseOutcomeDefaults = {
-      duration: options.duration ?? this.config.semantic?.duration,
-      dismissible: options.dismissible ?? this.config.semantic?.dismissible,
-      autoDismiss: this.config.semantic?.autoDismiss ?? this.resolved.autoDismiss,
+      duration: options.duration,
+      dismissible: dismissible ?? this.config.semantic?.dismissible ?? this.resolved.dismissible,
     };
     const settle = (type: SemanticType, format: () => string | ToastOptions): void => {
       try {
@@ -223,24 +232,25 @@ class ToastManager {
     this.config = copyConfig(merged);
     this.resolved = this.buildResolvedConfig(this.config);
 
-    if (config.maxVisible !== undefined) {
-      reconcileCapacity({
-        parent: this.getParent(),
-        instanceId: this.instanceId,
-        maxVisible: this.resolved.maxVisible,
-      });
+    // Without a page there are no stacks to update; the new settings apply
+    // once toasts render.
+    const parent = this.findParent();
+    if (!parent) {
+      return;
+    }
+
+    // An option given as `undefined` resets to its default, as it does in
+    // the constructor, so the stacks already showing reset too.
+    if ("maxVisible" in config) {
+      reconcileCapacity({ parent, instanceId: this.instanceId, maxVisible: this.resolved.maxVisible });
     }
 
     if ("labels" in config) {
-      applyInstanceRegionLabel({
-        parent: this.getParent(),
-        instanceId: this.instanceId,
-        label: this.resolved.regionLabel,
-      });
+      applyInstanceRegionLabel({ parent, instanceId: this.instanceId, label: this.resolved.regionLabel });
     }
 
-    if (config.margin !== undefined) {
-      applyInstanceMargin({ parent: this.getParent(), instanceId: this.instanceId, margin: config.margin });
+    if ("margin" in config) {
+      applyInstanceMargin({ parent, instanceId: this.instanceId, margin: this.resolved.margin ?? "" });
     }
   }
 
@@ -253,8 +263,8 @@ class ToastManager {
     this.activeToasts.forEach((t) => t.destroyImmediately());
     this.activeToasts.clear();
 
-    if (this.config.container || typeof document !== "undefined") {
-      const parent = this.getParent();
+    const parent = this.findParent();
+    if (parent) {
       removeInstanceContainers({ parent, instanceId: this.instanceId });
     }
   }
@@ -290,13 +300,22 @@ class ToastManager {
   }
 
   private getParent(): HTMLElement {
+    const parent = this.findParent();
+    if (!parent) {
+      throw new Error("DOM document is not available. Toaster operations require a browser environment.");
+    }
+    return parent;
+  }
+
+  /** The element stacks render into, or `null` when there is no page, as during server-side rendering. */
+  private findParent(): HTMLElement | null {
     if (this.config.container) {
       return this.config.container;
     }
     if (typeof document !== "undefined") {
       return document.body ?? document.documentElement;
     }
-    throw new Error("DOM document is not available. Toaster operations require a browser environment.");
+    return null;
   }
 
   private buildResolvedConfig(config: ToasterConfig): ResolvedToastConfig {
@@ -306,6 +325,10 @@ class ToastManager {
       duration: config.duration ?? DEFAULT_CONFIG.duration,
       dismissible: config.dismissible ?? DEFAULT_CONFIG.dismissible,
       autoDismiss: config.autoDismiss ?? DEFAULT_CONFIG.autoDismiss,
+      semanticOutcome: {
+        duration: config.semantic?.duration ?? config.duration ?? DEFAULT_CONFIG.duration,
+        autoDismiss: config.semantic?.autoDismiss ?? config.autoDismiss ?? DEFAULT_CONFIG.autoDismiss,
+      },
       maxVisible: config.maxVisible ?? DEFAULT_CONFIG.maxVisible,
       margin: config.margin,
       className: config.className,
@@ -323,14 +346,14 @@ class ToastManager {
       },
     );
     if (isInvalidDuration(config.duration)) {
-      throw new Error("Toaster duration must be a finite number greater than or equal to 0.");
+      throw new Error(`Toaster duration must be a number from 0 to ${MAX_DURATION}.`);
     }
     if (config.maxVisible !== undefined && (!Number.isInteger(config.maxVisible) || config.maxVisible <= 0)) {
       throw new Error("Toaster maxVisible must be a positive integer.");
     }
     for (const duration of [config.semantic?.duration, config.custom?.duration]) {
       if (isInvalidDuration(duration)) {
-        throw new Error("Toaster nested duration must be a finite number greater than or equal to 0.");
+        throw new Error(`Toaster nested duration must be a number from 0 to ${MAX_DURATION}.`);
       }
     }
   }
@@ -355,7 +378,7 @@ class ToastManager {
  *
  * @param config Optional initial configuration overrides for the toaster.
  * @returns An independent Toaster instance controller.
- * @throws {Error} If duration, max-visible count, or token colors are invalid.
+ * @throws {Error} If a position, a duration, or `maxVisible` is invalid.
  */
 export function createToaster(config?: ToasterConfig): Toaster {
   const manager = new ToastManager(config);

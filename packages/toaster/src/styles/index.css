@@ -1,4 +1,6 @@
-/* @codenhub/toaster consumer stylesheet. Every element selector is instance-scoped. */
+/* @codenhub/toaster consumer stylesheet. Every selector for this package's own
+   elements is instance-scoped; the presentation classes below are page-wide on
+   purpose, as their comment explains. */
 
 /* The same layer order @codenhub/styles declares. Stated first so that
    loading this sheet before that one cannot register `components` ahead
@@ -83,7 +85,7 @@
   gap: 0.5rem;
   max-width: calc(100vw - (2 * var(--toast-margin-x, 1rem)));
   max-height: calc(
-    100vh - var(--toast-margin-y, max(1rem, env(safe-area-inset-top, 0px))) -
+    100dvh - var(--toast-margin-y, max(1rem, env(safe-area-inset-top, 0px))) -
       var(--toast-margin-y, max(1rem, env(safe-area-inset-bottom, 0px)))
   );
   overflow-x: hidden;
@@ -92,6 +94,13 @@
   pointer-events: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+
+/* An empty stack leaves the page and the accessibility tree, so screen
+   reader landmark navigation does not stop at a "Notifications" region with
+   nothing in it. The element itself stays, keeping the stack's margin. */
+:where([data-toast-instance].toaster-toast-stack):empty {
+  display: none;
 }
 
 :where([data-toast-instance].toaster-toast-stack)::-webkit-scrollbar {
@@ -727,11 +736,6 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
 
 :where(.ghost) :where(dialog[data-toast-instance] .toast-dialog-btn-cancel) {
   background: transparent;
-}
-
-:where(dialog[data-toast-instance] .toast-dialog-container) {
-  background: var(--toast-color-surface, var(--color-background, var(--toast-default-color-background)));
-  color: var(--toast-color-text, var(--color-text, var(--toast-default-color-text)));
 }
 
 @keyframes toaster-toast-spin {

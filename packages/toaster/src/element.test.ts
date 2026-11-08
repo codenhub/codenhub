@@ -38,6 +38,7 @@ function makeToast(options: RawToastOptions): Toast {
       instanceId: "test-instance",
       dismissLabel: DEFAULT_DISMISS_LABEL,
       regionLabel: DEFAULT_REGION_LABEL,
+      semanticOutcome: { duration: DEFAULT_CONFIG.duration, autoDismiss: DEFAULT_CONFIG.autoDismiss },
     },
     parent: document.body,
   });

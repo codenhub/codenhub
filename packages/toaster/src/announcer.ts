@@ -57,6 +57,16 @@ function createRegion(parent: HTMLElement, instanceId: string, politeness: Polit
   return region;
 }
 
+/** Whether one of the instance's toast stacks is in `host`. */
+function hasStack(host: HTMLElement, instanceId: string): boolean {
+  for (const child of host.children) {
+    if (child.hasAttribute("data-toast-container") && child.getAttribute("data-toast-instance") === instanceId) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function appendLine(region: HTMLElement, text: string): void {
   const line = region.ownerDocument.createElement("div");
   line.textContent = text;
@@ -104,14 +114,14 @@ export function announce(params: AnnounceParams): void {
     // The host changes when a dialog opens, which makes a region outside it
     // inert, and when the dialog starts closing, which is when it stops
     // being modal and its own region is about to be cleared.
-    const isCurrent = getToastLayerHost(parent) === host;
-    if (region.isConnected && isCurrent) {
+    const currentHost = getToastLayerHost(parent);
+    if (region.isConnected && currentHost === host) {
       pending.forEach((line) => appendLine(region, line));
-    } else if (region.isConnected || (host !== parent && host.isConnected)) {
+    } else if (hasStack(currentHost, instanceId)) {
       // The region is no longer in the current host, or the dialog that held
-      // it was cleared. The dialog stays in the document until the instance
-      // is destroyed, so the toasts are still showing: announce through the
-      // current host instead.
+      // it was cleared, but the toasts are still showing: announce through
+      // the current host instead. Destroying the instance removes its stacks,
+      // so a destroyed instance announces nothing.
       pending.forEach((line) => announce({ parent, instanceId, role, text: line }));
     }
   }, FIRST_ANNOUNCEMENT_DELAY_MS);

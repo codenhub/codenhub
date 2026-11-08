@@ -21,6 +21,10 @@ type ToastElementOptions = Pick<
 const FALLBACK_ANIMATION_DURATION_MS = 400;
 const FALLBACK_ANIMATION_EASING = "cubic-bezier(0.2, 0, 0, 1)";
 
+function readCustomProperty(element: Element, property: string): string | undefined {
+  return element.ownerDocument.defaultView?.getComputedStyle(element).getPropertyValue(property).trim();
+}
+
 /**
  * Reads `--motion-duration-slow` off the element's computed style, so a
  * consumer or aesthetic that overrides @codenhub/styles' motion tokens
@@ -29,10 +33,6 @@ const FALLBACK_ANIMATION_EASING = "cubic-bezier(0.2, 0, 0, 1)";
  * standalone, or in an environment (such as jsdom) that does not resolve
  * custom properties from a stylesheet.
  */
-function readCustomProperty(element: Element, property: string): string | undefined {
-  return element.ownerDocument.defaultView?.getComputedStyle(element).getPropertyValue(property).trim();
-}
-
 function readAnimationDuration(element: Element): number {
   const raw = readCustomProperty(element, "--motion-duration-slow");
   if (!raw) {
@@ -531,8 +531,11 @@ function createSingleRunCallback(callback?: () => void): (() => void) | undefine
   };
 }
 
-/** @returns The running `Animation`, so a caller (e.g. `Toast.destroyImmediately()`) can cancel it early; `null` when nothing is actually animating (reduced motion, no `Element.animate`, or an already-finished synchronous path). */
-/** `onFinish` runs once, when the animation finishes or is canceled, or right away when nothing animates. */
+/**
+ * `onFinish` runs once, when the animation finishes or is canceled, or right away when nothing animates.
+ *
+ * @returns The running `Animation`, so a caller (e.g. `Toast.destroyImmediately()`) can cancel it early; `null` when nothing is actually animating (reduced motion, no `Element.animate`, or an already-finished synchronous path).
+ */
 function runAnimation(element: HTMLDivElement, keyframes: Keyframe[], onFinish?: () => void): Animation | null {
   const finish = createSingleRunCallback(onFinish);
 
