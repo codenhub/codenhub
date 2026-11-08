@@ -407,7 +407,8 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
 };
 
 /**
- * Normalizes an unknown error value into a predictable `AppError` whose own fields cannot change.
+ * Normalizes an unknown error value into a predictable `AppError` whose own fields, other than
+ * `stack`, cannot change.
  *
  * Unrolls nested wrapper fields (`cause`, `originalError`, `error`, `err`, `inner`, `innerError`)
  * up to the configured depth, and a `cause` chain alone past the default depth, then resolves a classification in priority order across every

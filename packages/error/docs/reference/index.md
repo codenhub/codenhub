@@ -140,7 +140,7 @@ Runs an async callback and captures a thrown or rejected value as a normalized `
 export declare function createAppError(error: unknown, options?: AppErrorOptions): AppError;
 ```
 
-Normalizes an unknown error value into a predictable `AppError` whose own fields cannot change.
+Normalizes an unknown error value into a predictable `AppError` whose own fields, other than `stack`, cannot change.
 
 Unrolls nested wrapper fields (`cause`, `originalError`, `error`, `err`, `inner`, `innerError`) up to the configured depth, and a `cause` chain alone past the default depth, then resolves a classification in priority order across every candidate found:
 
@@ -461,7 +461,7 @@ export interface AppError extends Error {
 }
 ```
 
-A predictable error shape representing a normalized application error. Its own fields cannot be changed or removed, though frameworks can still add properties of their own.
+A predictable error shape representing a normalized application error. Its own fields other than `stack` cannot be changed or removed, though frameworks can still add properties of their own.
 
 Implements the standard JavaScript `Error` interface and adds classification, localization support, and original error wrapping. An explicit `toJSON` keeps JSON serialization limited to the normalized fields, excluding diagnostic `cause` and `originalError` values on every engine.
 

@@ -1,6 +1,6 @@
 /**
- * A predictable error shape representing a normalized application error. Its own fields cannot be
- * changed or removed, though frameworks can still add properties of their own.
+ * A predictable error shape representing a normalized application error. Its own fields other than
+ * `stack` cannot be changed or removed, though frameworks can still add properties of their own.
  *
  * Implements the standard JavaScript `Error` interface and adds classification,
  * localization support, and original error wrapping. An explicit `toJSON` keeps JSON
