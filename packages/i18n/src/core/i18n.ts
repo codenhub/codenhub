@@ -9,7 +9,6 @@ import {
   getDateTimeFormat,
   getNumberFormat,
   intlLocale,
-  isOptionsObject,
   isPlainMessage,
   MessageSyntaxError,
   type MessageValues,
@@ -215,12 +214,13 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   }
 
   formatDate(value: Date | number, options: Intl.DateTimeFormatOptions = {}): string {
-    if (!isOptionsObject(options)) {
+    if (options === null) {
       return getDateTimeFormat(this.currentLocale, options).format(value);
     }
-    // The copy holds inherited options too, which a spread would drop. `timeZone: undefined`, as forwarded options often
-    // carry, names no zone, so the configured one still applies; any other value, even `null`, is Intl's to judge.
-    const copy = copyDateTimeFormatOptions(options);
+    // The copy holds inherited options too, which a spread would drop, and reads a primitive through its wrapper object,
+    // as Intl does. `timeZone: undefined`, as forwarded options often carry, names no zone, so the configured one still
+    // applies; any other value, even `null`, is Intl's to judge.
+    const copy = copyDateTimeFormatOptions(Object(options) as Intl.DateTimeFormatOptions);
     return getDateTimeFormat(
       this.currentLocale,
       copy.timeZone === undefined ? { ...copy, timeZone: this.config.timeZone } : copy,

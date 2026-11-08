@@ -59,6 +59,18 @@ describe("timeZone", () => {
     expect(i18n.formatDate(when, { dateStyle: "long", timeZone: forwarded.timeZone })).toBe(expected);
   });
 
+  it("should keep the configured time zone for primitive options, which Intl reads as an empty object", async () => {
+    const runtimeDay = new Intl.DateTimeFormat("en").format(when);
+    const timeZone =
+      runtimeDay === new Intl.DateTimeFormat("en", { timeZone: "Pacific/Pago_Pago" }).format(when)
+        ? "Pacific/Kiritimati"
+        : "Pacific/Pago_Pago";
+    const i18n = create(timeZone);
+    await i18n.init();
+
+    expect(i18n.formatDate(when, "long" as never)).toBe(new Intl.DateTimeFormat("en", { timeZone }).format(when));
+  });
+
   it("should pass timeZone: null to Intl, which rejects it, instead of using the configured time zone", async () => {
     const i18n = create("UTC");
     await i18n.init();
