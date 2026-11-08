@@ -1,6 +1,10 @@
 {
   "template": "codenhub/template",
   "synced": "762782500014da0808a98d681796dfb5bfcde14e",
+  "exceptions": {
+    "tsconfig.base.json": "This repository predates the template's TypeScript layout: the packages extend the root tsconfig.json, which sets the shared flags. Adopting tsconfig.base.json means its stricter flags, noUncheckedIndexedAccess and verbatimModuleSyntax, which raised over 160 type errors on 2026-11-08.",
+    "tsconfig.root.json": "This repository predates the template's TypeScript layout: the packages extend the root tsconfig.json, which sets the shared flags. Adopting tsconfig.base.json means its stricter flags, noUncheckedIndexedAccess and verbatimModuleSyntax, which raised over 160 type errors on 2026-11-08."
+  },
   "files": {
     ".editorconfig": "canonical",
     ".gitattributes": "blocks",
