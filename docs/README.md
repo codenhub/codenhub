@@ -1,31 +1,64 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-05
+last_updated: 2026-11-08
 scope: Index of repository-wide documentation.
 ---
 
-# Repository documentation
+# Documentation
 
-Root `docs/` contains durable repository knowledge. Package-specific consumer and maintainer documentation lives with each workspace package. [Contributing](../CONTRIBUTING.md) contains the contributor workflow; [agent instructions](../AGENTS.md) contain agent behavior guidance. Coden's brand, its visual identity, voice, and assets, is published at [coden.agency/brand](https://coden.agency/brand).
+`docs/` holds durable project knowledge. [Contributing](../CONTRIBUTING.md) contains the contributor workflow, and [agent instructions](../AGENTS.md) contain how agents work here. The [documentation guidelines](guidelines/documentation.md) define how these documents are written, what their status means, and how they change.
+
+Every document in `docs/` is listed here. Adding, moving, or deleting one updates this index in the same change.
+
+<!-- project:start -->
+
+Package-specific consumer and maintainer documentation lives with each workspace package; this index covers what holds across the repository. Start with the [roadmap](roadmap.md) for where the repository is heading.
+
+## Overview
+
+| Document              | Contains                             |
+| --------------------- | ------------------------------------ |
+| [Roadmap](roadmap.md) | Repository-level intended direction. |
+
+<!-- project:end -->
 
 ## Guidelines
 
-| Document                                                 | Contains                                                                                                 |
-| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| [Code](guidelines/code.md)                               | Coding conventions, architecture, TypeScript, testing practices, and source API documentation.           |
-| [Documentation](guidelines/documentation.md)             | Documentation ownership, metadata, status and authority, formatting, layout, and exception requirements. |
-| [Package naming](guidelines/package-naming.md)           | The branding test, naming vocabulary, title presentation, and each package's display name.               |
-| [Public docs writing](guidelines/public-docs-writing.md) | Writing complete, story-shaped, playful public package docs.                                             |
+| Document                                     | Contains                                                                                        |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| [Code](guidelines/code.md)                   | Naming, design, TypeScript, async and errors, testing practices, and documentation in code.     |
+| [Documentation](guidelines/documentation.md) | Metadata, status and authority, recording decisions, exceptions, layout, and the writing voice. |
+| [Security](guidelines/security.md)           | Secrets, untrusted input, what stays out of logs, and reviewing a change.                       |
+
+<!-- project:start -->
+
+| Document                                                 | Contains                                                                                   |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| [Brand](guidelines/brand.md)                             | Where Coden's brand is published, and how this repository names and presents its packages. |
+| [Package naming](guidelines/package-naming.md)           | The branding test, naming vocabulary, title presentation, and each package's display name. |
+| [Public docs writing](guidelines/public-docs-writing.md) | What a public package doc adds to the documentation guidelines' writing voice.             |
+
+<!-- project:end -->
 
 ## Repository references
 
-| Document              | Contains                                                                                   |
-| --------------------- | ------------------------------------------------------------------------------------------ |
-| [Tooling](tooling.md) | Root scripts, selectors, options, execution, reporting, compliance checks, and generators. |
-| [CI](ci.md)           | Pinned toolchain, verification jobs, deployment, previews, and publishing workflows.       |
-| [Roadmap](roadmap.md) | Repository-level intended direction.                                                       |
+| Document                  | Contains                                                                                                         |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| [Workspace](workspace.md) | The root scripts and what each guarantees, the shared tool configurations, and dependency versions.              |
+| [Tooling](tooling.md)     | How the scripts are implemented, the TypeScript and Vitest configuration, narrowing a run, and adding a package. |
+| [CI](ci.md)               | The pinned toolchain, the verification jobs, and dependency updates.                                             |
+
+<!-- project:start -->
+
+<!-- project:end -->
 
 ## Specifications
+
+| Document                | Contains                                                          |
+| ----------------------- | ----------------------------------------------------------------- |
+| [Tests](specs/tests.md) | Test categories, locations, configuration, scripts, and coverage. |
+
+<!-- project:start -->
 
 | Document                                                         | Contains                                                                                  |
 | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
@@ -42,6 +75,7 @@ Root `docs/` contains durable repository knowledge. Package-specific consumer an
 | [Package changelog](specs/packages-changelog.md)                 | Recommended changelog structure and release entries.                                      |
 | [Package development](specs/packages-development.md)             | Optional playground, dev, and debug environments.                                         |
 | [Package demos](specs/packages-demo.md)                          | Package demos and the application that aggregates them.                                   |
-| [Tests](specs/tests.md)                                          | Test categories, configuration, scripts, and coverage expectations.                       |
 | [Errors](specs/errors.md)                                        | Consumer-facing error conventions and documentation.                                      |
 | [Roadmaps](specs/roadmaps.md)                                    | Durable roadmap structure and content.                                                    |
+
+<!-- project:end -->
