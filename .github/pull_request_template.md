@@ -6,7 +6,7 @@ Fixes #
 
 ## Checks
 
-- [ ] `pnpm verify` passes, or the skipped steps are listed here
+- [ ] The delivery gate `CONTRIBUTING.md` names passes, `pnpm verify` by default, or the skipped steps are listed here
 - [ ] Documentation affected by behavior, API, or convention changes is updated in this pull request
 
 <!-- project:start -->
@@ -17,6 +17,6 @@ Fixes #
 
 ## Security
 
-- [ ] No secret, token, or personal data can reach a log, an error, a snapshot, or a response
+- [ ] No secret, token, or personal data can reach a log, an error, a snapshot, or a response other than the one that shows a new secret to its creator
 - [ ] New untrusted input is validated where it enters, with a bounded size
 - [ ] A new dependency, permission, or externally reachable surface is named in the description

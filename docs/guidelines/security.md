@@ -83,7 +83,7 @@ When the project serves web requests:
 A change that touches any of the above names it in its pull request and adds or updates its tests. The [pull request template](../../.github/pull_request_template.md) carries the check. Ask:
 
 - Does it add a way for untrusted input to reach the code? Is that input validated and bounded at the boundary?
-- Does a secret, token, user's data, or full URL now reach a log, error, or response?
+- Does a secret, token, user's data, or full URL now reach a log, error, or response, other than the one that shows a new secret to its creator?
 - Does it store a secret, and is it stored as a digest or encrypted as above?
 - Does it add a permission, capability, endpoint, or outbound call? Is that named in the pull request and tested?
 - Does it read a file a user can edit, and check what it reads?

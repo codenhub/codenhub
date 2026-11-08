@@ -64,6 +64,6 @@ A placeholder left in a file after creation is a bug.
 
 ## Syncing
 
-`manifest.json#synced` records the template commit this project last synced with. A sync compares the template at that commit with the template now, applies the changes to `canonical` files and outside the blocks of `blocks` files, proposes changes to `seed` files, and updates `synced`. The comparison against the last synced commit, rather than against the project's own files, is what tells a template change apart from a deliberate project difference.
+`manifest.json#synced` records the template commit this project last synced with. A sync takes the `files` map from the template's current manifest, keeping this project's `template` and `synced`, so a file the template added or reclassified gets its new class. It then compares the template at that commit with the template now, applies the changes to `canonical` files and outside the blocks of `blocks` files, proposes changes to `seed` files, and updates `synced`. The comparison against the last synced commit, rather than against the project's own files, is what tells a template change apart from a deliberate project difference.
 
 A project that improves a `canonical` file or the template-owned part of a `blocks` file proposes the improvement to the template instead of keeping a local edit.

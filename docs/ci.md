@@ -12,16 +12,16 @@ scope: Continuous integration workflows, the pinned workspace toolchain, and the
 
 Local and CI runs resolve the same versions, each declared once:
 
-| Where                           | Declares                                        |
-| ------------------------------- | ----------------------------------------------- |
-| `package.json` `engines`        | The Node.js and pnpm range every run must meet  |
-| `package.json` `packageManager` | The exact pnpm version pnpm installs itself     |
-| `.nvmrc`                        | The exact Node.js version, read by `nvm` and CI |
-| `.npmrc` `engine-strict`        | Makes an install outside `engines` fail         |
+| Where                                | Declares                                        |
+| ------------------------------------ | ----------------------------------------------- |
+| `package.json` `engines`             | The Node.js and pnpm range every run must meet  |
+| `package.json` `packageManager`      | The exact pnpm version pnpm installs itself     |
+| `.nvmrc`                             | The exact Node.js version, read by `nvm` and CI |
+| `pnpm-workspace.yaml` `engineStrict` | Makes an install outside `engines` fail         |
 
 CI reads those same files rather than repeating a version: `pnpm/action-setup` takes pnpm from `packageManager`, and `actions/setup-node` takes Node.js from `.nvmrc`. A version is raised in one place, and a machine that cannot satisfy it is told at install time instead of failing later in a way nobody can reproduce.
 
-`engine-strict` is deliberate friction. A patch-level difference rarely matters, and the one time it does, the failure looks like a bug in the change under review rather than a difference in the runtime.
+`engineStrict` is deliberate friction. A patch-level difference rarely matters, and the one time it does, the failure looks like a bug in the change under review rather than a difference in the runtime.
 
 Workspace setup, pnpm, Node.js and a `--frozen-lockfile` install, lives in the composite action `.github/actions/setup`, so every job that needs the workspace sets it up the same way. A lockfile that disagrees with the manifests fails the install rather than being rewritten in CI.
 
@@ -37,9 +37,11 @@ Workspace setup, pnpm, Node.js and a `--frozen-lockfile` install, lives in the c
 
 ## The workflow
 
-| Job      | Runner          | Runs                                                 |
-| -------- | --------------- | ---------------------------------------------------- |
-| `Verify` | `ubuntu-latest` | `pnpm verify`, then the `Working tree is clean` step |
+<!-- project:start -->
+
+The workflow runs `Verify` without the browser suites, which run in jobs of their own; [Jobs](#jobs) lists every job and what it runs.
+
+<!-- project:end -->
 
 By default there is no change-based selection: every run checks the whole workspace. A check that skips part of the workspace on a pull request lets that part reach `main` unverified, and a selection has to be maintained and can be wrong in ways a green run hides. A project whose full run grows too slow to wait for adds selection then, under three rules:
 

@@ -1,6 +1,6 @@
 {
   "template": "codenhub/template",
-  "synced": "b9dddc1c8765f09e67ee648ca3179af0504c3655",
+  "synced": "762782500014da0808a98d681796dfb5bfcde14e",
   "files": {
     ".editorconfig": "canonical",
     ".gitattributes": "blocks",
@@ -18,7 +18,6 @@
     ".github/pull_request_template.md": "blocks",
     ".github/workflows/ci.yml": "blocks",
     ".gitignore": "blocks",
-    ".npmrc": "canonical",
     ".nvmrc": "canonical",
     ".oxfmtrc.json": "blocks",
     ".oxlintrc.json": "blocks",

@@ -28,7 +28,7 @@ Allowed statuses:
 ```yaml
 ---
 status: APPROVED
-last_updated: 2026-07-15
+last_updated: 2026-11-08
 scope: Area governed by this document.
 ---
 ```
@@ -41,7 +41,7 @@ A file that is itself a template for consumer-facing output, such as a README te
 
 Markdown in this repository is not hard-wrapped. Write each paragraph and list item as a single line and let the editor wrap it on screen. Markdown renders a lone newline inside a paragraph as a space, so wrapped and unwrapped source read identically once rendered, and leaving prose unwrapped keeps an edit to one word from reflowing a whole paragraph in the diff.
 
-`pnpm format:check` enforces this: it runs Prettier over every Markdown file with `proseWrap` set to `never`, and `pnpm verify` and the pre-commit hook run the same check. The rule is the formatter's to keep: do not hand-wrap prose to a column, and do not set a `max_line_length` for Markdown in editor configuration. Third-party Markdown listed in `.prettierignore` is kept as received. Agent skills are formatted like the rest, but with their fenced examples left as written: an agent reads a skill as raw text, where an example's line breaks are part of what it shows.
+`pnpm format:check` enforces this: it runs Prettier over every Markdown file with `proseWrap` set to `never`, and `pnpm verify` and the pre-commit hook run the same check. The rule is the formatter's to keep: do not hand-wrap prose to a column, and do not give Markdown a line length in editor configuration. `.editorconfig` sets `max_line_length = off` for Markdown, which says the same to editors and is how Prettier reads an unlimited width. Third-party Markdown listed in `.prettierignore` is kept as received. Agent skills are formatted like the rest, but with their fenced examples left as written: an agent reads a skill as raw text, where an example's line breaks are part of what it shows.
 
 ## Source of truth
 

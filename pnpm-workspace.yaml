@@ -83,3 +83,8 @@ minimumReleaseAgeExclude:
   - "@codenhub/theme@0.2.2"
 patchedDependencies:
   typedoc@0.28.20: patches/typedoc@0.28.20.patch
+
+# Makes pnpm refuse an install outside `engines` in package.json instead of only printing a warning, so a
+# mismatch surfaces before it turns into a failure no one can reproduce (docs/ci.md, "Toolchain"). It lives
+# here because pnpm ignores `engine-strict` in .npmrc: checked with pnpm 11.7 and 12.16.
+engineStrict: true

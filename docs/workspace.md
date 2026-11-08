@@ -55,8 +55,7 @@ Every root script here except `prepare` is a thin wrapper around `hub`, and [Too
 | File                  | Configures                                                                                                                                                                                                                                                                |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `package.json`        | The root scripts, the tooling as `devDependencies`, and the pinned Node.js and pnpm (`engines`, `packageManager`).                                                                                                                                                        |
-| `pnpm-workspace.yaml` | The workspace globs, the catalog of every dependency version, and the supply-chain rules for installs ([CI](ci.md#dependency-installs)).                                                                                                                                  |
-| `.npmrc`              | `engine-strict`, so an install outside `engines` fails.                                                                                                                                                                                                                   |
+| `pnpm-workspace.yaml` | The workspace globs, the catalog of every dependency version, the supply-chain rules for installs ([CI](ci.md#dependency-installs)), and `engineStrict`, so an install outside `engines` fails.                                                                           |
 | `.nvmrc`              | The exact Node.js version, read by `nvm` and by CI.                                                                                                                                                                                                                       |
 | `.editorconfig`       | Indentation, final newline, LF line endings, and no hard wrap in Markdown.                                                                                                                                                                                                |
 | `.gitattributes`      | LF line endings in the repository and the working tree on every platform, and the binary file types.                                                                                                                                                                      |
@@ -88,7 +87,13 @@ oxfmt formats everything it understands except Markdown; Prettier formats only M
 
 ### Versions
 
-Every dependency version is declared once, in the catalog in `pnpm-workspace.yaml`, and referred to as `catalog:` in each `package.json`. The workspace therefore cannot hold two versions of one dependency by accident, and an upgrade is a one-line change that Dependabot can propose ([CI](ci.md#dependency-updates)).
+Every third-party dependency version is declared once, in the catalog in `pnpm-workspace.yaml`, and referred to as `catalog:` in each `package.json`. The workspace therefore cannot hold two versions of one dependency by accident, and an upgrade is a one-line change that Dependabot can propose ([CI](ci.md#dependency-updates)). A workspace package depends on another as `workspace:*`, and a `peerDependencies` range says what a consumer may install, so neither is a catalog entry.
+
+<!-- project:start -->
+
+<!-- Version rules only this project has, such as installing a published workspace package from its release through the catalog. Leave the block empty when there are none. -->
+
+<!-- project:end -->
 
 ## Git hooks
 
