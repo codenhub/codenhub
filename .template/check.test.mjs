@@ -1,14 +1,14 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync, unlinkSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { check, markerProblems, templateLines } from "./check.mjs";
 
 // Placeholders are built, not written, so this file holds none for the check to find in a project.
-const placeholder = (name) => `{${"{"}${name}}}`;
+const placeholder = (/** @type {string} */ name) => `{${"{"}${name}}}`;
 
 const TEMPLATE_FILES = {
   ".editorconfig": "root = true\n",
@@ -30,8 +30,15 @@ const TEMPLATE_FILES = {
 };
 const CLASSES = { ".editorconfig": "canonical", "AGENTS.md": "blocks", "README.md": "seed" };
 
+/** @type {string} */
 let root;
 
+/**
+ * Runs git and returns its trimmed output, throwing when it fails.
+ * @param {string} cwd The repository to run in.
+ * @param {...string} args The git arguments.
+ * @returns {string} Its output.
+ */
 function git(cwd, ...args) {
   const result = spawnSync("git", args, { cwd, encoding: "utf8" });
   if (result.status !== 0) {
@@ -40,6 +47,11 @@ function git(cwd, ...args) {
   return result.stdout.trim();
 }
 
+/**
+ * Writes files, creating their directories.
+ * @param {string} cwd The repository to write in.
+ * @param {Record<string, string>} files Each path and its text.
+ */
 function write(cwd, files) {
   for (const [path, text] of Object.entries(files)) {
     mkdirSync(dirname(join(cwd, path)), { recursive: true });
@@ -47,6 +59,12 @@ function write(cwd, files) {
   }
 }
 
+/**
+ * Writes files and commits everything.
+ * @param {string} cwd The repository to commit in.
+ * @param {Record<string, string>} files Each path and its text.
+ * @returns {string} The new commit's SHA.
+ */
 function commit(cwd, files) {
   write(cwd, files);
   git(cwd, "add", "-A");
@@ -54,37 +72,66 @@ function commit(cwd, files) {
   return git(cwd, "rev-parse", "HEAD");
 }
 
+/**
+ * A manifest's text, with the test classes unless `fields` replaces them.
+ * @param {Record<string, unknown>} fields Fields to set over the defaults.
+ * @returns {string} The JSON text.
+ */
 function manifest(fields) {
   return `${JSON.stringify({ template: "acme/template", synced: null, files: CLASSES, ...fields }, null, 2)}\n`;
 }
 
-/** A template repository and a project created from its first commit. */
+/** @type {string} */
+let fixture;
+/** @type {string} */
+let fixtureSynced;
+
+/**
+ * A template repository and a project created from its first commit. Both are built once, in `beforeAll`, and
+ * copied for each test: building them takes eight git processes, about a second per test on Windows.
+ */
 function setUp() {
   const template = join(root, "template");
   const project = join(root, "project");
+  cpSync(fixture, root, { recursive: true });
+  return {
+    template,
+    project,
+    synced: fixtureSynced,
+    run: () => check({ cwd: project, templateUrl: template }),
+  };
+}
+
+beforeAll(() => {
+  fixture = mkdtempSync(join(tmpdir(), "template-check-fixture-"));
+  const config = join(fixture, "gitconfig");
+  writeFileSync(config, "[user]\n\tname = Test\n\temail = test@example.com\n[commit]\n\tgpgsign = false\n");
+  vi.stubEnv("GIT_CONFIG_GLOBAL", config);
+  vi.stubEnv("GIT_CONFIG_NOSYSTEM", "1");
+  const template = join(fixture, "template");
+  const project = join(fixture, "project");
   mkdirSync(template);
   mkdirSync(project);
   git(template, "init", "--quiet", "-b", "main");
-  const synced = commit(template, { ...TEMPLATE_FILES, ".template/manifest.json": manifest({}) });
+  fixtureSynced = commit(template, { ...TEMPLATE_FILES, ".template/manifest.json": manifest({}) });
   git(project, "init", "--quiet", "-b", "main");
   commit(project, {
     ...TEMPLATE_FILES,
     "README.md": "# Acme Notes\n",
-    ".template/manifest.json": manifest({ synced }),
+    ".template/manifest.json": manifest({ synced: fixtureSynced }),
   });
-  return { template, project, synced, run: () => check({ cwd: project, templateUrl: template }) };
-}
+});
+
+afterAll(() => {
+  vi.unstubAllEnvs();
+  rmSync(fixture, { recursive: true, force: true });
+});
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "template-check-"));
-  const config = join(root, "gitconfig");
-  writeFileSync(config, "[user]\n\tname = Test\n\temail = test@example.com\n[commit]\n\tgpgsign = false\n");
-  vi.stubEnv("GIT_CONFIG_GLOBAL", config);
-  vi.stubEnv("GIT_CONFIG_NOSYSTEM", "1");
 });
 
 afterEach(() => {
-  vi.unstubAllEnvs();
   rmSync(root, { recursive: true, force: true });
 });
 

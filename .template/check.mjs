@@ -98,24 +98,24 @@ export function templateLines(text, isDocument) {
   if (isDocument && all[0] === "---") {
     const end = all.indexOf("---", 1);
     if (end > 0) {
-      for (let index = 0; index <= end; index += 1) {
+      for (const [index, line] of all.slice(0, end + 1).entries()) {
         // Only the delimiters and the keys are the template's. Any other line, indented or blank, continues the
         // value above it, such as a folded `>` scalar, and is the project's too.
-        if (all[index] === "---" || /^[\w-]+:/.test(all[index])) {
-          kept.push({ text: all[index].replace(/^([\w-]+):.*$/, "$1:"), line: index + 1 });
+        if (line === "---" || /^[\w-]+:/.test(line)) {
+          kept.push({ text: line.replace(/^([\w-]+):.*$/, "$1:"), line: index + 1 });
         }
       }
       next = end + 1;
     }
   }
   let isInBlock = false;
-  for (let index = next; index < all.length; index += 1) {
-    const kind = markerKind(all[index]);
+  for (const [offset, line] of all.slice(next).entries()) {
+    const kind = markerKind(line);
     if (kind !== undefined) {
       isInBlock = kind === "start";
-      kept.push({ text: all[index], line: index + 1 });
-    } else if (!isInBlock) {
-      kept.push({ text: all[index], line: index + 1 });
+    }
+    if (kind !== undefined || !isInBlock) {
+      kept.push({ text: line, line: next + offset + 1 });
     }
   }
   return kept;
@@ -130,14 +130,15 @@ function shapeProblems(manifest) {
   if (typeof manifest !== "object" || manifest === null || Array.isArray(manifest)) {
     return ["is not a JSON object"];
   }
+  const fields = /** @type {Record<string, unknown>} */ (manifest);
   const problems = [];
-  if (typeof manifest.template !== "string" || !REPOSITORY.test(manifest.template)) {
+  if (typeof fields.template !== "string" || !REPOSITORY.test(fields.template)) {
     problems.push("template must be an owner/repo string");
   }
-  if (manifest.synced !== null && (typeof manifest.synced !== "string" || !SHA.test(manifest.synced))) {
+  if (fields.synced !== null && (typeof fields.synced !== "string" || !SHA.test(fields.synced))) {
     problems.push("synced must be null or a full 40-character commit SHA");
   }
-  const files = manifest.files;
+  const files = fields.files;
   if (typeof files !== "object" || files === null || Array.isArray(files)) {
     problems.push("files must be an object of path to class");
     return problems;
@@ -147,7 +148,7 @@ function shapeProblems(manifest) {
       problems.push(`files: ${path} has class ${JSON.stringify(fileClass)}, not canonical, blocks, or seed`);
     }
   }
-  const exceptions = manifest.exceptions ?? {};
+  const exceptions = fields.exceptions ?? {};
   if (typeof exceptions !== "object" || exceptions === null || Array.isArray(exceptions)) {
     problems.push("exceptions must be an object of path to reason");
     return problems;
@@ -158,7 +159,7 @@ function shapeProblems(manifest) {
     }
     if (!Object.hasOwn(files, path)) {
       problems.push(`exceptions: ${path} is not in files`);
-    } else if (files[path] === "seed") {
+    } else if (/** @type {Record<string, unknown>} */ (files)[path] === "seed") {
       problems.push(`exceptions: ${path} is a seed file, which the project already owns`);
     }
   }
@@ -172,7 +173,9 @@ function shapeProblems(manifest) {
  * @returns {{ problems: string[], notes: string[] }} What fails the check, and what is only reported.
  */
 export function check({ cwd = process.cwd(), templateUrl } = {}) {
+  /** @type {string[]} */
   const problems = [];
+  /** @type {string[]} */
   const notes = [];
 
   let manifest;
@@ -191,7 +194,8 @@ export function check({ cwd = process.cwd(), templateUrl } = {}) {
   /** @type {Record<string, string>} */
   const exceptions = manifest.exceptions ?? {};
   const excused = new Set();
-  const report = (path, message) => {
+  /** Records a difference from the template, unless an exception excuses the file. */
+  const report = (/** @type {string} */ path, /** @type {string} */ message) => {
     if (Object.hasOwn(exceptions, path)) {
       excused.add(path);
     } else {
@@ -223,8 +227,8 @@ export function check({ cwd = process.cwd(), templateUrl } = {}) {
   const url = templateUrl ?? `https://github.com/${manifest.template}`;
 
   const head = git(cwd, ["ls-remote", url, "HEAD"]);
-  const headSha = head.stdout.split(/\s/)[0];
-  if (head.status !== 0 || !SHA.test(headSha ?? "")) {
+  const headSha = head.stdout.split(/\s/)[0] ?? "";
+  if (head.status !== 0 || !SHA.test(headSha)) {
     problems.push(`could not read ${url}: ${head.stderr || "no HEAD"}`);
     return { problems, notes };
   }
@@ -303,7 +307,7 @@ export function check({ cwd = process.cwd(), templateUrl } = {}) {
     const expected = templateLines(original.stdout, isDocument);
     const index = ours.findIndex((line, at) => line.text !== expected[at]?.text);
     if (index !== -1 || ours.length !== expected.length) {
-      const line = index === -1 ? (ours.at(-1)?.line ?? 1) : ours[index].line;
+      const line = (ours[index] ?? ours.at(-1))?.line ?? 1;
       report(path, `${path}:${line}: differs from the template's text outside the project blocks`);
     }
   }
