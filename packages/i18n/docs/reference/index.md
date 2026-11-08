@@ -189,6 +189,12 @@ addEventListener(type: string, callback: EventListener | EventListenerObject | n
 
 Adds a typed lifecycle event listener.
 
+**Parameters**
+
+- `type` — `ready`, dispatched after every applied `init()`, or `locale-change`, after every applied locale change.
+- `callback` — Receives the event, whose `detail` holds the locale. An exception is reported as by `I18n.subscribe`.
+- `options` — Standard `EventTarget` listener options, such as `{ once: true }`.
+
 #### I18n › formatDate
 
 ```ts
@@ -197,7 +203,17 @@ formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
 
 Formats a date, or a timestamp in milliseconds, for the active locale with `Intl.DateTimeFormat`, in the configured `timeZone` unless `options.timeZone` names another.
 
-**Throws** — `RangeError` — When `options` or the date is invalid, as `Intl.DateTimeFormat` throws.
+**Parameters**
+
+- `value` — Date, or milliseconds since the epoch.
+- `options` — `Intl.DateTimeFormat` options, such as `{ dateStyle: "long" }`, read by name, including inherited properties, as `Intl` reads them; other properties are ignored. A `timeZone` of `undefined` keeps the configured one.
+
+**Returns** — The formatted date.
+
+**Throws**
+
+- `RangeError` — When an option or the date is invalid, such as an unknown time zone or an invalid `Date`, as `Intl.DateTimeFormat` throws.
+- `TypeError` — When `options` is `null` or options conflict, such as `dateStyle` with `year`, as `Intl.DateTimeFormat` throws.
 
 #### I18n › formatList
 
@@ -206,6 +222,13 @@ formatList(values: Iterable<string>, options?: Intl.ListFormatOptions): string;
 ```
 
 Joins strings into a list, such as "a, b, and c", for the active locale with `Intl.ListFormat`.
+
+**Parameters**
+
+- `values` — Strings to join, in order.
+- `options` — `Intl.ListFormat` options, such as `{ type: "disjunction" }` for "a, b, or c".
+
+**Returns** — The joined list, or an empty string for no values.
 
 **Throws**
 
@@ -220,10 +243,17 @@ formatNumber(value: number | bigint, options?: Intl.NumberFormatOptions): string
 
 Formats a number for the active locale with `Intl.NumberFormat`.
 
+**Parameters**
+
+- `value` — Number or bigint to format.
+- `options` — `Intl.NumberFormat` options, such as `{ style: "percent" }`, read by name, including inherited properties, as `Intl` reads them; other properties are ignored.
+
+**Returns** — The formatted number.
+
 **Throws**
 
 - `RangeError` — When `options` is out of range, as `Intl.NumberFormat` throws.
-- `TypeError` — When `options` is incomplete, such as a currency style without `currency`.
+- `TypeError` — When `options` is `null` or incomplete, such as a currency style without `currency`, as `Intl.NumberFormat` throws.
 
 #### I18n › formatRelativeTime
 
@@ -232,6 +262,14 @@ formatRelativeTime(value: number, unit: Intl.RelativeTimeFormatUnit, options?: I
 ```
 
 Formats a relative time, such as `-1, "day"` for "1 day ago", for the active locale with `Intl.RelativeTimeFormat`.
+
+**Parameters**
+
+- `value` — Amount of `unit`, negative for the past.
+- `unit` — Unit of `value`, such as `"day"` or `"hours"`.
+- `options` — `Intl.RelativeTimeFormat` options, such as `{ numeric: "auto" }` for "yesterday".
+
+**Returns** — The formatted relative time.
 
 **Throws** — `RangeError` — When `value`, `unit`, or `options` is invalid, as `Intl.RelativeTimeFormat` throws.
 
@@ -247,7 +285,7 @@ Whether a key has a text, or is a plural group, in a dictionary the active local
 
 - `key` — Translation key, trimmed as `t()` trims it.
 
-**Returns** — `true` when `t(key)` would find a text, or `t(key, { count })` a plural form, and `false` otherwise, including for a string no dictionary can hold, such as one that is blank, longer than 1,000 characters, or contains ASCII controls.
+**Returns** — `true` when a dictionary has a text at `key`, or a plural group, one with an `other` form, and `false` otherwise, including for a group without an `other` form, whichever forms it has, and for a string no dictionary can hold, such as one that is blank, longer than 1,000 characters, or contains ASCII controls.
 
 **Throws**
 
@@ -310,7 +348,7 @@ matchLocale(preferences: readonly string[]): TLocale | undefined;
 
 Picks the configured locale that best serves ordered preferences, such as `navigator.languages` or the tags of an `Accept-Language` header sorted by quality.
 
-Each preference, in order, tries an exact case-insensitive match, then the longest configured locale it starts with as whole subtags and with the same likely script, such as `pt` for `pt-BR`, then likely subtags, such as `zh-Hant` for `zh-TW`, then the same language subtag.
+Each preference, in order, tries an exact case-insensitive match, then the longest configured locale it starts with as whole subtags and with the same likely script, such as `pt` for `pt-BR`, then likely subtags, such as `zh-Hant` for `zh-TW`, then the same language subtag. When several configured locales share a preference's language and script and none matches it exactly or by likely region, the first in `locales` wins: list `es-419` before `es-ES` to serve `es-MX` from `es-419`. `es-ES`, and `es`, whose likely region is Spain, still match `es-ES`.
 
 **Parameters**
 
@@ -328,6 +366,12 @@ removeEventListener(type: string, callback: EventListener | EventListenerObject 
 ```
 
 Removes a typed lifecycle event listener.
+
+**Parameters**
+
+- `type` — Event type the listener was added for.
+- `callback` — The listener that was added.
+- `options` — Standard `EventTarget` options; `capture` must match the one it was added with.
 
 #### I18n › resolveLocale
 
@@ -371,11 +415,11 @@ Atomically changes the active locale after all required loads succeed.
 subscribe(listener: () => void): () => void;
 ```
 
-Calls a listener after every applied initialization and locale change, such as to re-render a framework.
+Calls a listener after every applied `init()` and every applied locale change, such as to re-render a framework. A stale or same-locale request, which changes nothing, does not call it.
 
 **Parameters**
 
-- `listener` — Called without arguments; exceptions are reported as for any `EventTarget` listener.
+- `listener` — Called without arguments. An exception is reported as for any `EventTarget` listener: in a browser, as an uncaught error that neither stops other listeners nor rejects the change; in Node.js, it crashes the process.
 
 **Returns** — A function that removes the listener; calling it again does nothing.
 
@@ -491,7 +535,7 @@ getLocaleDirection?(locale: NoInfer<TLocale>): LocaleDirection;
 
 Resolves `ltr` or `rtl`; called during creation and state changes, with failures propagated unchanged.
 
-**Default** — `rtl` for a right-to-left script subtag, such as `uz-Arab`, or, without a script subtag, a right-to-left language, such as `ar`, `he`, `fa`, or `ur`; otherwise `ltr`.
+**Default** — `rtl` when the locale's script is right-to-left, otherwise `ltr`. The script is its script subtag, such as `uz-Arab`, else the likely script `Intl.Locale` gives for its language and region, such as Arabic for `pa-PK` and `arz` and Devanagari for `sd-IN`; for a tag `Intl.Locale` rejects, a right-to-left language, such as `ar` or `he`, gives `rtl`.
 
 #### I18nConfig › loadLocale
 
@@ -664,7 +708,7 @@ Resource limits checked when a loaded dictionary is validated. Each must be a po
 maxDepth?: number;
 ```
 
-Maximum nesting levels below the root object. Defaults to 100.
+Maximum nesting levels below the root object. Defaults to 100. Each level adds at least 2 characters to a flattened key, a name and a dot, so with the 1,000-character key limit, a translation more than 499 levels deep can't be loaded whatever this is set to.
 
 #### LocaleDictionaryLimits › maxProperties
 
@@ -763,6 +807,14 @@ type AnyValues = Readonly<Record<string, MessageValue>>;
 
 Not exported; declared in `src/core/message-params.ts`.
 
+### Digit
+
+```ts
+type Digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
 ### FlattenedKey
 
 ```ts
@@ -794,7 +846,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### IsName
 
 ```ts
-type IsName<N extends string> = N extends "" | `${string}${Space | "{" | "}" | ","}${string}` ? false : true;
+type IsName<N, TSteps extends Steps = []> = TSteps["length"] extends MaxSteps ? false : N extends `${infer C}${infer R}` ? C extends NameCharacter ? R extends "" ? true : IsName<R, Next<TSteps>> : false : false;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -807,10 +859,26 @@ type IsUnion<T, U = T> = T extends unknown ? ([U] extends [T] ? false : true) : 
 
 Not exported; declared in `src/core/message-params.ts`.
 
+### Letter
+
+```ts
+type Letter = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z";
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### MaxSteps
+
+```ts
+type MaxSteps = 900;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
 ### MessageArguments
 
 ```ts
-type MessageArguments<S> = S extends string ? string extends S ? Unreadable : Scan<StripQuotes<S>, ["m"], {}> : Unreadable;
+type MessageArguments<S> = S extends string ? string extends S ? Unreadable : StripQuotes<S> extends infer Text extends string ? Scan<Text, ["m"], {}, []> : Unreadable : Unreadable;
 ```
 
 The arguments of one message, `Unreadable` when it can't be read, or `{}` when it has none.
@@ -825,7 +893,15 @@ type MessageValue = string | number | Date;
 
 Type-level reading of ICU messages, so `t()` can require the values a literal message uses. A message TypeScript sees only as `string`, such as one from a JSON import, or one these types can't read, accepts any values, as before.
 
-Each step handles one brace or apostrophe, so a message stays well under TypeScript's 1,000-step limit for tail-recursive types.
+Each step handles one brace, apostrophe, name character, or space around a name or format. TypeScript stops a tail-recursive type after 1,000 steps with "Type instantiation is excessively deep" (TS2589), which a long message, such as one with 1,100 apostrophes, 600 arguments, or 1,100 spaces inside one argument, would reach, so a reading gives up after a step budget and the message accepts any values.
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### NameCharacter
+
+```ts
+type NameCharacter = Digit | Letter | Uppercase<Letter> | "_";
+```
 
 Not exported; declared in `src/core/message-params.ts`.
 
@@ -833,6 +909,14 @@ Not exported; declared in `src/core/message-params.ts`.
 
 ```ts
 type Narrow<T> = [T] extends [number] ? number : [T] extends [Date | number] ? Date | number : [T] extends [string | number] ? string | number : T;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### Next
+
+```ts
+type Next<TSteps extends Steps> = [...TSteps, unknown];
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -874,9 +958,9 @@ Not exported; declared in `src/core/types.ts`.
 ### ReadArgument
 
 ```ts
-type ReadArgument<S extends string, Stack extends readonly Frame[], Acc> = S extends `${infer N}}${infer After}` ? N extends `${string},${string}` ? ReadTypedArgument<S, Stack, Acc> : IsName<Trim<N>> extends true ? Scan<After, Stack, Acc & {
+type ReadArgument<S extends string, Stack extends readonly Frame[], Acc, TSteps extends Steps> = TSteps["length"] extends MaxSteps ? Unreadable : S extends `${infer N}}${infer After}` ? N extends `${string},${string}` ? ReadTypedArgument<S, Stack, Acc, Next<TSteps>> : IsName<Trim<N>> extends true ? Scan<After, Stack, Acc & {
     readonly [P in Trim<N>]: MessageValue;
-}> : Unreadable : Unreadable;
+}, Next<TSteps>> : Unreadable : Unreadable;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -884,13 +968,13 @@ Not exported; declared in `src/core/message-params.ts`.
 ### ReadTypedArgument
 
 ```ts
-type ReadTypedArgument<S extends string, Stack extends readonly Frame[], Acc> = S extends `${infer N},${infer R}` ? IsName<Trim<N>> extends true ? R extends `${infer T}}${infer After}` ? T extends `${string}${"," | "{"}${string}` ? R extends `${infer T2},${infer Style}` ? ValueOfType<Trim<T2>> extends Unreadable ? Unreadable : Trim<T2> extends "plural" | "selectordinal" | "select" ? Scan<Style, [...Stack, "o"], Acc & {
+type ReadTypedArgument<S extends string, Stack extends readonly Frame[], Acc, TSteps extends Steps> = TSteps["length"] extends MaxSteps ? Unreadable : S extends `${infer N},${infer R}` ? IsName<Trim<N>> extends true ? R extends `${infer T}}${infer After}` ? T extends `${string}${"," | "{"}${string}` ? R extends `${infer T2},${infer Style}` ? ValueOfType<Trim<T2>> extends Unreadable ? Unreadable : Trim<T2> extends "plural" | "selectordinal" | "select" ? Scan<Style, [...Stack, "o"], Acc & {
     readonly [P in Trim<N>]: ValueOfType<Trim<T2>>;
-}> : Style extends `${string}}${infer After2}` ? Scan<After2, Stack, Acc & {
+}, Next<TSteps>> : Style extends `${string}}${infer After2}` ? Scan<After2, Stack, Acc & {
     readonly [P in Trim<N>]: ValueOfType<Trim<T2>>;
-}> : Unreadable : Unreadable : ValueOfType<Trim<T>> extends Unreadable ? Unreadable : Scan<After, Stack, Acc & {
+}, Next<TSteps>> : Unreadable : Unreadable : ValueOfType<Trim<T>> extends Unreadable ? Unreadable : Scan<After, Stack, Acc & {
     readonly [P in Trim<N>]: ValueOfType<Trim<T>>;
-}> : Unreadable : Unreadable : Unreadable;
+}, Next<TSteps>> : Unreadable : Unreadable : Unreadable;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -898,7 +982,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### Scan
 
 ```ts
-type Scan<S extends string, Stack extends readonly Frame[], Acc> = NextBrace<S> extends [infer Brace, string, infer Rest extends string] ? Stack extends readonly [...infer Up extends readonly Frame[], infer Top] ? Brace extends "{" ? Top extends "m" ? ReadArgument<Rest, Stack, Acc> : Scan<Rest, [...Stack, "m"], Acc> : Up extends readonly [] ? Unreadable : Scan<Rest, Up, Acc> : Unreadable : Stack extends readonly ["m"] ? Acc : Unreadable;
+type Scan<S extends string, Stack extends readonly Frame[], Acc, TSteps extends Steps> = TSteps["length"] extends MaxSteps ? Unreadable : NextBrace<S> extends [infer Brace, string, infer Rest extends string] ? Stack extends readonly [...infer Up extends readonly Frame[], infer Top] ? Brace extends "{" ? Top extends "m" ? ReadArgument<Rest, Stack, Acc, Next<TSteps>> : Scan<Rest, [...Stack, "m"], Acc, Next<TSteps>> : Up extends readonly [] ? Unreadable : Scan<Rest, Up, Acc, Next<TSteps>> : Unreadable : Stack extends readonly ["m"] ? Acc : Unreadable;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -913,10 +997,26 @@ type Simplify<T> = {
 
 Not exported; declared in `src/core/message-params.ts`.
 
+### SkipQuoted
+
+```ts
+type SkipQuoted<S extends string, Out extends string, TSteps extends Steps> = TSteps["length"] extends MaxSteps ? Unreadable : S extends `${string}'${infer C}` ? C extends `'${infer D}` ? SkipQuoted<D, Out, Next<TSteps>> : StripQuotes<C, Out, Next<TSteps>> : Out;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
 ### Space
 
 ```ts
-type Space = " " | "\n" | "\t" | "\r";
+type Space = " " | "\t" | "\n" | "\v" | "\f" | "\r" | "\u00a0" | "\u1680" | "\u2000" | "\u2001" | "\u2002" | "\u2003" | "\u2004" | "\u2005" | "\u2006" | "\u2007" | "\u2008" | "\u2009" | "\u200a" | "\u2028" | "\u2029" | "\u202f" | "\u205f" | "\u3000" | "\ufeff";
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### Steps
+
+```ts
+type Steps = readonly unknown[];
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -924,7 +1024,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### StripQuotes
 
 ```ts
-type StripQuotes<S extends string, Out extends string = ""> = S extends `${infer A}'${infer B}` ? B extends `'${infer C}` ? StripQuotes<C, `${Out}${A}`> : B extends `{${string}` | `}${string}` ? B extends `${string}'${infer C}` ? StripQuotes<C, `${Out}${A}`> : `${Out}${A}` : StripQuotes<B, `${Out}${A}`> : `${Out}${S}`;
+type StripQuotes<S extends string, Out extends string = "", TSteps extends Steps = []> = TSteps["length"] extends MaxSteps ? Unreadable : S extends `${infer A}'${infer B}` ? B extends `'${infer C}` ? StripQuotes<C, `${Out}${A}`, Next<TSteps>> : B extends `{${string}` | `}${string}` ? SkipQuoted<B, `${Out}${A}`, Next<TSteps>> : StripQuotes<B, `${Out}${A}`, Next<TSteps>> : `${Out}${S}`;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -942,7 +1042,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### Trim
 
 ```ts
-type Trim<S extends string> = TrimEnd<TrimStart<S>>;
+type Trim<S extends string> = TrimStart<S> extends infer T extends string ? TrimEnd<T> : Unreadable;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -950,7 +1050,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### TrimEnd
 
 ```ts
-type TrimEnd<S extends string> = S extends `${infer R}${Space}` ? TrimEnd<R> : S;
+type TrimEnd<S extends string, TSteps extends Steps = []> = TSteps["length"] extends MaxSteps ? Unreadable : S extends `${infer R}${Space}` ? TrimEnd<R, Next<TSteps>> : S;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -958,7 +1058,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### TrimStart
 
 ```ts
-type TrimStart<S extends string> = S extends `${Space}${infer R}` ? TrimStart<R> : S;
+type TrimStart<S extends string, TSteps extends Steps = []> = TSteps["length"] extends MaxSteps ? Unreadable : S extends `${Space}${infer R}` ? TrimStart<R, Next<TSteps>> : S;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -1012,7 +1112,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### ValueOfType
 
 ```ts
-type ValueOfType<T extends string> = T extends "number" | "plural" | "selectordinal" ? number : T extends "date" | "time" ? Date | number : T extends "select" ? string | number : Unreadable;
+type ValueOfType<T> = T extends "number" | "plural" | "selectordinal" ? number : T extends "date" | "time" ? Date | number : T extends "select" ? string | number : Unreadable;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.

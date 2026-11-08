@@ -26,7 +26,7 @@ The factory trims locale identifiers and snapshots the validated configuration, 
 
 **Returns** — Pure parsing and generation operations bound to an immutable configuration snapshot.
 
-**Throws** — `TypeError` — When `config` is not a plain object, locales are empty, invalid conservative ASCII identifiers, duplicated case-insensitively after trimming, the trimmed default locale is unsupported, `localePrefix` is not a supported policy, or `pathnames` has an invalid path, an unsupported locale, a path that starts with a locale, a catch-all that is not last, parameters that differ from the canonical path's, or two pages with the same path in one locale.
+**Throws** — `TypeError` — When `config` is not a plain object, locales are empty, invalid conservative ASCII identifiers, or duplicated case-insensitively after trimming, the trimmed default locale is unsupported, `localePrefix` is not a supported policy, or `pathnames` is not an object of objects of strings or has an invalid path, an unsupported locale or one listed twice ignoring case, a path that starts with a locale, a catch-all that is not last, a parameter whose name has characters other than ASCII letters, digits, and `_` or is `__proto__`, `constructor`, or `prototype`, a parameter repeated in one path, parameters that differ from the canonical path's, two canonical paths of the same shape, such as `/products/:id` and `/products/:slug`, or two pages with the same path in one locale.
 
 ## Interfaces
 
@@ -93,7 +93,7 @@ Parses a URL's pathname into its locale and canonical pathname. Locale prefixes 
 
 - `pathname` — A URL's pathname, such as `url.pathname`: it starts with `/` and has no query or fragment.
 
-**Returns** — The locale and canonical pathname, or `undefined` when a required prefix is absent, when no URL leads to the path read, such as `/pt/en/sobre`, or `/en/sobre` when `/sobre` is the Portuguese about page, or when the path is one routing refuses, such as `//wp-login.php`, a dot segment, an encoded slash, or one longer than 8,192 characters. A result always has a canonical URL that `localize` builds.
+**Returns** — The locale and canonical pathname, or `undefined` when a required prefix is absent, when no URL leads to the path read, such as `/pt/en/sobre`, or `/en/sobre` when `/sobre` is the Portuguese about page, or when the path is one routing refuses, such as `//wp-login.php`, a dot segment, an encoded slash, or one longer than 8,192 characters, or when its canonical path or URL would be longer than that. A result always has a canonical URL that `localize` builds.
 
 **Throws** — `TypeError` — When `pathname` is not a string, does not start with `/`, or contains `?` or `#`, which a URL's pathname never does.
 
@@ -194,4 +194,4 @@ The trimmed canonical configured locale identified by the pathname.
 pathname: string;
 ```
 
-The canonical application pathname: the locale prefix removed and translated segments read back.
+The canonical application pathname: the locale prefix removed and translated segments read back. A listed page's fixed segments are written as a URL writes the table's words, the same in every locale, so `/pt/%61/x` reads as `/a/x` when `/a/:q` is listed, and so does `/%61/x` where the default locale has no prefix; other segments are kept as written.

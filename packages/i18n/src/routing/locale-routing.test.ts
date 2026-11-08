@@ -1,7 +1,15 @@
 // @vitest-environment node
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createLocaleRouting, type LocaleRoutingConfig } from "../routing";
+import { normalizeSegment } from "./path";
+import type * as PathModule from "./path";
+
+// Counts calls without changing what normalizeSegment returns, so every other test sees the real behavior.
+vi.mock("./path", async (importOriginal) => {
+  const actual = await importOriginal<typeof PathModule>();
+  return { ...actual, normalizeSegment: vi.fn(actual.normalizeSegment) };
+});
 
 const LOCALES = ["en-US", "pt-BR"] as const;
 
@@ -334,6 +342,46 @@ describe("createLocaleRouting", () => {
 
     for (const locale of invalidLocales) {
       expect(() => routing.localize("/about", locale as unknown as (typeof LOCALES)[number])).toThrow(RangeError);
+    }
+  });
+
+  it("should normalize each distinct segment at most once per parse", () => {
+    // Normalizing an escape that isn't UTF-8, such as `%C3`, costs about ten times a plain segment, so a request made
+    // of them must not pay that once per lookup. Counting calls bounds the cost without timing the machine.
+    const segments = Array.from({ length: 200 }, (_, index) => `%C3${index}`);
+    const canonical = ["docs", ...segments];
+    const requests = {
+      prefixed: `/pt-BR/documentos/${segments.join("/")}`,
+      unprefixed: `/docs/${segments.join("/")}/`,
+    };
+    // A rejected request could normalize nothing, so the results show that each request was read in full.
+    const expected = {
+      prefixed: { locale: "pt-BR", pathname: `/${canonical.join("/")}` },
+      unprefixed: { locale: "en-US", pathname: `/${canonical.join("/")}/` },
+    };
+
+    for (const localePrefix of ["always", "except-default", "when-ambiguous"] as const) {
+      const routing = createLocaleRouting({
+        defaultLocale: "en-US",
+        locales: LOCALES,
+        localePrefix,
+        pathnames: { "/docs/:path*": { "pt-BR": "/documentos/:path*" } },
+      });
+
+      for (const kind of ["prefixed", "unprefixed"] as const) {
+        const request = requests[kind];
+        vi.mocked(normalizeSegment).mockClear();
+        const result = routing.parse(request);
+        // `always` has no unprefixed paths.
+        expect(result, `${localePrefix}, ${kind}`).toEqual(
+          localePrefix === "always" && kind === "unprefixed" ? undefined : expected[kind],
+        );
+        const distinct = new Set([...request.split("/").filter(Boolean), ...canonical]);
+
+        expect(vi.mocked(normalizeSegment).mock.calls.length, `${localePrefix}, ${kind}`).toBeLessThanOrEqual(
+          distinct.size,
+        );
+      }
     }
   });
 });

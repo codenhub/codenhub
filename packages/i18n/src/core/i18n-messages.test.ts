@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createI18n } from "../index";
 import { getI18nInternals } from "./internals";
-import { MessageSyntaxError, parseMessage } from "./message-format";
+import { MessageSyntaxError, parseCachedMessage, parseMessage } from "./message-format";
 
 const messages = {
   hello: "Hello, {name}!",
@@ -85,6 +85,27 @@ describe("ICU messages", () => {
     expect(i18n.t("items", { count: 1 })).toBe("1 item");
     expect(i18n.t("items", { count: 1000 })).toBe("1,000 items");
     expect(i18n.t("items")).toBe("{count, plural, =0 {No items} one {# item} other {# items}}");
+  });
+
+  it("should compare exact plural values as numbers", async () => {
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en"],
+      loadLocale: () => ({
+        decimal: "{n, plural, =1.0 {exactly one} other {#}}",
+        padded: "{n, plural, =01 {exactly one} other {#}}",
+        negativeZero: "{n, plural, =-0 {zero} other {#}}",
+        half: "{n, plural, =0.50 {half} other {#}}",
+      }),
+      isSilent: true,
+    });
+    await i18n.init();
+
+    expect(i18n.t("decimal", { n: 1 })).toBe("exactly one");
+    expect(i18n.t("padded", { n: 1 })).toBe("exactly one");
+    expect(i18n.t("negativeZero", { n: 0 })).toBe("zero");
+    expect(i18n.t("half", { n: 0.5 })).toBe("half");
+    expect(i18n.t("decimal", { n: 2 })).toBe("2");
   });
 
   it("should use other and root formatting for a locale Intl rejects", async () => {
@@ -200,6 +221,7 @@ describe("parseMessage", () => {
     ["{", "an unclosed argument"],
     ["{count, plural, one {#}}", "a plural without other"],
     ["{v, select, a {x} a {y} other {z}}", "a repeated option"],
+    ["{n, plural, =1 {x} =1.0 {y} other {z}}", "an exact value repeated in another spelling"],
     ["{n, number, currency}", "an unknown number style"],
     ["{n, spellout}", "an unknown type"],
     ["{n, plural, offset:x other {#}}", "an invalid offset"],
@@ -252,5 +274,114 @@ describe("formatters", () => {
     expect(() => i18n.formatNumber(1, { style: "currency" })).toThrow(TypeError);
     expect(() => i18n.formatNumber(1, { maximumFractionDigits: 200 })).toThrow(RangeError);
     expect(() => i18n.formatDate(Number.NaN)).toThrow(RangeError);
+  });
+
+  it("should throw Intl's own error for null options", async () => {
+    const i18n = create();
+    await i18n.init();
+    const intlError = (construct: () => unknown): unknown => {
+      try {
+        construct();
+      } catch (error) {
+        return error;
+      }
+      throw new Error("Intl accepted null options");
+    };
+    const nullOptions = null as never;
+
+    expect(() => i18n.formatNumber(1, nullOptions)).toThrow(
+      intlError(() => new Intl.NumberFormat("en", nullOptions)) as Error,
+    );
+    expect(() => i18n.formatDate(0, nullOptions)).toThrow(
+      intlError(() => new Intl.DateTimeFormat("en", nullOptions)) as Error,
+    );
+  });
+
+  it("should read formatter options in the order Intl reads them", async () => {
+    const i18n = create();
+    await i18n.init();
+    const recordReads = (use: (options: object) => unknown): string[] => {
+      const reads: string[] = [];
+      use(new Proxy({}, { get: (_, name) => void reads.push(String(name)) }));
+      return reads;
+    };
+
+    expect(recordReads((options) => i18n.formatNumber(1, options))).toEqual(
+      recordReads((options) => new Intl.NumberFormat("en", options)),
+    );
+    expect(recordReads((options) => i18n.formatDate(0, options))).toEqual(
+      recordReads((options) => new Intl.DateTimeFormat("en", options)),
+    );
+  });
+
+  it("should not reuse a formatter for a string option that spells out another option", async () => {
+    const i18n = create();
+    await i18n.init();
+    const forged = { hour12: "x\0dateStyle=string:full" } as unknown as Intl.DateTimeFormatOptions;
+    const full: Intl.DateTimeFormatOptions = { hour12: "x" as never, dateStyle: "full" };
+
+    expect(i18n.formatDate(0, forged)).toBe(new Intl.DateTimeFormat("en", forged).format(0));
+    expect(i18n.formatDate(0, full)).toBe(new Intl.DateTimeFormat("en", full).format(0));
+  });
+
+  it("should read inherited number options without changing later calls", async () => {
+    const i18n = create();
+    const other = create();
+    await i18n.init();
+    await other.init();
+    // Intl reads options through the prototype chain, as from a class instance's defaults.
+    const percent = Object.create({ style: "percent" }) as Intl.NumberFormatOptions;
+
+    expect(i18n.formatNumber(0.5, percent)).toBe("50%");
+    expect(i18n.formatNumber(0.5)).toBe("0.5");
+    expect(other.formatNumber(0.25)).toBe("0.25");
+  });
+
+  it("should read inherited date options, with or without a configured time zone", async () => {
+    const when = new Date(Date.UTC(2026, 10, 2, 12));
+    const full = (): Intl.DateTimeFormatOptions => Object.create({ dateStyle: "full" }) as Intl.DateTimeFormatOptions;
+    const utc = createI18n({ defaultLocale: "en", locales: ["en"], loadLocale: () => ({}), timeZone: "UTC" });
+    const local = create();
+    await utc.init();
+    await local.init();
+
+    expect(utc.formatDate(when, full())).toBe("Monday, November 2, 2026");
+    expect(local.formatDate(when, full())).toBe(new Intl.DateTimeFormat("en", { dateStyle: "full" }).format(when));
+    expect(local.formatDate(when)).toBe(new Intl.DateTimeFormat("en").format(when));
+  });
+
+  it("should throw for an option Intl rejects even after a similar valid one", async () => {
+    const i18n = create();
+    await i18n.init();
+    // `null` reads as 0, while NaN is out of range; both serialize to JSON as null.
+    const zero = { maximumFractionDigits: null } as unknown as Intl.NumberFormatOptions;
+
+    expect(i18n.formatNumber(1.5, zero)).toBe("2");
+    expect(() => i18n.formatNumber(1.5, { maximumFractionDigits: Number.NaN })).toThrow(RangeError);
+    expect(i18n.formatNumber(1)).toBe("1");
+    expect(() => i18n.formatNumber(1, { style: (() => "percent") as never })).toThrow(RangeError);
+  });
+
+  it("should ignore a circular property Intl does not read", async () => {
+    const i18n = create();
+    await i18n.init();
+    const options: Intl.NumberFormatOptions & { self?: unknown } = { style: "percent" };
+    options.self = options;
+
+    expect(i18n.formatNumber(0.5, options)).toBe("50%");
+  });
+});
+
+describe("parseCachedMessage", () => {
+  it("should keep a message in use while many others are parsed", () => {
+    const hot = "{hot} message";
+    const parsed = parseCachedMessage(hot);
+
+    for (let index = 0; index < 10_000; index += 1) {
+      parseCachedMessage(`{cold${index}}`);
+      parseCachedMessage(hot);
+    }
+
+    expect(parseCachedMessage(hot)).toBe(parsed);
   });
 });

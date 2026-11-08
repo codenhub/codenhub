@@ -1,12 +1,12 @@
 ---
 title: Localized URLs
-description: Put the locale in the path, translate the path itself, read both back, link to other languages, send visitors to their own, and generate every localized page.
+description: Put the locale in the path, translate the path itself, read both back, link to other languages, generate every localized page, and send visitors to their own language on a static site.
 order: 4
 ---
 
 # Localized URLs
 
-Giving each language its own URL, such as `/about` and `/pt/about`, lets people share a link in the language they read, and lets search engines index every language. `@codenhub/i18n/routing` handles the part that is the same in every framework: reading the locale from a path, and building the path for another locale. It can also translate the path itself, so the Portuguese about page is `/pt/sobre`, or even just `/sobre`.
+Giving each language its own URL, such as `/about` and `/pt/about`, lets people share a link in the language they read, and lets search engines index every language. `@codenhub/i18n/routing` handles the part that is the same in every framework: reading the locale from a path, and building the path for another locale. It can also translate the path itself, so the Portuguese about page is `/pt/sobre`, or even just `/sobre`. The examples continue the `en` and `pt` app from the earlier pages, with Spanish joining once paths get translated.
 
 ## Set up routing
 
@@ -21,7 +21,7 @@ export const routing = createLocaleRouting({
 });
 ```
 
-`localePrefix` decides which paths start with their locale:
+`localePrefix` decides which paths start with their locale. It is required and has no default, because each choice gives your site different URLs, and URLs are hard to change once people have bookmarked them. Leaving it out throws `TypeError: [I18n] Invalid locale routing configuration: localePrefix: Expected "always", "except-default", or "when-ambiguous", received undefined`.
 
 | `localePrefix`     | English about page | Portuguese about page                                                             |
 | ------------------ | ------------------ | --------------------------------------------------------------------------------- |
@@ -29,7 +29,7 @@ export const routing = createLocaleRouting({
 | `"always"`         | `/en/about`        | `/pt/about`                                                                       |
 | `"when-ambiguous"` | `/about`           | `/pt/about`, or `/sobre` once translated; see [Drop the prefix](#drop-the-prefix) |
 
-`"except-default"` keeps your existing URLs when you add a language. `"always"` makes every URL name its language, so `/about` is not a page, which suits a site that redirects `/` to the visitor's language.
+`"except-default"` keeps your existing URLs when you add a language. `"always"` makes every URL name its language, so `/about` is not a page, which suits a site that redirects `/` to the visitor's language. `"when-ambiguous"` drops the prefix from translated paths that can only belong to one language, and is worth reading about before you pick it.
 
 Use the same `locales` and `defaultLocale` as your manager. Routing is separate from the manager, so it also works where no translation happens, such as in a server's redirect logic.
 
@@ -133,74 +133,6 @@ const alternates = [...routing.localizeAll(route.pathname).map((page) => link(pa
 
 Escape both values as you would any text in HTML, or let your framework create the tags. A path can contain characters, such as `"` or `&`, that are allowed in a URL but not raw inside an attribute.
 
-## Detect the language on a static site
-
-A server sends a visitor who arrives at `/` to their language from `Accept-Language`, as in [Read the locale from a path](#read-the-locale-from-a-path). A static site with `localePrefix: "except-default"` has no server to see that header: the default locale's pages are the unprefixed ones, and the browser has to do the redirect. That brings constraints of its own:
-
-- **It runs before first paint.** A deferred script redirects after the page has shown in the default language, so the visitor sees it flash. Put the redirect in an inline script in `<head>`. An inline script cannot `import`, so neither `matchLocale()` nor `routing` is there: compute what it needs at build time and pass it in.
-- **The visitor's choice wins.** Check the saved language before `navigator.languages`. Otherwise a Portuguese browser that picks English is sent straight back to Portuguese. The browser binding, set up as in [Read the locale on the client](#read-the-locale-on-the-client), already saves it: it stores `{"locale":"en"}` under the key `"i18n"`, or your `storageKey`, on every page it starts on. Since switching language is a navigation, that is the language of the last page the visitor read, including the one their switch led to.
-- **A link on your own site never redirects.** Where storage is blocked, the choice can't be saved, so an arrival from your own site, a same-origin `document.referrer`, keeps the page it asked for. That needs the browser to send the referrer: a link with `rel="noreferrer"`, or a page served with `Referrer-Policy: no-referrer`, sends none, and its visit is redirected like one from elsewhere, so a switch to the default language can be sent straight back. Leave both off your own links, including the language switcher.
-- **A prefixed URL never redirects.** Render the script only on the default locale's pages, so a shared `/pt/about` link always opens in Portuguese. Keep `search` and `hash` when redirecting.
-
-At build time, compute this page's path in every other locale with `localize()`, and a table from each language subtag to its locale:
-
-```ts
-// Build time, for the page at `pathname` in the default locale.
-const locales = ["en", "pt", "es"] as const;
-const defaultLocale = "en";
-
-const config = {
-  storageKey: "i18n", // the browser binding's storageKey
-  locales,
-  languages: Object.fromEntries(locales.map((locale) => [new Intl.Locale(locale).language, locale])),
-  targets: Object.fromEntries(locales.filter((locale) => locale !== defaultLocale).map((locale) => [locale, routing.localize(pathname, locale)])),
-};
-// `<` as `<`, so no path can close the script element early.
-const json = JSON.stringify(config).replaceAll("<", "\\u003c");
-```
-
-Then render, on the default locale's pages only:
-
-```html
-<script>
-  ((config) => {
-    try {
-      if (document.referrer !== "" && new URL(document.referrer).origin === location.origin) return;
-    } catch {
-      // An unreadable referrer counts as arriving from elsewhere.
-    }
-
-    let target;
-    try {
-      // The binding saves `{"locale":"pt"}`.
-      const saved = JSON.parse(localStorage.getItem(config.storageKey) ?? "null")?.locale;
-      if (config.locales.includes(saved)) target = saved;
-    } catch {
-      // Storage blocked or unreadable: fall back to the browser's languages.
-    }
-
-    if (target === undefined) {
-      const preferences = navigator.languages.length > 0 ? navigator.languages : [navigator.language];
-      for (const preference of preferences) {
-        const language = (preference ?? "").split("-")[0].toLowerCase();
-        if (Object.hasOwn(config.languages, language)) {
-          target = config.languages[language];
-          break;
-        }
-      }
-    }
-
-    if (target !== undefined && Object.hasOwn(config.targets, target)) {
-      location.replace(config.targets[target] + location.search + location.hash);
-    }
-  })(/* the build's `json` */);
-</script>
-```
-
-A saved default locale finds no target, so the visitor stays. `location.replace()` keeps the default-locale page out of history, so Back doesn't land on a page that redirects again.
-
-Matching by language subtag picks what `matchLocale()` would when your site has one locale per language, such as `en`, `pt-BR`, and `es`: `pt-PT` gets `pt-BR`, and `es-MX` gets `es`. Hold the two together with a test that runs the same matching against `matchLocale()` for a few preference lists. With more than one locale per language, such as `zh-Hans` and `zh-Hant`, a language subtag can't choose between them. Either compute a table at build time from the browser tags you expect to see, running each through `matchLocale()`, or run the redirect in a deferred script that imports your manager and calls `matchLocale(navigator.languages)`, and accept the flash.
-
 ## Translate paths
 
 `/pt/about` is a Portuguese page with an English address. To give it Portuguese words, list the translated paths in `pathnames`, keyed by canonical path:
@@ -233,6 +165,7 @@ How the table reads:
 - **Anything the table doesn't list keeps its words.** `/blog` is `/pt/blog`, and `/products/42` in Spanish is `/es/products/42`, since only Portuguese translates it.
 - **Fixed segments match case-sensitively**, as URLs do, so `/pt/Sobre` is not the about page. Only the locale prefix ignores case.
 - **Write words as you would read them.** `"/configurações"` matches the `/configura%C3%A7%C3%B5es` that browsers send, and `localize()` returns the encoded form.
+- **A listed page comes back in one spelling.** `parse()` returns a listed page's fixed words the way a URL writes the table's words, in every locale, so `/%61bout` and `/pt/%73obre`, odd spellings of `/about` and `/pt/sobre`, both give `pathname: "/about"`. Parameters and segments the table doesn't list come back as the request wrote them.
 - **A fixed segment beats a parameter, and a parameter beats a catch-all.** With both `/products/new` and `/products/:id` listed, `/products/new` is the new-product page, whichever order the table lists them in. With `/docs/intro` and `/docs/:path*`, `/docs/intro` is the intro page and every other `/docs/…` path goes to the catch-all.
 - **The default locale can be translated too.** A Portuguese-first site with English code can use `defaultLocale: "pt"` and `{ "/about": { pt: "/sobre" } }`, so `/sobre` is the Portuguese page and `/en/about` the English one.
 
@@ -240,13 +173,15 @@ How the table reads:
 
 `createLocaleRouting` checks the table when you create it, so a mistake fails at startup instead of on some unlucky click. Each of these throws a `TypeError` that names the entry:
 
-- **Two pages with the same path in one locale.** `{ "/about": { pt: "/sobre" }, "/company": { pt: "/sobre" } }` gives Portuguese two pages at `/pt/sobre`. Give one of them other words. The same goes for a form that takes words another page keeps: if `/contact` is `/about` in Spanish, the Spanish `/about` would be two pages.
+- **Two pages with the same path in one locale.** `{ "/about": { pt: "/sobre" }, "/company": { pt: "/sobre" } }` gives Portuguese two pages at `/pt/sobre`. Give one of them other words. The same goes for a form that takes words another listed page keeps: with `{ "/about": { pt: "/sobre" }, "/contact": { es: "/about" } }`, the about page keeps its English words in Spanish, so `/es/about` would be both pages, and creation throws.
 - **Two canonical paths with the same shape.** `/products/:id` and `/products/:slug` match the same paths. Keep one.
 - **Parameters that differ from the canonical path's.** `{ "/products/:id": { pt: "/produtos/:slug" } }` loses `:id`. Rename it, or move it, but keep it. A catch-all must stay a catch-all in every form.
 - **A catch-all that isn't last**, such as `/docs/:path*/edit`.
 - **A path that starts with a locale**, such as `/pt/about` as a canonical path. The prefix would be read as the locale. List `/about` instead.
 - **A locale that isn't configured**, or one listed twice in different letter case.
 - **A path `parse()` would reject**, as listed under [Paths it accepts](#paths-it-accepts).
+
+The check only sees pages the table lists. Without the `/about` entry, `{ "/contact": { es: "/about" } }` is accepted, because routing doesn't know you have an about page. The clash then shows up later, when you build that page's link: `localize("/about", "es")` throws `RangeError: [I18n] "/about" in "es" would be read as "/contact" in "es"; …`. [The risk you take on](#the-risk-you-take-on) explains this net and how to make sure it catches clashes at build time rather than in production.
 
 ### Register translated routes
 
@@ -330,21 +265,99 @@ routing.localizeAll("/about");
 
 Feed it your page list to get every page a static build needs, then render each one with its own manager, as in [Build a static site](server-rendering.md#build-a-static-site).
 
+## Detect the language on a static site
+
+A server sends a visitor who arrives at `/` to their language from `Accept-Language`, as in [Read the locale from a path](#read-the-locale-from-a-path). A static site with `localePrefix: "except-default"` has no server to see that header: the default locale's pages are the unprefixed ones, and the browser has to do the redirect. It is a short script with a long list of ways to get it slightly wrong, so here they are first:
+
+- **It runs before first paint.** A deferred script redirects after the page has shown in the default language, so the visitor sees it flash. Put the redirect in an inline script in `<head>`. An inline script cannot `import`, so neither `matchLocale()` nor `routing` is there: compute what it needs at build time and pass it in.
+- **The visitor's choice wins.** Check the saved language before `navigator.languages`. Otherwise a Portuguese browser that picks English is sent straight back to Portuguese. The browser binding, set up as in [Read the locale on the client](#read-the-locale-on-the-client), already saves it: it stores `{"locale":"en"}` under the key `"i18n"`, or your `storageKey`, on every page it starts on. Since switching language is a navigation, that is the language of the last page the visitor read, including the one their switch led to.
+- **A link on your own site never redirects.** Where storage is blocked, the choice can't be saved, so an arrival from your own site, a same-origin `document.referrer`, keeps the page it asked for. That needs the browser to send the referrer: a link with `rel="noreferrer"`, or a page served with `Referrer-Policy: no-referrer`, sends none, and its visit is redirected like one from elsewhere, so a switch to the default language can be sent straight back. Leave both off your own links, including the language switcher.
+- **A prefixed URL never redirects.** Render the script only on the default locale's pages, so a shared `/pt/about` link always opens in Portuguese. Keep `search` and `hash` when redirecting.
+
+At build time, while you [render each page](#generate-every-localized-page), compute this page's path in every other locale with `localize()`, and a table from each language subtag to its locale:
+
+```ts
+// Build time, for the page at `pathname` in the default locale.
+const locales = ["en", "pt", "es"] as const;
+const defaultLocale = "en";
+
+const config = {
+  storageKey: "i18n", // the browser binding's storageKey
+  locales,
+  languages: Object.fromEntries(locales.map((locale) => [new Intl.Locale(locale).language, locale])),
+  targets: Object.fromEntries(locales.filter((locale) => locale !== defaultLocale).map((locale) => [locale, routing.localize(pathname, locale)])),
+};
+// Writes `<` as `\u003c`, so no path can close the script element early.
+const json = JSON.stringify(config).replaceAll("<", "\\u003c");
+```
+
+Then render, on the default locale's pages only:
+
+```html
+<script>
+  ((config) => {
+    try {
+      if (document.referrer !== "" && new URL(document.referrer).origin === location.origin) return;
+    } catch {
+      // An unreadable referrer counts as arriving from elsewhere.
+    }
+
+    let target;
+    try {
+      // The binding saves `{"locale":"pt"}`.
+      const saved = JSON.parse(localStorage.getItem(config.storageKey) ?? "null")?.locale;
+      if (config.locales.includes(saved)) target = saved;
+    } catch {
+      // Storage blocked or unreadable: fall back to the browser's languages.
+    }
+
+    if (target === undefined) {
+      const preferences = navigator.languages.length > 0 ? navigator.languages : [navigator.language];
+      for (const preference of preferences) {
+        let language;
+        try {
+          // Reads old codes as `matchLocale()` does, such as `iw-IL` as Hebrew, `he`.
+          language = new Intl.Locale(preference).language;
+        } catch {
+          continue; // Not a language tag.
+        }
+        if (Object.hasOwn(config.languages, language)) {
+          target = config.languages[language];
+          break;
+        }
+      }
+    }
+
+    if (target !== undefined && Object.hasOwn(config.targets, target)) {
+      location.replace(config.targets[target] + location.search + location.hash);
+    }
+  })(/* the build's `json` */);
+</script>
+```
+
+A saved default locale finds no target, so the visitor stays. `location.replace()` keeps the default-locale page out of history, so Back doesn't land on a page that redirects again.
+
+Matching by language subtag picks what `matchLocale()` would when your site has one locale per language, such as `en`, `pt-BR`, and `es`: `pt-PT` gets `pt-BR`, and `es-MX` gets `es`. Hold the two together with a test that runs the same matching against `matchLocale()` for a few preference lists. With more than one locale per language, such as `zh-Hans` and `zh-Hant`, a language subtag can't choose between them. Either compute a table at build time from the browser tags you expect to see, running each through `matchLocale()`, or run the redirect in a deferred script that imports your manager and calls `matchLocale(navigator.languages)`, and accept the flash.
+
 ## Paths it accepts
 
 Routing works on the path of a URL only. Give it `url.pathname`, not the full URL, and handle the query string and fragment yourself.
 
-To keep a crafted URL from reaching a different page than the one checked, routing refuses a path that:
+This is the boring part of the page. It is also the part that decides whether a crafted URL can reach a different page than the one your code checked, so routing is strict about it. It refuses each of these paths:
 
-- is protocol-relative, such as `//host`, or contains `\`, `//`, or a control character;
-- contains a `.` or `..` segment, or encodes one, a slash, a backslash, a `%`, or a control character with `%`;
-- has a malformed `%` escape, or is longer than 8,192 characters.
+- **Doubled slashes**, as in `//wp-login.php` or `/docs//setup`. A path starting with `//` is read by browsers as another host, and an empty segment is a page no link of yours leads to. Write single slashes.
+- **Backslashes**, as in `/docs\setup`. Some servers treat `\` as `/`, so the same request would reach two different pages. Use `/`.
+- **Control characters**, such as a line break or a tab, written raw. No real link contains them.
+- **Dot segments**, `.` and `..`, as in `/docs/../admin`, and their encoded forms, such as `/docs/%2e%2e/admin`. A browser resolves them before sending a request, so a request that still has one was written by hand to climb out of the page it names. Resolve the path first; `new URL(path, "https://example.com").pathname` does it.
+- **An encoded slash, backslash, `%`, or control character**: `%2F`, `%5C`, `%25`, or `%00` to `%1F` and `%7F`, as in `/files/a%2Fb`. An encoded slash or backslash makes servers disagree about where segments start and end, one seeing one segment where another sees two. An encoded `%` invites a second round of decoding, so `%252F` turns into `%2F` and then `/`. An encoded control character gets past the check on raw ones. Keep a slash in a value out of the path, such as in the query string.
+- **A malformed escape**, a `%` not followed by two hex digits, as in `/50%off`. Write `%25` for a literal `%`… which is also refused, per the previous rule, so take the `%` out of the path.
+- **More than 8,192 characters**, or a path whose canonical path would be longer than that, as a short translated path can be when its table entry is long. Servers and proxies cut off URLs around this length anyway.
 
-A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links rather than read requests, so they throw a `TypeError` for such a path.
+A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links from your own paths rather than read requests, so for the same paths they throw a `TypeError`, such as `TypeError: [I18n] pathname must not contain dot segments`, and you fix the path in your code.
 
-Every method throws a `TypeError` for a value that is not a URL's pathname at all: one that does not start with `/`, such as a full URL `https://…`, or one that contains `?` or `#`, such as a path with its query string. That is a mistake in the calling code, not a request to answer.
+Every method, `parse()` included, throws `TypeError: [I18n] pathname must be a valid absolute application pathname` for a value that is not a URL's pathname at all: one that does not start with `/`, such as a full URL `https://…`, or one that contains `?` or `#`, such as Node's `request.url` with its query string. That is a mistake in the calling code, not a request to answer, so it fails loudly instead of answering 404 to every URL with a query.
 
-Ordinary escapes, such as `%20`, are fine, and a trailing slash is kept: `/pt/sobre/` parses to `/about/`.
+Ordinary escapes, such as `%20` and `%C3%A7`, are fine, and a trailing slash is kept: `/pt/sobre/` parses to `/about/`.
 
 `localize()` throws a `RangeError` instead when the path it builds would be longer than 8,192 characters, as a path just under the limit can be once its prefix or translated words are added.
 
@@ -353,3 +366,7 @@ Ordinary escapes, such as `%20`, are fine, and a trailing slash is kept: `/pt/so
 Routing reads and builds paths. Your framework or server still registers the routes, redirects, navigates, and renders. It also doesn't know about a base path: if your site lives under `/docs`, remove that before calling `parse()` and add it back after `localize()`.
 
 The table covers your application's own routes. Content slugs, such as a blog post's title in its URL, belong to wherever the content lives, such as your CMS, which knows each post's slug in each language.
+
+## Next
+
+That is the whole package: dictionaries, the browser, the server, and URLs. When something goes wrong along the way, [Troubleshooting](troubleshooting.md) starts from the error or warning you see and works back to the fix.

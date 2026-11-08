@@ -14,6 +14,9 @@ const getLanguageAndScript = (maximizedLocale: string): string => maximizedLocal
 /**
  * Matches ordered locale preferences, such as `navigator.languages` or a parsed `Accept-Language`, to a configured
  * locale: exact, then the longest whole-subtag prefix with the same likely script, then likely subtags, then language.
+ * Among configured locales of the same language and script, the first in `locales` wins when none matches exactly or by
+ * likely region, so `es-MX` matches `es-419` when it is listed before `es-ES`, while `en` matches `en-US`, its likely
+ * region, wherever it is listed.
  *
  * @param locales - Canonical supported locales.
  * @param preferences - Untrusted preferences, most preferred first; non-strings are skipped.

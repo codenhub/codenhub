@@ -4,6 +4,7 @@ import { matchConfiguredLocale } from "../locale/matching";
 import { validateI18nConfig, type ValidatedI18nConfig } from "../locale/resolution";
 import { registerI18nInternals } from "./internals";
 import {
+  copyDateTimeFormatOptions,
   formatMessage,
   getDateTimeFormat,
   getNumberFormat,
@@ -36,6 +37,8 @@ const MAX_MISSING_KEY_DIAGNOSTICS = 1_000;
 const MAX_MESSAGE_DIAGNOSTICS = 1_000;
 const MAX_TRANSLATION_KEY_LENGTH = 1_000;
 const PLACEHOLDER_PATTERN = /{([A-Za-z0-9_]+)}/g;
+// The form every plural group has, used when the count's category has none.
+const PLURAL_FALLBACK_FORM = "other";
 
 /** Whether a string can name a dictionary entry: not blank, within the length limit, and free of ASCII controls. */
 const isValidTranslationKey = (key: string): boolean =>
@@ -198,21 +201,30 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     if (!isValidTranslationKey(key)) {
       return false;
     }
-    // Any count finds a plural group, since every group has an `other` form to fall back to.
-    return this.lookup("has", key, 0) !== undefined;
+    // Only a group with an `other` form is a plural group. Choosing a form by count would make a group without one, such
+    // as `{ one, two }`, a key in a locale where the count's category is a form it has, and not in others.
+    return (
+      this.lookup("has", key) !== undefined ||
+      this.dictionaries!.some(({ dictionary }) => dictionary[`${key.trim()}.${PLURAL_FALLBACK_FORM}`] !== undefined)
+    );
   }
 
   formatNumber(value: number | bigint, options?: Intl.NumberFormatOptions): string {
     return getNumberFormat(this.currentLocale, options).format(value);
   }
 
-  formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string {
-    // `timeZone: undefined`, as forwarded options often carry, names no zone, so the configured one still applies. The
-    // zone is copied as an own property, which the formatter cache's key sees, even when the options inherit it.
-    const timeZone = options?.timeZone ?? this.config.timeZone;
-    return getDateTimeFormat(this.currentLocale, timeZone === undefined ? options : { ...options, timeZone }).format(
-      value,
-    );
+  formatDate(value: Date | number, options: Intl.DateTimeFormatOptions = {}): string {
+    if (options === null) {
+      return getDateTimeFormat(this.currentLocale, options).format(value);
+    }
+    // The copy holds inherited options too, which a spread would drop, and reads a primitive through its wrapper object,
+    // as Intl does. `timeZone: undefined`, as forwarded options often carry, names no zone, so the configured one still
+    // applies; any other value, even `null`, is Intl's to judge.
+    const copy = copyDateTimeFormatOptions(Object(options) as Intl.DateTimeFormatOptions);
+    return getDateTimeFormat(
+      this.currentLocale,
+      copy.timeZone === undefined ? { ...copy, timeZone: this.config.timeZone } : copy,
+    ).format(value);
   }
 
   formatRelativeTime(
@@ -377,7 +389,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     }
 
     const category = this.getPluralRules(locale)?.select(count) ?? "other";
-    return dictionary[`${key}.${category}`] ?? dictionary[`${key}.other`];
+    return dictionary[`${key}.${category}`] ?? dictionary[`${key}.${PLURAL_FALLBACK_FORM}`];
   }
 
   private getPluralRules(locale: TLocale): Intl.PluralRules | undefined {

@@ -114,6 +114,36 @@ describe("initializeBrowserI18n locale resolution", () => {
     expect(i18n.isReady).toBe(false);
   });
 
+  it("rejects document synchronization without a page document before initializing core", async () => {
+    const i18n = createManager();
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, "document")!;
+    Object.defineProperty(globalThis, "document", { value: undefined, configurable: true });
+
+    try {
+      await expect(initializeBrowserI18n({ i18n, locale: "fr", persistLocale: false })).rejects.toThrow(
+        new TypeError(
+          "[I18n] Document synchronization requires a page document; pass syncDocument: false without one.",
+        ),
+      );
+    } finally {
+      Object.defineProperty(globalThis, "document", descriptor);
+    }
+    expect(i18n.isReady).toBe(false);
+  });
+
+  it("initializes without a page document when document synchronization is disabled", async () => {
+    const i18n = createManager();
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, "document")!;
+    Object.defineProperty(globalThis, "document", { value: undefined, configurable: true });
+
+    try {
+      await initializeBrowserI18n({ i18n, locale: "fr", persistLocale: false, syncDocument: false });
+    } finally {
+      Object.defineProperty(globalThis, "document", descriptor);
+    }
+    expect(i18n.locale).toBe("fr");
+  });
+
   it.each([null, 42])(
     "rejects authoritative invalid explicit locale %j without falling through and releases ownership",
     async (invalidLocale) => {
@@ -164,6 +194,45 @@ describe("initializeBrowserI18n storage integration", () => {
     expect(setItem).toHaveBeenCalledTimes(1);
     expect(i18n.isReady).toBe(true);
     expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("warns and ignores a persisted value that is not valid JSON", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    localStorage.setItem("i18n", "{bad");
+    setNavigatorLocales(["fr"]);
+    const i18n = createManager();
+
+    await initializeBrowserI18n({ i18n });
+
+    expect(i18n.locale).toBe("fr");
+    expect(warn).toHaveBeenCalledWith("[I18n] Could not read persisted locale.", expect.any(SyntaxError));
+  });
+
+  it.each([
+    ["a bare JSON string", '"fr"'],
+    ["null", "null"],
+    ["a number", "42"],
+    ["an object without a string locale", '{"locale":{"toString":1}}'],
+    ["a locale that is no longer configured", '{"locale":"de"}'],
+  ])("ignores a persisted value that is %s", async (_description, storedValue) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    localStorage.setItem("i18n", storedValue);
+    setNavigatorLocales(["pt-BR"]);
+    const i18n = createManager();
+
+    await initializeBrowserI18n({ i18n });
+
+    expect(i18n.locale).toBe("pt-BR");
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("resolves a persisted locale with surrounding whitespace and different case", async () => {
+    localStorage.setItem("i18n", JSON.stringify({ locale: " FR " }));
+    const i18n = createManager();
+
+    await initializeBrowserI18n({ i18n });
+
+    expect(i18n.locale).toBe("fr");
   });
 
   it("does not persist a locale detected from navigator preferences", async () => {

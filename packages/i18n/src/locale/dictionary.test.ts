@@ -80,12 +80,52 @@ describe("normalizeDictionary", () => {
     expect(() => normalizeDictionary({ [key]: "value" })).toThrow(TypeError);
   });
 
-  it.each(["key\nforged", "key\u001bhidden", "key\u007fhidden"])(
-    "rejects ASCII control characters in key %s",
-    (key) => {
-      expect(() => normalizeDictionary({ [key]: "value" })).toThrow("[I18n] Invalid locale dictionary key.");
-    },
-  );
+  it.each([
+    ["key\nforged", '"key\\nforged"'],
+    ["key\u001bhidden", '"key\\u001bhidden"'],
+    ["key\u007fhidden", '"key\\u007fhidden"'],
+  ])("rejects ASCII control characters in key %j", (key, reported) => {
+    expect(() => normalizeDictionary({ [key]: "value" })).toThrow(`[I18n] Invalid locale dictionary key ${reported}.`);
+  });
+
+  it("names an invalid key in quotes", () => {
+    expect(() => normalizeDictionary({ " title": "value" })).toThrow('[I18n] Invalid locale dictionary key " title".');
+  });
+
+  it("names an invalid nested key by its flattened path", () => {
+    expect(() => normalizeDictionary({ home: { " title": "value" } })).toThrow(
+      '[I18n] Invalid locale dictionary key "home. title".',
+    );
+  });
+
+  it("escapes control characters in an invalid key so the message stays on one line", () => {
+    expect(() => normalizeDictionary({ "key\nforged": "value" })).toThrow(
+      '[I18n] Invalid locale dictionary key "key\\nforged".',
+    );
+  });
+
+  it("escapes Unicode line separators and C1 controls in an invalid key, which JSON leaves as written", () => {
+    expect(() => normalizeDictionary({ "\u2028forged\u2029\u0085\u007f ": "value" })).toThrow(
+      '[I18n] Invalid locale dictionary key "\\u2028forged\\u2029\\u0085\\u007f ".',
+    );
+  });
+
+  it("truncates an invalid key after 100 characters", () => {
+    const key = ` ${"k".repeat(500)}`;
+
+    expect(() => normalizeDictionary({ [key]: "value" })).toThrow(
+      `[I18n] Invalid locale dictionary key ${JSON.stringify(key.slice(0, 100))}....`,
+    );
+  });
+
+  it("names the locale in a rejection when one is given", () => {
+    expect(() => normalizeDictionary({ " title": "value" }, { locale: "pt" })).toThrow(
+      '[I18n] Invalid locale dictionary key " title" in locale "pt".',
+    );
+    expect(() => normalizeDictionary(null, { locale: "pt" })).toThrow(
+      '[I18n] A locale dictionary must be a non-null object in locale "pt".',
+    );
+  });
 
   it("rejects surrounding whitespace in nested key segments", () => {
     expect(() => normalizeDictionary({ safe: { " child ": "value" } })).toThrow(TypeError);
@@ -173,11 +213,19 @@ describe("normalizeDictionary", () => {
     const long = { key: "v".repeat(100_001) };
     const total = Object.fromEntries(Array.from({ length: 51 }, (_, index) => [`key-${index}`, "v".repeat(100_000)]));
 
-    expect(() => normalizeDictionary(deep, { ...DEFAULT_DICTIONARY_LIMITS, maxDepth: 101 })).not.toThrow();
-    expect(() => normalizeDictionary(many, { ...DEFAULT_DICTIONARY_LIMITS, maxTranslations: 10_001 })).not.toThrow();
-    expect(() => normalizeDictionary(groups, { ...DEFAULT_DICTIONARY_LIMITS, maxProperties: 20_002 })).not.toThrow();
-    expect(() => normalizeDictionary(long, { ...DEFAULT_DICTIONARY_LIMITS, maxValueLength: 100_001 })).not.toThrow();
-    expect(() => normalizeDictionary(total, { ...DEFAULT_DICTIONARY_LIMITS, maxTotalLength: 5_100_000 })).not.toThrow();
+    expect(() => normalizeDictionary(deep, { limits: { ...DEFAULT_DICTIONARY_LIMITS, maxDepth: 101 } })).not.toThrow();
+    expect(() =>
+      normalizeDictionary(many, { limits: { ...DEFAULT_DICTIONARY_LIMITS, maxTranslations: 10_001 } }),
+    ).not.toThrow();
+    expect(() =>
+      normalizeDictionary(groups, { limits: { ...DEFAULT_DICTIONARY_LIMITS, maxProperties: 20_002 } }),
+    ).not.toThrow();
+    expect(() =>
+      normalizeDictionary(long, { limits: { ...DEFAULT_DICTIONARY_LIMITS, maxValueLength: 100_001 } }),
+    ).not.toThrow();
+    expect(() =>
+      normalizeDictionary(total, { limits: { ...DEFAULT_DICTIONARY_LIMITS, maxTotalLength: 5_100_000 } }),
+    ).not.toThrow();
   });
 
   it.each([
@@ -187,7 +235,7 @@ describe("normalizeDictionary", () => {
     [{ maxValueLength: 3 }, { key: "four" }, "translation values must not exceed 3 characters"],
     [{ maxTotalLength: 5 }, { first: "abc", second: "def" }, "must not exceed 5 aggregate translation characters"],
   ])("lowers the limit %j when configured", (limit, input, message) => {
-    expect(() => normalizeDictionary(input, { ...DEFAULT_DICTIONARY_LIMITS, ...limit })).toThrow(message);
+    expect(() => normalizeDictionary(input, { limits: { ...DEFAULT_DICTIONARY_LIMITS, ...limit } })).toThrow(message);
   });
 
   it("shares the normalized dictionary for the same payload", () => {
@@ -200,16 +248,20 @@ describe("normalizeDictionary", () => {
     const payload = { first: "value", second: "value" };
     normalizeDictionary(payload);
 
-    expect(() => normalizeDictionary(payload, { ...DEFAULT_DICTIONARY_LIMITS, maxTranslations: 1 })).toThrow(
-      "must not exceed 1 translations",
+    expect(() =>
+      normalizeDictionary(payload, { limits: { ...DEFAULT_DICTIONARY_LIMITS, maxTranslations: 1 } }),
+    ).toThrow("must not exceed 1 translations");
+    expect(normalizeDictionary(payload, { limits: { ...DEFAULT_DICTIONARY_LIMITS, maxTranslations: 2 } })).toEqual(
+      payload,
     );
-    expect(normalizeDictionary(payload, { ...DEFAULT_DICTIONARY_LIMITS, maxTranslations: 2 })).toEqual(payload);
   });
 
   it("does not share a rejected payload", () => {
     const payload = { first: "value", second: "value" };
 
-    expect(() => normalizeDictionary(payload, { ...DEFAULT_DICTIONARY_LIMITS, maxTranslations: 1 })).toThrow(TypeError);
+    expect(() =>
+      normalizeDictionary(payload, { limits: { ...DEFAULT_DICTIONARY_LIMITS, maxTranslations: 1 } }),
+    ).toThrow(TypeError);
     expect(normalizeDictionary(payload)).toEqual(payload);
   });
 });

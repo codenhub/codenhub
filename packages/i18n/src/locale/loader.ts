@@ -61,7 +61,10 @@ export function createLocaleLoader<TLocale extends string>(
             throw new I18nError({ locale, cause });
           }
 
-          const normalizedDictionary = normalizeDictionary(payload, options.dictionaryLimits);
+          const normalizedDictionary = normalizeDictionary(payload, {
+            limits: options.dictionaryLimits,
+            locale,
+          });
           dictionaries.set(locale, normalizedDictionary);
           resolveLoad(normalizedDictionary);
         } catch (error) {

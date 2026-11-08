@@ -13,7 +13,11 @@ export interface LocaleDictionary {
  * The 1,000-character flattened-key limit is fixed, because `translate()` and DOM keys share it.
  */
 export interface LocaleDictionaryLimits {
-  /** Maximum nesting levels below the root object. Defaults to 100. */
+  /**
+   * Maximum nesting levels below the root object. Defaults to 100. Each level adds at least 2 characters to a
+   * flattened key, a name and a dot, so with the 1,000-character key limit, a translation more than 499 levels deep
+   * can't be loaded whatever this is set to.
+   */
   maxDepth?: number;
   /** Maximum string translations. Defaults to 10,000. */
   maxTranslations?: number;
@@ -79,8 +83,10 @@ export interface I18nConfig<TLocale extends string = string, TMessages = unknown
   /**
    * Resolves `ltr` or `rtl`; called during creation and state changes, with failures propagated unchanged.
    *
-   * @defaultValue `rtl` for a right-to-left script subtag, such as `uz-Arab`, or, without a script subtag, a
-   * right-to-left language, such as `ar`, `he`, `fa`, or `ur`; otherwise `ltr`.
+   * @defaultValue `rtl` when the locale's script is right-to-left, otherwise `ltr`. The script is its script subtag,
+   * such as `uz-Arab`, else the likely script `Intl.Locale` gives for its language and region, such as Arabic for
+   * `pa-PK` and `arz` and Devanagari for `sd-IN`; for a tag `Intl.Locale` rejects, a right-to-left language, such as
+   * `ar` or `he`, gives `rtl`.
    */
   getLocaleDirection?(locale: NoInfer<TLocale>): LocaleDirection;
   /**
@@ -215,7 +221,9 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * @remarks
    * Each preference, in order, tries an exact case-insensitive match, then the longest configured locale it starts with
    * as whole subtags and with the same likely script, such as `pt` for `pt-BR`, then likely subtags, such as `zh-Hant`
-   * for `zh-TW`, then the same language subtag.
+   * for `zh-TW`, then the same language subtag. When several configured locales share a preference's language and
+   * script and none matches it exactly or by likely region, the first in `locales` wins: list `es-419` before `es-ES` to
+   * serve `es-MX` from `es-419`. `es-ES`, and `es`, whose likely region is Spain, still match `es-ES`.
    *
    * @param preferences - Untrusted locale tags, most preferred first; blank, malformed, and non-string entries are skipped.
    * @returns The canonical locale for the first preference that matches, or undefined when none does.
@@ -271,9 +279,9 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * ```
    *
    * @param key - Translation key, trimmed as `t()` trims it.
-   * @returns `true` when `t(key)` would find a text, or `t(key, { count })` a plural form, and `false` otherwise,
-   * including for a string no dictionary can hold, such as one that is blank, longer than 1,000 characters, or contains
-   * ASCII controls.
+   * @returns `true` when a dictionary has a text at `key`, or a plural group, one with an `other` form, and `false`
+   * otherwise, including for a group without an `other` form, whichever forms it has, and for a string no dictionary
+   * can hold, such as one that is blank, longer than 1,000 characters, or contains ASCII controls.
    * @throws {Error} When called before successful initialization.
    * @throws {TypeError} When the key is not a string.
    */
@@ -285,8 +293,13 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   /**
    * Formats a number for the active locale with `Intl.NumberFormat`.
    *
+   * @param value - Number or bigint to format.
+   * @param options - `Intl.NumberFormat` options, such as `{ style: "percent" }`, read by name, including inherited
+   * properties, as `Intl` reads them; other properties are ignored.
+   * @returns The formatted number.
    * @throws {RangeError} When `options` is out of range, as `Intl.NumberFormat` throws.
-   * @throws {TypeError} When `options` is incomplete, such as a currency style without `currency`.
+   * @throws {TypeError} When `options` is `null` or incomplete, such as a currency style without `currency`, as
+   * `Intl.NumberFormat` throws.
    */
   formatNumber(value: number | bigint, options?: Intl.NumberFormatOptions): string;
 
@@ -294,13 +307,25 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * Formats a date, or a timestamp in milliseconds, for the active locale with `Intl.DateTimeFormat`, in the
    * configured `timeZone` unless `options.timeZone` names another.
    *
-   * @throws {RangeError} When `options` or the date is invalid, as `Intl.DateTimeFormat` throws.
+   * @param value - Date, or milliseconds since the epoch.
+   * @param options - `Intl.DateTimeFormat` options, such as `{ dateStyle: "long" }`, read by name, including inherited
+   * properties, as `Intl` reads them; other properties are ignored. A `timeZone` of `undefined` keeps the configured
+   * one.
+   * @returns The formatted date.
+   * @throws {RangeError} When an option or the date is invalid, such as an unknown time zone or an invalid `Date`, as
+   * `Intl.DateTimeFormat` throws.
+   * @throws {TypeError} When `options` is `null` or options conflict, such as `dateStyle` with `year`, as
+   * `Intl.DateTimeFormat` throws.
    */
   formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
 
   /**
    * Formats a relative time, such as `-1, "day"` for "1 day ago", for the active locale with `Intl.RelativeTimeFormat`.
    *
+   * @param value - Amount of `unit`, negative for the past.
+   * @param unit - Unit of `value`, such as `"day"` or `"hours"`.
+   * @param options - `Intl.RelativeTimeFormat` options, such as `{ numeric: "auto" }` for "yesterday".
+   * @returns The formatted relative time.
    * @throws {RangeError} When `value`, `unit`, or `options` is invalid, as `Intl.RelativeTimeFormat` throws.
    */
   formatRelativeTime(
@@ -312,39 +337,70 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   /**
    * Joins strings into a list, such as "a, b, and c", for the active locale with `Intl.ListFormat`.
    *
+   * @param values - Strings to join, in order.
+   * @param options - `Intl.ListFormat` options, such as `{ type: "disjunction" }` for "a, b, or c".
+   * @returns The joined list, or an empty string for no values.
    * @throws {RangeError} When `options` is invalid, as `Intl.ListFormat` throws.
    * @throws {TypeError} When a value is not a string, as `Intl.ListFormat` throws.
    */
   formatList(values: Iterable<string>, options?: Intl.ListFormatOptions): string;
 
   /**
-   * Calls a listener after every applied initialization and locale change, such as to re-render a framework.
+   * Calls a listener after every applied `init()` and every applied locale change, such as to re-render a framework.
+   * A stale or same-locale request, which changes nothing, does not call it.
    *
-   * @param listener - Called without arguments; exceptions are reported as for any `EventTarget` listener.
+   * @param listener - Called without arguments. An exception is reported as for any `EventTarget` listener: in a
+   * browser, as an uncaught error that neither stops other listeners nor rejects the change; in Node.js, it crashes the
+   * process.
    * @returns A function that removes the listener; calling it again does nothing.
    */
   subscribe(listener: () => void): () => void;
 
-  /** Adds a typed lifecycle event listener. */
+  /**
+   * Adds a typed lifecycle event listener.
+   *
+   * @param type - `ready`, dispatched after every applied `init()`, or `locale-change`, after every applied locale change.
+   * @param callback - Receives the event, whose `detail` holds the locale. An exception is reported as by
+   * {@link I18n.subscribe}.
+   * @param options - Standard `EventTarget` listener options, such as `{ once: true }`.
+   */
   addEventListener<K extends keyof I18nEventMap<TLocale>>(
     type: K,
     callback: (this: I18n<TLocale, TKey>, event: I18nEventMap<TLocale>[K]) => void,
     options?: AddEventListenerOptions | boolean,
   ): void;
-  /** Adds a standard event listener for interoperability with EventTarget. */
+  /**
+   * Adds a standard event listener for interoperability with EventTarget.
+   *
+   * @param type - Event type; only `ready` and `locale-change` are dispatched.
+   * @param callback - Standard listener, or `null`, which adds nothing.
+   * @param options - Standard `EventTarget` listener options.
+   */
   addEventListener(
     type: string,
     callback: EventListener | EventListenerObject | null,
     options?: AddEventListenerOptions | boolean,
   ): void;
 
-  /** Removes a typed lifecycle event listener. */
+  /**
+   * Removes a typed lifecycle event listener.
+   *
+   * @param type - Event type the listener was added for.
+   * @param callback - The listener that was added.
+   * @param options - Standard `EventTarget` options; `capture` must match the one it was added with.
+   */
   removeEventListener<K extends keyof I18nEventMap<TLocale>>(
     type: K,
     callback: (this: I18n<TLocale, TKey>, event: I18nEventMap<TLocale>[K]) => void,
     options?: EventListenerOptions | boolean,
   ): void;
-  /** Removes a standard event listener registered through EventTarget. */
+  /**
+   * Removes a standard event listener registered through EventTarget.
+   *
+   * @param type - Event type the listener was added for.
+   * @param callback - The listener that was added, or `null`, which removes nothing.
+   * @param options - Standard `EventTarget` options; `capture` must match the one it was added with.
+   */
   removeEventListener(
     type: string,
     callback: EventListener | EventListenerObject | null,

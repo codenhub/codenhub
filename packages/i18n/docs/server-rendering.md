@@ -6,11 +6,11 @@ order: 3
 
 # Render on a server or at build time
 
-A browser has one visitor, so one manager for the whole app is right. A server renders pages for many visitors at once, often in different languages, and a static site build renders every language in one run. Both need a different shape: **one manager per page you render**.
+A browser has one visitor, so one manager is right. A server has many visitors at once, in different languages, and a manager speaks one language at a time. So: **one manager per page you render**. A static site build renders every language in one run and follows the same rule. This page shows that shape with the `en` and `pt` dictionaries from the [overview](index.md#walkthrough), then picks each visitor's language, gets their dates right, and keeps the logs readable.
 
 ## One manager per request
 
-A manager has one current language. If two requests shared one, a Portuguese request calling `setLocale("pt")` would change the language of an English page still rendering. So create the manager inside the request:
+A manager has one current language. If two requests shared one, a Portuguese request calling `setLocale("pt")` would change the language of an English page still rendering, and the English visitor would get a page that switches language halfway down. It works fine in development, where you are the only visitor. So create the manager inside the request:
 
 ```ts
 // src/i18n.ts
@@ -42,6 +42,8 @@ export async function renderPage(request: Request) {
 ```
 
 Creating a manager is cheap, and the work that isn't is shared. When your loader returns the same object on every call, as an imported module does, every manager reuses the one checked copy of that dictionary instead of checking it again. A loader that reads and parses a file on every call loses that, so read each file once and keep the result.
+
+`i18n.direction` is `"rtl"` for a right-to-left locale such as Arabic, and `"ltr"` otherwise; [Right-to-left languages](index.md#right-to-left-languages) explains how it is decided and how to override it. Put it in `<html dir>`, as above, and the browser lays the page out the right way round from the first byte.
 
 Pass the manager, or `t`, down to whatever renders the page, rather than importing a shared one.
 
@@ -75,7 +77,7 @@ function pickLocale<TLocale extends string>(i18n: I18n<TLocale>, request: Reques
 
 A visitor whose languages all fail to match, including one who refuses your default with `en;q=0`, still gets the default locale, since the page has to be in some language. This helper does not implement the rest of `Accept-Language`, such as `*`; use your server framework's parser if you need it, and pass its result to `matchLocale()`.
 
-`matchLocale()` takes a list rather than the header because parsing the header, and limiting its size, belongs to your server. It matches the same way the browser binding does, so a visitor gets the same language from the server as from the browser: `pt-BR` gets your `pt`, and `zh-TW` gets your `zh-Hant`. Malformed tags are skipped, and `undefined` means nothing matched.
+`matchLocale()` takes a list rather than the header because parsing the header, and limiting its size, belongs to your server. It matches the same way the browser binding does, so a visitor gets the same language from the server as from the browser: `pt-BR` gets your `pt`, and `zh-TW` gets your `zh-Hant`. Malformed tags are skipped, and `undefined` means nothing matched. [Turn outside input into a locale](index.md#turn-outside-input-into-a-locale) has the full matching order, including which of two regional locales wins, and `resolveLocale()` for a locale from a cookie or a query string.
 
 When the URL carries the language, as on [a localized site](localized-urls.md), read it from the URL instead and use `Accept-Language` only to choose where to redirect a visitor who arrives at `/`. A static site has no server to see the header; see [Detect the language on a static site](localized-urls.md#detect-the-language-on-a-static-site).
 
@@ -97,7 +99,7 @@ export const createAppI18n = (timeZone?: string) =>
 
 ## Keep production logs useful
 
-A missing key logs a warning once per manager. With a manager per request, that is once per request, which floods the logs. In production, send misses to your logger, or turn the warnings off:
+A missing key logs a warning once for each locale and key in each manager. With a manager per request, that is once per request, so one missing key on the home page becomes a log line for every visitor. In production, send misses to your logger, where you can count them instead of scrolling past them, or turn the warnings off:
 
 ```ts
 createI18n({
@@ -108,9 +110,9 @@ createI18n({
 });
 ```
 
-`isSilent: true` turns off warnings only. Errors, such as a failed load, still throw.
+`onMissingKey` replaces the warning and runs on every miss. `isSilent: true` turns off warnings only, including the one for a message with invalid syntax. Errors, such as a failed load, still throw.
 
-In Node.js, an exception thrown from a function passed to `subscribe()`, or from a `ready` or `locale-change` listener, crashes the process, as with any `EventTarget`. Servers rarely need these, but if you use them, keep them from throwing.
+In Node.js, an exception thrown from a function passed to `subscribe()`, or from a `ready` or `locale-change` listener, crashes the process, as with any `EventTarget`. Servers rarely need these, but if you use them, wrap their body in `try`/`catch` so they can't throw.
 
 ## Build a static site
 
@@ -145,10 +147,14 @@ A dictionary that fails to load or check makes `init()` reject, so the build fai
 
 ## Hand the locale to the browser
 
-When the browser takes over a server-rendered page, it must start in the language the server used, or the text changes as the page loads. Pass that locale explicitly; it overrides saved and detected ones:
+When the browser takes over a server-rendered page, it must start in the language the server used, or the text changes as the page loads. Pass that locale explicitly; it overrides saved and detected ones, and the binding saves it as the visitor's choice, as [How the locale is chosen](browser.md#how-the-locale-is-chosen) explains:
 
 ```ts
 await initializeBrowserI18n({ i18n, locale: document.documentElement.lang as "en" | "pt" });
 ```
 
 On a localized site, read it from the URL with `routing.parse()` instead, as [Localized URLs](localized-urls.md#read-the-locale-on-the-client) shows.
+
+## Next
+
+If the language of each page lives in its URL, as it does on most server-rendered and static sites, continue with [Localized URLs](localized-urls.md): it reads the locale from the path, builds links to other languages, and lists every page a static build needs.
