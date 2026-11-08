@@ -7,6 +7,8 @@ description: Creates, syncs, adopts, and audits projects built on the shared pro
 
 The template repository is the source of truth for the shared project structure. Its `.template/README.md`, which every project keeps a copy of, defines the file classes (`canonical`, `blocks`, `seed`), project blocks, placeholders, `synced`, and `exceptions`, says how to sync, and documents `node .template/check.mjs`, which reports drift. Read it before any of the work below, and follow it rather than restating it; this skill adds what an agent needs around it.
 
+A project last synced before the template gained the check and the sync procedure has neither. Read the procedure from the fetched template, `git show FETCH_HEAD:.template/README.md`, and run the fetched check from the project root: save `git show FETCH_HEAD:.template/check.mjs` to a file outside the repository and run `node <that file>`. Both reach the project with its next sync.
+
 The template is the GitHub repository named, as an `owner/repo` string, in `.template/manifest.json#template`, or `codenhub/template` when a project has no manifest yet. The steps use `git`, `pnpm`, and an authenticated GitHub CLI (`gh`). Without `gh`, use the local start and ask the user to create the repository.
 
 A project brings its own name, brand, and domain. Never carry a name, owner, or brand from the template or from another project into this one.
@@ -54,9 +56,9 @@ The template's pre-push hook refuses any push to `main`, including the first pus
 
 ## Sync
 
-Follow "How to sync" in the project's `.template/README.md`. When `synced` is `null`, nothing records where the project started; treat it as an adoption.
+Follow "How to sync" in the fetched template's `.template/README.md`. When `synced` is `null`, nothing records where the project started; treat it as an adoption.
 
-When the template changed `.template/README.md` itself, read the fetched version, `git show FETCH_HEAD:.template/README.md`, before applying anything: the procedure that applies is the new one.
+Read it from `git show FETCH_HEAD:.template/README.md` before applying anything rather than from the project's copy: when the template changed the procedure, the one that applies is the new one, and a project from before it has none.
 
 Report what was applied, each conflict and how it was resolved, each block a clean merge changed and was restored, the seed changes proposed and which the user took, and any local edit to a template-owned file, with whether to take it upstream.
 
@@ -77,7 +79,7 @@ A project that predates the template has no `.template/`, so read the convention
 
 ## Audit
 
-Report and change nothing. Run `node .template/check.mjs` and report its output: how far `synced` is behind the template, and every failure with the file and line it names. Each failure is resolved by syncing, proposing the change upstream, recording an exception, or a local fix, as the README says; name which applies, and ask before acting on any of them.
+Report and change nothing. Run `node .template/check.mjs`, or the fetched check when the project has none, and report its output: how far `synced` is behind the template, and every failure with the file and line it names. Each failure is resolved by syncing, proposing the change upstream, recording an exception, or a local fix, as the README says; name which applies, and ask before acting on any of them.
 
 ## Upstream
 
