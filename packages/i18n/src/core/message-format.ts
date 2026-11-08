@@ -16,6 +16,7 @@ const DATE_STYLES = ["short", "medium", "long", "full"] as const;
 const PLURAL_KEYWORDS = new Set(["zero", "one", "two", "few", "many", "other"]);
 const NAME_PATTERN = /[A-Za-z0-9_]/;
 const SELECT_KEY_PATTERN = /[A-Za-z0-9_-]/;
+const EXACT_VALUE_PATTERN = /^=-?[0-9]+(\.[0-9]+)?$/;
 const MAX_NESTING = 10;
 
 type MessageNode =
@@ -217,9 +218,11 @@ class Parser {
           offset = Number(digits);
         }
         const options = this.parseOptions(depth, true, (key) => {
-          if (key.startsWith("=") ? !/^=-?[0-9]+(\.[0-9]+)?$/.test(key) : !PLURAL_KEYWORDS.has(key)) {
+          if (key.startsWith("=") ? !EXACT_VALUE_PATTERN.test(key) : !PLURAL_KEYWORDS.has(key)) {
             this.fail(`Unknown plural form ${key}`);
           }
+          // ICU compares exact values as numbers, so `=1.0` and `=01` select 1, as the value's own spelling does.
+          return key.startsWith("=") ? `=${Number(key.slice(1))}` : key;
         });
         return {
           kind: "plural",
@@ -232,7 +235,7 @@ class Parser {
       }
       case "select": {
         this.expect(",");
-        const options = this.parseOptions(depth, isInPlural, () => undefined);
+        const options = this.parseOptions(depth, isInPlural, (key) => key);
         return { kind: "select", name, options, source: this.message.slice(start, this.index) };
       }
       default:
@@ -256,10 +259,11 @@ class Parser {
     return style as TStyle;
   }
 
+  /** Reads options until `}`, keyed by `readKey`, which rejects an unknown key or returns the key to store. */
   private parseOptions(
     depth: number,
     isInPlural: boolean,
-    checkKey: (key: string) => void,
+    readKey: (key: string) => string,
   ): Map<string, readonly MessageNode[]> {
     const options = new Map<string, readonly MessageNode[]>();
 
@@ -270,19 +274,19 @@ class Parser {
         break;
       }
 
-      let key: string;
+      let written: string;
       if (this.peek() === "=") {
         this.index += 1;
-        key = `=${this.readWhile(/[-0-9.]/)}`;
+        written = `=${this.readWhile(/[-0-9.]/)}`;
       } else {
-        key = this.readWhile(SELECT_KEY_PATTERN);
+        written = this.readWhile(SELECT_KEY_PATTERN);
       }
-      if (key.length === 0 || key === "=") {
+      if (written.length === 0 || written === "=") {
         this.fail("Expected an option");
       }
-      checkKey(key);
+      const key = readKey(written);
       if (options.has(key)) {
-        this.fail(`Repeated option ${key}`);
+        this.fail(`Repeated option ${written}`);
       }
       this.expect("{");
       options.set(key, this.parseNodes(depth + 1, isInPlural));

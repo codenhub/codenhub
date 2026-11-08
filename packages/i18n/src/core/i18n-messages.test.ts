@@ -87,6 +87,27 @@ describe("ICU messages", () => {
     expect(i18n.t("items")).toBe("{count, plural, =0 {No items} one {# item} other {# items}}");
   });
 
+  it("should compare exact plural values as numbers", async () => {
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en"],
+      loadLocale: () => ({
+        decimal: "{n, plural, =1.0 {exactly one} other {#}}",
+        padded: "{n, plural, =01 {exactly one} other {#}}",
+        negativeZero: "{n, plural, =-0 {zero} other {#}}",
+        half: "{n, plural, =0.50 {half} other {#}}",
+      }),
+      isSilent: true,
+    });
+    await i18n.init();
+
+    expect(i18n.t("decimal", { n: 1 })).toBe("exactly one");
+    expect(i18n.t("padded", { n: 1 })).toBe("exactly one");
+    expect(i18n.t("negativeZero", { n: 0 })).toBe("zero");
+    expect(i18n.t("half", { n: 0.5 })).toBe("half");
+    expect(i18n.t("decimal", { n: 2 })).toBe("2");
+  });
+
   it("should use other and root formatting for a locale Intl rejects", async () => {
     const i18n = createI18n({
       defaultLocale: "x-test",
@@ -200,6 +221,7 @@ describe("parseMessage", () => {
     ["{", "an unclosed argument"],
     ["{count, plural, one {#}}", "a plural without other"],
     ["{v, select, a {x} a {y} other {z}}", "a repeated option"],
+    ["{n, plural, =1 {x} =1.0 {y} other {z}}", "an exact value repeated in another spelling"],
     ["{n, number, currency}", "an unknown number style"],
     ["{n, spellout}", "an unknown type"],
     ["{n, plural, offset:x other {#}}", "an invalid offset"],
