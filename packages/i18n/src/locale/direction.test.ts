@@ -38,6 +38,14 @@ describe("getDefaultLocaleDirection", () => {
     expect(getDefaultLocaleDirection(locale)).toBe("rtl");
   });
 
+  it.each([
+    ["en-u-nu-arab", "ltr"],
+    ["uz-x-arab", "ltr"],
+    ["he-x-latn", "rtl"],
+  ])("ignores a script-like value after an extension or private-use singleton in %s", (locale, direction) => {
+    expect(getDefaultLocaleDirection(locale)).toBe(direction);
+  });
+
   it("falls back to the language list when Intl.Locale rejects the tag", () => {
     expect(getDefaultLocaleDirection("ar-x")).toBe("rtl");
   });
