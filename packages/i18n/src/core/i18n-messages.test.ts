@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createI18n } from "../index";
 import { getI18nInternals } from "./internals";
-import { MessageSyntaxError, parseMessage } from "./message-format";
+import { MessageSyntaxError, parseCachedMessage, parseMessage } from "./message-format";
 
 const messages = {
   hello: "Hello, {name}!",
@@ -274,5 +274,19 @@ describe("formatters", () => {
     expect(() => i18n.formatNumber(1, { style: "currency" })).toThrow(TypeError);
     expect(() => i18n.formatNumber(1, { maximumFractionDigits: 200 })).toThrow(RangeError);
     expect(() => i18n.formatDate(Number.NaN)).toThrow(RangeError);
+  });
+});
+
+describe("parseCachedMessage", () => {
+  it("should keep a message in use while many others are parsed", () => {
+    const hot = "{hot} message";
+    const parsed = parseCachedMessage(hot);
+
+    for (let index = 0; index < 10_000; index += 1) {
+      parseCachedMessage(`{cold${index}}`);
+      parseCachedMessage(hot);
+    }
+
+    expect(parseCachedMessage(hot)).toBe(parsed);
   });
 });

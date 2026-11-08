@@ -311,14 +311,19 @@ const MAX_CACHED_MESSAGES = 10_000;
 const parsedMessages = new Map<string, Message | MessageSyntaxError>();
 
 /**
- * Parses a message once, keeping recent results, since dictionary texts repeat across lookups and managers.
+ * Parses a message once, keeping the most recently used results, since dictionary texts repeat across lookups and
+ * managers.
  *
  * @internal
  */
 export const parseCachedMessage = (message: string): Message | MessageSyntaxError => {
   let parsed = parsedMessages.get(message);
 
-  if (parsed === undefined) {
+  if (parsed !== undefined) {
+    // Re-inserting moves a hit to the newest end, so eviction drops the least recently used message.
+    parsedMessages.delete(message);
+    parsedMessages.set(message, parsed);
+  } else {
     try {
       parsed = parseMessage(message);
     } catch (error) {
