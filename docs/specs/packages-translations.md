@@ -21,6 +21,8 @@ The supported translation locales are:
 - `pt-BR`: Português (Brasil).
 - `es`: Español.
 
+`es` is written in a neutral Spanish that reads naturally in Latin America and in Spain alike: words every Spanish-speaking developer uses, and no slang or idiom tied to one country. The tag has no region, so it serves every Spanish reader, and most of them live in the Americas. A word that is everyday in one country can be unknown, or rude, in another: "a pelo" means "plain" in Spain and is vulgar in parts of Latin America. Rejected: Spain's Spanish, which reads as foreign to most of the audience; and one Latin American variety, which no single country represents.
+
 Supporting another locale means adding it to this list, in the change that adds that support.
 
 A locale is written as a BCP 47 tag, with a region in upper case when it has one, such as `pt-BR`. This is the same spelling as the URL prefix both sites use.
