@@ -217,7 +217,9 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * @remarks
    * Each preference, in order, tries an exact case-insensitive match, then the longest configured locale it starts with
    * as whole subtags and with the same likely script, such as `pt` for `pt-BR`, then likely subtags, such as `zh-Hant`
-   * for `zh-TW`, then the same language subtag.
+   * for `zh-TW`, then the same language subtag. When several configured locales share a preference's language and
+   * script and none matches it exactly or by likely region, the first in `locales` wins: list `es-419` before `es-ES` to
+   * serve `es-MX` from `es-419`. `es-ES`, and `es`, whose likely region is Spain, still match `es-ES`.
    *
    * @param preferences - Untrusted locale tags, most preferred first; blank, malformed, and non-string entries are skipped.
    * @returns The canonical locale for the first preference that matches, or undefined when none does.
