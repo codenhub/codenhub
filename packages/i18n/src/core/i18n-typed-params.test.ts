@@ -8,6 +8,7 @@ const en = {
   plain: "Hello",
   greeting: "Hello, {name}!",
   spaced: "Hello, { name }!",
+  unicodeSpaced: "Hello, {\u00a0name\u3000}!",
   total: "Total: {amount, number}",
   shipped: "Shipped {when, date, long} at {when, time, short}",
   inbox: "{count, plural, =0 {No messages} one {# message from {sender}} other {# messages}}",
@@ -34,6 +35,8 @@ describe("typed placeholder values", () => {
   it("should require each argument with the type its format needs", () => {
     expectTypeOf<Params<"total">["length"]>().toEqualTypeOf<1>();
     expectTypeOf<Value<"spaced", "name">>().toEqualTypeOf<string | number | Date>();
+    expectTypeOf<Params<"unicodeSpaced">["length"]>().toEqualTypeOf<1>();
+    expectTypeOf<Value<"unicodeSpaced", "name">>().toEqualTypeOf<string | number | Date>();
     expectTypeOf<Value<"total", "amount">>().toEqualTypeOf<number>();
     expectTypeOf<Value<"shipped", "when">>().toEqualTypeOf<Date | number>();
     expectTypeOf<Value<"inbox", "count">>().toEqualTypeOf<number>();
