@@ -245,7 +245,7 @@ The registry gives each component its default level, and the level says how much
 
 Depth is a property of the element and the aesthetic, not of the component's structure: `surface` carries no shadow geometry, so a plain card and a plain panel render identically until something asks for depth. Giving every registry rest level real fallback geometry with no aesthetic and no modifier was considered and not done, to avoid a visual change to every unclassed component.
 
-This modifier system is separate from the `--elevation-none/-sm/-md/-lg` tokens in `theme.css`: those are raw shadow values for a consumer's own elements, read by nothing else in `src/`. A `.raised` card and `--elevation-sm` written on your own element mean roughly the same weight of depth, but one multiplies an aesthetic's shadow parts and the other is a fixed value, so they will not always paint identically.
+This modifier system is separate from the `--elevation-none/-sm/-md/-lg` tokens in `theme.css`: those are raw shadow values for a consumer's own elements, read by nothing else in `src/`. A `.raised` card and `--elevation-sm` written on your own element mean roughly the same weight of depth, but one multiplies an aesthetic's shadow parts and the other is a fixed value, so they will not always paint identically. They also differ in where they read `--elevation-color`: the modifiers on the element, the tokens once at `:root`, so only the modifiers follow a container that sets its own. Re-resolving the tokens per element would mean declaring them on every element, which would hide a container's own `--elevation-sm` from everything inside it.
 
 ### The one limitation
 

@@ -243,7 +243,7 @@ The four `--elevation-*` shadows are for elements you style yourself. They are s
 | `--z-popover`              | `40`                                                   | Stacking order of tooltip bubbles. Use it for your own popovers so they stack the same way.                     |
 | `--breakpoint-xs`          | `30rem`                                                | The `xs:` responsive breakpoint. Only in a `/tw` build; the compiled entrypoints do not declare it.             |
 
-Each `--elevation-*` shadow is made of the listed parts, each in `--elevation-color`. The hover step that deepens a fill under the pointer is a presentation token, `--hover-step`; see [Customizing](./customizing.md#presentation-tokens).
+Each `--elevation-*` shadow is made of the listed parts, each in `--elevation-color`. The four shadows are composed once, on the root, so an `--elevation-color` you set on a container does not reach them: set it on `:root`, or set the `--elevation-*` token itself on the container. The elevation classes, such as `.card.raised`, read `--elevation-color` on the element and follow a container's value. The hover step that deepens a fill under the pointer is a presentation token, `--hover-step`; see [Customizing](./customizing.md#presentation-tokens).
 
 ## Fonts
 

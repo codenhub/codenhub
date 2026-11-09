@@ -187,7 +187,14 @@
        instead of inferring it by omitting a shadow declaration. These are raw
        shadows for elements a consumer styles; the elevation modifier classes
        (`.flat`/`.raised`/`.floating` in elevation.css) multiply an aesthetic's
-       shadow parts instead, and are not read from here. */
+       shadow parts instead, and are not read from here.
+
+       They resolve `--elevation-color` here, once, so a container's own
+       `--elevation-color` does not reach them. Declaring them on every element
+       instead would re-resolve it, and would also redeclare them under a
+       container that sets its own `--elevation-sm`, which no descendant would
+       then see. A consumer's override wins over a colour that follows the
+       container; docs/usage/theming.md#foundation-tokens says so. */
     --elevation-none: none;
     --elevation-sm: 0 1px 2px var(--elevation-color), 0 1px 3px var(--elevation-color);
     --elevation-md: 0 4px 6px -1px var(--elevation-color), 0 2px 4px -2px var(--elevation-color);
