@@ -23,6 +23,15 @@ const SCENARIOS: Record<string, readonly string[]> = {
   "/components alone": ["components.css", "aesthetics/index.css"],
   "/native": ["native.css", "aesthetics/index.css"],
   "/aesthetics loaded first": ["aesthetics/index.css", "theme.css", "components.css"],
+  /* `without-a-bundler.md`'s `<link>` tags the other way round: one file per
+     aesthetic the markup uses, then the base. */
+  "single aesthetics before .": [
+    "aesthetics/pixel.css",
+    "aesthetics/chunky-tile.css",
+    "aesthetics/neobrutalism.css",
+    "aesthetics/glass.css",
+    "index.css",
+  ],
 };
 
 /* A consumer's Tailwind utilities, and a consumer's plain unlayered rules. */
