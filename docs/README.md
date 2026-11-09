@@ -22,7 +22,8 @@ Package-specific consumer and maintainer documentation lives with each workspace
 
 | Document                                     | Contains                                                                                                 |
 | -------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| [Code](guidelines/code.md)                   | Naming, design, TypeScript, async and errors, testing practices, and documentation in code.              |
+| [Code](guidelines/code.md)                   | Naming, design, errors, inputs and state, testing practices, and documentation in code.                  |
+| [Stack](guidelines/stack.md)                 | The conventions of the project's languages and the tools that check them.                                |
 | [Documentation](guidelines/documentation.md) | Metadata, prompts, status and authority, recording decisions, exceptions, layout, and the writing voice. |
 | [Security](guidelines/security.md)           | Secrets, untrusted input, what stays out of logs, and reviewing a change.                                |
 
@@ -42,9 +43,10 @@ Package-specific consumer and maintainer documentation lives with each workspace
 
 ## Specifications
 
-| Document                | Contains                                                          |
-| ----------------------- | ----------------------------------------------------------------- |
-| [Tests](specs/tests.md) | Test categories, locations, configuration, scripts, and coverage. |
+| Document                            | Contains                                                               |
+| ----------------------------------- | ---------------------------------------------------------------------- |
+| [Tests](specs/tests.md)             | Test categories, where each lives, and coverage.                       |
+| [Stack tests](specs/stack-tests.md) | The stack's runners, file names, configuration, scripts, and commands. |
 
 | Document                                                         | Contains                                                                                  |
 | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
