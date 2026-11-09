@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-05
+last_updated: 2026-11-09
 scope: Documentation for public workspace packages.
 ---
 
@@ -224,7 +224,7 @@ The files are hosted on the documentation site rather than `codenhub.dev` becaus
 
 ### Page Markdown
 
-The documentation site also publishes each hosted public document's Markdown at `index.md` inside the page's own route: `docs/guides/setup.md`, served at `https://docs.codenhub.dev/<slug>/guides/setup/`, has its Markdown at `https://docs.codenhub.dev/<slug>/guides/setup/index.md`. Each page offers to copy, view, or download it. The file is the document's Markdown body without its frontmatter, from the same release-tag snapshot as the page, and its link and image targets follow the rule above for `llms-full.txt`: each package-relative target the site publishes becomes an absolute site URL, and code is left alone. Readers copy this text to paste it elsewhere, often into a prompt, where a relative link resolves to nothing. A generated reference page's Markdown carries no `description`/`since` deck, which the site adds only to the rendered page.
+The documentation site also publishes each hosted public document's Markdown at `index.md` inside the page's own route: `docs/guides/setup.md`, served at `https://docs.codenhub.dev/<slug>/guides/setup/`, has its Markdown at `https://docs.codenhub.dev/<slug>/guides/setup/index.md`. Each page offers to copy, view, or download it. The file is the document's Markdown body without its frontmatter, from the same release-tag snapshot as the page, and its link and image targets follow the rule above for `llms-full.txt`: each package-relative target the site publishes becomes an absolute site URL, and code is left alone. Readers copy this text to paste it elsewhere, often into a prompt, where a relative link resolves to nothing. A generated reference page's Markdown carries no `description`/`since` deck, which the site adds only to the rendered page. A page published untranslated under a locale (`docs/specs/packages-translations.md`, "Documentation site") is the one whose Markdown starts with something the document does not hold: a blockquote line with the notice the page shows, in the locale's language, and the English page's URL. Without it, a copy of the file presents English as the locale's translation, since the file has no page around it to carry the notice.
 
 ## Consumer and maintainer truth
 

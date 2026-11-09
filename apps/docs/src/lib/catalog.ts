@@ -366,6 +366,10 @@ async function untranslatedPage(
       relativePath: english.relativePath,
       siteUrl: siteConfig.siteUrl,
       slug,
+      untranslated: {
+        englishUrl: new URL(english.englishRoute, siteConfig.siteUrl).href,
+        notice: messages.untranslated,
+      },
     }),
     rawHtml: rendered.code,
     route: localizePath(locale, english.englishRoute),
