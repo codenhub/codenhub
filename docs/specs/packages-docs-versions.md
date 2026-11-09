@@ -1,6 +1,6 @@
 ---
-status: APPROVED
-last_updated: 2026-11-05
+status: IMPLEMENTED
+last_updated: 2026-11-09
 scope: Documentation for past package versions on the documentation site.
 ---
 
@@ -60,7 +60,7 @@ An archived version is served under its exact version, inside the package route 
 - English: `https://docs.codenhub.dev/<slug>/<version>/<path>/`.
 - A translation: `https://docs.codenhub.dev/<locale>/<slug>/<version>/<path>/`.
 
-The current version stays at its unversioned URL, so no existing link changes. The site publishes the same files under an archived version's route as under the current one's, as `docs/specs/packages-documentation.md`, "Publishing" and "LLM documentation", defines them: page Markdown, assets, `LICENSE`, `NOTICE`, `llms.txt`, and `llms-full.txt`, with absolute links pointing inside that version's route. The root `llms.txt` lists the current version only.
+The current version stays at its unversioned URL, so no existing link changes. The site publishes the same files under an archived version's route as under the current one's, as `docs/specs/packages-documentation.md`, "Publishing" and "LLM documentation", defines them: page Markdown, assets, `LICENSE`, `NOTICE`, `llms.txt`, and `llms-full.txt`, with absolute links pointing inside that version's route. The root `llms.txt` lists the current version only; the site's `catalog.json` lists every kept version and where each other release redirects (`docs/specs/packages-documentation.md`, "Catalog").
 
 Every stable release that is not kept redirects, path included, to the newest kept version that satisfies `^<that release>`, or to the current version when none does. A link to `/<slug>/0.4.2/guides/setup/` therefore follows the 0.4 line to `/<slug>/0.4.3/guides/setup/` when a patch replaces it, and a link to the current version's exact number lands on the unversioned URL. A path the target version does not have gets the not-found page.
 

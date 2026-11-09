@@ -1,20 +1,24 @@
 ---
 status: APPROVED
-last_updated: 2026-10-29
+last_updated: 2026-11-09
 scope: Recommended changelog documentation for workspace packages.
 ---
 
 # Package changelog spec
 
-This document defines how a package records its release history. Keeping one is recommended, not required.
+This document defines how a package records its release history. Keeping one is recommended, and required once the documentation site keeps an earlier release of the package.
 
 ## Compliance
 
-Keeping a changelog costs little once a package has any consumer, and it's usually the first thing an upgrading consumer looks for. It is still optional: nothing in `docs/specs/packages-lifecycle.md` or `docs/specs/packages-documentation.md` requires one, and a package with no changelog is fully compliant with both.
+Keeping a changelog costs little once a package has any consumer, and it's usually the first thing an upgrading consumer looks for. It is still optional until an earlier release has consumers worth writing for. A package with no changelog is compliant while the documentation site keeps no version of it besides the current one.
 
-A package opts in by adding a `docs/changelog/` directory as described below. There is no metadata flag to set on the package itself and no version at which a package is expected to start.
+A changelog becomes required once the site keeps an earlier release (`docs/specs/packages-docs-versions.md`, "Kept versions"): one that `codenhub.docs.versions` lists, or the newest release of an earlier major from 1.0. Keeping a version is how maintainers say it matters, that people use it or could still be using it, and those are the readers who need to know what changed since. `hub check`'s `changelog` rule reports `changelog/required` for such a package without `docs/changelog/`. It reads the kept versions from local release tags, as the `docs-versions` rule does.
 
-Once a package has opted in, keeping the changelog current stops being optional. `hub check`'s `changelog` rule reports `changelog/missing-entry` when the version in the manifest has no page, `changelog/unlinked-entry` when it has one `index.md` does not link, `changelog/missing-date` or `changelog/missing-description` when that page lacks the frontmatter required below, and `changelog/unfinished-entry` when a `- TODO` bullet remains in its body. `hub release --cut` writes the page and the link, so the ordinary way to release also produces the entry; `docs/tooling.md` documents each.
+Rejected: requiring a changelog by npm downloads or another measure of use. `hub check` makes no network requests, a download count says nothing about whether a version is supported, and the maintainers already record that judgment in `codenhub.docs.versions`. Requiring one for every package with an earlier release was rejected too: most 0.x releases here never had a consumer (`docs/specs/packages-docs-versions.md`, "Why"), and a changelog written for nobody costs every release a page.
+
+A package starts a changelog by adding a `docs/changelog/` directory as described below, by choice or once the site keeps an earlier release of it. There is no metadata flag to set on the package itself.
+
+Once a package has a changelog, keeping it current stops being optional. `hub check`'s `changelog` rule reports `changelog/missing-index` when `docs/changelog/` has no `index.md`, `changelog/missing-entry` when the version in the manifest has no page, `changelog/unlinked-entry` when it has one `index.md` does not link, `changelog/missing-date` or `changelog/missing-description` when that page lacks the frontmatter required below, and `changelog/unfinished-entry` when a `- TODO` bullet remains in its body. `hub release --cut` writes the page and the link, so the ordinary way to release also produces the entry; `docs/tooling.md` documents each.
 
 ## Structure
 

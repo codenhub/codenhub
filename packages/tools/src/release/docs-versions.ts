@@ -1,4 +1,4 @@
-import { major, maxSatisfying, rcompare, satisfies } from "semver";
+import { major, maxSatisfying, rcompare, satisfies, valid } from "semver";
 
 import { isStableVersion } from "./published-tags.ts";
 
@@ -19,7 +19,8 @@ export interface DocsVersionRedirect {
 }
 
 function stableNewestFirst(versions: readonly string[]): string[] {
-  return [...new Set(versions.filter(isStableVersion))].sort(rcompare);
+  // `isStableVersion` admits leading zeros, such as `01.2.3`, which `semver` throws on.
+  return [...new Set(versions.filter((version) => isStableVersion(version) && valid(version) !== null))].sort(rcompare);
 }
 
 /**

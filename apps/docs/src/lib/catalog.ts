@@ -25,7 +25,10 @@ import { rewritePackageMarkdownLinks } from "./markdown-links";
 import { rendererFor } from "./markdown/processor";
 import { pageAlternates, type PageAlternate } from "./page-alternates";
 import { localizeReferenceHeadings, localizeReferenceHtml } from "./reference-labels";
+import type { LlmsFile } from "./site-catalog";
 import { translatedFragments } from "./translated-fragments";
+
+const LLMS_FILES: readonly LlmsFile[] = ["llms.txt", "llms-full.txt"];
 
 type PublicDocumentModule = MarkdownInstance<Record<string, unknown>>;
 
@@ -149,6 +152,12 @@ export interface PublicPackage {
    * translation where one exists and the English body otherwise.
    */
   localeDocuments: Record<TranslationLocale, PublicDocument[]>;
+  /**
+   * The LLM files this version publishes at its route. The current version
+   * publishes both, which the documentation checks require; an archived
+   * release from before a package shipped them has neither.
+   */
+  llmsFiles: readonly LlmsFile[];
   /** npm package name from the manifest. */
   name?: string;
   /** npmjs.com URL, when the package is published. */
@@ -157,6 +166,11 @@ export interface PublicPackage {
   npmLabel?: string;
   slug: string;
   status: PackageStatus;
+  /**
+   * The version these pages are of: the manifest's, which in a production
+   * build is the release tag's (`docs/ci.md`, "Publish-scoped content").
+   */
+  version?: string;
   /**
    * The current version, then each archived one, newest first; empty when the
    * package has no archived version, since a list of one is not a choice.
@@ -198,6 +212,20 @@ const archivedDocumentModulesSnapshot = import.meta.glob<PublicDocumentModule>([
   "!../../.codenhub-published-docs/archived/**/docs/internal/**",
 ]);
 const archivedDocumentModules = import.meta.env.PROD ? archivedDocumentModulesSnapshot : {};
+// Keys only: a release from before a package shipped its LLM files has none,
+// and the catalog links only those an archived version publishes. `?raw`
+// keeps the never-called importers loadable.
+const archivedLlmsPaths = new Set(
+  Object.keys(
+    import.meta.glob(
+      [
+        "../../.codenhub-published-docs/archived/**/llms.txt",
+        "../../.codenhub-published-docs/archived/**/llms-full.txt",
+      ],
+      { query: "?raw" },
+    ),
+  ),
+);
 const docsVersionsSnapshot = Object.values(
   import.meta.glob<SnapshotDocsVersionsFile>("../../.codenhub-published-docs/docs-versions.json", {
     eager: true,
@@ -366,6 +394,10 @@ async function untranslatedPage(
       relativePath: english.relativePath,
       siteUrl: siteConfig.siteUrl,
       slug,
+      untranslated: {
+        englishUrl: new URL(english.englishRoute, siteConfig.siteUrl).href,
+        notice: messages.untranslated,
+      },
     }),
     rawHtml: rendered.code,
     route: localizePath(locale, english.englishRoute),
@@ -498,11 +530,13 @@ async function loadCatalog(): Promise<PublicPackage[]> {
         githubLabel: githubUrl === undefined ? undefined : `${name} on GitHub`,
         githubUrl,
         label: packageDefinition.label,
+        llmsFiles: LLMS_FILES,
         name,
         npmLabel: npmUrl === undefined ? undefined : `${name} on npm`,
         npmUrl,
         slug,
         status: packageDefinition.status,
+        version: readManifestString(manifest, "version"),
         versions: [],
       };
     }),
@@ -541,7 +575,8 @@ async function loadArchivedVersions(
           modules: archivedDocumentModules,
           slug: routeSlug,
         });
-        return { ...currentPackage, ...pages, archivedVersion: version };
+        const llmsFiles = LLMS_FILES.filter((file) => archivedLlmsPaths.has(`${rootPath}/${file}`));
+        return { ...currentPackage, ...pages, archivedVersion: version, llmsFiles, version };
       } catch (error) {
         console.warn(
           `Left out the archived docs of ${currentPackage.name ?? currentPackage.slug}@${version}: ${(error as Error).message}`,

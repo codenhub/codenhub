@@ -24,17 +24,18 @@ import { createUndocumentedExportRules } from "./undocumented-export-rules.ts";
  * @returns Rules in reporting order.
  */
 export function createCheckRules(workspace: Workspace): CheckRule[] {
+  const listTagsOnce = createDocsVersionTagSource(workspace.root);
   return [
     ...createManifestRules(createBrandSource()),
     ...createEnginesRules(workspace.root),
     ...createDependencyRules(workspace.packages, createReleaseSources(workspace.root)),
     ...createExportsRules(),
     ...createDocumentationRules(workspace.packages),
-    ...createDocsVersionRules(createDocsVersionTagSource(workspace.root)),
+    ...createDocsVersionRules(listTagsOnce),
     ...createUndocumentedExportRules(),
     ...createReadmeRules(),
     ...createReferenceRules(),
-    ...createChangelogRules(),
+    ...createChangelogRules(listTagsOnce),
     ...createTranslationRules(),
     ...createSizeRules(createSizeRuleSources(workspace.root)),
   ];

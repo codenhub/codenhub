@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-05
+last_updated: 2026-11-09
 scope: Documentation for public workspace packages.
 ---
 
@@ -224,7 +224,21 @@ The files are hosted on the documentation site rather than `codenhub.dev` becaus
 
 ### Page Markdown
 
-The documentation site also publishes each hosted public document's Markdown at `index.md` inside the page's own route: `docs/guides/setup.md`, served at `https://docs.codenhub.dev/<slug>/guides/setup/`, has its Markdown at `https://docs.codenhub.dev/<slug>/guides/setup/index.md`. Each page offers to copy, view, or download it. The file is the document's Markdown body without its frontmatter, from the same release-tag snapshot as the page, and its link and image targets follow the rule above for `llms-full.txt`: each package-relative target the site publishes becomes an absolute site URL, and code is left alone. Readers copy this text to paste it elsewhere, often into a prompt, where a relative link resolves to nothing. A generated reference page's Markdown carries no `description`/`since` deck, which the site adds only to the rendered page.
+The documentation site also publishes each hosted public document's Markdown at `index.md` inside the page's own route: `docs/guides/setup.md`, served at `https://docs.codenhub.dev/<slug>/guides/setup/`, has its Markdown at `https://docs.codenhub.dev/<slug>/guides/setup/index.md`. Each page offers to copy, view, or download it. The file is the document's Markdown body without its frontmatter, from the same release-tag snapshot as the page, and its link and image targets follow the rule above for `llms-full.txt`: each package-relative target the site publishes becomes an absolute site URL, and code is left alone. Readers copy this text to paste it elsewhere, often into a prompt, where a relative link resolves to nothing. A generated reference page's Markdown carries no `description`/`since` deck, which the site adds only to the rendered page. A page published untranslated under a locale (`docs/specs/packages-translations.md`, "Documentation site") is the one whose Markdown starts with something the document does not hold: a blockquote line with the notice the page shows, in the locale's language, and the English page's URL. Without it, a copy of the file presents English as the locale's translation, since the file has no page around it to carry the notice.
+
+### Catalog
+
+The documentation site publishes `https://docs.codenhub.dev/catalog.json`, the one place a program finds what the site serves without reading its HTML: every documented package, the versions the site keeps of it (`docs/specs/packages-docs-versions.md`), the pages of each version, and which locales translate each page (`docs/specs/packages-translations.md`). The root `llms.txt` links it.
+
+- `locales`: every page language, `en` first. Every other locale is a URL prefix: a page at `/<slug>/<path>/` is at `/<locale>/<slug>/<path>/` in that locale, its Markdown included.
+- `packages`: each package in catalog order, with its `name`, `slug`, `label`, `status`, `description` when it sets one, and:
+  - `current`: the version served at the unversioned URL.
+  - `versions`: the current version first, then each archived version that built, newest first. Each has its `version`, the `url` of its documentation index, its `llms` and `llmsFull` URLs when it publishes those files (an archived release from before a package shipped them has neither), and its `pages`, in the order the site sorts them, `index.md` first. A page has its route `path` inside the version (`""` for the index), `title`, `description` when it sets one, `section` (`guides`, `reference`, or `changelog`, as the site's tabs divide them), the `url` and `markdown` URLs of its English page, and `translations`, the locales that translate it. Under any other locale the page shows its English body.
+  - `redirects`: each other stable release, mapped to the served version its URLs redirect to (`docs/specs/packages-docs-versions.md`, "URLs"). The site performs those redirects in the browser, so a program that runs no script resolves them from here.
+
+Every URL is absolute. The catalog lists only what the site serves, so it makes no claim about a release the package does not keep. A field can be added to it without breaking a reader; removing or renaming one is a breaking change to the site, and is recorded here with its reason.
+
+Rejected: putting versions and locales in the root `llms.txt`. Its readers are language models that follow links, and a version and locale list for every page would bury the package list it exists to show.
 
 ## Consumer and maintainer truth
 

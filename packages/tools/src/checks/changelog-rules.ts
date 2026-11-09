@@ -3,6 +3,9 @@ import { join } from "node:path";
 
 import { UnsupportedFrontmatterError, parseMarkdown } from "../documentation/document-policy.ts";
 import { extractCuratedLinkTargets, stripMarkdownCode } from "../documentation/llms-full.ts";
+import { parsePackageMetadata } from "../documentation/package-metadata.ts";
+import { selectDocsVersions } from "../release/docs-versions.ts";
+import { parseReleaseTag } from "../release/publish.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import type { CheckRule, Finding } from "./rule.ts";
 
@@ -96,9 +99,47 @@ async function checkPageFrontmatter(packageRoot: string, page: string): Promise<
   return findings;
 }
 
-async function run(workspacePackage: WorkspacePackage): Promise<Finding[]> {
+/**
+ * The earlier releases the documentation site keeps for a package, which make its changelog required.
+ *
+ * A kept version is one the maintainers declared still matters, through
+ * `codenhub.docs.versions` or by the from-1.0 major rule
+ * (`docs/specs/packages-docs-versions.md`), so its consumers need to read what
+ * changed since. A malformed list is the `documentation` rule's to report.
+ * @param workspacePackage Package to inspect.
+ * @param tags Every local tag name.
+ * @returns Archived versions, newest first.
+ */
+function keptEarlierReleases(workspacePackage: WorkspacePackage, tags: readonly string[]): string[] {
+  let entries: string[] = [];
+  try {
+    entries = parsePackageMetadata(workspacePackage.manifest, "package.json")?.docsVersions ?? [];
+  } catch {
+    // Reported by the documentation rule; the major rule still applies.
+  }
+  const versions = tags.flatMap((tag) => {
+    const release = parseReleaseTag(tag);
+    return release?.name === workspacePackage.name ? [release.version] : [];
+  });
+  return selectDocsVersions(versions, entries).archived;
+}
+
+async function run(
+  workspacePackage: WorkspacePackage,
+  listTagsOnce: () => Promise<readonly string[]>,
+): Promise<Finding[]> {
   if (!(await hasChangelog(workspacePackage))) {
-    return [];
+    const kept = keptEarlierReleases(workspacePackage, await listTagsOnce());
+    return kept.length === 0
+      ? []
+      : [
+          {
+            code: "changelog/required",
+            location: INDEX,
+            message: `The documentation site keeps ${kept.join(", ")} of this package, so it needs a changelog saying what changed since. Add docs/changelog/ as docs/specs/packages-changelog.md describes.`,
+            severity: "error",
+          },
+        ];
   }
   const version = workspacePackage.manifest.version;
   if (typeof version !== "string") {
@@ -145,22 +186,23 @@ async function run(workspacePackage: WorkspacePackage): Promise<Finding[]> {
 }
 
 /**
- * Builds the rules that keep an opted-in changelog in step with the version.
+ * Builds the rules that keep a changelog in step with the version.
  *
- * The rules apply only to a package that already has `docs/changelog/`, because
- * `docs/specs/packages-changelog.md` makes keeping one recommended rather than
- * required. What they enforce is the part that is not optional once a package
- * has opted in: the version in the manifest is the version a consumer will
- * install, so it is the one version that must be documented and published.
+ * `docs/specs/packages-changelog.md` makes a changelog optional until the
+ * documentation site keeps an earlier release of the package, and required from
+ * then on. Once a package has one, the version in the manifest is the version a
+ * consumer will install, so it is the one version that must be documented and published.
+ * @param listTagsOnce Every local tag name, which says which earlier releases are kept.
  * @returns Rules in reporting order.
  */
-export function createChangelogRules(): CheckRule[] {
+export function createChangelogRules(listTagsOnce: () => Promise<readonly string[]> = async () => []): CheckRule[] {
   return [
     {
       appliesTo: ({ isPrivate }) => !isPrivate,
       name: "changelog",
-      run: ({ package: workspacePackage }) => run(workspacePackage),
-      summary: "An opted-in changelog documents, dates, describes, and links the version the manifest declares.",
+      run: ({ package: workspacePackage }) => run(workspacePackage, listTagsOnce),
+      summary:
+        "A package that keeps an earlier release has a changelog, and a changelog documents, dates, describes, and links the version the manifest declares.",
     },
   ];
 }

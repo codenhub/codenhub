@@ -61,6 +61,29 @@ describe("publishDocumentMarkdown", () => {
     expect(publishDocumentMarkdown({ ...site, body, relativePath: "index.md" })).toBe(body);
   });
 
+  it("opens an untranslated page with the locale's notice and the English page", () => {
+    const body = "\n\n# Setup\n\nSee [concepts](./concepts.md).\n";
+
+    expect(
+      publishDocumentMarkdown({
+        ...site,
+        body,
+        pageLocale: "pt-BR",
+        relativePath: "index.md",
+        untranslated: { englishUrl: "https://docs.example.dev/kit/", notice: "Esta página aparece em inglês." },
+      }),
+    ).toBe(
+      [
+        "> Esta página aparece em inglês. <https://docs.example.dev/kit/>",
+        "",
+        "# Setup",
+        "",
+        "See [concepts](https://docs.example.dev/pt-BR/kit/concepts/).",
+        "",
+      ].join("\n"),
+    );
+  });
+
   it("drops the blank lines left where the frontmatter was", () => {
     const body = "   \n      \n\n# Setup\n";
 

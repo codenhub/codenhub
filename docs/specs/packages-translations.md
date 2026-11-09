@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-07
+last_updated: 2026-11-09
 scope: Translations of package READMEs and public package documentation.
 ---
 
@@ -150,7 +150,7 @@ The documentation site follows the main site's URL scheme (`apps/www/src/i18n/in
 - English: `https://docs.codenhub.dev/<slug>/<path>/`.
 - A translation: `https://docs.codenhub.dev/<locale>/<slug>/<path>/`, its Markdown at `index.md` inside that route, as `docs/specs/packages-documentation.md` defines for English pages.
 
-Every published page, reference and changelog included, has a route in every locale, so a reader who chose a language keeps it on every page they open. The site's interface is translated for every supported locale, down to copy feedback, link previews and code-block controls; a missing path under a locale gets that locale's not-found page. A page without a translation in a locale shows its English body in that locale's interface, under a notice that it is not translated yet, with the body marked `lang="en"`. Such a page MUST name the English page as its canonical URL, MUST NOT name alternates, and is left out of the sitemap, so search engines index the English page once. Inside a locale the navigation marks each untranslated page as English. Each translated page and its English counterpart MUST name each other as alternates (`hreflang`), so a search engine shows the reader's language. Each also MUST name the English page as the `x-default` alternate: a reader whose language the site does not offer gets the English, which is complete and is what every translation is checked against, rather than whichever translation a search engine picks.
+Every published page, reference and changelog included, has a route in every locale, so a reader who chose a language keeps it on every page they open. The site's interface is translated for every supported locale, down to copy feedback, link previews and code-block controls; a missing path under a locale gets that locale's not-found page. A page without a translation in a locale shows its English body in that locale's interface, under a notice that it is not translated yet, with the body marked `lang="en"`. Its Markdown opens with the same notice and the English page's URL (`docs/specs/packages-documentation.md`, "Page Markdown"). Such a page MUST name the English page as its canonical URL, MUST NOT name alternates, and is left out of the sitemap, so search engines index the English page once. Inside a locale the navigation marks each untranslated page as English. Each translated page and its English counterpart MUST name each other as alternates (`hreflang`), so a search engine shows the reader's language. Each also MUST name the English page as the `x-default` alternate: a reader whose language the site does not offer gets the English, which is complete and is what every translation is checked against, rather than whichever translation a search engine picks.
 
 The locale is the outermost path segment so that the version segment (`docs/specs/packages-docs-versions.md`, "URLs") goes inside the package route without moving any locale URL.
 

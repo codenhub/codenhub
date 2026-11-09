@@ -320,6 +320,19 @@ describe("documentation chrome", () => {
     expect(html).not.toContain("location.replace(");
   });
 
+  it("opens an untranslated page's Markdown with the locale's notice and the English page", async () => {
+    const [untranslated, translated] = await Promise.all([
+      readOutput("pt-BR/theme/troubleshooting/index.md"),
+      readOutput("pt-BR/styles/index.md"),
+    ]);
+
+    expect(untranslated).toMatch(
+      /^> Esta página ainda não foi traduzida[^\n]*<https:\/\/docs\.codenhub\.dev\/theme\/troubleshooting\/>\n\n/,
+    );
+    expect(untranslated).toContain("Start with the symptom you see.");
+    expect(translated).not.toMatch(/^> /);
+  });
+
   it("keeps a translated page as its own canonical", async () => {
     const html = await readOutput("pt-BR/styles/index.html");
 
