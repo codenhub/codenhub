@@ -26,14 +26,17 @@ Each compiled import path is one file in the package's `dist/` folder:
 | `@codenhub/styles/aesthetics`   | `dist/aesthetics/index.css`                                       |
 | `@codenhub/styles/aesthetics/*` | `dist/aesthetics/<name>.css`, such as `dist/aesthetics/pixel.css` |
 
-Link the base file first and an aesthetic after it. [Setup → All entrypoints](../setup.md#all-entrypoints) explains what each one contains; link one base file, not several, since they overlap.
+Link one base file, not several, since they overlap, and any aesthetics you use. Their order does not matter, because every file declares the [cascade layers](../setup.md#cascade-layers) before using one. [Setup → All entrypoints](../setup.md#all-entrypoints) explains what each one contains.
 
 ## From a CDN
 
 jsDelivr and unpkg serve every file of every published npm version, so a page can link one with nothing installed:
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.7.0/dist/index.css" /> <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.7.0/dist/aesthetics/pixel.css" />
+<head>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.7.0/dist/index.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.7.0/dist/aesthetics/pixel.css" />
+</head>
 ```
 
 Put the exact version in the URL. Without one, the CDN serves the latest release, and below 1.0 a minor release may rename or remove a class; see [Versioning](../index.md#versioning).
@@ -95,7 +98,7 @@ STATICFILES_DIRS = [
 <link rel="stylesheet" href="{% static 'codenhub-styles/index.css' %}" />
 ```
 
-Point the prefix at `dist`, not at the package folder. `dist/` holds only finished CSS, so `collectstatic` also works with `ManifestStaticFilesStorage`, which fingerprints each file and rewrites the references inside it. The package folder also holds the Tailwind source in `tw/`, whose `@import "tailwindcss/..."` lines that storage cannot resolve.
+Point the prefix at `dist`, not at the package folder. `dist/` holds only finished CSS, plus an empty `index.d.ts` for TypeScript that the storage copies as it is, so `collectstatic` also works with `ManifestStaticFilesStorage`, which fingerprints each file and rewrites the references inside it. The package folder also holds the Tailwind source in `tw/`, whose `@import "tailwindcss/..."` lines that storage cannot resolve.
 
 ### Laravel
 
