@@ -243,7 +243,7 @@ Every release SHOULD aim to be the last before its next breaking change, whateve
 
 The same holds for planned features. Every release is an attempt at 1.0, so a feature on the package's roadmap ships in the release being prepared rather than in a later one. Deferring it is the exception, for when shipping it now is not a plausible option, such as a feature that waits on a runtime, a dependency, or a decision outside the package. The package's roadmap then says what it waits on, so the deferral can be judged and lifted when that changes. Rejected: deferring a feature because it is additive or needs its own design, which is true of most features and would leave a 1.0 short of what its consumers were promised. `@codenhub/i18n` translated route segments were deferred to 0.3.0 on that reasoning, then shipped in 0.2.0.
 
-Packages are also encouraged to track release history following `docs/specs/packages-changelog.md`; it's recommended, not required, and does not replace the README and `docs/` updates required above. A package that has opted in MUST keep its changelog in step with its version, which `hub check` enforces.
+Packages are also encouraged to track release history following `docs/specs/packages-changelog.md`, which requires a changelog once the documentation site keeps an earlier release of the package; it does not replace the README and `docs/` updates required above. A package that has one MUST keep it in step with its version, which `hub check` enforces.
 
 `hub release --cut=<version|major|minor|patch>` raises the version and scaffolds that entry in one step, and prints the sequence that follows. It writes only; committing and tagging stay with a person, for the reason "Who publishes" gives above.
 

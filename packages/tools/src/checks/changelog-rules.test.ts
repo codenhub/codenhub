@@ -187,3 +187,61 @@ describe("changelog rule run", () => {
     expect(await run(workspacePackage)).toMatchObject([{ code: "changelog/missing-index" }]);
   });
 });
+
+describe("changelog rule for a package that keeps an archived version", () => {
+  const TAGS = [
+    "@codenhub/example@0.4.1",
+    "@codenhub/example@0.5.0",
+    "@codenhub/example@1.3.0",
+    "@codenhub/other@2.0.0",
+  ];
+  const [archivingRule] = createChangelogRules(async () => TAGS);
+
+  async function runArchiving(
+    version: string,
+    docsVersions?: readonly string[],
+    changelog?: { index: string; pages: string[] },
+  ) {
+    const workspacePackage = await createPackageOnDisk(version, changelog);
+    const manifest = {
+      ...workspacePackage.manifest,
+      codenhub: {
+        docs: docsVersions === undefined ? {} : { versions: docsVersions },
+        label: "Example",
+        status: "active",
+      },
+    };
+    return (
+      archivingRule as { run: (context: { package: WorkspacePackage; includePack: boolean }) => Promise<unknown> }
+    ).run({ includePack: false, package: { ...workspacePackage, manifest } }) as Promise<{ code: string }[]>;
+  }
+
+  it("requires a changelog when codenhub.docs.versions keeps an earlier release", async () => {
+    expect(await runArchiving("1.3.0", ["^0.4.0"])).toMatchObject([{ code: "changelog/required" }]);
+  });
+
+  it("requires a changelog when an earlier major from 1.0 is archived by rule", async () => {
+    const [majorRule] = createChangelogRules(async () => ["@codenhub/example@1.2.0", "@codenhub/example@2.0.0"]);
+    const workspacePackage = await createPackageOnDisk("2.0.0");
+
+    expect(
+      await (
+        majorRule as { run: (context: { package: WorkspacePackage; includePack: boolean }) => Promise<unknown> }
+      ).run({
+        includePack: false,
+        package: workspacePackage,
+      }),
+    ).toMatchObject([{ code: "changelog/required" }]);
+  });
+
+  it("stays optional when nothing earlier is kept", async () => {
+    expect(await runArchiving("1.3.0")).toEqual([]);
+    expect(await runArchiving("1.3.0", ["^1.3.0"])).toEqual([]);
+  });
+
+  it("checks a kept changelog as usual", async () => {
+    expect(
+      await runArchiving("1.3.0", ["^0.4.0"], { index: "# Changelog\n\n- [1.3.0](1.3.0.md)\n", pages: ["1.3.0.md"] }),
+    ).toEqual([]);
+  });
+});
