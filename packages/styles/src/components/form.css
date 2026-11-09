@@ -256,7 +256,10 @@
      field loses to it too, because state wins over every choice
      (model.md#precedence). `--intent-hover` is redirected with the others so
      the line does not go grey under the pointer, and `--intent-strong` so typed
-     text is destructive too. The `:has()` arm bridges an
+     text is destructive too. `--intent-contrast` and `--intent-subtle` go with
+     them, so an invalid toggle is a destructive one in every part: left
+     neutral, a checked invalid checkbox in the dark theme drew the near-black
+     neutral mark on a red plate (3.28:1). The `:has()` arm bridges an
      inner control's state to an `.input-group`. */
   :is(
     .text-control,
@@ -273,9 +276,11 @@
   )[aria-invalid="true"],
   .input-group:has(> :is(.ipt, .textarea, .select, .text-control, input, textarea, select)[aria-invalid="true"]) {
     --intent-color: var(--color-destructive);
+    --intent-contrast: var(--color-destructive-contrast);
     --intent-hover: var(--color-destructive-hover);
     --intent-border: var(--color-destructive);
     --intent-strong: var(--color-destructive-strong);
+    --intent-subtle: var(--color-destructive-subtle);
   }
 }
 
@@ -299,6 +304,21 @@
   --_fg: var(--intent-strong);
 
   min-height: var(--control-height);
+
+  /* The button's size steps, so an `.ipt.sm` and a `.btn.sm` line up in a row:
+     the same 2rem and 3rem heights, the same text sizes, and the same
+     `--_scale-size` step `box` scales the corner by. See `btn`. */
+  &.sm {
+    @apply h-8 min-h-8 px-2.5 py-1 text-sm;
+
+    --_scale-size: 0.75;
+  }
+
+  &.lg {
+    @apply h-12 min-h-12 px-4 py-2.5 text-[1.0625rem];
+
+    --_scale-size: 1.25;
+  }
 }
 
 @utility field {
@@ -322,8 +342,15 @@
   font-weight: 400;
   letter-spacing: 0.05em;
 
-  &.destructive {
-    color: var(--intent-color);
+  /* A named intent prints its readable tone, `--intent-strong`, the colour
+     typed text takes: a hint is text on the page, and `--intent-color` is a
+     fill colour that reads below 4.5:1 there (destructive measured 3.28:1 on
+     the dark page). No intent, or `.neutral`, keeps the secondary grey that
+     marks a hint as helper text. A hint is not a component, so the intent
+     reset does not reach it and an intent on a container does not recolour
+     it; only a class on the hint itself does. */
+  &:is(.primary, .secondary, .success, .warning, .destructive, .info) {
+    color: var(--intent-strong);
   }
 }
 
@@ -344,6 +371,20 @@
   --_fg: var(--intent-strong);
 
   @apply min-h-28 resize-y;
+
+  /* The size steps `ipt` takes, for its text, padding, and corner. Its
+     height is its rows, so it keeps its own floor. */
+  &.sm {
+    @apply px-2.5 py-1 text-sm;
+
+    --_scale-size: 0.75;
+  }
+
+  &.lg {
+    @apply px-4 py-2.5 text-[1.0625rem];
+
+    --_scale-size: 1.25;
+  }
 }
 
 /* The same control with a native list behind it. The chevron is drawn from two
@@ -373,6 +414,19 @@
     calc(100% - 0.6875rem) center;
   background-repeat: no-repeat;
   background-size: 0.3125rem 0.3125rem;
+
+  /* The size steps `ipt` takes. The inline end keeps the chevron's room. */
+  &.sm {
+    @apply h-8 min-h-8 py-1 ps-2.5 text-sm;
+
+    --_scale-size: 0.75;
+  }
+
+  &.lg {
+    @apply h-12 min-h-12 py-2.5 ps-4 text-[1.0625rem];
+
+    --_scale-size: 1.25;
+  }
 
   /* The chevron sits at the inline end, like the padding kept for it, so a
      right-to-left select draws it at the left. `background-position` has no
@@ -443,6 +497,24 @@
   gap: var(--input-group-gap);
   padding-inline: var(--input-group-pad);
 
+  /* The size steps `ipt` takes, on the group rather than the control inside:
+     the group is the field, and the control and its adornments inherit the
+     text size. The control's height is the group's (below), so the group's
+     floor is its height. */
+  &.sm {
+    @apply min-h-8 text-sm;
+
+    --input-group-pad: 0.625rem;
+    --_scale-size: 0.75;
+  }
+
+  &.lg {
+    @apply min-h-12 text-[1.0625rem];
+
+    --input-group-pad: 1rem;
+    --_scale-size: 1.25;
+  }
+
   /* The focus ring the wrapper cannot get from `:focus-visible` -- a `<div>` is
      not focusable, and `:has(:focus-visible)` is unreliable because the inner
      control only matches `:focus-visible` while the document itself has focus.
@@ -459,6 +531,18 @@
     box-shadow: var(--_focus-stack, var(--_shadow));
   }
 
+  /* Focus on anything but the field -- the clear button the docs show, a
+     toggle -- is focus on that control, so it keeps its own ring and the group
+     drops the field's. Enter presses a focused button rather than typing into
+     the field, and two rings around one target say neither. The line keeps its
+     focus tone: something in the field still has focus. A separate rule rather
+     than a `:not(:has())` on the ring above, so an engine without `:has()`
+     drops only this rule and keeps the group's ring. */
+  &:has(> :not(.ipt, .textarea, .select, .text-control, input, textarea, select):focus) {
+    outline: none;
+    box-shadow: var(--_shadow);
+  }
+
   /* A disabled control inside dims the whole group. `.input-group.disabled` and
      the aria/data spellings are already handled by `box`'s own rule, carried in
      by `text-control`; this is the child-driven case a wrapper cannot see
@@ -472,9 +556,19 @@
   /* The control goes flush: the group drew the box, so the control paints no
      fill, no line and no ring, and gives its horizontal padding to the group.
      `border: none` rather than a transparent 1px, so the control does not add
-     its own width inside the group. */
+     its own width inside the group.
+
+     The typed text is the one paint the control keeps, and it is the group's
+     intent: the control resets its intent to neutral at its own root, like
+     every component, so an `.input-group.success` drew a success line around
+     neutral text. `--intent-strong` is the only slot the text reads, so it
+     alone inherits, and an invalid group -- by its own `aria-invalid` or the
+     control's, through the `:has()` arm -- prints destructive text the way a
+     lone invalid field does. The group owns the field, so an intent class on
+     the control inside does not colour its text. */
   & > :is(.ipt, .textarea, .select, .text-control, input, textarea, select) {
     --_fill-cap: 0%;
+    --intent-strong: inherit;
 
     flex: 1 1 auto;
     min-width: 0;
@@ -487,6 +581,28 @@
       outline: none;
       box-shadow: none;
     }
+
+    /* The group dims for a disabled control, so the control does not dim
+       again inside it: opacity multiplies, and the two 0.58s left the value
+       at about 0.34. Only `:disabled`, the state the group's `:has()` above
+       bridges; a control disabled by class or aria dims itself as a lone one
+       does, because the group does not dim for it. */
+    &:disabled {
+      opacity: 1;
+    }
+  }
+
+  /* A one-row control gives its height to the group too. Keeping its own
+     `--control-height` inside a box that draws its own line made the group
+     42px next to 40px fields and buttons. It stretches to the group's inside
+     instead, with no block padding, so the group is the control height and the
+     whole of its inside still takes a click. A textarea and a list box keep
+     their own height: their rows are the height. */
+  & > :is(.ipt, .select, input, select):not([multiple], [size]:not([size="1"])) {
+    align-self: stretch;
+    height: auto;
+    min-height: 0;
+    padding-block: 0;
   }
 
   /* Except a drop-down's end: its chevron is the select's own background,
@@ -815,5 +931,12 @@
     outline: 2px solid Highlight;
     outline-offset: 2px;
     box-shadow: none;
+  }
+
+  /* The group draws the field's ring, so the control inside draws none here
+     either: this block is unlayered, and the ring above beat the group's
+     layered suppression and drew a second ring inside the group's. */
+  .input-group > :is(.ipt, .textarea, .select, .text-control, input, textarea, select):focus-visible {
+    outline: none;
   }
 }

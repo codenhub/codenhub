@@ -586,3 +586,54 @@ test("draws an indeterminate checkbox in system colors in forced colors", async 
     expect(colors.mark, stylesUrl).toBe(colors.highlightText);
   }
 });
+
+/* Forced colours repaint every background as Canvas, the value fill on a
+   progress track included, so a half-full bar read as an empty one. The bar
+   opts out and names system colours itself: the value in CanvasText on a
+   Canvas track, with a CanvasText boundary so the track's extent shows. */
+test("shows a progress bar's value and its track in forced colors", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active" });
+  await page.setContent(
+    `<!doctype html><html><body>
+       <div class="progress primary" id="plain" style="--progress-value: 50%"></div>
+       <div class="progress ghost edged" id="ghost" style="--progress-value: 50%"></div>
+     </body></html>`,
+  );
+  await page.addStyleTag({ url: COMPONENT_STYLES_URL });
+
+  const colors = await page.evaluate(() => {
+    const resolve = (color: string) => {
+      const probe = document.createElement("span");
+      probe.style.color = color;
+      document.body.append(probe);
+      const resolved = getComputedStyle(probe).color;
+      probe.remove();
+      return resolved;
+    };
+    const read = (id: string) => {
+      const track = document.getElementById(id)!;
+      const styles = getComputedStyle(track);
+
+      return {
+        track: styles.backgroundColor,
+        edge: styles.borderTopColor,
+        edgeWidth: styles.borderTopWidth,
+        value: getComputedStyle(track, "::after").backgroundColor,
+      };
+    };
+
+    return {
+      canvas: resolve("Canvas"),
+      canvasText: resolve("CanvasText"),
+      plain: read("plain"),
+      ghost: read("ghost"),
+    };
+  });
+
+  for (const [label, bar] of Object.entries({ plain: colors.plain, ghost: colors.ghost })) {
+    expect(bar.value, `${label}: the value fill`).toBe(colors.canvasText);
+    expect(bar.track, `${label}: the track`).toBe(colors.canvas);
+    expect(bar.edge, `${label}: the track boundary`).toBe(colors.canvasText);
+    expect(Number.parseFloat(bar.edgeWidth), `${label}: a boundary that draws`).toBeGreaterThan(0);
+  }
+});
