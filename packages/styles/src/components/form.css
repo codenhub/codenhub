@@ -479,9 +479,19 @@
   /* The control goes flush: the group drew the box, so the control paints no
      fill, no line and no ring, and gives its horizontal padding to the group.
      `border: none` rather than a transparent 1px, so the control does not add
-     its own width inside the group. */
+     its own width inside the group.
+
+     The typed text is the one paint the control keeps, and it is the group's
+     intent: the control resets its intent to neutral at its own root, like
+     every component, so an `.input-group.success` drew a success line around
+     neutral text. `--intent-strong` is the only slot the text reads, so it
+     alone inherits, and an invalid group -- by its own `aria-invalid` or the
+     control's, through the `:has()` arm -- prints destructive text the way a
+     lone invalid field does. The group owns the field, so an intent class on
+     the control inside does not colour its text. */
   & > :is(.ipt, .textarea, .select, .text-control, input, textarea, select) {
     --_fill-cap: 0%;
+    --intent-strong: inherit;
 
     flex: 1 1 auto;
     min-width: 0;

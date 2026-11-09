@@ -1640,4 +1640,56 @@ test.describe("forms", () => {
       }
     }
   });
+
+  /* The group reads intent the way a lone field does, typed text included. The
+     control inside resets its own intent to neutral at its root, like every
+     component, so an `.input-group.success` once drew a success line around
+     neutral text, and an invalid group a red line around grey text. */
+  test("prints a group's intent and invalid state in the typed text of the control inside", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const measured = await page.evaluate(() => {
+      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+      const read = (html: string, selector: string) => {
+        const wrapper = document.createElement("div");
+
+        wrapper.innerHTML = html;
+        host.append(wrapper);
+
+        const color = getComputedStyle(wrapper.querySelector(selector)!).color;
+
+        wrapper.remove();
+
+        return color;
+      };
+
+      return {
+        lone: read('<input class="ipt" value="abc" />', "input"),
+        loneSuccess: read('<input class="ipt success" value="abc" />', "input"),
+        loneInvalid: read('<input class="ipt" aria-invalid="true" value="abc" />', "input"),
+        groupSuccess: read('<div class="input-group success"><input class="ipt" value="abc" /></div>', "input"),
+        groupInvalid: read(
+          '<div class="input-group" aria-invalid="true"><input class="ipt" value="abc" /></div>',
+          "input",
+        ),
+        innerInvalid: read(
+          '<div class="input-group"><input class="ipt" aria-invalid="true" value="abc" /></div>',
+          "input",
+        ),
+        groupSelect: read(
+          '<div class="input-group warning"><select class="select"><option>abc</option></select></div>',
+          "select",
+        ),
+        loneSelect: read('<select class="select warning"><option>abc</option></select>', "select"),
+      };
+    });
+
+    expect(getColorDistance(measured.loneSuccess, measured.lone), "the probe tells the intents apart").toBeGreaterThan(
+      2,
+    );
+    expectSameColor(measured.groupSuccess, measured.loneSuccess, ".input-group.success text");
+    expectSameColor(measured.groupInvalid, measured.loneInvalid, "an invalid group's text");
+    expectSameColor(measured.innerInvalid, measured.loneInvalid, "an invalid control's text in a group");
+    expectSameColor(measured.groupSelect, measured.loneSelect, ".input-group.warning select text");
+  });
 });
