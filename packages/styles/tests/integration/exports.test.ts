@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
+import ts from "typescript";
 import { expect, test } from "vitest";
 
 interface PackageManifest {
@@ -212,20 +213,118 @@ test("every declared package export target exists after build", async () => {
   );
 });
 
+/* Every CSS file under one of the package's published directories, as
+   package-relative paths with forward slashes. */
+const shippedStylesheets = async (directory: string) =>
+  (await readdir(path.resolve(packageRoot, directory), { recursive: true }))
+    .filter((file) => file.endsWith(".css"))
+    .map((file) => `${directory}/${file.replaceAll("\\", "/")}`);
+
 /* An HTML `<style>` element ends at the first `</style`, whatever CSS token it
    sits in, so a stylesheet inlined into a page would drop every rule after one.
-   Every CSS file under `dist/` ships -- the compiled entries and the `/tw`
-   sources alike -- so every one is checked, not just the export targets. */
+   Every CSS file under `dist/` and `tw/` ships -- the compiled entries and the
+   `/tw` sources alike -- so every one is checked, not just the export targets. */
 test("no shipped stylesheet contains a sequence that ends an inline style element", async () => {
-  const distRoot = path.resolve(packageRoot, "dist");
-  const stylesheets = (await readdir(distRoot, { recursive: true })).filter((file) => file.endsWith(".css"));
-  const outputs = await Promise.all(stylesheets.map((file) => readFile(path.join(distRoot, file), "utf8")));
-  const unsafe = stylesheets
-    .filter((_, index) => /<\/style/i.test(outputs[index]!))
-    .map((file) => `dist/${file.replaceAll("\\", "/")}`);
+  const stylesheets = [...(await shippedStylesheets("dist")), ...(await shippedStylesheets("tw"))];
+  const outputs = await Promise.all(stylesheets.map((file) => readFile(path.resolve(packageRoot, file), "utf8")));
+  const unsafe = stylesheets.filter((_, index) => /<\/style/i.test(outputs[index]!));
 
   expect(stylesheets.length).toBeGreaterThan(0);
   expect(unsafe).toEqual([]);
+});
+
+/* TypeScript 6 checks side-effect imports by default
+   (`noUncheckedSideEffectImports`), and `declare module "*.css"` cannot match
+   `@codenhub/styles` or `/aesthetics/glass`, which have no extension. Without
+   a `types` condition, `import "@codenhub/styles";` was TS2882 under
+   `moduleResolution: bundler`. This compiles such imports with the workspace
+   TypeScript. The consumer is an in-memory file inside the package, so each
+   specifier resolves by package self-reference, through `exports` exactly as
+   it would from `node_modules`. */
+test("side-effect imports typecheck with noUncheckedSideEffectImports", () => {
+  const specifiers = [
+    "@codenhub/styles",
+    "@codenhub/styles/theme",
+    "@codenhub/styles/components",
+    "@codenhub/styles/aesthetics/glass",
+    "@codenhub/styles/native",
+    "@codenhub/styles/tw",
+    "@codenhub/styles/tw/button",
+    "@codenhub/styles/tw/aesthetics/glass",
+  ];
+
+  const options: ts.CompilerOptions = {
+    module: ts.ModuleKind.Preserve,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    noEmit: true,
+    noUncheckedSideEffectImports: true,
+    strict: true,
+    target: ts.ScriptTarget.ESNext,
+    types: [],
+  };
+  const entry = path.join(packageRoot, "side-effect-imports.ts").replaceAll("\\", "/");
+  const source = specifiers.map((specifier) => `import "${specifier}";\n`).join("");
+  const host = ts.createCompilerHost(options);
+  const { fileExists, getSourceFile, readFile: readHostFile } = host;
+  const isEntry = (fileName: string) => fileName.replaceAll("\\", "/") === entry;
+
+  host.fileExists = (fileName) => isEntry(fileName) || fileExists.call(host, fileName);
+  host.readFile = (fileName) => (isEntry(fileName) ? source : readHostFile.call(host, fileName));
+  host.getSourceFile = (fileName, languageVersion, ...rest) =>
+    isEntry(fileName)
+      ? ts.createSourceFile(fileName, source, languageVersion)
+      : getSourceFile.call(host, fileName, languageVersion, ...rest);
+
+  const program = ts.createProgram([entry], options, host);
+  const diagnostics = ts
+    .getPreEmitDiagnostics(program)
+    .map((diagnostic) => `TS${diagnostic.code}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")}`);
+
+  expect(program.getRootFileNames()).toEqual([entry]);
+  expect(diagnostics).toEqual([]);
+});
+
+/* The test above samples entrypoints; this holds every one. TypeScript takes
+   the first condition it recognises, so `types` has to lead, and it has to
+   name a declaration rather than the stylesheet. */
+test("every stylesheet export leads with a types condition naming a declaration", () => {
+  const missing = Object.entries(manifest.exports)
+    .filter(([exportName]) => exportName !== "./package.json")
+    .filter(([, target]) => {
+      const [first, ...rest] = typeof target === "string" ? [] : Object.entries(target);
+
+      return !first || first[0] !== "types" || !first[1].endsWith(".d.ts") || rest.length === 0;
+    })
+    .map(([exportName]) => exportName);
+
+  expect(missing).toEqual([]);
+});
+
+/* `dist/` holds finished CSS only, so a server that serves or fingerprints it
+   as static files never meets a directive it cannot resolve. With the `/tw`
+   source inside it, Django's `ManifestStaticFilesStorage` failed
+   `collectstatic` on `dist/tw/components/index.css`'s bare
+   `@import "tailwindcss/utilities.css"`. The Tailwind source ships in `tw/`. */
+test("dist holds only finished CSS, with no Tailwind or import directive left", async () => {
+  const stylesheets = await shippedStylesheets("dist");
+  const outputs = await Promise.all(stylesheets.map((file) => readFile(path.resolve(packageRoot, file), "utf8")));
+  const unfinished = stylesheets.flatMap((file, index) =>
+    [
+      ...stripComments(outputs[index]!).matchAll(/@(import|apply|utility|theme|source|reference|custom-variant)\b/g),
+    ].map((match) => `${file} contains @${match[1]}`),
+  );
+
+  expect(stylesheets.length).toBeGreaterThan(0);
+  expect([...new Set(unfinished)]).toEqual([]);
+});
+
+test("every /tw export resolves into tw/, outside dist", () => {
+  const misplaced = exportTargets
+    .filter(({ exportName }) => exportName.startsWith("./tw"))
+    .filter(({ target }) => !target.startsWith("./tw/"))
+    .map(({ exportName, target }) => `${exportName} -> ${target}`);
+
+  expect(misplaced).toEqual([]);
 });
 
 for (const [exportName, contract] of Object.entries(compiledExportContracts)) {
@@ -672,6 +771,58 @@ test("./tw adds an xs breakpoint and keeps Tailwind's 2xl", async () => {
 
   expect(output).toMatch(/@media \(min-width:30rem\)\{\.xs\\:flex\{display:flex\}\}/);
   expect(output).toMatch(/@media \(min-width:96rem\)\{\.\\32 xl\\:flex\{display:flex\}\}/);
+});
+
+/* The compiled entries safelist every class with `@source inline(...)`, since
+   they have no markup to scan. Left in the `/tw` copy, the same lists made a
+   consumer's build emit every class whatever their pages used -- byte for
+   byte the compiled `dist/index.css`. The copy keeps none. */
+test("the /tw source safelists nothing", async () => {
+  const stylesheets = await shippedStylesheets("tw");
+  const outputs = await Promise.all(stylesheets.map((file) => readFile(path.resolve(packageRoot, file), "utf8")));
+
+  expect(stylesheets.length).toBeGreaterThan(0);
+  expect(stylesheets.filter((_, index) => /@source\s+inline\(/.test(stripComments(outputs[index]!)))).toEqual([]);
+});
+
+/* `compileAsConsumer` runs in the package root, where Tailwind's automatic
+   detection scans this package's own `src/` and would find every class. A
+   tree-shaking check needs a consumer that owns nothing but its page. */
+const compileIsolatedConsumer = async (css: string, html: string) => {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), "codenhub-styles-consumer-"));
+
+  try {
+    await writeFile(path.join(temporaryRoot, "page.html"), html);
+    await writeFile(path.join(temporaryRoot, "input.css"), css);
+    await executeFile(process.execPath, [tailwindCliPath, "-i", "input.css", "-o", "output.css", "--minify"], {
+      cwd: temporaryRoot,
+    });
+
+    return await readFile(path.join(temporaryRoot, "output.css"), "utf8");
+  } finally {
+    await rm(temporaryRoot, { force: true, recursive: true });
+  }
+};
+
+test("./tw emits only the components a consumer's pages use", async () => {
+  const twEntry = pathToFileURL(path.resolve(packageRoot, "tw/index.css")).href;
+  const output = await compileIsolatedConsumer(
+    `@import "${twEntry}";\n`,
+    '<button class="btn primary">Save</button>\n',
+  );
+  const compiled = await readFile(path.resolve(packageRoot, "dist/index.css"), "utf8");
+
+  expect(output).toMatch(/\.btn\{[^}]*--_capped:/);
+  expect(output).toMatch(/\.primary\{/);
+  /* A rule that starts with the class. `emitsOwnRule` would also count a
+     plain rule that only lists it, such as the reset's forced-colors
+     `.btn,…,.badge{border-color:CanvasText}`, which ships whatever is used. */
+  for (const unused of ["alert", "badge", "data-table", "tooltip-bubble", "stack", "card"]) {
+    expect(output, `.${unused} is unused and should not be emitted`).not.toMatch(
+      new RegExp(String.raw`(?:^|[{}])\.${unused}(?![\w-])`),
+    );
+  }
+  expect(output.length).toBeLessThan(compiled.length / 4);
 });
 
 /* Every `--color-*` a stylesheet reads that it never declares. Tailwind marks

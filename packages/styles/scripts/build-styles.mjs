@@ -6,7 +6,7 @@
  * targets (or the selected subset) concurrently with Promise.all.
  */
 import { execFile } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -38,6 +38,14 @@ const isAestheticsOnly = process.argv.includes("--aesthetics");
 const jobs = isStylesOnly ? STYLES_JOBS : isAestheticsOnly ? AESTHETICS_JOBS : [...STYLES_JOBS, ...AESTHETICS_JOBS];
 
 mkdirSync(path.join(packageRoot, "dist", "aesthetics"), { recursive: true });
+
+/* Every compiled export's `types` condition points here (`/tw` has its own in
+   `tw/`, from `build-tw.mjs`). TypeScript 6 checks
+   side-effect imports (`noUncheckedSideEffectImports`), and a specifier such
+   as `@codenhub/styles` has no `.css` extension for a `declare module "*.css"`
+   to match, so without a declaration it fails with TS2882. An empty module
+   declares nothing: the import is for its side effect alone. */
+writeFileSync(path.join(packageRoot, "dist", "index.d.ts"), "export {};\n");
 
 const binName = process.platform === "win32" ? "tailwindcss.CMD" : "tailwindcss";
 const binPath = path.join(packageRoot, "node_modules", ".bin", binName);

@@ -45,5 +45,9 @@
    `intent.css` and `form.css`, never as a selector of their own. Safelisting
    all six makes the emission deliberate; the composition-body check in
    `exports.test.ts` fails the build if one is dropped. `text-control` and
-   `surface` are also documented as consumer-usable on their own. */
+   `surface` are also documented as consumer-usable on their own.
+
+   The list is for the compiled build only. `scripts/build-tw.mjs` strips it
+   from the `tw/` copy, so a `/tw` consumer's Tailwind emits just the classes
+   it finds in their files rather than every one named here. */
 @source inline("box box-hover box-active text-control surface input-group unadorned text-display text-title-lg text-title text-title-sm text-label-lg text-label text-body btn field label hint ipt icon textarea select checkbox radio switch alert alert-icon badge skeleton progress tooltip tooltip-bubble tooltip-icon card panel interactive flush neutral solid soft ghost edged edgeless flat raised floating");

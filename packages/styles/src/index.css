@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
-/* The build has no markup to scan, so Tailwind's automatic content detection
-   sees only this package's own files. The `src/` scan is load-bearing: it is
+/* The compiled build has no markup to scan, so Tailwind's automatic content
+   detection sees only this package's own files. The `src/` scan is load-bearing: it is
    how the composition utilities (`box`, `surface`, `text-control`,
    `input-group`) are emitted as standalone rules, so
    `source(none)` is not an option. Tailwind utility names that collide with a
@@ -16,8 +16,8 @@
    ships as real CSS -- the license's "contents" once shipped as
    `.contents{display:contents}`.
    `exports.test.ts` guards it. `scripts/build-tw.mjs` strips these lines from
-   the `dist/tw/` copy, where they resolve to nothing and the `/tw` consumer
-   scans their own tree. */
+   the `tw/` copy, where they have no job: the `/tw` consumer scans their own
+   tree. */
 @source not "../dist";
 @source not "../tests";
 @source not "../dev";

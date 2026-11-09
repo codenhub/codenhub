@@ -7,8 +7,8 @@
  * This does not reimplement `box.css`'s formula -- that would be exactly the
  * hand-retyping this file exists to prevent (see
  * `docs/internal/generated-palette.md`). Instead it compiles the package's own
- * real `src/index.css` through the real Tailwind CLI, then renders real
- * `.box`-composed probe elements (and, for the neutral tokens, plain probes
+ * real `src/index.css` through the real Tailwind CLI, then renders the real
+ * components each cell describes (and, for the neutral tokens, plain probes
  * reading straight off their `theme.css` token) in a real browser and reads
  * their computed styles -- the same `getComputedStyle()` contract
  * `tests/browser/test-utils.ts` already uses for verification. The published
@@ -34,17 +34,22 @@ const read = (file) => readFile(path.join(packageRoot, file), "utf8");
 
 const registry = JSON.parse(await read("registry.json"));
 const INTENTS = Object.keys(registry.intents);
-/* The closed ground set `docs/internal/generated-palette.md` names, read from
-   the same registry component defaults it cites: `.badge`/`.btn`'s
-   `transparent` (`box`'s own default, no override needed), `.alert`'s
-   `--color-background` (suffix `page`), and `.pre`/`.code`/`.kbd`'s
-   `--intent-subtle` (suffix `subtle`). `.solid` is ground-independent and
-   skips this entirely -- see the doc's "What gets baked" section. */
+/* The closed ground set `docs/internal/generated-palette.md` names, each probed
+   on the real component that draws it rather than on a bare `box` handed the
+   ground token: `.alert` and `.kbd` cap a neutral fill and rest on a quieter
+   ground than the token alone, and a bare `box` missed both (light
+   `--palette-neutral-soft-page-bg` read L 0.884 where `.alert` renders 0.97).
+   The first class of each group is the probe; `tests/browser/palette.spec.ts`
+   holds every class in the group to the same values. `box-hover` is added to
+   the probe so the hover read has a hover to read: `.alert` and `.kbd` have
+   none of their own. `.solid` and `fg` are ground-independent and are read off
+   the unqualified probe -- see the doc's "What is generated" section. */
 const GROUNDS = [
-  { suffix: "", token: undefined },
-  { suffix: "page", token: "var(--color-background)" },
-  { suffix: "subtle", token: "var(--intent-subtle)" },
+  { suffix: "", component: "badge" },
+  { suffix: "page", component: "alert" },
+  { suffix: "subtle", component: "kbd" },
 ];
+const BASE_COMPONENT = GROUNDS[0].component;
 /* Matches `theme.css`'s explicit-override arm exactly (`.dark`, `.theme-dark`,
    `[data-theme="dark"]`), not the `prefers-color-scheme` arm -- the doc's
    "Dark mode" section is explicit that no OS-preference fallback is generated. */
@@ -109,10 +114,14 @@ function buildProbes() {
   const probes = [];
 
   for (const intent of INTENTS) {
-    probes.push({ classes: `box box-hover ${intent} solid edged`, key: `${intent}-solid`, readsBg: true });
+    probes.push({
+      classes: `${BASE_COMPONENT} box-hover ${intent} solid edged`,
+      key: `${intent}-solid`,
+      readsBg: true,
+    });
     for (const presentation of ["soft", "ghost"]) {
       probes.push({
-        classes: `box box-hover ${intent} ${presentation} edged`,
+        classes: `${BASE_COMPONENT} box-hover ${intent} ${presentation} edged`,
         key: `${intent}-${presentation}-fg`,
         readsBg: false,
       });
@@ -120,10 +129,9 @@ function buildProbes() {
         const key = ground.suffix === "" ? `${intent}-${presentation}` : `${intent}-${presentation}-${ground.suffix}`;
 
         probes.push({
-          classes: `box box-hover ${intent} ${presentation} edged`,
+          classes: `${ground.component} box-hover ${intent} ${presentation} edged`,
           key,
           readsBg: true,
-          style: ground.token === undefined ? undefined : `--_d-ground: ${ground.token}`,
         });
       }
     }

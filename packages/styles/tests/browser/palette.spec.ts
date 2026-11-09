@@ -6,29 +6,34 @@ import { expect, test } from "./fixtures";
 import { getColorDistance } from "./test-utils";
 
 /* `docs/internal/generated-palette.md`'s whole premise is that `./palette`'s
-   values are provably identical to what `box.css` itself renders, because
-   they are read from a real browser rather than retyped by a person. This is
-   that proof, run as a standing test rather than a one-off: every generated
-   cell is checked against a freshly composed live probe -- the same
-   `.box`/`.box-hover` classes and real `registry.json` intents
-   `scripts/generate-palette.mjs` used to generate `src/palette.css` -- through
-   the same `getColorDistance` contract the rest of this suite already trusts.
-   A `box.css` change nobody regenerated the palette for fails here. The three
+   values are provably identical to what the package's components render,
+   because they are read from a real browser rather than retyped by a person.
+   This is that proof, run as a standing test rather than a one-off: every
+   generated cell is checked against freshly rendered live components -- every
+   component the docs map to that cell's ground, not just the one
+   `scripts/generate-palette.mjs` probed -- through the same `getColorDistance`
+   contract the rest of this suite already trusts. A component or `box.css`
+   change nobody regenerated the palette for fails here, and so does a
+   component that stops rendering the ground the docs map it to. The three
    flat neutral tokens (`docs/internal/generated-palette.md#flat-neutral-values`)
-   get the same live-vs-generated check below, just without the `.box`
-   probe/hover apparatus, since they carry no intent, presentation, or
-   hover state of their own. */
+   get the same live-vs-generated check below, just without the component
+   probe/hover apparatus, since they carry no intent, presentation, or hover
+   state of their own. */
 
 const packageRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const registry = JSON.parse(await readFile(path.join(packageRoot, "registry.json"), "utf8")) as {
+  components: { class: string; default?: { ground?: string } }[];
   intents: Record<string, unknown>;
 };
 const INTENTS = Object.keys(registry.intents);
+/* The components each ground describes, as `docs/usage/customizing.md`
+   maps them. The generator probes the first of each; the rest have to agree. */
 const GROUNDS = [
-  { suffix: "", token: undefined },
-  { suffix: "page", token: "var(--color-background)" },
-  { suffix: "subtle", token: "var(--intent-subtle)" },
+  { suffix: "", components: ["badge", "btn"] },
+  { suffix: "page", components: ["alert"] },
+  { suffix: "subtle", components: ["kbd", "code", "pre"] },
 ] as const;
+const ALL_COMPONENTS = GROUNDS.flatMap((ground) => ground.components);
 
 const SURFACES_URL = "http://localhost:5184/surfaces/?env=vanilla";
 
@@ -38,52 +43,49 @@ interface Probe {
   name: string;
   readsBg: boolean;
   readsFg: boolean;
-  style?: string;
 }
 
-/* Mirrors `scripts/generate-palette.mjs`'s own `buildProbes`, and has to: this
-   test's whole point is proving the generator's output against the same
-   shape of input it was generated from. `readsBg` and `readsFg` are
-   independent: `.solid` bakes both a `-fg` and a `-bg`/`-edge` pair from the
-   same cell (`toDeclarations` reads `.fg` off every solid probe regardless of
-   what else it reads), where `.soft`/`.ghost` split them across two probes
-   because their `-fg` does not vary by ground but their `-bg`/`-edge` does. */
+/* One probe per cell and per component that cell describes. `readsBg` and
+   `readsFg` are independent: `.solid` bakes both a `-fg` and a `-bg`/`-edge`
+   pair from the same cell, where `.soft`/`.ghost` split them across two probes
+   because their `-fg` does not vary by ground but their `-bg`/`-edge` does.
+   Both ground-independent values -- `fg`, and every `.solid` slot -- are held
+   on every mapped component, which is what makes publishing them once true.
+   `box-hover` is added as the generator
+   adds it, so a component without a hover of its own still has one to read. */
 function buildProbes(): Probe[] {
   const probes: Probe[] = [];
+  const probe = (component: string, name: string, classes: string, reads: Pick<Probe, "readsBg" | "readsFg">) =>
+    probes.push({ classes: `${component} box-hover ${classes} edged`, key: `${component}:${name}`, name, ...reads });
 
   for (const intent of INTENTS) {
-    probes.push({
-      classes: `box box-hover ${intent} solid edged`,
-      key: `${intent}-solid`,
-      name: `${intent}-solid`,
-      readsBg: true,
-      readsFg: true,
-    });
+    for (const component of ALL_COMPONENTS) {
+      probe(component, `${intent}-solid`, `${intent} solid`, { readsBg: true, readsFg: true });
+    }
     for (const presentation of ["soft", "ghost"] as const) {
-      probes.push({
-        classes: `box box-hover ${intent} ${presentation} edged`,
-        key: `${intent}-${presentation}-fg`,
-        name: `${intent}-${presentation}`,
-        readsBg: false,
-        readsFg: true,
-      });
       for (const ground of GROUNDS) {
         const name = ground.suffix === "" ? `${intent}-${presentation}` : `${intent}-${presentation}-${ground.suffix}`;
 
-        probes.push({
-          classes: `box box-hover ${intent} ${presentation} edged`,
-          key: name,
-          name,
-          readsBg: true,
-          readsFg: false,
-          style: ground.token === undefined ? undefined : `--_d-ground: ${ground.token}`,
-        });
+        for (const component of ground.components) {
+          probe(component, name, `${intent} ${presentation}`, { readsBg: true, readsFg: true });
+        }
       }
     }
   }
 
   return probes;
 }
+
+/* The fg of a ground-qualified cell is published once, on the unqualified name. */
+const fgName = (name: string) => name.replace(/-(page|subtle)$/, "");
+
+test("the subtle ground covers every component the registry grounds on --intent-subtle", () => {
+  const onSubtle = registry.components
+    .filter((component) => component.default?.ground === "--intent-subtle")
+    .map((component) => component.class);
+
+  expect([...onSubtle].sort()).toEqual([...GROUNDS[2].components].sort());
+});
 
 test.describe("generated palette", () => {
   test.beforeEach(async ({ page }) => {
@@ -114,9 +116,6 @@ test.describe("generated palette", () => {
           const element = document.createElement("div");
           element.className = probe.classes;
           element.dataset.key = probe.key;
-          if (probe.style) {
-            element.setAttribute("style", probe.style);
-          }
           host.append(element);
 
           const styles = getComputedStyle(element);
@@ -182,36 +181,39 @@ test.describe("generated palette", () => {
         rest[probe.key].edgeHover = hovered.edge;
       }
 
-      const generated = await page.evaluate((probeList) => {
-        const read = (token: string) => {
-          const probe = document.createElement("span");
-          probe.style.color = `var(${token})`;
-          document.body.append(probe);
-          const value = getComputedStyle(probe).color;
-          probe.remove();
-          return value;
-        };
-        const values: Record<
-          string,
-          { bg?: string; bgHover?: string; edge?: string; edgeHover?: string; fg?: string }
-        > = {};
+      const generated = await page.evaluate(
+        (probeList) => {
+          const read = (token: string) => {
+            const probe = document.createElement("span");
+            probe.style.color = `var(${token})`;
+            document.body.append(probe);
+            const value = getComputedStyle(probe).color;
+            probe.remove();
+            return value;
+          };
+          const values: Record<
+            string,
+            { bg?: string; bgHover?: string; edge?: string; edgeHover?: string; fg?: string }
+          > = {};
 
-        for (const probe of probeList) {
-          const bgSlots = probe.readsBg
-            ? {
-                bg: read(`--palette-${probe.name}-bg`),
-                edge: read(`--palette-${probe.name}-edge`),
-                bgHover: read(`--palette-${probe.name}-bg-hover`),
-                edgeHover: read(`--palette-${probe.name}-edge-hover`),
-              }
-            : {};
-          const fgSlots = probe.readsFg ? { fg: read(`--palette-${probe.name}-fg`) } : {};
+          for (const probe of probeList) {
+            const bgSlots = probe.readsBg
+              ? {
+                  bg: read(`--palette-${probe.name}-bg`),
+                  edge: read(`--palette-${probe.name}-edge`),
+                  bgHover: read(`--palette-${probe.name}-bg-hover`),
+                  edgeHover: read(`--palette-${probe.name}-edge-hover`),
+                }
+              : {};
+            const fgSlots = probe.readsFg ? { fg: read(`--palette-${probe.fgName}-fg`) } : {};
 
-          values[probe.key] = { ...bgSlots, ...fgSlots };
-        }
+            values[probe.key] = { ...bgSlots, ...fgSlots };
+          }
 
-        return values;
-      }, probes);
+          return values;
+        },
+        probes.map((probe) => ({ ...probe, fgName: fgName(probe.name) })),
+      );
 
       const neutral = await page.evaluate(() => {
         const read = (token: string) => {
@@ -245,14 +247,14 @@ test.describe("generated palette", () => {
 
         if (probe.readsBg) {
           checks.push(
-            [`${probe.name} bg`, live.bg, expected.bg],
-            [`${probe.name} edge`, live.edge, expected.edge],
-            [`${probe.name} bg-hover`, live.bgHover, expected.bgHover],
-            [`${probe.name} edge-hover`, live.edgeHover, expected.edgeHover],
+            [`${probe.key} bg`, live.bg, expected.bg],
+            [`${probe.key} edge`, live.edge, expected.edge],
+            [`${probe.key} bg-hover`, live.bgHover, expected.bgHover],
+            [`${probe.key} edge-hover`, live.edgeHover, expected.edgeHover],
           );
         }
         if (probe.readsFg) {
-          checks.push([`${probe.name} fg`, live.fg, expected.fg]);
+          checks.push([`${probe.key} fg`, live.fg, expected.fg]);
         }
 
         for (const [label, actual, wanted] of checks) {

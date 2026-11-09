@@ -226,10 +226,13 @@ Every value is a finished color, never a reference to another variable, so the f
 Naming: `--palette-<intent>-<presentation>-<slot>`, where `<intent>` is one of the seven published intents (`neutral`, `primary`, `secondary`, `success`, `warning`, `destructive`, `info`) and `<presentation>` is `solid`, `soft`, or `ghost`. `<slot>` is `bg`, `fg`, or `edge`. Two qualifiers layer on only where they apply:
 
 - A ground qualifier, `page` or `subtle`, before the slot. It appears only on the `bg` and `edge` of `.soft` and `.ghost`, because a `.solid` fill covers its ground and the text color never depends on it.
-  - No qualifier is the transparent ground of `.badge` and `.btn`: `--palette-success-soft-bg`.
-  - `page` is the ground of `.alert`, `--color-background`: `--palette-success-soft-page-bg`.
-  - `subtle` is the ground of `.pre`, `.code`, `.kbd`, and `.tooltip-bubble`, the intent's own `--intent-subtle`: `--palette-success-soft-subtle-bg`.
-- A `-hover` suffix, on `bg` and `edge` only, because the text color does not change on hover: `--palette-success-soft-page-bg-hover`.
+  - No qualifier is what `.badge` and `.btn` draw, on a transparent ground: `--palette-success-soft-bg`.
+  - `page` is what `.alert` draws, on the page: `--palette-success-soft-page-bg`.
+  - `subtle` is what `.kbd`, `.code`, and `.pre` draw, on the intent's own subtle tone: `--palette-success-soft-subtle-bg`.
+
+  Each value is read from the component itself, so it includes what the component does on its own. A neutral `.alert`, `.kbd`, `.code`, or `.pre` keeps a quieter fill than a neutral `.badge`, and its `neutral-soft-page` and `neutral-soft-subtle` values say so. `.tooltip-bubble` matches none of the three: with no intent it fills with its own tooltip tone, and its edge is solid rather than faded.
+
+- A `-hover` suffix, on `bg` and `edge` only, because the text color does not change on hover: `--palette-success-soft-page-bg-hover`. `.alert`, `.kbd`, `.code`, and `.pre` have no hover of their own, so their hover values are what the component draws when you add `box-hover` to it.
 
 Light values are set on `:root`. Dark values apply under `.dark`, `.theme-dark`, or `[data-theme="dark"]` on the element or an element above it, the same selectors the package's theme uses. The light values also apply under `.light`, `.theme-light`, and `[data-theme="light"]`, so the nearest explicit theme wins: a light area inside a dark one reads the light values.
 
