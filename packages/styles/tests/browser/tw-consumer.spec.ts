@@ -111,16 +111,15 @@ type Side = "tw" | "dist";
    page is styled by `css`. Custom properties are left out: a tree-shaken build
    drops the theme variables nothing reads, which changes no rendered value. */
 const renderFixture = async (page: Page, theme: "light" | "dark", css: string, side: Side) => {
+  /* The sheet is in the page before its first render. Added afterwards, it
+     restyled every element: the reduced-motion transitions started from the
+     browser defaults, and under load WebKit reported some elements' inherited
+     values from before the restyle (`tab-size` 8 where both sheets set 4).
+     Neither sheet contains `</style`; `exports.test.ts` holds that. The wait
+     below still lets any transition the first render starts finish. */
   await page.setContent(
-    `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8" /></head><body>${fixtureFor(side)}</body></html>`,
+    `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8" /><style>${css}</style></head><body>${fixtureFor(side)}</body></html>`,
   );
-  await page.addStyleTag({ content: css });
-  /* Adding the sheet to a rendered page restyles every element, and the
-     reset's reduced-motion rule gives everything a 0.01ms transition, so a
-     read on the same frame lands on the browser defaults it started from (a
-     `medium`, 3px, border; black text). The tooltip bubble's `visibility`
-     also waits out `--tooltip-linger`, a delay reduced motion leaves alone,
-     so this waits for every transition to end rather than for a frame count. */
   await page.evaluate(async () => {
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     await Promise.all(document.getAnimations().map((animation) => animation.finished));
