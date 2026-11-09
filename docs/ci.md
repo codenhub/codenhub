@@ -157,7 +157,7 @@ Three checks report on pull requests without living in this repository. The main
 
 Because the trigger is dashboard state, a build fires for every push unless that project's build watch paths exclude the change. All three lists are recorded below so the reasoning is reviewable even though the setting is not.
 
-Five things are true of all three.
+Six things are true of all three.
 
 Each list excludes rather than includes, and that direction is the point. An include list that misses a path publishes a stale site and says nothing; an exclude list that misses one costs a build nobody needed. Only the second failure is visible, so all three filters are built to fail that way.
 
@@ -167,7 +167,7 @@ Every list excludes the same set of files that no site build reads. At the root 
 
 Every list also excludes the published prose of each package: `README.md` and its `README.<locale>.md` translations, `LICENSE`, `NOTICE`, `llms.txt`, `llms-full.txt`, and `docs/`. The main and documentation sites read these only from the release-tag snapshot that "Publish-scoped content" describes, never from the working tree, and the demo site does not read them at all.
 
-Cloudflare's `*` matches across `/`, so `packages/*/docs/*` also matches a `docs/` directory nested deeper, such as `packages/plugins/vite/icons/docs/`. That is intended for the directories listed here, but it means a new entry can reach further than it reads. Check it against `git ls-files` so that it matches no path under a package's `src/`.
+Cloudflare's `*` matches across `/`, so `packages/*/docs/*` also matches a `docs/` directory nested deeper, such as `packages/plugins/vite/icons/docs/`. That is intended for the directories listed here, but it means a new entry can reach further than it reads. Check it against `git ls-files` so that it matches no workspace package's `src/`. The only `src/` paths the lists match on purpose belong to the eval fixture projects under `packages/skills/evals/`, which no site builds.
 
 Watch paths apply to the production branch only. Cloudflare documents excludes as applied first, with a build triggered only if a changed path survives them and then matches an include, and documents `*` as matching across `/` — so a push touching only `docs/ci.md` should not build. Three such pushes on a pull request branch built anyway, and the merge of the same change into `main` skipped. Read these filters as governing merges, not pull requests; nothing either one lists will spare a build on a branch.
 
