@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
+import ts from "typescript";
 import { expect, test } from "vitest";
 
 interface PackageManifest {
@@ -230,6 +231,73 @@ test("no shipped stylesheet contains a sequence that ends an inline style elemen
 
   expect(stylesheets.length).toBeGreaterThan(0);
   expect(unsafe).toEqual([]);
+});
+
+/* TypeScript 6 checks side-effect imports by default
+   (`noUncheckedSideEffectImports`), and `declare module "*.css"` cannot match
+   `@codenhub/styles` or `/aesthetics/glass`, which have no extension. Without
+   a `types` condition, `import "@codenhub/styles";` was TS2882 under
+   `moduleResolution: bundler`. This compiles such imports with the workspace
+   TypeScript. The consumer is an in-memory file inside the package, so each
+   specifier resolves by package self-reference, through `exports` exactly as
+   it would from `node_modules`. */
+test("side-effect imports typecheck with noUncheckedSideEffectImports", () => {
+  const specifiers = [
+    "@codenhub/styles",
+    "@codenhub/styles/theme",
+    "@codenhub/styles/components",
+    "@codenhub/styles/aesthetics/glass",
+    "@codenhub/styles/native",
+    "@codenhub/styles/tw",
+    "@codenhub/styles/tw/button",
+    "@codenhub/styles/tw/aesthetics/glass",
+  ];
+
+  const options: ts.CompilerOptions = {
+    module: ts.ModuleKind.Preserve,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    noEmit: true,
+    noUncheckedSideEffectImports: true,
+    strict: true,
+    target: ts.ScriptTarget.ESNext,
+    types: [],
+  };
+  const entry = path.join(packageRoot, "side-effect-imports.ts").replaceAll("\\", "/");
+  const source = specifiers.map((specifier) => `import "${specifier}";\n`).join("");
+  const host = ts.createCompilerHost(options);
+  const { fileExists, getSourceFile, readFile: readHostFile } = host;
+  const isEntry = (fileName: string) => fileName.replaceAll("\\", "/") === entry;
+
+  host.fileExists = (fileName) => isEntry(fileName) || fileExists.call(host, fileName);
+  host.readFile = (fileName) => (isEntry(fileName) ? source : readHostFile.call(host, fileName));
+  host.getSourceFile = (fileName, languageVersion, ...rest) =>
+    isEntry(fileName)
+      ? ts.createSourceFile(fileName, source, languageVersion)
+      : getSourceFile.call(host, fileName, languageVersion, ...rest);
+
+  const program = ts.createProgram([entry], options, host);
+  const diagnostics = ts
+    .getPreEmitDiagnostics(program)
+    .map((diagnostic) => `TS${diagnostic.code}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")}`);
+
+  expect(program.getRootFileNames()).toEqual([entry]);
+  expect(diagnostics).toEqual([]);
+});
+
+/* The test above samples entrypoints; this holds every one. TypeScript takes
+   the first condition it recognises, so `types` has to lead, and it has to
+   name a declaration rather than the stylesheet. */
+test("every stylesheet export leads with a types condition naming a declaration", () => {
+  const missing = Object.entries(manifest.exports)
+    .filter(([exportName]) => exportName !== "./package.json")
+    .filter(([, target]) => {
+      const [first, ...rest] = typeof target === "string" ? [] : Object.entries(target);
+
+      return !first || first[0] !== "types" || !first[1].endsWith(".d.ts") || rest.length === 0;
+    })
+    .map(([exportName]) => exportName);
+
+  expect(missing).toEqual([]);
 });
 
 /* `dist/` holds finished CSS only, so a server that serves or fingerprints it

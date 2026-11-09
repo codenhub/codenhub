@@ -91,7 +91,7 @@ That does not apply to the `/tw` files. They are Tailwind source, not finished C
 
 Compiled entrypoints are finished CSS. `/tw` entrypoints publish the uncompiled source from `tw/`, beside `dist/`, which a Tailwind v4 build must process. A focused `/tw` component entrypoint includes the theme tokens, so its classes work on their own.
 
-Each import path resolves the same file under the `style`, `import`, and `default` export conditions. A CSS import is a side effect, so make sure your bundler does not drop it as unused.
+Each import path resolves the same file under the `style`, `import`, and `default` export conditions. A `types` condition comes first and names an empty declaration, so TypeScript accepts a side-effect import such as `import "@codenhub/styles";` with `noUncheckedSideEffectImports`, which TypeScript 6 turns on by default. A CSS import is a side effect, so make sure your bundler does not drop it as unused.
 
 | Import path                      | What it contains and what it changes                                                                                                                                                                                                                                                                                 |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

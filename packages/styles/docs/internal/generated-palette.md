@@ -57,7 +57,7 @@ Light values are the unscoped default, declared on `:root` and on the explicit l
 
 ## Public surface
 
-`./palette` is a documented, published export, mapped through `style`/`import`/`default` conditions to `dist/palette.css`, and versioned under the same semver as the rest of the package. It has `exports` coverage, public docs coverage in [Customizing](../usage/customizing.md#generated-palette) and [Setup](../setup.md#import-paths), and a `compiledExportContracts` entry in `tests/integration/exports.test.ts`.
+`./palette` is a documented, published export, mapped through `style`/`import`/`default` conditions to `dist/palette.css` (and `types` to the shared empty declaration), and versioned under the same semver as the rest of the package. It has `exports` coverage, public docs coverage in [Customizing](../usage/customizing.md#generated-palette) and [Setup](../setup.md#import-paths), and a `compiledExportContracts` entry in `tests/integration/exports.test.ts`.
 
 A JSON sidecar for non-CSS consumers is not shipped. The package stays CSS-only by design, and adding one waits for a concrete non-CSS consumer.
 

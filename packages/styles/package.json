@@ -25,156 +25,187 @@
   ],
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "style": "./dist/index.css",
       "import": "./dist/index.css",
       "default": "./dist/index.css"
     },
     "./theme": {
+      "types": "./dist/index.d.ts",
       "style": "./dist/theme.css",
       "import": "./dist/theme.css",
       "default": "./dist/theme.css"
     },
     "./palette": {
+      "types": "./dist/index.d.ts",
       "style": "./dist/palette.css",
       "import": "./dist/palette.css",
       "default": "./dist/palette.css"
     },
     "./components": {
+      "types": "./dist/index.d.ts",
       "style": "./dist/components.css",
       "import": "./dist/components.css",
       "default": "./dist/components.css"
     },
     "./aesthetics": {
+      "types": "./dist/index.d.ts",
       "style": "./dist/aesthetics/index.css",
       "import": "./dist/aesthetics/index.css",
       "default": "./dist/aesthetics/index.css"
     },
     "./aesthetics/neobrutalism": {
+      "types": "./dist/index.d.ts",
       "style": "./dist/aesthetics/neobrutalism.css",
       "import": "./dist/aesthetics/neobrutalism.css",
       "default": "./dist/aesthetics/neobrutalism.css"
     },
     "./aesthetics/glass": {
+      "types": "./dist/index.d.ts",
       "style": "./dist/aesthetics/glass.css",
       "import": "./dist/aesthetics/glass.css",
       "default": "./dist/aesthetics/glass.css"
     },
     "./aesthetics/pixel": {
+      "types": "./dist/index.d.ts",
       "style": "./dist/aesthetics/pixel.css",
       "import": "./dist/aesthetics/pixel.css",
       "default": "./dist/aesthetics/pixel.css"
     },
     "./aesthetics/chunky-tile": {
+      "types": "./dist/index.d.ts",
       "style": "./dist/aesthetics/chunky-tile.css",
       "import": "./dist/aesthetics/chunky-tile.css",
       "default": "./dist/aesthetics/chunky-tile.css"
     },
     "./aesthetics/cyber": {
+      "types": "./dist/index.d.ts",
       "style": "./dist/aesthetics/cyber.css",
       "import": "./dist/aesthetics/cyber.css",
       "default": "./dist/aesthetics/cyber.css"
     },
     "./aesthetics/sketch": {
+      "types": "./dist/index.d.ts",
       "style": "./dist/aesthetics/sketch.css",
       "import": "./dist/aesthetics/sketch.css",
       "default": "./dist/aesthetics/sketch.css"
     },
     "./tw": {
+      "types": "./tw/index.d.ts",
       "style": "./tw/index.css",
       "import": "./tw/index.css",
       "default": "./tw/index.css"
     },
     "./tw/theme": {
+      "types": "./tw/index.d.ts",
       "style": "./tw/theme.css",
       "import": "./tw/theme.css",
       "default": "./tw/theme.css"
     },
     "./tw/components": {
+      "types": "./tw/index.d.ts",
       "style": "./tw/components/index.css",
       "import": "./tw/components/index.css",
       "default": "./tw/components/index.css"
     },
     "./tw/surface": {
+      "types": "./tw/index.d.ts",
       "style": "./tw/components/surface.css",
       "import": "./tw/components/surface.css",
       "default": "./tw/components/surface.css"
     },
     "./tw/button": {
+      "types": "./tw/index.d.ts",
       "style": "./tw/components/button.css",
       "import": "./tw/components/button.css",
       "default": "./tw/components/button.css"
     },
     "./tw/form": {
+      "types": "./tw/index.d.ts",
       "style": "./tw/components/form.css",
       "import": "./tw/components/form.css",
       "default": "./tw/components/form.css"
     },
     "./tw/feedback": {
+      "types": "./tw/index.d.ts",
       "style": "./tw/components/feedback.css",
       "import": "./tw/components/feedback.css",
       "default": "./tw/components/feedback.css"
     },
     "./tw/tooltip": {
+      "types": "./tw/index.d.ts",
       "style": "./tw/components/tooltip.css",
       "import": "./tw/components/tooltip.css",
       "default": "./tw/components/tooltip.css"
     },
     "./tw/reset": {
+      "types": "./tw/index.d.ts",
       "style": "./tw/reset.css",
       "import": "./tw/reset.css",
       "default": "./tw/reset.css"
     },
     "./tw/native": {
+      "types": "./tw/index.d.ts",
       "style": "./tw/native.css",
       "import": "./tw/native.css",
       "default": "./tw/native.css"
     },
     "./tw/typography": {
+      "types": "./tw/index.d.ts",
       "style": "./tw/typography.css",
       "import": "./tw/typography.css",
       "default": "./tw/typography.css"
     },
     "./tw/utilities": {
+      "types": "./tw/index.d.ts",
       "style": "./tw/utilities/index.css",
       "import": "./tw/utilities/index.css",
       "default": "./tw/utilities/index.css"
     },
     "./tw/aesthetics": {
+      "types": "./tw/index.d.ts",
       "style": "./tw/aesthetics/index.css",
       "import": "./tw/aesthetics/index.css",
       "default": "./tw/aesthetics/index.css"
     },
     "./tw/aesthetics/neobrutalism": {
+      "types": "./tw/index.d.ts",
       "style": "./tw/aesthetics/neobrutalism.css",
       "import": "./tw/aesthetics/neobrutalism.css",
       "default": "./tw/aesthetics/neobrutalism.css"
     },
     "./tw/aesthetics/glass": {
+      "types": "./tw/index.d.ts",
       "style": "./tw/aesthetics/glass.css",
       "import": "./tw/aesthetics/glass.css",
       "default": "./tw/aesthetics/glass.css"
     },
     "./tw/aesthetics/pixel": {
+      "types": "./tw/index.d.ts",
       "style": "./tw/aesthetics/pixel.css",
       "import": "./tw/aesthetics/pixel.css",
       "default": "./tw/aesthetics/pixel.css"
     },
     "./tw/aesthetics/chunky-tile": {
+      "types": "./tw/index.d.ts",
       "style": "./tw/aesthetics/chunky-tile.css",
       "import": "./tw/aesthetics/chunky-tile.css",
       "default": "./tw/aesthetics/chunky-tile.css"
     },
     "./tw/aesthetics/cyber": {
+      "types": "./tw/index.d.ts",
       "style": "./tw/aesthetics/cyber.css",
       "import": "./tw/aesthetics/cyber.css",
       "default": "./tw/aesthetics/cyber.css"
     },
     "./tw/aesthetics/sketch": {
+      "types": "./tw/index.d.ts",
       "style": "./tw/aesthetics/sketch.css",
       "import": "./tw/aesthetics/sketch.css",
       "default": "./tw/aesthetics/sketch.css"
     },
     "./native": {
+      "types": "./dist/index.d.ts",
       "style": "./dist/native.css",
       "import": "./dist/native.css",
       "default": "./dist/native.css"

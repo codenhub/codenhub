@@ -49,3 +49,7 @@ for (const relativePath of readdirSync(target, { recursive: true })) {
     writeFileSync(file, after);
   }
 }
+
+/* The `/tw` exports' `types` condition, for the same reason as `dist/index.d.ts`
+   in `build-styles.mjs`. */
+writeFileSync(join(target, "index.d.ts"), "export {};\n");
