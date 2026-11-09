@@ -29,12 +29,13 @@ A settings screen with a "System / Light / Dark" choice removes the attribute fo
 
 How it resolves:
 
-- A theme selector sets the CSS `color-scheme` property and nothing else. Every color token holds its light and its dark value at once, through `light-dark()`, and the element's `color-scheme` picks one.
-- `color-scheme` inherits, so a selector themes everything inside it. A selector on any element themes that part of the page: a dark sidebar on a light page is `<aside class="dark">`.
+- A theme selector sets the CSS `color-scheme` property, and the element's text color to `--color-text`. Every color token holds its light and its dark value at once, through `light-dark()`, and the element's `color-scheme` picks one.
+- `color-scheme` inherits, so a selector themes everything inside it. A selector on any element themes that part of the page: a dark sidebar on a light page is `<aside class="dark">`, and the text inside it takes the dark theme's text color.
+- A selector sets no background. Give the region its ground yourself, such as `background: var(--color-background)`. Any utility or component class on the same element overrides the selector's text color.
 - The nearest selector wins, at any depth. A `.light` card inside a `.dark` page is light.
 - With no selector, the root has `color-scheme: light dark`, which follows the system.
 - Put one theme on an element. If an element carries both a light and a dark selector, dark wins, but do not rely on that.
-- Setting `color-scheme` yourself on an element works the same way, because it is the only thing the palette reads. It also themes native parts such as scrollbars and the inside of form controls.
+- Setting `color-scheme` yourself on an element themes the tokens the same way, because it is the only thing the palette reads. It also themes native parts such as scrollbars and the inside of form controls. Plain text inside keeps the color it inherited until you also set `color: var(--color-text)`.
 
 Every component color comes from a token or from `currentColor`, so components follow the theme with no dark-mode rules of their own. The marks the package draws, such as the checkbox tick and the select arrow, use `currentColor` too. Icons and images you add are yours to theme.
 

@@ -162,4 +162,53 @@ test.describe("theme", () => {
     expect(nested.outer).toBe("dark");
     expect(nested.inner).toBe("light");
   });
+
+  /* Setting only `color-scheme` left a region's own text on the ink it
+     inherited from the page: `<aside class="dark"><p>` on a light page kept the
+     light theme's near-black and printed it on the region's dark ground. */
+  test("re-resolves the text colour of a region a theme selector forces", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const resolved = await page.evaluate(() => {
+      const root = document.documentElement;
+
+      root.classList.remove("dark", "theme-dark");
+      root.removeAttribute("data-theme");
+      root.classList.add("light");
+
+      const read = (setup: (host: HTMLElement) => void) => {
+        const host = document.createElement("aside");
+        const paragraph = document.createElement("p");
+        const probe = document.createElement("span");
+
+        setup(host);
+        probe.style.color = "var(--color-text)";
+        host.append(paragraph, probe);
+        document.body.append(host);
+
+        const values = { paragraph: getComputedStyle(paragraph).color, token: getComputedStyle(probe).color };
+
+        host.remove();
+
+        return values;
+      };
+
+      return {
+        page: getComputedStyle(document.body).color,
+        dark: read((host) => host.classList.add("dark")),
+        themeDark: read((host) => host.classList.add("theme-dark")),
+        dataDark: read((host) => host.setAttribute("data-theme", "dark")),
+        lightInDark: read((host) => {
+          root.classList.replace("light", "dark");
+          host.classList.add("light");
+        }),
+      };
+    });
+
+    for (const spelling of ["dark", "themeDark", "dataDark", "lightInDark"] as const) {
+      expect(resolved[spelling].paragraph, `${spelling} region text`).toBe(resolved[spelling].token);
+    }
+
+    expect(resolved.dark.paragraph, "the region's text is not the page's").not.toBe(resolved.page);
+  });
 });

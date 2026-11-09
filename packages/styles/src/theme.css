@@ -32,7 +32,8 @@
 
 /* Color tokens are declared once with `light-dark()`, which resolves at the
    point of use against the consuming element's computed `color-scheme`. Theme
-   selectors below therefore set `color-scheme` and nothing else. Verified
+   selectors below therefore set `color-scheme`, and the region's own `color`
+   so its text re-resolves too. Verified
    across Chromium, Firefox, and WebKit, including resolution through
    `color-mix()` and through Tailwind's `@theme`, which emits theme values as
    unregistered custom properties rather than `@property` registrations.
@@ -227,16 +228,23 @@
     }
   }
 
+  /* A forced theme re-resolves the region's own text as well as its scheme.
+     `color` inherits as a computed colour, already resolved against the scheme
+     above, so a `<p>` in an `<aside class="dark">` on a light page kept the
+     light theme's near-black. No background: a region that wants the theme's
+     ground says so. In `theme`, so every utility and component still wins. */
   .light,
   .theme-light,
   [data-theme="light"] {
     color-scheme: light;
+    color: var(--color-text);
   }
 
   .dark,
   .theme-dark,
   [data-theme="dark"] {
     color-scheme: dark;
+    color: var(--color-text);
   }
 }
 
