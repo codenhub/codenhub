@@ -39,12 +39,11 @@
 
   /* Same carve-out as `.panel`'s, and for the same reason: a neutral alert
      mixes 12% of near-black ink onto the page (`217, 217, 217` against `250,
-     250, 250`), a slab rather than a status signal. Scoped to no named intent:
-     a named intent keeps its ordinary wash, because untinting
-     `.alert.soft.destructive` would silence the status it exists to carry
-     rather than quiet it. `:not(...)` names every intent class, plus
-     `.solid`/`.ghost` so an explicit presentation on the element is never
-     clamped to a cap it did not ask for.
+     250, 250`), a slab rather than a status signal. Only a quiet neutral tint
+     is untinted, through `surface`'s `--_quiet`, stepped from the resolved
+     fill so a container's `.ghost` or `.solid` renders the alert its own
+     would. A named intent keeps its ordinary wash, because untinting
+     `.alert.soft.destructive` would silence the status it exists to carry.
 
      Grounds on `--color-foreground` through `--_d-surface-ground`, exactly like
      `.panel` and a resting `.card.soft`, so glass's ground and a consumer's
@@ -52,10 +51,8 @@
      reveal a tint into either, so this is permanent. A neutral alert keeps its
      identity: `--_d-border: 100%` above holds regardless of fill, so it still
      reads as a framed box, just a quiet one instead of a grey slab. */
-  &:not(.primary, .secondary, .success, .warning, .destructive, .info, .solid, .ghost) {
-    --_fill-cap: 0%;
-    --_d-surface-ground: var(--color-foreground);
-  }
+  --_fill-cap: calc(100% - var(--_quiet));
+  --_d-surface-ground: color-mix(in oklab, var(--color-foreground) var(--_quiet), var(--color-background));
 }
 
 /* No icon is shipped. `.alert` is already `flex`, so an icon dropped in as a

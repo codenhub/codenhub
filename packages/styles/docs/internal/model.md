@@ -111,6 +111,8 @@ ground = color-mix(--color-background plate, the component's own ground)
 
 It is a step rather than a ramp, because the two percentages cannot be divided in every engine, and a fill the cap stopped is one the presentation asked to be full. The component's own cap is measured out first, so what it reinterprets stays a tint: a text control's 20% `.solid` wash and a neutral `.card.soft`'s 0% are the same at every intent. A toggle lifts the intent cap, so its plate never takes this ground. `.quote` composes its own fill and takes the same step. The generated palette follows: neutral `.solid` is ground-independent like every other `.solid`.
 
+The same kind of step decides the quiet neutral surface. A neutral `.card.soft`, `.panel`, and `.alert` rest untinted on `--color-foreground` rather than on 12% of the page's ink, and `surface` names when: `--_quiet` is 100% for a neutral intent (its cap below 100%) and a resolved fill above 0% and below that cap, else 0%. The three components read it into their `--_fill-cap` and their ground. It is stepped from the resolved fill, not keyed on classes on the element, because presentation cascades: a container's `.soft` and the surface's own are one request and render one plate, and a container's `.ghost` or `.solid` is not mistaken for the quiet default.
+
 ### Hover is derived, never declared
 
 ```

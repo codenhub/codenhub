@@ -34,40 +34,43 @@
     --surface-padding: 0;
   }
 
-  /* `.soft` rests untinted for no named intent instead of mixing its 12%: 12%
-     of `--color-text` onto any of `--color-background`, `--color-foreground`,
-     or `--color-surface` lands within a few units of the others (a near-black
-     ink dominates the result), so swapping the ground token alone does not read
-     as quieter. A resting no-intent `.card.soft` is `--color-foreground` with
-     no ink mixed in -- a plain step up from the page that marks a different
-     container without drawing attention to it.
+  /* A quiet neutral tint -- `.soft`, on the card or on a container -- rests
+     untinted instead of mixing its 12%: 12% of `--color-text` onto any of
+     `--color-background`, `--color-foreground`, or `--color-surface` lands
+     within a few units of the others (a near-black ink dominates the result),
+     so swapping the ground token alone does not read as quieter. A resting
+     neutral `.card.soft` is `--color-foreground` with no ink mixed in -- a
+     plain step up from the page that marks a different container without
+     drawing attention to it.
 
      A named intent keeps its ordinary 12% wash: 12% of an actual hue does not
      read as a slab the way 12% of near-black ink does (`.card.soft.destructive`
      is a gentle `249, 225, 225`), and untinting it would silence it rather than
-     quiet it. `:not(...)` names every intent class for that reason; `.panel`'s
-     carve-out below is scoped the same way.
+     quiet it. `.ghost` and `.solid` are not a tint and keep their own plates.
 
-     `--_fill-cap: 0%` (box.css's override slot, not `--ui-fill` directly -- see
-     the comment there) composed with `box-hover`'s formula (`min(100%, resting
-     + 14%)`) reveals the intent on hover with no second fill declaration for
-     the no-intent case: resting at 0% means hover lands at exactly the hover
-     step, 14%, in `--intent-hover`. The ground steps to `--color-surface` at
-     the same moment, through `--_d-surface-ground`, the default `surface` reads
-     beneath the public `--ui-surface-ground`, so a consumer's override, or
-     glass's ground, wins over both states. Scoped to `.interactive` and
-     `.hoverable`, the two classes that opt a card into `box-hover`: a plain
-     `.card.soft` has no hover state to reveal into and stays at the quiet rest.
-     A named intent needs neither special case: it rests tinted, so the generic
-     `box-hover` formula deepens it on hover (12% to 26%). */
-  &.soft:not(.primary, .secondary, .success, .warning, .destructive, .info) {
-    --_fill-cap: 0%;
-    --_d-surface-ground: var(--color-foreground);
+     Which case applies is `surface`'s `--_quiet`, stepped from the resolved
+     fill and the intent's cap rather than keyed on classes on the card, so a
+     container's `.soft` renders the plate the card's own `.soft` does. Keyed
+     on the card's classes, `.soft > .card` drew the grey slab. `--_fill-cap`
+     (box.css's override slot, not `--ui-fill` directly -- see the comment
+     there) drops to 0% only when quiet, and the ground steps to the
+     foreground only then, through `--_d-surface-ground`, the default
+     `surface` reads beneath the public `--ui-surface-ground`, so a consumer's
+     override, or glass's ground, wins.
 
-    &.interactive:hover,
-    &.hoverable:hover {
-      --_d-surface-ground: var(--color-surface);
-    }
+     Composed with `box-hover`'s formula (`min(100%, resting + 14%)`), the
+     quiet rest reveals the intent on hover with no second fill declaration:
+     resting at 0% means hover lands at exactly the hover step, 14%, in
+     `--intent-hover`, and the ground steps to `--color-surface` at the same
+     moment. Scoped to `.interactive` and `.hoverable`, the two classes that
+     opt a card into `box-hover`. A named intent rests tinted, so the generic
+     formula deepens it on hover (12% to 26%). */
+  --_fill-cap: calc(100% - var(--_quiet));
+  --_d-surface-ground: color-mix(in oklab, var(--color-foreground) var(--_quiet), var(--color-background));
+
+  &.interactive:hover,
+  &.hoverable:hover {
+    --_d-surface-ground: color-mix(in oklab, var(--color-surface) var(--_quiet), var(--color-background));
   }
 
   /* Opt-in, because a card is only sometimes a control. Applications still owe
@@ -128,28 +131,23 @@
      page is far more assertive than 12% of a hue (`217, 217, 217` against a
      `250, 250, 250` page): the same "neutral ink reads louder" effect
      `.card.soft` answers, and the reason `--intent-fill-max` stops neutral's
-     fill short everywhere else.
-
-     Scoped to no named intent rather than untinted unconditionally, as
-     `data-table` is: a panel is not interactive, so there is no hover to reveal
-     a colored intent into, and it is edgeless by default, so the fill is the
-     only channel a `.primary` bulk-actions bar or a `.destructive` danger-zone
-     panel has to say what it is (a resting `.panel.destructive` is a gentle
-     `249, 225, 225` wash). `.card.soft` carries the same scoping. `:not(...)`
-     names every intent class, plus `.solid`/`.ghost` so an explicit
-     presentation on the element is never clamped to a cap it did not ask for --
-     the guard `data-table`'s `:not(.solid, .ghost)` also uses.
-
-     Grounds on `--color-foreground` through `--_d-surface-ground`, the default
+     fill short everywhere else. So a quiet neutral tint rests untinted on
+     `--color-foreground`, through `--_d-surface-ground`, the default
      `.card.soft` rests on, so a bare `.panel` rests at exactly the plate a
      `.card.soft` does, and a consumer's `--ui-surface-ground` or glass's
      translucent ground wins over it: a neutral panel under `.glass` is glass.
-     Permanent rather than hover-revealed: neither a panel nor `data-table` has
-     an interaction state to reveal a tint into. */
-  &:not(.primary, .secondary, .success, .warning, .destructive, .info, .solid, .ghost) {
-    --_fill-cap: 0%;
-    --_d-surface-ground: var(--color-foreground);
-  }
+
+     A named intent keeps its wash: a panel is edgeless by default, so the fill
+     is the only channel a `.primary` bulk-actions bar or a `.destructive`
+     danger-zone panel has to say what it is (a resting `.panel.destructive` is
+     a gentle `249, 225, 225` wash). `.ghost` and `.solid` keep their own
+     plates. Which case applies is `surface`'s `--_quiet`, stepped from the
+     resolved fill, so a container's `.ghost` or `.solid` renders the panel its
+     own would; keyed on the panel's classes, both landed on the quiet plate.
+     Permanent rather than hover-revealed: a panel has no interaction state to
+     reveal a tint into. */
+  --_fill-cap: calc(100% - var(--_quiet));
+  --_d-surface-ground: color-mix(in oklab, var(--color-foreground) var(--_quiet), var(--color-background));
 }
 
 /* The user agent already promises both of these for a native `<dialog>` --

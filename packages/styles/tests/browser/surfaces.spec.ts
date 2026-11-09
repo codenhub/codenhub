@@ -537,4 +537,85 @@ test.describe("surfaces", () => {
       await page.mouse.up();
     }
   });
+
+  /* Presentation cascades, so a fill class on a container and the same class on
+     the surface itself are one request and render one plate. The neutral
+     carve-outs once keyed on the class on the element: `.soft > .card` drew a
+     grey slab where `.card.soft` rests on the quiet foreground, and a
+     `.ghost` or `.solid` container landed a panel or an alert on the quiet
+     plate its own `.ghost` or `.solid` would have left. */
+  test("renders a container's fill class and the surface's own one identically", async ({ page }) => {
+    await page.goto(SURFACES_URL);
+
+    for (const theme of ["light", "dark"]) {
+      // oxlint-disable-next-line no-await-in-loop -- one theme, then the other, on one page.
+      const pairs = await page.evaluate((name) => {
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(name);
+        const read = (html: string) => {
+          const wrapper = document.createElement("div");
+
+          wrapper.innerHTML = html;
+          document.body.append(wrapper);
+
+          const surface = wrapper.querySelector("[data-surface]")!;
+          const styles = getComputedStyle(surface);
+          const values = { background: styles.backgroundColor, color: styles.color, border: styles.borderTopColor };
+
+          wrapper.remove();
+
+          return values;
+        };
+        const results = [];
+
+        for (const component of ["card", "panel", "alert"]) {
+          for (const fill of ["ghost", "soft", "solid"]) {
+            for (const intent of ["", "neutral", "success"]) {
+              const classes = `${component} ${intent}`.trim();
+
+              results.push({
+                label: `${name} .${classes}.${fill}`,
+                own: read(`<div class="${classes} ${fill}" data-surface>Text</div>`),
+                cascaded: read(`<div class="${fill}"><div class="${classes}" data-surface>Text</div></div>`),
+              });
+            }
+          }
+        }
+
+        return results;
+      }, theme);
+
+      for (const { label, own, cascaded } of pairs) {
+        expectSameColor(cascaded.background, own.background, `${label} plate`);
+        expectSameColor(cascaded.color, own.color, `${label} text`);
+        expectSameColor(cascaded.border, own.border, `${label} line`);
+      }
+    }
+  });
+
+  /* The quiet rest a neutral `.card.soft` takes reveals into the surface tone
+     on hover, and a container's `.soft` is the same request. */
+  test("hovers a card under a container's soft as it hovers a soft card", async ({ page }) => {
+    await page.goto(SURFACES_URL);
+    await page.evaluate(() => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        `<div class="card soft interactive" data-hover-surface="own">Own</div>
+         <div class="soft"><div class="card interactive" data-hover-surface="cascaded">Cascaded</div></div>`,
+      );
+    });
+
+    const hovered = async (which: string) => {
+      const element = page.locator(`[data-hover-surface="${which}"]`);
+
+      await element.hover();
+
+      return element.evaluate(async (node) => {
+        await Promise.all(node.getAnimations().map((animation) => animation.finished));
+        return getComputedStyle(node).backgroundColor;
+      });
+    };
+
+    expectSameColor(await hovered("cascaded"), await hovered("own"), "hovered plate");
+  });
 });

@@ -33,6 +33,24 @@
   --_d-surface-ground: initial;
   --_d-ground: var(--ui-surface-ground, var(--_d-surface-ground, var(--color-background)));
 
+  /* Whether this surface rests on a quiet neutral tint, as 0% or 100%: a
+     neutral intent (its fill cap is below 100%) and a resolved fill above
+     nothing and below that cap -- `.soft`, a panel's or an alert's default.
+     12% of the page's near-black ink reads as a grey slab rather than a step,
+     so `.card`, `.panel`, and `.alert` read this to rest such a fill on the
+     quiet foreground instead. Stepped from the resolved fill rather than
+     keyed on a class on the element, because presentation cascades: a
+     container's `.soft` and the surface's own are one request and have to
+     render one plate. Stepped rather than divided, as `box`'s `--_plate` is,
+     because the percentages cannot be divided in every engine yet. Only the
+     components that reinterpret the tint apply it; `surface` alone keeps the
+     plain tint. */
+  --_quiet: min(
+    clamp(0%, calc((100% - var(--intent-fill-max, 100%)) * 1000), 100%),
+    clamp(0%, calc(var(--ui-fill, var(--_d-fill)) * 1000), 100%),
+    clamp(0%, calc((var(--intent-fill-max, 100%) - var(--ui-fill, var(--_d-fill))) * 1000), 100%)
+  );
+
   /* The complete-shadow slot for a shadow that is not one layer (glass tucks two
      under with negative spread). Only `surface` reads it -- through `--ui-shadow`
      it would land an 18px drop under every button and chip -- like the backdrop. */
