@@ -234,6 +234,21 @@ describe("changelog rule for a package that keeps an archived version", () => {
     ).toMatchObject([{ code: "changelog/required" }]);
   });
 
+  it("still applies the major rule when codenhub.docs.versions is malformed", async () => {
+    const [majorRule] = createChangelogRules(async () => ["@codenhub/example@1.2.0", "@codenhub/example@2.0.0"]);
+    const workspacePackage = await createPackageOnDisk("2.0.0");
+    const manifest = {
+      ...workspacePackage.manifest,
+      codenhub: { docs: { versions: "^1.0.0" }, label: "Example", status: "active" },
+    };
+
+    expect(
+      await (
+        majorRule as { run: (context: { package: WorkspacePackage; includePack: boolean }) => Promise<unknown> }
+      ).run({ includePack: false, package: { ...workspacePackage, manifest } }),
+    ).toMatchObject([{ code: "changelog/required" }]);
+  });
+
   it("stays optional when nothing earlier is kept", async () => {
     expect(await runArchiving("1.3.0")).toEqual([]);
     expect(await runArchiving("1.3.0", ["^1.3.0"])).toEqual([]);
