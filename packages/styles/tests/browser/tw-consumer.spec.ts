@@ -63,6 +63,14 @@ const FIXTURE = `
   <input class="text-control" />
   <div class="{tw:my-surface|dist:surface}">Surface by @apply</div>
   <input class="{tw:my-control|dist:text-control}" data-known="apply-text-control" />
+  <input class="{tw:my-control soft|dist:text-control soft}" data-known="apply-text-control" />
+  <input class="{tw:my-control solid|dist:text-control solid}" data-known="apply-text-control" />
+  <input class="{tw:my-control edgeless|dist:text-control edgeless}" data-known="apply-text-control" />
+  <input class="{tw:my-control|dist:text-control}" aria-invalid="true" data-known="apply-text-control" />
+  <input class="{tw:my-control success|dist:text-control success}" data-known="apply-text-control" />
+  <div class="card success">
+    <input class="{tw:my-control|dist:text-control}" data-known="apply-text-control" />
+  </div>
 </main>`;
 
 const fixtureFor = (side: "tw" | "dist") =>
@@ -213,13 +221,15 @@ test.describe("/tw consumer build", () => {
     });
   }
 
-  /* Known defect, independent of tree shaking: `@apply text-control` copies
-     the `@utility` body but not the `:where(.text-control, .ipt, ...)` rule in
-     `intent.css` that sets a control's border colour, so the applied control
-     draws a surface's border instead. Marked as failing so the fix turns this
-     red, and the marker and this test go with it. */
-  test("@apply text-control draws the class's border", async ({ page }) => {
-    test.fail(true, "@apply text-control misses the control border rule in intent.css");
-    expect(await differencesBetween(page, "light", (known) => known === "apply-text-control")).toEqual([]);
-  });
+  /* `@apply` copies the `@utility` body and nothing that names the class from
+     outside it, so the neutral reset, the control line, and the class-keyed
+     seams (`.soft`, `.solid`, `.edgeless`, `aria-invalid`) are carried inside
+     the utility. Each applied control has to match the class it stands in for:
+     unclassed, under each seam, with an intent of its own, and with none
+     inside a container that has one. */
+  for (const theme of ["light", "dark"] as const) {
+    test(`@apply text-control renders as the class does, ${theme} theme`, async ({ page }) => {
+      expect(await differencesBetween(page, theme, (known) => known === "apply-text-control")).toEqual([]);
+    });
+  }
 });

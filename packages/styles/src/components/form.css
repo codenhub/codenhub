@@ -70,8 +70,8 @@
      typing goes and a toggle with no silhouette at all (WCAG 1.4.11). That is
      our own cascade producing the broken result, so our own floor answers it.
 
-     An element's own `.edgeless` lowers the floor -- see the rule below the
-     utility -- which is a consumer naming what they want rather than a cascade
+     An element's own `.edgeless` lowers the floor -- see the seam below --
+     which is a consumer naming what they want rather than a cascade
      reaching something nobody classed. `.checkbox` and `.radio` are left off
      that rule and keep the floor absolute: they have nothing outside their
      line, so removing it removes the control. */
@@ -110,6 +110,104 @@
      and beats `reset.css`'s `@layer base` ring, killing the keyboard ring too. */
   &:focus-visible {
     --_line-tone: var(--intent-color);
+  }
+
+  /* Everything below until `:checked` is keyed on the class, and lives inside
+     the utility so `@apply text-control` carries it: `@apply` copies this body
+     with the consumer's own selector, and a rule naming `.text-control` from
+     outside it never reaches their element. See model.md#the-composition-api.
+
+     The neutral reset, for an element that carries none of the package's own
+     text-control classes -- a consumer's `.my-control { @apply text-control }`.
+     Those classes keep the reset in `intent.css`, in `components`; this one
+     lands in `utilities` and would beat a consumer's own intent class declared
+     in `components` there. It writes the values that reset and the control
+     line do, so a field inside a `.card.success` stays neutral and draws the
+     3:1 control line rather than `--color-border`.
+
+     Zero specificity, and never on an element with an intent class, so it
+     cannot overrule one: the intent class is excluded, and every rule that
+     writes an intent slot in `utilities` -- `aria-invalid` below, the
+     `:checked` arm, `.input-group`'s inherited `--intent-strong` -- carries at
+     least 0-1-0. `.neutral` is not excluded, so `.neutral` takes the control
+     line here as it does on `.ipt.neutral`. */
+  :where(
+    &:not(
+      .text-control,
+      .ipt,
+      .textarea,
+      .select,
+      .input-group,
+      .checkbox,
+      .radio,
+      .switch,
+      .primary,
+      .secondary,
+      .success,
+      .warning,
+      .destructive,
+      .info
+    )
+  ) {
+    --intent-color: var(--color-text);
+    --intent-contrast: var(--color-text-contrast);
+    --intent-hover: var(--color-text-hover);
+    --intent-strong: var(--color-text-strong);
+    --intent-subtle: var(--color-surface);
+    --intent-border: var(--ui-control-ink, var(--ui-ink, var(--color-control-border)));
+    --intent-fill-max: 20%;
+  }
+
+  /* The component seams: rules that beat their own component's body on
+     specificity, 0-2-0 against 0-1-0, in `utilities`. They write only package
+     privates or a state's intent slots, so nothing a consumer writes competes
+     with them. The exclusions sit in `:where()` so they add none.
+
+     A fill class on the element names its own cap; the 6% cascade cap above is
+     for a container reaching a field nobody classed. Both raise `--_fill-cap`
+     rather than writing `--_fill` (P6), which is also what keeps `.soft` <
+     `.solid`: written as a rewrite, the louder name renders the quieter box.
+     20% clears `.soft`'s 12% and matches the plate a `.solid` badge draws. The
+     three toggles are excluded: each caps at 40% in its own utility, and this
+     rule would overrule that. See
+     model.md#the-bounds-that-survive-and-the-test-for-keeping-one. */
+  &.soft:where(:not(.checkbox, .radio, .switch)) {
+    --_fill-cap: 12%;
+  }
+
+  &.solid:where(:not(.checkbox, .radio, .switch)) {
+    --_fill-cap: 20%;
+  }
+
+  /* The element's own `.edgeless` lowers the floor this utility raises -- a
+     class on the element is a consumer's request, a class on a container is a
+     cascade. `.checkbox` and `.radio` are excluded: an unchecked one is a
+     transparent square/circle with nothing but its line, so the floor is
+     absolute and `.edgeless` on them is published unsupported. `.input-group`
+     keeps it because the group is the field boundary. */
+  &.edgeless:where(:not(.checkbox, .radio)) {
+    --_edge-floor: 0%;
+  }
+
+  /* An invalid control is destructive whatever else it was asked to be. In
+     `utilities` above every intent class and both resets in `components`, and
+     0-2-0 so it also outranks the control's own body and the reset above; a
+     consumer's utility setting an intent slot on an invalid field loses to it
+     too, because state wins over every choice (model.md#precedence).
+     `--intent-hover` is redirected with the others so the line does not go grey
+     under the pointer, and `--intent-strong` so typed text is destructive too.
+     `--intent-contrast` and `--intent-subtle` go with them, so an invalid
+     toggle is a destructive one in every part: left neutral, a checked invalid
+     checkbox in the dark theme drew the near-black neutral mark on a red plate
+     (3.28:1). The bare elements and the `.input-group` bridge are below the
+     utility, since they name no class `@apply` could carry. */
+  &[aria-invalid="true"] {
+    --intent-color: var(--color-destructive);
+    --intent-contrast: var(--color-destructive-contrast);
+    --intent-hover: var(--color-destructive-hover);
+    --intent-border: var(--color-destructive);
+    --intent-strong: var(--color-destructive-strong);
+    --intent-subtle: var(--color-destructive-subtle);
   }
 
   /* S1, P6: `:checked` is a state, so it re-declares the presentation inputs --
@@ -178,37 +276,20 @@
   }
 }
 
-/* The component seams: rules that exist to beat their own component's
-   `@utility`, placed in `utilities` and winning there on specificity, each at
-   least 0-2-0 against the component's 0-1-0. They write only package privates
-   (`--_fill-cap`, `--_edge-floor`) or a state's intent slots, so nothing a
-   consumer writes competes with them. See
+/* The seams that name no class `@apply text-control` could carry: bare
+   elements, the toggles' shared lift, and one component's own combination.
+   Placed in `utilities` and winning there on specificity, like the seams inside
+   the utility. They write only package privates or a state's intent slots, so
+   nothing a consumer writes competes with them. See
    docs/internal/model.md#cascade-layers. */
 @layer utilities {
-  /* A fill class on the element names its own cap; the 6% cascade cap in the
-     utility is for a container reaching a field nobody classed. Both raise
-     `--_fill-cap` rather than writing `--_fill` (P6), which is also what keeps
-     `.soft` < `.solid`: written as a rewrite, the louder name renders the
-     quieter box. 20% clears `.soft`'s 12% and matches the plate a `.solid`
-     badge draws.
-
-     `.switch` is deliberately absent: its track caps at 40% in its own utility,
-     and a 0-2-0 rule here would overrule that. See
-     model.md#the-bounds-that-survive-and-the-test-for-keeping-one. */
-  :is(.text-control, .ipt, .textarea, .select, .input-group).soft {
-    --_fill-cap: 12%;
-  }
-
-  :is(.text-control, .ipt, .textarea, .select, .input-group).solid {
-    --_fill-cap: 20%;
-  }
-
   /* A checked text-control fills with its own intent, so neutral has to drop its
      20% cap here. No toggle needs this arm any more (see below), but a text
      input is never `:checked` in practice either -- kept for whatever custom
-     `.text-control` composition does check itself. A plain rule at 0-2-0 in
-     `utilities`, above every intent class in `components`, so `.neutral` on the
-     element cannot put the cap back. */
+     `.text-control` composition does check itself; only an `<input>` can be,
+     so the `input` arm reaches an `@apply text-control` one too. A plain rule
+     at 0-2-0 in `utilities`, above every intent class in `components`, so
+     `.neutral` on the element cannot put the cap back. */
   :is(.text-control, input):checked {
     --intent-fill-max: 100%;
   }
@@ -226,54 +307,23 @@
     --intent-fill-max: 100%;
   }
 
-  /* The element's own `.edgeless` lowers the floor `text-control` raises -- a
-     class on the element is a consumer's request, a class on a container is a
-     cascade. `.checkbox` and `.radio` are absent: an unchecked one is a
-     transparent square/circle with nothing but its line, so the floor is
-     absolute and `.edgeless` on them is published unsupported. `.input-group`
-     is on it because the group is the field boundary. */
-  :is(.text-control, .ipt, .textarea, .select, .switch, .input-group).edgeless {
-    --_edge-floor: 0%;
-  }
-
-  /* `.switch`'s one exception to the opt-out above: `.ghost` already asks for
-     zero fill, so a `.switch.ghost.edgeless` track would have neither a line
-     nor a plate and disappear -- nothing would mark its bounds but the floating
-     knob. Every other fill on this component has something to paint
-     (`.soft`/`.solid`/default all rest above 0%), so only this pairing needs
-     the floor held up. `.switch.ghost.edgeless` therefore renders identically
-     to `.switch.ghost.edged`, and is published unsupported as a distinct look.
-     Higher specificity than the rule above (three classes, not an `:is()` of
-     one) wins regardless of source order. */
+  /* `.switch`'s one exception to the `.edgeless` opt-out in `text-control`:
+     `.ghost` already asks for zero fill, so a `.switch.ghost.edgeless` track
+     would have neither a line nor a plate and disappear -- nothing would mark
+     its bounds but the floating knob. Every other fill on this component has
+     something to paint (`.soft`/`.solid`/default all rest above 0%), so only
+     this pairing needs the floor held up. `.switch.ghost.edgeless` therefore
+     renders identically to `.switch.ghost.edged`, and is published unsupported
+     as a distinct look. Three classes against the opt-out's two, so it wins
+     regardless of source order. */
   .switch.ghost.edgeless {
     --_edge-floor: 100%;
   }
 
-  /* An invalid control is destructive whatever else it was asked to be. It sits
-     in `utilities`, above every intent class and both intent resets in
-     `components`, and `:is()` gives it 0-2-0 so it also outranks the control's
-     own utility; a consumer's utility setting an intent slot on an invalid
-     field loses to it too, because state wins over every choice
-     (model.md#precedence). `--intent-hover` is redirected with the others so
-     the line does not go grey under the pointer, and `--intent-strong` so typed
-     text is destructive too. `--intent-contrast` and `--intent-subtle` go with
-     them, so an invalid toggle is a destructive one in every part: left
-     neutral, a checked invalid checkbox in the dark theme drew the near-black
-     neutral mark on a red plate (3.28:1). The `:has()` arm bridges an
-     inner control's state to an `.input-group`. */
-  :is(
-    .text-control,
-    .ipt,
-    .textarea,
-    .select,
-    .checkbox,
-    .radio,
-    .switch,
-    .input-group,
-    input,
-    textarea,
-    select
-  )[aria-invalid="true"],
+  /* `text-control`'s invalid state, for a bare field no class reaches and for
+     the `.input-group` whose control is invalid. The values are the
+     utility's; see the state there. */
+  :is(input, textarea, select)[aria-invalid="true"],
   .input-group:has(> :is(.ipt, .textarea, .select, .text-control, input, textarea, select)[aria-invalid="true"]) {
     --intent-color: var(--color-destructive);
     --intent-contrast: var(--color-destructive-contrast);
