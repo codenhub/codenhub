@@ -31,3 +31,33 @@ test("draws a box with no intent in the aesthetic's ink", async ({ page }) => {
   expect(values.bare.line).toBe(values.neutral.line);
   expect(values.bare.shadow).toBe(values.neutral.shadow);
 });
+
+/* With no aesthetic a raised button's depth is the plain step's offset, and
+   the press read it from nowhere: `0 1px 3px` at rest and on hover, `0 0 3px`
+   held down. */
+test("keeps a raised button's vertical offset while it is pressed", async ({ page }) => {
+  await page.goto(BUTTONS_URL);
+
+  await page.evaluate(() => {
+    const target = document.createElement("button");
+
+    target.id = "press-probe";
+    target.className = "btn raised";
+    target.textContent = "Press";
+    target.style.transition = "none";
+    document.body.prepend(target);
+  });
+
+  const target = page.locator("#press-probe");
+  const readShadow = () => target.evaluate((element) => getComputedStyle(element).boxShadow);
+
+  await target.hover();
+  const hovered = await readShadow();
+
+  await page.mouse.down();
+  const pressed = await readShadow();
+  await page.mouse.up();
+
+  expect(hovered).not.toBe("none");
+  expect(pressed).toBe(hovered);
+});

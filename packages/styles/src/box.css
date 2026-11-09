@@ -340,7 +340,11 @@
 @utility box-active {
   &:active:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
     --_sx: calc(var(--ui-active-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_depth));
-    --_sy: calc(var(--ui-active-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, 0px))) * var(--_depth));
+    /* The same three slots as the resting offset, `.raised`'s plain step last,
+       so with no aesthetic a pressed button keeps the depth it rests on. */
+    --_sy: calc(
+      var(--ui-active-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, var(--elevation-y, 0px)))) * var(--_depth)
+    );
 
     --_press: calc(var(--ui-active-translate-x, 0px) * var(--_depth))
       calc(var(--ui-active-translate-y, 0px) * var(--_depth));
