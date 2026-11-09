@@ -338,7 +338,7 @@ One deliberate exception to I3: table rows inherit their table's intent rather t
 
 ### The root floor
 
-`box` reads `var(--intent-color)` and the other six slots with no fallback, so an element that resolves none of them composes from an undefined value -- and an undefined `var()` inside `color-mix()` invalidates the whole declaration, so the element paints nothing. Every registered component is in one of the two resets, so this only bites a component reached another way: `@apply code` on a consumer's own `.prose code`, a bare `<code>` with no native stylesheet loaded, anything the package's selector lists do not name.
+`box` reads `var(--intent-color)` and the other slots except `--intent-border` with no fallback, so an element that resolves none of them composes from an undefined value -- and an undefined `var()` inside `color-mix()` invalidates the whole declaration, so the element paints nothing. Every registered component is in one of the two resets, so this only bites a component reached another way: `@apply code` on a consumer's own `.prose code`, a bare `<code>` with no native stylesheet loaded, anything the package's selector lists do not name.
 
 The neutral values are declared at `:root` to close that. It is a floor, not a barrier, and the distinction is why it does not reopen I3:
 
@@ -347,7 +347,9 @@ The neutral values are declared at `:root` to close that. It is a floor, not a b
 
 So a registered component is unaffected: its own reset still fires, and `.success` on a container still cannot reach it. An unnamed `@apply` target composes neutral instead of nothing, or picks up an ancestor's _explicit_ intent if one is in scope.
 
-The cost is a fourth copy of the neutral mapping, after `.neutral` and the two resets. CSS has no "use the root value, ignore what's inherited" primitive, so the barriers cannot reference the floor -- they restate it. `registry.test.ts` holds all four copies to the same slots and fails the build on drift.
+The floor leaves one slot out: `--intent-border`. Neutral's line is `var(--ui-ink, var(--color-border))`, and an aesthetic sets `--ui-ink` on its own class, never on `:root`, so the floor would resolve it to the theme's grey before any aesthetic was in scope and hand that grey down. A bare `box` under `.neobrutalism` drew a grey line and a grey slab beside a `.neutral` sibling's black ink. Its readers -- `box`'s line, depth colour, and halo, `.quote`'s bar, and `.data-table`'s rules -- write the same chain as their `var()` fallback instead, so it resolves on the element, where the aesthetic is. The other slots read `--color-*` tokens, which a consumer may also set below `:root`; an unnamed `@apply` target composes those from the root values. Moving them off the floor too would need the same fallback at every reader, including the components that read a slot directly.
+
+The cost is a fourth copy of the neutral mapping, after `.neutral` and the two resets. CSS has no "use the root value, ignore what's inherited" primitive, so the barriers cannot reference the floor -- they restate it. `registry.test.ts` holds all four copies to the same slots, the floor to all but `--intent-border`, and fails the build on drift.
 
 ## Aesthetic
 
@@ -772,7 +774,7 @@ A solo class is not an aesthetic in the sense the rules above govern. It names n
 | Input                                         | Read from                  | Why                                                                                                                                                                                              |
 | --------------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `--ui-fill`, `--ui-border`, `--ui-fg-on-fill` | the element or a container | Presentation cascades; that is the model's ([Presentation](#presentation)).                                                                                                                      |
-| The intent slots                              | the element's intent class | Intent does not cascade ([Intent](#intent)). The slots inherit, and the `:root` floor always defines them, so a `var()` fallback cannot tell an own intent from an inherited one. The class can. |
+| The intent slots                              | the element's intent class | Intent does not cascade ([Intent](#intent)). The slots inherit, and the `:root` floor defines all but one, so a `var()` fallback cannot tell an own intent from an inherited one. The class can. |
 | `--ui-elevation`                              | the element                | Registered non-inheriting ([Elevation](#elevation)).                                                                                                                                             |
 | Material `--ui-*`, `--elevation-color`        | never                      | They belong to whichever aesthetic an ancestor carries; a solo element is its own aesthetic inside any of them.                                                                                  |
 

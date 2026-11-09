@@ -98,7 +98,11 @@
      `.edgeless` on the fill colour, which the border box paints as a second
      coat -- a ring around an element that asked for no edge. See
      docs/internal/model.md#presentation. */
-  --_line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--intent-border));
+  --_line: color-mix(
+    in oklab,
+    transparent var(--ui-fill, var(--_d-fill)),
+    var(--intent-border, var(--ui-ink, var(--color-border)))
+  );
   /* How much line there is, as an input rather than a result. A component that
      must keep its line whatever the edge class says raises `--_edge-floor`
      instead of rewriting `--_edge`, and the composition above still runs.
@@ -161,7 +165,11 @@
      mixes where the intent lives). An intent-coloured shadow at full opacity is
      a smear of the component's hue, not depth; neobrutalism's slab, which *is*
      ink, asks for it by name. */
-  --_depth-color: color-mix(in oklab, var(--intent-border) var(--ui-shadow-ink, 0%), var(--elevation-color));
+  --_depth-color: color-mix(
+    in oklab,
+    var(--intent-border, var(--ui-ink, var(--color-border))) var(--ui-shadow-ink, 0%),
+    var(--elevation-color)
+  );
   /* Or the shadow *is* the edge. An aesthetic that draws its line as an inset
      ring (`.pixel`) puts the border where `clip-path` cannot cut it, so that
      ring must answer the edge axis like a real border -- `--_edge` already does,
@@ -187,7 +195,7 @@
   --_halo-layer:
     ,
     0 0 var(--ui-halo-blur, 0px) var(--ui-halo-spread, 0px)
-      color-mix(in oklab, var(--intent-border) var(--ui-halo-ink), transparent);
+      color-mix(in oklab, var(--intent-border, var(--ui-ink, var(--color-border))) var(--ui-halo-ink), transparent);
   /* Indirection so a component can substitute a complete value of its own
      without restating the parts -- `surface` does, for the multi-layer case.
      There is deliberately no `--ui-shadow` wrapper: a complete value has nothing

@@ -163,7 +163,11 @@
      something every engine can carry. `--table-row-hover` below is written the
      same way, for the same reason. */
   --table-rule-plated: color-mix(in oklab, currentColor 20%, transparent);
-  --table-rule-tone: color-mix(in oklab, var(--table-rule-plated) var(--ui-fill, var(--_d-fill)), var(--intent-border));
+  --table-rule-tone: color-mix(
+    in oklab,
+    var(--table-rule-plated) var(--ui-fill, var(--_d-fill)),
+    var(--intent-border, var(--ui-rule-ink, var(--ui-ink, var(--color-border))))
+  );
   --table-rule: color-mix(in oklab, var(--table-rule-tone) var(--table-rule-amount), transparent);
   --table-boundary: color-mix(in oklab, var(--table-rule-tone) var(--table-boundary-amount), transparent);
   /* A hovered row is a step from the table it is in, not from a tone the page
@@ -517,7 +521,11 @@
      A quotation draws its own edge instead of taking `box`'s, so an edge change
      is made in `box`, `.quote`, and `.progress`. Recorded in `registry.json`
      beside the decision to compose none of `box`. */
-  --quote-line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--intent-border));
+  --quote-line: color-mix(
+    in oklab,
+    transparent var(--ui-fill, var(--_d-fill)),
+    var(--intent-border, var(--ui-ink, var(--color-border)))
+  );
   --quote-edge: color-mix(in oklab, var(--quote-line) var(--ui-border, var(--_d-border)), transparent);
   --quote-width: calc(var(--ui-border-width, var(--border-width)) * 2 + 1px);
 

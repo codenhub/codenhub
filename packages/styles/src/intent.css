@@ -21,14 +21,20 @@
    element itself, which is a matching rule and so beats this inherited value --
    that is what stops a `.success` container's intent reaching a component
    nested under it. An intent class on the element beats both. Values track
-   `.neutral` slot for slot; `registry.test.ts` fails the build on drift. */
+   `.neutral` slot for slot; `registry.test.ts` fails the build on drift.
+
+   Except `--intent-border`, which is left undeclared here. Neutral's line is
+   `--ui-ink`, which an aesthetic sets on its own class, never on `:root`, so
+   resolved here it was always the theme's grey: a bare `box` under
+   `.neobrutalism` drew a grey line and a grey slab beside a `.neutral`
+   sibling's black ink. Its readers -- `box`, `.quote`, `.data-table` -- fall
+   back to the same chain on the element instead. */
 :root {
   --intent-color: var(--color-text);
   --intent-contrast: var(--color-text-contrast);
   --intent-hover: var(--color-text-hover);
   --intent-strong: var(--color-text-strong);
   --intent-subtle: var(--color-surface);
-  --intent-border: var(--ui-ink, var(--color-border));
   --intent-fill-max: 20%;
 }
 

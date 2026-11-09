@@ -1144,7 +1144,14 @@ test("documents the neutral intent fill cap in every generated reference", async
    missing from one of them is an undefined `var()` inside whichever
    `color-mix()` reads it, and that declaration collapses to its initial value
    without reporting anything. The floor is in `intent.css` beside `.neutral`;
-   the resets are the two hand-maintained selector lists, one per file. */
+   the resets are the two hand-maintained selector lists, one per file.
+
+   The floor leaves out `--intent-border`, and must: neutral's line reads
+   `--ui-ink`, which no aesthetic sets on `:root`, so a floor value is always
+   the theme's grey and beats the aesthetic's ink. Its readers fall back on the
+   element instead. */
+const ROOT_FLOOR_OMITS = new Set(["--intent-border"]);
+
 test("both intent resets and the root floor declare every slot the neutral intent declares", async () => {
   const intent = await read("src/intent.css");
   const native = await read("src/native.css");
@@ -1173,9 +1180,16 @@ test("both intent resets and the root floor declare every slot the neutral inten
       problems.push(`could not extract ${label}`);
       continue;
     }
+    const isFloor = label === "the :root floor in intent.css";
+
     for (const slot of slots) {
-      if (!block.includes(`${slot}:`)) {
+      const omitted = isFloor && ROOT_FLOOR_OMITS.has(slot);
+
+      if (!omitted && !block.includes(`${slot}:`)) {
         problems.push(`${label} is missing ${slot}`);
+      }
+      if (omitted && block.includes(`${slot}:`)) {
+        problems.push(`${label} declares ${slot}, which resolves without the aesthetic in scope`);
       }
     }
   }
