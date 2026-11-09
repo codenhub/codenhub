@@ -2530,6 +2530,58 @@ test.describe("aesthetics", () => {
       expect(new Set(radii.around).size, "glass inside sketch keeps one corner").toBe(1);
     });
 
+    /* The nearest region decides, as for neobrutalism's alert: a sketch region
+       re-entered inside another aesthetic nested in a sketch one rotates again,
+       and the aesthetic between keeps its own corners -- cyber's whole surface
+       shape included. A descendant-selector exclusion cannot tell the two apart,
+       so the re-entered buttons once all took the first outline. */
+    test("rotates by the nearest region", async ({ page }) => {
+      await page.goto(BUTTONS_URL);
+
+      const read = await page.getByTestId("preview-root").evaluate((root) => {
+        const others = ["neobrutalism", "glass", "pixel", "chunky-tile", "cyber"];
+        const markup =
+          '<button class="btn">One</button><button class="btn">Two</button><button class="btn">Three</button>' +
+          '<div class="card">One</div><div class="card">Two</div><span class="badge">One</span><span class="badge">Two</span>' +
+          '<input type="checkbox" class="checkbox" /><hr class="divider" /><button class="btn pill">Pill</button>';
+        const paint = (regions: string[]) => {
+          const wrapper = document.createElement("div");
+
+          wrapper.innerHTML = `${regions.map((region) => `<div class="${region}">`).join("")}<div data-probe>${markup}</div>${"</div>".repeat(regions.length)}`;
+          root.append(wrapper);
+
+          const probe = wrapper.querySelector("[data-probe]")!;
+          const result = Array.from(probe.children, (element) => {
+            const styles = getComputedStyle(element);
+
+            return `${element.className}: ${styles.borderRadius} ${styles.borderTopStyle}`;
+          });
+
+          wrapper.remove();
+
+          return result;
+        };
+
+        return {
+          alone: paint(["sketch"]),
+          nested: Object.fromEntries(others.map((other) => [other, paint(["sketch", other])])),
+          reference: Object.fromEntries(others.map((other) => [other, paint([other])])),
+          reentered: Object.fromEntries(others.map((other) => [other, paint(["sketch", other, "sketch"])])),
+          rounded: paint(["sketch sketch-rounded"]),
+          reenteredRounded: paint(["sketch sketch-rounded", "glass", "sketch sketch-rounded"]),
+          plainInRounded: paint(["sketch sketch-rounded", "glass", "sketch"]),
+        };
+      });
+
+      expect(new Set(read.alone.slice(0, 3)).size, "sketch rotates its buttons").toBe(3);
+      for (const other of Object.keys(read.nested)) {
+        expect(read.nested[other], `${other} inside sketch`).toEqual(read.reference[other]);
+        expect(read.reentered[other], `sketch inside ${other} inside sketch`).toEqual(read.alone);
+      }
+      expect(read.reenteredRounded, "rounded sketch re-entered").toEqual(read.rounded);
+      expect(read.plainInRounded, "plain sketch inside glass inside rounded sketch").toEqual(read.alone);
+    });
+
     test("draws sharp uneven corners on surfaces, solid ink, and a small offset shadow", async ({ page }) => {
       await page.goto(withAesthetic(SURFACES_URL, "sketch"));
 
