@@ -56,7 +56,7 @@ node -e 'for (const l of require("./.github/labels.json")) require("node:child_p
 
 It never deletes a label: deleting one strips it from every issue that carries it, so a label that is no longer listed is removed by hand.
 
-The `type:` and `status:` labels are the same in every project started from this template, so a GitHub organization can set them as its default labels, and a new repository then starts with the labels the issue forms and Dependabot apply. Renaming a label on GitHub, rather than creating it again, keeps it on the issues that carry it.
+The `type:` and `status:` labels do not depend on the project, so a GitHub organization can set them as its default labels, and a new repository then starts with the labels the issue forms and Dependabot apply. Renaming a label on GitHub, rather than creating it again, keeps it on the issues that carry it.
 
 The `pkg:` and `app:` labels are derived from the workspace rather than listed, so the sync here is `pnpm hub labels`, which creates or updates the fixed groups in `.github/labels.json` and one label per package and app. Run it after adding a package or editing the list; [tooling](docs/tooling.md#issue-labels) describes the command.
 
@@ -159,7 +159,7 @@ The human directing the work stays the commit author. The trailer is an addition
 
 ## Validation
 
-Run scripts from the repository root. During development, narrow checks to what changed; [tooling](docs/tooling.md) lists the commands and how to narrow them. Before delivering a change, run the gate named below; by default, that is the whole gate:
+Run scripts from the repository root. During development, narrow checks to what changed; [tooling](docs/tooling.md) lists the commands and how to narrow them. Before delivering a change, run the gate this section names; unless it names a narrower one, that is the whole gate:
 
 ```sh
 pnpm verify
@@ -254,4 +254,4 @@ Three hooks run locally, all from `.githooks/`:
 | `commit-msg` | The subject line shape described above                       |
 | `pre-push`   | Refuses a direct push to `main`, and a misnamed branch       |
 
-`--no-verify` bypasses them. It is for the commit that genuinely has to land unfixed, and an agent that reaches for it MUST say so in the same breath rather than quietly routing around a failing check. [Workspace](docs/workspace.md#git-hooks) records why each hook does that much and no more.
+`--no-verify` bypasses them: on `git commit` for the first two, on `git push` for the last. It is for the commit that genuinely has to land unfixed, and an agent that reaches for it MUST say so in the same breath rather than quietly routing around a failing check. [Workspace](docs/workspace.md#git-hooks) records why each hook does that much and no more.

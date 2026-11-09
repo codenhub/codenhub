@@ -1,5 +1,5 @@
 // Prettier formats Markdown only; oxfmt owns every other format. JSON5, rather than JSON, so this file can
-// hold the comments below.
+// carry comments.
 {
   $schema: "https://json.schemastore.org/prettierrc",
   overrides: [

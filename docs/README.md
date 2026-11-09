@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-08
+last_updated: 2026-11-09
 scope: Index of repository-wide documentation.
 ---
 
@@ -20,11 +20,11 @@ Package-specific consumer and maintainer documentation lives with each workspace
 
 ## Guidelines
 
-| Document                                     | Contains                                                                                        |
-| -------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| [Code](guidelines/code.md)                   | Naming, design, TypeScript, async and errors, testing practices, and documentation in code.     |
-| [Documentation](guidelines/documentation.md) | Metadata, status and authority, recording decisions, exceptions, layout, and the writing voice. |
-| [Security](guidelines/security.md)           | Secrets, untrusted input, what stays out of logs, and reviewing a change.                       |
+| Document                                     | Contains                                                                                                 |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| [Code](guidelines/code.md)                   | Naming, design, TypeScript, async and errors, testing practices, and documentation in code.              |
+| [Documentation](guidelines/documentation.md) | Metadata, prompts, status and authority, recording decisions, exceptions, layout, and the writing voice. |
+| [Security](guidelines/security.md)           | Secrets, untrusted input, what stays out of logs, and reviewing a change.                                |
 
 | Document                                                 | Contains                                                                                   |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------ |

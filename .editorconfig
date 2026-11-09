@@ -14,6 +14,3 @@ trim_trailing_whitespace = false
 # Prose is not hard-wrapped; Prettier runs with proseWrap "never" and reads this
 # as an unlimited print width, which also keeps wide tables aligned.
 max_line_length = off
-
-# Sections for the project's other languages, such as `[*.rs]` with rustfmt's `indent_size = 4`.
-# A later section wins, so a section here can override the template's settings for its files.

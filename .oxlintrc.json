@@ -14,8 +14,6 @@
   },
   "plugins": ["typescript", "oxc", "jsdoc", "unicorn", "promise", "vitest"],
   "rules": {
-    // Rules the template does not set. A later duplicate key wins, so a rule the template sets
-    // changes in the template.
     "curly": ["error", "all"],
     "eqeqeq": ["error", "always"],
     "jsdoc/check-access": "error",

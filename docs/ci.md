@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-08
+last_updated: 2026-11-09
 scope: Continuous integration workflows, the pinned workspace toolchain, and the checks that report on pull requests.
 ---
 
@@ -170,7 +170,7 @@ The merge queue is what lets pull requests check only what they changed ([Trigge
 
 ## Other workflows
 
-The template's CI verifies; it does not deploy, release or publish. A project that does adds a workflow of its own and documents it here.
+The workflow above verifies; it does not deploy, release or publish. A project that does adds a workflow of its own and documents it here.
 
 ### Deployment checks
 

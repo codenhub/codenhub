@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-08
+last_updated: 2026-11-09
 scope: Durable repository-level documentation under root `docs/`.
 ---
 
@@ -42,6 +42,10 @@ A file that is itself a template for consumer-facing output, such as a README te
 Markdown in this repository is not hard-wrapped. Write each paragraph and list item as a single line and let the editor wrap it on screen. Markdown renders a lone newline inside a paragraph as a space, so wrapped and unwrapped source read identically once rendered, and leaving prose unwrapped keeps an edit to one word from reflowing a whole paragraph in the diff.
 
 `pnpm format:check` enforces this: it runs Prettier over every Markdown file with `proseWrap` set to `never`, and `pnpm verify` and the pre-commit hook run the same check. The rule is the formatter's to keep: do not hand-wrap prose to a column, and do not give Markdown a line length in editor configuration. `.editorconfig` sets `max_line_length = off` for Markdown, which says the same to editors and is how Prettier reads an unlimited width. Third-party Markdown listed in `.prettierignore` is kept as received. Agent skills are formatted like the rest, but with their fenced examples left as written: an agent reads a skill as raw text, where an example's line breaks are part of what it shows.
+
+## Prompts
+
+An HTML comment in a document, such as `<!-- The project's own root scripts, as a table with the same columns. -->`, is a prompt: it says what this project writes in that place. Write it there and delete the comment, or delete the comment when the project has nothing to add. A prompt left behind renders as nothing, so a reader of the page sees no difference, but a reader of the source cannot tell a section nobody filled in from one with nothing to say.
 
 ## Source of truth
 
