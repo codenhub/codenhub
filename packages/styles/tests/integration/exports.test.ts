@@ -725,6 +725,7 @@ test("compiled entrypoints declare every colour they read", async () => {
    entry carrying the theme to the tokens `docs/usage/theming.md` publishes. */
 const UNDECLARED_DOCUMENTED_TOKENS = new Set([
   // Computed on the focused element, never declared -- see `theme.css`.
+  "--focus-ring",
   "--focus-ring-offset",
   // A Tailwind breakpoint: it exists only in a `/tw` consumer's build.
   "--breakpoint-xs",

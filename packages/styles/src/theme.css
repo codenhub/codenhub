@@ -193,7 +193,12 @@
     --elevation-md: 0 4px 6px -1px var(--elevation-color), 0 2px 4px -2px var(--elevation-color);
     --elevation-lg: 0 20px 25px -5px var(--elevation-color), 0 8px 10px -6px var(--elevation-color);
 
-    --focus-ring: color-mix(in srgb, var(--color-primary) 64%, transparent);
+    /* `--focus-ring` is not declared: its default is the brand colour
+       at 64%, and declared here it resolved against `:root`'s
+       `--color-primary` and inherited, so a region that set its own brand
+       colour filled a primary button in it and ringed it in the page's. Every
+       reader falls back to the mix on the focused element instead, and a
+       consumer's `--focus-ring` on any ancestor still inherits. */
     /* `--focus-ring-offset` is not declared: its default is the negative of the
        line width of whatever is focused, which only the focused element knows,
        so the outline computes it there -- see `reset.css`. Declared here it

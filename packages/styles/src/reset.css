@@ -87,7 +87,7 @@
      A component drawing no line at rest loses nothing: the outline moves inward
      over its own fill by a hairline, which is not a visible change. */
   :focus-visible {
-    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline: var(--focus-ring-width) solid var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
     outline-offset: var(--focus-ring-offset, calc(-1 * var(--ui-border-width, var(--border-width))));
   }
 

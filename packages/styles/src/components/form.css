@@ -454,7 +454,7 @@
   &:focus-within {
     --_line-tone: var(--intent-color);
 
-    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline: var(--focus-ring-width) solid var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
     outline-offset: var(--focus-ring-offset, calc(-1 * var(--ui-border-width, var(--border-width))));
     box-shadow: var(--_focus-stack, var(--_shadow));
   }
@@ -548,7 +548,9 @@
      rather than as an `outline`, so a clipping aesthetic clips it with
      everything else and its own inset focus layer still paints over the top. */
   &:focus-visible {
-    --_shadow: var(--_shadow-parts) var(--_halo-layer,), 0 0 0 var(--focus-ring-width) var(--focus-ring);
+    --_shadow:
+      var(--_shadow-parts) var(--_halo-layer,),
+      0 0 0 var(--focus-ring-width) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
   }
 
   &::after {
@@ -619,7 +621,9 @@
 
   /* The ring, for the reason given on `checkbox`. */
   &:focus-visible {
-    --_shadow: var(--_shadow-parts) var(--_halo-layer,), 0 0 0 var(--focus-ring-width) var(--focus-ring);
+    --_shadow:
+      var(--_shadow-parts) var(--_halo-layer,),
+      0 0 0 var(--focus-ring-width) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
   }
 
   &::after {
@@ -715,7 +719,9 @@
 
   /* The ring, for the reason given on `checkbox`. */
   &:focus-visible {
-    --_shadow: var(--_shadow-parts) var(--_halo-layer,), 0 0 0 var(--focus-ring-width) var(--focus-ring);
+    --_shadow:
+      var(--_shadow-parts) var(--_halo-layer,),
+      0 0 0 var(--focus-ring-width) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
   }
 
   &::after {

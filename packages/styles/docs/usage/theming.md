@@ -233,7 +233,7 @@ The four `--elevation-*` shadows are for elements you style yourself. They are s
 | `--elevation-sm`           | `0 1px 2px`, `0 1px 3px`                               | A light shadow for your own surfaces, such as a card.                                                           |
 | `--elevation-md`           | `0 4px 6px -1px`, `0 2px 4px -2px`                     | A shadow for your own raised elements, such as a dropdown menu.                                                 |
 | `--elevation-lg`           | `0 20px 25px -5px`, `0 8px 10px -6px`                  | A shadow for your own overlays, such as a modal dialog.                                                         |
-| `--focus-ring`             | `--color-primary` at 64% opacity                       | Color of the keyboard focus ring.                                                                               |
+| `--focus-ring`             | Not set                                                | Color of the keyboard focus ring. When unset, `--color-primary` at 64% opacity, on the focused element.         |
 | `--focus-ring-offset`      | Not set                                                | Distance of the ring from the element. When unset, the ring sits on the element's border under every aesthetic. |
 | `--focus-ring-width`       | `3px`                                                  | Width of the keyboard focus ring.                                                                               |
 | `--motion-duration-fast`   | `120ms`                                                | A table row's hover.                                                                                            |

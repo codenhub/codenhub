@@ -12,7 +12,6 @@ test.describe("theme", () => {
       return {
         containerMax: styles.getPropertyValue("--container-max").trim(),
         controlHeight: styles.getPropertyValue("--control-height").trim(),
-        focusRing: styles.getPropertyValue("--focus-ring").trim(),
         motionDurationFast: styles.getPropertyValue("--motion-duration-fast").trim(),
         motionDurationNormal: styles.getPropertyValue("--motion-duration-normal").trim(),
         radiusControl: styles.getPropertyValue("--radius-control").trim(),
@@ -26,7 +25,6 @@ test.describe("theme", () => {
 
     expect(tokenValues.containerMax).not.toBe("");
     expect(tokenValues.controlHeight).not.toBe("");
-    expect(tokenValues.focusRing).not.toBe("");
     expect(tokenValues.motionDurationFast).not.toBe("");
     expect(tokenValues.motionDurationNormal).not.toBe("");
     expect(tokenValues.radiusControl).not.toBe("");
@@ -210,5 +208,58 @@ test.describe("theme", () => {
     }
 
     expect(resolved.dark.paragraph, "the region's text is not the page's").not.toBe(resolved.page);
+  });
+
+  /* `--focus-ring` was resolved once at `:root`, so a container that set its
+     own `--color-primary` filled a primary button with that colour and still
+     ringed it in the page's. */
+  test("draws the focus ring from the brand colour in scope, or a container's ring", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const readFocused = async (hostStyle: string) => {
+      const expected = await page.evaluate((style) => {
+        const host = document.createElement("div");
+        const previous = document.createElement("button");
+        const target = document.createElement("button");
+        const probe = document.createElement("span");
+
+        host.id = "focus-ring-host";
+        host.setAttribute("style", style);
+        previous.id = "focus-ring-previous";
+        target.id = "focus-ring-target";
+        target.className = "btn primary";
+        target.textContent = "Probe";
+        probe.style.color = "var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent))";
+        host.append(previous, target, probe);
+        document.body.prepend(host);
+        previous.focus();
+
+        return getComputedStyle(probe).color;
+      }, hostStyle);
+
+      await page.keyboard.press("Tab");
+
+      const focused = await page.evaluate(() => {
+        const target = document.querySelector("#focus-ring-target")!;
+        const values = {
+          focusVisible: target.matches(":focus-visible"),
+          outline: getComputedStyle(target).outlineColor,
+        };
+
+        document.querySelector("#focus-ring-host")!.remove();
+
+        return values;
+      });
+
+      return { expected, ...focused };
+    };
+
+    const brand = await readFocused("--color-primary: rgb(255, 0, 0)");
+    const ring = await readFocused("--focus-ring: rgb(0, 0, 255)");
+
+    expect(brand.focusVisible).toBe(true);
+    expect(brand.outline, "a scoped brand colour reaches the ring").toBe(brand.expected);
+    expect(brand.outline).toBe("color(srgb 1 0 0 / 0.64)");
+    expect(ring.outline, "a container's own ring still inherits").toBe("rgb(0, 0, 255)");
   });
 });

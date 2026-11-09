@@ -202,7 +202,8 @@
      differs from the fill, whatever the fill is. Shadows paint first-on-top,
      so the line is listed last and is the two pixels the ring leaves showing. */
   --_focus-stack:
-    var(--_shadow), inset 0 0 0 var(--ui-focus-inset) var(--focus-ring),
+    var(--_shadow),
+    inset 0 0 0 var(--ui-focus-inset) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent)),
     inset 0 0 0 calc(var(--ui-focus-inset) + 2px) var(--color-background);
 
   /* Every box sizes itself as `min-height`/`min-width: var(--control-height)`

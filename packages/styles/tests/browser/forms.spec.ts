@@ -395,7 +395,7 @@ test.describe("forms", () => {
     const expected = await page.evaluate(() => {
       const probe = document.createElement("div");
 
-      probe.style.color = "var(--focus-ring)";
+      probe.style.color = "var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent))";
       document.body.append(probe);
 
       const value = getComputedStyle(probe).color;
