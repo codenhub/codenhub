@@ -190,9 +190,6 @@
   box-shadow:
     var(--_solo-depth) var(--_solo-depth) 0 0 var(--_solo-ink),
     inset 0 0 0 100vmax var(--_solo-fill);
-  transition:
-    box-shadow var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1)),
-    transform var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1));
 }
 
 /* An intent class on the element colours it, as on a component. Named rather
@@ -226,7 +223,33 @@
 
 /* The press, only on something pressed: an action, not disabled. A solo
    container -- a toast clicked to dismiss -- stays put, the way only `.btn` and
-   an opted-in card press under the aesthetic class. */
+   an opted-in card press under the aesthetic class.
+
+   Only an action takes the press's transition. `transition` is one list, so
+   writing it on every solo element replaced a container's own -- a toast's
+   fade and height stopped animating. The travel is the independent
+   `translate`, so the element's own `transform` stays its own. */
+.neobrutalism-solo:is(
+  button,
+  a[href],
+  [role="button"],
+  summary,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"]
+) {
+  transition:
+    box-shadow var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1)),
+    translate var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1));
+
+  /* Reduced motion keeps the press and drops its motion: the element lands in
+     its slab at once. The near-zero duration `box` uses, so a `transitionend`
+     still fires. */
+  @media (prefers-reduced-motion: reduce) {
+    transition-duration: 0.01ms;
+  }
+}
+
 .neobrutalism-solo:is(
     button,
     a[href],
@@ -239,19 +262,5 @@
   box-shadow:
     0 0 0 0 var(--_solo-ink),
     inset 0 0 0 100vmax var(--_solo-fill);
-  transform: translate(var(--_solo-depth), var(--_solo-depth));
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .neobrutalism-solo:is(
-      button,
-      a[href],
-      [role="button"],
-      summary,
-      input[type="button"],
-      input[type="submit"],
-      input[type="reset"]
-    ):active:not(:disabled, [aria-disabled="true"]) {
-    transform: none;
-  }
+  translate: var(--_solo-depth) var(--_solo-depth);
 }

@@ -233,7 +233,9 @@ test.describe("solo utilities", () => {
   });
 
   /* An action presses; a container clicked to dismiss does not, and neither
-     does a disabled action. A held pointer is what drives `:active`. */
+     does a disabled action. A held pointer is what drives `:active`. The press
+     is the independent `translate`, so an element's own `transform` is left
+     alone. */
   test("press an action, and neither a container nor a disabled action", async ({ page }) => {
     await load(
       page,
@@ -252,8 +254,8 @@ test.describe("solo utilities", () => {
       try {
         // Transitions run, so this polls for the settled value.
         return await expect
-          .poll(() => target.evaluate((node) => getComputedStyle(node).transform), { timeout: 2000 })
-          .toBe("matrix(1, 0, 0, 1, 4, 4)")
+          .poll(() => target.evaluate((node) => getComputedStyle(node).translate), { timeout: 2000 })
+          .toBe("4px 4px")
           .then(
             () => true,
             () => false,
@@ -268,27 +270,75 @@ test.describe("solo utilities", () => {
     expect(await pressed("#disabled"), "disabled action").toBe(false);
   });
 
-  test("drop the press transform under reduced motion", async ({ page }) => {
+  /* A toast library animates its own element -- a fade, a slide, a height --
+     and a solo class on it wrote `transition` whole, which replaced that list
+     with the press's, so the toast stopped animating. Only an action, which
+     presses, takes the press's transition, and the press moves `translate`
+     and `scale`, so an element's own `transform` stays its own. */
+  test("leave a container's own transition and transform alone", async ({ page }) => {
+    const solos = ["glass", "neobrutalism", "pixel", "chunky-tile", "cyber", "sketch"];
+
+    await load(
+      page,
+      ["aesthetics/index.css"],
+      solos.map((name) => `<div data-toast class="${name}-solo" id="${name}">toast</div>`).join(""),
+      ":where([data-toast]) { transition: opacity 0.4s, transform 0.4s, height 0.4s; transform: translateY(2px); }",
+    );
+
+    for (const name of solos) {
+      // oxlint-disable-next-line no-await-in-loop -- one read per solo class.
+      const styles = await read(page, `#${name}`, ["transition-property", "transition-duration", "transform"]);
+
+      expect(styles["transition-property"], `${name}-solo keeps the toast's transitions`).toBe(
+        "opacity, transform, height",
+      );
+      expect(styles["transition-duration"], `${name}-solo keeps their durations`).toBe("0.4s, 0.4s, 0.4s");
+      expect(styles.transform, `${name}-solo keeps the toast's transform`).toBe("matrix(1, 0, 0, 1, 0, 2)");
+    }
+  });
+
+  /* Reduced motion removes the travel's motion, not the press: the slab still
+     collapses and the element still lands where it was, at once. */
+  test("press at once under reduced motion", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await load(
       page,
       ["aesthetics/index.css"],
-      `<button id="neo" class="neobrutalism-solo" style="margin: 40px">Go</button>`,
+      `<button id="neobrutalism" class="neobrutalism-solo" style="margin: 40px">Go</button>
+       <button id="chunky-tile" class="chunky-tile-solo" style="margin: 40px">Go</button>`,
     );
 
-    const target = page.locator("#neo");
+    for (const [name, travel] of [
+      ["neobrutalism", "4px 4px"],
+      ["chunky-tile", "0px 4px"],
+    ] as const) {
+      const target = page.locator(`#${name}`);
 
-    await target.hover();
-    await page.mouse.down();
+      // oxlint-disable-next-line no-await-in-loop -- one press at a time.
+      await target.hover();
+      // oxlint-disable-next-line no-await-in-loop -- one press at a time.
+      await page.mouse.down();
 
-    try {
-      /* The slab still collapses; only the movement goes. */
-      await expect
-        .poll(() => target.evaluate((node) => getComputedStyle(node).boxShadow))
-        .toMatch(/\b0px 0px 0px 0px\b/);
-      expect(await target.evaluate((node) => getComputedStyle(node).transform)).toBe("none");
-    } finally {
-      await page.mouse.up();
+      try {
+        // oxlint-disable-next-line no-await-in-loop -- one press at a time.
+        const pressed = await target.evaluate(async (node) => {
+          await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+          const styles = getComputedStyle(node);
+
+          return { durations: styles.transitionDuration, translate: styles.translate, shadow: styles.boxShadow };
+        });
+
+        /* Read once, two frames in, without polling: a press still animating
+           over the normal duration would read part of the way there. */
+        expect(pressed.translate, `${name} travels`).toBe(travel);
+        expect(pressed.shadow, `${name} slab collapses`).toMatch(/\b0px 0px 0px 0px\b/);
+        for (const duration of pressed.durations.split(",")) {
+          expect(Number.parseFloat(duration), `${name} transition ${pressed.durations}`).toBeLessThan(0.001);
+        }
+      } finally {
+        // oxlint-disable-next-line no-await-in-loop -- one press at a time.
+        await page.mouse.up();
+      }
     }
   });
 
