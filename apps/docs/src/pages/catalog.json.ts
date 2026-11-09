@@ -12,6 +12,7 @@ const versionSource = (publicPackage: PublicPackage): CatalogVersionSource[] =>
         {
           archived: publicPackage.archivedVersion !== undefined,
           documents: publicPackage.documents,
+          llmsFiles: publicPackage.llmsFiles,
           localeDocuments: publicPackage.localeDocuments,
           version: publicPackage.version,
         },

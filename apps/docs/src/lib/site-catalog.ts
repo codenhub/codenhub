@@ -6,12 +6,17 @@ import type { PublicDocument } from "./catalog";
 import { documentMarkdownRoute } from "./document-markdown";
 import { sectionOf, type DocumentSection } from "./document-section";
 
+/** An LLM file a package version publishes at its route. */
+export type LlmsFile = "llms-full.txt" | "llms.txt";
+
 /** One version of a package as the catalog reads it. */
 export interface CatalogVersionSource {
   /** Whether this is an archived version, served under `/<slug>/<version>/`. */
   archived?: boolean;
   /** The English pages, in the order the site sorts them. */
   documents: readonly Pick<PublicDocument, "description" | "relativePath" | "routePath" | "title">[];
+  /** The LLM files the version publishes; a release from before a package shipped them has neither. */
+  llmsFiles: readonly LlmsFile[];
   /** Each locale's pages; one whose `lang` is the locale is a translation. */
   localeDocuments: Record<TranslationLocale, readonly Pick<PublicDocument, "lang" | "relativePath">[]>;
   version: string;
@@ -47,8 +52,10 @@ export interface CatalogPage {
 
 /** One version the site serves. */
 export interface CatalogVersion {
-  llms: string;
-  llmsFull: string;
+  /** URL of the version's `llms.txt`, when it publishes one. */
+  llms?: string;
+  /** URL of the version's `llms-full.txt`, when it publishes one. */
+  llmsFull?: string;
   pages: CatalogPage[];
   /** URL of the version's English documentation index. */
   url: string;
@@ -86,9 +93,10 @@ function catalogVersion(siteUrl: string, slug: string, source: CatalogVersionSou
         (document) => document.relativePath === relativePath && document.lang === locale,
       ),
     );
+  const llmsUrl = (file: LlmsFile): string | undefined => (source.llmsFiles.includes(file) ? url(file) : undefined);
   return {
-    llms: url("llms.txt"),
-    llmsFull: url("llms-full.txt"),
+    llms: llmsUrl("llms.txt"),
+    llmsFull: llmsUrl("llms-full.txt"),
     pages: source.documents.map((document) => {
       const route = `/${routeSlug}/${document.routePath}`.replace(/\/$/, "") + "/";
       return {

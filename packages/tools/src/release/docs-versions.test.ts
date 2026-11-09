@@ -35,6 +35,10 @@ describe("selectDocsVersions", () => {
   it("has no current version without a stable release", () => {
     expect(selectDocsVersions(["0.1.0-beta.1"])).toEqual({ archived: [] });
   });
+
+  it("ignores a tag version that is not valid SemVer", () => {
+    expect(selectDocsVersions(["01.2.3", "1.0.0", "2.0.0"])).toEqual({ archived: ["1.0.0"], current: "2.0.0" });
+  });
 });
 
 describe("findUnmatchedDocsVersions", () => {

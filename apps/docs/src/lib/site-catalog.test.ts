@@ -25,6 +25,7 @@ const kit: CatalogPackageSource = {
         page("reference/index.md", "reference", "Reference"),
         page("changelog/0.5.0.md", "changelog/0.5.0", "0.5.0", "Adds strict mode."),
       ],
+      llmsFiles: ["llms.txt", "llms-full.txt"],
       localeDocuments: {
         es: [
           { lang: "en", relativePath: "index.md" },
@@ -42,6 +43,7 @@ const kit: CatalogPackageSource = {
     {
       archived: true,
       documents: [page("index.md", "", "Overview")],
+      llmsFiles: ["llms.txt", "llms-full.txt"],
       localeDocuments: { es: [{ lang: "en", relativePath: "index.md" }], "pt-BR": [] },
       version: "0.4.1",
     },
@@ -117,14 +119,23 @@ describe("buildSiteCatalog", () => {
     ]);
   });
 
-  it("serializes without optional fields a package does not set", () => {
+  it("serializes without optional fields a package does not set, or LLM files a version does not publish", () => {
     const catalog = buildSiteCatalog(siteUrl, [
       {
         label: "Store",
         redirects: [],
         slug: "store",
         status: "experimental",
-        versions: [{ documents: [], localeDocuments: { es: [], "pt-BR": [] }, version: "0.1.0" }],
+        versions: [
+          { documents: [], llmsFiles: ["llms.txt"], localeDocuments: { es: [], "pt-BR": [] }, version: "0.1.0" },
+          {
+            archived: true,
+            documents: [],
+            llmsFiles: [],
+            localeDocuments: { es: [], "pt-BR": [] },
+            version: "0.0.1",
+          },
+        ],
       },
     ]);
 
@@ -137,11 +148,11 @@ describe("buildSiteCatalog", () => {
       versions: [
         {
           llms: "https://docs.example.dev/store/llms.txt",
-          llmsFull: "https://docs.example.dev/store/llms-full.txt",
           pages: [],
           url: "https://docs.example.dev/store/",
           version: "0.1.0",
         },
+        { pages: [], url: "https://docs.example.dev/store/0.0.1/", version: "0.0.1" },
       ],
     });
   });
