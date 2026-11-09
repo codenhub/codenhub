@@ -13,7 +13,7 @@ nvm use
 pnpm install
 ```
 
-`pnpm install` also points git at `.githooks/` through `core.hooksPath`, so the hooks described below start working after the first install and not before. If lifecycle scripts were disabled during the install, run `node .githooks/install.mjs`. [CI](docs/ci.md) covers why the versions are pinned where they are.
+`pnpm install` also points git at `.githooks/` through `core.hooksPath`, so the hooks described below start working after the first install and not before. If lifecycle scripts were disabled during the install, run `git config core.hooksPath .githooks`. [CI](docs/ci.md) covers why the versions are pinned where they are.
 
 Browser suites need Playwright's browsers, which `pnpm hub browsers` installs and `pnpm test:browser` installs on its own before it runs; [tooling](docs/tooling.md#browser-tests) has the details. A package or app starts for development through its own script, as in `pnpm hub docs dev`.
 
