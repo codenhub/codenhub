@@ -72,6 +72,8 @@ The shadow is cast in the component's own intent, so a success button throws a g
 - Only `.btn` and an opted-in `.card` respond to hover and press. A card opts in with `.interactive`, or with one of its halves — `.hoverable` for the hover response alone, `.pressable` for the press alone; a plain card, an alert, or a panel is a container and stays put.
 - An alert sits on the offset shadow under this aesthetic, and under no other. An alert is otherwise flat, but here the shadow is a second outline rather than depth, and an alert without it looks unfinished next to everything else. This includes an alert inside a nested `.neobrutalism` region. `.flat` still removes it and `.floating` still doubles it.
 - The tooltip trigger takes the zero corner like everything else and draws square; `.radio` keeps its circle.
+- Under `prefers-reduced-motion: reduce` the press still happens, but at once: the element lands in its shadow without travelling there. The press is the feedback that a click registered, so only its motion goes.
+- It has no font of its own and sets the theme's, `--font-default`, on the region, so a neobrutalist region nested inside pixel, cyber, sketch, or chunky tile does not take their face.
 
 ## Glass
 
@@ -90,8 +92,9 @@ The shadow is cast in the component's own intent, so a success button throws a g
 - Every surface in a glass region is glass, a neutral `.card.soft`, `.panel`, and `.alert` included.
 - The glass is the ground, not the fill. A presentation keeps its whole fill, so a `.solid` button, a checked toggle, and a `.solid` card or table are opaque; the default, `.soft`, and `.ghost` panes are the frosted ones.
 - The blur applies to `.card`, `.panel`, `.alert`, the tooltip bubble, and a default or `.soft` `.data-table` only. Controls stay solid and sit on the glass: a blur under every control of a dense cluster costs a composited layer apiece and reads as noise. Controls still take the aesthetic's radius, border, and shadow.
-- Under `prefers-reduced-transparency: reduce`, glass surfaces drop the blur and become opaque.
+- Under `prefers-reduced-transparency: reduce`, and in forced colors, glass surfaces drop the blur and become opaque. Forced colors replace the colors but keep their transparency, so without this a pane would show the page through the system's background.
 - Buttons and an opted-in `.card` press with the plain `scale(0.97)`; reduced motion turns it off.
+- It has no font of its own and sets the theme's, `--font-default`, on the region, as neobrutalism does.
 - Text controls and toggles draw their line in the page's ink at 55% rather than the white hairline, which would erase an unchecked checkbox on a light page. It is `--ui-control-ink`; set it on the region to choose another.
 - A table's frame and rules draw the page's ink at 20%, because the hairline vanishes on the table's plate. It is `--ui-rule-ink`.
 - A table with a `<caption>` blurs behind the caption as well as its rows in Chromium and Safari, whose table box includes the caption, and under `.glass-liquid` the rim and sheen frame the caption too. Firefox keeps the caption off the pane. Label the table from a heading outside it with `aria-labelledby` where that matters.
@@ -114,9 +117,9 @@ The lens is drawn by an SVG filter in `backdrop-filter`, which Chromium renders 
 - It draws its blur and lens on each surface's `::before` and `::after`, so a surface inside a liquid region cannot carry a `::before` or `::after` of your own. Each surface also becomes a positioned stacking context; a surface you position yourself keeps your placement.
 - Anything else that frosts under glass keeps liquid's light blur and its clearer ground, without the lens or the rim: a bare `<table>` under `/native`, or a component of your own built with `@apply surface`.
 - The lens is 8px of erosion blurred over 10px on every surface, and 3px blurred over 3.5px on a button; its strength is fixed. A filter cannot read a custom property, so neither is a knob. The corners are, through `--glass-radius` and `--glass-radius-surface`, with larger defaults: a continuous corner reads smaller than a round one of the same radius.
-- A region of another aesthetic nested inside a liquid region, or of plain `.glass`, keeps its own material and takes no layers.
+- The nearest region decides. A region of another aesthetic nested inside a liquid region, or of plain `.glass`, keeps its own material and takes no layers, and a liquid region nested again inside that takes them back.
 - Without `.glass` in scope it changes the corners and nothing else.
-- Under `prefers-reduced-transparency: reduce` the blur and the lens go and the surface is opaque, as under glass. In forced colors the layers draw nothing.
+- Under `prefers-reduced-transparency: reduce`, and in forced colors, the blur and the lens go and the surface is opaque, as under glass.
 - Text sits over a clearer pane than under glass. Over busy content, check that your text still reads: the ground is 30% of the page color, where glass's is 45%.
 
 #### Liquid buttons
@@ -176,7 +179,7 @@ The bar is a darker shade of the element's own color rather than a shadow under 
 
 **Exceptions:**
 
-- Only what the registry rests above zero sits on a bar — buttons and cards. A badge, chip, field, or tooltip is flat until it asks for depth with `.raised`, and `.flat` takes the bar off anything:
+- Only buttons and cards sit on a bar, because they are the components resting above zero elevation. A badge, chip, field, or tooltip is flat until it asks for depth with `.raised`, and `.flat` takes the bar off anything:
 
   ```html
   <div class="card soft edgeless info flat">Promo panel, deliberately flat</div>
@@ -186,7 +189,8 @@ The bar is a darker shade of the element's own color rather than a shadow under 
 - Labels are drawn heavier and slightly tracked, through `--ui-label-weight` and `--ui-label-tracking`, so your own `font-*` or `tracking-*` utility still wins. It reaches `.btn` and `.badge`, and a bare `<button>` only where `/native` styles it. Casing is left alone: how a label is worded is the application's decision, so if you want uppercase buttons, write that rule in your own stylesheet.
 - `.card.interactive` presses like a `.btn`, so a chunky answer tile drops onto its bar on click; `.card.pressable` gets the same press on its own. A plain `.card` stays put.
 - The shipped `.primary` is near-black on a light page and near-white on a dark one, and the bar is always mixed toward black. On a light page, a primary button's bar is almost invisible against its near-black face (measured `1.04:1`). On a dark page, the near-white face against the same bar reads well (`2.48:1`). Give `.primary` a hue of its own if it is the call to action and needs the depth cue in both themes.
-- Depth in this aesthetic is the bar, never a blurred drop shadow. Anything the registry rests flat sits flush on the page.
+- Under `prefers-reduced-motion: reduce` the press still happens, but at once, as under neobrutalism.
+- Depth in this aesthetic is the bar, never a blurred drop shadow. Anything that rests flat sits flush on the page.
 - Controls draw a heavier gray than the tiles around them, `neutral-600` in light and `neutral-400` in dark, through `--ui-control-ink`, so a field reads as a field inside a tile.
 
 ## Cyber
@@ -259,7 +263,7 @@ The dashed button is `ghost edged` because a filled button has no separate line 
 
 **Exceptions:**
 
-- Sketch names components to rotate their outlines, so its outlines reach only this package's components; a region of another aesthetic nested inside a sketch region keeps that aesthetic's corners.
+- Sketch names components to rotate their outlines, so its outlines reach only this package's components; a region of another aesthetic nested inside a sketch region keeps that aesthetic's corners. The nearest region decides, so a sketch region nested again inside that one rotates.
 - Chips, such as checkboxes, key caps, code, badges, switches, and progress bars, rotate through small uneven outlines set in `--ui-radius-tight`. Set that token on a chip to choose its shape.
 - A `.btn.pill` takes a rounded pill bounded to its own height, so a wide one does not become an oval. Badges, progress bars, and switches take their chip outline. Radios and the tooltip icon stay circles, slightly uneven, so a radio is never mistaken for a checkbox. An explicit `--ui-radius-pill` on an element still wins.
 - `--font-sketch` is yours to supply. The package ships no handwriting font and falls back to the platform `cursive` family.

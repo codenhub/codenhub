@@ -199,7 +199,6 @@
     0 0 var(--cyber-glow, 8px) 1px color-mix(in oklab, var(--_solo-ink) 60%, transparent),
     inset 0 0 0 100vmax var(--_solo-fill);
   font-family: var(--font-cyber, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
-  transition: transform var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1));
 }
 
 /* An intent class on the element colours it, as on a component. Named rather
@@ -231,7 +230,12 @@
   color: var(--_solo-fg);
 }
 
-/* An action takes the control shape, on the opposite diagonal to a pane's. */
+/* An action takes the control shape, on the opposite diagonal to a pane's.
+
+   And the press's transition, on an action only: `transition` is one list, so
+   writing it on every solo element replaced a container's own -- a toast's
+   fade and height stopped animating. The press is the independent `scale`, so
+   the element's own `transform` stays its own. */
 .cyber-solo:is(
   button,
   a[href],
@@ -242,6 +246,7 @@
   input[type="reset"]
 ) {
   border-radius: var(--cyber-shape, min(var(--cyber-cut, 0.625rem), 25%) 0 / min(var(--cyber-cut, 0.625rem), 25%) 0);
+  transition: scale var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1));
 }
 
 @supports not (corner-shape: bevel) {
@@ -271,7 +276,7 @@
     input[type="submit"],
     input[type="reset"]
   ):active:not(:disabled, [aria-disabled="true"]) {
-  transform: scale(0.97);
+  scale: 0.97;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -284,6 +289,6 @@
       input[type="submit"],
       input[type="reset"]
     ):active:not(:disabled, [aria-disabled="true"]) {
-    transform: none;
+    scale: none;
   }
 }
