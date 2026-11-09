@@ -15,11 +15,7 @@ pnpm install
 
 `pnpm install` also points git at `.githooks/` through `core.hooksPath`, so the hooks described below start working after the first install and not before. If lifecycle scripts were disabled during the install, run `node .githooks/install.mjs`. [CI](docs/ci.md) covers why the versions are pinned where they are.
 
-<!-- project:start -->
-
 Browser suites need Playwright's browsers, which `pnpm hub browsers` installs and `pnpm test:browser` installs on its own before it runs; [tooling](docs/tooling.md#browser-tests) has the details. A package or app starts for development through its own script, as in `pnpm hub docs dev`.
-
-<!-- project:end -->
 
 ## Changes
 
@@ -28,12 +24,8 @@ Browser suites need Playwright's browsers, which `pnpm hub browsers` installs an
 - Update affected documentation in the same change as behavior, public API, exports, conventions, or decisions. Each contract has one owning document; references point to that owner rather than repeat its requirements.
 - Do not commit secrets, `.env` files, build artifacts, or unrelated changes.
 
-<!-- project:start -->
-
 - A breaking change to a published package takes the version that [`docs/specs/packages-lifecycle.md`](docs/specs/packages-lifecycle.md) governs, and its commit says what breaks in the body.
 - A change to a package README or anything under a package's `docs/` regenerates the derived files in the same change, as [Validation](#validation) describes.
-
-<!-- project:end -->
 
 ## Issues
 
@@ -50,17 +42,13 @@ Each issue carries one label from each group that applies:
 
 `status:upstream` means the issue waits on a change in a dependency you maintain, as [below](#a-defect-found-mid-task) describes.
 
-<!-- project:start -->
-
 | Group       | Labels             | Says                                             |
 | ----------- | ------------------ | ------------------------------------------------ |
 | `found-in:` | `repo`, `external` | Whether it surfaced in this repository or an app |
 
 A defect found in this repository carries `found-in:repo`, as in `--label "type:bug,pkg:error,found-in:repo"`, and the workaround names it as `codenhub/codenhub#123`, which reads the same in an app outside this repository.
 
-<!-- project:end -->
-
-`.github/labels.json` holds the list. Unless the project derives its `pkg:` and `app:` labels, as the block below then says, add an entry in the change that adds the package or app. After editing the list, create or update the labels on GitHub through `gh`:
+`.github/labels.json` holds the list. Unless the project derives its `pkg:` and `app:` labels, as recorded below, add an entry in the change that adds the package or app. After editing the list, create or update the labels on GitHub through `gh`:
 
 ```sh
 node -e 'for (const l of require("./.github/labels.json")) require("node:child_process").execFileSync("gh", ["label", "create", l.name, "--color", l.color, "--description", l.description, "--force"], { stdio: "inherit" })'
@@ -70,11 +58,7 @@ It never deletes a label: deleting one strips it from every issue that carries i
 
 The `type:` and `status:` labels are the same in every project started from this template, so a GitHub organization can set them as its default labels, and a new repository then starts with the labels the issue forms and Dependabot apply. Renaming a label on GitHub, rather than creating it again, keeps it on the issues that carry it.
 
-<!-- project:start -->
-
 The `pkg:` and `app:` labels are derived from the workspace rather than listed, so the sync here is `pnpm hub labels`, which creates or updates the fixed groups in `.github/labels.json` and one label per package and app. Run it after adding a package or editing the list; [tooling](docs/tooling.md#issue-labels) describes the command.
-
-<!-- project:end -->
 
 ### A defect found mid-task
 
@@ -139,11 +123,7 @@ One of `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `rever
 
 The area the change lands in, and optional. For a workspace package it is the package name without its npm scope; for a package nested a level deeper, such as `packages/plugins/vite`, it is the path under `packages/`, as in `plugins/vite`. For an app it is the directory name under `apps/`. Repository-level areas use their own name, such as `ci`, `deps`, or `docs`. Leave it out when the change spans several.
 
-<!-- project:start -->
-
-<!-- Scopes this project uses beyond the rule above, such as the areas of a single-package project, with what each covers. Leave the block empty when there are none. -->
-
-<!-- project:end -->
+<!-- Scopes this project uses beyond the rule above, such as the areas of a single-package project, with what each covers. -->
 
 ### Subject
 
@@ -179,15 +159,13 @@ The human directing the work stays the commit author. The trailer is an addition
 
 ## Validation
 
-Run scripts from the repository root. During development, narrow checks to what changed; [tooling](docs/tooling.md) lists the commands and how to narrow them. Before delivering a change, run the gate the block below names; by default, that is the whole gate:
+Run scripts from the repository root. During development, narrow checks to what changed; [tooling](docs/tooling.md) lists the commands and how to narrow them. Before delivering a change, run the gate named below; by default, that is the whole gate:
 
 ```sh
 pnpm verify
 ```
 
 It runs formatting, linting, the build, type checking, and tests, the same checks CI runs. Report any step that was skipped or failed.
-
-<!-- project:start -->
 
 The gate before delivery is the branch selection, not the whole workspace. Root tooling owns dependency build ordering, so use its selectors rather than `pnpm --filter` or commands run from a package directory; [tooling](docs/tooling.md#targets) documents selector resolution and options.
 
@@ -202,8 +180,6 @@ Regenerate derived files if the change touched a package README or anything unde
 ```sh
 pnpm generate <target>
 ```
-
-<!-- project:end -->
 
 ## Pull requests
 
@@ -222,8 +198,6 @@ A pull request that builds on another unmerged one targets that one's branch and
 Releasing is a maintainer action, and it is separate from merging. Merging changes `main`; a release puts a version where people install or reach it, and a published version can be superseded but rarely taken back.
 
 Bump the version and record what users need to know in an ordinary pull request first; the release itself names a commit already on `main`.
-
-<!-- project:start -->
 
 A release publishes one package to npm, where a version can be deprecated but never replaced. Check the package is ready, then push the tag that authorizes the release:
 
@@ -267,8 +241,6 @@ pnpm hub release error --cut=0.3.1-beta.1
 ```
 
 A pre-release publishes under the `next` dist-tag, so `npm install` without a version keeps resolving the current stable release, and the documentation site keeps showing it. An app opts in with `pnpm add @codenhub/error@next` or the exact version. Each pre-release still uses up its version number on npm, and a package that keeps a changelog gets a page for it. The stable release that follows is cut with its explicit version, `--cut=0.3.1`.
-
-<!-- project:end -->
 
 Pushing a release tag and deploying are outward-facing actions. An agent asks first and never does either on its own initiative.
 

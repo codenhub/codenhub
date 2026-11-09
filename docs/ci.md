@@ -37,11 +37,7 @@ Workspace setup, pnpm, Node.js and a `--frozen-lockfile` install, lives in the c
 
 ## The workflow
 
-<!-- project:start -->
-
 The workflow runs `Verify` without the browser suites, which run in jobs of their own; [Jobs](#jobs) lists every job and what it runs.
-
-<!-- project:end -->
 
 By default there is no change-based selection: every run checks the whole workspace. A check that skips part of the workspace on a pull request lets that part reach `main` unverified, and a selection has to be maintained and can be wrong in ways a green run hides. A project whose full run grows too slow to wait for adds selection then, under three rules:
 
@@ -49,13 +45,9 @@ By default there is no change-based selection: every run checks the whole worksp
 - **A change to `.github/` runs everything.** A workflow or the setup action belongs to no package, so a selection by changed package selects nothing, and the run passes without exercising the change it was opened for ([codenhub/codenhub@3d9bfe8a](https://github.com/codenhub/codenhub/commit/3d9bfe8a)).
 - **The run asserts the ref it compares against.** A selection that compares against the base branch needs that ref in the checkout (`fetch-depth: 0`), and the job checks the ref exists before selecting: a tool that falls back to working-tree changes when the ref is missing would, in CI, check nothing and report success.
 
-`Template conformance` runs `node .template/check.mjs`, which fails when a file the template owns has drifted from the commit the project last synced with; [the template conventions](../.template/README.md#checking) list what it checks. It is a step of `Verify` rather than part of `pnpm verify`, because it needs the network and `package.json` is the project's own: a script added there would not reach a project that already exists. It runs the same way locally.
-
 `Working tree is clean` fails when a check has left a tracked or untracked file changed. A check that writes has changed what it was checking, so it is reported rather than passing.
 
-Runs for the same pull request cancel each other, because only the newest push is worth a verdict. A merge-queue run or a push to `main` never cancels: each is the authoritative check of a commit. The `merge_group` trigger never fires in a repository without a merge queue. A project that requires one removes the `push` trigger, which sits in a project block for that reason: the queue lands the exact commit it checked, so a push run would only repeat a passed check. The workflow's token is read-only (`permissions: contents: read`); a job that needs more asks for it on that job alone.
-
-<!-- project:start -->
+Runs for the same pull request cancel each other, because only the newest push is worth a verdict. A merge-queue run or a push to `main` never cancels: each is the authoritative check of a commit. The `merge_group` trigger never fires in a repository without a merge queue. A project that requires one removes the `push` trigger: the queue lands the exact commit it checked, so a push run would only repeat a passed check. The workflow's token is read-only (`permissions: contents: read`); a job that needs more asks for it on that job alone.
 
 ### Triggers and selection
 
@@ -116,8 +108,6 @@ The gate also catches what an install itself writes. A tracked `bin` target has 
 
 `drift` also installs Chromium, the one engine it needs: `@codenhub/styles`' `styles-palette` generator computes `./palette`'s values by rendering real composed colors in a real browser rather than reimplementing `color-mix()` math by hand (`docs/internal/generated-palette.md` describes the composition), and `hub generate --dry-run` still has to run that generator to know whether `src/palette.css` is stale. It runs in the same image, as the same user, as the `browser` job's chromium leg.
 
-<!-- project:end -->
-
 ## Changing the workflow
 
 Prefer adding a script to `package.json` over adding a step to the workflow. A step only CI can run is a step nobody can reproduce before pushing, and that is how CI turns into a second build system.
@@ -167,8 +157,6 @@ Binding the checks to the GitHub Actions app stops any other integration from re
 
 Turn on "Automatically delete head branches" in the repository's general settings too; it is available on every plan. Deleting a merged branch is what makes GitHub retarget a pull request built on it to that branch's own base. With the branch left behind, the next pull request merges into it and never reaches `main`.
 
-<!-- project:start -->
-
 This repository's ruleset for `main` goes further than the recommendation, and has no bypass actors:
 
 | Setting                | Value                                                                         |
@@ -180,13 +168,9 @@ This repository's ruleset for `main` goes further than the recommendation, and h
 
 The merge queue is what lets pull requests check only what they changed ([Triggers and selection](#triggers-and-selection)). `Browser tests` is the `browser-result` job's name, so the rule names no engine. The Actions setting that refuses an action referenced by anything but a full SHA is on, and "Automatically delete head branches" is on.
 
-<!-- project:end -->
-
 ## Other workflows
 
 The template's CI verifies; it does not deploy, release or publish. A project that does adds a workflow of its own and documents it here.
-
-<!-- project:start -->
 
 ### Deployment checks
 
@@ -323,5 +307,3 @@ A tag can be pushed by anyone with write access, from any commit. The job theref
 ### Not covered yet
 
 Nothing the repository would own is missing any more. The three deployments run from Cloudflare dashboard state, their previews from a maintainer's machine, and publishing from a tag through trusted publishing. None of them carries a credential here, which is the property to preserve when any of them changes.
-
-<!-- project:end -->

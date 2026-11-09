@@ -31,11 +31,7 @@ Name by domain intent. Avoid names that say only the type or the mechanism, such
 - Do not add compatibility layers unless there is a real consumer, persisted data, shipped behavior, or explicit requirement that needs one.
 - Do not add a dependency unless simple in-house code is clearly worse.
 
-<!-- project:start -->
-
 Workspace packages live in `packages/` and the sites in `apps/`. An app may import packages; a package never imports an app. A public package installs its public siblings from their npm releases through the catalog, never from the working tree, so it is built and tested against what its consumers install; [`docs/specs/packages-lifecycle.md`](../specs/packages-lifecycle.md), "Ranges", owns that rule. `packages/tools` is private, and every package builds and checks with it.
-
-<!-- project:end -->
 
 ### Fix it upstream
 
@@ -134,9 +130,7 @@ Every symbol exported from a published package's entrypoint, through `package.js
 
 An export needed only to compose entrypoints SHOULD stay out of public entrypoints. When one cannot, mark it `@internal`.
 
-When a change touches a package's `exports`, its exported symbols, or its observable behavior or failures, it updates the TSDoc and every README or document describing them in the same change. oxlint checks the structure of the tags. Whether every export is documented, and how well, is a review responsibility unless the project enforces it, as the block below records.
-
-<!-- project:start -->
+When a change touches a package's `exports`, its exported symbols, or its observable behavior or failures, it updates the TSDoc and every README or document describing them in the same change. oxlint checks the structure of the tags. Whether every export is documented, and how well, is a review responsibility unless the project enforces it, as recorded below.
 
 For `private: false` workspace packages, every symbol exposed through `package.json` `exports` is public API, including plugin factories and CSS or token surfaces represented in TypeScript, and the MUST above applies to all of them. [`docs/specs/packages-documentation.md`](../specs/packages-documentation.md) defines the public package documentation contract, and [`docs/specs/packages-readme.md`](../specs/packages-readme.md) the README requirements. An `@internal` export stays out of package README examples, and a change to the API updates the package's public docs and LLM documentation along with its README.
 
@@ -144,14 +138,8 @@ Weak tags become weak public prose: the generated API reference ([`docs/specs/pa
 
 `hub check` enforces the TSDoc rule: it reports `undocumented-export/missing-jsdoc` errors for undocumented top-level declarations exposed through typed package exports, following re-exports to their original declarations. It covers public packages and private packages that declare `codenhub.docs`, independently of generated reference opt-in. Missing documentation fails local verification and pull-request CI. Class and interface members remain a review responsibility, as does the quality of the documentation.
 
-<!-- project:end -->
-
 ## Formatting, linting, and type checking
 
 - Code MUST pass `pnpm verify`. [Workspace](../workspace.md#root-scripts) lists what it runs; while working, `pnpm format:check`, `pnpm lint:check`, and `pnpm typecheck` run its parts on their own.
 - oxfmt formats code and JSON, and Prettier formats Markdown. Do not fight the formatter's output.
 - Lint rules are enforceable project policy. Change the rule, or add a scoped override with its reason recorded, rather than ignoring it broadly. A local suppression comment says why it is there.
-
-<!-- project:start -->
-
-<!-- project:end -->

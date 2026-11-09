@@ -1,10 +1,6 @@
 # Agent instructions
 
-<!-- project:start -->
-
 CodenHub is the workspace behind [coden.agency](https://coden.agency): the `@codenhub/*` packages published to npm, and the sites in `apps/` that document and demonstrate them. A published version can be deprecated but never replaced, so a mistake that reaches a release stays in every app that installed it. Read [`docs/specs/packages-lifecycle.md`](docs/specs/packages-lifecycle.md) before changing a published package's exports, behavior, or version.
-
-<!-- project:end -->
 
 This repository is docs-first. [`docs/README.md`](docs/README.md) indexes every document. [`CONTRIBUTING.md`](CONTRIBUTING.md) is the workflow every change follows, and [`docs/tooling.md`](docs/tooling.md) lists the commands. Before delivering a change, run the gate [`CONTRIBUTING.md`](CONTRIBUTING.md#validation) names, `pnpm verify` unless the project narrows it.
 
@@ -14,7 +10,6 @@ This repository is docs-first. [`docs/README.md`](docs/README.md) indexes every 
 - Ask when different interpretations would lead to different work. Do not settle an unstated choice about behavior, public API, a security property, or a recorded decision by assuming it. Do everything independent of the answer first, then ask at the point the answer is needed.
 - Keep changes small and within the requested scope. Preserve unrelated work.
 - A defect found while working on something else is filed and worked around, not fixed on the spot, as [`CONTRIBUTING.md`](CONTRIBUTING.md#a-defect-found-mid-task) describes. That includes a defect in a dependency you also maintain: the fix belongs in that dependency's repository.
-- Files listed in `.template/manifest.json` come from a shared template, and the manifest says which parts the project owns. Before changing one, or when asked to sync with the template, read [`.template/README.md`](.template/README.md); `node .template/check.mjs` reports drift.
 - Never put a secret, token, password, or personal data in a log, an error, a test snapshot, a commit, or a message to the user, including test values you generate. [`docs/guidelines/security.md`](docs/guidelines/security.md) has the rest.
 - Report failing checks, skipped steps, and unfinished work plainly, with the output that shows it. Never describe a partial result as complete.
 - Close by listing material judgment calls and assumptions so they can be confirmed or reversed.
@@ -28,13 +23,9 @@ This repository is docs-first. [`docs/README.md`](docs/README.md) indexes every 
 
 ## Project specifics
 
-<!-- project:start -->
-
 - **The delivery gate is the branch selection.** `pnpm verify --changed` is the gate before delivering a change, not the whole workspace, which CI runs on every merge; [`CONTRIBUTING.md`](CONTRIBUTING.md#validation) says when the whole workspace is needed instead.
 - **Generated files are regenerated, not edited.** A file marked as generated is derived from package READMEs, `docs/`, and manifests. Change its source and run `pnpm generate <target>`; a change to package metadata also needs an unfiltered `pnpm generate`, since the root README package list is regenerated only for the whole workspace. CI fails on drift rather than fixing it. [Tooling](docs/tooling.md#generated-files) lists the generators.
 - **Root tooling selects packages.** Run scripts from the repository root through `hub`'s selectors rather than `pnpm --filter` or from a package directory; it owns the build order of workspace dependencies.
-
-<!-- project:end -->
 
 ## Knowledge
 

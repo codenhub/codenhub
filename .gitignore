@@ -33,7 +33,6 @@ playwright-report
 # Short-lived plans (docs/guidelines/documentation.md, "What belongs here").
 docs/plans
 
-# project:start
 # Framework caches and generated test output.
 .astro
 .wrangler
@@ -58,4 +57,3 @@ docs/plans
 
 # Svelte components the @codenhub/error tests compile
 **/.svelte-test
-# project:end

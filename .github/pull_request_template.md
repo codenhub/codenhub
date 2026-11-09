@@ -9,11 +9,7 @@ Fixes #
 - [ ] The delivery gate `CONTRIBUTING.md` names passes, `pnpm verify` by default, or the skipped steps are listed here
 - [ ] Documentation affected by behavior, API, or convention changes is updated in this pull request
 
-<!-- project:start -->
-
 - [ ] Derived files are regenerated (`pnpm generate <target>`) if a package README or `docs/` changed
-
-<!-- project:end -->
 
 ## Security
 

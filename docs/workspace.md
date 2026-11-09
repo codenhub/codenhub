@@ -28,8 +28,6 @@ This document is the workspace's contract: the names of the root scripts and wha
 
 Keep these names as they are: CI, the git hooks and the agent instructions call them by name. A script that only some projects need, such as `dev` or an end-to-end suite, is the project's to add.
 
-<!-- project:start -->
-
 Every root script here except `prepare` is a thin wrapper around `hub`, and [Tooling](tooling.md#running-it) maps each one to its command. Beyond the scripts above:
 
 | Script                    | Guarantees                                                                                               |
@@ -48,8 +46,6 @@ Every root script here except `prepare` is a thin wrapper around `hub`, and [Too
 
 `pnpm verify` runs `test:browser` and then `check` after `test`. Every script but `prepare` takes `hub`'s selectors, so `pnpm verify --changed` verifies a branch and `pnpm test error` one package; [Tooling](tooling.md#targets) describes them.
 
-<!-- project:end -->
-
 ## Configuration
 
 | File                  | Configures                                                                                                                                                                                                                                                                |
@@ -66,8 +62,6 @@ Every root script here except `prepare` is a thin wrapper around `hub`, and [Too
 
 The TypeScript and Vitest configurations depend on how the project runs its checks; [Tooling](tooling.md) describes them.
 
-<!-- project:start -->
-
 | File                  | Configures                                                                                                                                                                                       |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `tsconfig.json`       | The TypeScript configuration of the repository's own files; [Tooling](tooling.md#type-checking) describes how packages type-check.                                                               |
@@ -79,8 +73,6 @@ The TypeScript and Vitest configurations depend on how the project runs its chec
 | `patches/`            | pnpm patches for dependencies, each named by `patchedDependencies` in `pnpm-workspace.yaml` with the reason and the condition for removing it.                                                   |
 | `.github/labels.json` | The fixed issue label groups; `pnpm hub labels` adds a `pkg:` and `app:` label per package and app.                                                                                              |
 
-<!-- project:end -->
-
 ### Two formatters
 
 oxfmt formats everything it understands except Markdown; Prettier formats only Markdown. oxfmt is far faster and agrees with Prettier's output for code, but its Markdown support does not yet match Prettier's, and the documentation is where formatting churn costs the most review time. `.oxfmtrc.json` ignores `**/*.md`, and the scripts hand Prettier `**/*.md` explicitly, so neither formatter touches the other's files.
@@ -89,11 +81,7 @@ oxfmt formats everything it understands except Markdown; Prettier formats only M
 
 Every third-party dependency version is declared once, in the catalog in `pnpm-workspace.yaml`, and referred to as `catalog:` in each `package.json`. The workspace therefore cannot hold two versions of one dependency by accident, and an upgrade is a one-line change that Dependabot can propose ([CI](ci.md#dependency-updates)). A workspace package depends on another as `workspace:*`, and a `peerDependencies` range says what a consumer may install, so neither is a catalog entry.
 
-<!-- project:start -->
-
-<!-- Version rules only this project has, such as installing a published workspace package from its release through the catalog. Leave the block empty when there are none. -->
-
-<!-- project:end -->
+<!-- Version rules only this project has, such as installing a published workspace package from its release through the catalog. -->
 
 ## Git hooks
 
@@ -101,7 +89,7 @@ Every third-party dependency version is declared once, in the catalog in `pnpm-w
 
 `pre-commit` formats and lints the staged files, fixes what it can, and re-stages the result. It runs those checks and no others: type checking and tests take minutes, and a hook that slow gets bypassed until it may as well not exist. `pnpm verify` is where the rest belongs.
 
-A project with code in another language, such as Rust or Go, adds its formatter in the hook's project block, which names the extensions it owns and the commands that fix and check them; those files then skip oxfmt. When oxfmt also understands one of those extensions, the project lists the same files in the `.oxfmtrc.json` project block's `ignorePatterns`, so `pnpm format:check` and `pnpm format:fix` leave them to its formatter too. Its linter, like the type checker, belongs to `pnpm verify`.
+A project with code in another language, such as Rust or Go, adds its formatter in the hook's project section, which names the extensions it owns and the commands that fix and check them; those files then skip oxfmt. When oxfmt also understands one of those extensions, the project lists the same files in the `.oxfmtrc.json` `ignorePatterns`, so `pnpm format:check` and `pnpm format:fix` leave them to its formatter too. Its linter, like the type checker, belongs to `pnpm verify`.
 
 `pre-commit` reads files from the working tree rather than from the index. For a file that is only partly staged that matters: the hook never rewrites it, because re-staging would sweep in the parts deliberately left out of the commit, and it checks the file as it sits on disk. A commit whose staged content is already clean can therefore still fail. The alternative, skipping such files, would let unformatted code through the one check meant to stop it.
 

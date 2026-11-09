@@ -34,7 +34,6 @@ report() {
 }
 trap report EXIT
 
-# project:start
 # Formatters the template does not run. PROJECT_EXTENSIONS lists the extensions they own, as a `grep -E`
 # alternation such as `rs` or `go|proto`; those files go to them instead of oxfmt. project_fix rewrites and
 # project_check checks the newline-delimited file list in "$1", typically through run_on, as in
@@ -42,7 +41,6 @@ trap report EXIT
 PROJECT_EXTENSIONS=
 project_fix() { :; }
 project_check() { :; }
-# project:end
 
 # `core.quotePath=false` lists a path with non-ASCII characters as it is. Quoted, as
 # `"caf\303\251.md"`, it would match no extension below and go unchecked.

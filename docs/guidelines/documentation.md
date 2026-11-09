@@ -120,15 +120,11 @@ A roadmap, when the project keeps one, records durable direction: current focus,
 
 Every document is listed in [`docs/README.md`](../README.md). Adding, moving, or deleting one updates that index in the same change.
 
-<!-- project:start -->
-
 - **Package documentation lives with its package.** Each workspace package owns its consumer and maintainer documentation, in its README and its own `docs/`, as [`docs/specs/packages-documentation.md`](../specs/packages-documentation.md) defines; it never goes in root `docs/`. That spec adopts this document's metadata model, selectively, for a package's internal docs.
 - **The README and index templates carry no frontmatter.** [`docs/specs/packages-readme-template.md`](../specs/packages-readme-template.md) and [`docs/specs/packages-index-template.md`](../specs/packages-index-template.md) are copied into consumer-facing output, so they are the template files the header rule exempts.
 - **Package exceptions have a register.** An exception specific to a package is recorded in [`docs/specs/packages-exceptions.md`](../specs/packages-exceptions.md), not next to the rule. Other exceptions stay next to the rule they bypass.
 - **Specs are partly enforced.** `hub check` enforces part of the specifications in `docs/specs/`, which cover packages, their READMEs, tests, errors, and roadmaps.
 - **What `.prettierignore` keeps as received** is the vendored icon attributions in `packages/icons/data/`.
-
-<!-- project:end -->
 
 ## Agent instructions
 
