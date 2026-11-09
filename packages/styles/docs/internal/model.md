@@ -673,6 +673,7 @@ Translucent surfaces over a blurred backdrop with a hairline highlight edge. Nee
 - A press is the base `scale(0.97)`, dropped under reduced motion. Controls carry no shadow here, so there is no slab to press into.
 - Every surface in its region is glass, a neutral `.card.soft`, `.panel`, and `.alert` included: their quiet ground is a private default beneath `--ui-surface-ground`, so glass's ground wins over it.
 - Under `prefers-reduced-transparency`, and in forced colours, opacity goes to 100% and the blur is dropped. Transparency is the whole aesthetic, so the honest degradation is an opaque surface rather than a softer blur. Forced colours replace a colour but keep its alpha, so a pane left translucent there showed the page through the system's `Canvas`; the solo class follows the class.
+- No face of its own: the region sets the theme's, `--font-default`, as chunky tile reads it, so a glass region nested inside a font-bearing aesthetic does not take that aesthetic's face.
 - Corners are `--glass-radius` and `--glass-radius-surface`, at 0.75rem and 1rem. Rounder than the base geometry, because a translucent panel with a tight corner reads as a cut-out rather than as a pane; a full step above `--radius-surface` lands closer to a pill than to glass. Read with a fallback rather than declared, so an ancestor can set them ([R8](#rules-for-aesthetics)).
 
 #### `.glass-liquid`
@@ -704,6 +705,7 @@ Thick ink outline, a hard unblurred offset shadow, and a press that moves the el
 - Ink follows the theme, not the palette: near-black on light, near-white on dark. Pure black disappears on a dark page. Controls take the theme's control border instead, through `--ui-control-ink`: the ink is the primary colour in both themes.
 - The offset shadow is the component's own `--intent-border`, so a success button casts a green shadow and a neutral button casts ink.
 - The press moves the element by the shadow offset and shrinks the shadow to nothing. Hover holds the slab still; the derived fill tint is its whole response.
+- No face of its own: the region sets the theme's, `--font-default`, as chunky tile reads it, so a region nested inside a font-bearing aesthetic does not take that aesthetic's face.
 - An alert rests on the slab, which is the one component this aesthetic names in a selector. Here the slab is a second ink line rather than depth, and an alert is the only container the registry rests flat. It is written into the component's resting default rather than the modifier, so every elevation class still wins.
 
 ### `.pixel`

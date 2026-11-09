@@ -124,6 +124,12 @@
     --ui-label-tracking: initial;
     --ui-label-case: initial;
     --ui-label-shadow: initial;
+
+    /* No face of its own, so the theme's, named rather than inherited: a glass
+       region nested inside pixel, cyber, sketch, or chunky tile otherwise took
+       their face. `--font-default` is the token the reset applies to the page,
+       as chunky tile reads it. */
+    font-family: var(--font-default, ui-sans-serif, system-ui, sans-serif);
   }
 
   /* Transparency is the whole aesthetic, so the honest degradation is an opaque

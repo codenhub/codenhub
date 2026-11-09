@@ -2835,6 +2835,46 @@ test.describe("nested aesthetics", () => {
       expect(surfaces[index]!.alert, `${inner} in ${outer}: alert`).toBe(surfaces[reference]!.alert);
     }
   });
+
+  /* `font-family` inherits, so a region that names no face took the one around
+     it: glass inside pixel set in monospace, and a neobrutalist button inside
+     sketch in cursive. Every region names its face, the theme's where it has
+     none of its own. */
+  test("sets a nested region in its own face", async ({ page }) => {
+    await page.goto(BUTTONS_URL);
+
+    const faces = await page.getByTestId("preview-root").evaluate((root, all) => {
+      const paint = (regions: string[]) => {
+        const wrapper = document.createElement("div");
+
+        wrapper.innerHTML = `${regions.map((region) => `<div class="${region}">`).join("")}<button class="btn">x</button><div class="card">x</div>${"</div>".repeat(regions.length)}`;
+        root.append(wrapper);
+
+        const result = [".btn", ".card"].map(
+          (selector) => getComputedStyle(wrapper.querySelector(selector)!).fontFamily,
+        );
+
+        wrapper.remove();
+
+        return result.join(" | ");
+      };
+
+      return {
+        page: paint([]),
+        alone: Object.fromEntries(all.map((inner) => [inner, paint([inner])])),
+        nested: all.flatMap((inner) =>
+          all.filter((outer) => outer !== inner).map((outer) => ({ inner, outer, face: paint([outer, inner]) })),
+        ),
+      };
+    }, AESTHETICS);
+
+    for (const plain of ["glass", "glass glass-liquid", "neobrutalism"] as const) {
+      expect(faces.alone[plain], `${plain} alone takes the page face`).toBe(faces.page);
+    }
+    for (const { inner, outer, face } of faces.nested) {
+      expect(face, `${inner} in ${outer}`).toBe(faces.alone[inner]);
+    }
+  });
 });
 
 /* Under pixel the edge is an inset ring and the border is zero, and a knob
