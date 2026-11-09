@@ -14,6 +14,8 @@ git fetch --no-tags https://github.com/<template> HEAD
 git show FETCH_HEAD:profiles/README.md
 ```
 
+Outside a Git repository, as when starting a new project, `git fetch` has nowhere to fetch into: run both commands in a scratch repository made with `git init`, outside the place the project will go, and delete it once the project exists. When the fetched template has no `profiles/README.md`, it predates the split into profiles, as a fork may: say so and ask the user how to go on rather than following its `.template/README.md`, which describes the manifest design.
+
 `<template>` is `codenhub/template` unless the user names another `owner/repo`; use the same one in every command below, and in the README's commands, which name `codenhub/template`. Any other fetch overwrites `FETCH_HEAD`, so fetch the template again before reading it. The steps use `git`, the chosen profile's tools, such as Node.js and `pnpm` for `node-pnpm`, and an authenticated GitHub CLI (`gh`); without `gh`, use the local start and ask the user to create the repository.
 
 A project brings its own name, brand, and domain. Never carry a name, owner, or brand from the template or from another project into this one.
@@ -59,7 +61,7 @@ The template's pre-push hook refuses any push to `main`, including the first pus
 Follow "Comparing a project with the template" in the README, from the project's repository: one comparison with the core and one with the profile the project started from. A project created before the split into profiles started from `node-pnpm`. A project that still has `.template/manifest.json` is migrated first, as its own commit; see Migrate.
 
 - **Judge each hunk, not each file.** For each one, decide which side is better: the template's, the project's, or a difference that is the project's own, such as its name, its packages, or a rule only it needs. Judge on what each version does for this project, not on which is newer; the template's version of a file is not the correct one by default.
-- **Take the template's side on a branch.** Apply each hunk where the template is better, then rerun the setup commands when a dependency manifest changed, and the gate. A hunk that would change the project's behavior, public contract, or a decision its documentation records is presented as a choice, with your recommendation, rather than taken.
+- **Take the template's side on a branch.** Apply each hunk where the template is better, then rerun the project's own setup commands, as its contributor guide gives them, when a dependency manifest changed, and the gate. A hunk that would change the project's behavior, public contract, or a decision its documentation records is presented as a choice, with your recommendation, rather than taken.
 - **Keep the project's side without recording it.** Nothing in the project records which differences were kept; a kept difference shows up again in the next comparison, and that is intended. Do not add a file, comment, or list to suppress it.
 - **When asked only to audit or report,** change nothing: report the judgments below and ask before applying any.
 
