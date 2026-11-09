@@ -704,7 +704,7 @@ Thick ink outline, a hard unblurred offset shadow, and a press that moves the el
 - `--neo-offset` at 4px is the knob: the shadow offset and the press travel are the same number, so a consumer scaling the look scales it whole. Read with a fallback per [R8](#rules-for-aesthetics), so an ancestor can set it.
 - Ink follows the theme, not the palette: near-black on light, near-white on dark. Pure black disappears on a dark page. Controls take the theme's control border instead, through `--ui-control-ink`: the ink is the primary colour in both themes.
 - The offset shadow is the component's own `--intent-border`, so a success button casts a green shadow and a neutral button casts ink.
-- The press moves the element by the shadow offset and shrinks the shadow to nothing. Hover holds the slab still; the derived fill tint is its whole response.
+- The press moves the element by the shadow offset and shrinks the shadow to nothing. Hover holds the slab still; the derived fill tint is its whole response. Under reduced motion the press still happens, at once: `--ui-active-transform` is `none`, so there is no scale to drop, and `box`'s near-zero duration removes only the travel. The press is the feedback that a click registered.
 - No face of its own: the region sets the theme's, `--font-default`, as chunky tile reads it, so a region nested inside a font-bearing aesthetic does not take that aesthetic's face.
 - An alert rests on the slab, which is the one component this aesthetic names in a selector. Here the slab is a second ink line rather than depth, and an alert is the only container the registry rests flat. It is written into the component's resting default rather than the modifier, so every elevation class still wins.
 
@@ -730,7 +730,7 @@ Rounded slabs seated on a darker shade of themselves, pressed flat on click.
 - The bar is solid, unblurred, straight down, and spreadless. Zero x is what separates it from neobrutalism, whose two-axis offset reads as a card lifted off the page where this is a slab seated on it.
 - The bar is a shade of the element rather than a repeat of it, which takes an opaque `--elevation-color` as well as a partial `--ui-shadow-ink`. See [Worked example](#worked-example-the-chunky-tile-look).
 - An unfilled tile's bar and its line are the same colour by construction: both resolve `--intent-border`.
-- Hover holds still and the press moves: a seated slab has one gesture and it belongs to the press.
+- Hover holds still and the press moves: a seated slab has one gesture and it belongs to the press. Under reduced motion it still happens, at once, as neobrutalism's does.
 - Labels are heavier and slightly tracked, through `--ui-label-weight` and `--ui-label-tracking`, which `.btn` and `.badge` read, so a consumer's `font-*` utility still beats them. Casing is left to the application.
 - A `.p-xs` button sits on half the lift and a `.sm` one on three quarters: `box` scales depth down with the size step, so the aesthetic names no component.
 - Reads `--font-rounded` and falls back to `--font-default`, then a sans-serif stack, so a consumer who themed the page font gets it here too. The package ships no font binary.

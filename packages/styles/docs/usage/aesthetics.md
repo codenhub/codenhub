@@ -72,6 +72,7 @@ The shadow is cast in the component's own intent, so a success button throws a g
 - Only `.btn` and an opted-in `.card` respond to hover and press. A card opts in with `.interactive`, or with one of its halves — `.hoverable` for the hover response alone, `.pressable` for the press alone; a plain card, an alert, or a panel is a container and stays put.
 - An alert sits on the offset shadow under this aesthetic, and under no other. An alert is otherwise flat, but here the shadow is a second outline rather than depth, and an alert without it looks unfinished next to everything else. This includes an alert inside a nested `.neobrutalism` region. `.flat` still removes it and `.floating` still doubles it.
 - The tooltip trigger takes the zero corner like everything else and draws square; `.radio` keeps its circle.
+- Under `prefers-reduced-motion: reduce` the press still happens, but at once: the element lands in its shadow without travelling there. The press is the feedback that a click registered, so only its motion goes.
 - It has no font of its own and sets the theme's, `--font-default`, on the region, so a neobrutalist region nested inside pixel, cyber, sketch, or chunky tile does not take their face.
 
 ## Glass
@@ -188,6 +189,7 @@ The bar is a darker shade of the element's own color rather than a shadow under 
 - Labels are drawn heavier and slightly tracked, through `--ui-label-weight` and `--ui-label-tracking`, so your own `font-*` or `tracking-*` utility still wins. It reaches `.btn` and `.badge`, and a bare `<button>` only where `/native` styles it. Casing is left alone: how a label is worded is the application's decision, so if you want uppercase buttons, write that rule in your own stylesheet.
 - `.card.interactive` presses like a `.btn`, so a chunky answer tile drops onto its bar on click; `.card.pressable` gets the same press on its own. A plain `.card` stays put.
 - The shipped `.primary` is near-black on a light page and near-white on a dark one, and the bar is always mixed toward black. On a light page, a primary button's bar is almost invisible against its near-black face (measured `1.04:1`). On a dark page, the near-white face against the same bar reads well (`2.48:1`). Give `.primary` a hue of its own if it is the call to action and needs the depth cue in both themes.
+- Under `prefers-reduced-motion: reduce` the press still happens, but at once, as under neobrutalism.
 - Depth in this aesthetic is the bar, never a blurred drop shadow. Anything the registry rests flat sits flush on the page.
 - Controls draw a heavier gray than the tiles around them, `neutral-600` in light and `neutral-400` in dark, through `--ui-control-ink`, so a field reads as a field inside a tile.
 

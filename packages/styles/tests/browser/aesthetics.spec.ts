@@ -364,6 +364,48 @@ test.describe("aesthetics", () => {
       await expectHeldThenPressed("card-default-none-interactive");
     });
 
+    /* Reduced motion removes the travel's motion, not the press: a slab press
+       is the feedback that a click landed, and it lands at once. Shared with
+       chunky tile, the other slab. */
+    test("presses into its slab at once under reduced motion, as chunky tile does", async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: "reduce" });
+
+      for (const [aesthetic, travel] of [
+        ["neobrutalism", "4px 4px"],
+        ["chunky-tile", "0px 4px"],
+      ] as const) {
+        // oxlint-disable-next-line no-await-in-loop -- one page per aesthetic.
+        await page.goto(withAesthetic(BUTTONS_URL, aesthetic));
+
+        const button = page.getByTestId("btn-default-none");
+
+        // oxlint-disable-next-line no-await-in-loop -- one press at a time.
+        await button.hover();
+        // oxlint-disable-next-line no-await-in-loop -- one press at a time.
+        await page.mouse.down();
+        try {
+          // oxlint-disable-next-line no-await-in-loop -- one press at a time.
+          const pressed = await button.evaluate(async (node) => {
+            await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+            const styles = getComputedStyle(node);
+
+            return { durations: styles.transitionDuration, translate: styles.translate, shadow: styles.boxShadow };
+          });
+
+          /* Read once, two frames in: a press still animating over the normal
+             duration would read part of the way there. */
+          expect(pressed.translate, `${aesthetic} travels`).toBe(travel);
+          expect(pressed.shadow, `${aesthetic} slab collapses`).toMatch(/\b0px 0px 0px 0px\b/);
+          for (const duration of pressed.durations.split(",")) {
+            expect(Number.parseFloat(duration), `${aesthetic} transition ${pressed.durations}`).toBeLessThan(0.001);
+          }
+        } finally {
+          // oxlint-disable-next-line no-await-in-loop -- one press at a time.
+          await page.mouse.up();
+        }
+      }
+    });
+
     /* The offset is read with a fallback rather than declared, which is what lets
        an ancestor set it. Declared on the class it would outrank every ancestor --
        including `:root`, where an application normally themes something -- and the
