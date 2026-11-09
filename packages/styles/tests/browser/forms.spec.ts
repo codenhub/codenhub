@@ -1145,7 +1145,12 @@ test.describe("forms", () => {
         host.append(element);
 
         const styles = getComputedStyle(element);
-        const values = { border: styles.borderTopColor, cursor: styles.cursor, opacity: styles.opacity };
+        /* What a reader sees is the product of the group's opacity and the
+           control's, so a group and a control both dimmed is dimmed twice. */
+        const control = element.firstElementChild;
+        const effectiveOpacity =
+          Number.parseFloat(styles.opacity) * (control ? Number.parseFloat(getComputedStyle(control).opacity) : 1);
+        const values = { border: styles.borderTopColor, cursor: styles.cursor, effectiveOpacity };
 
         element.remove();
 
@@ -1161,6 +1166,7 @@ test.describe("forms", () => {
         plain: read("input-group", `<input class="ipt" />`),
         invalid: read("input-group", `<input class="ipt" aria-invalid="true" />`),
         disabled: read("input-group", `<input class="ipt" disabled />`),
+        loneDisabled: read("field", `<input class="ipt" disabled />`),
       };
     });
 
@@ -1176,7 +1182,11 @@ test.describe("forms", () => {
       getColorDistance(measured.plain.border, measured.neutralLine),
       "a valid group keeps the neutral line",
     ).toBeLessThan(2);
-    expect(Number.parseFloat(measured.disabled.opacity), "an inner disabled dims the group").toBeLessThan(1);
+    expect(measured.disabled.effectiveOpacity, "an inner disabled dims the group once").toBeCloseTo(
+      measured.loneDisabled.effectiveOpacity,
+      2,
+    );
+    expect(measured.disabled.effectiveOpacity, "and does dim it").toBeLessThan(1);
     expect(measured.disabled.cursor, "and shows the not-allowed cursor").toBe("not-allowed");
 
     /* A dimmed group does not answer the pointer, as a disabled lone field

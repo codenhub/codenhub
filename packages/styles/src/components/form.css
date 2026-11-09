@@ -494,6 +494,15 @@
       outline: none;
       box-shadow: none;
     }
+
+    /* The group dims for a disabled control, so the control does not dim
+       again inside it: opacity multiplies, and the two 0.58s left the value
+       at about 0.34. Only `:disabled`, the state the group's `:has()` above
+       bridges; a control disabled by class or aria dims itself as a lone one
+       does, because the group does not dim for it. */
+    &:disabled {
+      opacity: 1;
+    }
   }
 
   /* Except a drop-down's end: its chevron is the select's own background,
