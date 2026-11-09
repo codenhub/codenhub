@@ -1785,4 +1785,61 @@ test.describe("forms", () => {
     expect(heights.groupSelect, "a group around a select").toBeCloseTo(heights.ipt, 1);
     expect(heights.groupBare, "a group around a bare input").toBeCloseTo(heights.ipt, 1);
   });
+
+  /* One ring per focus. Under forced colours the field's own Highlight ring is
+     unlayered, so it once beat the group's layered suppression and a focused
+     field in a group drew two. A button in the group -- the docs' clear button
+     -- is a different target: Enter presses it rather than typing into the
+     field, so it keeps its own ring and the group drops the field's. */
+  test("draws one focus ring in a group, on the field or on a button inside it", async ({ page }) => {
+    const readRings = () =>
+      page.evaluate(() => {
+        const group = document.querySelector("[data-ring-probe]")!;
+        const input = group.querySelector("input")!;
+        const button = group.querySelector("button")!;
+        const outline = (element: Element) => getComputedStyle(element).outlineStyle;
+        const focused = document.activeElement;
+
+        return {
+          focused: focused === input ? "input" : focused === button ? "button" : "other",
+          group: outline(group),
+          input: outline(input),
+          button: outline(button),
+        };
+      });
+    const setUp = async () => {
+      await page.goto(FORMS_URL);
+      await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+
+        host.insertAdjacentHTML(
+          "beforeend",
+          `<div class="input-group" data-ring-probe>
+             <input class="ipt" type="search" />
+             <button class="btn icon ghost p-xs" type="button" aria-label="Clear">x</button>
+           </div>`,
+        );
+      });
+      await page.locator("[data-ring-probe] input").focus();
+    };
+
+    await setUp();
+    const field = await readRings();
+    await page.keyboard.press("Tab");
+    const button = await readRings();
+
+    expect(field.focused).toBe("input");
+    expect(field.group, "the group rings for its field").toBe("solid");
+    expect(field.input, "and the field draws none of its own").toBe("none");
+    expect(button.focused).toBe("button");
+    expect(button.button, "a focused button keeps its own ring").toBe("solid");
+    expect(button.group, "and the group drops the field's").toBe("none");
+
+    await page.emulateMedia({ forcedColors: "active" });
+    await setUp();
+    const forced = await readRings();
+
+    expect(forced.group, "forced colours: the group rings").toBe("solid");
+    expect(forced.input, "forced colours: the field draws none of its own").toBe("none");
+  });
 });

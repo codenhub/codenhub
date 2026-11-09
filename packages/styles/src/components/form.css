@@ -471,6 +471,18 @@
     box-shadow: var(--_focus-stack, var(--_shadow));
   }
 
+  /* Focus on anything but the field -- the clear button the docs show, a
+     toggle -- is focus on that control, so it keeps its own ring and the group
+     drops the field's. Enter presses a focused button rather than typing into
+     the field, and two rings around one target say neither. The line keeps its
+     focus tone: something in the field still has focus. A separate rule rather
+     than a `:not(:has())` on the ring above, so an engine without `:has()`
+     drops only this rule and keeps the group's ring. */
+  &:has(> :not(.ipt, .textarea, .select, .text-control, input, textarea, select):focus) {
+    outline: none;
+    box-shadow: var(--_shadow);
+  }
+
   /* A disabled control inside dims the whole group. `.input-group.disabled` and
      the aria/data spellings are already handled by `box`'s own rule, carried in
      by `text-control`; this is the child-driven case a wrapper cannot see
@@ -853,5 +865,12 @@
     outline: 2px solid Highlight;
     outline-offset: 2px;
     box-shadow: none;
+  }
+
+  /* The group draws the field's ring, so the control inside draws none here
+     either: this block is unlayered, and the ring above beat the group's
+     layered suppression and drew a second ring inside the group's. */
+  .input-group > :is(.ipt, .textarea, .select, .text-control, input, textarea, select):focus-visible {
+    outline: none;
   }
 }

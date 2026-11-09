@@ -121,7 +121,7 @@ A `.select` works in a group too. The group removes the control's side padding, 
 
 Any element works as the adornment: an icon class, an inline `<svg>`, an `<img>`, or text. The package ships no icons for fields, because a built-in image could not follow your text color, theme, or aesthetic.
 
-The group reads intent and presentation the way a lone `.ipt` does: `.input-group.primary` colors the border and the typed text, and `.input-group.soft.edgeless` is a field sunk into the page. Put the intent on the group, not on the control inside: the group draws the field, so the control's text takes the group's intent and an intent class on the control has no effect. `aria-invalid="true"` or `disabled` on the control inside applies to the whole group, and so does either on the group itself. The focus ring appears when anything inside the group has focus, so unlike a lone field it also shows after a mouse click.
+The group reads intent and presentation the way a lone `.ipt` does: `.input-group.primary` colors the border and the typed text, and `.input-group.soft.edgeless` is a field sunk into the page. Put the intent on the group, not on the control inside: the group draws the field, so the control's text takes the group's intent and an intent class on the control has no effect. `aria-invalid="true"` or `disabled` on the control inside applies to the whole group, and so does either on the group itself. The group's focus ring appears when its field has focus, so unlike a lone field it also shows after a mouse click. A button inside the group, such as a clear button, draws its own ring when it has focus, and the group draws none: one ring always marks the one control that has focus.
 
 ## Browser decorations
 
