@@ -158,6 +158,11 @@ export interface PublicPackage {
   slug: string;
   status: PackageStatus;
   /**
+   * The version these pages are of: the manifest's, which in a production
+   * build is the release tag's (`docs/ci.md`, "Publish-scoped content").
+   */
+  version?: string;
+  /**
    * The current version, then each archived one, newest first; empty when the
    * package has no archived version, since a list of one is not a choice.
    */
@@ -507,6 +512,7 @@ async function loadCatalog(): Promise<PublicPackage[]> {
         npmUrl,
         slug,
         status: packageDefinition.status,
+        version: readManifestString(manifest, "version"),
         versions: [],
       };
     }),
@@ -545,7 +551,7 @@ async function loadArchivedVersions(
           modules: archivedDocumentModules,
           slug: routeSlug,
         });
-        return { ...currentPackage, ...pages, archivedVersion: version };
+        return { ...currentPackage, ...pages, archivedVersion: version, version };
       } catch (error) {
         console.warn(
           `Left out the archived docs of ${currentPackage.name ?? currentPackage.slug}@${version}: ${(error as Error).message}`,

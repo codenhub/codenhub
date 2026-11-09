@@ -42,6 +42,8 @@ export function buildSiteLlmsTxt(
     "",
     "Each package publishes an `llms.txt` that routes to its documentation and an `llms-full.txt` that compiles its README and public documentation into one file. Links to files this site publishes are absolute; other package-relative links, such as `README.md`, stay as authored.",
     "",
+    `This file lists the current version of each package. ${new URL("/catalog.json", site.siteUrl).href} lists every version the site serves, each version's pages with their Markdown, and the languages each page is translated into.`,
+    "",
     "## Packages",
     "",
     ...packageLines,
