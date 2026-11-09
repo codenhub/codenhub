@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-30
+last_updated: 2026-11-09
 scope: The generated, flat `./palette` output of `@codenhub/styles`' composed colors, for consumers that cannot depend on the Tailwind pipeline that produces them.
 ---
 
@@ -18,7 +18,7 @@ This document contains no drop-in code: the source and the generator own the imp
 
 ## What is generated
 
-`scripts/generate-palette.mjs` compiles the package's own `src/index.css` through the Tailwind CLI, renders real `box`-composed probe elements for every combination in Chromium, and reads their computed styles, so the published value is the browser's own answer rather than a re-derivation of the formula. Presentation percentages and intents come from `registry.json`. `pnpm generate` writes `src/palette.css`, which is compiled to `dist/palette.css`; `--dry-run` reports drift without writing.
+`scripts/generate-palette.mjs` compiles the package's own `src/index.css` through the Tailwind CLI, renders the real component each ground describes for every combination in Chromium, and reads their computed styles, so the published value is the browser's own answer rather than a re-derivation of the formula. Presentation percentages and intents come from `registry.json`. `pnpm generate` writes `src/palette.css`, which is compiled to `dist/palette.css`; `--dry-run` reports drift without writing.
 
 Every `intent x presentation` cell (7 intents, `solid`/`soft`/`ghost`) gets its `bg`, `fg`, and `edge` at rest, plus `bg` and `edge` again at hover. `fg` never changes on hover, since `box-hover` only redefines background, edge, shadow, and transform.
 
@@ -28,7 +28,9 @@ Ground does not need its own free-standing dimension, because most of the cross 
 - **`fg` is ground-independent** for every presentation.
 - **Only `.soft` and `.ghost`'s `bg` varies by ground.** The ground-qualified edge names are published for symmetry, and their values equal the unqualified edge because the edge fades toward `transparent` rather than toward the ground-mixed plate.
 
-The ground set is closed and comes from `registry.json`'s component defaults: `transparent` (`.badge` and `.btn`, the default, no suffix), `--color-background` (`.alert`, through `--ui-surface-ground`, suffix `page`), and `--intent-subtle` (`.pre`, `.code`, and `.kbd`, suffix `subtle`). `.tooltip-bubble` reads `--ui-surface-ground` first, with `--intent-subtle` only as a fallback; the generator's `subtle` probe uses that fallback ground. These three grounds are generator inputs, resolved to that token's actual light or dark value at generation time -- the output is always the composited color, never a `var(--color-background)` or `var(--intent-subtle)` reference. `./palette` is self-contained and never needs `./theme` loaded alongside it. A `.ghost` cell's `bg` on the `transparent` ground is `transparent` itself, and on `page` or `subtle` is that ground's resolved color; they are generated for naming consistency with `.soft`.
+The ground set is closed, and each ground is probed on the real component that draws it rather than on a bare `box` handed the ground token: `.badge` for the unqualified cells (transparent ground; `.btn` renders the same), `.alert` for `page`, and `.kbd` for `subtle` (`.code` and `.pre` render the same; they are the components `registry.json` grounds on `--intent-subtle`). A bare `box` is not enough because the components do more than set a ground: a neutral `.alert`, `.kbd`, `.code`, or `.pre` caps its fill, and the alert grounds on `--color-foreground`, so a `box` given `--color-background` or `--intent-subtle` published L 0.884 for `--palette-neutral-soft-page-bg` where `.alert` renders 0.97. The probe adds `box-hover`, so the hover cells of `.alert` and `.kbd`, which have no hover of their own, are what the component draws when made hoverable. `.solid` and `fg` are read off the unqualified probe; `palette.spec.ts` holds every mapped component to them. `.tooltip-bubble` is not mapped to any ground: it reads `--ui-surface-ground` first, a neutral bubble fills with `--color-tooltip`, and its edge does not fade, so its values match none of the three.
+
+Every value is resolved at generation time -- the output is always the composited color, never a `var(--color-background)` or `var(--intent-subtle)` reference. `./palette` is self-contained and never needs `./theme` loaded alongside it. A `.ghost` cell's `bg` on the unqualified ground is `transparent` itself, and on `page` or `subtle` is that component's resolved ground; they are generated for naming consistency with `.soft`.
 
 `.solid` contributes 5 values per intent (`bg`, `fg`, `edge`, `bg-hover`, `edge-hover`); `.soft` and `.ghost` each contribute 13 (`fg` once, plus `bg`/`edge`/`bg-hover`/`edge-hover` on each of the three grounds). That is 31 values per intent, 217 per theme, plus the 3 neutral values below: 220 per theme, 440 declarations.
 
@@ -51,7 +53,7 @@ Light values are the unscoped default, declared on `:root` and on the explicit l
 
 ## Verifying the output
 
-`tests/browser/palette.spec.ts` checks every generated `bg`, `fg`, and `edge` value -- rest and hover, light and dark -- against the live, `box`-composed value for the same cell, and the three neutral values against their theme counterparts. It compares through `getColorDistance` in `tests/browser/test-utils.ts`, which normalizes a computed color, whichever of `rgb()`, `color(srgb ...)`, `oklab()`, or `oklch()` the engine serializes, to 8-bit sRGB and takes the largest per-channel distance, tolerating the rounding `color-mix()` introduces.
+`tests/browser/palette.spec.ts` checks every generated `bg`, `fg`, and `edge` value -- rest and hover, light and dark -- against every live component the cell describes (`.badge` and `.btn`; `.alert`; `.kbd`, `.code`, and `.pre`), checks that the `subtle` group is exactly the components `registry.json` grounds on `--intent-subtle`, and the three neutral values against their theme counterparts. It compares through `getColorDistance` in `tests/browser/test-utils.ts`, which normalizes a computed color, whichever of `rgb()`, `color(srgb ...)`, `oklab()`, or `oklch()` the engine serializes, to 8-bit sRGB and takes the largest per-channel distance, tolerating the rounding `color-mix()` introduces.
 
 ## Public surface
 
