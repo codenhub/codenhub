@@ -1162,6 +1162,55 @@ test.describe("aesthetics", () => {
         expect(read.nestedBackdrop, "and keeps its own blur").toContain("blur(14px)");
       });
 
+      /* The nearest region decides, as for neobrutalism's alert: a liquid region
+         re-entered inside another aesthetic nested in a liquid one takes the
+         layers back. A descendant-selector exclusion cannot tell the two apart
+         -- the re-entered card also sits below the other aesthetic -- so it once
+         drew no layer. */
+      test("layers a surface by the nearest region", async ({ page, browserName }) => {
+        await allowTransparency(page, browserName);
+        await page.goto(SURFACES_URL);
+
+        const read = await page.getByTestId("preview-root").evaluate((root) => {
+          const others = ["neobrutalism", "pixel", "chunky-tile", "cyber", "sketch", "glass"];
+          const paint = (regions: string[]) => {
+            const wrapper = document.createElement("div");
+
+            wrapper.innerHTML = `${regions.map((region) => `<div class="${region}">`).join("")}<div class="card">x</div>${"</div>".repeat(regions.length)}`;
+            root.append(wrapper);
+
+            const card = wrapper.querySelector(".card")!;
+            const styles = getComputedStyle(card);
+            const result = {
+              layer: getComputedStyle(card, "::before").content,
+              backdrop:
+                styles.backdropFilter && styles.backdropFilter !== "none"
+                  ? styles.backdropFilter
+                  : styles.getPropertyValue("-webkit-backdrop-filter"),
+              isolation: styles.isolation,
+            };
+
+            wrapper.remove();
+
+            return result;
+          };
+          const liquid = "glass glass-liquid";
+
+          return {
+            alone: paint([liquid]),
+            nested: Object.fromEntries(others.map((other) => [other, paint([liquid, other])])),
+            reference: Object.fromEntries(others.map((other) => [other, paint([other])])),
+            reentered: Object.fromEntries(others.map((other) => [other, paint([liquid, other, liquid])])),
+          };
+        });
+
+        expect(read.alone.layer, "a liquid card").toBe('""');
+        for (const other of Object.keys(read.nested)) {
+          expect(read.nested[other], `a card in ${other} inside liquid`).toEqual(read.reference[other]);
+          expect(read.reentered[other], `a card in liquid inside ${other} inside liquid`).toEqual(read.alone);
+        }
+      });
+
       test("changes only the corners where glass is not in scope", async ({ page }) => {
         await page.goto(SURFACES_URL);
 

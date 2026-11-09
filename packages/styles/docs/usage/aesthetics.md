@@ -117,7 +117,7 @@ The lens is drawn by an SVG filter in `backdrop-filter`, which Chromium renders 
 - It draws its blur and lens on each surface's `::before` and `::after`, so a surface inside a liquid region cannot carry a `::before` or `::after` of your own. Each surface also becomes a positioned stacking context; a surface you position yourself keeps your placement.
 - Anything else that frosts under glass keeps liquid's light blur and its clearer ground, without the lens or the rim: a bare `<table>` under `/native`, or a component of your own built with `@apply surface`.
 - The lens is 8px of erosion blurred over 10px on every surface, and 3px blurred over 3.5px on a button; its strength is fixed. A filter cannot read a custom property, so neither is a knob. The corners are, through `--glass-radius` and `--glass-radius-surface`, with larger defaults: a continuous corner reads smaller than a round one of the same radius.
-- A region of another aesthetic nested inside a liquid region, or of plain `.glass`, keeps its own material and takes no layers.
+- The nearest region decides. A region of another aesthetic nested inside a liquid region, or of plain `.glass`, keeps its own material and takes no layers, and a liquid region nested again inside that takes them back.
 - Without `.glass` in scope it changes the corners and nothing else.
 - Under `prefers-reduced-transparency: reduce`, and in forced colors, the blur and the lens go and the surface is opaque, as under glass.
 - Text sits over a clearer pane than under glass. Over busy content, check that your text still reads: the ground is 30% of the page color, where glass's is 45%.

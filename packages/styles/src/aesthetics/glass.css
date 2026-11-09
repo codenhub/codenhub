@@ -260,8 +260,16 @@
 
      Surfaces take the layers from a liquid scope. A region of another
      aesthetic nested inside, or of plain glass, keeps its own material and
-     takes none; this list names the other aesthetics, and `registry.test.ts`
-     fails when one is missing.
+     takes none, and a liquid region nested again inside that takes them back:
+     the nearest region decides. A `:not(.glass-liquid :is(...) *)` exclusion
+     cannot tell those two apart, since the re-entered surface also sits below
+     the other aesthetic, so each region writes a private flag instead and
+     inheritance hands a surface the nearest one's -- the way neobrutalism
+     rests its alert. Off, the flag withholds the layers, the anchor, and the
+     isolation, and hands back the backdrop the nearest region set. The list
+     below names the other aesthetics, and `registry.test.ts` fails when one
+     is missing. A region's own element is not a host: it declares the flag's
+     backdrop from its own, which a host would then declare from the flag.
 
      A button takes them only when it carries `.glass-liquid` itself, in a
      glass scope. Controls stay solid under a liquid region, for the reason
@@ -272,6 +280,19 @@
      plate under the rim, and `.soft` and `.ghost` are the clear panes. A
      disabled one is dimmed by `opacity`, which makes it a backdrop root, so it
      keeps the ground and the rim and bends nothing. */
+  .glass-liquid:not(.glass-solo) {
+    /* A space toggle: empty is on, and `initial` makes every declaration
+       reading it invalid at computed-value time, which is off. */
+    --_glass-liquid-on: ;
+    --_glass-liquid-backdrop: initial;
+  }
+
+  .glass:not(.glass-liquid),
+  :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) {
+    --_glass-liquid-on: initial;
+    --_glass-liquid-backdrop: var(--ui-backdrop);
+  }
+
   :is(.glass-liquid:not(.glass-solo), .glass-liquid:not(.glass-solo) *):is(.glass, .glass *):is(
       .card,
       .panel,
@@ -279,17 +300,12 @@
       .tooltip-bubble,
       .surface,
       .data-table:not(.solid, .ghost)
-    ):not(
-      .glass-liquid :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch),
-      .glass-liquid :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) *,
-      .glass-liquid .glass:not(.glass-liquid),
-      .glass-liquid .glass:not(.glass-liquid) *
-    ),
+    ):not(.glass:not(.glass-liquid), :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch)),
   .btn.glass-liquid:is(.glass, .glass *) {
-    --ui-backdrop: none;
+    --ui-backdrop: var(--_glass-liquid-backdrop, none);
 
-    position: relative;
-    isolation: isolate;
+    position: var(--_glass-liquid-on) relative;
+    isolation: var(--_glass-liquid-on) isolate;
 
     &::before,
     &::after {
@@ -298,7 +314,7 @@
       z-index: -1;
       border-radius: inherit;
       corner-shape: inherit;
-      content: "";
+      content: var(--_glass-liquid-on) "";
       pointer-events: none;
     }
 
