@@ -89,7 +89,7 @@ A `.select` draws its own arrow. With `multiple` or a `size` above 1 it becomes 
 
 ## Add an icon or a fixed prefix
 
-`.input-group` puts an icon or a piece of text inside a field's border. The group draws the border, background, focus ring, and invalid and disabled states; the control inside it gives up its own, so the border is drawn once. Place the adornment before the control to put it at the start, after it to put it at the end.
+`.input-group` puts an icon or a piece of text inside a field's border. The group draws the border, background, focus ring, and invalid and disabled states; the control inside it gives up its own, so the border is drawn once. Place the adornment before the control to put it at the start, after it to put it at the end. A group is the height of a lone field, so it lines up with the fields and buttons beside it.
 
 The profile address always starts with the same host, so it is a fixed prefix:
 

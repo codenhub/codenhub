@@ -1748,4 +1748,41 @@ test.describe("forms", () => {
       }
     }
   });
+
+  /* A group is a field, so it is a field's height and lines up with the fields
+     and buttons beside it. The control inside once kept its own
+     `--control-height` inside a box that adds its own line, and the group was
+     42px next to 40px. */
+  test("sizes a group to the control height, like the fields and buttons beside it", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const heights = await page.evaluate(() => {
+      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+      const read = (html: string) => {
+        const wrapper = document.createElement("div");
+
+        wrapper.innerHTML = html;
+        host.append(wrapper);
+
+        const height = wrapper.firstElementChild!.getBoundingClientRect().height;
+
+        wrapper.remove();
+
+        return height;
+      };
+
+      return {
+        btn: read('<button class="btn" type="button">Go</button>'),
+        ipt: read('<input class="ipt" />'),
+        group: read('<div class="input-group"><span>@</span><input class="ipt" /></div>'),
+        groupSelect: read('<div class="input-group"><select class="select"><option>One</option></select></div>'),
+        groupBare: read('<div class="input-group"><input /></div>'),
+      };
+    });
+
+    expect(heights.ipt, "a lone field").toBeCloseTo(heights.btn, 1);
+    expect(heights.group, "a group").toBeCloseTo(heights.ipt, 1);
+    expect(heights.groupSelect, "a group around a select").toBeCloseTo(heights.ipt, 1);
+    expect(heights.groupBare, "a group around a bare input").toBeCloseTo(heights.ipt, 1);
+  });
 });

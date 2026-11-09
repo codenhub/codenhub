@@ -520,6 +520,19 @@
     }
   }
 
+  /* A one-row control gives its height to the group too. Keeping its own
+     `--control-height` inside a box that draws its own line made the group
+     42px next to 40px fields and buttons. It stretches to the group's inside
+     instead, with no block padding, so the group is the control height and the
+     whole of its inside still takes a click. A textarea and a list box keep
+     their own height: their rows are the height. */
+  & > :is(.ipt, .select, input, select):not([multiple], [size]:not([size="1"])) {
+    align-self: stretch;
+    height: auto;
+    min-height: 0;
+    padding-block: 0;
+  }
+
   /* Except a drop-down's end: its chevron is the select's own background,
      drawn inside its box 0.6875-1.3125rem from the inline end, so a long label
      with no padding there ran under it. A list box draws none and keeps the
