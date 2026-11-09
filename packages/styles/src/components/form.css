@@ -304,6 +304,21 @@
   --_fg: var(--intent-strong);
 
   min-height: var(--control-height);
+
+  /* The button's size steps, so an `.ipt.sm` and a `.btn.sm` line up in a row:
+     the same 2rem and 3rem heights, the same text sizes, and the same
+     `--_scale-size` step `box` scales the corner by. See `btn`. */
+  &.sm {
+    @apply h-8 min-h-8 px-2.5 py-1 text-sm;
+
+    --_scale-size: 0.75;
+  }
+
+  &.lg {
+    @apply h-12 min-h-12 px-4 py-2.5 text-[1.0625rem];
+
+    --_scale-size: 1.25;
+  }
 }
 
 @utility field {
@@ -356,6 +371,20 @@
   --_fg: var(--intent-strong);
 
   @apply min-h-28 resize-y;
+
+  /* The size steps `ipt` takes, for its text, padding, and corner. Its
+     height is its rows, so it keeps its own floor. */
+  &.sm {
+    @apply px-2.5 py-1 text-sm;
+
+    --_scale-size: 0.75;
+  }
+
+  &.lg {
+    @apply px-4 py-2.5 text-[1.0625rem];
+
+    --_scale-size: 1.25;
+  }
 }
 
 /* The same control with a native list behind it. The chevron is drawn from two
@@ -385,6 +414,19 @@
     calc(100% - 0.6875rem) center;
   background-repeat: no-repeat;
   background-size: 0.3125rem 0.3125rem;
+
+  /* The size steps `ipt` takes. The inline end keeps the chevron's room. */
+  &.sm {
+    @apply h-8 min-h-8 py-1 ps-2.5 text-sm;
+
+    --_scale-size: 0.75;
+  }
+
+  &.lg {
+    @apply h-12 min-h-12 py-2.5 ps-4 text-[1.0625rem];
+
+    --_scale-size: 1.25;
+  }
 
   /* The chevron sits at the inline end, like the padding kept for it, so a
      right-to-left select draws it at the left. `background-position` has no
@@ -454,6 +496,24 @@
   min-height: var(--control-height);
   gap: var(--input-group-gap);
   padding-inline: var(--input-group-pad);
+
+  /* The size steps `ipt` takes, on the group rather than the control inside:
+     the group is the field, and the control and its adornments inherit the
+     text size. The control's height is the group's (below), so the group's
+     floor is its height. */
+  &.sm {
+    @apply min-h-8 text-sm;
+
+    --input-group-pad: 0.625rem;
+    --_scale-size: 0.75;
+  }
+
+  &.lg {
+    @apply min-h-12 text-[1.0625rem];
+
+    --input-group-pad: 1rem;
+    --_scale-size: 1.25;
+  }
 
   /* The focus ring the wrapper cannot get from `:focus-visible` -- a `<div>` is
      not focusable, and `:has(:focus-visible)` is unreliable because the inner

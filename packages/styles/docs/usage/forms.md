@@ -27,6 +27,25 @@ A field is a label, a control, and an optional hint, stacked:
 
 A text control is at least 2.5rem tall (`--control-height`), the same height as a default button, so a field and a button line up in a row. Its default look is no fill and a border. A `.textarea` is at least 7rem tall and can be resized vertically.
 
+### Sizes
+
+`.ipt`, `.select`, `.textarea`, and `.input-group` take the button's size classes, so a small field and a small button line up in a row:
+
+| Class   | Height | Side padding | Text      |
+| ------- | ------ | ------------ | --------- |
+| `.sm`   | 2rem   | 0.625rem     | 0.875rem  |
+| default | 2.5rem | 0.75rem      | inherited |
+| `.lg`   | 3rem   | 1rem         | 1.0625rem |
+
+The corners scale with the size, as a button's do. A `.textarea` keeps its 7rem minimum height at every size; the class changes its text, padding, and corners. Size an `.input-group` on the group, not on the control inside it: the control and its adornments take the group's text size.
+
+```html
+<div class="cluster tight">
+  <input class="ipt sm" aria-label="Coupon code" />
+  <button class="btn sm" type="button">Apply</button>
+</div>
+```
+
 ## Show a validation error
 
 Mark the control invalid with `aria-invalid="true"` and give the error message `.hint.destructive`:

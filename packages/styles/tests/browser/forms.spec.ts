@@ -1842,4 +1842,70 @@ test.describe("forms", () => {
     expect(forced.group, "forced colours: the group rings").toBe("solid");
     expect(forced.input, "forced colours: the field draws none of its own").toBe("none");
   });
+
+  /* The text controls take the button's size steps, so a `.btn.sm` and an
+     `.ipt.sm` line up in a row: height, text size, and the corner the size
+     step scales. */
+  test("sizes text controls and groups with the button's size steps", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const sizes = await page.evaluate(() => {
+      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+      const read = (html: string) => {
+        const wrapper = document.createElement("div");
+
+        wrapper.innerHTML = html;
+        host.append(wrapper);
+
+        const element = wrapper.firstElementChild!;
+        const styles = getComputedStyle(element);
+        const inner = element.querySelector("input");
+        const values = {
+          height: element.getBoundingClientRect().height,
+          fontSize: (inner ? getComputedStyle(inner) : styles).fontSize,
+          radius: styles.borderTopLeftRadius,
+          paddingStart: Number.parseFloat(styles.paddingInlineStart),
+        };
+
+        wrapper.remove();
+
+        return values;
+      };
+
+      return Object.fromEntries(
+        ["", "sm", "lg"].map((size) => [
+          size || "default",
+          {
+            btn: read(`<button class="btn ${size}" type="button">Go</button>`),
+            ipt: read(`<input class="ipt ${size}" />`),
+            select: read(`<select class="select ${size}"><option>One</option></select>`),
+            textarea: read(`<textarea class="textarea ${size}"></textarea>`),
+            group: read(`<div class="input-group ${size}"><span>@</span><input class="ipt" /></div>`),
+          },
+        ]),
+      );
+    });
+
+    for (const [size, controls] of Object.entries(sizes)) {
+      for (const control of ["ipt", "select", "group"] as const) {
+        expect(controls[control].height, `${size} .${control} height`).toBeCloseTo(controls.btn.height, 1);
+      }
+      for (const control of ["ipt", "select", "textarea", "group"] as const) {
+        expect(controls[control].fontSize, `${size} .${control} text`).toBe(controls.btn.fontSize);
+        expect(controls[control].radius, `${size} .${control} corner`).toBe(controls.btn.radius);
+      }
+    }
+
+    expect(sizes.sm.btn.height, "the steps differ").toBeLessThan(sizes.default.btn.height);
+    expect(sizes.lg.btn.height, "the steps differ").toBeGreaterThan(sizes.default.btn.height);
+
+    for (const control of ["ipt", "select", "textarea", "group"] as const) {
+      expect(sizes.sm[control].paddingStart, `.${control}.sm pads less`).toBeLessThan(
+        sizes.default[control].paddingStart,
+      );
+      expect(sizes.lg[control].paddingStart, `.${control}.lg pads more`).toBeGreaterThan(
+        sizes.default[control].paddingStart,
+      );
+    }
+  });
 });
