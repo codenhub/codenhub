@@ -1036,6 +1036,75 @@ async function utilityBodies(): Promise<Map<string, string>> {
   return bodies;
 }
 
+/* `surface` and `text-control` carry their neutral reset for an element the
+   package does not name, as `:where(&:not(<exclusions>))`. The exclusions are
+   the package's own classes that apply the utility -- they keep the reset in
+   `intent.css`, in `components` -- and the six intent classes. Both halves are
+   a hand-kept list: a new component applying the utility and missing here
+   takes the reset in `utilities`, where it beats a consumer's own intent class
+   declared in `components`; a listed class that no longer applies it is a
+   stale name. So the list is held to the stylesheet's own answer: every
+   utility whose body applies this one, directly or through another, the
+   utility's own class, and every intent but `.neutral`, which takes the reset
+   on purpose. See docs/internal/model.md#what-apply-carries. */
+test("the carried neutral resets exclude exactly the package classes that apply them", async () => {
+  const bodies = await utilityBodies();
+  const applied = (body: string): string[] =>
+    [...body.matchAll(/@apply ([^;]*);/g)].flatMap(([, list]) => list!.trim().split(/\s+/));
+  const intents = Object.keys(registry.intents).filter((name) => name !== "neutral");
+  const problems: string[] = [];
+
+  /* `@apply` outside any `@utility` names a selector this test cannot list, so
+     it is reported rather than missed. */
+  const appliedAnywhere = (await sourceFiles()).flatMap(({ source }) => applied(withoutComments(source)));
+  const appliedInUtilities = [...bodies.values()].flatMap(applied);
+
+  for (const helper of ["surface", "text-control"]) {
+    const count = (names: string[]) => names.filter((name) => name === helper).length;
+
+    if (count(appliedAnywhere) !== count(appliedInUtilities)) {
+      problems.push(`@apply ${helper} is used outside a @utility, which this check cannot list`);
+    }
+
+    const appliers = new Set<string>([helper]);
+    let grew = true;
+
+    while (grew) {
+      grew = false;
+      for (const [name, body] of bodies) {
+        if (!appliers.has(name) && applied(body).some((target) => appliers.has(target))) {
+          appliers.add(name);
+          grew = true;
+        }
+      }
+    }
+
+    const list = bodies.get(helper)?.match(/:where\(\s*&:not\(([^)]*)\)\s*\)/)?.[1];
+
+    if (list === undefined) {
+      problems.push(`could not find the carried neutral reset in @utility ${helper}`);
+      continue;
+    }
+    const excluded = new Set(list.split(",").map((selector) => selector.trim()));
+    const expected = new Set([...[...appliers].map((name) => `.${name}`), ...intents.map((name) => `.${name}`)]);
+
+    for (const selector of expected) {
+      if (!excluded.has(selector)) {
+        problems.push(`${helper}'s carried reset should exclude ${selector}`);
+      }
+    }
+    for (const selector of excluded) {
+      if (!expected.has(selector)) {
+        problems.push(
+          `${helper}'s carried reset excludes ${selector}, which neither applies ${helper} nor is an intent`,
+        );
+      }
+    }
+  }
+
+  expect(problems).toEqual([]);
+});
+
 /* A material token's readers are recorded so a change to who reads it is a
    change to the registry, and the record is only worth keeping if it is the
    stylesheet's own answer. */

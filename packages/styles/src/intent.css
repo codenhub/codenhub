@@ -125,7 +125,8 @@
    transparent background and a zero-width border -- `box` collapses. A
    consumer's `@apply surface` or `@apply text-control` is not on it; each
    utility carries its own copy for that element, excluding the classes here
-   that apply it. See docs/internal/model.md#what-apply-carries. */
+   that apply it, and `registry.test.ts` fails when that exclusion list drifts
+   from the classes that do. See docs/internal/model.md#what-apply-carries. */
 :where(
   .btn,
   .ipt,
