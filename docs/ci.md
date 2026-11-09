@@ -1,7 +1,7 @@
 ---
 status: IMPLEMENTED
 last_updated: 2026-11-09
-scope: Continuous integration workflows, the pinned workspace toolchain, and the checks that report on pull requests.
+scope: Continuous integration workflows and the checks that report on pull requests.
 ---
 
 # Continuous integration
@@ -10,30 +10,9 @@ scope: Continuous integration workflows, the pinned workspace toolchain, and the
 
 ## Toolchain
 
-Local and CI runs resolve the same versions, each declared once:
+Local and CI runs resolve the same versions, each declared once, and CI reads those same declarations rather than repeating a version. A version is raised in one place, and a machine that cannot satisfy it is told at install time instead of failing later in a way nobody can reproduce. [Workspace](workspace.md#toolchain) lists where each version is declared.
 
-| Where                                | Declares                                        |
-| ------------------------------------ | ----------------------------------------------- |
-| `package.json` `engines`             | The Node.js and pnpm range every run must meet  |
-| `package.json` `packageManager`      | The exact pnpm version pnpm installs itself     |
-| `.nvmrc`                             | The exact Node.js version, read by `nvm` and CI |
-| `pnpm-workspace.yaml` `engineStrict` | Makes an install outside `engines` fail         |
-
-CI reads those same files rather than repeating a version: `pnpm/action-setup` takes pnpm from `packageManager`, and `actions/setup-node` takes Node.js from `.nvmrc`. A version is raised in one place, and a machine that cannot satisfy it is told at install time instead of failing later in a way nobody can reproduce.
-
-`engineStrict` is deliberate friction. A patch-level difference rarely matters, and the one time it does, the failure looks like a bug in the change under review rather than a difference in the runtime.
-
-Workspace setup, pnpm, Node.js and a `--frozen-lockfile` install, lives in the composite action `.github/actions/setup`, so every job that needs the workspace sets it up the same way. A lockfile that disagrees with the manifests fails the install rather than being rewritten in CI.
-
-### Dependency installs
-
-`pnpm-workspace.yaml` holds the pnpm settings that govern installs, locally and in CI alike:
-
-- `blockExoticSubdeps: true` refuses a transitive dependency that resolves to a git repository or a tarball URL instead of the registry. A direct dependency's source is written in `package.json`, where a reviewer sees it; a transitive one would arrive through another package's manifest unseen.
-- `trustPolicy: no-downgrade` refuses a version whose publish-time trust evidence, such as provenance or trusted publishing, is weaker than that of an earlier version of the same package. A release that drops its provenance is a common sign of a compromised publish.
-- `trustPolicyIgnoreAfter: 10080` is an age in minutes, seven days, after which a version is no longer held to the trust policy. It stops a long-published version that predates provenance from being refused as a downgrade, while a fresh release, the one a compromise would be, is still checked. When one recent version must be let through, `trustPolicyExclude` names that exact version, with the reason in a comment and the condition for removing it.
-- `allowBuilds` lists the only dependencies whose install scripts run. It starts empty in the template: the template's tools ship their native binaries as optional dependencies and need none. A dependency that needs one, such as `esbuild`, gets an entry in the same change, with the reason.
-- pnpm's default `minimumReleaseAge` holds back a version published less than a day ago, so a compromised release is usually caught and pulled before it can be installed here. A version needed sooner goes in `minimumReleaseAgeExclude`, by exact version, and leaves it once it is old enough.
+Setup, the toolchain and an install from the lockfile, lives in the composite action `.github/actions/setup`, so every job that needs the project sets it up the same way. A lockfile that disagrees with the manifests fails the install rather than being rewritten in CI.
 
 ## The workflow
 

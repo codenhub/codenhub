@@ -53,7 +53,7 @@ catalog:
 overrides:
   "typedoc>minimatch": ^11.0.4
 
-# Supply-chain rules, applied to every install, local and in CI alike (docs/ci.md, "Dependency installs").
+# Supply-chain rules, applied to every install, local and in CI alike (docs/workspace.md, "Dependency installs").
 # Refuses a transitive dependency that resolves to a git repository or a tarball URL instead of the registry.
 blockExoticSubdeps: true
 # Refuses a version published with weaker trust evidence (provenance, trusted publishing) than an earlier
@@ -85,6 +85,6 @@ patchedDependencies:
   typedoc@0.28.20: patches/typedoc@0.28.20.patch
 
 # Makes pnpm refuse an install outside `engines` in package.json instead of only printing a warning, so a
-# mismatch surfaces before it turns into a failure no one can reproduce (docs/ci.md, "Toolchain"). It lives
+# mismatch surfaces before it turns into a failure no one can reproduce (docs/workspace.md, "Toolchain"). It lives
 # here because pnpm ignores `engine-strict` in .npmrc: checked with pnpm 11.7 and 12.16.
 engineStrict: true

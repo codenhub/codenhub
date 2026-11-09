@@ -1,7 +1,7 @@
 ---
 status: IMPLEMENTED
 last_updated: 2026-11-08
-scope: The root script names and what each guarantees, the shared tool configurations, and how dependency versions are declared.
+scope: The root script names and what each guarantees, the shared tool configurations, the pinned toolchain, install rules, and how dependency versions are declared.
 ---
 
 # Workspace
@@ -51,7 +51,7 @@ Every root script here except `prepare` is a thin wrapper around `hub`, and [Too
 | File                  | Configures                                                                                                                                                                                                                                                                |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `package.json`        | The root scripts, the tooling as `devDependencies`, and the pinned Node.js and pnpm (`engines`, `packageManager`).                                                                                                                                                        |
-| `pnpm-workspace.yaml` | The workspace globs, the catalog of every dependency version, the supply-chain rules for installs ([CI](ci.md#dependency-installs)), and `engineStrict`, so an install outside `engines` fails.                                                                           |
+| `pnpm-workspace.yaml` | The workspace globs, the catalog of every dependency version, the supply-chain rules for installs ([below](#dependency-installs)), and `engineStrict`, so an install outside `engines` fails.                                                                             |
 | `.nvmrc`              | The exact Node.js version, read by `nvm` and by CI.                                                                                                                                                                                                                       |
 | `.editorconfig`       | Indentation, final newline, LF line endings, and no hard wrap in Markdown.                                                                                                                                                                                                |
 | `.gitattributes`      | LF line endings in the repository and the working tree on every platform, and the binary file types.                                                                                                                                                                      |
@@ -83,20 +83,35 @@ Every third-party dependency version is declared once, in the catalog in `pnpm-w
 
 <!-- Version rules only this project has, such as installing a published workspace package from its release through the catalog. -->
 
+## Toolchain
+
+Local and CI runs resolve the same versions, each declared once:
+
+| Where                                | Declares                                        |
+| ------------------------------------ | ----------------------------------------------- |
+| `package.json` `engines`             | The Node.js and pnpm range every run must meet  |
+| `package.json` `packageManager`      | The exact pnpm version pnpm installs itself     |
+| `.nvmrc`                             | The exact Node.js version, read by `nvm` and CI |
+| `pnpm-workspace.yaml` `engineStrict` | Makes an install outside `engines` fail         |
+
+CI reads those same files rather than repeating a version: `pnpm/action-setup` takes pnpm from `packageManager`, and `actions/setup-node` takes Node.js from `.nvmrc`, both in the [setup action](ci.md#toolchain), which then installs with `--frozen-lockfile`.
+
+`engineStrict` is deliberate friction. A patch-level difference rarely matters, and the one time it does, the failure looks like a bug in the change under review rather than a difference in the runtime.
+
+### Dependency installs
+
+`pnpm-workspace.yaml` holds the pnpm settings that govern installs, locally and in CI alike:
+
+- `blockExoticSubdeps: true` refuses a transitive dependency that resolves to a git repository or a tarball URL instead of the registry. A direct dependency's source is written in `package.json`, where a reviewer sees it; a transitive one would arrive through another package's manifest unseen.
+- `trustPolicy: no-downgrade` refuses a version whose publish-time trust evidence, such as provenance or trusted publishing, is weaker than that of an earlier version of the same package. A release that drops its provenance is a common sign of a compromised publish.
+- `trustPolicyIgnoreAfter: 10080` is an age in minutes, seven days, after which a version is no longer held to the trust policy. It stops a long-published version that predates provenance from being refused as a downgrade, while a fresh release, the one a compromise would be, is still checked. When one recent version must be let through, `trustPolicyExclude` names that exact version, with the reason in a comment and the condition for removing it.
+- `allowBuilds` lists the only dependencies whose install scripts run. A dependency that needs one, such as `esbuild`, gets an entry in the same change, with the reason.
+- pnpm's default `minimumReleaseAge` holds back a version published less than a day ago, so a compromised release is usually caught and pulled before it can be installed here. A version needed sooner goes in `minimumReleaseAgeExclude`, by exact version, and leaves it once it is old enough.
+
 ## Git hooks
 
-[Contributing](../CONTRIBUTING.md#hooks) lists what each hook checks. This section records why each does that much and no more.
-
-`pre-commit` formats and lints the staged files, fixes what it can, and re-stages the result. It runs those checks and no others: type checking and tests take minutes, and a hook that slow gets bypassed until it may as well not exist. `pnpm verify` is where the rest belongs.
+[Contributing](../CONTRIBUTING.md#hooks) lists what each hook checks and why each does that much and no more. This section records what is particular to this stack.
 
 `pre-commit` itself knows nothing of the stack: it finds the staged files, keeps partly staged ones out of the rewrite, and calls `profile_fix` and `profile_check` from `.githooks/profile.sh`, which run oxfmt, Prettier, and oxlint. oxfmt is handed every staged file and formats those it understands, so the hook covers the same files as `pnpm format:check`, YAML and the formats oxfmt gains later included, with no list of extensions to fall behind. A project with code in another language, such as Rust or Go, adds its formatter to both functions and to the `format:fix` and `format:check` scripts, so the hook and the gate run the same formatter. When oxfmt also understands those files, the project lists them in `ignorePatterns` in `.oxfmtrc.json`. Its linter, like the type checker, belongs to `pnpm verify`.
 
-`pre-commit` reads files from the working tree rather than from the index. For a file that is only partly staged that matters: the hook never rewrites it, because re-staging would sweep in the parts deliberately left out of the commit, and it checks the file as it sits on disk. A commit whose staged content is already clean can therefore still fail. The alternative, skipping such files, would let unformatted code through the one check meant to stop it.
-
-`commit-msg` checks the subject line and nothing else. A body is optional, and no hook can tell whether a message describes the commit honestly, so the mechanical half is automated and the rest stays with review. Merges, reverts, and `fixup!`, `squash!`, and `amend!` markers pass unchecked: git composes those subjects, and rejecting a message nobody wrote would only train people to reach for `--no-verify` out of habit, which costs the checks that do matter. The 72-character limit is where practice already sat rather than a number from a style guide: replayed over 200 earlier commits of codenhub/codenhub, it rejected six, three merely long and three joining two changes with "and", which is the split the convention asks for anyway.
-
 The hooks are wired by `core.hooksPath`, which the root `prepare` script sets on every install with `git config`. That is a local git setting rather than a tracked one, so a fresh clone runs no hooks until something sets it; doing it from `prepare` keeps a hook manager out of the dependency list. The setup step never fails an install: a tree without git, or without permission to write its config, reports and carries on.
-
-`pre-push` reads the destination ref rather than the branch you are standing on, so its refusal to push to `main` holds for a push from `main`, for an explicit refspec that targets it from elsewhere, and for a `--delete`. It also refuses a branch whose name is not `<type>/<slug>`. That check sits in a hook rather than in wording alone because the name is often not a choice anyone made: an agent harness creates `claude/...` or `codex/...` before the agent has read a file, and a rule about naming a branch does not read as applying to a branch that already has a name. Deleting a remote branch passes whatever it is called, since removing a misnamed branch is the cleanup, and tags are not checked.
-
-`--no-verify` bypasses these: on `git commit` for the first two, on `git push` for the last. It is for the change that genuinely has to land unfixed, and it is worth saying out loud when it is used, since the whole point of a hook is that skipping one is visible.
