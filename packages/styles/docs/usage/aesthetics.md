@@ -179,7 +179,7 @@ The bar is a darker shade of the element's own color rather than a shadow under 
 
 **Exceptions:**
 
-- Only what the registry rests above zero sits on a bar — buttons and cards. A badge, chip, field, or tooltip is flat until it asks for depth with `.raised`, and `.flat` takes the bar off anything:
+- Only buttons and cards sit on a bar, because they are the components resting above zero elevation. A badge, chip, field, or tooltip is flat until it asks for depth with `.raised`, and `.flat` takes the bar off anything:
 
   ```html
   <div class="card soft edgeless info flat">Promo panel, deliberately flat</div>
@@ -190,7 +190,7 @@ The bar is a darker shade of the element's own color rather than a shadow under 
 - `.card.interactive` presses like a `.btn`, so a chunky answer tile drops onto its bar on click; `.card.pressable` gets the same press on its own. A plain `.card` stays put.
 - The shipped `.primary` is near-black on a light page and near-white on a dark one, and the bar is always mixed toward black. On a light page, a primary button's bar is almost invisible against its near-black face (measured `1.04:1`). On a dark page, the near-white face against the same bar reads well (`2.48:1`). Give `.primary` a hue of its own if it is the call to action and needs the depth cue in both themes.
 - Under `prefers-reduced-motion: reduce` the press still happens, but at once, as under neobrutalism.
-- Depth in this aesthetic is the bar, never a blurred drop shadow. Anything the registry rests flat sits flush on the page.
+- Depth in this aesthetic is the bar, never a blurred drop shadow. Anything that rests flat sits flush on the page.
 - Controls draw a heavier gray than the tiles around them, `neutral-600` in light and `neutral-400` in dark, through `--ui-control-ink`, so a field reads as a field inside a tile.
 
 ## Cyber
