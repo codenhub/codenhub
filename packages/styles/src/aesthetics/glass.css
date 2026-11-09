@@ -127,8 +127,13 @@
   }
 
   /* Transparency is the whole aesthetic, so the honest degradation is an opaque
-     surface rather than a softer blur. */
-  @media (prefers-reduced-transparency: reduce) {
+     surface rather than a softer blur.
+
+     Forced colours take the same branch. They repaint a background in `Canvas`
+     but keep its alpha -- measured in Chromium -- so the translucent ground
+     stayed translucent over whatever was behind it, and a liquid card's text
+     sat at about 2.5:1 over a busy page. An opaque ground is `Canvas` whole. */
+  @media (prefers-reduced-transparency: reduce), (forced-colors: active) {
     .glass {
       --ui-backdrop: none;
       --ui-surface-ground: var(--color-background);
@@ -221,7 +226,7 @@
     --ui-backdrop: var(--_glass-liquid-blur);
   }
 
-  @media (prefers-reduced-transparency: reduce) {
+  @media (prefers-reduced-transparency: reduce), (forced-colors: active) {
     .glass.glass-liquid:not(.glass-solo),
     .glass .glass-liquid:not(.glass-solo) {
       --ui-surface-ground: var(--color-background);
@@ -438,7 +443,8 @@
   color: var(--_solo-fg);
 }
 
-@media (prefers-reduced-transparency: reduce) {
+/* Forced colours with it, for the reason the aesthetic class gives. */
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
   .glass-solo {
     --_solo-ground: var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0)));
 
@@ -498,7 +504,7 @@
   }
 }
 
-@media (prefers-reduced-transparency: reduce) {
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
   .glass-solo.glass-liquid {
     --_solo-ground: var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0)));
   }

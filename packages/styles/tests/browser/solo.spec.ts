@@ -381,6 +381,42 @@ test.describe("solo utilities", () => {
     expect(styles["clip-path"]).toBe("none");
   });
 
+  /* Forced colours keep a background's alpha, in Chromium at least, so the
+     translucent ground stayed translucent over whatever was behind it. They
+     take the reduced-transparency branch instead. */
+  test("ground a glass element opaquely in forced colors", async ({ page, browserName }) => {
+    if (browserName === "chromium") {
+      const session = await page.context().newCDPSession(page);
+
+      await session.send("Emulation.setEmulatedMedia", {
+        features: [
+          { name: "forced-colors", value: "active" },
+          { name: "prefers-reduced-transparency", value: "no-preference" },
+        ],
+      });
+    } else {
+      await page.emulateMedia({ forcedColors: "active" });
+    }
+    await load(
+      page,
+      ["aesthetics/glass.css"],
+      `<div id="glass" class="glass-solo">glass</div><div id="liquid" class="glass-solo glass-liquid">liquid</div>`,
+    );
+    test.skip(
+      !(await page.evaluate(() => matchMedia("(forced-colors: active)").matches)),
+      "engine cannot emulate forced colors",
+    );
+
+    for (const selector of ["#glass", "#liquid"]) {
+      // oxlint-disable-next-line no-await-in-loop -- two reads, in turn.
+      const styles = await read(page, selector, ["background-color", "backdrop-filter", "-webkit-backdrop-filter"]);
+
+      expect(readSrgb(styles["background-color"]!).alpha, `${selector} ground is opaque`).toBe(1);
+      expect(styles["backdrop-filter"], `${selector} blurs nothing`).toMatch(/^(none)?$/);
+      expect(styles["-webkit-backdrop-filter"] ?? "", `${selector} blurs nothing, prefixed`).toMatch(/^(none)?$/);
+    }
+  });
+
   /* A solo class composes with what the element is asked to be, the way a
      component does: presentation from the element or a container, the intent
      on the element, the element's own elevation. See

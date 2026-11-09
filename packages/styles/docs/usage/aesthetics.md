@@ -90,7 +90,7 @@ The shadow is cast in the component's own intent, so a success button throws a g
 - Every surface in a glass region is glass, a neutral `.card.soft`, `.panel`, and `.alert` included.
 - The glass is the ground, not the fill. A presentation keeps its whole fill, so a `.solid` button, a checked toggle, and a `.solid` card or table are opaque; the default, `.soft`, and `.ghost` panes are the frosted ones.
 - The blur applies to `.card`, `.panel`, `.alert`, the tooltip bubble, and a default or `.soft` `.data-table` only. Controls stay solid and sit on the glass: a blur under every control of a dense cluster costs a composited layer apiece and reads as noise. Controls still take the aesthetic's radius, border, and shadow.
-- Under `prefers-reduced-transparency: reduce`, glass surfaces drop the blur and become opaque.
+- Under `prefers-reduced-transparency: reduce`, and in forced colors, glass surfaces drop the blur and become opaque. Forced colors replace the colors but keep their transparency, so without this a pane would show the page through the system's background.
 - Buttons and an opted-in `.card` press with the plain `scale(0.97)`; reduced motion turns it off.
 - Text controls and toggles draw their line in the page's ink at 55% rather than the white hairline, which would erase an unchecked checkbox on a light page. It is `--ui-control-ink`; set it on the region to choose another.
 - A table's frame and rules draw the page's ink at 20%, because the hairline vanishes on the table's plate. It is `--ui-rule-ink`.
@@ -116,7 +116,7 @@ The lens is drawn by an SVG filter in `backdrop-filter`, which Chromium renders 
 - The lens is 8px of erosion blurred over 10px on every surface, and 3px blurred over 3.5px on a button; its strength is fixed. A filter cannot read a custom property, so neither is a knob. The corners are, through `--glass-radius` and `--glass-radius-surface`, with larger defaults: a continuous corner reads smaller than a round one of the same radius.
 - A region of another aesthetic nested inside a liquid region, or of plain `.glass`, keeps its own material and takes no layers.
 - Without `.glass` in scope it changes the corners and nothing else.
-- Under `prefers-reduced-transparency: reduce` the blur and the lens go and the surface is opaque, as under glass. In forced colors the layers draw nothing.
+- Under `prefers-reduced-transparency: reduce`, and in forced colors, the blur and the lens go and the surface is opaque, as under glass.
 - Text sits over a clearer pane than under glass. Over busy content, check that your text still reads: the ground is 30% of the page color, where glass's is 45%.
 
 #### Liquid buttons

@@ -779,6 +779,64 @@ test.describe("aesthetics", () => {
       expect(readSrgb(card["background-color"]!).alpha, "card alpha").toBe(1);
     });
 
+    /* Forced colours swap a background for `Canvas` but keep its alpha, in
+       Chromium at least, so a translucent ground stayed translucent: a glass
+       card read 0.45 over whatever was behind it, and a liquid one 0.3 with no
+       blur, which left its text at about 2.5:1 over a busy page. Forced colours
+       take the reduced-transparency branch instead. */
+    test("grounds glass and liquid glass opaquely in forced colors", async ({ page, browserName }) => {
+      if (browserName === "chromium") {
+        const session = await page.context().newCDPSession(page);
+
+        await session.send("Emulation.setEmulatedMedia", {
+          features: [
+            { name: "forced-colors", value: "active" },
+            { name: "prefers-reduced-transparency", value: "no-preference" },
+          ],
+        });
+      } else {
+        await page.emulateMedia({ forcedColors: "active" });
+      }
+      await page.goto(withAesthetic(SURFACES_URL, "glass"));
+      test.skip(
+        !(await page.evaluate(() => matchMedia("(forced-colors: active)").matches)),
+        "engine cannot emulate forced colors",
+      );
+      expect(await page.evaluate(() => matchMedia("(prefers-reduced-transparency: reduce)").matches)).toBe(false);
+
+      const read = await page.getByTestId("preview-root").evaluate((root) => {
+        const region = document.createElement("div");
+
+        region.innerHTML =
+          '<div class="card" data-probe="glass">Glass</div>' +
+          '<div class="glass glass-liquid"><div class="card" data-probe="liquid">Liquid</div></div>';
+        root.append(region);
+
+        const paint = (probe: string) => {
+          const element = region.querySelector(`[data-probe="${probe}"]`)!;
+          const styles = getComputedStyle(element);
+          const before = getComputedStyle(element, "::before");
+          const backdrop = (from: CSSStyleDeclaration) =>
+            from.backdropFilter && from.backdropFilter !== "none"
+              ? from.backdropFilter
+              : from.getPropertyValue("-webkit-backdrop-filter");
+
+          return { ground: styles.backgroundColor, host: backdrop(styles), layer: backdrop(before) };
+        };
+        const result = { glass: paint("glass"), liquid: paint("liquid") };
+
+        region.remove();
+
+        return result;
+      });
+
+      for (const [name, painted] of Object.entries(read)) {
+        expect(readSrgb(painted.ground).alpha, `${name} ground is opaque`).toBe(1);
+        expect(painted.host, `${name} blurs nothing`).toMatch(/^(none)?$/);
+        expect(painted.layer, `${name} layer blurs nothing`).toMatch(/^(none)?$/);
+      }
+    });
+
     /* The knob is read with a fallback rather than declared, and that is what makes
        it worth having. Declared on the class it would outrank every ancestor --
        including `:root`, where an application normally themes something -- and the

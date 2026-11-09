@@ -672,7 +672,7 @@ Translucent surfaces over a blurred backdrop with a hairline highlight edge. Nee
 - Both shadow layers pull in with negative spread, so the shadow tucks under the surface instead of haloing onto the backdrop.
 - A press is the base `scale(0.97)`, dropped under reduced motion. Controls carry no shadow here, so there is no slab to press into.
 - Every surface in its region is glass, a neutral `.card.soft`, `.panel`, and `.alert` included: their quiet ground is a private default beneath `--ui-surface-ground`, so glass's ground wins over it.
-- Under `prefers-reduced-transparency`, opacity goes to 100% and the blur is dropped. Transparency is the whole aesthetic, so the honest degradation is an opaque surface rather than a softer blur.
+- Under `prefers-reduced-transparency`, and in forced colours, opacity goes to 100% and the blur is dropped. Transparency is the whole aesthetic, so the honest degradation is an opaque surface rather than a softer blur. Forced colours replace a colour but keep its alpha, so a pane left translucent there showed the page through the system's `Canvas`; the solo class follows the class.
 - Corners are `--glass-radius` and `--glass-radius-surface`, at 0.75rem and 1rem. Rounder than the base geometry, because a translucent panel with a tight corner reads as a cut-out rather than as a pane; a full step above `--radius-surface` lands closer to a pill than to glass. Read with a fallback rather than declared, so an ancestor can set them ([R8](#rules-for-aesthetics)).
 
 #### `.glass-liquid`
@@ -692,7 +692,7 @@ A modifier of glass, after Apple's Liquid Glass, the way `.sketch-rounded` is of
 - **A button's lens is a third of a pane's**: 3px of erosion under a 3.5px blur, at a strength of 40. The pane's 8px band under a 10px blur is most of a 40px button's height, so the two sides' ramps met in the middle and the label sat in a loop. It is swapped as the value the layer reads, because the layers' list outranks any selector naming the button's `::after` alone.
 - **A disabled liquid button bends nothing.** `box` dims it with `opacity`, which makes it a backdrop root, so its layers see only the button. It keeps the ground and the rim. Recorded rather than worked around: dimming by colour instead would change what disabled looks like on every component.
 - **The region's backdrop is the lighter blur, not `none`**, and a host of the layers clears its own. The layers' list names components, so a bare `<table>` under `/native` and a consumer's `@apply surface` take none; with the backdrop cleared on the region they kept the 30% ground and nothing blurred behind it.
-- Lighter than glass: `blur(2px) saturate(1.8)`, a 30% ground where glass's is 45%, and corners of 1rem and 1.5rem through glass's own knobs. The lens needs detail left to bend. Reduced transparency drops the blur and the lens and makes the ground opaque; forced colours draw no layer.
+- Lighter than glass: `blur(2px) saturate(1.8)`, a 30% ground where glass's is 45%, and corners of 1rem and 1.5rem through glass's own knobs. The lens needs detail left to bend. Reduced transparency and forced colours drop the blur and the lens and make the ground opaque.
 - `.glass-solo.glass-liquid` paints the same pane on a solo element. Its anchor is the one layered declaration a solo class makes, so an element's own `fixed` or `absolute` beats it and a toast keeps its placement. The modifier's tokens and scopes skip a solo element (`:not(.glass-solo)`), so nothing inside it inherits liquid's corners or takes its layers.
 
 ### `.neobrutalism`
