@@ -1,5 +1,5 @@
 ---
-status: APPROVED
+status: IMPLEMENTED
 last_updated: 2026-11-09
 scope: Documentation for past package versions on the documentation site.
 ---
