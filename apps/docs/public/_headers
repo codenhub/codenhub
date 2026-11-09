@@ -8,6 +8,7 @@
   Access-Control-Allow-Origin: *
 
 # Each page's Markdown source (`<route>/index.md`). The charset keeps non-ASCII
-# text readable when a browser opens the file directly.
+# text readable when a browser opens the file directly. It also labels the 404
+# for a missing `.md` path; `apps/docs/AGENTS.md` records why it stays.
 /*.md
   Content-Type: text/markdown; charset=utf-8
