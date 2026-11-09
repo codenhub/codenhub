@@ -322,8 +322,15 @@
   font-weight: 400;
   letter-spacing: 0.05em;
 
-  &.destructive {
-    color: var(--intent-color);
+  /* A named intent prints its readable tone, `--intent-strong`, the colour
+     typed text takes: a hint is text on the page, and `--intent-color` is a
+     fill colour that reads below 4.5:1 there (destructive measured 3.28:1 on
+     the dark page). No intent, or `.neutral`, keeps the secondary grey that
+     marks a hint as helper text. A hint is not a component, so the intent
+     reset does not reach it and an intent on a container does not recolour
+     it; only a class on the hint itself does. */
+  &:is(.primary, .secondary, .success, .warning, .destructive, .info) {
+    color: var(--intent-strong);
   }
 }
 

@@ -1,5 +1,6 @@
 import { expect, test } from "./fixtures";
 import {
+  BUTTON_INTENT_TOKENS,
   expectSameColor,
   flattenColor,
   getColorDistance,
@@ -1572,5 +1573,61 @@ test.describe("forms", () => {
     expect(knobs.ltrInsideRtl).toEqual(knobs.ltr);
     expect(knobs.rtlInsideLtr).toEqual(knobs.rtl);
     expect(knobs.rtlOnControl).toEqual(knobs.rtl);
+  });
+
+  /* A hint is text on the page, so an intent hint prints the intent's readable
+     tone, `--intent-strong`, as typed text does. `.hint.destructive` once
+     printed `--intent-color`, a fill colour, at 3.28:1 on the dark page, and
+     only destructive was wired at all: `.hint.success` stayed secondary grey. */
+  test("prints an intent hint in the intent's readable tone at 4.5:1 in both themes", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    for (const theme of ["light", "dark"]) {
+      // oxlint-disable-next-line no-await-in-loop -- one theme, then the other, on one page.
+      const hints = await page.evaluate(
+        ({ name, intents }) => {
+          document.documentElement.classList.remove("light", "dark");
+          document.documentElement.classList.add(name);
+          const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+          const ground = (element: Element) => {
+            for (let node: Element | null = element; node; node = node.parentElement) {
+              const color = getComputedStyle(node).backgroundColor;
+              if (color !== "rgba(0, 0, 0, 0)" && color !== "transparent") {
+                return color;
+              }
+            }
+            return getComputedStyle(document.documentElement).backgroundColor;
+          };
+
+          return intents.map(({ className, tokenName }) => {
+            const hint = document.createElement("span");
+            const probe = document.createElement("span");
+
+            hint.className = `hint ${className}`;
+            hint.textContent = "Helper text";
+            probe.style.color = `var(--color-${tokenName}-strong)`;
+            host.append(hint, probe);
+
+            const result = {
+              label: `${name} .hint.${className}`,
+              color: getComputedStyle(hint).color,
+              strong: getComputedStyle(probe).color,
+              page: ground(hint),
+            };
+
+            hint.remove();
+            probe.remove();
+
+            return result;
+          });
+        },
+        { name: theme, intents: BUTTON_INTENT_TOKENS },
+      );
+
+      for (const hint of hints) {
+        expectSameColor(hint.color, hint.strong, `${hint.label} prints --intent-strong`);
+        expect.soft(getContrastRatio(hint.color, hint.page), `${hint.label} contrast`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
   });
 });
