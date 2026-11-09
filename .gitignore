@@ -28,10 +28,15 @@ playwright-report
 .agents
 .antigravity
 .claude
+.cline
 .codex
 .cursor
 .gemini
+.kiro
 .opencode
+.trae
+.windsurf
+.zcode
 
 # Short-lived plans (docs/guidelines/documentation.md, "What belongs here").
 docs/plans

@@ -45,7 +45,7 @@ Markdown in this repository is not hard-wrapped. Write each paragraph and list i
 
 ## Prompts
 
-An HTML comment in a document, such as `<!-- The project's own root scripts, as a table with the same columns. -->`, is a prompt: it says what this project writes in that place. Write it there and delete the comment, or delete the comment when the project has nothing to add. A prompt left behind renders as nothing, so a reader of the page sees no difference, but a reader of the source cannot tell a section nobody filled in from one with nothing to say.
+An HTML comment that stands on its own line and says what the project writes in that place, such as `<!-- The project's own root scripts, as a table with the same columns. -->`, is a prompt. Write it there and delete the comment, or delete the comment when the project has nothing to add. A prompt left behind renders as nothing, so a reader of the page sees no difference, but a reader of the source cannot tell a section nobody filled in from one with nothing to say. Other comments are not prompts and stay, such as the markers a generator writes between, like `<!-- generated: packages start -->`.
 
 ## Source of truth
 

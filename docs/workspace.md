@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-08
+last_updated: 2026-11-09
 scope: The root script names and what each guarantees, the shared tool configurations, the pinned toolchain, install rules, and how dependency versions are declared.
 ---
 
@@ -81,7 +81,7 @@ oxfmt formats everything it understands except Markdown; Prettier formats only M
 
 Every third-party dependency version is declared once, in the catalog in `pnpm-workspace.yaml`, and referred to as `catalog:` in each `package.json`. The workspace therefore cannot hold two versions of one dependency by accident, and an upgrade is a one-line change that Dependabot can propose ([CI](ci.md#dependency-updates)). A workspace package depends on another as `workspace:*`, and a `peerDependencies` range says what a consumer may install, so neither is a catalog entry.
 
-<!-- Version rules only this project has, such as installing a published workspace package from its release through the catalog. -->
+A public package that depends on another public package installs it from its release, through a `catalog:` range of `^<version>`, not as `workspace:*`, so it is built and tested against what its consumers install. [Package lifecycle](specs/packages-lifecycle.md#ranges) owns the rule and how the range follows each release.
 
 ## Toolchain
 

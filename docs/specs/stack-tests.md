@@ -10,11 +10,11 @@ The [testing specification](tests.md) defines the categories, where they live, a
 
 ## Runners and file names
 
-| Category    | Runner                                | File                                                    | Runs with           |
-| ----------- | ------------------------------------- | ------------------------------------------------------- | ------------------- |
-| Unit        | [Vitest](https://vitest.dev/)         | `src/<file>.test.ts` or `.tsx`, next to `src/<file>.ts` | `pnpm test`         |
-| Integration | Vitest                                | `<package>/tests/integration/`                          | `pnpm test`         |
-| Browser     | [Playwright](https://playwright.dev/) | `<package>/tests/e2e/` or `<package>/tests/browser/`    | `pnpm test:browser` |
+| Category    | Runner                                | File                                                               | Runs with           |
+| ----------- | ------------------------------------- | ------------------------------------------------------------------ | ------------------- |
+| Unit        | [Vitest](https://vitest.dev/)         | `<file>.test.ts` or `.tsx`, next to `<file>.ts`, usually in `src/` | `pnpm test`         |
+| Integration | Vitest                                | `<package>/tests/<suite>/`, such as `tests/integration/`           | `pnpm test`         |
+| Browser     | [Playwright](https://playwright.dev/) | `<package>/tests/e2e/` or `<package>/tests/browser/`               | `pnpm test:browser` |
 
 ## Configuration
 
@@ -37,7 +37,7 @@ The [testing specification](tests.md) defines the categories, where they live, a
 
 ## Coverage
 
-`pnpm test:coverage` writes a V8 coverage report to `coverage/`.
+`pnpm test:coverage` runs each package's `test:coverage` in that package's directory, which writes a V8 coverage report to the package's own `coverage/`. `@codenhub/styles` is CSS only and runs its integration tests instead, as its [exception](packages-exceptions.md#codenhubstyles-coverage-report) records.
 
 ## Commands
 

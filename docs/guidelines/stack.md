@@ -67,6 +67,4 @@ Weak tags become weak public prose: the generated API reference ([`docs/specs/pa
 
 ## Formatting, linting, and type checking
 
-- oxfmt formats code and JSON, and Prettier formats Markdown. While working, `pnpm format:check`, `pnpm lint:check`, and `pnpm typecheck` run the gate's parts on their own; [Workspace](../workspace.md#root-scripts) lists them.
-
-<!-- Conventions for the project's frameworks and styling, for example a section per framework. -->
+- oxfmt formats code, JSON, and YAML, and Prettier formats Markdown. While working, `pnpm format:check`, `pnpm lint:check`, and `pnpm typecheck` run the gate's parts on their own; [Workspace](../workspace.md#root-scripts) lists them.

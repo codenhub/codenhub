@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-04
+last_updated: 2026-11-09
 scope: Public workspace packages.
 ---
 
