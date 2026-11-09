@@ -16,9 +16,9 @@ A changelog becomes required once the site keeps an earlier release (`docs/specs
 
 Rejected: requiring a changelog by npm downloads or another measure of use. `hub check` makes no network requests, a download count says nothing about whether a version is supported, and the maintainers already record that judgment in `codenhub.docs.versions`. Requiring one for every package with an earlier release was rejected too: most 0.x releases here never had a consumer (`docs/specs/packages-docs-versions.md`, "Why"), and a changelog written for nobody costs every release a page.
 
-A package opts in by adding a `docs/changelog/` directory as described below. There is no metadata flag to set on the package itself and no version at which a package is expected to start.
+A package starts a changelog by adding a `docs/changelog/` directory as described below, by choice or once the site keeps an earlier release of it. There is no metadata flag to set on the package itself.
 
-Once a package has a changelog, keeping it current stops being optional. `hub check`'s `changelog` rule reports `changelog/missing-entry` when the version in the manifest has no page, `changelog/unlinked-entry` when it has one `index.md` does not link, `changelog/missing-date` or `changelog/missing-description` when that page lacks the frontmatter required below, and `changelog/unfinished-entry` when a `- TODO` bullet remains in its body. `hub release --cut` writes the page and the link, so the ordinary way to release also produces the entry; `docs/tooling.md` documents each.
+Once a package has a changelog, keeping it current stops being optional. `hub check`'s `changelog` rule reports `changelog/missing-index` when `docs/changelog/` has no `index.md`, `changelog/missing-entry` when the version in the manifest has no page, `changelog/unlinked-entry` when it has one `index.md` does not link, `changelog/missing-date` or `changelog/missing-description` when that page lacks the frontmatter required below, and `changelog/unfinished-entry` when a `- TODO` bullet remains in its body. `hub release --cut` writes the page and the link, so the ordinary way to release also produces the entry; `docs/tooling.md` documents each.
 
 ## Structure
 
