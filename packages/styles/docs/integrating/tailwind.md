@@ -22,7 +22,7 @@ A project that already runs Tailwind CSS v4 can compile this package's source in
 
 `/tw` imports Tailwind itself, so it replaces your own `@import "tailwindcss"` rather than joining it: with both, Tailwind's Preflight is emitted twice. Every other `/tw/*` entrypoint expects your import to come first; see [Using a focused entrypoint](#using-a-focused-entrypoint).
 
-Tailwind CSS v4 scans your project automatically — most projects need nothing beyond the import above. `@source` paths resolve relative to the CSS file that declares them, not your project root, so `./src` here means "the `src/` next to this stylesheet"; adjust it to match where your own global stylesheet actually lives. Add `@source` only for markup Tailwind's automatic scan won't reach on its own: a path excluded by default (`.gitignore`d, or inside `node_modules` — an external component library, for instance) or, in a monorepo, one outside this file's own directory tree. Point it at your app's markup, not at this package — `/tw` already ships every class definition it publishes, so scanning it too only slows the build without adding classes.
+Tailwind CSS v4 scans your project automatically — most projects need nothing beyond the import above. `@source` paths resolve relative to the CSS file that declares them, not your project root, so `./src` here means "the `src/` next to this stylesheet"; adjust it to match where your own global stylesheet actually lives. Add `@source` only for markup Tailwind's automatic scan won't reach on its own: a path excluded by default (`.gitignore`d, or inside `node_modules` — an external component library, for instance) or, in a monorepo, one outside this file's own directory tree. Point it at your app's markup, not at this package: the package's source names every class it defines, so scanning it emits all of them whether your pages use them or not.
 
 ## Add aesthetics
 
@@ -62,11 +62,17 @@ Unlike `/tw`, the focused entrypoints and `/tw/native` do not import Tailwind, s
 
 **A class built at runtime has no styling**
 
-- **What happened:** `<button class="btn primary">` is styled, but a button whose intent comes from a variable, such as `` `btn ${tone}` ``, is not.
-- **Why:** Tailwind generates a class only when it finds the complete name in your source files. The package's own component and axis classes are always generated, but your own utilities are not, and a name assembled from strings is invisible to the scan.
-- **Fix:** write complete class names in your source, for example in a lookup object (`{ save: "btn primary", remove: "btn destructive" }`), or list the names your code can produce with `@source inline("...")` in your stylesheet.
+- **What happened:** `<button class="btn primary">` is styled, but a button whose class comes from a variable, such as `"btn " + variant`, or from CMS content, is not.
+- **Why:** Tailwind emits only the classes it finds written out in the files it scans. That holds for the package's classes too: a `/tw` build emits `.alert` only if `alert` appears somewhere it scans, which keeps the stylesheet to what your pages use. A name assembled at runtime never appears whole in a file, so the scan misses it.
+- **Fix:** write each complete class name somewhere Tailwind scans, for example in a lookup object (`{ save: "btn primary", remove: "btn destructive" }`), or list the names your code or content can produce in your stylesheet:
 
-Every `/tw` entrypoint requires Tailwind CSS 4.3.2 or newer, below 5: the source uses `@source not` and `@source inline()`, which arrived in 4.1, and it is tested against 4.3.2.
+```css
+@import "@codenhub/styles/tw";
+
+@source inline("btn primary secondary destructive alert badge");
+```
+
+Every `/tw` entrypoint requires Tailwind CSS 4.3.2 or newer, below 5, the version it is tested against.
 
 ## The `dark:` variant
 

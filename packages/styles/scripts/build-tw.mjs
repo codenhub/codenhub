@@ -1,6 +1,6 @@
 /**
  * Copies `src/` to `tw/` for the source (`/tw`) entrypoints, dropping the
- * `@source not "..."` directives on the way.
+ * `@source not "..."` and `@source inline("...")` directives on the way.
  *
  * `tw/` sits beside `dist/` rather than inside it, so `dist/` holds finished
  * CSS only: a server that serves or fingerprints `dist/` as static files, such
@@ -12,8 +12,11 @@
  * on -- and have no job in the copy: a `/tw` consumer scans their own
  * `@source`, not this package's tree.
  *
- * `@source inline(...)` is left in place -- it safelists the utility class names
- * a `/tw` consumer needs and is load-bearing.
+ * The `@source inline("...")` safelists exist for the compiled build, which has
+ * no markup to scan, and name every class the package defines. Left in the
+ * copy, they made a `/tw` consumer's build emit all of them whatever their
+ * pages used: a page with one `btn` compiled to the whole `dist/index.css`.
+ * Without them the consumer's Tailwind emits what it finds in their files.
  */
 import { cpSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -31,6 +34,7 @@ cpSync(source, target, { recursive: true });
 /* One directive per line, each terminated with `;`. The horizontal-whitespace
    classes keep the match from eating an adjacent line. */
 const SOURCE_NOT = /^[ \t]*@source[ \t]+not[ \t]+(?:"[^"]*"|'[^']*')[ \t]*;?[ \t]*\r?\n?/gm;
+const SOURCE_INLINE = /^[ \t]*@source[ \t]+inline\((?:"[^"]*"|'[^']*')\)[ \t]*;?[ \t]*\r?\n?/gm;
 
 for (const relativePath of readdirSync(target, { recursive: true })) {
   if (typeof relativePath !== "string" || !relativePath.endsWith(".css")) {
@@ -39,7 +43,7 @@ for (const relativePath of readdirSync(target, { recursive: true })) {
 
   const file = join(target, relativePath);
   const before = readFileSync(file, "utf8");
-  const after = before.replace(SOURCE_NOT, "");
+  const after = before.replace(SOURCE_NOT, "").replace(SOURCE_INLINE, "");
 
   if (after !== before) {
     writeFileSync(file, after);

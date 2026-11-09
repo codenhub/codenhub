@@ -705,6 +705,58 @@ test("./tw adds an xs breakpoint and keeps Tailwind's 2xl", async () => {
   expect(output).toMatch(/@media \(min-width:96rem\)\{\.\\32 xl\\:flex\{display:flex\}\}/);
 });
 
+/* The compiled entries safelist every class with `@source inline(...)`, since
+   they have no markup to scan. Left in the `/tw` copy, the same lists made a
+   consumer's build emit every class whatever their pages used -- byte for
+   byte the compiled `dist/index.css`. The copy keeps none. */
+test("the /tw source safelists nothing", async () => {
+  const stylesheets = await shippedStylesheets("tw");
+  const outputs = await Promise.all(stylesheets.map((file) => readFile(path.resolve(packageRoot, file), "utf8")));
+
+  expect(stylesheets.length).toBeGreaterThan(0);
+  expect(stylesheets.filter((_, index) => /@source\s+inline\(/.test(stripComments(outputs[index]!)))).toEqual([]);
+});
+
+/* `compileAsConsumer` runs in the package root, where Tailwind's automatic
+   detection scans this package's own `src/` and would find every class. A
+   tree-shaking check needs a consumer that owns nothing but its page. */
+const compileIsolatedConsumer = async (css: string, html: string) => {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), "codenhub-styles-consumer-"));
+
+  try {
+    await writeFile(path.join(temporaryRoot, "page.html"), html);
+    await writeFile(path.join(temporaryRoot, "input.css"), css);
+    await executeFile(process.execPath, [tailwindCliPath, "-i", "input.css", "-o", "output.css", "--minify"], {
+      cwd: temporaryRoot,
+    });
+
+    return await readFile(path.join(temporaryRoot, "output.css"), "utf8");
+  } finally {
+    await rm(temporaryRoot, { force: true, recursive: true });
+  }
+};
+
+test("./tw emits only the components a consumer's pages use", async () => {
+  const twEntry = pathToFileURL(path.resolve(packageRoot, "tw/index.css")).href;
+  const output = await compileIsolatedConsumer(
+    `@import "${twEntry}";\n`,
+    '<button class="btn primary">Save</button>\n',
+  );
+  const compiled = await readFile(path.resolve(packageRoot, "dist/index.css"), "utf8");
+
+  expect(output).toMatch(/\.btn\{[^}]*--_capped:/);
+  expect(output).toMatch(/\.primary\{/);
+  /* A rule that starts with the class. `emitsOwnRule` would also count a
+     plain rule that only lists it, such as the reset's forced-colors
+     `.btn,…,.badge{border-color:CanvasText}`, which ships whatever is used. */
+  for (const unused of ["alert", "badge", "data-table", "tooltip-bubble", "stack", "card"]) {
+    expect(output, `.${unused} is unused and should not be emitted`).not.toMatch(
+      new RegExp(String.raw`(?:^|[{}])\.${unused}(?![\w-])`),
+    );
+  }
+  expect(output.length).toBeLessThan(compiled.length / 4);
+});
+
 /* Every `--color-*` a stylesheet reads that it never declares. Tailwind marks
    each `@theme` value a `@reference`d file reaches as reference-only, the last
    write winning, and drops those from the output. A shared file that imported
