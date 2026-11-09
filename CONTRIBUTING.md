@@ -6,14 +6,16 @@ This document defines the contributor workflow, from a working tree through vali
 
 ## Setup
 
-The toolchain is pinned, and an install outside it fails rather than warns. With `nvm`, `nvm use` reads `.nvmrc`; pnpm installs the version `packageManager` names.
+The toolchain is pinned, and an install outside it fails rather than warns. `.nvmrc` pins Node.js: `nvm install` reads it, downloads that version when it is missing, and switches to it. pnpm installs the version `packageManager` names.
 
 ```sh
-nvm use
+nvm install
 pnpm install
 ```
 
-`pnpm install` also points git at `.githooks/` through `core.hooksPath`, so the hooks described below start working after the first install and not before. If lifecycle scripts were disabled during the install, run `git config core.hooksPath .githooks`. [CI](docs/ci.md) covers why the versions are pinned where they are.
+nvm for Windows does not read `.nvmrc`, and `nvm install` and `nvm use` without a version fail, so name it; in PowerShell, `nvm install (Get-Content .nvmrc)`, then `nvm use (Get-Content .nvmrc)`. Checked with nvm for Windows 1.2.2, and in the source of 2.0.1, whose `install` requires the version.
+
+`pnpm install` also points git at `.githooks/` through `core.hooksPath`, so the hooks described below start working after the first install and not before. If lifecycle scripts were disabled during the install, run `git config core.hooksPath .githooks`. [Workspace](docs/workspace.md#toolchain) covers why the versions are pinned where they are.
 
 Browser suites need Playwright's browsers, which `pnpm hub browsers` installs and `pnpm test:browser` installs on its own before it runs; [tooling](docs/tooling.md#browser-tests) has the details. A package or app starts for development through its own script, as in `pnpm hub docs dev`.
 

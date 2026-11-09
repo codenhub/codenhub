@@ -20,7 +20,7 @@ hub <command> [targets...] [options] [-- tool arguments]
 
 `hub` is available through the root `hub` script and as a local binary. It finds the repository root by walking up to `pnpm-workspace.yaml`, so it behaves the same from any directory.
 
-The Node and pnpm versions it runs under are pinned by `engines`, `packageManager`, and `.nvmrc`, and an install outside that range fails rather than warns. `docs/ci.md` explains where each version is declared.
+The Node and pnpm versions it runs under are pinned by `engines`, `packageManager`, and `.nvmrc`, and an install outside that range fails rather than warns. [Workspace](workspace.md#toolchain) lists where each version is declared.
 
 Root scripts map directly onto it:
 
