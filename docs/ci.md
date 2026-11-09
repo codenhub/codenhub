@@ -6,7 +6,7 @@ scope: Continuous integration workflows and the checks that report on pull reque
 
 # Continuous integration
 
-`.github/workflows/ci.yml` verifies every pull request, every merge-queue check, and, unless the project requires a merge queue, every push to `main`. It runs the same script a contributor runs locally, `pnpm verify`, so a green run means `verify` passed rather than that some CI-only approximation of it did. [Workspace](workspace.md) says what each script guarantees.
+`.github/workflows/ci.yml` verifies every pull request and every merge-queue check. It runs the same script a contributor runs locally, `pnpm verify`, so a green run means `verify` passed rather than that some CI-only approximation of it did. [Workspace](workspace.md) says what each script guarantees.
 
 ## Toolchain
 
@@ -26,7 +26,7 @@ By default there is no change-based selection: every run checks the whole worksp
 
 `Working tree is clean` fails when a check has left a tracked or untracked file changed. A check that writes has changed what it was checking, so it is reported rather than passing.
 
-Runs for the same pull request cancel each other, because only the newest push is worth a verdict. A merge-queue run or a push to `main` never cancels: each is the authoritative check of a commit. The `merge_group` trigger never fires in a repository without a merge queue. A project that requires one removes the `push` trigger: the queue lands the exact commit it checked, so a push run would only repeat a passed check. The workflow's token is read-only (`permissions: contents: read`); a job that needs more asks for it on that job alone.
+Runs for the same pull request cancel each other, because only the newest push is worth a verdict. A merge-queue run never cancels: it is the authoritative check of the commit that lands. This repository requires a merge queue, so the workflow has no `push` trigger: the queue lands the exact commit it checked, so a push run would only repeat a passed check. The workflow's token is read-only (`permissions: contents: read`); a job that needs more asks for it on that job alone.
 
 ### Triggers and selection
 

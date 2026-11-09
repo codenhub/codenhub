@@ -8,8 +8,8 @@ on:
   # result (any event other than `pull_request` gets an empty SELECTOR), and it lands the exact commit it
   # tested, so a run there would repeat a passed check (`docs/ci.md`).
 
-# A pull request pushed to again abandons the run it superseded; a merge-queue run or a push to `main` keeps every
-# run, because each is the authoritative check of a commit.
+# A pull request pushed to again abandons the run it superseded; a merge-queue run is never cancelled, because it
+# is the authoritative check of the commit that lands.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
