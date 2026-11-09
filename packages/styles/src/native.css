@@ -102,10 +102,12 @@
     @apply text-label;
   }
 
-  /* Links are left out: a link takes the text it sits in, so one inside a
-     heading stays heading-sized. */
-  p,
-  li {
+  /* Body copy is the page's text, set once on `body` and inherited, so a
+     container can resize or embolden the Markdown inside it. Pinned on `p` and
+     `li` instead, a bold 20px container printed its paragraphs at 14px regular,
+     and their tracking reached the controls inside one. Links take the text
+     they sit in, so one inside a heading stays heading-sized. */
+  body {
     @apply text-body;
   }
 

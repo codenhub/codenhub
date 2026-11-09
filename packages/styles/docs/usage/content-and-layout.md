@@ -45,7 +45,7 @@ A `.divider` takes an intent, which colors it, and ignores presentation classes,
 
 The two largest sizes grow at Tailwind's `md` breakpoint, 48rem by default. With the Tailwind source entrypoints, your own `md` breakpoint applies. The package sets no size on unclassed text: body text and unclassed headings take the browser's size, or the surrounding text size under the reset; see [Setup → Classless HTML](../setup.md#classless-html) for the classless mapping.
 
-`.text-body` is 0.875rem, smaller than the 1rem page text; use it for secondary or dense copy, not for the page's main text.
+`.text-body` is 0.875rem, smaller than the 1rem page text; use it for secondary or dense copy, not for the page's main text. `/native` is the exception: it sets `.text-body` on `body`, so there it is the page text, and paragraphs and list items inherit it from whatever they sit in. See [Classless HTML](../setup.md#classless-html).
 
 `.selection-contrast` on an element swaps the colors of selected text inside it to `--color-primary` on `--color-primary-contrast`. Use it on a `.solid.primary` area, where the default selection color would match the background.
 

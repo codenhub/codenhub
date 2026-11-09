@@ -182,6 +182,37 @@ test("keeps a link at the size and weight of the text around it", async ({ page 
   expect(styles.paragraphLink).toBe(styles.paragraph);
 });
 
+/* Body copy is the page's text, set on `body`, so a container can resize or
+   embolden the Markdown inside it. Pinned on `p` and `li`, a bold 20px
+   container printed its paragraphs at 14px regular, and their tracking reached
+   the button inside one. */
+test("lets paragraphs and list items take their container's type", async ({ page }) => {
+  await page.goto(NATIVE_URL);
+
+  const styles = await page.evaluate(() => {
+    const host = document.createElement("div");
+
+    host.style.cssText = "font-weight: 700; font-size: 20px; letter-spacing: 1px";
+    host.innerHTML = "<p>Paragraph <button>Action</button></p><ul><li>Item</li></ul>";
+    document.body.append(host);
+
+    const read = (selector: string) => {
+      const style = getComputedStyle(host.querySelector(selector)!);
+
+      return { size: style.fontSize, tracking: style.letterSpacing, weight: style.fontWeight };
+    };
+    const values = { body: getComputedStyle(document.body).fontSize, item: read("li"), paragraph: read("p") };
+
+    host.remove();
+
+    return values;
+  });
+
+  expect(styles.paragraph).toEqual({ size: "20px", tracking: "1px", weight: "700" });
+  expect(styles.item).toEqual({ size: "20px", tracking: "1px", weight: "700" });
+  expect(styles.body, "body copy is the page's text").toBe("14px");
+});
+
 /* A button's label is the size of the text around it, whichever element and
    entrypoint draws it: the user agent's 13.33px applied to `<button>` alone,
    so a native button, a `.btn` button, and a `.btn` link all disagreed. */
