@@ -256,7 +256,10 @@
      field loses to it too, because state wins over every choice
      (model.md#precedence). `--intent-hover` is redirected with the others so
      the line does not go grey under the pointer, and `--intent-strong` so typed
-     text is destructive too. The `:has()` arm bridges an
+     text is destructive too. `--intent-contrast` and `--intent-subtle` go with
+     them, so an invalid toggle is a destructive one in every part: left
+     neutral, a checked invalid checkbox in the dark theme drew the near-black
+     neutral mark on a red plate (3.28:1). The `:has()` arm bridges an
      inner control's state to an `.input-group`. */
   :is(
     .text-control,
@@ -273,9 +276,11 @@
   )[aria-invalid="true"],
   .input-group:has(> :is(.ipt, .textarea, .select, .text-control, input, textarea, select)[aria-invalid="true"]) {
     --intent-color: var(--color-destructive);
+    --intent-contrast: var(--color-destructive-contrast);
     --intent-hover: var(--color-destructive-hover);
     --intent-border: var(--color-destructive);
     --intent-strong: var(--color-destructive-strong);
+    --intent-subtle: var(--color-destructive-subtle);
   }
 }
 

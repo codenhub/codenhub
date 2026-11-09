@@ -1692,4 +1692,60 @@ test.describe("forms", () => {
     expectSameColor(measured.innerInvalid, measured.loneInvalid, "an invalid control's text in a group");
     expectSameColor(measured.groupSelect, measured.loneSelect, ".input-group.warning select text");
   });
+
+  /* An invalid toggle is destructive whatever else it was asked to be, so it
+     has to look like a destructive one, mark included. The invalid rule once
+     redirected only the line and fill slots, so a checked invalid checkbox in
+     the dark theme drew the neutral near-black mark on a red plate (3.28:1)
+     where `.checkbox.destructive` draws a light one. */
+  test("draws an invalid toggle exactly as a destructive one, checked or not", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    for (const theme of ["light", "dark"]) {
+      // oxlint-disable-next-line no-await-in-loop -- one theme, then the other, on one page.
+      const pairs = await page.evaluate((name) => {
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(name);
+        const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+        const toggles = [
+          ["checkbox", 'type="checkbox"'],
+          ["radio", 'type="radio"'],
+          ["switch", 'type="checkbox" role="switch"'],
+        ];
+        const read = (html: string) => {
+          const wrapper = document.createElement("div");
+
+          wrapper.innerHTML = html;
+          host.append(wrapper);
+
+          const control = wrapper.firstElementChild!;
+          const styles = getComputedStyle(control);
+          const values = {
+            background: styles.backgroundColor,
+            border: styles.borderTopColor,
+            color: styles.color,
+            mark: getComputedStyle(control, "::after").backgroundColor,
+          };
+
+          wrapper.remove();
+
+          return values;
+        };
+
+        return toggles.flatMap(([className, type]) =>
+          ["", "checked"].map((checked) => ({
+            label: `${name} .${className}${checked ? ":checked" : ""}`,
+            invalid: read(`<input class="${className}" ${type} ${checked} aria-invalid="true" />`),
+            destructive: read(`<input class="${className} destructive" ${type} ${checked} />`),
+          })),
+        );
+      }, theme);
+
+      for (const { label, invalid, destructive } of pairs) {
+        for (const part of ["background", "border", "color", "mark"] as const) {
+          expectSameColor(invalid[part], destructive[part], `${label} invalid ${part}`);
+        }
+      }
+    }
+  });
 });
