@@ -112,6 +112,29 @@
     --_line-tone: var(--intent-color);
   }
 
+  /* The forced-colours ring, carried so `@apply text-control` draws it: the
+     unlayered block at the end of this file names the package's own classes,
+     and `reset.css` names only typed native fields, so an applied control --
+     an `<input>` with no `type`, a `contenteditable` -- kept the 3px ring in a
+     system colour instead of the 2px `Highlight` one beside a `.text-control`.
+
+     `!important`, as the reset's ring is: the copy lands in whichever layer the
+     consumer applied it in, and an accessibility override has to win over any
+     layered rule there. So it cannot be suppressed and is kept off a control
+     inside an `.input-group`, which draws the field's ring and has the control
+     inside draw none; the offset and the cleared shadow are not important and
+     reach that control too, as the unlayered block's do. */
+  @media (forced-colors: active) {
+    &:focus-visible {
+      outline-offset: 2px;
+      box-shadow: none;
+    }
+
+    &:focus-visible:where(:not(.input-group > *)) {
+      outline: 2px solid Highlight !important;
+    }
+  }
+
   /* Everything below until `:checked` is keyed on the class, and lives inside
      the utility so `@apply text-control` carries it: `@apply` copies this body
      with the consumer's own selector, and a rule naming `.text-control` from

@@ -240,4 +240,45 @@ test.describe("/tw consumer build", () => {
       });
     }
   }
+
+  /* Forced colours replace the focus ring's colour with the system's and keep
+     its width, so the package draws a 2px `Highlight` outline on a focused
+     control -- and none on a control inside an `.input-group`, which draws the
+     field's ring. An applied control has to get the same ring, in the same
+     places. */
+  test("@apply text-control draws the forced-colours focus ring as the class does", async ({ page }) => {
+    await page.emulateMedia({ forcedColors: "active", reducedMotion: "reduce" });
+
+    const ringsFor = async (side: Side) => {
+      const control = side === "tw" ? "my-control" : "text-control";
+
+      await page.setContent(
+        `<!doctype html><html><head><meta charset="utf-8" /><style>${side === "tw" ? twCss : distCss}</style></head><body>` +
+          `<input class="${control}" id="lone" /><div class="input-group"><input class="${control}" id="grouped" /></div>` +
+          `<span class="${control}" id="span" tabindex="0">Editable</span></body></html>`,
+      );
+
+      return page.evaluate(() =>
+        ["lone", "grouped", "span"].map((id) => {
+          const element = document.getElementById(id)!;
+
+          element.focus();
+          const styles = getComputedStyle(element);
+
+          return {
+            id,
+            focusVisible: element.matches(":focus-visible"),
+            outline: `${styles.outlineStyle} ${styles.outlineWidth} ${styles.outlineOffset}`,
+          };
+        }),
+      );
+    };
+
+    const compiled = await ringsFor("dist");
+
+    expect(compiled.map(({ focusVisible }) => focusVisible)).toEqual([true, true, true]);
+    expect(compiled[0]!.outline, "the compiled control's ring").toBe("solid 2px 2px");
+    expect(compiled[1]!.outline, "no ring on the control inside a group").toMatch(/^none /);
+    expect(await ringsFor("tw")).toEqual(compiled);
+  });
 });
