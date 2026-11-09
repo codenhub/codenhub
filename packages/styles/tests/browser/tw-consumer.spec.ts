@@ -70,7 +70,9 @@ const FIXTURE = `
   <input class="{tw:my-control success|dist:text-control success}" data-known="apply-text-control" />
   <div class="card success">
     <input class="{tw:my-control|dist:text-control}" data-known="apply-text-control" />
+    <div class="{tw:my-surface|dist:surface}" data-known="apply-surface">Surface in a success card</div>
   </div>
+  <div class="{tw:my-surface success|dist:surface success}" data-known="apply-surface">Success surface</div>
 </main>`;
 
 const fixtureFor = (side: "tw" | "dist") =>
@@ -222,14 +224,20 @@ test.describe("/tw consumer build", () => {
   }
 
   /* `@apply` copies the `@utility` body and nothing that names the class from
-     outside it, so the neutral reset, the control line, and the class-keyed
-     seams (`.soft`, `.solid`, `.edgeless`, `aria-invalid`) are carried inside
-     the utility. Each applied control has to match the class it stands in for:
-     unclassed, under each seam, with an intent of its own, and with none
-     inside a container that has one. */
-  for (const theme of ["light", "dark"] as const) {
-    test(`@apply text-control renders as the class does, ${theme} theme`, async ({ page }) => {
-      expect(await differencesBetween(page, theme, (known) => known === "apply-text-control")).toEqual([]);
-    });
+     outside it, so what a helper needs is carried inside the utility: both
+     carry the neutral intent reset, and `text-control` its control line and
+     class-keyed seams (`.soft`, `.solid`, `.edgeless`, `aria-invalid`) too.
+     Each applied element has to match the class it stands in for: unclassed,
+     under each seam, with an intent of its own, and with none inside a
+     container that has one. */
+  for (const [helper, known] of [
+    ["text-control", "apply-text-control"],
+    ["surface", "apply-surface"],
+  ] as const) {
+    for (const theme of ["light", "dark"] as const) {
+      test(`@apply ${helper} renders as the class does, ${theme} theme`, async ({ page }) => {
+        expect(await differencesBetween(page, theme, (element) => element === known)).toEqual([]);
+      });
+    }
   }
 });

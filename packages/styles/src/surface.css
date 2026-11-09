@@ -21,6 +21,38 @@
   --_d-fg-on-fill: 0%;
   --_d-border: 100%;
 
+  /* The neutral reset, carried so `@apply surface` gets it: the reset in
+     `intent.css` names `.surface`, which a consumer's `.my-surface` is not, so
+     a surface inside a `.card.success` took the card's intent. Only for an
+     element that carries neither an intent class nor one of the package's own
+     surface classes; those keep the reset in `components`, where a consumer's
+     own intent class beats it, and `.tooltip-bubble` keeps its own no-intent
+     plate. Zero specificity, so every rule that writes an intent slot on the
+     element wins over it. The values track `.neutral`'s. */
+  :where(
+    &:not(
+      .surface,
+      .card,
+      .panel,
+      .alert,
+      .tooltip-bubble,
+      .primary,
+      .secondary,
+      .success,
+      .warning,
+      .destructive,
+      .info
+    )
+  ) {
+    --intent-color: var(--color-text);
+    --intent-contrast: var(--color-text-contrast);
+    --intent-hover: var(--color-text-hover);
+    --intent-strong: var(--color-text-strong);
+    --intent-subtle: var(--color-surface);
+    --intent-border: var(--ui-ink, var(--color-border));
+    --intent-fill-max: 20%;
+  }
+
   /* The public token first, so an aesthetic (glass's translucent ground) or a
      consumer names the ground outright; then the component's own quiet default,
      which `.card.soft`, a neutral `.panel`, and a neutral `.alert` write as a
