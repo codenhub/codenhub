@@ -152,7 +152,7 @@ What it does not do:
 - **No switch.** A checkbox with `role="switch"` is still painted as a checkbox; the mapping does not read roles. A page that needs switches is better served by the class-based stylesheet.
 - **Links keep the text around them.** A link inside a heading stays heading-sized; a link is never styled as a button.
 - **Body text is set once.** `p` and `li` take their type from the element they sit in, so a container that sets its own size, weight, or tracking applies it to the Markdown inside it.
-- **`pre code` is not double-styled.** Code inside a `pre` drops its own background and padding.
+- **`pre code` is not double-styled.** Code inside a `pre` drops the chip it would draw on its own: background, padding, border, shadow, glow, and clip.
 
 The mappings are global: every matching element on the page is styled, including elements inside third-party widgets. They sit in the `base` [cascade layer](#cascade-layers), so any class beats them. Add an intent or presentation class to a mapped element, such as `<button class="destructive">`, and it applies as it would on `.btn`.
 

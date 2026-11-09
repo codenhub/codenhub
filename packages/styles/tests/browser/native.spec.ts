@@ -213,6 +213,23 @@ test("lets paragraphs and list items take their container's type", async ({ page
   expect(styles.body, "body copy is the page's text").toBe("14px");
 });
 
+/* `pre code` cleared the chip's fill and padding and kept the rest of it: under
+   `.cyber` a glowing box sat inside the block, under `.neobrutalism` a 2px
+   transparent border indented the first line, and `.pixel` drew an inset ring. */
+for (const aesthetic of ["cyber", "neobrutalism", "pixel"]) {
+  test(`draws no chip inside a native preformatted block under .${aesthetic}`, async ({ page }) => {
+    await page.goto(`${NATIVE_URL}&aesthetic=${aesthetic}`);
+
+    const code = page.getByTestId("native-pre-code");
+
+    await expect(code).toBeVisible();
+    await expect(code).toHaveCSS("border-top-width", "0px");
+    await expect(code).toHaveCSS("border-left-width", "0px");
+    await expect(code).toHaveCSS("box-shadow", "none");
+    await expect(code).toHaveCSS("clip-path", "none");
+  });
+}
+
 /* A button's label is the size of the text around it, whichever element and
    entrypoint draws it: the user agent's 13.33px applied to `<button>` alone,
    so a native button, a `.btn` button, and a `.btn` link all disagreed. */

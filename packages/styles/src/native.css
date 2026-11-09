@@ -136,8 +136,19 @@
     @apply pre;
   }
 
+  /* The block is the chip; the code inside it is text. Clearing only the fill
+     and padding left the rest of the chip an aesthetic draws: `.cyber`'s glow
+     boxed the text, neobrutalism's 2px transparent border indented the first
+     line, and `.pixel`'s inset ring outlined it. The halo token goes too, so
+     nothing that reads it inside a block draws one, and so does the clip a
+     cutting aesthetic gives the chip, which would trim the block's text. */
   pre code {
     @apply bg-transparent p-0;
+
+    --ui-halo-ink: initial;
+    border: 0;
+    box-shadow: none;
+    clip-path: none;
   }
 
   hr {

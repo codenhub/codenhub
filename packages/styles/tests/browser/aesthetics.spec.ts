@@ -1527,11 +1527,18 @@ test.describe("aesthetics", () => {
 
       /* Scoped to the preview root: the playground chrome sits outside it and is
          deliberately left unstyled by the aesthetic. */
-      const shapes = await page.evaluate(() =>
-        [
+      /* An inline `<code>`: the page's only one sits in a `pre`, where the chip,
+         ring included, is cleared. */
+      const shapes = await page.evaluate(() => {
+        const inline = document.createElement("p");
+
+        inline.innerHTML = '<code data-testid="inline-code-probe">probe</code>';
+        document.querySelector('[data-testid="native-root"]')!.append(inline);
+
+        return [
           '[data-testid="native-root"] button',
           '[data-testid="native-root"] input[type="text"]',
-          '[data-testid="native-root"] code',
+          '[data-testid="inline-code-probe"]',
         ].map((selector) => {
           const styles = getComputedStyle(document.querySelector(selector) as Element);
 
@@ -1542,8 +1549,8 @@ test.describe("aesthetics", () => {
             borderTopWidth: styles.borderTopWidth,
             borderTopLeftRadius: styles.borderTopLeftRadius,
           };
-        }),
-      );
+        });
+      });
 
       const [button, input, code] = shapes;
 
