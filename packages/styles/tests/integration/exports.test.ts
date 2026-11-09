@@ -212,20 +212,51 @@ test("every declared package export target exists after build", async () => {
   );
 });
 
+/* Every CSS file under one of the package's published directories, as
+   package-relative paths with forward slashes. */
+const shippedStylesheets = async (directory: string) =>
+  (await readdir(path.resolve(packageRoot, directory), { recursive: true }))
+    .filter((file) => file.endsWith(".css"))
+    .map((file) => `${directory}/${file.replaceAll("\\", "/")}`);
+
 /* An HTML `<style>` element ends at the first `</style`, whatever CSS token it
    sits in, so a stylesheet inlined into a page would drop every rule after one.
-   Every CSS file under `dist/` ships -- the compiled entries and the `/tw`
-   sources alike -- so every one is checked, not just the export targets. */
+   Every CSS file under `dist/` and `tw/` ships -- the compiled entries and the
+   `/tw` sources alike -- so every one is checked, not just the export targets. */
 test("no shipped stylesheet contains a sequence that ends an inline style element", async () => {
-  const distRoot = path.resolve(packageRoot, "dist");
-  const stylesheets = (await readdir(distRoot, { recursive: true })).filter((file) => file.endsWith(".css"));
-  const outputs = await Promise.all(stylesheets.map((file) => readFile(path.join(distRoot, file), "utf8")));
-  const unsafe = stylesheets
-    .filter((_, index) => /<\/style/i.test(outputs[index]!))
-    .map((file) => `dist/${file.replaceAll("\\", "/")}`);
+  const stylesheets = [...(await shippedStylesheets("dist")), ...(await shippedStylesheets("tw"))];
+  const outputs = await Promise.all(stylesheets.map((file) => readFile(path.resolve(packageRoot, file), "utf8")));
+  const unsafe = stylesheets.filter((_, index) => /<\/style/i.test(outputs[index]!));
 
   expect(stylesheets.length).toBeGreaterThan(0);
   expect(unsafe).toEqual([]);
+});
+
+/* `dist/` holds finished CSS only, so a server that serves or fingerprints it
+   as static files never meets a directive it cannot resolve. With the `/tw`
+   source inside it, Django's `ManifestStaticFilesStorage` failed
+   `collectstatic` on `dist/tw/components/index.css`'s bare
+   `@import "tailwindcss/utilities.css"`. The Tailwind source ships in `tw/`. */
+test("dist holds only finished CSS, with no Tailwind or import directive left", async () => {
+  const stylesheets = await shippedStylesheets("dist");
+  const outputs = await Promise.all(stylesheets.map((file) => readFile(path.resolve(packageRoot, file), "utf8")));
+  const unfinished = stylesheets.flatMap((file, index) =>
+    [
+      ...stripComments(outputs[index]!).matchAll(/@(import|apply|utility|theme|source|reference|custom-variant)\b/g),
+    ].map((match) => `${file} contains @${match[1]}`),
+  );
+
+  expect(stylesheets.length).toBeGreaterThan(0);
+  expect([...new Set(unfinished)]).toEqual([]);
+});
+
+test("every /tw export resolves into tw/, outside dist", () => {
+  const misplaced = exportTargets
+    .filter(({ exportName }) => exportName.startsWith("./tw"))
+    .filter(({ target }) => !target.startsWith("./tw/"))
+    .map(({ exportName, target }) => `${exportName} -> ${target}`);
+
+  expect(misplaced).toEqual([]);
 });
 
 for (const [exportName, contract] of Object.entries(compiledExportContracts)) {

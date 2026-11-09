@@ -89,7 +89,7 @@ That does not apply to the `/tw` files. They are Tailwind source, not finished C
 
 ## All entrypoints
 
-Compiled entrypoints are finished CSS. `/tw` entrypoints publish the uncompiled source from `dist/tw`, which a Tailwind v4 build must process. A focused `/tw` component entrypoint includes the theme tokens, so its classes work on their own.
+Compiled entrypoints are finished CSS. `/tw` entrypoints publish the uncompiled source from `tw/`, beside `dist/`, which a Tailwind v4 build must process. A focused `/tw` component entrypoint includes the theme tokens, so its classes work on their own.
 
 Each import path resolves the same file under the `style`, `import`, and `default` export conditions. A CSS import is a side effect, so make sure your bundler does not drop it as unused.
 

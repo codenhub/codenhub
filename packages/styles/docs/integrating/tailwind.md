@@ -10,7 +10,7 @@ A project that already runs Tailwind CSS v4 can compile this package's source in
 
 ## Why source instead of compiled
 
-`/tw` entrypoints publish copied, uncompiled source from `dist/tw`; your own Tailwind build compiles it alongside your app, so its `@theme`, `@utility`, and `@apply` directives resolve together with yours. The compiled entrypoints (`@codenhub/styles`) still work in a Tailwind project, but then two separate CSS pipelines run side by side instead of one — use `/tw` unless a specific reason rules it out.
+`/tw` entrypoints publish copied, uncompiled source from the package's `tw/` folder; your own Tailwind build compiles it alongside your app, so its `@theme`, `@utility`, and `@apply` directives resolve together with yours. The compiled entrypoints (`@codenhub/styles`) still work in a Tailwind project, but then two separate CSS pipelines run side by side instead of one — use `/tw` unless a specific reason rules it out.
 
 ## Import the source entrypoint
 

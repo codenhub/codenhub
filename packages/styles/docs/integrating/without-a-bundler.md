@@ -95,6 +95,8 @@ STATICFILES_DIRS = [
 <link rel="stylesheet" href="{% static 'codenhub-styles/index.css' %}" />
 ```
 
+Point the prefix at `dist`, not at the package folder. `dist/` holds only finished CSS, so `collectstatic` also works with `ManifestStaticFilesStorage`, which fingerprints each file and rewrites the references inside it. The package folder also holds the Tailwind source in `tw/`, whose `@import "tailwindcss/..."` lines that storage cannot resolve.
+
 ### Laravel
 
 A Laravel app runs Vite by default, so it has a bundler: import the package from `resources/css/app.css` as in [Setup → Import the stylesheet](../setup.md#import-the-stylesheet), and load that file with the `@vite` directive as usual.

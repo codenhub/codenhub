@@ -12,6 +12,7 @@
   },
   "files": [
     "dist",
+    "tw",
     "NOTICE",
     "README.md",
     "docs",
@@ -79,99 +80,99 @@
       "default": "./dist/aesthetics/sketch.css"
     },
     "./tw": {
-      "style": "./dist/tw/index.css",
-      "import": "./dist/tw/index.css",
-      "default": "./dist/tw/index.css"
+      "style": "./tw/index.css",
+      "import": "./tw/index.css",
+      "default": "./tw/index.css"
     },
     "./tw/theme": {
-      "style": "./dist/tw/theme.css",
-      "import": "./dist/tw/theme.css",
-      "default": "./dist/tw/theme.css"
+      "style": "./tw/theme.css",
+      "import": "./tw/theme.css",
+      "default": "./tw/theme.css"
     },
     "./tw/components": {
-      "style": "./dist/tw/components/index.css",
-      "import": "./dist/tw/components/index.css",
-      "default": "./dist/tw/components/index.css"
+      "style": "./tw/components/index.css",
+      "import": "./tw/components/index.css",
+      "default": "./tw/components/index.css"
     },
     "./tw/surface": {
-      "style": "./dist/tw/components/surface.css",
-      "import": "./dist/tw/components/surface.css",
-      "default": "./dist/tw/components/surface.css"
+      "style": "./tw/components/surface.css",
+      "import": "./tw/components/surface.css",
+      "default": "./tw/components/surface.css"
     },
     "./tw/button": {
-      "style": "./dist/tw/components/button.css",
-      "import": "./dist/tw/components/button.css",
-      "default": "./dist/tw/components/button.css"
+      "style": "./tw/components/button.css",
+      "import": "./tw/components/button.css",
+      "default": "./tw/components/button.css"
     },
     "./tw/form": {
-      "style": "./dist/tw/components/form.css",
-      "import": "./dist/tw/components/form.css",
-      "default": "./dist/tw/components/form.css"
+      "style": "./tw/components/form.css",
+      "import": "./tw/components/form.css",
+      "default": "./tw/components/form.css"
     },
     "./tw/feedback": {
-      "style": "./dist/tw/components/feedback.css",
-      "import": "./dist/tw/components/feedback.css",
-      "default": "./dist/tw/components/feedback.css"
+      "style": "./tw/components/feedback.css",
+      "import": "./tw/components/feedback.css",
+      "default": "./tw/components/feedback.css"
     },
     "./tw/tooltip": {
-      "style": "./dist/tw/components/tooltip.css",
-      "import": "./dist/tw/components/tooltip.css",
-      "default": "./dist/tw/components/tooltip.css"
+      "style": "./tw/components/tooltip.css",
+      "import": "./tw/components/tooltip.css",
+      "default": "./tw/components/tooltip.css"
     },
     "./tw/reset": {
-      "style": "./dist/tw/reset.css",
-      "import": "./dist/tw/reset.css",
-      "default": "./dist/tw/reset.css"
+      "style": "./tw/reset.css",
+      "import": "./tw/reset.css",
+      "default": "./tw/reset.css"
     },
     "./tw/native": {
-      "style": "./dist/tw/native.css",
-      "import": "./dist/tw/native.css",
-      "default": "./dist/tw/native.css"
+      "style": "./tw/native.css",
+      "import": "./tw/native.css",
+      "default": "./tw/native.css"
     },
     "./tw/typography": {
-      "style": "./dist/tw/typography.css",
-      "import": "./dist/tw/typography.css",
-      "default": "./dist/tw/typography.css"
+      "style": "./tw/typography.css",
+      "import": "./tw/typography.css",
+      "default": "./tw/typography.css"
     },
     "./tw/utilities": {
-      "style": "./dist/tw/utilities/index.css",
-      "import": "./dist/tw/utilities/index.css",
-      "default": "./dist/tw/utilities/index.css"
+      "style": "./tw/utilities/index.css",
+      "import": "./tw/utilities/index.css",
+      "default": "./tw/utilities/index.css"
     },
     "./tw/aesthetics": {
-      "style": "./dist/tw/aesthetics/index.css",
-      "import": "./dist/tw/aesthetics/index.css",
-      "default": "./dist/tw/aesthetics/index.css"
+      "style": "./tw/aesthetics/index.css",
+      "import": "./tw/aesthetics/index.css",
+      "default": "./tw/aesthetics/index.css"
     },
     "./tw/aesthetics/neobrutalism": {
-      "style": "./dist/tw/aesthetics/neobrutalism.css",
-      "import": "./dist/tw/aesthetics/neobrutalism.css",
-      "default": "./dist/tw/aesthetics/neobrutalism.css"
+      "style": "./tw/aesthetics/neobrutalism.css",
+      "import": "./tw/aesthetics/neobrutalism.css",
+      "default": "./tw/aesthetics/neobrutalism.css"
     },
     "./tw/aesthetics/glass": {
-      "style": "./dist/tw/aesthetics/glass.css",
-      "import": "./dist/tw/aesthetics/glass.css",
-      "default": "./dist/tw/aesthetics/glass.css"
+      "style": "./tw/aesthetics/glass.css",
+      "import": "./tw/aesthetics/glass.css",
+      "default": "./tw/aesthetics/glass.css"
     },
     "./tw/aesthetics/pixel": {
-      "style": "./dist/tw/aesthetics/pixel.css",
-      "import": "./dist/tw/aesthetics/pixel.css",
-      "default": "./dist/tw/aesthetics/pixel.css"
+      "style": "./tw/aesthetics/pixel.css",
+      "import": "./tw/aesthetics/pixel.css",
+      "default": "./tw/aesthetics/pixel.css"
     },
     "./tw/aesthetics/chunky-tile": {
-      "style": "./dist/tw/aesthetics/chunky-tile.css",
-      "import": "./dist/tw/aesthetics/chunky-tile.css",
-      "default": "./dist/tw/aesthetics/chunky-tile.css"
+      "style": "./tw/aesthetics/chunky-tile.css",
+      "import": "./tw/aesthetics/chunky-tile.css",
+      "default": "./tw/aesthetics/chunky-tile.css"
     },
     "./tw/aesthetics/cyber": {
-      "style": "./dist/tw/aesthetics/cyber.css",
-      "import": "./dist/tw/aesthetics/cyber.css",
-      "default": "./dist/tw/aesthetics/cyber.css"
+      "style": "./tw/aesthetics/cyber.css",
+      "import": "./tw/aesthetics/cyber.css",
+      "default": "./tw/aesthetics/cyber.css"
     },
     "./tw/aesthetics/sketch": {
-      "style": "./dist/tw/aesthetics/sketch.css",
-      "import": "./dist/tw/aesthetics/sketch.css",
-      "default": "./dist/tw/aesthetics/sketch.css"
+      "style": "./tw/aesthetics/sketch.css",
+      "import": "./tw/aesthetics/sketch.css",
+      "default": "./tw/aesthetics/sketch.css"
     },
     "./native": {
       "style": "./dist/native.css",
@@ -184,7 +185,7 @@
     "access": "public"
   },
   "scripts": {
-    "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
+    "clean": "node -e \"for (const d of ['dist', 'tw']) fs.rmSync(d, { recursive: true, force: true })\"",
     "dev": "pnpm --filter=@codenhub/styles-dev dev",
     "debug": "pnpm build && pnpm --filter=@codenhub/styles-debug dev",
     "demo": "pnpm build && pnpm --filter=@codenhub/styles-demo dev",
