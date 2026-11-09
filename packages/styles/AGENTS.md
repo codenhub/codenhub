@@ -1,0 +1,5 @@
+# packages/styles
+
+## Traps
+
+- **A browser run can test another checkout's CSS.** `playwright.config.ts` serves every run on the fixed port 5184 with `reuseExistingServer` on outside CI, so when another worktree's server already holds the port, Playwright attaches to it and asserts that checkout's build: a fix looks like it failed, or a regression passes. When that server dies mid-run, the rest fails with `ERR_CONNECTION_REFUSED`. Held under Playwright 1.63 on 2026-11-09, when four parallel worktrees ran the styles suite at once; one run reported 147 failures carrying the pre-fix values of another branch. Prefer `CI=1` on a local run whenever another checkout might be testing, so a busy port fails at startup instead, and stop the other server first.
