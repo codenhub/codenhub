@@ -1,20 +1,20 @@
 ---
 name: project-template
-description: Creates projects from the shared project template (codenhub/template), a pnpm workspace with docs-first guidelines, agent instructions, git hooks, and CI, compares existing projects with it, and migrates projects off its earlier `.template/manifest.json` design. Use when starting a new project or repository from the template, when asked to sync, update, compare, or audit a project against the template, to adopt the template in an existing project, or to remove a project's template manifest, markers, or conformance check. Not for unrelated work in a project that happens to come from the template.
+description: Creates projects from the shared project template (codenhub/template), a stack-neutral core of docs-first guidelines, agent instructions, git hooks, and CI with a profile per stack, compares existing projects with it, and migrates projects off its earlier `.template/manifest.json` design. Use when starting a new project or repository from the template, when asked to sync, update, compare, or audit a project against the template, to adopt the template in an existing project, or to remove a project's template manifest, markers, or conformance check. Not for unrelated work in a project that happens to come from the template.
 ---
 
 # Project Template
 
-The template is a starting point and a reference. A project created from it keeps no tie to it: no `.template/` directory, no record of a sync, nothing in CI. Comparing a project with the template is something someone chooses to do, and each difference is judged on which side is better.
+The template is a starting point and a reference. A project created from it keeps no tie to it: no `profiles/` directory or other template-only file, no record of a sync, nothing in CI. Comparing a project with the template is something someone chooses to do, and each difference is judged on which side is better.
 
-The procedure lives in the template's `.template/README.md`. A project created from the current template has no `.template/`, and a project from the manifest design has an outdated copy, so always read the fetched one: it is the authority. Fetch the template without adding a remote and read it before any of the work below; follow it rather than restating it, since this skill adds only what an agent needs around it:
+The procedure, and the design behind it, lives in the template's `profiles/README.md`. A created project has no `profiles/`, and a project from the manifest design has an outdated `.template/README.md`, so always read the fetched README: it is the authority, and this skill follows it where the two differ. Fetch the template without adding a remote and read it before any of the work below; follow it rather than restating it, since this skill adds only what an agent needs around it:
 
 ```sh
 git fetch --no-tags https://github.com/<template> HEAD
-git show FETCH_HEAD:.template/README.md
+git show FETCH_HEAD:profiles/README.md
 ```
 
-`<template>` is `codenhub/template` unless the user names another `owner/repo`; use the same one in every command below, and in the README's commands, which name `codenhub/template`. Any other fetch overwrites `FETCH_HEAD`, so fetch the template again before reading it. The steps use `git`, `pnpm`, and an authenticated GitHub CLI (`gh`); without `gh`, use the local start and ask the user to create the repository.
+`<template>` is `codenhub/template` unless the user names another `owner/repo`; use the same one in every command below, and in the README's commands, which name `codenhub/template`. Any other fetch overwrites `FETCH_HEAD`, so fetch the template again before reading it. The steps use `git`, the chosen profile's tools, such as Node.js and `pnpm` for `node-pnpm`, and an authenticated GitHub CLI (`gh`); without `gh`, use the local start and ask the user to create the repository.
 
 A project brings its own name, brand, and domain. Never carry a name, owner, or brand from the template or from another project into this one.
 
@@ -29,7 +29,7 @@ Creating a repository, pushing, and opening a pull request or an issue are outwa
 
 ## New Project
 
-1. **Collect the placeholder values** in the README's table. Derive what you can, use the current year for `{{year}}`, and ask for the rest, including the GitHub owner and the repository's visibility. Never guess the copyright holder.
+1. **Choose the profile and collect the placeholder values** in the README's tables. The profile is the project's stack, from the README's list; when none fits, say so and ask, and never write a profile unasked. `{{setup}}` and `{{verify}}` come from the profile's row. Derive what you can, use the current year for `{{year}}`, and ask for the rest, including the GitHub owner and the repository's visibility. Never guess the copyright holder.
 2. **Create the repository.** Prefer GitHub's template creation, which keeps the hooks' executable bits, with the visibility the user chose, `--private` or `--public`:
 
    ```sh
@@ -48,22 +48,22 @@ Creating a repository, pushing, and opening a pull request or an issue are outwa
 
    Without `gh`, ask the user to turn it on under the repository's Settings, General, Pull Requests.
 
-3. **Follow "Creating a project"** in the README: replace the placeholders, delete `.template/`, run the placeholder check, then `pnpm install`, which also points git at the hooks, and `pnpm verify`. Leave GitHub Actions expressions such as `${{ github.ref }}` alone. A value the user has not decided yet, such as the license of a private repository, stays a placeholder only when the user says so, and goes in the report.
+3. **Follow "Creating a project"** in the README: delete the template-only files and lay the profile over the core, replace the placeholders, run the placeholder check, then the profile's setup commands, which also point git at the hooks, and its gate. Leave GitHub Actions expressions such as `${{ github.ref }}` alone. A value the user has not decided yet, such as the license of a private repository, stays a placeholder only when the user says so, and goes in the report.
 4. **Fill the prompts** the documentation guidelines describe, the HTML comments in the documents, from what the user has told you about the project. Leave a prompt you have nothing for, and list it in the report for the user to fill or delete.
-5. **Commit** the untouched template first and the rest second, so the second commit shows exactly what the project changed. GitHub's template creation already made the first commit on `main`. For a local start, the untouched template is the first commit on `main`. Either way, the placeholder replacement, the deletion of `.template/`, and any further setup go on a bootstrap branch, such as `chore/bootstrap`, merged by pull request.
+5. **Commit** the untouched template first and the rest second, so the second commit shows exactly what the project changed. GitHub's template creation already made the first commit on `main`. For a local start, the untouched template is the first commit on `main`. Either way, the profile step, the placeholder replacement, and any further setup go on a bootstrap branch, such as `chore/bootstrap`, merged by pull request.
 
 The template's pre-push hook refuses any push to `main`, including the first push into an empty repository. Tell the user; pushing with `--no-verify` is their decision, never yours.
 
 ## Compare
 
-Follow "Comparing a project with the template" in the README, from the project's repository. A project that still has `.template/manifest.json` is migrated first, as its own commit; see Migrate.
+Follow "Comparing a project with the template" in the README, from the project's repository: one comparison with the core and one with the profile the project started from. A project created before the split into profiles started from `node-pnpm`. A project that still has `.template/manifest.json` is migrated first, as its own commit; see Migrate.
 
 - **Judge each hunk, not each file.** For each one, decide which side is better: the template's, the project's, or a difference that is the project's own, such as its name, its packages, or a rule only it needs. Judge on what each version does for this project, not on which is newer; the template's version of a file is not the correct one by default.
-- **Take the template's side on a branch.** Apply each hunk where the template is better, then run `pnpm install` when `package.json` or `pnpm-workspace.yaml` changed, and `pnpm verify`. A hunk that would change the project's behavior, public contract, or a decision its documentation records is presented as a choice, with your recommendation, rather than taken.
+- **Take the template's side on a branch.** Apply each hunk where the template is better, then rerun the setup commands when a dependency manifest changed, and the gate. A hunk that would change the project's behavior, public contract, or a decision its documentation records is presented as a choice, with your recommendation, rather than taken.
 - **Keep the project's side without recording it.** Nothing in the project records which differences were kept; a kept difference shows up again in the next comparison, and that is intended. Do not add a file, comment, or list to suppress it.
 - **When asked only to audit or report,** change nothing: report the judgments below and ask before applying any.
 
-A project that predates the template is compared the same way. The diff is large, and a file shown as removed is one the project never had: judge whether to add it. Present the result as a branch for review, never as a finished change, since it rewrites files the project has relied on. When the project is not a pnpm workspace, or its tooling differs at the core, adopting the template is a restructuring decision: describe what would change and ask before starting. A project file that does the job of a template file under another name, such as a different hooks directory or lint config, is proposed for replacement, not replaced.
+A project that predates the template is compared the same way. The diff is large, and a file shown as removed is one the project never had: judge whether to add it. Present the result as a branch for review, never as a finished change, since it rewrites files the project has relied on. When no profile matches the project's stack, compare with the core only, and say so; when its tooling differs from its profile's at the root, adopting the profile is a restructuring decision: describe what would change and ask before starting. A project file that does the job of a template file under another name, such as a different hooks directory or lint config, is proposed for replacement, not replaced.
 
 Report per file, and per hunk where a file has more than one verdict, which side won and why. Then list what was taken, what was kept, what is suggested upstream, and the choices left for the user. Leave out the placeholder values, which are not differences to judge.
 
