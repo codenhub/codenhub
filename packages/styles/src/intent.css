@@ -122,7 +122,10 @@
    registry component missing from either. `.text-control` and `.surface` are on
    it though they are not components: both are documented as typeable on their
    own, and a bare `<div class="surface">` with no intent resolved computes a
-   transparent background and a zero-width border -- `box` collapses. */
+   transparent background and a zero-width border -- `box` collapses. A
+   consumer's `@apply surface` or `@apply text-control` is not on it; each
+   utility carries its own copy for that element, excluding the classes here
+   that apply it. See docs/internal/model.md#what-apply-carries. */
 :where(
   .btn,
   .ipt,
@@ -169,7 +172,9 @@
    above every intent class in `components`, and overrule `.primary` on the
    element. Written as a plain class list it would carry 0-1-0 and, being later
    in the stylesheet, beat `.primary` the same way. Either would make every
-   colored control draw a grey line; `:where()` keeps it under both.
+   colored control draw a grey line; `:where()` keeps it under both. The copy
+   `text-control` carries for `@apply` does sit in `utilities`, and is safe
+   there only because it never matches an element with an intent class.
 
    An aesthetic reaches this line through `--ui-control-ink` first, then its
    `--ui-ink`: the theme keeps a control border apart from a surface border, and

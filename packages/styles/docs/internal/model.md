@@ -164,13 +164,19 @@ Both surviving edge bounds turn on one distinction, the one [the bounds test](#t
 - **A class on a container** is our own cascade reaching something nobody classed. A bound may answer it.
 - **A class on the element** is a consumer describing what they want. A bound may not answer it.
 
-CSS expresses it directly. The utility raises the floor; a plain rule matching the element's own class lowers it:
+CSS expresses it directly. The utility raises the floor; a rule nested in it, matching the element's own class, lowers it:
 
 ```css
-:is(.text-control, .ipt, .textarea, .select, .switch, .input-group).edgeless {
-  --_edge-floor: 0%;
+@utility text-control {
+  --_edge-floor: 100%;
+
+  &.edgeless:where(:not(.checkbox, .radio)) {
+    --_edge-floor: 0%;
+  }
 }
 ```
+
+Nested rather than written beside the utility, so `@apply text-control` carries it with the consumer's selector; see [What `@apply` carries](#what-apply-carries). The exclusion sits in `:where()` so the rule keeps 0-2-0.
 
 So a `.edgeless` toolbar cannot erase the line of a field inside it, and `.ipt.edgeless` gets exactly the borderless field it asked for. That field does not meet WCAG 1.4.11 at rest -- a 12% tint is 1.31:1 against the page where a control boundary is asked for 3:1 -- which is a consumer's opt-in rather than a default. Recorded in [Accessibility](../accessibility.md).
 
@@ -498,7 +504,7 @@ Modifiers -- size, and [elevation](#elevation) -- sit above the three, being per
 
 State is where a design system usually grows escape hatches: `:checked`, `:indeterminate`, `.active`, `[data-state]`, selected rows each have an obvious wrong answer -- paint the property directly -- that works in isolation and then ignores the aesthetic, ignores elevation, and loses the hover derivation. S1 closes that. `aria-invalid` and `:checked` follow it; a state that painted `border-color` would look fine in isolation and fail under an aesthetic that draws its edge as an inset ring.
 
-S1 says what a state may declare. It does not say where, and where decides whether the state wins at all. The intent resets are in `components`; a state written as `&[aria-invalid="true"]` inside `@utility` lands in `utilities`, which beats `components`, and `:is(...)` gives it 0-2-0 so it also outranks its own component's utility. **A state that writes an intent slot is declared above the intents: in `utilities`, at a specificity that beats its own component.** A consumer's utility setting an intent slot on an invalid field loses to it too, because state wins over every choice.
+S1 says what a state may declare. It does not say where, and where decides whether the state wins at all. The intent resets are in `components`; a state written as `&[aria-invalid="true"]` inside `@utility` lands in `utilities`, which beats `components`, and the class with the attribute gives it 0-2-0 so it also outranks its own component's utility. **A state that writes an intent slot is declared above the intents: in `utilities`, at a specificity that beats its own component.** A consumer's utility setting an intent slot on an invalid field loses to it too, because state wins over every choice.
 
 The cost of the rule is that a state can only express itself in the vocabulary the axes already have. That is the point: if a state needs something the vocabulary cannot say, the vocabulary is missing a slot, and adding the slot fixes it for every state at once rather than for that one.
 
@@ -647,6 +653,17 @@ The table component is `.data-table`, not `.table`: an `@utility table` would re
 | `text-control` | `box` plus the fill cap, the edge floor, and the field affordances all six text controls share.                                                  |
 
 They are the seam the components are built from, and a consumer composing a component the package does not ship is better served by them than by copying a component's declarations. What they are not is a taxonomy: applying `box` says how an element is painted, not what kind of thing it is.
+
+#### What `@apply` carries
+
+`@apply` copies a utility's body, nested rules included, under the consumer's selector, and nothing else. A rule that names the class from outside the utility -- `:where(.text-control, ...)` in `intent.css`, `:is(.text-control, ...).soft` beside it -- never reaches `.my-control { @apply text-control }`. So whatever the helper's contract includes lives inside the utility:
+
+- **The neutral reset.** `surface` and `text-control` carry it, `text-control` with the control line, as `:where(&:not(<the package's own classes that apply the helper>, <the six intent classes>))`. Zero specificity, so every rule writing an intent slot on the element wins over it, and never on an element with an intent class, so it cannot overrule one. `box` carries none: it takes the nearest intent, as documented.
+- **The seams `text-control` owns.** `&.soft`, `&.solid`, `&.edgeless`, and `&[aria-invalid="true"]`, each at 0-2-0 as before. The toggles' exceptions -- no `.soft`/`.solid` cap on any of the three, no `.edgeless` on `.checkbox` and `.radio` -- are exclusions in `:where()`, so they add no specificity.
+
+The reset excludes the package's own classes because it lands in `utilities`, where the `intent.css` reset is in `components`. On `.ipt` it would beat a consumer's own intent class declared in `components` ([Theming → Your own intent](../usage/theming.md#your-own-intent)); a consumer's applied element carries that cost instead, since nothing else reaches it. An intent class of the consumer's own on such an element has to be unlayered or a utility to win.
+
+Not carried, because each names the applied element from somewhere else: `.input-group`'s rules for the control inside it, which match the package's control classes and the native fields, so they reach an applied `<input>`, `<textarea>`, or `<select>` and nothing else; `dialog:is(.card, .panel, .surface)`, which hides a closed dialog and centres an open one; and the liquid-glass layers, whose selector list names surfaces and gives anything it misses the backdrop instead.
 
 ### Public component variables
 
