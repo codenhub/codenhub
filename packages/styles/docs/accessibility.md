@@ -99,14 +99,16 @@ The measurements below are for the shipped colors. Once you change a color token
 
 ### Forced colors and direction
 
-| Feature        | Behavior                                                                                                                                                                                                                                            |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Forced colors  | With `forced-colors: active`, borders, checked states, and a `.select`'s chevron stay visible, drawn in system colors, under every aesthetic. An aesthetic that draws its border as an inner shadow, such as `.pixel`, draws a real border instead. |
-| Text direction | Under `dir="rtl"`, the quote bar, the alert icon, the progress fill, the vertical divider, the switch knob, table alignment, and a select's chevron all switch sides. No class is needed.                                                           |
+| Feature        | Behavior                                                                                                                                                                                                                                                                    |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Forced colors  | With `forced-colors: active`, borders, checked states, a `.select`'s chevron, and a progress bar's value stay visible, drawn in system colors, under every aesthetic. An aesthetic that draws its border as an inner shadow, such as `.pixel`, draws a real border instead. |
+| Text direction | Under `dir="rtl"`, the quote bar, the alert icon, the progress fill, the vertical divider, the switch knob, table alignment, and a select's chevron all switch sides. No class is needed.                                                                                   |
 
 In forced colors, `.text-control`, `.ipt`, `.textarea`, `.select`, and the toggles show a 2px `Highlight` focus outline. The native entrypoint gives unclassed text inputs, selects, textareas, checkboxes, and radios the same outline.
 
 Checkboxes, radios, and switches use the system colors `Canvas`, `CanvasText`, `Highlight`, and `HighlightText`, so checked and unchecked stay distinct: a checked toggle is filled with `Highlight` and its mark is `HighlightText`, on the classes and in the native entrypoint alike. Shape, size, and spacing do not change.
+
+A `.progress` bar does the same: its filled part is `CanvasText` on a `Canvas` track with a `CanvasText` outline, whatever its intent or presentation, so a half-full bar does not read as an empty one. The `.active` shimmer is not drawn.
 
 ## Required outside CSS
 

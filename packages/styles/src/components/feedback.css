@@ -226,3 +226,26 @@
     }
   }
 }
+
+/* Forced colours repaint every background as Canvas, the value fill on a
+   Canvas track included, so a half-full bar read as an empty one. The bar opts
+   out, as the toggles do in `form.css`, and names system colours for every
+   part: the value in CanvasText, the track in Canvas, and a CanvasText
+   boundary at the track's own width, because a `.soft.edgeless` track has no
+   visible line and the extent of the bar is half of what it says. The shimmer
+   is decoration in the intent colour, so it goes. */
+@media (forced-colors: active) {
+  .progress {
+    forced-color-adjust: none;
+    background-color: Canvas;
+    border-color: CanvasText;
+
+    &::after {
+      background-color: CanvasText;
+    }
+
+    &.active::before {
+      display: none;
+    }
+  }
+}
