@@ -20,7 +20,6 @@ body:
       description: The released version, or the commit from `git rev-parse --short HEAD` when running from a checkout.
     validations:
       required: true
-  # project:start
   # Where it surfaced decides the `found-in:` label (CONTRIBUTING.md, "Issues").
   - type: dropdown
     id: found-in
@@ -31,7 +30,6 @@ body:
         - An app outside this repository
     validations:
       required: true
-  # project:end
   - type: textarea
     id: actual
     attributes:

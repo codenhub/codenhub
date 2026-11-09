@@ -1,8 +1,7 @@
 // Prettier formats Markdown only; oxfmt owns every other format. JSON5, rather than JSON, so this file can
-// hold the project block below.
+// carry comments.
 {
   $schema: "https://json.schemastore.org/prettierrc",
-  // project:start
   overrides: [
     // Generated API reference: a signature block stays byte-for-byte what the compiler emitted.
     {
@@ -15,6 +14,5 @@
       options: { embeddedLanguageFormatting: "off" },
     },
   ],
-  // project:end
   proseWrap: "never",
 }

@@ -1,10 +1,8 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "ignorePatterns": [
-    // project:start
     // Eval fixtures: projects an agent works on, kept byte-for-byte because their flaws are what the eval tests.
     "packages/skills/evals/*/fixtures/**",
-    // project:end
     "**/dist/**",
     "**/coverage/**",
     "**/test-results/**",
@@ -16,10 +14,6 @@
   },
   "plugins": ["typescript", "oxc", "jsdoc", "unicorn", "promise", "vitest"],
   "rules": {
-    // project:start
-    // Rules the template does not set. A later duplicate key wins, so a rule the template sets
-    // changes in the template.
-    // project:end
     "curly": ["error", "all"],
     "eqeqeq": ["error", "always"],
     "jsdoc/check-access": "error",
@@ -49,7 +43,6 @@
     "vitest/require-mock-type-parameters": "off"
   },
   "overrides": [
-    // project:start
     // Code whose output is the point: the skills CLI, benchmarks, and test support such as reporters and servers.
     {
       "files": ["packages/skills/src/cli.ts", "packages/skills/src/cli-helpers.ts", "**/bench/**", "**/tests/**"],
@@ -57,7 +50,6 @@
         "no-console": "off"
       }
     },
-    // project:end
     {
       "files": [".githooks/**", "**/scripts/**", "**/*.test.ts", "**/*.test.tsx"],
       "rules": {

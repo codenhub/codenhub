@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-04
+last_updated: 2026-11-09
 scope: Public workspace packages.
 ---
 
@@ -42,7 +42,7 @@ Public packages SHOULD also ship a `LICENSE` file at the package root, carrying 
 
 A public package that runs on Node.js, whether as a library, a CLI, or a build-time plugin, MUST declare `engines.node` as `>=<major>`, where `<major>` is the Node.js major line pinned in `.nvmrc`, today `>=24`. Its README `Requirements` section and public docs MUST state the same floor. Packages run on Node.js 24 or newer for the same reason the repository's own toolchain does: it is the only version CI runs.
 
-- **Floor tracks what CI tests.** CI runs the pinned version and nothing else (`docs/ci.md`, "Toolchain"), so the pinned major is the only line a floor can name and still be tested. A floor below it is a claim no run checks. Before this rule, four packages declared `>=22` and their READMEs repeated it, but no CI run had ever used Node.js 22.
+- **Floor tracks what CI tests.** CI runs the pinned version and nothing else (`docs/workspace.md`, "Toolchain"), so the pinned major is the only line a floor can name and still be tested. A floor below it is a claim no run checks. Before this rule, four packages declared `>=22` and their READMEs repeated it, but no CI run had ever used Node.js 22.
 - **The major, not the patch.** The floor names the line, `>=24`, not the pinned patch, `>=24.14.1`. The patch is a toolchain choice, not something a package needs, so naming it would turn away consumers on earlier 24.x releases for no reason. The cost is that CI tests one patch of the line, not its first.
 - **A higher floor needs a reason.** A package MAY declare a higher floor when it needs an API the pinned major lacks. It MUST name that API next to the floor in its README `Requirements`, so the next person can tell when the reason no longer applies.
 - **No upper bound.** Packages declare no `<25`. CI does not test a newer major either, but blocking an install on one would only break a consumer whose code most likely works. The repository root keeps its upper bound, because the root bound guards the toolchain, not a consumer.

@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-30
+last_updated: 2026-11-09
 scope: Approved exceptions for workspace packages.
 ---
 
@@ -29,7 +29,7 @@ An exception to a rule that `hub check` enforces MUST also declare a `Checks byp
 
 ## `@codenhub/styles`: Coverage report
 
-- **Rules bypassed:** `docs/specs/tests.md` (`test:coverage` outputs a coverage report).
+- **Rules bypassed:** `docs/specs/stack-tests.md` (`test:coverage` writes a coverage report).
 - **Where it applies:** The `test:coverage` script in `packages/styles/package.json`.
 - **Why acceptable:** The package contains only CSS, so JavaScript or TypeScript instrumentation cannot produce meaningful code coverage. The script runs the package's real integration tests instead of reporting a false success or generating an irrelevant report, and its cross-browser computed-style tests run under `pnpm test:browser`.
 - **Temporary or permanent:** Permanent while the package remains CSS-only.

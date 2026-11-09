@@ -8,11 +8,7 @@ scope: How code keeps the project's security commitments, for anyone writing or 
 
 This document says how code handles secrets, untrusted input, and what leaves the process, so the same problem is solved the same way everywhere. Vulnerabilities are reported as [SECURITY.md](../../SECURITY.md) describes, never in a public issue.
 
-<!-- project:start -->
-
 CodenHub ships libraries that run inside other people's apps. The trust boundary is each package's public API: anything a caller passes in may have come from that app's users, and a package treats it as data, never as instructions. A package that defends against hostile input states what each input gets in its own public docs, as `@codenhub/oidc` does in [Hostile input](../../packages/oidc/docs/security.md) and `@codenhub/validation` in [Limits](../../packages/validation/docs/limits.md). Where a package's own documentation and this one disagree, the package's wins for that package, and this one is fixed.
-
-<!-- project:end -->
 
 ## Secrets
 
@@ -58,8 +54,6 @@ When the project serves web requests:
 - The project calls only services it needs for the feature at hand, or that its operator configured. No telemetry, update checks, or third-party lookups without a recorded decision and, where users are affected, a way to turn them off.
 - Every dependency is a trust decision. The rule in [Coding guidelines](code.md#architecture-and-design) on adding dependencies applies with extra force to anything that runs at install time or handles secrets.
 
-<!-- project:start -->
-
 ## Packages that handle untrusted input
 
 ### Tokens in `@codenhub/jwt` and `@codenhub/oidc`
@@ -76,8 +70,6 @@ When the project serves web requests:
 
 - **An issue never holds a value of the input**, so logging a failed validation cannot log a password that was sent. An issue may hold what the schema was configured with, such as the values a `oneOf` accepts, and the input's keys, in `path` ([`@codenhub/validation`](../../packages/validation/README.md)). It is the rule above, "An error message names the field, never its value", applied to issues: a package that reports issues follows it, and a new issue code adds a test that its issue holds no input value.
 
-<!-- project:end -->
-
 ## Reviewing a change
 
 A change that touches any of the above names it in its pull request and adds or updates its tests. The [pull request template](../../.github/pull_request_template.md) carries the check. Ask:
@@ -88,10 +80,6 @@ A change that touches any of the above names it in its pull request and adds or 
 - Does it add a permission, capability, endpoint, or outbound call? Is that named in the pull request and tested?
 - Does it read a file a user can edit, and check what it reads?
 
-<!-- project:start -->
-
 - Does a package now read a token claim or header before the token is verified, or let one choose how it is verified?
 - Does a new validator or collection keep the issue and depth bounds, with a test past each?
 - Does a new error or issue carry any value from the input?
-
-<!-- project:end -->

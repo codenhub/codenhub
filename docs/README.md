@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-08
+last_updated: 2026-11-09
 scope: Index of repository-wide documentation.
 ---
 
@@ -10,8 +10,6 @@ scope: Index of repository-wide documentation.
 
 Every document in `docs/` is listed here. Adding, moving, or deleting one updates this index in the same change.
 
-<!-- project:start -->
-
 Package-specific consumer and maintainer documentation lives with each workspace package; this index covers what holds across the repository. Start with the [roadmap](roadmap.md) for where the repository is heading.
 
 ## Overview
@@ -20,25 +18,20 @@ Package-specific consumer and maintainer documentation lives with each workspace
 | --------------------- | ------------------------------------ |
 | [Roadmap](roadmap.md) | Repository-level intended direction. |
 
-<!-- project:end -->
-
 ## Guidelines
 
-| Document                                     | Contains                                                                                        |
-| -------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| [Code](guidelines/code.md)                   | Naming, design, TypeScript, async and errors, testing practices, and documentation in code.     |
-| [Documentation](guidelines/documentation.md) | Metadata, status and authority, recording decisions, exceptions, layout, and the writing voice. |
-| [Security](guidelines/security.md)           | Secrets, untrusted input, what stays out of logs, and reviewing a change.                       |
-
-<!-- project:start -->
+| Document                                     | Contains                                                                                                 |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| [Code](guidelines/code.md)                   | Naming, design, errors, inputs and state, testing practices, and documentation in code.                  |
+| [Stack](guidelines/stack.md)                 | The conventions of the project's languages and the tools that check them.                                |
+| [Documentation](guidelines/documentation.md) | Metadata, prompts, status and authority, recording decisions, exceptions, layout, and the writing voice. |
+| [Security](guidelines/security.md)           | Secrets, untrusted input, what stays out of logs, and reviewing a change.                                |
 
 | Document                                                 | Contains                                                                                   |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | [Brand](guidelines/brand.md)                             | Where Coden's brand is published, and how this repository names and presents its packages. |
 | [Package naming](guidelines/package-naming.md)           | The branding test, naming vocabulary, title presentation, and each package's display name. |
 | [Public docs writing](guidelines/public-docs-writing.md) | What a public package doc adds to the documentation guidelines' writing voice.             |
-
-<!-- project:end -->
 
 ## Repository references
 
@@ -48,17 +41,12 @@ Package-specific consumer and maintainer documentation lives with each workspace
 | [Tooling](tooling.md)     | How the scripts are implemented, the TypeScript and Vitest configuration, narrowing a run, and adding a package. |
 | [CI](ci.md)               | The pinned toolchain, the verification jobs, and dependency updates.                                             |
 
-<!-- project:start -->
-
-<!-- project:end -->
-
 ## Specifications
 
-| Document                | Contains                                                          |
-| ----------------------- | ----------------------------------------------------------------- |
-| [Tests](specs/tests.md) | Test categories, locations, configuration, scripts, and coverage. |
-
-<!-- project:start -->
+| Document                            | Contains                                                               |
+| ----------------------------------- | ---------------------------------------------------------------------- |
+| [Tests](specs/tests.md)             | Test categories, where each lives, and coverage.                       |
+| [Stack tests](specs/stack-tests.md) | The stack's runners, file names, configuration, scripts, and commands. |
 
 | Document                                                         | Contains                                                                                  |
 | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
@@ -77,5 +65,3 @@ Package-specific consumer and maintainer documentation lives with each workspace
 | [Package demos](specs/packages-demo.md)                          | Package demos and the application that aggregates them.                                   |
 | [Errors](specs/errors.md)                                        | Consumer-facing error conventions and documentation.                                      |
 | [Roadmaps](specs/roadmaps.md)                                    | Durable roadmap structure and content.                                                    |
-
-<!-- project:end -->
