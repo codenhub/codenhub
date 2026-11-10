@@ -213,7 +213,9 @@ const SPECIFICITY = { static: 0, param: 1, rest: 2 } as const;
 
 /**
  * Orders patterns so that, at the first segment where two differ in kind, the more specific one comes first: a fixed
- * segment, then a parameter, then a catch-all.
+ * segment, then a parameter, then a catch-all. Where one pattern's kinds start the other's, the shorter comes first.
+ * Those two never match the same path, but without that tie-break the order is inconsistent, so `/blog` listed between
+ * `/blog/:slug` and `/blog/archive` left the parameter first.
  */
 const bySpecificity = (a: Pattern, b: Pattern): number => {
   for (let index = 0; index < Math.min(a.segments.length, b.segments.length); index += 1) {
@@ -222,7 +224,7 @@ const bySpecificity = (a: Pattern, b: Pattern): number => {
       return difference;
     }
   }
-  return 0;
+  return a.segments.length - b.segments.length;
 };
 
 const parameterNames = (pattern: Pattern): string[] =>
