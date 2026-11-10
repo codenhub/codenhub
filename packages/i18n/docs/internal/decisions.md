@@ -111,6 +111,8 @@ Rejected: documenting the `t(key) === key` comparison, because of the reported m
 
 **A string no dictionary can hold is a miss (0.2.1).** `has()` first threw a `TypeError` for an invalid key, as `t()` does. That was not weighed against its own example, ``has(`errors.${code}`)``: a `code` from a response or a query string with a line break, or over 1,000 characters, threw from the very check meant to guard it. Such a key can't be in a dictionary, so `has()` returns `false`, silently. It still throws for a non-string, which is a mistake in the calling code, and `t()` still throws for an invalid key, since a call that passes one has skipped the check. Rejected: keeping the throw and documenting it, which leaves every caller to validate the code before checking it.
 
+**A typed key is not narrowed (2026-11-10).** `has(key: string): key is TKey` narrowed a key that was already a `TKey` to `never` when `has()` returned `false`, although a typed key can still be missing, such as one only another locale has. An overload, `has(key: TKey): boolean`, now comes first, so only a key that isn't typed yet is narrowed. Rejected: documenting the narrowing, which leaves every such branch unusable.
+
 **A group counts only with an `other` form (2026-11-08).** `has()` picked a plural form for count 0, so `{ one, two }` was a key in Portuguese and French, where 0 is `one`, but not in English, while `t()` showed the raw key in every locale. It now counts a group only when it has an `other` form, the definition plural groups and typed keys already use. Rejected: keeping count-based selection, because the answer for one dictionary must not change with the active locale.
 
 ## Browser

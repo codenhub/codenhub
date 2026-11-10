@@ -270,7 +270,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   /**
    * Whether a key has a text, or is a plural group, in a dictionary the active locale falls back to. Unlike `t()`, a
    * miss neither calls `onMissingKey` nor warns, so a key built at runtime can be checked before it is used, and the
-   * check narrows it to a key `t()` accepts.
+   * check narrows it to a key `t()` accepts. A key that is already typed is not narrowed, since it can still be missing,
+   * as from a locale that has not translated it.
    *
    * @example
    * ```ts
@@ -285,6 +286,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * @throws {Error} When called before successful initialization.
    * @throws {TypeError} When the key is not a string.
    */
+  has(key: TKey): boolean;
   has(key: string): key is TKey;
 
   /** Short alias of {@link I18n.translate}, the same bound function. */

@@ -198,7 +198,9 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     return found === undefined ? key.trim() : this.format(key, found, params ?? {});
   }
 
-  has(key: string): key is TKey {
+  has(key: TKey): boolean;
+  has(key: string): key is TKey;
+  has(key: string): boolean {
     if (!this.isReadyState) {
       throw new Error("[I18n] has() requires successful initialization.");
     }
