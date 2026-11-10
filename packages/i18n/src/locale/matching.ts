@@ -6,14 +6,19 @@ const LANGUAGE_ALIASES: ReadonlyMap<string, string> = new Map([["no", "nb"]]);
 
 const compareLanguage = (language: string): string => LANGUAGE_ALIASES.get(language) ?? language;
 
+// A lowercased tag with its language as `compareLanguage` gives it, such as `nb-no` for `no-NO`.
+const aliasLanguage = (tag: string): string => {
+  const [language = "", ...rest] = tag.toLowerCase().split("-");
+  return [compareLanguage(language), ...rest].join("-");
+};
+
 /**
  * Adds likely subtags, such as `zh-TW` to `zh-Hant-TW`, with the language compared as `compareLanguage` gives it, or
  * returns undefined for a tag `Intl.Locale` rejects.
  */
 const maximizeLocale = (value: string): string | undefined => {
   try {
-    const [language = "", ...rest] = new Intl.Locale(value).maximize().toString().toLowerCase().split("-");
-    return [compareLanguage(language), ...rest].join("-");
+    return aliasLanguage(new Intl.Locale(value).maximize().toString());
   } catch {
     return undefined;
   }
@@ -67,17 +72,20 @@ export function matchConfiguredLocale<TLocale extends string>(
     }
 
     // A prefix with another likely script, such as `zh` (Simplified) for `zh-TW`, is left to the script match below.
-    const prefixLocale = maximizedLocales
-      .filter(
-        ({ locale, maximized }) =>
-          normalizedPreference.startsWith(`${locale.toLowerCase()}-`) &&
-          (maximized === undefined || getLanguageAndScript(maximized) === getLanguageAndScript(maximizedPreference)),
-      )
-      .map(({ locale }) => locale)
-      .reduce<TLocale | undefined>(
-        (longest, locale) => (locale.length > (longest?.length ?? 0) ? locale : longest),
-        undefined,
-      );
+    // The prefix as written wins over one through a language alias, so `nb-NO` gets `nb` even when `no` is listed first.
+    const findPrefixLocale = (toTag: (tag: string) => string): TLocale | undefined =>
+      maximizedLocales
+        .filter(
+          ({ locale, maximized }) =>
+            toTag(normalizedPreference).startsWith(`${toTag(locale)}-`) &&
+            (maximized === undefined || getLanguageAndScript(maximized) === getLanguageAndScript(maximizedPreference)),
+        )
+        .map(({ locale }) => locale)
+        .reduce<TLocale | undefined>(
+          (longest, locale) => (locale.length > (longest?.length ?? 0) ? locale : longest),
+          undefined,
+        );
+    const prefixLocale = findPrefixLocale((tag) => tag.toLowerCase()) ?? findPrefixLocale(aliasLanguage);
 
     if (prefixLocale !== undefined) {
       return prefixLocale;

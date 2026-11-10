@@ -44,6 +44,9 @@ describe("matchConfiguredLocale", () => {
     [["en", "nb", "no"], ["no"], "no"],
     [["en", "nn"], ["no"], undefined],
     [["en", "no"], ["nn"], undefined],
+    [["nb", "nb-NO"], ["no-NO-x-foo"], "nb-NO"],
+    [["no", "nb"], ["nb-NO"], "nb"],
+    [["nb", "no"], ["no-NO"], "no"],
   ] as const)("matches %j to %j as the same Norwegian, Bokmål, but not Nynorsk", (locales, preferences, expected) => {
     expect(matchConfiguredLocale(locales, preferences)).toBe(expected);
   });
