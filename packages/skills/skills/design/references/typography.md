@@ -38,7 +38,7 @@ The platform's system font stack is a legitimate choice for tools, admin panels,
 
 Typefaces communicate through how their letters are built. Adjectives like "modern" or "elegant" do not pick a font; construction does. Classify each candidate by its letters, then judge whether that construction fits.
 
-- **Neo-grotesque sans**, such as Helvetica, Inter, Roboto, and the system UI fonts: closed apertures and uniform strokes. Neutral and everywhere. It disappears, which is right for dense tools and wrong when the work needs a recognizable identity.
+- **Neo-grotesque sans**, such as Helvetica: uniform strokes and closed apertures. Faces drawn from it for screens, such as Inter and Roboto, open the apertures and raise the x-height, which is why they pass at interface sizes where Helvetica struggles. Neutral and everywhere. It disappears, which is right for dense tools and wrong when the work needs a recognizable identity. System UI fonts differ by platform, so classify the one in use: San Francisco is a neo-grotesque, and Segoe UI is a humanist sans.
 - **Humanist sans**: open apertures, some stroke modulation, and proportions from handwriting. Warmer and more readable at small sizes; suits approachable products, public services, and long interface text.
 - **Geometric sans**: near-circular bowls, single-story `a` in many, and straight, even strokes. Confident and brand-forward at display sizes; tiring in long text, where the round letters blur together.
 - **Grotesque and industrial sans**: older and more irregular than neo-grotesques, often in condensed widths. Suits editorial headlines, signage, and work that should feel direct.
@@ -52,6 +52,8 @@ Typefaces communicate through how their letters are built. Adjectives like "mode
 - Choosing the font before knowing the roles, the content, and the audience.
 - A neutral neo-grotesque by reflex for work that needs an identity, or a fashionable display face by reflex to avoid looking generic. The same handful of trendy faces appears across generated work; a font picked to seem distinctive becomes the new default.
 - Shortlisting only the first faces that come to mind. Most generated work draws from the same few dozen families; when every candidate is one you have seen used everywhere, look further.
+- Naming a less common face from memory. Confirm it exists where it will be loaded from, with the weights, styles, and scripts the work needs, before choosing it. A face that is missing renders the fallback.
+- A serif display face over a neutral sans by reflex. The pairing is sound, and it is the first one generated work reaches for; choose it for a reason in the content.
 - Pairing two fonts of the same classification, such as two geometric sans faces. They look almost the same, so the pair reads as a mistake.
 - More than two families. A third almost never earns its place outside a code face.
 - A display face at body size, or a thin weight (100–300) below about 24px.

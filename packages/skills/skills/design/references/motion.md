@@ -22,6 +22,8 @@ Interface motion explains a change the person would otherwise have to work out. 
 
 Do not animate content on scroll or page load just because it entered the viewport, and do not add hover motion to elements that do nothing. Motion that answers no question delays content and teaches people to wait.
 
+The exception is an entrance or scroll sequence that carries a direction chosen for the whole surface. Build that as one planned sequence, never as a default applied to every section; the durations and rules below are for interfaces people operate, and such a sequence may run longer.
+
 ## Duration
 
 Interface motion is short. People use these elements repeatedly, and every animation is a delay they pay each time.
@@ -69,7 +71,8 @@ When the person has asked for reduced motion, replace movement with an instant c
 - Use CSS transitions for state changes, such as open and closed or hover. They retarget smoothly when interrupted halfway; keyframe animations restart instead. Use keyframe animations for loops and multi-step sequences.
 - Use the Web Animations API when script must start, reverse, or sequence motion. Use the View Transitions API for transitions between views where the browser supports it, and leave the change instant elsewhere.
 - To animate to and from an automatic height, animate `grid-template-rows` from `0fr` to `1fr` on a grid wrapper, or animate `height` to a measured value on an `overflow: hidden` wrapper and clear it when the animation ends. A transform alone leaves the surrounding content in place, so it overlaps or leaves a gap.
-- Interface motion rarely needs an animation library. Use one when the product already has one, or for physics-based gestures such as drag with momentum.
+- An exit animation needs its element to stay until the animation ends: keep it mounted and displayed, play the exit, then remove it. For elements shown with `display` or in the top layer, such as `dialog` and popovers, use `@starting-style` for the entrance and `transition-behavior: allow-discrete` on `display` and `overlay` for the exit, where the browser supports them. In a component framework, use its presence or transition mechanism. Otherwise the element is gone before its exit plays.
+- Interface motion rarely needs an animation library. Use one when the product already has one, for physics-based gestures such as drag with momentum, or for a sequenced or scroll-scrubbed piece that a direction calls for.
 - Gate hover effects behind `@media (hover: hover)` so touch devices do not get stuck in the hover state after a tap.
 - Never let an animation shift the layout around it unexpectedly. Reserve the element's space before it appears, or animate it out of the document flow. When content is intentionally expanded, collapsed, inserted, or removed, let the surrounding content reflow smoothly with it instead of jumping.
 

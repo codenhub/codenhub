@@ -7,22 +7,48 @@ description: Guides visual and interface design decisions in any medium, includi
 
 Design is a set of decisions that make content easy to read, use, and remember for a particular audience in a particular medium. Every visual property, such as size, weight, space, color, position, and motion, tells the viewer something: what matters, what belongs together, and what to do next. A property that tells them nothing is decoration, and decoration applied by default is what makes generated work look generated.
 
-The usual failure is not missing knowledge. It is choosing before reasoning: picking a font, a palette, or a style first, then pouring the content into it. Work the other way. Content and context decide the hierarchy, and the hierarchy decides type, space, and color.
+The usual failure is not missing knowledge. It is choosing before reasoning: picking a font, a palette, or a style first, then pouring the content into it. Work the other way. Content and context decide the hierarchy, and the hierarchy decides type, space, and color. An idea for the whole surface comes from the content in the same way, as Direction describes.
 
 ## Existing Systems First
 
 In a product with a design system, brand guide, or established screens, use its tokens, components, fonts, spacing, and motion. A screen that departs from the rest of the product reads as a bug, not as design. Apply this guidance to what the system leaves open, such as composition, hierarchy, density, and empty, loading, and error states. When following the system would ship an accessibility failure, such as text that fails contrast, use the nearest value from the system's own scale that passes, and report the problem so the system can be fixed for every screen. For other conflicts with this guidance, follow the system and report the problem instead of quietly working around it.
 
+## Fitting The Request
+
+The Procedure below is for a new surface or a restyle of a whole one. Do only the work the request needs, and say which steps you skipped:
+
+- **A small change,** such as fixing spacing, restyling one component, or adding a state: keep the typeface, palette, and density already in use, apply the sections the change touches, and verify what you changed. Skip the typeface shortlist, the accent comparison, and Direction, and report only what changed and why.
+- **A review:** render the work and run the checks in Verification on it. Report each problem with where it shows and the smallest fix for it, most damaging first, and say what works and should be kept. Do not redesign unless asked.
+- **One decision,** such as a typeface or a palette: do the Context and Content steps as far as the decision depends on them, then the step for that decision.
+
 ## Procedure
 
 1. **Context.** Establish the medium (screen UI, document, slide, social image, video, print), the viewing conditions (size, distance, seconds on screen, surroundings), the audience, and how often they see it. A tool used all day and a page seen once for ten seconds need opposite answers to most questions below. When the request leaves these open, infer them from the content and state the assumption.
 2. **Content.** Work with real or realistic content before styling it. Placeholder text hides length, wrapping, and hierarchy problems. Rank it: the one thing the viewer must get first, what supports it, and what is reference. Most surfaces need three levels of importance or fewer; past that, levels blur together.
-3. **Constraints.** Accessibility, platform conventions, languages and scripts, licenses, performance budgets, and brand.
-4. **Type.** Choose type before color, since most of any interface is text. Read [references/typography.md](references/typography.md) before choosing a typeface, pairing fonts, building a type scale, or setting text for video or social media. When the typeface is not already set by the system or brand, shortlist at least three from at least two different constructions, judge them against the reference's criteria, and say why the winner beat the others.
-5. **Space and layout.** Apply the next two sections.
-6. **Color.** Read [references/color.md](references/color.md) before building a palette, choosing an accent or working with a brand color, setting up dark mode, or choosing colors for status or data.
-7. **Interaction.** When people operate the work, as in an app screen, a form, a flow, a component, or navigation, read [references/interaction.md](references/interaction.md) and design its states, feedback, and keyboard use along with its looks. Read [references/motion.md](references/motion.md) before adding transitions, animations, or micro-interactions to an interface.
-8. **Check.** Follow Verification below before presenting the work.
+3. **Constraints.** Accessibility, platform conventions, languages and scripts, licenses, performance budgets, brand, and what the medium can render, as described in Beyond The Browser.
+4. **Direction.** For a surface seen once or meant to be remembered, such as a landing page, hero, cover, poster, slide, or social image, look for the idea the surface is built around, as described in Direction. Screens people work in skip this step.
+5. **Type.** Choose type before color, since most of any interface is text. Read [references/typography.md](references/typography.md) before choosing a typeface, pairing fonts, building a type scale, or setting text for video or social media. When the typeface is not already set by the system or brand, shortlist at least three from at least two different constructions, judge them against the reference's criteria, and say why the winner beat the others.
+6. **Space and layout.** Apply Hierarchy, Space And Layout, and Separation.
+7. **Color.** Read [references/color.md](references/color.md) before building a palette, choosing an accent or working with a brand color, setting up dark mode, or choosing colors for status or data.
+8. **Interaction.** When people operate the work, as in an app screen, a form, a flow, a component, or navigation, read [references/interaction.md](references/interaction.md) and design its states, feedback, and keyboard use along with its looks. Read [references/motion.md](references/motion.md) before adding transitions, animations, or micro-interactions to an interface.
+9. **Check.** Follow Verification below before presenting the work.
+
+## Direction
+
+The quiet, flat result the rest of this guidance produces is a default. Leave it when there is an idea to leave it for. Effects with no idea behind them are the decoration Default Failures describes, and they are what marks work as generated.
+
+Look for the idea before deciding there is none. Write a few candidates, each one sentence that says what the viewer sees and which part of the content it comes from: the product doing its work, a real number at a scale that makes it felt, the material or the place, the shape of the process, or the name. "A route map that draws itself as the page scrolls, for a delivery planner" is an idea. "Premium", "modern", "bold", and "something cool" are requests for one.
+
+Commit to a candidate only when all of these hold:
+
+- **It is specific.** Put an unrelated product or subject into the sentence. When it still fits, it describes a category.
+- **It carries the content.** With it, the viewer gets the main thing from the Content step sooner or remembers it longer. An idea that competes with that thing is decoration at a larger size.
+- **You can build every part exactly.** Name the technique for each part: type, layout, real assets, and geometry or code you can define precisely. A part that depends on drawing you cannot do, an asset you do not have, or a technique you cannot test here is a guess.
+- **You can look at it.** The environment can render the result, moving parts included, so Verification can run on it.
+
+When a candidate passes, build it in full. Give it the scale, color, motion, and surface it needs, and drop each default that stands in its way. Read [references/effects.md](references/effects.md) before building it. A half-applied idea, such as a faint gradient behind an otherwise standard page, has the cost of both and the effect of neither. The direction changes the defaults, never the floor: contrast, legibility, reading order, the reduced-motion preference, and the interaction rules still hold.
+
+When none passes, keep the default and make it strong: the hierarchy, the type, and one focal element from the content, as Hierarchy describes. Say that no idea passed and why, and name what would unlock one, such as product screenshots, photography, or a brand decision. A request for something striking does not change this. A strong plain page can take an idea later, when one exists; effects added without one have to be removed first.
 
 ## Hierarchy
 
@@ -60,7 +86,7 @@ Every line, border, background change, and shadow claims that space alone could 
 
 ## Default Failures
 
-Generated design converges on the patterns below. Each is wrong as a default, and some are right in a specific case. Use one only when that case applies, and be able to say why.
+Generated design converges on the patterns below. Each is wrong as a default, and some are right in a specific case. Use one only when that case applies, or when a direction that passed the checks in Direction calls for it, and be able to say why.
 
 - **Lines wherever one fits.** Hairlines between every metric, row, and section; top-only borders on cards; a divider, a gap, and a background change at the same boundary. See Separation.
 - **A card around everything.** A border, radius, and shadow around every section, metric, and paragraph. Cards are for discrete objects a person acts on or moves between, such as a product, a message, or a file. Separate sections with space and headings.
@@ -69,7 +95,7 @@ Generated design converges on the patterns below. Each is wrong as a default, an
 - **Uppercase everywhere.** Small tracked-out labels above every heading, uppercase buttons, uppercase headers. Uppercase slows reading and loses word shapes. Reserve it for one level of very short labels, and track it out slightly.
 - **Emoji as icons or bullets.** Emoji render differently on each platform, carry a tone you did not choose, and read as casual. Use one icon set with a consistent stroke and size, or no icon. Add icons where they speed recognition, such as navigation and repeated actions, not beside every heading.
 - **Saturated everything.** Full-strength color on large areas, several accents competing. Saturation is emphasis; spend it on what should be noticed first.
-- **The generated palette.** Generated work lands on the same few palettes whatever the subject, such as a cream ground with an orange, rust, terracotta, or copper accent, indigo or violet for anything technical, a slate ground with one bright accent, and deep green or teal. Avoiding one sends it to the next. Without a brand color, choose the accent against the field: look at the colors that competitors or neighboring products in the same space use, pick one that differs from them and fits the content, and state in the deliverable which ones you compared and how the choice differs. When you can search the web or open those products, look at them before choosing. Only when they cannot be inspected, or there is no competitive field, state that limitation and choose a provisional accent from the content and audience; do not claim a comparison or distinctiveness. The provisional accent still avoids the palettes above and their near neighbors, such as oxblood, ochre, and brick, unless the content's own colors produce one. A mood such as "warm", "calm", or "technical" is not a reason. See [references/color.md](references/color.md).
+- **The generated palette.** Generated work lands on the same few pairs of ground and accent whatever the subject: a cream ground with an orange, rust, terracotta, or copper accent, indigo or violet for anything technical, a near-black or slate ground with one bright accent, and deep green or teal. The structure is not the failure: neutrals with one accent is how most palettes are built, in a light or a dark theme, and a product that already has a dark theme keeps it. The failure is reaching the same pair by reflex, and avoiding one pair sends the reflex to the next. Test the choice by changing the subject: a ground and accent you would also have picked for an unrelated product were not chosen for this one. Without a brand color, choose the accent against the field: look at the colors that competitors or neighboring products in the same space use, pick one that differs from them and fits the content, and state in the deliverable which ones you compared and how the choice differs. When you can search the web or open those products, look at them before choosing. Only when they cannot be inspected, or there is no competitive field, state that limitation and choose a provisional accent from the content and audience; do not claim a comparison or distinctiveness. The provisional accent still avoids the pairs above and their near neighbors, such as oxblood, ochre, and brick, unless the content's own colors produce one. A mood such as "warm", "calm", or "technical" is not a reason for a hue: mood sets lightness and saturation, and those words fit any subject. See [references/color.md](references/color.md).
 - **Generated copy.** Generated copy repeats a few constructions until they mark it: contrasts in the form "X, not Y" or "Less X. More Y.", two-fragment slogans such as "Your coffee. Every month.", lists of three joined by middots, and a small uppercase label above every headline. Use each at most once on a page, and only where it is the clearest way to say the thing. Write each line as a plain sentence first, and keep that version when it says the same.
 - **Everything centered.** Centered paragraphs, forms, and grids of identical items. See Space And Layout.
 - **The reflex font.** Inter, Roboto, or a system stack because it came to mind first, or a fashionable display face picked to avoid them. Either can be right; neither is right by default.
@@ -79,11 +105,20 @@ Generated design converges on the patterns below. Each is wrong as a default, an
 - **Filler content.** Lorem ipsum, "John Doe", suspiciously round metrics, and three identical feature columns of icon, heading, and sentence. Use realistic content in realistic, uneven amounts.
 - **Motion by default.** A fade-up on every section and a scale on every hover. Motion explains change: where something came from, what responded, what is loading. Use it there, keep it short, and respect the reduced-motion preference. See [references/motion.md](references/motion.md).
 
+## Beyond The Browser
+
+The references assume a current browser. Other media render less, and the medium's limits override the browser guidance:
+
+- **HTML email.** Many mail clients drop web fonts, modern color functions, flexbox, grid, and most CSS outside inline styles. Lay out with tables, inline the styles, use hex colors and a system font stack, and keep the width near 600px. The message must still read with images blocked and in the client's dark mode. Test in the clients the audience uses.
+- **Print.** Work in physical units, add bleed, commonly 3mm, to anything printed to the edge, keep images near 300 pixels per inch at their printed size, and proof color as [references/color.md](references/color.md) describes.
+
 ## Verification
 
 Look at the output before presenting it. Most design failures are obvious in a rendered image and invisible in code.
 
 - Render the work and view it at its real size. For UI, capture a narrow phone width and a common desktop width. For social images and video, view them at the size people meet them, such as a feed thumbnail on a phone.
+- Confirm each chosen font loaded by checking the rendered text, such as its computed font or `document.fonts.check()`, not the stylesheet. A face that failed to load renders its fallback, and the page still looks finished.
+- When a direction was built, describe what the render shows before comparing it with the idea's sentence. When it still does not read as the idea after revising, return to the default and say so.
 - For social images, thumbnails, and posters, also view a copy scaled to about a quarter of its width. The main message must still read.
 - Blur or squint at it. You should see a few distinct blocks, with clearly larger gaps between groups than within them, and the order in which things stand out must match the ranking from the Content step. Without reading, count the sections and the groups in each; if you cannot, the structure is not visible yet.
 - Check that every heading and label sits closer to what it labels than to the item before it. Margins from different elements add up, so a title can end up nearer the previous description than its own.
@@ -96,4 +131,4 @@ Look at the output before presenting it. Most design failures are obvious in a r
 
 ## Presenting Decisions
 
-When presenting the work, state the main decisions with one reason each: the typeface, the density, the accent color, and any deliberate exception to Default Failures. One line each is enough. Stated reasons make the choices reviewable, and a choice with no reason to state was probably a reflex.
+When presenting the work, state the main decisions with one reason each: the direction, or that none passed, the typeface, the density, the accent color, and any deliberate exception to Default Failures. One line each is enough. Stated reasons make the choices reviewable, and a choice with no reason to state was probably a reflex.
