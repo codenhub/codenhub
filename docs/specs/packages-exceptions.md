@@ -21,10 +21,10 @@ An exception to a rule that `hub check` enforces MUST also declare a `Checks byp
 
 ## `@codenhub/styles`: CSS-only package
 
-- **Rules bypassed:** `docs/specs/packages-lifecycle.md` (metadata fields `main`, `module`, and `types` required in `package.json`).
-- **Checks bypassed:** `metadata/main`, `metadata/module`, `metadata/types`.
+- **Rules bypassed:** `docs/specs/packages-lifecycle.md` (metadata fields `main` and `module` required in `package.json`).
+- **Checks bypassed:** `metadata/main`, `metadata/module`.
 - **Where it applies:** `packages/styles/`.
-- **Why acceptable:** The package is CSS-only and exposes no JavaScript or TypeScript API. Adding `main`, `module`, and `types` would provide no usable runtime or declaration entrypoint.
+- **Why acceptable:** The package is CSS-only and exposes no JavaScript API, so `main` and `module` would point at no usable runtime entrypoint. It does declare `types`: an empty `dist/index.d.ts`, the same file every export's `types` condition names, so a TypeScript project that checks side-effect imports resolves `import "@codenhub/styles"` under either module resolution.
 - **Temporary or permanent:** Permanent.
 
 ## `@codenhub/styles`: Coverage report
