@@ -130,8 +130,11 @@ class ProductCard extends HTMLElement {
   #unsubscribe?: () => void;
 
   connectedCallback() {
-    this.render();
+    // The element can connect before the manager is ready; `subscribe()` also calls back once `init()` applies.
     this.#unsubscribe = i18n.subscribe(() => this.render());
+    if (i18n.isReady) {
+      this.render();
+    }
   }
 
   disconnectedCallback() {
