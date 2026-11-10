@@ -476,6 +476,24 @@ test.describe("solo utilities", () => {
       expect(styles["backdrop-filter"], `${selector} blurs nothing`).toMatch(/^(none)?$/);
       expect(styles["-webkit-backdrop-filter"] ?? "", `${selector} blurs nothing, prefixed`).toMatch(/^(none)?$/);
     }
+
+    /* The liquid pane blurs and bends through its two layers, not the host. */
+    const layers = await page.locator("#liquid").evaluate((element) =>
+      ["::before", "::after"].map((pseudo) => {
+        const style = getComputedStyle(element, pseudo);
+
+        return {
+          pseudo,
+          filter: style.getPropertyValue("backdrop-filter"),
+          prefixed: style.getPropertyValue("-webkit-backdrop-filter"),
+        };
+      }),
+    );
+
+    for (const { pseudo, filter, prefixed } of layers) {
+      expect(filter, `#liquid${pseudo} blurs nothing`).toMatch(/^(none)?$/);
+      expect(prefixed, `#liquid${pseudo} blurs nothing, prefixed`).toMatch(/^(none)?$/);
+    }
   });
 
   /* A solo class composes with what the element is asked to be, the way a

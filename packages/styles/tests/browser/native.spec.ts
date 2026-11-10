@@ -227,6 +227,8 @@ for (const aesthetic of ["cyber", "neobrutalism", "pixel"]) {
     await expect(code).toHaveCSS("border-left-width", "0px");
     await expect(code).toHaveCSS("box-shadow", "none");
     await expect(code).toHaveCSS("clip-path", "none");
+    await expect(code).toHaveCSS("padding", "0px");
+    await expect(code).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   });
 }
 

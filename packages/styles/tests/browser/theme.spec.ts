@@ -208,6 +208,12 @@ test.describe("theme", () => {
     }
 
     expect(resolved.dark.paragraph, "the region's text is not the page's").not.toBe(resolved.page);
+    /* Each alias has to switch the region, not only agree with itself: a
+       spelling that stopped matching left text and token on the page's ink
+       together. */
+    expect(resolved.themeDark.paragraph, ".theme-dark is .dark").toBe(resolved.dark.paragraph);
+    expect(resolved.dataDark.paragraph, "data-theme=dark is .dark").toBe(resolved.dark.paragraph);
+    expect(resolved.lightInDark.paragraph, ".light inside a dark page is the light page").toBe(resolved.page);
   });
 
   /* `--focus-ring` was resolved once at `:root`, so a container that set its
