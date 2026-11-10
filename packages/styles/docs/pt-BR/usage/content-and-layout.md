@@ -2,7 +2,7 @@
 title: Conteúdo e layout
 description: Consulta de todos os helpers de layout com os seus espaçamentos, a escala tipográfica com os seus tamanhos, cards e painéis com o seu padding, tabelas, citações, código e teclas.
 order: 10
-source: 6a638b6d6e735f1a7343bf9c6b2db131ca91fc30
+source: ab8d628a92a7a3f040cf2b91977a14a2c054aa21
 ---
 
 # Conteúdo e layout
@@ -46,7 +46,7 @@ Um `.divider` aceita uma intenção, que o colore, e ignora as classes de aprese
 
 Os dois maiores tamanhos crescem no breakpoint `md` do Tailwind, 48rem por padrão. Com os entrypoints de código-fonte do Tailwind, vale o seu próprio breakpoint `md`. O pacote não define tamanho para texto sem classe: o texto do corpo e os títulos sem classe recebem o tamanho do navegador, ou o tamanho do texto em volta sob o reset; veja [Configuração → HTML sem classes](../setup.md#html-sem-classes) para o mapeamento sem classes.
 
-`.text-body` tem 0.875rem, menor que o texto de 1rem da página; use-o para texto secundário ou denso, não para o texto principal da página.
+`.text-body` tem 0.875rem, menor que o texto de 1rem da página; use-o para texto secundário ou denso, não para o texto principal da página. O `/native` é a exceção: ele aplica `.text-body` ao `body`, então lá ele é o texto da página, e parágrafos e itens de lista o herdam do elemento em que estiverem. Veja [HTML sem classes](../setup.md#html-sem-classes).
 
 `.selection-contrast` num elemento troca as cores do texto selecionado dentro dele para `--color-primary` sobre `--color-primary-contrast`. Use-o numa área `.solid.primary`, onde a cor de seleção padrão seria igual ao fundo.
 

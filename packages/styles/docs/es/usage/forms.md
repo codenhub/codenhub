@@ -2,7 +2,7 @@
 title: Formularios
 description: Campos con etiqueta, pistas y errores, iconos y prefijos fijos, selects y toggles de checkbox, radio y switch.
 order: 2
-source: 58972b8573a07a3336b5765a725eb99abb2f907a
+source: bb81303c18d3da5ae193ff34ad8a96225cee0cf8
 ---
 
 # Formularios
@@ -28,6 +28,25 @@ Un campo es una etiqueta, un control y una pista opcional, apilados:
 
 Un control de texto mide al menos 2.5rem de alto (`--control-height`), la misma altura que un botón por defecto, así que un campo y un botón quedan alineados en una fila. Su aspecto por defecto es sin relleno y con borde. Un `.textarea` mide al menos 7rem de alto y se puede redimensionar en vertical.
 
+### Tamaños
+
+`.ipt`, `.select`, `.textarea` e `.input-group` aceptan las clases de tamaño del botón, así que un campo pequeño y un botón pequeño quedan alineados en una fila:
+
+| Clase       | Altura | Relleno lateral | Texto     |
+| ----------- | ------ | --------------- | --------- |
+| `.sm`       | 2rem   | 0.625rem        | 0.875rem  |
+| por defecto | 2.5rem | 0.75rem         | heredado  |
+| `.lg`       | 3rem   | 1rem            | 1.0625rem |
+
+Las esquinas escalan con el tamaño, como las de un botón. Un `.textarea` conserva su altura mínima de 7rem en todos los tamaños; la clase cambia su texto, su relleno y sus esquinas. Define el tamaño de un `.input-group` en el grupo, no en el control de dentro: el control y sus adornos toman el tamaño de texto del grupo.
+
+```html
+<div class="cluster tight">
+  <input class="ipt sm" aria-label="Coupon code" />
+  <button class="btn sm" type="button">Apply</button>
+</div>
+```
+
 ## Mostrar un error de validación
 
 Marca el control como inválido con `aria-invalid="true"` y dale al mensaje de error `.hint.destructive`:
@@ -40,7 +59,13 @@ Marca el control como inválido con `aria-invalid="true"` y dale al mensaje de e
 </div>
 ```
 
-Un control inválido dibuja su borde, su anillo de foco y el texto escrito en el color destructivo, tenga la clase de intención que tenga. El texto usa el tono legible de ese color, `--intent-strong`, para que siga siendo legible sobre la página. El paquete solo pinta el estado: decidir que el valor es inválido, poner y quitar `aria-invalid` y escribir el mensaje es cosa de tu código. Quita `aria-invalid` en cuanto el valor vuelva a ser válido; si lo dejas puesto, el campo sigue en rojo.
+Un control inválido dibuja su borde, su anillo de foco y el texto escrito en el color destructivo, tenga la clase de intención que tenga. El texto usa el tono legible de ese color, `--intent-strong`, para que siga siendo legible sobre la página. El paquete solo pinta el estado: decidir que el valor es inválido, poner y quitar `aria-invalid` y escribir el mensaje es cosa de tu código. Quita `aria-invalid` en cuanto el valor vuelva a ser válido; si lo dejas puesto, el campo sigue en rojo. En un checkbox, un radio o un switch, `aria-invalid="true"` dibuja el toggle exactamente igual que `.destructive`, marca de activado incluida.
+
+Un `.hint` acepta cualquier intención con nombre, no solo `.destructive`: `.hint.success` confirma que se aceptó un valor, y `.hint.warning` señala uno que está permitido pero es inusual. Cada uno se muestra en el tono legible de su intención, `--intent-strong`, que mantiene 4.5:1 frente a la página en los dos temas. Un `.hint` sin intención, o con `.neutral`, se queda en el color secundario. Solo lo colorea una clase en el propio `.hint`; una intención en el campo o en un contenedor que lo rodee no lo hace.
+
+```html
+<input class="ipt success" id="username" value="ada" aria-describedby="username-hint" /> <span class="hint success" id="username-hint">That username is available.</span>
+```
 
 ## Montar el formulario de perfil
 
@@ -84,7 +109,7 @@ Un `.select` dibuja su propia flecha. Con `multiple` o con un `size` mayor que 1
 
 ## Añadir un icono o un prefijo fijo
 
-`.input-group` pone un icono o un fragmento de texto dentro del borde de un campo. El grupo dibuja el borde, el fondo, el anillo de foco y los estados inválido y deshabilitado; el control de dentro renuncia a los suyos, así que el borde se dibuja una sola vez. Coloca el adorno antes del control para ponerlo al principio, o después para ponerlo al final.
+`.input-group` pone un icono o un fragmento de texto dentro del borde de un campo. El grupo dibuja el borde, el fondo, el anillo de foco y los estados inválido y deshabilitado; el control de dentro renuncia a los suyos, así que el borde se dibuja una sola vez. Coloca el adorno antes del control para ponerlo al principio, o después para ponerlo al final. Un grupo mide lo mismo que un campo solo, así que queda alineado con los campos y los botones que tiene al lado.
 
 La dirección del perfil siempre empieza con el mismo host, así que es un prefijo fijo:
 
@@ -116,7 +141,7 @@ Un `.select` también funciona en un grupo. El grupo quita el relleno lateral de
 
 Cualquier elemento sirve como adorno: una clase de icono, un `<svg>` en línea, un `<img>` o texto. El paquete no incluye iconos para los campos, porque una imagen incorporada no podría seguir tu color de texto, tu tema ni tu estética.
 
-El grupo lee la intención y la presentación igual que un `.ipt` solo: `.input-group.primary` colorea el borde, y `.input-group.soft.edgeless` es un campo hundido en la página. `aria-invalid="true"` o `disabled` en el control de dentro se aplica a todo el grupo, y lo mismo si cualquiera de los dos está en el propio grupo. El anillo de foco aparece cuando cualquier elemento dentro del grupo tiene el foco, así que, a diferencia de un campo solo, también se muestra después de un clic con el ratón.
+El grupo lee la intención y la presentación igual que un `.ipt` solo: `.input-group.primary` colorea el borde y el texto escrito, y `.input-group.soft.edgeless` es un campo hundido en la página. Pon la intención en el grupo, no en el control de dentro: el grupo dibuja el campo, así que el texto del control toma la intención del grupo y una clase de intención en el control no tiene efecto. `aria-invalid="true"` o `disabled` en el control de dentro se aplica a todo el grupo, y lo mismo si cualquiera de los dos está en el propio grupo. El anillo de foco del grupo aparece cuando su campo tiene el foco, así que, a diferencia de un campo solo, también se muestra después de un clic con el ratón. Un botón dentro del grupo, como un botón para borrar, dibuja su propio anillo cuando tiene el foco, y el grupo no dibuja ninguno: un solo anillo marca siempre el único control que tiene el foco.
 
 ## Decoraciones del navegador
 

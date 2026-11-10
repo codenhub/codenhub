@@ -2,7 +2,7 @@
 title: Composição
 description: Consulta sobre como intenção, apresentação, estética e elevação se combinam, o visual padrão de cada componente e quais classes cada componente lê.
 order: 8
-source: 8aa84776103ce27781f924220cc7c621231e5734
+source: 6d4fd92ab11655c25a8ed033550e7d160341fff4
 ---
 
 # Composição
@@ -77,6 +77,7 @@ A borda é o contorno do componente e nada mais. Linhas dentro de um componente,
 Um `.card.soft`, um `.panel` e um `.alert` neutros não mostram tom em repouso. Em vez disso, eles usam o tom de fundo discreto um passo distante da página (`--color-foreground`), porque um tom cinza em toda caixa neutra parece sujo, e não discreto.
 
 - Um `.card.soft` com `.interactive` ou `.hoverable` mostra o tom no hover. Um `.card.soft` simples e um `.panel` não têm estado de hover.
+- A apresentação pode vir do elemento ou de um contêiner: `<div class="soft"><div class="card">` fica em repouso como `.card.soft`, e um contêiner `.ghost` ou `.solid` dá a um `.panel` ou `.alert` a placa que a própria classe daria.
 - Com uma das seis intenções embutidas, os três mantêm o tom comum de 12%, e um card o aprofunda no hover. Uma intenção definida por você é tratada como neutra aqui; veja [Temas → Sua própria intenção](./theming.md#sua-própria-intenção).
 - Um `.badge` mantém o seu tom de 12% mesmo quando neutro. Ele não tem borda, então, sem o tom, sumiria no texto em volta.
 

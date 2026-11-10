@@ -2,7 +2,7 @@
 title: Sin bundler
 description: Enlazar las hojas de estilos compiladas desde HTML simple, Rails, Django o cualquier aplicación renderizada en el servidor.
 order: 6
-source: 3b29f40d4ca6413f4c0ee8e3a69eb1f8394e2ba6
+source: df7658b1005be55086aefbe7ca362fc56c9048ba
 ---
 
 # Sin bundler
@@ -27,14 +27,17 @@ Cada ruta de import compilada es un archivo en la carpeta `dist/` del paquete:
 | `@codenhub/styles/aesthetics`   | `dist/aesthetics/index.css`                                    |
 | `@codenhub/styles/aesthetics/*` | `dist/aesthetics/<name>.css`, como `dist/aesthetics/pixel.css` |
 
-Enlaza primero el archivo base y después una estética. [Configuración inicial → Todos los puntos de entrada](../setup.md#todos-los-puntos-de-entrada) explica qué contiene cada uno; enlaza un solo archivo base, no varios, porque se solapan.
+Enlaza un solo archivo base, no varios, porque se solapan, y las estéticas que uses. Su orden no importa, porque cada archivo declara las [capas de cascada](../setup.md#capas-de-cascada) antes de usar alguna. [Configuración inicial → Todos los puntos de entrada](../setup.md#todos-los-puntos-de-entrada) explica qué contiene cada uno.
 
 ## Desde un CDN
 
 jsDelivr y unpkg sirven todos los archivos de cada versión publicada en npm, así que una página puede enlazar uno sin instalar nada:
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.7.0/dist/index.css" /> <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.7.0/dist/aesthetics/pixel.css" />
+<head>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.7.0/dist/index.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.7.0/dist/aesthetics/pixel.css" />
+</head>
 ```
 
 Pon la versión exacta en la URL. Sin ella, el CDN sirve la última versión, y por debajo de 1.0 una versión menor puede renombrar o eliminar una clase; consulta [Versionado](../index.md#versionado).
@@ -95,6 +98,8 @@ STATICFILES_DIRS = [
 {% load static %}
 <link rel="stylesheet" href="{% static 'codenhub-styles/index.css' %}" />
 ```
+
+Apunta el prefijo a `dist`, no a la carpeta del paquete. `dist/` contiene solo CSS terminado, más un `index.d.ts` vacío para TypeScript que el almacenamiento copia tal cual, así que `collectstatic` también funciona con `ManifestStaticFilesStorage`, que añade una huella a cada archivo y reescribe las referencias que contiene. La carpeta del paquete también contiene el código fuente de Tailwind en `tw/`, cuyas líneas `@import "tailwindcss/..."` ese almacenamiento no puede resolver.
 
 ### Laravel
 

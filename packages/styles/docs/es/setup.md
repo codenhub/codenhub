@@ -2,7 +2,7 @@
 title: Configuración inicial
 description: Instala el paquete, elige entre CSS compilado o código fuente de Tailwind y renderiza la estructura base de la página de ajustes.
 order: 1
-source: 20ec2aeb0950fe5b8a045e9b0ac307ca97d0462e
+source: 6ff7e654d43c32b770c1234e1bf96d033e59d6a0
 ---
 
 # Configuración inicial
@@ -80,7 +80,7 @@ El orden de los dos imports no importa, porque cada punto de entrada declara las
 - **Falta el import o no se carga de forma global.** Las clases no hacen nada hasta que la hoja de estilos está en la página. Impórtala una vez en una hoja de estilos que cargue cada página, no en un componente que puede no renderizarse.
 - **El nombre del paquete no se resuelve.** Un `<link>` simple o una herramienta sin resolución de paquetes CSS no puede leer `@import "@codenhub/styles"`. Enlaza `node_modules/@codenhub/styles/dist/index.css`, o sigue [Sin bundler](./integrating/without-a-bundler.md).
 - **Se carga una ruta `/tw` sin Tailwind.** Los archivos `/tw` son código fuente de Tailwind: contienen `@theme`, `@utility` y `@apply`, que los navegadores no entienden. Tu build de Tailwind tiene que compilarlos; consulta [Tailwind CSS v4](./integrating/tailwind.md).
-- **Falta una clase construida en tiempo de ejecución (solo con código fuente de Tailwind).** Tailwind genera una clase solo cuando encuentra su nombre en tus archivos fuente. Un nombre armado a partir de strings, como `` `btn ${tone}` ``, es invisible para ese escaneo. Escribe los nombres de clase completos, o enuméralos como se describe en [Tailwind CSS v4](./integrating/tailwind.md).
+- **Falta una clase construida en tiempo de ejecución (solo con código fuente de Tailwind).** Tailwind genera una clase, también las del paquete, solo cuando encuentra su nombre en tus archivos fuente. Un nombre armado a partir de strings, como `` `btn ${tone}` ``, es invisible para ese escaneo. Escribe los nombres de clase completos, o enuméralos como se describe en [Tailwind CSS v4](./integrating/tailwind.md).
 
 ### CSS crítico en línea
 
@@ -90,9 +90,9 @@ Eso no se aplica a los archivos `/tw`. Son código fuente de Tailwind, no CSS te
 
 ## Todos los puntos de entrada
 
-Los puntos de entrada compilados son CSS terminado. Los puntos de entrada `/tw` publican el código fuente sin compilar desde `dist/tw`, que un build de Tailwind v4 tiene que procesar. Un punto de entrada `/tw` de un solo componente incluye los tokens del tema, así que sus clases funcionan por sí solas.
+Los puntos de entrada compilados son CSS terminado. Los puntos de entrada `/tw` publican el código fuente sin compilar desde `tw/`, junto a `dist/`, que un build de Tailwind v4 tiene que procesar. Un punto de entrada `/tw` de un solo componente incluye los tokens del tema, así que sus clases funcionan por sí solas.
 
-Cada ruta de import resuelve el mismo archivo con las condiciones de exportación `style`, `import` y `default`. Un import de CSS es un efecto secundario, así que asegúrate de que tu bundler no lo descarte como no usado.
+Cada ruta de import resuelve el mismo archivo con las condiciones de exportación `style`, `import` y `default`. Antes va una condición `types` que apunta a una declaración vacía, así que TypeScript acepta un import por efecto secundario como `import "@codenhub/styles";` con `noUncheckedSideEffectImports`, que TypeScript 6 activa por defecto. Un import de CSS es un efecto secundario, así que asegúrate de que tu bundler no lo descarte como no usado.
 
 | Ruta de import                   | Qué contiene y qué cambia                                                                                                                                                                                                                                                                                                                         |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -114,7 +114,7 @@ Cada ruta de import resuelve el mismo archivo con las condiciones de exportació
 | `@codenhub/styles/tw/reset`      | Tema, helpers de tipografía y el reset global en código fuente. Cambia la raíz, el body y los elementos, y define reglas de selección, movimiento, foco, barras de desplazamiento y colores forzados.                                                                                                                                             |
 | `@codenhub/styles/tw/native`     | Versión en código fuente de `/native`: todo, más el reset y el mapeo sin clases. El efecto global más amplio.                                                                                                                                                                                                                                     |
 | `@codenhub/styles/tw/typography` | Tema en código fuente más los helpers de tipografía. Define los selectores de tema; sin reset, sin mapeo sin clases.                                                                                                                                                                                                                              |
-| `@codenhub/styles/tw/utilities`  | Tema y tipografía en código fuente más los helpers de layout y de contenido. Enumera los nombres de clase del paquete para que Tailwind los genere siempre.                                                                                                                                                                                       |
+| `@codenhub/styles/tw/utilities`  | Tema y tipografía en código fuente más los helpers de layout y de contenido.                                                                                                                                                                                                                                                                      |
 | `@codenhub/styles/tw/aesthetics` | Las seis estéticas en código fuente. `/tw/aesthetics/neobrutalism`, `/glass`, `/pixel`, `/chunky-tile`, `/cyber` y `/sketch` publican una cada uno. CSS simple, sin efectos secundarios de tema ni de reset.                                                                                                                                      |
 | `@codenhub/styles/package.json`  | El manifiesto del paquete, como JSON. Para herramientas que leen la versión instalada o el mapa de exportaciones; no es una hoja de estilos.                                                                                                                                                                                                      |
 
@@ -124,17 +124,17 @@ No importes en un mismo build dos puntos de entrada que se solapan, como `@coden
 
 `@codenhub/styles/native` da estilo a elementos HTML simples sin ninguna clase, para contenido al que no puedes añadir clases, como la salida de Markdown o el cuerpo de un CMS. Es la hoja de estilos completa más este mapeo:
 
-| Elemento                                                                                                                                      | Con el estilo de                                                                   |
-| --------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `h1`, `h2`, `h3`, `h4`, `h5` y `h6`                                                                                                           | `.text-title-lg`, `.text-title`, `.text-title-sm`, `.text-label-lg`, `.text-label` |
-| `p`, `li`                                                                                                                                     | `.text-body`                                                                       |
-| `table`                                                                                                                                       | `.data-table`                                                                      |
-| `kbd`, `blockquote`, `q`, `code`, `pre`                                                                                                       | `.kbd`, `.quote`, `.quote-inline`, `.code`, `.pre`                                 |
-| `hr`                                                                                                                                          | `.divider`                                                                         |
-| `input` sin tipo, o con tipo `text`, `number`, `email`, `password`, `url`, `tel`, `search`, `month`, `week`, `time`, `date`, `datetime-local` | `.ipt`                                                                             |
-| `textarea`, `select`                                                                                                                          | `.textarea`, `.select`                                                             |
-| `input type="checkbox"`, `input type="radio"`                                                                                                 | `.checkbox`, `.radio`                                                              |
-| `button`, `input type="button"`, `type="submit"`, `type="reset"`                                                                              | `.btn`                                                                             |
+| Elemento                                                                                                                                      | Con el estilo de                                                                     |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `h1`, `h2`, `h3`, `h4`, `h5` y `h6`                                                                                                           | `.text-title-lg`, `.text-title`, `.text-title-sm`, `.text-label-lg`, `.text-label`   |
+| `body`                                                                                                                                        | `.text-body`, heredado por los párrafos, los elementos de lista y el resto del texto |
+| `table`                                                                                                                                       | `.data-table`                                                                        |
+| `kbd`, `blockquote`, `q`, `code`, `pre`                                                                                                       | `.kbd`, `.quote`, `.quote-inline`, `.code`, `.pre`                                   |
+| `hr`                                                                                                                                          | `.divider`                                                                           |
+| `input` sin tipo, o con tipo `text`, `number`, `email`, `password`, `url`, `tel`, `search`, `month`, `week`, `time`, `date`, `datetime-local` | `.ipt`                                                                               |
+| `textarea`, `select`                                                                                                                          | `.textarea`, `.select`                                                               |
+| `input type="checkbox"`, `input type="radio"`                                                                                                 | `.checkbox`, `.radio`                                                                |
+| `button`, `input type="button"`, `type="submit"`, `type="reset"`                                                                              | `.btn`                                                                               |
 
 ```html
 <article>
@@ -152,7 +152,8 @@ Lo que no hace:
 - **Algunos tipos de input se quedan como están:** `file`, `range`, `color` y `hidden` conservan el aspecto propio del navegador.
 - **Sin switch.** Un checkbox con `role="switch"` se sigue pintando como checkbox; el mapeo no lee roles. A una página que necesita switches le conviene más la hoja de estilos basada en clases.
 - **Los enlaces mantienen el texto que los rodea.** Un enlace dentro de un encabezado conserva el tamaño del encabezado; un enlace nunca recibe estilo de botón.
-- **`pre code` no recibe estilo doble.** El código dentro de un `pre` pierde su propio fondo y su relleno.
+- **El texto de cuerpo se define una sola vez.** `p` y `li` toman su tipografía del elemento en el que están, así que un contenedor que define su propio tamaño, peso o espaciado entre letras lo aplica al Markdown que contiene.
+- **`pre code` no recibe estilo doble.** El código dentro de un `pre` pierde el chip que dibujaría por sí solo: fondo, relleno, borde, sombra, brillo y recorte.
 
 El mapeo es global: se da estilo a cada elemento de la página que coincida, incluidos los elementos dentro de widgets de terceros. Está en la [capa de cascada](#capas-de-cascada) `base`, así que cualquier clase lo supera. Añade una clase de intención o de presentación a un elemento mapeado, como `<button class="destructive">`, y se aplica igual que en `.btn`.
 
