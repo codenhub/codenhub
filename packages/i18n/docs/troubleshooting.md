@@ -117,7 +117,7 @@ The same goes for `localePrefix` in a routing configuration kept in a variable, 
 
 ## A message shows its raw text
 
-You see `{count, plural, one {# item} other {# items}` or `{first-name}` on screen, and the console warns about an invalid message. The text isn't valid message syntax, so it is shown as written rather than half formatted. The warning appears once per text and locale.
+You see `{count, plural, one {# item} other {# items}` or `{first-name}` on screen, and the console warns about an invalid message. The text isn't valid message syntax, so it is shown as written, with only its plain `{name}` placeholders filled, rather than half formatted. The warning appears once per text and locale.
 
 Common causes:
 

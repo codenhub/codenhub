@@ -282,7 +282,7 @@ t("inbox", { name: "Ana", count: 1200 }); // "Hi Ana, you have 1,200 messages."
 
 `=N` compares numbers, not text, so `=1`, `=1.0`, and `=01` all match 1. That also makes two of them in one message the same option twice: `{n, plural, =1 {…} =1.0 {…} other {…}}` is invalid syntax. Write each number once.
 
-`offset:N` subtracts from the number before choosing a form and filling `#`, but not before matching `=N`, as in `{count, plural, offset:1 =0 {Nobody} =1 {{name}} other {{name} and # others}}`. Both ways of writing plurals are supported; plural groups keep each form an ordinary key, which some translation tools handle better.
+`offset:N` subtracts from the number before choosing a form and filling `#`, but not before matching `=N`, as in `{count, plural, offset:1 =0 {Nobody} =1 {{name}} one {{name} and # other} other {{name} and # others}}`, where a `count` of 2 shows `Ana and 1 other`. Both ways of writing plurals are supported; plural groups keep each form an ordinary key, which some translation tools handle better.
 
 ## Typed keys
 
@@ -357,7 +357,7 @@ Reading a message's arguments happens entirely in the type system, which is clev
 
 - **The key is one of several.** In `t(isError ? "save.failed" : "save.done")`, TypeScript sees a union of two keys and can't know which message's values apply. Call `t()` with each key in its own branch, `isError ? t("save.failed", { file }) : t("save.done")`, and each call is checked.
 - **The message is a plain `string`**, as every text in a JSON dictionary is. Write the default language as `as const` TypeScript, as above.
-- **The message has invalid syntax**, such as an unclosed `{`, or a placeholder name that isn't ASCII letters, digits, and `_`, such as `{first-name}`. The runtime can't read it either: it logs a warning and shows the text with only valid `{name}` placeholders filled. Fix the message; the [message check](#find-untranslated-keys) finds these.
+- **The message has an unclosed `{`**, or a placeholder name that isn't ASCII letters, digits, and `_`, such as `{first-name}`. Other invalid syntax, such as `{n, number, currency}` or a `select` without `other`, may still ask for values. Either way, the runtime can't read it either: it logs a warning and shows the text with only valid `{name}` placeholders filled. Fix the message; the [message check](#find-untranslated-keys) finds these.
 - **The message is too long for the types to read**: about 900 apostrophes, 450 arguments, or 900 spaces inside one argument's braces, in one text. TypeScript has a limit on how deep a type can go, and the reading stops short of it instead of failing your build. At runtime the message works normally. If you have one of these, it is probably three messages in a trench coat; splitting it brings the checks back.
 - **The manager's type is written by hand without the dictionary.** `I18n<"en" | "pt", Key>` checks keys but not values. Pass the dictionary type as a third type argument, `I18n<"en" | "pt", Key, typeof en>`, to keep them checked.
 
