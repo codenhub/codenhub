@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-29
+last_updated: 2026-11-09
 scope: `@codenhub/styles` package direction.
 ---
 

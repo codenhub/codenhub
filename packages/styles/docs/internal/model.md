@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-04
+last_updated: 2026-11-09
 scope: `@codenhub/styles` styling model, token contracts, and composition rules.
 ---
 
