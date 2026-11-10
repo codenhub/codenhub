@@ -2,7 +2,7 @@
 title: Configuración inicial
 description: Instala el paquete, elige entre CSS compilado o código fuente de Tailwind y renderiza la estructura base de la página de ajustes.
 order: 1
-source: 6ff7e654d43c32b770c1234e1bf96d033e59d6a0
+source: 86de6c7099d75b08755b00463a6c8c0062890214
 ---
 
 # Configuración inicial
@@ -80,7 +80,7 @@ El orden de los dos imports no importa, porque cada punto de entrada declara las
 - **Falta el import o no se carga de forma global.** Las clases no hacen nada hasta que la hoja de estilos está en la página. Impórtala una vez en una hoja de estilos que cargue cada página, no en un componente que puede no renderizarse.
 - **El nombre del paquete no se resuelve.** Un `<link>` simple o una herramienta sin resolución de paquetes CSS no puede leer `@import "@codenhub/styles"`. Enlaza `node_modules/@codenhub/styles/dist/index.css`, o sigue [Sin bundler](./integrating/without-a-bundler.md).
 - **Se carga una ruta `/tw` sin Tailwind.** Los archivos `/tw` son código fuente de Tailwind: contienen `@theme`, `@utility` y `@apply`, que los navegadores no entienden. Tu build de Tailwind tiene que compilarlos; consulta [Tailwind CSS v4](./integrating/tailwind.md).
-- **Falta una clase construida en tiempo de ejecución (solo con código fuente de Tailwind).** Tailwind genera una clase, también las del paquete, solo cuando encuentra su nombre en tus archivos fuente. Un nombre armado a partir de strings, como `` `btn ${tone}` ``, es invisible para ese escaneo. Escribe los nombres de clase completos, o enuméralos como se describe en [Tailwind CSS v4](./integrating/tailwind.md).
+- **Falta una clase construida en tiempo de ejecución (solo con código fuente de Tailwind).** Tailwind genera una clase de utilidad, también los componentes del paquete como `.btn`, solo cuando encuentra su nombre en tus archivos fuente. Un nombre armado a partir de strings, como `` `btn ${tone}` ``, es invisible para ese escaneo. Escribe los nombres de clase completos, o enuméralos como se describe en [Tailwind CSS v4](./integrating/tailwind.md).
 
 ### CSS crítico en línea
 

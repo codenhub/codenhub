@@ -2,7 +2,7 @@
 title: Tailwind CSS v4
 description: Usar los puntos de entrada de código fuente /tw en un proyecto con Tailwind CSS v4.
 order: 1
-source: 7e720ecae78726c7e47a52f4d1622e3e3fb23fa0
+source: 20a38b6bc7002b5a2bb1ea61198620ba757106b2
 ---
 
 # Tailwind CSS v4
@@ -64,16 +64,16 @@ A diferencia de `/tw`, los puntos de entrada específicos y `/tw/native` no impo
 **Una clase construida en tiempo de ejecución no tiene estilo**
 
 - **Qué ha pasado:** `<button class="btn primary">` tiene estilo, pero un botón cuya clase viene de una variable, como `"btn " + variant`, o de contenido de un CMS, no.
-- **Por qué:** Tailwind emite solo las clases que encuentra escritas completas en los archivos que escanea. Eso vale también para las clases del paquete: un build con `/tw` emite `.alert` solo si `alert` aparece en algún lugar que escanea, lo que limita la hoja de estilos a lo que usan tus páginas. Un nombre armado en tiempo de ejecución nunca aparece completo en un archivo, así que el escaneo no lo ve.
+- **Por qué:** Tailwind emite solo las clases que encuentra escritas completas en los archivos que escanea. Eso vale también para las clases de componente del paquete: un build con `/tw` emite `.alert` solo si `alert` aparece en algún lugar que escanea, lo que limita la hoja de estilos a lo que usan tus páginas. Las clases de intención, de presentación y de elevación, como `.primary` y `.soft`, son CSS plano y se emiten siempre. Un nombre armado en tiempo de ejecución nunca aparece completo en un archivo, así que el escaneo no lo ve.
 - **Solución:** escribe cada nombre de clase completo en algún lugar que Tailwind escanee, por ejemplo en un objeto de consulta (`{ save: "btn primary", remove: "btn destructive" }`), o enumera en tu hoja de estilos los nombres que tu código o tu contenido pueden producir:
 
 ```css
 @import "@codenhub/styles/tw";
 
-@source inline("btn primary secondary destructive alert badge");
+@source inline("btn alert badge");
 ```
 
-Todos los puntos de entrada `/tw` requieren Tailwind CSS 4.3.2 o posterior, por debajo de 5, la versión con la que se prueba.
+Todos los puntos de entrada `/tw` requieren Tailwind CSS 4.3.2 o posterior, por debajo de 5 (`>=4.3.2 <5`).
 
 ## La variante `dark:`
 

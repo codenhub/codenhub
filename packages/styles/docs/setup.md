@@ -79,7 +79,7 @@ The order of the two imports does not matter, because every entrypoint declares 
 - **The import is missing or not loaded globally.** The classes do nothing until the stylesheet is on the page. Import it once in a stylesheet every page loads, not in a component that may not render.
 - **The package name does not resolve.** A plain `<link>` or a tool without CSS package resolution cannot read `@import "@codenhub/styles"`. Link `node_modules/@codenhub/styles/dist/index.css`, or follow [Without a bundler](./integrating/without-a-bundler.md).
 - **A `/tw` path is loaded without Tailwind.** The `/tw` files are Tailwind source: they contain `@theme`, `@utility`, and `@apply`, which browsers do not understand. Your Tailwind build has to compile them; see [Tailwind CSS v4](./integrating/tailwind.md).
-- **A class built at runtime is missing (Tailwind source only).** Tailwind generates a class, the package's included, only when it finds the name in your source files. A name assembled from strings, such as `` `btn ${tone}` ``, is invisible to that scan. Write full class names, or list them as described in [Tailwind CSS v4](./integrating/tailwind.md).
+- **A class built at runtime is missing (Tailwind source only).** Tailwind generates a utility class, the package's components such as `.btn` included, only when it finds the name in your source files. A name assembled from strings, such as `` `btn ${tone}` ``, is invisible to that scan. Write full class names, or list them as described in [Tailwind CSS v4](./integrating/tailwind.md).
 
 ### Inlining critical CSS
 

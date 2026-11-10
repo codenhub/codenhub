@@ -2,7 +2,7 @@
 title: Tailwind CSS v4
 description: Como usar os entrypoints de código-fonte /tw num projeto com Tailwind CSS v4.
 order: 1
-source: 7e720ecae78726c7e47a52f4d1622e3e3fb23fa0
+source: 20a38b6bc7002b5a2bb1ea61198620ba757106b2
 ---
 
 # Tailwind CSS v4
@@ -64,16 +64,16 @@ Diferente do `/tw`, os entrypoints específicos e o `/tw/native` não importam o
 **Uma classe montada em tempo de execução fica sem estilo**
 
 - **O que aconteceu:** `<button class="btn primary">` é estilizado, mas um botão cuja classe vem de uma variável, como `"btn " + variant`, ou de conteúdo de um CMS, não é.
-- **Por quê:** o Tailwind emite só as classes que encontra escritas por extenso nos arquivos que varre. Isso vale também para as classes do pacote: um build com `/tw` emite `.alert` só se `alert` aparecer em algum lugar que ele varre, o que mantém a folha de estilos restrita ao que as suas páginas usam. Um nome montado em tempo de execução nunca aparece inteiro num arquivo, então a varredura não o encontra.
+- **Por quê:** o Tailwind emite só as classes que encontra escritas por extenso nos arquivos que varre. Isso vale também para as classes de componente do pacote: um build com `/tw` emite `.alert` só se `alert` aparecer em algum lugar que ele varre, o que mantém a folha de estilos restrita ao que as suas páginas usam. As classes de intenção, de apresentação e de elevação, como `.primary` e `.soft`, são CSS comum e sempre emitidas. Um nome montado em tempo de execução nunca aparece inteiro num arquivo, então a varredura não o encontra.
 - **Como resolver:** escreva cada nome de classe completo em algum lugar que o Tailwind varre, por exemplo num objeto de consulta (`{ save: "btn primary", remove: "btn destructive" }`), ou liste na sua folha de estilos os nomes que o seu código ou o seu conteúdo podem produzir:
 
 ```css
 @import "@codenhub/styles/tw";
 
-@source inline("btn primary secondary destructive alert badge");
+@source inline("btn alert badge");
 ```
 
-Todo entrypoint `/tw` exige Tailwind CSS 4.3.2 ou mais recente, abaixo da 5, a versão com que ele é testado.
+Todo entrypoint `/tw` exige Tailwind CSS 4.3.2 ou mais recente, abaixo da 5 (`>=4.3.2 <5`).
 
 ## A variante `dark:`
 

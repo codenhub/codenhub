@@ -2,7 +2,7 @@
 title: Configuração
 description: Instale o pacote, escolha entre CSS compilado ou código-fonte do Tailwind e renderize a estrutura da página de configurações.
 order: 1
-source: 6ff7e654d43c32b770c1234e1bf96d033e59d6a0
+source: 86de6c7099d75b08755b00463a6c8c0062890214
 ---
 
 # Configuração
@@ -80,7 +80,7 @@ A ordem dos dois imports não importa, porque todo entrypoint declara as [camada
 - **O import está faltando ou não é carregado globalmente.** As classes não fazem nada até a folha de estilos estar na página. Importe-a uma vez numa folha de estilos que toda página carrega, não num componente que pode não ser renderizado.
 - **O nome do pacote não é resolvido.** Um `<link>` simples ou uma ferramenta sem resolução de pacotes CSS não consegue ler `@import "@codenhub/styles"`. Referencie `node_modules/@codenhub/styles/dist/index.css` ou siga [Sem bundler](./integrating/without-a-bundler.md).
 - **Um caminho `/tw` é carregado sem Tailwind.** Os arquivos `/tw` são código-fonte do Tailwind: eles contêm `@theme`, `@utility` e `@apply`, que os navegadores não entendem. O seu build do Tailwind precisa compilá-los; veja [Tailwind CSS v4](./integrating/tailwind.md).
-- **Falta uma classe montada em tempo de execução (só com código-fonte do Tailwind).** O Tailwind só gera uma classe, incluindo as do pacote, quando encontra o nome nos seus arquivos de código. Um nome montado a partir de strings, como `` `btn ${tone}` ``, é invisível para essa varredura. Escreva os nomes de classe completos, ou liste-os como descrito em [Tailwind CSS v4](./integrating/tailwind.md).
+- **Falta uma classe montada em tempo de execução (só com código-fonte do Tailwind).** O Tailwind só gera uma classe utilitária, incluindo os componentes do pacote como `.btn`, quando encontra o nome nos seus arquivos de código. Um nome montado a partir de strings, como `` `btn ${tone}` ``, é invisível para essa varredura. Escreva os nomes de classe completos, ou liste-os como descrito em [Tailwind CSS v4](./integrating/tailwind.md).
 
 ### CSS crítico inline
 

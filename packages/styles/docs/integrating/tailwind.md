@@ -63,16 +63,16 @@ Unlike `/tw`, the focused entrypoints and `/tw/native` do not import Tailwind, s
 **A class built at runtime has no styling**
 
 - **What happened:** `<button class="btn primary">` is styled, but a button whose class comes from a variable, such as `"btn " + variant`, or from CMS content, is not.
-- **Why:** Tailwind emits only the classes it finds written out in the files it scans. That holds for the package's classes too: a `/tw` build emits `.alert` only if `alert` appears somewhere it scans, which keeps the stylesheet to what your pages use. A name assembled at runtime never appears whole in a file, so the scan misses it.
+- **Why:** Tailwind emits only the classes it finds written out in the files it scans. That holds for the package's component classes too: a `/tw` build emits `.alert` only if `alert` appears somewhere it scans, which keeps the stylesheet to what your pages use. The intent, presentation, and elevation classes, such as `.primary` and `.soft`, are plain CSS and always emitted. A name assembled at runtime never appears whole in a file, so the scan misses it.
 - **Fix:** write each complete class name somewhere Tailwind scans, for example in a lookup object (`{ save: "btn primary", remove: "btn destructive" }`), or list the names your code or content can produce in your stylesheet:
 
 ```css
 @import "@codenhub/styles/tw";
 
-@source inline("btn primary secondary destructive alert badge");
+@source inline("btn alert badge");
 ```
 
-Every `/tw` entrypoint requires Tailwind CSS 4.3.2 or newer, below 5, the version it is tested against.
+Every `/tw` entrypoint requires Tailwind CSS 4.3.2 or newer, below 5 (`>=4.3.2 <5`).
 
 ## The `dark:` variant
 
