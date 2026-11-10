@@ -127,6 +127,8 @@ The binding persists an explicit locale and every later applied change, but not 
 
 When the loader rejects for a stored or detected locale, the binding warns and starts with the default locale, keeping the stored preference. Rejecting made a temporary failure of one dictionary stop the application from starting, and the only recovery, passing the default explicitly, persisted it and kept that visitor on the default for good. An explicit locale or the default locale still rejects, since nothing can serve in its place.
 
+**The detected locale comes before the default (2026-11-10).** The decision above compared rejecting with using the default, and did not weigh the browser's languages as the next choice: a visitor with a saved `fr` whose dictionary fails to load, and a `pt-BR` browser, got English although Portuguese was available. A failing saved locale now falls back to the detected locale, then the default, each warned about, and none persisted. Rejected: trying every locale in `navigator.languages`, which can stack one failed load per preference before the page shows text.
+
 ### One data attribute per translated attribute
 
 `data-i18n-<attribute>` was chosen over a single list attribute, such as `data-i18n-attrs="placeholder:search.hint"`, because it needs no parsing and a `MutationObserver` can watch exactly those names. Attributes are limited to text read by people or assistive technology, so a translation can never set a URL, a style, or an event handler.

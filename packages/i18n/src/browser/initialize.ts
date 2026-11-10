@@ -114,8 +114,8 @@ const getMutationObserver = (root: ParentNode): typeof MutationObserver => {
  * the configured default. Storage failures are recoverable and warn unless the manager is
  * silent. Only one call may initialize or own a binding for a manager at a time. Setup is
  * transactional: failed initialization or browser setup releases all binding-owned resources.
- * When the loader rejects for a stored or detected locale, it warns unless silent and initializes the default locale
- * without persisting it. Other required dictionary loading and validation failures reject unchanged.
+ * When the loader rejects for a stored or detected locale, it warns unless silent and tries the next of those, the
+ * detected locale after a stored one, then the default locale, without persisting the locale it starts in. Other required dictionary loading and validation failures reject unchanged.
  *
  * @typeParam TLocale - Union of supported canonical locale identifiers.
  * @param options - Core manager, locale inputs, persistence, document, and optional DOM behavior.
@@ -302,44 +302,51 @@ export async function initializeBrowserI18n<TLocale extends string>(
   };
 
   try {
-    let initialLocale: TLocale;
+    let candidates: TLocale[];
 
     if (locale !== undefined) {
       if (typeof locale !== "string") {
         throw new RangeError("[I18n] An explicit browser locale must be a string.");
       }
-      initialLocale = locale;
+      candidates = [locale];
     } else {
-      initialLocale =
-        (shouldPersistLocale ? readPersistedLocale(i18n, storageKey) : undefined) ??
-        i18n.matchLocale(getNavigatorPreferences()) ??
-        i18n.defaultLocale;
+      // Stored, then detected, then the default, each tried once.
+      const preferences = [
+        shouldPersistLocale ? readPersistedLocale(i18n, storageKey) : undefined,
+        i18n.matchLocale(getNavigatorPreferences()),
+        i18n.defaultLocale,
+      ].filter((candidate): candidate is TLocale => candidate !== undefined);
+      candidates = [...new Set(preferences)];
     }
 
+    let initialLocale = candidates[0]!;
     let wasInitializationApplied: boolean;
 
-    try {
-      wasInitializationApplied = await internals.init({
-        locale: initialLocale,
-      });
-    } catch (error) {
-      // A stored or detected locale is a preference, not a requirement: when its loader fails, the default still serves
-      // the user, and it is not persisted, so a later visit tries the preference again.
-      // The default loads beside the preference, so a rejection of the default itself is not a preference failure.
-      if (
-        locale !== undefined ||
-        !(error instanceof I18nError) ||
-        initialLocale === i18n.defaultLocale ||
-        error.locale === i18n.defaultLocale
-      ) {
-        throw error;
-      }
+    for (let index = 0; ; index += 1) {
+      initialLocale = candidates[index]!;
+      try {
+        // oxlint-disable-next-line no-await-in-loop -- each locale is tried only after the one before it failed.
+        wasInitializationApplied = await internals.init({
+          locale: initialLocale,
+        });
+        break;
+      } catch (error) {
+        // A stored or detected locale is a preference, not a requirement: when its loader fails, the next preference,
+        // and at last the default, still serves the user, and it is not persisted, so a later visit tries it again.
+        // The default loads beside each preference, so a rejection of the default itself is not a preference failure.
+        const next = candidates[index + 1];
+        if (
+          locale !== undefined ||
+          next === undefined ||
+          !(error instanceof I18nError) ||
+          error.locale === i18n.defaultLocale
+        ) {
+          throw error;
+        }
 
-      warn(i18n, `[I18n] Could not load locale "${initialLocale}"; using the default locale.`, error);
-      initialLocale = i18n.defaultLocale;
-      wasInitializationApplied = await internals.init({
-        locale: initialLocale,
-      });
+        const target = next === i18n.defaultLocale ? "the default locale" : JSON.stringify(next);
+        warn(i18n, `[I18n] Could not load locale "${initialLocale}"; using ${target}.`, error);
+      }
     }
 
     if (!wasInitializationApplied || !i18n.isReady || i18n.locale !== i18n.resolveLocale(initialLocale)) {

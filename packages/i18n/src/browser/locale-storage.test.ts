@@ -279,6 +279,40 @@ describe("initializeBrowserI18n storage integration", () => {
     expect(localStorage.getItem("i18n")).toBe(JSON.stringify({ locale: "fr" }));
   });
 
+  it("tries the detected locale when a stored locale fails to load, keeping the stored choice", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    localStorage.setItem("i18n", JSON.stringify({ locale: "fr" }));
+    setNavigatorLocales(["pt-BR"]);
+    const i18n = createManager({
+      loadLocale: (locale) => (locale === "fr" ? Promise.reject(new Error("503")) : dictionaries[locale]),
+    });
+
+    await initializeBrowserI18n({ i18n });
+
+    expect(i18n.locale).toBe("pt-BR");
+    expect(localStorage.getItem("i18n")).toBe(JSON.stringify({ locale: "fr" }));
+    expect(warn).toHaveBeenCalledWith('[I18n] Could not load locale "fr"; using "pt-BR".', expect.any(I18nError));
+  });
+
+  it("falls back to the default when both the stored and the detected locale fail to load", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    localStorage.setItem("i18n", JSON.stringify({ locale: "fr" }));
+    setNavigatorLocales(["pt-BR"]);
+    const i18n = createManager({
+      loadLocale: (locale) => (locale === "en" ? dictionaries[locale] : Promise.reject(new Error("503"))),
+    });
+
+    await initializeBrowserI18n({ i18n });
+
+    expect(i18n.locale).toBe("en");
+    expect(localStorage.getItem("i18n")).toBe(JSON.stringify({ locale: "fr" }));
+    expect(warn).toHaveBeenCalledWith('[I18n] Could not load locale "fr"; using "pt-BR".', expect.any(I18nError));
+    expect(warn).toHaveBeenCalledWith(
+      '[I18n] Could not load locale "pt-BR"; using the default locale.',
+      expect.any(I18nError),
+    );
+  });
+
   it("rejects without falling back when the default locale fails to load beside a detected locale", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     setNavigatorLocales(["fr-CA"]);
