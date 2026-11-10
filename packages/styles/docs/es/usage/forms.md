@@ -2,7 +2,7 @@
 title: Formularios
 description: Campos con etiqueta, pistas y errores, iconos y prefijos fijos, selects y toggles de checkbox, radio y switch.
 order: 2
-source: bb81303c18d3da5ae193ff34ad8a96225cee0cf8
+source: 00e6a57cfd62f524fde5a550af721786edd7a5dd
 ---
 
 # Formularios
@@ -61,7 +61,7 @@ Marca el control como inválido con `aria-invalid="true"` y dale al mensaje de e
 
 Un control inválido dibuja su borde, su anillo de foco y el texto escrito en el color destructivo, tenga la clase de intención que tenga. El texto usa el tono legible de ese color, `--intent-strong`, para que siga siendo legible sobre la página. El paquete solo pinta el estado: decidir que el valor es inválido, poner y quitar `aria-invalid` y escribir el mensaje es cosa de tu código. Quita `aria-invalid` en cuanto el valor vuelva a ser válido; si lo dejas puesto, el campo sigue en rojo. En un checkbox, un radio o un switch, `aria-invalid="true"` dibuja el toggle exactamente igual que `.destructive`, marca de activado incluida.
 
-Un `.hint` acepta cualquier intención con nombre, no solo `.destructive`: `.hint.success` confirma que se aceptó un valor, y `.hint.warning` señala uno que está permitido pero es inusual. Cada uno se muestra en el tono legible de su intención, `--intent-strong`, que mantiene 4.5:1 frente a la página en los dos temas. Un `.hint` sin intención, o con `.neutral`, se queda en el color secundario. Solo lo colorea una clase en el propio `.hint`; una intención en el campo o en un contenedor que lo rodee no lo hace.
+Un `.hint` acepta cualquiera de las seis intenciones incorporadas, no solo `.destructive`: `.hint.success` confirma que se aceptó un valor, y `.hint.warning` señala uno que está permitido pero es inusual. Cada uno se muestra en el tono legible de su intención, `--intent-strong`, que mantiene 4.5:1 frente a la página en los dos temas. Un `.hint` sin intención, con `.neutral` o con una [intención que definiste tú](./theming.md#tu-propia-intención), se queda en el color secundario. Solo lo colorea una clase en el propio `.hint`; una intención en el campo o en un contenedor que lo rodee no lo hace.
 
 ```html
 <input class="ipt success" id="username" value="ada" aria-describedby="username-hint" /> <span class="hint success" id="username-hint">That username is available.</span>

@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro e escuro, como trocar a paleta pelas cores da marca, como definir uma intenção própria, e cada token de cor, de intenção, fundamental e de fonte com o seu padrão.
 order: 5
-source: e7597c70666e5c4f8a1c407f47ae1405537093b9
+source: 481dcaaa6ee7de89ac3750771a29fd59ffaa057e
 ---
 
 # Temas
@@ -122,6 +122,7 @@ A classe funciona em tudo o que aceita intenção: botões, badges, campos e tog
 - **Um repouso discreto, sem tom.** Um `.card.soft`, um `.panel` e um `.alert` neutros ficam sobre o tom de fundo discreto, e só reconhecem uma intenção pelas seis classes embutidas. `.card.soft.beta`, `.panel.beta` e `.alert.beta` são desenhados como o neutro: o tom de fundo discreto em vez de um tom violeta. A sua intenção ainda colore o texto e a borda deles.
 - **O tom dos chips.** Uma tecla `.kbd` ou um bloco de código `.beta` mostra o seu tom `--intent-subtle`, mas não os 12% extras de `--intent-color` que uma intenção embutida acrescenta por cima.
 - **Classes solo.** Uma [classe solo](./solo.md) como `.neobrutalism-solo` só aceita intenção das seis classes embutidas, então `.neobrutalism-solo.beta` é desenhado como neutro.
+- **O texto do hint.** Um [`.hint`](./forms.md#mostre-um-erro-de-validação) só aparece no tom legível de uma intenção com as seis classes embutidas, então `.hint.beta` continua na cor secundária.
 
 Se você precisa disso, há dois caminhos:
 

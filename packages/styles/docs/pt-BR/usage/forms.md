@@ -2,7 +2,7 @@
 title: Formulários
 description: Campos com rótulo, dicas e erros, ícones e prefixos fixos, selects e toggles de checkbox, radio e switch.
 order: 2
-source: bb81303c18d3da5ae193ff34ad8a96225cee0cf8
+source: 00e6a57cfd62f524fde5a550af721786edd7a5dd
 ---
 
 # Formulários
@@ -61,7 +61,7 @@ Marque o controle como inválido com `aria-invalid="true"` e dê à mensagem de 
 
 Um controle inválido desenha a borda, o anel de foco e o texto digitado na cor destrutiva, seja qual for a classe de intenção dele. O texto usa o tom legível dessa cor, `--intent-strong`, para continuar legível na página. O pacote só pinta o estado: decidir que o valor é inválido, definir e remover o `aria-invalid` e escrever a mensagem ficam por conta do seu código. Remova o `aria-invalid` assim que o valor voltar a ser válido; se ele continuar definido, o campo continua vermelho. Num checkbox, radio ou switch, `aria-invalid="true"` desenha o toggle exatamente como `.destructive` desenha, marca de seleção incluída.
 
-Um hint aceita qualquer intenção nomeada, não só `.destructive`: `.hint.success` confirma que um valor foi aceito, e `.hint.warning` sinaliza um valor permitido, mas incomum. Cada um aparece no tom legível da sua intenção, `--intent-strong`, que mantém 4.5:1 em relação à página nos dois temas. Um hint sem intenção, ou com `.neutral`, continua na cor secundária. Só uma classe no próprio hint o colore; uma intenção no campo ou num contêiner em volta dele não.
+Um hint aceita qualquer uma das seis intenções embutidas, não só `.destructive`: `.hint.success` confirma que um valor foi aceito, e `.hint.warning` sinaliza um valor permitido, mas incomum. Cada um aparece no tom legível da sua intenção, `--intent-strong`, que mantém 4.5:1 em relação à página nos dois temas. Um hint sem intenção, com `.neutral` ou com uma [intenção que você mesmo definiu](./theming.md#sua-própria-intenção) continua na cor secundária. Só uma classe no próprio hint o colore; uma intenção no campo ou num contêiner em volta dele não.
 
 ```html
 <input class="ipt success" id="username" value="ada" aria-describedby="username-hint" /> <span class="hint success" id="username-hint">That username is available.</span>

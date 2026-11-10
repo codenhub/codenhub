@@ -121,6 +121,7 @@ The class works on everything that takes an intent: buttons, badges, fields and 
 - **A quiet, untinted rest.** A neutral `.card.soft`, `.panel`, and `.alert` rest on the quiet background tone, and they recognize an intent only by the six built-in classes. `.card.soft.beta`, `.panel.beta`, and `.alert.beta` are drawn like the neutral one: the quiet background tone instead of a violet tint. Your intent still colors their text and border.
 - **The chip tint.** A `.beta` key cap or code block shows your `--intent-subtle` tint, but not the extra 12% of `--intent-color` a built-in intent adds over it.
 - **Solo classes.** A [solo class](./solo.md) such as `.neobrutalism-solo` takes an intent only from the six built-in classes, so `.neobrutalism-solo.beta` is drawn neutral.
+- **Hint text.** A [`.hint`](./forms.md#show-a-validation-error) prints in an intent's readable tone only for the six built-in classes, so `.hint.beta` stays secondary-colored.
 
 If you need those, there are two ways:
 
