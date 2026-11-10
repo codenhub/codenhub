@@ -41,9 +41,11 @@ Build the neutrals first; they cover most of any surface. Then add one accent, t
 
 ## Choosing A Hue
 
-When no brand exists, choose the accent against the field: note the colors that competitors or neighboring products in the same space use, then pick one that differs from them and fits the content and the audience. State which ones you compared and how the choice differs. When you can search the web or open those products, look at them before choosing. Only when they cannot be inspected, or there is no competitive field, state that limitation and choose a provisional accent from the content and audience; do not claim a comparison or distinctiveness. Choosing by mood lands on the defaults that mark work as generated: the indigo and violet of popular CSS frameworks, the purple-to-blue gradient, a cream ground with an orange, rust, terracotta, or copper accent, a near-black or slate ground with one bright accent, and deep green or teal.
+When no brand exists, choose the accent against the field: note the colors that competitors or neighboring products in the same space use, then pick one that differs from them and fits the content and the audience. State which ones you compared and how the choice differs. When you can search the web or open those products, look at them before choosing. Only when they cannot be inspected, or there is no competitive field, state that limitation and choose a provisional accent from the content and audience; do not claim a comparison or distinctiveness.
 
-- Hue associations are weak and cultural. Blue reads as trust and default (and therefore generic), green as growth, money, or go, red as danger or urgency in many places and as luck in others. Use them as one input, not a rule.
+Choosing a hue by mood lands on the pairs that mark work as generated: a cream ground with an orange, rust, terracotta, or copper accent, indigo or violet for anything technical, the purple-to-blue gradient, a near-black or slate ground with one bright accent, and deep green or teal. The structure this file teaches, tinted neutrals with one accent in a light or a dark theme, is not the failure. The failure is reaching the same pair whatever the subject is. Test the choice by changing the subject: a ground and accent you would also have picked for an unrelated product were not chosen for this one. Mood is a reason for lightness and saturation, as below, and never for a hue.
+
+- Hue associations are weak and cultural. Blue reads as trust and is the most common choice, so it differentiates least; green reads as growth, money, or go; red reads as danger or urgency in many places and as luck in others. Use them as one input, not a rule.
 - Saturation and lightness carry more meaning than hue. Muted and darker colors read as serious, calm, or premium; bright, saturated colors read as energetic and young, and as cheap when they cover everything.
 - Check the conflicts. An accent in the same hue family as danger or success makes ordinary buttons look like warnings or confirmations.
 
@@ -53,7 +55,7 @@ When no brand exists, choose the accent against the field: note the colors that 
 - Hold the hue, step the lightness evenly, and reduce chroma toward the lightest and darkest steps, where high chroma falls outside the screen's gamut and looks garish.
 - Watch for hue drift: some hues shift as they lighten or darken, such as blue toward purple. Correct the hue per step until the ramp reads as one color.
 - Use about 10–12 steps per ramp, and map steps to roles consistently: the lightest for backgrounds, the next for subtle fills and borders, a middle step for the solid accent, and the darkest for text in that hue.
-- Modern browsers support `oklch()` in CSS. Add sRGB fallbacks only when the project's supported browsers require them.
+- Modern browsers support `oklch()` in CSS. Add sRGB fallbacks only when the project's supported browsers require them, and use hex values where the output is not a browser, such as HTML email.
 
 ## Color Theory As Reasoning
 
