@@ -124,7 +124,7 @@ class Parser {
         text += this.readApostrophe(isInPlural);
       } else if (character === "{") {
         flush();
-        nodes.push(this.parseArgument(depth, isInPlural));
+        nodes.push(this.parseArgument(depth));
       } else if (character === "}") {
         break;
       } else if (character === "#" && isInPlural) {
@@ -173,7 +173,7 @@ class Parser {
     return quoted;
   }
 
-  private parseArgument(depth: number, isInPlural: boolean): MessageNode {
+  private parseArgument(depth: number): MessageNode {
     const start = this.index;
     this.index += 1;
     this.skipSpace();
@@ -235,7 +235,8 @@ class Parser {
       }
       case "select": {
         this.expect(",");
-        const options = this.parseOptions(depth, isInPlural, (key) => key);
+        // ICU reads `#` as the number only in a plural's own options, not in a select nested inside one.
+        const options = this.parseOptions(depth, false, (key) => key);
         return { kind: "select", name, options, source: this.message.slice(start, this.index) };
       }
       default:
@@ -517,6 +518,21 @@ const getPluralRules = (locale: string, isOrdinal: boolean): Intl.PluralRules =>
 const isDateValue = (value: unknown): value is Date | number =>
   (value instanceof Date && !Number.isNaN(value.getTime())) || (typeof value === "number" && Number.isFinite(value));
 
+/**
+ * Formats the value of a plain `{name}`: text and numbers as written, a valid `Date` as a medium date, and anything else
+ * as `undefined`, for the argument to stay as written.
+ *
+ * @internal
+ */
+export const formatPlainValue = (value: unknown, locale: string, timeZone: string | undefined): string | undefined => {
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+  return value instanceof Date && isDateValue(value)
+    ? getDateTimeFormat(locale, { dateStyle: "medium", timeZone }).format(value)
+    : undefined;
+};
+
 const formatNodes = (
   nodes: Message,
   values: MessageValues,
@@ -540,12 +556,7 @@ const formatNodes = (
 
     switch (node.kind) {
       case "argument":
-        result +=
-          typeof value === "string" || typeof value === "number"
-            ? String(value)
-            : value instanceof Date && isDateValue(value)
-              ? getDateTimeFormat(locale, { dateStyle: "medium", timeZone }).format(value)
-              : node.source;
+        result += formatPlainValue(value, locale, timeZone) ?? node.source;
         break;
       case "number":
         result +=

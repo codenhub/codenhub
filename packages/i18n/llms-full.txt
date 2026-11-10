@@ -540,7 +540,7 @@ An apostrophe before `{` or `}` quotes text up to the next apostrophe, and two a
 | `Type '{name}' to insert` | `Type {name} to insert` |
 | `It''s '{'here'}'`        | `It's {here}`           |
 
-Inside a plural, `#` stands for the number; write `'#'` for a literal `#`. Quoted text is text to the types too: in `'{it''s {x}'`, which shows `{it's {x}`, `x` is not a value `t()` asks for.
+Inside a plural's forms, `#` stands for the number; write `'#'` for a literal `#`. A `select` nested in a form is not the plural itself, so a `#` there is shown as written, as in ICU; put `{count}` there instead. Quoted text is text to the types too: in `'{it''s {x}'`, which shows `{it's {x}`, `x` is not a value `t()` asks for.
 
 Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning, unless the manager is silent, and is shown with only its `{name}` placeholders filled. The warning names the key and the locale, and comes once for each text in each locale, among the 1,000 most recent. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
 
@@ -623,7 +623,7 @@ t("inbox", { name: "Ana", count: 1200 }); // "Hi Ana, you have 1,200 messages."
 
 `=N` compares numbers, not text, so `=1`, `=1.0`, and `=01` all match 1. That also makes two of them in one message the same option twice: `{n, plural, =1 {…} =1.0 {…} other {…}}` is invalid syntax. Write each number once.
 
-`offset:N` subtracts from the number before choosing a form and filling `#`, but not before matching `=N`, as in `{count, plural, offset:1 =0 {Nobody} =1 {{name}} other {{name} and # others}}`. Both ways of writing plurals are supported; plural groups keep each form an ordinary key, which some translation tools handle better.
+`offset:N` subtracts from the number before choosing a form and filling `#`, but not before matching `=N`, as in `{count, plural, offset:1 =0 {Nobody} =1 {{name}} one {{name} and # other} other {{name} and # others}}`, where a `count` of 2 shows `Ana and 1 other`. Both ways of writing plurals are supported; plural groups keep each form an ordinary key, which some translation tools handle better.
 
 ## Typed keys
 
@@ -698,7 +698,7 @@ Reading a message's arguments happens entirely in the type system, which is clev
 
 - **The key is one of several.** In `t(isError ? "save.failed" : "save.done")`, TypeScript sees a union of two keys and can't know which message's values apply. Call `t()` with each key in its own branch, `isError ? t("save.failed", { file }) : t("save.done")`, and each call is checked.
 - **The message is a plain `string`**, as every text in a JSON dictionary is. Write the default language as `as const` TypeScript, as above.
-- **The message has invalid syntax**, such as an unclosed `{`, or a placeholder name that isn't ASCII letters, digits, and `_`, such as `{first-name}`. The runtime can't read it either: it logs a warning and shows the text with only valid `{name}` placeholders filled. Fix the message; the [message check](#find-untranslated-keys) finds these.
+- **The message has an unclosed `{`**, or a placeholder name that isn't ASCII letters, digits, and `_`, such as `{first-name}`. Other invalid syntax, such as `{n, number, currency}` or a `select` without `other`, may still ask for values. Either way, the runtime can't read it either: it logs a warning and shows the text with only valid `{name}` placeholders filled. Fix the message; the [message check](#find-untranslated-keys) finds these.
 - **The message is too long for the types to read**: about 900 apostrophes, 450 arguments, or 900 spaces inside one argument's braces, in one text. TypeScript has a limit on how deep a type can go, and the reading stops short of it instead of failing your build. At runtime the message works normally. If you have one of these, it is probably three messages in a trench coat; splitting it brings the checks back.
 - **The manager's type is written by hand without the dictionary.** `I18n<"en" | "pt", Key>` checks keys but not values. Pass the dictionary type as a third type argument, `I18n<"en" | "pt", Key, typeof en>`, to keep them checked.
 
@@ -929,7 +929,31 @@ With `observe`, adding an element, or changing or removing a `data-i18n` key, is
 
 Leave `observe` off when a framework renders the page: the framework already calls `t()`, and watching the page would only duplicate its work.
 
-The binding does not look inside custom elements (tags with a dash, such as `<my-widget>`) from an outer root, since the component owns its content. To translate a component's content, pass the component, or its shadow root, as the `root` of its own binding.
+The binding does not look inside custom elements (tags with a dash, such as `<my-widget>`), with or without a shadow root, and doesn't warn when it skips one. A component has a life of its own: it can render after the page was translated, and it adds and removes text as people use it, which it has to translate itself anyway. So the component translates its own content: call `i18n.t()` when it renders, and render again from `i18n.subscribe()`:
+
+```ts
+class ProductCard extends HTMLElement {
+  #unsubscribe?: () => void;
+
+  connectedCallback() {
+    // The element can connect before the manager is ready; `subscribe()` also calls back once `init()` applies.
+    this.#unsubscribe = i18n.subscribe(() => this.render());
+    if (i18n.isReady) {
+      this.render();
+    }
+  }
+
+  disconnectedCallback() {
+    this.#unsubscribe?.();
+  }
+
+  render() {
+    this.querySelector("button")!.textContent = i18n.t("cart.add");
+  }
+}
+```
+
+That includes a custom element used only as a wrapper, whose children you wrote in the page, such as `<site-nav><a data-i18n="nav.home">Home</a></site-nav>`: those links are skipped too. Use a plain element, such as `<nav>`, for a wrapper whose text the page translates. A component can't have a binding of its own on the same manager, since a manager has one binding.
 
 ## In a Web Worker
 
@@ -1020,6 +1044,9 @@ Browsers send the visitor's languages in the `Accept-Language` header, such as `
 ```ts
 import type { I18n } from "@codenhub/i18n";
 
+// Real browsers send a handful of languages, and a header can list thousands.
+const MAX_PREFERENCES = 10;
+
 function pickLocale<TLocale extends string>(i18n: I18n<TLocale>, request: Request): TLocale {
   const preferences = (request.headers.get("accept-language") ?? "")
     .split(",")
@@ -1033,6 +1060,7 @@ function pickLocale<TLocale extends string>(i18n: I18n<TLocale>, request: Reques
     // Drops refused languages (q=0) and malformed weights.
     .filter(({ quality }) => quality > 0)
     .sort((left, right) => right.quality - left.quality)
+    .slice(0, MAX_PREFERENCES)
     .map(({ tag }) => tag);
 
   return i18n.matchLocale(preferences) ?? i18n.defaultLocale;
@@ -1041,7 +1069,7 @@ function pickLocale<TLocale extends string>(i18n: I18n<TLocale>, request: Reques
 
 A visitor whose languages all fail to match, including one who refuses your default with `en;q=0`, still gets the default locale, since the page has to be in some language. This helper does not implement the rest of `Accept-Language`, such as `*`; use your server framework's parser if you need it, and pass its result to `matchLocale()`.
 
-`matchLocale()` takes a list rather than the header because parsing the header, and limiting its size, belongs to your server. It matches the same way the browser binding does, so a visitor gets the same language from the server as from the browser: `pt-BR` gets your `pt`, and `zh-TW` gets your `zh-Hant`. Malformed tags are skipped, and `undefined` means nothing matched. [Turn outside input into a locale](docs/index.md#turn-outside-input-into-a-locale) has the full matching order, including which of two regional locales wins, and `resolveLocale()` for a locale from a cookie or a query string.
+`matchLocale()` takes a list rather than the header because parsing the header, and limiting its size, belongs to your server. Keep the limit: `matchLocale()` tries preferences in order until one matches, so a request whose 16 KB header lists thousands of languages you don't support would otherwise hold your server's event loop for tens of milliseconds, about 60 ms on Node 24. It matches the same way the browser binding does, so a visitor gets the same language from the server as from the browser: `pt-BR` gets your `pt`, and `zh-TW` gets your `zh-Hant`. Malformed tags are skipped, and `undefined` means nothing matched. [Turn outside input into a locale](docs/index.md#turn-outside-input-into-a-locale) has the full matching order, including which of two regional locales wins, and `resolveLocale()` for a locale from a cookie or a query string.
 
 When the URL carries the language, as on [a localized site](docs/localized-urls.md), read it from the URL instead and use `Accept-Language` only to choose where to redirect a visitor who arrives at `/`. A static site has no server to see the header; see [Detect the language on a static site](docs/localized-urls.md#detect-the-language-on-a-static-site).
 
@@ -1607,7 +1635,7 @@ The same goes for `localePrefix` in a routing configuration kept in a variable, 
 
 ## A message shows its raw text
 
-You see `{count, plural, one {# item} other {# items}` or `{first-name}` on screen, and the console warns about an invalid message. The text isn't valid message syntax, so it is shown as written rather than half formatted. The warning appears once per text and locale.
+You see `{count, plural, one {# item} other {# items}` or `{first-name}` on screen, and the console warns about an invalid message. The text isn't valid message syntax, so it is shown as written, with only its plain `{name}` placeholders filled, rather than half formatted. The warning appears once per text and locale.
 
 Common causes:
 

@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-08
+last_updated: 2026-11-10
 scope: Why `@codenhub/i18n` behaves as it does, with the alternatives each decision rejected, for whoever changes it next.
 ---
 
@@ -81,6 +81,7 @@ Every text is read as an ICU message: `{name}`, `number` (`integer`, `percent`),
 - **A `Date` is a value**, formatted as `{name, date}`, so a plain `{when}` shows a readable date rather than `Date.prototype.toString()`.
 - **Plural groups stay**: they keep each form an ordinary key, which some translation tools need.
 - **Formatter options are copied by name (2026-11-08).** Formatters are cached per process. The key was `JSON.stringify(options)`, which sees only own properties while `Intl` also reads inherited ones, so `formatNumber(x, Object.create({ style: "percent" }))` turned every later call, in every manager, into a percentage. The options `Intl` reads are now copied by name, inherited ones included, and that copy is both the cache key and what `Intl` receives, so the two cannot disagree. Values that are not primitives are never cached, so `Intl` validates them on every call. Trade-off: an `Intl` option newer than ES2025 is ignored until it is added to the list.
+- **`#` is the number only in a plural's own forms (2026-11-10)**, as ICU's `MessagePattern` defines it: a `select` nested in a form shows `#` as written, and an apostrophe before `#` quotes only in a plural. It used to print the number there too, as `messageformat` does, which disagreed with ICU and `intl-messageformat`.
 - **Exact plural values compare as numbers (2026-11-08)**, as in ICU, so `=1.0` and `=01` select 1, and two spellings of one value are a repeated option. They used to compare as text and silently never matched. `offset` still matches the raw value.
 
 ### Values are typed from literal messages (0.2.0)
@@ -110,6 +111,8 @@ Rejected: documenting the `t(key) === key` comparison, because of the reported m
 
 **A string no dictionary can hold is a miss (0.2.1).** `has()` first threw a `TypeError` for an invalid key, as `t()` does. That was not weighed against its own example, ``has(`errors.${code}`)``: a `code` from a response or a query string with a line break, or over 1,000 characters, threw from the very check meant to guard it. Such a key can't be in a dictionary, so `has()` returns `false`, silently. It still throws for a non-string, which is a mistake in the calling code, and `t()` still throws for an invalid key, since a call that passes one has skipped the check. Rejected: keeping the throw and documenting it, which leaves every caller to validate the code before checking it.
 
+**A typed key is not narrowed (2026-11-10).** `has(key: string): key is TKey` narrowed a key that was already a `TKey` to `never` when `has()` returned `false`, although a typed key can still be missing, such as one only another locale has. An overload, `has(key: TKey): boolean`, now comes first, so only a key that isn't typed yet is narrowed. Rejected: documenting the narrowing, which leaves every such branch unusable.
+
 **A group counts only with an `other` form (2026-11-08).** `has()` picked a plural form for count 0, so `{ one, two }` was a key in Portuguese and French, where 0 is `one`, but not in English, while `t()` showed the raw key in every locale. It now counts a group only when it has an `other` form, the definition plural groups and typed keys already use. Rejected: keeping count-based selection, because the answer for one dictionary must not change with the active locale.
 
 ## Browser
@@ -125,6 +128,12 @@ When the loader rejects for a stored or detected locale, the binding warns and s
 ### One data attribute per translated attribute
 
 `data-i18n-<attribute>` was chosen over a single list attribute, such as `data-i18n-attrs="placeholder:search.hint"`, because it needs no parsing and a `MutationObserver` can watch exactly those names. Attributes are limited to text read by people or assistive technology, so a translation can never set a URL, a style, or an event handler.
+
+### Custom elements translate themselves
+
+The binding skips every element inside a custom element, a tag with a dash, from an outer root. A component has its own life cycle: it may render after the page's pass, and it adds and removes text as people use it, such as a card that changes with interaction, so it has to call `t()` for that text anyway. Re-running the page's pass for each component's change was rejected as costlier than the component translating itself with `t()` and `subscribe()`.
+
+**Wrappers are skipped too (2026-11-10).** An audit asked whether a light-DOM wrapper, such as `<site-nav>` around links the page wrote, should be read. It stays skipped: the binding can't tell a wrapper from a component that renders its children, and reading into one would translate, and then fight, text the component owns. The guide says to use a plain element for a wrapper. The guide used to suggest a component binding of its own, which a manager's one binding rules out; it now shows `t()` and `subscribe()`. Rejected: a warning per skipped element with keys, which would fire for every component that translates its own content.
 
 ### A missing document fails before initialization (2026-11-08)
 

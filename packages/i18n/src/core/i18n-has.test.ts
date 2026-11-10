@@ -49,6 +49,19 @@ describe("has", () => {
     warn.mockRestore();
   });
 
+  it("should keep a typed key's type when it is missing", async () => {
+    const { i18n } = create();
+    await i18n.init();
+    type Key = Parameters<typeof i18n.t>[0];
+    const key = "only" as Key;
+
+    expect(i18n.has(key)).toBe(false);
+    if (!i18n.has(key)) {
+      // A typed key can still be missing, such as one only another locale has; this branch must not be `never`.
+      expectTypeOf(key).toEqualTypeOf<Key>();
+    }
+  });
+
   it("should narrow a runtime key so t() accepts it", async () => {
     const { i18n } = create();
     await i18n.init();
