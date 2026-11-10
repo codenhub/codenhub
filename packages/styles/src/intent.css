@@ -21,14 +21,20 @@
    element itself, which is a matching rule and so beats this inherited value --
    that is what stops a `.success` container's intent reaching a component
    nested under it. An intent class on the element beats both. Values track
-   `.neutral` slot for slot; `registry.test.ts` fails the build on drift. */
+   `.neutral` slot for slot; `registry.test.ts` fails the build on drift.
+
+   Except `--intent-border`, which is left undeclared here. Neutral's line is
+   `--ui-ink`, which an aesthetic sets on its own class, never on `:root`, so
+   resolved here it was always the theme's grey: a bare `box` under
+   `.neobrutalism` drew a grey line and a grey slab beside a `.neutral`
+   sibling's black ink. Its readers -- `box`, `.quote`, `.data-table` -- fall
+   back to the same chain on the element instead. */
 :root {
   --intent-color: var(--color-text);
   --intent-contrast: var(--color-text-contrast);
   --intent-hover: var(--color-text-hover);
   --intent-strong: var(--color-text-strong);
   --intent-subtle: var(--color-surface);
-  --intent-border: var(--ui-ink, var(--color-border));
   --intent-fill-max: 20%;
 }
 
@@ -116,7 +122,11 @@
    registry component missing from either. `.text-control` and `.surface` are on
    it though they are not components: both are documented as typeable on their
    own, and a bare `<div class="surface">` with no intent resolved computes a
-   transparent background and a zero-width border -- `box` collapses. */
+   transparent background and a zero-width border -- `box` collapses. A
+   consumer's `@apply surface` or `@apply text-control` is not on it; each
+   utility carries its own copy for that element, excluding the classes here
+   that apply it, and `registry.test.ts` fails when that exclusion list drifts
+   from the classes that do. See docs/internal/model.md#what-apply-carries. */
 :where(
   .btn,
   .ipt,
@@ -163,7 +173,9 @@
    above every intent class in `components`, and overrule `.primary` on the
    element. Written as a plain class list it would carry 0-1-0 and, being later
    in the stylesheet, beat `.primary` the same way. Either would make every
-   colored control draw a grey line; `:where()` keeps it under both.
+   colored control draw a grey line; `:where()` keeps it under both. The copy
+   `text-control` carries for `@apply` does sit in `utilities`, and is safe
+   there only because it never matches an element with an intent class.
 
    An aesthetic reaches this line through `--ui-control-ink` first, then its
    `--ui-ink`: the theme keeps a control border apart from a surface border, and

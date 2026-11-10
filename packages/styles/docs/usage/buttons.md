@@ -39,7 +39,7 @@ A button accepts one intent, one fill class, and one edge class, all optional. W
 
 A **neutral** button never fills completely. Its color is the page's own text color, so a full fill would be a black or white block, the loudest thing on the page for the intent that means nothing in particular. A neutral `.solid` button stops at a 20% fill instead, a quiet gray a step darker than `.soft`. Every named intent fills to 100%.
 
-On hover, a button's fill deepens by `--hover-step` (14%), so a `.ghost` button picks up a tint and a `.solid` one changes to its intent's hover color. On press it scales down slightly (`scale(0.97)`); an [aesthetic](./aesthetics.md) can replace that with its own press, and a user's reduced-motion preference turns it off.
+On hover, a button's fill deepens by `--hover-step` (14%), so a `.ghost` button picks up a tint and a `.solid` one changes to its intent's hover color. On press it scales down slightly (`scale(0.97)`); an [aesthetic](./aesthetics.md) can replace that with its own press, and under a user's reduced-motion preference it still happens, at once.
 
 ## Sizes and shapes
 

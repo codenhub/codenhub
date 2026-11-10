@@ -75,7 +75,7 @@ Shadow geometry is split into parts with no color in them, so they inherit safel
 | `--ui-hover-shadow-y`     | Shadow vertical offset while hovered.                                                                                                                | `--ui-shadow-y`                           |
 | `--ui-active-shadow-x`    | Shadow horizontal offset while pressed.                                                                                                              | `--ui-shadow-x`                           |
 | `--ui-active-shadow-y`    | Shadow vertical offset while pressed.                                                                                                                | `--ui-shadow-y`                           |
-| `--ui-active-transform`   | Transform while pressed. `none` under `prefers-reduced-motion`.                                                                                      | `scale(0.97)`                             |
+| `--ui-active-transform`   | Transform while pressed. Kept under `prefers-reduced-motion`, which drops only its transition.                                                       | `scale(0.97)`                             |
 | `--ui-active-translate-x` | Distance a press travels into the element's depth; `-y` beside it. Scaled like the shadow.                                                           | `0px`                                     |
 | `--ui-shadow-ink`         | Percentage of shadow color taken from intent ink.                                                                                                    | `0%`                                      |
 | `--ui-halo-blur`          | Blur of a halo around the element; `--ui-halo-spread` beside it. Elevation does not scale it.                                                        | `0px`                                     |
@@ -92,7 +92,7 @@ Shadow geometry is split into parts with no color in them, so they inherit safel
 | `--ui-clip-tight`         | Compact component silhouette.                                                                                                                        | `--ui-clip`                               |
 | `--ui-focus-inset`        | Inset focus layer width.                                                                                                                             | Unset                                     |
 | `--ui-label-weight`       | Label weight of `.btn` (and, with `/native`, a bare `<button>`) and `.badge`.                                                                        | Semibold on a button, bold on a badge     |
-| `--ui-label-tracking`     | Label letter spacing. Unset, the label inherits it.                                                                                                  | Unset                                     |
+| `--ui-label-tracking`     | Label letter spacing. Unset, it is `normal`, so neither the page's tracking nor a container's reaches the label.                                     | `normal`                                  |
 | `--ui-label-case`         | Label `text-transform`.                                                                                                                              | `none` on a button; inherited on a badge  |
 | `--ui-label-shadow`       | Label `text-shadow`, written without a color so it takes the label's own.                                                                            | `none` on a button; inherited on a badge  |
 
@@ -119,7 +119,7 @@ Which corners take the corner is its own choice. `.cut-diagonal` keeps the top-l
 
 `--ui-surface-image` lays any `background-image` over a surface's plate: cards, panels, alerts, and tooltips, not controls. Whoever sets it owns the contrast of the text over it, and your own `background-image` on a surface still wins.
 
-`--ui-label-*` treats the label of a button or a badge: weight, tracking, case, and a text shadow. Write the shadow without a color, such as `0 0 6px`, so it takes the label's own color and cannot lower its contrast. Your own `font-*`, `tracking-*`, and case utilities still win.
+`--ui-label-*` treats the label of a button or a badge: weight, tracking, case, and a text shadow. Write the shadow without a color, such as `0 0 6px`, so it takes the label's own color and cannot lower its contrast. Your own `font-*`, `tracking-*`, and case utilities still win. A label does not inherit tracking, so a `tracking-*` utility on a container leaves its buttons and badges at `normal`; to track every label in a region, set `--ui-label-tracking` on it, which they inherit.
 
 Under forced colors each of these draws its plain version: a solid line, no halo, no painted layer, and no label shadow. The silhouette and the ring below go too. Forced colors remove every box shadow, so `--ui-clip`, `--ui-clip-tight`, `--ui-border-max`, and `--ui-shadow-edge` are cleared and a component draws its real border at `--ui-border-width`.
 
@@ -215,9 +215,9 @@ The same knobs tune each aesthetic's [solo class](./solo.md), which reads them o
 
 ```css
 .my-badge {
-  background: var(--palette-success-soft-page-bg);
+  background: var(--palette-success-soft-bg);
   color: var(--palette-success-soft-fg);
-  border-color: var(--palette-success-soft-page-edge);
+  border-color: var(--palette-success-soft-edge);
 }
 ```
 
@@ -226,10 +226,13 @@ Every value is a finished color, never a reference to another variable, so the f
 Naming: `--palette-<intent>-<presentation>-<slot>`, where `<intent>` is one of the seven published intents (`neutral`, `primary`, `secondary`, `success`, `warning`, `destructive`, `info`) and `<presentation>` is `solid`, `soft`, or `ghost`. `<slot>` is `bg`, `fg`, or `edge`. Two qualifiers layer on only where they apply:
 
 - A ground qualifier, `page` or `subtle`, before the slot. It appears only on the `bg` and `edge` of `.soft` and `.ghost`, because a `.solid` fill covers its ground and the text color never depends on it.
-  - No qualifier is the transparent ground of `.badge` and `.btn`: `--palette-success-soft-bg`.
-  - `page` is the ground of `.alert`, `--color-background`: `--palette-success-soft-page-bg`.
-  - `subtle` is the ground of `.pre`, `.code`, `.kbd`, and `.tooltip-bubble`, the intent's own `--intent-subtle`: `--palette-success-soft-subtle-bg`.
-- A `-hover` suffix, on `bg` and `edge` only, because the text color does not change on hover: `--palette-success-soft-page-bg-hover`.
+  - No qualifier is what `.badge` and `.btn` draw, on a transparent ground: `--palette-success-soft-bg`.
+  - `page` is what `.alert` draws, on the page: `--palette-success-soft-page-bg`.
+  - `subtle` is what `.kbd`, `.code`, and `.pre` draw, on the intent's own subtle tone: `--palette-success-soft-subtle-bg`.
+
+  Each value is read from the component itself, so it includes what the component does on its own. A neutral `.alert`, `.kbd`, `.code`, or `.pre` keeps a quieter fill than a neutral `.badge`, and its `neutral-soft-page` and `neutral-soft-subtle` values say so. `.tooltip-bubble` matches none of the three: with no intent it fills with its own tooltip tone, and its edge is solid rather than faded.
+
+- A `-hover` suffix, on `bg` and `edge` only, because the text color does not change on hover: `--palette-success-soft-page-bg-hover`. `.alert`, `.kbd`, `.code`, and `.pre` have no hover of their own, so their hover values are what the component draws when you add `box-hover` to it.
 
 Light values are set on `:root`. Dark values apply under `.dark`, `.theme-dark`, or `[data-theme="dark"]` on the element or an element above it, the same selectors the package's theme uses. The light values also apply under `.light`, `.theme-light`, and `[data-theme="light"]`, so the nearest explicit theme wins: a light area inside a dark one reads the light values.
 
@@ -286,7 +289,10 @@ Filter chips for the members list, one pressed and one not:
 What to give each one:
 
 - **`box` needs a fill and an edge class.** It has no defaults of its own, so with no `.solid`, `.soft`, or `.ghost` and no `.edged` or `.edgeless`, on the element or a container, it draws nothing. `surface` and `text-control` have defaults and work alone.
-- **Name the intent.** A `box` element takes the intent of the nearest element around it that has one, unlike the package's components. Put `.neutral` or an intent class on it.
+- **Name the intent on `box`.** A `box` element takes the intent of the nearest element around it that has one, unlike the package's components. Put `.neutral` or an intent class on it. `surface` and `text-control` are neutral unless the element has an intent class, as components are.
+- **`@apply` carries the whole helper.** `@utility my-field { @apply text-control; }` gets what `class="text-control"` gets: the neutral intent and the field border, `.soft`, `.solid`, and `.edgeless` on the element, and the invalid look for `aria-invalid="true"`. `@apply surface` is neutral the same way. An intent class you defined yourself must be plain CSS or a utility to color such an element, not a rule in `@layer components`.
+- **Write the class that applies a helper as a utility.** What `@apply` copies lands in the [cascade layer](../setup.md#cascade-layers) of the rule it is written in. The helpers are utilities, and `@utility my-field` keeps your class in `utilities` beside them, so your other utilities still reach it. Written as plain CSS, `.my-field { @apply text-control; }` is unlayered, and everything the helper declares beats every utility on the element: an intent class you wrote as a utility leaves the field neutral, and `mt-8` does not move a dialog. Your own unlayered CSS still contests it, by specificity and then source order, as any two unlayered rules do.
+- **A dialog works with `@apply surface`.** A closed `<dialog>` with your own `@apply surface` class stays hidden, and an open one is centered, as with `.card`. Hiding a closed one wins over a display utility such as `flex`; a margin you set still places an open one, and a margin utility does when your class is a utility too.
 - **Size and spacing are yours.** None of the helpers sets padding, width, or height; `text-control` does not set the 2.5rem height that `.ipt` adds.
 - **So are behavior and semantics.** Use a real `<button>`, `<input>`, or `<a href>`, or add the role and keyboard handling yourself, and set states such as `aria-pressed` or `aria-invalid`. `box` draws the disabled look for `disabled`, `.disabled`, `aria-disabled="true"`, and `data-disabled`, but only the `disabled` attribute stops input.
 

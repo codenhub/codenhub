@@ -124,20 +124,25 @@
     --ui-label-tracking: initial;
     --ui-label-case: initial;
     --ui-label-shadow: initial;
+
+    /* No face of its own, so the theme's, named rather than inherited: a glass
+       region nested inside pixel, cyber, sketch, or chunky tile otherwise took
+       their face. `--font-default` is the token the reset applies to the page,
+       as chunky tile reads it. */
+    font-family: var(--font-default, ui-sans-serif, system-ui, sans-serif);
   }
 
   /* Transparency is the whole aesthetic, so the honest degradation is an opaque
-     surface rather than a softer blur. */
-  @media (prefers-reduced-transparency: reduce) {
+     surface rather than a softer blur.
+
+     Forced colours take the same branch. They repaint a background in `Canvas`
+     but keep its alpha -- measured in Chromium -- so the translucent ground
+     stayed translucent over whatever was behind it, and a liquid card's text
+     sat at about 2.5:1 over a busy page. An opaque ground is `Canvas` whole. */
+  @media (prefers-reduced-transparency: reduce), (forced-colors: active) {
     .glass {
       --ui-backdrop: none;
       --ui-surface-ground: var(--color-background);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .glass {
-      --ui-active-transform: none;
     }
   }
 
@@ -209,10 +214,9 @@
      same element, or on a surface inside a glass region.
 
      The backdrop is liquid's lighter blur, for whatever frosts under glass and
-     takes no layers below: a bare `<table>` under `/native`, a consumer's own
-     `@apply surface`. The layers' selector list cannot name those, and with
-     the backdrop cleared here they kept the clearer ground with nothing
-     blurred behind it. A surface that does take the layers clears its own. */
+     takes no layers below: a bare `<table>` under `/native`. With the backdrop
+     cleared here it kept the clearer ground with nothing blurred behind it. A
+     host of the layers clears its own. */
   .glass.glass-liquid:not(.glass-solo),
   .glass .glass-liquid:not(.glass-solo) {
     --ui-ink: light-dark(rgb(255 255 255 / 0.45), rgb(255 255 255 / 0.16));
@@ -221,7 +225,7 @@
     --ui-backdrop: var(--_glass-liquid-blur);
   }
 
-  @media (prefers-reduced-transparency: reduce) {
+  @media (prefers-reduced-transparency: reduce), (forced-colors: active) {
     .glass.glass-liquid:not(.glass-solo),
     .glass .glass-liquid:not(.glass-solo) {
       --ui-surface-ground: var(--color-background);
@@ -234,14 +238,20 @@
     }
   }
 
-  /* The layers: a treatment no token reaches, so a selector list glass owns and
-     the registry records. Two pseudo-elements behind the content, the blur
-     beneath and the lens with the rim and sheen above it. `isolation` keeps
-     them above the element's own plate, which they then blur with the page;
-     `position` anchors them, and a component that positions itself -- the
-     tooltip bubble -- keeps its own. A default or `.soft` table frosts under
-     glass, so it takes the layers too. Both slots are spent, so a host carries
-     no `::before` or `::after` of the consumer's; the fields cannot host one.
+  /* The layers: a treatment no token reaches. Two pseudo-elements behind the
+     content, the blur beneath and the lens with the rim and sheen above it.
+     `isolation` keeps them above the element's own plate, which they then blur
+     with the page; `position` anchors them, and a component that positions
+     itself -- the tooltip bubble -- keeps its own. Both slots are spent, so a
+     host carries no `::before` or `::after` of the consumer's; the fields
+     cannot host one.
+
+     Surfaces draw them in `surface` itself, from the flag and the values
+     below, so every element that applies it takes them: the package's
+     surfaces and a consumer's `@apply surface` alike. A selector list here
+     reached only the classes it named. The list below is for the two hosts
+     that are not surfaces, and the registry records it: a default or `.soft`
+     table, which frosts under glass, and a liquid button.
 
      The blur is on the layer and not on the host: an element with a backdrop
      filter of its own is a backdrop root, and a layer inside one sees only that
@@ -249,8 +259,18 @@
 
      Surfaces take the layers from a liquid scope. A region of another
      aesthetic nested inside, or of plain glass, keeps its own material and
-     takes none; this list names the other aesthetics, and `registry.test.ts`
-     fails when one is missing.
+     takes none, and a liquid region nested again inside that takes them back:
+     the nearest region decides. A `:not(.glass-liquid :is(...) *)` exclusion
+     cannot tell those two apart, since the re-entered surface also sits below
+     the other aesthetic, so each region writes a private flag instead and
+     inheritance hands a surface the nearest one's -- the way neobrutalism
+     rests its alert. The flag is on only for a liquid region in a glass
+     scope, so it alone says whether a surface takes the layers. Off, it
+     withholds the layers, the anchor, and the isolation, and a table or a
+     button gets back the backdrop the nearest region set. The list below
+     names the other aesthetics, and `registry.test.ts` fails when one is
+     missing. A region's own element is not a host: it declares the flag's
+     backdrop from its own, which a host would then declare from the flag.
 
      A button takes them only when it carries `.glass-liquid` itself, in a
      glass scope. Controls stay solid under a liquid region, for the reason
@@ -261,24 +281,27 @@
      plate under the rim, and `.soft` and `.ghost` are the clear panes. A
      disabled one is dimmed by `opacity`, which makes it a backdrop root, so it
      keeps the ground and the rim and bends nothing. */
-  :is(.glass-liquid:not(.glass-solo), .glass-liquid:not(.glass-solo) *):is(.glass, .glass *):is(
-      .card,
-      .panel,
-      .alert,
-      .tooltip-bubble,
-      .surface,
-      .data-table:not(.solid, .ghost)
-    ):not(
-      .glass-liquid :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch),
-      .glass-liquid :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) *,
-      .glass-liquid .glass:not(.glass-liquid),
-      .glass-liquid .glass:not(.glass-liquid) *
-    ),
-  .btn.glass-liquid:is(.glass, .glass *) {
-    --ui-backdrop: none;
+  .glass-liquid:not(.glass-solo):is(.glass, .glass *) {
+    /* A space toggle: empty is on, and `initial` makes every declaration
+       reading it invalid at computed-value time, which is off. */
+    --_glass-liquid-on: ;
+    --_glass-liquid-backdrop: initial;
+  }
 
-    position: relative;
-    isolation: isolate;
+  .glass:not(.glass-liquid),
+  :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) {
+    --_glass-liquid-on: initial;
+    --_glass-liquid-backdrop: var(--ui-backdrop);
+  }
+
+  :is(.glass-liquid:not(.glass-solo), .glass-liquid:not(.glass-solo) *):is(.glass, .glass *):is(
+      .data-table:not(.solid, .ghost)
+    ):not(.glass:not(.glass-liquid), :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch)),
+  .btn.glass-liquid:is(.glass, .glass *) {
+    --ui-backdrop: var(--_glass-liquid-backdrop, none);
+
+    position: var(--_glass-liquid-on) relative;
+    isolation: var(--_glass-liquid-on) isolate;
 
     &::before,
     &::after {
@@ -287,7 +310,7 @@
       z-index: -1;
       border-radius: inherit;
       corner-shape: inherit;
-      content: "";
+      content: var(--_glass-liquid-on) "";
       pointer-events: none;
     }
 
@@ -438,7 +461,8 @@
   color: var(--_solo-fg);
 }
 
-@media (prefers-reduced-transparency: reduce) {
+/* Forced colours with it, for the reason the aesthetic class gives. */
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
   .glass-solo {
     --_solo-ground: var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0)));
 
@@ -498,7 +522,7 @@
   }
 }
 
-@media (prefers-reduced-transparency: reduce) {
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
   .glass-solo.glass-liquid {
     --_solo-ground: var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0)));
   }

@@ -2,7 +2,7 @@
 title: Composición
 description: Consulta de cómo se combinan la intención, la presentación, la estética y la elevación, el aspecto por defecto de cada componente y qué clases lee cada uno.
 order: 8
-source: 8aa84776103ce27781f924220cc7c621231e5734
+source: 6d4fd92ab11655c25a8ed033550e7d160341fff4
 ---
 
 # Composición
@@ -78,6 +78,7 @@ Una `.card.soft`, un `.panel` y una `.alert` neutros no muestran tinte en reposo
 
 - Una `.card.soft` con `.interactive` o `.hoverable` muestra el tinte con hover. Una `.card.soft` simple y un `.panel` no tienen estado de hover.
 - Con una de las seis intenciones incluidas, los tres conservan el tinte normal del 12%, y una tarjeta lo intensifica con hover. Una intención que hayas definido tú se trata aquí como neutra; consulta [Temas → Tu propia intención](./theming.md#tu-propia-intención).
+- La presentación puede venir del elemento o de un contenedor: `<div class="soft"><div class="card">` reposa como `.card.soft`, y un contenedor `.ghost` o `.solid` le da a un `.panel` o a una `.alert` la placa que le daría su propia clase.
 - Un `.badge` conserva su tinte del 12% incluso cuando es neutro. No tiene borde, así que sin el tinte se perdería en el texto que lo rodea.
 
 `.kbd`, `.code` y `.pre` funcionan de otra manera. Reposan sobre el tono subtle de su intención, `--intent-subtle`, que es `--color-surface` para la neutra, y una intención incluida añade encima un 12% de su color. Una intención que hayas definido tú muestra su propio tinte `--intent-subtle` sin ese 12% adicional.

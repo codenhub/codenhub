@@ -27,6 +27,25 @@ A field is a label, a control, and an optional hint, stacked:
 
 A text control is at least 2.5rem tall (`--control-height`), the same height as a default button, so a field and a button line up in a row. Its default look is no fill and a border. A `.textarea` is at least 7rem tall and can be resized vertically.
 
+### Sizes
+
+`.ipt`, `.select`, `.textarea`, and `.input-group` take the button's size classes, so a small field and a small button line up in a row:
+
+| Class   | Height | Side padding | Text      |
+| ------- | ------ | ------------ | --------- |
+| `.sm`   | 2rem   | 0.625rem     | 0.875rem  |
+| default | 2.5rem | 0.75rem      | inherited |
+| `.lg`   | 3rem   | 1rem         | 1.0625rem |
+
+The corners scale with the size, as a button's do. A `.textarea` keeps its 7rem minimum height at every size; the class changes its text, padding, and corners. Size an `.input-group` on the group, not on the control inside it: the control and its adornments take the group's text size.
+
+```html
+<div class="cluster tight">
+  <input class="ipt sm" aria-label="Coupon code" />
+  <button class="btn sm" type="button">Apply</button>
+</div>
+```
+
 ## Show a validation error
 
 Mark the control invalid with `aria-invalid="true"` and give the error message `.hint.destructive`:
@@ -39,7 +58,13 @@ Mark the control invalid with `aria-invalid="true"` and give the error message `
 </div>
 ```
 
-An invalid control draws its border, focus ring, and typed text in the destructive color, whatever intent class it has. The text uses the readable tone of that color, `--intent-strong`, so it stays legible on the page. The package only paints the state: deciding that the value is invalid, setting and clearing `aria-invalid`, and writing the message are your code. Remove `aria-invalid` once the value is valid again; leaving it set keeps the field red.
+An invalid control draws its border, focus ring, and typed text in the destructive color, whatever intent class it has. The text uses the readable tone of that color, `--intent-strong`, so it stays legible on the page. The package only paints the state: deciding that the value is invalid, setting and clearing `aria-invalid`, and writing the message are your code. Remove `aria-invalid` once the value is valid again; leaving it set keeps the field red. On a checkbox, radio, or switch, `aria-invalid="true"` draws the toggle exactly as `.destructive` does, checked mark included.
+
+A hint takes any of the six built-in intents, not only `.destructive`: `.hint.success` confirms a value was accepted, and `.hint.warning` flags one that is allowed but unusual. Each prints in its intent's readable tone, `--intent-strong`, which holds 4.5:1 against the page in both themes. A hint with no intent, with `.neutral`, or with an [intent you defined yourself](./theming.md#your-own-intent), stays secondary-colored. Only a class on the hint itself colors it; an intent on the field or a container around it does not.
+
+```html
+<input class="ipt success" id="username" value="ada" aria-describedby="username-hint" /> <span class="hint success" id="username-hint">That username is available.</span>
+```
 
 ## Put the profile form together
 
@@ -83,7 +108,7 @@ A `.select` draws its own arrow. With `multiple` or a `size` above 1 it becomes 
 
 ## Add an icon or a fixed prefix
 
-`.input-group` puts an icon or a piece of text inside a field's border. The group draws the border, background, focus ring, and invalid and disabled states; the control inside it gives up its own, so the border is drawn once. Place the adornment before the control to put it at the start, after it to put it at the end.
+`.input-group` puts an icon or a piece of text inside a field's border. The group draws the border, background, focus ring, and invalid and disabled states; the control inside it gives up its own, so the border is drawn once. Place the adornment before the control to put it at the start, after it to put it at the end. A group is the height of a lone field, so it lines up with the fields and buttons beside it.
 
 The profile address always starts with the same host, so it is a fixed prefix:
 
@@ -115,7 +140,7 @@ A `.select` works in a group too. The group removes the control's side padding, 
 
 Any element works as the adornment: an icon class, an inline `<svg>`, an `<img>`, or text. The package ships no icons for fields, because a built-in image could not follow your text color, theme, or aesthetic.
 
-The group reads intent and presentation the way a lone `.ipt` does: `.input-group.primary` colors the border, and `.input-group.soft.edgeless` is a field sunk into the page. `aria-invalid="true"` or `disabled` on the control inside applies to the whole group, and so does either on the group itself. The focus ring appears when anything inside the group has focus, so unlike a lone field it also shows after a mouse click.
+The group reads intent and presentation the way a lone `.ipt` does: `.input-group.primary` colors the border and the typed text, and `.input-group.soft.edgeless` is a field sunk into the page. Put the intent on the group, not on the control inside: the group draws the field, so the control's text takes the group's intent and an intent class on the control has no effect. `aria-invalid="true"` or `disabled` on the control inside applies to the whole group, and so does either on the group itself. The group's focus ring appears when its field has focus, so unlike a lone field it also shows after a mouse click. A button inside the group, such as a clear button, draws its own ring when it has focus, and the group draws none: one ring always marks the one control that has focus.
 
 ## Browser decorations
 

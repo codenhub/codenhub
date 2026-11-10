@@ -182,6 +182,104 @@ test("keeps a link at the size and weight of the text around it", async ({ page 
   expect(styles.paragraphLink).toBe(styles.paragraph);
 });
 
+/* Body copy is the page's text, set on `body`, so a container can resize or
+   embolden the Markdown inside it. Pinned on `p` and `li`, a bold 20px
+   container printed its paragraphs at 14px regular, and their tracking reached
+   the button inside one; a control keeps its own tracking either way. */
+test("lets paragraphs and list items take their container's type", async ({ page }) => {
+  await page.goto(NATIVE_URL);
+
+  const styles = await page.evaluate(() => {
+    const host = document.createElement("div");
+
+    host.style.cssText = "font-weight: 700; font-size: 20px; letter-spacing: 1px";
+    host.innerHTML = "<p>Paragraph <button>Action</button></p><ul><li>Item</li></ul>";
+    document.body.append(host);
+
+    const read = (selector: string) => {
+      const style = getComputedStyle(host.querySelector(selector)!);
+
+      return { size: style.fontSize, tracking: style.letterSpacing, weight: style.fontWeight };
+    };
+    const values = {
+      body: getComputedStyle(document.body).fontSize,
+      button: getComputedStyle(host.querySelector("button")!).letterSpacing,
+      item: read("li"),
+      paragraph: read("p"),
+    };
+
+    host.remove();
+
+    return values;
+  });
+
+  expect(styles.paragraph).toEqual({ size: "20px", tracking: "1px", weight: "700" });
+  expect(styles.item).toEqual({ size: "20px", tracking: "1px", weight: "700" });
+  expect(styles.body, "body copy is the page's text").toBe("14px");
+  expect(styles.button, "a button in a paragraph keeps its own tracking").toBe("normal");
+});
+
+/* Body copy's wider tracking is set on `body`, so every control inherited it:
+   a `<button>`, a `.btn`, a `.badge`, and a submit printed 0.05em, and under
+   `/tw` Preflight passed it to the text fields too. A label and typed text are
+   their own material, so neither the page's tracking nor a container's reaches
+   them. The built entry is `/tw`, which emits only the classes the page names,
+   so it checks the native elements. */
+const CONTROLS = {
+  build:
+    '<button>A</button><input type="submit" value="B"><input type="reset" value="C"><input type="button" value="D"><input type="text"><input><textarea></textarea><select></select>',
+  vanilla:
+    '<button>A</button><input type="submit" value="B"><input type="text"><textarea></textarea><select></select><button class="btn">E</button><a class="btn" href="#">F</a><span class="badge">G</span><input class="ipt"><textarea class="textarea"></textarea><select class="select"></select><input class="text-control">',
+};
+
+for (const [environment, markup] of Object.entries(CONTROLS)) {
+  test(`keeps every control's tracking normal on the ${environment} entry`, async ({ page }) => {
+    await page.goto(`http://localhost:5184/native/?env=${environment}`);
+
+    const tracking = await page.evaluate((html) => {
+      const read = (host: HTMLElement) =>
+        [...host.children].map((element) => `${element.outerHTML}: ${getComputedStyle(element).letterSpacing}`);
+      const page = document.createElement("div");
+      const container = document.createElement("div");
+
+      page.innerHTML = html;
+      container.innerHTML = html;
+      container.style.letterSpacing = "1px";
+      document.body.append(page, container);
+
+      const values = { container: read(container), page: read(page) };
+
+      page.remove();
+      container.remove();
+
+      return values;
+    }, markup);
+
+    for (const line of [...tracking.page, ...tracking.container]) {
+      expect(line).toMatch(/: normal$/);
+    }
+  });
+}
+
+/* `pre code` cleared the chip's fill and padding and kept the rest of it: under
+   `.cyber` a glowing box sat inside the block, under `.neobrutalism` a 2px
+   transparent border indented the first line, and `.pixel` drew an inset ring. */
+for (const aesthetic of ["cyber", "neobrutalism", "pixel"]) {
+  test(`draws no chip inside a native preformatted block under .${aesthetic}`, async ({ page }) => {
+    await page.goto(`${NATIVE_URL}&aesthetic=${aesthetic}`);
+
+    const code = page.getByTestId("native-pre-code");
+
+    await expect(code).toBeVisible();
+    await expect(code).toHaveCSS("border-top-width", "0px");
+    await expect(code).toHaveCSS("border-left-width", "0px");
+    await expect(code).toHaveCSS("box-shadow", "none");
+    await expect(code).toHaveCSS("clip-path", "none");
+    await expect(code).toHaveCSS("padding", "0px");
+    await expect(code).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  });
+}
+
 /* A button's label is the size of the text around it, whichever element and
    entrypoint draws it: the user agent's 13.33px applied to `<button>` alone,
    so a native button, a `.btn` button, and a `.btn` link all disagreed. */

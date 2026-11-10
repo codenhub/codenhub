@@ -77,6 +77,7 @@ A neutral `.card.soft`, `.panel`, and `.alert` show no tint at rest. They use th
 
 - A `.card.soft` with `.interactive` or `.hoverable` shows the tint on hover. A plain `.card.soft` and a `.panel` have no hover state.
 - With one of the six built-in intents, all three keep the ordinary 12% tint, and a card deepens it on hover. An intent you defined yourself is treated as neutral here; see [Theming → Your own intent](./theming.md#your-own-intent).
+- The presentation can come from the element or from a container: `<div class="soft"><div class="card">` rests like `.card.soft`, and a `.ghost` or `.solid` container gives a `.panel` or `.alert` the plate its own class would.
 - A `.badge` keeps its 12% tint even when neutral. It has no border, so without the tint it would disappear into the text around it.
 
 `.kbd`, `.code`, and `.pre` work differently. They rest on their intent's subtle tone, `--intent-subtle`, which is `--color-surface` for neutral, and a built-in intent adds 12% of its color over it. An intent you defined yourself shows its own `--intent-subtle` tint without that extra 12%.

@@ -79,7 +79,7 @@ The order of the two imports does not matter, because every entrypoint declares 
 - **The import is missing or not loaded globally.** The classes do nothing until the stylesheet is on the page. Import it once in a stylesheet every page loads, not in a component that may not render.
 - **The package name does not resolve.** A plain `<link>` or a tool without CSS package resolution cannot read `@import "@codenhub/styles"`. Link `node_modules/@codenhub/styles/dist/index.css`, or follow [Without a bundler](./integrating/without-a-bundler.md).
 - **A `/tw` path is loaded without Tailwind.** The `/tw` files are Tailwind source: they contain `@theme`, `@utility`, and `@apply`, which browsers do not understand. Your Tailwind build has to compile them; see [Tailwind CSS v4](./integrating/tailwind.md).
-- **A class built at runtime is missing (Tailwind source only).** Tailwind generates a class only when it finds the name in your source files. A name assembled from strings, such as `` `btn ${tone}` ``, is invisible to that scan. Write full class names, or list them as described in [Tailwind CSS v4](./integrating/tailwind.md).
+- **A class built at runtime is missing (Tailwind source only).** Tailwind generates a utility class, the package's components such as `.btn` included, only when it finds the name in your source files. A name assembled from strings, such as `` `btn ${tone}` ``, is invisible to that scan. Write full class names, or list them as described in [Tailwind CSS v4](./integrating/tailwind.md).
 
 ### Inlining critical CSS
 
@@ -89,9 +89,9 @@ That does not apply to the `/tw` files. They are Tailwind source, not finished C
 
 ## All entrypoints
 
-Compiled entrypoints are finished CSS. `/tw` entrypoints publish the uncompiled source from `dist/tw`, which a Tailwind v4 build must process. A focused `/tw` component entrypoint includes the theme tokens, so its classes work on their own.
+Compiled entrypoints are finished CSS. `/tw` entrypoints publish the uncompiled source from `tw/`, beside `dist/`, which a Tailwind v4 build must process. A focused `/tw` component entrypoint includes the theme tokens, so its classes work on their own.
 
-Each import path resolves the same file under the `style`, `import`, and `default` export conditions. A CSS import is a side effect, so make sure your bundler does not drop it as unused.
+Each import path resolves the same file under the `style`, `import`, and `default` export conditions. A `types` condition comes first and names an empty declaration, so TypeScript accepts a side-effect import such as `import "@codenhub/styles";` with `noUncheckedSideEffectImports`, which TypeScript 6 turns on by default. A CSS import is a side effect, so make sure your bundler does not drop it as unused.
 
 | Import path                      | What it contains and what it changes                                                                                                                                                                                                                                                                                 |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -113,7 +113,7 @@ Each import path resolves the same file under the `style`, `import`, and `defaul
 | `@codenhub/styles/tw/reset`      | Source theme, typography helpers, and the global reset. Changes the root, body, and elements, and sets selection, motion, focus, scrollbar, and forced-colors rules.                                                                                                                                                 |
 | `@codenhub/styles/tw/native`     | Source version of `/native`: everything plus the reset and the classless mappings. The broadest global effect.                                                                                                                                                                                                       |
 | `@codenhub/styles/tw/typography` | Source theme plus the typography helpers. Sets the theme selectors; no reset, no classless mappings.                                                                                                                                                                                                                 |
-| `@codenhub/styles/tw/utilities`  | Source theme and typography plus the layout and content helpers. Lists the package's class names so Tailwind always generates them.                                                                                                                                                                                  |
+| `@codenhub/styles/tw/utilities`  | Source theme and typography plus the layout and content helpers.                                                                                                                                                                                                                                                     |
 | `@codenhub/styles/tw/aesthetics` | All six aesthetics as source. `/tw/aesthetics/neobrutalism`, `/glass`, `/pixel`, `/chunky-tile`, `/cyber`, and `/sketch` publish one each. Plain CSS with no theme or reset side effects.                                                                                                                            |
 | `@codenhub/styles/package.json`  | The package manifest, as JSON. For tools that read the installed version or export map; it is not a stylesheet.                                                                                                                                                                                                      |
 
@@ -126,7 +126,7 @@ Do not import two entrypoints that overlap, such as `@codenhub/styles` and `@cod
 | Element                                                                                                                                        | Styled as                                                                          |
 | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `h1`, `h2`, `h3`, `h4`, `h5` and `h6`                                                                                                          | `.text-title-lg`, `.text-title`, `.text-title-sm`, `.text-label-lg`, `.text-label` |
-| `p`, `li`                                                                                                                                      | `.text-body`                                                                       |
+| `body`                                                                                                                                         | `.text-body`, inherited by paragraphs, list items, and other text                  |
 | `table`                                                                                                                                        | `.data-table`                                                                      |
 | `kbd`, `blockquote`, `q`, `code`, `pre`                                                                                                        | `.kbd`, `.quote`, `.quote-inline`, `.code`, `.pre`                                 |
 | `hr`                                                                                                                                           | `.divider`                                                                         |
@@ -151,7 +151,8 @@ What it does not do:
 - **Some input types are left alone:** `file`, `range`, `color`, and `hidden` keep the browser's own look.
 - **No switch.** A checkbox with `role="switch"` is still painted as a checkbox; the mapping does not read roles. A page that needs switches is better served by the class-based stylesheet.
 - **Links keep the text around them.** A link inside a heading stays heading-sized; a link is never styled as a button.
-- **`pre code` is not double-styled.** Code inside a `pre` drops its own background and padding.
+- **Body text is set once.** `p` and `li` take their type from the element they sit in, so a container that sets its own size, weight, or tracking applies it to the Markdown inside it. Controls keep their own tracking: a button, a badge, and a text field print `normal`, whatever the page or the container sets.
+- **`pre code` is not double-styled.** Code inside a `pre` drops the chip it would draw on its own: background, padding, border, shadow, glow, and clip.
 
 The mappings are global: every matching element on the page is styled, including elements inside third-party widgets. They sit in the `base` [cascade layer](#cascade-layers), so any class beats them. Add an intent or presentation class to a mapped element, such as `<button class="destructive">`, and it applies as it would on `.btn`.
 

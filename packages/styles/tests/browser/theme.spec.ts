@@ -12,7 +12,6 @@ test.describe("theme", () => {
       return {
         containerMax: styles.getPropertyValue("--container-max").trim(),
         controlHeight: styles.getPropertyValue("--control-height").trim(),
-        focusRing: styles.getPropertyValue("--focus-ring").trim(),
         motionDurationFast: styles.getPropertyValue("--motion-duration-fast").trim(),
         motionDurationNormal: styles.getPropertyValue("--motion-duration-normal").trim(),
         radiusControl: styles.getPropertyValue("--radius-control").trim(),
@@ -26,7 +25,6 @@ test.describe("theme", () => {
 
     expect(tokenValues.containerMax).not.toBe("");
     expect(tokenValues.controlHeight).not.toBe("");
-    expect(tokenValues.focusRing).not.toBe("");
     expect(tokenValues.motionDurationFast).not.toBe("");
     expect(tokenValues.motionDurationNormal).not.toBe("");
     expect(tokenValues.radiusControl).not.toBe("");
@@ -161,5 +159,113 @@ test.describe("theme", () => {
 
     expect(nested.outer).toBe("dark");
     expect(nested.inner).toBe("light");
+  });
+
+  /* Setting only `color-scheme` left a region's own text on the ink it
+     inherited from the page: `<aside class="dark"><p>` on a light page kept the
+     light theme's near-black and printed it on the region's dark ground. */
+  test("re-resolves the text colour of a region a theme selector forces", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const resolved = await page.evaluate(() => {
+      const root = document.documentElement;
+
+      root.classList.remove("dark", "theme-dark");
+      root.removeAttribute("data-theme");
+      root.classList.add("light");
+
+      const read = (setup: (host: HTMLElement) => void) => {
+        const host = document.createElement("aside");
+        const paragraph = document.createElement("p");
+        const probe = document.createElement("span");
+
+        setup(host);
+        probe.style.color = "var(--color-text)";
+        host.append(paragraph, probe);
+        document.body.append(host);
+
+        const values = { paragraph: getComputedStyle(paragraph).color, token: getComputedStyle(probe).color };
+
+        host.remove();
+
+        return values;
+      };
+
+      return {
+        page: getComputedStyle(document.body).color,
+        dark: read((host) => host.classList.add("dark")),
+        themeDark: read((host) => host.classList.add("theme-dark")),
+        dataDark: read((host) => host.setAttribute("data-theme", "dark")),
+        lightInDark: read((host) => {
+          root.classList.replace("light", "dark");
+          host.classList.add("light");
+        }),
+      };
+    });
+
+    for (const spelling of ["dark", "themeDark", "dataDark", "lightInDark"] as const) {
+      expect(resolved[spelling].paragraph, `${spelling} region text`).toBe(resolved[spelling].token);
+    }
+
+    expect(resolved.dark.paragraph, "the region's text is not the page's").not.toBe(resolved.page);
+    /* Each alias has to switch the region, not only agree with itself: a
+       spelling that stopped matching left text and token on the page's ink
+       together. */
+    expect(resolved.themeDark.paragraph, ".theme-dark is .dark").toBe(resolved.dark.paragraph);
+    expect(resolved.dataDark.paragraph, "data-theme=dark is .dark").toBe(resolved.dark.paragraph);
+    expect(resolved.lightInDark.paragraph, ".light inside a dark page is the light page").toBe(resolved.page);
+  });
+
+  /* `--focus-ring` was resolved once at `:root`, so a container that set its
+     own `--color-primary` filled a primary button with that colour and still
+     ringed it in the page's. */
+  test("draws the focus ring from the brand colour in scope, or a container's ring", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const readFocused = async (hostStyle: string) => {
+      const expected = await page.evaluate((style) => {
+        const host = document.createElement("div");
+        const previous = document.createElement("button");
+        const target = document.createElement("button");
+        const probe = document.createElement("span");
+
+        host.id = "focus-ring-host";
+        host.setAttribute("style", style);
+        previous.id = "focus-ring-previous";
+        target.id = "focus-ring-target";
+        target.className = "btn primary";
+        target.textContent = "Probe";
+        probe.style.color = "var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent))";
+        host.append(previous, target, probe);
+        document.body.prepend(host);
+        previous.focus();
+
+        return getComputedStyle(probe).color;
+      }, hostStyle);
+
+      await page.keyboard.press("Tab");
+
+      const focused = await page.evaluate(() => {
+        const target = document.querySelector("#focus-ring-target")!;
+        const values = {
+          focusVisible: target.matches(":focus-visible"),
+          outline: getComputedStyle(target).outlineColor,
+        };
+
+        document.querySelector("#focus-ring-host")!.remove();
+
+        return values;
+      });
+
+      return { expected, ...focused };
+    };
+
+    const brand = await readFocused("--color-primary: rgb(255, 0, 0)");
+    const ring = await readFocused("--focus-ring: rgb(0, 0, 255)");
+
+    expect(brand.focusVisible).toBe(true);
+    expect(brand.outline, "a scoped brand colour reaches the ring").toBe(brand.expected);
+    expect(brand.outline).toBe("color(srgb 1 0 0 / 0.64)");
+    expect(ring.outline, "a container's own ring still inherits").toBe("rgb(0, 0, 255)");
   });
 });

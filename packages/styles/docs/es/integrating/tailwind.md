@@ -2,7 +2,7 @@
 title: Tailwind CSS v4
 description: Usar los puntos de entrada de código fuente /tw en un proyecto con Tailwind CSS v4.
 order: 1
-source: 7988dc023c91950991a720ea7da7edfe3378d4d7
+source: 20a38b6bc7002b5a2bb1ea61198620ba757106b2
 ---
 
 # Tailwind CSS v4
@@ -11,7 +11,7 @@ Un proyecto que ya usa Tailwind CSS v4 puede compilar el código fuente de este 
 
 ## Por qué código fuente en lugar de compilado
 
-Los puntos de entrada `/tw` publican código fuente copiado y sin compilar desde `dist/tw`; tu propio build de Tailwind lo compila junto con tu aplicación, así que sus directivas `@theme`, `@utility` y `@apply` se resuelven junto con las tuyas. Los puntos de entrada compilados (`@codenhub/styles`) siguen funcionando en un proyecto con Tailwind, pero entonces se ejecutan dos pipelines de CSS separados en paralelo en lugar de uno: usa `/tw` salvo que un motivo concreto lo descarte.
+Los puntos de entrada `/tw` publican código fuente copiado y sin compilar desde la carpeta `tw/` del paquete; tu propio build de Tailwind lo compila junto con tu aplicación, así que sus directivas `@theme`, `@utility` y `@apply` se resuelven junto con las tuyas. Los puntos de entrada compilados (`@codenhub/styles`) siguen funcionando en un proyecto con Tailwind, pero entonces se ejecutan dos pipelines de CSS separados en paralelo en lugar de uno: usa `/tw` salvo que un motivo concreto lo descarte.
 
 ## Importar el punto de entrada de código fuente
 
@@ -23,7 +23,7 @@ Los puntos de entrada `/tw` publican código fuente copiado y sin compilar desde
 
 `/tw` importa el propio Tailwind, así que sustituye a tu `@import "tailwindcss"` en lugar de sumarse a él: con los dos, el Preflight de Tailwind se emite dos veces. Todos los demás puntos de entrada `/tw/*` esperan que tu import vaya primero; consulta [Usar un punto de entrada específico](#usar-un-punto-de-entrada-específico).
 
-Tailwind CSS v4 escanea tu proyecto automáticamente: la mayoría de los proyectos no necesita nada más que el import anterior. Las rutas de `@source` se resuelven respecto al archivo CSS que las declara, no respecto a la raíz de tu proyecto, así que aquí `./src` significa "el `src/` que está junto a esta hoja de estilos"; ajústalo según dónde esté realmente tu hoja de estilos global. Añade `@source` solo para el markup al que el escaneo automático de Tailwind no llega por sí solo: una ruta excluida por defecto (incluida en `.gitignore`, o dentro de `node_modules`, por ejemplo una librería de componentes externa) o, en un monorepo, una que está fuera del árbol de directorios de este archivo. Apúntalo al markup de tu aplicación, no a este paquete: `/tw` ya incluye todas las definiciones de clase que publica, así que escanearlo también solo ralentiza el build sin añadir clases.
+Tailwind CSS v4 escanea tu proyecto automáticamente: la mayoría de los proyectos no necesita nada más que el import anterior. Las rutas de `@source` se resuelven respecto al archivo CSS que las declara, no respecto a la raíz de tu proyecto, así que aquí `./src` significa "el `src/` que está junto a esta hoja de estilos"; ajústalo según dónde esté realmente tu hoja de estilos global. Añade `@source` solo para el markup al que el escaneo automático de Tailwind no llega por sí solo: una ruta excluida por defecto (incluida en `.gitignore`, o dentro de `node_modules`, por ejemplo una librería de componentes externa) o, en un monorepo, una que está fuera del árbol de directorios de este archivo. Apúntalo al markup de tu aplicación, no a este paquete: el código fuente del paquete nombra cada clase que define, así que escanearlo las emite todas, las usen tus páginas o no.
 
 ## Añadir estéticas
 
@@ -63,11 +63,17 @@ A diferencia de `/tw`, los puntos de entrada específicos y `/tw/native` no impo
 
 **Una clase construida en tiempo de ejecución no tiene estilo**
 
-- **Qué ha pasado:** `<button class="btn primary">` tiene estilo, pero un botón cuya intención viene de una variable, como `` `btn ${tone}` ``, no.
-- **Por qué:** Tailwind genera una clase solo cuando encuentra el nombre completo en tus archivos fuente. Las clases de componente y de eje del propio paquete se generan siempre, pero tus propias utilidades no, y un nombre armado a partir de strings es invisible para el escaneo.
-- **Solución:** escribe nombres de clase completos en tu código, por ejemplo en un objeto de consulta (`{ save: "btn primary", remove: "btn destructive" }`), o enumera los nombres que tu código puede producir con `@source inline("...")` en tu hoja de estilos.
+- **Qué ha pasado:** `<button class="btn primary">` tiene estilo, pero un botón cuya clase viene de una variable, como `"btn " + variant`, o de contenido de un CMS, no.
+- **Por qué:** Tailwind emite solo las clases que encuentra escritas completas en los archivos que escanea. Eso vale también para las clases de componente del paquete: un build con `/tw` emite `.alert` solo si `alert` aparece en algún lugar que escanea, lo que limita la hoja de estilos a lo que usan tus páginas. Las clases de intención, de presentación y de elevación, como `.primary` y `.soft`, son CSS plano y se emiten siempre. Un nombre armado en tiempo de ejecución nunca aparece completo en un archivo, así que el escaneo no lo ve.
+- **Solución:** escribe cada nombre de clase completo en algún lugar que Tailwind escanee, por ejemplo en un objeto de consulta (`{ save: "btn primary", remove: "btn destructive" }`), o enumera en tu hoja de estilos los nombres que tu código o tu contenido pueden producir:
 
-Todos los puntos de entrada `/tw` requieren Tailwind CSS 4.3.2 o posterior, por debajo de 5: el código fuente usa `@source not` y `@source inline()`, que llegaron en la 4.1, y se prueba con la 4.3.2.
+```css
+@import "@codenhub/styles/tw";
+
+@source inline("btn alert badge");
+```
+
+Todos los puntos de entrada `/tw` requieren Tailwind CSS 4.3.2 o posterior, por debajo de 5 (`>=4.3.2 <5`).
 
 ## La variante `dark:`
 

@@ -2,7 +2,7 @@
 title: Estéticas
 description: Os seis visuais opcionais, o que cada um muda num componente, os seus ajustes e os seus limites.
 order: 6
-source: 13c01d45553a89f9aeda36d0726b01e7f7879ac9
+source: dc3687e44f8721d7dd21b9006e397cde8596ed8e
 ---
 
 # Estéticas
@@ -73,6 +73,8 @@ A sombra é projetada na intenção do próprio componente, então um botão de 
 - Só o `.btn` e um `.card` que optou por isso respondem a hover e clique. Um card opta com `.interactive`, ou com uma das suas metades — `.hoverable` só para a resposta ao hover, `.pressable` só para o clique; um card simples, um alerta ou um painel é um contêiner e fica parado.
 - Um alerta fica sobre a sombra deslocada nesta estética, e em nenhuma outra. Fora daqui, um alerta é plano, mas aqui a sombra é um segundo contorno, e não profundidade, e um alerta sem ela parece inacabado ao lado de todo o resto. Isso inclui um alerta dentro de uma região `.neobrutalism` aninhada. `.flat` ainda a remove e `.floating` ainda a dobra.
 - O gatilho de tooltip recebe o canto zero como todo o resto e fica quadrado; o `.radio` mantém o círculo.
+- Com `prefers-reduced-motion: reduce`, o clique ainda acontece, mas de imediato: o elemento pousa na sua sombra sem se deslocar até ela. O clique é o sinal de que ele foi registrado, então só o movimento some.
+- Ela não tem fonte própria e define a do tema, `--font-default`, na região, para que uma região neobrutalism aninhada dentro de pixel, cyber, sketch ou chunky tile não herde a fonte delas. Uma fonte que você define só com `font-family`, no `body` ou num contêiner, não chega dentro da região; defina-a também em `--font-default`, como descreve [Temas → Fontes](./theming.md#fontes).
 
 ## Glass
 
@@ -91,8 +93,9 @@ O `.glass` precisa de algo por trás para desfocar. Sobre um fundo de página pl
 - Toda superfície numa região glass é de vidro, incluindo um `.card.soft`, um `.panel` e um `.alert` neutros.
 - O vidro é o chão, não o preenchimento. Uma apresentação mantém o preenchimento inteiro, então um botão `.solid`, um toggle marcado e um card ou tabela `.solid` são opacos; as placas padrão, `.soft` e `.ghost` são as foscas.
 - O desfoque se aplica só a `.card`, `.panel`, `.alert`, ao balão de tooltip e a um `.data-table` padrão ou `.soft`. Os controles continuam sólidos e ficam sobre o vidro: um desfoque sob cada controle de um grupo denso custa uma camada de composição para cada um e vira ruído visual. Os controles ainda recebem o raio, a borda e a sombra da estética.
-- Com `prefers-reduced-transparency: reduce`, as superfícies de vidro perdem o desfoque e ficam opacas.
-- Botões e um `.card` que optou por isso usam o clique simples `scale(0.97)`; o movimento reduzido o desativa.
+- Com `prefers-reduced-transparency: reduce`, e em cores forçadas, as superfícies de vidro perdem o desfoque e ficam opacas. As cores forçadas substituem as cores mas mantêm a transparência delas, então sem isso um painel mostraria a página através do fundo do sistema.
+- Botões e um `.card` que optou por isso usam o clique simples `scale(0.97)`; com movimento reduzido, o clique ainda acontece, de imediato.
+- Ela não tem fonte própria e define a do tema, `--font-default`, na região, como o neobrutalism faz.
 - Controles de texto e toggles desenham a linha na tinta da página a 55%, e não com a borda fina branca, que apagaria um checkbox desmarcado numa página clara. Ela é o `--ui-control-ink`; defina-o na região para escolher outra.
 - A moldura e as linhas divisórias de uma tabela usam a tinta da página a 20%, porque a borda fina desaparece sobre a placa da tabela. Ela é o `--ui-rule-ink`.
 - Uma tabela com `<caption>` desfoca o fundo por trás da legenda, além das linhas, no Chromium e no Safari, cuja caixa da tabela inclui a legenda, e com `.glass-liquid` a borda de luz e o reflexo também emolduram a legenda. O Firefox deixa a legenda fora da placa. Onde isso importar, dê nome à tabela a partir de um título fora dela, com `aria-labelledby`.
@@ -111,13 +114,13 @@ A lente é desenhada por um filtro SVG em `backdrop-filter`, que o Chromium rend
 
 **Exceções:**
 
-- Ele alcança `.card`, `.panel`, `.alert`, o balão de tooltip e um `.data-table` padrão ou `.soft`. Os controles continuam sólidos, como no glass, exceto um botão que pede: veja [Botões líquidos](#botões-líquidos).
+- Ele alcança `.card`, `.panel`, `.alert`, `.surface`, o balão de tooltip, um componente seu criado com `@apply surface` e um `.data-table` padrão ou `.soft`. Os controles continuam sólidos, como no glass, exceto um botão que pede: veja [Botões líquidos](#botões-líquidos).
 - Ele desenha o desfoque e a lente no `::before` e no `::after` de cada superfície, então uma superfície dentro de uma região liquid não pode ter um `::before` ou `::after` seu. Cada superfície também vira um contexto de empilhamento posicionado; uma superfície que você mesmo posiciona mantém o seu posicionamento.
-- Todo o resto que fica fosco no glass mantém o desfoque leve e o chão mais transparente do liquid, sem a lente nem a borda de luz: uma `<table>` sem classe com `/native`, ou um componente seu criado com `@apply surface`.
+- Todo o resto que fica fosco no glass mantém o desfoque leve e o chão mais transparente do liquid, sem a lente nem a borda de luz: uma `<table>` sem classe com `/native`.
 - A lente é uma erosão de 8px desfocada em 10px em toda superfície, e de 3px desfocada em 3.5px num botão; a intensidade dela é fixa. Um filtro não consegue ler uma custom property, então nenhum desses valores é um ajuste. Os cantos são, por meio de `--glass-radius` e `--glass-radius-surface`, com padrões maiores: um canto contínuo parece menor que um arredondado com o mesmo raio.
-- Uma região de outra estética aninhada dentro de uma região liquid, ou de `.glass` simples, mantém o seu próprio material e não recebe camadas.
+- A região mais próxima decide. Uma região de outra estética aninhada dentro de uma região liquid, ou de `.glass` simples, mantém o seu próprio material e não recebe camadas, e uma região liquid aninhada de novo dentro dela volta a recebê-las.
 - Sem `.glass` em vigor, ele muda os cantos e mais nada.
-- Com `prefers-reduced-transparency: reduce`, o desfoque e a lente somem e a superfície fica opaca, como no glass. Em cores forçadas, as camadas não desenham nada.
+- Com `prefers-reduced-transparency: reduce`, e em cores forçadas, o desfoque e a lente somem e a superfície fica opaca, como no glass.
 - O texto fica sobre uma placa mais transparente que no glass. Sobre um conteúdo carregado, confira se o texto continua legível: o chão é 30% da cor da página, contra 45% no glass.
 
 #### Botões líquidos
@@ -177,7 +180,7 @@ A barra é um tom mais escuro da própria cor do elemento, e não uma sombra emb
 
 **Exceções:**
 
-- Só fica sobre uma barra o que o registro deixa em repouso acima de zero — botões e cards. Um badge, chip, campo ou tooltip é plano até pedir profundidade com `.raised`, e `.flat` tira a barra de qualquer coisa:
+- Só botões e cards ficam sobre uma barra, porque são os componentes que repousam acima da elevação zero. Um badge, chip, campo ou tooltip é plano até pedir profundidade com `.raised`, e `.flat` tira a barra de qualquer coisa:
 
   ```html
   <div class="card soft edgeless info flat">Promo panel, deliberately flat</div>
@@ -187,7 +190,8 @@ A barra é um tom mais escuro da própria cor do elemento, e não uma sombra emb
 - Os rótulos são desenhados mais pesados e com um leve espaçamento entre letras, por meio de `--ui-label-weight` e `--ui-label-tracking`, então os seus utilitários `font-*` ou `tracking-*` ainda vencem. Isso alcança `.btn` e `.badge`, e um `<button>` sem classe só onde a `/native` o estiliza. A caixa das letras fica como está: como um rótulo é escrito é decisão da aplicação, então, se você quiser botões em maiúsculas, escreva essa regra na sua própria folha de estilos.
 - `.card.interactive` afunda ao clicar como um `.btn`, então um bloco de resposta chunky desce sobre a barra ao ser clicado; `.card.pressable` recebe o mesmo clique sozinho. Um `.card` simples fica parado.
 - O `.primary` padrão é quase preto numa página clara e quase branco numa escura, e a barra é sempre misturada em direção ao preto. Numa página clara, a barra de um botão primário é quase invisível contra a face quase preta (medido: `1.04:1`). Numa página escura, a face quase branca contra a mesma barra se lê bem (`2.48:1`). Dê ao `.primary` um matiz próprio se ele for a chamada para ação e precisar da indicação de profundidade nos dois temas.
-- A profundidade nesta estética é a barra, nunca uma sombra projetada com desfoque. Tudo o que o registro deixa em repouso plano fica rente à página.
+- Com `prefers-reduced-motion: reduce`, o clique ainda acontece, mas de imediato, como no neobrutalism.
+- A profundidade nesta estética é a barra, nunca uma sombra projetada com desfoque. Tudo o que repousa plano fica rente à página.
 - Os controles desenham um cinza mais pesado que os blocos em volta, `neutral-600` no claro e `neutral-400` no escuro, por meio de `--ui-control-ink`, para que um campo pareça um campo dentro de um bloco.
 
 ## Cyber
@@ -260,11 +264,11 @@ O botão tracejado é `ghost edged` porque um botão preenchido não tem uma lin
 
 **Exceções:**
 
-- O sketch identifica os componentes pelo nome para alternar os contornos, então os contornos dele só alcançam os componentes deste pacote; uma região de outra estética aninhada dentro de uma região sketch mantém os cantos daquela estética.
+- O sketch identifica os componentes pelo nome para alternar os contornos, então os contornos dele só alcançam os componentes deste pacote; uma região de outra estética aninhada dentro de uma região sketch mantém os cantos daquela estética. A região mais próxima decide, então uma região sketch aninhada de novo dentro dela volta a alternar os contornos.
 - Os chips, como checkboxes, teclas, código, badges, switches e barras de progresso, alternam entre contornos pequenos e irregulares definidos em `--ui-radius-tight`. Defina esse token num chip para escolher o formato dele.
 - Um `.btn.pill` recebe uma pílula arredondada limitada à sua própria altura, para que um botão largo não vire um oval. Badges, barras de progresso e switches recebem o contorno de chip. Radios e o ícone de tooltip continuam círculos, levemente irregulares, para que um radio nunca seja confundido com um checkbox. Um `--ui-radius-pill` explícito num elemento ainda vence.
 - A `--font-sketch` fica por sua conta. O pacote não entrega nenhuma fonte manuscrita e cai na família `cursive` da plataforma.
-- Os botões usam o clique simples `scale(0.97)`; o movimento reduzido o desativa.
+- Os botões usam o clique simples `scale(0.97)`; com movimento reduzido, o clique ainda acontece, de imediato.
 - O modo de cores forçadas desenha os detalhes tracejados como sólidos, como todas as outras linhas de material.
 
 ## Classes solo

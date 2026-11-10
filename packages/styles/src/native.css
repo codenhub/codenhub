@@ -102,10 +102,14 @@
     @apply text-label;
   }
 
-  /* Links are left out: a link takes the text it sits in, so one inside a
-     heading stays heading-sized. */
-  p,
-  li {
+  /* Body copy is the page's text, set once on `body` and inherited, so a
+     container can resize or embolden the Markdown inside it. Pinned on `p` and
+     `li` instead, a bold 20px container printed its paragraphs at 14px regular,
+     and their tracking reached the controls inside one. The controls keep
+     their own tracking all the same: `.btn`, `.badge`, and `text-control` set
+     `normal`, so this body's wider tracking stops at them. Links take the text
+     they sit in, so one inside a heading stays heading-sized. */
+  body {
     @apply text-body;
   }
 
@@ -134,8 +138,19 @@
     @apply pre;
   }
 
+  /* The block is the chip; the code inside it is text. Clearing only the fill
+     and padding left the rest of the chip an aesthetic draws: `.cyber`'s glow
+     boxed the text, neobrutalism's 2px transparent border indented the first
+     line, and `.pixel`'s inset ring outlined it. The halo token goes too, so
+     nothing that reads it inside a block draws one, and so does the clip a
+     cutting aesthetic gives the chip, which would trim the block's text. */
   pre code {
     @apply bg-transparent p-0;
+
+    --ui-halo-ink: initial;
+    border: 0;
+    box-shadow: none;
+    clip-path: none;
   }
 
   hr {

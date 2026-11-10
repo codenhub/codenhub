@@ -32,7 +32,8 @@
 
 /* Color tokens are declared once with `light-dark()`, which resolves at the
    point of use against the consuming element's computed `color-scheme`. Theme
-   selectors below therefore set `color-scheme` and nothing else. Verified
+   selectors below therefore set `color-scheme`, and the region's own `color`
+   so its text re-resolves too. Verified
    across Chromium, Firefox, and WebKit, including resolution through
    `color-mix()` and through Tailwind's `@theme`, which emits theme values as
    unregistered custom properties rather than `@property` registrations.
@@ -186,13 +187,25 @@
        instead of inferring it by omitting a shadow declaration. These are raw
        shadows for elements a consumer styles; the elevation modifier classes
        (`.flat`/`.raised`/`.floating` in elevation.css) multiply an aesthetic's
-       shadow parts instead, and are not read from here. */
+       shadow parts instead, and are not read from here.
+
+       They resolve `--elevation-color` here, once, so a container's own
+       `--elevation-color` does not reach them. Declaring them on every element
+       instead would re-resolve it, and would also redeclare them under a
+       container that sets its own `--elevation-sm`, which no descendant would
+       then see. A consumer's override wins over a colour that follows the
+       container; docs/usage/theming.md#foundation-tokens says so. */
     --elevation-none: none;
     --elevation-sm: 0 1px 2px var(--elevation-color), 0 1px 3px var(--elevation-color);
     --elevation-md: 0 4px 6px -1px var(--elevation-color), 0 2px 4px -2px var(--elevation-color);
     --elevation-lg: 0 20px 25px -5px var(--elevation-color), 0 8px 10px -6px var(--elevation-color);
 
-    --focus-ring: color-mix(in srgb, var(--color-primary) 64%, transparent);
+    /* `--focus-ring` is not declared: its default is the brand colour
+       at 64%, and declared here it resolved against `:root`'s
+       `--color-primary` and inherited, so a region that set its own brand
+       colour filled a primary button in it and ringed it in the page's. Every
+       reader falls back to the mix on the focused element instead, and a
+       consumer's `--focus-ring` on any ancestor still inherits. */
     /* `--focus-ring-offset` is not declared: its default is the negative of the
        line width of whatever is focused, which only the focused element knows,
        so the outline computes it there -- see `reset.css`. Declared here it
@@ -215,28 +228,29 @@
   /* The base look answers a press with a small scale-in. `box-active` applies it on
      `.btn` and `.card.interactive`; every aesthetic sets its own
      `--ui-active-transform` on its class, in `components`, so those win over
-     this whichever sheet loads first. Reduced motion opts out. Kept outside `@theme` because a media query cannot go
-     inside it. */
+     this whichever sheet loads first. Reduced motion keeps it and drops only
+     its motion, in `box`. */
   :root {
     --ui-active-transform: scale(0.97);
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    :root {
-      --ui-active-transform: none;
-    }
-  }
-
+  /* A forced theme re-resolves the region's own text as well as its scheme.
+     `color` inherits as a computed colour, already resolved against the scheme
+     above, so a `<p>` in an `<aside class="dark">` on a light page kept the
+     light theme's near-black. No background: a region that wants the theme's
+     ground says so. In `theme`, so every utility and component still wins. */
   .light,
   .theme-light,
   [data-theme="light"] {
     color-scheme: light;
+    color: var(--color-text);
   }
 
   .dark,
   .theme-dark,
   [data-theme="dark"] {
     color-scheme: dark;
+    color: var(--color-text);
   }
 }
 
@@ -246,13 +260,14 @@
    The second arm follows the OS preference. `--color-*` tokens resolve through
    `light-dark()` against the computed `color-scheme`, so with no explicit
    selector `:root`'s `color-scheme: light dark` already follows it -- see
-   `concepts.md#theme-selection`. A selector list cannot query computed style,
-   but it can match "OS prefers dark, and not under a forced-light subtree" with
-   a plain descendant exclusion: `:not(:where(.light, .light *, ...))` matches
-   only when no ancestor (or the element itself) carries one of the three light
-   spellings. The exclusion cannot see a subtree forced light by other means,
-   where `light-dark()` would still honor it; that is out of contract, since
-   those three spellings are the only supported way to force a theme.
+   `docs/usage/theming.md#light-and-dark`. A selector list cannot query
+   computed style, but it can match "OS prefers dark, and not under a
+   forced-light subtree" with a plain descendant exclusion:
+   `:not(:where(.light, .light *, ...))` matches only when no ancestor (or the
+   element itself) carries one of the three light spellings. The exclusion
+   cannot see a subtree forced light by other means, where `light-dark()` would
+   still honor it; that is out of contract, since those three spellings are the
+   only supported way to force a theme.
 
    Each arm is independent, so an explicit selector wins over the OS preference
    at any depth. It does not win over an explicit selector of the opposite

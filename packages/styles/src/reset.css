@@ -87,10 +87,13 @@
      A component drawing no line at rest loses nothing: the outline moves inward
      over its own fill by a hairline, which is not a visible change. */
   :focus-visible {
-    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline: var(--focus-ring-width) solid var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
     outline-offset: var(--focus-ring-offset, calc(-1 * var(--ui-border-width, var(--border-width))));
   }
 
+  /* Not on a control inside an `.input-group`, which draws the field's ring
+     for it: an important declaration in `base` beats any later one, so the
+     group could not suppress this one and a focused field drew two rings. */
   @media (forced-colors: active) {
     input:is(
         [type="text"],
@@ -107,9 +110,9 @@
         [type="time"],
         [type="checkbox"],
         [type="radio"]
-      ):focus-visible,
-    textarea:focus-visible,
-    select:focus-visible {
+      ):focus-visible:not(.input-group > *),
+    textarea:focus-visible:not(.input-group > *),
+    select:focus-visible:not(.input-group > *) {
       outline: 2px solid Highlight !important;
       outline-offset: 2px;
     }

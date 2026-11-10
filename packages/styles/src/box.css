@@ -98,7 +98,11 @@
      `.edgeless` on the fill colour, which the border box paints as a second
      coat -- a ring around an element that asked for no edge. See
      docs/internal/model.md#presentation. */
-  --_line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--intent-border));
+  --_line: color-mix(
+    in oklab,
+    transparent var(--ui-fill, var(--_d-fill)),
+    var(--intent-border, var(--ui-ink, var(--color-border)))
+  );
   /* How much line there is, as an input rather than a result. A component that
      must keep its line whatever the edge class says raises `--_edge-floor`
      instead of rewriting `--_edge`, and the composition above still runs.
@@ -161,7 +165,11 @@
      mixes where the intent lives). An intent-coloured shadow at full opacity is
      a smear of the component's hue, not depth; neobrutalism's slab, which *is*
      ink, asks for it by name. */
-  --_depth-color: color-mix(in oklab, var(--intent-border) var(--ui-shadow-ink, 0%), var(--elevation-color));
+  --_depth-color: color-mix(
+    in oklab,
+    var(--intent-border, var(--ui-ink, var(--color-border))) var(--ui-shadow-ink, 0%),
+    var(--elevation-color)
+  );
   /* Or the shadow *is* the edge. An aesthetic that draws its line as an inset
      ring (`.pixel`) puts the border where `clip-path` cannot cut it, so that
      ring must answer the edge axis like a real border -- `--_edge` already does,
@@ -187,7 +195,7 @@
   --_halo-layer:
     ,
     0 0 var(--ui-halo-blur, 0px) var(--ui-halo-spread, 0px)
-      color-mix(in oklab, var(--intent-border) var(--ui-halo-ink), transparent);
+      color-mix(in oklab, var(--intent-border, var(--ui-ink, var(--color-border))) var(--ui-halo-ink), transparent);
   /* Indirection so a component can substitute a complete value of its own
      without restating the parts -- `surface` does, for the multi-layer case.
      There is deliberately no `--ui-shadow` wrapper: a complete value has nothing
@@ -202,7 +210,8 @@
      differs from the fill, whatever the fill is. Shadows paint first-on-top,
      so the line is listed last and is the two pixels the ring leaves showing. */
   --_focus-stack:
-    var(--_shadow), inset 0 0 0 var(--ui-focus-inset) var(--focus-ring),
+    var(--_shadow),
+    inset 0 0 0 var(--ui-focus-inset) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent)),
     inset 0 0 0 calc(var(--ui-focus-inset) + 2px) var(--color-background);
 
   /* Every box sizes itself as `min-height`/`min-width: var(--control-height)`
@@ -314,7 +323,9 @@
    component opts in. `btn` and `.card.interactive` both do. The gesture is the
    aesthetic's -- neobrutalism travels into its offset shadow, chunky-tile drops
    onto its bar -- and with no aesthetic it is the base `scale(0.97)` from
-   `theme.css`, dropped under reduced motion. The `--ui-active-shadow-*` slots
+   `theme.css`. Reduced motion keeps every press and drops its motion, in
+   `box`, since a press is the feedback that a click landed. The
+   `--ui-active-shadow-*` slots
    stay no-ops until an aesthetic sets them.
 
    A press that travels into the element's own depth is a translation, given as
@@ -331,7 +342,11 @@
 @utility box-active {
   &:active:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
     --_sx: calc(var(--ui-active-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_depth));
-    --_sy: calc(var(--ui-active-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, 0px))) * var(--_depth));
+    /* The same three slots as the resting offset, `.raised`'s plain step last,
+       so with no aesthetic a pressed button keeps the depth it rests on. */
+    --_sy: calc(
+      var(--ui-active-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, var(--elevation-y, 0px)))) * var(--_depth)
+    );
 
     --_press: calc(var(--ui-active-translate-x, 0px) * var(--_depth))
       calc(var(--ui-active-translate-y, 0px) * var(--_depth));

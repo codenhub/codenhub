@@ -2,7 +2,7 @@
 title: Botões
 description: Ações destrutivas e secundárias, botões de ícone, tamanhos, links com cara de botão, estados desabilitados e como carregar ícones.
 order: 1
-source: 191dd268b7da59fd3b3bf82c23aa192207c89381
+source: c160b409a0de01a02e1ea72ba0f2110d11353d6b
 ---
 
 # Botões
@@ -40,7 +40,7 @@ Um botão aceita uma intenção, uma classe de preenchimento e uma classe de bor
 
 Um botão **neutro** nunca é preenchido por completo. A cor dele é a própria cor do texto da página, então um preenchimento total seria um bloco preto ou branco, o elemento que mais chama atenção na página justamente para a intenção que não significa nada em particular. Em vez disso, um botão neutro `.solid` para em 20% de preenchimento, um cinza discreto um tom mais escuro que o `.soft`. Toda intenção com nome preenche até 100%.
 
-No hover, o preenchimento de um botão aumenta em `--hover-step` (14%), então um botão `.ghost` ganha um tom e um `.solid` muda para a cor de hover da sua intenção. Ao ser pressionado, ele encolhe um pouco (`scale(0.97)`); uma [estética](./aesthetics.md) pode trocar isso pelo seu próprio efeito de clique, e a preferência do usuário por movimento reduzido o desativa.
+No hover, o preenchimento de um botão aumenta em `--hover-step` (14%), então um botão `.ghost` ganha um tom e um `.solid` muda para a cor de hover da sua intenção. Ao ser pressionado, ele encolhe um pouco (`scale(0.97)`); uma [estética](./aesthetics.md) pode trocar isso pelo seu próprio efeito de clique, e, com a preferência do usuário por movimento reduzido, ele ainda acontece, de imediato.
 
 ## Tamanhos e formatos
 

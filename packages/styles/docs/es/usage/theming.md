@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro y oscuro, reemplazar la paleta con los colores de marca, definir una intención propia, y cada token de color, intención, base y fuente con su valor por defecto.
 order: 5
-source: ef2e6095c03e7765cb650f720aca10403a70930c
+source: 7c3de72fa13d9456b240c5bf47035075bef3da81
 ---
 
 # Temas
@@ -30,12 +30,13 @@ Una pantalla de ajustes con la opción "Sistema / Claro / Oscuro" quita el atrib
 
 Cómo se resuelve:
 
-- Un selector de tema define la propiedad CSS `color-scheme` y nada más. Cada token de color contiene a la vez su valor claro y su valor oscuro, mediante `light-dark()`, y el `color-scheme` del elemento elige uno.
-- `color-scheme` se hereda, así que un selector aplica el tema a todo lo que contiene. Un selector en cualquier elemento aplica el tema a esa parte de la página: una barra lateral oscura en una página clara es `<aside class="dark">`.
+- Un selector de tema define la propiedad CSS `color-scheme`, y el color del texto del elemento en `--color-text`. Cada token de color contiene a la vez su valor claro y su valor oscuro, mediante `light-dark()`, y el `color-scheme` del elemento elige uno.
+- `color-scheme` se hereda, así que un selector aplica el tema a todo lo que contiene. Un selector en cualquier elemento aplica el tema a esa parte de la página: una barra lateral oscura en una página clara es `<aside class="dark">`, y el texto que contiene toma el color de texto del tema oscuro.
+- Un selector no define ningún fondo. Dale tú el fondo a la zona, por ejemplo con `background: var(--color-background)`. Cualquier utilidad o clase de componente en el mismo elemento sobrescribe el color de texto del selector.
 - Gana el selector más cercano, a cualquier profundidad. Una tarjeta `.light` dentro de una página `.dark` es clara.
 - Sin selector, la raíz tiene `color-scheme: light dark`, que sigue al sistema.
 - Pon un solo tema en cada elemento. Si un elemento lleva a la vez un selector claro y uno oscuro, gana el oscuro, pero no confíes en ello.
-- Definir tú mismo `color-scheme` en un elemento funciona igual, porque es lo único que lee la paleta. También aplica el tema a partes nativas como las barras de desplazamiento y el interior de los controles de formulario.
+- Definir tú mismo `color-scheme` en un elemento aplica el tema a los tokens de la misma forma, porque es lo único que lee la paleta. También aplica el tema a partes nativas como las barras de desplazamiento y el interior de los controles de formulario. El texto simple de dentro conserva el color que heredó hasta que también defines `color: var(--color-text)`.
 
 Cada color de componente viene de un token o de `currentColor`, así que los componentes siguen el tema sin reglas propias de modo oscuro. Las marcas que dibuja el paquete, como el tick del checkbox y la flecha del select, también usan `currentColor`. Los iconos y las imágenes que añadas son tuyos para adaptarlos al tema.
 
@@ -121,6 +122,7 @@ La clase funciona en todo lo que acepta una intención: botones, badges, campos 
 - **Un reposo discreto, sin tinte.** Una `.card.soft`, un `.panel` y una `.alert` neutros reposan sobre el tono de fondo discreto, y solo reconocen una intención por las seis clases incorporadas. `.card.soft.beta`, `.panel.beta` y `.alert.beta` se dibujan como el neutro: el tono de fondo discreto en lugar de un tinte violeta. Tu intención sigue coloreando su texto y su borde.
 - **El tinte de los chips.** Una tecla o un bloque de código `.beta` muestra tu tinte `--intent-subtle`, pero no el 12% adicional de `--intent-color` que una intención incorporada añade encima.
 - **Clases solo.** Una [clase solo](./solo.md) como `.neobrutalism-solo` solo toma una intención de las seis clases incorporadas, así que `.neobrutalism-solo.beta` se dibuja neutro.
+- **El texto del hint.** Un [`.hint`](./forms.md#mostrar-un-error-de-validación) solo se muestra en el tono legible de una intención con las seis clases incorporadas, así que `.hint.beta` se queda en el color secundario.
 
 Si los necesitas, hay dos caminos:
 
@@ -233,7 +235,7 @@ Las cuatro sombras `--elevation-*` son para elementos a los que das estilo tú. 
 | `--elevation-sm`           | `0 1px 2px`, `0 1px 3px`                                       | Una sombra ligera para tus propias superficies, como una tarjeta.                                                          |
 | `--elevation-md`           | `0 4px 6px -1px`, `0 2px 4px -2px`                             | Una sombra para tus propios elementos elevados, como un menú desplegable.                                                  |
 | `--elevation-lg`           | `0 20px 25px -5px`, `0 8px 10px -6px`                          | Una sombra para tus propias capas superpuestas, como un diálogo modal.                                                     |
-| `--focus-ring`             | `--color-primary` con un 64% de opacidad                       | Color del anillo de foco del teclado.                                                                                      |
+| `--focus-ring`             | Sin definir                                                    | Color del anillo de foco del teclado. Sin definir, `--color-primary` con un 64% de opacidad, en el elemento con foco.      |
 | `--focus-ring-offset`      | Sin definir                                                    | Distancia del anillo al elemento. Sin definir, el anillo queda sobre el borde del elemento con cualquier estética.         |
 | `--focus-ring-width`       | `3px`                                                          | Grosor del anillo de foco del teclado.                                                                                     |
 | `--motion-duration-fast`   | `120ms`                                                        | El hover de una fila de tabla.                                                                                             |
@@ -243,22 +245,22 @@ Las cuatro sombras `--elevation-*` son para elementos a los que das estilo tú. 
 | `--z-popover`              | `40`                                                           | Orden de apilamiento de las burbujas de tooltip. Úsalo para tus propios popovers, para que se apilen igual.                |
 | `--breakpoint-xs`          | `30rem`                                                        | El breakpoint adaptable `xs:`. Solo en un build `/tw`; los puntos de entrada compilados no lo declaran.                    |
 
-Cada sombra `--elevation-*` está formada por las partes indicadas, cada una en `--elevation-color`. El paso de hover que intensifica un relleno bajo el puntero es un token de presentación, `--hover-step`; consulta [Personalización](./customizing.md#tokens-de-presentación).
+Cada sombra `--elevation-*` está formada por las partes indicadas, cada una en `--elevation-color`. Las cuatro sombras se componen una sola vez, en la raíz, así que un `--elevation-color` que definas en un contenedor no les llega: defínelo en `:root`, o define el propio token `--elevation-*` en el contenedor. Las clases de elevación, como `.card.raised`, leen `--elevation-color` en el elemento y siguen el valor de un contenedor. El paso de hover que intensifica un relleno bajo el puntero es un token de presentación, `--hover-step`; consulta [Personalización](./customizing.md#tokens-de-presentación).
 
 ## Fuentes
 
 El paquete no incluye archivos de fuente ni hace peticiones de red. Cada token de fuente nombra fuentes ya instaladas en el dispositivo del lector hasta que aportes las tuyas.
 
-| Token            | Lo lee                                                                                      | Sin tu valor                                                                                                                                      |
-| ---------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--font-default` | El reset, en `html` y `body`. Los botones y los controles de formulario lo heredan.         | `"Segoe UI", system-ui, sans-serif`                                                                                                               |
-| `--font-mono`    | Los helpers de contenido `kbd`, `code` y `pre`, y `<kbd>`, `<code>` y `<pre>` con `/native` | `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`. Con `/tw`, el valor de tu tema de Tailwind. |
-| `--font-pixel`   | [`.pixel`](./aesthetics.md#pixel) y `.pixel-solo`                                           | No declarado. Recurre a una pila monoespaciada.                                                                                                   |
-| `--font-rounded` | [`.chunky-tile`](./aesthetics.md#chunky-tile) y `.chunky-tile-solo`                         | No declarado. Recurre a `--font-default` y después a una pila sans-serif.                                                                         |
-| `--font-cyber`   | [`.cyber`](./aesthetics.md#cyber) y `.cyber-solo`                                           | No declarado. Recurre a una pila monoespaciada.                                                                                                   |
-| `--font-sketch`  | [`.sketch`](./aesthetics.md#sketch) y `.sketch-solo`                                        | No declarado. Recurre a la familia `cursive` de la plataforma.                                                                                    |
+| Token            | Lo lee                                                                                             | Sin tu valor                                                                                                                                      |
+| ---------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--font-default` | El reset, en `html` y `body`, y las regiones `.glass` y `.neobrutalism`. Los controles lo heredan. | `"Segoe UI", system-ui, sans-serif`                                                                                                               |
+| `--font-mono`    | Los helpers de contenido `kbd`, `code` y `pre`, y `<kbd>`, `<code>` y `<pre>` con `/native`        | `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`. Con `/tw`, el valor de tu tema de Tailwind. |
+| `--font-pixel`   | [`.pixel`](./aesthetics.md#pixel) y `.pixel-solo`                                                  | No declarado. Recurre a una pila monoespaciada.                                                                                                   |
+| `--font-rounded` | [`.chunky-tile`](./aesthetics.md#chunky-tile) y `.chunky-tile-solo`                                | No declarado. Recurre a `--font-default` y después a una pila sans-serif.                                                                         |
+| `--font-cyber`   | [`.cyber`](./aesthetics.md#cyber) y `.cyber-solo`                                                  | No declarado. Recurre a una pila monoespaciada.                                                                                                   |
+| `--font-sketch`  | [`.sketch`](./aesthetics.md#sketch) y `.sketch-solo`                                               | No declarado. Recurre a la familia `cursive` de la plataforma.                                                                                    |
 
-`--font-default` solo llega a la página a través del reset, que incluyen `@codenhub/styles`, `/native`, `/tw`, `/tw/native` y `/tw/reset`. Con `/theme` o `/components` solos, define tú mismo `font-family` en `body`. Los tokens de las estéticas los lee la propia clase de la estética, así que funcionan con cualquier punto de entrada.
+`--font-default` solo llega a la página a través del reset, que incluyen `@codenhub/styles`, `/native`, `/tw`, `/tw/native` y `/tw/reset`. Con `/theme` o `/components` solos, define tú mismo `font-family` en `body` y define `--font-default` con la misma fuente: las regiones `.glass` y `.neobrutalism` definen su propio `font-family` a partir del token, así que una fuente definida solo en `body` no llega dentro de ellas. O define solo el token y escribe `font-family: var(--font-default)` en `body`. Los tokens de las estéticas los lee la propia clase de la estética, así que funcionan con cualquier punto de entrada.
 
 Para usar una fuente web, cárgala como cargas cualquier fuente y después nómbrala en el token. Define el token en `:root` para toda la página, o en cualquier elemento para esa parte:
 

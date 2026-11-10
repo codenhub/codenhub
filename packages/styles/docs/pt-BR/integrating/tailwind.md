@@ -2,7 +2,7 @@
 title: Tailwind CSS v4
 description: Como usar os entrypoints de código-fonte /tw num projeto com Tailwind CSS v4.
 order: 1
-source: 7988dc023c91950991a720ea7da7edfe3378d4d7
+source: 20a38b6bc7002b5a2bb1ea61198620ba757106b2
 ---
 
 # Tailwind CSS v4
@@ -11,7 +11,7 @@ Um projeto que já roda Tailwind CSS v4 pode compilar o código-fonte deste paco
 
 ## Por que código-fonte em vez de compilado
 
-Os entrypoints `/tw` publicam uma cópia do código-fonte não compilado de `dist/tw`; o seu próprio build do Tailwind o compila junto com a sua aplicação, então as diretivas `@theme`, `@utility` e `@apply` dele são resolvidas junto com as suas. Os entrypoints compilados (`@codenhub/styles`) continuam funcionando num projeto com Tailwind, mas aí dois pipelines de CSS separados rodam lado a lado em vez de um — use `/tw`, a menos que um motivo específico o descarte.
+Os entrypoints `/tw` publicam uma cópia do código-fonte não compilado da pasta `tw/` do pacote; o seu próprio build do Tailwind o compila junto com a sua aplicação, então as diretivas `@theme`, `@utility` e `@apply` dele são resolvidas junto com as suas. Os entrypoints compilados (`@codenhub/styles`) continuam funcionando num projeto com Tailwind, mas aí dois pipelines de CSS separados rodam lado a lado em vez de um — use `/tw`, a menos que um motivo específico o descarte.
 
 ## Importe o entrypoint de código-fonte
 
@@ -23,7 +23,7 @@ Os entrypoints `/tw` publicam uma cópia do código-fonte não compilado de `dis
 
 O `/tw` importa o próprio Tailwind, então ele substitui o seu `@import "tailwindcss"` em vez de se somar a ele: com os dois, o Preflight do Tailwind é emitido duas vezes. Todos os outros entrypoints `/tw/*` esperam que o seu import venha antes; veja [Usando um entrypoint específico](#usando-um-entrypoint-específico).
 
-O Tailwind CSS v4 varre o seu projeto automaticamente — a maioria dos projetos não precisa de nada além do import acima. Os caminhos de `@source` são resolvidos a partir do arquivo CSS que os declara, não da raiz do projeto, então `./src` aqui significa "o `src/` ao lado desta folha de estilos"; ajuste para onde a sua folha de estilos global realmente está. Adicione `@source` só para markup que a varredura automática do Tailwind não alcança sozinha: um caminho excluído por padrão (listado no `.gitignore`, ou dentro de `node_modules` — uma biblioteca de componentes externa, por exemplo) ou, num monorepo, um caminho fora da árvore de diretórios deste arquivo. Aponte para o markup da sua aplicação, não para este pacote — o `/tw` já entrega a definição de todas as classes que publica, então varrê-lo também só deixa o build mais lento, sem acrescentar classes.
+O Tailwind CSS v4 varre o seu projeto automaticamente — a maioria dos projetos não precisa de nada além do import acima. Os caminhos de `@source` são resolvidos a partir do arquivo CSS que os declara, não da raiz do projeto, então `./src` aqui significa "o `src/` ao lado desta folha de estilos"; ajuste para onde a sua folha de estilos global realmente está. Adicione `@source` só para markup que a varredura automática do Tailwind não alcança sozinha: um caminho excluído por padrão (listado no `.gitignore`, ou dentro de `node_modules` — uma biblioteca de componentes externa, por exemplo) ou, num monorepo, um caminho fora da árvore de diretórios deste arquivo. Aponte para o markup da sua aplicação, não para este pacote: o código-fonte do pacote nomeia todas as classes que ele define, então varrê-lo emite todas elas, quer as suas páginas as usem ou não.
 
 ## Adicione estéticas
 
@@ -63,11 +63,17 @@ Diferente do `/tw`, os entrypoints específicos e o `/tw/native` não importam o
 
 **Uma classe montada em tempo de execução fica sem estilo**
 
-- **O que aconteceu:** `<button class="btn primary">` é estilizado, mas um botão cuja intenção vem de uma variável, como `` `btn ${tone}` ``, não é.
-- **Por quê:** o Tailwind só gera uma classe quando encontra o nome completo nos seus arquivos de código. As classes de componente e de eixo do próprio pacote são sempre geradas, mas os seus próprios utilitários não, e um nome montado a partir de strings é invisível para a varredura.
-- **Como resolver:** escreva os nomes de classe completos no seu código, por exemplo num objeto de consulta (`{ save: "btn primary", remove: "btn destructive" }`), ou liste os nomes que o seu código pode produzir com `@source inline("...")` na sua folha de estilos.
+- **O que aconteceu:** `<button class="btn primary">` é estilizado, mas um botão cuja classe vem de uma variável, como `"btn " + variant`, ou de conteúdo de um CMS, não é.
+- **Por quê:** o Tailwind emite só as classes que encontra escritas por extenso nos arquivos que varre. Isso vale também para as classes de componente do pacote: um build com `/tw` emite `.alert` só se `alert` aparecer em algum lugar que ele varre, o que mantém a folha de estilos restrita ao que as suas páginas usam. As classes de intenção, de apresentação e de elevação, como `.primary` e `.soft`, são CSS comum e sempre emitidas. Um nome montado em tempo de execução nunca aparece inteiro num arquivo, então a varredura não o encontra.
+- **Como resolver:** escreva cada nome de classe completo em algum lugar que o Tailwind varre, por exemplo num objeto de consulta (`{ save: "btn primary", remove: "btn destructive" }`), ou liste na sua folha de estilos os nomes que o seu código ou o seu conteúdo podem produzir:
 
-Todo entrypoint `/tw` exige Tailwind CSS 4.3.2 ou mais recente, abaixo da 5: o código-fonte usa `@source not` e `@source inline()`, que chegaram na 4.1, e é testado com a 4.3.2.
+```css
+@import "@codenhub/styles/tw";
+
+@source inline("btn alert badge");
+```
+
+Todo entrypoint `/tw` exige Tailwind CSS 4.3.2 ou mais recente, abaixo da 5 (`>=4.3.2 <5`).
 
 ## A variante `dark:`
 

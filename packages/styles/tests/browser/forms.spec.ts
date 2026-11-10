@@ -1,5 +1,6 @@
 import { expect, test } from "./fixtures";
 import {
+  BUTTON_INTENT_TOKENS,
   expectSameColor,
   flattenColor,
   getColorDistance,
@@ -395,7 +396,7 @@ test.describe("forms", () => {
     const expected = await page.evaluate(() => {
       const probe = document.createElement("div");
 
-      probe.style.color = "var(--focus-ring)";
+      probe.style.color = "var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent))";
       document.body.append(probe);
 
       const value = getComputedStyle(probe).color;
@@ -1144,7 +1145,12 @@ test.describe("forms", () => {
         host.append(element);
 
         const styles = getComputedStyle(element);
-        const values = { border: styles.borderTopColor, cursor: styles.cursor, opacity: styles.opacity };
+        /* What a reader sees is the product of the group's opacity and the
+           control's, so a group and a control both dimmed is dimmed twice. */
+        const control = element.firstElementChild;
+        const effectiveOpacity =
+          Number.parseFloat(styles.opacity) * (control ? Number.parseFloat(getComputedStyle(control).opacity) : 1);
+        const values = { border: styles.borderTopColor, cursor: styles.cursor, effectiveOpacity };
 
         element.remove();
 
@@ -1160,6 +1166,7 @@ test.describe("forms", () => {
         plain: read("input-group", `<input class="ipt" />`),
         invalid: read("input-group", `<input class="ipt" aria-invalid="true" />`),
         disabled: read("input-group", `<input class="ipt" disabled />`),
+        loneDisabled: read("field", `<input class="ipt" disabled />`),
       };
     });
 
@@ -1175,7 +1182,11 @@ test.describe("forms", () => {
       getColorDistance(measured.plain.border, measured.neutralLine),
       "a valid group keeps the neutral line",
     ).toBeLessThan(2);
-    expect(Number.parseFloat(measured.disabled.opacity), "an inner disabled dims the group").toBeLessThan(1);
+    expect(measured.disabled.effectiveOpacity, "an inner disabled dims the group once").toBeCloseTo(
+      measured.loneDisabled.effectiveOpacity,
+      2,
+    );
+    expect(measured.disabled.effectiveOpacity, "and does dim it").toBeLessThan(1);
     expect(measured.disabled.cursor, "and shows the not-allowed cursor").toBe("not-allowed");
 
     /* A dimmed group does not answer the pointer, as a disabled lone field
@@ -1572,5 +1583,329 @@ test.describe("forms", () => {
     expect(knobs.ltrInsideRtl).toEqual(knobs.ltr);
     expect(knobs.rtlInsideLtr).toEqual(knobs.rtl);
     expect(knobs.rtlOnControl).toEqual(knobs.rtl);
+  });
+
+  /* A hint is text on the page, so an intent hint prints the intent's readable
+     tone, `--intent-strong`, as typed text does. `.hint.destructive` once
+     printed `--intent-color`, a fill colour, at 3.28:1 on the dark page, and
+     only destructive was wired at all: `.hint.success` stayed secondary grey. */
+  test("prints an intent hint in the intent's readable tone at 4.5:1 in both themes", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    for (const theme of ["light", "dark"]) {
+      // oxlint-disable-next-line no-await-in-loop -- one theme, then the other, on one page.
+      const hints = await page.evaluate(
+        ({ name, intents }) => {
+          document.documentElement.classList.remove("light", "dark");
+          document.documentElement.classList.add(name);
+          const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+          const ground = (element: Element) => {
+            for (let node: Element | null = element; node; node = node.parentElement) {
+              const color = getComputedStyle(node).backgroundColor;
+              if (color !== "rgba(0, 0, 0, 0)" && color !== "transparent") {
+                return color;
+              }
+            }
+            return getComputedStyle(document.documentElement).backgroundColor;
+          };
+
+          return intents.map(({ className, tokenName }) => {
+            const hint = document.createElement("span");
+            const probe = document.createElement("span");
+
+            hint.className = `hint ${className}`;
+            hint.textContent = "Helper text";
+            probe.style.color = `var(--color-${tokenName}-strong)`;
+            host.append(hint, probe);
+
+            const result = {
+              label: `${name} .hint.${className}`,
+              color: getComputedStyle(hint).color,
+              strong: getComputedStyle(probe).color,
+              page: ground(hint),
+            };
+
+            hint.remove();
+            probe.remove();
+
+            return result;
+          });
+        },
+        { name: theme, intents: BUTTON_INTENT_TOKENS },
+      );
+
+      for (const hint of hints) {
+        expectSameColor(hint.color, hint.strong, `${hint.label} prints --intent-strong`);
+        expect.soft(getContrastRatio(hint.color, hint.page), `${hint.label} contrast`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
+  /* The group reads intent the way a lone field does, typed text included. The
+     control inside resets its own intent to neutral at its root, like every
+     component, so an `.input-group.success` once drew a success line around
+     neutral text, and an invalid group a red line around grey text. */
+  test("prints a group's intent and invalid state in the typed text of the control inside", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const measured = await page.evaluate(() => {
+      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+      const read = (html: string, selector: string) => {
+        const wrapper = document.createElement("div");
+
+        wrapper.innerHTML = html;
+        host.append(wrapper);
+
+        const color = getComputedStyle(wrapper.querySelector(selector)!).color;
+
+        wrapper.remove();
+
+        return color;
+      };
+
+      return {
+        lone: read('<input class="ipt" value="abc" />', "input"),
+        loneSuccess: read('<input class="ipt success" value="abc" />', "input"),
+        loneInvalid: read('<input class="ipt" aria-invalid="true" value="abc" />', "input"),
+        groupSuccess: read('<div class="input-group success"><input class="ipt" value="abc" /></div>', "input"),
+        groupInvalid: read(
+          '<div class="input-group" aria-invalid="true"><input class="ipt" value="abc" /></div>',
+          "input",
+        ),
+        innerInvalid: read(
+          '<div class="input-group"><input class="ipt" aria-invalid="true" value="abc" /></div>',
+          "input",
+        ),
+        groupSelect: read(
+          '<div class="input-group warning"><select class="select"><option>abc</option></select></div>',
+          "select",
+        ),
+        loneSelect: read('<select class="select warning"><option>abc</option></select>', "select"),
+      };
+    });
+
+    expect(getColorDistance(measured.loneSuccess, measured.lone), "the probe tells the intents apart").toBeGreaterThan(
+      2,
+    );
+    expectSameColor(measured.groupSuccess, measured.loneSuccess, ".input-group.success text");
+    expectSameColor(measured.groupInvalid, measured.loneInvalid, "an invalid group's text");
+    expectSameColor(measured.innerInvalid, measured.loneInvalid, "an invalid control's text in a group");
+    expectSameColor(measured.groupSelect, measured.loneSelect, ".input-group.warning select text");
+  });
+
+  /* An invalid toggle is destructive whatever else it was asked to be, so it
+     has to look like a destructive one, mark included. The invalid rule once
+     redirected only the line and fill slots, so a checked invalid checkbox in
+     the dark theme drew the neutral near-black mark on a red plate (3.28:1)
+     where `.checkbox.destructive` draws a light one. */
+  test("draws an invalid toggle exactly as a destructive one, checked or not", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    for (const theme of ["light", "dark"]) {
+      // oxlint-disable-next-line no-await-in-loop -- one theme, then the other, on one page.
+      const pairs = await page.evaluate((name) => {
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(name);
+        const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+        const toggles = [
+          ["checkbox", 'type="checkbox"'],
+          ["radio", 'type="radio"'],
+          ["switch", 'type="checkbox" role="switch"'],
+        ];
+        const read = (html: string) => {
+          const wrapper = document.createElement("div");
+
+          wrapper.innerHTML = html;
+          host.append(wrapper);
+
+          const control = wrapper.firstElementChild!;
+          const styles = getComputedStyle(control);
+          const values = {
+            background: styles.backgroundColor,
+            border: styles.borderTopColor,
+            color: styles.color,
+            mark: getComputedStyle(control, "::after").backgroundColor,
+          };
+
+          wrapper.remove();
+
+          return values;
+        };
+
+        return toggles.flatMap(([className, type]) =>
+          ["", "checked"].map((checked) => ({
+            label: `${name} .${className}${checked ? ":checked" : ""}`,
+            invalid: read(`<input class="${className}" ${type} ${checked} aria-invalid="true" />`),
+            destructive: read(`<input class="${className} destructive" ${type} ${checked} />`),
+          })),
+        );
+      }, theme);
+
+      for (const { label, invalid, destructive } of pairs) {
+        for (const part of ["background", "border", "color", "mark"] as const) {
+          expectSameColor(invalid[part], destructive[part], `${label} invalid ${part}`);
+        }
+      }
+    }
+  });
+
+  /* A group is a field, so it is a field's height and lines up with the fields
+     and buttons beside it. The control inside once kept its own
+     `--control-height` inside a box that adds its own line, and the group was
+     42px next to 40px. */
+  test("sizes a group to the control height, like the fields and buttons beside it", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const heights = await page.evaluate(() => {
+      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+      const read = (html: string) => {
+        const wrapper = document.createElement("div");
+
+        wrapper.innerHTML = html;
+        host.append(wrapper);
+
+        const height = wrapper.firstElementChild!.getBoundingClientRect().height;
+
+        wrapper.remove();
+
+        return height;
+      };
+
+      return {
+        btn: read('<button class="btn" type="button">Go</button>'),
+        ipt: read('<input class="ipt" />'),
+        group: read('<div class="input-group"><span>@</span><input class="ipt" /></div>'),
+        groupSelect: read('<div class="input-group"><select class="select"><option>One</option></select></div>'),
+        groupBare: read('<div class="input-group"><input /></div>'),
+      };
+    });
+
+    expect(heights.ipt, "a lone field").toBeCloseTo(heights.btn, 1);
+    expect(heights.group, "a group").toBeCloseTo(heights.ipt, 1);
+    expect(heights.groupSelect, "a group around a select").toBeCloseTo(heights.ipt, 1);
+    expect(heights.groupBare, "a group around a bare input").toBeCloseTo(heights.ipt, 1);
+  });
+
+  /* One ring per focus. Under forced colours the field's own Highlight ring is
+     unlayered, so it once beat the group's layered suppression and a focused
+     field in a group drew two. A button in the group -- the docs' clear button
+     -- is a different target: Enter presses it rather than typing into the
+     field, so it keeps its own ring and the group drops the field's. */
+  test("draws one focus ring in a group, on the field or on a button inside it", async ({ page }) => {
+    const readRings = () =>
+      page.evaluate(() => {
+        const group = document.querySelector("[data-ring-probe]")!;
+        const input = group.querySelector("input")!;
+        const button = group.querySelector("button")!;
+        const outline = (element: Element) => getComputedStyle(element).outlineStyle;
+        const focused = document.activeElement;
+
+        return {
+          focused: focused === input ? "input" : focused === button ? "button" : "other",
+          group: outline(group),
+          input: outline(input),
+          button: outline(button),
+        };
+      });
+    const setUp = async () => {
+      await page.goto(FORMS_URL);
+      await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+
+        host.insertAdjacentHTML(
+          "beforeend",
+          `<div class="input-group" data-ring-probe>
+             <input class="ipt" type="search" />
+             <button class="btn icon ghost p-xs" type="button" aria-label="Clear">x</button>
+           </div>`,
+        );
+      });
+      await page.locator("[data-ring-probe] input").focus();
+    };
+
+    await setUp();
+    const field = await readRings();
+    await page.keyboard.press("Tab");
+    const button = await readRings();
+
+    expect(field.focused).toBe("input");
+    expect(field.group, "the group rings for its field").toBe("solid");
+    expect(field.input, "and the field draws none of its own").toBe("none");
+    expect(button.focused).toBe("button");
+    expect(button.button, "a focused button keeps its own ring").toBe("solid");
+    expect(button.group, "and the group drops the field's").toBe("none");
+
+    await page.emulateMedia({ forcedColors: "active" });
+    await setUp();
+    const forced = await readRings();
+
+    expect(forced.group, "forced colours: the group rings").toBe("solid");
+    expect(forced.input, "forced colours: the field draws none of its own").toBe("none");
+  });
+
+  /* The text controls take the button's size steps, so a `.btn.sm` and an
+     `.ipt.sm` line up in a row: height, text size, and the corner the size
+     step scales. */
+  test("sizes text controls and groups with the button's size steps", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const sizes = await page.evaluate(() => {
+      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+      const read = (html: string) => {
+        const wrapper = document.createElement("div");
+
+        wrapper.innerHTML = html;
+        host.append(wrapper);
+
+        const element = wrapper.firstElementChild!;
+        const styles = getComputedStyle(element);
+        const inner = element.querySelector("input");
+        const values = {
+          height: element.getBoundingClientRect().height,
+          fontSize: (inner ? getComputedStyle(inner) : styles).fontSize,
+          radius: styles.borderTopLeftRadius,
+          paddingStart: Number.parseFloat(styles.paddingInlineStart),
+        };
+
+        wrapper.remove();
+
+        return values;
+      };
+
+      return Object.fromEntries(
+        ["", "sm", "lg"].map((size) => [
+          size || "default",
+          {
+            btn: read(`<button class="btn ${size}" type="button">Go</button>`),
+            ipt: read(`<input class="ipt ${size}" />`),
+            select: read(`<select class="select ${size}"><option>One</option></select>`),
+            textarea: read(`<textarea class="textarea ${size}"></textarea>`),
+            group: read(`<div class="input-group ${size}"><span>@</span><input class="ipt" /></div>`),
+          },
+        ]),
+      );
+    });
+
+    for (const [size, controls] of Object.entries(sizes)) {
+      for (const control of ["ipt", "select", "group"] as const) {
+        expect(controls[control].height, `${size} .${control} height`).toBeCloseTo(controls.btn.height, 1);
+      }
+      for (const control of ["ipt", "select", "textarea", "group"] as const) {
+        expect(controls[control].fontSize, `${size} .${control} text`).toBe(controls.btn.fontSize);
+        expect(controls[control].radius, `${size} .${control} corner`).toBe(controls.btn.radius);
+      }
+    }
+
+    expect(sizes.sm.btn.height, "the steps differ").toBeLessThan(sizes.default.btn.height);
+    expect(sizes.lg.btn.height, "the steps differ").toBeGreaterThan(sizes.default.btn.height);
+
+    for (const control of ["ipt", "select", "textarea", "group"] as const) {
+      expect(sizes.sm[control].paddingStart, `.${control}.sm pads less`).toBeLessThan(
+        sizes.default[control].paddingStart,
+      );
+      expect(sizes.lg[control].paddingStart, `.${control}.lg pads more`).toBeGreaterThan(
+        sizes.default[control].paddingStart,
+      );
+    }
   });
 });

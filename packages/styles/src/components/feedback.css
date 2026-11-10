@@ -39,12 +39,11 @@
 
   /* Same carve-out as `.panel`'s, and for the same reason: a neutral alert
      mixes 12% of near-black ink onto the page (`217, 217, 217` against `250,
-     250, 250`), a slab rather than a status signal. Scoped to no named intent:
-     a named intent keeps its ordinary wash, because untinting
-     `.alert.soft.destructive` would silence the status it exists to carry
-     rather than quiet it. `:not(...)` names every intent class, plus
-     `.solid`/`.ghost` so an explicit presentation on the element is never
-     clamped to a cap it did not ask for.
+     250, 250`), a slab rather than a status signal. Only a quiet neutral tint
+     is untinted, through `surface`'s `--_quiet`, stepped from the resolved
+     fill so a container's `.ghost` or `.solid` renders the alert as the
+     alert's own `.ghost` or `.solid` would. A named intent keeps its ordinary wash, because untinting
+     `.alert.soft.destructive` would silence the status it exists to carry.
 
      Grounds on `--color-foreground` through `--_d-surface-ground`, exactly like
      `.panel` and a resting `.card.soft`, so glass's ground and a consumer's
@@ -52,10 +51,8 @@
      reveal a tint into either, so this is permanent. A neutral alert keeps its
      identity: `--_d-border: 100%` above holds regardless of fill, so it still
      reads as a framed box, just a quiet one instead of a grey slab. */
-  &:not(.primary, .secondary, .success, .warning, .destructive, .info, .solid, .ghost) {
-    --_fill-cap: 0%;
-    --_d-surface-ground: var(--color-foreground);
-  }
+  --_fill-cap: calc(100% - var(--_quiet));
+  --_d-surface-ground: color-mix(in oklab, var(--color-foreground) var(--_quiet), var(--color-background));
 }
 
 /* No icon is shipped. `.alert` is already `flex`, so an icon dropped in as a
@@ -89,10 +86,11 @@
 
   @apply box inline-flex min-h-6 w-fit items-center gap-1 px-2.5 text-xs;
 
-  /* The label material `.btn` reads. Unset, tracking, case, and shadow inherit,
-     as a badge's text always has. */
+  /* The label material `.btn` reads. Unset, tracking is `normal`, as `.btn`'s
+     is, so neither body copy's tracking nor a container's reaches the label;
+     case and shadow inherit, as a badge's text always has. */
   font-weight: var(--ui-label-weight, var(--font-weight-bold));
-  letter-spacing: var(--ui-label-tracking);
+  letter-spacing: var(--ui-label-tracking, normal);
   text-transform: var(--ui-label-case);
   text-shadow: var(--ui-label-shadow);
 
@@ -223,6 +221,29 @@
     &.active::before,
     &.indeterminate::after {
       animation: none;
+    }
+  }
+}
+
+/* Forced colours repaint every background as Canvas, the value fill on a
+   Canvas track included, so a half-full bar read as an empty one. The bar opts
+   out, as the toggles do in `form.css`, and names system colours for every
+   part: the value in CanvasText, the track in Canvas, and a CanvasText
+   boundary at the track's own width, because a `.soft.edgeless` track has no
+   visible line and the extent of the bar is half of what it says. The shimmer
+   is decoration in the intent colour, so it goes. */
+@media (forced-colors: active) {
+  .progress {
+    forced-color-adjust: none;
+    background-color: Canvas;
+    border-color: CanvasText;
+
+    &::after {
+      background-color: CanvasText;
+    }
+
+    &.active::before {
+      display: none;
     }
   }
 }

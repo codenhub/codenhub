@@ -117,6 +117,66 @@ test.describe("aesthetics", () => {
     await expect(page.getByTestId("card-default-none")).toBeVisible();
   });
 
+  /* Reduced motion removes a press's motion, never the press: it is the
+     feedback that a click landed, so it lands at once. Every look is pressed
+     for real, since `:active` is what `box-active` keys on, and read once, two
+     frames in, without polling: a press still animating over the normal
+     duration would read part of the way there. The near-zero duration keeps a
+     `transitionend` firing. */
+  test("presses at once under reduced motion, in every look", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+
+    const scale = /^matrix\(0\.97, 0, 0, 0\.97,/;
+    const looks = [
+      { look: "", transform: scale },
+      { look: "glass", transform: scale },
+      { look: "cyber", transform: scale },
+      { look: "sketch", transform: scale },
+      { look: "neobrutalism", transform: /^none$/, travel: "4px 4px" },
+      { look: "chunky-tile", transform: /^none$/, travel: "0px 4px" },
+    ] as const;
+
+    for (const { look, transform, ...slab } of looks) {
+      const label = look || "base look";
+
+      // oxlint-disable-next-line no-await-in-loop -- one page per look.
+      await page.goto(look ? withAesthetic(BUTTONS_URL, look) : BUTTONS_URL);
+
+      const button = page.getByTestId("btn-default-none");
+
+      // oxlint-disable-next-line no-await-in-loop -- one press at a time.
+      await button.hover();
+      // oxlint-disable-next-line no-await-in-loop -- one press at a time.
+      await page.mouse.down();
+      try {
+        // oxlint-disable-next-line no-await-in-loop -- one press at a time.
+        const pressed = await button.evaluate(async (node) => {
+          await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+          const styles = getComputedStyle(node);
+
+          return {
+            durations: styles.transitionDuration,
+            transform: styles.transform,
+            translate: styles.translate,
+            shadow: styles.boxShadow,
+          };
+        });
+
+        expect(pressed.transform, `${label} press transform`).toMatch(transform);
+        if ("travel" in slab) {
+          expect(pressed.translate, `${label} travels`).toBe(slab.travel);
+          expect(pressed.shadow, `${label} slab collapses`).toMatch(/\b0px 0px 0px 0px\b/);
+        }
+        for (const duration of pressed.durations.split(",")) {
+          expect(Number.parseFloat(duration), `${label} transition ${pressed.durations}`).toBeLessThan(0.001);
+        }
+      } finally {
+        // oxlint-disable-next-line no-await-in-loop -- one press at a time.
+        await page.mouse.up();
+      }
+    }
+  });
+
   test.describe("neobrutalism", () => {
     test("gives every component a hard offset shadow and a thick edge", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "neobrutalism"));
@@ -726,7 +786,7 @@ test.describe("aesthetics", () => {
        failed on Firefox: with the button held, a single `evaluate` sometimes
        took 5-7s to return, which the poll's 5s timeout counted against the
        press even though the value it returned was right. */
-    test("presses with the base scale, and not at all under reduced motion", async ({ page }) => {
+    test("presses with the base scale", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "glass"));
       await page.addStyleTag({ content: "* { transition: none !important; }" });
 
@@ -742,9 +802,6 @@ test.describe("aesthetics", () => {
       };
 
       await press(/^matrix\(0\.97, 0, 0, 0\.97,/, "pressed");
-      await page.emulateMedia({ reducedMotion: "reduce" });
-      await press(/^none$/, "pressed under reduced motion");
-      await page.emulateMedia({ reducedMotion: null });
     });
 
     /* `.neutral` beat the control line's zero-specificity selector, so writing the
@@ -777,6 +834,64 @@ test.describe("aesthetics", () => {
          opaque surface rather than a softer blur. */
       expect(backdrop === "" || backdrop === "none", "card backdrop").toBe(true);
       expect(readSrgb(card["background-color"]!).alpha, "card alpha").toBe(1);
+    });
+
+    /* Forced colours swap a background for `Canvas` but keep its alpha, in
+       Chromium at least, so a translucent ground stayed translucent: a glass
+       card read 0.45 over whatever was behind it, and a liquid one 0.3 with no
+       blur, which left its text at about 2.5:1 over a busy page. Forced colours
+       take the reduced-transparency branch instead. */
+    test("grounds glass and liquid glass opaquely in forced colors", async ({ page, browserName }) => {
+      if (browserName === "chromium") {
+        const session = await page.context().newCDPSession(page);
+
+        await session.send("Emulation.setEmulatedMedia", {
+          features: [
+            { name: "forced-colors", value: "active" },
+            { name: "prefers-reduced-transparency", value: "no-preference" },
+          ],
+        });
+      } else {
+        await page.emulateMedia({ forcedColors: "active" });
+      }
+      await page.goto(withAesthetic(SURFACES_URL, "glass"));
+      test.skip(
+        !(await page.evaluate(() => matchMedia("(forced-colors: active)").matches)),
+        "engine cannot emulate forced colors",
+      );
+      expect(await page.evaluate(() => matchMedia("(prefers-reduced-transparency: reduce)").matches)).toBe(false);
+
+      const read = await page.getByTestId("preview-root").evaluate((root) => {
+        const region = document.createElement("div");
+
+        region.innerHTML =
+          '<div class="card" data-probe="glass">Glass</div>' +
+          '<div class="glass glass-liquid"><div class="card" data-probe="liquid">Liquid</div></div>';
+        root.append(region);
+
+        const paint = (probe: string) => {
+          const element = region.querySelector(`[data-probe="${probe}"]`)!;
+          const styles = getComputedStyle(element);
+          const before = getComputedStyle(element, "::before");
+          const backdrop = (from: CSSStyleDeclaration) =>
+            from.backdropFilter && from.backdropFilter !== "none"
+              ? from.backdropFilter
+              : from.getPropertyValue("-webkit-backdrop-filter");
+
+          return { ground: styles.backgroundColor, host: backdrop(styles), layer: backdrop(before) };
+        };
+        const result = { glass: paint("glass"), liquid: paint("liquid") };
+
+        region.remove();
+
+        return result;
+      });
+
+      for (const [name, painted] of Object.entries(read)) {
+        expect(readSrgb(painted.ground).alpha, `${name} ground is opaque`).toBe(1);
+        expect(painted.host, `${name} blurs nothing`).toMatch(/^(none)?$/);
+        expect(painted.layer, `${name} layer blurs nothing`).toMatch(/^(none)?$/);
+      }
     });
 
     /* The knob is read with a fallback rather than declared, and that is what makes
@@ -989,11 +1104,11 @@ test.describe("aesthetics", () => {
         expect(readSrgb(read.ghost.ground).alpha, "a ghost button rests on liquid's ground").toBeCloseTo(0.3, 2);
       });
 
-      /* The layers' list names components, so anything else that frosts under
-         glass -- a bare `<table>` under `/native`, a consumer's own `@apply
-         surface` -- takes none. It keeps a blur of its own instead: with the
-         backdrop cleared on the region it had the clearer ground and nothing
-         blurred behind it. */
+      /* Surfaces and the listed hosts take the layers, so anything else that
+         frosts under glass -- a bare `<table>` under `/native` -- takes none.
+         It keeps a blur of its own instead: with the backdrop cleared on the
+         region it had the clearer ground and nothing blurred behind it. A host
+         draws no backdrop of its own, so its layers see the page. */
       test("leaves a blur for what frosts and takes no layers", async ({ page, browserName }) => {
         await allowTransparency(page, browserName);
         await page.goto(withAesthetic(SURFACES_URL, LIQUID));
@@ -1004,11 +1119,11 @@ test.describe("aesthetics", () => {
           region.innerHTML = '<div data-probe="unlisted">Unlisted</div><div class="card" data-probe="host">Host</div>';
           root.append(region);
 
-          const token = (probe: string) =>
-            getComputedStyle(region.querySelector(`[data-probe="${probe}"]`)!)
-              .getPropertyValue("--ui-backdrop")
-              .trim();
-          const result = { unlisted: token("unlisted"), host: token("host") };
+          const styles = (probe: string) => getComputedStyle(region.querySelector(`[data-probe="${probe}"]`)!);
+          const result = {
+            unlisted: styles("unlisted").getPropertyValue("--ui-backdrop").trim(),
+            host: styles("host").backdropFilter || styles("host").getPropertyValue("-webkit-backdrop-filter"),
+          };
 
           region.remove();
 
@@ -1016,7 +1131,7 @@ test.describe("aesthetics", () => {
         });
 
         expect(read.unlisted, "the region's backdrop is liquid's blur").toContain("blur(2px)");
-        expect(read.host, "a host clears it for its layers").toBe("none");
+        expect(read.host, "a host clears its own for its layers").toBe("none");
       });
 
       test("reaches one surface inside a glass region, and skips a plain glass region nested inside", async ({
@@ -1060,6 +1175,55 @@ test.describe("aesthetics", () => {
         expect(read.one, "liquid on one card").toBe('""');
         expect(read.nested, "plain glass nested in liquid takes no layer").toBe("none");
         expect(read.nestedBackdrop, "and keeps its own blur").toContain("blur(14px)");
+      });
+
+      /* The nearest region decides, as for neobrutalism's alert: a liquid region
+         re-entered inside another aesthetic nested in a liquid one takes the
+         layers back. A descendant-selector exclusion cannot tell the two apart
+         -- the re-entered card also sits below the other aesthetic -- so it once
+         drew no layer. */
+      test("layers a surface by the nearest region", async ({ page, browserName }) => {
+        await allowTransparency(page, browserName);
+        await page.goto(SURFACES_URL);
+
+        const read = await page.getByTestId("preview-root").evaluate((root) => {
+          const others = ["neobrutalism", "pixel", "chunky-tile", "cyber", "sketch", "glass"];
+          const paint = (regions: string[]) => {
+            const wrapper = document.createElement("div");
+
+            wrapper.innerHTML = `${regions.map((region) => `<div class="${region}">`).join("")}<div class="card">x</div>${"</div>".repeat(regions.length)}`;
+            root.append(wrapper);
+
+            const card = wrapper.querySelector(".card")!;
+            const styles = getComputedStyle(card);
+            const result = {
+              layer: getComputedStyle(card, "::before").content,
+              backdrop:
+                styles.backdropFilter && styles.backdropFilter !== "none"
+                  ? styles.backdropFilter
+                  : styles.getPropertyValue("-webkit-backdrop-filter"),
+              isolation: styles.isolation,
+            };
+
+            wrapper.remove();
+
+            return result;
+          };
+          const liquid = "glass glass-liquid";
+
+          return {
+            alone: paint([liquid]),
+            nested: Object.fromEntries(others.map((other) => [other, paint([liquid, other])])),
+            reference: Object.fromEntries(others.map((other) => [other, paint([other])])),
+            reentered: Object.fromEntries(others.map((other) => [other, paint([liquid, other, liquid])])),
+          };
+        });
+
+        expect(read.alone.layer, "a liquid card").toBe('""');
+        for (const other of Object.keys(read.nested)) {
+          expect(read.nested[other], `a card in ${other} inside liquid`).toEqual(read.reference[other]);
+          expect(read.reentered[other], `a card in liquid inside ${other} inside liquid`).toEqual(read.alone);
+        }
       });
 
       test("changes only the corners where glass is not in scope", async ({ page }) => {
@@ -1527,11 +1691,18 @@ test.describe("aesthetics", () => {
 
       /* Scoped to the preview root: the playground chrome sits outside it and is
          deliberately left unstyled by the aesthetic. */
-      const shapes = await page.evaluate(() =>
-        [
+      /* An inline `<code>`: the page's only one sits in a `pre`, where the chip,
+         ring included, is cleared. */
+      const shapes = await page.evaluate(() => {
+        const inline = document.createElement("p");
+
+        inline.innerHTML = '<code data-testid="inline-code-probe">probe</code>';
+        document.querySelector('[data-testid="native-root"]')!.append(inline);
+
+        return [
           '[data-testid="native-root"] button',
           '[data-testid="native-root"] input[type="text"]',
-          '[data-testid="native-root"] code',
+          '[data-testid="inline-code-probe"]',
         ].map((selector) => {
           const styles = getComputedStyle(document.querySelector(selector) as Element);
 
@@ -1542,8 +1713,8 @@ test.describe("aesthetics", () => {
             borderTopWidth: styles.borderTopWidth,
             borderTopLeftRadius: styles.borderTopLeftRadius,
           };
-        }),
-      );
+        });
+      });
 
       const [button, input, code] = shapes;
 
@@ -2052,33 +2223,23 @@ test.describe("aesthetics", () => {
       }
     });
 
-    test("presses with the base scale, and not at all under reduced motion", async ({ page }) => {
+    test("presses with the base scale", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "cyber"));
 
       const resting = await readStyles(page, "btn-default-none", ["--ui-active-transform", "--ui-hover-transform"]);
 
-      await page.emulateMedia({ reducedMotion: "reduce" });
-
-      const reduced = await readStyles(page, "btn-default-none", ["--ui-active-transform"]);
-
       expect(resting["--ui-active-transform"].trim(), "press").toBe("scale(.97)");
       expect(resting["--ui-hover-transform"].trim(), "hover holds still").toBe("none");
-      expect(reduced["--ui-active-transform"].trim(), "reduced motion").toBe("none");
     });
   });
 
   test.describe("sketch", () => {
-    test("scales pressed buttons and opts out under reduced motion", async ({ page }) => {
+    test("scales pressed buttons", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "sketch"));
 
       const resting = await readStyles(page, "btn-default-none", ["--ui-active-transform"]);
 
-      await page.emulateMedia({ reducedMotion: "reduce" });
-
-      const reduced = await readStyles(page, "btn-default-none", ["--ui-active-transform"]);
-
       expect(resting["--ui-active-transform"].trim()).toBe("scale(.97)");
-      expect(reduced["--ui-active-transform"].trim()).toBe("none");
     });
 
     test("gives pill buttons an organic hand-drawn pill contour", async ({ page }) => {
@@ -2379,6 +2540,58 @@ test.describe("aesthetics", () => {
 
       expect(new Set(radii.inside).size, "sketch inside glass still rotates").toBe(3);
       expect(new Set(radii.around).size, "glass inside sketch keeps one corner").toBe(1);
+    });
+
+    /* The nearest region decides, as for neobrutalism's alert: a sketch region
+       re-entered inside another aesthetic nested in a sketch one rotates again,
+       and the aesthetic between keeps its own corners -- cyber's whole surface
+       shape included. A descendant-selector exclusion cannot tell the two apart,
+       so the re-entered buttons once all took the first outline. */
+    test("rotates by the nearest region", async ({ page }) => {
+      await page.goto(BUTTONS_URL);
+
+      const read = await page.getByTestId("preview-root").evaluate((root) => {
+        const others = ["neobrutalism", "glass", "pixel", "chunky-tile", "cyber"];
+        const markup =
+          '<button class="btn">One</button><button class="btn">Two</button><button class="btn">Three</button>' +
+          '<div class="card">One</div><div class="card">Two</div><span class="badge">One</span><span class="badge">Two</span>' +
+          '<input type="checkbox" class="checkbox" /><hr class="divider" /><button class="btn pill">Pill</button>';
+        const paint = (regions: string[]) => {
+          const wrapper = document.createElement("div");
+
+          wrapper.innerHTML = `${regions.map((region) => `<div class="${region}">`).join("")}<div data-probe>${markup}</div>${"</div>".repeat(regions.length)}`;
+          root.append(wrapper);
+
+          const probe = wrapper.querySelector("[data-probe]")!;
+          const result = Array.from(probe.children, (element) => {
+            const styles = getComputedStyle(element);
+
+            return `${element.className}: ${styles.borderRadius} ${styles.borderTopStyle}`;
+          });
+
+          wrapper.remove();
+
+          return result;
+        };
+
+        return {
+          alone: paint(["sketch"]),
+          nested: Object.fromEntries(others.map((other) => [other, paint(["sketch", other])])),
+          reference: Object.fromEntries(others.map((other) => [other, paint([other])])),
+          reentered: Object.fromEntries(others.map((other) => [other, paint(["sketch", other, "sketch"])])),
+          rounded: paint(["sketch sketch-rounded"]),
+          reenteredRounded: paint(["sketch sketch-rounded", "glass", "sketch sketch-rounded"]),
+          plainInRounded: paint(["sketch sketch-rounded", "glass", "sketch"]),
+        };
+      });
+
+      expect(new Set(read.alone.slice(0, 3)).size, "sketch rotates its buttons").toBe(3);
+      for (const other of Object.keys(read.nested)) {
+        expect(read.nested[other], `${other} inside sketch`).toEqual(read.reference[other]);
+        expect(read.reentered[other], `sketch inside ${other} inside sketch`).toEqual(read.alone);
+      }
+      expect(read.reenteredRounded, "rounded sketch re-entered").toEqual(read.rounded);
+      expect(read.plainInRounded, "plain sketch inside glass inside rounded sketch").toEqual(read.alone);
     });
 
     test("draws sharp uneven corners on surfaces, solid ink, and a small offset shadow", async ({ page }) => {
@@ -2775,6 +2988,46 @@ test.describe("nested aesthetics", () => {
       expect(focused[index]!.shadow, `${inner} in ${outer}: focused button`).toBe(focused[reference]!.shadow);
       expect(surfaces[index]!.card, `${inner} in ${outer}: card`).toBe(surfaces[reference]!.card);
       expect(surfaces[index]!.alert, `${inner} in ${outer}: alert`).toBe(surfaces[reference]!.alert);
+    }
+  });
+
+  /* `font-family` inherits, so a region that names no face took the one around
+     it: glass inside pixel set in monospace, and a neobrutalist button inside
+     sketch in cursive. Every region names its face, the theme's where it has
+     none of its own. */
+  test("sets a nested region in its own face", async ({ page }) => {
+    await page.goto(BUTTONS_URL);
+
+    const faces = await page.getByTestId("preview-root").evaluate((root, all) => {
+      const paint = (regions: string[]) => {
+        const wrapper = document.createElement("div");
+
+        wrapper.innerHTML = `${regions.map((region) => `<div class="${region}">`).join("")}<button class="btn">x</button><div class="card">x</div>${"</div>".repeat(regions.length)}`;
+        root.append(wrapper);
+
+        const result = [".btn", ".card"].map(
+          (selector) => getComputedStyle(wrapper.querySelector(selector)!).fontFamily,
+        );
+
+        wrapper.remove();
+
+        return result.join(" | ");
+      };
+
+      return {
+        page: paint([]),
+        alone: Object.fromEntries(all.map((inner) => [inner, paint([inner])])),
+        nested: all.flatMap((inner) =>
+          all.filter((outer) => outer !== inner).map((outer) => ({ inner, outer, face: paint([outer, inner]) })),
+        ),
+      };
+    }, AESTHETICS);
+
+    for (const plain of ["glass", "glass glass-liquid", "neobrutalism"] as const) {
+      expect(faces.alone[plain], `${plain} alone takes the page face`).toBe(faces.page);
+    }
+    for (const { inner, outer, face } of faces.nested) {
+      expect(face, `${inner} in ${outer}`).toBe(faces.alone[inner]);
     }
   });
 });

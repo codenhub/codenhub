@@ -567,8 +567,9 @@ test.describe("buttons", () => {
 
   /* No aesthetic is in scope, so `box-active` falls back to the `:root`
      `--ui-active-transform` the base look declares. A held pointer is what drives
-     `:active`; no keyboard move can. Reduced motion drops the transform entirely. */
-  test("scales a pressed button on the base look, and holds still under reduced motion", async ({ page }) => {
+     `:active`; no keyboard move can. Reduced motion keeps the press and drops its
+     motion, which the aesthetics suite asserts for every look. */
+  test("scales a pressed button on the base look", async ({ page }) => {
     await page.goto(BUTTONS_URL);
 
     const button = page.getByTestId("btn-default-none");
@@ -585,18 +586,6 @@ test.describe("buttons", () => {
       await expect.poll(pressedScale, "pressed on the base look").toBeCloseTo(0.97, 2);
     } finally {
       await page.mouse.up();
-    }
-
-    await page.emulateMedia({ reducedMotion: "reduce" });
-    await button.hover();
-    await page.mouse.down();
-    try {
-      await expect
-        .poll(() => button.evaluate((node) => getComputedStyle(node).transform), "pressed under reduced motion")
-        .toBe("none");
-    } finally {
-      await page.mouse.up();
-      await page.emulateMedia({ reducedMotion: null });
     }
   });
 });

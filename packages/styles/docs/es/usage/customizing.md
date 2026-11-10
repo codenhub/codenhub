@@ -2,7 +2,7 @@
 title: Personalización
 description: Consulta de los tokens de presentación y de material, los controles de las estéticas, las seis variables públicas de componente, la paleta generada y los helpers para construir tus propios componentes.
 order: 9
-source: aa87391c5599ddfda913abcce9d17d9686345906
+source: ae10b826450c0c396611abe636734ae14a3d8961
 ---
 
 # Personalización
@@ -76,7 +76,7 @@ La geometría de la sombra se divide en partes sin color, así que se heredan si
 | `--ui-hover-shadow-y`     | Desplazamiento vertical de la sombra con hover.                                                                                                                                     | `--ui-shadow-y`                                         |
 | `--ui-active-shadow-x`    | Desplazamiento horizontal de la sombra al pulsar.                                                                                                                                   | `--ui-shadow-x`                                         |
 | `--ui-active-shadow-y`    | Desplazamiento vertical de la sombra al pulsar.                                                                                                                                     | `--ui-shadow-y`                                         |
-| `--ui-active-transform`   | Transformación al pulsar. `none` con `prefers-reduced-motion`.                                                                                                                      | `scale(0.97)`                                           |
+| `--ui-active-transform`   | Transformación al pulsar. Se conserva con `prefers-reduced-motion`, que solo quita su transición.                                                                                   | `scale(0.97)`                                           |
 | `--ui-active-translate-x` | Distancia que recorre una pulsación hacia la profundidad del elemento; `-y` a su lado. Se escala como la sombra.                                                                    | `0px`                                                   |
 | `--ui-shadow-ink`         | Porcentaje del color de la sombra tomado de la tinta de la intención.                                                                                                               | `0%`                                                    |
 | `--ui-halo-blur`          | Desenfoque de un halo alrededor del elemento; `--ui-halo-spread` a su lado. La elevación no lo escala.                                                                              | `0px`                                                   |
@@ -93,7 +93,7 @@ La geometría de la sombra se divide en partes sin color, así que se heredan si
 | `--ui-clip-tight`         | Silueta compacta del componente.                                                                                                                                                    | `--ui-clip`                                             |
 | `--ui-focus-inset`        | Grosor de la capa de foco interior.                                                                                                                                                 | Sin definir                                             |
 | `--ui-label-weight`       | Grosor de la etiqueta de `.btn` (y, con `/native`, de un `<button>` sin clase) y de `.badge`.                                                                                       | Semibold en un botón, bold en un badge                  |
-| `--ui-label-tracking`     | Espaciado entre letras de la etiqueta. Sin definir, la etiqueta lo hereda.                                                                                                          | Sin definir                                             |
+| `--ui-label-tracking`     | Espaciado entre letras de la etiqueta. Sin definir, es `normal`, así que ni el espaciado de la página ni el de un contenedor llega a la etiqueta.                                   | `normal`                                                |
 | `--ui-label-case`         | `text-transform` de la etiqueta.                                                                                                                                                    | `none` en un botón; heredado en un badge                |
 | `--ui-label-shadow`       | `text-shadow` de la etiqueta, escrito sin color para que tome el de la propia etiqueta.                                                                                             | `none` en un botón; heredado en un badge                |
 
@@ -120,7 +120,7 @@ Qué esquinas toman la esquina es una elección aparte. `.cut-diagonal` conserva
 
 `--ui-surface-image` pone cualquier `background-image` sobre la placa de una superficie: tarjetas, paneles, alertas y tooltips, no controles. Quien lo define es responsable del contraste del texto que queda encima, y tu propio `background-image` en una superficie sigue ganando.
 
-`--ui-label-*` trata la etiqueta de un botón o de un badge: grosor, espaciado entre letras, mayúsculas y una sombra de texto. Escribe la sombra sin color, como `0 0 6px`, para que tome el color de la propia etiqueta y no pueda reducir su contraste. Tus propias utilidades `font-*`, `tracking-*` y de mayúsculas siguen ganando.
+`--ui-label-*` trata la etiqueta de un botón o de un badge: grosor, espaciado entre letras, mayúsculas y una sombra de texto. Escribe la sombra sin color, como `0 0 6px`, para que tome el color de la propia etiqueta y no pueda reducir su contraste. Tus propias utilidades `font-*`, `tracking-*` y de mayúsculas siguen ganando. Una etiqueta no hereda el espaciado entre letras, así que una utilidad `tracking-*` en un contenedor deja sus botones y badges en `normal`; para espaciar todas las etiquetas de una región, define `--ui-label-tracking` en ella, que la heredan.
 
 Con colores forzados, cada uno de estos dibuja su versión simple: una línea continua, sin halo, sin capa pintada y sin sombra de etiqueta. La silueta y el anillo de abajo también desaparecen. Los colores forzados eliminan todas las sombras de caja, así que `--ui-clip`, `--ui-clip-tight`, `--ui-border-max` y `--ui-shadow-edge` se anulan y un componente dibuja su borde real con `--ui-border-width`.
 
@@ -216,9 +216,9 @@ Los mismos controles ajustan la [clase solo](./solo.md) de cada estética, que l
 
 ```css
 .my-badge {
-  background: var(--palette-success-soft-page-bg);
+  background: var(--palette-success-soft-bg);
   color: var(--palette-success-soft-fg);
-  border-color: var(--palette-success-soft-page-edge);
+  border-color: var(--palette-success-soft-edge);
 }
 ```
 
@@ -227,10 +227,13 @@ Cada valor es un color final, nunca una referencia a otra variable, así que el 
 Nombres: `--palette-<intent>-<presentation>-<slot>`, donde `<intent>` es una de las siete intenciones publicadas (`neutral`, `primary`, `secondary`, `success`, `warning`, `destructive`, `info`) y `<presentation>` es `solid`, `soft` o `ghost`. `<slot>` es `bg`, `fg` o `edge`. Dos calificadores se añaden solo donde aplican:
 
 - Un calificador de fondo, `page` o `subtle`, antes del hueco. Solo aparece en el `bg` y el `edge` de `.soft` y `.ghost`, porque un relleno `.solid` cubre su fondo y el color del texto nunca depende de él.
-  - Sin calificador es el fondo transparente de `.badge` y `.btn`: `--palette-success-soft-bg`.
-  - `page` es el fondo de `.alert`, `--color-background`: `--palette-success-soft-page-bg`.
-  - `subtle` es el fondo de `.pre`, `.code`, `.kbd` y `.tooltip-bubble`, el propio `--intent-subtle` de la intención: `--palette-success-soft-subtle-bg`.
-- Un sufijo `-hover`, solo en `bg` y `edge`, porque el color del texto no cambia con hover: `--palette-success-soft-page-bg-hover`.
+  - Sin calificador es lo que dibujan `.badge` y `.btn`, sobre un fondo transparente: `--palette-success-soft-bg`.
+  - `page` es lo que dibuja `.alert`, sobre la página: `--palette-success-soft-page-bg`.
+  - `subtle` es lo que dibujan `.kbd`, `.code` y `.pre`, sobre el propio tono sutil de la intención: `--palette-success-soft-subtle-bg`.
+
+  Cada valor se lee del propio componente, así que incluye lo que el componente hace por su cuenta. Un `.alert`, `.kbd`, `.code` o `.pre` neutral conserva un relleno más discreto que un `.badge` neutral, y sus valores `neutral-soft-page` y `neutral-soft-subtle` lo reflejan. `.tooltip-bubble` no coincide con ninguno de los tres: sin intención se rellena con su propio tono de tooltip, y su borde es sólido en vez de atenuado.
+
+- Un sufijo `-hover`, solo en `bg` y `edge`, porque el color del texto no cambia con hover: `--palette-success-soft-page-bg-hover`. `.alert`, `.kbd`, `.code` y `.pre` no tienen hover propio, así que sus valores de hover son lo que dibuja el componente cuando le añades `box-hover`.
 
 Los valores claros se definen en `:root`. Los oscuros se aplican bajo `.dark`, `.theme-dark` o `[data-theme="dark"]` en el elemento o en uno por encima, los mismos selectores que usa el tema del paquete. Los valores claros también se aplican bajo `.light`, `.theme-light` y `[data-theme="light"]`, así que gana el tema explícito más cercano: una zona clara dentro de una oscura lee los valores claros.
 
@@ -287,7 +290,10 @@ Chips de filtro para la lista de miembros, uno pulsado y otro no:
 Qué darle a cada uno:
 
 - **`box` necesita una clase de relleno y una de borde.** No tiene valores por defecto propios, así que sin `.solid`, `.soft` o `.ghost` y sin `.edged` o `.edgeless`, en el elemento o en un contenedor, no dibuja nada. `surface` y `text-control` tienen valores por defecto y funcionan solos.
-- **Nombra la intención.** Un elemento `box` toma la intención del elemento más cercano a su alrededor que tenga una, a diferencia de los componentes del paquete. Ponle `.neutral` o una clase de intención.
+- **Nombra la intención en `box`.** Un elemento `box` toma la intención del elemento más cercano a su alrededor que tenga una, a diferencia de los componentes del paquete. Ponle `.neutral` o una clase de intención. `surface` y `text-control` son neutrales salvo que el elemento tenga una clase de intención, como los componentes.
+- **`@apply` lleva el helper completo.** `@utility my-field { @apply text-control; }` obtiene lo mismo que `class="text-control"`: la intención neutral y el borde del campo, `.soft`, `.solid` y `.edgeless` en el elemento, y el aspecto inválido con `aria-invalid="true"`. `@apply surface` es neutral de la misma forma. Una clase de intención que definas tú debe ser CSS plano o una utilidad para colorear un elemento así, no una regla en `@layer components`.
+- **Escribe como utilidad la clase que aplica un helper.** Lo que copia `@apply` cae en la [capa de cascada](../setup.md#capas-de-cascada) de la regla en la que está escrito. Los helpers son utilidades, y `@utility my-field` mantiene tu clase en `utilities` junto a ellos, así que tus otras utilidades siguen alcanzándola. Escrita como CSS plano, `.my-field { @apply text-control; }` queda sin capa, y todo lo que declara el helper gana sobre cualquier utilidad en el elemento: una clase de intención que escribiste como utilidad deja el campo neutral, y `mt-8` no mueve un diálogo. Tu propio CSS sin capa sigue compitiendo con él, por especificidad y después por orden en el código, como dos reglas sin capa cualesquiera.
+- **Un diálogo funciona con `@apply surface`.** Un `<dialog>` cerrado con tu propia clase que hace `@apply surface` permanece oculto, y uno abierto se centra, como con `.card`. Ocultar uno cerrado gana sobre una utilidad de display como `flex`; un margen que pongas sigue colocando uno abierto, y una utilidad de margen también lo hace cuando tu clase es una utilidad.
 - **El tamaño y el espaciado son cosa tuya.** Ninguno de los helpers define el relleno interior, el ancho ni el alto; `text-control` no define la altura de 2.5rem que añade `.ipt`.
 - **También el comportamiento y la semántica.** Usa un `<button>`, un `<input>` o un `<a href>` reales, o añade tú el rol y el manejo del teclado, y define estados como `aria-pressed` o `aria-invalid`. `box` dibuja el aspecto deshabilitado para `disabled`, `.disabled`, `aria-disabled="true"` y `data-disabled`, pero solo el atributo `disabled` impide la interacción.
 

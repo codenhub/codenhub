@@ -2,7 +2,7 @@
 title: Configuração
 description: Instale o pacote, escolha entre CSS compilado ou código-fonte do Tailwind e renderize a estrutura da página de configurações.
 order: 1
-source: 20ec2aeb0950fe5b8a045e9b0ac307ca97d0462e
+source: d183b76ee3f7c5396fcc4e23647486fd99e7ee1d
 ---
 
 # Configuração
@@ -80,7 +80,7 @@ A ordem dos dois imports não importa, porque todo entrypoint declara as [camada
 - **O import está faltando ou não é carregado globalmente.** As classes não fazem nada até a folha de estilos estar na página. Importe-a uma vez numa folha de estilos que toda página carrega, não num componente que pode não ser renderizado.
 - **O nome do pacote não é resolvido.** Um `<link>` simples ou uma ferramenta sem resolução de pacotes CSS não consegue ler `@import "@codenhub/styles"`. Referencie `node_modules/@codenhub/styles/dist/index.css` ou siga [Sem bundler](./integrating/without-a-bundler.md).
 - **Um caminho `/tw` é carregado sem Tailwind.** Os arquivos `/tw` são código-fonte do Tailwind: eles contêm `@theme`, `@utility` e `@apply`, que os navegadores não entendem. O seu build do Tailwind precisa compilá-los; veja [Tailwind CSS v4](./integrating/tailwind.md).
-- **Falta uma classe montada em tempo de execução (só com código-fonte do Tailwind).** O Tailwind só gera uma classe quando encontra o nome nos seus arquivos de código. Um nome montado a partir de strings, como `` `btn ${tone}` ``, é invisível para essa varredura. Escreva os nomes de classe completos, ou liste-os como descrito em [Tailwind CSS v4](./integrating/tailwind.md).
+- **Falta uma classe montada em tempo de execução (só com código-fonte do Tailwind).** O Tailwind só gera uma classe utilitária, incluindo os componentes do pacote como `.btn`, quando encontra o nome nos seus arquivos de código. Um nome montado a partir de strings, como `` `btn ${tone}` ``, é invisível para essa varredura. Escreva os nomes de classe completos, ou liste-os como descrito em [Tailwind CSS v4](./integrating/tailwind.md).
 
 ### CSS crítico inline
 
@@ -90,9 +90,9 @@ Isso não vale para os arquivos `/tw`. Eles são código-fonte do Tailwind, não
 
 ## Todos os entrypoints
 
-Os entrypoints compilados são CSS pronto. Os entrypoints `/tw` publicam o código-fonte não compilado de `dist/tw`, que um build do Tailwind v4 precisa processar. Um entrypoint `/tw` de um componente específico inclui os tokens do tema, então as classes dele funcionam sozinhas.
+Os entrypoints compilados são CSS pronto. Os entrypoints `/tw` publicam o código-fonte não compilado de `tw/`, ao lado de `dist/`, que um build do Tailwind v4 precisa processar. Um entrypoint `/tw` de um componente específico inclui os tokens do tema, então as classes dele funcionam sozinhas.
 
-Cada caminho de import resolve para o mesmo arquivo nas condições de export `style`, `import` e `default`. Um import de CSS é um efeito colateral, então garanta que o seu bundler não o descarte como não usado.
+Cada caminho de import resolve para o mesmo arquivo nas condições de export `style`, `import` e `default`. Uma condição `types` vem primeiro e aponta para uma declaração vazia, para que o TypeScript aceite um import de efeito colateral como `import "@codenhub/styles";` com `noUncheckedSideEffectImports`, que o TypeScript 6 ativa por padrão. Um import de CSS é um efeito colateral, então garanta que o seu bundler não o descarte como não usado.
 
 | Caminho de import                | O que contém e o que altera                                                                                                                                                                                                                                                                                                        |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -114,7 +114,7 @@ Cada caminho de import resolve para o mesmo arquivo nas condições de export `s
 | `@codenhub/styles/tw/reset`      | Tema, utilitários de tipografia e o reset global em código-fonte. Altera a raiz, o body e os elementos, e define regras de seleção, movimento, foco, barra de rolagem e cores forçadas.                                                                                                                                            |
 | `@codenhub/styles/tw/native`     | Versão em código-fonte da `/native`: tudo, mais o reset e os mapeamentos sem classes. O efeito global mais amplo.                                                                                                                                                                                                                  |
 | `@codenhub/styles/tw/typography` | Tema em código-fonte mais os utilitários de tipografia. Define os seletores de tema; sem reset, sem mapeamentos sem classes.                                                                                                                                                                                                       |
-| `@codenhub/styles/tw/utilities`  | Tema e tipografia em código-fonte mais os utilitários de layout e de conteúdo. Lista os nomes de classe do pacote para que o Tailwind sempre os gere.                                                                                                                                                                              |
+| `@codenhub/styles/tw/utilities`  | Tema e tipografia em código-fonte mais os utilitários de layout e de conteúdo.                                                                                                                                                                                                                                                     |
 | `@codenhub/styles/tw/aesthetics` | As seis estéticas em código-fonte. `/tw/aesthetics/neobrutalism`, `/glass`, `/pixel`, `/chunky-tile`, `/cyber` e `/sketch` publicam uma cada. CSS puro, sem efeitos colaterais de tema ou de reset.                                                                                                                                |
 | `@codenhub/styles/package.json`  | O manifesto do pacote, em JSON. Para ferramentas que leem a versão instalada ou o mapa de exports; não é uma folha de estilos.                                                                                                                                                                                                     |
 
@@ -127,7 +127,7 @@ Não importe dois entrypoints que se sobrepõem, como `@codenhub/styles` e `@cod
 | Elemento                                                                                                                                       | Estilizado como                                                                    |
 | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `h1`, `h2`, `h3`, `h4`, `h5` e `h6`                                                                                                            | `.text-title-lg`, `.text-title`, `.text-title-sm`, `.text-label-lg`, `.text-label` |
-| `p`, `li`                                                                                                                                      | `.text-body`                                                                       |
+| `body`                                                                                                                                         | `.text-body`, herdado por parágrafos, itens de lista e outros textos               |
 | `table`                                                                                                                                        | `.data-table`                                                                      |
 | `kbd`, `blockquote`, `q`, `code`, `pre`                                                                                                        | `.kbd`, `.quote`, `.quote-inline`, `.code`, `.pre`                                 |
 | `hr`                                                                                                                                           | `.divider`                                                                         |
@@ -152,7 +152,8 @@ O que ele não faz:
 - **Alguns tipos de input ficam de fora:** `file`, `range`, `color` e `hidden` mantêm a aparência do próprio navegador.
 - **Nada de switch.** Um checkbox com `role="switch"` continua pintado como checkbox; o mapeamento não lê roles. Uma página que precisa de switches fica mais bem servida pela folha de estilos baseada em classes.
 - **Links acompanham o texto ao redor.** Um link dentro de um título mantém o tamanho do título; um link nunca é estilizado como botão.
-- **`pre code` não recebe estilo duplicado.** O código dentro de um `pre` perde o seu próprio fundo e padding.
+- **O texto do corpo é definido uma vez.** `p` e `li` herdam a tipografia do elemento em que estão, então um contêiner que define o seu próprio tamanho, peso ou espaçamento entre letras o aplica ao Markdown dentro dele. Os controles mantêm o próprio espaçamento entre letras: um botão, um badge e um campo de texto ficam em `normal`, seja o que for que a página ou o contêiner definam.
+- **`pre code` não recebe estilo duplicado.** O código dentro de um `pre` perde o chip que desenharia sozinho: fundo, padding, borda, sombra, brilho e recorte.
 
 Os mapeamentos são globais: todo elemento correspondente na página é estilizado, inclusive elementos dentro de widgets de terceiros. Eles ficam na [camada de cascata](#camadas-de-cascata) `base`, então qualquer classe vence. Adicione uma classe de intenção ou de apresentação a um elemento mapeado, como `<button class="destructive">`, e ela funciona como funcionaria num `.btn`.
 

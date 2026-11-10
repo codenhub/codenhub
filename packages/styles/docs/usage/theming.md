@@ -29,12 +29,13 @@ A settings screen with a "System / Light / Dark" choice removes the attribute fo
 
 How it resolves:
 
-- A theme selector sets the CSS `color-scheme` property and nothing else. Every color token holds its light and its dark value at once, through `light-dark()`, and the element's `color-scheme` picks one.
-- `color-scheme` inherits, so a selector themes everything inside it. A selector on any element themes that part of the page: a dark sidebar on a light page is `<aside class="dark">`.
+- A theme selector sets the CSS `color-scheme` property, and the element's text color to `--color-text`. Every color token holds its light and its dark value at once, through `light-dark()`, and the element's `color-scheme` picks one.
+- `color-scheme` inherits, so a selector themes everything inside it. A selector on any element themes that part of the page: a dark sidebar on a light page is `<aside class="dark">`, and the text inside it takes the dark theme's text color.
+- A selector sets no background. Give the region its ground yourself, such as `background: var(--color-background)`. Any utility or component class on the same element overrides the selector's text color.
 - The nearest selector wins, at any depth. A `.light` card inside a `.dark` page is light.
 - With no selector, the root has `color-scheme: light dark`, which follows the system.
 - Put one theme on an element. If an element carries both a light and a dark selector, dark wins, but do not rely on that.
-- Setting `color-scheme` yourself on an element works the same way, because it is the only thing the palette reads. It also themes native parts such as scrollbars and the inside of form controls.
+- Setting `color-scheme` yourself on an element themes the tokens the same way, because it is the only thing the palette reads. It also themes native parts such as scrollbars and the inside of form controls. Plain text inside keeps the color it inherited until you also set `color: var(--color-text)`.
 
 Every component color comes from a token or from `currentColor`, so components follow the theme with no dark-mode rules of their own. The marks the package draws, such as the checkbox tick and the select arrow, use `currentColor` too. Icons and images you add are yours to theme.
 
@@ -120,6 +121,7 @@ The class works on everything that takes an intent: buttons, badges, fields and 
 - **A quiet, untinted rest.** A neutral `.card.soft`, `.panel`, and `.alert` rest on the quiet background tone, and they recognize an intent only by the six built-in classes. `.card.soft.beta`, `.panel.beta`, and `.alert.beta` are drawn like the neutral one: the quiet background tone instead of a violet tint. Your intent still colors their text and border.
 - **The chip tint.** A `.beta` key cap or code block shows your `--intent-subtle` tint, but not the extra 12% of `--intent-color` a built-in intent adds over it.
 - **Solo classes.** A [solo class](./solo.md) such as `.neobrutalism-solo` takes an intent only from the six built-in classes, so `.neobrutalism-solo.beta` is drawn neutral.
+- **Hint text.** A [`.hint`](./forms.md#show-a-validation-error) prints in an intent's readable tone only for the six built-in classes, so `.hint.beta` stays secondary-colored.
 
 If you need those, there are two ways:
 
@@ -232,7 +234,7 @@ The four `--elevation-*` shadows are for elements you style yourself. They are s
 | `--elevation-sm`           | `0 1px 2px`, `0 1px 3px`                               | A light shadow for your own surfaces, such as a card.                                                           |
 | `--elevation-md`           | `0 4px 6px -1px`, `0 2px 4px -2px`                     | A shadow for your own raised elements, such as a dropdown menu.                                                 |
 | `--elevation-lg`           | `0 20px 25px -5px`, `0 8px 10px -6px`                  | A shadow for your own overlays, such as a modal dialog.                                                         |
-| `--focus-ring`             | `--color-primary` at 64% opacity                       | Color of the keyboard focus ring.                                                                               |
+| `--focus-ring`             | Not set                                                | Color of the keyboard focus ring. When unset, `--color-primary` at 64% opacity, on the focused element.         |
 | `--focus-ring-offset`      | Not set                                                | Distance of the ring from the element. When unset, the ring sits on the element's border under every aesthetic. |
 | `--focus-ring-width`       | `3px`                                                  | Width of the keyboard focus ring.                                                                               |
 | `--motion-duration-fast`   | `120ms`                                                | A table row's hover.                                                                                            |
@@ -242,7 +244,7 @@ The four `--elevation-*` shadows are for elements you style yourself. They are s
 | `--z-popover`              | `40`                                                   | Stacking order of tooltip bubbles. Use it for your own popovers so they stack the same way.                     |
 | `--breakpoint-xs`          | `30rem`                                                | The `xs:` responsive breakpoint. Only in a `/tw` build; the compiled entrypoints do not declare it.             |
 
-Each `--elevation-*` shadow is made of the listed parts, each in `--elevation-color`. The hover step that deepens a fill under the pointer is a presentation token, `--hover-step`; see [Customizing](./customizing.md#presentation-tokens).
+Each `--elevation-*` shadow is made of the listed parts, each in `--elevation-color`. The four shadows are composed once, on the root, so an `--elevation-color` you set on a container does not reach them: set it on `:root`, or set the `--elevation-*` token itself on the container. The elevation classes, such as `.card.raised`, read `--elevation-color` on the element and follow a container's value. The hover step that deepens a fill under the pointer is a presentation token, `--hover-step`; see [Customizing](./customizing.md#presentation-tokens).
 
 ## Fonts
 
@@ -250,14 +252,14 @@ The package ships no font files and makes no network requests. Every font token 
 
 | Token            | Read by                                                                                          | Without your value                                                                                                                              |
 | ---------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--font-default` | The reset, on `html` and `body`. Buttons and form controls inherit it.                           | `"Segoe UI", system-ui, sans-serif`                                                                                                             |
+| `--font-default` | The reset, on `html` and `body`, and `.glass` and `.neobrutalism` regions. Controls inherit it.  | `"Segoe UI", system-ui, sans-serif`                                                                                                             |
 | `--font-mono`    | The `kbd`, `code`, and `pre` content helpers, and `<kbd>`, `<code>`, and `<pre>` under `/native` | `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`. Under `/tw`, your Tailwind theme's value. |
 | `--font-pixel`   | [`.pixel`](./aesthetics.md#pixel) and `.pixel-solo`                                              | Not declared. Falls back to a monospace stack.                                                                                                  |
 | `--font-rounded` | [`.chunky-tile`](./aesthetics.md#chunky-tile) and `.chunky-tile-solo`                            | Not declared. Falls back to `--font-default`, then a sans-serif stack.                                                                          |
 | `--font-cyber`   | [`.cyber`](./aesthetics.md#cyber) and `.cyber-solo`                                              | Not declared. Falls back to a monospace stack.                                                                                                  |
 | `--font-sketch`  | [`.sketch`](./aesthetics.md#sketch) and `.sketch-solo`                                           | Not declared. Falls back to the platform `cursive` family.                                                                                      |
 
-`--font-default` reaches the page only through the reset, which `@codenhub/styles`, `/native`, `/tw`, `/tw/native`, and `/tw/reset` include. With `/theme` or `/components` alone, set `font-family` on `body` yourself. The aesthetic tokens are read by the aesthetic's own class, so they work with any entrypoint.
+`--font-default` reaches the page only through the reset, which `@codenhub/styles`, `/native`, `/tw`, `/tw/native`, and `/tw/reset` include. With `/theme` or `/components` alone, set `font-family` on `body` yourself, and set `--font-default` to the same font: `.glass` and `.neobrutalism` regions set their own `font-family` from the token, so a font set only on `body` does not reach inside them. Or set only the token, and write `font-family: var(--font-default)` on `body`. The aesthetic tokens are read by the aesthetic's own class, so they work with any entrypoint.
 
 To use a web font, load it the way you load any font, then name it in the token. Set the token on `:root` for the whole page, or on any element for that part of it:
 
