@@ -2,7 +2,7 @@
 title: Personalización
 description: Consulta de los tokens de presentación y de material, los controles de las estéticas, las seis variables públicas de componente, la paleta generada y los helpers para construir tus propios componentes.
 order: 9
-source: d2e88766839dce9b892543088ac5026f32c4620a
+source: ae10b826450c0c396611abe636734ae14a3d8961
 ---
 
 # Personalización
@@ -216,9 +216,9 @@ Los mismos controles ajustan la [clase solo](./solo.md) de cada estética, que l
 
 ```css
 .my-badge {
-  background: var(--palette-success-soft-page-bg);
+  background: var(--palette-success-soft-bg);
   color: var(--palette-success-soft-fg);
-  border-color: var(--palette-success-soft-page-edge);
+  border-color: var(--palette-success-soft-edge);
 }
 ```
 

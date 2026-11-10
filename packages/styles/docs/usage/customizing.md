@@ -215,9 +215,9 @@ The same knobs tune each aesthetic's [solo class](./solo.md), which reads them o
 
 ```css
 .my-badge {
-  background: var(--palette-success-soft-page-bg);
+  background: var(--palette-success-soft-bg);
   color: var(--palette-success-soft-fg);
-  border-color: var(--palette-success-soft-page-edge);
+  border-color: var(--palette-success-soft-edge);
 }
 ```
 
