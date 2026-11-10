@@ -97,6 +97,10 @@ Every text is read as an ICU message: `{name}`, `number` (`integer`, `percent`),
 
 ### `timeZone` is a manager option (0.2.0)
 
+### Optional options accept `undefined` (2026-11-10)
+
+Every optional option of `createI18n`, `init`, `dictionaryLimits`, `I18nError`, and `initializeBrowserI18n` is typed `?: T | undefined`, as the routing options already were, and the package compiles with `exactOptionalPropertyTypes`. Without it, a consumer who enables that flag could not compile the guide's `initializeBrowserI18n({ i18n, locale: route?.locale })`, although the runtime has always read an explicit `undefined` as an omitted option. `getLocaleDirection` and `onMissingKey` became function-typed properties, since a method can't be `| undefined`, so their parameters are now checked contravariantly: a callback whose `locale` parameter is narrower than the configured locales, which the runtime would call with a locale it doesn't accept, no longer compiles. Rejected: documenting a spread such as `...(route && { locale: route.locale })`, which every strict consumer would have to find and repeat.
+
 Dates in messages used the runtime's time zone, with no way to change it, so a server rendered `{d, date}` on its own calendar day: 01:00 UTC on 2 November was "November 2" for a reader in São Paulo, where it is still 1 November, and the text changed when the browser took over. `formatDate` could take `options.timeZone`, but nothing reached a message.
 
 - **On the manager, not per call.** A server already creates one manager per request, so the reader's zone fits there, and a message has nowhere to name a zone. `formatDate` uses it as its default, and its own `options.timeZone` wins.

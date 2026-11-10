@@ -6,7 +6,7 @@ export type I18nErrorCode = "i18n.locale_load_failed";
 /** Consumer-provided context retained by an `I18nError`. */
 export interface I18nErrorOptions {
   /** Locale whose translations could not be loaded. */
-  readonly locale?: string;
+  readonly locale?: string | undefined;
   /** Original loader failure. */
   readonly cause?: unknown;
 }
@@ -19,7 +19,7 @@ export class I18nError extends Error {
   /** Stable identifier for consumer classification. */
   readonly code: I18nErrorCode = "i18n.locale_load_failed";
   /** Locale whose loader rejected. */
-  readonly locale?: string;
+  readonly locale?: string | undefined;
   /** Original loader failure retained for diagnostics and classification. */
   override readonly cause?: unknown;
 

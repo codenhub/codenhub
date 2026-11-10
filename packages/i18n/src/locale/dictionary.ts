@@ -8,7 +8,7 @@ const MAX_FLATTENED_KEY_LENGTH = 1_000;
 const MAX_REPORTED_KEY_LENGTH = 100;
 
 /** Every dictionary limit, resolved. @internal */
-export type DictionaryLimits = Readonly<Required<LocaleDictionaryLimits>>;
+export type DictionaryLimits = { readonly [K in keyof LocaleDictionaryLimits]-?: number };
 
 /** The limits used when a manager configures none. @internal */
 export const DEFAULT_DICTIONARY_LIMITS: DictionaryLimits = Object.freeze({

@@ -7,7 +7,7 @@ export interface LocaleLoaderOptions<TLocale extends string> {
   /** Returns a flat or nested locale payload. */
   loadLocale(locale: TLocale): unknown | Promise<unknown>;
   /** Resource limits applied to loaded payloads. Defaults to the package limits. */
-  dictionaryLimits?: DictionaryLimits;
+  dictionaryLimits?: DictionaryLimits | undefined;
 }
 
 /** Cache and normalization boundary used by an i18n manager. */

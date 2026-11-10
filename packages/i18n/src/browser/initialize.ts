@@ -32,20 +32,20 @@ export interface BrowserI18nOptions<TLocale extends string> {
    * Authoritative locale, which takes precedence over persisted and browser preferences, and is persisted when
    * `persistLocale` is on. Only `undefined` omits this input; other non-string runtime values reject initialization.
    */
-  locale?: TLocale;
+  locale?: TLocale | undefined;
   /** Local storage key used for the JSON locale preference. Defaults to `"i18n"`. Storage is best-effort: a failed read or write warns and is skipped. */
-  storageKey?: string;
+  storageKey?: string | undefined;
   /**
    * Whether a stored locale is read, and explicit or later application-made locales are written. A locale detected
    * from navigator preferences or the default is not written. Defaults to `true`.
    */
-  persistLocale?: boolean;
+  persistLocale?: boolean | undefined;
   /** Whether the global document element's `lang` and `dir` stay synchronized. Defaults to `true`. */
-  syncDocument?: boolean;
+  syncDocument?: boolean | undefined;
   /** Optional DOM boundary whose safe `data-i18n` leaves and allowlisted `data-i18n-<attribute>` attributes are translated. */
-  root?: ParentNode;
+  root?: ParentNode | undefined;
   /** Whether additions and translation-key attribute changes below `root` are incrementally observed. Defaults to `false`. */
-  observe?: boolean;
+  observe?: boolean | undefined;
 }
 
 /** Browser effects exclusively owned for one i18n manager after successful initialization. */

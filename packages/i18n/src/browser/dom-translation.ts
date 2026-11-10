@@ -40,7 +40,7 @@ interface DomTranslatorOptions {
 
 interface TranslateRootOptions {
   readonly root: ParentNode;
-  readonly boundary?: ParentNode;
+  readonly boundary?: ParentNode | undefined;
   readonly translate: (key: string) => string | undefined;
 }
 
