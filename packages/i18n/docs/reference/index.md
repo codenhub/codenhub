@@ -108,6 +108,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
     resolveLocale(value: string): TLocale | undefined;
     matchLocale(preferences: readonly string[]): TLocale | undefined;
     translate<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
+    has(key: TKey): boolean;
     has(key: string): key is TKey;
     t<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
     formatNumber(value: number | bigint, options?: Intl.NumberFormatOptions): string;
@@ -276,10 +277,11 @@ Formats a relative time, such as `-1, "day"` for "1 day ago", for the active loc
 #### I18n › has
 
 ```ts
+has(key: TKey): boolean;
 has(key: string): key is TKey;
 ```
 
-Whether a key has a text, or is a plural group, in a dictionary the active locale falls back to. Unlike `t()`, a miss neither calls `onMissingKey` nor warns, so a key built at runtime can be checked before it is used, and the check narrows it to a key `t()` accepts.
+Whether a key has a text, or is a plural group, in a dictionary the active locale falls back to. Unlike `t()`, a miss neither calls `onMissingKey` nor warns, so a key built at runtime can be checked before it is used, and the check narrows it to a key `t()` accepts. A key that is already typed is not narrowed, since it can still be missing, as from a locale that has not translated it.
 
 **Parameters**
 
@@ -441,7 +443,7 @@ Resolves a trimmed key against the active locale's dictionary, then each configu
 
 A parent is made by dropping subtags and is skipped when its likely script differs, so `zh-Hant` never falls back to `zh`, which is Simplified Chinese.
 
-Messages use ICU syntax: `{name}`, `{n, number}` with an optional `integer` or `percent` style, `{d, date}` and `{d, time}` with an optional `short`, `medium` (the default), `long`, or `full` style, `{n, plural, …}` and `{n, selectordinal, …}` with `=N` and CLDR category options, an optional `offset:N`, and `#` for the number, and `{v, select, …}`. Plural categories and every format use the locale of the dictionary that has the text. An apostrophe before `{`, `}`, or, in a plural, `#` quotes them, and `''` is one apostrophe. A message that is not valid syntax warns once, unless silent, and only its `{name}` placeholders are filled.
+Messages use ICU syntax: `{name}`, `{n, number}` with an optional `integer` or `percent` style, `{d, date}` and `{d, time}` with an optional `short`, `medium` (the default), `long`, or `full` style, `{n, plural, …}` and `{n, selectordinal, …}` with `=N` and CLDR category options, an optional `offset:N`, and `#` for the number in the plural's own forms, and `{v, select, …}`. Plural categories and every format use the locale of the dictionary that has the text. An apostrophe before `{`, `}`, or, in a plural, `#` quotes them, and `''` is one apostrophe. A message that is not valid syntax warns once, unless silent, and only its `{name}` placeholders are filled.
 
 When `params.count` is a number and the key is a group of plural forms rather than a text, such as `{ one: "{count} item", other: "{count} items" }`, the form is chosen with `Intl.PluralRules` for the locale of the dictionary that has the group, falling back to its `other` form. Forms are named by CLDR plural category: `zero`, `one`, `two`, `few`, `many`, and `other`.
 
