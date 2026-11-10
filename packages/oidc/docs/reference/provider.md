@@ -547,7 +547,7 @@ A `302` to the client's registered `post_logout_redirect_uri`, carrying `state`,
 readonly subject?: string;
 ```
 
-The user a verified `id_token_hint` names. The hint may have expired, so compare it with the user of the app's own session. Absent without a verified hint: then nothing ties the request to a user, and the app should ask the user to confirm before it signs them out.
+The user a verified `id_token_hint` names. The hint may have expired, so compare it with the user of the app's own session, and ask the user to confirm when they differ or there is no session. Absent without a verified hint: then nothing ties the request to a user, and the app should ask the user to confirm before it signs them out.
 
 #### EndSession › uiLocales
 
@@ -1506,11 +1506,7 @@ export type ClientAuthentication =
         readonly method: "client_secret_jwt";
         readonly key: SecretKey;
     }
-    /**
- * The client's public keys, from `createKeySet`, `importKeySet`, or `createRemoteKeySet`. A remote key set must
- * be one object per client, reused across `findClient` calls: its cache and its limit on fetches live in the
- * object, so a new one for each read lets every token request make the provider fetch the client's JWKS.
- */
+    /** The client's public keys, from `createKeySet`, `importKeySet`, or `createRemoteKeySet`. */
     | {
         readonly method: "private_key_jwt";
         readonly keys: KeySet;
@@ -1520,6 +1516,8 @@ export type ClientAuthentication =
 How a registered client authenticates to the token endpoint, and what the provider checks it against.
 
 Secrets are never stored in plaintext: `secretHash` is what [`hashClientSecret`](#hashclientsecret) returns for the secret [`generateClientSecret`](#generateclientsecret) created. `client_secret_jwt` is the exception, because an HMAC can only be checked with the secret itself.
+
+A remote key set given as `keys` must be one object per client, reused across `findClient` calls: its cache and its limit on fetches live in the object, so a new one for each read lets every token request that presents an assertion for that client make the provider fetch the client's JWKS.
 
 ### Consumption
 

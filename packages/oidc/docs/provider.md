@@ -310,7 +310,7 @@ A success carries `clientId` when a client is known, `subject` when the hint ver
 
 The `id_token_hint` is verified as an ID token this provider issued: signed by one of its keys, with its issuer, typed `JWT`, and with `sub`, `aud`, `exp` and `iat`. The type keeps a JWT access token (`at+jwt`) from passing as a hint. A hint with several audiences must name one of them in `azp`.
 
-An expired hint is accepted when expiry is its only fault, as RP-Initiated Logout 1.0 recommends: ID tokens are short-lived, so a hint has usually expired by the time the user signs out, and a relying party that sends no `client_id` is known only through it. It stays acceptable for as long as the key that signed it is among the provider's keys. Since the hint may be old, compare `subject` with the user of your own session before signing anyone out without asking.
+An expired hint is accepted when expiry is its only fault: ID tokens are short-lived, so a hint has usually expired by the time the user signs out, and a relying party that sends no `client_id` is known only through it. RP-Initiated Logout 1.0 recommends accepting one while the relying party has a current or recent session at the provider. The provider keeps no sessions, so it cannot check that: a hint stays acceptable for as long as the key that signed it is among the provider's keys. Compare `subject` with the user of your own session, and ask the user to confirm when they differ or there is no session.
 
 A hint that does not verify is ignored. It is not a failure, and the result has no `subject`. Nothing then ties the request to a user, so ask the user to confirm the logout before signing them out.
 
@@ -321,6 +321,7 @@ The provider keeps no sessions. The app ends its own session, and may revoke the
 ```ts
 declare function renderError(issues: unknown): Response;
 declare function endAppSession(request: Request): Promise<void>;
+declare function sessionSubject(request: Request): Promise<string | undefined>; // the user of the app's own session
 declare function renderLogoutConfirmation(request: Request): Response;
 declare function renderSignedOutPage(): Response;
 
@@ -329,8 +330,9 @@ const result = await provider.endSession(request);
 if (!result.ok) {
   return renderError(result.error.issues); // never redirect on failure
 }
-if (result.value.subject === undefined) {
-  // No verified ID token hint: stop here, and end the session only once the user confirms on the page the app renders.
+if (result.value.subject === undefined || result.value.subject !== (await sessionSubject(request))) {
+  // No verified ID token hint, or one for another user than the session's, as an old hint may be: stop here, and
+  // end the session only once the user confirms on the page the app renders.
   return renderLogoutConfirmation(request);
 }
 await endAppSession(request); // the app's own session
