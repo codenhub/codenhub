@@ -2,7 +2,7 @@
 title: Configuração
 description: Instale o pacote, escolha entre CSS compilado ou código-fonte do Tailwind e renderize a estrutura da página de configurações.
 order: 1
-source: 86de6c7099d75b08755b00463a6c8c0062890214
+source: d183b76ee3f7c5396fcc4e23647486fd99e7ee1d
 ---
 
 # Configuração
@@ -152,7 +152,7 @@ O que ele não faz:
 - **Alguns tipos de input ficam de fora:** `file`, `range`, `color` e `hidden` mantêm a aparência do próprio navegador.
 - **Nada de switch.** Um checkbox com `role="switch"` continua pintado como checkbox; o mapeamento não lê roles. Uma página que precisa de switches fica mais bem servida pela folha de estilos baseada em classes.
 - **Links acompanham o texto ao redor.** Um link dentro de um título mantém o tamanho do título; um link nunca é estilizado como botão.
-- **O texto do corpo é definido uma vez.** `p` e `li` herdam a tipografia do elemento em que estão, então um contêiner que define o seu próprio tamanho, peso ou espaçamento entre letras o aplica ao Markdown dentro dele.
+- **O texto do corpo é definido uma vez.** `p` e `li` herdam a tipografia do elemento em que estão, então um contêiner que define o seu próprio tamanho, peso ou espaçamento entre letras o aplica ao Markdown dentro dele. Os controles mantêm o próprio espaçamento entre letras: um botão, um badge e um campo de texto ficam em `normal`, seja o que for que a página ou o contêiner definam.
 - **`pre code` não recebe estilo duplicado.** O código dentro de um `pre` perde o chip que desenharia sozinho: fundo, padding, borda, sombra, brilho e recorte.
 
 Os mapeamentos são globais: todo elemento correspondente na página é estilizado, inclusive elementos dentro de widgets de terceiros. Eles ficam na [camada de cascata](#camadas-de-cascata) `base`, então qualquer classe vence. Adicione uma classe de intenção ou de apresentação a um elemento mapeado, como `<button class="destructive">`, e ela funciona como funcionaria num `.btn`.

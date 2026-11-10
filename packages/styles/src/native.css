@@ -105,7 +105,9 @@
   /* Body copy is the page's text, set once on `body` and inherited, so a
      container can resize or embolden the Markdown inside it. Pinned on `p` and
      `li` instead, a bold 20px container printed its paragraphs at 14px regular,
-     and their tracking reached the controls inside one. Links take the text
+     and their tracking reached the controls inside one. The controls keep
+     their own tracking all the same: `.btn`, `.badge`, and `text-control` set
+     `normal`, so this body's wider tracking stops at them. Links take the text
      they sit in, so one inside a heading stays heading-sized. */
   body {
     @apply text-body;

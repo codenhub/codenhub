@@ -92,7 +92,7 @@ Shadow geometry is split into parts with no color in them, so they inherit safel
 | `--ui-clip-tight`         | Compact component silhouette.                                                                                                                        | `--ui-clip`                               |
 | `--ui-focus-inset`        | Inset focus layer width.                                                                                                                             | Unset                                     |
 | `--ui-label-weight`       | Label weight of `.btn` (and, with `/native`, a bare `<button>`) and `.badge`.                                                                        | Semibold on a button, bold on a badge     |
-| `--ui-label-tracking`     | Label letter spacing. Unset, the label inherits it.                                                                                                  | Unset                                     |
+| `--ui-label-tracking`     | Label letter spacing. Unset, it is `normal`, so neither the page's tracking nor a container's reaches the label.                                     | `normal`                                  |
 | `--ui-label-case`         | Label `text-transform`.                                                                                                                              | `none` on a button; inherited on a badge  |
 | `--ui-label-shadow`       | Label `text-shadow`, written without a color so it takes the label's own.                                                                            | `none` on a button; inherited on a badge  |
 
@@ -119,7 +119,7 @@ Which corners take the corner is its own choice. `.cut-diagonal` keeps the top-l
 
 `--ui-surface-image` lays any `background-image` over a surface's plate: cards, panels, alerts, and tooltips, not controls. Whoever sets it owns the contrast of the text over it, and your own `background-image` on a surface still wins.
 
-`--ui-label-*` treats the label of a button or a badge: weight, tracking, case, and a text shadow. Write the shadow without a color, such as `0 0 6px`, so it takes the label's own color and cannot lower its contrast. Your own `font-*`, `tracking-*`, and case utilities still win.
+`--ui-label-*` treats the label of a button or a badge: weight, tracking, case, and a text shadow. Write the shadow without a color, such as `0 0 6px`, so it takes the label's own color and cannot lower its contrast. Your own `font-*`, `tracking-*`, and case utilities still win. A label does not inherit tracking, so a `tracking-*` utility on a container leaves its buttons and badges at `normal`; to track every label in a region, set `--ui-label-tracking` on it, which they inherit.
 
 Under forced colors each of these draws its plain version: a solid line, no halo, no painted layer, and no label shadow. The silhouette and the ring below go too. Forced colors remove every box shadow, so `--ui-clip`, `--ui-clip-tight`, `--ui-border-max`, and `--ui-shadow-edge` are cleared and a component draws its real border at `--ui-border-width`.
 

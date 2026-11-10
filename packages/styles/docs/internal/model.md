@@ -422,9 +422,11 @@ Beyond composition, the package strives for three things, in this order: that it
 | `--ui-clip-tight`         | `--ui-clip`                        | Silhouette for chips.                                                       |
 | `--ui-focus-inset`        | _undefined_                        | Inset focus layer width, with a page-colour line inside. Undefined: none.   |
 | `--ui-label-weight`       | per component                      | Label weight; `.btn` and `.badge`.                                          |
-| `--ui-label-tracking`     | _undefined_                        | Label tracking; undefined inherits.                                         |
+| `--ui-label-tracking`     | _undefined_                        | Label tracking; undefined is `normal`.                                      |
 | `--ui-label-case`         | per component                      | `text-transform`; `.btn` falls back to `none`.                              |
 | `--ui-label-shadow`       | per component                      | `text-shadow` with no colour, so it takes the label's.                      |
+
+Tracking stops at a control. `/native` sets body copy's wider tracking on `body`, and Preflight passes `letter-spacing` on to fields under `/tw`, so `.btn` and `.badge` fall back to `normal` and `text-control` sets it: neither the page's tracking nor a container's reaches a label or typed text. The cost is that a container's `tracking-*` no longer reaches its buttons; a region changes its labels' tracking through `--ui-label-tracking`, which inherits.
 
 `registry.json` records under `material` which utilities read each of the corner, line, halo, surface image, and label tokens, and the surface ground, surface shadow, fill alpha, and backdrop beside them: the tokens a region nested inside glass would otherwise inherit. Every aesthetic names or clears every one of them, and every token any other aesthetic declares, `--elevation-color` and `--ui-focus-inset` included: a token one aesthetic sets is one a region nested inside it inherits. `registry.test.ts` checks the declarations, and `aesthetics.spec.ts` checks that every aesthetic nested inside every other paints a focused button and a card exactly as it does alone.
 

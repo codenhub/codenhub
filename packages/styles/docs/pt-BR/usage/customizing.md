@@ -2,7 +2,7 @@
 title: Personalização
 description: Consulta sobre tokens de apresentação e de material, ajustes das estéticas, as seis variáveis públicas de componente, a paleta gerada e os helpers para criar os seus próprios componentes.
 order: 9
-source: 1c842940027ebaefcada465fcf929ba31cbf100e
+source: 37e5fd58940cc8af4ab8e51d70d2845dc3e52d2e
 ---
 
 # Personalização
@@ -93,7 +93,7 @@ A geometria da sombra é dividida em partes sem cor, então elas são herdadas c
 | `--ui-clip-tight`         | Silhueta compacta do componente.                                                                                                                                            | `--ui-clip`                                             |
 | `--ui-focus-inset`        | Espessura da camada interna de foco.                                                                                                                                        | Sem valor                                               |
 | `--ui-label-weight`       | Peso do rótulo de `.btn` (e, com `/native`, de um `<button>` sem classe) e de `.badge`.                                                                                     | Seminegrito num botão, negrito num badge                |
-| `--ui-label-tracking`     | Espaçamento entre as letras do rótulo. Sem valor, o rótulo o herda.                                                                                                         | Sem valor                                               |
+| `--ui-label-tracking`     | Espaçamento entre as letras do rótulo. Sem valor, é `normal`, então nem o espaçamento da página nem o de um contêiner chega ao rótulo.                                      | `normal`                                                |
 | `--ui-label-case`         | `text-transform` do rótulo.                                                                                                                                                 | `none` num botão; herdado num badge                     |
 | `--ui-label-shadow`       | `text-shadow` do rótulo, escrito sem cor para receber a do próprio rótulo.                                                                                                  | `none` num botão; herdado num badge                     |
 
@@ -120,7 +120,7 @@ Quais cantos recebem o canto é uma escolha à parte. `.cut-diagonal` mantém o 
 
 `--ui-surface-image` coloca qualquer `background-image` sobre a placa de uma superfície: cards, painéis, alertas e tooltips, não controles. Quem o define é responsável pelo contraste do texto sobre ele, e o seu próprio `background-image` numa superfície ainda vence.
 
-`--ui-label-*` trata o rótulo de um botão ou de um badge: peso, espaçamento entre letras, caixa e uma sombra de texto. Escreva a sombra sem cor, como `0 0 6px`, para que ela receba a cor do próprio rótulo e não possa reduzir o seu contraste. Os seus próprios utilitários `font-*`, `tracking-*` e de caixa ainda vencem.
+`--ui-label-*` trata o rótulo de um botão ou de um badge: peso, espaçamento entre letras, caixa e uma sombra de texto. Escreva a sombra sem cor, como `0 0 6px`, para que ela receba a cor do próprio rótulo e não possa reduzir o seu contraste. Os seus próprios utilitários `font-*`, `tracking-*` e de caixa ainda vencem. Um rótulo não herda o espaçamento entre letras, então um utilitário `tracking-*` em um contêiner deixa os seus botões e badges em `normal`; para espaçar todos os rótulos de uma região, defina `--ui-label-tracking` nela, que eles herdam.
 
 Em cores forçadas, cada um deles desenha a sua versão simples: uma linha sólida, sem halo, sem camada pintada e sem sombra no rótulo. A silhueta e o anel abaixo também somem. As cores forçadas removem todas as box shadows, então `--ui-clip`, `--ui-clip-tight`, `--ui-border-max` e `--ui-shadow-edge` são limpos e um componente desenha a sua borda real com `--ui-border-width`.
 

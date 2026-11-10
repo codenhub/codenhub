@@ -32,15 +32,16 @@
   /* The label is material, shared with `.badge`: weight, tracking, case, and a
      text shadow, set by an aesthetic as tokens (`.chunky-tile`'s heavier,
      tracked label), and a consumer's own `font-*`, `tracking-*`, `uppercase`, or
-     text-shadow utility still beats the aesthetic. Tracking has no fallback on
-     purpose: undefined, the declaration is invalid at computed-value time and
-     `letter-spacing` inherits, which is what it did before the slot existed.
-     Case and shadow fall back to `none`, which is what a button already does:
-     the user agent stops both inheriting into one. The shadow is written
+     text-shadow utility still beats the aesthetic. Tracking, case, and shadow
+     fall back to `normal` and `none`, the label's own values, so none of them
+     inherits: body copy's wider tracking is set on `body`, and a button that
+     took it, or a container's, printed a tracked label nothing asked for. The
+     user agent already stops case and shadow inheriting into a button, and
+     `/native` maps `<button>` and the button inputs here. The shadow is written
      without a colour, so it takes the label's own and cannot lower its
      contrast. See docs/internal/model.md#cascade-layers. */
   font-weight: var(--ui-label-weight, var(--font-weight-semibold));
-  letter-spacing: var(--ui-label-tracking);
+  letter-spacing: var(--ui-label-tracking, normal);
   text-transform: var(--ui-label-case, none);
   text-shadow: var(--ui-label-shadow, none);
 

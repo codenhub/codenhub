@@ -86,10 +86,11 @@
 
   @apply box inline-flex min-h-6 w-fit items-center gap-1 px-2.5 text-xs;
 
-  /* The label material `.btn` reads. Unset, tracking, case, and shadow inherit,
-     as a badge's text always has. */
+  /* The label material `.btn` reads. Unset, tracking is `normal`, as `.btn`'s
+     is, so neither body copy's tracking nor a container's reaches the label;
+     case and shadow inherit, as a badge's text always has. */
   font-weight: var(--ui-label-weight, var(--font-weight-bold));
-  letter-spacing: var(--ui-label-tracking);
+  letter-spacing: var(--ui-label-tracking, normal);
   text-transform: var(--ui-label-case);
   text-shadow: var(--ui-label-shadow);
 

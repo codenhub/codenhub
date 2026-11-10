@@ -80,10 +80,14 @@
   @apply w-full appearance-none;
 
   /* The surrounding font rather than the user agent's smaller field one, on
-     every entry: `/components` carries no reset to say so. */
+     every entry: `/components` carries no reset to say so. Its tracking is
+     typed text's own, `normal`, rather than the page's: body copy's wider
+     tracking is set on `body`, and Preflight's `letter-spacing: inherit` on
+     `/tw` handed it, or a container's, to every field. */
   font-family: inherit;
   font-size: inherit;
   line-height: inherit;
+  letter-spacing: normal;
 
   &::placeholder {
     color: var(--color-text-secondary);

@@ -2,7 +2,7 @@
 title: Configuración inicial
 description: Instala el paquete, elige entre CSS compilado o código fuente de Tailwind y renderiza la estructura base de la página de ajustes.
 order: 1
-source: 86de6c7099d75b08755b00463a6c8c0062890214
+source: d183b76ee3f7c5396fcc4e23647486fd99e7ee1d
 ---
 
 # Configuración inicial
@@ -152,7 +152,7 @@ Lo que no hace:
 - **Algunos tipos de input se quedan como están:** `file`, `range`, `color` y `hidden` conservan el aspecto propio del navegador.
 - **Sin switch.** Un checkbox con `role="switch"` se sigue pintando como checkbox; el mapeo no lee roles. A una página que necesita switches le conviene más la hoja de estilos basada en clases.
 - **Los enlaces mantienen el texto que los rodea.** Un enlace dentro de un encabezado conserva el tamaño del encabezado; un enlace nunca recibe estilo de botón.
-- **El texto de cuerpo se define una sola vez.** `p` y `li` toman su tipografía del elemento en el que están, así que un contenedor que define su propio tamaño, peso o espaciado entre letras lo aplica al Markdown que contiene.
+- **El texto de cuerpo se define una sola vez.** `p` y `li` toman su tipografía del elemento en el que están, así que un contenedor que define su propio tamaño, peso o espaciado entre letras lo aplica al Markdown que contiene. Los controles conservan su propio espaciado entre letras: un botón, un badge y un campo de texto quedan en `normal`, sea lo que sea que definan la página o el contenedor.
 - **`pre code` no recibe estilo doble.** El código dentro de un `pre` pierde el chip que dibujaría por sí solo: fondo, relleno, borde, sombra, brillo y recorte.
 
 El mapeo es global: se da estilo a cada elemento de la página que coincida, incluidos los elementos dentro de widgets de terceros. Está en la [capa de cascada](#capas-de-cascada) `base`, así que cualquier clase lo supera. Añade una clase de intención o de presentación a un elemento mapeado, como `<button class="destructive">`, y se aplica igual que en `.btn`.

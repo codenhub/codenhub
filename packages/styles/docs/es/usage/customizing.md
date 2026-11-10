@@ -2,7 +2,7 @@
 title: Personalización
 description: Consulta de los tokens de presentación y de material, los controles de las estéticas, las seis variables públicas de componente, la paleta generada y los helpers para construir tus propios componentes.
 order: 9
-source: 1c842940027ebaefcada465fcf929ba31cbf100e
+source: 37e5fd58940cc8af4ab8e51d70d2845dc3e52d2e
 ---
 
 # Personalización
@@ -93,7 +93,7 @@ La geometría de la sombra se divide en partes sin color, así que se heredan si
 | `--ui-clip-tight`         | Silueta compacta del componente.                                                                                                                                                    | `--ui-clip`                                             |
 | `--ui-focus-inset`        | Grosor de la capa de foco interior.                                                                                                                                                 | Sin definir                                             |
 | `--ui-label-weight`       | Grosor de la etiqueta de `.btn` (y, con `/native`, de un `<button>` sin clase) y de `.badge`.                                                                                       | Semibold en un botón, bold en un badge                  |
-| `--ui-label-tracking`     | Espaciado entre letras de la etiqueta. Sin definir, la etiqueta lo hereda.                                                                                                          | Sin definir                                             |
+| `--ui-label-tracking`     | Espaciado entre letras de la etiqueta. Sin definir, es `normal`, así que ni el espaciado de la página ni el de un contenedor llega a la etiqueta.                                   | `normal`                                                |
 | `--ui-label-case`         | `text-transform` de la etiqueta.                                                                                                                                                    | `none` en un botón; heredado en un badge                |
 | `--ui-label-shadow`       | `text-shadow` de la etiqueta, escrito sin color para que tome el de la propia etiqueta.                                                                                             | `none` en un botón; heredado en un badge                |
 
@@ -120,7 +120,7 @@ Qué esquinas toman la esquina es una elección aparte. `.cut-diagonal` conserva
 
 `--ui-surface-image` pone cualquier `background-image` sobre la placa de una superficie: tarjetas, paneles, alertas y tooltips, no controles. Quien lo define es responsable del contraste del texto que queda encima, y tu propio `background-image` en una superficie sigue ganando.
 
-`--ui-label-*` trata la etiqueta de un botón o de un badge: grosor, espaciado entre letras, mayúsculas y una sombra de texto. Escribe la sombra sin color, como `0 0 6px`, para que tome el color de la propia etiqueta y no pueda reducir su contraste. Tus propias utilidades `font-*`, `tracking-*` y de mayúsculas siguen ganando.
+`--ui-label-*` trata la etiqueta de un botón o de un badge: grosor, espaciado entre letras, mayúsculas y una sombra de texto. Escribe la sombra sin color, como `0 0 6px`, para que tome el color de la propia etiqueta y no pueda reducir su contraste. Tus propias utilidades `font-*`, `tracking-*` y de mayúsculas siguen ganando. Una etiqueta no hereda el espaciado entre letras, así que una utilidad `tracking-*` en un contenedor deja sus botones y badges en `normal`; para espaciar todas las etiquetas de una región, define `--ui-label-tracking` en ella, que la heredan.
 
 Con colores forzados, cada uno de estos dibuja su versión simple: una línea continua, sin halo, sin capa pintada y sin sombra de etiqueta. La silueta y el anillo de abajo también desaparecen. Los colores forzados eliminan todas las sombras de caja, así que `--ui-clip`, `--ui-clip-tight`, `--ui-border-max` y `--ui-shadow-edge` se anulan y un componente dibuja su borde real con `--ui-border-width`.
 
