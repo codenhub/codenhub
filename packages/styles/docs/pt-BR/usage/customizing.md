@@ -2,7 +2,7 @@
 title: Personalização
 description: Consulta sobre tokens de apresentação e de material, ajustes das estéticas, as seis variáveis públicas de componente, a paleta gerada e os helpers para criar os seus próprios componentes.
 order: 9
-source: aa87391c5599ddfda913abcce9d17d9686345906
+source: 43865da6280f631e9959256ef266f504239a16ff
 ---
 
 # Personalização
@@ -227,10 +227,13 @@ Todo valor é uma cor final, nunca uma referência a outra variável, então o a
 Nomenclatura: `--palette-<intent>-<presentation>-<slot>`, em que `<intent>` é uma das sete intenções publicadas (`neutral`, `primary`, `secondary`, `success`, `warning`, `destructive`, `info`) e `<presentation>` é `solid`, `soft` ou `ghost`. `<slot>` é `bg`, `fg` ou `edge`. Dois qualificadores se somam só onde se aplicam:
 
 - Um qualificador de chão, `page` ou `subtle`, antes do slot. Ele só aparece no `bg` e no `edge` de `.soft` e `.ghost`, porque um preenchimento `.solid` cobre o seu chão e a cor do texto nunca depende dele.
-  - Sem qualificador é o chão transparente de `.badge` e `.btn`: `--palette-success-soft-bg`.
-  - `page` é o chão de `.alert`, `--color-background`: `--palette-success-soft-page-bg`.
-  - `subtle` é o chão de `.pre`, `.code`, `.kbd` e `.tooltip-bubble`, o próprio `--intent-subtle` da intenção: `--palette-success-soft-subtle-bg`.
-- Um sufixo `-hover`, só em `bg` e `edge`, porque a cor do texto não muda no hover: `--palette-success-soft-page-bg-hover`.
+  - Sem qualificador é o que `.badge` e `.btn` desenham, sobre um chão transparente: `--palette-success-soft-bg`.
+  - `page` é o que `.alert` desenha, sobre a página: `--palette-success-soft-page-bg`.
+  - `subtle` é o que `.kbd`, `.code` e `.pre` desenham, sobre o tom subtle da própria intenção: `--palette-success-soft-subtle-bg`.
+
+  Cada valor é lido do próprio componente, então inclui o que o componente faz por conta própria. Um `.alert`, `.kbd`, `.code` ou `.pre` neutro mantém um preenchimento mais discreto que um `.badge` neutro, e os seus valores `neutral-soft-page` e `neutral-soft-subtle` refletem isso. `.tooltip-bubble` não corresponde a nenhum dos três: sem intenção, ele é preenchido com o seu próprio tom de tooltip, e a sua borda é sólida em vez de esmaecida.
+
+- Um sufixo `-hover`, só em `bg` e `edge`, porque a cor do texto não muda no hover: `--palette-success-soft-page-bg-hover`. `.alert`, `.kbd`, `.code` e `.pre` não têm hover próprio, então os seus valores de hover são o que o componente desenha quando você adiciona `box-hover` a ele.
 
 Os valores claros são definidos em `:root`. Os valores escuros se aplicam sob `.dark`, `.theme-dark` ou `[data-theme="dark"]` no elemento ou num elemento acima dele, os mesmos seletores que o tema do pacote usa. Os valores claros também se aplicam sob `.light`, `.theme-light` e `[data-theme="light"]`, então o tema explícito mais próximo vence: uma área clara dentro de uma escura lê os valores claros.
 
@@ -287,7 +290,9 @@ Chips de filtro para a lista de membros, um pressionado e outro não:
 O que dar a cada um:
 
 - **`box` precisa de uma classe de preenchimento e de uma de borda.** Ele não tem padrões próprios, então, sem `.solid`, `.soft` ou `.ghost` e sem `.edged` ou `.edgeless`, no elemento ou num contêiner, ele não desenha nada. `surface` e `text-control` têm padrões e funcionam sozinhos.
-- **Dê nome à intenção.** Um elemento `box` recebe a intenção do elemento mais próximo em volta dele que tenha uma, diferente dos componentes do pacote. Coloque `.neutral` ou uma classe de intenção nele.
+- **Dê nome à intenção no `box`.** Um elemento `box` recebe a intenção do elemento mais próximo em volta dele que tenha uma, diferente dos componentes do pacote. Coloque `.neutral` ou uma classe de intenção nele. `surface` e `text-control` são neutros, a menos que o elemento tenha uma classe de intenção, como os componentes.
+- **`@apply` leva o helper inteiro.** `.my-field { @apply text-control; }` recebe o mesmo que `class="text-control"`: a intenção neutra e a borda de campo, `.soft`, `.solid` e `.edgeless` no elemento, e o visual inválido com `aria-invalid="true"`. `@apply surface` é neutro da mesma forma. Para colorir um elemento assim, uma classe de intenção que você mesmo definiu precisa ser CSS simples ou um utilitário, e não uma regra em `@layer components`.
+- **Um dialog funciona com `@apply surface`.** Um `<dialog>` fechado com uma classe sua que faz `@apply surface` fica escondido, e um aberto fica centralizado, como com `.card`. Esconder um fechado vence um utilitário de display como `flex`; uma margem que você define ainda posiciona um aberto.
 - **Tamanho e espaçamento ficam por sua conta.** Nenhum dos helpers define padding, largura ou altura; `text-control` não define a altura de 2.5rem que `.ipt` adiciona.
 - **Comportamento e semântica também.** Use um `<button>`, `<input>` ou `<a href>` de verdade, ou adicione você mesmo o role e o tratamento de teclado, e defina estados como `aria-pressed` ou `aria-invalid`. `box` desenha o visual desabilitado para `disabled`, `.disabled`, `aria-disabled="true"` e `data-disabled`, mas só o atributo `disabled` bloqueia a interação.
 

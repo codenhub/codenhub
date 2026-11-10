@@ -2,7 +2,7 @@
 title: Estéticas
 description: Os seis visuais opcionais, o que cada um muda num componente, os seus ajustes e os seus limites.
 order: 6
-source: 3c48815d08a5308ec32856fc415f65400eaf261b
+source: af0b5f8a4895c10cba172444f5e61408e8bd7264
 ---
 
 # Estéticas
@@ -114,9 +114,9 @@ A lente é desenhada por um filtro SVG em `backdrop-filter`, que o Chromium rend
 
 **Exceções:**
 
-- Ele alcança `.card`, `.panel`, `.alert`, o balão de tooltip e um `.data-table` padrão ou `.soft`. Os controles continuam sólidos, como no glass, exceto um botão que pede: veja [Botões líquidos](#botões-líquidos).
+- Ele alcança `.card`, `.panel`, `.alert`, `.surface`, o balão de tooltip, um componente seu criado com `@apply surface` e um `.data-table` padrão ou `.soft`. Os controles continuam sólidos, como no glass, exceto um botão que pede: veja [Botões líquidos](#botões-líquidos).
 - Ele desenha o desfoque e a lente no `::before` e no `::after` de cada superfície, então uma superfície dentro de uma região liquid não pode ter um `::before` ou `::after` seu. Cada superfície também vira um contexto de empilhamento posicionado; uma superfície que você mesmo posiciona mantém o seu posicionamento.
-- Todo o resto que fica fosco no glass mantém o desfoque leve e o chão mais transparente do liquid, sem a lente nem a borda de luz: uma `<table>` sem classe com `/native`, ou um componente seu criado com `@apply surface`.
+- Todo o resto que fica fosco no glass mantém o desfoque leve e o chão mais transparente do liquid, sem a lente nem a borda de luz: uma `<table>` sem classe com `/native`.
 - A lente é uma erosão de 8px desfocada em 10px em toda superfície, e de 3px desfocada em 3.5px num botão; a intensidade dela é fixa. Um filtro não consegue ler uma custom property, então nenhum desses valores é um ajuste. Os cantos são, por meio de `--glass-radius` e `--glass-radius-surface`, com padrões maiores: um canto contínuo parece menor que um arredondado com o mesmo raio.
 - A região mais próxima decide. Uma região de outra estética aninhada dentro de uma região liquid, ou de `.glass` simples, mantém o seu próprio material e não recebe camadas, e uma região liquid aninhada de novo dentro dela volta a recebê-las.
 - Sem `.glass` em vigor, ele muda os cantos e mais nada.

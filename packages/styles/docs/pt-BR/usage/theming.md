@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro e escuro, como trocar a paleta pelas cores da marca, como definir uma intenção própria, e cada token de cor, de intenção, fundamental e de fonte com o seu padrão.
 order: 5
-source: ef2e6095c03e7765cb650f720aca10403a70930c
+source: e7597c70666e5c4f8a1c407f47ae1405537093b9
 ---
 
 # Temas
@@ -30,12 +30,13 @@ Uma tela de configurações com a escolha "Sistema / Claro / Escuro" remove o at
 
 Como isso é resolvido:
 
-- Um seletor de tema define a propriedade CSS `color-scheme` e mais nada. Cada token de cor guarda o seu valor claro e o seu valor escuro ao mesmo tempo, por meio de `light-dark()`, e o `color-scheme` do elemento escolhe um deles.
-- `color-scheme` é herdado, então um seletor aplica o tema a tudo o que está dentro dele. Um seletor em qualquer elemento aplica o tema àquela parte da página: uma barra lateral escura numa página clara é `<aside class="dark">`.
+- Um seletor de tema define a propriedade CSS `color-scheme` e a cor do texto do elemento como `--color-text`. Cada token de cor guarda o seu valor claro e o seu valor escuro ao mesmo tempo, por meio de `light-dark()`, e o `color-scheme` do elemento escolhe um deles.
+- `color-scheme` é herdado, então um seletor aplica o tema a tudo o que está dentro dele. Um seletor em qualquer elemento aplica o tema àquela parte da página: uma barra lateral escura numa página clara é `<aside class="dark">`, e o texto dentro dela recebe a cor de texto do tema escuro.
+- Um seletor não define fundo. Dê você mesmo o fundo da região, como `background: var(--color-background)`. Qualquer classe utilitária ou de componente no mesmo elemento substitui a cor de texto do seletor.
 - O seletor mais próximo vence, em qualquer profundidade. Um card `.light` dentro de uma página `.dark` é claro.
 - Sem seletor, a raiz tem `color-scheme: light dark`, que segue o sistema.
 - Coloque um único tema por elemento. Se um elemento tiver um seletor claro e um escuro, o escuro vence, mas não conte com isso.
-- Definir você mesmo o `color-scheme` num elemento funciona do mesmo jeito, porque ele é a única coisa que a paleta lê. Isso também aplica o tema a partes nativas, como barras de rolagem e o interior de controles de formulário.
+- Definir você mesmo o `color-scheme` num elemento aplica o tema aos tokens do mesmo jeito, porque ele é a única coisa que a paleta lê. Isso também aplica o tema a partes nativas, como barras de rolagem e o interior de controles de formulário. O texto simples dentro dele mantém a cor que herdou até você definir também `color: var(--color-text)`.
 
 Toda cor de componente vem de um token ou de `currentColor`, então os componentes seguem o tema sem regras próprias de modo escuro. As marcas que o pacote desenha, como o visto do checkbox e a seta do select, também usam `currentColor`. Ícones e imagens que você adiciona ficam por sua conta.
 
@@ -233,7 +234,7 @@ As quatro sombras `--elevation-*` são para elementos que você mesmo estiliza. 
 | `--elevation-sm`           | `0 1px 2px`, `0 1px 3px`                                       | Uma sombra leve para as suas próprias superfícies, como um card.                                                           |
 | `--elevation-md`           | `0 4px 6px -1px`, `0 2px 4px -2px`                             | Uma sombra para os seus próprios elementos elevados, como um menu dropdown.                                                |
 | `--elevation-lg`           | `0 20px 25px -5px`, `0 8px 10px -6px`                          | Uma sombra para as suas próprias sobreposições, como um dialog modal.                                                      |
-| `--focus-ring`             | `--color-primary` com 64% de opacidade                         | Cor do anel de foco do teclado.                                                                                            |
+| `--focus-ring`             | Não definido                                                   | Cor do anel de foco do teclado. Quando não está definido, `--color-primary` com 64% de opacidade, no elemento focado.      |
 | `--focus-ring-offset`      | Não definido                                                   | Distância entre o anel e o elemento. Quando não está definido, o anel fica sobre a borda do elemento em qualquer estética. |
 | `--focus-ring-width`       | `3px`                                                          | Espessura do anel de foco do teclado.                                                                                      |
 | `--motion-duration-fast`   | `120ms`                                                        | O hover de uma linha de tabela.                                                                                            |
@@ -243,7 +244,7 @@ As quatro sombras `--elevation-*` são para elementos que você mesmo estiliza. 
 | `--z-popover`              | `40`                                                           | Ordem de empilhamento dos balões de tooltip. Use nos seus próprios popovers para que eles empilhem do mesmo jeito.         |
 | `--breakpoint-xs`          | `30rem`                                                        | O breakpoint responsivo `xs:`. Só num build `/tw`; os entrypoints compilados não o declaram.                               |
 
-Cada sombra `--elevation-*` é composta das partes listadas, cada uma em `--elevation-color`. O passo de hover que intensifica um preenchimento sob o ponteiro é um token de apresentação, `--hover-step`; veja [Personalização](./customizing.md#tokens-de-apresentação).
+Cada sombra `--elevation-*` é composta das partes listadas, cada uma em `--elevation-color`. As quatro sombras são compostas uma única vez, na raiz, então um `--elevation-color` que você define num contêiner não chega até elas: defina-o em `:root`, ou defina o próprio token `--elevation-*` no contêiner. As classes de elevação, como `.card.raised`, leem `--elevation-color` no elemento e seguem o valor de um contêiner. O passo de hover que intensifica um preenchimento sob o ponteiro é um token de apresentação, `--hover-step`; veja [Personalização](./customizing.md#tokens-de-apresentação).
 
 ## Fontes
 
