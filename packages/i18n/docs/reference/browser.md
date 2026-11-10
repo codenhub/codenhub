@@ -66,12 +66,12 @@ Existing DOM text, document attributes, persisted state, and core i18n state are
 ```ts
 export interface BrowserI18nOptions<TLocale extends string> {
     i18n: I18n<TLocale>;
-    locale?: TLocale;
-    storageKey?: string;
-    persistLocale?: boolean;
-    syncDocument?: boolean;
-    root?: ParentNode;
-    observe?: boolean;
+    locale?: TLocale | undefined;
+    storageKey?: string | undefined;
+    persistLocale?: boolean | undefined;
+    syncDocument?: boolean | undefined;
+    root?: ParentNode | undefined;
+    observe?: boolean | undefined;
 }
 ```
 
@@ -92,7 +92,7 @@ Manager to initialize; it must not have another initializing or active browser b
 #### BrowserI18nOptions › locale
 
 ```ts
-locale?: TLocale;
+locale?: TLocale | undefined;
 ```
 
 Authoritative locale, which takes precedence over persisted and browser preferences, and is persisted when `persistLocale` is on. Only `undefined` omits this input; other non-string runtime values reject initialization.
@@ -100,7 +100,7 @@ Authoritative locale, which takes precedence over persisted and browser preferen
 #### BrowserI18nOptions › observe
 
 ```ts
-observe?: boolean;
+observe?: boolean | undefined;
 ```
 
 Whether additions and translation-key attribute changes below `root` are incrementally observed. Defaults to `false`.
@@ -108,7 +108,7 @@ Whether additions and translation-key attribute changes below `root` are increme
 #### BrowserI18nOptions › persistLocale
 
 ```ts
-persistLocale?: boolean;
+persistLocale?: boolean | undefined;
 ```
 
 Whether a stored locale is read, and explicit or later application-made locales are written. A locale detected from navigator preferences or the default is not written. Defaults to `true`.
@@ -116,7 +116,7 @@ Whether a stored locale is read, and explicit or later application-made locales 
 #### BrowserI18nOptions › root
 
 ```ts
-root?: ParentNode;
+root?: ParentNode | undefined;
 ```
 
 Optional DOM boundary whose safe `data-i18n` leaves and allowlisted `data-i18n-<attribute>` attributes are translated.
@@ -124,7 +124,7 @@ Optional DOM boundary whose safe `data-i18n` leaves and allowlisted `data-i18n-<
 #### BrowserI18nOptions › storageKey
 
 ```ts
-storageKey?: string;
+storageKey?: string | undefined;
 ```
 
 Local storage key used for the JSON locale preference. Defaults to `"i18n"`. Storage is best-effort: a failed read or write warns and is skipped.
@@ -132,7 +132,7 @@ Local storage key used for the JSON locale preference. Defaults to `"i18n"`. Sto
 #### BrowserI18nOptions › syncDocument
 
 ```ts
-syncDocument?: boolean;
+syncDocument?: boolean | undefined;
 ```
 
 Whether the global document element's `lang` and `dir` stay synchronized. Defaults to `true`.

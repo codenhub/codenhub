@@ -18,15 +18,15 @@ export interface LocaleDictionaryLimits {
    * flattened key, a name and a dot, so with the 1,000-character key limit, a translation more than 499 levels deep
    * can't be loaded whatever this is set to.
    */
-  maxDepth?: number;
+  maxDepth?: number | undefined;
   /** Maximum string translations. Defaults to 10,000. */
-  maxTranslations?: number;
+  maxTranslations?: number | undefined;
   /** Maximum traversed properties, counting translations and nested groups. Defaults to 20,000. */
-  maxProperties?: number;
+  maxProperties?: number | undefined;
   /** Maximum characters in one translation value. Defaults to 100,000. */
-  maxValueLength?: number;
+  maxValueLength?: number | undefined;
   /** Maximum characters across all translation values. Defaults to 5,000,000. */
-  maxTotalLength?: number;
+  maxTotalLength?: number | undefined;
 }
 
 // Distributes over the property type so an optional leaf (`string | undefined`) still counts as a key. A group with an
@@ -88,7 +88,7 @@ export interface I18nConfig<TLocale extends string = string, TMessages = unknown
    * `pa-PK` and `arz` and Devanagari for `sd-IN`; for a tag `Intl.Locale` rejects, a right-to-left language, such as
    * `ar` or `he`, gives `rtl`.
    */
-  getLocaleDirection?(locale: NoInfer<TLocale>): LocaleDirection;
+  getLocaleDirection?: ((locale: NoInfer<TLocale>) => LocaleDirection) | undefined;
   /**
    * Called for every key missing from every dictionary the active locale falls back to, in place of the default
    * warning.
@@ -96,9 +96,9 @@ export interface I18nConfig<TLocale extends string = string, TMessages = unknown
    *
    * @defaultValue A `console.warn` once for each of the 1,000 most recent locale/key pairs, unless `isSilent`.
    */
-  onMissingKey?(key: string, locale: NoInfer<TLocale>): void;
+  onMissingKey?: ((key: string, locale: NoInfer<TLocale>) => void) | undefined;
   /** Suppresses optional diagnostics, including the default missing-key warning, without suppressing failures. Defaults to `false`. */
-  isSilent?: boolean;
+  isSilent?: boolean | undefined;
   /**
    * IANA time zone, such as `"America/Sao_Paulo"` or `"UTC"`, for `{d, date}`, `{d, time}`, and `{d}` in messages,
    * and the default of `formatDate`. Set it on a server, where the runtime's time zone is the server's, not the
@@ -106,15 +106,15 @@ export interface I18nConfig<TLocale extends string = string, TMessages = unknown
    *
    * @defaultValue The runtime's time zone.
    */
-  timeZone?: string;
+  timeZone?: string | undefined;
   /** Raises or lowers the resource limits applied to loaded dictionaries; unset limits keep their defaults. */
-  dictionaryLimits?: LocaleDictionaryLimits;
+  dictionaryLimits?: LocaleDictionaryLimits | undefined;
 }
 
 /** Locale selected explicitly during initialization. */
 export interface I18nInitOptions<TLocale extends string = string> {
   /** Locale to activate; defaults to the configured default locale. */
-  locale?: TLocale;
+  locale?: TLocale | undefined;
 }
 
 /** Payload emitted after successful initialization is applied. */
@@ -221,7 +221,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * @remarks
    * Each preference, in order, tries an exact case-insensitive match, then the longest configured locale it starts with
    * as whole subtags and with the same likely script, such as `pt` for `pt-BR`, then likely subtags, such as `zh-Hant`
-   * for `zh-TW`, then the same language in the same likely script. A locale in another script never matches, so with
+   * for `zh-TW`, then the same language in the same likely script. `no` and `nb` count as one language, Norwegian
+   * Bokmål, so either serves the other; Nynorsk, `nn`, stays apart. A locale in another script never matches, so with
    * `zh`, which is Simplified, `zh-TW` tries the next preference. A configured locale `Intl.Locale` rejects has no likely
    * script, so it matches by language, and by the script it names when it names one. When several configured locales share a preference's
    * language and script and none matches it exactly or by likely region, the first in `locales` wins: list `es-419`

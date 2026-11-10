@@ -18,8 +18,12 @@ const en = {
   apostrophe: "Don't wait, {name}",
   broken: "Hello {name",
   cart: { items: { one: "{count} item", other: "{count} items in {place}" } },
+  items: { one: "One item", other: "{count} items" },
+  files: { one: "One file", other: "{count} files in {folder}" },
+  choices: { one: "One", other: "Many" },
+  welcome: "Welcome",
 } as const;
-const pt = { greeting: "Olá, {nome}!" } as const;
+const pt = { greeting: "Olá, {nome}!", welcome: "Bem-vindo, {name}" } as const;
 type Messages = typeof en | typeof pt;
 
 type Params<K extends string> = TranslateParams<Messages, K>;
@@ -58,6 +62,17 @@ describe("typed placeholder values", () => {
     expectTypeOf<{ place: "cart" }>().not.toExtend<Values<"cart.items">>();
     expectTypeOf<{ count: 1 }>().not.toExtend<Values<"cart.items">>();
     expectTypeOf<Value<"cart.items", "count">>().toEqualTypeOf<number>();
+  });
+
+  it("should still check a key when one of its forms or dictionaries has no arguments", () => {
+    expectTypeOf<Params<"items">["length"]>().toEqualTypeOf<1>();
+    expectTypeOf<{ count: 1 }>().toExtend<Values<"items">>();
+    expectTypeOf<{ count: 1; folder: "docs" }>().toExtend<Values<"files">>();
+    expectTypeOf<{ count: 1 }>().not.toExtend<Values<"files">>();
+    expectTypeOf<{ count: 1 }>().toExtend<Values<"choices">>();
+    expectTypeOf<{}>().not.toExtend<Values<"choices">>();
+    expectTypeOf<{ name: "Ana" }>().toExtend<Values<"welcome">>();
+    expectTypeOf<{}>().not.toExtend<Values<"welcome">>();
   });
 
   it("should accept any values for a message it can't read, a key union, or untyped dictionaries", () => {

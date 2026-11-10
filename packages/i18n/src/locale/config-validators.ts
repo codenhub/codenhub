@@ -200,12 +200,12 @@ const readDictionaryLimits = (value: unknown): Record<string, number> | undefine
 export interface CheckedI18nConfig {
   readonly locales: string[];
   readonly loadLocale: (locale: string) => unknown;
-  readonly getLocaleDirection?: (locale: string) => unknown;
-  readonly onMissingKey?: (key: string, locale: string) => unknown;
+  readonly getLocaleDirection?: ((locale: string) => unknown) | undefined;
+  readonly onMissingKey?: ((key: string, locale: string) => unknown) | undefined;
   readonly defaultLocale: string;
-  readonly isSilent?: boolean;
-  readonly timeZone?: string;
-  readonly dictionaryLimits?: Record<string, number>;
+  readonly isSilent?: boolean | undefined;
+  readonly timeZone?: string | undefined;
+  readonly dictionaryLimits?: Record<string, number> | undefined;
 }
 
 /** Where locale routing puts the locale prefix. @internal */

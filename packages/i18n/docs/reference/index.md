@@ -85,7 +85,7 @@ Stable identifier for consumer classification.
 #### I18nError › locale
 
 ```ts
-readonly locale?: string;
+readonly locale?: string | undefined;
 ```
 
 Locale whose loader rejected.
@@ -350,7 +350,7 @@ matchLocale(preferences: readonly string[]): TLocale | undefined;
 
 Picks the configured locale that best serves ordered preferences, such as `navigator.languages` or the tags of an `Accept-Language` header sorted by quality.
 
-Each preference, in order, tries an exact case-insensitive match, then the longest configured locale it starts with as whole subtags and with the same likely script, such as `pt` for `pt-BR`, then likely subtags, such as `zh-Hant` for `zh-TW`, then the same language in the same likely script. A locale in another script never matches, so with `zh`, which is Simplified, `zh-TW` tries the next preference. A configured locale `Intl.Locale` rejects has no likely script, so it matches by language, and by the script it names when it names one. When several configured locales share a preference's language and script and none matches it exactly or by likely region, the first in `locales` wins: list `es-419` before `es-ES` to serve `es-MX` from `es-419`. `es-ES`, and `es`, whose likely region is Spain, still match `es-ES`.
+Each preference, in order, tries an exact case-insensitive match, then the longest configured locale it starts with as whole subtags and with the same likely script, such as `pt` for `pt-BR`, then likely subtags, such as `zh-Hant` for `zh-TW`, then the same language in the same likely script. `no` and `nb` count as one language, Norwegian Bokmål, so either serves the other; Nynorsk, `nn`, stays apart. A locale in another script never matches, so with `zh`, which is Simplified, `zh-TW` tries the next preference. A configured locale `Intl.Locale` rejects has no likely script, so it matches by language, and by the script it names when it names one. When several configured locales share a preference's language and script and none matches it exactly or by likely region, the first in `locales` wins: list `es-419` before `es-ES` to serve `es-MX` from `es-419`. `es-ES`, and `es`, whose likely region is Spain, still match `es-ES`.
 
 **Parameters**
 
@@ -472,11 +472,11 @@ export interface I18nConfig<TLocale extends string = string, TMessages = unknown
     defaultLocale: NoInfer<TLocale>;
     locales: readonly TLocale[];
     loadLocale(locale: NoInfer<TLocale>): TMessages | Promise<TMessages>;
-    getLocaleDirection?(locale: NoInfer<TLocale>): LocaleDirection;
-    onMissingKey?(key: string, locale: NoInfer<TLocale>): void;
-    isSilent?: boolean;
-    timeZone?: string;
-    dictionaryLimits?: LocaleDictionaryLimits;
+    getLocaleDirection?: ((locale: NoInfer<TLocale>) => LocaleDirection) | undefined;
+    onMissingKey?: ((key: string, locale: NoInfer<TLocale>) => void) | undefined;
+    isSilent?: boolean | undefined;
+    timeZone?: string | undefined;
+    dictionaryLimits?: LocaleDictionaryLimits | undefined;
 }
 ```
 
@@ -498,15 +498,25 @@ Supported ASCII locale used initially and for missing-key fallback; matched afte
 #### I18nConfig › dictionaryLimits
 
 ```ts
-dictionaryLimits?: LocaleDictionaryLimits;
+dictionaryLimits?: LocaleDictionaryLimits | undefined;
 ```
 
 Raises or lowers the resource limits applied to loaded dictionaries; unset limits keep their defaults.
 
+#### I18nConfig › getLocaleDirection
+
+```ts
+getLocaleDirection?: ((locale: NoInfer<TLocale>) => LocaleDirection) | undefined;
+```
+
+Resolves `ltr` or `rtl`; called during creation and state changes, with failures propagated unchanged.
+
+**Default** — `rtl` when the locale's script is right-to-left, otherwise `ltr`. The script is its script subtag, such as `uz-Arab`, else the likely script `Intl.Locale` gives for its language and region, such as Arabic for `pa-PK` and `arz` and Devanagari for `sd-IN`; for a tag `Intl.Locale` rejects, a right-to-left language, such as `ar` or `he`, gives `rtl`.
+
 #### I18nConfig › isSilent
 
 ```ts
-isSilent?: boolean;
+isSilent?: boolean | undefined;
 ```
 
 Suppresses optional diagnostics, including the default missing-key warning, without suppressing failures. Defaults to `false`.
@@ -519,25 +529,25 @@ locales: readonly TLocale[];
 
 Non-empty, case-insensitively unique ASCII locale identifiers composed of alphanumeric hyphen-separated subtags.
 
+#### I18nConfig › onMissingKey
+
+```ts
+onMissingKey?: ((key: string, locale: NoInfer<TLocale>) => void) | undefined;
+```
+
+Called for every key missing from every dictionary the active locale falls back to, in place of the default warning. Exceptions propagate from the lookup, so a test can throw here to fail on a missing key.
+
+**Default** — A `console.warn` once for each of the 1,000 most recent locale/key pairs, unless `isSilent`.
+
 #### I18nConfig › timeZone
 
 ```ts
-timeZone?: string;
+timeZone?: string | undefined;
 ```
 
 IANA time zone, such as `"America/Sao_Paulo"` or `"UTC"`, for `{d, date}`, `{d, time}`, and `{d}` in messages, and the default of `formatDate`. Set it on a server, where the runtime's time zone is the server's, not the reader's, so a date shows the same day as in the reader's browser. Checked at creation.
 
 **Default** — The runtime's time zone.
-
-#### I18nConfig › getLocaleDirection
-
-```ts
-getLocaleDirection?(locale: NoInfer<TLocale>): LocaleDirection;
-```
-
-Resolves `ltr` or `rtl`; called during creation and state changes, with failures propagated unchanged.
-
-**Default** — `rtl` when the locale's script is right-to-left, otherwise `ltr`. The script is its script subtag, such as `uz-Arab`, else the likely script `Intl.Locale` gives for its language and region, such as Arabic for `pa-PK` and `arz` and Devanagari for `sd-IN`; for a tag `Intl.Locale` rejects, a right-to-left language, such as `ar` or `he`, gives `rtl`.
 
 #### I18nConfig › loadLocale
 
@@ -547,21 +557,11 @@ loadLocale(locale: NoInfer<TLocale>): TMessages | Promise<TMessages>;
 
 Loads a flat or nested dictionary through a consumer-selected transport; callback failures become `I18nError`. Its declared return type, such as an `as const` object or an imported JSON module, types translation keys; an `unknown` or `any` return accepts any string key.
 
-#### I18nConfig › onMissingKey
-
-```ts
-onMissingKey?(key: string, locale: NoInfer<TLocale>): void;
-```
-
-Called for every key missing from every dictionary the active locale falls back to, in place of the default warning. Exceptions propagate from the lookup, so a test can throw here to fail on a missing key.
-
-**Default** — A `console.warn` once for each of the 1,000 most recent locale/key pairs, unless `isSilent`.
-
 ### I18nErrorOptions
 
 ```ts
 export interface I18nErrorOptions {
-    readonly locale?: string;
+    readonly locale?: string | undefined;
     readonly cause?: unknown;
 }
 ```
@@ -579,7 +579,7 @@ Original loader failure.
 #### I18nErrorOptions › locale
 
 ```ts
-readonly locale?: string;
+readonly locale?: string | undefined;
 ```
 
 Locale whose translations could not be loaded.
@@ -615,7 +615,7 @@ Successful initialization event.
 
 ```ts
 export interface I18nInitOptions<TLocale extends string = string> {
-    locale?: TLocale;
+    locale?: TLocale | undefined;
 }
 ```
 
@@ -624,7 +624,7 @@ Locale selected explicitly during initialization.
 #### I18nInitOptions › locale
 
 ```ts
-locale?: TLocale;
+locale?: TLocale | undefined;
 ```
 
 Locale to activate; defaults to the configured default locale.
@@ -694,11 +694,11 @@ readonly [key: string]: string;
 
 ```ts
 export interface LocaleDictionaryLimits {
-    maxDepth?: number;
-    maxTranslations?: number;
-    maxProperties?: number;
-    maxValueLength?: number;
-    maxTotalLength?: number;
+    maxDepth?: number | undefined;
+    maxTranslations?: number | undefined;
+    maxProperties?: number | undefined;
+    maxValueLength?: number | undefined;
+    maxTotalLength?: number | undefined;
 }
 ```
 
@@ -707,7 +707,7 @@ Resource limits checked when a loaded dictionary is validated. Each must be a po
 #### LocaleDictionaryLimits › maxDepth
 
 ```ts
-maxDepth?: number;
+maxDepth?: number | undefined;
 ```
 
 Maximum nesting levels below the root object. Defaults to 100. Each level adds at least 2 characters to a flattened key, a name and a dot, so with the 1,000-character key limit, a translation more than 499 levels deep can't be loaded whatever this is set to.
@@ -715,7 +715,7 @@ Maximum nesting levels below the root object. Defaults to 100. Each level adds a
 #### LocaleDictionaryLimits › maxProperties
 
 ```ts
-maxProperties?: number;
+maxProperties?: number | undefined;
 ```
 
 Maximum traversed properties, counting translations and nested groups. Defaults to 20,000.
@@ -723,7 +723,7 @@ Maximum traversed properties, counting translations and nested groups. Defaults 
 #### LocaleDictionaryLimits › maxTotalLength
 
 ```ts
-maxTotalLength?: number;
+maxTotalLength?: number | undefined;
 ```
 
 Maximum characters across all translation values. Defaults to 5,000,000.
@@ -731,7 +731,7 @@ Maximum characters across all translation values. Defaults to 5,000,000.
 #### LocaleDictionaryLimits › maxTranslations
 
 ```ts
-maxTranslations?: number;
+maxTranslations?: number | undefined;
 ```
 
 Maximum string translations. Defaults to 10,000.
@@ -739,7 +739,7 @@ Maximum string translations. Defaults to 10,000.
 #### LocaleDictionaryLimits › maxValueLength
 
 ```ts
-maxValueLength?: number;
+maxValueLength?: number | undefined;
 ```
 
 Maximum characters in one translation value. Defaults to 100,000.
@@ -861,6 +861,14 @@ type IsUnion<T, U = T> = T extends unknown ? ([U] extends [T] ? false : true) : 
 
 Not exported; declared in `src/core/message-params.ts`.
 
+### IsUnreadable
+
+```ts
+type IsUnreadable<U> = [Extract<U, Unreadable>] extends [never] ? false : true;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
 ### Letter
 
 ```ts
@@ -934,7 +942,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### ParamsFor
 
 ```ts
-type ParamsFor<U> = Unreadable extends U ? [params?: AnyValues] : ParamsOf<UnionToIntersection<U>>;
+type ParamsFor<U> = IsUnreadable<U> extends true ? [params?: AnyValues] : ParamsOf<UnionToIntersection<U>>;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -1096,7 +1104,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ```ts
 type ValueArguments<V> = V extends string ? MessageArguments<V> : V extends {
     readonly other: string;
-} ? Unreadable extends FormArguments<V> ? Unreadable : UnionToIntersection<FormArguments<V>> & {
+} ? IsUnreadable<FormArguments<V>> extends true ? Unreadable : UnionToIntersection<FormArguments<V>> & {
     readonly count: number;
 } : Unreadable;
 ```

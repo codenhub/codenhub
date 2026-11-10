@@ -1,9 +1,24 @@
 import { resolveConfiguredLocale } from "./configured-locale";
 
-/** Adds likely subtags, such as `zh-TW` to `zh-Hant-TW`, or returns undefined for a tag `Intl.Locale` rejects. */
+// Languages compared as one. `no` is the Norwegian macrolanguage, and browsers and content use it for Bokmål, `nb`,
+// as CLDR does; `Intl.Locale` keeps them apart. Nynorsk, `nn`, is a separate written standard and stays apart.
+const LANGUAGE_ALIASES: ReadonlyMap<string, string> = new Map([["no", "nb"]]);
+
+const compareLanguage = (language: string): string => LANGUAGE_ALIASES.get(language) ?? language;
+
+// A lowercased tag with its language as `compareLanguage` gives it, such as `nb-no` for `no-NO`.
+const aliasLanguage = (tag: string): string => {
+  const [language = "", ...rest] = tag.toLowerCase().split("-");
+  return [compareLanguage(language), ...rest].join("-");
+};
+
+/**
+ * Adds likely subtags, such as `zh-TW` to `zh-Hant-TW`, with the language compared as `compareLanguage` gives it, or
+ * returns undefined for a tag `Intl.Locale` rejects.
+ */
 const maximizeLocale = (value: string): string | undefined => {
   try {
-    return new Intl.Locale(value).maximize().toString().toLowerCase();
+    return aliasLanguage(new Intl.Locale(value).maximize().toString());
   } catch {
     return undefined;
   }
@@ -16,7 +31,7 @@ const getLanguageAndScript = (maximizedLocale: string): string => maximizedLocal
  * locale: exact, then the longest whole-subtag prefix with the same likely script, then likely subtags, then the same
  * language and likely script. A locale whose likely script differs never matches, so `zh-TW` tries the next preference
  * rather than Simplified `zh`. A locale `Intl.Locale` rejects matches by language subtag, and by the script it names
- * when it names one.
+ * when it names one. `no` and `nb` are compared as one language, Norwegian Bokmål.
  * Among configured locales of the same language and script, the first in `locales` wins when none matches exactly or by
  * likely region, so `es-MX` matches `es-419` when it is listed before `es-ES`, while `en` matches `en-US`, its likely
  * region, wherever it is listed.
@@ -57,17 +72,20 @@ export function matchConfiguredLocale<TLocale extends string>(
     }
 
     // A prefix with another likely script, such as `zh` (Simplified) for `zh-TW`, is left to the script match below.
-    const prefixLocale = maximizedLocales
-      .filter(
-        ({ locale, maximized }) =>
-          normalizedPreference.startsWith(`${locale.toLowerCase()}-`) &&
-          (maximized === undefined || getLanguageAndScript(maximized) === getLanguageAndScript(maximizedPreference)),
-      )
-      .map(({ locale }) => locale)
-      .reduce<TLocale | undefined>(
-        (longest, locale) => (locale.length > (longest?.length ?? 0) ? locale : longest),
-        undefined,
-      );
+    // The prefix as written wins over one through a language alias, so `nb-NO` gets `nb` even when `no` is listed first.
+    const findPrefixLocale = (toTag: (tag: string) => string): TLocale | undefined =>
+      maximizedLocales
+        .filter(
+          ({ locale, maximized }) =>
+            toTag(normalizedPreference).startsWith(`${toTag(locale)}-`) &&
+            (maximized === undefined || getLanguageAndScript(maximized) === getLanguageAndScript(maximizedPreference)),
+        )
+        .map(({ locale }) => locale)
+        .reduce<TLocale | undefined>(
+          (longest, locale) => (locale.length > (longest?.length ?? 0) ? locale : longest),
+          undefined,
+        );
+    const prefixLocale = findPrefixLocale((tag) => tag.toLowerCase()) ?? findPrefixLocale(aliasLanguage);
 
     if (prefixLocale !== undefined) {
       return prefixLocale;
@@ -91,8 +109,11 @@ export function matchConfiguredLocale<TLocale extends string>(
       if (maximized !== undefined) {
         return false;
       }
-      const [localeLanguage, second] = locale.toLowerCase().split("-");
-      return localeLanguage === language && (second === undefined || !/^[a-z]{4}$/.test(second) || second === script);
+      const [localeLanguage = "", second] = locale.toLowerCase().split("-");
+      return (
+        compareLanguage(localeLanguage) === language &&
+        (second === undefined || !/^[a-z]{4}$/.test(second) || second === script)
+      );
     })?.locale;
 
     if (subtagLocale !== undefined) {

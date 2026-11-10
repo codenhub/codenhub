@@ -71,7 +71,7 @@ A loader that never settles, such as a `fetch()` to a server that stopped answer
 
 `init()`, `setLocale()`, or `loadLocale()` throws a `TypeError` naming the problem, the key, and the locale when a dictionary doesn't fit the rules. These failures are not wrapped in `I18nError`, because they come from the dictionary's content rather than from loading it, and retrying won't change the content.
 
-A dictionary must be a plain object, such as an object literal or parsed JSON. Anything else, including `null`, an array, or a class instance, gives `[I18n] A locale dictionary must be a non-null object in locale "pt".`. Within it:
+A dictionary must be a plain object, such as an object literal or parsed JSON. Anything else, including `null`, an array, or a class instance, gives `[I18n] A locale dictionary must be a non-null object in locale "pt".`. A loader that returns `import("./pt.json")` itself, rather than its `.default`, hands over the module instead of the dictionary and gives `[I18n] A locale dictionary must be a module's default export, …`. Return `(await import("./pt.json")).default`. Within it:
 
 - **Every value is a string or a group.** `{ count: 3 }` gives `[I18n] Locale dictionary value at "count" must be a string in locale "pt".`. Numbers, booleans, `null`, arrays, functions, and objects such as `Date` or `Map` are all rejected. Write numbers as text, `"3"`, and put lists under numbered or named keys.
 - **No key segment is empty.** `"nav..home"`, `"nav."`, and `".nav"` are rejected, as in `[I18n] Invalid locale dictionary key "nav..home" in locale "pt".`. Remove the extra dot.

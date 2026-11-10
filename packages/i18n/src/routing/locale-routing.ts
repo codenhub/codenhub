@@ -192,7 +192,7 @@ export const createLocaleRouting = <TLocale extends string>(
   }: {
     readonly canonical: readonly string[];
     readonly hasTrailingSlash: boolean;
-    readonly isRootSlashed?: boolean;
+    readonly isRootSlashed?: boolean | undefined;
     readonly locale: TLocale;
     readonly normalize: Normalize;
   }): string => {

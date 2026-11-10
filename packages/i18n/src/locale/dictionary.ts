@@ -8,7 +8,7 @@ const MAX_FLATTENED_KEY_LENGTH = 1_000;
 const MAX_REPORTED_KEY_LENGTH = 100;
 
 /** Every dictionary limit, resolved. @internal */
-export type DictionaryLimits = Readonly<Required<LocaleDictionaryLimits>>;
+export type DictionaryLimits = { readonly [K in keyof LocaleDictionaryLimits]-?: number };
 
 /** The limits used when a manager configures none. @internal */
 export const DEFAULT_DICTIONARY_LIMITS: DictionaryLimits = Object.freeze({
@@ -94,6 +94,13 @@ export function normalizeDictionary(input: unknown, options: NormalizeDictionary
 
   if (!isObject(input)) {
     throw invalid("A locale dictionary must be a non-null object");
+  }
+  // A loader that returns `import("./en.json")` without `.default` hands over the module namespace, which otherwise
+  // fails on its symbol key with a message that points nowhere near the cause. The descriptor runs no getter.
+  if (Object.getOwnPropertyDescriptor(input, Symbol.toStringTag)?.value === "Module") {
+    throw invalid(
+      `A locale dictionary must be a module's default export, such as (await import("./en.json")).default, not the module itself`,
+    );
   }
 
   const shared = normalizedPayloads.get(input);

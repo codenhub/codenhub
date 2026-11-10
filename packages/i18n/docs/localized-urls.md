@@ -189,7 +189,7 @@ How the table reads:
 - **A catch-all** is a last segment written `:name*`, such as `"/docs/:path*": { pt: "/documentos/:path*" }`. It matches one or more segments and copies them across, so `/docs/guides/setup` is `/pt/documentos/guides/setup`. It does not match zero segments: list `/docs` itself as its own entry.
 - **Anything the table doesn't list keeps its words.** `/blog` is `/pt/blog`, and `/products/42` in Spanish is `/es/products/42`, since only Portuguese translates it.
 - **Fixed segments match case-sensitively**, as URLs do, so `/pt/Sobre` is not the about page. Only the locale prefix ignores case.
-- **Write words as you would read them.** `"/configurações"` matches the `/configura%C3%A7%C3%B5es` that browsers send, and `localize()` returns the encoded form.
+- **Prefer plain letters in paths.** Routing doesn't change your words, so `/servicos` is what you get only if you write `/servicos`. Most sites drop accents from URLs, because an accented path is shown percent-encoded wherever it gets copied as text, such as `/servi%C3%A7os`. Accents work too: `"/serviços"` matches the `/servi%C3%A7os` that browsers send, and `localize()` returns the encoded form, so a static build that writes a folder for that path has to decode it first, as in [Build a static site](server-rendering.md#build-a-static-site).
 - **A listed page comes back in one spelling.** `parse()` returns a listed page's fixed words the way a URL writes the table's words, in every locale, so `/%61bout` and `/pt/%73obre`, odd spellings of `/about` and `/pt/sobre`, both give `pathname: "/about"`. Parameters and segments the table doesn't list come back as the request wrote them.
 - **A fixed segment beats a parameter, and a parameter beats a catch-all.** With both `/products/new` and `/products/:id` listed, `/products/new` is the new-product page, whichever order the table lists them in. With `/docs/intro` and `/docs/:path*`, `/docs/intro` is the intro page and every other `/docs/…` path goes to the catch-all.
 - **The default locale can be translated too.** A Portuguese-first site with English code can use `defaultLocale: "pt"` and `{ "/about": { pt: "/sobre" } }`, so `/sobre` is the Portuguese page and `/en/about` the English one.
@@ -309,11 +309,11 @@ const defaultLocale = "en";
 const config = {
   storageKey: "i18n", // the browser binding's storageKey
   locales,
-  // `zh-TW` is `zh-Hant`: a language and its likely script, as `matchLocale()` compares them.
+  // `zh-TW` is `zh-Hant`: a language and its likely script, as `matchLocale()` compares them, with Norwegian `no` as `nb`.
   languages: Object.fromEntries(
     locales.map((locale) => {
       const { language, script } = new Intl.Locale(locale).maximize();
-      return [`${language}-${script}`, locale];
+      return [`${language === "no" ? "nb" : language}-${script}`, locale];
     }),
   ),
   targets: Object.fromEntries(locales.filter((locale) => locale !== defaultLocale).map((locale) => [locale, routing.localize(pathname, locale)])),
@@ -349,7 +349,7 @@ Then render, on the default locale's pages only:
         try {
           // Reads old codes as `matchLocale()` does, such as `iw-IL` as Hebrew, `he`, and adds the likely script.
           const likely = new Intl.Locale(preference).maximize();
-          language = `${likely.language}-${likely.script}`;
+          language = `${likely.language === "no" ? "nb" : likely.language}-${likely.script}`;
         } catch {
           continue; // Not a language tag.
         }
@@ -369,7 +369,7 @@ Then render, on the default locale's pages only:
 
 A saved default locale finds no target, so the visitor stays. `location.replace()` keeps the default-locale page out of history, so Back doesn't land on a page that redirects again.
 
-Matching by language and script picks what `matchLocale()` would when your site has one locale per language and script, such as `en`, `pt-BR`, `es`, `zh-Hans`, and `zh-Hant`: `pt-PT` gets `pt-BR`, `es-MX` gets `es`, and `zh-TW` gets `zh-Hant`. A language in another script never matches, so with only `zh`, which is Simplified, a `zh-TW` visitor moves on to their next language. Hold the two together with a test that runs the same matching against `matchLocale()` for a few preference lists. With more than one locale per language and script, such as `es-419` and `es-ES`, the table can't choose between them. Either compute a table at build time from the browser tags you expect to see, running each through `matchLocale()`, or run the redirect in a deferred script that imports your manager and calls `matchLocale(navigator.languages)`, and accept the flash.
+Matching by language and script picks what `matchLocale()` would when your site has one locale per language and script, such as `en`, `pt-BR`, `es`, `zh-Hans`, and `zh-Hant`: `pt-PT` gets `pt-BR`, `es-MX` gets `es`, and `zh-TW` gets `zh-Hant`. A language in another script never matches, so with only `zh`, which is Simplified, a `zh-TW` visitor moves on to their next language. Hold the two together with a test that runs the same matching against `matchLocale()` for a few preference lists. With more than one locale per language and script, such as `es-419` and `es-ES`, or `no` and `nb`, which count as one language, the table can't choose between them. Either compute a table at build time from the browser tags you expect to see, running each through `matchLocale()`, or run the redirect in a deferred script that imports your manager and calls `matchLocale(navigator.languages)`, and accept the flash.
 
 ## Paths it accepts
 

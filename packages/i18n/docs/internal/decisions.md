@@ -36,6 +36,8 @@ Matching used to live only in the browser entry point, so a server resolving `Ac
 
 **A locale in another script never matches (2026-11-10).** The last step matched any configured locale of the same language, so with `["en", "zh"]`, `zh-TW` got Simplified `zh` even when English came next in the visitor's list, and with `["en", "zh-Hant"]`, `zh` got Traditional. That did not weigh the reason fallback chains skip a parent in another script: a page in a script the visitor doesn't read serves them worse than their next language. The step now requires the same likely script, as every earlier step does, and a locale `Intl.Locale` rejects still matches by language subtag. Rejected: keeping RFC 4647 lookup, which defends the old result but disagrees with the fallback chains on the same pair of locales.
 
+**`no` and `nb` match each other (2026-11-10).** Matching compared languages as `Intl.Locale` gives them, so a site configured with `no` served the default locale to a browser that sends `nb`, and the other way round. Both are Norwegian Bokmål in practice: `no` is the macrolanguage, browsers and content use either code for Bokmål, and CLDR treats them as one. They are now compared as one language at every step after the exact match, so a site listing both still serves each its own. Nynorsk, `nn`, is a separate written standard and stays apart. The guide's static-site redirect script maps `no` to `nb` the same way, so it keeps agreeing with `matchLocale()`. Rejected: a general table of macrolanguages, which no other language has needed; and matching `nn` to `no` too, which would serve Bokmål to a Nynorsk reader as an exact language.
+
 ### Interpolation came before ICU, with ICU syntax
 
 Without interpolation, a sentence with a value has to be concatenated from fragments, which fixes English word order into every translation, so `{name}` placeholders shipped first. `{name}` is the ICU argument syntax, so ICU messages can extend it later without changing existing translations.
@@ -94,6 +96,10 @@ Every text is read as an ICU message: `{name}`, `number` (`integer`, `percent`),
 - **Loose where the type can't know**: a key union, a `string` message, a message the types can't read, and an `I18n` typed without its third type argument accept any values, as before.
 - **Every typed dictionary that has the key contributes**, so a translation that uses another argument requires it too. Extra values are allowed.
 - **Reading gives up rather than failing the build (2026-11-08).** A message over 900 type-level steps, about 900 apostrophes, 450 arguments, or 900 spaces inside one argument, accepts any values. Before, it failed every `t()` call that used it with TS2589. Argument names must be ASCII letters, digits, or `_`, as at runtime, and `''` inside quoted text is an apostrophe, so the types no longer require a value the runtime prints as written.
+
+### Optional options accept `undefined` (2026-11-10)
+
+Every optional option of `createI18n`, `init`, `dictionaryLimits`, `I18nError`, and `initializeBrowserI18n` is typed `?: T | undefined`, as the routing options already were, and the package compiles with `exactOptionalPropertyTypes`. Without it, a consumer who enables that flag could not compile the guide's `initializeBrowserI18n({ i18n, locale: route?.locale })`, although the runtime has always read an explicit `undefined` as an omitted option. `getLocaleDirection` and `onMissingKey` became function-typed properties, since a method can't be `| undefined`, so their parameters are now checked contravariantly: a callback whose `locale` parameter is narrower than the configured locales, which the runtime would call with a locale it doesn't accept, no longer compiles. Rejected: documenting a spread such as `...(route && { locale: route.locale })`, which every strict consumer would have to find and repeat.
 
 ### `timeZone` is a manager option (0.2.0)
 
