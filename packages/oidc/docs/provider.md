@@ -455,7 +455,10 @@ const verifyAccessToken = createVerifier({
   issuer: "https://sso.example",
   audience: "https://api.example",
   type: "at+jwt",
-  requiredClaims: ["sub", "client_id", "iat", "jti"],
+  requiredClaims: ["sub", "client_id", "exp", "iat", "jti"],
+  // The provider's clock may run ahead of this server's. With the default of 0, a token issued a second
+  // "in the future" is refused with `issued_in_future`.
+  clockTolerance: 60,
 });
 
 declare const bearerToken: string; // from the Authorization header

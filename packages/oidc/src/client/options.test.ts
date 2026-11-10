@@ -58,8 +58,8 @@ describe("resolveClientOptions", () => {
     expect(resolveClientOptions(withOptions({ timeout: 10 })).timeoutMs).toBe(10_000);
   });
 
-  it("defaults the clock tolerance to zero", () => {
-    expect(resolveClientOptions(validOptions()).clockTolerance).toBe(0);
+  it("defaults the clock tolerance to 60 seconds", () => {
+    expect(resolveClientOptions(validOptions()).clockTolerance).toBe(60);
   });
 
   it("keeps the clock tolerance it was given", () => {

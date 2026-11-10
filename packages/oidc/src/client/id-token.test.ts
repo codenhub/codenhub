@@ -126,8 +126,20 @@ describe("createIdTokenValidator", () => {
       expect(jwtCodesOf(result)).toEqual(["wrong_issuer"]);
     });
 
+    it("accepts a token issued a second ahead of this clock under the default tolerance", async () => {
+      const result = await validator()(await tokenWith({ iat: NOW_S + 1, auth_time: NOW_S + 1 }), expected);
+
+      expect(result.ok).toBe(true);
+    });
+
+    it("refuses a token issued in the future beyond the tolerance", async () => {
+      const result = await validator()(await tokenWith({ iat: NOW_S + 61 }), expected);
+
+      expect(jwtCodesOf(result)).toEqual(["issued_in_future"]);
+    });
+
     it("refuses an expired token", async () => {
-      const result = await validator()(await tokenWith({ exp: NOW_S - 1 }), expected);
+      const result = await validator()(await tokenWith({ exp: NOW_S - 60 }), expected);
 
       expect(jwtCodesOf(result)).toEqual(["expired"]);
     });
@@ -147,7 +159,7 @@ describe("createIdTokenValidator", () => {
     });
 
     it("maps every jwt issue under the id_token path", async () => {
-      const result = await validator()(await tokenWith({ aud: "other-app", exp: NOW_S - 1 }), expected);
+      const result = await validator()(await tokenWith({ aud: "other-app", exp: NOW_S - 60 }), expected);
 
       expect(issuesOf(result)).toEqual([
         { code: "invalid_id_token", path: ["id_token", "payload", "exp"], params: { jwtCode: "expired" } },
@@ -369,8 +381,17 @@ describe("createIdTokenValidator", () => {
       expect(result.ok).toBe(true);
     });
 
-    it("refuses max_age=0 for an authentication before the request", async () => {
-      const result = await validator()(await tokenWith({ auth_time: NOW_S - 11 }), {
+    it("refuses max_age=0 for an authentication before the request, with no clock tolerance", async () => {
+      const result = await validatorWith(serveJwks(), 0)(await tokenWith({ auth_time: NOW_S - 11 }), {
+        nonce: "nonce-1",
+        maxAge: { seconds: 0, requestedAt: NOW_S - 10 },
+      });
+
+      expect(issuesOf(result)).toEqual([{ code: "auth_too_old", path: ["id_token", "payload", "auth_time"] }]);
+    });
+
+    it("refuses max_age=0 for an authentication further before the request than the default tolerance", async () => {
+      const result = await validator()(await tokenWith({ auth_time: NOW_S - 71 }), {
         nonce: "nonce-1",
         maxAge: { seconds: 0, requestedAt: NOW_S - 10 },
       });

@@ -234,7 +234,7 @@ export function resolveClientOptions(options: ClientOptions): ResolvedClientOpti
       label: `${PREFIX} clockTolerance`,
       min: 0,
       max: 300,
-      fallback: 0,
+      fallback: 60,
     }),
     now: readNow(options.now),
     idTokenAlgorithms: readIdTokenAlgorithms(metadata),

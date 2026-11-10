@@ -63,9 +63,10 @@ export interface ClientOptions {
   readonly timeout?: number;
   /**
    * Seconds of clock skew allowed on the ID token's `exp`, `iat`, and `auth_time`. An integer from 0
-   * through 300.
+   * through 300. With 0, a provider whose clock runs a second ahead of this one fails every sign-in with
+   * `issued_in_future`.
    *
-   * @defaultValue 0
+   * @defaultValue 60
    */
   readonly clockTolerance?: number;
   /**
