@@ -41,8 +41,8 @@
      mixes 12% of near-black ink onto the page (`217, 217, 217` against `250,
      250, 250`), a slab rather than a status signal. Only a quiet neutral tint
      is untinted, through `surface`'s `--_quiet`, stepped from the resolved
-     fill so a container's `.ghost` or `.solid` renders the alert its own
-     would. A named intent keeps its ordinary wash, because untinting
+     fill so a container's `.ghost` or `.solid` renders the alert as the
+     alert's own `.ghost` or `.solid` would. A named intent keeps its ordinary wash, because untinting
      `.alert.soft.destructive` would silence the status it exists to carry.
 
      Grounds on `--color-foreground` through `--_d-surface-ground`, exactly like
