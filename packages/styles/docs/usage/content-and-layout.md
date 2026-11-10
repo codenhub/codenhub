@@ -88,7 +88,7 @@ A neutral `.card.soft` and a neutral `.panel` show no tint: they rest on the qui
 | `.hoverable`   | The hover color only, with no pointer cursor.                                                             |
 | `.pressable`   | The press and the pointer cursor only.                                                                    |
 
-On the default look, a press scales the card down slightly (`scale(0.97)`); an aesthetic can replace that with its own press, and a reduced-motion preference turns it off.
+On the default look, a press scales the card down slightly (`scale(0.97)`); an aesthetic can replace that with its own press, and under a reduced-motion preference it still happens, at once.
 
 Use one half for a card that answers only one gesture. A card that holds its own button takes `.hoverable`, so that pressing the button does not press the whole card.
 

@@ -146,12 +146,6 @@
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .glass {
-      --ui-active-transform: none;
-    }
-  }
-
   /* Liquid glass: a modifier of glass, the way `.sketch-rounded` is of sketch.
      Continuous corners, a bright rim where light catches the pane, a lighter
      blur, and -- in engines that render an SVG filter in `backdrop-filter`,

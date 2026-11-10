@@ -93,7 +93,7 @@ The shadow is cast in the component's own intent, so a success button throws a g
 - The glass is the ground, not the fill. A presentation keeps its whole fill, so a `.solid` button, a checked toggle, and a `.solid` card or table are opaque; the default, `.soft`, and `.ghost` panes are the frosted ones.
 - The blur applies to `.card`, `.panel`, `.alert`, the tooltip bubble, and a default or `.soft` `.data-table` only. Controls stay solid and sit on the glass: a blur under every control of a dense cluster costs a composited layer apiece and reads as noise. Controls still take the aesthetic's radius, border, and shadow.
 - Under `prefers-reduced-transparency: reduce`, and in forced colors, glass surfaces drop the blur and become opaque. Forced colors replace the colors but keep their transparency, so without this a pane would show the page through the system's background.
-- Buttons and an opted-in `.card` press with the plain `scale(0.97)`; reduced motion turns it off.
+- Buttons and an opted-in `.card` press with the plain `scale(0.97)`; under reduced motion the press still happens, at once.
 - It has no font of its own and sets the theme's, `--font-default`, on the region, as neobrutalism does.
 - Text controls and toggles draw their line in the page's ink at 55% rather than the white hairline, which would erase an unchecked checkbox on a light page. It is `--ui-control-ink`; set it on the region to choose another.
 - A table's frame and rules draw the page's ink at 20%, because the hairline vanishes on the table's plate. It is `--ui-rule-ink`.
@@ -267,7 +267,7 @@ The dashed button is `ghost edged` because a filled button has no separate line 
 - Chips, such as checkboxes, key caps, code, badges, switches, and progress bars, rotate through small uneven outlines set in `--ui-radius-tight`. Set that token on a chip to choose its shape.
 - A `.btn.pill` takes a rounded pill bounded to its own height, so a wide one does not become an oval. Badges, progress bars, and switches take their chip outline. Radios and the tooltip icon stay circles, slightly uneven, so a radio is never mistaken for a checkbox. An explicit `--ui-radius-pill` on an element still wins.
 - `--font-sketch` is yours to supply. The package ships no handwriting font and falls back to the platform `cursive` family.
-- Buttons press with the plain `scale(0.97)`; reduced motion turns it off.
+- Buttons press with the plain `scale(0.97)`; under reduced motion the press still happens, at once.
 - Forced-colors mode draws the dashed accents solid, like every other material line.
 
 ## Solo classes

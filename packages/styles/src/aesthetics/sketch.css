@@ -73,12 +73,6 @@
     font-family: var(--font-sketch, cursive);
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .sketch {
-      --ui-active-transform: none;
-    }
-  }
-
   /* Rounded variant: bounded elliptical corners, so the top and bottom edges of
      a wide element stay straight instead of bulging into an egg. On the region
      with `.sketch`, or on one component inside it. Knobs follow R8.

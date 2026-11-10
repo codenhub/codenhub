@@ -88,7 +88,7 @@
 
     /* The glow holds still under the pointer and under a press; the press is the
        base scale, restated because a region nested inside another aesthetic must
-       not inherit that one's travel. Reduced motion drops it below. */
+       not inherit that one's travel. */
     --ui-hover-transform: none;
     --ui-active-shadow-x: 0px;
     --ui-active-shadow-y: 0px;
@@ -143,12 +143,6 @@
       --ui-corner: 0;
       --ui-radius: 0;
       --ui-radius-surface: 0;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .cyber {
-      --ui-active-transform: none;
     }
   }
 }
@@ -247,6 +241,12 @@
 ) {
   border-radius: var(--cyber-shape, min(var(--cyber-cut, 0.625rem), 25%) 0 / min(var(--cyber-cut, 0.625rem), 25%) 0);
   transition: scale var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1));
+
+  /* Reduced motion keeps the press and drops its motion: the element gives at
+     once. The near-zero duration `box` uses, so a `transitionend` still fires. */
+  @media (prefers-reduced-motion: reduce) {
+    transition-duration: 0.01ms;
+  }
 }
 
 @supports not (corner-shape: bevel) {
@@ -277,18 +277,4 @@
     input[type="reset"]
   ):active:not(:disabled, [aria-disabled="true"]) {
   scale: 0.97;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cyber-solo:is(
-      button,
-      a[href],
-      [role="button"],
-      summary,
-      input[type="button"],
-      input[type="submit"],
-      input[type="reset"]
-    ):active:not(:disabled, [aria-disabled="true"]) {
-    scale: none;
-  }
 }

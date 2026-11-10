@@ -1007,7 +1007,7 @@ A button accepts one intent, one fill class, and one edge class, all optional. W
 
 A **neutral** button never fills completely. Its color is the page's own text color, so a full fill would be a black or white block, the loudest thing on the page for the intent that means nothing in particular. A neutral `.solid` button stops at a 20% fill instead, a quiet gray a step darker than `.soft`. Every named intent fills to 100%.
 
-On hover, a button's fill deepens by `--hover-step` (14%), so a `.ghost` button picks up a tint and a `.solid` one changes to its intent's hover color. On press it scales down slightly (`scale(0.97)`); an [aesthetic](docs/usage/aesthetics.md) can replace that with its own press, and a user's reduced-motion preference turns it off.
+On hover, a button's fill deepens by `--hover-step` (14%), so a `.ghost` button picks up a tint and a `.solid` one changes to its intent's hover color. On press it scales down slightly (`scale(0.97)`); an [aesthetic](docs/usage/aesthetics.md) can replace that with its own press, and under a user's reduced-motion preference it still happens, at once.
 
 ## Sizes and shapes
 
@@ -2005,7 +2005,7 @@ The shadow is cast in the component's own intent, so a success button throws a g
 - The glass is the ground, not the fill. A presentation keeps its whole fill, so a `.solid` button, a checked toggle, and a `.solid` card or table are opaque; the default, `.soft`, and `.ghost` panes are the frosted ones.
 - The blur applies to `.card`, `.panel`, `.alert`, the tooltip bubble, and a default or `.soft` `.data-table` only. Controls stay solid and sit on the glass: a blur under every control of a dense cluster costs a composited layer apiece and reads as noise. Controls still take the aesthetic's radius, border, and shadow.
 - Under `prefers-reduced-transparency: reduce`, and in forced colors, glass surfaces drop the blur and become opaque. Forced colors replace the colors but keep their transparency, so without this a pane would show the page through the system's background.
-- Buttons and an opted-in `.card` press with the plain `scale(0.97)`; reduced motion turns it off.
+- Buttons and an opted-in `.card` press with the plain `scale(0.97)`; under reduced motion the press still happens, at once.
 - It has no font of its own and sets the theme's, `--font-default`, on the region, as neobrutalism does.
 - Text controls and toggles draw their line in the page's ink at 55% rather than the white hairline, which would erase an unchecked checkbox on a light page. It is `--ui-control-ink`; set it on the region to choose another.
 - A table's frame and rules draw the page's ink at 20%, because the hairline vanishes on the table's plate. It is `--ui-rule-ink`.
@@ -2179,7 +2179,7 @@ The dashed button is `ghost edged` because a filled button has no separate line 
 - Chips, such as checkboxes, key caps, code, badges, switches, and progress bars, rotate through small uneven outlines set in `--ui-radius-tight`. Set that token on a chip to choose its shape.
 - A `.btn.pill` takes a rounded pill bounded to its own height, so a wide one does not become an oval. Badges, progress bars, and switches take their chip outline. Radios and the tooltip icon stay circles, slightly uneven, so a radio is never mistaken for a checkbox. An explicit `--ui-radius-pill` on an element still wins.
 - `--font-sketch` is yours to supply. The package ships no handwriting font and falls back to the platform `cursive` family.
-- Buttons press with the plain `scale(0.97)`; reduced motion turns it off.
+- Buttons press with the plain `scale(0.97)`; under reduced motion the press still happens, at once.
 - Forced-colors mode draws the dashed accents solid, like every other material line.
 
 ## Solo classes
@@ -2266,7 +2266,7 @@ With none of those classes, a solo class paints the material alone (edge, corner
 - **It beats the other library's styles.** The rules are unlayered and one class deep, so they win over a component's layered rules, and over its zero-specificity ones, wherever the two load. An unlayered foreign rule that is more specific, or as specific and later in the page, still wins. The other side of this is that a Tailwind utility on the same element, such as `rounded-none`, loses to the solo class: tune it through its knobs instead.
 - **It presses only an action.** Neobrutalism, chunky tile, and cyber press a `button`, `a[href]`, `[role="button"]`, `summary`, or button-type `input` that is not disabled. Anything else stays put, so a toast does not sink when clicked. Chunky tile's heavier label follows the same rule.
 - **It leaves a container's motion alone.** Only an action takes the press's `transition`, and the press moves the element through the `translate` and `scale` properties, not `transform`. A toast keeps its own transitions and its own `transform`. On an action, the press's `transition` replaces any the element had.
-- **Reduced motion keeps the press and drops its motion.** Under `prefers-reduced-motion: reduce`, neobrutalism and chunky tile still press, but at once: the element lands in its shadow or bar without travelling there. Cyber's shrink, which only signals the click, goes.
+- **Reduced motion keeps the press and drops its motion.** Under `prefers-reduced-motion: reduce`, neobrutalism, chunky tile, and cyber still press, but at once: the element lands in its shadow or bar, or shrinks, without travelling there.
 
 ## Next
 
@@ -2506,7 +2506,7 @@ Shadow geometry is split into parts with no color in them, so they inherit safel
 | `--ui-hover-shadow-y`     | Shadow vertical offset while hovered.                                                                                                                | `--ui-shadow-y`                           |
 | `--ui-active-shadow-x`    | Shadow horizontal offset while pressed.                                                                                                              | `--ui-shadow-x`                           |
 | `--ui-active-shadow-y`    | Shadow vertical offset while pressed.                                                                                                                | `--ui-shadow-y`                           |
-| `--ui-active-transform`   | Transform while pressed. `none` under `prefers-reduced-motion`.                                                                                      | `scale(0.97)`                             |
+| `--ui-active-transform`   | Transform while pressed. Kept under `prefers-reduced-motion`, which drops only its transition.                                                       | `scale(0.97)`                             |
 | `--ui-active-translate-x` | Distance a press travels into the element's depth; `-y` beside it. Scaled like the shadow.                                                           | `0px`                                     |
 | `--ui-shadow-ink`         | Percentage of shadow color taken from intent ink.                                                                                                    | `0%`                                      |
 | `--ui-halo-blur`          | Blur of a halo around the element; `--ui-halo-spread` beside it. Elevation does not scale it.                                                        | `0px`                                     |
@@ -2818,7 +2818,7 @@ A neutral `.card.soft` and a neutral `.panel` show no tint: they rest on the qui
 | `.hoverable`   | The hover color only, with no pointer cursor.                                                             |
 | `.pressable`   | The press and the pointer cursor only.                                                                    |
 
-On the default look, a press scales the card down slightly (`scale(0.97)`); an aesthetic can replace that with its own press, and a reduced-motion preference turns it off.
+On the default look, a press scales the card down slightly (`scale(0.97)`); an aesthetic can replace that with its own press, and under a reduced-motion preference it still happens, at once.
 
 Use one half for a card that answers only one gesture. A card that holds its own button takes `.hoverable`, so that pressing the button does not press the whole card.
 
@@ -2999,11 +2999,11 @@ With no intent class, the outline is the quiet border gray, `--color-border`. To
 
 ### Motion and transparency
 
-| Feature                    | Behavior                                                                                                                                                                                                                                                                                                                                                          |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Reduced motion, components | With `prefers-reduced-motion: reduce`, every component stops its own transitions and animations: the skeleton and progress shimmer, the indeterminate bar, the tooltip, the toggle marks, and the press's travel. Under neobrutalism and chunky tile, and their solo classes, the press still happens, at once; under the other aesthetics its shrink is dropped. |
-| Reduced motion, whole page | The reset also shortens every other animation and transition on the page.                                                                                                                                                                                                                                                                                         |
-| Reduced transparency       | With `prefers-reduced-transparency: reduce`, and in forced colors, `.glass`, `.glass-liquid`, and `.glass-solo` drop their blur and lens and become opaque.                                                                                                                                                                                                       |
+| Feature                    | Behavior                                                                                                                                                                                                                                                                                                                                                               |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reduced motion, components | With `prefers-reduced-motion: reduce`, every component stops its own transitions and animations: the skeleton and progress shimmer, the indeterminate bar, the tooltip, the toggle marks, and the press's motion. The press itself still happens, at once, on the default look and under every aesthetic and solo class, since it is the feedback that a click landed. |
+| Reduced motion, whole page | The reset also shortens every other animation and transition on the page.                                                                                                                                                                                                                                                                                              |
+| Reduced transparency       | With `prefers-reduced-transparency: reduce`, and in forced colors, `.glass`, `.glass-liquid`, and `.glass-solo` drop their blur and lens and become opaque.                                                                                                                                                                                                            |
 
 Each component's reduced-motion rule ships with the component, so every entrypoint that includes it respects reduced motion without the reset, including `@codenhub/styles/components`, `@codenhub/styles/tw/components`, and each `/tw/*` component entrypoint. The complete and native entrypoints add the reset's page-wide rule.
 

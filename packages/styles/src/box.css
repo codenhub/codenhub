@@ -323,7 +323,9 @@
    component opts in. `btn` and `.card.interactive` both do. The gesture is the
    aesthetic's -- neobrutalism travels into its offset shadow, chunky-tile drops
    onto its bar -- and with no aesthetic it is the base `scale(0.97)` from
-   `theme.css`, dropped under reduced motion. The `--ui-active-shadow-*` slots
+   `theme.css`. Reduced motion keeps every press and drops its motion, in
+   `box`, since a press is the feedback that a click landed. The
+   `--ui-active-shadow-*` slots
    stay no-ops until an aesthetic sets them.
 
    A press that travels into the element's own depth is a translation, given as

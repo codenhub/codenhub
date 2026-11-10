@@ -297,20 +297,23 @@ test.describe("solo utilities", () => {
     }
   });
 
-  /* Reduced motion removes the travel's motion, not the press: the slab still
-     collapses and the element still lands where it was, at once. */
+  /* Reduced motion removes a press's motion, never the press: the slab still
+     collapses, the element still lands where it was, and cyber's still gives
+     under the pointer, at once. */
   test("press at once under reduced motion", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await load(
       page,
       ["aesthetics/index.css"],
       `<button id="neobrutalism" class="neobrutalism-solo" style="margin: 40px">Go</button>
-       <button id="chunky-tile" class="chunky-tile-solo" style="margin: 40px">Go</button>`,
+       <button id="chunky-tile" class="chunky-tile-solo" style="margin: 40px">Go</button>
+       <button id="cyber" class="cyber-solo" style="margin: 40px">Go</button>`,
     );
 
-    for (const [name, travel] of [
-      ["neobrutalism", "4px 4px"],
-      ["chunky-tile", "0px 4px"],
+    for (const [name, travel, scale] of [
+      ["neobrutalism", "4px 4px", "none"],
+      ["chunky-tile", "0px 4px", "none"],
+      ["cyber", "none", "0.97"],
     ] as const) {
       const target = page.locator(`#${name}`);
 
@@ -325,13 +328,21 @@ test.describe("solo utilities", () => {
           await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
           const styles = getComputedStyle(node);
 
-          return { durations: styles.transitionDuration, translate: styles.translate, shadow: styles.boxShadow };
+          return {
+            durations: styles.transitionDuration,
+            translate: styles.translate,
+            scale: styles.scale,
+            shadow: styles.boxShadow,
+          };
         });
 
         /* Read once, two frames in, without polling: a press still animating
            over the normal duration would read part of the way there. */
         expect(pressed.translate, `${name} travels`).toBe(travel);
-        expect(pressed.shadow, `${name} slab collapses`).toMatch(/\b0px 0px 0px 0px\b/);
+        expect(pressed.scale, `${name} gives`).toBe(scale);
+        if (travel !== "none") {
+          expect(pressed.shadow, `${name} slab collapses`).toMatch(/\b0px 0px 0px 0px\b/);
+        }
         for (const duration of pressed.durations.split(",")) {
           expect(Number.parseFloat(duration), `${name} transition ${pressed.durations}`).toBeLessThan(0.001);
         }

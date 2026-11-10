@@ -117,6 +117,66 @@ test.describe("aesthetics", () => {
     await expect(page.getByTestId("card-default-none")).toBeVisible();
   });
 
+  /* Reduced motion removes a press's motion, never the press: it is the
+     feedback that a click landed, so it lands at once. Every look is pressed
+     for real, since `:active` is what `box-active` keys on, and read once, two
+     frames in, without polling: a press still animating over the normal
+     duration would read part of the way there. The near-zero duration keeps a
+     `transitionend` firing. */
+  test("presses at once under reduced motion, in every look", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+
+    const scale = /^matrix\(0\.97, 0, 0, 0\.97,/;
+    const looks = [
+      { look: "", transform: scale },
+      { look: "glass", transform: scale },
+      { look: "cyber", transform: scale },
+      { look: "sketch", transform: scale },
+      { look: "neobrutalism", transform: /^none$/, travel: "4px 4px" },
+      { look: "chunky-tile", transform: /^none$/, travel: "0px 4px" },
+    ] as const;
+
+    for (const { look, transform, ...slab } of looks) {
+      const label = look || "base look";
+
+      // oxlint-disable-next-line no-await-in-loop -- one page per look.
+      await page.goto(look ? withAesthetic(BUTTONS_URL, look) : BUTTONS_URL);
+
+      const button = page.getByTestId("btn-default-none");
+
+      // oxlint-disable-next-line no-await-in-loop -- one press at a time.
+      await button.hover();
+      // oxlint-disable-next-line no-await-in-loop -- one press at a time.
+      await page.mouse.down();
+      try {
+        // oxlint-disable-next-line no-await-in-loop -- one press at a time.
+        const pressed = await button.evaluate(async (node) => {
+          await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+          const styles = getComputedStyle(node);
+
+          return {
+            durations: styles.transitionDuration,
+            transform: styles.transform,
+            translate: styles.translate,
+            shadow: styles.boxShadow,
+          };
+        });
+
+        expect(pressed.transform, `${label} press transform`).toMatch(transform);
+        if ("travel" in slab) {
+          expect(pressed.translate, `${label} travels`).toBe(slab.travel);
+          expect(pressed.shadow, `${label} slab collapses`).toMatch(/\b0px 0px 0px 0px\b/);
+        }
+        for (const duration of pressed.durations.split(",")) {
+          expect(Number.parseFloat(duration), `${label} transition ${pressed.durations}`).toBeLessThan(0.001);
+        }
+      } finally {
+        // oxlint-disable-next-line no-await-in-loop -- one press at a time.
+        await page.mouse.up();
+      }
+    }
+  });
+
   test.describe("neobrutalism", () => {
     test("gives every component a hard offset shadow and a thick edge", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "neobrutalism"));
@@ -362,48 +422,6 @@ test.describe("aesthetics", () => {
          a container, not a control. */
       await page.goto(withAesthetic(SURFACES_URL, "neobrutalism"));
       await expectHeldThenPressed("card-default-none-interactive");
-    });
-
-    /* Reduced motion removes the travel's motion, not the press: a slab press
-       is the feedback that a click landed, and it lands at once. Shared with
-       chunky tile, the other slab. */
-    test("presses into its slab at once under reduced motion, as chunky tile does", async ({ page }) => {
-      await page.emulateMedia({ reducedMotion: "reduce" });
-
-      for (const [aesthetic, travel] of [
-        ["neobrutalism", "4px 4px"],
-        ["chunky-tile", "0px 4px"],
-      ] as const) {
-        // oxlint-disable-next-line no-await-in-loop -- one page per aesthetic.
-        await page.goto(withAesthetic(BUTTONS_URL, aesthetic));
-
-        const button = page.getByTestId("btn-default-none");
-
-        // oxlint-disable-next-line no-await-in-loop -- one press at a time.
-        await button.hover();
-        // oxlint-disable-next-line no-await-in-loop -- one press at a time.
-        await page.mouse.down();
-        try {
-          // oxlint-disable-next-line no-await-in-loop -- one press at a time.
-          const pressed = await button.evaluate(async (node) => {
-            await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-            const styles = getComputedStyle(node);
-
-            return { durations: styles.transitionDuration, translate: styles.translate, shadow: styles.boxShadow };
-          });
-
-          /* Read once, two frames in: a press still animating over the normal
-             duration would read part of the way there. */
-          expect(pressed.translate, `${aesthetic} travels`).toBe(travel);
-          expect(pressed.shadow, `${aesthetic} slab collapses`).toMatch(/\b0px 0px 0px 0px\b/);
-          for (const duration of pressed.durations.split(",")) {
-            expect(Number.parseFloat(duration), `${aesthetic} transition ${pressed.durations}`).toBeLessThan(0.001);
-          }
-        } finally {
-          // oxlint-disable-next-line no-await-in-loop -- one press at a time.
-          await page.mouse.up();
-        }
-      }
     });
 
     /* The offset is read with a fallback rather than declared, which is what lets
@@ -768,7 +786,7 @@ test.describe("aesthetics", () => {
        failed on Firefox: with the button held, a single `evaluate` sometimes
        took 5-7s to return, which the poll's 5s timeout counted against the
        press even though the value it returned was right. */
-    test("presses with the base scale, and not at all under reduced motion", async ({ page }) => {
+    test("presses with the base scale", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "glass"));
       await page.addStyleTag({ content: "* { transition: none !important; }" });
 
@@ -784,9 +802,6 @@ test.describe("aesthetics", () => {
       };
 
       await press(/^matrix\(0\.97, 0, 0, 0\.97,/, "pressed");
-      await page.emulateMedia({ reducedMotion: "reduce" });
-      await press(/^none$/, "pressed under reduced motion");
-      await page.emulateMedia({ reducedMotion: null });
     });
 
     /* `.neutral` beat the control line's zero-specificity selector, so writing the
@@ -2208,33 +2223,23 @@ test.describe("aesthetics", () => {
       }
     });
 
-    test("presses with the base scale, and not at all under reduced motion", async ({ page }) => {
+    test("presses with the base scale", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "cyber"));
 
       const resting = await readStyles(page, "btn-default-none", ["--ui-active-transform", "--ui-hover-transform"]);
 
-      await page.emulateMedia({ reducedMotion: "reduce" });
-
-      const reduced = await readStyles(page, "btn-default-none", ["--ui-active-transform"]);
-
       expect(resting["--ui-active-transform"].trim(), "press").toBe("scale(.97)");
       expect(resting["--ui-hover-transform"].trim(), "hover holds still").toBe("none");
-      expect(reduced["--ui-active-transform"].trim(), "reduced motion").toBe("none");
     });
   });
 
   test.describe("sketch", () => {
-    test("scales pressed buttons and opts out under reduced motion", async ({ page }) => {
+    test("scales pressed buttons", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "sketch"));
 
       const resting = await readStyles(page, "btn-default-none", ["--ui-active-transform"]);
 
-      await page.emulateMedia({ reducedMotion: "reduce" });
-
-      const reduced = await readStyles(page, "btn-default-none", ["--ui-active-transform"]);
-
       expect(resting["--ui-active-transform"].trim()).toBe("scale(.97)");
-      expect(reduced["--ui-active-transform"].trim()).toBe("none");
     });
 
     test("gives pill buttons an organic hand-drawn pill contour", async ({ page }) => {
