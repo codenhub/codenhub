@@ -32,12 +32,12 @@ Locale selection uses explicit input, valid persisted state, navigator preferenc
 
 **Throws**
 
-- `TypeError` — When observation lacks a root, when `syncDocument` is on without a global `document`, such as in a Web Worker, when the manager was not created by `createI18n()`, or when it already has a browser binding. These are thrown before the manager is initialized.
+- `TypeError` — When observation lacks a root, when `root` is not a DOM node, such as the `null` of a `querySelector()` that found nothing, when `syncDocument` is on without a global `document`, such as in a Web Worker, when the manager was not created by `createI18n()`, or when it already has a browser binding. These are thrown before the manager is initialized.
 - `RangeError` — When an explicit locale is unsupported or is not a string at runtime.
 - `Error` — With the message "[I18n] Browser initialization was superseded before its locale became active." when a later `init()` call starts before this call's locale becomes active, or a later `setLocale()` call does on a manager that was already initialized, even to the locale already active. The manager keeps the later call's result. On a manager that was not yet initialized, `setLocale()` throws its own error instead and supersedes nothing.
 - `TypeError` — When a required dictionary is invalid.
 - `TypeError` — When direction resolution returns a value other than `ltr` or `rtl`.
-- `I18nError` — When the loader rejects for an explicit locale or the default locale. Exceptions from the direction callback and required browser setup propagate unchanged.
+- `I18nError` — When the loader rejects for an explicit locale or the default locale. Exceptions from the direction callback and required browser setup propagate unchanged. An exception from translating the root, such as one `onMissingKey` throws, propagates after every other element is translated.
 
 ## Interfaces
 

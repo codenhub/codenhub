@@ -103,6 +103,7 @@ await initializeBrowserI18n({ i18n, root: document });
 - The text already in the HTML is the last fallback. A key a language lacks shows the text of the next locale in its fallback chain, as `t()` does: a configured parent such as `pt` for `pt-BR`, then the default locale. The original text comes back only when no dictionary in the chain has the key.
 - Text is set as plain text, never as HTML, and `<script>`, `<style>`, `<noscript>`, and `<template>` are never touched.
 - Placeholders such as `{name}` are not filled here, because there is nowhere in the HTML to pass a value from. Render text with values from your code with `t()`.
+- The page shows the text written in its HTML until the visitor's dictionary has loaded, then switches in place, which on a slow connection is visible. To avoid that, render a page per language ahead of time, as in [Build a static site](server-rendering.md#build-a-static-site), and pass its `locale`; or keep the root hidden until the binding's promise settles.
 
 ### Form controls
 

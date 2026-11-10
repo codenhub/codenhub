@@ -1,7 +1,7 @@
 import { I18nError } from "../core/errors";
 import { getI18nInternals } from "../core/internals";
 import type { I18n } from "../core/types";
-import { createDomTranslator, TRANSLATION_KEY_ATTRIBUTES } from "./dom-translation";
+import { createDomTranslator, runEach, TRANSLATION_KEY_ATTRIBUTES } from "./dom-translation";
 
 const DEFAULT_STORAGE_KEY = "i18n";
 const LOCALE_CHANGE_EVENT = "locale-change";
@@ -120,7 +120,8 @@ const getMutationObserver = (root: ParentNode): typeof MutationObserver => {
  * @typeParam TLocale - Union of supported canonical locale identifiers.
  * @param options - Core manager, locale inputs, persistence, document, and optional DOM behavior.
  * @returns A binding that disconnects browser-owned listeners and observation.
- * @throws {TypeError} When observation lacks a root, when `syncDocument` is on without a global `document`, such as in a
+ * @throws {TypeError} When observation lacks a root, when `root` is not a DOM node, such as the `null` of a
+ * `querySelector()` that found nothing, when `syncDocument` is on without a global `document`, such as in a
  * Web Worker, when the manager was not created by `createI18n()`, or when it already has a browser binding. These are
  * thrown before the manager is initialized.
  * @throws {RangeError} When an explicit locale is unsupported or is not a string at runtime.
@@ -131,7 +132,8 @@ const getMutationObserver = (root: ParentNode): typeof MutationObserver => {
  * @throws {TypeError} When a required dictionary is invalid.
  * @throws {TypeError} When direction resolution returns a value other than `ltr` or `rtl`.
  * @throws {I18nError} When the loader rejects for an explicit locale or the default locale.
- * Exceptions from the direction callback and required browser setup propagate unchanged.
+ * Exceptions from the direction callback and required browser setup propagate unchanged. An exception from
+ * translating the root, such as one `onMissingKey` throws, propagates after every other element is translated.
  */
 export async function initializeBrowserI18n<TLocale extends string>(
   options: BrowserI18nOptions<TLocale>,
@@ -148,6 +150,11 @@ export async function initializeBrowserI18n<TLocale extends string>(
 
   if (observe && root === undefined) {
     throw new TypeError("[I18n] Browser observation requires a root.");
+  }
+
+  // A `querySelector()` that finds nothing gives `null`, which would otherwise fail only after the manager started.
+  if (root !== undefined && (typeof root !== "object" || root === null || typeof root.nodeType !== "number")) {
+    throw new TypeError("[I18n] root must be a DOM node, such as document.body.");
   }
 
   if (shouldSyncDocument && typeof document === "undefined") {
@@ -171,35 +178,36 @@ export async function initializeBrowserI18n<TLocale extends string>(
     if (shouldSyncDocument) {
       syncDocumentLocale(i18n);
     }
-    if (root !== undefined) {
-      // The full pass covers pending additions and key changes but does not find an element whose last key was removed,
-      // so only those are handled first; the pass covers the other pending records.
-      if (observer !== undefined) {
-        const observedRoot = root;
-        const keyRemovedElements = new Set<Element>();
-
-        for (const mutation of observer.takeRecords()) {
-          if (mutation.type === "attributes" && !hasTranslationKey(mutation.target as Element)) {
-            keyRemovedElements.add(mutation.target as Element);
-          }
-        }
-        for (const element of keyRemovedElements) {
-          if (!observedRoot.contains(element)) {
-            continue;
-          }
-          domTranslator.translateRoot({
-            root: element,
-            boundary: root,
-            translate: (key) => internals.lookup(key),
-          });
-        }
-      }
-      domTranslator.translateRoot({
-        root,
-        translate: (key) => internals.lookup(key),
-      });
-      handleChangesDuringPass();
+    const observedRoot = root;
+    if (observedRoot === undefined) {
+      return;
     }
+    // The full pass covers pending additions and key changes but does not find an element whose last key was removed,
+    // so only those are handled first; the pass covers the other pending records.
+    const keyRemovedElements = new Set<Element>();
+    for (const mutation of observer?.takeRecords() ?? []) {
+      if (mutation.type === "attributes" && !hasTranslationKey(mutation.target as Element)) {
+        keyRemovedElements.add(mutation.target as Element);
+      }
+    }
+    // Each step runs even when an earlier one throws, as from `onMissingKey`, and the first error is thrown last.
+    runEach(
+      [
+        () =>
+          runEach(keyRemovedElements, (element) => {
+            if (observedRoot.contains(element)) {
+              domTranslator.translateRoot({
+                root: element,
+                boundary: observedRoot,
+                translate: (key) => internals.lookup(key),
+              });
+            }
+          }),
+        () => domTranslator.translateRoot({ root: observedRoot, translate: (key) => internals.lookup(key) }),
+        handleChangesDuringPass,
+      ],
+      (step) => step(),
+    );
   };
   /**
    * Handles changes other code made during a pass once and drops the pass's own writes, which need no second pass.
@@ -211,8 +219,11 @@ export async function initializeBrowserI18n<TLocale extends string>(
     const foreignChanges = observer?.takeRecords().filter(isForeignChange) ?? [];
 
     if (foreignChanges.length > 0) {
-      handleMutations(foreignChanges);
-      observer?.takeRecords();
+      try {
+        handleMutations(foreignChanges);
+      } finally {
+        observer?.takeRecords();
+      }
     }
   };
   const handleMutations = (mutations: readonly MutationRecord[]): void => {
@@ -247,10 +258,10 @@ export async function initializeBrowserI18n<TLocale extends string>(
       }
     }
 
-    for (const changedRoot of changedRoots) {
+    runEach(changedRoots, (changedRoot) => {
       // A record outlives its node's place: an element added and then moved out of the root is no longer the binding's.
       if (!observedRoot.contains(changedRoot)) {
-        continue;
+        return;
       }
 
       let ancestor = changedRoot.parentElement;
@@ -266,7 +277,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
       }
 
       if (hasChangedAncestor && !keyRemovedElements.has(changedRoot)) {
-        continue;
+        return;
       }
 
       domTranslator.translateRoot({
@@ -274,7 +285,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
         boundary: observedRoot,
         translate: (key) => internals.lookup(key),
       });
-    }
+    });
   };
   // Later core changes are choices the application made, so they persist when enabled.
   const applyBrowserEffects = (): void => applyEffects(shouldPersistLocale);
@@ -356,8 +367,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
     if (observe && root !== undefined) {
       const observedRoot = root;
       observer = new (getMutationObserver(observedRoot))((mutations) => {
-        handleMutations(mutations);
-        handleChangesDuringPass();
+        runEach([() => handleMutations(mutations), handleChangesDuringPass], (step) => step());
       });
       observer.observe(observedRoot, {
         attributes: true,

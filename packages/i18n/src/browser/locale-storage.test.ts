@@ -114,6 +114,28 @@ describe("initializeBrowserI18n locale resolution", () => {
     expect(i18n.isReady).toBe(false);
   });
 
+  it.each([
+    { root: null, observe: false },
+    { root: null, observe: true },
+    { root: "#app", observe: false },
+  ])(
+    "rejects a root that is not a DOM node, $root with observe $observe, before initializing core",
+    async (options) => {
+      const i18n = createManager();
+
+      await expect(
+        initializeBrowserI18n({
+          i18n,
+          locale: "fr",
+          ...(options as unknown as { root: ParentNode; observe: boolean }),
+        }),
+      ).rejects.toThrow(new TypeError("[I18n] root must be a DOM node, such as document.body."));
+      expect(i18n.isReady).toBe(false);
+      expect(localStorage.getItem("i18n")).toBeNull();
+      expect(document.documentElement.lang).toBe("");
+    },
+  );
+
   it("rejects document synchronization without a page document before initializing core", async () => {
     const i18n = createManager();
     const descriptor = Object.getOwnPropertyDescriptor(globalThis, "document")!;
@@ -180,6 +202,24 @@ describe("initializeBrowserI18n storage integration", () => {
 
     expect(i18n.locale).toBe("fr");
     expect(warn).toHaveBeenCalledWith("[I18n] Could not read persisted locale.", failure);
+  });
+
+  it("continues when reading the localStorage property itself throws, as with site data blocked", async () => {
+    const failure = new DOMException("The operation is insecure.", "SecurityError");
+    vi.spyOn(window, "localStorage", "get").mockImplementation(() => {
+      throw failure;
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    setNavigatorLocales(["fr"]);
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({ i18n });
+    await i18n.setLocale("ar");
+
+    expect(i18n.locale).toBe("ar");
+    expect(warn).toHaveBeenCalledWith("[I18n] Could not read persisted locale.", failure);
+    expect(warn).toHaveBeenCalledWith("[I18n] Could not persist locale.", failure);
+    binding.disconnect();
   });
 
   it("continues after a storage write failure and suppresses warnings when silent", async () => {

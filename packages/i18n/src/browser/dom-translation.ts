@@ -46,9 +46,33 @@ interface TranslateRootOptions {
 
 /** @internal */
 export interface DomTranslator {
-  /** Translates safe leaves and attributes at and below the root, restoring the fallback where a key was removed. */
+  /**
+   * Translates safe leaves and attributes at and below the root, restoring the fallback where a key was removed. An
+   * element whose translation throws, such as from a throwing `onMissingKey`, keeps its text; the rest are still
+   * translated, and the first error is thrown after the pass.
+   */
   translateRoot(options: TranslateRootOptions): void;
 }
+
+/**
+ * Runs `run` for every item, even after one throws, then throws the first error, so one failure doesn't leave the rest
+ * of a page in another language.
+ *
+ * @internal
+ */
+export const runEach = <T>(items: Iterable<T>, run: (item: T) => void): void => {
+  let failure: { readonly error: unknown } | undefined;
+  for (const item of items) {
+    try {
+      run(item);
+    } catch (error) {
+      failure ??= { error };
+    }
+  }
+  if (failure !== undefined) {
+    throw failure.error;
+  }
+};
 
 const isElementNode = (node: ParentNode): node is Element => node.nodeType === ELEMENT_NODE;
 
@@ -236,11 +260,11 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
 
   return {
     translateRoot({ root, boundary = root, translate }) {
-      for (const element of collectElements(root, isTracked)) {
+      runEach(collectElements(root, isTracked), (element) => {
         if (!isInsideCustomElement(element, boundary)) {
           translateElement(element, translate);
         }
-      }
+      });
     },
   };
 }
