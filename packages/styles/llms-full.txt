@@ -238,7 +238,7 @@ The order of the two imports does not matter, because every entrypoint declares 
 - **The import is missing or not loaded globally.** The classes do nothing until the stylesheet is on the page. Import it once in a stylesheet every page loads, not in a component that may not render.
 - **The package name does not resolve.** A plain `<link>` or a tool without CSS package resolution cannot read `@import "@codenhub/styles"`. Link `node_modules/@codenhub/styles/dist/index.css`, or follow [Without a bundler](docs/integrating/without-a-bundler.md).
 - **A `/tw` path is loaded without Tailwind.** The `/tw` files are Tailwind source: they contain `@theme`, `@utility`, and `@apply`, which browsers do not understand. Your Tailwind build has to compile them; see [Tailwind CSS v4](docs/integrating/tailwind.md).
-- **A class built at runtime is missing (Tailwind source only).** Tailwind generates a class, the package's included, only when it finds the name in your source files. A name assembled from strings, such as `` `btn ${tone}` ``, is invisible to that scan. Write full class names, or list them as described in [Tailwind CSS v4](docs/integrating/tailwind.md).
+- **A class built at runtime is missing (Tailwind source only).** Tailwind generates a utility class, the package's components such as `.btn` included, only when it finds the name in your source files. A name assembled from strings, such as `` `btn ${tone}` ``, is invisible to that scan. Write full class names, or list them as described in [Tailwind CSS v4](docs/integrating/tailwind.md).
 
 ### Inlining critical CSS
 
@@ -441,16 +441,16 @@ Unlike `/tw`, the focused entrypoints and `/tw/native` do not import Tailwind, s
 **A class built at runtime has no styling**
 
 - **What happened:** `<button class="btn primary">` is styled, but a button whose class comes from a variable, such as `"btn " + variant`, or from CMS content, is not.
-- **Why:** Tailwind emits only the classes it finds written out in the files it scans. That holds for the package's classes too: a `/tw` build emits `.alert` only if `alert` appears somewhere it scans, which keeps the stylesheet to what your pages use. A name assembled at runtime never appears whole in a file, so the scan misses it.
+- **Why:** Tailwind emits only the classes it finds written out in the files it scans. That holds for the package's component classes too: a `/tw` build emits `.alert` only if `alert` appears somewhere it scans, which keeps the stylesheet to what your pages use. The intent, presentation, and elevation classes, such as `.primary` and `.soft`, are plain CSS and always emitted. A name assembled at runtime never appears whole in a file, so the scan misses it.
 - **Fix:** write each complete class name somewhere Tailwind scans, for example in a lookup object (`{ save: "btn primary", remove: "btn destructive" }`), or list the names your code or content can produce in your stylesheet:
 
 ```css
 @import "@codenhub/styles/tw";
 
-@source inline("btn primary secondary destructive alert badge");
+@source inline("btn alert badge");
 ```
 
-Every `/tw` entrypoint requires Tailwind CSS 4.3.2 or newer, below 5, the version it is tested against.
+Every `/tw` entrypoint requires Tailwind CSS 4.3.2 or newer, below 5 (`>=4.3.2 <5`).
 
 ## The `dark:` variant
 
@@ -1155,7 +1155,7 @@ Mark the control invalid with `aria-invalid="true"` and give the error message `
 
 An invalid control draws its border, focus ring, and typed text in the destructive color, whatever intent class it has. The text uses the readable tone of that color, `--intent-strong`, so it stays legible on the page. The package only paints the state: deciding that the value is invalid, setting and clearing `aria-invalid`, and writing the message are your code. Remove `aria-invalid` once the value is valid again; leaving it set keeps the field red. On a checkbox, radio, or switch, `aria-invalid="true"` draws the toggle exactly as `.destructive` does, checked mark included.
 
-A hint takes any named intent, not only `.destructive`: `.hint.success` confirms a value was accepted, and `.hint.warning` flags one that is allowed but unusual. Each prints in its intent's readable tone, `--intent-strong`, which holds 4.5:1 against the page in both themes. A hint with no intent, or with `.neutral`, stays secondary-colored. Only a class on the hint itself colors it; an intent on the field or a container around it does not.
+A hint takes any of the six built-in intents, not only `.destructive`: `.hint.success` confirms a value was accepted, and `.hint.warning` flags one that is allowed but unusual. Each prints in its intent's readable tone, `--intent-strong`, which holds 4.5:1 against the page in both themes. A hint with no intent, with `.neutral`, or with an [intent you defined yourself](docs/usage/theming.md#your-own-intent), stays secondary-colored. Only a class on the hint itself colors it; an intent on the field or a container around it does not.
 
 ```html
 <input class="ipt success" id="username" value="ada" aria-describedby="username-hint" /> <span class="hint success" id="username-hint">That username is available.</span>
@@ -1740,6 +1740,7 @@ The class works on everything that takes an intent: buttons, badges, fields and 
 - **A quiet, untinted rest.** A neutral `.card.soft`, `.panel`, and `.alert` rest on the quiet background tone, and they recognize an intent only by the six built-in classes. `.card.soft.beta`, `.panel.beta`, and `.alert.beta` are drawn like the neutral one: the quiet background tone instead of a violet tint. Your intent still colors their text and border.
 - **The chip tint.** A `.beta` key cap or code block shows your `--intent-subtle` tint, but not the extra 12% of `--intent-color` a built-in intent adds over it.
 - **Solo classes.** A [solo class](docs/usage/solo.md) such as `.neobrutalism-solo` takes an intent only from the six built-in classes, so `.neobrutalism-solo.beta` is drawn neutral.
+- **Hint text.** A [`.hint`](docs/usage/forms.md#show-a-validation-error) prints in an intent's readable tone only for the six built-in classes, so `.hint.beta` stays secondary-colored.
 
 If you need those, there are two ways:
 
