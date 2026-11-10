@@ -61,7 +61,7 @@ Register each plugin before use: `gsap.registerPlugin(SplitText, DrawSVGPlugin)`
 ## Camera And Depth
 
 - Wrap the scene in one camera element inside the stage, and animate that element's `x`, `y`, `scale`, and `rotation` for camera moves. Set its `transformOrigin` to the point the move should hold still, and use an ease-in-out, since a camera starts and stops.
-- For depth, set `perspective` on the stage with CSS, give the camera element `transform-style: preserve-3d`, and place layers at different `z` values. A camera move then shifts near layers more than far ones.
+- For depth, set `perspective` on the stage with CSS, give the camera element `transform-style: preserve-3d`, and place layers at different `z` values. A camera move then shifts near layers more than far ones. Every wrapper between the camera element and a layer needs `transform-style: preserve-3d` as well, and none may set `overflow`, `opacity` below 1, or a `filter`; any of these flattens the layers inside it.
 - Animate blur as a `filter` string, such as `filter: "blur(12px)"`, from an explicit starting value, such as `filter: "blur(0px)"`. Put it on single layers, never on the camera element or another `preserve-3d` element: a filter flattens that element's children into one plane, and the depth is lost.
 - For motion blur, pass the capture script four times the delivery frame rate, such as 120 for a 30fps delivery, and average the frames in the encode.
 
