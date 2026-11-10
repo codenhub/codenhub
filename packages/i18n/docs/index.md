@@ -231,7 +231,7 @@ await i18n.init({ locale: i18n.resolveLocale(lang) ?? i18n.defaultLocale });
 3. A match through likely subtags: `zh-TW`, Traditional Chinese, gets `zh-Hant`.
 4. The same language in the same script: `pt-PT` gets `pt-BR` when that is your only Portuguese.
 
-A locale in another script never matches, because a page in a script the visitor doesn't read serves them worse than their next language. With `zh`, which is Simplified Chinese, a `zh-TW` visitor who also lists English gets English, and one who lists nothing else gets `undefined`.
+A locale in another script never matches, because a page in a script the visitor doesn't read serves them worse than their next language. With `zh`, which is Simplified Chinese, a `zh-TW` visitor who also lists English gets English, and one who lists nothing else gets `undefined`. A configured locale that `Intl.Locale` rejects, such as one with a private-use subtag over eight characters, has no likely script, so it matches by language, and by the script it names when it names one.
 
 It returns `undefined` when nothing matches, skips blank and malformed entries, and throws a `TypeError` when `preferences` isn't an array.
 

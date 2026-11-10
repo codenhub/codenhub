@@ -27,6 +27,14 @@ describe("matchConfiguredLocale", () => {
     expect(matchConfiguredLocale(locales, preferences)).toBeUndefined();
   });
 
+  it.each([
+    [["zh-Hant-x-abcdefghijk"], ["zh-TW"], "zh-Hant-x-abcdefghijk"],
+    [["zh-Hant-x-abcdefghijk"], ["zh-Hans-CN"], undefined],
+    [["en-x-abcdefghijk"], ["en-GB"], "en-x-abcdefghijk"],
+  ] as const)("matches %j, which Intl.Locale rejects, to %j by its named script", (locales, preferences, expected) => {
+    expect(matchConfiguredLocale(locales, preferences)).toBe(expected);
+  });
+
   it("tries the next preference rather than a locale in another script", () => {
     expect(matchConfiguredLocale(["en", "zh"], ["zh-TW", "en"])).toBe("en");
   });

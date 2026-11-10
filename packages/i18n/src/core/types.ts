@@ -222,7 +222,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * Each preference, in order, tries an exact case-insensitive match, then the longest configured locale it starts with
    * as whole subtags and with the same likely script, such as `pt` for `pt-BR`, then likely subtags, such as `zh-Hant`
    * for `zh-TW`, then the same language in the same likely script. A locale in another script never matches, so with
-   * `zh`, which is Simplified, `zh-TW` tries the next preference. When several configured locales share a preference's
+   * `zh`, which is Simplified, `zh-TW` tries the next preference. A configured locale `Intl.Locale` rejects has no likely
+   * script, so it matches by language, and by the script it names when it names one. When several configured locales share a preference's
    * language and script and none matches it exactly or by likely region, the first in `locales` wins: list `es-419`
    * before `es-ES` to serve `es-MX` from `es-419`. `es-ES`, and `es`, whose likely region is Spain, still match `es-ES`.
    *
