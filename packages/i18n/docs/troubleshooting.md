@@ -145,12 +145,18 @@ The path `localize()` would build opens a different page, or the same page in an
 
 The path you passed is valid, but the locale prefix or the translated words make the result longer than `parse()` accepts. Shorten the path; a link that long is also likely to be cut off by servers and proxies long before anyone reads it.
 
+## A placeholder shows as written and nothing warns
+
+You see `Ouvrir l{app}` where you expected `Ouvrir l'éditeur`, and the console is quiet. The apostrophe before `{` quotes the placeholder, which is valid message syntax, so there is nothing to warn about. Write `l''{app}`, or use the typographic apostrophe, `l’{app}`. See [Literal braces and apostrophes](translations.md#literal-braces-and-apostrophes).
+
 ## The browser binding warns or rejects
 
 - **"Document synchronization requires a page document"**: `initializeBrowserI18n()` ran without a `document`, as in a Web Worker, and threw `TypeError: [I18n] Document synchronization requires a page document; pass syncDocument: false without one.` before starting the manager. Pass `syncDocument: false` and no `root`; see [In a Web Worker](browser.md#in-a-web-worker).
 - **"The manager already has a browser binding"**: you called `initializeBrowserI18n()` twice for the same manager. Call `disconnect()` on the first binding, or keep one.
 - **"Browser initialization was superseded before its locale became active"**: your code called `i18n.init()` while the binding was starting the manager, or `i18n.setLocale()` on a manager that was already initialized, even to the locale already showing. The manager keeps your call's result and the binding is not connected. Let the binding start the manager, and switch languages after its promise resolves.
 - **"Browser observation requires a root"**: `observe: true` needs a `root` to watch.
+- **"root must be an element, a document, or a shadow root, such as document.body."**: `root` was something else, usually the `null` that `document.querySelector("#app")` returns on a page without `#app`. The binding throws before starting the manager. Check that the element exists on every page that runs the script, or pass `document`.
+- **`onMissingKey` threw**: the binding still translates every other element, then rejects with the first error on the first initialization, or reports it as an uncaught error after a later language switch. Only the text or attribute whose key was missing keeps its value. A first initialization that rejects this way leaves the manager started but the binding disconnected, so later language switches don't translate the page; fix the callback and call `initializeBrowserI18n()` again.
 - **"Could not read persisted locale" or "Could not persist locale"**: `localStorage` is unavailable, as in some private browsing modes or a Web Worker. The visitor's choice is not saved; everything else works. Pass `persistLocale: false` where there is no storage to start quietly.
 - **`Could not load locale "pt"; using "es".`** or **`Could not load locale "pt"; using the default locale.`**: the loader failed for a saved or detected locale other than the default, so the visitor got the next one instead: the locale detected from the browser after a saved one, then the default. Fix the loader; the saved choice is kept for next time. If the default locale itself fails to load, there is nothing left to fall back to, and initialization rejects with `Failed to load translations for locale "en".`
 - **"Skipping translation on <p> because translated elements must be leaves"**: the element with `data-i18n` has child elements. Put the key on an element that contains only text, or translate it with `t()`.

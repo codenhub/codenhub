@@ -543,6 +543,10 @@ An apostrophe before `{` or `}` quotes text up to the next apostrophe, and two a
 | `Don't forget {name}`     | `Don't forget Ana`      |
 | `Type '{name}' to insert` | `Type {name} to insert` |
 | `It''s '{'here'}'`        | `It's {here}`           |
+| `Ouvrir l''{app}`         | `Ouvrir l'éditeur`      |
+| `Ouvrir l’{app}`          | `Ouvrir l’éditeur`      |
+
+Watch for an apostrophe right before a placeholder, as French, Italian, and Catalan elision puts one: `Ouvrir l'{app}` quotes `{app}`, so it shows `Ouvrir l{app}`, and nothing warns, because the text is valid. Write two apostrophes, `l''{app}`, or the typographic apostrophe `’`, which French typography prefers anyway and which is never syntax.
 
 Inside a plural's forms, `#` stands for the number; write `'#'` for a literal `#`. A `select` nested in a form is not the plural itself, so a `#` there is shown as written, as in ICU; put `{count}` there instead. Quoted text is text to the types too: in `'{it''s {x}'`, which shows `{it's {x}`, `x` is not a value `t()` asks for.
 
@@ -913,6 +917,7 @@ await initializeBrowserI18n({ i18n, root: document });
 - The text already in the HTML is the last fallback. A key a language lacks shows the text of the next locale in its fallback chain, as `t()` does: a configured parent such as `pt` for `pt-BR`, then the default locale. The original text comes back only when no dictionary in the chain has the key.
 - Text is set as plain text, never as HTML, and `<script>`, `<style>`, `<noscript>`, and `<template>` are never touched.
 - Placeholders such as `{name}` are not filled here, because there is nowhere in the HTML to pass a value from. Render text with values from your code with `t()`.
+- The page shows the text written in its HTML until the visitor's dictionary has loaded, then switches in place, which on a slow connection is visible. To avoid that, render a page per language ahead of time, as in [Build a static site](docs/server-rendering.md#build-a-static-site), and pass its `locale`; or keep the root hidden until the binding's promise settles, whether it resolves or rejects, with a deadline on the loader as in [It never fails, it just hangs](docs/troubleshooting.md#it-never-fails-it-just-hangs), so a stalled request can't leave the page blank.
 
 ### Form controls
 
@@ -1701,12 +1706,18 @@ The path `localize()` would build opens a different page, or the same page in an
 
 The path you passed is valid, but the locale prefix or the translated words make the result longer than `parse()` accepts. Shorten the path; a link that long is also likely to be cut off by servers and proxies long before anyone reads it.
 
+## A placeholder shows as written and nothing warns
+
+You see `Ouvrir l{app}` where you expected `Ouvrir l'éditeur`, and the console is quiet. The apostrophe before `{` quotes the placeholder, which is valid message syntax, so there is nothing to warn about. Write `l''{app}`, or use the typographic apostrophe, `l’{app}`. See [Literal braces and apostrophes](docs/translations.md#literal-braces-and-apostrophes).
+
 ## The browser binding warns or rejects
 
 - **"Document synchronization requires a page document"**: `initializeBrowserI18n()` ran without a `document`, as in a Web Worker, and threw `TypeError: [I18n] Document synchronization requires a page document; pass syncDocument: false without one.` before starting the manager. Pass `syncDocument: false` and no `root`; see [In a Web Worker](docs/browser.md#in-a-web-worker).
 - **"The manager already has a browser binding"**: you called `initializeBrowserI18n()` twice for the same manager. Call `disconnect()` on the first binding, or keep one.
 - **"Browser initialization was superseded before its locale became active"**: your code called `i18n.init()` while the binding was starting the manager, or `i18n.setLocale()` on a manager that was already initialized, even to the locale already showing. The manager keeps your call's result and the binding is not connected. Let the binding start the manager, and switch languages after its promise resolves.
 - **"Browser observation requires a root"**: `observe: true` needs a `root` to watch.
+- **"root must be an element, a document, or a shadow root, such as document.body."**: `root` was something else, usually the `null` that `document.querySelector("#app")` returns on a page without `#app`. The binding throws before starting the manager. Check that the element exists on every page that runs the script, or pass `document`.
+- **`onMissingKey` threw**: the binding still translates every other element, then rejects with the first error on the first initialization, or reports it as an uncaught error after a later language switch. Only the text or attribute whose key was missing keeps its value. A first initialization that rejects this way leaves the manager started but the binding disconnected, so later language switches don't translate the page; fix the callback and call `initializeBrowserI18n()` again.
 - **"Could not read persisted locale" or "Could not persist locale"**: `localStorage` is unavailable, as in some private browsing modes or a Web Worker. The visitor's choice is not saved; everything else works. Pass `persistLocale: false` where there is no storage to start quietly.
 - **`Could not load locale "pt"; using "es".`** or **`Could not load locale "pt"; using the default locale.`**: the loader failed for a saved or detected locale other than the default, so the visitor got the next one instead: the locale detected from the browser after a saved one, then the default. Fix the loader; the saved choice is kept for next time. If the default locale itself fails to load, there is nothing left to fall back to, and initialization rejects with `Failed to load translations for locale "en".`
 - **"Skipping translation on <p> because translated elements must be leaves"**: the element with `data-i18n` has child elements. Put the key on an element that contains only text, or translate it with `t()`.
@@ -1720,6 +1731,48 @@ The browser warnings are silenced along with the rest when the manager has `isSi
 ## Still stuck
 
 The [reference](docs/reference/index.md) documents every export, option, and the errors each one throws. If the behavior changed after an upgrade, the [changelog](docs/changelog/index.md) says what changed and how to move to it.
+
+<!-- Source: docs/changelog/0.3.0.md -->
+
+# 0.3.0
+
+## Added
+
+- **`trailingSlash`** on `createLocaleRouting` picks whether built paths end with `/`: `"preserve"`, the default and the old behavior, `"always"`, such as `/pt/` for a host that serves `pt/index.html`, or `"never"`. `parse()` still accepts both spellings. See [Trailing slashes](docs/localized-urls.md#trailing-slashes).
+- **`no` and `nb` match each other**, since both mean Norwegian Bokmål, after an exact match. A site configured with `no` no longer serves its default locale to a browser sending `nb`, or the other way round. Nynorsk, `nn`, stays apart.
+- **Every optional option accepts an explicit `undefined`** under `exactOptionalPropertyTypes`, as in `initializeBrowserI18n({ i18n, locale: route?.locale })`, which the runtime always read as omitted.
+
+## Changed
+
+- **Breaking.** **`matchLocale()` never matches a locale in another script.** With `en` and `zh`, a `zh-TW` visitor who also lists English now gets English rather than Simplified Chinese. A preference that only matched across scripts now matches nothing; add a locale in that script to serve it.
+- **Breaking.** **`#` is the number only in a plural's own forms.** In `{n, plural, other {{v, select, other {# x}}}}`, the nested `select` now shows `# x`, as ICU does, rather than `5 x`. Write `{n}` there to show the number.
+- **Breaking, types only.** **Plural keys whose forms take no arguments are type-checked.** A group such as `{ one: "One item", other: "Many items" }` now requires `count`, and each argument another form or locale uses. Code that passed wrong or missing values to such keys no longer compiles; pass the values the messages use.
+- **Breaking, types only.** **`getLocaleDirection` and `onMissingKey` are typed as function properties**, so their parameters are checked strictly. A callback whose locale parameter is narrower than the configured locales no longer compiles; type it with every configured locale.
+- **The browser binding tries the detected locale when a saved one fails to load**, before the default, so a visitor with a saved `fr` and a `pt-BR` browser gets Portuguese rather than the default.
+- **The browser binding checks `root` before starting the manager.** A `root` that is not a DOM node, such as the `null` of a `querySelector()` that found nothing, throws `TypeError: [I18n] root must be an element, a document, or a shadow root, such as document.body.` before anything is initialized or saved, where it failed with a null dereference afterwards.
+- **`initializeBrowserI18n()` throws a `TypeError` without a page document** while `syncDocument` is on, as in a Web Worker, before touching the manager, where it rejected with a `ReferenceError` after initializing it.
+- The default text direction comes from a locale's likely script, so `pa-PK`, `az-IR`, `uz-AF`, `arz`, `prs`, and `ji` are now `rtl`, and `sd-IN` is `ltr`.
+- `parse()` returns a listed page's fixed words in one spelling, so `/%61bout` and `/about` give the same `pathname`, and it returns `undefined` when the canonical path, not only the request, would be longer than 8,192 characters.
+- Dictionary errors name the locale and quote the key, and the load-failure message tells the visitor to try again.
+
+## Fixed
+
+- With `onMissingKey` throwing, the browser binding stopped at that element and left the rest of the page in the old language. It now translates every other text and attribute, then throws the first error.
+- A binding started after another's `disconnect()` took the earlier translations for the page's text.
+- An element that a custom element or `onMissingKey` added while the binding translated stayed untranslated.
+- A stored or detected locale that failed to load after a later `init()` started was retried over that call's locale.
+- Route precedence depended on table order in one case: with `/blog/:slug`, `/blog`, and `/blog/archive`, the archive page was read as a slug.
+- A pattern of about 4,000 segments next to an overlapping catch-all made `createLocaleRouting` overflow the call stack. Large translated-path tables are now matched through an index rather than one by one.
+- With `trailingSlash: "always"`, `parse()` could accept a path whose canonical URL `localize()` then refused as too long.
+- Formatter options inherited from a prototype, or a string option containing `\0`, could share a cached formatter with other options, so one `formatNumber()` call changed later ones in every manager.
+- `formatDate(value, "long")` and other primitive options lost the configured time zone.
+- `=1.0` and `=01` never matched in a plural; they now select 1, as in ICU.
+- A `Date` in a message with invalid syntax was left as `{when}` instead of formatted.
+- `has()` counted a plural group without an `other` form as a key in some locales, and narrowed a typed key to `never` when it returned `false`.
+- Long or deeply nested `as const` messages hit TypeScript's recursion limit; they now fall back to loose values. A name written with a no-break space inside its braces is read as the runtime reads it.
+- A loader returning `import("./en.json")` without `.default` failed with an unrelated message; it now says to return the module's default export.
+- A rejected dictionary key containing DEL, C1 controls, U+2028, or U+2029 is escaped in the error, so it can't break a log line.
+- A message read on every lookup is no longer evicted from the parse cache after 10,000 others.
 
 <!-- Source: docs/changelog/0.2.1.md -->
 

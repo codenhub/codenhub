@@ -46,9 +46,33 @@ interface TranslateRootOptions {
 
 /** @internal */
 export interface DomTranslator {
-  /** Translates safe leaves and attributes at and below the root, restoring the fallback where a key was removed. */
+  /**
+   * Translates safe leaves and attributes at and below the root, restoring the fallback where a key was removed. A
+   * text or attribute whose translation throws, such as from a throwing `onMissingKey`, keeps its value; every other
+   * key is still translated, and the first error is thrown after the pass.
+   */
   translateRoot(options: TranslateRootOptions): void;
 }
+
+/**
+ * Runs `run` for every item, even after one throws, then throws the first error, so one failure doesn't leave the rest
+ * of a page in another language.
+ *
+ * @internal
+ */
+export const runEach = <T>(items: Iterable<T>, run: (item: T) => void): void => {
+  let failure: { readonly error: unknown } | undefined;
+  for (const item of items) {
+    try {
+      run(item);
+    } catch (error) {
+      failure ??= { error };
+    }
+  }
+  if (failure !== undefined) {
+    throw failure.error;
+  }
+};
 
 const isElementNode = (node: ParentNode): node is Element => node.nodeType === ELEMENT_NODE;
 
@@ -215,15 +239,16 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
       return;
     }
 
-    const rawKey = element.getAttribute(TRANSLATION_ATTRIBUTE);
+    const translateOwnText = (): void => {
+      const rawKey = element.getAttribute(TRANSLATION_ATTRIBUTE);
 
-    if (rawKey !== null) {
-      translateText(element, rawKey, translate);
-    } else {
-      restoreText(element);
-    }
-
-    for (const attribute of TRANSLATED_ATTRIBUTES) {
+      if (rawKey !== null) {
+        translateText(element, rawKey, translate);
+      } else {
+        restoreText(element);
+      }
+    };
+    const translateOwnAttribute = (attribute: string): void => {
       const rawAttributeKey = element.getAttribute(`${TRANSLATION_ATTRIBUTE}-${attribute}`);
 
       if (rawAttributeKey !== null) {
@@ -231,16 +256,22 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
       } else {
         restoreAttribute(element, attribute);
       }
-    }
+    };
+
+    // The text and each attribute are translated even when another of the element's keys throws.
+    runEach(
+      [translateOwnText, ...TRANSLATED_ATTRIBUTES.map((attribute) => () => translateOwnAttribute(attribute))],
+      (step) => step(),
+    );
   };
 
   return {
     translateRoot({ root, boundary = root, translate }) {
-      for (const element of collectElements(root, isTracked)) {
+      runEach(collectElements(root, isTracked), (element) => {
         if (!isInsideCustomElement(element, boundary)) {
           translateElement(element, translate);
         }
-      }
+      });
     },
   };
 }

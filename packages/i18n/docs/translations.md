@@ -198,6 +198,10 @@ An apostrophe before `{` or `}` quotes text up to the next apostrophe, and two a
 | `Don't forget {name}`     | `Don't forget Ana`      |
 | `Type '{name}' to insert` | `Type {name} to insert` |
 | `It''s '{'here'}'`        | `It's {here}`           |
+| `Ouvrir l''{app}`         | `Ouvrir l'éditeur`      |
+| `Ouvrir l’{app}`          | `Ouvrir l’éditeur`      |
+
+Watch for an apostrophe right before a placeholder, as French, Italian, and Catalan elision puts one: `Ouvrir l'{app}` quotes `{app}`, so it shows `Ouvrir l{app}`, and nothing warns, because the text is valid. Write two apostrophes, `l''{app}`, or the typographic apostrophe `’`, which French typography prefers anyway and which is never syntax.
 
 Inside a plural's forms, `#` stands for the number; write `'#'` for a literal `#`. A `select` nested in a form is not the plural itself, so a `#` there is shown as written, as in ICU; put `{count}` there instead. Quoted text is text to the types too: in `'{it''s {x}'`, which shows `{it's {x}`, `x` is not a value `t()` asks for.
 

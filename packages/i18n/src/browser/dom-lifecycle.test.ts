@@ -422,6 +422,76 @@ describe("initializeBrowserI18n document integration", () => {
     binding.disconnect();
   });
 
+  it("finishes the initial pass before rethrowing the first error from missing-key handling", async () => {
+    document.body.innerHTML =
+      '<p data-i18n="greeting">Hello</p><p data-i18n="first" data-i18n-title="greeting" title="Hi">Fallback</p>' +
+      '<p data-i18n="frOnly">Other</p><p data-i18n="second">Second fallback</p>';
+    const errors = new Map<string, Error>();
+    const i18n = createManager({
+      onMissingKey: (key) => {
+        const error = new Error(key);
+        errors.set(key, error);
+        throw error;
+      },
+    });
+
+    const initialization = initializeBrowserI18n({ i18n, locale: "fr", root: document.body });
+
+    await expect(initialization).rejects.toThrow("first");
+    await expect(initialization.catch((error: unknown) => error)).resolves.toBe(errors.get("first"));
+    expect(errors.has("second")).toBe(true);
+    expect(Array.from(document.querySelectorAll("p"), (element) => element.textContent)).toEqual([
+      "Bonjour",
+      "Fallback",
+      "Francais seulement",
+      "Second fallback",
+    ]);
+    expect(document.querySelectorAll("p")[1]?.getAttribute("title")).toBe("Bonjour");
+  });
+
+  it("finishes a locale-change pass and observed additions before reporting an error from missing-key handling", async () => {
+    document.body.innerHTML =
+      '<p data-i18n="greeting">Hello</p><p data-i18n="missing">Fallback</p><p data-i18n="frOnly">Other</p>';
+    const failure = new Error("missing key");
+    let shouldThrow = false;
+    const i18n = createManager({
+      onMissingKey: () => {
+        if (shouldThrow) {
+          throw failure;
+        }
+      },
+    });
+    const binding = await initializeBrowserI18n({ i18n, locale: "en", root: document.body, observe: true });
+    const reported: unknown[] = [];
+    const onError = (event: ErrorEvent) => {
+      reported.push(event.error);
+      event.preventDefault();
+    };
+    window.addEventListener("error", onError);
+    shouldThrow = true;
+
+    try {
+      await i18n.setLocale("fr");
+      const added = document.createElement("div");
+      added.innerHTML = '<span data-i18n="missing">Added fallback</span>';
+      const sibling = document.createElement("span");
+      sibling.dataset.i18n = "greeting";
+      document.body.append(added, sibling);
+      await flushMutations();
+    } finally {
+      window.removeEventListener("error", onError);
+      binding.disconnect();
+    }
+
+    expect(Array.from(document.querySelectorAll("p"), (element) => element.textContent)).toEqual([
+      "Bonjour",
+      "Fallback",
+      "Francais seulement",
+    ]);
+    expect(document.querySelector("body > span")?.textContent).toBe("Bonjour");
+    expect(reported).toEqual([failure, failure]);
+  });
+
   it("does not translate an element added to the root and moved outside it before observation runs", async () => {
     document.body.innerHTML = '<div id="root"></div><div id="outside"></div>';
     const root = document.querySelector("#root")!;
