@@ -188,4 +188,44 @@ describe("createScriptCommand", () => {
     await expect(command.run(context)).resolves.toBe(0);
     expect(lines.join("\n").match(/workers=\d+/g)).toEqual(["workers=4"]);
   });
+
+  describe("a package's own time limit", () => {
+    /* The script outlives the declared 0.1 seconds by a wide margin, so a run
+       that honours the declaration is killed and one that does not finishes. */
+    async function runSlowPackage(flags: readonly string[], declared: unknown): Promise<number> {
+      const slow: WorkspacePackage = {
+        ...createPackage("slow", "packages/slow", []),
+        directory: process.cwd(),
+        manifest: { codenhub: { tools: { timeout: declared } } },
+        scripts: { test: `"${process.execPath}" -e "setTimeout(() => {}, 1500)"` },
+      };
+      const context: CommandContext = {
+        options: parseArguments(["test", "--no-build", ...flags]).options,
+        passthrough: [],
+        reporter: createReporter({ useColor: false, write: () => undefined, writeError: () => undefined }),
+        selection: { isImplicit: false, targets: [{ package: slow, paths: [] }], unownedPaths: [] },
+        tokens: [],
+        workspace: { packages: [slow], root: process.cwd() },
+      };
+
+      return createScriptCommand({ name: "test", summary: "Run tests." }).run(context);
+    }
+
+    it("shouldApplyTheLimitAPackageDeclaresInPlaceOfTheDefault", async () => {
+      await expect(runSlowPackage([], 0.1)).resolves.toBe(1);
+    });
+
+    it("shouldLetTheCallerSetTheLimitOverWhatThePackageDeclares", async () => {
+      await expect(runSlowPackage(["--timeout=30"], 0.1)).resolves.toBe(0);
+    });
+
+    it("shouldLetTheCallerRemoveTheLimitOverWhatThePackageDeclares", async () => {
+      await expect(runSlowPackage(["--no-timeout"], 0.1)).resolves.toBe(0);
+    });
+
+    it("shouldRaiseTheLimitOverTheDefaultForASlowPackage", async () => {
+      await expect(runSlowPackage(["--timeout=0.1"], 30)).resolves.toBe(1);
+      await expect(runSlowPackage([], 30)).resolves.toBe(0);
+    });
+  });
 });

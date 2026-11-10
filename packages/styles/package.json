@@ -256,6 +256,9 @@
   "codenhub": {
     "label": "StyleKit",
     "status": "active",
-    "docs": {}
+    "docs": {},
+    "tools": {
+      "timeout": 1800
+    }
   }
 }

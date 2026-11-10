@@ -156,6 +156,21 @@ describe("manifest rules", () => {
     expect((await runRules(workspacePackage)).map(({ code }) => code)).toEqual(["scripts/test:coverage"]);
   });
 
+  it("shouldAcceptAPackageTimeoutAndRejectAMalformedOne", async () => {
+    const withTimeout = async (timeout: unknown) =>
+      (
+        await runRules(
+          createPackage({
+            directory: await createPackageDirectory(),
+            manifest: { ...COMPLIANT_MANIFEST, codenhub: { ...COMPLIANT_MANIFEST.codenhub, tools: { timeout } } },
+          }),
+        )
+      ).map(({ code }) => code);
+
+    expect(await withTimeout(1800)).toEqual([]);
+    expect(await withTimeout("1800")).toEqual(["scripts/timeout"]);
+  });
+
   it("shouldRejectAScriptThatChainsABuild", async () => {
     const scripts = { ...COMPLIANT_SCRIPTS, test: "pnpm build && vitest run" };
     const workspacePackage = createPackage({

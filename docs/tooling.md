@@ -123,23 +123,23 @@ Diagnostics name the file they came from, so a batch that fails is reported agai
 
 ## Options
 
-| Option                | Effect                                                                              |
-| --------------------- | ----------------------------------------------------------------------------------- |
-| `--changed[=<ref>]`   | Narrow to packages changed against `<ref>`. Defaults to `main`.                     |
-| `--parallel[=<n>]`    | Run up to `<n>` packages at once. Defaults to 6; a bare flag asks for one per core. |
-| `--bail`              | Stop after the first failing package.                                               |
-| `--no-build`          | Skip prerequisite builds.                                                           |
-| `--no-deps`           | Build only the selected packages, not their workspace dependencies.                 |
-| `--skip=<steps>`      | Leave verification steps out of a `verify` run.                                     |
-| `--timeout=<seconds>` | Kill a finite package run after `<seconds>`. Defaults to 600.                       |
-| `--no-timeout`        | Never kill a package run.                                                           |
-| `--dry-run`           | Print the commands that would run.                                                  |
-| `--fix`               | Apply fixes instead of only reporting.                                              |
-| `--pack`              | Let `check` run `npm pack --dry-run` to inspect publishable contents.               |
-| `--json`              | Emit machine-readable output where supported.                                       |
-| `--verbose`           | Report every command's output, not only the output of what failed.                  |
-| `-h`, `--help`        | Show usage.                                                                         |
-| `--version`           | Print the tooling version.                                                          |
+| Option                | Effect                                                                                 |
+| --------------------- | -------------------------------------------------------------------------------------- |
+| `--changed[=<ref>]`   | Narrow to packages changed against `<ref>`. Defaults to `main`.                        |
+| `--parallel[=<n>]`    | Run up to `<n>` packages at once. Defaults to 6; a bare flag asks for one per core.    |
+| `--bail`              | Stop after the first failing package.                                                  |
+| `--no-build`          | Skip prerequisite builds.                                                              |
+| `--no-deps`           | Build only the selected packages, not their workspace dependencies.                    |
+| `--skip=<steps>`      | Leave verification steps out of a `verify` run.                                        |
+| `--timeout=<seconds>` | Kill a finite package run after `<seconds>`. Defaults to 600, or to the package's own. |
+| `--no-timeout`        | Never kill a package run.                                                              |
+| `--dry-run`           | Print the commands that would run.                                                     |
+| `--fix`               | Apply fixes instead of only reporting.                                                 |
+| `--pack`              | Let `check` run `npm pack --dry-run` to inspect publishable contents.                  |
+| `--json`              | Emit machine-readable output where supported.                                          |
+| `--verbose`           | Report every command's output, not only the output of what failed.                     |
+| `-h`, `--help`        | Show usage.                                                                            |
+| `--version`           | Print the tooling version.                                                             |
 
 Unrecognized flags and everything after a bare `--` are forwarded to the underlying tool, so `hub test error --reporter=verbose` reaches Vitest unchanged.
 
@@ -168,7 +168,9 @@ Captured diagnostic output is limited to 12,000 JavaScript string characters per
 
 `--verbose` shows complete output and reports what passed as well, which is the way to inspect output a successful command produced. It streams that output live only when one command holds the terminal; several packages running at once would interleave into a transcript nobody can read, so their output is captured and printed as each one finishes. Repository-wide tools are the exception to the rule above: `lint`, `format`, and `cloc` repeat whatever they wrote, pass or fail, because a linter reports warnings and still exits zero, and keying their output off the exit code would drop the findings the run existed to surface.
 
-A package run whose script is still running when it exceeds `--timeout` is killed, together with every process it started: a script runs under a shell, and it is the shell's children that hold the output open, so killing the shell alone would leave the run waiting on them. When the script has already exited but a process it left behind still holds its output pipes, the run is reported with the script's own result once the limit elapses, and that leftover process is not stopped, because it can no longer be found through the script that started it. Reporting it as timed out would misreport a script that finished well inside the limit; waiting for the leftover process would leave the call without an upper bound, which is what the limit is for; and a grace period after exit would be a new timing constant that either truncates slow output or waits needlessly. On Windows `taskkill` ends the tree; elsewhere the tree is read from one `ps` snapshot taken just before the kill, so a process started after that instant is not in it and can outlive the run. This is what keeps one hanging browser-test worker from blocking a whole workspace run. Interactive `dev`, `debug`, `preview`, and watch commands stream through one attached terminal and have no timeout or output cap. Native machine-readable results such as `check --json` and `list --json` are not shortened; a captured run requested with `--json` also preserves its complete output. Valid JSON emitted by an underlying tool remains complete even without a hub flag.
+A package whose scripts legitimately outlast the default declares its own limit as `codenhub.tools.timeout`, a positive number of seconds. It replaces the default for that package's script runs, so one slow package does not lengthen the wait on a hung run in every other. It never overrides the command line: `--timeout` and `--no-timeout` apply to every package as typed. `hub check` reports a malformed value as `scripts/timeout`. The first user was `@codenhub/styles`, whose local browser step runs three engines in one run and took 690 seconds, where CI runs one engine per job. Rejected: raising the default, which lengthens the wait on a hung run everywhere; and a flag-only workaround, which the documented gate, `pnpm verify`, would still fail without.
+
+A package run whose script is still running when it exceeds its limit is killed, together with every process it started: a script runs under a shell, and it is the shell's children that hold the output open, so killing the shell alone would leave the run waiting on them. When the script has already exited but a process it left behind still holds its output pipes, the run is reported with the script's own result once the limit elapses, and that leftover process is not stopped, because it can no longer be found through the script that started it. Reporting it as timed out would misreport a script that finished well inside the limit; waiting for the leftover process would leave the call without an upper bound, which is what the limit is for; and a grace period after exit would be a new timing constant that either truncates slow output or waits needlessly. On Windows `taskkill` ends the tree; elsewhere the tree is read from one `ps` snapshot taken just before the kill, so a process started after that instant is not in it and can outlive the run. This is what keeps one hanging browser-test worker from blocking a whole workspace run. Interactive `dev`, `debug`, `preview`, and watch commands stream through one attached terminal and have no timeout or output cap. Native machine-readable results such as `check --json` and `list --json` are not shortened; a captured run requested with `--json` also preserves its complete output. Valid JSON emitted by an underlying tool remains complete even without a hub flag.
 
 ## Repository-wide tools
 
@@ -375,22 +377,22 @@ The cost is that an artifact directory below a package root that is not itself a
 
 Findings carry a `<rule>/<detail>` code and a severity. Only `error` findings fail the run; `warning` covers SHOULD-level rules such as the recommended `license` and `repository` metadata. `pnpm check --json` prints the codes.
 
-| Rule                  | Checks                                                                                                                  |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `metadata`            | Required and recommended manifest fields, and the LICENSE file, of published packages.                                  |
-| `scripts`             | Required scripts, a self-contained `prepublishOnly`, no chained builds, and browser tests kept out of the unit scripts. |
-| `engines`             | A declared `engines.node` is a lower bound within the pinned Node.js major, and the README and public docs state it.    |
-| `dependencies`        | Declared where used, in the right field, with catalog ranges and no cycles.                                             |
-| `exports`             | Import paths shown in the README and public docs are declared in `exports`.                                             |
-| `documentation`       | Required surfaces, frontmatter, single H1, link targets, and slug uniqueness.                                           |
-| `docs-versions`       | Each `codenhub.docs.versions` entry matches a stable release tag; an entry that matches none is a warning.              |
-| `undocumented-export` | JSDoc/TSDoc presence on top-level typed package exports, following declaration barrels.                                 |
-| `llms-full`           | `llms-full.txt` still matches the documents it compiles.                                                                |
-| `readme`              | README status notices agree with `codenhub.status`.                                                                     |
-| `changelog`           | A package that keeps an earlier release has a changelog, which documents, dates, describes, and links the version.      |
-| `translation`         | Translations mirror an English file in a listed locale, record a valid `source`, keep its structure, and are current.   |
-| `size`                | A version awaiting its release tag carries a `size.json` that matches its build.                                        |
-| `assets`              | `codenhub.assets` entries name files `coden.agency/brand` publishes.                                                    |
+| Rule                  | Checks                                                                                                                                                          |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `metadata`            | Required and recommended manifest fields, and the LICENSE file, of published packages.                                                                          |
+| `scripts`             | Required scripts, a self-contained `prepublishOnly`, no chained builds, browser tests kept out of the unit scripts, and a well-formed `codenhub.tools.timeout`. |
+| `engines`             | A declared `engines.node` is a lower bound within the pinned Node.js major, and the README and public docs state it.                                            |
+| `dependencies`        | Declared where used, in the right field, with catalog ranges and no cycles.                                                                                     |
+| `exports`             | Import paths shown in the README and public docs are declared in `exports`.                                                                                     |
+| `documentation`       | Required surfaces, frontmatter, single H1, link targets, and slug uniqueness.                                                                                   |
+| `docs-versions`       | Each `codenhub.docs.versions` entry matches a stable release tag; an entry that matches none is a warning.                                                      |
+| `undocumented-export` | JSDoc/TSDoc presence on top-level typed package exports, following declaration barrels.                                                                         |
+| `llms-full`           | `llms-full.txt` still matches the documents it compiles.                                                                                                        |
+| `readme`              | README status notices agree with `codenhub.status`.                                                                                                             |
+| `changelog`           | A package that keeps an earlier release has a changelog, which documents, dates, describes, and links the version.                                              |
+| `translation`         | Translations mirror an English file in a listed locale, record a valid `source`, keep its structure, and are current.                                           |
+| `size`                | A version awaiting its release tag carries a `size.json` that matches its build.                                                                                |
+| `assets`              | `codenhub.assets` entries name files `coden.agency/brand` publishes.                                                                                            |
 
 The `documentation` rule also reports `documentation/legacy-metadata` when a package declares identity (`label`, `status`, and the other fields `docs/specs/packages-metadata.md` lists) inside `codenhub.docs` instead of on `codenhub`, and `documentation/missing-logo` when `codenhub.logo` names no file in the package.
 
