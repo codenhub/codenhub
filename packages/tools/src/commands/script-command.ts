@@ -146,6 +146,11 @@ export async function runPackageBatch(
   const { reporter } = context;
   const rows = new Map<string, SummaryRow>();
   let hasFailure = false;
+  // Resolved before anything starts: a malformed declaration throws, and from
+  // inside a run it would reject while the pool kept starting queued packages.
+  const timeouts = new Map(
+    runs.map(({ workspacePackage }) => [workspacePackage.name, resolveTimeoutMs(context, workspacePackage, settings)]),
+  );
 
   const runOne = async ({ spec, workspacePackage }: PackageRun): Promise<void> => {
     if (hasFailure && settings.bails) {
@@ -162,7 +167,7 @@ export async function runPackageBatch(
     }
     const outcome = await execute(spec, {
       stdio: settings.streams ? "inherit" : "pipe",
-      timeoutMs: resolveTimeoutMs(context, workspacePackage, settings),
+      timeoutMs: timeouts.get(workspacePackage.name),
     });
     if (!outcome.isSuccess) {
       hasFailure = true;

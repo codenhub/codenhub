@@ -22,6 +22,12 @@ describe("readPackageTimeoutMs", () => {
     expect(readPackageTimeoutMs(createPackage({ codenhub: { tools: { timeout: 1800 } } }))).toBe(1_800_000);
   });
 
+  it("shouldAcceptTheLongestDelayATimerHolds", () => {
+    expect(readPackageTimeoutMs(createPackage({ codenhub: { tools: { timeout: 2_147_483.647 } } }))).toBe(
+      2_147_483_647,
+    );
+  });
+
   it("shouldAcceptAFractionOfASecond", () => {
     expect(readPackageTimeoutMs(createPackage({ codenhub: { tools: { timeout: 0.5 } } }))).toBe(500);
   });
@@ -34,11 +40,14 @@ describe("readPackageTimeoutMs", () => {
     expect(readPackageTimeoutMs(createPackage(manifest))).toBeUndefined();
   });
 
-  it.each([0, -1, "600", null, Number.POSITIVE_INFINITY, 1e308, true])("shouldRejectATimeoutOf%s", (timeout) => {
-    expect(() => readPackageTimeoutMs(createPackage({ codenhub: { tools: { timeout } } }))).toThrow(
-      /Invalid codenhub\.tools\.timeout in slow: expected a positive number of seconds/,
-    );
-  });
+  it.each([0, -1, "600", null, Number.POSITIVE_INFINITY, 1e308, 2_147_484, true])(
+    "shouldRejectATimeoutOf%s",
+    (timeout) => {
+      expect(() => readPackageTimeoutMs(createPackage({ codenhub: { tools: { timeout } } }))).toThrow(
+        /Invalid codenhub\.tools\.timeout in slow: expected a positive number of seconds/,
+      );
+    },
+  );
 
   it("shouldRejectToolsThatIsNotAnObject", () => {
     expect(() => readPackageTimeoutMs(createPackage({ codenhub: { tools: 1800 } }))).toThrow(

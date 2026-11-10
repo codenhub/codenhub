@@ -40,7 +40,7 @@ export interface CliOptions {
   /**
    * Whether `timeoutMs` is still the built-in default.
    *
-   * A package may declare a longer limit of its own, but only over the default:
+   * A package may declare a limit of its own, but only over the default:
    * `--timeout` and `--no-timeout` are the caller's say for this run, and win.
    */
   isDefaultTimeout: boolean;

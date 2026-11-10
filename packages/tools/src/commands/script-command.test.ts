@@ -223,9 +223,12 @@ describe("createScriptCommand", () => {
       await expect(runSlowPackage(["--no-timeout"], 0.1)).resolves.toBe(0);
     });
 
-    it("shouldRaiseTheLimitOverTheDefaultForASlowPackage", async () => {
+    it("shouldApplyTheCallerLimitEvenWhenThePackageDeclaresALongerOne", async () => {
       await expect(runSlowPackage(["--timeout=0.1"], 30)).resolves.toBe(1);
-      await expect(runSlowPackage([], 30)).resolves.toBe(0);
+    });
+
+    it.each([0, -1, "1800"])("shouldRejectAMalformedDeclarationOf%s", async (declared) => {
+      await expect(runSlowPackage([], declared)).rejects.toThrow(/Invalid codenhub\.tools\.timeout in slow/);
     });
   });
 });
