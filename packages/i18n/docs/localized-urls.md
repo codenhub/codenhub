@@ -35,6 +35,31 @@ Use the same `locales` and `defaultLocale` as your manager. Routing is separate 
 
 If you keep the configuration in a variable before passing it in, write `localePrefix: "except-default" as const`. Without `as const`, TypeScript widens the value to `string`, and `createLocaleRouting` rejects it at compile time.
 
+### Trailing slashes
+
+By default, `localize()` keeps the slash of the path you give it: `/about/` gives `/pt/about/`, and `/about` gives `/pt/about`. A locale's home page has no slash to keep, since `/` says nothing about one, so it is always `/pt`. Many static hosts serve `pt/index.html` at `/pt/` and redirect `/pt` there, so on a site like that, set `trailingSlash`:
+
+```ts
+export const routing = createLocaleRouting({
+  locales: ["en", "pt"] as const,
+  defaultLocale: "en",
+  localePrefix: "except-default",
+  trailingSlash: "always",
+});
+
+routing.localize("/", "pt"); // "/pt/"
+routing.localize("/about", "pt"); // "/pt/about/"
+routing.localize("/", "en"); // "/"
+```
+
+| `trailingSlash`          | Builds                                                         |
+| ------------------------ | -------------------------------------------------------------- |
+| `"preserve"`, by default | The given path's slash: `/pt/about/` or `/pt/about`, and `/pt` |
+| `"always"`               | A slash on every path: `/pt/about/` and `/pt/`                 |
+| `"never"`                | No slash on any path but `/`: `/pt/about` and `/pt`            |
+
+`parse()` accepts both spellings whatever you choose, and its `pathname` keeps the request's slash: `/about` for `/pt/about` and `/about/` for `/pt/about/`. Route both values to the same page, or strip the slash before routing. With `"always"` or `"never"`, [Redirect to the canonical URL](#redirect-to-the-canonical-url) then sends the other spelling to the one `localize()` builds, so each page has one address.
+
 ## Read the locale from a path
 
 `parse()` splits a path into its locale and the rest:
@@ -82,7 +107,7 @@ await initializeBrowserI18n({ i18n, locale: route?.locale });
 
 ### Redirect to the canonical URL
 
-`parse()` is forgiving: `/PT/about` and `/en/about` are read as well as `/pt/about` and `/about`. That is friendly to someone typing a URL, but a search engine that finds one page at several addresses splits its ranking between them. Send every other spelling to the one `localize()` builds. Every path `parse()` returns has one, so this never throws:
+`parse()` is forgiving: `/PT/about` and `/en/about` are read as well as `/pt/about` and `/about`, and so are both spellings of a [trailing slash](#trailing-slashes). That is friendly to someone typing a URL, but a search engine that finds one page at several addresses splits its ranking between them. Send every other spelling to the one `localize()` builds. Every path `parse()` returns has one, so this never throws:
 
 ```ts
 const route = routing.parse(url.pathname);
@@ -274,7 +299,7 @@ A server sends a visitor who arrives at `/` to their language from `Accept-Langu
 - **A link on your own site never redirects.** Where storage is blocked, the choice can't be saved, so an arrival from your own site, a same-origin `document.referrer`, keeps the page it asked for. That needs the browser to send the referrer: a link with `rel="noreferrer"`, or a page served with `Referrer-Policy: no-referrer`, sends none, and its visit is redirected like one from elsewhere, so a switch to the default language can be sent straight back. Leave both off your own links, including the language switcher.
 - **A prefixed URL never redirects.** Render the script only on the default locale's pages, so a shared `/pt/about` link always opens in Portuguese. Keep `search` and `hash` when redirecting.
 
-At build time, while you [render each page](#generate-every-localized-page), compute this page's path in every other locale with `localize()`, and a table from each language subtag to its locale:
+At build time, while you [render each page](#generate-every-localized-page), compute this page's path in every other locale with `localize()`, and a table from each language and its likely script, such as `zh-Hant` for `zh-TW`, to its locale:
 
 ```ts
 // Build time, for the page at `pathname` in the default locale.
@@ -284,7 +309,13 @@ const defaultLocale = "en";
 const config = {
   storageKey: "i18n", // the browser binding's storageKey
   locales,
-  languages: Object.fromEntries(locales.map((locale) => [new Intl.Locale(locale).language, locale])),
+  // `zh-TW` is `zh-Hant`: a language and its likely script, as `matchLocale()` compares them.
+  languages: Object.fromEntries(
+    locales.map((locale) => {
+      const { language, script } = new Intl.Locale(locale).maximize();
+      return [`${language}-${script}`, locale];
+    }),
+  ),
   targets: Object.fromEntries(locales.filter((locale) => locale !== defaultLocale).map((locale) => [locale, routing.localize(pathname, locale)])),
 };
 // Writes `<` as `\u003c`, so no path can close the script element early.
@@ -316,8 +347,9 @@ Then render, on the default locale's pages only:
       for (const preference of preferences) {
         let language;
         try {
-          // Reads old codes as `matchLocale()` does, such as `iw-IL` as Hebrew, `he`.
-          language = new Intl.Locale(preference).language;
+          // Reads old codes as `matchLocale()` does, such as `iw-IL` as Hebrew, `he`, and adds the likely script.
+          const likely = new Intl.Locale(preference).maximize();
+          language = `${likely.language}-${likely.script}`;
         } catch {
           continue; // Not a language tag.
         }
@@ -337,7 +369,7 @@ Then render, on the default locale's pages only:
 
 A saved default locale finds no target, so the visitor stays. `location.replace()` keeps the default-locale page out of history, so Back doesn't land on a page that redirects again.
 
-Matching by language subtag picks what `matchLocale()` would when your site has one locale per language, such as `en`, `pt-BR`, and `es`: `pt-PT` gets `pt-BR`, and `es-MX` gets `es`. Hold the two together with a test that runs the same matching against `matchLocale()` for a few preference lists. With more than one locale per language, such as `zh-Hans` and `zh-Hant`, a language subtag can't choose between them. Either compute a table at build time from the browser tags you expect to see, running each through `matchLocale()`, or run the redirect in a deferred script that imports your manager and calls `matchLocale(navigator.languages)`, and accept the flash.
+Matching by language and script picks what `matchLocale()` would when your site has one locale per language and script, such as `en`, `pt-BR`, `es`, `zh-Hans`, and `zh-Hant`: `pt-PT` gets `pt-BR`, `es-MX` gets `es`, and `zh-TW` gets `zh-Hant`. A language in another script never matches, so with only `zh`, which is Simplified, a `zh-TW` visitor moves on to their next language. Hold the two together with a test that runs the same matching against `matchLocale()` for a few preference lists. With more than one locale per language and script, such as `es-419` and `es-ES`, the table can't choose between them. Either compute a table at build time from the browser tags you expect to see, running each through `matchLocale()`, or run the redirect in a deferred script that imports your manager and calls `matchLocale(navigator.languages)`, and accept the flash.
 
 ## Paths it accepts
 

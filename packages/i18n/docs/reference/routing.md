@@ -55,7 +55,7 @@ Generates the canonical URL pathname of a page for one supported locale.
 - `pathname` — A canonical application pathname of at most 8,192 characters without a URL, query, or fragment. A path that starts with a locale is read as that locale's URL, as `parse` reads it.
 - `locale` — A supported locale, trimmed and matched case-insensitively.
 
-**Returns** — The pathname in the locale's words, with the configured locale-prefix policy applied.
+**Returns** — The pathname in the locale's words, with the configured locale-prefix and trailing-slash policies applied.
 
 **Throws**
 
@@ -105,6 +105,7 @@ export interface LocaleRoutingConfig<TLocale extends string> {
     locales: readonly TLocale[];
     localePrefix: "always" | "except-default" | "when-ambiguous";
     pathnames?: Readonly<Record<string, Readonly<Partial<Record<NoInfer<TLocale>, string>>>>> | undefined;
+    trailingSlash?: "preserve" | "always" | "never" | undefined;
 }
 ```
 
@@ -141,6 +142,14 @@ pathnames?: Readonly<Record<string, Readonly<Partial<Record<NoInfer<TLocale>, st
 ```
 
 Translated paths, keyed by the canonical path the application routes on, with each locale's form, such as `{ "/products/:id": { pt: "/produtos/:id" } }`. Paths have fixed segments, `:name` parameters, and a last `:name*` catch-all that matches one or more segments, and every form uses the canonical path's parameters, in any order. Fixed segments match case-sensitively, Unicode matches its percent-encoding, and a fixed segment wins over a parameter, which wins over a catch-all. A locale or path the table doesn't list keeps the canonical words.
+
+#### LocaleRoutingConfig › trailingSlash
+
+```ts
+trailingSlash?: "preserve" | "always" | "never" | undefined;
+```
+
+Whether the paths `localize` and `localizeAll` build end with `/`: `"preserve"`, the default, keeps the given path's slash, so a locale's root, such as `/pt`, has none; `"always"` ends every path but `/` with one, such as `/pt/`, for a site that serves pages as `pt/index.html`; `"never"` ends none with one. `parse` accepts both spellings whatever the policy, and its `pathname` keeps the request's.
 
 ### LocalizedPath
 

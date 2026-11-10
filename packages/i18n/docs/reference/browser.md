@@ -18,7 +18,7 @@ export declare function initializeBrowserI18n<TLocale extends string>(options: B
 
 Initializes core i18n using browser locale precedence and binds optional browser effects.
 
-Locale selection uses explicit input, valid persisted state, navigator preferences, then the configured default. Storage failures are recoverable and warn unless the manager is silent. Only one call may initialize or own a binding for a manager at a time. Setup is transactional: failed initialization or browser setup releases all binding-owned resources. When the loader rejects for a stored or detected locale, it warns unless silent and initializes the default locale without persisting it. Other required dictionary loading and validation failures reject unchanged.
+Locale selection uses explicit input, valid persisted state, navigator preferences, then the configured default. Storage failures are recoverable and warn unless the manager is silent. Only one call may initialize or own a binding for a manager at a time. Setup is transactional: failed initialization or browser setup releases all binding-owned resources. When the loader rejects for a stored or detected locale, it warns unless silent and tries the next of those, the detected locale after a stored one, then the default locale, without persisting the locale it starts in. Other required dictionary loading and validation failures reject unchanged.
 
 **Parameters**
 

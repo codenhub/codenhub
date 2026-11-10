@@ -305,7 +305,9 @@ await i18n.init({ locale: i18n.resolveLocale(lang) ?? i18n.defaultLocale });
 1. An exact match, ignoring case: `pt-BR` gets `pt-BR`.
 2. The longest configured locale the preference starts with, as whole subtags, written in the same script: `pt-BR` gets `pt`.
 3. A match through likely subtags: `zh-TW`, Traditional Chinese, gets `zh-Hant`.
-4. The same language: `pt-PT` gets `pt-BR` when that is your only Portuguese.
+4. The same language in the same script: `pt-PT` gets `pt-BR` when that is your only Portuguese.
+
+A locale in another script never matches, because a page in a script the visitor doesn't read serves them worse than their next language. With `zh`, which is Simplified Chinese, a `zh-TW` visitor who also lists English gets English, and one who lists nothing else gets `undefined`. A configured locale that `Intl.Locale` rejects, such as one with a private-use subtag over eight characters, has no likely script, so it matches by language, and by the script it names when it names one.
 
 It returns `undefined` when nothing matches, skips blank and malformed entries, and throws a `TypeError` when `preferences` isn't an array.
 
@@ -847,7 +849,7 @@ Pass `locale` when the page already knows its language, such as from the URL in 
 
 On a localized site, that means every page view saves the language in its URL. Usually that is what you want: the saved language is the one the visitor last read, which is what [the static-site redirect](docs/localized-urls.md#detect-the-language-on-a-static-site) relies on. It also means a visitor who follows one shared Portuguese link has Portuguese saved from then on, until they read a page in another language, even if their browser asks for English. If you would rather save only what the visitor picks in your language picker, turn saving off with `persistLocale: false` and store the picker's choice yourself. That option also stops the binding from reading the saved choice, so read your own back and pass it as `locale`.
 
-If your loader fails for a saved or detected locale, the visitor gets the default locale and a console warning instead of a broken app, and their saved choice is kept for next time. A loader failure for a locale you passed explicitly, or for the default locale, still rejects, since there is nothing sensible to fall back to. So does a dictionary that loads but [breaks the rules](docs/troubleshooting.md#a-dictionary-is-rejected), whatever the locale: that is a bug to fix, not a network hiccup to ride out.
+If your loader fails for a saved locale, the binding warns and tries the locale it detects from the browser, then the default locale, so the visitor still gets a language they read instead of a broken app. A detected locale that fails falls back to the default the same way. The saved choice is kept for next time. A loader failure for a locale you passed explicitly, or for the default locale, still rejects, since there is nothing sensible to fall back to. So does a dictionary that loads but [breaks the rules](docs/troubleshooting.md#a-dictionary-is-rejected), whatever the locale: that is a bug to fix, not a network hiccup to ride out.
 
 ## Let visitors switch languages
 
@@ -906,7 +908,7 @@ await initializeBrowserI18n({ i18n, root: document });
 
 - `data-i18n` replaces an element's text. The element must contain only text, with no child elements, so a translation can never remove your markup. Elements with children are skipped with a warning.
 - `data-i18n-<attribute>` translates one attribute. Only attributes that hold text for people or screen readers are allowed: `alt`, `title`, `placeholder`, `label`, `aria-label`, `aria-description`, `aria-placeholder`, `aria-roledescription`, and `aria-valuetext`. Others, such as `data-i18n-href` or `data-i18n-onclick`, are ignored, so a translation can never change a link, a style, or an event handler.
-- The text already in the HTML is the fallback. If a later language lacks the key, the original text comes back.
+- The text already in the HTML is the last fallback. A key a language lacks shows the text of the next locale in its fallback chain, as `t()` does: a configured parent such as `pt` for `pt-BR`, then the default locale. The original text comes back only when no dictionary in the chain has the key.
 - Text is set as plain text, never as HTML, and `<script>`, `<style>`, `<noscript>`, and `<template>` are never touched.
 - Placeholders such as `{name}` are not filled here, because there is nowhere in the HTML to pass a value from. Render text with values from your code with `t()`.
 
@@ -1184,6 +1186,31 @@ Use the same `locales` and `defaultLocale` as your manager. Routing is separate 
 
 If you keep the configuration in a variable before passing it in, write `localePrefix: "except-default" as const`. Without `as const`, TypeScript widens the value to `string`, and `createLocaleRouting` rejects it at compile time.
 
+### Trailing slashes
+
+By default, `localize()` keeps the slash of the path you give it: `/about/` gives `/pt/about/`, and `/about` gives `/pt/about`. A locale's home page has no slash to keep, since `/` says nothing about one, so it is always `/pt`. Many static hosts serve `pt/index.html` at `/pt/` and redirect `/pt` there, so on a site like that, set `trailingSlash`:
+
+```ts
+export const routing = createLocaleRouting({
+  locales: ["en", "pt"] as const,
+  defaultLocale: "en",
+  localePrefix: "except-default",
+  trailingSlash: "always",
+});
+
+routing.localize("/", "pt"); // "/pt/"
+routing.localize("/about", "pt"); // "/pt/about/"
+routing.localize("/", "en"); // "/"
+```
+
+| `trailingSlash`          | Builds                                                         |
+| ------------------------ | -------------------------------------------------------------- |
+| `"preserve"`, by default | The given path's slash: `/pt/about/` or `/pt/about`, and `/pt` |
+| `"always"`               | A slash on every path: `/pt/about/` and `/pt/`                 |
+| `"never"`                | No slash on any path but `/`: `/pt/about` and `/pt`            |
+
+`parse()` accepts both spellings whatever you choose, and its `pathname` keeps the request's slash: `/about` for `/pt/about` and `/about/` for `/pt/about/`. Route both values to the same page, or strip the slash before routing. With `"always"` or `"never"`, [Redirect to the canonical URL](#redirect-to-the-canonical-url) then sends the other spelling to the one `localize()` builds, so each page has one address.
+
 ## Read the locale from a path
 
 `parse()` splits a path into its locale and the rest:
@@ -1231,7 +1258,7 @@ await initializeBrowserI18n({ i18n, locale: route?.locale });
 
 ### Redirect to the canonical URL
 
-`parse()` is forgiving: `/PT/about` and `/en/about` are read as well as `/pt/about` and `/about`. That is friendly to someone typing a URL, but a search engine that finds one page at several addresses splits its ranking between them. Send every other spelling to the one `localize()` builds. Every path `parse()` returns has one, so this never throws:
+`parse()` is forgiving: `/PT/about` and `/en/about` are read as well as `/pt/about` and `/about`, and so are both spellings of a [trailing slash](#trailing-slashes). That is friendly to someone typing a URL, but a search engine that finds one page at several addresses splits its ranking between them. Send every other spelling to the one `localize()` builds. Every path `parse()` returns has one, so this never throws:
 
 ```ts
 const route = routing.parse(url.pathname);
@@ -1423,7 +1450,7 @@ A server sends a visitor who arrives at `/` to their language from `Accept-Langu
 - **A link on your own site never redirects.** Where storage is blocked, the choice can't be saved, so an arrival from your own site, a same-origin `document.referrer`, keeps the page it asked for. That needs the browser to send the referrer: a link with `rel="noreferrer"`, or a page served with `Referrer-Policy: no-referrer`, sends none, and its visit is redirected like one from elsewhere, so a switch to the default language can be sent straight back. Leave both off your own links, including the language switcher.
 - **A prefixed URL never redirects.** Render the script only on the default locale's pages, so a shared `/pt/about` link always opens in Portuguese. Keep `search` and `hash` when redirecting.
 
-At build time, while you [render each page](#generate-every-localized-page), compute this page's path in every other locale with `localize()`, and a table from each language subtag to its locale:
+At build time, while you [render each page](#generate-every-localized-page), compute this page's path in every other locale with `localize()`, and a table from each language and its likely script, such as `zh-Hant` for `zh-TW`, to its locale:
 
 ```ts
 // Build time, for the page at `pathname` in the default locale.
@@ -1433,7 +1460,13 @@ const defaultLocale = "en";
 const config = {
   storageKey: "i18n", // the browser binding's storageKey
   locales,
-  languages: Object.fromEntries(locales.map((locale) => [new Intl.Locale(locale).language, locale])),
+  // `zh-TW` is `zh-Hant`: a language and its likely script, as `matchLocale()` compares them.
+  languages: Object.fromEntries(
+    locales.map((locale) => {
+      const { language, script } = new Intl.Locale(locale).maximize();
+      return [`${language}-${script}`, locale];
+    }),
+  ),
   targets: Object.fromEntries(locales.filter((locale) => locale !== defaultLocale).map((locale) => [locale, routing.localize(pathname, locale)])),
 };
 // Writes `<` as `\u003c`, so no path can close the script element early.
@@ -1465,8 +1498,9 @@ Then render, on the default locale's pages only:
       for (const preference of preferences) {
         let language;
         try {
-          // Reads old codes as `matchLocale()` does, such as `iw-IL` as Hebrew, `he`.
-          language = new Intl.Locale(preference).language;
+          // Reads old codes as `matchLocale()` does, such as `iw-IL` as Hebrew, `he`, and adds the likely script.
+          const likely = new Intl.Locale(preference).maximize();
+          language = `${likely.language}-${likely.script}`;
         } catch {
           continue; // Not a language tag.
         }
@@ -1486,7 +1520,7 @@ Then render, on the default locale's pages only:
 
 A saved default locale finds no target, so the visitor stays. `location.replace()` keeps the default-locale page out of history, so Back doesn't land on a page that redirects again.
 
-Matching by language subtag picks what `matchLocale()` would when your site has one locale per language, such as `en`, `pt-BR`, and `es`: `pt-PT` gets `pt-BR`, and `es-MX` gets `es`. Hold the two together with a test that runs the same matching against `matchLocale()` for a few preference lists. With more than one locale per language, such as `zh-Hans` and `zh-Hant`, a language subtag can't choose between them. Either compute a table at build time from the browser tags you expect to see, running each through `matchLocale()`, or run the redirect in a deferred script that imports your manager and calls `matchLocale(navigator.languages)`, and accept the flash.
+Matching by language and script picks what `matchLocale()` would when your site has one locale per language and script, such as `en`, `pt-BR`, `es`, `zh-Hans`, and `zh-Hant`: `pt-PT` gets `pt-BR`, `es-MX` gets `es`, and `zh-TW` gets `zh-Hant`. A language in another script never matches, so with only `zh`, which is Simplified, a `zh-TW` visitor moves on to their next language. Hold the two together with a test that runs the same matching against `matchLocale()` for a few preference lists. With more than one locale per language and script, such as `es-419` and `es-ES`, the table can't choose between them. Either compute a table at build time from the browser tags you expect to see, running each through `matchLocale()`, or run the redirect in a deferred script that imports your manager and calls `matchLocale(navigator.languages)`, and accept the flash.
 
 ## Paths it accepts
 
@@ -1558,7 +1592,7 @@ Your loader threw or rejected, and the manager wrapped the failure in an `I18nEr
 - `error.locale` is the locale that failed.
 - `error.cause` is what your loader threw, such as a network error or a timeout.
 
-The manager keeps its current language, and the next call tries the loader again, so a retry button can just call `setLocale()` again. In a browser, a saved or detected locale that fails falls back to the default; see [How the locale is chosen](docs/browser.md#how-the-locale-is-chosen).
+The manager keeps its current language, and the next call tries the loader again, so a retry button can just call `setLocale()` again. In a browser, a saved locale that fails falls back to the detected locale, and a detected one to the default; see [How the locale is chosen](docs/browser.md#how-the-locale-is-chosen).
 
 ### Show it to the visitor
 
@@ -1670,9 +1704,10 @@ The path you passed is valid, but the locale prefix or the translated words make
 - **"Browser initialization was superseded before its locale became active"**: your code called `i18n.init()` while the binding was starting the manager, or `i18n.setLocale()` on a manager that was already initialized, even to the locale already showing. The manager keeps your call's result and the binding is not connected. Let the binding start the manager, and switch languages after its promise resolves.
 - **"Browser observation requires a root"**: `observe: true` needs a `root` to watch.
 - **"Could not read persisted locale" or "Could not persist locale"**: `localStorage` is unavailable, as in some private browsing modes or a Web Worker. The visitor's choice is not saved; everything else works. Pass `persistLocale: false` where there is no storage to start quietly.
-- **`Could not load locale "pt"; using the default locale.`**: the loader failed for a saved or detected locale other than the default, so the visitor got the default instead. Fix the loader; the saved choice is kept for next time. If the default locale itself fails to load, there is nothing left to fall back to, and initialization rejects with `Failed to load translations for locale "en".`
+- **`Could not load locale "pt"; using "es".`** or **`Could not load locale "pt"; using the default locale.`**: the loader failed for a saved or detected locale other than the default, so the visitor got the next one instead: the locale detected from the browser after a saved one, then the default. Fix the loader; the saved choice is kept for next time. If the default locale itself fails to load, there is nothing left to fall back to, and initialization rejects with `Failed to load translations for locale "en".`
 - **"Skipping translation on <p> because translated elements must be leaves"**: the element with `data-i18n` has child elements. Put the key on an element that contains only text, or translate it with `t()`.
 - **"Skipping translation on <style> because the element can activate or hide translated content"**: a `data-i18n` key is on a `<script>`, `<style>`, `<noscript>`, or `<template>` element, whose text runs as code or decides what shows. Move the key to an ordinary element.
+- **"Skipping translation because data-i18n contains an invalid key"**, or the same for a `data-i18n-<attribute>`: the key is blank, longer than 1,000 characters, or contains an ASCII control character, so no dictionary can hold it. The element keeps its current text. Fix the key in the HTML.
 - **`data-i18n` text shows `{name}`**: HTML translation can't fill placeholders. Render that text with `t()` and pass the values.
 - **A `data-i18n-href` attribute does nothing**: only text attributes can be translated. See [Translate HTML without a framework](docs/browser.md#translate-html-without-a-framework).
 

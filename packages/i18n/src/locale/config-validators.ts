@@ -218,12 +218,23 @@ const readLocalePrefix = (value: unknown): LocalePrefix =>
     ? (value as LocalePrefix)
     : expectType("localePrefix", '"always", "except-default", or "when-ambiguous"', value);
 
+/** Whether built paths end with a slash. @internal */
+export type TrailingSlash = "preserve" | "always" | "never";
+
+const TRAILING_SLASHES: readonly unknown[] = ["preserve", "always", "never"];
+
+const readTrailingSlash = (value: unknown): TrailingSlash =>
+  value === undefined || TRAILING_SLASHES.includes(value)
+    ? ((value ?? "preserve") as TrailingSlash)
+    : expectType("trailingSlash", '"preserve", "always", or "never"', value);
+
 /** The checked configuration of locale routing, with locales trimmed. @internal */
 export interface CheckedLocaleRoutingConfig {
   readonly locales: string[];
   readonly defaultLocale: string;
   readonly localePrefix: LocalePrefix;
   readonly pathnames: readonly CheckedPathnameEntry[];
+  readonly trailingSlash: TrailingSlash;
 }
 
 /**
@@ -258,8 +269,8 @@ export const i18nConfig = (input: unknown): CheckedI18nConfig => {
 };
 
 /**
- * Checks the configuration of locale routing: the locales, the default locale, the locale-prefix policy, and the shape of the
- * translated-path table.
+ * Checks the configuration of locale routing: the locales, the default locale, the locale-prefix policy, the shape of the
+ * translated-path table, and the trailing-slash policy.
  *
  * @internal
  */
@@ -272,6 +283,7 @@ export const localeRoutingConfig = (input: unknown): CheckedLocaleRoutingConfig 
     defaultLocale: readDefaultLocale(own(config, "defaultLocale"), locales),
     localePrefix: readLocalePrefix(own(config, "localePrefix")),
     pathnames: readPathnames(own(config, "pathnames"), locales),
+    trailingSlash: readTrailingSlash(own(config, "trailingSlash")),
   };
 };
 

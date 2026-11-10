@@ -34,6 +34,8 @@ Matching used to live only in the browser entry point, so a server resolving `Ac
 
 **Order breaks ties between regions (2026-11-08).** Among configured locales that share a preference's language and script, with no exact or likely-region match, the first in `locales` wins, and the docs say so: list `es-419` before `es-ES` to serve `es-MX` from `es-419`. Choosing by region containment was rejected because it needs CLDR region data that `Intl` does not expose, and ordering already gives the right result.
 
+**A locale in another script never matches (2026-11-10).** The last step matched any configured locale of the same language, so with `["en", "zh"]`, `zh-TW` got Simplified `zh` even when English came next in the visitor's list, and with `["en", "zh-Hant"]`, `zh` got Traditional. That did not weigh the reason fallback chains skip a parent in another script: a page in a script the visitor doesn't read serves them worse than their next language. The step now requires the same likely script, as every earlier step does, and a locale `Intl.Locale` rejects still matches by language subtag. Rejected: keeping RFC 4647 lookup, which defends the old result but disagrees with the fallback chains on the same pair of locales.
+
 ### Interpolation came before ICU, with ICU syntax
 
 Without interpolation, a sentence with a value has to be concatenated from fragments, which fixes English word order into every translation, so `{name}` placeholders shipped first. `{name}` is the ICU argument syntax, so ICU messages can extend it later without changing existing translations.
@@ -125,6 +127,8 @@ The binding persists an explicit locale and every later applied change, but not 
 
 When the loader rejects for a stored or detected locale, the binding warns and starts with the default locale, keeping the stored preference. Rejecting made a temporary failure of one dictionary stop the application from starting, and the only recovery, passing the default explicitly, persisted it and kept that visitor on the default for good. An explicit locale or the default locale still rejects, since nothing can serve in its place.
 
+**The detected locale comes before the default (2026-11-10).** The decision above compared rejecting with using the default, and did not weigh the browser's languages as the next choice: a visitor with a saved `fr` whose dictionary fails to load, and a `pt-BR` browser, got English although Portuguese was available. A failing saved locale now falls back to the detected locale, then the default, each warned about, and none persisted. Rejected: trying every locale in `navigator.languages`, which can stack one failed load per preference before the page shows text.
+
 ### One data attribute per translated attribute
 
 `data-i18n-<attribute>` was chosen over a single list attribute, such as `data-i18n-attrs="placeholder:search.hint"`, because it needs no parsing and a `MutationObserver` can watch exactly those names. Attributes are limited to text read by people or assistive technology, so a translation can never set a URL, a style, or an event handler.
@@ -178,6 +182,16 @@ Rejected:
 ### One `localePrefix` option replaces `prefixDefaultLocale` (2026-11-02)
 
 The prefix policy has three values: `"always"`, `"except-default"`, and `"when-ambiguous"`. That makes it one option rather than `prefixDefaultLocale: boolean` plus a second flag whose combinations overlap. The change breaks the API, and it is made in 0.2.0 because before 1.0 is the cheapest time. Rejected: keeping `prefixDefaultLocale` and adding a flag later, which avoids the break but leaves two settings that interact.
+
+### `trailingSlash` builds a locale's root with a slash (2026-11-10)
+
+`localize("/", "pt")` was always `/pt`, while `localize("/about/", "pt")` kept its slash, because the canonical root `/` can't say whether a slash is wanted. That did not weigh static hosts that serve `pt/index.html` at `/pt/` and redirect `/pt` there, such as GitHub Pages: every link and `hreflang` to a locale's home page went through a redirect, and the guide's canonical redirect sent `/pt/` back to `/pt`. An optional `trailingSlash` now picks `"preserve"`, the old behavior and the default, `"always"`, or `"never"` for every path `localize` builds.
+
+- **Optional, unlike `localePrefix`.** Its default is the behavior 0.2 shipped, so no existing URL changes.
+- **`parse` is unchanged**: it accepts both spellings and keeps the request's in `pathname`, so the canonical redirect turns the other spelling into the built one. Normalizing `pathname` too was rejected, because it changes what an application routes on for a setting about links.
+- **Three values, not a boolean**, so a site that drops slashes can collapse both spellings into one address too.
+
+Rejected: documenting a one-line wrapper that appends `/`, which every trailing-slash site would have to find and repeat.
 
 ### `parse` returns only paths that have a canonical URL (2026-11-02)
 

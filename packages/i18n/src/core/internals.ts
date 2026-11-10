@@ -2,7 +2,10 @@ import type { I18nInitOptions } from "./types";
 
 /** Manager operations the browser entrypoint needs but the public `I18n` type does not expose. @internal */
 export interface I18nInternals {
-  /** Initializes like `init()`, resolving whether this call applied state rather than being superseded. */
+  /**
+   * Initializes like `init()`, resolving whether this call applied state rather than being superseded. A call superseded
+   * before its loading fails resolves false rather than rejecting.
+   */
   init(options: I18nInitOptions): Promise<boolean>;
   /** Looks a key up like `translate()`, reporting a miss, but returns undefined for it rather than the key. */
   lookup(key: string): string | undefined;
