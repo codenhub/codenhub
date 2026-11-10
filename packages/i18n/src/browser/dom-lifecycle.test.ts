@@ -7,6 +7,27 @@ import { createDeferred, createManager, dictionaries, flushMutations, setupBrows
 setupBrowserTestHooks();
 
 describe("initializeBrowserI18n document integration", () => {
+  it("keeps the page's own text as the fallback for a binding started after disconnect()", async () => {
+    document.body.innerHTML =
+      '<p data-i18n="frOnly" data-i18n-title="frOnly" title="Original title">Original</p><p id="removed" data-i18n="greeting">Server</p>';
+    const paragraph = document.querySelector("p")!;
+    const removed = document.querySelector("#removed")!;
+    const i18n = createManager();
+
+    const first = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body });
+    expect(paragraph.textContent).toBe("Francais seulement");
+    first.disconnect();
+
+    const second = await initializeBrowserI18n({ i18n, locale: "pt-BR", root: document.body, observe: true });
+    expect(paragraph.textContent).toBe("Original");
+    expect(paragraph.getAttribute("title")).toBe("Original title");
+
+    removed.removeAttribute("data-i18n");
+    await flushMutations();
+    expect(removed.textContent).toBe("Server");
+    second.disconnect();
+  });
+
   it("synchronizes the document locale and direction by default", async () => {
     const i18n = createManager();
 

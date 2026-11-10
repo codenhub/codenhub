@@ -76,12 +76,14 @@ const collectElements = (root: ParentNode, isTracked: (element: Element) => bool
 const isValidDomKey = (rawKey: string): boolean =>
   rawKey.trim().length > 0 && rawKey.length <= MAX_TRANSLATION_KEY_LENGTH && !hasAsciiControlCharacter(rawKey);
 
-/** Creates isolated fallback-text tracking for one browser binding. @internal */
-export function createDomTranslator(options: DomTranslatorOptions): DomTranslator {
-  const fallbackTexts = new WeakMap<Element, string>();
-  const translatedTexts = new WeakMap<Element, string>();
-  const attributeStates = new WeakMap<Element, Map<string, AttributeState>>();
+// Kept per element rather than per binding: a binding started after another's disconnect() would otherwise take the
+// first binding's translations for the page's original text.
+const fallbackTexts = new WeakMap<Element, string>();
+const translatedTexts = new WeakMap<Element, string>();
+const attributeStates = new WeakMap<Element, Map<string, AttributeState>>();
 
+/** Creates the DOM translator of one browser binding. @internal */
+export function createDomTranslator(options: DomTranslatorOptions): DomTranslator {
   const warnInvalidKey = (keyAttribute: string): void => {
     if (!options.isSilent) {
       console.warn(`[I18n] Skipping translation because ${keyAttribute} contains an invalid key.`);
