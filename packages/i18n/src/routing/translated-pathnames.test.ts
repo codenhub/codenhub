@@ -181,7 +181,14 @@ describe("translated pathnames", () => {
       ["/blog/:slug/:page*", { pt: "/artigos/:slug/:page*" }],
     ] as const;
 
-    it.each([[[0, 1, 2, 3]], [[3, 1, 2, 0]], [[0, 3, 1, 2]], [[3, 0, 1, 2]], [[2, 1, 0, 3]]])(
+    const permutations = (indexes: readonly number[]): number[][] =>
+      indexes.length === 0
+        ? [[]]
+        : indexes.flatMap((index) =>
+            permutations(indexes.filter((other) => other !== index)).map((rest) => [index, ...rest]),
+          );
+
+    it.each(permutations([0, 1, 2, 3]).map((order) => [order]))(
       "should prefer a fixed segment over a parameter with a shorter path listed between them, in order %j",
       (order) => {
         const routing = create({ pathnames: Object.fromEntries(order.map((index) => blogEntries[index]!)) });
