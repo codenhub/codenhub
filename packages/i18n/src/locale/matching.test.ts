@@ -35,6 +35,19 @@ describe("matchConfiguredLocale", () => {
     expect(matchConfiguredLocale(locales, preferences)).toBe(expected);
   });
 
+  it.each([
+    [["en", "no"], ["nb"], "no"],
+    [["en", "no"], ["nb-NO"], "no"],
+    [["en", "nb"], ["no"], "nb"],
+    [["en", "nb-NO"], ["no-NO"], "nb-NO"],
+    [["en", "no-x-abcdefghijk"], ["nb"], "no-x-abcdefghijk"],
+    [["en", "nb", "no"], ["no"], "no"],
+    [["en", "nn"], ["no"], undefined],
+    [["en", "no"], ["nn"], undefined],
+  ] as const)("matches %j to %j as the same Norwegian, Bokmål, but not Nynorsk", (locales, preferences, expected) => {
+    expect(matchConfiguredLocale(locales, preferences)).toBe(expected);
+  });
+
   it("tries the next preference rather than a locale in another script", () => {
     expect(matchConfiguredLocale(["en", "zh"], ["zh-TW", "en"])).toBe("en");
   });

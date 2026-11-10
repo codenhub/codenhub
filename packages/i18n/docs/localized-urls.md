@@ -309,11 +309,11 @@ const defaultLocale = "en";
 const config = {
   storageKey: "i18n", // the browser binding's storageKey
   locales,
-  // `zh-TW` is `zh-Hant`: a language and its likely script, as `matchLocale()` compares them.
+  // `zh-TW` is `zh-Hant`: a language and its likely script, as `matchLocale()` compares them, with Norwegian `no` as `nb`.
   languages: Object.fromEntries(
     locales.map((locale) => {
       const { language, script } = new Intl.Locale(locale).maximize();
-      return [`${language}-${script}`, locale];
+      return [`${language === "no" ? "nb" : language}-${script}`, locale];
     }),
   ),
   targets: Object.fromEntries(locales.filter((locale) => locale !== defaultLocale).map((locale) => [locale, routing.localize(pathname, locale)])),
@@ -349,7 +349,7 @@ Then render, on the default locale's pages only:
         try {
           // Reads old codes as `matchLocale()` does, such as `iw-IL` as Hebrew, `he`, and adds the likely script.
           const likely = new Intl.Locale(preference).maximize();
-          language = `${likely.language}-${likely.script}`;
+          language = `${likely.language === "no" ? "nb" : likely.language}-${likely.script}`;
         } catch {
           continue; // Not a language tag.
         }
