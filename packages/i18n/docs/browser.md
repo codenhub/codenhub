@@ -100,7 +100,7 @@ await initializeBrowserI18n({ i18n, root: document });
 
 - `data-i18n` replaces an element's text. The element must contain only text, with no child elements, so a translation can never remove your markup. Elements with children are skipped with a warning.
 - `data-i18n-<attribute>` translates one attribute. Only attributes that hold text for people or screen readers are allowed: `alt`, `title`, `placeholder`, `label`, `aria-label`, `aria-description`, `aria-placeholder`, `aria-roledescription`, and `aria-valuetext`. Others, such as `data-i18n-href` or `data-i18n-onclick`, are ignored, so a translation can never change a link, a style, or an event handler.
-- The text already in the HTML is the fallback. If a later language lacks the key, the original text comes back.
+- The text already in the HTML is the last fallback. A key a language lacks shows the default locale's text, as `t()` does, and the original text comes back only when no dictionary has the key, not even the default locale's.
 - Text is set as plain text, never as HTML, and `<script>`, `<style>`, `<noscript>`, and `<template>` are never touched.
 - Placeholders such as `{name}` are not filled here, because there is nowhere in the HTML to pass a value from. Render text with values from your code with `t()`.
 
