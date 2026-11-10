@@ -15,7 +15,11 @@ export type ClientAuthentication =
   | { readonly method: "client_secret_post"; readonly secretHash: string }
   /** The client's HS256 secret, from `importSecretKey`. */
   | { readonly method: "client_secret_jwt"; readonly key: SecretKey }
-  /** The client's public keys, from `createKeySet`, `importKeySet`, or `createRemoteKeySet`. */
+  /**
+   * The client's public keys, from `createKeySet`, `importKeySet`, or `createRemoteKeySet`. A remote key set must
+   * be one object per client, reused across `findClient` calls: its cache and its limit on fetches live in the
+   * object, so a new one for each read lets every token request make the provider fetch the client's JWKS.
+   */
   | { readonly method: "private_key_jwt"; readonly keys: KeySet };
 
 /**
