@@ -193,6 +193,22 @@ describe("ICU messages", () => {
     }
   });
 
+  it("should format a date in a malformed message as a valid one does", async () => {
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en", "pt"],
+      loadLocale: () => ({ since: "Since {when} }", valid: "Since {when}" }),
+      timeZone: "America/Sao_Paulo",
+      isSilent: true,
+    });
+    await i18n.init();
+    const when = new Date(Date.UTC(2026, 10, 2, 1));
+
+    expect(i18n.t("since", { when })).toBe(`${i18n.t("valid", { when })} }`);
+    expect(i18n.t("since", { when })).toBe("Since Nov 1, 2026 }");
+    expect(i18n.t("since", { when: new Date(Number.NaN) })).toBe("Since {when} }");
+  });
+
   it("should warn for a stray closing brace whether or not the text has an apostrophe", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {

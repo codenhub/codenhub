@@ -6,6 +6,7 @@ import { registerI18nInternals } from "./internals";
 import {
   copyDateTimeFormatOptions,
   formatMessage,
+  formatPlainValue,
   getDateTimeFormat,
   getNumberFormat,
   intlLocale,
@@ -50,11 +51,18 @@ interface FoundTranslation<TLocale extends string> {
   readonly locale: TLocale;
 }
 
+interface InterpolateOptions {
+  readonly text: string;
+  readonly params: MessageValues;
+  readonly locale: string;
+  readonly timeZone: string | undefined;
+}
+
 /** Fills only `{name}` placeholders, as a message that is not valid ICU syntax is shown. */
-const interpolate = (text: string, params: MessageValues): string =>
+const interpolate = ({ text, params, locale, timeZone }: InterpolateOptions): string =>
   text.replace(PLACEHOLDER_PATTERN, (placeholder, name: string) => {
     const value: unknown = Object.hasOwn(params, name) ? params[name] : undefined;
-    return typeof value === "string" || typeof value === "number" ? String(value) : placeholder;
+    return formatPlainValue(value, locale, timeZone) ?? placeholder;
   });
 
 class CoreCustomEvent<TDetail> extends Event implements CustomEvent<TDetail> {
@@ -248,7 +256,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     const message = parseCachedMessage(found.text);
     if (message instanceof MessageSyntaxError) {
       this.reportInvalidMessage(key, found, message);
-      return interpolate(found.text, params);
+      return interpolate({ text: found.text, params, locale: found.locale, timeZone: this.config.timeZone });
     }
 
     return formatMessage(message, params, found.locale, this.config.timeZone);

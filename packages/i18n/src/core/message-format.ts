@@ -518,6 +518,21 @@ const getPluralRules = (locale: string, isOrdinal: boolean): Intl.PluralRules =>
 const isDateValue = (value: unknown): value is Date | number =>
   (value instanceof Date && !Number.isNaN(value.getTime())) || (typeof value === "number" && Number.isFinite(value));
 
+/**
+ * Formats the value of a plain `{name}`: text and numbers as written, a valid `Date` as a medium date, and anything else
+ * as `undefined`, for the argument to stay as written.
+ *
+ * @internal
+ */
+export const formatPlainValue = (value: unknown, locale: string, timeZone: string | undefined): string | undefined => {
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+  return value instanceof Date && isDateValue(value)
+    ? getDateTimeFormat(locale, { dateStyle: "medium", timeZone }).format(value)
+    : undefined;
+};
+
 const formatNodes = (
   nodes: Message,
   values: MessageValues,
@@ -541,12 +556,7 @@ const formatNodes = (
 
     switch (node.kind) {
       case "argument":
-        result +=
-          typeof value === "string" || typeof value === "number"
-            ? String(value)
-            : value instanceof Date && isDateValue(value)
-              ? getDateTimeFormat(locale, { dateStyle: "medium", timeZone }).format(value)
-              : node.source;
+        result += formatPlainValue(value, locale, timeZone) ?? node.source;
         break;
       case "number":
         result +=
