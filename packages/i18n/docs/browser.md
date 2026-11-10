@@ -123,7 +123,28 @@ With `observe`, adding an element, or changing or removing a `data-i18n` key, is
 
 Leave `observe` off when a framework renders the page: the framework already calls `t()`, and watching the page would only duplicate its work.
 
-The binding does not look inside custom elements (tags with a dash, such as `<my-widget>`) from an outer root, since the component owns its content. To translate a component's content, pass the component, or its shadow root, as the `root` of its own binding.
+The binding does not look inside custom elements (tags with a dash, such as `<my-widget>`), with or without a shadow root, and doesn't warn when it skips one. A component has a life of its own: it can render after the page was translated, and it adds and removes text as people use it, which it has to translate itself anyway. So the component translates its own content: call `i18n.t()` when it renders, and render again from `i18n.subscribe()`:
+
+```ts
+class ProductCard extends HTMLElement {
+  #unsubscribe?: () => void;
+
+  connectedCallback() {
+    this.render();
+    this.#unsubscribe = i18n.subscribe(() => this.render());
+  }
+
+  disconnectedCallback() {
+    this.#unsubscribe?.();
+  }
+
+  render() {
+    this.querySelector("button")!.textContent = i18n.t("cart.add");
+  }
+}
+```
+
+That includes a custom element used only as a wrapper, whose children you wrote in the page, such as `<site-nav><a data-i18n="nav.home">Home</a></site-nav>`: those links are skipped too. Use a plain element, such as `<nav>`, for a wrapper whose text the page translates. A component can't have a binding of its own on the same manager, since a manager has one binding.
 
 ## In a Web Worker
 

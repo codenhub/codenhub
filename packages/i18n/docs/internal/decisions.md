@@ -129,6 +129,12 @@ When the loader rejects for a stored or detected locale, the binding warns and s
 
 `data-i18n-<attribute>` was chosen over a single list attribute, such as `data-i18n-attrs="placeholder:search.hint"`, because it needs no parsing and a `MutationObserver` can watch exactly those names. Attributes are limited to text read by people or assistive technology, so a translation can never set a URL, a style, or an event handler.
 
+### Custom elements translate themselves
+
+The binding skips every element inside a custom element, a tag with a dash, from an outer root. A component has its own life cycle: it may render after the page's pass, and it adds and removes text as people use it, such as a card that changes with interaction, so it has to call `t()` for that text anyway. Re-running the page's pass for each component's change was rejected as costlier than the component translating itself with `t()` and `subscribe()`.
+
+**Wrappers are skipped too (2026-11-10).** An audit asked whether a light-DOM wrapper, such as `<site-nav>` around links the page wrote, should be read. It stays skipped: the binding can't tell a wrapper from a component that renders its children, and reading into one would translate, and then fight, text the component owns. The guide says to use a plain element for a wrapper. The guide used to suggest a component binding of its own, which a manager's one binding rules out; it now shows `t()` and `subscribe()`. Rejected: a warning per skipped element with keys, which would fire for every component that translates its own content.
+
 ### A missing document fails before initialization (2026-11-08)
 
 In a Web Worker, `initializeBrowserI18n()` initialized the manager and then rejected with a `ReferenceError` from document synchronization, which left the manager ready but unbound. It now throws a `TypeError` naming the requirement before touching the manager, but only when `syncDocument` is on. With `syncDocument: false` and no `root`, initialization already worked without a document, so it keeps working. Rejected: requiring a document for the whole `./browser` entry, which breaks a combination that works, and adding an option, which nothing needs.
