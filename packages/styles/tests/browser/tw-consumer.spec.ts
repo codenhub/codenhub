@@ -90,6 +90,13 @@ const DIALOGS = `
 <dialog class="my-sheet flex" id="open-flex">Open</dialog>
 <dialog class="my-sheet mt-8" id="placed">Placed</dialog>`;
 
+/* Read by the custom-intent test alone, and scanned beside the fixture the
+   same way. */
+const CUSTOM_INTENTS = `
+<input class="my-field beta" id="field-utility-intent" />
+<input class="my-field gamma" id="field-plain-intent" />
+<div class="my-sheet beta" id="sheet-utility-intent">Sheet</div>`;
+
 const fixtureFor = (side: "tw" | "dist") =>
   FIXTURE.replaceAll(/\{tw:([^|]*)\|dist:([^}]*)\}/g, (_, tw: string, dist: string) => (side === "tw" ? tw : dist));
 
@@ -107,6 +114,30 @@ const CONSUMER_CSS = (twEntry: string, glassEntry: string) => `@import "${twEntr
 @utility my-sheet {
   @apply surface;
 }
+
+@utility my-field {
+  @apply text-control;
+}
+
+@utility beta {
+  --intent-color: #7c3aed;
+  --intent-contrast: #ffffff;
+  --intent-hover: #6d28d9;
+  --intent-strong: #5b21b6;
+  --intent-subtle: #ede9fe;
+  --intent-border: #7c3aed;
+  --intent-fill-max: 100%;
+}
+
+.gamma {
+  --intent-color: #0f766e;
+  --intent-contrast: #ffffff;
+  --intent-hover: #115e59;
+  --intent-strong: #134e4a;
+  --intent-subtle: #ccfbf1;
+  --intent-border: #0f766e;
+  --intent-fill-max: 100%;
+}
 `;
 
 let twCss = "";
@@ -121,6 +152,7 @@ test.beforeAll(async () => {
        package's. */
     await writeFile(path.join(temporaryRoot, "page.html"), fixtureFor("tw"));
     await writeFile(path.join(temporaryRoot, "dialogs.html"), DIALOGS);
+    await writeFile(path.join(temporaryRoot, "intents.html"), CUSTOM_INTENTS);
     await writeFile(
       path.join(temporaryRoot, "input.css"),
       CONSUMER_CSS(
@@ -300,6 +332,25 @@ test.describe("/tw consumer build", () => {
     expect(Number.parseFloat(dialogs.openFlex), "centred beside a display utility").toBeGreaterThan(0);
     expect(dialogs.openFlexDisplay, "an open dialog takes the consumer's display").toBe("flex");
     expect(dialogs.placed, "a consumer's margin utility").toBe("32px");
+  });
+
+  /* A helper applied in a utility of the consumer's own lands in `utilities`,
+     as `class="text-control"` does, so its zero-specificity neutral reset
+     loses to an intent class the consumer wrote as a utility or as plain
+     CSS. Applied in unlayered CSS instead, the reset would be unlayered and
+     beat every utility; customizing.md says so. */
+  test("@apply in a consumer's utility takes the consumer's own intent", async ({ page }) => {
+    await page.setContent(
+      `<!doctype html><html><head><meta charset="utf-8" /><style>${twCss}</style></head><body>${CUSTOM_INTENTS}</body></html>`,
+    );
+
+    const intents = await page.evaluate(() =>
+      ["field-utility-intent", "field-plain-intent", "sheet-utility-intent"].map((id) =>
+        getComputedStyle(document.getElementById(id)!).getPropertyValue("--intent-color").trim(),
+      ),
+    );
+
+    expect(intents).toEqual(["#7c3aed", "#0f766e", "#7c3aed"]);
   });
 
   /* Forced colours replace the focus ring's colour with the system's and keep
