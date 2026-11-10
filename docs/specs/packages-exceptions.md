@@ -24,7 +24,7 @@ An exception to a rule that `hub check` enforces MUST also declare a `Checks byp
 - **Rules bypassed:** `docs/specs/packages-lifecycle.md` (metadata fields `main` and `module` required in `package.json`).
 - **Checks bypassed:** `metadata/main`, `metadata/module`.
 - **Where it applies:** `packages/styles/`.
-- **Why acceptable:** The package is CSS-only and exposes no JavaScript API, so `main` and `module` would point at no usable runtime entrypoint. It does declare `types`: an empty `dist/index.d.ts`, the same file every export's `types` condition names, so a TypeScript project that checks side-effect imports resolves `import "@codenhub/styles"` under either module resolution.
+- **Why acceptable:** The package is CSS-only and exposes no JavaScript API, so `main` and `module` would point at no usable runtime entrypoint. It does declare `types`: an empty `dist/index.d.ts`, the file the `dist/` exports' `types` conditions name (the `/tw` exports name the same empty `tw/index.d.ts`), so a TypeScript project that checks side-effect imports resolves them; `tests/integration/exports.test.ts` compiles such imports.
 - **Temporary or permanent:** Permanent.
 
 ## `@codenhub/styles`: Coverage report
