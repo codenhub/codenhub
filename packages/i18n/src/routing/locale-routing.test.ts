@@ -444,6 +444,15 @@ describe("createLocaleRouting", () => {
       expect(routing.localize(route.pathname, route.locale)).toBe("/pt-BR/marca/");
     });
 
+    it("should parse no path whose canonical URL would pass the limit once `always` adds its slash", () => {
+      const routing = create("always");
+      const pathname = `/${"a".repeat(8_191)}`;
+
+      expect(routing.parse(pathname)).toBeUndefined();
+      expect(() => routing.localize(pathname, "en-US")).toThrow(RangeError);
+      expect(create("preserve").parse(pathname)).toBeDefined();
+    });
+
     it("should reject a value that is not a policy", () => {
       expect(() => create("sometimes" as "always")).toThrow(
         '[I18n] Invalid locale routing configuration: trailingSlash: Expected "preserve", "always", or "never", received string',

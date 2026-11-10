@@ -238,6 +238,12 @@ export const createLocaleRouting = <TLocale extends string>(
     };
   };
 
+  /** Applies `trailingSlash` to a path's own slash, so `parse()` checks the URL `localize()` builds. */
+  const slashPolicy = (hasTrailingSlash: boolean) => ({
+    hasTrailingSlash: trailingSlash === "preserve" ? hasTrailingSlash : trailingSlash === "always",
+    isRootSlashed: trailingSlash === "always",
+  });
+
   const parseWith = (pathname: string, normalize: Normalize): ParsedLocalePath<TLocale> | undefined => {
     // A value `url.pathname` never is, such as a full URL or a path with its query, is a mistake in the calling code.
     if (typeof pathname !== "string" || !pathname.startsWith("/") || pathname.includes("?") || pathname.includes("#")) {
@@ -259,7 +265,7 @@ export const createLocaleRouting = <TLocale extends string>(
     if (findLocale(segments[0]) !== undefined) {
       return undefined;
     }
-    const url = buildUrl({ canonical: segments, hasTrailingSlash, locale: route.locale, normalize });
+    const url = buildUrl({ canonical: segments, ...slashPolicy(hasTrailingSlash), locale: route.locale, normalize });
     const readBack = url.length > MAX_PATHNAME_LENGTH ? undefined : read(url, normalize);
 
     if (readBack?.locale !== route.locale) {
@@ -295,8 +301,7 @@ export const createLocaleRouting = <TLocale extends string>(
     const canonical = prefixLocale === undefined ? segments : readPath(segments.slice(1), prefixLocale, normalize);
     const result = buildUrl({
       canonical,
-      hasTrailingSlash: trailingSlash === "preserve" ? hasTrailingSlash : trailingSlash === "always",
-      isRootSlashed: trailingSlash === "always",
+      ...slashPolicy(hasTrailingSlash),
       locale: canonicalLocale,
       normalize,
     });
