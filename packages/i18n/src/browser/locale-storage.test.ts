@@ -294,6 +294,24 @@ describe("initializeBrowserI18n storage integration", () => {
     expect(warn).toHaveBeenCalledWith('[I18n] Could not load locale "fr"; using "pt-BR".', expect.any(I18nError));
   });
 
+  it("does not retry over a later init() when a stored locale fails to load after it", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    localStorage.setItem("i18n", JSON.stringify({ locale: "fr" }));
+    let rejectFr: (error: Error) => void = () => undefined;
+    const frLoad = new Promise<never>((_, reject) => {
+      rejectFr = reject;
+    });
+    const i18n = createManager({ loadLocale: (locale) => (locale === "fr" ? frLoad : dictionaries[locale]) });
+
+    const browserInitialization = initializeBrowserI18n({ i18n });
+    const coreInitialization = i18n.init({ locale: "pt-BR" });
+    rejectFr(new Error("503"));
+
+    await expect(browserInitialization).rejects.toThrow("Browser initialization was superseded");
+    await coreInitialization;
+    expect(i18n.locale).toBe("pt-BR");
+  });
+
   it("falls back to the default when both the stored and the detected locale fail to load", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     localStorage.setItem("i18n", JSON.stringify({ locale: "fr" }));

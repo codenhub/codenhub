@@ -147,7 +147,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       dictionaryLimits: this.config.dictionaryLimits,
     });
     registerI18nInternals(this, {
-      init: (options) => this.applyInit(options as I18nInitOptions<TLocale>),
+      init: (options) => this.applyInit(options as I18nInitOptions<TLocale>, true),
       lookup: (key) => {
         const found = this.lookup("translate", key);
         return found === undefined ? undefined : this.format(key, found, {});
@@ -297,12 +297,27 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     };
   }
 
-  private async applyInit(options: I18nInitOptions<TLocale> = {}): Promise<boolean> {
+  /**
+   * Initializes, resolving whether this call applied state. With `isFailureSuperseded`, a call superseded before its
+   * loading fails also resolves false rather than rejecting, so a caller that retries on failure cannot override the
+   * later call.
+   */
+  private async applyInit(options: I18nInitOptions<TLocale> = {}, isFailureSuperseded = false): Promise<boolean> {
     const requestedLocale = options.locale === undefined ? this.defaultLocale : options.locale;
     const locale = this.requireLocale(requestedLocale);
     const requestId = this.createRequest();
-    const dictionaries = await this.loadRequiredDictionaries(locale);
-    const direction = this.resolveLocaleDirection(locale);
+    let dictionaries: readonly ChainDictionary<TLocale>[];
+    let direction: LocaleDirection;
+
+    try {
+      dictionaries = await this.loadRequiredDictionaries(locale);
+      direction = this.resolveLocaleDirection(locale);
+    } catch (error) {
+      if (isFailureSuperseded && !this.isLatestRequest(requestId)) {
+        return false;
+      }
+      throw error;
+    }
 
     if (!this.isLatestRequest(requestId)) {
       return false;
