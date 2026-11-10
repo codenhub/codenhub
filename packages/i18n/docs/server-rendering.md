@@ -147,7 +147,7 @@ await Promise.all(
 );
 ```
 
-`pathname` is a URL path, percent-encoded where the table has words such as `/serviços`. Hosts decode a request before looking for its file, so name the file after `decodeURI(pathname)`, such as `servicos/index.html` for `/servicos` and `serviços/index.html` for `/servi%C3%A7os`.
+`pathname` is a URL path, percent-encoded where the table has words such as `/serviços`. Hosts decode a request before looking for its file, so name the file after `decodeURI(pathname)`: `serviços` for `/servi%C3%A7os`, not the encoded form, which no request finds. Where that file goes, such as `serviços.html` or `serviços/index.html`, depends on your host and your `trailingSlash` setting.
 
 A dictionary that fails to load or check makes `init()` reject, so the build fails instead of publishing pages without text. A key that only your default language has does not fail the build; it renders in the default language. Add [the untranslated-keys test](translations.md#find-untranslated-keys) to catch those, and make `onMissingKey` throw during the build to fail on keys missing from every language.
 

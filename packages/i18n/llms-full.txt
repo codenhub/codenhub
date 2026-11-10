@@ -1139,7 +1139,7 @@ await Promise.all(
 );
 ```
 
-`pathname` is a URL path, percent-encoded where the table has words such as `/serviços`. Hosts decode a request before looking for its file, so name the file after `decodeURI(pathname)`, such as `servicos/index.html` for `/servicos` and `serviços/index.html` for `/servi%C3%A7os`.
+`pathname` is a URL path, percent-encoded where the table has words such as `/serviços`. Hosts decode a request before looking for its file, so name the file after `decodeURI(pathname)`: `serviços` for `/servi%C3%A7os`, not the encoded form, which no request finds. Where that file goes, such as `serviços.html` or `serviços/index.html`, depends on your host and your `trailingSlash` setting.
 
 A dictionary that fails to load or check makes `init()` reject, so the build fails instead of publishing pages without text. A key that only your default language has does not fail the build; it renders in the default language. Add [the untranslated-keys test](docs/translations.md#find-untranslated-keys) to catch those, and make `onMissingKey` throw during the build to fail on keys missing from every language.
 
@@ -1524,7 +1524,7 @@ Then render, on the default locale's pages only:
 
 A saved default locale finds no target, so the visitor stays. `location.replace()` keeps the default-locale page out of history, so Back doesn't land on a page that redirects again.
 
-Matching by language and script picks what `matchLocale()` would when your site has one locale per language and script, such as `en`, `pt-BR`, `es`, `zh-Hans`, and `zh-Hant`: `pt-PT` gets `pt-BR`, `es-MX` gets `es`, and `zh-TW` gets `zh-Hant`. A language in another script never matches, so with only `zh`, which is Simplified, a `zh-TW` visitor moves on to their next language. Hold the two together with a test that runs the same matching against `matchLocale()` for a few preference lists. With more than one locale per language and script, such as `es-419` and `es-ES`, the table can't choose between them. Either compute a table at build time from the browser tags you expect to see, running each through `matchLocale()`, or run the redirect in a deferred script that imports your manager and calls `matchLocale(navigator.languages)`, and accept the flash.
+Matching by language and script picks what `matchLocale()` would when your site has one locale per language and script, such as `en`, `pt-BR`, `es`, `zh-Hans`, and `zh-Hant`: `pt-PT` gets `pt-BR`, `es-MX` gets `es`, and `zh-TW` gets `zh-Hant`. A language in another script never matches, so with only `zh`, which is Simplified, a `zh-TW` visitor moves on to their next language. Hold the two together with a test that runs the same matching against `matchLocale()` for a few preference lists. With more than one locale per language and script, such as `es-419` and `es-ES`, or `no` and `nb`, which count as one language, the table can't choose between them. Either compute a table at build time from the browser tags you expect to see, running each through `matchLocale()`, or run the redirect in a deferred script that imports your manager and calls `matchLocale(navigator.languages)`, and accept the flash.
 
 ## Paths it accepts
 
