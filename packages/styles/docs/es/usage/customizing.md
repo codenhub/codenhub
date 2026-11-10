@@ -2,7 +2,7 @@
 title: Personalización
 description: Consulta de los tokens de presentación y de material, los controles de las estéticas, las seis variables públicas de componente, la paleta generada y los helpers para construir tus propios componentes.
 order: 9
-source: 37e5fd58940cc8af4ab8e51d70d2845dc3e52d2e
+source: d2e88766839dce9b892543088ac5026f32c4620a
 ---
 
 # Personalización
@@ -291,8 +291,9 @@ Qué darle a cada uno:
 
 - **`box` necesita una clase de relleno y una de borde.** No tiene valores por defecto propios, así que sin `.solid`, `.soft` o `.ghost` y sin `.edged` o `.edgeless`, en el elemento o en un contenedor, no dibuja nada. `surface` y `text-control` tienen valores por defecto y funcionan solos.
 - **Nombra la intención en `box`.** Un elemento `box` toma la intención del elemento más cercano a su alrededor que tenga una, a diferencia de los componentes del paquete. Ponle `.neutral` o una clase de intención. `surface` y `text-control` son neutrales salvo que el elemento tenga una clase de intención, como los componentes.
-- **`@apply` lleva el helper completo.** `.my-field { @apply text-control; }` obtiene lo mismo que `class="text-control"`: la intención neutral y el borde del campo, `.soft`, `.solid` y `.edgeless` en el elemento, y el aspecto inválido con `aria-invalid="true"`. `@apply surface` es neutral de la misma forma. Una clase de intención que definas tú debe ser CSS plano o una utilidad para colorear un elemento así, no una regla en `@layer components`.
-- **Un diálogo funciona con `@apply surface`.** Un `<dialog>` cerrado con tu propia clase que hace `@apply surface` permanece oculto, y uno abierto se centra, como con `.card`. Ocultar uno cerrado gana sobre una utilidad de display como `flex`; un margen que pongas sigue colocando uno abierto.
+- **`@apply` lleva el helper completo.** `@utility my-field { @apply text-control; }` obtiene lo mismo que `class="text-control"`: la intención neutral y el borde del campo, `.soft`, `.solid` y `.edgeless` en el elemento, y el aspecto inválido con `aria-invalid="true"`. `@apply surface` es neutral de la misma forma. Una clase de intención que definas tú debe ser CSS plano o una utilidad para colorear un elemento así, no una regla en `@layer components`.
+- **Escribe como utilidad la clase que aplica un helper.** Lo que copia `@apply` cae en la [capa de cascada](../setup.md#capas-de-cascada) de la regla en la que está escrito. Los helpers son utilidades, y `@utility my-field` mantiene tu clase en `utilities` junto a ellos, así que tus otras utilidades siguen alcanzándola. Escrita como CSS plano, `.my-field { @apply text-control; }` queda sin capa, y todo lo que declara el helper gana sobre cualquier utilidad en el elemento: una clase de intención que escribiste como utilidad deja el campo neutral, y `mt-8` no mueve un diálogo. Tu propio CSS sin capa sigue compitiendo con él, por especificidad y después por orden en el código, como dos reglas sin capa cualesquiera.
+- **Un diálogo funciona con `@apply surface`.** Un `<dialog>` cerrado con tu propia clase que hace `@apply surface` permanece oculto, y uno abierto se centra, como con `.card`. Ocultar uno cerrado gana sobre una utilidad de display como `flex`; un margen que pongas sigue colocando uno abierto, y una utilidad de margen también lo hace cuando tu clase es una utilidad.
 - **El tamaño y el espaciado son cosa tuya.** Ninguno de los helpers define el relleno interior, el ancho ni el alto; `text-control` no define la altura de 2.5rem que añade `.ipt`.
 - **También el comportamiento y la semántica.** Usa un `<button>`, un `<input>` o un `<a href>` reales, o añade tú el rol y el manejo del teclado, y define estados como `aria-pressed` o `aria-invalid`. `box` dibuja el aspecto deshabilitado para `disabled`, `.disabled`, `aria-disabled="true"` y `data-disabled`, pero solo el atributo `disabled` impide la interacción.
 
