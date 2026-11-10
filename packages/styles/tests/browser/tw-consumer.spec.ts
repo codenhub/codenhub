@@ -73,7 +73,18 @@ const FIXTURE = `
     <div class="{tw:my-surface|dist:surface}" data-known="apply-surface">Surface in a success card</div>
   </div>
   <div class="{tw:my-surface success|dist:surface success}" data-known="apply-surface">Success surface</div>
+  <dialog class="{tw:my-surface|dist:surface}" data-known="apply-surface">Closed sheet</dialog>
+  <dialog class="{tw:my-surface|dist:surface}" data-known="apply-surface" open>Open sheet</dialog>
 </main>`;
+
+/* Read by the dialog test alone, and scanned by the consumer's build beside the
+   fixture so the classes it names are emitted. */
+const DIALOGS = `
+<dialog class="my-surface" id="closed">Closed</dialog>
+<dialog class="my-sheet flex" id="closed-flex">Closed</dialog>
+<dialog class="my-surface" id="open">Open</dialog>
+<dialog class="my-sheet flex" id="open-flex">Open</dialog>
+<dialog class="my-sheet mt-8" id="placed">Placed</dialog>`;
 
 const fixtureFor = (side: "tw" | "dist") =>
   FIXTURE.replaceAll(/\{tw:([^|]*)\|dist:([^}]*)\}/g, (_, tw: string, dist: string) => (side === "tw" ? tw : dist));
@@ -86,6 +97,10 @@ const CONSUMER_CSS = (twEntry: string) => `@import "${twEntry}";
 
 .my-control {
   @apply text-control;
+}
+
+@utility my-sheet {
+  @apply surface;
 }
 `;
 
@@ -100,6 +115,7 @@ test.beforeAll(async () => {
        automatic detection scans the fixture page and nothing of this
        package's. */
     await writeFile(path.join(temporaryRoot, "page.html"), fixtureFor("tw"));
+    await writeFile(path.join(temporaryRoot, "dialogs.html"), DIALOGS);
     await writeFile(
       path.join(temporaryRoot, "input.css"),
       CONSUMER_CSS(pathToFileURL(path.join(packageRoot, "tw", "index.css")).href),
@@ -240,6 +256,40 @@ test.describe("/tw consumer build", () => {
       });
     }
   }
+
+  /* A closed `<dialog>` stays hidden and an open one centred whichever class
+     applies `surface`, and wherever the consumer applied it: unlayered, or as
+     a utility of their own beside `flex`. The user agent's own rules lose to
+     `surface`'s `display` and to Preflight's `margin: 0`. A consumer's
+     margin utility still places an open one. */
+  test("@apply surface keeps a dialog closed until opened, and centred once open", async ({ page }) => {
+    await page.setContent(
+      `<!doctype html><html><head><meta charset="utf-8" /><style>${twCss}</style></head><body>${DIALOGS}</body></html>`,
+    );
+
+    const dialogs = await page.evaluate(() => {
+      for (const id of ["open", "open-flex", "placed"]) {
+        (document.getElementById(id) as HTMLDialogElement).show();
+      }
+      const read = (id: string) => getComputedStyle(document.getElementById(id)!);
+
+      return {
+        closed: read("closed").display,
+        closedFlex: read("closed-flex").display,
+        open: read("open").marginLeft,
+        openFlex: read("open-flex").marginLeft,
+        openFlexDisplay: read("open-flex").display,
+        placed: read("placed").marginTop,
+      };
+    });
+
+    expect(dialogs.closed).toBe("none");
+    expect(dialogs.closedFlex, "a closed dialog beside a display utility").toBe("none");
+    expect(Number.parseFloat(dialogs.open), "centred over Preflight").toBeGreaterThan(0);
+    expect(Number.parseFloat(dialogs.openFlex), "centred beside a display utility").toBeGreaterThan(0);
+    expect(dialogs.openFlexDisplay, "an open dialog takes the consumer's display").toBe("flex");
+    expect(dialogs.placed, "a consumer's margin utility").toBe("32px");
+  });
 
   /* Forced colours replace the focus ring's colour with the system's and keep
      its width, so the package draws a 2px `Highlight` outline on a focused

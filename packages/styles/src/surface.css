@@ -108,4 +108,24 @@
      `backdrop-filter` and not the `-webkit-` alias). Measured on the built CSS. */
   -webkit-backdrop-filter: var(--ui-backdrop, none);
   backdrop-filter: var(--ui-backdrop, none);
+
+  /* A `<dialog>`: hidden while closed, centred once open. The user agent
+     promises both, at user-agent origin, which loses to any author rule at
+     all: `display: block` above beats the first, so a closed dialog rendered,
+     and a margin reset beats the second, so an open one pinned to the
+     top-left. Carried here so `@apply surface` keeps both; the package's own
+     surfaces also keep the unlayered hide in `components/surface.css`.
+
+     The hide outranks a display utility on specificity, 0-2-1 against 0-1-0,
+     so a closed `.my-sheet.flex` stays closed; written unlayered, the
+     consumer's own applied rule beats every layered one. The centring is a
+     default at zero specificity, so a consumer's margin -- a utility, or their
+     own CSS in the same layer -- still places the dialog. */
+  &:is(dialog):not([open]) {
+    display: none;
+  }
+
+  :where(&:is(dialog)[open]) {
+    margin: auto;
+  }
 }
