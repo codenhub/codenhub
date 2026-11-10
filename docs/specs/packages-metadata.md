@@ -37,7 +37,7 @@ The shared reader is `parsePackageMetadata` in `@codenhub/tools/documentation` (
 - `order`: OPTIONAL non-negative integer for relative ordering. Lower values appear first; tools MUST use a deterministic fallback when it is absent.
 - `demoUrl`: OPTIONAL absolute URL to a standalone live demo application. Sites MAY use it to link to or embed the demo.
 
-`codenhub` also carries fields owned by other specs, which this one does not define: `docs` (`docs/specs/packages-documentation.md`, with `docs.reference` in `docs/specs/packages-reference.md` and `docs.versions` in `docs/specs/packages-docs-versions.md`), `assets` (`docs/specs/packages-demo.md`), and `bundled` (`docs/specs/packages-lifecycle.md`).
+`codenhub` also carries fields owned by other specs, which this one does not define: `docs` (`docs/specs/packages-documentation.md`, with `docs.reference` in `docs/specs/packages-reference.md` and `docs.versions` in `docs/specs/packages-docs-versions.md`), `assets` (`docs/specs/packages-demo.md`), `bundled` (`docs/specs/packages-lifecycle.md`), and `tools` (`docs/tooling.md`, "Reporting").
 
 Every `private: false` package MUST declare `label` and `status`. Slugs MUST be unique across the workspace. A malformed field is invalid; tools MUST NOT fall back to other manifest fields to hide a missing required field or a malformed one.
 

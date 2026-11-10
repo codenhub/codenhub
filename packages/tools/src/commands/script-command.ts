@@ -10,6 +10,7 @@ import {
   withWorkspaceDependencies,
 } from "../workspace/dependency-order.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
+import { readPackageTimeoutMs } from "../workspace/package-timeout.ts";
 import type { PackageSelection } from "../workspace/select-packages.ts";
 import { EXIT_FAILURE, EXIT_SUCCESS, type CommandContext, type CommandDefinition } from "./definition.ts";
 
@@ -91,6 +92,27 @@ export interface RunSettings {
   timeoutMs?: number;
 }
 
+/**
+ * Picks the limit a package's run is killed at.
+ *
+ * A limit the caller set, or the absence of one, applies as given. Only the
+ * built-in default yields to the limit a package declares for itself.
+ * @param context Command invocation.
+ * @param workspacePackage Package being run.
+ * @param settings Settings of the batch, whose limit is the one requested for this run.
+ * @returns Milliseconds before the run is killed, or `undefined` to wait indefinitely.
+ */
+function resolveTimeoutMs(
+  context: CommandContext,
+  workspacePackage: WorkspacePackage,
+  settings: RunSettings,
+): number | undefined {
+  if (settings.timeoutMs === undefined || !context.options.isDefaultTimeout) {
+    return settings.timeoutMs;
+  }
+  return readPackageTimeoutMs(workspacePackage) ?? settings.timeoutMs;
+}
+
 function toSummaryRow(workspacePackage: WorkspacePackage, outcome: Awaited<ReturnType<typeof execute>>): SummaryRow {
   if (outcome.didTimeOut) {
     return { detail: formatDuration(outcome.durationMs), label: workspacePackage.name, status: "timed-out" };
@@ -124,6 +146,11 @@ export async function runPackageBatch(
   const { reporter } = context;
   const rows = new Map<string, SummaryRow>();
   let hasFailure = false;
+  // Resolved before anything starts: a malformed declaration throws, and from
+  // inside a run it would reject while the pool kept starting queued packages.
+  const timeouts = new Map(
+    runs.map(({ workspacePackage }) => [workspacePackage.name, resolveTimeoutMs(context, workspacePackage, settings)]),
+  );
 
   const runOne = async ({ spec, workspacePackage }: PackageRun): Promise<void> => {
     if (hasFailure && settings.bails) {
@@ -140,7 +167,7 @@ export async function runPackageBatch(
     }
     const outcome = await execute(spec, {
       stdio: settings.streams ? "inherit" : "pipe",
-      timeoutMs: settings.timeoutMs,
+      timeoutMs: timeouts.get(workspacePackage.name),
     });
     if (!outcome.isSuccess) {
       hasFailure = true;

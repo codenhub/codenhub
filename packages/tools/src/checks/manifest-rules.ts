@@ -5,6 +5,7 @@ import { BrandUnreachableError, type BrandSource } from "../assets/brand-source.
 import { parseAssetEntries } from "../assets/manifest.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { hasDocumentationMetadata } from "../workspace/package-policy.ts";
+import { readPackageTimeoutMs } from "../workspace/package-timeout.ts";
 import type { CheckRule, Finding } from "./rule.ts";
 
 const MANIFEST_LOCATION = "package.json";
@@ -148,6 +149,11 @@ function checkScripts(workspacePackage: WorkspacePackage): Finding[] {
     if (script !== undefined && BUILD_INVOCATION.test(script)) {
       fail("build-chain", `"${name}" must not chain a build; \`hub\` builds first and chaining it again builds twice.`);
     }
+  }
+  try {
+    readPackageTimeoutMs(workspacePackage);
+  } catch (cause) {
+    fail("timeout", (cause as Error).message);
   }
   return findings;
 }

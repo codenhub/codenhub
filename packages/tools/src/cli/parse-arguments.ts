@@ -37,6 +37,13 @@ export interface CliOptions {
   skippedSteps: readonly string[];
   /** Milliseconds before a package run is killed, or `undefined` to wait indefinitely. */
   timeoutMs?: number;
+  /**
+   * Whether `timeoutMs` is still the built-in default.
+   *
+   * A package may declare a limit of its own, but only over the default:
+   * `--timeout` and `--no-timeout` are the caller's say for this run, and win.
+   */
+  isDefaultTimeout: boolean;
   /** Whether commands print what they would run instead of running it. */
   isDryRun: boolean;
   /** Whether the command applies fixes rather than only reporting. */
@@ -83,6 +90,7 @@ function createDefaultOptions(): CliOptions {
     baseRef: DEFAULT_BASE_REF,
     concurrency: defaultConcurrency(),
     includePack: false,
+    isDefaultTimeout: true,
     isDryRun: false,
     isVerbose: false,
     shouldBail: false,
@@ -178,10 +186,12 @@ function applyFlag(options: CliOptions, name: string, value: string | undefined)
       // An unbounded run is asked for with `--no-timeout`; this only ever reads a
       // finite number of seconds.
       options.timeoutMs = readPositiveNumber(name, value, DEFAULT_TIMEOUT_SECONDS, 1000);
+      options.isDefaultTimeout = false;
       return true;
     }
     case "no-timeout": {
       options.timeoutMs = undefined;
+      options.isDefaultTimeout = false;
       return true;
     }
     case "dry-run": {

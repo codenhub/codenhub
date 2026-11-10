@@ -53,6 +53,12 @@ describe("parseArguments", () => {
     expect(parseArguments(["test", "--timeout=30"]).options.timeoutMs).toBe(30_000);
   });
 
+  it("shouldMarkTheTimeoutAsDefaultUnlessAFlagSetsIt", () => {
+    expect(parseArguments(["test"]).options.isDefaultTimeout).toBe(true);
+    expect(parseArguments(["test", "--timeout=30"]).options.isDefaultTimeout).toBe(false);
+    expect(parseArguments(["test", "--no-timeout"]).options.isDefaultTimeout).toBe(false);
+  });
+
   it("shouldSupportDisablingTheTimeout", () => {
     expect(parseArguments(["test", "--no-timeout"]).options.timeoutMs).toBeUndefined();
   });
