@@ -56,7 +56,7 @@ Browsers send the visitor's languages in the `Accept-Language` header, such as `
 ```ts
 import type { I18n } from "@codenhub/i18n";
 
-// Real browsers send a handful of languages; matching costs about 20 µs each, and a header can hold thousands.
+// Real browsers send a handful of languages, and a header can list thousands.
 const MAX_PREFERENCES = 10;
 
 function pickLocale<TLocale extends string>(i18n: I18n<TLocale>, request: Request): TLocale {
@@ -81,7 +81,7 @@ function pickLocale<TLocale extends string>(i18n: I18n<TLocale>, request: Reques
 
 A visitor whose languages all fail to match, including one who refuses your default with `en;q=0`, still gets the default locale, since the page has to be in some language. This helper does not implement the rest of `Accept-Language`, such as `*`; use your server framework's parser if you need it, and pass its result to `matchLocale()`.
 
-`matchLocale()` takes a list rather than the header because parsing the header, and limiting its size, belongs to your server. Keep the limit: `matchLocale()` tries every preference it is given, so a request whose 16 KB header lists thousands of languages would otherwise hold your server's event loop for 50 to 100 ms. It matches the same way the browser binding does, so a visitor gets the same language from the server as from the browser: `pt-BR` gets your `pt`, and `zh-TW` gets your `zh-Hant`. Malformed tags are skipped, and `undefined` means nothing matched. [Turn outside input into a locale](index.md#turn-outside-input-into-a-locale) has the full matching order, including which of two regional locales wins, and `resolveLocale()` for a locale from a cookie or a query string.
+`matchLocale()` takes a list rather than the header because parsing the header, and limiting its size, belongs to your server. Keep the limit: `matchLocale()` tries preferences in order until one matches, so a request whose 16 KB header lists thousands of languages you don't support would otherwise hold your server's event loop for tens of milliseconds, about 60 ms on Node 24. It matches the same way the browser binding does, so a visitor gets the same language from the server as from the browser: `pt-BR` gets your `pt`, and `zh-TW` gets your `zh-Hant`. Malformed tags are skipped, and `undefined` means nothing matched. [Turn outside input into a locale](index.md#turn-outside-input-into-a-locale) has the full matching order, including which of two regional locales wins, and `resolveLocale()` for a locale from a cookie or a query string.
 
 When the URL carries the language, as on [a localized site](localized-urls.md), read it from the URL instead and use `Accept-Language` only to choose where to redirect a visitor who arrives at `/`. A static site has no server to see the header; see [Detect the language on a static site](localized-urls.md#detect-the-language-on-a-static-site).
 
