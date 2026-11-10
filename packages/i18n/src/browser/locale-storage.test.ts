@@ -294,6 +294,25 @@ describe("initializeBrowserI18n storage integration", () => {
     expect(warn).toHaveBeenCalledWith('[I18n] Could not load locale "fr"; using "pt-BR".', expect.any(I18nError));
   });
 
+  it("falls back to the default when a parent shared by the stored and the detected locale fails to load", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    localStorage.setItem("i18n", JSON.stringify({ locale: "pt-BR" }));
+    setNavigatorLocales(["pt"]);
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en", "pt", "pt-BR"],
+      loadLocale: (locale) => (locale === "pt" ? Promise.reject(new Error("503")) : { greeting: locale }),
+    });
+
+    await initializeBrowserI18n({ i18n });
+
+    expect(i18n.locale).toBe("en");
+    expect(localStorage.getItem("i18n")).toBe(JSON.stringify({ locale: "pt-BR" }));
+    const parentFailure = expect.objectContaining({ locale: "pt" });
+    expect(warn).toHaveBeenCalledWith('[I18n] Could not load locale "pt-BR"; using "pt".', parentFailure);
+    expect(warn).toHaveBeenCalledWith('[I18n] Could not load locale "pt"; using the default locale.', parentFailure);
+  });
+
   it("does not retry over a later init() when a stored locale fails to load after it", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     localStorage.setItem("i18n", JSON.stringify({ locale: "fr" }));
