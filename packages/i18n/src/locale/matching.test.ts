@@ -18,4 +18,16 @@ describe("matchConfiguredLocale", () => {
   it("matches es to es-ES, its likely region, when es-419 is listed first", () => {
     expect(matchConfiguredLocale(["es-419", "es-ES"], ["es"])).toBe("es-ES");
   });
+
+  it.each([
+    [["en", "zh-Hant"], ["zh"]],
+    [["en", "zh"], ["zh-TW"]],
+    [["en", "sr-Latn"], ["sr"]],
+  ] as const)("does not match %j to %j, a language in another script", (locales, preferences) => {
+    expect(matchConfiguredLocale(locales, preferences)).toBeUndefined();
+  });
+
+  it("tries the next preference rather than a locale in another script", () => {
+    expect(matchConfiguredLocale(["en", "zh"], ["zh-TW", "en"])).toBe("en");
+  });
 });

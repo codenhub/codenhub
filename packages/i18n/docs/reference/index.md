@@ -350,7 +350,7 @@ matchLocale(preferences: readonly string[]): TLocale | undefined;
 
 Picks the configured locale that best serves ordered preferences, such as `navigator.languages` or the tags of an `Accept-Language` header sorted by quality.
 
-Each preference, in order, tries an exact case-insensitive match, then the longest configured locale it starts with as whole subtags and with the same likely script, such as `pt` for `pt-BR`, then likely subtags, such as `zh-Hant` for `zh-TW`, then the same language subtag. When several configured locales share a preference's language and script and none matches it exactly or by likely region, the first in `locales` wins: list `es-419` before `es-ES` to serve `es-MX` from `es-419`. `es-ES`, and `es`, whose likely region is Spain, still match `es-ES`.
+Each preference, in order, tries an exact case-insensitive match, then the longest configured locale it starts with as whole subtags and with the same likely script, such as `pt` for `pt-BR`, then likely subtags, such as `zh-Hant` for `zh-TW`, then the same language in the same likely script. A locale in another script never matches, so with `zh`, which is Simplified, `zh-TW` tries the next preference. When several configured locales share a preference's language and script and none matches it exactly or by likely region, the first in `locales` wins: list `es-419` before `es-ES` to serve `es-MX` from `es-419`. `es-ES`, and `es`, whose likely region is Spain, still match `es-ES`.
 
 **Parameters**
 

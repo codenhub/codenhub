@@ -13,7 +13,9 @@ const getLanguageAndScript = (maximizedLocale: string): string => maximizedLocal
 
 /**
  * Matches ordered locale preferences, such as `navigator.languages` or a parsed `Accept-Language`, to a configured
- * locale: exact, then the longest whole-subtag prefix with the same likely script, then likely subtags, then language.
+ * locale: exact, then the longest whole-subtag prefix with the same likely script, then likely subtags, then the same
+ * language and likely script. A locale whose likely script differs never matches, so `zh-TW` tries the next preference
+ * rather than Simplified `zh`; a locale `Intl.Locale` rejects matches by language subtag alone.
  * Among configured locales of the same language and script, the first in `locales` wins when none matches exactly or by
  * likely region, so `es-MX` matches `es-419` when it is listed before `es-ES`, while `en` matches `en-US`, its likely
  * region, wherever it is listed.
@@ -81,8 +83,11 @@ export function matchConfiguredLocale<TLocale extends string>(
       return likelyLocale.locale;
     }
 
+    // The same language in another likely script, such as `zh-Hant` for `zh`, reads worse than the next preference.
     const language = normalizedPreference.split("-")[0];
-    const subtagLocale = locales.find((locale) => locale.toLowerCase().split("-")[0] === language);
+    const subtagLocale = maximizedLocales.find(
+      ({ locale, maximized }) => maximized === undefined && locale.toLowerCase().split("-")[0] === language,
+    )?.locale;
 
     if (subtagLocale !== undefined) {
       return subtagLocale;

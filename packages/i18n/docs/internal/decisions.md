@@ -34,6 +34,8 @@ Matching used to live only in the browser entry point, so a server resolving `Ac
 
 **Order breaks ties between regions (2026-11-08).** Among configured locales that share a preference's language and script, with no exact or likely-region match, the first in `locales` wins, and the docs say so: list `es-419` before `es-ES` to serve `es-MX` from `es-419`. Choosing by region containment was rejected because it needs CLDR region data that `Intl` does not expose, and ordering already gives the right result.
 
+**A locale in another script never matches (2026-11-10).** The last step matched any configured locale of the same language, so with `["en", "zh"]`, `zh-TW` got Simplified `zh` even when English came next in the visitor's list, and with `["en", "zh-Hant"]`, `zh` got Traditional. That did not weigh the reason fallback chains skip a parent in another script: a page in a script the visitor doesn't read serves them worse than their next language. The step now requires the same likely script, as every earlier step does, and a locale `Intl.Locale` rejects still matches by language subtag. Rejected: keeping RFC 4647 lookup, which defends the old result but disagrees with the fallback chains on the same pair of locales.
+
 ### Interpolation came before ICU, with ICU syntax
 
 Without interpolation, a sentence with a value has to be concatenated from fragments, which fixes English word order into every translation, so `{name}` placeholders shipped first. `{name}` is the ICU argument syntax, so ICU messages can extend it later without changing existing translations.
