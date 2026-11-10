@@ -117,7 +117,7 @@ The references assume a current browser. Other media render less, and the medium
 Look at the output before presenting it. Most design failures are obvious in a rendered image and invisible in code.
 
 - Render the work and view it at its real size. For UI, capture a narrow phone width and a common desktop width. For social images and video, view them at the size people meet them, such as a feed thumbnail on a phone.
-- Confirm each chosen font loaded by checking the rendered text, such as its computed font or `document.fonts.check()`, not the stylesheet. A face that failed to load renders its fallback, and the page still looks finished.
+- Confirm each chosen font rendered. Read the rendered font the browser's developer tools report for the text, or confirm `document.fonts` holds a face of that family with the status `loaded`. The computed `font-family` only repeats the stylesheet, and `document.fonts.check()` returns true for a family that does not exist. A face that failed to load renders its fallback, and the page still looks finished.
 - When a direction was built, describe what the render shows before comparing it with the idea's sentence. When it still does not read as the idea after revising, return to the default and say so.
 - For social images, thumbnails, and posters, also view a copy scaled to about a quarter of its width. The main message must still read.
 - Blur or squint at it. You should see a few distinct blocks, with clearly larger gaps between groups than within them, and the order in which things stand out must match the ranking from the Content step. Without reading, count the sections and the groups in each; if you cannot, the structure is not visible yet.

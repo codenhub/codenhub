@@ -19,7 +19,7 @@ This applies once a direction has passed its checks. Without one, none of it doe
 
 - Keep the idea's sentence in front of you, and say which part of it each effect carries. Cut an effect that carries none.
 - Choose the one or two means the idea needs and push them far. Several mild effects together read as a template.
-- Build the plain version first: real content in its final layout, readable, with no effects. Layer the effects on top of it. That version is what people get with reduced motion, a failed script, or an unsupported browser, so it must be a finished page.
+- Build the plain version first: real content in its final layout, readable, with no effects. Layer the effects on top of it. That version is what people get with a failed script or an unsupported browser, so it must be a finished page. Reduced motion keeps the composition and drops the movement, as Cost And Fallbacks describes.
 - Use means you can define exactly: type, CSS, SVG geometry, drawing code, and real images or video. When the idea needs imagery you cannot produce, such as a photograph, an illustration, or a 3D model, ask for the asset, or use an image model when one is available. A crude substitute costs more than the plain version.
 
 ## Scale And Composition
@@ -34,7 +34,7 @@ Most of the force in expressive work comes from scale, crop, and placement, befo
 ## Light, Gradient, And Texture
 
 - Give light a source. Decide where it comes from, and keep every gradient, glow, highlight, and shadow consistent with that position.
-- Interpolate gradients in a perceptual space. `linear-gradient(in oklab, …)` keeps the middle of a blend between distant hues from turning gray. `in oklch` travels around the hue wheel and adds hues between the stops; use it only when those hues are wanted.
+- Interpolate gradients in a perceptual space. `linear-gradient(in oklab, …)` steps evenly in lightness and avoids the dark, muddy middle of an sRGB blend, but it still grays between hues that sit roughly opposite. `in oklch` keeps the chroma through the middle by traveling around the hue wheel, which adds hues between the stops; use it only when those hues are wanted. Otherwise add a middle stop.
 - Keep the stops few. Stops close in hue and apart in lightness read as light on a surface. Two saturated, distant hues at the same lightness read as the generated gradient.
 - Large smooth gradients show bands. Overlay fine noise at low opacity to break them up.
 - For grain, tile a small noise image at a few percent opacity. A turbulence filter over the whole page is recomputed whenever anything under it changes, which stutters once the page moves.
@@ -75,7 +75,7 @@ Most of the force in expressive work comes from scale, crop, and placement, befo
 
 - Use them when the idea cannot be built from the document: many particles that stand for data, a field that flows, a 3D object.
 - Build one only when you can run it and look at the result. Shader and 3D code that has never been rendered is unverified, and a small error gives a blank canvas.
-- Put a static image or CSS background under the canvas. It shows under reduced motion, before the canvas starts, and when the graphics context fails or is lost.
+- Put a static image or CSS background under the canvas for the time before the canvas starts and for when the graphics context fails or is lost; hide the canvas when that happens, since a canvas that has painted covers what is under it. Under reduced motion, draw one composed frame and stop the loop, or show the static image instead of the canvas.
 - Cap the device pixel ratio at 2, size the canvas to its element, handle resizing, and stop the loop when the canvas is off screen or the tab is hidden.
 - Drive the animation from elapsed time, never from a frame count, so it runs at the same speed on 60Hz and 120Hz screens.
 - Keep text in the document, above the canvas, so it stays sharp, selectable, and readable by assistive technology.
@@ -93,7 +93,7 @@ Most of the force in expressive work comes from scale, crop, and placement, befo
 
 - Describe what the render shows before comparing it with the idea's sentence. Someone who has not read the sentence should be able to say it from the render.
 - Capture the first view at the end of its sequence and in the middle of it, and capture several scroll positions, including one in the middle of a transition. A capture of the full page must show no blank sections.
-- Load the page with scripts off, with reduced motion on, and in a browser without the newest feature used. Each must give a finished page.
+- Load the page with scripts off, with reduced motion on, and in a browser without the newest feature used. Each must give a finished page, and reduced motion must still show the composition.
 - Measure text contrast against the worst part of the background behind it, not the average.
 - Run it with the CPU throttled and at phone width.
 - When the render still does not read as the idea after revising, return to the plain version and say so.
