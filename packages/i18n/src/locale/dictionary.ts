@@ -95,6 +95,13 @@ export function normalizeDictionary(input: unknown, options: NormalizeDictionary
   if (!isObject(input)) {
     throw invalid("A locale dictionary must be a non-null object");
   }
+  // A loader that returns `import("./en.json")` without `.default` hands over the module namespace, which otherwise
+  // fails on its symbol key with a message that points nowhere near the cause. The descriptor runs no getter.
+  if (Object.getOwnPropertyDescriptor(input, Symbol.toStringTag)?.value === "Module") {
+    throw invalid(
+      `A locale dictionary must be a module's default export, such as (await import("./en.json")).default, not the module itself`,
+    );
+  }
 
   const shared = normalizedPayloads.get(input);
 

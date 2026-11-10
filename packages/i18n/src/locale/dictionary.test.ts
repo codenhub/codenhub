@@ -143,6 +143,14 @@ describe("normalizeDictionary", () => {
     expect(getter).not.toHaveBeenCalled();
   });
 
+  it("tells a loader that returned a module namespace to return its default export", async () => {
+    const namespace = await import("../core/plain-object");
+
+    expect(() => normalizeDictionary(namespace, { locale: "en" })).toThrow(
+      `[I18n] A locale dictionary must be a module's default export, such as (await import("./en.json")).default, not the module itself in locale "en".`,
+    );
+  });
+
   it("rejects symbol keys", () => {
     expect(() => normalizeDictionary({ key: "value", [Symbol("hidden")]: "value" })).toThrow(TypeError);
   });
