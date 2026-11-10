@@ -124,7 +124,7 @@ class Parser {
         text += this.readApostrophe(isInPlural);
       } else if (character === "{") {
         flush();
-        nodes.push(this.parseArgument(depth, isInPlural));
+        nodes.push(this.parseArgument(depth));
       } else if (character === "}") {
         break;
       } else if (character === "#" && isInPlural) {
@@ -173,7 +173,7 @@ class Parser {
     return quoted;
   }
 
-  private parseArgument(depth: number, isInPlural: boolean): MessageNode {
+  private parseArgument(depth: number): MessageNode {
     const start = this.index;
     this.index += 1;
     this.skipSpace();
@@ -235,7 +235,8 @@ class Parser {
       }
       case "select": {
         this.expect(",");
-        const options = this.parseOptions(depth, isInPlural, (key) => key);
+        // ICU reads `#` as the number only in a plural's own options, not in a select nested inside one.
+        const options = this.parseOptions(depth, false, (key) => key);
         return { kind: "select", name, options, source: this.message.slice(start, this.index) };
       }
       default:

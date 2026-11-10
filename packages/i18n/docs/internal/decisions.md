@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-08
+last_updated: 2026-11-10
 scope: Why `@codenhub/i18n` behaves as it does, with the alternatives each decision rejected, for whoever changes it next.
 ---
 
@@ -81,6 +81,7 @@ Every text is read as an ICU message: `{name}`, `number` (`integer`, `percent`),
 - **A `Date` is a value**, formatted as `{name, date}`, so a plain `{when}` shows a readable date rather than `Date.prototype.toString()`.
 - **Plural groups stay**: they keep each form an ordinary key, which some translation tools need.
 - **Formatter options are copied by name (2026-11-08).** Formatters are cached per process. The key was `JSON.stringify(options)`, which sees only own properties while `Intl` also reads inherited ones, so `formatNumber(x, Object.create({ style: "percent" }))` turned every later call, in every manager, into a percentage. The options `Intl` reads are now copied by name, inherited ones included, and that copy is both the cache key and what `Intl` receives, so the two cannot disagree. Values that are not primitives are never cached, so `Intl` validates them on every call. Trade-off: an `Intl` option newer than ES2025 is ignored until it is added to the list.
+- **`#` is the number only in a plural's own forms (2026-11-10)**, as ICU's `MessagePattern` defines it: a `select` nested in a form shows `#` as written, and an apostrophe before `#` quotes only in a plural. It used to print the number there too, as `messageformat` does, which disagreed with ICU and `intl-messageformat`.
 - **Exact plural values compare as numbers (2026-11-08)**, as in ICU, so `=1.0` and `=01` select 1, and two spellings of one value are a repeated option. They used to compare as text and silently never matched. `offset` still matches the raw value.
 
 ### Values are typed from literal messages (0.2.0)

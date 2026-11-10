@@ -160,6 +160,24 @@ describe("ICU messages", () => {
     expect(i18n.t("quotedPound", { count: 2 })).toBe("# 2");
   });
 
+  it("should read # as the number only directly inside a plural, as ICU does", async () => {
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en"],
+      loadLocale: () => ({
+        inSelect: "{n, plural, other {{v, select, other {# x}} #}}",
+        quoteInSelect: "{n, plural, other {{v, select, other {'#' x}}}}",
+        innerPlural: "{n, plural, other {{v, select, other {{m, plural, other {#}}}}}}",
+      }),
+      isSilent: true,
+    });
+    await i18n.init();
+
+    expect(i18n.t("inSelect", { n: 5, v: "a" })).toBe("# x 5");
+    expect(i18n.t("quoteInSelect", { n: 5, v: "a" })).toBe("'#' x");
+    expect(i18n.t("innerPlural", { n: 5, v: "a", m: 3 })).toBe("3");
+  });
+
   it("should warn once for a malformed message and fill its simple placeholders", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {

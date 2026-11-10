@@ -199,7 +199,7 @@ An apostrophe before `{` or `}` quotes text up to the next apostrophe, and two a
 | `Type '{name}' to insert` | `Type {name} to insert` |
 | `It''s '{'here'}'`        | `It's {here}`           |
 
-Inside a plural, `#` stands for the number; write `'#'` for a literal `#`. Quoted text is text to the types too: in `'{it''s {x}'`, which shows `{it's {x}`, `x` is not a value `t()` asks for.
+Inside a plural's forms, `#` stands for the number; write `'#'` for a literal `#`. A `select` nested in a form is not the plural itself, so a `#` there is shown as written, as in ICU; put `{count}` there instead. Quoted text is text to the types too: in `'{it''s {x}'`, which shows `{it's {x}`, `x` is not a value `t()` asks for.
 
 Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning, unless the manager is silent, and is shown with only its `{name}` placeholders filled. The warning names the key and the locale, and comes once for each text in each locale, among the 1,000 most recent. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
 
