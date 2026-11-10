@@ -8,6 +8,8 @@ const LOCALE_CHANGE_EVENT = "locale-change";
 const READY_EVENT = "ready";
 const BOUND_MANAGERS = new WeakSet<object>();
 const ELEMENT_NODE = 1;
+/** Element, document, and document fragment, which includes a shadow root. */
+const PARENT_NODE_TYPES = new Set([ELEMENT_NODE, 9, 11]);
 
 const isElement = (node: Node): node is Element => node.nodeType === ELEMENT_NODE;
 const hasTranslationKey = (element: Element): boolean =>
@@ -120,8 +122,8 @@ const getMutationObserver = (root: ParentNode): typeof MutationObserver => {
  * @typeParam TLocale - Union of supported canonical locale identifiers.
  * @param options - Core manager, locale inputs, persistence, document, and optional DOM behavior.
  * @returns A binding that disconnects browser-owned listeners and observation.
- * @throws {TypeError} When observation lacks a root, when `root` is not a DOM node, such as the `null` of a
- * `querySelector()` that found nothing, when `syncDocument` is on without a global `document`, such as in a
+ * @throws {TypeError} When observation lacks a root, when `root` is not an element, a document, or a shadow root,
+ * such as the `null` of a `querySelector()` that found nothing, when `syncDocument` is on without a global `document`, such as in a
  * Web Worker, when the manager was not created by `createI18n()`, or when it already has a browser binding. These are
  * thrown before the manager is initialized.
  * @throws {RangeError} When an explicit locale is unsupported or is not a string at runtime.
@@ -132,8 +134,9 @@ const getMutationObserver = (root: ParentNode): typeof MutationObserver => {
  * @throws {TypeError} When a required dictionary is invalid.
  * @throws {TypeError} When direction resolution returns a value other than `ltr` or `rtl`.
  * @throws {I18nError} When the loader rejects for an explicit locale or the default locale.
- * Exceptions from the direction callback and required browser setup propagate unchanged. An exception from
- * translating the root, such as one `onMissingKey` throws, propagates after every other element is translated.
+ * Exceptions from the direction callback and required browser setup propagate unchanged.
+ * @throws {unknown} Any exception from translating the root, such as one `onMissingKey` throws, unchanged, after
+ * every other key in the root is translated. When several throw, the first propagates.
  */
 export async function initializeBrowserI18n<TLocale extends string>(
   options: BrowserI18nOptions<TLocale>,
@@ -153,8 +156,8 @@ export async function initializeBrowserI18n<TLocale extends string>(
   }
 
   // A `querySelector()` that finds nothing gives `null`, which would otherwise fail only after the manager started.
-  if (root !== undefined && (typeof root !== "object" || root === null || typeof root.nodeType !== "number")) {
-    throw new TypeError("[I18n] root must be a DOM node, such as document.body.");
+  if (root !== undefined && (typeof root !== "object" || root === null || !PARENT_NODE_TYPES.has(root.nodeType))) {
+    throw new TypeError("[I18n] root must be an element, a document, or a shadow root, such as document.body.");
   }
 
   if (shouldSyncDocument && typeof document === "undefined") {

@@ -422,23 +422,31 @@ describe("initializeBrowserI18n document integration", () => {
     binding.disconnect();
   });
 
-  it("finishes the initial pass before rethrowing an error from missing-key handling", async () => {
+  it("finishes the initial pass before rethrowing the first error from missing-key handling", async () => {
     document.body.innerHTML =
-      '<p data-i18n="greeting">Hello</p><p data-i18n="missing">Fallback</p><p data-i18n="frOnly">Other</p>';
-    const failure = new Error("missing key");
+      '<p data-i18n="greeting">Hello</p><p data-i18n="first" data-i18n-title="greeting" title="Hi">Fallback</p>' +
+      '<p data-i18n="frOnly">Other</p><p data-i18n="second">Second fallback</p>';
+    const errors = new Map<string, Error>();
     const i18n = createManager({
-      onMissingKey: () => {
-        throw failure;
+      onMissingKey: (key) => {
+        const error = new Error(key);
+        errors.set(key, error);
+        throw error;
       },
     });
 
-    await expect(initializeBrowserI18n({ i18n, locale: "fr", root: document.body })).rejects.toBe(failure);
+    const initialization = initializeBrowserI18n({ i18n, locale: "fr", root: document.body });
 
+    await expect(initialization).rejects.toThrow("first");
+    await expect(initialization.catch((error: unknown) => error)).resolves.toBe(errors.get("first"));
+    expect(errors.has("second")).toBe(true);
     expect(Array.from(document.querySelectorAll("p"), (element) => element.textContent)).toEqual([
       "Bonjour",
       "Fallback",
       "Francais seulement",
+      "Second fallback",
     ]);
+    expect(document.querySelectorAll("p")[1]?.getAttribute("title")).toBe("Bonjour");
   });
 
   it("finishes a locale-change pass and observed additions before reporting an error from missing-key handling", async () => {

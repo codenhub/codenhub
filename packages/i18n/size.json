@@ -280,10 +280,10 @@
         "initializeBrowserI18n": {
           "files": {
             "dist/browser.js": {
-              "bytes": 5767,
+              "bytes": 5862,
               "declarations": {
-                "initializeBrowserI18n": 2612,
-                "createDomTranslator": 1588,
+                "initializeBrowserI18n": 2633,
+                "createDomTranslator": 1626,
                 "readPersistedLocale": 217,
                 "TRANSLATED_ATTRIBUTES": 131,
                 "persistLocale": 125,
@@ -297,6 +297,7 @@
                 "isForeignChange": 61,
                 "isValidDomKey": 45,
                 "warn": 43,
+                "PARENT_NODE_TYPES": 36,
                 "hasTranslationKey": 34,
                 "TRANSLATION_KEY_ATTRIBUTES": 31,
                 "TRANSLATION_KEY_SELECTOR": 31,
@@ -331,16 +332,16 @@
               "bytes": 35
             }
           },
-          "gzip": 2613,
-          "minified": 6317
+          "gzip": 2645,
+          "minified": 6412
         }
       },
       "files": {
         "dist/browser.js": {
-          "bytes": 5767,
+          "bytes": 5862,
           "declarations": {
-            "initializeBrowserI18n": 2612,
-            "createDomTranslator": 1588,
+            "initializeBrowserI18n": 2633,
+            "createDomTranslator": 1626,
             "readPersistedLocale": 217,
             "TRANSLATED_ATTRIBUTES": 131,
             "persistLocale": 125,
@@ -354,6 +355,7 @@
             "isForeignChange": 61,
             "isValidDomKey": 45,
             "warn": 43,
+            "PARENT_NODE_TYPES": 36,
             "hasTranslationKey": 34,
             "TRANSLATION_KEY_ATTRIBUTES": 31,
             "TRANSLATION_KEY_SELECTOR": 31,
@@ -388,9 +390,9 @@
           "bytes": 35
         }
       },
-      "gzip": 2613,
-      "minified": 6317,
-      "sha256": "d0f8fb67427a994e27685aac364f1484c58c6c91fd7d3152b686216666463d95"
+      "gzip": 2645,
+      "minified": 6412,
+      "sha256": "5ab22f0ab5593658508ea01c86e7ca97a3f91073124cbb96954473208534370b"
     },
     "./routing": {
       "exports": {

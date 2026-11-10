@@ -118,8 +118,10 @@ describe("initializeBrowserI18n locale resolution", () => {
     { root: null, observe: false },
     { root: null, observe: true },
     { root: "#app", observe: false },
+    { root: document.createTextNode("text"), observe: false },
+    { root: document.createComment("comment"), observe: true },
   ])(
-    "rejects a root that is not a DOM node, $root with observe $observe, before initializing core",
+    "rejects a root that is not a parent node, $root with observe $observe, before initializing core",
     async (options) => {
       const i18n = createManager();
 
@@ -129,7 +131,9 @@ describe("initializeBrowserI18n locale resolution", () => {
           locale: "fr",
           ...(options as unknown as { root: ParentNode; observe: boolean }),
         }),
-      ).rejects.toThrow(new TypeError("[I18n] root must be a DOM node, such as document.body."));
+      ).rejects.toThrow(
+        new TypeError("[I18n] root must be an element, a document, or a shadow root, such as document.body."),
+      );
       expect(i18n.isReady).toBe(false);
       expect(localStorage.getItem("i18n")).toBeNull();
       expect(document.documentElement.lang).toBe("");
