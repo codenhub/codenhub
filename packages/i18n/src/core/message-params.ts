@@ -225,7 +225,7 @@ type UnionToIntersection<U> = (U extends unknown ? (value: U) => void : never) e
 type ValueArguments<V> = V extends string
   ? MessageArguments<V>
   : V extends { readonly other: string }
-    ? Unreadable extends FormArguments<V>
+    ? IsUnreadable<FormArguments<V>> extends true
       ? Unreadable
       : UnionToIntersection<FormArguments<V>> & { readonly count: number }
     : Unreadable;
@@ -254,8 +254,12 @@ type Narrow<T> = [T] extends [number]
       : T;
 type Simplify<T> = { readonly [K in keyof T]: Narrow<T[K]> } & {};
 
+// Whether any member is the marker. `Unreadable extends U` is not that test: a message without arguments reads as `{}`,
+// which the marker is assignable to.
+type IsUnreadable<U> = [Extract<U, Unreadable>] extends [never] ? false : true;
+
 // Any dictionary whose message can't be read makes the values loose; otherwise every dictionary's arguments apply.
-type ParamsFor<U> = Unreadable extends U ? [params?: AnyValues] : ParamsOf<UnionToIntersection<U>>;
+type ParamsFor<U> = IsUnreadable<U> extends true ? [params?: AnyValues] : ParamsOf<UnionToIntersection<U>>;
 type ParamsOf<A> = keyof A extends never ? [params?: AnyValues] : [params: Readonly<Simplify<A>> & AnyValues];
 
 /**

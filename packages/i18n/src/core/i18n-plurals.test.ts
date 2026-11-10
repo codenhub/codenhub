@@ -104,7 +104,9 @@ describe("plural selection", () => {
     const i18n = createPluralI18n(onMissingKey);
     await i18n.init();
 
+    // @ts-expect-error -- a plural group needs a count
     expect(i18n.t("cart.items")).toBe("cart.items");
+    // @ts-expect-error -- the count must be a number
     expect(i18n.t("cart.items", { count: "2" })).toBe("cart.items");
     expect(onMissingKey).toHaveBeenCalledTimes(2);
     expect(onMissingKey).toHaveBeenCalledWith("cart.items", "en");

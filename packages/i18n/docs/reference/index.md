@@ -861,6 +861,14 @@ type IsUnion<T, U = T> = T extends unknown ? ([U] extends [T] ? false : true) : 
 
 Not exported; declared in `src/core/message-params.ts`.
 
+### IsUnreadable
+
+```ts
+type IsUnreadable<U> = [Extract<U, Unreadable>] extends [never] ? false : true;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
 ### Letter
 
 ```ts
@@ -934,7 +942,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### ParamsFor
 
 ```ts
-type ParamsFor<U> = Unreadable extends U ? [params?: AnyValues] : ParamsOf<UnionToIntersection<U>>;
+type ParamsFor<U> = IsUnreadable<U> extends true ? [params?: AnyValues] : ParamsOf<UnionToIntersection<U>>;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -1096,7 +1104,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ```ts
 type ValueArguments<V> = V extends string ? MessageArguments<V> : V extends {
     readonly other: string;
-} ? Unreadable extends FormArguments<V> ? Unreadable : UnionToIntersection<FormArguments<V>> & {
+} ? IsUnreadable<FormArguments<V>> extends true ? Unreadable : UnionToIntersection<FormArguments<V>> & {
     readonly count: number;
 } : Unreadable;
 ```
