@@ -443,7 +443,7 @@ What `Client.endSessionUrl` puts in the logout request. Every member is optional
 readonly idTokenHint?: string;
 ```
 
-The ID token of the sign-in being ended. Recommended: it tells the provider which user is leaving, so it can skip asking them to confirm. An expired one is sent as well; this package's provider then ignores it.
+The ID token of the sign-in being ended. Recommended: it tells the provider which user is leaving, so it can skip asking them to confirm. An expired one is sent as well; this package's provider accepts it.
 
 #### EndSessionOptions › logoutHint
 

@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { digestKey, encodeBase64Url, randomToken, sha256, timingSafeEqual } from "./encoding";
+import { decodeBase64Url, digestKey, encodeBase64Url, randomToken, sha256, timingSafeEqual } from "./encoding";
 
 describe("encodeBase64Url", () => {
   it("shouldEncodeEmptyInputAsEmptyString", () => {
@@ -19,6 +19,15 @@ describe("encodeBase64Url", () => {
     for (let length = 0; length < 40; length += 1) {
       const bytes = randomBytes(length);
       expect(encodeBase64Url(new Uint8Array(bytes))).toBe(bytes.toString("base64url"));
+    }
+  });
+});
+
+describe("decodeBase64Url", () => {
+  it("shouldReturnTheBytesNodeDecodesForEveryLengthModuloThree", () => {
+    for (let length = 0; length < 40; length += 1) {
+      const bytes = randomBytes(length);
+      expect(decodeBase64Url(bytes.toString("base64url"))).toEqual(new Uint8Array(bytes));
     }
   });
 });

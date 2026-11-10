@@ -547,7 +547,7 @@ A `302` to the client's registered `post_logout_redirect_uri`, carrying `state`,
 readonly subject?: string;
 ```
 
-The user a verified `id_token_hint` names. Absent without one, as when the hint has expired: then nothing ties the request to a user, and the app should ask the user to confirm before it signs them out.
+The user a verified `id_token_hint` names. The hint may have expired, so compare it with the user of the app's own session. Absent without a verified hint: then nothing ties the request to a user, and the app should ask the user to confirm before it signs them out.
 
 #### EndSession › uiLocales
 

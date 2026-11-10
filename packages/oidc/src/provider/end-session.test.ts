@@ -51,6 +51,9 @@ function idToken(pair: KeyPair, overrides: Record<string, unknown> = {}, typ = "
   });
 }
 
+/** The times of an ID token that expired ten minutes ago. */
+const EXPIRED = { iat: NOW_SECONDS - 1200, exp: NOW_SECONDS - 600 };
+
 const logout = (parameters: Record<string, string>): Request =>
   new Request(`${LOGOUT}?${new URLSearchParams(parameters).toString()}`);
 
@@ -148,7 +151,17 @@ describe("endSession", () => {
   });
 
   it.each([
-    ["an expired hint", (pair: KeyPair) => idToken(pair, { iat: NOW_SECONDS - 1200, exp: NOW_SECONDS - 600 })],
+    [
+      "an expired hint from another issuer",
+      (pair: KeyPair) => idToken(pair, { ...EXPIRED, iss: "https://evil.example" }),
+    ],
+    [
+      "an expired hint signed by another key",
+      async () => idToken(await generateKeyPair({ alg: "ES256", kid: "k1" }), EXPIRED),
+    ],
+    ["an expired JWT access token", (pair: KeyPair) => idToken(pair, EXPIRED, "at+jwt")],
+    ["a hint that expired before it was issued", (pair: KeyPair) => idToken(pair, { exp: NOW_SECONDS - 120 })],
+    ["a hint issued in the future", (pair: KeyPair) => idToken(pair, { iat: NOW_SECONDS + 60 })],
     ["a hint from another issuer", (pair: KeyPair) => idToken(pair, { iss: "https://evil.example" })],
     ["a hint signed by another key", async () => idToken(await generateKeyPair({ alg: "ES256", kid: "k1" }))],
     ["a hint that is not a JWT", async () => "not-a-jwt"],
@@ -167,6 +180,25 @@ describe("endSession", () => {
     expect(result.ok).toBe(true);
     expect(result.ok && result.value.subject).toBeUndefined();
     expect(result.ok && result.value.redirect?.headers.get("location")).toBe(AFTER_LOGOUT);
+  });
+
+  it("accepts an expired hint, so a request without client_id still names its user and redirects", async () => {
+    const { op, pair } = await setup();
+
+    const result = await op.endSession(
+      logout({ id_token_hint: await idToken(pair, EXPIRED), post_logout_redirect_uri: AFTER_LOGOUT }),
+    );
+
+    expect(result.ok && result.value).toMatchObject({ clientId: "web", subject: "user-1" });
+    expect(result.ok && result.value.redirect?.headers.get("location")).toBe(AFTER_LOGOUT);
+  });
+
+  it("refuses an expired hint issued to another client than client_id", async () => {
+    const { op, pair } = await setup();
+
+    const result = await op.endSession(logout({ id_token_hint: await idToken(pair, EXPIRED), client_id: "other" }));
+
+    expect(!result.ok && result.error.issues).toEqual([{ code: "invalid_request", path: ["id_token_hint"] }]);
   });
 
   it("refuses a hint issued to another client than client_id", async () => {

@@ -308,7 +308,11 @@ The provider implements RP-initiated logout. Its end-session endpoint is `endpoi
 
 A success carries `clientId` when a client is known, `subject` when the hint verified, `logoutHint` and `uiLocales` when given, and `redirect`. `redirect` is a `302` to `post_logout_redirect_uri`, with `state` appended when the request had one, or `null` when the request named no `post_logout_redirect_uri`.
 
-The `id_token_hint` is verified as an ID token this provider issued: signed by one of its keys, with its issuer, typed `JWT`, unexpired, and with `sub`, `aud`, `exp` and `iat`. The type keeps a JWT access token (`at+jwt`) from passing as a hint. A hint with several audiences must name one of them in `azp`. A hint that does not verify, such as an expired one, is ignored. It is not a failure, and the result has no `subject`. Nothing then ties the request to a user, so ask the user to confirm the logout before signing them out.
+The `id_token_hint` is verified as an ID token this provider issued: signed by one of its keys, with its issuer, typed `JWT`, and with `sub`, `aud`, `exp` and `iat`. The type keeps a JWT access token (`at+jwt`) from passing as a hint. A hint with several audiences must name one of them in `azp`.
+
+An expired hint is accepted when expiry is its only fault, as RP-Initiated Logout 1.0 recommends: ID tokens are short-lived, so a hint has usually expired by the time the user signs out, and a relying party that sends no `client_id` is known only through it. It stays acceptable for as long as the key that signed it is among the provider's keys. Since the hint may be old, compare `subject` with the user of your own session before signing anyone out without asking.
+
+A hint that does not verify is ignored. It is not a failure, and the result has no `subject`. Nothing then ties the request to a user, so ask the user to confirm the logout before signing them out.
 
 The URIs a client may redirect to after logout are listed in its record's `postLogoutRedirectUris`, each held to the redirect URI rules. See [Client records](store.md#client-records).
 

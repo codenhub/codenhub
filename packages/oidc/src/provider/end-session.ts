@@ -1,5 +1,6 @@
 import { createKeySet, createVerifier } from "@codenhub/jwt";
 
+import { decodeBase64Url } from "../shared/encoding";
 import { fail, ok } from "../shared/result";
 import type { OidcIssue, OidcResult } from "../shared/types";
 import { checkClientRecord } from "./client-record";
@@ -7,6 +8,8 @@ import { readFrontChannelParameters } from "./front-channel";
 import type { ResolvedOptions } from "./options";
 import { redirectResponse } from "./responses";
 import type { ClientRecord, EndSession } from "./types";
+
+const MILLISECONDS_PER_SECOND = 1000;
 
 /** What a verified `id_token_hint` tells the provider: the user, and the clients the token was issued to. */
 interface Hint {
@@ -21,9 +24,8 @@ interface Hint {
  *
  * @remarks
  * Nothing in a failed request is trusted with a redirect, so every failure is for the app to render. An
- * `id_token_hint` that does not verify, as an expired one does not, is ignored rather than refused, so it names no
- * user; the redirect does not depend on it, since `post_logout_redirect_uri` is matched against the client's
- * registration.
+ * `id_token_hint` that does not verify is ignored rather than refused, so it names no user and no client. An
+ * expired one that is otherwise valid still verifies (RP-Initiated Logout 1.0 §2).
  */
 export async function endSession(options: ResolvedOptions, request: Request): Promise<OidcResult<EndSession>> {
   const read = await readFrontChannelParameters(request, "endSession");
@@ -69,23 +71,29 @@ const optionalMember = <K extends string, V>(key: K, value: V | undefined): Part
   value === undefined ? {} : ({ [key]: value } as Record<K, V>);
 
 /**
- * Verifies an `id_token_hint` as an ID token this provider issued: signed by one of its keys, with its issuer, typed
- * `JWT` and unexpired. `@codenhub/jwt` returns no payload for a token that fails, so an expired hint names no one.
- * The type keeps a JWT access token (`at+jwt`), signed by the same keys, from passing as a hint. A hint with several
+ * Verifies an `id_token_hint` as an ID token this provider issued: signed by one of its keys, with its issuer and
+ * typed `JWT`. It may have expired, as a hint normally has by the time the user signs out. The type keeps a JWT access token (`at+jwt`), signed by the same keys, from passing as a hint. A hint with several
  * audiences and no `azp` among them names no client, so it is ignored rather than trusted for any of them.
  */
 async function verifyHint(options: ResolvedOptions, idTokenHint: string | undefined): Promise<Hint | undefined> {
   if (idTokenHint === undefined) {
     return undefined;
   }
-  const verify = createVerifier({
-    keys: createKeySet(options.publicKeys),
-    issuer: options.issuer,
-    type: "JWT",
-    requiredClaims: ["sub", "aud", "exp", "iat"],
-    now: () => options.now() * 1000,
-  });
-  const verified = await verify(idTokenHint);
+  const verifyAt = (now: number): ReturnType<ReturnType<typeof createVerifier>> =>
+    createVerifier({
+      keys: createKeySet(options.publicKeys),
+      issuer: options.issuer,
+      type: "JWT",
+      requiredClaims: ["sub", "aud", "exp", "iat"],
+      now: () => now * MILLISECONDS_PER_SECOND,
+    })(idTokenHint);
+  let verified = await verifyAt(options.now());
+  if (!verified.ok && verified.error.issues.length === 1 && verified.error.issues[0].code === "expired") {
+    // Expiry is the hint's only fault, so its signature and every other claim were just verified. It is verified
+    // again at the moment it was issued, which is how `@codenhub/jwt` hands over the payload of an expired token.
+    const issuedAt = issueTimeOf(idTokenHint);
+    verified = issuedAt === undefined ? verified : await verifyAt(issuedAt);
+  }
   if (!verified.ok || typeof verified.value.payload.sub !== "string") {
     return undefined;
   }
@@ -94,6 +102,17 @@ async function verifyHint(options: ResolvedOptions, idTokenHint: string | undefi
   const clientId =
     audiences.length === 1 ? audiences[0] : typeof azp === "string" && audiences.includes(azp) ? azp : undefined;
   return clientId === undefined ? undefined : { subject: sub, audiences, clientId };
+}
+
+/** The `iat` of a token whose signature and claim types `@codenhub/jwt` has already verified. */
+function issueTimeOf(token: string): number | undefined {
+  try {
+    const payload: unknown = JSON.parse(new TextDecoder().decode(decodeBase64Url(token.split(".")[1] ?? "")));
+    const iat = typeof payload === "object" && payload !== null ? (payload as { iat?: unknown }).iat : undefined;
+    return typeof iat === "number" ? iat : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 async function findClient(options: ResolvedOptions, clientId: string): Promise<ClientRecord | undefined> {

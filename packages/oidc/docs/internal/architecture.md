@@ -75,7 +75,7 @@ A token issued to another client is refused with `invalid_request` and left alon
 
 ### End session
 
-`endSession` (`provider/end-session.ts`) keeps no state: it validates the request and returns a `redirect` for the app to send after it ends its own session (decision 37). An `id_token_hint` is verified with `@codenhub/jwt` against the provider's public keys and issuer, with no audience, and its `aud` is compared with `client_id` afterwards, so a hint for another client is refused while an expired one is ignored. A `post_logout_redirect_uri` is honored only for a known client that registered it; every failure has no redirect, since nothing in a failed logout request can be trusted with one.
+`endSession` (`provider/end-session.ts`) keeps no state: it validates the request and returns a `redirect` for the app to send after it ends its own session (decision 37). An `id_token_hint` is verified with `@codenhub/jwt` against the provider's public keys and issuer, with no audience, and its `aud` is compared with `client_id` afterwards, so a hint for another client is refused. A hint whose only fault is expiry is verified a second time with the clock set to its `iat`, read from the payload only after `@codenhub/jwt` reported `expired` and nothing else, which means the signature already verified (decision 45). A `post_logout_redirect_uri` is honored only for a known client that registered it; every failure has no redirect, since nothing in a failed logout request can be trusted with one.
 
 ### Diagnostics
 
