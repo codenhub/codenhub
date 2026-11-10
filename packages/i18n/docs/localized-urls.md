@@ -58,7 +58,7 @@ routing.localize("/", "en"); // "/"
 | `"always"`               | A slash on every path: `/pt/about/` and `/pt/`                 |
 | `"never"`                | No slash on any path but `/`: `/pt/about` and `/pt`            |
 
-`parse()` accepts both spellings whatever you choose, and its `pathname` keeps the request's slash, so `/pt/about` and `/pt/about/` are both the about page. With `"always"` or `"never"`, [Redirect to the canonical URL](#redirect-to-the-canonical-url) then sends the other spelling to the one `localize()` builds, so each page has one address.
+`parse()` accepts both spellings whatever you choose, and its `pathname` keeps the request's slash: `/about` for `/pt/about` and `/about/` for `/pt/about/`. Route both values to the same page, or strip the slash before routing. With `"always"` or `"never"`, [Redirect to the canonical URL](#redirect-to-the-canonical-url) then sends the other spelling to the one `localize()` builds, so each page has one address.
 
 ## Read the locale from a path
 

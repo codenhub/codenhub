@@ -40,7 +40,7 @@ Your loader threw or rejected, and the manager wrapped the failure in an `I18nEr
 - `error.locale` is the locale that failed.
 - `error.cause` is what your loader threw, such as a network error or a timeout.
 
-The manager keeps its current language, and the next call tries the loader again, so a retry button can just call `setLocale()` again. In a browser, a saved or detected locale that fails falls back to the default; see [How the locale is chosen](browser.md#how-the-locale-is-chosen).
+The manager keeps its current language, and the next call tries the loader again, so a retry button can just call `setLocale()` again. In a browser, a saved locale that fails falls back to the detected locale, and a detected one to the default; see [How the locale is chosen](browser.md#how-the-locale-is-chosen).
 
 ### Show it to the visitor
 

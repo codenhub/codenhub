@@ -269,8 +269,8 @@ export const i18nConfig = (input: unknown): CheckedI18nConfig => {
 };
 
 /**
- * Checks the configuration of locale routing: the locales, the default locale, the locale-prefix policy, and the shape of the
- * translated-path table.
+ * Checks the configuration of locale routing: the locales, the default locale, the locale-prefix policy, the shape of the
+ * translated-path table, and the trailing-slash policy.
  *
  * @internal
  */
