@@ -6,6 +6,7 @@
 - Building The Timeline
 - Text
 - Plugins
+- Camera And Depth
 - Determinism
 - Capturing Frames
 - Other Browser Animation
@@ -56,6 +57,13 @@ window.ready = true;
 - `CustomEase` for brand-specific easing curves.
 
 Register each plugin before use: `gsap.registerPlugin(SplitText, DrawSVGPlugin)`.
+
+## Camera And Depth
+
+- Wrap the scene in one camera element inside the stage, and animate that element's `x`, `y`, `scale`, and `rotation` for camera moves. Set its `transformOrigin` to the point the move should hold still, and use an ease-in-out, since a camera starts and stops.
+- For depth, set `perspective` on the stage with CSS, give the camera element `transform-style: preserve-3d`, and place layers at different `z` values. A camera move then shifts near layers more than far ones.
+- Animate blur as a `filter` string, such as `filter: "blur(12px)"`, from an explicit starting value, such as `filter: "blur(0px)"`.
+- For motion blur, pass the capture script four times the delivery frame rate, such as 120 for a 30fps delivery, and average the frames in the encode.
 
 ## Determinism
 
