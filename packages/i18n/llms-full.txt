@@ -1139,6 +1139,8 @@ await Promise.all(
 );
 ```
 
+`pathname` is a URL path, percent-encoded where the table has words such as `/serviços`. Hosts decode a request before looking for its file, so name the file after `decodeURI(pathname)`, such as `servicos/index.html` for `/servicos` and `serviços/index.html` for `/servi%C3%A7os`.
+
 A dictionary that fails to load or check makes `init()` reject, so the build fails instead of publishing pages without text. A key that only your default language has does not fail the build; it renders in the default language. Add [the untranslated-keys test](docs/translations.md#find-untranslated-keys) to catch those, and make `onMissingKey` throw during the build to fail on keys missing from every language.
 
 ## Hand the locale to the browser
@@ -1342,7 +1344,7 @@ How the table reads:
 - **A catch-all** is a last segment written `:name*`, such as `"/docs/:path*": { pt: "/documentos/:path*" }`. It matches one or more segments and copies them across, so `/docs/guides/setup` is `/pt/documentos/guides/setup`. It does not match zero segments: list `/docs` itself as its own entry.
 - **Anything the table doesn't list keeps its words.** `/blog` is `/pt/blog`, and `/products/42` in Spanish is `/es/products/42`, since only Portuguese translates it.
 - **Fixed segments match case-sensitively**, as URLs do, so `/pt/Sobre` is not the about page. Only the locale prefix ignores case.
-- **Write words as you would read them.** `"/configurações"` matches the `/configura%C3%A7%C3%B5es` that browsers send, and `localize()` returns the encoded form.
+- **Prefer plain letters in paths.** Routing doesn't change your words, so `/servicos` is what you get only if you write `/servicos`. Most sites drop accents from URLs, because an accented path is shown percent-encoded wherever it gets copied as text, such as `/servi%C3%A7os`. Accents work too: `"/serviços"` matches the `/servi%C3%A7os` that browsers send, and `localize()` returns the encoded form, so a static build that writes a folder for that path has to decode it first, as in [Build a static site](docs/server-rendering.md#build-a-static-site).
 - **A listed page comes back in one spelling.** `parse()` returns a listed page's fixed words the way a URL writes the table's words, in every locale, so `/%61bout` and `/pt/%73obre`, odd spellings of `/about` and `/pt/sobre`, both give `pathname: "/about"`. Parameters and segments the table doesn't list come back as the request wrote them.
 - **A fixed segment beats a parameter, and a parameter beats a catch-all.** With both `/products/new` and `/products/:id` listed, `/products/new` is the new-product page, whichever order the table lists them in. With `/docs/intro` and `/docs/:path*`, `/docs/intro` is the intro page and every other `/docs/…` path goes to the catch-all.
 - **The default locale can be translated too.** A Portuguese-first site with English code can use `defaultLocale: "pt"` and `{ "/about": { pt: "/sobre" } }`, so `/sobre` is the Portuguese page and `/en/about` the English one.
