@@ -61,7 +61,7 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
   },
   "./tw/surface": {
     candidates: "panel",
-    patterns: [/\.panel\{[^}]*--_capped:/, /backdrop-filter:var\(--ui-backdrop,none\)/],
+    patterns: [/\.panel\{[^}]*--_capped:/, /backdrop-filter:var\(--_layers-clear,var\(--ui-backdrop,none\)\)/],
   },
   "./tw/button": {
     candidates: "btn",

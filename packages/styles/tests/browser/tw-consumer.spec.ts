@@ -73,6 +73,10 @@ const FIXTURE = `
     <div class="{tw:my-surface|dist:surface}" data-known="apply-surface">Surface in a success card</div>
   </div>
   <div class="{tw:my-surface success|dist:surface success}" data-known="apply-surface">Success surface</div>
+  <div class="glass glass-liquid">
+    <div class="{tw:my-surface|dist:surface}" data-known="apply-surface">Liquid surface</div>
+    <div class="neobrutalism"><div class="{tw:my-surface|dist:surface}" data-known="apply-surface">Nested</div></div>
+  </div>
   <dialog class="{tw:my-surface|dist:surface}" data-known="apply-surface">Closed sheet</dialog>
   <dialog class="{tw:my-surface|dist:surface}" data-known="apply-surface" open>Open sheet</dialog>
 </main>`;
@@ -89,7 +93,8 @@ const DIALOGS = `
 const fixtureFor = (side: "tw" | "dist") =>
   FIXTURE.replaceAll(/\{tw:([^|]*)\|dist:([^}]*)\}/g, (_, tw: string, dist: string) => (side === "tw" ? tw : dist));
 
-const CONSUMER_CSS = (twEntry: string) => `@import "${twEntry}";
+const CONSUMER_CSS = (twEntry: string, glassEntry: string) => `@import "${twEntry}";
+@import "${glassEntry}";
 
 .my-surface {
   @apply surface;
@@ -118,7 +123,10 @@ test.beforeAll(async () => {
     await writeFile(path.join(temporaryRoot, "dialogs.html"), DIALOGS);
     await writeFile(
       path.join(temporaryRoot, "input.css"),
-      CONSUMER_CSS(pathToFileURL(path.join(packageRoot, "tw", "index.css")).href),
+      CONSUMER_CSS(
+        pathToFileURL(path.join(packageRoot, "tw", "index.css")).href,
+        pathToFileURL(path.join(packageRoot, "tw", "aesthetics", "glass.css")).href,
+      ),
     );
     await executeFile(process.execPath, [tailwindCliPath, "-i", "input.css", "-o", "output.css", "--minify"], {
       cwd: temporaryRoot,
@@ -128,7 +136,10 @@ test.beforeAll(async () => {
     await rm(temporaryRoot, { force: true, recursive: true });
   }
 
-  distCss = await readFile(path.join(packageRoot, "dist", "index.css"), "utf8");
+  distCss = [
+    await readFile(path.join(packageRoot, "dist", "index.css"), "utf8"),
+    await readFile(path.join(packageRoot, "dist", "aesthetics", "glass.css"), "utf8"),
+  ].join("\n");
 });
 
 type Side = "tw" | "dist";

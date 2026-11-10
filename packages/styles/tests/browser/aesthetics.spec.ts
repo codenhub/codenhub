@@ -1089,11 +1089,11 @@ test.describe("aesthetics", () => {
         expect(readSrgb(read.ghost.ground).alpha, "a ghost button rests on liquid's ground").toBeCloseTo(0.3, 2);
       });
 
-      /* The layers' list names components, so anything else that frosts under
-         glass -- a bare `<table>` under `/native`, a consumer's own `@apply
-         surface` -- takes none. It keeps a blur of its own instead: with the
-         backdrop cleared on the region it had the clearer ground and nothing
-         blurred behind it. */
+      /* Surfaces and the listed hosts take the layers, so anything else that
+         frosts under glass -- a bare `<table>` under `/native` -- takes none.
+         It keeps a blur of its own instead: with the backdrop cleared on the
+         region it had the clearer ground and nothing blurred behind it. A host
+         draws no backdrop of its own, so its layers see the page. */
       test("leaves a blur for what frosts and takes no layers", async ({ page, browserName }) => {
         await allowTransparency(page, browserName);
         await page.goto(withAesthetic(SURFACES_URL, LIQUID));
@@ -1104,11 +1104,11 @@ test.describe("aesthetics", () => {
           region.innerHTML = '<div data-probe="unlisted">Unlisted</div><div class="card" data-probe="host">Host</div>';
           root.append(region);
 
-          const token = (probe: string) =>
-            getComputedStyle(region.querySelector(`[data-probe="${probe}"]`)!)
-              .getPropertyValue("--ui-backdrop")
-              .trim();
-          const result = { unlisted: token("unlisted"), host: token("host") };
+          const styles = (probe: string) => getComputedStyle(region.querySelector(`[data-probe="${probe}"]`)!);
+          const result = {
+            unlisted: styles("unlisted").getPropertyValue("--ui-backdrop").trim(),
+            host: styles("host").backdropFilter || styles("host").getPropertyValue("-webkit-backdrop-filter"),
+          };
 
           region.remove();
 
@@ -1116,7 +1116,7 @@ test.describe("aesthetics", () => {
         });
 
         expect(read.unlisted, "the region's backdrop is liquid's blur").toContain("blur(2px)");
-        expect(read.host, "a host clears it for its layers").toBe("none");
+        expect(read.host, "a host clears its own for its layers").toBe("none");
       });
 
       test("reaches one surface inside a glass region, and skips a plain glass region nested inside", async ({

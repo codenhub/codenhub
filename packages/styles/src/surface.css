@@ -105,9 +105,65 @@
   /* Prefixed property first, deliberately: written second the minifier folds the
      pair into the prefixed one alone, and the standard property never reaches
      `dist/` -- which drops the blur in Firefox (the one engine with
-     `backdrop-filter` and not the `-webkit-` alias). Measured on the built CSS. */
-  -webkit-backdrop-filter: var(--ui-backdrop, none);
-  backdrop-filter: var(--ui-backdrop, none);
+     `backdrop-filter` and not the `-webkit-` alias). Measured on the built CSS.
+
+     Cleared under liquid glass, which draws the blur on a layer below instead:
+     a surface with a backdrop filter of its own is a backdrop root, and a layer
+     inside one sees only the surface. */
+  --_layers-clear: var(--_glass-liquid-on) none;
+  -webkit-backdrop-filter: var(--_layers-clear, var(--ui-backdrop, none));
+  backdrop-filter: var(--_layers-clear, var(--ui-backdrop, none));
+
+  /* Liquid glass's two layers, a blur under the content and a lens with its rim
+     and sheen above it. A pseudo-element is not a value a token reaches, so
+     they are drawn here, where `@apply surface` carries them, and glass hands
+     them its values: `--_glass-liquid-on` is the space-toggle flag the nearest
+     liquid region in a glass scope sets on and every other region sets off,
+     and the blur, lens, rim, and sheen are its privates. With no liquid region
+     in scope every declaration below is a no-op, so the surface names no
+     aesthetic's class and changes nothing without one.
+
+     Zero specificity, so anything that writes these on the element beats them:
+     the tooltip bubble's own `absolute`, a consumer's `relative` or `before:`
+     utility. Off, the anchor, the isolation, and the content revert to the
+     layer below, so a surface outside a liquid region keeps every positioning
+     and pseudo-element rule written for it in another layer; the layers' other
+     declarations compute to `unset`, which is what an undeclared one is. Both
+     slots are spent where the flag is on, so a host there carries no
+     `::before` or `::after` of its own. See
+     docs/internal/model.md#glass-liquid. */
+  :where(&) {
+    --_layers-anchor: var(--_glass-liquid-on) relative;
+    --_layers-isolation: var(--_glass-liquid-on) isolate;
+
+    position: var(--_layers-anchor, revert-layer);
+    isolation: var(--_layers-isolation, revert-layer);
+  }
+
+  :where(&)::before,
+  :where(&)::after {
+    --_layers-content: var(--_glass-liquid-on) "";
+
+    position: var(--_glass-liquid-on) absolute;
+    inset: var(--_glass-liquid-on) 0;
+    z-index: var(--_glass-liquid-on) -1;
+    border-radius: var(--_glass-liquid-on) inherit;
+    corner-shape: var(--_glass-liquid-on) inherit;
+    content: var(--_layers-content, revert-layer);
+    pointer-events: var(--_glass-liquid-on) none;
+  }
+
+  /* Prefixed first, for the reason above. */
+  :where(&)::before {
+    -webkit-backdrop-filter: var(--_glass-liquid-on) var(--_glass-liquid-blur);
+    backdrop-filter: var(--_glass-liquid-on) var(--_glass-liquid-blur);
+  }
+
+  :where(&)::after {
+    backdrop-filter: var(--_glass-liquid-on) var(--_glass-liquid-lens);
+    background-image: var(--_glass-liquid-on) var(--_glass-liquid-sheen);
+    box-shadow: var(--_glass-liquid-on) var(--_glass-liquid-rim);
+  }
 
   /* A `<dialog>`: hidden while closed, centred once open. The user agent
      promises both, at user-agent origin, which loses to any author rule at
