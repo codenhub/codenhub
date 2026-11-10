@@ -2,7 +2,7 @@
 title: Estéticas
 description: Os seis visuais opcionais, o que cada um muda num componente, os seus ajustes e os seus limites.
 order: 6
-source: cd46b4ebee22acac1baea87a0843af58e2e018b1
+source: dc3687e44f8721d7dd21b9006e397cde8596ed8e
 ---
 
 # Estéticas
@@ -74,7 +74,7 @@ A sombra é projetada na intenção do próprio componente, então um botão de 
 - Um alerta fica sobre a sombra deslocada nesta estética, e em nenhuma outra. Fora daqui, um alerta é plano, mas aqui a sombra é um segundo contorno, e não profundidade, e um alerta sem ela parece inacabado ao lado de todo o resto. Isso inclui um alerta dentro de uma região `.neobrutalism` aninhada. `.flat` ainda a remove e `.floating` ainda a dobra.
 - O gatilho de tooltip recebe o canto zero como todo o resto e fica quadrado; o `.radio` mantém o círculo.
 - Com `prefers-reduced-motion: reduce`, o clique ainda acontece, mas de imediato: o elemento pousa na sua sombra sem se deslocar até ela. O clique é o sinal de que ele foi registrado, então só o movimento some.
-- Ela não tem fonte própria e define a do tema, `--font-default`, na região, para que uma região neobrutalism aninhada dentro de pixel, cyber, sketch ou chunky tile não herde a fonte delas.
+- Ela não tem fonte própria e define a do tema, `--font-default`, na região, para que uma região neobrutalism aninhada dentro de pixel, cyber, sketch ou chunky tile não herde a fonte delas. Uma fonte que você define só com `font-family`, no `body` ou num contêiner, não chega dentro da região; defina-a também em `--font-default`, como descreve [Temas → Fontes](./theming.md#fontes).
 
 ## Glass
 

@@ -73,7 +73,7 @@ The shadow is cast in the component's own intent, so a success button throws a g
 - An alert sits on the offset shadow under this aesthetic, and under no other. An alert is otherwise flat, but here the shadow is a second outline rather than depth, and an alert without it looks unfinished next to everything else. This includes an alert inside a nested `.neobrutalism` region. `.flat` still removes it and `.floating` still doubles it.
 - The tooltip trigger takes the zero corner like everything else and draws square; `.radio` keeps its circle.
 - Under `prefers-reduced-motion: reduce` the press still happens, but at once: the element lands in its shadow without travelling there. The press is the feedback that a click registered, so only its motion goes.
-- It has no font of its own and sets the theme's, `--font-default`, on the region, so a neobrutalist region nested inside pixel, cyber, sketch, or chunky tile does not take their face.
+- It has no font of its own and sets the theme's, `--font-default`, on the region, so a neobrutalist region nested inside pixel, cyber, sketch, or chunky tile does not take their face. A font you set with `font-family` alone, on `body` or a container, does not reach inside the region; set it in `--font-default` too, as [Theming → Fonts](./theming.md#fonts) describes.
 
 ## Glass
 

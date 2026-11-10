@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro y oscuro, reemplazar la paleta con los colores de marca, definir una intención propia, y cada token de color, intención, base y fuente con su valor por defecto.
 order: 5
-source: 481dcaaa6ee7de89ac3750771a29fd59ffaa057e
+source: 7c3de72fa13d9456b240c5bf47035075bef3da81
 ---
 
 # Temas
@@ -251,16 +251,16 @@ Cada sombra `--elevation-*` está formada por las partes indicadas, cada una en 
 
 El paquete no incluye archivos de fuente ni hace peticiones de red. Cada token de fuente nombra fuentes ya instaladas en el dispositivo del lector hasta que aportes las tuyas.
 
-| Token            | Lo lee                                                                                      | Sin tu valor                                                                                                                                      |
-| ---------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--font-default` | El reset, en `html` y `body`. Los botones y los controles de formulario lo heredan.         | `"Segoe UI", system-ui, sans-serif`                                                                                                               |
-| `--font-mono`    | Los helpers de contenido `kbd`, `code` y `pre`, y `<kbd>`, `<code>` y `<pre>` con `/native` | `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`. Con `/tw`, el valor de tu tema de Tailwind. |
-| `--font-pixel`   | [`.pixel`](./aesthetics.md#pixel) y `.pixel-solo`                                           | No declarado. Recurre a una pila monoespaciada.                                                                                                   |
-| `--font-rounded` | [`.chunky-tile`](./aesthetics.md#chunky-tile) y `.chunky-tile-solo`                         | No declarado. Recurre a `--font-default` y después a una pila sans-serif.                                                                         |
-| `--font-cyber`   | [`.cyber`](./aesthetics.md#cyber) y `.cyber-solo`                                           | No declarado. Recurre a una pila monoespaciada.                                                                                                   |
-| `--font-sketch`  | [`.sketch`](./aesthetics.md#sketch) y `.sketch-solo`                                        | No declarado. Recurre a la familia `cursive` de la plataforma.                                                                                    |
+| Token            | Lo lee                                                                                             | Sin tu valor                                                                                                                                      |
+| ---------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--font-default` | El reset, en `html` y `body`, y las regiones `.glass` y `.neobrutalism`. Los controles lo heredan. | `"Segoe UI", system-ui, sans-serif`                                                                                                               |
+| `--font-mono`    | Los helpers de contenido `kbd`, `code` y `pre`, y `<kbd>`, `<code>` y `<pre>` con `/native`        | `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`. Con `/tw`, el valor de tu tema de Tailwind. |
+| `--font-pixel`   | [`.pixel`](./aesthetics.md#pixel) y `.pixel-solo`                                                  | No declarado. Recurre a una pila monoespaciada.                                                                                                   |
+| `--font-rounded` | [`.chunky-tile`](./aesthetics.md#chunky-tile) y `.chunky-tile-solo`                                | No declarado. Recurre a `--font-default` y después a una pila sans-serif.                                                                         |
+| `--font-cyber`   | [`.cyber`](./aesthetics.md#cyber) y `.cyber-solo`                                                  | No declarado. Recurre a una pila monoespaciada.                                                                                                   |
+| `--font-sketch`  | [`.sketch`](./aesthetics.md#sketch) y `.sketch-solo`                                               | No declarado. Recurre a la familia `cursive` de la plataforma.                                                                                    |
 
-`--font-default` solo llega a la página a través del reset, que incluyen `@codenhub/styles`, `/native`, `/tw`, `/tw/native` y `/tw/reset`. Con `/theme` o `/components` solos, define tú mismo `font-family` en `body`. Los tokens de las estéticas los lee la propia clase de la estética, así que funcionan con cualquier punto de entrada.
+`--font-default` solo llega a la página a través del reset, que incluyen `@codenhub/styles`, `/native`, `/tw`, `/tw/native` y `/tw/reset`. Con `/theme` o `/components` solos, define tú mismo `font-family` en `body` y define `--font-default` con la misma fuente: las regiones `.glass` y `.neobrutalism` definen su propio `font-family` a partir del token, así que una fuente definida solo en `body` no llega dentro de ellas. O define solo el token y escribe `font-family: var(--font-default)` en `body`. Los tokens de las estéticas los lee la propia clase de la estética, así que funcionan con cualquier punto de entrada.
 
 Para usar una fuente web, cárgala como cargas cualquier fuente y después nómbrala en el token. Define el token en `:root` para toda la página, o en cualquier elemento para esa parte:
 

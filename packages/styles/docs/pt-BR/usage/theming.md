@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro e escuro, como trocar a paleta pelas cores da marca, como definir uma intenção própria, e cada token de cor, de intenção, fundamental e de fonte com o seu padrão.
 order: 5
-source: 481dcaaa6ee7de89ac3750771a29fd59ffaa057e
+source: 7c3de72fa13d9456b240c5bf47035075bef3da81
 ---
 
 # Temas
@@ -253,14 +253,14 @@ O pacote não entrega arquivos de fonte e não faz requisições de rede. Cada t
 
 | Token            | Lido por                                                                                      | Sem o seu valor                                                                                                                                   |
 | ---------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--font-default` | O reset, em `html` e `body`. Botões e controles de formulário o herdam.                       | `"Segoe UI", system-ui, sans-serif`                                                                                                               |
+| `--font-default` | O reset, em `html` e `body`, e as regiões `.glass` e `.neobrutalism`. Os controles o herdam.  | `"Segoe UI", system-ui, sans-serif`                                                                                                               |
 | `--font-mono`    | Os utilitários de conteúdo `kbd`, `code` e `pre`, e `<kbd>`, `<code>` e `<pre>` com `/native` | `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`. Com `/tw`, o valor do seu tema do Tailwind. |
 | `--font-pixel`   | [`.pixel`](./aesthetics.md#pixel) e `.pixel-solo`                                             | Não declarado. Cai numa pilha monoespaçada.                                                                                                       |
 | `--font-rounded` | [`.chunky-tile`](./aesthetics.md#chunky-tile) e `.chunky-tile-solo`                           | Não declarado. Cai em `--font-default` e, depois, numa pilha sans-serif.                                                                          |
 | `--font-cyber`   | [`.cyber`](./aesthetics.md#cyber) e `.cyber-solo`                                             | Não declarado. Cai numa pilha monoespaçada.                                                                                                       |
 | `--font-sketch`  | [`.sketch`](./aesthetics.md#sketch) e `.sketch-solo`                                          | Não declarado. Cai na família `cursive` da plataforma.                                                                                            |
 
-`--font-default` só chega à página pelo reset, que `@codenhub/styles`, `/native`, `/tw`, `/tw/native` e `/tw/reset` incluem. Usando só `/theme` ou `/components`, defina você mesmo o `font-family` no `body`. Os tokens das estéticas são lidos pela classe da própria estética, então funcionam com qualquer entrypoint.
+`--font-default` só chega à página pelo reset, que `@codenhub/styles`, `/native`, `/tw`, `/tw/native` e `/tw/reset` incluem. Usando só `/theme` ou `/components`, defina você mesmo o `font-family` no `body` e defina `--font-default` com a mesma fonte: as regiões `.glass` e `.neobrutalism` definem o próprio `font-family` a partir do token, então uma fonte definida só no `body` não chega dentro delas. Ou defina só o token e escreva `font-family: var(--font-default)` no `body`. Os tokens das estéticas são lidos pela classe da própria estética, então funcionam com qualquer entrypoint.
 
 Para usar uma web font, carregue-a como você carrega qualquer fonte e depois nomeie-a no token. Defina o token no `:root` para a página inteira, ou em qualquer elemento para aquela parte dela:
 
