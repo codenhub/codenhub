@@ -2,7 +2,7 @@
 title: Botones
 description: Acciones destructivas y secundarias, botones de icono, tamaños, enlaces con aspecto de botón, estados deshabilitados e iconos de carga.
 order: 1
-source: 191dd268b7da59fd3b3bf82c23aa192207c89381
+source: c160b409a0de01a02e1ea72ba0f2110d11353d6b
 ---
 
 # Botones
@@ -40,7 +40,7 @@ Un botón acepta una intención, una clase de relleno y una clase de borde, toda
 
 Un botón **neutro** nunca se rellena del todo. Su color es el propio color de texto de la página, así que un relleno completo sería un bloque negro o blanco, lo más llamativo de la página para la intención que no significa nada en particular. Un botón neutro `.solid` se queda en un relleno del 20%, un gris discreto un paso más oscuro que `.soft`. Todas las intenciones con nombre se rellenan al 100%.
 
-Con hover, el relleno de un botón se intensifica en `--hover-step` (14%), así que un botón `.ghost` toma un tinte y uno `.solid` cambia al color de hover de su intención. Al pulsarlo se encoge un poco (`scale(0.97)`); una [estética](./aesthetics.md) puede reemplazarlo por su propia pulsación, y la preferencia de movimiento reducido del usuario lo desactiva.
+Con hover, el relleno de un botón se intensifica en `--hover-step` (14%), así que un botón `.ghost` toma un tinte y uno `.solid` cambia al color de hover de su intención. Al pulsarlo se encoge un poco (`scale(0.97)`); una [estética](./aesthetics.md) puede reemplazarlo por su propia pulsación, y con la preferencia de movimiento reducido del usuario sigue ocurriendo, al instante.
 
 ## Tamaños y formas
 

@@ -2,7 +2,7 @@
 title: Estéticas
 description: Los seis aspectos opcionales, lo que cada uno cambia en un componente, sus controles y sus límites.
 order: 6
-source: af0b5f8a4895c10cba172444f5e61408e8bd7264
+source: cd46b4ebee22acac1baea87a0843af58e2e018b1
 ---
 
 # Estéticas
@@ -94,7 +94,7 @@ La sombra se proyecta en la propia intención del componente, así que un botón
 - El vidrio es el fondo, no el relleno. Una presentación conserva todo su relleno, así que un botón `.solid`, un toggle marcado y una tarjeta o tabla `.solid` son opacos; los cristales esmerilados son los de por defecto, `.soft` y `.ghost`.
 - El desenfoque solo se aplica a `.card`, `.panel`, `.alert`, la burbuja del tooltip y una `.data-table` por defecto o `.soft`. Los controles se quedan sólidos y se apoyan sobre el vidrio: un desenfoque bajo cada control de un grupo denso cuesta una capa compuesta por cada uno y se percibe como ruido. Los controles siguen tomando el radio, el borde y la sombra de la estética.
 - Con `prefers-reduced-transparency: reduce`, y con colores forzados, las superficies de vidrio pierden el desenfoque y se vuelven opacas. Los colores forzados reemplazan los colores pero conservan su transparencia, así que sin esto un panel dejaría ver la página a través del fondo del sistema.
-- Los botones y una `.card` que lo active se pulsan con el `scale(0.97)` simple; el movimiento reducido lo desactiva.
+- Los botones y una `.card` que lo active se pulsan con el `scale(0.97)` simple; con movimiento reducido la pulsación sigue ocurriendo, al instante.
 - No tiene fuente propia y define en la región la del tema, `--font-default`, como hace neobrutalism.
 - Los controles de texto y los toggles dibujan su línea con la tinta de la página al 55% en lugar del fino borde blanco, que borraría un checkbox sin marcar en una página clara. Es `--ui-control-ink`; defínelo en la región para elegir otro.
 - El marco y las líneas divisorias de una tabla dibujan la tinta de la página al 20%, porque el borde fino desaparece sobre la placa de la tabla. Es `--ui-rule-ink`.
@@ -268,7 +268,7 @@ El botón discontinuo es `ghost edged` porque un botón relleno no tiene una lí
 - Los chips, como checkboxes, teclas, código, badges, switches y barras de progreso, rotan entre pequeños contornos irregulares definidos en `--ui-radius-tight`. Define ese token en un chip para elegir su forma.
 - Un `.btn.pill` toma una píldora redondeada acotada a su propia altura, para que uno ancho no se convierta en un óvalo. Los badges, las barras de progreso y los switches toman su contorno de chip. Los radios y el icono del tooltip siguen siendo círculos, ligeramente irregulares, para que un radio nunca se confunda con un checkbox. Un `--ui-radius-pill` explícito en un elemento sigue ganando.
 - La `--font-sketch` la aportas tú. El paquete no incluye ninguna fuente manuscrita y recurre a la familia `cursive` de la plataforma.
-- Los botones se pulsan con el `scale(0.97)` simple; el movimiento reducido lo desactiva.
+- Los botones se pulsan con el `scale(0.97)` simple; con movimiento reducido la pulsación sigue ocurriendo, al instante.
 - El modo de colores forzados dibuja continuos los detalles discontinuos, como cualquier otra línea del material.
 
 ## Clases solo

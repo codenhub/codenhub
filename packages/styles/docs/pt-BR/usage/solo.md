@@ -2,7 +2,7 @@
 title: Classes solo
 description: Como aplicar uma estética a um único elemento de outra biblioteca, como um toast ou um dialog, e o que uma classe solo lê e ignora.
 order: 7
-source: 23f751881fa72f3092ac7a83f1a565dfb1b26b07
+source: c44308a8768737292529d4f93b703b3fa200255a
 ---
 
 # Classes solo
@@ -79,7 +79,7 @@ Sem nenhuma dessas classes, uma classe solo desenha só o material (borda, canto
 - **Ela vence os estilos da outra biblioteca.** As regras são sem camada e têm uma classe de profundidade, então vencem as regras com camada de um componente, e as de especificidade zero, onde quer que as duas carreguem. Uma regra externa sem camada que seja mais específica, ou igualmente específica e posterior na página, ainda vence. O outro lado disso é que um utilitário do Tailwind no mesmo elemento, como `rounded-none`, perde para a classe solo: use os ajustes dela em vez disso.
 - **Ela só faz clicar uma ação.** Neobrutalism, chunky tile e cyber afundam ao clicar um `button`, um `a[href]`, um `[role="button"]`, um `summary` ou um `input` do tipo botão que não esteja desabilitado. Todo o resto fica parado, então um toast não afunda ao ser clicado. O rótulo mais pesado do chunky tile segue a mesma regra.
 - **Ela não mexe no movimento de um contêiner.** Só uma ação recebe a `transition` do clique, e o clique move o elemento pelas propriedades `translate` e `scale`, não por `transform`. Um toast mantém as suas próprias transições e o seu próprio `transform`. Numa ação, a `transition` do clique substitui qualquer uma que o elemento tivesse.
-- **O movimento reduzido mantém o clique e tira o movimento dele.** Com `prefers-reduced-motion: reduce`, neobrutalism e chunky tile ainda afundam ao clicar, mas de imediato: o elemento pousa na sua sombra ou barra sem se deslocar até ela. O encolhimento do cyber, que só sinaliza o clique, some.
+- **O movimento reduzido mantém o clique e tira o movimento dele.** Com `prefers-reduced-motion: reduce`, neobrutalism, chunky tile e cyber ainda respondem ao clique, mas de imediato: o elemento pousa na sua sombra ou barra, ou encolhe, sem se deslocar até lá.
 
 ## A seguir
 

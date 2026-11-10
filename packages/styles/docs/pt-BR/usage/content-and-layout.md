@@ -2,7 +2,7 @@
 title: Conteúdo e layout
 description: Consulta de todos os helpers de layout com os seus espaçamentos, a escala tipográfica com os seus tamanhos, cards e painéis com o seu padding, tabelas, citações, código e teclas.
 order: 10
-source: ab8d628a92a7a3f040cf2b91977a14a2c054aa21
+source: 4e28376992e3ddfdd7266f6bf74766ea9f0f82e1
 ---
 
 # Conteúdo e layout
@@ -89,7 +89,7 @@ Um `.card.soft` neutro e um `.panel` neutro não mostram tom: eles ficam sobre o
 | `.hoverable`   | Só a cor de hover, sem cursor de ponteiro.                                                                  |
 | `.pressable`   | Só o clique e o cursor de ponteiro.                                                                         |
 
-No visual padrão, um clique reduz levemente o card (`scale(0.97)`); uma estética pode substituir isso pelo seu próprio clique, e a preferência por movimento reduzido o desativa.
+No visual padrão, um clique reduz levemente o card (`scale(0.97)`); uma estética pode substituir isso pelo seu próprio clique, e, com a preferência por movimento reduzido, ele ainda acontece, de imediato.
 
 Use uma das metades num card que responde a um só gesto. Um card que contém o seu próprio botão recebe `.hoverable`, para que clicar no botão não clique o card inteiro.
 

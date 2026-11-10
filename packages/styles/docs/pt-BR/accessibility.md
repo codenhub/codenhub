@@ -2,7 +2,7 @@
 title: Acessibilidade
 description: O que o CSS faz por foco, estados, movimento, contraste, cores forçadas e texto da direita para a esquerda, e o que a sua aplicação ainda deve aos seus usuários.
 order: 5
-source: 0ffcdd693d834133c21df333eab389d8a06e1d02
+source: 78a05fdd23ceaedc64db2358eb393a17fe6435a2
 ---
 
 # Acessibilidade
@@ -59,11 +59,11 @@ Sem classe de intenção, o contorno é o cinza de borda discreto, `--color-bord
 
 ### Movimento e transparência
 
-| Recurso                            | Comportamento                                                                                                                                                                                                                                                                                                                                                                       |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Movimento reduzido, componentes    | Com `prefers-reduced-motion: reduce`, todo componente para as suas próprias transições e animações: o brilho do skeleton e do progresso, a barra indeterminada, o tooltip, as marcas dos toggles e o deslocamento do clique. Sob neobrutalism e chunky tile, e as suas classes solo, o clique ainda acontece, de imediato; sob as outras estéticas, o encolhimento dele é removido. |
-| Movimento reduzido, página inteira | O reset também encurta todas as outras animações e transições da página.                                                                                                                                                                                                                                                                                                            |
-| Transparência reduzida             | Com `prefers-reduced-transparency: reduce`, e em cores forçadas, `.glass`, `.glass-liquid` e `.glass-solo` perdem o desfoque e a lente e ficam opacos.                                                                                                                                                                                                                              |
+| Recurso                            | Comportamento                                                                                                                                                                                                                                                                                                                                                         |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Movimento reduzido, componentes    | Com `prefers-reduced-motion: reduce`, todo componente para as suas próprias transições e animações: o brilho do skeleton e do progresso, a barra indeterminada, o tooltip, as marcas dos toggles e o movimento do clique. O clique em si ainda acontece, de imediato, no visual padrão e sob toda estética e classe solo, porque é o sinal de que ele foi registrado. |
+| Movimento reduzido, página inteira | O reset também encurta todas as outras animações e transições da página.                                                                                                                                                                                                                                                                                              |
+| Transparência reduzida             | Com `prefers-reduced-transparency: reduce`, e em cores forçadas, `.glass`, `.glass-liquid` e `.glass-solo` perdem o desfoque e a lente e ficam opacos.                                                                                                                                                                                                                |
 
 A regra de movimento reduzido de cada componente vem com o componente, então todo entrypoint que o inclui respeita o movimento reduzido sem o reset, incluindo `@codenhub/styles/components`, `@codenhub/styles/tw/components` e cada entrypoint de componente `/tw/*`. Os entrypoints completos e nativos adicionam a regra do reset para a página inteira.
 

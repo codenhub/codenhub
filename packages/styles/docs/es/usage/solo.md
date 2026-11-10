@@ -2,7 +2,7 @@
 title: Clases solo
 description: Cómo pintar una estética sobre un elemento de otra librería, como un toast o un diálogo, y qué lee e ignora una clase solo.
 order: 7
-source: 23f751881fa72f3092ac7a83f1a565dfb1b26b07
+source: c44308a8768737292529d4f93b703b3fa200255a
 ---
 
 # Clases solo
@@ -79,7 +79,7 @@ Sin ninguna de esas clases, una clase solo pinta solo el material (borde, esquin
 - **Gana a los estilos de la otra librería.** Las reglas no tienen capa y tienen un solo nivel de clase, así que ganan a las reglas con capa de un componente, y a las de especificidad cero, se carguen donde se carguen. Una regla ajena sin capa que sea más específica, o igual de específica y posterior en la página, sigue ganando. La otra cara es que una utilidad de Tailwind en el mismo elemento, como `rounded-none`, pierde frente a la clase solo: ajústalo mediante sus controles.
 - **Solo pulsa una acción.** Neobrutalism, chunky tile y cyber pulsan un `button`, un `a[href]`, un `[role="button"]`, un `summary` o un `input` de tipo botón que no esté deshabilitado. Todo lo demás se queda quieto, así que un toast no se hunde al hacer clic. La etiqueta más gruesa de chunky tile sigue la misma regla.
 - **No toca el movimiento de un contenedor.** Solo una acción toma la `transition` de la pulsación, y la pulsación mueve el elemento mediante las propiedades `translate` y `scale`, no `transform`. Un toast conserva sus propias transiciones y su propio `transform`. En una acción, la `transition` de la pulsación reemplaza la que tuviera el elemento.
-- **El movimiento reducido conserva la pulsación y quita su movimiento.** Con `prefers-reduced-motion: reduce`, neobrutalism y chunky tile siguen pulsando, pero al instante: el elemento cae en su sombra o su barra sin recorrer la distancia. El encogimiento de cyber, que solo señala el clic, desaparece.
+- **El movimiento reducido conserva la pulsación y quita su movimiento.** Con `prefers-reduced-motion: reduce`, neobrutalism, chunky tile y cyber siguen pulsando, pero al instante: el elemento cae en su sombra o su barra, o se encoge, sin recorrer la distancia.
 
 ## Siguiente paso
 

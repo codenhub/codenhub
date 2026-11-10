@@ -2,7 +2,7 @@
 title: Personalização
 description: Consulta sobre tokens de apresentação e de material, ajustes das estéticas, as seis variáveis públicas de componente, a paleta gerada e os helpers para criar os seus próprios componentes.
 order: 9
-source: 43865da6280f631e9959256ef266f504239a16ff
+source: 1c842940027ebaefcada465fcf929ba31cbf100e
 ---
 
 # Personalização
@@ -76,7 +76,7 @@ A geometria da sombra é dividida em partes sem cor, então elas são herdadas c
 | `--ui-hover-shadow-y`     | Deslocamento vertical da sombra durante o hover.                                                                                                                            | `--ui-shadow-y`                                         |
 | `--ui-active-shadow-x`    | Deslocamento horizontal da sombra durante o clique.                                                                                                                         | `--ui-shadow-x`                                         |
 | `--ui-active-shadow-y`    | Deslocamento vertical da sombra durante o clique.                                                                                                                           | `--ui-shadow-y`                                         |
-| `--ui-active-transform`   | Transformação durante o clique. `none` sob `prefers-reduced-motion`.                                                                                                        | `scale(0.97)`                                           |
+| `--ui-active-transform`   | Transformação durante o clique. Mantida sob `prefers-reduced-motion`, que tira só a transição dela.                                                                         | `scale(0.97)`                                           |
 | `--ui-active-translate-x` | Distância que um clique percorre na profundidade do elemento; `-y` ao lado. Escalado como a sombra.                                                                         | `0px`                                                   |
 | `--ui-shadow-ink`         | Porcentagem da cor da sombra tirada da tinta da intenção.                                                                                                                   | `0%`                                                    |
 | `--ui-halo-blur`          | Desfoque de um halo em volta do elemento; `--ui-halo-spread` ao lado. A elevação não o escala.                                                                              | `0px`                                                   |

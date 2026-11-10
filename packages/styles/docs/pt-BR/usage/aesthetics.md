@@ -2,7 +2,7 @@
 title: Estéticas
 description: Os seis visuais opcionais, o que cada um muda num componente, os seus ajustes e os seus limites.
 order: 6
-source: af0b5f8a4895c10cba172444f5e61408e8bd7264
+source: cd46b4ebee22acac1baea87a0843af58e2e018b1
 ---
 
 # Estéticas
@@ -94,7 +94,7 @@ O `.glass` precisa de algo por trás para desfocar. Sobre um fundo de página pl
 - O vidro é o chão, não o preenchimento. Uma apresentação mantém o preenchimento inteiro, então um botão `.solid`, um toggle marcado e um card ou tabela `.solid` são opacos; as placas padrão, `.soft` e `.ghost` são as foscas.
 - O desfoque se aplica só a `.card`, `.panel`, `.alert`, ao balão de tooltip e a um `.data-table` padrão ou `.soft`. Os controles continuam sólidos e ficam sobre o vidro: um desfoque sob cada controle de um grupo denso custa uma camada de composição para cada um e vira ruído visual. Os controles ainda recebem o raio, a borda e a sombra da estética.
 - Com `prefers-reduced-transparency: reduce`, e em cores forçadas, as superfícies de vidro perdem o desfoque e ficam opacas. As cores forçadas substituem as cores mas mantêm a transparência delas, então sem isso um painel mostraria a página através do fundo do sistema.
-- Botões e um `.card` que optou por isso usam o clique simples `scale(0.97)`; o movimento reduzido o desativa.
+- Botões e um `.card` que optou por isso usam o clique simples `scale(0.97)`; com movimento reduzido, o clique ainda acontece, de imediato.
 - Ela não tem fonte própria e define a do tema, `--font-default`, na região, como o neobrutalism faz.
 - Controles de texto e toggles desenham a linha na tinta da página a 55%, e não com a borda fina branca, que apagaria um checkbox desmarcado numa página clara. Ela é o `--ui-control-ink`; defina-o na região para escolher outra.
 - A moldura e as linhas divisórias de uma tabela usam a tinta da página a 20%, porque a borda fina desaparece sobre a placa da tabela. Ela é o `--ui-rule-ink`.
@@ -268,7 +268,7 @@ O botão tracejado é `ghost edged` porque um botão preenchido não tem uma lin
 - Os chips, como checkboxes, teclas, código, badges, switches e barras de progresso, alternam entre contornos pequenos e irregulares definidos em `--ui-radius-tight`. Defina esse token num chip para escolher o formato dele.
 - Um `.btn.pill` recebe uma pílula arredondada limitada à sua própria altura, para que um botão largo não vire um oval. Badges, barras de progresso e switches recebem o contorno de chip. Radios e o ícone de tooltip continuam círculos, levemente irregulares, para que um radio nunca seja confundido com um checkbox. Um `--ui-radius-pill` explícito num elemento ainda vence.
 - A `--font-sketch` fica por sua conta. O pacote não entrega nenhuma fonte manuscrita e cai na família `cursive` da plataforma.
-- Os botões usam o clique simples `scale(0.97)`; o movimento reduzido o desativa.
+- Os botões usam o clique simples `scale(0.97)`; com movimento reduzido, o clique ainda acontece, de imediato.
 - O modo de cores forçadas desenha os detalhes tracejados como sólidos, como todas as outras linhas de material.
 
 ## Classes solo

@@ -2,7 +2,7 @@
 title: Contenido y layout
 description: Consulta de cada helper de layout con su espaciado, la escala tipográfica con sus tamaños, las tarjetas y los paneles con su relleno interior, las tablas, las citas, el código y las teclas.
 order: 10
-source: ab8d628a92a7a3f040cf2b91977a14a2c054aa21
+source: 4e28376992e3ddfdd7266f6bf74766ea9f0f82e1
 ---
 
 # Contenido y layout
@@ -89,7 +89,7 @@ Una `.card.soft` neutra y un `.panel` neutro no muestran tinte: reposan sobre el
 | `.hoverable`   | Solo el color de hover, sin cursor de puntero.                                                                  |
 | `.pressable`   | Solo la pulsación y el cursor de puntero.                                                                       |
 
-Con el aspecto por defecto, una pulsación reduce ligeramente la tarjeta (`scale(0.97)`); una estética puede reemplazarla con su propia pulsación, y la preferencia de movimiento reducido la desactiva.
+Con el aspecto por defecto, una pulsación reduce ligeramente la tarjeta (`scale(0.97)`); una estética puede reemplazarla con su propia pulsación, y con la preferencia de movimiento reducido sigue ocurriendo, al instante.
 
 Usa una de las dos mitades para una tarjeta que responde solo a un gesto. Una tarjeta que contiene su propio botón lleva `.hoverable`, para que pulsar el botón no pulse toda la tarjeta.
 
