@@ -183,6 +183,16 @@ Rejected:
 
 The prefix policy has three values: `"always"`, `"except-default"`, and `"when-ambiguous"`. That makes it one option rather than `prefixDefaultLocale: boolean` plus a second flag whose combinations overlap. The change breaks the API, and it is made in 0.2.0 because before 1.0 is the cheapest time. Rejected: keeping `prefixDefaultLocale` and adding a flag later, which avoids the break but leaves two settings that interact.
 
+### `trailingSlash` builds a locale's root with a slash (2026-11-10)
+
+`localize("/", "pt")` was always `/pt`, while `localize("/about/", "pt")` kept its slash, because the canonical root `/` can't say whether a slash is wanted. That did not weigh static hosts that serve `pt/index.html` at `/pt/` and redirect `/pt` there, such as GitHub Pages: every link and `hreflang` to a locale's home page went through a redirect, and the guide's canonical redirect sent `/pt/` back to `/pt`. An optional `trailingSlash` now picks `"preserve"`, the old behavior and the default, `"always"`, or `"never"` for every path `localize` builds.
+
+- **Optional, unlike `localePrefix`.** Its default is the behavior 0.2 shipped, so no existing URL changes.
+- **`parse` is unchanged**: it accepts both spellings and keeps the request's in `pathname`, so the canonical redirect turns the other spelling into the built one. Normalizing `pathname` too was rejected, because it changes what an application routes on for a setting about links.
+- **Three values, not a boolean**, so a site that drops slashes can collapse both spellings into one address too.
+
+Rejected: documenting a one-line wrapper that appends `/`, which every trailing-slash site would have to find and repeat.
+
 ### `parse` returns only paths that have a canonical URL (2026-11-02)
 
 `parse` used to return a result for any path it could read, including paths no link leads to: `/pt/en/sobre` read as `/en/sobre` in Portuguese, which `localize` then read as a prefixed URL, and, with `"when-ambiguous"`, `/en/sobre` read as an English `/sobre`, whose unprefixed URL is the Portuguese about page. `localize(route.pathname, route.locale)`, the guide's canonical redirect and the advice in `localize`'s own error, then threw a `RangeError`, so a typed URL answered 500. `parse` now returns `undefined` for such a path, and for one whose canonical URL would be longer than 8,192 characters, so every result has a canonical URL that `localize` builds and the path answers 404.

@@ -42,6 +42,13 @@ export interface LocaleRoutingConfig<TLocale extends string> {
    * parameter, which wins over a catch-all. A locale or path the table doesn't list keeps the canonical words.
    */
   pathnames?: Readonly<Record<string, Readonly<Partial<Record<NoInfer<TLocale>, string>>>>> | undefined;
+  /**
+   * Whether the paths `localize` and `localizeAll` build end with `/`: `"preserve"`, the default, keeps the given
+   * path's slash, so a locale's root, such as `/pt`, has none; `"always"` ends every path but `/` with one, such as
+   * `/pt/`, for a site that serves pages as `pt/index.html`; `"never"` ends none with one. `parse` accepts both
+   * spellings whatever the policy, and its `pathname` keeps the request's.
+   */
+  trailingSlash?: "preserve" | "always" | "never" | undefined;
 }
 
 /** A pathname resolved to its canonical configured locale. */
@@ -88,7 +95,7 @@ export interface LocaleRouting<TLocale extends string> {
    * @param pathname - A canonical application pathname of at most 8,192 characters without a URL, query, or fragment.
    * A path that starts with a locale is read as that locale's URL, as `parse` reads it.
    * @param locale - A supported locale, trimmed and matched case-insensitively.
-   * @returns The pathname in the locale's words, with the configured locale-prefix policy applied.
+   * @returns The pathname in the locale's words, with the configured locale-prefix and trailing-slash policies applied.
    * @throws {TypeError} When `pathname` is not a valid application pathname.
    * @throws {RangeError} When `locale` is unsupported or is not a string at runtime, when the result would be longer
    * than 8,192 characters, or when the result would be parsed as another page or locale, such as a page the table
@@ -129,7 +136,7 @@ export const createLocaleRouting = <TLocale extends string>(
   const subject = "[I18n] Invalid locale routing configuration";
   const validated = assertConfig(localeRoutingConfig, config, subject);
   const locales = Object.freeze(validated.locales as TLocale[]);
-  const { localePrefix } = validated;
+  const { localePrefix, trailingSlash } = validated;
   const localeLookup = new Map<string, TLocale>(locales.map((locale) => [locale.toLowerCase(), locale]));
 
   const findLocale = (value: string | undefined, shouldTrim = false): TLocale | undefined =>
@@ -172,15 +179,20 @@ export const createLocaleRouting = <TLocale extends string>(
   const isSameCanonical = (a: readonly string[], b: readonly string[], normalize: Normalize): boolean =>
     a.map(normalize).join("/") === b.map(normalize).join("/");
 
-  /** Builds the URL of canonical segments in `locale`, without checking how it reads back. */
+  /**
+   * Builds the URL of canonical segments in `locale`, without checking how it reads back. A locale's root, such as
+   * `/pt`, gets a slash only when `isRootSlashed`, since `/` itself says nothing about one.
+   */
   const buildUrl = ({
     canonical,
     hasTrailingSlash,
+    isRootSlashed = false,
     locale,
     normalize,
   }: {
     readonly canonical: readonly string[];
     readonly hasTrailingSlash: boolean;
+    readonly isRootSlashed?: boolean;
     readonly locale: TLocale;
     readonly normalize: Normalize;
   }): string => {
@@ -191,7 +203,7 @@ export const createLocaleRouting = <TLocale extends string>(
       (locale !== defaultLocale && !(localePrefix === "when-ambiguous" && found?.item.unprefixed.has(locale) === true));
 
     return isPrefixed
-      ? joinPathname([locale, ...localized], hasTrailingSlash && localized.length > 0)
+      ? joinPathname([locale, ...localized], localized.length > 0 ? hasTrailingSlash : isRootSlashed)
       : joinPathname(localized, hasTrailingSlash);
   };
 
@@ -281,7 +293,13 @@ export const createLocaleRouting = <TLocale extends string>(
     const { segments, hasTrailingSlash } = splitPathname(pathname);
     const prefixLocale = findLocale(segments[0]);
     const canonical = prefixLocale === undefined ? segments : readPath(segments.slice(1), prefixLocale, normalize);
-    const result = buildUrl({ canonical, hasTrailingSlash, locale: canonicalLocale, normalize });
+    const result = buildUrl({
+      canonical,
+      hasTrailingSlash: trailingSlash === "preserve" ? hasTrailingSlash : trailingSlash === "always",
+      isRootSlashed: trailingSlash === "always",
+      locale: canonicalLocale,
+      normalize,
+    });
 
     if (result.length > MAX_PATHNAME_LENGTH) {
       throw new RangeError(

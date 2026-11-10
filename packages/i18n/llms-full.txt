@@ -1186,6 +1186,31 @@ Use the same `locales` and `defaultLocale` as your manager. Routing is separate 
 
 If you keep the configuration in a variable before passing it in, write `localePrefix: "except-default" as const`. Without `as const`, TypeScript widens the value to `string`, and `createLocaleRouting` rejects it at compile time.
 
+### Trailing slashes
+
+By default, `localize()` keeps the slash of the path you give it: `/about/` gives `/pt/about/`, and `/about` gives `/pt/about`. A locale's home page has no slash to keep, since `/` says nothing about one, so it is always `/pt`. Many static hosts serve `pt/index.html` at `/pt/` and redirect `/pt` there, so on a site like that, set `trailingSlash`:
+
+```ts
+export const routing = createLocaleRouting({
+  locales: ["en", "pt"] as const,
+  defaultLocale: "en",
+  localePrefix: "except-default",
+  trailingSlash: "always",
+});
+
+routing.localize("/", "pt"); // "/pt/"
+routing.localize("/about", "pt"); // "/pt/about/"
+routing.localize("/", "en"); // "/"
+```
+
+| `trailingSlash`          | Builds                                                         |
+| ------------------------ | -------------------------------------------------------------- |
+| `"preserve"`, by default | The given path's slash: `/pt/about/` or `/pt/about`, and `/pt` |
+| `"always"`               | A slash on every path: `/pt/about/` and `/pt/`                 |
+| `"never"`                | No slash on any path but `/`: `/pt/about` and `/pt`            |
+
+`parse()` accepts both spellings whatever you choose, and its `pathname` keeps the request's slash, so `/pt/about` and `/pt/about/` are both the about page. With `"always"` or `"never"`, [Redirect to the canonical URL](#redirect-to-the-canonical-url) then sends the other spelling to the one `localize()` builds, so each page has one address.
+
 ## Read the locale from a path
 
 `parse()` splits a path into its locale and the rest:
@@ -1233,7 +1258,7 @@ await initializeBrowserI18n({ i18n, locale: route?.locale });
 
 ### Redirect to the canonical URL
 
-`parse()` is forgiving: `/PT/about` and `/en/about` are read as well as `/pt/about` and `/about`. That is friendly to someone typing a URL, but a search engine that finds one page at several addresses splits its ranking between them. Send every other spelling to the one `localize()` builds. Every path `parse()` returns has one, so this never throws:
+`parse()` is forgiving: `/PT/about` and `/en/about` are read as well as `/pt/about` and `/about`, and so are both spellings of a [trailing slash](#trailing-slashes). That is friendly to someone typing a URL, but a search engine that finds one page at several addresses splits its ranking between them. Send every other spelling to the one `localize()` builds. Every path `parse()` returns has one, so this never throws:
 
 ```ts
 const route = routing.parse(url.pathname);

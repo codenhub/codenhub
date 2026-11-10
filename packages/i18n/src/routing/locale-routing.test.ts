@@ -384,4 +384,70 @@ describe("createLocaleRouting", () => {
       }
     }
   });
+
+  describe("trailingSlash", () => {
+    const create = (
+      trailingSlash: LocaleRoutingConfig<(typeof LOCALES)[number]>["trailingSlash"],
+      localePrefix: LocaleRoutingConfig<(typeof LOCALES)[number]>["localePrefix"] = "except-default",
+    ) =>
+      createLocaleRouting({
+        defaultLocale: "en-US",
+        locales: LOCALES,
+        localePrefix,
+        pathnames: { "/brand": { "pt-BR": "/marca" } },
+        trailingSlash,
+      });
+
+    it("should keep the given path's slash by default, with none on a locale's root", () => {
+      for (const routing of [create(undefined), create("preserve")]) {
+        expect(routing.localize("/", "pt-BR")).toBe("/pt-BR");
+        expect(routing.localize("/brand", "pt-BR")).toBe("/pt-BR/marca");
+        expect(routing.localize("/brand/", "pt-BR")).toBe("/pt-BR/marca/");
+      }
+    });
+
+    it("should end every built path with a slash with `always`, a locale's root included", () => {
+      const routing = create("always");
+
+      expect(routing.localize("/", "en-US")).toBe("/");
+      expect(routing.localize("/", "pt-BR")).toBe("/pt-BR/");
+      expect(routing.localize("/brand", "pt-BR")).toBe("/pt-BR/marca/");
+      expect(routing.localize("/brand/", "en-US")).toBe("/brand/");
+      expect(routing.localizeAll("/")).toEqual([
+        { locale: "en-US", pathname: "/" },
+        { locale: "pt-BR", pathname: "/pt-BR/" },
+      ]);
+      expect(create("always", "always").localize("/", "en-US")).toBe("/en-US/");
+      expect(create("always", "when-ambiguous").localize("/brand", "pt-BR")).toBe("/marca/");
+    });
+
+    it("should end no built path with a slash with `never`, except the root", () => {
+      const routing = create("never");
+
+      expect(routing.localize("/", "en-US")).toBe("/");
+      expect(routing.localize("/", "pt-BR")).toBe("/pt-BR");
+      expect(routing.localize("/brand/", "pt-BR")).toBe("/pt-BR/marca");
+      expect(routing.localize("/pt-BR/marca/", "en-US")).toBe("/brand");
+    });
+
+    it("should parse both spellings, keeping the request's slash, so a redirect can send one to the other", () => {
+      for (const trailingSlash of ["always", "never"] as const) {
+        const routing = create(trailingSlash);
+
+        expect(routing.parse("/pt-BR/marca")).toEqual({ locale: "pt-BR", pathname: "/brand" });
+        expect(routing.parse("/pt-BR/marca/")).toEqual({ locale: "pt-BR", pathname: "/brand/" });
+        expect(routing.parse("/pt-BR")).toEqual({ locale: "pt-BR", pathname: "/" });
+        expect(routing.parse("/pt-BR/")).toEqual({ locale: "pt-BR", pathname: "/" });
+      }
+      const routing = create("always");
+      const route = routing.parse("/pt-BR/marca")!;
+      expect(routing.localize(route.pathname, route.locale)).toBe("/pt-BR/marca/");
+    });
+
+    it("should reject a value that is not a policy", () => {
+      expect(() => create("sometimes" as "always")).toThrow(
+        '[I18n] Invalid locale routing configuration: trailingSlash: Expected "preserve", "always", or "never", received string',
+      );
+    });
+  });
 });
