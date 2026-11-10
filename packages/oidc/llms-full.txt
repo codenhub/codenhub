@@ -236,7 +236,7 @@ const client = createClient({
 | `auth`           | How the client authenticates to the token endpoint. See [Client authentication](#client-authentication).                                                                                                                                                                                                                                                                                                                                                                                                                                      | Required                  |
 | `fetch`          | The `fetch` for the token, userinfo and JWKS requests. Looked up on each call when you omit it.                                                                                                                                                                                                                                                                                                                                                                                                                                               | `globalThis.fetch`        |
 | `timeout`        | Seconds to wait for each response, including its body, before failing. An integer from 1 through 60.                                                                                                                                                                                                                                                                                                                                                                                                                                          | `5`                       |
-| `clockTolerance` | Seconds of clock skew allowed on the ID token's `exp`, `iat` and `auth_time`. An integer from 0 through 300.                                                                                                                                                                                                                                                                                                                                                                                                                                  | `0`                       |
+| `clockTolerance` | Seconds of clock skew allowed on the ID token's `exp`, `iat` and `auth_time`. An integer from 0 through 300. The default absorbs ordinary drift between the two servers: with `0`, a provider whose clock runs a second ahead makes sign-ins fail with `issued_in_future`.                                                                                                                                                                                                                                                                    | `60`                      |
 | `now`            | The current time in milliseconds since the Unix epoch. For tests.                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | `Date.now`                |
 
 The client accepts an ID token only when its signature verifies with one of the provider's keys, and only with an asymmetric algorithm the provider advertises in `id_token_signing_alg_values_supported` that this package supports: `ES256`, `EdDSA`, `Ed25519`, `RS256` or `PS256`. An ID token signed with `HS256` or `none` is never accepted. The keys come from the provider's `jwks_uri`, which the client fetches on first use and caches.
@@ -430,13 +430,13 @@ await session.destroy();
 
 On the page at `postLogoutRedirectUri`, compare the `state` parameter with the `logoutState` in that cookie before you show the user as signed out. The provider returns `state` unchanged.
 
-| Option                  | Meaning                                                                                                                                                                                                                      | Default   |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| `idTokenHint`           | The ID token of the sign-in being ended. It tells the provider which user is leaving. An expired one is still sent, and the provider ignores it. It has no length cap of its own; only the 8192-character URL limit applies. | None sent |
-| `postLogoutRedirectUri` | Where the provider sends the browser afterwards. It must be registered for this client at the provider.                                                                                                                      | None sent |
-| `state`                 | Returned unchanged to `postLogoutRedirectUri`.                                                                                                                                                                               | None sent |
-| `logoutHint`            | A hint about the account being signed out, such as an email address.                                                                                                                                                         | None sent |
-| `uiLocales`             | Preferred languages for the provider's logout page, as BCP 47 tags, under the same rules as `authorize`.                                                                                                                     | None sent |
+| Option                  | Meaning                                                                                                                                                                                                                                                            | Default   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
+| `idTokenHint`           | The ID token of the sign-in being ended. It tells the provider which user is leaving. An expired one is still sent, and this package's provider accepts it when it is otherwise valid. It has no length cap of its own; only the 8192-character URL limit applies. | None sent |
+| `postLogoutRedirectUri` | Where the provider sends the browser afterwards. It must be registered for this client at the provider.                                                                                                                                                            | None sent |
+| `state`                 | Returned unchanged to `postLogoutRedirectUri`.                                                                                                                                                                                                                     | None sent |
+| `logoutHint`            | A hint about the account being signed out, such as an email address.                                                                                                                                                                                               | None sent |
+| `uiLocales`             | Preferred languages for the provider's logout page, as BCP 47 tags, under the same rules as `authorize`.                                                                                                                                                           | None sent |
 
 The URL always carries `client_id`, so the provider can match `postLogoutRedirectUri` even after the hint has expired. A hint issued to a different client is refused: the provider returns `invalid_request` at `id_token_hint`, so send the hint from the client it was issued to. The URL keeps any query the endpoint already has. Empty strings are left out.
 
@@ -799,7 +799,11 @@ The provider implements RP-initiated logout. Its end-session endpoint is `endpoi
 
 A success carries `clientId` when a client is known, `subject` when the hint verified, `logoutHint` and `uiLocales` when given, and `redirect`. `redirect` is a `302` to `post_logout_redirect_uri`, with `state` appended when the request had one, or `null` when the request named no `post_logout_redirect_uri`.
 
-The `id_token_hint` is verified as an ID token this provider issued: signed by one of its keys, with its issuer, typed `JWT`, unexpired, and with `sub`, `aud`, `exp` and `iat`. The type keeps a JWT access token (`at+jwt`) from passing as a hint. A hint with several audiences must name one of them in `azp`. A hint that does not verify, such as an expired one, is ignored. It is not a failure, and the result has no `subject`. Nothing then ties the request to a user, so ask the user to confirm the logout before signing them out.
+The `id_token_hint` is verified as an ID token this provider issued: signed by one of its keys, with its issuer, typed `JWT`, and with `sub`, `aud`, `exp` and `iat`. The type keeps a JWT access token (`at+jwt`) from passing as a hint. A hint with several audiences must name one of them in `azp`.
+
+An expired hint is accepted when expiry is its only fault: ID tokens are short-lived, so a hint has usually expired by the time the user signs out, and a relying party that sends no `client_id` is known only through it. RP-Initiated Logout 1.0 recommends accepting one while the relying party has a current or recent session at the provider. The provider keeps no sessions, so it cannot check that: a hint stays acceptable for as long as the key that signed it is among the provider's keys. Compare `subject` with the user of your own session, and ask the user to confirm when they differ or there is no session.
+
+A hint that does not verify is ignored. It is not a failure, and the result has no `subject`. Nothing then ties the request to a user, so ask the user to confirm the logout before signing them out.
 
 The URIs a client may redirect to after logout are listed in its record's `postLogoutRedirectUris`, each held to the redirect URI rules. See [Client records](docs/store.md#client-records).
 
@@ -808,6 +812,7 @@ The provider keeps no sessions. The app ends its own session, and may revoke the
 ```ts
 declare function renderError(issues: unknown): Response;
 declare function endAppSession(request: Request): Promise<void>;
+declare function sessionSubject(request: Request): Promise<string | undefined>; // the user of the app's own session
 declare function renderLogoutConfirmation(request: Request): Response;
 declare function renderSignedOutPage(): Response;
 
@@ -816,8 +821,9 @@ const result = await provider.endSession(request);
 if (!result.ok) {
   return renderError(result.error.issues); // never redirect on failure
 }
-if (result.value.subject === undefined) {
-  // No verified ID token hint: stop here, and end the session only once the user confirms on the page the app renders.
+if (result.value.subject === undefined || result.value.subject !== (await sessionSubject(request))) {
+  // No verified ID token hint, or one for another user than the session's, as an old hint may be: stop here, and
+  // end the session only once the user confirms on the page the app renders.
   return renderLogoutConfirmation(request);
 }
 await endAppSession(request); // the app's own session
@@ -934,6 +940,8 @@ export const provider = createProvider({
 
 A JWT access token is signed with the first signing key. Its header has `typ: "at+jwt"`. Its payload has `iss`, `exp` (`ttl.accessToken` after issue), `aud`, `sub`, `client_id`, `iat`, a random `jti`, and `scope` (space-separated). A user's token also has `auth_time`, `amr` and `acr` when the grant had them. A client credentials token has none of these three, and its `sub` is the client identifier.
 
+A resource server must therefore not take `sub` alone for a user: a token whose `sub` equals its `client_id` belongs to the client itself (RFC 9068 §5). Tell the two apart by that comparison, and assign client identifiers that can never equal a user's subject, such as by giving them a prefix no subject has.
+
 The provider stores a JWT access token by its digest, as it stores an opaque one, so userinfo and revocation accept it, and a revocation takes effect at the provider at once. A resource server that verifies the token offline sees a revocation only when the token expires, so keep `ttl.accessToken` short. The ID token's `at_hash` is computed over the JWT string.
 
 A resource server verifies the token with `@codenhub/jwt`. The `at+jwt` type is what stops an ID token from passing as an access token:
@@ -946,7 +954,10 @@ const verifyAccessToken = createVerifier({
   issuer: "https://sso.example",
   audience: "https://api.example",
   type: "at+jwt",
-  requiredClaims: ["sub", "client_id", "iat", "jti"],
+  requiredClaims: ["sub", "client_id", "exp", "iat", "jti"],
+  // The provider's clock may run ahead of this server's. With the default of 0, a token issued a second
+  // "in the future" is refused with `issued_in_future`.
+  clockTolerance: 60,
 });
 
 declare const bearerToken: string; // from the Authorization header
@@ -1201,7 +1212,7 @@ interface ClientRecord {
 - `{ method: "none" }`, for a public client that relies on PKCE alone.
 - `{ method: "client_secret_basic", secretHash }` and `{ method: "client_secret_post", secretHash }`, where `secretHash` comes from `hashClientSecret`.
 - `{ method: "client_secret_jwt", key }`, where `key` is the client's HS256 `SecretKey`, from `generateSecretKey({ alg: "HS256" })` or `importSecretKey`.
-- `{ method: "private_key_jwt", keys }`, where `keys` is the client's public `KeySet`, from `createKeySet`, `importKeySet` or `createRemoteKeySet`.
+- `{ method: "private_key_jwt", keys }`, where `keys` is the client's public `KeySet`, from `createKeySet`, `importKeySet` or `createRemoteKeySet`. A remote key set must be created once per client and reused, as described below.
 
 A record that breaks these rules is a bug in the store, and the provider throws `TypeError` for it.
 
@@ -1210,6 +1221,8 @@ A record that breaks these rules is a bug in the store, and the provider throws 
 `postLogoutRedirectUris` lists where [logout](docs/provider.md#ending-sessions) may send the browser. Each entry is held to the redirect URI rules: an absolute URL of visible ASCII, without fragment or credentials, and not `javascript:`, `data:`, `vbscript:` or `file:`. Absent or empty, no logout of that client redirects.
 
 The `key` and `keys` values are `@codenhub/jwt` objects, not JSON. A plain object is not one of them, and `@codenhub/jwt` refuses it with `TypeError` when the provider uses it. A store that persists these records therefore keeps the key as a JWK and rebuilds the object on each read: `exportSecretJwk` or `exportPublicJwk` writes the key, and `importSecretKey` or `importKeySet` reads it back. A secret can be exported only when it was created or imported as extractable. A store may also keep the key objects in memory, as the in-memory store does.
+
+A remote key set is the exception: never rebuild it on each read. Its cached keys and its limit on fetches live in the object, so a new one for every `findClient` call starts empty, and each token request that presents a client assertion for that client, whoever signed it, makes the provider fetch the client's JWKS. Create one per client and keep it, such as in a map keyed by the client identifier and the JWKS URL, and replace it only when the URL changes.
 
 ## createMemoryStore
 
@@ -1320,15 +1333,16 @@ These inputs arrive at `beginAuthorization` and `completeAuthorization`. "Render
 
 The end-session endpoint never redirects a failed request, so the app renders each row below, except where it says otherwise. A redirect goes only to a `post_logout_redirect_uri` the client registered.
 
-| Input                                                                                                                                                                                    | Outcome                                                                                                |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| A method or media type the endpoint does not accept, or a URL longer than 8192 characters                                                                                                | Render, `invalid_request`.                                                                             |
-| A duplicated, too many, too long or malformed parameter, or a percent-escape that is not valid UTF-8                                                                                     | Render, `invalid_request`, with `params.reason` of `duplicate`, `too_many`, `too_long` or `malformed`. |
-| An unknown `client_id`                                                                                                                                                                   | Render, `unknown_client`.                                                                              |
-| An `id_token_hint` that verifies, issued to a client other than `client_id`                                                                                                              | Render, `invalid_request`, path `["id_token_hint"]`.                                                   |
-| A forged, expired or foreign `id_token_hint`, a JWT access token, or a hint with several audiences and no `azp` among them                                                               | Ignored. The result has no `subject` and no failure, so the app asks the user to confirm the logout.   |
-| A `post_logout_redirect_uri` that is not, byte for byte, one of the client's `postLogoutRedirectUris`: a trailing slash, a different case, a port, an added query, or an encoded variant | Render, `invalid_redirect_uri`, path `["post_logout_redirect_uri"]`. Nothing is redirected.            |
-| A `post_logout_redirect_uri` when no client is known, from `client_id` or from the hint                                                                                                  | Render, `invalid_redirect_uri`. Nothing is redirected.                                                 |
+| Input                                                                                                                                                                                    | Outcome                                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| A method or media type the endpoint does not accept, or a URL longer than 8192 characters                                                                                                | Render, `invalid_request`.                                                                                                                  |
+| A duplicated, too many, too long or malformed parameter, or a percent-escape that is not valid UTF-8                                                                                     | Render, `invalid_request`, with `params.reason` of `duplicate`, `too_many`, `too_long` or `malformed`.                                      |
+| An unknown `client_id`                                                                                                                                                                   | Render, `unknown_client`.                                                                                                                   |
+| An `id_token_hint` that verifies, issued to a client other than `client_id`                                                                                                              | Render, `invalid_request`, path `["id_token_hint"]`.                                                                                        |
+| An expired `id_token_hint` that is otherwise valid                                                                                                                                       | Accepted as an unexpired one is: it names the user and the client, and it is refused when it was issued to another client than `client_id`. |
+| A forged or foreign `id_token_hint`, one issued in the future, a JWT access token, or a hint with several audiences and no `azp` among them                                              | Ignored. The result has no `subject` and no failure, so the app asks the user to confirm the logout.                                        |
+| A `post_logout_redirect_uri` that is not, byte for byte, one of the client's `postLogoutRedirectUris`: a trailing slash, a different case, a port, an added query, or an encoded variant | Render, `invalid_redirect_uri`, path `["post_logout_redirect_uri"]`. Nothing is redirected.                                                 |
+| A `post_logout_redirect_uri` when no client is known, from `client_id` or from the hint                                                                                                  | Render, `invalid_redirect_uri`. Nothing is redirected.                                                                                      |
 
 ## Provider: the token endpoint
 
@@ -1437,7 +1451,7 @@ Every limit the package enforces, with its value. Where a limit applies to one p
 | Parameter length, name or value                 | 4096 characters                                                                       | Every parsed query and form.                                                                                                                                                                                                                                                                                                                                                                                           |
 | Response body                                   | 65536 bytes                                                                           | Discovery, token, userinfo, revocation and JWKS responses.                                                                                                                                                                                                                                                                                                                                                             |
 | Client request timeout                          | 5 seconds by default, 1 to 60                                                         | Discovery, token, userinfo, revocation and JWKS requests, including the body.                                                                                                                                                                                                                                                                                                                                          |
-| Client clock tolerance                          | 0 seconds by default, at most 300                                                     | The ID token's `exp`, `iat` and `auth_time`.                                                                                                                                                                                                                                                                                                                                                                           |
+| Client clock tolerance                          | 60 seconds by default, at most 300                                                    | The ID token's `exp`, `iat` and `auth_time`.                                                                                                                                                                                                                                                                                                                                                                           |
 | ID token length                                 | 8192 characters                                                                       | The client's ID token check. Not configurable from `createClient`.                                                                                                                                                                                                                                                                                                                                                     |
 | JWT JSON nesting                                | 32 levels                                                                             | Every JSON the verifier reads in a token.                                                                                                                                                                                                                                                                                                                                                                              |
 | JWKS cache                                      | 600 seconds, refetch cooldown 30 seconds, stale keys for at most 3600 seconds         | The client's key set, as `@codenhub/jwt` defaults. The client does not change them.                                                                                                                                                                                                                                                                                                                                    |

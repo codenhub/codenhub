@@ -63,9 +63,10 @@ export interface ClientOptions {
   readonly timeout?: number;
   /**
    * Seconds of clock skew allowed on the ID token's `exp`, `iat`, and `auth_time`. An integer from 0
-   * through 300.
+   * through 300. With 0, a provider whose clock runs a second ahead of this one makes sign-ins fail with
+   * `issued_in_future`.
    *
-   * @defaultValue 0
+   * @defaultValue 60
    */
   readonly clockTolerance?: number;
   /**
@@ -178,7 +179,7 @@ export interface ClientCredentialsOptions {
 export interface EndSessionOptions {
   /**
    * The ID token of the sign-in being ended. Recommended: it tells the provider which user is leaving, so it can
-   * skip asking them to confirm. An expired one is sent as well; this package's provider then ignores it.
+   * skip asking them to confirm. An expired one is sent as well; this package's provider accepts it when it is otherwise valid.
    */
   readonly idTokenHint?: string;
   /** Where the provider sends the browser afterwards. Must be registered for this client at the provider. */

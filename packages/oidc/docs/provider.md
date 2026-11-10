@@ -308,7 +308,11 @@ The provider implements RP-initiated logout. Its end-session endpoint is `endpoi
 
 A success carries `clientId` when a client is known, `subject` when the hint verified, `logoutHint` and `uiLocales` when given, and `redirect`. `redirect` is a `302` to `post_logout_redirect_uri`, with `state` appended when the request had one, or `null` when the request named no `post_logout_redirect_uri`.
 
-The `id_token_hint` is verified as an ID token this provider issued: signed by one of its keys, with its issuer, typed `JWT`, unexpired, and with `sub`, `aud`, `exp` and `iat`. The type keeps a JWT access token (`at+jwt`) from passing as a hint. A hint with several audiences must name one of them in `azp`. A hint that does not verify, such as an expired one, is ignored. It is not a failure, and the result has no `subject`. Nothing then ties the request to a user, so ask the user to confirm the logout before signing them out.
+The `id_token_hint` is verified as an ID token this provider issued: signed by one of its keys, with its issuer, typed `JWT`, and with `sub`, `aud`, `exp` and `iat`. The type keeps a JWT access token (`at+jwt`) from passing as a hint. A hint with several audiences must name one of them in `azp`.
+
+An expired hint is accepted when expiry is its only fault: ID tokens are short-lived, so a hint has usually expired by the time the user signs out, and a relying party that sends no `client_id` is known only through it. RP-Initiated Logout 1.0 recommends accepting one while the relying party has a current or recent session at the provider. The provider keeps no sessions, so it cannot check that: a hint stays acceptable for as long as the key that signed it is among the provider's keys. Compare `subject` with the user of your own session, and ask the user to confirm when they differ or there is no session.
+
+A hint that does not verify is ignored. It is not a failure, and the result has no `subject`. Nothing then ties the request to a user, so ask the user to confirm the logout before signing them out.
 
 The URIs a client may redirect to after logout are listed in its record's `postLogoutRedirectUris`, each held to the redirect URI rules. See [Client records](store.md#client-records).
 
@@ -317,6 +321,7 @@ The provider keeps no sessions. The app ends its own session, and may revoke the
 ```ts
 declare function renderError(issues: unknown): Response;
 declare function endAppSession(request: Request): Promise<void>;
+declare function sessionSubject(request: Request): Promise<string | undefined>; // the user of the app's own session
 declare function renderLogoutConfirmation(request: Request): Response;
 declare function renderSignedOutPage(): Response;
 
@@ -325,8 +330,9 @@ const result = await provider.endSession(request);
 if (!result.ok) {
   return renderError(result.error.issues); // never redirect on failure
 }
-if (result.value.subject === undefined) {
-  // No verified ID token hint: stop here, and end the session only once the user confirms on the page the app renders.
+if (result.value.subject === undefined || result.value.subject !== (await sessionSubject(request))) {
+  // No verified ID token hint, or one for another user than the session's, as an old hint may be: stop here, and
+  // end the session only once the user confirms on the page the app renders.
   return renderLogoutConfirmation(request);
 }
 await endAppSession(request); // the app's own session
@@ -443,6 +449,8 @@ export const provider = createProvider({
 
 A JWT access token is signed with the first signing key. Its header has `typ: "at+jwt"`. Its payload has `iss`, `exp` (`ttl.accessToken` after issue), `aud`, `sub`, `client_id`, `iat`, a random `jti`, and `scope` (space-separated). A user's token also has `auth_time`, `amr` and `acr` when the grant had them. A client credentials token has none of these three, and its `sub` is the client identifier.
 
+A resource server must therefore not take `sub` alone for a user: a token whose `sub` equals its `client_id` belongs to the client itself (RFC 9068 §5). Tell the two apart by that comparison, and assign client identifiers that can never equal a user's subject, such as by giving them a prefix no subject has.
+
 The provider stores a JWT access token by its digest, as it stores an opaque one, so userinfo and revocation accept it, and a revocation takes effect at the provider at once. A resource server that verifies the token offline sees a revocation only when the token expires, so keep `ttl.accessToken` short. The ID token's `at_hash` is computed over the JWT string.
 
 A resource server verifies the token with `@codenhub/jwt`. The `at+jwt` type is what stops an ID token from passing as an access token:
@@ -455,7 +463,10 @@ const verifyAccessToken = createVerifier({
   issuer: "https://sso.example",
   audience: "https://api.example",
   type: "at+jwt",
-  requiredClaims: ["sub", "client_id", "iat", "jti"],
+  requiredClaims: ["sub", "client_id", "exp", "iat", "jti"],
+  // The provider's clock may run ahead of this server's. With the default of 0, a token issued a second
+  // "in the future" is refused with `issued_in_future`.
+  clockTolerance: 60,
 });
 
 declare const bearerToken: string; // from the Authorization header

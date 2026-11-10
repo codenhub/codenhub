@@ -2,6 +2,7 @@ const BASE64URL_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
 const RANDOM_TOKEN_BYTES = 32;
 const SIX_BIT_MASK = 0x3f;
 const BIT_BUFFER_MASK = 0xffff;
+const BYTE_MASK = 0xff;
 const BITS_PER_BYTE = 8;
 const BITS_PER_CHARACTER = 6;
 
@@ -25,6 +26,27 @@ export function encodeBase64Url(bytes: Uint8Array): string {
     output += BASE64URL_ALPHABET[(buffer << (BITS_PER_CHARACTER - bits)) & SIX_BIT_MASK];
   }
   return output;
+}
+
+/**
+ * Decodes base64url text that a strict decoder already accepted, such as a part of a JWT `@codenhub/jwt` verified.
+ * It checks nothing itself: a character outside the alphabet gives meaningless bytes, not an error.
+ */
+export function decodeBase64Url(text: string): Uint8Array {
+  const bytes = new Uint8Array(Math.floor((text.length * BITS_PER_CHARACTER) / BITS_PER_BYTE));
+  let buffer = 0;
+  let bits = 0;
+  let length = 0;
+  for (const character of text) {
+    buffer = ((buffer << BITS_PER_CHARACTER) | BASE64URL_ALPHABET.indexOf(character)) & BIT_BUFFER_MASK;
+    bits += BITS_PER_CHARACTER;
+    if (bits >= BITS_PER_BYTE) {
+      bits -= BITS_PER_BYTE;
+      bytes[length] = (buffer >> bits) & BYTE_MASK;
+      length += 1;
+    }
+  }
+  return bytes;
 }
 
 /** Returns a 256-bit random token, base64url-encoded to 43 characters, from the Web Crypto RNG. */

@@ -141,7 +141,7 @@ interface ClientRecord {
 - `{ method: "none" }`, for a public client that relies on PKCE alone.
 - `{ method: "client_secret_basic", secretHash }` and `{ method: "client_secret_post", secretHash }`, where `secretHash` comes from `hashClientSecret`.
 - `{ method: "client_secret_jwt", key }`, where `key` is the client's HS256 `SecretKey`, from `generateSecretKey({ alg: "HS256" })` or `importSecretKey`.
-- `{ method: "private_key_jwt", keys }`, where `keys` is the client's public `KeySet`, from `createKeySet`, `importKeySet` or `createRemoteKeySet`.
+- `{ method: "private_key_jwt", keys }`, where `keys` is the client's public `KeySet`, from `createKeySet`, `importKeySet` or `createRemoteKeySet`. A remote key set must be created once per client and reused, as described below.
 
 A record that breaks these rules is a bug in the store, and the provider throws `TypeError` for it.
 
@@ -150,6 +150,8 @@ A record that breaks these rules is a bug in the store, and the provider throws 
 `postLogoutRedirectUris` lists where [logout](provider.md#ending-sessions) may send the browser. Each entry is held to the redirect URI rules: an absolute URL of visible ASCII, without fragment or credentials, and not `javascript:`, `data:`, `vbscript:` or `file:`. Absent or empty, no logout of that client redirects.
 
 The `key` and `keys` values are `@codenhub/jwt` objects, not JSON. A plain object is not one of them, and `@codenhub/jwt` refuses it with `TypeError` when the provider uses it. A store that persists these records therefore keeps the key as a JWK and rebuilds the object on each read: `exportSecretJwk` or `exportPublicJwk` writes the key, and `importSecretKey` or `importKeySet` reads it back. A secret can be exported only when it was created or imported as extractable. A store may also keep the key objects in memory, as the in-memory store does.
+
+A remote key set is the exception: never rebuild it on each read. Its cached keys and its limit on fetches live in the object, so a new one for every `findClient` call starts empty, and each token request that presents a client assertion for that client, whoever signed it, makes the provider fetch the client's JWKS. Create one per client and keep it, such as in a map keyed by the client identifier and the JWKS URL, and replace it only when the URL changes.
 
 ## createMemoryStore
 

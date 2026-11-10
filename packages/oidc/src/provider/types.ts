@@ -8,6 +8,10 @@ import type { OidcFailure, OidcResult, Prompt, ProviderMetadata } from "../share
  * Secrets are never stored in plaintext: `secretHash` is what {@link hashClientSecret} returns for the
  * secret {@link generateClientSecret} created. `client_secret_jwt` is the exception, because an HMAC
  * can only be checked with the secret itself.
+ *
+ * A remote key set given as `keys` must be one object per client, reused across `findClient` calls: its cache and
+ * its limit on fetches live in the object, so a new one for each read lets every token request that presents an
+ * assertion for that client make the provider fetch the client's JWKS.
  */
 export type ClientAuthentication =
   | { readonly method: "none" }
@@ -515,8 +519,10 @@ export interface EndSession {
    */
   readonly clientId?: string;
   /**
-   * The user a verified `id_token_hint` names. Absent without one, as when the hint has expired: then nothing ties
-   * the request to a user, and the app should ask the user to confirm before it signs them out.
+   * The user a verified `id_token_hint` names. The hint may have expired, so compare it with the user of the
+   * app's own session, and ask the user to confirm when they differ or there is no session. Absent without a
+   * verified hint: then nothing ties the request to a user, and the app should ask the user to confirm before it
+   * signs them out.
    */
   readonly subject?: string;
   /** `logout_hint`, passed through as sent. */

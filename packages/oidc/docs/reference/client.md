@@ -342,9 +342,9 @@ The client identifier the provider registered.
 readonly clockTolerance?: number;
 ```
 
-Seconds of clock skew allowed on the ID token's `exp`, `iat`, and `auth_time`. An integer from 0 through 300.
+Seconds of clock skew allowed on the ID token's `exp`, `iat`, and `auth_time`. An integer from 0 through 300. With 0, a provider whose clock runs a second ahead of this one makes sign-ins fail with `issued_in_future`.
 
-**Default** — 0
+**Default** — 60
 
 #### ClientOptions › fetch
 
@@ -443,7 +443,7 @@ What `Client.endSessionUrl` puts in the logout request. Every member is optional
 readonly idTokenHint?: string;
 ```
 
-The ID token of the sign-in being ended. Recommended: it tells the provider which user is leaving, so it can skip asking them to confirm. An expired one is sent as well; this package's provider then ignores it.
+The ID token of the sign-in being ended. Recommended: it tells the provider which user is leaving, so it can skip asking them to confirm. An expired one is sent as well; this package's provider accepts it when it is otherwise valid.
 
 #### EndSessionOptions › logoutHint
 
