@@ -310,7 +310,7 @@ What it does not do:
 - **Some input types are left alone:** `file`, `range`, `color`, and `hidden` keep the browser's own look.
 - **No switch.** A checkbox with `role="switch"` is still painted as a checkbox; the mapping does not read roles. A page that needs switches is better served by the class-based stylesheet.
 - **Links keep the text around them.** A link inside a heading stays heading-sized; a link is never styled as a button.
-- **Body text is set once.** `p` and `li` take their type from the element they sit in, so a container that sets its own size, weight, or tracking applies it to the Markdown inside it.
+- **Body text is set once.** `p` and `li` take their type from the element they sit in, so a container that sets its own size, weight, or tracking applies it to the Markdown inside it. Controls keep their own tracking: a button, a badge, and a text field print `normal`, whatever the page or the container sets.
 - **`pre code` is not double-styled.** Code inside a `pre` drops the chip it would draw on its own: background, padding, border, shadow, glow, and clip.
 
 The mappings are global: every matching element on the page is styled, including elements inside third-party widgets. They sit in the `base` [cascade layer](#cascade-layers), so any class beats them. Add an intent or presentation class to a mapped element, such as `<button class="destructive">`, and it applies as it would on `.btn`.
@@ -1871,14 +1871,14 @@ The package ships no font files and makes no network requests. Every font token 
 
 | Token            | Read by                                                                                          | Without your value                                                                                                                              |
 | ---------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--font-default` | The reset, on `html` and `body`. Buttons and form controls inherit it.                           | `"Segoe UI", system-ui, sans-serif`                                                                                                             |
+| `--font-default` | The reset, on `html` and `body`, and `.glass` and `.neobrutalism` regions. Controls inherit it.  | `"Segoe UI", system-ui, sans-serif`                                                                                                             |
 | `--font-mono`    | The `kbd`, `code`, and `pre` content helpers, and `<kbd>`, `<code>`, and `<pre>` under `/native` | `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`. Under `/tw`, your Tailwind theme's value. |
 | `--font-pixel`   | [`.pixel`](docs/usage/aesthetics.md#pixel) and `.pixel-solo`                                              | Not declared. Falls back to a monospace stack.                                                                                                  |
 | `--font-rounded` | [`.chunky-tile`](docs/usage/aesthetics.md#chunky-tile) and `.chunky-tile-solo`                            | Not declared. Falls back to `--font-default`, then a sans-serif stack.                                                                          |
 | `--font-cyber`   | [`.cyber`](docs/usage/aesthetics.md#cyber) and `.cyber-solo`                                              | Not declared. Falls back to a monospace stack.                                                                                                  |
 | `--font-sketch`  | [`.sketch`](docs/usage/aesthetics.md#sketch) and `.sketch-solo`                                           | Not declared. Falls back to the platform `cursive` family.                                                                                      |
 
-`--font-default` reaches the page only through the reset, which `@codenhub/styles`, `/native`, `/tw`, `/tw/native`, and `/tw/reset` include. With `/theme` or `/components` alone, set `font-family` on `body` yourself. The aesthetic tokens are read by the aesthetic's own class, so they work with any entrypoint.
+`--font-default` reaches the page only through the reset, which `@codenhub/styles`, `/native`, `/tw`, `/tw/native`, and `/tw/reset` include. With `/theme` or `/components` alone, set `font-family` on `body` yourself, and set `--font-default` to the same font: `.glass` and `.neobrutalism` regions set their own `font-family` from the token, so a font set only on `body` does not reach inside them. Or set only the token, and write `font-family: var(--font-default)` on `body`. The aesthetic tokens are read by the aesthetic's own class, so they work with any entrypoint.
 
 To use a web font, load it the way you load any font, then name it in the token. Set the token on `:root` for the whole page, or on any element for that part of it:
 
@@ -1986,7 +1986,7 @@ The shadow is cast in the component's own intent, so a success button throws a g
 - An alert sits on the offset shadow under this aesthetic, and under no other. An alert is otherwise flat, but here the shadow is a second outline rather than depth, and an alert without it looks unfinished next to everything else. This includes an alert inside a nested `.neobrutalism` region. `.flat` still removes it and `.floating` still doubles it.
 - The tooltip trigger takes the zero corner like everything else and draws square; `.radio` keeps its circle.
 - Under `prefers-reduced-motion: reduce` the press still happens, but at once: the element lands in its shadow without travelling there. The press is the feedback that a click registered, so only its motion goes.
-- It has no font of its own and sets the theme's, `--font-default`, on the region, so a neobrutalist region nested inside pixel, cyber, sketch, or chunky tile does not take their face.
+- It has no font of its own and sets the theme's, `--font-default`, on the region, so a neobrutalist region nested inside pixel, cyber, sketch, or chunky tile does not take their face. A font you set with `font-family` alone, on `body` or a container, does not reach inside the region; set it in `--font-default` too, as [Theming → Fonts](docs/usage/theming.md#fonts) describes.
 
 ## Glass
 
@@ -2524,7 +2524,7 @@ Shadow geometry is split into parts with no color in them, so they inherit safel
 | `--ui-clip-tight`         | Compact component silhouette.                                                                                                                        | `--ui-clip`                               |
 | `--ui-focus-inset`        | Inset focus layer width.                                                                                                                             | Unset                                     |
 | `--ui-label-weight`       | Label weight of `.btn` (and, with `/native`, a bare `<button>`) and `.badge`.                                                                        | Semibold on a button, bold on a badge     |
-| `--ui-label-tracking`     | Label letter spacing. Unset, the label inherits it.                                                                                                  | Unset                                     |
+| `--ui-label-tracking`     | Label letter spacing. Unset, it is `normal`, so neither the page's tracking nor a container's reaches the label.                                     | `normal`                                  |
 | `--ui-label-case`         | Label `text-transform`.                                                                                                                              | `none` on a button; inherited on a badge  |
 | `--ui-label-shadow`       | Label `text-shadow`, written without a color so it takes the label's own.                                                                            | `none` on a button; inherited on a badge  |
 
@@ -2551,7 +2551,7 @@ Which corners take the corner is its own choice. `.cut-diagonal` keeps the top-l
 
 `--ui-surface-image` lays any `background-image` over a surface's plate: cards, panels, alerts, and tooltips, not controls. Whoever sets it owns the contrast of the text over it, and your own `background-image` on a surface still wins.
 
-`--ui-label-*` treats the label of a button or a badge: weight, tracking, case, and a text shadow. Write the shadow without a color, such as `0 0 6px`, so it takes the label's own color and cannot lower its contrast. Your own `font-*`, `tracking-*`, and case utilities still win.
+`--ui-label-*` treats the label of a button or a badge: weight, tracking, case, and a text shadow. Write the shadow without a color, such as `0 0 6px`, so it takes the label's own color and cannot lower its contrast. Your own `font-*`, `tracking-*`, and case utilities still win. A label does not inherit tracking, so a `tracking-*` utility on a container leaves its buttons and badges at `normal`; to track every label in a region, set `--ui-label-tracking` on it, which they inherit.
 
 Under forced colors each of these draws its plain version: a solid line, no halo, no painted layer, and no label shadow. The silhouette and the ring below go too. Forced colors remove every box shadow, so `--ui-clip`, `--ui-clip-tight`, `--ui-border-max`, and `--ui-shadow-edge` are cleared and a component draws its real border at `--ui-border-width`.
 
