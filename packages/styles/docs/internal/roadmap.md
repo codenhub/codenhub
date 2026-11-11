@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-10
+last_updated: 2026-11-11
 scope: `@codenhub/styles` package direction.
 ---
 
@@ -22,9 +22,6 @@ Nothing further is committed to a version. The foundation was built for structur
 
 ## Planned
 
-- **A configuration file for look.** Density, presentation, and aesthetic become configuration: markup names the plain class (`.btn`, `.card`, `.ipt`), and a project's config file says how that class looks by default, such as a `.lg` soft button under `.neobrutalism`. Intents stay inline in the markup, and an inline modifier still overrides the configured one. The goal is that a page stops spelling its look out on every element, the repetition that leaves agents writing long inline class lists instead of a component class. Not started; the file's format, and how it reaches a build, are decided with its design.
-- **Per-component `modifiers` and `intents` in `registry.json`.** The registry lists every modifier and intent once, package-wide, and records which axes each component reads, but not which modifiers or intents each component accepts, so a component that takes `.sm` and `.lg` (`.btn`, the text controls, `.input-group`) looks the same there as one that does not. Each entry gains the two fields, and `tests/browser/axes.spec.ts` gains a probe that a listed modifier or intent changes what the component computes and an unlisted one does not, as it does for axes. Deferred to the configuration file above rather than added now, because that file will define what each component accepts, and the schema should be designed once against it rather than shipped first and reshaped to fit.
-
 The aesthetics below carry no release commitment. Each needs its solo class, compiled and `/tw` exports, a registry entry, public documentation, playground coverage, and cross-browser tests when it lands, and clears every token the other aesthetics declare ([Adding an aesthetic](./model.md#adding-an-aesthetic)).
 
 Aesthetics compose the foundation rather than justify new tokens. Exact appearance, knobs, and browser fallbacks are reviewed against real screens before claiming completion, and visual references are agreed before an aesthetic is built.
@@ -33,12 +30,18 @@ Aesthetics compose the foundation rather than justify new tokens. Exact appearan
 - **Synthwave/retro.** Visual references are awaited before defining its appearance, tokens, or implementation. No look has been selected.
 - **Retro-OS bevel (`.retro-os`).** A raised two-tone edge with the standard press, not an inverted pressed bevel. A first attempt did not read as a retro OS, so the design starts over from references. A two-tone bevel needs two depth layers with separate base colours, which the foundation does not carry; whether the new design needs them is decided with it.
 
+## Possible
+
+Ideas kept for later, not planned: no release is prepared toward them, so they are not deferred features in the sense of `docs/specs/packages-lifecycle.md`. Each moves to Planned only by a decision that names the need it meets.
+
+- **A configuration file for look.** Density, presentation, and aesthetic become configuration: markup names the plain class (`.btn`, `.card`, `.ipt`), and a project's config file says how that class looks by default, such as a `.lg` soft button under `.neobrutalism`. Intents stay inline in the markup, and an inline modifier still overrides the configured one. The goal is that a page stops spelling its look out on every element. Since 0.8.0 most of that goal is met without it: every class is a `/tw` utility, so a project names its look once in a class of its own, `@utility btn-save { @apply btn primary soft sm; }`, as [Presets](../usage/presets.md) describes. What remains is a default for the plain class itself. Moved from Planned on 2026-11-11, before the 0.8.0 tag, because no design exists and the presets cover the common case.
+- **Per-component `modifiers` and `intents` in `registry.json`.** The registry lists every modifier and intent once, package-wide, and records which axes each component reads, but not which modifiers or intents each component accepts, so a component that takes `.sm` and `.lg` (`.btn`, the text controls, `.input-group`) looks the same there as one that does not. Each entry would gain the two fields, and `tests/browser/axes.spec.ts` a probe that a listed modifier or intent changes what the component computes and an unlisted one does not, as it does for axes. It follows the configuration file above, which would define what each component accepts, so the schema is designed once against it rather than shipped first and reshaped to fit. `registry.json` is not published, so consumers do not depend on its shape.
+
 ## Known gaps
 
 Each of these is a limit of what ships today, recorded so it is decided rather than rediscovered. None is committed to a version.
 
-- **`.tooltip-icon` is recorded as a helper, not a component.** It applies `box`, rests on a ground of its own, and reads the fill, edge, and intent a component reads, but `registry.json` lists it under `helpers`, so it carries no default, no `axes`, and no probe in `axes.spec.ts`. Whether it moves to `components` is decided with the per-component schema above, since both change what a registry entry records.
-- **The Propshaft setup in [Without a bundler](../integrating/without-a-bundler.md) is unverified.** It has not been run against a Rails application, so the asset path, the link tags, and the collision it warns about are untested.
+- **`.tooltip-icon` is recorded as a helper, not a component.** It applies `box`, rests on a ground of its own, and reads the fill, edge, and intent a component reads, but `registry.json` lists it under `helpers`, so it carries no default, no `axes`, and no probe in `axes.spec.ts`. Whether it moves to `components` is decided with the per-component fields under Possible, since both change what a registry entry records. Consumers do not see the difference: `registry.json` is not published.
 
 ## Notes
 
