@@ -2,7 +2,7 @@
 title: Composición
 description: Consulta de cómo se combinan la intención, la presentación, la estética y la elevación, el aspecto por defecto de cada componente y qué clases lee cada uno.
 order: 8
-source: 6d4fd92ab11655c25a8ed033550e7d160341fff4
+source: 2493c7c14124565b565b1226e99d4b3de3b087b2
 ---
 
 # Composición
@@ -23,6 +23,9 @@ Esta es una página de consulta. [Construir una pantalla](../concepts.md) presen
 - **Las estéticas y los [tokens de material](./customizing.md#tokens-de-material) se heredan** de la misma forma.
 - **La intención no se hereda.** `.primary` y las demás clases de intención colorean solo el elemento en el que están. Un contenedor que recoloreara en silencio todo lo que contiene volvería rojo el botón neutro Cancelar de una tarjeta roja de zona de peligro. `.neutral` nombra el valor por defecto; úsalo donde un elemento tomaría si no una intención, como una fila de tabla dentro de una tabla `.success`. Consulta [Temas → Tokens de intención](./theming.md#tokens-de-intención).
 - **La elevación no se hereda.** `.raised` eleva solo el elemento en el que está; consulta [Elevación](#elevación).
+- **El tamaño no se hereda.** `.sm` y `.lg` cambian el tamaño solo del botón o del control en el que están, así que un formulario `.sm` no encoge los campos que contiene. Consulta [Botones → Tamaños y formas](./buttons.md#tamaños-y-formas) y [Formularios → Tamaños](./forms.md#tamaños).
+
+Con los puntos de entrada de código fuente de Tailwind, cada clase anterior, salvo las clases de estética, es también una utilidad de Tailwind, así que variantes como `md:lg` y `dark:solid` funcionan y `@apply btn primary soft sm` le da a una clase tuya la combinación completa. Los modificadores documentados con cada componente, como `.tight` o `.interactive`, también son utilidades, así que `@apply stack tight` funciona. Las clases de estética, como `.glass`, siguen siendo CSS simple, así que `@apply glass` y `md:glass` no funcionan; escribe la clase en el marcado. Consulta [Tailwind CSS v4 → Construir tus propios componentes con `@apply`](../integrating/tailwind.md#construir-tus-propios-componentes-con-apply), y [Preajustes](./presets.md) para saber cuándo recurrir a ello.
 
 ## Valores por defecto de los componentes
 
@@ -140,7 +143,7 @@ Qué clases cambian cada componente. "Material" es lo que una [estética](./aest
 | `.progress`                                     | Relleno del carril, borde y grosor del borde. La parte rellena es siempre el color completo de la intención. |
 | `.skeleton`, `.divider`                         | Solo intención.                                                                                              |
 
-Las clases de estado y los modificadores como `.interactive`, `.hoverable`, `.pressable`, `.p-sm` y `.vertical` se documentan con su componente. Un control no válido se marca con `aria-invalid="true"`, no con una clase; consulta [Formularios](./forms.md#mostrar-un-error-de-validación).
+Las clases de estado y los modificadores como `.interactive`, `.hoverable`, `.pressable`, `.p-sm` y `.vertical` se documentan con su componente. Cada uno tiene efecto en los componentes que lo leen, y en `/tw` son utilidades, así que `@apply card interactive` funciona. Un control no válido se marca con `aria-invalid="true"`, no con una clase; consulta [Formularios](./forms.md#mostrar-un-error-de-validación).
 
 ## Elevación
 

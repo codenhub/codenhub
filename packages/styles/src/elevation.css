@@ -1,5 +1,7 @@
-/* Imported into the `components` layer by `theme.css`, below every utility, so
-   a consumer's own utility or unlayered CSS beats these classes. See
+/* Each class here is a `@utility` whose body sits in `utilities.families`: a
+   utility, so `@apply` and Tailwind's variants reach it, and in a sublayer, so
+   it still loses to every rule written straight into `utilities` -- a
+   component's, or a consumer's own utility. See
    docs/internal/model.md#cascade-layers. */
 
 /* Elevation is a modifier, not an axis: depth is a per-element decision (raised
@@ -47,27 +49,31 @@
 
 /* No part-based depth. Complete surface shadow values, such as glass, are not
    reached by the elevation multiplier. */
-.flat {
-  --ui-elevation: 0;
+@utility flat {
+  @layer families {
+    --ui-elevation: 0;
+  }
 }
 
-/* The plain-step geometry both rungs multiply, declared once so the two cannot
-   drift. It is the fallback for a page with no aesthetic in scope; an aesthetic
+/* The plain-step geometry both rungs multiply. Each utility restates it so
+   `@apply raised` carries it, so the two copies must stay identical. It is the fallback for a page with no aesthetic in scope; an aesthetic
    that declares its own shadow parts overrides it, and the elevation multiplier
    scales whichever one lands. `.floating` takes its extra depth from the
-   multiplier below, not a second copy of these parts. */
-.raised,
-.floating {
-  --elevation-y: 1px;
-  --elevation-blur: 3px;
-}
-
+   multiplier, not from different parts. */
 /* The aesthetic's depth as authored, said explicitly. */
-.raised {
-  --ui-elevation: 1;
+@utility raised {
+  @layer families {
+    --elevation-y: 1px;
+    --elevation-blur: 3px;
+    --ui-elevation: 1;
+  }
 }
 
 /* Twice it, for menus and popovers. */
-.floating {
-  --ui-elevation: 2;
+@utility floating {
+  @layer families {
+    --elevation-y: 1px;
+    --elevation-blur: 3px;
+    --ui-elevation: 2;
+  }
 }

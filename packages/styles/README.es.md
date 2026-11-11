@@ -1,4 +1,4 @@
-<!-- source: 1022aa97842da09b0d9c3d453c7b11a04835e1ed -->
+<!-- source: fcd286422a8c1f205081b7cd33456d5893d47139 -->
 
 # @codenhub/styles
 
@@ -50,6 +50,7 @@ La documentación construye una pantalla de ajustes de cuenta de principio a fin
 | Imports de CSS | Las herramientas del proyecto deben resolver los imports de CSS de paquetes.                                                                                                     |
 | Navegadores    | Chrome 123, Safari 17.5 o Firefox 128 y posteriores (`light-dark()` para los temas; `:has()` para el estado de `.input-group`; `@property` para una elevación que no se hereda). |
 | Tailwind CSS   | 4.3.2 o posterior, por debajo de 5; solo es necesario para los puntos de entrada de código fuente `/tw`.                                                                         |
+| Node.js        | 24 o posterior, solo en la máquina que ejecuta el comando `codenhub-styles build`. Las hojas de estilos no lo necesitan.                                                         |
 | Accesibilidad  | Tu proyecto aporta el HTML semántico, ARIA, el comportamiento de teclado y la gestión del foco.                                                                                  |
 
 ## Notas

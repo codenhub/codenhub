@@ -167,7 +167,23 @@ for (const [scenario, files] of Object.entries(SCENARIOS)) {
     test("keeps the component seams winning over their own component", async ({ page }) => {
       await load(page, files);
 
-      expect(await read(page, "soft-field", "--_fill-cap"), "`.ipt.soft` names its own cap").toBe("12%");
+      /* The cap is an unresolved `max()`/`min()` expression, so it is measured as
+         a width inside a 100px box: the bound the field's fill actually gets. */
+      const cap = await page.getByTestId("soft-field").evaluate((field) => {
+        const box = document.createElement("div");
+        const probe = document.createElement("div");
+
+        box.style.width = "100px";
+        probe.style.width = getComputedStyle(field).getPropertyValue("--_fill-cap");
+        box.append(probe);
+        document.body.append(box);
+        const width = getComputedStyle(probe).width;
+        box.remove();
+
+        return width;
+      });
+
+      expect(cap, "`.ipt.soft` names its own cap").toBe("12px");
       expect(await read(page, "invalid-field", "--intent-color"), "invalid beats `.success`").toBe(
         await read(page, "destructive-button", "--intent-color"),
       );

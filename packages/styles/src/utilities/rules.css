@@ -1,0 +1,9 @@
+/* Every utility, with nothing they need: `content.css` applies `box`, which
+   the importing entry supplies once. See `index.css` beside this file. */
+@import "./layout.css";
+@import "./content.css";
+
+/* Safelists the utilities for the compiled build, which has no markup to scan.
+   `scripts/build-tw.mjs` strips it from the `tw/` copy -- see the note in
+   `components/index.css`. */
+@source inline("view vertical horizontal stack tight loose cluster between auto-grid section section-content narrow wide divider selection-contrast visually-hidden table-wrap data-table ruled ruleless kbd quote quote-inline code pre");

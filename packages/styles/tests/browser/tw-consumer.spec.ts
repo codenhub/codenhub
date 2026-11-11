@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -77,8 +77,69 @@ const FIXTURE = `
     <div class="{tw:my-surface|dist:surface}" data-known="apply-surface">Liquid surface</div>
     <div class="neobrutalism"><div class="{tw:my-surface|dist:surface}" data-known="apply-surface">Nested</div></div>
   </div>
+  <button class="{tw:my-save|dist:btn primary soft edged raised sm}">Applied button</button>
+  <button class="{tw:my-large|dist:btn secondary lg cut-diagonal}">Applied large button</button>
+  <button class="{tw:my-ghost|dist:btn destructive ghost flat}">Applied ghost button</button>
+  <input class="{tw:my-small-field|dist:ipt sm}" />
+  <input class="{tw:my-soft-field|dist:ipt soft}" />
+  <input class="{tw:my-solid-field|dist:ipt solid primary}" />
+  <input class="{tw:my-bare-field|dist:ipt soft edgeless}" />
+  <span class="tooltip"><span class="{tw:my-bare-tip|dist:tooltip-bubble edgeless}">Tip</span></span>
+  <select class="{tw:my-large-select|dist:select lg}"><option>One</option></select>
+  <textarea class="{tw:my-small-area|dist:textarea sm}">Text</textarea>
+  <div class="{tw:my-floating|dist:card floating solid info}">Applied card</div>
+  <div class="card success solid">
+    <button class="{tw:my-plain|dist:btn}">Applied button in a success card</button>
+    <span class="{tw:my-badge|dist:badge}">Applied badge</span>
+    <kbd class="{tw:my-kbd|dist:kbd}">K</kbd>
+    <table class="{tw:my-table|dist:data-table}"><thead><tr><th>A</th></tr></thead><tbody><tr><td>1</td></tr></tbody></table>
+    <div class="{tw:my-box|dist:box}">Applied box</div>
+    <input class="{tw:my-control|dist:text-control}" />
+  </div>
+  <button class="btn primary raised"><span class="{tw:my-box|dist:box}">Box in a button</span></button>
+  <input type="checkbox" class="{tw:my-check|dist:checkbox}" />
+  <input type="checkbox" class="{tw:my-check|dist:checkbox}" checked />
+  <input type="checkbox" class="{tw:my-check|dist:checkbox}" checked disabled />
+  <input type="radio" class="{tw:my-radio|dist:radio}" checked />
+  <input type="checkbox" class="{tw:my-switch|dist:switch}" />
+  <input type="checkbox" class="{tw:my-switch|dist:switch}" checked />
+  <div class="{tw:my-group|dist:input-group}"><span>@</span><input class="ipt" /></div>
   <dialog class="{tw:my-surface|dist:surface}" data-known="apply-surface">Closed sheet</dialog>
   <dialog class="{tw:my-surface|dist:surface}" data-known="apply-surface" open>Open sheet</dialog>
+  <div class="{tw:my-tight|dist:stack tight}"><p>a</p><p>b</p></div>
+  <div class="{tw:my-loose|dist:stack loose}"><p>a</p><p>b</p></div>
+  <div class="{tw:my-row|dist:view horizontal tight}"><p>a</p><p>b</p></div>
+  <div class="{tw:my-column|dist:view vertical loose}"><p>a</p><p>b</p></div>
+  <div class="{tw:my-spread|dist:cluster between}"><p>a</p><p>b</p></div>
+  <div class="{tw:my-tight-cluster|dist:cluster tight}"><p>a</p><p>b</p></div>
+  <div class="{tw:my-loose-grid|dist:auto-grid loose}"><p>a</p><p>b</p></div>
+  <div class="{tw:my-narrow|dist:section-content narrow}">Narrow</div>
+  <div class="{tw:my-wide|dist:section-content wide}">Wide</div>
+  <hr class="{tw:my-upright|dist:divider vertical}" />
+  <button class="{tw:my-icon|dist:btn icon}">x</button>
+  <button class="{tw:my-small-icon|dist:btn icon sm}">x</button>
+  <button class="{tw:my-chip-icon|dist:btn icon p-xs}">x</button>
+  <button class="{tw:my-snug-icon|dist:btn icon p-sm}">x</button>
+  <button class="{tw:my-roomy-icon|dist:btn icon p-lg lg}">x</button>
+  <button class="{tw:my-chip|dist:btn p-xs}">Chip</button>
+  <button class="{tw:my-snug|dist:btn p-sm primary}">Snug</button>
+  <button class="{tw:my-roomy|dist:btn p-lg}">Roomy</button>
+  <button class="{tw:my-pill|dist:btn pill solid primary}">Pill</button>
+  <div class="{tw:my-chip-card|dist:card p-xs}">Card</div>
+  <div class="{tw:my-snug-card|dist:card p-sm raised}">Card</div>
+  <div class="{tw:my-roomy-card|dist:card p-lg}">Card</div>
+  <div class="{tw:my-flush-card|dist:card flush}">Card</div>
+  <div class="{tw:my-chip-panel|dist:panel p-xs}">Panel</div>
+  <div class="{tw:my-snug-panel|dist:panel p-sm}">Panel</div>
+  <div class="{tw:my-roomy-panel|dist:panel p-lg}">Panel</div>
+  <div class="{tw:my-flush-panel|dist:panel flush}">Panel</div>
+  <div class="{tw:my-click-card|dist:card interactive}">Card</div>
+  <div class="{tw:my-hover-card|dist:card hoverable soft}">Card</div>
+  <div class="{tw:my-press-card|dist:card pressable}">Card</div>
+  <div class="{tw:my-busy|dist:progress active}"></div>
+  <div class="{tw:my-waiting|dist:progress indeterminate}"></div>
+  <table class="{tw:my-ruled|dist:data-table ruled}"><thead><tr><th>A</th></tr></thead><tbody><tr><td>1</td></tr><tr><td>2</td></tr></tbody></table>
+  <table class="{tw:my-bare-table|dist:data-table ruleless}"><thead><tr><th>A</th></tr></thead><tbody><tr><td>1</td></tr><tr><td>2</td></tr></tbody></table>
 </main>`;
 
 /* Read by the dialog test alone, and scanned by the consumer's build beside the
@@ -97,6 +158,17 @@ const CUSTOM_INTENTS = `
 <input class="my-field gamma" id="field-plain-intent" />
 <div class="my-sheet beta" id="sheet-utility-intent">Sheet</div>`;
 
+/* Read by the override test alone, and scanned beside the fixture the same
+   way. */
+const OVERRIDES = `
+<table class="data-table"><tbody><tr><td class="p-0 text-center" id="cell">1</td></tr></tbody></table>
+<label class="label text-sm" id="label">Label</label>
+<button class="btn sm px-8" id="button-padding">Wide</button>
+<button class="btn lg text-xs" id="button-text">Small type</button>
+<div class="view horizontal flex-col" id="view-direction"><p>a</p></div>
+<button class="btn icon p-4" id="icon-padding">x</button>
+<div class="card p-xs p-8" id="card-padding">Card</div>`;
+
 const fixtureFor = (side: "tw" | "dist") =>
   FIXTURE.replaceAll(/\{tw:([^|]*)\|dist:([^}]*)\}/g, (_, tw: string, dist: string) => (side === "tw" ? tw : dist));
 
@@ -109,6 +181,229 @@ const CONSUMER_CSS = (twEntry: string, glassEntry: string) => `@import "${twEntr
 
 .my-control {
   @apply text-control;
+}
+
+/* A consumer's own component is a package component with its axis and modifier
+   classes applied: every one of them is a utility. */
+.my-save {
+  @apply btn primary soft edged raised sm;
+}
+
+.my-large {
+  @apply btn secondary lg cut-diagonal;
+}
+
+.my-ghost {
+  @apply btn destructive ghost flat;
+}
+
+.my-small-field {
+  @apply ipt sm;
+}
+
+/* A fill or an edge class applied with a field is the element's own, as the
+   class on the element is: the field takes the soft tint whole and drops its
+   line, where a container's class would be capped and floored. */
+.my-soft-field {
+  @apply ipt soft;
+}
+
+.my-solid-field {
+  @apply ipt solid primary;
+}
+
+.my-bare-field {
+  @apply ipt soft edgeless;
+}
+
+.my-bare-tip {
+  @apply tooltip-bubble edgeless;
+}
+
+.my-large-select {
+  @apply select lg;
+}
+
+.my-small-area {
+  @apply textarea sm;
+}
+
+.my-floating {
+  @apply card floating solid info;
+}
+
+.my-plain {
+  @apply btn;
+}
+
+.my-badge {
+  @apply badge;
+}
+
+.my-kbd {
+  @apply kbd;
+}
+
+.my-table {
+  @apply data-table;
+}
+
+.my-box {
+  @apply box;
+}
+
+.my-check {
+  @apply checkbox;
+}
+
+.my-radio {
+  @apply radio;
+}
+
+.my-switch {
+  @apply switch;
+}
+
+.my-group {
+  @apply input-group;
+}
+
+/* Every modifier is a utility, so each applies with its component and renders
+   as the classes do. */
+.my-tight {
+  @apply stack tight;
+}
+
+.my-loose {
+  @apply stack loose;
+}
+
+.my-row {
+  @apply view horizontal tight;
+}
+
+.my-column {
+  @apply view vertical loose;
+}
+
+.my-spread {
+  @apply cluster between;
+}
+
+.my-tight-cluster {
+  @apply cluster tight;
+}
+
+.my-loose-grid {
+  @apply auto-grid loose;
+}
+
+.my-narrow {
+  @apply section-content narrow;
+}
+
+.my-wide {
+  @apply section-content wide;
+}
+
+.my-upright {
+  @apply divider vertical;
+}
+
+.my-icon {
+  @apply btn icon;
+}
+
+.my-small-icon {
+  @apply btn icon sm;
+}
+
+.my-chip-icon {
+  @apply btn icon p-xs;
+}
+
+.my-snug-icon {
+  @apply btn icon p-sm;
+}
+
+.my-roomy-icon {
+  @apply btn icon p-lg lg;
+}
+
+.my-chip {
+  @apply btn p-xs;
+}
+
+.my-snug {
+  @apply btn p-sm primary;
+}
+
+.my-roomy {
+  @apply btn p-lg;
+}
+
+.my-pill {
+  @apply btn pill solid primary;
+}
+
+.my-chip-card {
+  @apply card p-xs;
+}
+
+.my-snug-card {
+  @apply card p-sm raised;
+}
+
+.my-roomy-card {
+  @apply card p-lg;
+}
+
+.my-flush-card {
+  @apply card flush;
+}
+
+.my-chip-panel {
+  @apply panel p-xs;
+}
+
+.my-snug-panel {
+  @apply panel p-sm;
+}
+
+.my-roomy-panel {
+  @apply panel p-lg;
+}
+
+.my-flush-panel {
+  @apply panel flush;
+}
+
+.my-click-card {
+  @apply card interactive;
+}
+
+.my-hover-card {
+  @apply card hoverable soft;
+}
+
+.my-press-card {
+  @apply card pressable;
+}
+
+.my-busy {
+  @apply progress active;
+}
+
+.my-waiting {
+  @apply progress indeterminate;
+}
+
+.my-ruled {
+  @apply data-table ruled;
+}
+
+.my-bare-table {
+  @apply data-table ruleless;
 }
 
 @utility my-sheet {
@@ -140,7 +435,65 @@ const CONSUMER_CSS = (twEntry: string, glassEntry: string) => `@import "${twEntr
 }
 `;
 
+/* Tailwind's default palette, less what the package's own theme reads from
+   it: the `neutral`, `emerald`, `amber`, `rose`, and `indigo` ramps and
+   `white`. A consumer who wants only their own colours as utilities clears
+   these. Clearing the whole `--color-*` namespace takes the package's tokens
+   with it, declared in the same namespace, and the build fails; clearing a
+   ramp the theme reads leaves that intent with no colour and no error, so
+   `docs/usage/theming.md` lists the ones to keep. */
+const CLEARED_HUES = [
+  "red",
+  "orange",
+  "yellow",
+  "lime",
+  "green",
+  "teal",
+  "cyan",
+  "sky",
+  "blue",
+  "violet",
+  "purple",
+  "fuchsia",
+  "pink",
+  "slate",
+  "gray",
+  "zinc",
+  "stone",
+];
+
+const CLEARED_PALETTE_CSS = (twEntry: string) => `@import "${twEntry}";
+
+@theme {
+${CLEARED_HUES.map((hue) => `  --color-${hue}-*: initial;`).join("\n")}
+  --color-black: initial;
+  --color-brand: #7c3aed;
+}
+`;
+
+const CLEARED_PALETTE_PAGE = `
+<div id="root">
+  <button class="btn primary solid bg-red-500" id="primary">Save</button>
+  <button class="btn" id="neutral">Cancel</button>
+  <div class="card soft success" id="card">Saved</div>
+  <div class="alert destructive" id="alert">Failed</div>
+  <p class="text-brand" id="brand">Brand</p>
+</div>`;
+
+/* A consumer who restates the neutral line in `@theme`. Tailwind merges that
+   into the one theme rule, ahead of every rule this package layers after it. */
+const OWN_BORDER_CSS = (twEntry: string) => `@import "${twEntry}";
+
+@theme {
+  --color-border: rgb(200 30 30);
+}
+`;
+
+const OWN_BORDER_PAGE = `<div class="card" id="card">Card</div>`;
+
 let twCss = "";
+let clearedCss = "";
+let ownBorderCss = "";
 let distCss = "";
 
 test.beforeAll(async () => {
@@ -153,6 +506,7 @@ test.beforeAll(async () => {
     await writeFile(path.join(temporaryRoot, "page.html"), fixtureFor("tw"));
     await writeFile(path.join(temporaryRoot, "dialogs.html"), DIALOGS);
     await writeFile(path.join(temporaryRoot, "intents.html"), CUSTOM_INTENTS);
+    await writeFile(path.join(temporaryRoot, "overrides.html"), OVERRIDES);
     await writeFile(
       path.join(temporaryRoot, "input.css"),
       CONSUMER_CSS(
@@ -164,6 +518,32 @@ test.beforeAll(async () => {
       cwd: temporaryRoot,
     });
     twCss = await readFile(path.join(temporaryRoot, "output.css"), "utf8");
+
+    const clearedRoot = path.join(temporaryRoot, "cleared");
+
+    await mkdir(clearedRoot);
+    await writeFile(path.join(clearedRoot, "page.html"), CLEARED_PALETTE_PAGE);
+    await writeFile(
+      path.join(clearedRoot, "input.css"),
+      CLEARED_PALETTE_CSS(pathToFileURL(path.join(packageRoot, "tw", "index.css")).href),
+    );
+    await executeFile(process.execPath, [tailwindCliPath, "-i", "input.css", "-o", "output.css", "--minify"], {
+      cwd: clearedRoot,
+    });
+    clearedCss = await readFile(path.join(clearedRoot, "output.css"), "utf8");
+
+    const ownBorderRoot = path.join(temporaryRoot, "own-border");
+
+    await mkdir(ownBorderRoot);
+    await writeFile(path.join(ownBorderRoot, "page.html"), OWN_BORDER_PAGE);
+    await writeFile(
+      path.join(ownBorderRoot, "input.css"),
+      OWN_BORDER_CSS(pathToFileURL(path.join(packageRoot, "tw", "index.css")).href),
+    );
+    await executeFile(process.execPath, [tailwindCliPath, "-i", "input.css", "-o", "output.css", "--minify"], {
+      cwd: ownBorderRoot,
+    });
+    ownBorderCss = await readFile(path.join(ownBorderRoot, "output.css"), "utf8");
   } finally {
     await rm(temporaryRoot, { force: true, recursive: true });
   }
@@ -392,5 +772,169 @@ test.describe("/tw consumer build", () => {
     expect(compiled[0]!.outline, "the compiled control's ring").toBe("solid 2px 2px");
     expect(compiled[1]!.outline, "no ring on the control inside a group").toMatch(/^none /);
     expect(await ringsFor("tw")).toEqual(compiled);
+  });
+
+  /* The toggles' forced-colours rules name their classes from outside the
+     utilities, so an applied checkbox kept none of them: `box`'s colours were
+     forced to the system's with the checked state painted like the unchecked
+     one. Each utility carries the rules for the element it is applied to. */
+  test("draws applied toggles in system colours in forced colours", async ({ page }) => {
+    await page.emulateMedia({ forcedColors: "active" });
+    test.skip(
+      !(await page.evaluate(
+        () => matchMedia("(forced-colors: active)").matches && CSS.supports("forced-color-adjust", "none"),
+      )),
+      "engine cannot emulate forced colors",
+    );
+
+    const paintFor = async (side: Side) => {
+      const name = (control: string) => (side === "tw" ? `my-${control === "checkbox" ? "check" : control}` : control);
+
+      await page.setContent(
+        `<!doctype html><html><head><meta charset="utf-8" /><style>${side === "tw" ? twCss : distCss}</style></head><body>` +
+          ["checkbox", "radio", "switch"]
+            .map(
+              (control) =>
+                `<input type="${control === "radio" ? "radio" : "checkbox"}" class="${name(control)}" />` +
+                `<input type="${control === "radio" ? "radio" : "checkbox"}" class="${name(control)}" checked />`,
+            )
+            .join("") +
+          "</body></html>",
+      );
+
+      return page.evaluate(() =>
+        [...document.querySelectorAll("input")].map((element) => {
+          const styles = getComputedStyle(element);
+
+          return [
+            styles.forcedColorAdjust,
+            styles.backgroundColor,
+            styles.borderTopColor,
+            getComputedStyle(element, "::after").backgroundColor,
+          ].join(" | ");
+        }),
+      );
+    };
+
+    const compiled = await paintFor("dist");
+
+    expect(compiled[0], "the compiled checkbox opts out of forced colours").toMatch(/^none /);
+    expect(await paintFor("tw")).toEqual(compiled);
+  });
+
+  /* A component's inner rules are defaults. Written at 0-1-1 and 0-2-0 they
+     outranked every Tailwind utility on the element: a cell kept its padding
+     under `p-0`, and a small button its padding under `px-8`. */
+  test("renders its own colours for a consumer who cleared Tailwind's palette", async ({ page }) => {
+    const coloursFor = async (css: string) => {
+      await page.setContent(
+        `<!doctype html><html data-theme="light"><head><meta charset="utf-8" /><style>${css}</style></head><body>${CLEARED_PALETTE_PAGE}</body></html>`,
+      );
+
+      return page.evaluate(() =>
+        ["primary", "neutral", "card", "alert"].map((id) => {
+          const styles = getComputedStyle(document.getElementById(id)!);
+
+          return [styles.backgroundColor, styles.color, styles.borderTopColor].join(" | ");
+        }),
+      );
+    };
+
+    expect(clearedCss, "a cleared hue is no longer a utility").not.toMatch(/\.bg-red-500/);
+    expect(clearedCss, "the consumer's own colour is one").toMatch(/\.text-brand/);
+    /* The compiled sheet has `bg-red-500` for the first button, so the three
+       it cannot repaint are the ones compared with it. */
+    expect((await coloursFor(clearedCss)).slice(1)).toEqual((await coloursFor(distCss)).slice(1));
+  });
+
+  test("keeps a --color-border set in @theme when more contrast is asked for", async ({ page }) => {
+    await page.setContent(
+      `<!doctype html><html data-theme="light"><head><meta charset="utf-8" /><style>${ownBorderCss}</style></head><body>${OWN_BORDER_PAGE}</body></html>`,
+    );
+
+    const line = () => page.evaluate(() => getComputedStyle(document.getElementById("card")!).borderTopColor);
+    const resting = await line();
+
+    await page.emulateMedia({ contrast: "more" });
+
+    expect(await line()).toBe(resting);
+  });
+
+  test("@apply tooltip-bubble opens in a tooltip host, as the class does", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setContent(
+      `<!doctype html><html data-theme="light"><head><meta charset="utf-8" /><style>${twCss}</style></head><body style="padding:80px"><span class="tooltip"><button type="button" id="trigger">Help</button><span class="my-bare-tip">Tip</span></span></body></html>`,
+    );
+
+    const bubble = page.locator(".my-bare-tip");
+
+    await expect(bubble).toBeHidden();
+    await page.locator("#trigger").hover();
+    await expect(bubble).toBeVisible();
+    await expect(bubble).toHaveCSS("opacity", "1");
+  });
+
+  test("a Tailwind utility on the element beats a component's inner default", async ({ page }) => {
+    await page.setContent(
+      `<!doctype html><html><head><meta charset="utf-8" /><style>${twCss}</style></head><body>${OVERRIDES}</body></html>`,
+    );
+
+    const read = (id: string, property: string) =>
+      page.evaluate(
+        ([elementId, name]) => getComputedStyle(document.getElementById(elementId!)!).getPropertyValue(name!),
+        [id, property],
+      );
+
+    expect(await read("cell", "padding-left")).toBe("0px");
+    expect(await read("cell", "padding-top")).toBe("0px");
+    expect(await read("cell", "text-align")).toBe("center");
+    expect(await read("label", "font-size")).toBe("14px");
+    expect(await read("button-padding", "padding-left")).toBe("32px");
+    expect(await read("button-text", "font-size")).toBe("12px");
+    expect(await read("view-direction", "flex-direction")).toBe("column");
+    expect(await read("icon-padding", "padding-left")).toBe("16px");
+    expect(await read("card-padding", "padding-left")).toBe("32px");
+  });
+
+  /* The comparison above reads every element at rest; this is the one modifier
+     whose job is a state. */
+  test("@apply card interactive answers the pointer as the class does", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+
+    const hovered = async (css: string, classes: string) => {
+      await page.setContent(
+        `<!doctype html><html data-theme="light"><head><meta charset="utf-8" /><style>${css}</style></head><body style="padding:40px"><div class="${classes}" id="target">Card</div></body></html>`,
+      );
+
+      /* The pointer stays where the last page left it, over the card. */
+      await page.mouse.move(0, 0);
+      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+
+      const target = page.locator("#target");
+      const rest = await target.evaluate((element) => getComputedStyle(element).backgroundColor);
+
+      await target.hover();
+      await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+
+      return {
+        rest,
+        cursor: await target.evaluate((element) => getComputedStyle(element).cursor),
+        hover: await target.evaluate((element) => getComputedStyle(element).backgroundColor),
+      };
+    };
+
+    for (const [mine, classes] of [
+      ["my-click-card", "card interactive"],
+      ["my-hover-card", "card hoverable soft"],
+    ] as const) {
+      // oxlint-disable-next-line no-await-in-loop -- one page, loaded in turn.
+      const applied = await hovered(twCss, mine);
+      // oxlint-disable-next-line no-await-in-loop -- one page, loaded in turn.
+      const classed = await hovered(distCss, classes);
+
+      expect(applied, mine).toEqual(classed);
+      expect(applied.hover, `${mine} changes on hover`).not.toBe(applied.rest);
+    }
   });
 });

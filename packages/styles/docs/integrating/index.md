@@ -20,16 +20,44 @@ Importing from one place matters for two reasons. Some frameworks only _allow_ g
 
 ## Which guide to follow
 
-| Stack                                                        | Guide                                       |
-| ------------------------------------------------------------ | ------------------------------------------- |
-| A Tailwind CSS v4 project on any bundler                     | [Tailwind CSS v4](./tailwind.md)            |
-| Next.js / React                                              | [Next.js](./nextjs.md)                      |
-| Vue                                                          | [Vue](./vue.md)                             |
-| Svelte / SvelteKit                                           | [Svelte](./svelte.md)                       |
-| Astro                                                        | [Astro](./astro.md)                         |
-| Plain HTML, Rails, Django, or any app with no CSS build step | [Without a bundler](./without-a-bundler.md) |
+| Stack                                                                         | Guide                                       |
+| ----------------------------------------------------------------------------- | ------------------------------------------- |
+| A Tailwind CSS v4 project on any bundler                                      | [Tailwind CSS v4](./tailwind.md)            |
+| Next.js / React                                                               | [Next.js](./nextjs.md)                      |
+| Vue                                                                           | [Vue](./vue.md)                             |
+| Svelte / SvelteKit                                                            | [Svelte](./svelte.md)                       |
+| Astro                                                                         | [Astro](./astro.md)                         |
+| Plain HTML, Rails, Laravel, Django, or any app with no Node.js CSS build step | [Without a bundler](./without-a-bundler.md) |
 
-A project with no framework — a plain Vite, webpack, or Parcel build — needs nothing beyond [Setup → Import the stylesheet](../setup.md#import-the-stylesheet): import the compiled stylesheet from the project's existing global CSS entry.
+A project with no framework — a plain Vite, webpack, or Parcel build — imports the compiled stylesheet from the project's existing global CSS entry, as [Setup → Import the stylesheet](../setup.md#import-the-stylesheet) shows. Vite and webpack resolve the package name as it is; Parcel and PostCSS with `postcss-import` need the change below.
+
+### Bundlers that need a nudge
+
+Both tools find the stylesheet once they are told how; neither needs a different entrypoint.
+
+**Parcel.** Turn on its support for a package's `exports` map in your `package.json`:
+
+```json
+{
+  "@parcel/resolver-default": {
+    "packageExports": true
+  }
+}
+```
+
+Then import the package with Parcel's `npm:` prefix, which tells it the name is a package and not a file next to the stylesheet:
+
+```css
+@import "npm:@codenhub/styles";
+```
+
+**PostCSS with `postcss-import`.** The plugin does not read a package's `exports` map, so the package name alone does not resolve. Import the compiled file by its path on disk instead, relative to your own stylesheet, the same file a `<link>` would name:
+
+```css
+@import "../node_modules/@codenhub/styles/dist/index.css";
+```
+
+The other compiled entrypoints work the same way, such as `@codenhub/styles/dist/aesthetics/neobrutalism.css`.
 
 ## Verifying it worked
 

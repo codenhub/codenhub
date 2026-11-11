@@ -1,0 +1,203 @@
+/* The host is a positioning wrapper and nothing else -- it paints no fill, no
+   edge, no material of its own. The bubble is a real element beside the trigger
+   rather than a pseudo-element, so intent, presentation, aesthetic, and
+   elevation classes go on `.tooltip-bubble`, the thing actually shown, not on
+   the wrapper -- the same rule every other component follows (theming.md:
+   "Intent does not cascade").
+
+   A real element is also what makes the tooltip accessible: `content:
+   attr(data-tooltip)` text is not reliably exposed to assistive tech and cannot
+   be the target of an `aria-describedby`, which needs a real element with a
+   real `id`. A real bubble can carry `role="tooltip"` and be referenced by the
+   trigger's own `aria-describedby`; wiring that association is the consumer's,
+   this package only styles the bubble. See docs/usage/tooltips.md. */
+@utility tooltip {
+  --tooltip-gap: 0.5rem;
+  /* How long the bubble stays after the pointer leaves the trigger: long
+     enough to cross `--tooltip-gap` onto the bubble, which keeps it open
+     (WCAG 1.4.13). */
+  --tooltip-linger: 300ms;
+  --tooltip-top: calc(var(--tooltip-gap) * -1);
+  --tooltip-right: auto;
+  --tooltip-bottom: auto;
+  --tooltip-left: 50%;
+  --tooltip-origin: bottom;
+  --tooltip-transform: translate(-50%, -100%);
+
+  @apply relative inline-block;
+
+  &[data-tooltip-position="bottom"] {
+    --tooltip-top: auto;
+    --tooltip-bottom: calc(var(--tooltip-gap) * -1);
+    --tooltip-origin: top;
+    --tooltip-transform: translate(-50%, 100%);
+  }
+
+  &[data-tooltip-position="left"] {
+    --tooltip-top: 50%;
+    --tooltip-left: calc(var(--tooltip-gap) * -1);
+    --tooltip-origin: right;
+    --tooltip-transform: translate(-100%, -50%);
+  }
+
+  &[data-tooltip-position="right"] {
+    --tooltip-top: 50%;
+    --tooltip-left: auto;
+    --tooltip-right: calc(var(--tooltip-gap) * -1);
+    --tooltip-origin: left;
+    --tooltip-transform: translate(100%, -50%);
+  }
+}
+
+/* The bubble. It is a surface, so an aesthetic that blurs surfaces blurs it
+   too, and it rests on a ground of its own, edged, and flat -- depth is opt-in
+   through its own `.raised`/`.floating`, like any other component. See
+   model.md#elevation. */
+@utility tooltip-bubble {
+  @apply surface absolute z-(--z-popover) w-max max-w-72 px-2.5 py-2 text-sm font-normal whitespace-normal opacity-0;
+
+  /* Hidden rather than merely transparent, so a closed bubble is nothing
+     under the pointer, and it lingers before it goes: the host stays hovered
+     once the pointer is over the bubble, so crossing the gap in
+     `--tooltip-linger` keeps it open. Visibility switches at the end of the
+     fade, so the bubble is there to land on for the whole of it. */
+  visibility: hidden;
+  transition-property: opacity, transform, visibility;
+  transition-duration: var(--motion-duration-normal);
+  transition-timing-function: var(--motion-ease);
+  transition-delay: var(--tooltip-linger, 0s);
+
+  /* Filled, over a ground of its own. An intent floods the fill
+     (`.tooltip-bubble.primary` is the primary colour); with no intent
+     `intent.css` resolves the bubble onto `--color-tooltip` and lifts the
+     neutral cap. The ground stays the surface tone, not the plate: pointed at
+     both, the fill axis goes inert (`axes.spec.ts` catches it). An opaque
+     ground is also what keeps a cascaded `.ghost` from leaving the bubble
+     boundaryless. `--ui-surface-ground` is read first so a glass tooltip stays
+     glass. */
+  --_d-fill: 100%;
+  --_d-fg-on-fill: 100%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
+  --_d-ground: var(--ui-surface-ground, var(--intent-subtle));
+
+  /* `surface` refuses the silhouette clip because it holds other things. The
+     bubble holds a line of text, so it takes the aesthetic's shape back. */
+  clip-path: var(--ui-clip, none);
+
+  /* The bubble's line is a boundary against content nobody chose, so `box`'s
+     edge blend is wrong here: at a full fill the line *is* the plate. Restate
+     the colour only; how much line comes from `--_edge-amount`, floored below. */
+  --_line: var(--intent-border);
+
+  /* Floored, for the same reason the ground is opaque: a cascade must not take
+     the boundary from a bubble nobody classed (worst in light, where the plate
+     is near-white). The element's own `.edgeless` lowers it -- the same
+     `--_own-edge` `text-control` reads. */
+  --_edge-floor: var(--_own-edge);
+
+  /* A bubble is a small transient popover, not a modal, so it takes the
+     control corner `box` computes rather than the surface one `surface` hands
+     it, with the same pattern. */
+  border-radius: var(
+    --ui-radius,
+    calc(var(--_corner) * var(--ui-corner-tl, 1)) calc(var(--_corner) * var(--ui-corner-tr, 1))
+      calc(var(--_corner) * var(--ui-corner-br, 1)) calc(var(--_corner) * var(--ui-corner-bl, 1))
+  );
+  left: var(--tooltip-left);
+  right: var(--tooltip-right);
+  top: var(--tooltip-top);
+  bottom: var(--tooltip-bottom);
+  transform: var(--tooltip-transform) scale(0);
+  transform-origin: var(--tooltip-origin);
+
+  /* The bubble appears without growing under reduced motion, for the entries
+     without the reset; see `box.css`. */
+  @media (prefers-reduced-motion: reduce) {
+    transition-duration: 0.01ms;
+  }
+
+  /* The no-intent plate, carried so `@apply tooltip-bubble` gets it: the rule
+     in `intent.css` names `.tooltip-bubble`, which a consumer's `.my-tip` is
+     not, so an applied bubble took `surface`'s neutral reset and drew the
+     page's ink at a fifth. In `families` after that reset, which `surface`
+     carries at the same zero specificity, so this one wins and an intent
+     applied with it still beats both. Never on `.tooltip-bubble` itself,
+     which keeps the rule in `components`. */
+  @layer families {
+    :where(&:not(.tooltip-bubble, .primary, .secondary, .success, .warning, .destructive, .info)) {
+      --intent-color: var(--color-tooltip);
+      --intent-contrast: var(--color-tooltip-contrast);
+      --intent-hover: var(--color-tooltip);
+      --intent-strong: var(--color-tooltip-contrast);
+      --intent-subtle: var(--color-surface);
+      --intent-border: var(--ui-ink, var(--color-border));
+      --intent-fill-max: 100%;
+    }
+  }
+
+  /* Shown on hover or focus anywhere in the host, or pinned open with
+     `data-state="open"`. `:focus-within` rather than the trigger's own
+     `:focus-visible`, the same substitution `.input-group` makes: the bubble
+     is a sibling of the trigger, so only the shared ancestor can see both at
+     once. The cost is the one `.input-group` accepts -- the bubble also shows
+     on a mouse click.
+
+     In the body, so an applied bubble opens in a `.tooltip` as the class
+     does; they win over the resting values above on specificity. */
+  .tooltip:hover &,
+  .tooltip:focus-within &,
+  .tooltip[data-state="open"] & {
+    opacity: 1;
+    transform: var(--tooltip-transform) scale(1);
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  /* Dismissed: a hover message has to close without the pointer moving
+     (WCAG 1.4.13), and CSS cannot hear Escape, so the consumer's handler
+     writes `data-state="closed"` and clears it when the pointer and focus
+     leave. Later and as specific as the rule above, so it wins over hover and
+     focus alike. */
+  .tooltip[data-state="closed"] & {
+    opacity: 0;
+    transform: var(--tooltip-transform) scale(0);
+    visibility: hidden;
+    transition-delay: 0s;
+  }
+}
+
+/* The trigger badge, for a message with no other element to hang it on. Quiet
+   -- ghost, edged, on `--intent-subtle`, a key cap's resting shape -- because
+   it marks that there is a message, it is not one. The line earns its keep:
+   `--intent-subtle` is a near-page tint that reads the same across families, so
+   a plate alone leaves three of eight intents indistinguishable;
+   `--intent-border` is the slot that differs.
+
+   Its corner is the aesthetic's, through the pill corner and then the control
+   corner: round by default, a diamond under `.cyber`, square under
+   `.neobrutalism` and `.pixel`, whose corner is zero. Only the silhouette
+   clip is refused -- `clip-path: none`, as `.radio` has it -- because
+   `.pixel`'s stepped polygon would bite a 20px chip rather than shape it. */
+@utility tooltip-icon {
+  @apply box inline-flex size-5 cursor-default items-center justify-center text-sm font-bold;
+
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
+  --_d-ground: var(--intent-subtle);
+
+  /* A ground of its own, so no ink from above passes through, as on `surface`. */
+  --_held-ink: var(--_fg-own);
+  --_held-on: var(--_own-hold);
+
+  /* The trigger is best a real `<button>`, which is a `.btn` under `/native`
+     and carries the user agent's padding under `/components`; either would
+     stretch the chip past its own size. */
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
+  clip-path: none;
+}

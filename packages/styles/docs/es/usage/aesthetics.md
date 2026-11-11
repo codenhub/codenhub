@@ -2,7 +2,7 @@
 title: Estéticas
 description: Los seis aspectos opcionales, lo que cada uno cambia en un componente, sus controles y sus límites.
 order: 6
-source: dc3687e44f8721d7dd21b9006e397cde8596ed8e
+source: adc344b555d4477cdc37adb6abb4cc07620c6486
 ---
 
 # Estéticas
@@ -71,7 +71,7 @@ La sombra se proyecta en la propia intención del componente, así que un botón
 
 - Los chips de contenido también toman la estética. El borde de una tecla `.kbd` pasa del gris discreto de los bordes a la tinta, y de 1px a 2px, como cualquier otro borde. Un `.code` o un `.pre` no tiene borde por defecto, así que no recibe ninguno; añade `.edged` para darle un borde de tinta.
 - Solo `.btn` y una `.card` que lo active responden al hover y a la pulsación. Una tarjeta lo activa con `.interactive`, o con una de sus dos mitades: `.hoverable` solo para la respuesta al hover, `.pressable` solo para la pulsación; una tarjeta simple, una alerta o un panel es un contenedor y se queda quieto.
-- Una alerta se apoya sobre la sombra desplazada con esta estética, y con ninguna otra. Por lo demás una alerta es plana, pero aquí la sombra es un segundo contorno más que profundidad, y una alerta sin ella parece inacabada junto a todo lo demás. Esto incluye una alerta dentro de una región `.neobrutalism` anidada. `.flat` sigue quitándola y `.floating` sigue duplicándola.
+- Una alerta se apoya sobre la sombra desplazada con esta estética, y con ninguna otra. Por lo demás una alerta es plana, pero aquí la sombra es un segundo contorno más que profundidad, y una alerta sin ella parece inacabada junto a todo lo demás. Esto incluye una alerta dentro de una región `.neobrutalism` anidada, y una alerta que lleva la clase ella misma, `.alert.neobrutalism`. `.flat` sigue quitándola y `.floating` sigue duplicándola.
 - El disparador del tooltip toma la esquina cero como todo lo demás y se dibuja cuadrado; `.radio` conserva su círculo.
 - Con `prefers-reduced-motion: reduce` la pulsación sigue ocurriendo, pero al instante: el elemento cae en su sombra sin recorrer la distancia. La pulsación es la señal de que un clic se registró, así que solo se quita su movimiento.
 - No tiene fuente propia y define en la región la del tema, `--font-default`, así que una región neobrutalista anidada dentro de pixel, cyber, sketch o chunky tile no toma su tipografía. Una fuente que defines solo con `font-family`, en `body` o en un contenedor, no llega dentro de la región; defínela también en `--font-default`, como describe [Temas → Fuentes](./theming.md#fuentes).
@@ -155,8 +155,9 @@ Un botón es un cristal liquid cuando él mismo lleva `.glass-liquid`, dentro de
 **Excepciones:**
 
 - Las esquinas son una unidad o nada. Los chips pequeños son cuadrados en lugar de escalonados: badges, teclas, código en línea, checkboxes y switches. Una unidad menos en cada esquina de un badge de 24px parecería un mordisco, no una esquina.
+- Las superficies también son cuadradas: una `.card`, un `.panel` o una `.alert` conserva el anillo interior, pero no recibe recorte ni recorta nada. Un recorte cortaría todo lo que contiene, así que un tooltip dentro de una tarjeta, una sombra o un anillo de foco quedarían recortados.
 - Las tablas, las barras de progreso y los skeletons también son cuadrados. Una tabla no recibe recorte porque en Chromium y WebKit su caja incluye el caption, y el recorte caería en el caption en lugar de en las filas. Las barras de progreso y los skeletons solo toman la esquina cuadrada.
-- Un bloque de código `.pre` es escalonado como una tarjeta. No tiene borde por defecto, así que el recorte se ve sin contorno alrededor.
+- Un bloque de código `.pre` es escalonado como un botón. No tiene borde por defecto, así que el recorte se ve sin contorno alrededor.
 - El contorno es un anillo interior, porque un recorte elimina un borde real; por el mismo motivo, el anillo de foco es una segunda capa interior en lugar de un outline. Los dos son el propio borde del elemento y no una sombra, así que el borde responde a `.edged` y `.edgeless` como lo hace un borde: un badge `.edgeless` y un botón `.solid` no dibujan ninguno, una tarjeta `.edged` dibuja uno, y un campo conserva el suyo pida lo que pida un contenedor.
 - El anillo de foco interior lleva dentro una línea de 2px del color de la página. El anillo es del color principal, así que en un botón `.solid.primary` se dibujaría sobre su propio color; la línea es lo que se ve ahí.
 - Con colores forzados desaparecen tanto el anillo como el recorte, porque el sistema elimina todas las sombras de caja: los componentes dibujan un borde real de 2px y esquinas rectas, y `.pixel-solo` un outline hacia dentro.
@@ -269,6 +270,7 @@ El botón discontinuo es `ghost edged` porque un botón relleno no tiene una lí
 - Un `.btn.pill` toma una píldora redondeada acotada a su propia altura, para que uno ancho no se convierta en un óvalo. Los badges, las barras de progreso y los switches toman su contorno de chip. Los radios y el icono del tooltip siguen siendo círculos, ligeramente irregulares, para que un radio nunca se confunda con un checkbox. Un `--ui-radius-pill` explícito en un elemento sigue ganando.
 - La `--font-sketch` la aportas tú. El paquete no incluye ninguna fuente manuscrita y recurre a la familia `cursive` de la plataforma.
 - Los botones se pulsan con el `scale(0.97)` simple; con movimiento reducido la pulsación sigue ocurriendo, al instante.
+- Con [`/native`](../setup.md#html-sin-clases), un `<hr>`, una `<table>` y un checkbox simples toman los detalles discontinuos de `.divider`, `.data-table` y `.checkbox`.
 - El modo de colores forzados dibuja continuos los detalles discontinuos, como cualquier otra línea del material.
 
 ## Clases solo

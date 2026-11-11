@@ -9,5 +9,12 @@
   },
   "exclude": ["dist", "node_modules", "test-results"],
   "extends": "../../tsconfig.json",
-  "include": ["playwright.config.ts", "vitest.config.ts", "tests/**/*.ts", "dev/**/*.ts", "debug/**/*.ts"]
+  "include": [
+    "playwright.config.ts",
+    "vitest.config.ts",
+    "src/**/*.ts",
+    "tests/**/*.ts",
+    "dev/**/*.ts",
+    "debug/**/*.ts"
+  ]
 }

@@ -197,7 +197,7 @@ Every aesthetic's knobs reach the same way: each knob is _read_ with its default
 
 Knobs and material tokens reach in opposite directions. A knob is read once, at the element with the aesthetic class, and the result passes down. So set a knob on that element or on one above it; set on an element inside the aesthetic, it changes nothing, because the value has already been read.
 
-`--ui-radius` and the other material tokens are read by each component as it draws. They work on the element they are set on and everything inside it, which is how you round one card differently from its neighbors without touching the knob.
+`--ui-radius`, `--ui-radius-surface`, and the other material tokens are read by each component as it draws. They work on the element they are set on and everything inside it, which is how you round one card differently from its neighbors without touching the knob. Mind which one a component reads: a surface (`.card`, `.panel`, `.alert`) takes `--ui-radius-surface`, and a control such as `.btn` or `.ipt` takes `--ui-radius`. `style="--ui-radius-surface: 0"` squares one card; `--ui-radius` on that card squares the buttons inside it and leaves the card round.
 
 Shipped aesthetics set the shared material tokens above. Every shipped aesthetic sets `--ui-ink` for its neutral line. Every shipped aesthetic also sets `--ui-control-ink`: `.glass` and `.chunky-tile` to a line of their own, heavier than their surfaces', and the others to `--color-control-border`, since their ink is near-black or near-white and a resting checkbox outlined in it would look checked. `.glass` sets `--ui-rule-ink` too, so a table's lines read on its plate; the others clear it. Intent classes still override the intent slots on each component.
 
@@ -266,7 +266,7 @@ The examples in context are in [Feedback → Show progress](./feedback.md#show-p
 
 ## Composition helpers
 
-To build a component the package does not ship, such as a segmented control or a filter chip, compose it from the same classes the package's components are built from. With compiled CSS, write them as classes; with Tailwind source, you can also `@apply` them.
+To build a component the package does not ship, such as a segmented control or a filter chip, compose it from the same classes the package's components are built from. With compiled CSS, write them as classes; with Tailwind source, you can also `@apply` them, together with the intent, presentation, elevation, and corner classes, which are utilities on `/tw` too: `@apply box box-hover neutral soft edgeless`. To give a shipped component a fixed recipe instead, such as a small soft primary button, see [Tailwind CSS v4 → Build your own components with `@apply`](../integrating/tailwind.md#build-your-own-components-with-apply).
 
 | Class          | What it gives an element                                                                                                                                                                   |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

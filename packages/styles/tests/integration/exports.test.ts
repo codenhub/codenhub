@@ -200,7 +200,7 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
   },
 };
 const aggregateExportTargets = ["dist/components.css", "dist/index.css"];
-const representativePublicRules = [".box{--_fill-cap:100%;--_capped:"];
+const representativePublicRules = [".box{--_fill-cap:100%;--_d-fill:0%;"];
 
 test("every declared package export target exists after build", async () => {
   await Promise.all(
@@ -231,6 +231,54 @@ test("no shipped stylesheet contains a sequence that ends an inline style elemen
 
   expect(stylesheets.length).toBeGreaterThan(0);
   expect(unsafe).toEqual([]);
+});
+
+/* `files` publishes all of `tw/`, so a source no `/tw` export imports ships as
+   bytes nobody can load: `tw/palette.css`, a copy of the generated palette,
+   reached consumers only through `dist/palette.css`. */
+test("every stylesheet under tw/ is reachable from a /tw export", async () => {
+  const targets = Object.entries(manifest.exports)
+    .filter(([exportName]) => exportName.startsWith("./tw"))
+    .map(([, target]) => (typeof target === "string" ? target : target.default).replace(/^\.\//, ""));
+  const reached = new Set<string>();
+  const queue = [...targets];
+
+  while (queue.length > 0) {
+    const file = queue.pop()!;
+
+    if (reached.has(file)) {
+      continue;
+    }
+
+    reached.add(file);
+
+    // oxlint-disable-next-line no-await-in-loop -- a walk: each file names the next ones to read.
+    const css = await readFile(path.resolve(packageRoot, file), "utf8");
+
+    for (const [, specifier] of css.matchAll(/@(?:import|reference)\s+"(\.[^"]+)"/g)) {
+      queue.push(path.posix.join(path.posix.dirname(file), specifier!));
+    }
+  }
+
+  const unreachable = (await shippedStylesheets("tw")).filter((file) => !reached.has(file));
+
+  expect(targets.length).toBeGreaterThan(0);
+  expect(unreachable).toEqual([]);
+});
+
+/* `tw/` is a copy of `src/`, and the build command's TypeScript lives in
+   `src/cli/`: copied whole, it shipped as source no export reaches. */
+test("tw/ holds stylesheets and their declaration file, nothing else", async () => {
+  const entries = await readdir(path.resolve(packageRoot, "tw"), { recursive: true, withFileTypes: true });
+  const strays = entries
+    .map((entry) => ({
+      entry,
+      relative: path.relative(path.resolve(packageRoot, "tw"), path.join(entry.parentPath, entry.name)),
+    }))
+    .filter(({ entry, relative }) => entry.isFile() && !entry.name.endsWith(".css") && relative !== "index.d.ts")
+    .map(({ relative }) => relative);
+
+  expect(strays).toEqual([]);
 });
 
 /* TypeScript 6 checks side-effect imports by default
@@ -345,12 +393,48 @@ for (const [exportName, contract] of Object.entries(compiledExportContracts)) {
    wherever Tailwind puts it. */
 const LAYER_ORDER = ["theme", "base", "components", "utilities"];
 
-function firstLayerOrder(css: string): string[] {
-  const names = [...css.matchAll(/@layer\s+([a-z][a-z0-9.,\s-]*?)\s*[;{]/g)].flatMap((match) =>
-    match[1]!.split(",").map((name) => name.trim()),
-  );
+function firstLayerOrder(source: string): string[] {
+  const css = source.replace(/\/\*[\s\S]*?\*\//g, "");
+  const names: string[] = [];
+  /* The layer each open block sits in, so a nested `@layer families` is named
+     as the browser names it -- `utilities.families`, or `base.families` where
+     `/native` applies a component in `base` -- and a top-level `families` is
+     not mistaken for a sublayer. */
+  const stack: string[] = [];
+  let buffer = "";
+  let quote: string | null = null;
+  const enclosing = () => stack.findLast((entry) => entry !== "") ?? "";
+  const qualify = (name: string) => (enclosing() ? `${enclosing()}.${name}` : name);
 
-  return [...new Set(names)].filter((name) => name !== "properties");
+  for (let index = 0; index < css.length; index++) {
+    const character = css[index]!;
+
+    if (quote) {
+      if (character === quote && css[index - 1] !== "\\") {
+        quote = null;
+      }
+    } else if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === "{" || character === ";") {
+      const layer = /^@layer\s+([a-z][a-z0-9.,\s-]*)$/.exec(buffer.trim());
+      const declared = layer ? layer[1]!.split(",").map((name) => qualify(name.trim())) : [];
+
+      names.push(...declared);
+      if (character === "{") {
+        stack.push(declared.length === 1 ? declared[0]! : "");
+      }
+      buffer = "";
+    } else if (character === "}") {
+      stack.pop();
+      buffer = "";
+    } else {
+      buffer += character;
+    }
+  }
+
+  /* Only the top-level order is the package's: a sublayer such as
+     `utilities.families` ranks inside its parent wherever it is first met. */
+  return [...new Set(names)].filter((name) => name !== "properties" && !name.includes("."));
 }
 
 /* Every style rule that sits in no `@layer`, with the at-rules around it. A
@@ -410,6 +494,10 @@ const UNLAYERED_ALLOWED: { reason: string; matches: (rule: { context: string; se
     reason: "dialog restatement on the package's containers",
     matches: (rule) => /^dialog:is\(\.card,\.panel,\.surface\)(?::not\(\[open\]\)|\[open\])$/.test(rule.selector),
   },
+  {
+    reason: "closed-popover restatement on the package's surfaces",
+    matches: (rule) => rule.selector === ":is(.card,.panel,.surface,.alert)[popover]:not(:popover-open)",
+  },
   { reason: "solo class", matches: (rule) => /-solo\b/.test(rule.selector) },
 ];
 
@@ -442,7 +530,7 @@ for (const target of compiledTargets) {
    own source tree defines against its output.
 
    `roots` is the entrypoint's import closure, not just its directory: the
-   `dist/components.css` index pulls `../box.css` and `../typography.css`
+   `dist/components.css` index pulls `../box.css` and `../typography.rules.css`
    alongside `./`, and a utility added to either belongs in that bundle. A
    functional `@utility name-*` keeps its trailing `*` so the match below can
    look for `.name-<value>` rather than a bare `.name`. */
@@ -473,8 +561,11 @@ async function definedUtilities(roots: string[]): Promise<string[]> {
 
 const compiledCompleteness: Record<string, string[]> = {
   "dist/index.css": ["src"],
-  "dist/components.css": ["src/components", "src/box.css", "src/typography.css", "src/theme.css"],
+  "dist/components.css": ["src/components", "src/box.css", "src/typography.rules.css", "src/theme.css"],
   "dist/native.css": ["src"],
+  /* Named by hand in `theme.compiled.css`'s `@source inline` list, which a new
+     family can be left out of. */
+  "dist/theme.css": ["src/intent.css", "src/presentation.css", "src/elevation.css", "src/corner.css", "src/size.css"],
 };
 
 for (const [target, roots] of Object.entries(compiledCompleteness)) {
@@ -710,6 +801,83 @@ test("aggregate exports emit each public rule expansion once", async () => {
   }
 });
 
+/* Every declaration of a minified stylesheet, each with the chain of rule
+   preludes it sits in: `@layer utilities > .btn > &:hover > color:red`. */
+const declarationsIn = (css: string): string[] => {
+  const declarations: string[] = [];
+  const preludes: string[] = [];
+  let token = "";
+  let quote = "";
+  let parentheses = 0;
+
+  const flush = () => {
+    if (token.trim() !== "") {
+      declarations.push([...preludes, token.trim()].join(" > "));
+    }
+    token = "";
+  };
+
+  for (const character of css) {
+    if (quote !== "") {
+      quote = character === quote ? "" : quote;
+    } else if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === "(") {
+      parentheses += 1;
+    } else if (character === ")") {
+      parentheses -= 1;
+    } else if (parentheses === 0 && character === "{") {
+      preludes.push(token.trim());
+      token = "";
+      continue;
+    } else if (parentheses === 0 && (character === ";" || character === "}")) {
+      flush();
+      if (character === "}") {
+        preludes.pop();
+      }
+      continue;
+    }
+    token += character;
+  }
+
+  return declarations;
+};
+
+/* Tailwind stacks a `@utility` that reaches one build more than once: each
+   registration appends its body, so `@apply box` expands to as many copies as
+   there are files that `@reference` `box.css`. Nine did, and 63% of the
+   declarations in `dist/index.css` were repeats of one already in the same
+   rule. A repeat changes nothing a browser computes, so nothing else failed.
+
+   One repeat is the source's own: `box` shortens its transition under reduced
+   motion, and the tooltip bubble, which replaces that transition after applying
+   `box`, has to shorten its own. The other is Tailwind's: Preflight's link
+   rule comes out of its minifier with the prefixed declaration twice. */
+const RESTATED_DECLARATIONS = [
+  "@layer base > a > -webkit-text-decoration:inherit",
+  "@layer utilities > @media (prefers-reduced-motion:reduce) > .tooltip-bubble > transition-duration:.01ms",
+];
+
+test("aggregate exports state each declaration once", async () => {
+  for (const target of [...aggregateExportTargets, "dist/native.css"]) {
+    const seen = new Set<string>();
+    const repeated = new Set<string>();
+
+    // oxlint-disable-next-line no-await-in-loop -- one file at a time keeps the failure naming its file.
+    const output = await readFile(path.resolve(packageRoot, target), "utf8");
+
+    for (const declaration of declarationsIn(output)) {
+      (seen.has(declaration) ? repeated : seen).add(declaration);
+    }
+
+    for (const restated of RESTATED_DECLARATIONS) {
+      repeated.delete(restated);
+    }
+
+    expect([...repeated].slice(0, 5), `${target} repeats ${repeated.size} of ${seen.size} declarations`).toEqual([]);
+  }
+});
+
 /* Compiles the given package exports the way a Tailwind consumer does, as the
    Tailwind guide tells them to: their own `@import "tailwindcss"` first, then
    each export in order -- except with `./tw`, which imports Tailwind itself
@@ -823,6 +991,23 @@ test("./tw emits only the components a consumer's pages use", async () => {
     );
   }
   expect(output.length).toBeLessThan(compiled.length / 4);
+});
+
+/* The axis and modifier classes are utilities, so Tailwind's variants reach
+   them: a button that turns soft on hover, or large from a breakpoint. As plain
+   classes each of these compiled to nothing, with no error. */
+test("./tw gives the axis and modifier classes Tailwind's variants", async () => {
+  const twEntry = pathToFileURL(path.resolve(packageRoot, "tw/index.css")).href;
+  const output = await compileIsolatedConsumer(
+    `@import "${twEntry}";\n`,
+    '<button class="btn hover:soft md:lg focus:primary dark:edged md:raised">Save</button>\n',
+  );
+
+  expect(output).toMatch(/\.hover\\:soft:hover\{[^}]*--ui-fill:12%/);
+  expect(output).toMatch(/\.md\\:lg\{[^}]*--_size-lg:/);
+  expect(output).toMatch(/\.focus\\:primary:focus\{[^}]*--intent-color:var\(--color-primary\)/);
+  expect(output).toMatch(/\.dark\\:edged[^{]*\{[^}]*--ui-border:100%/);
+  expect(output).toMatch(/\.md\\:raised\{[^}]*--ui-elevation:1/);
 });
 
 /* Every `--color-*` a stylesheet reads that it never declares. Tailwind marks

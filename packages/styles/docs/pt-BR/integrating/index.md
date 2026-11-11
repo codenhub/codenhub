@@ -3,7 +3,7 @@ title: Visão geral
 description: Como a folha de estilos é carregada no build de um framework e qual guia seguir.
 group: Integração
 order: 2
-source: f2ccb27bbdbe15278726278864c01a586505eb16
+source: df31bf142a4a12567b699232f77ea21d5ee52ebe
 ---
 
 # Integração
@@ -21,16 +21,44 @@ Importar de um único lugar importa por dois motivos. Alguns frameworks só _per
 
 ## Qual guia seguir
 
-| Stack                                                                    | Guia                                  |
-| ------------------------------------------------------------------------ | ------------------------------------- |
-| Um projeto com Tailwind CSS v4 em qualquer bundler                       | [Tailwind CSS v4](./tailwind.md)      |
-| Next.js / React                                                          | [Next.js](./nextjs.md)                |
-| Vue                                                                      | [Vue](./vue.md)                       |
-| Svelte / SvelteKit                                                       | [Svelte](./svelte.md)                 |
-| Astro                                                                    | [Astro](./astro.md)                   |
-| HTML puro, Rails, Django ou qualquer aplicação sem etapa de build de CSS | [Sem bundler](./without-a-bundler.md) |
+| Stack                                                                                         | Guia                                  |
+| --------------------------------------------------------------------------------------------- | ------------------------------------- |
+| Um projeto com Tailwind CSS v4 em qualquer bundler                                            | [Tailwind CSS v4](./tailwind.md)      |
+| Next.js / React                                                                               | [Next.js](./nextjs.md)                |
+| Vue                                                                                           | [Vue](./vue.md)                       |
+| Svelte / SvelteKit                                                                            | [Svelte](./svelte.md)                 |
+| Astro                                                                                         | [Astro](./astro.md)                   |
+| HTML puro, Rails, Laravel, Django ou qualquer aplicação sem etapa de build de CSS com Node.js | [Sem bundler](./without-a-bundler.md) |
 
-Um projeto sem framework — um build simples com Vite, webpack ou Parcel — não precisa de nada além de [Configuração → Importe a folha de estilos](../setup.md#importe-a-folha-de-estilos): importe a folha de estilos compilada a partir do arquivo CSS global que o projeto já tem.
+Um projeto sem framework — um build simples com Vite, webpack ou Parcel — importa a folha de estilos compilada a partir do arquivo CSS global que o projeto já tem, como mostra [Configuração → Importe a folha de estilos](../setup.md#importe-a-folha-de-estilos). Vite e webpack resolvem o nome do pacote como ele é; Parcel e PostCSS com `postcss-import` precisam da mudança abaixo.
+
+### Bundlers que precisam de um empurrão
+
+As duas ferramentas encontram a folha de estilos assim que alguém diz como; nenhuma precisa de outro entrypoint.
+
+**Parcel.** Ative o suporte ao mapa `exports` de um pacote no seu `package.json`:
+
+```json
+{
+  "@parcel/resolver-default": {
+    "packageExports": true
+  }
+}
+```
+
+Depois importe o pacote com o prefixo `npm:` do Parcel, que diz a ele que o nome é um pacote, e não um arquivo ao lado da folha de estilos:
+
+```css
+@import "npm:@codenhub/styles";
+```
+
+**PostCSS com `postcss-import`.** O plugin não lê o mapa `exports` de um pacote, então o nome do pacote sozinho não é resolvido. Importe em vez disso o arquivo compilado pelo caminho em disco, relativo à sua própria folha de estilos, o mesmo arquivo que um `<link>` apontaria:
+
+```css
+@import "../node_modules/@codenhub/styles/dist/index.css";
+```
+
+Os outros entrypoints compilados funcionam do mesmo jeito, como `@codenhub/styles/dist/aesthetics/neobrutalism.css`.
 
 ## Conferindo se funcionou
 

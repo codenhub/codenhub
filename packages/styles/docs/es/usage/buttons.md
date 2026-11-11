@@ -2,7 +2,7 @@
 title: Botones
 description: Acciones destructivas y secundarias, botones de icono, tamaños, enlaces con aspecto de botón, estados deshabilitados e iconos de carga.
 order: 1
-source: c160b409a0de01a02e1ea72ba0f2110d11353d6b
+source: 54f7c8a1eee5a0f696dc60b9f60f42026d49c5d5
 ---
 
 # Botones
@@ -41,6 +41,10 @@ Un botón acepta una intención, una clase de relleno y una clase de borde, toda
 Un botón **neutro** nunca se rellena del todo. Su color es el propio color de texto de la página, así que un relleno completo sería un bloque negro o blanco, lo más llamativo de la página para la intención que no significa nada en particular. Un botón neutro `.solid` se queda en un relleno del 20%, un gris discreto un paso más oscuro que `.soft`. Todas las intenciones con nombre se rellenan al 100%.
 
 Con hover, el relleno de un botón se intensifica en `--hover-step` (14%), así que un botón `.ghost` toma un tinte y uno `.solid` cambia al color de hover de su intención. Al pulsarlo se encoge un poco (`scale(0.97)`); una [estética](./aesthetics.md) puede reemplazarlo por su propia pulsación, y con la preferencia de movimiento reducido del usuario sigue ocurriendo, al instante.
+
+Un botón neutro `.soft` o `.ghost` dentro de una superficie con relleno, como un botón Cancelar en una `.card.solid.primary` o en una `.alert.solid.destructive`, imprime su etiqueta y su línea en el color de texto de esa superficie, así que sigue siendo legible sobre el relleno. Un campo de texto hace lo mismo. Un botón con intención conserva su propio color, y también uno neutro `.solid`, que se apoya en un relleno propio.
+
+Cuando un botón con relleno tiene el foco del teclado, una línea de 2px del color de la página recorre el interior del anillo de foco, así que el anillo sigue visible sobre un botón relleno del mismo color, como `.solid.primary`.
 
 ## Tamaños y formas
 

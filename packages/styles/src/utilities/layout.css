@@ -1,77 +1,110 @@
 /* The gap is a private each layout declares from `--layout-gap`, and the
-   density modifiers write the private. A container's `--layout-gap` still
-   reaches every layout inside it, because each one reads the token afresh; a
-   `.tight` or `.loose` stays on its own element, the way `.p-xs` stays on a
-   card, because the layout inside declares its own private over the one it
-   would inherit. */
+   density modifiers step it: `tight` and `loose` raise a flag
+   (`modifiers.css`) and the layout reads it, so `@apply stack tight` carries
+   the step. A container's `--layout-gap` still reaches every layout inside
+   it, because each one reads the token afresh; a `.tight` or `.loose` stays
+   on its own element, the way `.p-xs` stays on a card, because the layout
+   inside restates the flags at zero specificity in `families`, where one on
+   the element itself still wins. */
 @utility view {
+  @layer families {
+    :where(&:not(.tight)) {
+      --_m-tight: initial;
+    }
+
+    :where(&:not(.loose)) {
+      --_m-loose: initial;
+    }
+
+    :where(&:not(.vertical)) {
+      --_m-vertical: initial;
+    }
+
+    :where(&:not(.horizontal)) {
+      --_m-horizontal: initial;
+    }
+  }
+
   @apply flex gap-(--_gap);
 
-  --_gap: var(--layout-gap);
+  --_tight-gap: var(--_m-tight) 0.5rem;
+  --_loose-gap: var(--_m-loose) 1.5rem;
+  --_gap: var(--_loose-gap, var(--_tight-gap, var(--layout-gap)));
 
-  &.vertical {
-    @apply flex-col;
-  }
+  /* A row unless asked: `vertical` stacks, and `horizontal` is a row that
+     wraps and centres its items. */
+  --_vertical-direction: var(--_m-vertical) column;
+  --_horizontal-direction: var(--_m-horizontal) row;
+  --_horizontal-wrap: var(--_m-horizontal) wrap;
+  --_horizontal-align: var(--_m-horizontal) center;
 
-  &.horizontal {
-    @apply flex-row flex-wrap items-center;
-  }
-
-  &.tight {
-    --_gap: 0.5rem;
-  }
-
-  &.loose {
-    --_gap: 1.5rem;
-  }
+  flex-direction: var(--_horizontal-direction, var(--_vertical-direction, row));
+  flex-wrap: var(--_horizontal-wrap, nowrap);
+  align-items: var(--_horizontal-align, normal);
 }
 
 @utility stack {
+  @layer families {
+    :where(&:not(.tight)) {
+      --_m-tight: initial;
+    }
+
+    :where(&:not(.loose)) {
+      --_m-loose: initial;
+    }
+  }
+
   @apply flex flex-col gap-(--_gap);
 
-  --_gap: var(--layout-gap);
-
-  &.tight {
-    --_gap: 0.5rem;
-  }
-
-  &.loose {
-    --_gap: 1.5rem;
-  }
+  --_tight-gap: var(--_m-tight) 0.5rem;
+  --_loose-gap: var(--_m-loose) 1.5rem;
+  --_gap: var(--_loose-gap, var(--_tight-gap, var(--layout-gap)));
 }
 
 @utility cluster {
+  @layer families {
+    :where(&:not(.tight)) {
+      --_m-tight: initial;
+    }
+
+    :where(&:not(.loose)) {
+      --_m-loose: initial;
+    }
+
+    :where(&:not(.between)) {
+      --_m-between: initial;
+    }
+  }
+
   @apply flex flex-wrap items-center gap-(--_gap);
 
-  --_gap: var(--layout-gap);
+  --_tight-gap: var(--_m-tight) 0.5rem;
+  --_loose-gap: var(--_m-loose) 1.5rem;
+  --_gap: var(--_loose-gap, var(--_tight-gap, var(--layout-gap)));
 
-  &.between {
-    @apply justify-between;
-  }
+  --_between-justify: var(--_m-between) space-between;
 
-  &.tight {
-    --_gap: 0.5rem;
-  }
-
-  &.loose {
-    --_gap: 1.5rem;
-  }
+  justify-content: var(--_between-justify, normal);
 }
 
 @utility auto-grid {
+  @layer families {
+    :where(&:not(.tight)) {
+      --_m-tight: initial;
+    }
+
+    :where(&:not(.loose)) {
+      --_m-loose: initial;
+    }
+  }
+
   @apply grid gap-(--_gap);
 
-  --_gap: var(--layout-gap);
+  --_tight-gap: var(--_m-tight) 0.5rem;
+  --_loose-gap: var(--_m-loose) 1.5rem;
+  --_gap: var(--_loose-gap, var(--_tight-gap, var(--layout-gap)));
 
   grid-template-columns: repeat(auto-fit, minmax(min(var(--layout-grid-min), 100%), 1fr));
-
-  &.tight {
-    --_gap: 0.5rem;
-  }
-
-  &.loose {
-    --_gap: 1.5rem;
-  }
 }
 
 @utility section {
@@ -79,15 +112,22 @@
 }
 
 @utility section-content {
-  @apply mx-auto w-full max-w-(--container-max);
+  @layer families {
+    :where(&:not(.narrow)) {
+      --_m-narrow: initial;
+    }
 
-  &.narrow {
-    max-width: var(--container-narrow);
+    :where(&:not(.wide)) {
+      --_m-wide: initial;
+    }
   }
 
-  &.wide {
-    max-width: var(--container-wide);
-  }
+  @apply mx-auto w-full;
+
+  --_narrow-max: var(--_m-narrow) var(--container-narrow);
+  --_wide-max: var(--_m-wide) var(--container-wide);
+
+  max-width: var(--_wide-max, var(--_narrow-max, var(--container-max)));
 }
 
 /* An indicator: intent only, and no presentation token at all. A rule is a
@@ -95,21 +135,45 @@
    one -- a container's `.ghost.edgeless` must not make every `<hr>` inside it
    invisible. The width is the aesthetic's line width, unscaled. */
 @utility divider {
+  /* The indicator reset, carried so `@apply divider` gets it, as `btn` carries
+     its own: the neutral slots, with the two an indicator takes from the
+     colour it sits in. Without it an applied one read an undefined
+     `--intent-border`. */
+  @layer families {
+    :where(&:not(.divider, .primary, .secondary, .success, .warning, .destructive, .info)) {
+      --intent-color: currentColor;
+      --intent-contrast: var(--color-text-contrast);
+      --intent-hover: var(--color-text-hover);
+      --intent-strong: var(--color-text-strong);
+      --intent-subtle: var(--color-surface);
+      --intent-border: currentColor;
+      --intent-fill-max: 20%;
+    }
+  }
+
+  @layer families {
+    :where(&:not(.vertical)) {
+      --_m-vertical: initial;
+    }
+  }
+
   --divider-color: var(--intent-color);
   --divider-width: var(--ui-border-width, var(--border-width));
 
-  @apply m-0 w-full border-0 border-t;
+  @apply m-0 border-0;
 
+  /* Across unless `vertical`, which turns the line to the inline-start edge
+     and stretches it down its row. */
+  --_vertical-width: var(--_m-vertical) 0px;
+  --_vertical-self: var(--_m-vertical) stretch;
+  --_vertical-line: var(--_m-vertical) var(--divider-width);
+
+  width: var(--_vertical-width, 100%);
+  align-self: var(--_vertical-self, auto);
   border-color: var(--divider-color);
-  border-top-width: var(--divider-width);
-  border-top-style: var(--ui-rule-style, var(--ui-line-style, solid));
-
-  &.vertical {
-    @apply h-auto w-0 self-stretch border-s border-t-0;
-
-    border-inline-start-width: var(--divider-width);
-    border-inline-start-style: var(--ui-rule-style, var(--ui-line-style, solid));
-  }
+  border-style: var(--ui-rule-style, var(--ui-line-style, solid));
+  border-top-width: var(--_vertical-width, var(--divider-width));
+  border-inline-start-width: var(--_vertical-line, 0px);
 }
 
 @utility selection-contrast {

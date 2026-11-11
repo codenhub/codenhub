@@ -3,7 +3,7 @@ title: Visión general
 description: Cómo se carga la hoja de estilos en el build de un framework, y qué guía seguir.
 group: Integración
 order: 2
-source: f2ccb27bbdbe15278726278864c01a586505eb16
+source: df31bf142a4a12567b699232f77ea21d5ee52ebe
 ---
 
 # Integración
@@ -21,16 +21,44 @@ Importar desde un solo lugar importa por dos motivos. Algunos frameworks solo _p
 
 ## Qué guía seguir
 
-| Stack                                                                      | Guía                                  |
-| -------------------------------------------------------------------------- | ------------------------------------- |
-| Un proyecto con Tailwind CSS v4 en cualquier bundler                       | [Tailwind CSS v4](./tailwind.md)      |
-| Next.js / React                                                            | [Next.js](./nextjs.md)                |
-| Vue                                                                        | [Vue](./vue.md)                       |
-| Svelte / SvelteKit                                                         | [Svelte](./svelte.md)                 |
-| Astro                                                                      | [Astro](./astro.md)                   |
-| HTML simple, Rails, Django o cualquier aplicación sin paso de build de CSS | [Sin bundler](./without-a-bundler.md) |
+| Stack                                                                                           | Guía                                  |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------- |
+| Un proyecto con Tailwind CSS v4 en cualquier bundler                                            | [Tailwind CSS v4](./tailwind.md)      |
+| Next.js / React                                                                                 | [Next.js](./nextjs.md)                |
+| Vue                                                                                             | [Vue](./vue.md)                       |
+| Svelte / SvelteKit                                                                              | [Svelte](./svelte.md)                 |
+| Astro                                                                                           | [Astro](./astro.md)                   |
+| HTML simple, Rails, Laravel, Django o cualquier aplicación sin paso de build de CSS con Node.js | [Sin bundler](./without-a-bundler.md) |
 
-Un proyecto sin framework, un build simple con Vite, webpack o Parcel, no necesita nada más allá de [Configuración inicial → Importar la hoja de estilos](../setup.md#importar-la-hoja-de-estilos): importa la hoja de estilos compilada desde la entrada CSS global que el proyecto ya tiene.
+Un proyecto sin framework, un build simple con Vite, webpack o Parcel, importa la hoja de estilos compilada desde la entrada CSS global que el proyecto ya tiene, como muestra [Configuración inicial → Importar la hoja de estilos](../setup.md#importar-la-hoja-de-estilos). Vite y webpack resuelven el nombre del paquete tal cual; Parcel y PostCSS con `postcss-import` necesitan el cambio de abajo.
+
+### Bundlers que necesitan un empujón
+
+Ambas herramientas encuentran la hoja de estilos en cuanto se les dice cómo; ninguna necesita otro punto de entrada.
+
+**Parcel.** Activa su soporte del mapa `exports` de un paquete en tu `package.json`:
+
+```json
+{
+  "@parcel/resolver-default": {
+    "packageExports": true
+  }
+}
+```
+
+Luego importa el paquete con el prefijo `npm:` de Parcel, que le indica que el nombre es un paquete y no un archivo junto a la hoja de estilos:
+
+```css
+@import "npm:@codenhub/styles";
+```
+
+**PostCSS con `postcss-import`.** El plugin no lee el mapa `exports` de un paquete, así que el nombre del paquete por sí solo no se resuelve. Importa en su lugar el archivo compilado por su ruta en disco, relativa a tu propia hoja de estilos, el mismo archivo que nombraría un `<link>`:
+
+```css
+@import "../node_modules/@codenhub/styles/dist/index.css";
+```
+
+Los demás puntos de entrada compilados funcionan igual, como `@codenhub/styles/dist/aesthetics/neobrutalism.css`.
 
 ## Comprobar que funciona
 

@@ -1,0 +1,34 @@
+/* The size modifier: `sm` and `lg`. A utility in `utilities.families`, as the
+   classes in `presentation.css` are, so `@apply btn sm` and `md:lg` work.
+
+   A size cannot say what it changes, because each component has its own
+   steps, so it raises a flag and the component reads it. The flag is a space
+   toggle: unset it is guaranteed-invalid, so `--_sm-h: var(--_size-sm) 2rem`
+   is invalid too and the `var(--_sm-h, ...)` that reads it takes its
+   fallback; set, it is empty, and the same line computes to `2rem`.
+
+   Registered non-inheriting, as `--ui-elevation` is and for its reason: a
+   size is a choice about one element, and inherited, a `.sm` form would
+   shrink every control inside it. No `initial-value`, so an element that
+   does not set it computes guaranteed-invalid. See docs/internal/model.md#size. */
+@property --_size-sm {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --_size-lg {
+  syntax: "*";
+  inherits: false;
+}
+
+@utility sm {
+  @layer families {
+    --_size-sm: ;
+  }
+}
+
+@utility lg {
+  @layer families {
+    --_size-lg: ;
+  }
+}

@@ -440,6 +440,27 @@ function rootDeclarations(block: string): string {
    to paint at all. */
 const composition = new Set(["box", "box-hover", "box-active", "surface", "text-control"]);
 
+/* The class families that are utilities, so `@apply` and Tailwind's variants
+   reach them: every intent, both halves of presentation, elevation, size, the
+   corner patterns, and every modifier a component reads. `disabled` is not
+   one: it is a state beside `:disabled` and `[aria-disabled]`, matched as a
+   selector, and `sketch-rounded` belongs to its aesthetic's stylesheet. */
+const families = new Set([
+  ...Object.keys(registry.intents),
+  ...Object.keys(registry.presentation.fill),
+  ...Object.keys(registry.presentation.edge),
+  ...Object.keys(registry.modifiers.elevation as Record<string, unknown>),
+  ...(registry.modifiers.size as string[]),
+  ...(registry.modifiers.padding as string[]),
+  ...(registry.modifiers.layout as string[]),
+  ...(registry.modifiers.rule as string[]),
+  ...(registry.modifiers.state as string[]).filter((name) => name !== "disabled"),
+  "icon",
+  "pill",
+  "cut-diagonal",
+  "cut-diagonal-reverse",
+]);
+
 /* The registry is the list of what the package supports, so a utility it does
    not name is either drift or an accidental part of the public surface. `.table`
    shipped for months this way. */
@@ -448,6 +469,7 @@ test("every shipped utility is in the registry", async () => {
     ...registry.components.map((component) => component.class),
     ...(registry.helpers ?? []),
     ...composition,
+    ...families,
   ]);
   expect([...(await shippedUtilities()).keys()].filter((name) => !known.has(name))).toEqual([]);
 });
@@ -1175,7 +1197,9 @@ test("every intent maps onto the color family and fill cap the registry names", 
   const problems: string[] = [];
 
   for (const [name, { family, fillMax }] of Object.entries(registry.intents)) {
-    const block = intent.match(new RegExp(String.raw`(^|\n)\.${name}(?![A-Za-z0-9_-])[^{]*` + `{([^}]*)}`));
+    const block = intent.match(
+      new RegExp(String.raw`(^|\n)@utility ${name}(?![A-Za-z0-9_-])\s*\{\s*@layer families\s*` + `{([^}]*)}`),
+    );
 
     if (block === null) {
       problems.push(`.${name} has no block in intent.css`);
@@ -1225,7 +1249,7 @@ test("both intent resets and the root floor declare every slot the neutral inten
   const intent = await read("src/intent.css");
   const native = await read("src/native.css");
   const problems: string[] = [];
-  const neutralMatch = intent.match(/(?:^|\n)\.neutral(?![A-Za-z0-9_-])[^{}]*\{([^{}]*)}/);
+  const neutralMatch = intent.match(/(?:^|\n)@utility neutral\s*\{\s*@layer families\s*\{([^{}]*)}/);
 
   if (neutralMatch === null) {
     problems.push("intent.css: could not extract .neutral intent block");
@@ -1235,7 +1259,7 @@ test("both intent resets and the root floor declare every slot the neutral inten
 
   expect(slots.length).toBeGreaterThan(0);
 
-  const rootMatch = intent.match(/(?:^|\n):root\s*\{([^{}]*--intent-color[^{}]*)}/);
+  const rootMatch = intent.match(/(?:^|\n)\s*:root\s*\{([^{}]*--intent-color[^{}]*)}/);
   const declarations: Record<string, string | null> = {
     "the :root floor in intent.css": rootMatch?.[1] ?? null,
     "the intent reset in intent.css":

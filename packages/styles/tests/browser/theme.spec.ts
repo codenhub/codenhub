@@ -269,3 +269,42 @@ test.describe("theme", () => {
     expect(ring.outline, "a container's own ring still inherits").toBe("rgb(0, 0, 255)");
   });
 });
+
+/* Paper is white and a browser leaves backgrounds off it unless told
+   otherwise. A dark page printed its near-white text on no ground, and a
+   solid button its contrast label on no plate: both unreadable. */
+test("prints a dark page in the light theme, and a filled box with its plate", async ({ page }) => {
+  const read = async (theme: string) => {
+    await page.setContent(
+      `<!doctype html><html data-theme="${theme}"><body><p id="text">Text</p>` +
+        '<section class="dark"><p id="region">Region</p></section>' +
+        '<button class="btn solid primary" id="button">Save</button></body></html>',
+    );
+    await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+    await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+
+    return page.evaluate(() => {
+      const style = (id: string) => getComputedStyle(document.getElementById(id)!);
+
+      return {
+        adjust:
+          style("button").getPropertyValue("print-color-adjust") ||
+          style("button").getPropertyValue("-webkit-print-color-adjust"),
+        plate: style("button").backgroundColor,
+        region: style("region").color,
+        text: style("text").color,
+      };
+    });
+  };
+
+  await page.emulateMedia({ media: "print" });
+
+  const light = await read("light");
+  const dark = await read("dark");
+
+  expect(dark.text).toBe(light.text);
+  expect(dark.region).toBe(light.text);
+  expect(dark.adjust).toBe("exact");
+  expect(dark.plate, "the solid button keeps a plate").not.toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/);
+  expect(dark.plate, "the plate is the light theme's").toBe(light.plate);
+});

@@ -2,7 +2,7 @@
 title: Conteúdo e layout
 description: Consulta de todos os helpers de layout com os seus espaçamentos, a escala tipográfica com os seus tamanhos, cards e painéis com o seu padding, tabelas, citações, código e teclas.
 order: 10
-source: 4e28376992e3ddfdd7266f6bf74766ea9f0f82e1
+source: 19c4b12f34054533e56cbc1edbefff908c48a1e7
 ---
 
 # Conteúdo e layout
@@ -104,6 +104,8 @@ Use uma das metades num card que responde a um só gesto. Um card que contém o 
 
 Essas classes só estilizam. Coloque-as num link ou botão de verdade e dê a ele um nome acessível; um `<div class="card interactive">` não pode receber foco nem ser usado pelo teclado.
 
+Um card `.interactive` ou `.pressable` desabilitado mostra o cursor de não permitido em vez do ponteiro, seja um `<button>` com `disabled`, seja um elemento com `.disabled`, `aria-disabled="true"` ou `data-disabled`.
+
 ## Tabelas
 
 A tela de configurações lista as chaves de API numa tabela:
@@ -147,6 +149,8 @@ A tela de configurações lista as chaves de API numa tabela:
 ### Intenção das linhas
 
 As linhas de uma tabela recebem a intenção da tabela, então `.data-table.success` deixa o cabeçalho e as linhas divisórias verdes. Uma linha com a sua própria classe de intenção usa essa, como faz o `<tr class="destructive">` da chave revogada. `<tr class="neutral">` volta uma linha para neutro dentro de uma tabela colorida. Numa tabela `.solid`, uma linha com a sua própria intenção mantém a cor de texto da tabela, para continuar legível sobre o preenchimento da tabela, e mostra a sua intenção pela linha divisória e pelo hover. Este é o único lugar em que uma intenção é herdada, porque as linhas são partes da tabela, e não componentes separados.
+
+Só as seis intenções embutidas e `.neutral` mudam a cor de uma linha do corpo. Uma linha com uma intenção que você mesmo definiu, como `<tr class="beta">`, fica igual ao resto da tabela: o texto, a linha divisória e o hover vêm da intenção da tabela. Para marcar essa linha, escreva nela uma classe de intenção embutida e troque, na própria linha, a família de cores dessa intenção, como descreve [Temas → Sua própria intenção](./theming.md#sua-própria-intenção), ou pinte a linha com os seus próprios utilitários.
 
 ### Linhas divisórias de tabela
 
@@ -212,4 +216,4 @@ Um `.kbd`, `.code` ou `.pre` fica sobre o tom suave da sua intenção, `--color-
 
 ## A seguir
 
-[Acessibilidade](../accessibility.md) lista o que o CSS faz pelos seus usuários e o que a sua aplicação ainda deve a eles.
+A página de [Predefinições](./presets.md) mostra como definir um visual uma única vez, em vez de em cada elemento. [Acessibilidade](../accessibility.md) lista o que o CSS faz pelos seus usuários e o que a sua aplicação ainda deve a eles.

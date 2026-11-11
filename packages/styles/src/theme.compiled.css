@@ -1,0 +1,11 @@
+/* What `dist/theme.css` is built from. The class families in `theme.css` are
+   `@utility` rules, which Tailwind writes only where it finds a
+   `@tailwind utilities` and a candidate naming them; a consumer of `/tw/theme`
+   brings both, and the compiled file has neither. So this entry adds
+   Tailwind's utilities with no scan at all and names the families, and nothing
+   else is emitted. `theme.css` itself cannot carry the import: it is the
+   first thing `components/index.css` imports, and `source(none)` there would
+   turn off the scan that entry depends on. */
+@import "./theme.css";
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@source inline("neutral primary secondary success warning destructive info solid soft ghost edged edgeless flat raised floating sm lg cut-diagonal cut-diagonal-reverse");

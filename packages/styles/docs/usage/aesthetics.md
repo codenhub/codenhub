@@ -70,7 +70,7 @@ The shadow is cast in the component's own intent, so a success button throws a g
 
 - Content chips take the aesthetic too. A `.kbd` key cap's border changes from the quiet border gray to the ink, and from 1px to 2px, like every other border. A `.code` or `.pre` has no border by default, so it gets none; add `.edged` to give one an ink border.
 - Only `.btn` and an opted-in `.card` respond to hover and press. A card opts in with `.interactive`, or with one of its halves — `.hoverable` for the hover response alone, `.pressable` for the press alone; a plain card, an alert, or a panel is a container and stays put.
-- An alert sits on the offset shadow under this aesthetic, and under no other. An alert is otherwise flat, but here the shadow is a second outline rather than depth, and an alert without it looks unfinished next to everything else. This includes an alert inside a nested `.neobrutalism` region. `.flat` still removes it and `.floating` still doubles it.
+- An alert sits on the offset shadow under this aesthetic, and under no other. An alert is otherwise flat, but here the shadow is a second outline rather than depth, and an alert without it looks unfinished next to everything else. This includes an alert inside a nested `.neobrutalism` region, and an alert that carries the class itself, `.alert.neobrutalism`. `.flat` still removes it and `.floating` still doubles it.
 - The tooltip trigger takes the zero corner like everything else and draws square; `.radio` keeps its circle.
 - Under `prefers-reduced-motion: reduce` the press still happens, but at once: the element lands in its shadow without travelling there. The press is the feedback that a click registered, so only its motion goes.
 - It has no font of its own and sets the theme's, `--font-default`, on the region, so a neobrutalist region nested inside pixel, cyber, sketch, or chunky tile does not take their face. A font you set with `font-family` alone, on `body` or a container, does not reach inside the region; set it in `--font-default` too, as [Theming → Fonts](./theming.md#fonts) describes.
@@ -154,8 +154,9 @@ A button is a liquid pane when it carries `.glass-liquid` itself, inside a glass
 **Exceptions:**
 
 - Corners are one unit or nothing. Small chips are square instead of stepped: badges, key caps, inline code, checkboxes, and switches. One unit off each corner of a 24px badge would look like a bite, not a corner.
+- Surfaces are square too: a `.card`, `.panel`, or `.alert` keeps the inset ring but takes no cut and clips nothing. A clip would cut everything inside it, so a tooltip in a card, a shadow, or a focus ring there would be trimmed.
 - Tables, progress bars, and skeletons are square too. A table takes no cut because in Chromium and WebKit its box includes its caption, and the cut would land on the caption instead of the rows. Progress bars and skeletons take only the square corner.
-- A `.pre` code block is stepped like a card. It has no border by default, so the cut shows with no outline around it.
+- A `.pre` code block is stepped like a button. It has no border by default, so the cut shows with no outline around it.
 - The outline is an inset ring, because a clip removes a real border — and the focus ring, for the same reason, is a second inset layer rather than an outline. Both are the element's own edge rather than a shadow, so the border answers `.edged` and `.edgeless` the way a border does: a `.edgeless` badge and a `.solid` button draw none, a `.edged` card draws one, and a field keeps one whatever a container asks for.
 - The inset focus ring carries a 2px line of the page color inside it. The ring is the primary color, so on a `.solid.primary` button it would be drawn over its own color; the line is what shows there.
 - In forced colors the ring and the cut both go, because the system removes every box shadow: components draw a real 2px border and square corners, and `.pixel-solo` an inward outline.
@@ -268,6 +269,7 @@ The dashed button is `ghost edged` because a filled button has no separate line 
 - A `.btn.pill` takes a rounded pill bounded to its own height, so a wide one does not become an oval. Badges, progress bars, and switches take their chip outline. Radios and the tooltip icon stay circles, slightly uneven, so a radio is never mistaken for a checkbox. An explicit `--ui-radius-pill` on an element still wins.
 - `--font-sketch` is yours to supply. The package ships no handwriting font and falls back to the platform `cursive` family.
 - Buttons press with the plain `scale(0.97)`; under reduced motion the press still happens, at once.
+- With [`/native`](../setup.md#classless-html), a plain `<hr>`, `<table>`, and checkbox take the dashed accents of `.divider`, `.data-table`, and `.checkbox`.
 - Forced-colors mode draws the dashed accents solid, like every other material line.
 
 ## Solo classes

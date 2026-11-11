@@ -1,0 +1,1226 @@
+/* What all six text controls share: the box, the chrome, and two bounds that
+   exist because presentation cascades -- a cascaded-fill cap so a container's
+   `.solid` cannot fill a field with its own text colour, and an edge floor so a
+   container's `.edgeless` cannot leave a field or an unchecked toggle with no
+   boundary (WCAG 1.4.11). `switch` opts out of the floor on two of its own
+   fills, the only component that can, because its knob still carries the state;
+   `.checkbox` and `.radio` have nothing outside their line and cannot.
+
+   No derived hover: on something you type into, only the line responds to a
+   pointer. See model.md#the-bounds-that-survive-and-the-test-for-keeping-one. */
+@utility text-control {
+  @apply box;
+
+  /* The resting geometry, stated whole for the same reason every component
+     states it: `box` reads these three with no fallback, so a slot left out is
+     an undefined `var()` inside a `color-mix()` and the declaration reading it
+     collapses to its initial value rather than reporting anything. `text-control`
+     is typeable on its own, so it owes them exactly as a component does. */
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+
+  /* A field's fill is at most a wash, never a plate, so it never holds an ink
+     of its own, even under a `.solid` it or a container names: it prints in
+     the ink it was handed. */
+  --_held-ink: inherit;
+  --_held-on: inherit;
+  --_own-hold: 0%;
+
+  /* 6% is a quiet wash, and it is the cap rather than a presentation: `.soft`
+     names the tint it wants and takes it whole below, so what this governs is
+     `.solid` and the container that cascades one onto a field nobody classed. A
+     cap equal to `.soft`'s 12% would hand `.solid` and `.soft` the same tint
+     through `min()`.
+
+     Named rather than written into the `min()`, because the soft hover below is
+     derived from it and the two must not drift apart. Typed text is
+     `--intent-strong` over a wash of its own tone, which holds 4.5:1 for every
+     intent in both themes up to `.solid`'s 20% below.
+
+     The fill and the ink are `box`'s own, unrestated: its `--_capped` reads
+     this cap, so the plate and the ink ramp stay in step at every bound,
+     including the checked state below that lifts it.
+
+     The element's own fill class names its own cap: `.soft` its 12% whole,
+     `.solid` 20%, which clears `.soft` and matches the plate a `.solid`
+     badge draws. Read from `--_own-fill`, which the class writes and which
+     does not inherit, so the 6% still answers a container's class. Raised
+     here rather than written as a fill (P6), which is what keeps `.soft` <
+     `.solid`. See
+     model.md#the-bounds-that-survive-and-the-test-for-keeping-one. */
+  --_fill-cap: max(6%, min(var(--_own-fill), 20%));
+  /* The resting line is a fraction of the intent rather than all of it, and the
+     fraction is what makes the pointer visible. Drawn at full strength a control
+     already sits at its intent's darkest, and hover moves it to a neighbouring
+     tone -- `--color-primary` to `--color-primary-hover` is one step in the
+     palette, which reads as nothing. Only the neutral family looked right,
+     because its resting tone is a border token and its hover is the text one,
+     two places apart.
+
+     Resting at 60% gives every intent that distance: hover and focus both take
+     the tone whole, so the line arrives rather than shifts. A toggle sets this
+     back to 100% -- its line is a silhouette rather than a field's edge, and
+     there is nothing else marking an unchecked box. */
+  --_line-rest: 60%;
+  /* Someone who asks for more contrast gets the line whole: above 4:1
+     against the page in both themes, where the quiet line is under 3:1. Hover
+     and focus then change nothing in the tone, which is the trade the
+     preference asks for. See docs/accessibility.md. */
+  @media (prefers-contrast: more) {
+    --_line-rest: 100%;
+  }
+  /* Two seams rather than one composed result. `--_line-tone` is what colour
+     the line is, and the states below move it; `--_line` folds in the fill,
+     walking the line toward the intent colour by the fill amount, so a state
+     never has to restate that blend to keep it. It is a field's own form of P3
+     rather than `box`'s: a field keeps its line whatever it is filled with, so
+     the line walks toward the fill's colour instead of fading out into it.
+
+     A single `--_line` that states overwrote would lose the blend along with
+     the tone, because replacing a composed result drops every term it was
+     composed from -- the same failure as the edge below. */
+  --_line-tone: color-mix(in oklab, var(--intent-border) var(--_line-rest), transparent);
+  --_line: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_line-tone));
+  /* The edge floor, as an input to `box` rather than a rewrite of its result.
+     The line is drawn whatever a *container's* edge class says, because a
+     `.edgeless` toolbar would otherwise leave a field with no mark of where
+     typing goes and a toggle with no silhouette at all (WCAG 1.4.11). That is
+     our own cascade producing the broken result, so our own floor answers it.
+
+     An element's own `.edgeless` lowers the floor -- `--_own-edge`, which
+     the class writes and which does not inherit -- because that is a consumer
+     naming what they want rather than a cascade reaching something nobody
+     classed. `.checkbox` and `.radio` restate the floor absolute: they have
+     nothing outside their line, so removing it removes the control, and
+     `.edgeless` on them is published unsupported. `.input-group` keeps the
+     lowering because the group is the field boundary. */
+  --_edge-floor: var(--_own-edge);
+
+  @apply w-full appearance-none;
+
+  /* The surrounding font rather than the user agent's smaller field one, on
+     every entry: `/components` carries no reset to say so. Its tracking is
+     typed text's own, `normal`, rather than the page's: body copy's wider
+     tracking is set on `body`, and Preflight's `letter-spacing: inherit` on
+     `/tw` handed it, or a container's, to every field. */
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  letter-spacing: normal;
+
+  &::placeholder {
+    color: var(--color-text-secondary);
+  }
+
+  /* The last exclusion is `.input-group`'s: a group whose control is disabled
+     dims as a disabled field does (see `input-group`), so it does not answer
+     the pointer either. The list is the group's own, so a `<select>` with a
+     disabled `<option>` is not caught by it. */
+  &:hover:not(
+      :disabled,
+      .disabled,
+      [aria-disabled="true"],
+      [data-disabled],
+      :focus-visible,
+      :has(> :is(.ipt, .textarea, .select, .text-control, input, textarea, select):disabled)
+    ) {
+    --_line-tone: var(--intent-hover);
+  }
+
+  /* The line moves to the intent on top of the `reset.css` `:focus-visible`
+     outline -- a second signal, not a replacement. This must NOT suppress the
+     outline: `&:focus { outline-none }` nested here lands in the utilities layer
+     and beats `reset.css`'s `@layer base` ring, killing the keyboard ring too. */
+  &:focus-visible {
+    --_line-tone: var(--intent-color);
+  }
+
+  /* The forced-colours ring, carried so `@apply text-control` draws it: the
+     unlayered block at the end of this file names the package's own classes,
+     and `reset.css` names only typed native fields, so an applied control --
+     an `<input>` with no `type`, a `contenteditable` -- kept the 3px ring in a
+     system colour instead of the 2px `Highlight` one beside a `.text-control`.
+
+     `!important`, as the reset's ring is: the copy lands in whichever layer the
+     consumer applied it in, and an accessibility override has to win over any
+     layered rule there. So it cannot be suppressed and is kept off a control
+     inside an `.input-group`, which draws the field's ring and has the control
+     inside draw none; the offset and the cleared shadow are not important and
+     reach that control too, as the unlayered block's do. */
+  @media (forced-colors: active) {
+    &:focus-visible {
+      outline-offset: 2px;
+      box-shadow: none;
+    }
+
+    &:focus-visible:where(:not(.input-group > *)) {
+      outline: 2px solid Highlight !important;
+    }
+  }
+
+  /* Everything below until `:checked` is keyed on the class, and lives inside
+     the utility so `@apply text-control` carries it: `@apply` copies this body
+     with the consumer's own selector, and a rule naming `.text-control` from
+     outside it never reaches their element. See model.md#the-composition-api.
+
+     The neutral reset, for an element that carries none of the package's own
+     text-control classes -- a consumer's `.my-control { @apply text-control }`.
+     Those classes keep the reset in `intent.css`, in `components`; this one
+     lands in `utilities` and would beat a consumer's own intent class declared
+     in `components` there. It writes the values that reset and the control
+     line do, so a field inside a `.card.success` stays neutral and draws the
+     3:1 control line rather than `--color-border`.
+
+     Zero specificity, and never on an element with an intent class, so it
+     cannot overrule one: the intent class is excluded, and every rule that
+     writes an intent slot in `utilities` -- `aria-invalid` below, the
+     `:checked` arm, `.input-group`'s inherited `--intent-strong` -- carries at
+     least 0-1-0. `.neutral` is not excluded, so `.neutral` takes the control
+     line here as it does on `.ipt.neutral`. */
+  /* In `families`, beside the intent classes: applied with an intent --
+     `@apply text-control info` -- the reset and the intent land in one layer, where the
+     intent's 0-1-0 beats this. Left in the rule's own layer it would beat
+     every intent applied with it. */
+  @layer families {
+    :where(
+      &:not(
+        .text-control,
+        .ipt,
+        .textarea,
+        .select,
+        .input-group,
+        .checkbox,
+        .radio,
+        .switch,
+        .primary,
+        .secondary,
+        .success,
+        .warning,
+        .destructive,
+        .info
+      )
+    ) {
+      --intent-color: var(--color-text);
+      --intent-contrast: var(--color-text-contrast);
+      --intent-hover: var(--color-text-hover);
+      --intent-strong: var(--color-text-strong);
+      --intent-subtle: var(--color-surface);
+      --intent-border: var(--ui-control-ink, var(--ui-ink, var(--color-control-border)));
+      --intent-fill-max: 20%;
+    }
+  }
+
+  /* The component seams: rules that beat their own component's body on
+     specificity, 0-2-0 against 0-1-0, in `utilities`. They write only package
+     privates or a state's intent slots, so nothing a consumer writes competes
+     with them. */
+
+  /* An invalid control is destructive whatever else it was asked to be. In
+     `utilities` above every intent class in `utilities.families` and both
+     resets in `components`, and
+     0-2-0 so it also outranks the control's own body and the reset above; a
+     consumer's utility setting an intent slot on an invalid field loses to it
+     too, because state wins over every choice (model.md#precedence).
+     `--intent-hover` is redirected with the others so the line does not go grey
+     under the pointer, and `--intent-strong` so typed text is destructive too.
+     `--intent-contrast` and `--intent-subtle` go with them, so an invalid
+     toggle is a destructive one in every part: left neutral, a checked invalid
+     checkbox in the dark theme drew the near-black neutral mark on a red plate
+     (3.28:1). The bare elements and the `.input-group` bridge are below the
+     utility, since they name no class `@apply` could carry. */
+  &[aria-invalid="true"] {
+    --intent-color: var(--color-destructive);
+    --intent-contrast: var(--color-destructive-contrast);
+    --intent-hover: var(--color-destructive-hover);
+    --intent-border: var(--color-destructive);
+    --intent-strong: var(--color-destructive-strong);
+    --intent-subtle: var(--color-destructive-subtle);
+  }
+
+  /* S1, P6: `:checked` is a state, so it re-declares the presentation inputs --
+     a full fill and full contrast ink -- and lifts the cap that would bound
+     them, and `box` composes the rest. It does not write a result: pinning
+     `--_fill` and `--_fg` directly would make a checked toggle ignore its own
+     aesthetic and elevation along with presentation. It sits in `utilities` at
+     0-2-0, above the fill classes in `utilities.families`, so a checked toggle
+     renders
+     one plate whatever presentation it or a container asks for, and a
+     consumer's utility loses to it because state wins over every choice
+     (model.md#precedence). A toggle is a void `<input>`, so the inputs it
+     writes reach nothing but its own mark.
+
+     The checked fill is 100% whatever the presentation, so a checkbox, a radio,
+     and a switch each have one "on" identity; presentation separates the
+     *unchecked* plate instead (see `checkbox`/`radio`/`switch` below). It lives
+     here, not on the toggles, because a text input is never `:checked`.
+
+     The ink is declared alongside the fill: `--ui-fg-on-fill: 0%` is
+     `.ghost`/`.soft` declaring "my plate stays quiet", and a checked toggle
+     with an opaque plate and an ink that still expects a quiet one loses its
+     mark into the plate. `box` ramps the ink against the bounded fill before
+     `--ui-bg-alpha` thins it, so a checked toggle under `.glass` keeps full
+     contrast ink on its translucent plate. */
+  &:checked {
+    --ui-fill: 100%;
+    --ui-fg-on-fill: 100%;
+    --_fill-cap: 100%;
+  }
+}
+
+/* The browser's own field decorations -- the date picker button, a number's
+   spin buttons, a search field's clear and magnifier -- stay by default,
+   because each one is also behaviour: hiding the picker button hides the only
+   pointer route to the picker. `.unadorned` removes them for a consumer who
+   draws their own adornments in an `.input-group` and wires the behaviour back
+   (`showPicker()`, `stepUp()`/`stepDown()`, clearing the value). On the
+   control, or on the group to reach the control inside.
+
+   Firefox exposes no pseudo-element for its date picker button, so that one
+   stays there; its number spinners go with `appearance: textfield`. */
+@utility unadorned {
+  &::-webkit-search-decoration,
+  &::-webkit-search-cancel-button,
+  &::-webkit-search-results-button,
+  &::-webkit-search-results-decoration,
+  &::-webkit-calendar-picker-indicator,
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button,
+  &::-webkit-clear-button,
+  & > input::-webkit-search-decoration,
+  & > input::-webkit-search-cancel-button,
+  & > input::-webkit-search-results-button,
+  & > input::-webkit-search-results-decoration,
+  & > input::-webkit-calendar-picker-indicator,
+  & > input::-webkit-inner-spin-button,
+  & > input::-webkit-outer-spin-button,
+  & > input::-webkit-clear-button {
+    -webkit-appearance: none;
+    display: none;
+  }
+
+  &[type="number"],
+  & > input[type="number"] {
+    appearance: textfield;
+  }
+}
+
+/* The seams that name no class `@apply text-control` could carry: bare
+   elements, the toggles' shared lift, and one component's own combination.
+   Placed in `utilities` and winning there on specificity, like the seams inside
+   the utility. They write only package privates or a state's intent slots, so
+   nothing a consumer writes competes with them. See
+   docs/internal/model.md#cascade-layers. */
+@layer utilities {
+  /* A checked text-control fills with its own intent, so neutral has to drop its
+     20% cap here. No toggle needs this arm any more (see below), but a text
+     input is never `:checked` in practice either -- kept for whatever custom
+     `.text-control` composition does check itself; only an `<input>` can be,
+     so the `input` arm reaches an `@apply text-control` one too. A plain rule
+     at 0-2-0 in `utilities`, above every intent class in
+     `utilities.families`, so
+     `.neutral` on the element cannot put the cap back. */
+  :is(.text-control, input):checked {
+    --intent-fill-max: 100%;
+  }
+
+  /* The three toggles read their own component cap (`--_fill-cap`, below) as the
+     ceiling regardless of intent, checked or not -- not just at `:checked`, the
+     way the arm above still works for a hypothetical checked text-control. A
+     neutral fill stops at 20% everywhere else because it is the page's own ink,
+     and a full one reads as a slab on a badge or a card. That reasoning does not
+     hold for a toggle at rest: a neutral checkbox is the common case, most
+     controls carry no intent class at all, and it has to look like a present,
+     interactive box rather than a washed-out one just because nothing colored
+     it. Declared where the intents are, for the reason given above. */
+
+  /* `.switch`'s one exception to the `.edgeless` opt-out in `text-control`:
+     `.ghost` already asks for zero fill, so a `.switch.ghost.edgeless` track
+     would have neither a line nor a plate and disappear -- nothing would mark
+     its bounds but the floating knob. Every other fill on this component has
+     something to paint (`.soft`/`.solid`/default all rest above 0%), so only
+     this pairing needs the floor held up. `.switch.ghost.edgeless` therefore
+     renders identically to `.switch.ghost.edged`, and is published unsupported
+     as a distinct look. Three classes against the opt-out's two, so it wins
+     regardless of source order. */
+
+  /* `text-control`'s invalid state, for a bare field no class reaches and for
+     the `.input-group` whose control is invalid. The values are the
+     utility's; see the state there. */
+  :is(input, textarea, select)[aria-invalid="true"],
+  .input-group:has(> :is(.ipt, .textarea, .select, .text-control, input, textarea, select)[aria-invalid="true"]) {
+    --intent-color: var(--color-destructive);
+    --intent-contrast: var(--color-destructive-contrast);
+    --intent-hover: var(--color-destructive-hover);
+    --intent-border: var(--color-destructive);
+    --intent-strong: var(--color-destructive-strong);
+    --intent-subtle: var(--color-destructive-subtle);
+  }
+}
+
+/* A ghost, edged, unelevated text control. */
+@utility ipt {
+  @apply text-control h-(--control-height,2.5rem) px-3 py-2;
+
+  /* After the `@apply`, not before: it inlines `text-control`'s own resting
+     geometry at that point, so a component's defaults written above it lose to
+     the utility they are meant to specialise. */
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
+
+  /* Typed text is the intent printed on a page, `--intent-strong`: a field's
+     plate is at most a wash, and `--intent-color`, a fill colour, reads below
+     4.5:1 there for several intents. On the three text inputs, not
+     `text-control`, because a toggle's mark takes `box`'s composed `--_fg`
+     instead. See docs/internal/model.md#intent. */
+  --_fg-own: var(--intent-strong);
+
+  /* The button's size steps, so an `.ipt.sm` and a `.btn.sm` line up in a row:
+     the same 2rem and 3rem heights, the same text sizes, and the same
+     `--_scale-size` step `box` scales the corner by. Flags, read here, for the
+     reason `btn` gives. */
+  --_sm-h: var(--_size-sm) 2rem;
+  --_lg-h: var(--_size-lg) 3rem;
+  --_sm-px: var(--_size-sm) 0.625rem;
+  --_lg-px: var(--_size-lg) 1rem;
+  --_sm-py: var(--_size-sm) 0.25rem;
+  --_lg-py: var(--_size-lg) 0.625rem;
+  --_sm-text: var(--_size-sm) var(--text-sm);
+  --_lg-text: var(--_size-lg) 1.0625rem;
+  --_sm-leading: var(--_size-sm) var(--tw-leading, var(--text-sm--line-height));
+  --_sm-scale: var(--_size-sm) 0.75;
+  --_lg-scale: var(--_size-lg) 1.25;
+  --_scale-size: var(--_sm-scale, var(--_lg-scale));
+
+  height: var(--_sm-h, var(--_lg-h, var(--control-height, 2.5rem)));
+  min-height: var(--_sm-h, var(--_lg-h, var(--control-height)));
+  padding-inline: var(--_sm-px, var(--_lg-px, 0.75rem));
+  padding-block: var(--_sm-py, var(--_lg-py, 0.5rem));
+  font-size: var(--_sm-text, var(--_lg-text, inherit));
+  line-height: var(--_sm-leading, inherit);
+}
+
+@utility field {
+  --field-gap: 0.35rem;
+
+  @apply flex w-full flex-col gap-(--field-gap);
+}
+
+@utility label {
+  /* In `:where()`: a label's type is a default, and Tailwind emits this rule
+     after its own type utilities, so at 0-1-0 `.label.text-sm` stayed 16px. */
+  :where(&) {
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.025em;
+  }
+}
+
+/* A hint wraps, so it takes `text-sm`'s leading like the package's other 14px
+   text rather than a line height equal to its size, where wrapped lines touch. */
+@utility hint {
+  @apply text-sm;
+
+  color: var(--color-text-secondary);
+  font-weight: 400;
+  letter-spacing: 0.05em;
+
+  /* A named intent prints its readable tone, `--intent-strong`, the colour
+     typed text takes: a hint is text on the page, and `--intent-color` is a
+     fill colour that reads below 4.5:1 there (destructive measured 3.28:1 on
+     the dark page). No intent, or `.neutral`, keeps the secondary grey that
+     marks a hint as helper text. A hint is not a component, so the intent
+     reset does not reach it and an intent on a container does not recolour
+     it; only a class on the hint itself does. */
+  &:is(.primary, .secondary, .success, .warning, .destructive, .info) {
+    color: var(--intent-strong);
+  }
+}
+
+/* A ghost, edged, unelevated multi-line text control. */
+@utility textarea {
+  @apply text-control px-3 py-2;
+
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
+
+  /* Typed text is the intent printed on a page, `--intent-strong`: a field's
+     plate is at most a wash, and `--intent-color`, a fill colour, reads below
+     4.5:1 there for several intents. On the three text inputs, not
+     `text-control`, because a toggle's mark takes `box`'s composed `--_fg`
+     instead. See docs/internal/model.md#intent. */
+  --_fg-own: var(--intent-strong);
+
+  @apply min-h-28 resize-y;
+
+  /* The size steps `ipt` takes, for its text, padding, and corner. Its
+     height is its rows, so it keeps its own floor. */
+  --_sm-px: var(--_size-sm) 0.625rem;
+  --_lg-px: var(--_size-lg) 1rem;
+  --_sm-py: var(--_size-sm) 0.25rem;
+  --_lg-py: var(--_size-lg) 0.625rem;
+  --_sm-text: var(--_size-sm) var(--text-sm);
+  --_lg-text: var(--_size-lg) 1.0625rem;
+  --_sm-leading: var(--_size-sm) var(--tw-leading, var(--text-sm--line-height));
+  --_sm-scale: var(--_size-sm) 0.75;
+  --_lg-scale: var(--_size-lg) 1.25;
+  --_scale-size: var(--_sm-scale, var(--_lg-scale));
+
+  padding-inline: var(--_sm-px, var(--_lg-px, 0.75rem));
+  padding-block: var(--_sm-py, var(--_lg-py, 0.5rem));
+  font-size: var(--_sm-text, var(--_lg-text, inherit));
+  line-height: var(--_sm-leading, inherit);
+}
+
+/* The same control with a native list behind it. The chevron is drawn from two
+   gradients rather than masked, because `appearance: none` removes the platform
+   arrow and a background image is the only thing a replaced element can paint. */
+@utility select {
+  @apply text-control h-(--control-height,2.5rem) py-2 ps-3 pe-10;
+
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
+
+  /* Typed text is the intent printed on a page, `--intent-strong`: a field's
+     plate is at most a wash, and `--intent-color`, a fill colour, reads below
+     4.5:1 there for several intents. On the three text inputs, not
+     `text-control`, because a toggle's mark takes `box`'s composed `--_fg`
+     instead. See docs/internal/model.md#intent. */
+  --_fg-own: var(--intent-strong);
+
+  min-height: var(--control-height);
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 1rem) center,
+    calc(100% - 0.6875rem) center;
+  background-repeat: no-repeat;
+  background-size: 0.3125rem 0.3125rem;
+
+  /* The size steps `ipt` takes. The inline end keeps the chevron's room. */
+  --_sm-h: var(--_size-sm) 2rem;
+  --_lg-h: var(--_size-lg) 3rem;
+  --_sm-px: var(--_size-sm) 0.625rem;
+  --_lg-px: var(--_size-lg) 1rem;
+  --_sm-py: var(--_size-sm) 0.25rem;
+  --_lg-py: var(--_size-lg) 0.625rem;
+  --_sm-text: var(--_size-sm) var(--text-sm);
+  --_lg-text: var(--_size-lg) 1.0625rem;
+  --_sm-leading: var(--_size-sm) var(--tw-leading, var(--text-sm--line-height));
+  --_sm-scale: var(--_size-sm) 0.75;
+  --_lg-scale: var(--_size-lg) 1.25;
+  --_scale-size: var(--_sm-scale, var(--_lg-scale));
+
+  height: var(--_sm-h, var(--_lg-h, var(--control-height, 2.5rem)));
+  min-height: var(--_sm-h, var(--_lg-h, var(--control-height)));
+  padding-inline-start: var(--_sm-px, var(--_lg-px, 0.75rem));
+  padding-block: var(--_sm-py, var(--_lg-py, 0.5rem));
+  font-size: var(--_sm-text, var(--_lg-text, inherit));
+  line-height: var(--_sm-leading, inherit);
+
+  /* The chevron sits at the inline end, like the padding kept for it, so a
+     right-to-left select draws it at the left. `background-position` has no
+     logical form, so the mirror is named here. */
+  &:dir(rtl) {
+    background-position:
+      0.6875rem center,
+      1rem center;
+  }
+
+  /* The open list is painted by the browser, over the select's own background
+     when it has one. A ghost select has none, so Chromium falls back to its
+     default popup -- white on Windows -- while the options inherit the select's
+     text, near-white in the dark theme: white on white. The options take the
+     page's ground and text instead, which follow the theme. */
+  & option,
+  & optgroup {
+    background-color: var(--color-background);
+    color: var(--color-text);
+  }
+
+  /* Several rows showing is a list box, not a drop-down: no chevron, the height
+     of its rows, and the chevron's room given back. `--control-height` stays
+     the floor. */
+  &:is([multiple], [size]:not([size="1"])) {
+    height: auto;
+    padding-inline: 0.75rem;
+    background-image: none;
+  }
+}
+
+/* A wrapper that owns the field box so a control can carry adornments beside it
+   -- a leading or trailing icon today, an affix or an in-field button later. It
+   composes `text-control` for the border, radius, fill cap, aesthetic shape,
+   and the invalid and disabled handling a lone field carries; `:focus-within`
+   stands in for the `:focus-visible` a wrapper cannot have. The control inside
+   goes flush: its own box paint is switched off below, so the boundary is drawn
+   once, by the group.
+
+   No icons ship. Any element works in a slot -- an inline `<svg>`, an `<img>`,
+   or a class from an icon set such as `@codenhub/icons` -- placed before the
+   control for a leading adornment and after it for a trailing one. See
+   docs/usage/forms.md#icons.
+
+   The gap between the control and its adornment is a token, `--input-group-gap`,
+   rather than a bare Tailwind `gap-2`: an icon reads that 0.5rem as the normal
+   breathing room a distinct glyph needs, but a text affix meant to glue onto the
+   value -- a URL host, a currency symbol, a unit -- reads the same gap as a
+   stray space breaking the two apart. A consumer sets `--input-group-gap: 0` on
+   their own `.input-group` for a flush affix; the default stays the icon-tuned
+   0.5rem so every existing icon composition is unchanged. */
+@utility input-group {
+  @apply text-control flex w-full items-center;
+
+  /* After the `@apply`, for the reason `ipt` states it: `text-control` inlines
+     its own resting geometry there, so a default written above it loses to the
+     utility meant to specialise it. Ghost, edged, flat -- a field boundary and
+     nothing more. */
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
+
+  /* The size steps `ipt` takes, on the group rather than the control inside:
+     the group is the field, and the control and its adornments inherit the
+     text size. The control's height is the group's (below), so the group's
+     floor is its height. */
+  --_sm-h: var(--_size-sm) 2rem;
+  --_lg-h: var(--_size-lg) 3rem;
+  --_sm-px: var(--_size-sm) 0.625rem;
+  --_lg-px: var(--_size-lg) 1rem;
+  --_sm-text: var(--_size-sm) var(--text-sm);
+  --_lg-text: var(--_size-lg) 1.0625rem;
+  --_sm-leading: var(--_size-sm) var(--tw-leading, var(--text-sm--line-height));
+  --_sm-scale: var(--_size-sm) 0.75;
+  --_lg-scale: var(--_size-lg) 1.25;
+  --_scale-size: var(--_sm-scale, var(--_lg-scale));
+
+  --input-group-gap: 0.5rem;
+  --input-group-pad: var(--_sm-px, var(--_lg-px, 0.75rem));
+
+  min-height: var(--_sm-h, var(--_lg-h, var(--control-height)));
+  gap: var(--input-group-gap);
+  padding-inline: var(--input-group-pad);
+  font-size: var(--_sm-text, var(--_lg-text, inherit));
+  line-height: var(--_sm-leading, inherit);
+
+  /* The focus ring the wrapper cannot get from `:focus-visible` -- a `<div>` is
+     not focusable, and `:has(:focus-visible)` is unreliable because the inner
+     control only matches `:focus-visible` while the document itself has focus.
+     `:focus-within` is the honest stand-in: the `reset.css` outline every
+     control draws, plus `box`'s inset layer when a clipping aesthetic asks for
+     one, and the focus line tone a field states for itself. The control inside
+     drops its own ring below so the group shows one. The cost is that the ring
+     also shows on a mouse click, which a lone field's does not. */
+  &:focus-within {
+    --_line-tone: var(--intent-color);
+
+    outline: var(--focus-ring-width) solid var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
+    outline-offset: var(--focus-ring-offset, calc(-1 * var(--ui-border-width, var(--border-width))));
+    box-shadow: var(--_focus-stack, var(--_shadow), inset 0 0 0 2px var(--_focus-gap));
+  }
+
+  /* Focus on anything but the field -- the clear button the docs show, a
+     toggle -- is focus on that control, so it keeps its own ring and the group
+     drops the field's. Enter presses a focused button rather than typing into
+     the field, and two rings around one target say neither. The line keeps its
+     focus tone: something in the field still has focus. A separate rule rather
+     than a `:not(:has())` on the ring above, so an engine without `:has()`
+     drops only this rule and keeps the group's ring. */
+  &:has(> :not(.ipt, .textarea, .select, .text-control, input, textarea, select):focus) {
+    outline: none;
+    box-shadow: var(--_shadow);
+  }
+
+  /* A disabled control inside dims the whole group. `.input-group.disabled` and
+     the aria/data spellings are already handled by `box`'s own rule, carried in
+     by `text-control`; this is the child-driven case a wrapper cannot see
+     without `:has()`. */
+  &:has(
+    > :is(.ipt, .textarea, .select, .text-control, input, textarea, select):where(
+        :not(
+          .checkbox,
+          .radio,
+          .switch,
+          .btn,
+          [type="checkbox"],
+          [type="radio"],
+          [type="button"],
+          [type="submit"],
+          [type="reset"],
+          [type="image"],
+          [type="range"],
+          [type="color"],
+          [type="file"],
+          [type="hidden"]
+        )
+      ):disabled
+  ) {
+    @apply cursor-not-allowed;
+
+    opacity: 0.58;
+  }
+
+  /* "The control inside" is a text field. Every selector below that names it
+     ends in the same `:where(:not(...))`, which takes out the toggles, the
+     button-like inputs, and the inputs that draw their own widget: matched,
+     a checkbox in a group lost its box and its line, and stretched like a
+     field. In `:where()`, so the exclusion adds no specificity.
+
+     The control goes flush: the group drew the box, so the control paints no
+     fill, no line and no ring, and gives its horizontal padding to the group.
+     `border: none` rather than a transparent 1px, so the control does not add
+     its own width inside the group.
+
+     The typed text is the one paint the control keeps, and it is the group's
+     intent: the control resets its intent to neutral at its own root, like
+     every component, so an `.input-group.success` drew a success line around
+     neutral text. `--intent-strong` is the only slot the text reads, so it
+     alone inherits, and an invalid group -- by its own `aria-invalid` or the
+     control's, through the `:has()` arm -- prints destructive text the way a
+     lone invalid field does. The group owns the field, so an intent class on
+     the control inside does not colour its text. */
+  &
+    > :is(.ipt, .textarea, .select, .text-control, input, textarea, select):where(
+      :not(
+        .checkbox,
+        .radio,
+        .switch,
+        .btn,
+        [type="checkbox"],
+        [type="radio"],
+        [type="button"],
+        [type="submit"],
+        [type="reset"],
+        [type="image"],
+        [type="range"],
+        [type="color"],
+        [type="file"],
+        [type="hidden"]
+      )
+    ) {
+    --_fill-cap: 0%;
+    --intent-strong: inherit;
+
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-inline: 0;
+    border: none;
+    background-color: transparent;
+    box-shadow: none;
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: none;
+    }
+
+    /* The group dims for a disabled control, so the control does not dim
+       again inside it: opacity multiplies, and the two 0.58s left the value
+       at about 0.34. Only `:disabled`, the state the group's `:has()` above
+       bridges; a control disabled by class or aria dims itself as a lone one
+       does, because the group does not dim for it. */
+    &:disabled {
+      opacity: 1;
+    }
+  }
+
+  /* A one-row control gives its height to the group too. Keeping its own
+     `--control-height` inside a box that draws its own line made the group
+     42px next to 40px fields and buttons. It stretches to the group's inside
+     instead, with no block padding, so the group is the control height and the
+     whole of its inside still takes a click. A textarea and a list box keep
+     their own height: their rows are the height. */
+  &
+    > :is(.ipt, .select, input, select):not([multiple], [size]:not([size="1"])):where(
+      :not(
+        .checkbox,
+        .radio,
+        .switch,
+        .btn,
+        [type="checkbox"],
+        [type="radio"],
+        [type="button"],
+        [type="submit"],
+        [type="reset"],
+        [type="image"],
+        [type="range"],
+        [type="color"],
+        [type="file"],
+        [type="hidden"]
+      )
+    ) {
+    align-self: stretch;
+    height: auto;
+    min-height: 0;
+    padding-block: 0;
+  }
+
+  /* Except a drop-down's end: its chevron is the select's own background,
+     drawn inside its box 0.6875-1.3125rem from the inline end, so a long label
+     with no padding there ran under it. A list box draws none and keeps the
+     padding its own rule gives it. */
+  & > :is(.select, select):not([multiple], [size]:not([size="1"])) {
+    padding-inline-end: 1.75rem;
+  }
+
+  /* Anything else in the group -- an icon, affix text -- does not stretch and
+     reads as secondary. A button, a link button, and any `<input>` keep their
+     own styling. Zero specificity: it is a default for unstyled content, and at
+     the 0-2-0 it had, a badge or a text utility on the adornment lost its
+     colour to this grey. */
+  :where(& > :not(.ipt, .textarea, .select, .text-control, input, textarea, select, button, .btn)) {
+    @apply inline-flex flex-none items-center;
+
+    color: var(--color-text-secondary);
+  }
+
+  /* The group is destructive when its control is invalid. Carried here for an
+     applied group; the package's own keeps the plain rule above the utility. */
+  &:has(
+    > :is(.ipt, .textarea, .select, .text-control, input, textarea, select):where(
+        :not(
+          .checkbox,
+          .radio,
+          .switch,
+          .btn,
+          [type="checkbox"],
+          [type="radio"],
+          [type="button"],
+          [type="submit"],
+          [type="reset"],
+          [type="image"],
+          [type="range"],
+          [type="color"],
+          [type="file"],
+          [type="hidden"]
+        )
+      )[aria-invalid="true"]
+  ) {
+    --intent-color: var(--color-destructive);
+    --intent-contrast: var(--color-destructive-contrast);
+    --intent-hover: var(--color-destructive-hover);
+    --intent-border: var(--color-destructive);
+    --intent-strong: var(--color-destructive-strong);
+    --intent-subtle: var(--color-destructive-subtle);
+  }
+}
+
+/* The three toggles compose `text-control` for its bounds, not its chrome: the
+   edge floor keeps a container's `.edgeless` from erasing the closed silhouette
+   (WCAG 1.4.11), and the checked state that pins the fill (see `text-control`'s
+   `:checked` above) lives there. They raise the fill cap to 40%: the 6% cap
+   keeps typed text legible and a toggle has none, and 40% is where a resting
+   `.ghost` (0%), `.soft`/default (12%), and `.solid` (the cap itself) read as
+   three distinct plates rather than three shades of one wash. Unclassed rests
+   at `.soft` rather than at the cap: `--_d-fill`/`--_d-fg-on-fill` below name
+   the same pair `.soft` does, so a bare `<input class="checkbox">` reads as the
+   quiet tint, and a consumer reaches the louder plate by writing `.solid`. See
+   model.md#the-bounds-that-survive-and-the-test-for-keeping-one. */
+@utility checkbox {
+  @apply text-control inline-grid size-4 cursor-pointer place-content-center;
+
+  --_d-fill: 12%;
+  --_d-fg-on-fill: 0%;
+  --_fill-cap: 40%;
+  /* Absolute, whatever the element's own edge class: see `text-control`. */
+  --_edge-floor: 100%;
+  --_line-rest: 100%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
+
+  /* A chip keeps a small default even under a large control corner, but an
+     explicit tight radius is a complete shape, including elliptical corners. */
+  border-radius: var(
+    --ui-radius-tight,
+    min(var(--ui-radius, var(--ui-corner, var(--radius-small))), var(--radius-small))
+  );
+
+  /* Chip geometry: the tight silhouette, and an inset edge no thicker than the
+     line the aesthetic draws elsewhere. A 16px box cannot spend four pixels a
+     side on an edge -- under `.pixel` that leaves an eight-pixel hole and an
+     unchecked box reads as a filled one. Our own aesthetic on our own component
+     produces that, so our own `min()` answers it. */
+  --_ss: min(var(--ui-shadow-spread, 0px), var(--ui-border-width, var(--border-width)));
+
+  clip-path: var(--ui-clip-tight, var(--ui-clip, none));
+
+  /* `text-control` trades the outline for its own line colour, which reads on a
+     40px field and not on a 16px box. The ring goes back as a shadow layer
+     rather than as an `outline`, so a clipping aesthetic clips it with
+     everything else and its own inset focus layer still paints over the top. */
+  &:focus-visible {
+    --_shadow:
+      var(--_shadow-parts) var(--_halo-layer,),
+      0 0 0 var(--focus-ring-width) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
+  }
+
+  &::after {
+    @apply block size-3 opacity-0 transition-opacity duration-(--motion-duration-normal) ease-(--motion-ease);
+
+    /* The mark takes the box's own foreground, which `box` already mixed against
+       this component's intent and fill, so a checked box in any intent has a
+       mark that reads against it. */
+    background-color: currentcolor;
+    content: "";
+    mask-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>");
+    -webkit-mask-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>");
+    mask-size: contain;
+    -webkit-mask-size: contain;
+  }
+
+  &:checked::after {
+    @apply opacity-100;
+  }
+
+  /* Mixed -- part of a group checked -- takes the checked plate, the same
+     inputs `text-control`'s `:checked` writes, and a dash for its mark. After
+     the checked mark, so a box that is both draws the dash, as the browser's
+     own checkbox does. */
+  &:indeterminate {
+    --ui-fill: 100%;
+    --ui-fg-on-fill: 100%;
+    --_fill-cap: 100%;
+  }
+
+  &:indeterminate::after {
+    @apply opacity-100;
+
+    mask-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round'><line x1='5' y1='12' x2='19' y2='12'/></svg>");
+    -webkit-mask-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round'><line x1='5' y1='12' x2='19' y2='12'/></svg>");
+  }
+
+  /* The mark appears without moving under reduced motion, for the entries
+     without the reset; see `box.css`. */
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      transition-duration: 0.01ms;
+    }
+  }
+
+  /* The toggle's cap is its own (`--_fill-cap`), whatever the intent: a
+     neutral fill stops at 20% elsewhere because it is the page's ink, and a
+     neutral checkbox is the common case and has to look like a present,
+     interactive box. In the body so `@apply` carries it; it beats the intent
+     classes from here as it did as a plain rule in `utilities`. */
+  --intent-fill-max: 100%;
+
+  /* Forced colours, carried for an applied toggle. The package's own classes
+     also keep the unlayered copy at the foot of this file, which beats every
+     layered rule. */
+  @media (forced-colors: active) {
+    forced-color-adjust: none;
+    background-color: Canvas;
+    border-color: CanvasText;
+    transition: none;
+
+    &:checked,
+    &:indeterminate {
+      background-color: Highlight;
+      border-color: Highlight;
+
+      &::after {
+        background-color: HighlightText;
+      }
+    }
+  }
+}
+
+/* The same control with a round silhouette and a dot for its mark, and the
+   same fill cap raise given on `checkbox`. */
+@utility radio {
+  @apply text-control inline-grid size-4 cursor-pointer place-content-center;
+
+  border-radius: var(--ui-radius-pill, calc(infinity * 1px));
+
+  --_d-fill: 12%;
+  --_d-fg-on-fill: 0%;
+  --_fill-cap: 40%;
+  /* Absolute, whatever the element's own edge class: see `text-control`. */
+  --_edge-floor: 100%;
+  --_line-rest: 100%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
+
+  /* The inset edge is capped for the reason given on `checkbox`, but the
+     silhouette is not taken: the circle is the only thing telling a radio from a
+     checkbox at a glance, and a stepped polygon would square it. An inset shadow
+     follows `border-radius`, so the edge stays round without one. */
+  --_ss: min(var(--ui-shadow-spread, 0px), var(--ui-border-width, var(--border-width)));
+
+  clip-path: none;
+
+  /* The ring, for the reason given on `checkbox`. */
+  &:focus-visible {
+    --_shadow:
+      var(--_shadow-parts) var(--_halo-layer,),
+      0 0 0 var(--focus-ring-width) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
+  }
+
+  &::after {
+    @apply block size-2 scale-0 rounded-full opacity-0 transition-[transform,opacity] duration-(--motion-duration-normal) ease-(--motion-ease);
+
+    /* The dot is the ring's shape at a smaller size: a diamond inside a diamond
+       under a bevelling aesthetic, a circle inside a circle otherwise. */
+    corner-shape: var(--ui-corner-shape, round);
+
+    background-color: currentcolor;
+    content: "";
+  }
+
+  /* A checked radio thickens its ring and takes the intent whole on the line.
+     The fill is pinned by `text-control`'s `:checked`, so every checked radio
+     is a filled circle whatever fill class it carries. The dot takes `box`'s
+     composed foreground, which walks to the contrast tone as the (always full)
+     plate fills, so it stays readable. `--_line-tone` rather than `--_edge`, so
+     `text-control`'s edge floor still draws the ring under a container's
+     `.edgeless`. */
+  &:checked {
+    --_line-tone: var(--intent-color);
+
+    /* Twice the line the aesthetic draws, which is the 2px the original pinned
+       at the default hairline, and capped so a thick aesthetic cannot close the
+       circle over its own dot: 3px leaves 10px of interior for an 8px mark. */
+    border-width: min(calc(var(--_width) * 2), 3px);
+  }
+
+  &:checked::after {
+    @apply scale-100 opacity-100;
+  }
+
+  /* The mark appears without moving under reduced motion, for the entries
+     without the reset; see `box.css`. */
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      transition-duration: 0.01ms;
+    }
+  }
+
+  /* The toggle's cap is its own (`--_fill-cap`), whatever the intent: a
+     neutral fill stops at 20% elsewhere because it is the page's ink, and a
+     neutral checkbox is the common case and has to look like a present,
+     interactive box. In the body so `@apply` carries it; it beats the intent
+     classes from here as it did as a plain rule in `utilities`. */
+  --intent-fill-max: 100%;
+
+  /* Forced colours, carried for an applied toggle. The package's own classes
+     also keep the unlayered copy at the foot of this file, which beats every
+     layered rule. */
+  @media (forced-colors: active) {
+    forced-color-adjust: none;
+    background-color: Canvas;
+    border-color: CanvasText;
+    transition: none;
+
+    &:checked {
+      background-color: Highlight;
+      border-color: Highlight;
+
+      &::after {
+        background-color: HighlightText;
+      }
+    }
+  }
+}
+
+/* A2: every dimension derives from the border width `box` resolved, so the knob
+   cannot drift out of a track a thick aesthetic widened. */
+@utility switch {
+  @apply text-control relative cursor-pointer;
+
+  --_d-fill: 12%;
+  --_d-fg-on-fill: 0%;
+  --_line-rest: 100%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
+
+  /* 40%, measured: at `text-control`'s 6% the three resting fills collapse to
+     two looks, so the switch would have to vary its *line* per fill class --
+     the one place a fill class would decide an edge. 40% separates all three
+     (29/67/144 sRGB steps on the light page, against ~20 for a visible one)
+     without reaching a checked track's pinned 100%, so the knob's position
+     still says which; `axes.spec.ts` asserts all three. `checkbox`/`radio`
+     raise their own cap to the same value for the same reason. A cap rather
+     than a resting value, because it answers the cascade case;
+     `--intent-fill-max` (declared where the intents are, above) lifts to 100%
+     for all three toggles so a neutral one reads this cap, not the 20% ceiling
+     a badge or a card stays under. */
+  --_fill-cap: 40%;
+
+  --switch-height: 1.25rem;
+  --switch-width: 2.5rem;
+  --switch-gap: 1px;
+  /* The edge an aesthetic draws as an inset ring rather than as a border
+     (`.pixel`), present only while `--ui-shadow-edge` is declared -- the idiom
+     `box` uses. That ring paints under the knob, so a knob sized from the
+     border alone covered it: under pixel the border is zero, the knob met the
+     edge, and an unchecked and a checked switch both read as two halves. */
+  --_switch-ring: var(--ui-shadow-edge) var(--_ss);
+  --_switch-offset: calc(var(--_switch-ring, 0px) + var(--switch-gap));
+  --switch-inset: calc(var(--_width) + var(--_switch-offset));
+  --switch-knob: calc(var(--switch-height) - var(--switch-inset) * 2);
+  --switch-travel: calc(var(--switch-width) - var(--switch-inset) * 2 - var(--switch-knob));
+
+  height: var(--switch-height);
+  width: var(--switch-width);
+  /* Pill by default; a squaring aesthetic reaches the track and the knob
+     together, and an aesthetic with a pill corner of its own reaches both
+     through that first. */
+  border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
+
+  /* Chip geometry, for the reason given on `checkbox`: a 20px track has no more
+     room for a thick inset edge than a 16px box does. */
+  --_ss: min(var(--ui-shadow-spread, 0px), var(--ui-border-width, var(--border-width)));
+
+  clip-path: var(--ui-clip-tight, var(--ui-clip, none));
+
+  /* The ring, for the reason given on `checkbox`. */
+  &:focus-visible {
+    --_shadow:
+      var(--_shadow-parts) var(--_halo-layer,),
+      0 0 0 var(--focus-ring-width) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
+  }
+
+  &::after {
+    @apply absolute transition-[translate,background-color] duration-(--motion-duration-normal) ease-(--motion-ease);
+
+    /* The knob is the one part that does not take the box's foreground: an
+       unchecked track is unfilled, so a knob in that colour would be the same
+       tone as the label beside it. Checked, it takes the mark colour like the
+       other two toggles. */
+    background-color: var(--color-text-secondary);
+    border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
+    /* A pseudo-element is not a box: the knob takes the track's corner shape
+       itself, so the two stay the same shape. */
+    corner-shape: var(--ui-corner-shape, round);
+    content: "";
+    height: var(--switch-knob);
+    width: var(--switch-knob);
+    top: var(--_switch-offset);
+    inset-inline-start: var(--_switch-offset);
+  }
+
+  &:checked::after {
+    background-color: currentcolor;
+    /* translate has no logical form, so the checked travel is named as a
+       physical x offset and mirrored under :dir(rtl) to travel toward the
+       opposite edge, matching the inset-inline-start resting position. */
+    translate: var(--switch-travel);
+  }
+
+  /* Direction sits on the control, ahead of the pseudo-element: nested as
+     `:dir(rtl) &` inside `&:checked::after`, `&` carries `::after`, which
+     cannot appear inside `:is()`, and the emitted rule matched nothing. */
+  &:checked:dir(rtl)::after {
+    translate: calc(-1 * var(--switch-travel));
+  }
+
+  /* The mark appears without moving under reduced motion, for the entries
+     without the reset; see `box.css`. */
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      transition-duration: 0.01ms;
+    }
+  }
+
+  /* `.ghost.edgeless` would leave the track neither a line nor a plate, so the
+     floor is held up: three classes against the opt-out's two in
+     `text-control`. Published unsupported as a distinct look. */
+  &.ghost.edgeless {
+    --_edge-floor: 100%;
+  }
+
+  /* The toggle's cap is its own (`--_fill-cap`), whatever the intent: a
+     neutral fill stops at 20% elsewhere because it is the page's ink, and a
+     neutral checkbox is the common case and has to look like a present,
+     interactive box. In the body so `@apply` carries it; it beats the intent
+     classes from here as it did as a plain rule in `utilities`. */
+  --intent-fill-max: 100%;
+
+  /* Forced colours, carried for an applied toggle. The package's own classes
+     also keep the unlayered copy at the foot of this file, which beats every
+     layered rule. */
+  @media (forced-colors: active) {
+    forced-color-adjust: none;
+    background-color: Canvas;
+    border-color: CanvasText;
+    transition: none;
+
+    &::after {
+      background-color: CanvasText;
+    }
+
+    &:checked {
+      background-color: Highlight;
+      border-color: Highlight;
+
+      &::after {
+        background-color: HighlightText;
+      }
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .checkbox,
+  .radio,
+  .switch {
+    /* Keep these explicit system colors from being forced back to transparent. */
+    forced-color-adjust: none;
+    background-color: Canvas;
+    border-color: CanvasText;
+    transition: none;
+  }
+
+  /* The switch knob is the one mark visible while unchecked, and with forced
+     colours off it would keep the package grey on a system Canvas. */
+  .switch::after {
+    background-color: CanvasText;
+  }
+
+  /* The chevron is two gradients, and forced colours drop every gradient, so a
+     drop-down with `appearance: none` showed no arrow at all and read as a text
+     field. The platform's own arrow comes back instead: it is drawn in system
+     colours, and the author border, padding and focus outline still apply. A
+     list box has no arrow to restore. */
+  .select:not([multiple], [size]:not([size="1"])) {
+    appearance: auto;
+  }
+
+  .checkbox:checked,
+  .checkbox:indeterminate,
+  .radio:checked,
+  .switch:checked {
+    background-color: Highlight;
+    border-color: Highlight;
+
+    &::after {
+      background-color: HighlightText;
+    }
+  }
+
+  .text-control:focus-visible,
+  .ipt:focus-visible,
+  .textarea:focus-visible,
+  .select:focus-visible,
+  .checkbox:focus-visible,
+  .radio:focus-visible,
+  .switch:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+
+  /* The group draws the field's ring, so the control inside draws none here
+     either: this block is unlayered, and the ring above beat the group's
+     layered suppression and drew a second ring inside the group's. */
+  .input-group > :is(.ipt, .textarea, .select, .text-control, input, textarea, select):focus-visible {
+    outline: none;
+  }
+}

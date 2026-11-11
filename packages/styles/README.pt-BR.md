@@ -1,4 +1,4 @@
-<!-- source: 1022aa97842da09b0d9c3d453c7b11a04835e1ed -->
+<!-- source: fcd286422a8c1f205081b7cd33456d5893d47139 -->
 
 # @codenhub/styles
 
@@ -50,6 +50,7 @@ A documentação monta uma tela de configurações de conta do início ao fim, n
 | Imports de CSS | O ferramental do projeto precisa resolver imports de CSS de pacotes.                                                                                                 |
 | Navegadores    | Chrome 123, Safari 17.5 ou Firefox 128 e mais recentes (`light-dark()` para temas; `:has()` para o estado de `.input-group`; `@property` para elevação sem herança). |
 | Tailwind CSS   | 4.3.2 ou mais recente, abaixo da 5, exigido apenas para os entrypoints de código-fonte `/tw`.                                                                        |
+| Node.js        | 24 ou mais recente, só na máquina que roda o comando `codenhub-styles build`. As folhas de estilos não precisam dele.                                                |
 | Acessibilidade | Quem usa o pacote fornece HTML semântico, ARIA, comportamento de teclado e gerenciamento de foco.                                                                    |
 
 ## Observações

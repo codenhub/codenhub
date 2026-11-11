@@ -1,5 +1,7 @@
-/* Imported into the `components` layer by `theme.css`, below every utility, so
-   a consumer's own utility or unlayered CSS beats these classes. See
+/* Each class here is a `@utility` whose body sits in `utilities.families`: a
+   utility, so `@apply` and Tailwind's variants reach it, and in a sublayer, so
+   it still loses to every rule written straight into `utilities` -- a
+   component's, or a consumer's own utility. See
    docs/internal/model.md#cascade-layers. */
 
 /* Presentation answers two independent questions, and each is its own closed
@@ -13,7 +15,9 @@
    `.solid.edged` and `.solid.edgeless` render one box without either class
    deciding the other's question.
 
-   Presentation declares only unitless numbers and percentages. A custom
+   Presentation declares only unitless numbers and percentages, and the
+   `--_holds-ink` toggle, whose values are a keyword and an empty value: neither
+   carries an intent either, so it inherits as safely. A custom
    property's value is resolved on the element that declares it, so anything
    referencing an intent token here would resolve against the container's intent
    and inherit down already-resolved. Numbers carry no intent, so they inherit
@@ -26,16 +30,73 @@
    `min(100%, resting fill + --hover-step)`, always in `--intent-hover`. There
    is no hover token and no per-presentation branch. */
 
-/* Filled with the intent color. Text is the contrast tone. */
-.solid {
-  --ui-fill: 100%;
-  --ui-fg-on-fill: 100%;
+/* The ink of the plate an element sits on, handed down by the nearest filled
+   box above it. Registered, so that an unfilled box -- whose declaration of
+   these is deliberately invalid -- inherits them instead of clearing them:
+   that is what lets the ink pass through a box with no plate of its own.
+   `--_own-hold` does not inherit, so the same invalid declaration reads 0%
+   and a box can tell an ink it was handed from one it holds. See
+   docs/internal/model.md#the-ink-of-the-plate-beneath. */
+@property --_held-ink {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --_held-on {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 0%;
+}
+
+@property --_own-hold {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+/* Filled with the intent color. Text is the contrast tone. `--_holds-ink` is
+   the same answer as a toggle `box` can read: empty where the fill is a
+   plate, `none` where it is not. A percentage cannot make a declaration
+   invalid, and an invalid one is how an unfilled box passes the ink on. */
+/* What the element itself asked for, as against what reached it from a
+   container: the fill and the edge its own presentation class names. Neither
+   inherits, so a field reads its own `.soft` here and a toolbar's `.soft`
+   only through `--ui-fill`. A class on the element is a request and a class
+   on a container is a cascade, and a component that bounds the cascade --
+   `text-control`'s 6% wash, its edge floor, the tooltip bubble's -- lifts the
+   bound by these. Written by the utilities, so `@apply ipt soft` carries the
+   request as the class on the element does; a selector keyed on `.soft` saw
+   only the class. See docs/internal/model.md#what-apply-carries. */
+@property --_own-fill {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+@property --_own-edge {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+
+@utility solid {
+  @layer families {
+    --ui-fill: 100%;
+    --ui-fg-on-fill: 100%;
+    --_own-fill: 100%;
+    --_holds-ink: ;
+  }
 }
 
 /* Tinted with the intent color. Text is the intent color. */
-.soft {
-  --ui-fill: 12%;
-  --ui-fg-on-fill: 0%;
+@utility soft {
+  @layer families {
+    --ui-fill: 12%;
+    --ui-fg-on-fill: 0%;
+    --_own-fill: 12%;
+    --_holds-ink: none;
+  }
 }
 
 /* No fill at rest; the derived hover gives it one. Text is the intent color. It
@@ -45,9 +106,13 @@
    A component that rests on a ground rather than on nothing keeps that ground
    here: `.ghost` is zero fill, not zero paint. `.data-table` is the exception
    that proves it -- its head plate *is* the tint, so a ghost table drops it. */
-.ghost {
-  --ui-fill: 0%;
-  --ui-fg-on-fill: 0%;
+@utility ghost {
+  @layer families {
+    --ui-fill: 0%;
+    --ui-fg-on-fill: 0%;
+    --_own-fill: 0%;
+    --_holds-ink: none;
+  }
 }
 
 /* A line in the intent color, at the aesthetic's material width. The width
@@ -58,11 +123,17 @@
    has an inside are a separate decision with their own class --
    `.data-table.ruled` -- so a consumer's own markup says whether they asked for
    them. */
-.edged {
-  --ui-border: 100%;
+@utility edged {
+  @layer families {
+    --ui-border: 100%;
+    --_own-edge: 100%;
+  }
 }
 
 /* No line. */
-.edgeless {
-  --ui-border: 0%;
+@utility edgeless {
+  @layer families {
+    --ui-border: 0%;
+    --_own-edge: 0%;
+  }
 }

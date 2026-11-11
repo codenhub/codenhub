@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-09
+last_updated: 2026-11-10
 scope: `@codenhub/styles` styling model, token contracts, and composition rules.
 ---
 
@@ -36,7 +36,7 @@ Two of them cascade and one does not, and that is the same rule seen from two si
 
 > **An axis interacts with the other axes in the composition. A modifier composes independently.**
 
-Edge blends against fill: `--_line` fades out by the fill amount (P3), which is why `.solid.edged` and `.solid.edgeless` render one box. Two things that interact inside one expression are one question with two dimensions, not one question and one bolt-on. Elevation multiplies shadow geometry nothing else touches; `.pill` sets a radius nothing else touches; `.sm` sets lengths. None of them can change what another axis produces.
+Edge blends against fill: `--_line` fades out by the fill amount (P3), which is why `.solid.edged` and `.solid.edgeless` render one box. Two things that interact inside one expression are one question with two dimensions, not one question and one bolt-on. Elevation multiplies shadow geometry nothing else touches; `.pill` sets a radius nothing else touches; `.sm` sets lengths ([Size](#size)). None of them can change what another axis produces.
 
 So edge stays inside presentation, size and elevation are modifiers, and a new candidate is argued against this sentence.
 
@@ -113,6 +113,30 @@ It is a step rather than a ramp, because the two percentages cannot be divided i
 
 The same kind of step decides the quiet neutral surface. A neutral `.card.soft`, `.panel`, and `.alert` rest untinted on `--color-foreground` rather than on 12% of the page's ink, and `surface` names when: `--_quiet` is 100% for a neutral intent (its cap below 100%) and a resolved fill above 0% and below that cap, else 0%. The three components read it into their `--_fill-cap` and their ground. It is stepped from the resolved fill, not keyed on classes on the element, because presentation cascades: a container's `.soft` and the surface's own are one request and render one plate, and a container's `.ghost` or `.solid` is not mistaken for the quiet default.
 
+Every other step a component takes on presentation is built the same way, from resolved values rather than class keys. `.kbd`, `.code`, and `.pre` drop the neutral wash with `--_fill-cap` stepped from the intent's cap and the resolved fill; `.data-table` rests on its quiet plate by `--_table-quiet`, 100% for a resolved fill above nothing and below full. Keyed on classes, a container's `.solid` reached a chip's ink and line while its plate stayed capped, and filled a table's head and dropped its frame while the body kept the quiet plate. The one part still keyed on a class is the table's backdrop blur, on `:not(.solid, .ghost)`: a filter cannot be stepped from a percentage, so a table under a container's `.ghost` in a glass region still blurs what is behind it.
+
+### The ink of the plate beneath
+
+Intent does not cascade, so a component with none prints the page's ink, and on a filled parent that ink sits on the parent's fill rather than on the page: a neutral badge in a `.primary` button read at 1.11:1. So a box whose fill is a plate hands its ink down, and a neutral box inside it prints that ink instead of its own:
+
+```
+through = 100% when the box is neutral (its cap below 100%), was handed an ink, and holds none; else 0%
+fg      = color-mix(handed ink through, own ink)
+```
+
+Whether a fill is a plate is a space toggle the fill classes write beside their numbers: `.solid` sets `--_holds-ink` empty, `.soft` and `.ghost` set it `none`, and a component names its resting answer as `--_d-holds-ink` -- `none` from `box`, empty from `.btn`. `box` turns it into three registered properties (`presentation.css`): `--_held-ink`, the ink handed down; `--_held-on`, whether one was handed; and `--_own-hold`, whether this box holds one. Where the box holds none, the toggle makes their declarations invalid, and an invalid declaration of a registered property that inherits computes to the inherited value, so the ink passes through a box with no plate -- an `.input-group` to the field inside it -- and reaches the next neutral box. `--_own-hold` does not inherit, so the same invalid declaration reads `0%`, which is how a box tells an ink it was handed from one it holds. The toggle is not the fill itself because a percentage cannot make a declaration invalid.
+
+A box that rests on a ground of its own blocks the ink: `surface`, `.kbd`, `.code`, `.pre`, `.data-table`, and `.tooltip-icon` restate `--_held-ink` as their own ink and `--_held-on` as their own hold after `@apply box`, so a surface hands ink down only where its fill is a plate and nothing from above passes through it. A text control is never a plate: it restates the two as inherited and its own hold as `0%`, so a field prints the ink handed to it. `box` reads the same ink first in its line, `--_line-ink`, so an edged neutral box on a filled parent draws its line in the parent's ink too.
+
+The limits, recorded rather than worked around:
+
+- Only a neutral box takes the ink. An intent keeps its own ink, as it keeps its own colour.
+- A `.ghost` table blocks like every table, so on a filled parent it prints the page's ink on that fill: the block is unconditional because a toggle cannot be stepped from the fill.
+- A fill set straight through `--ui-fill`, rather than by a fill class, does not flip the toggle, so it hands nothing down.
+- A `.soft` tint is not a plate, so nothing on it is re-inked.
+
+The same line carries one more ink: that of a neutral box with no fill. An aesthetic whose line is a highlight on a plate has nothing to draw on without one -- glass's hairline on a `.ghost.edged` button measured 1.01:1 on a light page. So `box` mixes `--_bare-ink` into the line by `--_bare`, 100% for a neutral intent resolving to no fill, stepped from the resolved values so a container's `.ghost` counts and an intent's own line is never swapped. `box` clears `--_bare-ink` with `initial` so a nested box does not inherit it; `.btn` and `.badge` point it at `--_unfilled-ink`, a private the region names. Only glass names one, the theme's ink at 55% that is also its control line, and it clears it again on a region of any other aesthetic nested inside, so the nearest region decides.
+
 ### Hover is derived, never declared
 
 ```
@@ -150,37 +174,36 @@ A bound written on an input leaves the axis live:
 --_edge: color-mix(in oklab, var(--_line) var(--_edge-amount), transparent);
 
 /* text-control */
---_edge-floor: 100%;
+--_edge-floor: var(--_own-edge);
 ```
 
-`--_fill-cap`, `--_line-rest`, `--_edge-floor`, and `--_line-tone` are the seams. A component that needs something they cannot express needs a new seam, which is one line in `box` and visible there.
+`--_fill-cap`, `--_line-rest`, `--_edge-floor`, `--_line-tone`, `--_bare-ink`, and the held ink (`--_d-holds-ink`, and `--_held-ink`, `--_held-on`, and `--_own-hold` restated after `@apply box`) are the seams. A component that needs something they cannot express needs a new seam, which is one line in `box` and visible there.
 
 **The test that enforces it.** `registry.json` records the axes each component reads, and `tests/browser/axes.spec.ts` asserts it in both directions: an axis the registry calls live must change what the component computes, and an axis it leaves off must not.
 
 ### Element or cascade
 
-Both surviving edge bounds turn on one distinction, the one [the bounds test](#the-bounds-that-survive-and-the-test-for-keeping-one) draws:
+The surviving edge bounds, and the text control's fill cap, turn on one distinction, the one [the bounds test](#the-bounds-that-survive-and-the-test-for-keeping-one) draws:
 
 - **A class on a container** is our own cascade reaching something nobody classed. A bound may answer it.
 - **A class on the element** is a consumer describing what they want. A bound may not answer it.
 
-CSS expresses it directly. The utility raises the floor; a rule nested in it, matching the element's own class, lowers it:
+CSS has no selector for "this class reached the element by inheritance", so the fill and edge classes record the request themselves. Beside `--ui-fill` and `--ui-border` they write `--_own-fill` and `--_own-edge`, registered in `presentation.css` as not inheriting: a container's class reaches the element through the public tokens and leaves these at their initial values, `0%` and `100%`. A bound reads them:
 
 ```css
 @utility text-control {
-  --_edge-floor: 100%;
-
-  &.edgeless:where(:not(.checkbox, .radio)) {
-    --_edge-floor: 0%;
-  }
+  --_fill-cap: max(6%, min(var(--_own-fill), 20%));
+  --_edge-floor: var(--_own-edge);
 }
 ```
 
-Nested rather than written beside the utility, so `@apply text-control` carries it with the consumer's selector; see [What `@apply` carries](#what-apply-carries). The exclusion sits in `:where()` so the rule keeps 0-2-0.
+The floor is full unless the element's own `.edgeless` lowers it, and the cap is 6% unless the element's own `.soft` or `.solid` raises it to 12% or 20%. `.checkbox` and `.radio` restate the floor as `100%` after `@apply`, and the tooltip bubble reads `--_own-edge` for its floor the same way.
+
+Rejected: rules nested in the utility and keyed on the element's class -- `&.soft`, `&.solid`, and `&.edgeless:where(:not(.checkbox, .radio))` -- which is what these replaced. They saw only the class. `.my-field { @apply ipt soft }` carries `soft`'s declarations but not the class, so it kept the 6% cap a container's `.soft` gets, and a variant such as `md:edgeless` writes no `.edgeless`. Written by the utilities, the request travels wherever the utility's body does; see [What `@apply` carries](#what-apply-carries).
 
 So a `.edgeless` toolbar cannot erase the line of a field inside it, and `.ipt.edgeless` gets exactly the borderless field it asked for. That field does not meet WCAG 1.4.11 at rest -- a 12% tint is 1.31:1 against the page where a control boundary is asked for 3:1 -- which is a consumer's opt-in rather than a default. Recorded in [Accessibility](../accessibility.md).
 
-`.checkbox` and `.radio` are absent from that rule. An unchecked checkbox is a transparent square and an unchecked radio a transparent circle: removing the line removes the control, so their floor is absolute in both directions and `.edgeless` on them is published as unsupported. They are the only two components that read one presentation axis and not the other.
+`.checkbox` and `.radio` do not read `--_own-edge`. An unchecked checkbox is a transparent square and an unchecked radio a transparent circle: removing the line removes the control, so their floor is absolute in both directions and `.edgeless` on them is published as unsupported. They are the only two components that read one presentation axis and not the other.
 
 `.switch.ghost.edgeless` is the one other case that keeps its line: `.ghost` already asks for zero fill, so removing the line too would leave nothing marking the track but the knob. It renders the same as `.switch.ghost.edged`, and is published unsupported as a distinct look.
 
@@ -200,13 +223,13 @@ The checked fill is `100%` whatever presentation the element or a container asks
 
 `:checked` declares full contrast ink beside the full fill: a checked `.ghost` or `.soft` toggle with an opaque plate and an ink still asking for none would render a mark almost the colour of its own background.
 
-It writes the inputs, not private floors, because of the layer map ([Cascade layers](#cascade-layers)): `:checked` in `utilities` at 0-2-0 beats every fill class in `components`, and a state is the one kind of rule the map lets write a public token from `utilities`, so a consumer's own `[--ui-fill:...]` loses to it, as it loses to `aria-invalid`. A toggle is a void `<input>`, so the inputs reach nothing but its own mark.
+It writes the inputs, not private floors, because of the layer map ([Cascade layers](#cascade-layers)): `:checked` in `utilities` at 0-2-0 beats every fill class, whose bodies are in `utilities.families`, and a state is the one kind of rule the map lets write a public token from `utilities`, so a consumer's own `[--ui-fill:...]` loses to it, as it loses to `aria-invalid`. A toggle is a void `<input>`, so the inputs reach nothing but its own mark.
 
 Two properties of `box` make that safe. `text-control` does not restate `box`'s fill and ink formulas, because `box`'s ramp sees `--_fill-cap`; the ink ramps in one place. And `box` ramps the ink against the bounded fill _before_ `--ui-bg-alpha` thins it, so a checked toggle under a region that sets it keeps full contrast ink on a thinned plate; `forms.spec.ts` asserts it.
 
 `--_fill-cap` is a private seam. A component writing `--ui-fill` from `utilities` would beat a consumer's utility, which the layer map reserves for state; and `--ui-fill` cascades, so a neutral panel writing `0%` would turn every badge inside it ghost, where a cap bounds the component and stops there.
 
-One intent slot moves with this. `--intent-fill-max` stops neutral at 20% everywhere else, because a neutral fill is the page's own ink and a full one is a slab -- true of a badge, and false of a toggle at rest, where the common case carries no intent class at all and still has to look like a present, interactive control. So the three toggles lift it unconditionally, declared above the intent classes for the reason [Precedence](#precedence) gives.
+One intent slot moves with this. `--intent-fill-max` stops neutral at 20% everywhere else, because a neutral fill is the page's own ink and a full one is a slab -- true of a badge, and false of a toggle at rest, where the common case carries no intent class at all and still has to look like a present, interactive control. So each of the three toggles lifts it unconditionally, `--intent-fill-max: 100%` in its own body: written straight into `utilities`, it beats the intent classes in `utilities.families` for the reason [Precedence](#precedence) gives, and `@apply checkbox` carries it.
 
 ### Unsupported values
 
@@ -259,6 +282,63 @@ This modifier system is separate from the `--elevation-none/-sm/-md/-lg` tokens 
 
 An aesthetic setting `--ui-surface-shadow` as a complete multi-layer value opts out of the elevation scale on surfaces, because there is nothing for the multiplier to reach. That hole is kept small deliberately, and it is the only one: there is no general `--ui-shadow` slot, because a complete value reaching every component would take `.flat` away from all of them at once. Shipped aesthetics express depth with the parts, and the complete value stays a surface-only escape hatch for shadows that cannot be described as one layer. An aesthetic taking it declares it in the registry, so `.flat` not reaching its surfaces is documented rather than discovered.
 
+## Size
+
+`.sm` and `.lg` are the size modifier, and a modifier for the reason elevation is one. Like the fill classes they are `@utility` rules in `utilities.families` (`size.css`), so `@apply btn sm` and `md:lg` reach them. A size cannot say what it changes, because each component has its own steps, so it raises a flag and the component reads it:
+
+```css
+/* size.css */
+@utility sm {
+  @layer families {
+    --_size-sm: ;
+  }
+}
+
+/* btn */
+--_sm-h: var(--_size-sm) 2rem;
+min-height: var(--_sm-h, var(--_lg-h, var(--control-height)));
+```
+
+The flag is a space toggle. Unset, it is guaranteed-invalid, so `--_sm-h` is invalid too and the reader takes its fallback, the next step and then the default; set, it is empty, and the same line computes to `2rem`. `--_size-sm` and `--_size-lg` are registered non-inheriting with no initial value, as `--ui-elevation` is and for its reason: a size is a choice about one element, and inherited, a `.sm` form would shrink every control inside it. Where both are set, `sm` wins, because each reader names it first.
+
+`.btn`, `.ipt`, `.textarea`, `.select`, and `.input-group` read the flags, each in its own body. A component that reads neither ignores the class. The step `box` scales corners and depth by, `--_scale-size`, is read from the same flags.
+
+Rejected: `&.sm` and `&.lg` nested in each component, which is what the flag replaced. The class was no utility, so `@apply btn sm` could not be written and `md:lg` produced nothing; and at 0-2-0 the nested rule beat a consumer's `min-h-*` or `px-*`, where the default step loses to them. Written in the body, the step is one more default.
+
+## Modifiers
+
+The classes that belong to one component -- `.tight`, `.loose`, `.vertical`, `.horizontal`, `.between`, `.narrow`, `.wide`, `.p-xs`, `.p-sm`, `.p-lg`, `.flush`, `.icon`, `.pill`, `.active`, `.indeterminate` -- are `@utility` rules in `utilities.families` (`modifiers.css`), as the size classes are and by the same mechanism. `@apply stack tight`, `@apply btn icon pill`, and `md:tight` work, so a consumer's component takes a modifier the way a shipped one does.
+
+```css
+/* modifiers.css */
+@utility tight {
+  @layer families {
+    --_m-tight: ;
+  }
+}
+
+/* stack */
+:where(&:not(.tight)) {
+  --_m-tight: initial;
+}
+--_tight-gap: var(--_m-tight) 0.5rem;
+gap: var(--_loose-gap, var(--_tight-gap, var(--layout-gap)));
+```
+
+A modifier cannot say what it changes: `p-xs` is 0.5rem on a card and 0.25rem on a panel. So it raises a space-toggle flag, as [Size](#size) describes, and each component reads it in its own body. On an element that reads no flag the class sets a custom property nothing uses, so a page's own `.active` or `.wide` is not restyled.
+
+**The flags are not registered.** The two size flags are `@property` rules, non-inheriting. A `@property` rule cannot be tree-shaken: nested in an `@utility` it is not hoisted, and at the top level it ships in every `/tw` build, used or not. Fifteen of them would add to the floor of every build for modifiers most pages use a few of. The flags inherit instead, and every component that reads one restates it `initial` on itself, as `:where(&:not(.<name>))` in `@layer families`: zero specificity, so a flag raised on the element wins over it, whether by the class, by a variant such as `md:tight`, or by a consumer's `.my-stack { @apply stack tight }`, each at 0-1-0 or above. That keeps what 0.7.0 fixed -- a `.card.p-xs` does not shrink a card inside it, a `.stack.tight` does not tighten a stack inside it -- for a component of the consumer's own too, since the reset is in the body `@apply` copies.
+
+**`ruled` and `ruleless` raise no flag.** They write `--ui-rule`, a public token that already cascades, as `edged` writes `--ui-border`. On a container they rule every table inside it; before, they reached only the `.data-table` carrying them.
+
+**`interactive`, `hoverable`, and `pressable` are aliases.** `interactive` applies `box-hover`, `box-active`, and the pointer cursor; the other two are its halves. They are no longer nested in `.card`, so they answer on anything painted by `box`. The hover half raises `--_m-hover`, which `.card` reads for its quiet hover ground.
+
+**`disabled` is not a utility.** It is a state, written beside `:disabled`, `[aria-disabled="true"]`, and `[data-disabled]` in the selectors that read it, and those rules have to match the attributes whether or not a class exists. A utility could only add a fifth way to say it.
+
+**`.sketch-rounded` and `.glass-liquid` are not utilities** either: they modify an aesthetic, and aesthetics are plain CSS, emitted always.
+
+Rejected: `&.tight` nested in each component, which is what the flags replaced, and for the reasons under [Size](#size): `@apply stack tight` could not be written, `md:tight` compiled to nothing, and at 0-2-0 the nested rule beat a consumer's `gap-*` or `p-*`, where the default loses to them. Rejected too: a utility that declares the property itself, such as `tight { gap: 0.5rem }`. It would restyle any element with that class, and it cannot hold a value that differs per component.
+
 ## Shared composition
 
 Twenty-one components paint a box the same way, so the five expressions that mix intent x presentation x aesthetic live in exactly one place: `@utility box`. Components that share more share more: the six text controls share `@utility text-control`, and the four containers -- card, panel, alert, and the tooltip's bubble -- share `@utility surface`. Those are shared code, named for what they are. Nothing else needs a name: a key cap, a code chip and a table take `box` and say the rest themselves.
@@ -283,11 +363,11 @@ Seven bounds pass it, and they are the same argument in different materials. Eve
 
 | Component            | Bound                                      | What our own composition does to it                                                                                                                                                                                                                                               |
 | -------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `text-control`       | Cascaded fill capped at 6%                 | A container's `.solid` cascades onto a field nobody classed and fills it with its own text color. A fill class on the element names its own cap.                                                                                                                                  |
+| `text-control`       | Cascaded fill capped at 6%                 | A container's `.solid` cascades onto a field nobody classed and fills it with its own text color. The element's own fill class names its own cap through `--_own-fill`: `.soft` 12%, `.solid` 20%.                                                                                |
 | Toggles              | Resting fill capped at 40%                 | The 6% cap keeps _typed text_ legible and a toggle has none; 40% is where `.ghost`/`.soft`/`.solid` separate as three plates, measured. Escaped by the default and the element's own `.soft` (both `12%`); lifted whole by `:checked`, the state that declares the checked plate. |
-| Text controls        | Edge floored at 100%                       | A container's `.edgeless` leaves a field with no mark of where typing goes. Lifted by the element's own `.edgeless`.                                                                                                                                                              |
+| Text controls        | Edge floored at 100%                       | A container's `.edgeless` leaves a field with no mark of where typing goes. Lifted by the element's own `.edgeless`, through `--_own-edge`.                                                                                                                                       |
 | `.checkbox` `.radio` | Edge floored at 100%, absolutely           | The same, with nothing left when the line goes. Lifted by nothing.                                                                                                                                                                                                                |
-| `.tooltip`           | Edge floored at 100%                       | A container's `.solid` or `.edgeless` takes the boundary off a bubble nobody classed. In light its plate is near-white, so the line is the only thing separating the message from what is behind it. Lifted by the element's own `.edgeless`.                                     |
+| `.tooltip`           | Edge floored at 100%                       | A container's `.solid` or `.edgeless` takes the boundary off a bubble nobody classed. In light its plate is near-white, so the line is the only thing separating the message from what is behind it. Lifted by the element's own `.edgeless`, through `--_own-edge`.              |
 | Toggles              | Inset ring spread capped at the line width | Under `.pixel` the aesthetic's four-pixel ring on a sixteen-pixel box leaves an eight-pixel hole, so an unchecked toggle reads as a checked one. Capped at `--ui-border-width`.                                                                                                   |
 | `.radio`             | Checked line width capped at 3px           | A checked radio doubles its line, and a thick aesthetic doubled closes the circle over its own dot; 3px leaves 10px of interior for an 8px mark.                                                                                                                                  |
 
@@ -299,11 +379,27 @@ The number is expected to move. This is a test, not a quota: a bound that passes
 
 The rules that follow:
 
-- A file other files `@reference` -- `box.css`, `surface.css` -- imports neither the theme nor Tailwind.
-- A file that references Tailwind imports the theme straight after it, so the theme is the last word. The layout and content utilities, which never stand alone, reference neither.
-- A compiled entry imports the theme before its own `@reference "tailwindcss"`. Tailwind writes the theme's variables where it meets the first `@theme`, and after the reference that is Tailwind's own reference-only one.
+- A file other files `@reference` -- `box.css`, `surface.css` -- imports neither the theme nor Tailwind. Neither does a `*.rules.css` file ([One route to each utility](#one-route-to-each-utility)).
+- A file that references Tailwind imports the theme straight after it, so the theme is the last word. The focused entries do this. The layout and content utilities, which never stand alone, reference neither.
+- `index.css` imports all of Tailwind, then the theme. `components/index.css` and `native.css` reference Tailwind nowhere: each imports the theme first, then `tailwindcss/utilities.css` into `layer(utilities)`, as `tailwindcss/index.css` does it. Without the layer the CLI emitted the components unlayered on those two entries, where they beat every consumer rule. `theme.compiled.css`, which `dist/theme.css` is built from, imports the theme and then the same utilities with `source(none)`, and names the class families in an `@source inline` list: they are `@utility` rules, which Tailwind writes only where it finds both its utilities and a candidate, and the theme on its own has neither.
 
 `exports.test.ts` holds it: every compiled entry, and every `/tw` entry that carries the theme must declare every `--color-*` they read.
+
+### One route to each utility
+
+Tailwind registers a `@utility` once for every route by which the file defining it reaches a build, imported or referenced, and each registration appends its body: `@apply box` expanded to as many copies as there were files that `@reference`d `box.css`. Nine did, and 63% of the declarations in `dist/index.css` repeated one already in the same rule. A repeat changes nothing a browser computes, so nothing else failed.
+
+So a stylesheet that defines rules is split in two. `X.rules.css` holds the rules and brings nothing they need. `X.css` is the focused entry, the one a granular `/tw/*` export names: it brings Tailwind, the theme, and its reference to `box.css` or `surface.css`, then imports its rules file. An aggregate imports the rules files and brings what they need once. `components/rules.css` imports `box.css` and `surface.rules.css` once each and then every component's rules, and `components/index.css`, `index.css`, and `native.css` import it; `utilities/rules.css` does the same for the layout and content utilities. Typography, the reset, and `surface` follow the same split. `index.css` and `native.css` do not import `typography.css`, because `components/rules.css` brings its rules and a second route stacks them.
+
+`exports.test.ts` ("aggregate exports state each declaration once") holds every aggregate export and `dist/native.css` to it. Two repeats are recorded there rather than removed: the tooltip bubble restates `box`'s shortened transition under reduced motion because it replaces that transition after applying `box`, and Tailwind's minifier emits a prefixed declaration of Preflight's link rule twice.
+
+The route an aggregate used before, importing the focused entries, is what this replaced: each brought its own reference to `box.css`, and importing five stacked five copies.
+
+### What `tw/` ships
+
+`tw/` is `src/` copied by `scripts/build-tw.mjs`, less what only the compiled build reads: `palette.css`, which reaches consumers as `dist/palette.css`, and `theme.compiled.css`. `files` publishes the whole directory, so a stylesheet no `/tw` export reaches would ship as bytes nobody can load; `exports.test.ts` checks that every stylesheet under `tw/` is reachable from a `/tw` export.
+
+The theme builds its tokens from Tailwind's palette, so a `/tw` consumer keeps the ramps it reads: `neutral`, `emerald`, `amber`, `rose`, `indigo`, and `white`. Clearing one of those leaves its intent with no colour and no error; clearing the rest of the palette is supported, and `tests/browser/tw-consumer.spec.ts` builds a consumer that does. `docs/usage/theming.md` lists the ramps to keep.
 
 ## Intent
 
@@ -418,7 +514,7 @@ Beyond composition, the package strives for three things, in this order: that it
 | `--ui-backdrop`           | `none`                             | Backdrop filter; resolved by surfaces and the data table only.              |
 | `--ui-surface-image`      | `none`                             | Painted layer; resolved by surfaces only.                                   |
 | `--ui-hover-transform`    | `none`                             | Transform applied on interactive hover.                                     |
-| `--ui-clip`               | `none`                             | Silhouette for structural components.                                       |
+| `--ui-clip`               | `none`                             | Silhouette for controls and the tooltip bubble; surfaces take none.         |
 | `--ui-clip-tight`         | `--ui-clip`                        | Silhouette for chips.                                                       |
 | `--ui-focus-inset`        | _undefined_                        | Inset focus layer width, with a page-colour line inside. Undefined: none.   |
 | `--ui-label-weight`       | per component                      | Label weight; `.btn` and `.badge`.                                          |
@@ -447,6 +543,8 @@ box-shadow: var(--ui-shadow-x, 0px) var(--ui-shadow-y, 0px) var(--ui-shadow-blur
 `--ui-surface-shadow` is the complete-value override for the multi-layer case glass needs, where the color is fixed rather than intent-derived. It is scoped to surfaces deliberately: glass's 18px drop shadow given through an unscoped slot would land under every button and chip on the page, the same reach-one-kind-of-component problem `--ui-backdrop` solves, solved the same way.
 
 `--ui-focus-inset` draws focus as an inset layer where a clip removes the outline, and the layer is two tones: the ring in `--focus-ring`, and a 2px line of `--color-background` inside it. `--focus-ring` is the primary colour, so on a `.solid.primary` box the ring alone was painted over its own colour and a focused button was pixel for pixel a resting one. One of the two tones always differs from the fill.
+
+The outline `reset.css` draws for everything else has the same problem: it sits over the box's own edge, and on a box filled with the ring's colour that part of it vanished. Under a two-pixel line one pixel of ring was left, and neobrutalism's slab covered it on two sides. So `box`'s `:focus-visible` adds a 2px inset line of `--color-background` under the outline, `--_focus-gap`, and `.input-group` does the same under `:focus-within`. It is stepped from the capped fill and drawn only on a box filled past half: on an unfilled one the outline already reads against the page, and a line of the page colour inside a soft field is a stray mark.
 
 `--ui-shadow-inset` carries the `inset` keyword, without which pixel's ring would have to be a complete value and lose the component's own intent. `--ui-shadow-edge` says the inset ring is not a shadow at all but a border drawn where a `clip-path` cannot cut it, so it answers the edge axis the way a real border does. Pointing it at `--_edge` is the whole implementation, because `--_edge` already carries P3's blend and the edge amount as its alpha. It is read for its presence rather than its value, and that is a measured constraint. As a percentage -- `color-mix(in oklab, var(--_edge) var(--ui-shadow-edge), var(--_depth-color))` -- both ends of the mix are themselves `color-mix()` results, and WebKit resolves that nesting as though the percentage were zero: every ring comes out in `--elevation-color` at 8% alpha, in that engine alone. Declaring the token empty and selecting between two single mixes with the guaranteed-invalid fallback idiom keeps all three engines in agreement. An aesthetic nested inside one that declares it clears it with `initial`.
 
@@ -500,13 +598,13 @@ This is the mechanism behind every case in this model where a value is declared 
 2. **Presentation** decides how much fill and whether there is an edge.
 3. **Intent** colors both.
 
-Modifiers -- size, and [elevation](#elevation) -- sit above the three, being per-element choices rather than axis membership. State sits above the modifiers: a control that is `:disabled` or `aria-invalid` reads as such regardless of every axis and modifier applied to it. State is a condition rather than a choice, so it is not an axis, but it wins when it collides with one. There is no fourth step: a component does not clamp the composed result, and the bounds it places on inputs are stated where they apply.
+Modifiers -- [size](#size), and [elevation](#elevation) -- sit above the three, being per-element choices rather than axis membership. State sits above the modifiers: a control that is `:disabled` or `aria-invalid` reads as such regardless of every axis and modifier applied to it. State is a condition rather than a choice, so it is not an axis, but it wins when it collides with one. There is no fourth step: a component does not clamp the composed result, and the bounds it places on inputs are stated where they apply.
 
 **S1. A state re-declares an input, never a painted property.** It sets `--ui-fill`, `--ui-border`, or an intent slot, and lets `box` paint. It does not write `background-color`, `border-color`, or `box-shadow` of its own.
 
 State is where a design system usually grows escape hatches: `:checked`, `:indeterminate`, `.active`, `[data-state]`, selected rows each have an obvious wrong answer -- paint the property directly -- that works in isolation and then ignores the aesthetic, ignores elevation, and loses the hover derivation. S1 closes that. `aria-invalid` and `:checked` follow it; a state that painted `border-color` would look fine in isolation and fail under an aesthetic that draws its edge as an inset ring.
 
-S1 says what a state may declare. It does not say where, and where decides whether the state wins at all. The intent resets are in `components`; a state written as `&[aria-invalid="true"]` inside `@utility` lands in `utilities`, which beats `components`, and the class with the attribute gives it 0-2-0 so it also outranks its own component's utility. **A state that writes an intent slot is declared above the intents: in `utilities`, at a specificity that beats its own component.** A consumer's utility setting an intent slot on an invalid field loses to it too, because state wins over every choice.
+S1 says what a state may declare. It does not say where, and where decides whether the state wins at all. The intent resets are in `components` and the intent classes in `utilities.families`; a state written as `&[aria-invalid="true"]` inside `@utility` lands in `utilities` itself, which beats both, and the class with the attribute gives it 0-2-0 so it also outranks its own component's utility. **A state that writes an intent slot is declared above the intents: in `utilities`, at a specificity that beats its own component.** A consumer's utility setting an intent slot on an invalid field loses to it too, because state wins over every choice.
 
 The cost of the rule is that a state can only express itself in the vocabulary the axes already have. That is the point: if a state needs something the vocabulary cannot say, the vocabulary is missing a slot, and adding the slot fixes it for every state at once rather than for that one.
 
@@ -514,19 +612,24 @@ The cost of the rule is that a state can only express itself in the vocabulary t
 
 CSS shipped by the package is placed across Tailwind's four cascade layers, in Tailwind's order (with documented unlayered exceptions), on every entrypoint, and every entrypoint states that order before it uses a layer -- a browser orders layers by the first time it meets each name, so a sheet opening `components` first would rank it lowest. This applies to standalone `/components`, `/native`, `/theme`, `/palette`, and aesthetic entries as well as the aggregate: loading an aesthetic before components does not change which layer wins. Built-file browser probes cover Tailwind utilities, plain consumer CSS, and raw entries in Chromium, Firefox, and WebKit.
 
-| Layer        | Holds                                                                                                                      |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| `theme`      | Tailwind's theme, the `:root` foundation tokens, the colour-scheme selectors, and `./palette`.                             |
-| `base`       | The reset and the native element styles.                                                                                   |
-| `components` | The four class families: intent (floor, classes, both resets), presentation, elevation, and every aesthetic's token class. |
-| `utilities`  | Every component, and the seams that must beat their own component.                                                         |
-| _unlayered_  | The `forced-colors` overrides, the closed-`<dialog>` restatement, solo classes, and `@property`.                           |
+| Layer                | Holds                                                                                                                                                                 |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `theme`              | Tailwind's theme, the `:root` foundation tokens, the colour-scheme selectors and the print rule, and `./palette`.                                                     |
+| `base`               | The reset, the native element styles, and the `[hidden]` rule.                                                                                                        |
+| `components`         | The intent floor and both intent resets, and every aesthetic's token class.                                                                                           |
+| `utilities.families` | The class families as `@utility` bodies: intent, presentation, elevation, corner, and size. Beside them, the `.neutral` arms and the neutral resets components carry. |
+| `utilities`          | Every component, and the seams that must beat their own component.                                                                                                    |
+| _unlayered_          | The `forced-colors` overrides, the closed-`<dialog>` and closed-popover restatements, solo classes, and `@property`.                                                  |
 
-So a consumer's own utility, or their unlayered CSS, beats any class of the four families on the same element. A consumer's utility and a component contest one layer, by specificity and then source order: components cannot sit below `utilities`, because `@apply` reaches only `@utility` rules and `box`, `surface`, and `text-control` are applied that way.
+`utilities.families` is a sublayer of `utilities`, and a layer's own rules beat the rules of every layer nested in it. So every rule written straight into `utilities` -- a component's, or a consumer's own utility -- beats a family class on the same element whatever the specificity, and so does a consumer's unlayered CSS. A consumer's utility and a component contest one layer, by specificity and then source order: components cannot sit below `utilities`, because `@apply` reaches only `@utility` rules and `box`, `surface`, and `text-control` are applied that way.
 
-Where a rule goes follows from what it writes. A rule writing a property or a public token a consumer may set goes in `components` (or `theme`, for a foundation token), where a consumer's utility beats it. A rule writing only package privates, or a state, goes in `utilities` at the specificity it needs to beat its own component. State is the deliberate exception to a utility's override: `aria-invalid` and `:checked` win over normal intent and fill classes. Chunky tile's heavier label is a slot (`--ui-label-weight`) because a selector writing its painted weight could neither beat the component in `components` nor yield to a consumer's `font-*` in `utilities`.
+The families are `@utility` rules, with their bodies wrapped in `@layer families` (`presentation.css`, `intent.css`, `elevation.css`, `corner.css`, `size.css`), so that `@apply btn soft` and a variant -- `hover:soft`, `md:lg`, `focus:primary`, `dark:edged`, `md:raised` -- reach them; `exports.test.ts` compiles those five against `./tw`. Rejected: keeping them as plain classes in `components`, where they sat before. A plain class is not a utility, so `@apply` could not name one, and each of those variants compiled to nothing, with no error. Also rejected: bodies written straight into `utilities`, where a family class would contest a consumer's own utility on specificity and source order instead of losing to it.
 
-Neutral soft surfaces use a private `--_d-surface-ground` instead of writing the public `--ui-surface-ground` in a component utility: the latter would overrule `.glass` on the same element and leak its inherited ground into nested ghost cards. Under glass, neutral soft cards, panels, and alerts therefore become glass too. `surface` resets the private at each component root. Form seams that must beat their own utility share `utilities` at greater specificity. Solo classes stay unlayered to beat foreign components' unlayered zero-specificity rules; consumer Tailwind utilities do not override them, while the presentation, intent, and elevation classes reach them through the tokens those classes set. Accessibility overrides and the closed-dialog restatement stay unlayered because they must beat components regardless of layer. Centring an open dialog is a default rather than behaviour, so `surface` carries it at zero specificity, in `utilities` for the package's surfaces: it beats a `base` reset such as Preflight's `margin: 0`, and a consumer's margin utility or unlayered CSS beats it, so a dialog can still be placed.
+A component that carries the neutral reset for `@apply` -- `.btn`, `.badge`, `.kbd`, `.code`, `.pre`, `.quote`, `.data-table`, `surface`, `text-control` -- writes it as `@layer families { :where(&:not(<its own classes>, <the six intents>)) {...} }`, beside the intent classes, so an intent applied with it, `@apply text-control info`, wins there on specificity. Left in the component's own layer, the reset would beat every intent applied with it. The tooltip bubble's no-intent plate sits there for the same reason, and the `.neutral` arm that outranks the controls', the table's, and the bubble's `:where()` defaults sits there because the `.neutral` class it answers does.
+
+Where a rule goes follows from what it writes. A rule writing a property or a public token a consumer may set goes in `components` or `utilities.families` (or `theme`, for a foundation token), where a consumer's utility beats it. A rule writing only package privates, or a state, goes in `utilities` at the specificity it needs to beat its own component. State is the deliberate exception to a utility's override: `aria-invalid` and `:checked` win over normal intent and fill classes. Chunky tile's heavier label is a slot (`--ui-label-weight`) because a selector writing its painted weight could neither beat the component in `components` nor yield to a consumer's `font-*` in `utilities`. Inside `utilities`, a default that a consumer's utility on the same element should beat is written at zero specificity: `.label`'s type at `:where(&)`, and `.data-table`'s cell padding and alignment at `:where(& :is(th, td))` and `:where(& th)`. Tailwind emits its own utilities before the package's, so at 0-1-0 `.label.text-sm` stayed 16px, and at 0-1-1 `p-0` or `text-center` on a cell lost.
+
+Neutral soft surfaces use a private `--_d-surface-ground` instead of writing the public `--ui-surface-ground` in a component utility: the latter would overrule `.glass` on the same element and leak its inherited ground into nested ghost cards. Under glass, neutral soft cards, panels, and alerts therefore become glass too. `surface` resets the private at each component root. Form seams that must beat their own utility share `utilities` at greater specificity. Solo classes stay unlayered to beat foreign components' unlayered zero-specificity rules; consumer Tailwind utilities do not override them, while the presentation, intent, and elevation classes reach them through the tokens those classes set. Accessibility overrides and the closed-dialog and closed-popover restatements stay unlayered because they must beat components regardless of layer. Centring an open dialog is a default rather than behaviour, so `surface` carries it at zero specificity, in `utilities` for the package's surfaces: it beats a `base` reset such as Preflight's `margin: 0`, and a consumer's margin utility or unlayered CSS beats it, so a dialog can still be placed.
 
 `integration/exports.test.ts` holds every built entrypoint to the order and to the unlayered allowlist, and `browser/layers.spec.ts` asserts a consumer's override on the raw files a non-Tailwind consumer links.
 
@@ -558,6 +661,12 @@ Four of those name a ground as well. `.pre`, `.code` and `.kbd` are not transpar
 Everything else rests on nothing, and `box` says so on itself: it declares `--_d-ground: transparent` rather than leaving the value to the `var(--_d-ground, transparent)` fallback in its fill blend. The token inherits like any custom property, so a `surface` setting it to an opaque plate would reach every box nested inside -- a `.ghost` button in a card would blend its zero fill over the page colour and paint an opaque slab where it asked for no fill. An own declaration on `box` beats the inherited one, so a nested control keeps its own ground; the four components above restate theirs after `@apply box` for the same reason.
 
 These authored defaults are decisions, not derivations -- there is no rule that produces them. Each is stated in one place rather than hidden as a `var()` fallback in the middle of a component.
+
+### Resting defaults
+
+`box` states what a box rests as when nothing says otherwise: `--_d-fill: 0%`, `--_d-fg-on-fill: 0%`, `--_d-border: 0%`, `--_d-elevation: 1`, and `--_d-holds-ink: none` -- no fill, no line, the ordinary depth, and no ink handed down. They are stated on the element rather than left to the `var()` fallbacks, for the reason `--_d-ground` is: `--_d-*` inherit like any custom property, so a bare `box` inside a `.btn` rested as the button did, with a full fill and the button's line.
+
+A component writes its own after `@apply box`. The `@apply` inlines `box`'s declarations at that point, and the later declaration in one rule wins, so a value written above the `@apply` is overridden by the very utility it was meant to specialise. The no-op restatements of `--_fill-cap`, `--_edge-floor`, `--_bare-ink`, the scale steps, and `--surface-padding` in `box` are there for the same inheritance, so a nested box reads its own presentation rather than its container's reinterpretation of one.
 
 ### `.input-group` owns the box; the control inside gives it up
 
@@ -646,13 +755,13 @@ The table component is `.data-table`, not `.table`: an `@utility table` would re
 
 `@utility` does not make a private helper. Every name below is a class a consumer can type, whether or not it is documented, so they are published as a small composition API.
 
-| Utility        | What applying it gives an element                                                                                                                |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `box`          | The whole painted box: `border-box` sizing, fill, foreground, edge, radius, shadow, clip, focus, disabled.                                       |
-| `box-hover`    | The derived hover tone, for something you press rather than type into. `btn`, and `.card.interactive` / `.card.hoverable`.                       |
-| `box-active`   | The `:active` press: the base `scale(0.97)`, or the aesthetic's active shadow and transform. `btn`, and `.card.interactive` / `.card.pressable`. |
-| `surface`      | `box` plus the surface-only slots: ground, backdrop, surface shadow.                                                                             |
-| `text-control` | `box` plus the fill cap, the edge floor, and the field affordances all six text controls share.                                                  |
+| Utility        | What applying it gives an element                                                                                                                  |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `box`          | The whole painted box: `border-box` sizing, fill, foreground, edge, radius, shadow, clip, focus, disabled.                                         |
+| `box-hover`    | The derived hover tone, for something you press rather than type into. `btn`, and the `interactive` / `hoverable` utilities.                       |
+| `box-active`   | The `:active` press: the base `scale(0.97)`, or the aesthetic's active shadow and transform. `btn`, and the `interactive` / `pressable` utilities. |
+| `surface`      | `box` plus the surface-only slots: ground, backdrop, surface shadow.                                                                               |
+| `text-control` | `box` plus the fill cap, the edge floor, and the field affordances all six text controls share.                                                    |
 
 They are the seam the components are built from, and a consumer composing a component the package does not ship is better served by them than by copying a component's declarations. What they are not is a taxonomy: applying `box` says how an element is painted, not what kind of thing it is.
 
@@ -660,17 +769,21 @@ They are the seam the components are built from, and a consumer composing a comp
 
 `@apply` copies a utility's body, nested rules included, under the consumer's selector, and nothing else. A rule that names the class from outside the utility -- `:where(.text-control, ...)` in `intent.css`, `:is(.text-control, ...).soft` beside it -- never reaches `.my-control { @apply text-control }`. So whatever the helper's contract includes lives inside the utility:
 
-- **The neutral reset.** `surface` and `text-control` carry it, `text-control` with the control line, as `:where(&:not(<the package's own classes that apply the helper>, <the six intent classes>))`. Zero specificity, so every rule writing an intent slot on the element wins over it, and never on an element with an intent class, so it cannot overrule one. `registry.test.ts` holds each list to the stylesheet: it fails on a package utility that applies the helper, directly or through another, and is missing from the list, and on a listed class that no longer applies it. `box` carries none: it takes the nearest intent, as documented.
-- **The dialog rules `surface` owns.** `&:is(dialog):not([open])` hides a closed dialog at 0-2-1, above a display utility, and `:where(&:is(dialog)[open])` centres an open one at zero specificity, below a consumer's margin. Each lands in the layer the helper is applied in; `.card`, `.panel`, and `.surface` also keep the unlayered hide in `components/surface.css`, so for them it beats any layered rule.
-- **The seams `text-control` owns.** `&.soft`, `&.solid`, `&.edgeless`, and `&[aria-invalid="true"]`, each at 0-2-0 as before. And the forced-colours focus ring, `outline: 2px solid Highlight !important` as the reset's is, kept off a control inside an `.input-group` by `:where(:not(.input-group > *))` because an important ring cannot be suppressed by the group. The toggles' exceptions -- no `.soft`/`.solid` cap on any of the three, no `.edgeless` on `.checkbox` and `.radio` -- are exclusions in `:where()`, so they add no specificity.
+- **The neutral reset.** Every component a consumer may apply under a selector of their own carries it -- `.btn`, `.badge`, `.kbd`, `.code`, `.pre`, `.quote`, `.data-table`, `surface`, and `text-control`, the last with the control line -- as `:where(&:not(<the package's own classes that apply the utility>, <the six intent classes>))` in `@layer families`. Zero specificity, so every rule writing an intent slot on the element wins over it, and never on an element with an intent class, so it cannot overrule one. `registry.test.ts` holds each list to the stylesheet: it fails on a package utility that applies the helper, directly or through another, and is missing from the list, and on a listed class that no longer applies it. `box` carries none: it takes the nearest intent, as documented.
+- **The request on the element.** The fill and edge utilities write `--_own-fill` and `--_own-edge` beside their public tokens, so `@apply ipt soft` lifts the 6% cap and `@apply ipt edgeless` lowers the edge floor as the classes on the element do ([Element or cascade](#element-or-cascade)). The size flags travel the same way ([Size](#size)).
+- **The dialog and popover rules `surface` owns.** `&:is(dialog):not([open])` hides a closed dialog at 0-2-1 and `&[popover]:not(:popover-open)` a closed popover at 0-3-0, both above a display utility, because the user agent's own hide loses to the surface's `display`; `:where(&:is(dialog)[open])` centres an open dialog at zero specificity, below a consumer's margin. Each lands in the layer the helper is applied in. `.card`, `.panel`, and `.surface` also keep the unlayered dialog hide in `components/surface.rules.css`, and those three and `.alert` the unlayered popover hide beside it, a toast being the surface most often given `popover`, so for them it beats any layered rule.
+- **The seams `text-control` owns.** `&[aria-invalid="true"]` at 0-2-0, and the forced-colours focus ring, `outline: 2px solid Highlight !important` as the reset's is, kept off a control inside an `.input-group` by `:where(:not(.input-group > *))` because an important ring cannot be suppressed by the group. Each toggle carries `--intent-fill-max: 100%` and its forced-colours colours in its body, and `.input-group` its `:has()` bridges for an inner control's `aria-invalid` and `disabled`.
+- **The tooltip bubble's open and dismissed states.** Written in its body as `.tooltip:hover &` and its siblings, so an applied bubble opens inside a `.tooltip` as the class does.
 
-The reset excludes the package's own classes because it lands in `utilities`, where the `intent.css` reset is in `components`. On `.ipt` it would beat a consumer's own intent class declared in `components` ([Theming → Your own intent](../usage/theming.md#your-own-intent)); a consumer's applied element carries that cost instead, since nothing else reaches it. An intent class of the consumer's own on such an element has to be unlayered or a utility to win.
+The reset excludes the package's own classes because it beats the `intent.css` reset, which is in `components`. On `.ipt` it would beat a consumer's own intent class declared in `components` ([Theming → Your own intent](../usage/theming.md#your-own-intent)); a consumer's applied element carries that cost instead, since nothing else reaches it. An intent class of the consumer's own on such an element has to be unlayered or a utility to win.
+
+**A component's modifiers are carried.** Each is a utility that raises a flag the component's body reads, and the body `@apply` copies includes the reset that keeps the flag off a nested component ([Modifiers](#modifiers)).
 
 Not carried, because it names the applied element from somewhere else: `.input-group`'s rules for the control inside it, which match the package's control classes and the native fields, so they reach an applied `<input>`, `<textarea>`, or `<select>` and nothing else.
 
 ### Public component variables
 
-Six component-scoped custom properties are supported consumer inputs, documented in one table in `docs/usage/customizing.md`: `--progress-value`, `--progress-color`, `--progress-surface`, `--progress-edge`, `--input-group-gap`, and `--tooltip-linger`. Every other variable a component declares or reads -- `--surface-padding`, `--field-gap`, `--switch-*`, `--table-*`, `--quote-*`, the tooltip positioning intermediates, `--elevation-y`, `--elevation-blur`, and every `--_*` private -- is internal wiring that may change in any release.
+Six component-scoped custom properties are supported consumer inputs, documented in one table in `docs/usage/customizing.md`: `--progress-value`, `--progress-color`, `--progress-surface`, `--progress-edge`, `--input-group-gap`, and `--tooltip-linger`. Every other variable a component declares or reads -- `--field-gap`, `--switch-*`, `--table-*`, `--quote-*`, the tooltip positioning intermediates, `--elevation-y`, `--elevation-blur`, and every `--_*` private -- is internal wiring that may change in any release.
 
 The six are public for different reasons. `--input-group-gap` and `--tooltip-linger` have been taught in the published docs since 0.2.0 and 0.6.0, so consumers may rely on them, and each meets a need nothing else does: `--input-group-gap: 0` glues a text affix to its value, and `--tooltip-linger` is the hover timing WCAG 1.4.13 asks for. The progress trio is the override path [Pseudo-element budget](#pseudo-element-budget) already gives an aesthetic or a consumer into `.progress`, and `--progress-value` is the bar's only input.
 
@@ -692,7 +805,7 @@ Translucent surfaces over a blurred backdrop with a hairline highlight edge. Nee
 
 - Blur and saturation reach surfaces and the data table only, through `--ui-backdrop`. Controls stay solid: an active blur costs a compositing layer apiece, and one under every control of a dense cluster reads as noise. A table is a pane of content, and next to frosted cards an opaque one reads as a slab. Only its default and `.soft` forms frost: a `.solid` table is opaque, and a `.ghost` one has nothing behind its type to blur.
 - The glass is the ground, not the fill. Translucency is `--ui-surface-ground`, the plate a partial fill is painted over; every presentation keeps its whole fill, so a `.solid` button, a checked toggle, and a `.solid` card are opaque. Glass does not set `--ui-bg-alpha`: thinning every fill would make how much colour a presentation asks for depend on the aesthetic, which is presentation's question ([R1](#rules-for-aesthetics)).
-- The edge is a light hairline in both themes, because glass catches light from above regardless of what is under it. Text controls and toggles do not take it: the hairline erases an unchecked checkbox on a light page, so their line is `--ui-control-ink`, the theme's ink at 55% -- translucent, so it tints what is behind the pane rather than drawing a flat grey. A table's frame and rules do not take it either: it vanishes on the table's plate, so they draw `--ui-rule-ink`, the same ink at 20%. Buttons and badges keep the hairline.
+- The edge is a light hairline in both themes, because glass catches light from above regardless of what is under it. Text controls and toggles do not take it: the hairline erases an unchecked checkbox on a light page, so their line is `--ui-control-ink`, the theme's ink at 55% -- translucent, so it tints what is behind the pane rather than drawing a flat grey. A table's frame and rules do not take it either: it vanishes on the table's plate, so they draw `--ui-rule-ink`, the same ink at 20%. Buttons and badges keep the hairline where they have a plate to draw it on; a neutral one with no fill -- a `.ghost.edged` button, at 1.01:1 on a light page -- draws the control ink instead, through `--_unfilled-ink` ([The ink of the plate beneath](#the-ink-of-the-plate-beneath)).
 - Both shadow layers pull in with negative spread, so the shadow tucks under the surface instead of haloing onto the backdrop.
 - A press is the base `scale(0.97)`, at once under reduced motion. Controls carry no shadow here, so there is no slab to press into.
 - Every surface in its region is glass, a neutral `.card.soft`, `.panel`, and `.alert` included: their quiet ground is a private default beneath `--ui-surface-ground`, so glass's ground wins over it.
@@ -730,7 +843,7 @@ Thick ink outline, a hard unblurred offset shadow, and a press that moves the el
 - The offset shadow is the component's own `--intent-border`, so a success button casts a green shadow and a neutral button casts ink.
 - The press moves the element by the shadow offset and shrinks the shadow to nothing. Hover holds the slab still; the derived fill tint is its whole response. Under reduced motion the press still happens, at once: `--ui-active-transform` is `none`, so there is no scale to drop, and `box`'s near-zero duration removes only the travel. The press is the feedback that a click registered.
 - No face of its own: the region sets the theme's, `--font-default`, as chunky tile reads it, so a region nested inside a font-bearing aesthetic does not take that aesthetic's face.
-- An alert rests on the slab, which is the one component this aesthetic names in a selector. Here the slab is a second ink line rather than depth, and an alert is the only container the registry rests flat. It is written into the component's resting default rather than the modifier, so every elevation class still wins.
+- An alert rests on the slab, which is the one component this aesthetic names in a selector, as `:is(.neobrutalism .alert, .alert.neobrutalism)` so an alert carrying the class itself takes it too. Here the slab is a second ink line rather than depth, and an alert is the only container the registry rests flat. It is written into the component's resting default rather than the modifier, so every elevation class still wins.
 
 ### `.pixel`
 
@@ -742,6 +855,7 @@ An 8-bit look built from a stepped silhouette and an inset ring.
 - The edge is a one-unit inset ring, the same size as the cut, so the corner is covered and the line does not read as broken there.
 - The ring answers the edge axis, through `--ui-shadow-edge`. It is the border, not depth, so `.edgeless` draws none and a field's own floor keeps one.
 - No radius anywhere. `clip-path` clips a border away, so the border ceiling goes to zero and the ring does the drawing. A table takes no clip, because the clip would span its caption, so it is square, and its rules read the uncapped width: capped, the head and foot rules and `.ruled` would draw nothing.
+- Surfaces take no clip either, and are square with the ring. A clip cuts everything inside the element, and a surface is the box that holds other things: a tooltip in a card computed visible and was never painted, and a child's shadow and focus outline were cut with it. `surface` refuses the clip whatever the aesthetic says; the tooltip bubble, which holds a line of text, takes the stepped silhouette back.
 - Controls draw the theme's control border, as under neobrutalism. A switch's knob sits inside the ring, which it reads through `--ui-shadow-edge`: sized from the zero border alone, it would cover the ring and both states would read as two halves.
 - Reads `--font-pixel` and falls back to monospace. The package ships no font binary.
 
@@ -782,7 +896,7 @@ Uneven elliptical corners, solid ink with dashed accents, and a small hard offse
 - `.sketch-rounded` is a modifier: short rounded corners, bounded in pixels so a wide element keeps straight top and bottom edges, rotated the same way. On the region or on one component.
 - A `.btn.pill` takes a rounded pill bounded to the button's half-height; badges, progress bars, and switches take their chip outline; radios and the tooltip icon stay slightly uneven circles, so a radio is never read as a checkbox.
 - Knobs `--sketch-radius`, `--sketch-radius-surface`, `--sketch-radius-pill`, `--sketch-radius-rounded`, and `--sketch-radius-surface-rounded` are read with fallbacks per [R8](#rules-for-aesthetics); a set knob replaces every step of its rotation. An explicit radius on a component wins over the rotation.
-- The edge is 1px solid through `--ui-line-style`; checkboxes are dashed, and dividers and table rules take `--ui-rule-style: dashed`. Forced colours draws them solid. Controls draw the theme's control border, as under neobrutalism, and a table rotates with the surfaces.
+- The edge is 1px solid through `--ui-line-style`; checkboxes are dashed, and dividers and table rules take `--ui-rule-style: dashed`. The bare elements `/native` styles as those components -- a checkbox `<input>` that is not a switch, `hr`, and `table` -- take the same accents, named in `:where()` beside the classes so the selector keeps the class's weight. Forced colours draws them solid. Controls draw the theme's control border, as under neobrutalism, and a table rotates with the surfaces.
 - The shadow is a neutral 2px right-and-down offset with no blur or spread, scaled by elevation like every part-based depth cue.
 - Buttons press with `scale(0.97)`, like the plain look; under reduced motion the press still happens, at once.
 - Reads `--font-sketch` and falls back to the platform `cursive` generic family. The package ships no font binary.
@@ -910,7 +1024,30 @@ Uppercase actions are not part of it. Casing is how a label is worded, and silen
 
 ### Where this leaves native elements
 
-Tier 1 reaches a bare `<button>` because tokens travel through the cascade, and because `native.css` maps the element to the same utility the class carries. An aesthetic staying in Tier 1 works everywhere. An aesthetic writing its own selector list works wherever it remembered to look, which is the cost of writing one and the reason to prefer a slot.
+Tier 1 reaches a bare `<button>` because tokens travel through the cascade, and because `native.css` maps the element to the same utility the class carries. `<dialog>` is a floating card (`@apply card floating`), the one surface with an element of its own. `<progress>` takes `.progress`'s track; its value is painted in the engine's own pseudo-element, so the fill is restated on `::-webkit-progress-value` and `::-moz-progress-bar`, one rule each, because a selector list naming a pseudo-element an engine does not know drops the whole rule. With no `value` it is indeterminate, and the sweep is drawn on the track's own background, because an engine paints that pseudo-element empty or full and neither can be moved; it rests under reduced motion and takes system colours under forced colours. An aesthetic staying in Tier 1 works everywhere. An aesthetic writing its own selector list works wherever it remembered to look, which is the cost of writing one and the reason to prefer a slot.
+
+## Increased contrast
+
+Several lines rest below 3:1 on purpose: a field's line at 60% so hover and focus have somewhere to go, the surface line at `--color-border`, a progress track with no edge, an intent's line faded by the soft fill under it, glass's white hairline. `prefers-contrast: more` is the reader saying that trade is the wrong one for them, so under it each of those lines is drawn at 3:1 or more against both its own fill and the page. `tests/browser/contrast.spec.ts` measures every one in both themes; [Accessibility](../accessibility.md#increased-contrast) is the consumer-facing list.
+
+- **A field rests at its whole line.** `--_line-rest` goes to 100% in a `@media` nested in the text control's body, so `@apply ipt` carries it. Hover and focus then move nothing in the tone; the focus ring is untouched.
+- **The neutral line is one slot.** `--color-border` is `var(--_contrast-border, …)`, and the slot is set only under the preference, to neutral-600 in light and neutral-400 in dark. The control grey, neutral-500, is not enough: `box` fades a line by the fill under it, and a neutral `.badge.soft.edged` landed at 2.9:1 against its own tint. A slot the token reads, rather than the token restated in a `@media`, so a consumer's own `--color-border` replaces both and is kept whatever order the sheets load in.
+- **An intent's line is its strong tone.** Each intent utility sets `--intent-border` to `--color-<intent>-strong` under the preference. With the resting tone, a `.soft.edged` warning drew at 2.4:1 in light and success at 2.9:1 in dark.
+- **A progress track draws its edge.** `--_d-border` goes to 100%; `--ui-border` is still read first, so `.edgeless` wins.
+- **Glass goes opaque,** by joining the reduced-transparency and forced-colours branch, and its hairline becomes the control grey: white on an opaque light page is 1.03:1. Chunky tile's tile grey, about 2.5:1 in both themes, takes its controls' grey.
+
+Left alone: text, solid fills, and focus rings, which meet their ratios without it; a border the consumer removed with `.edgeless`; a `.panel`, which draws no line by default and is a region, not a control; and `prefers-contrast: less`, which nothing reads.
+
+The nested `@media` blocks sit last in their rule, and chunky tile's is a rule of its own: `registry.test.ts` reads those blocks' declarations with patterns that stop at the first nested brace.
+
+Rejected: a `.high-contrast` class or a token the consumer sets. The preference is the reader's, stated to the browser, and a class would leave it to each application to wire up. Rejected too: raising the lines for everyone. The quiet resting line is a decision of the default look ([Presentation](#presentation)), and the preference is what lets both readers have theirs.
+
+## Print
+
+Paper is the light ground. A browser leaves backgrounds off a printed page unless told otherwise, so a dark page printed its near-white text on no ground, and a filled box printed its contrast label, white, on nothing. Two declarations answer it:
+
+- `theme.css` sets `color-scheme: light` under `@media print` on `:root` and the dark-theme selectors. Every token resolves through `light-dark()`, so this re-resolves all of them, a forced-dark region's included. It is in `theme`, after the scheme selectors and at their specificity, so it beats them and a consumer's utility still beats it. It does not reach a `dark:` utility, which keys on the class and not on the scheme.
+- `box` and `.progress` set `print-color-adjust: exact`, so a box prints as drawn. It inherits, so everything inside a box keeps its paint too. `.progress` states it itself because it composes none of `box`, and its bar is nothing but two backgrounds.
 
 ## Direction
 

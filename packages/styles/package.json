@@ -1,6 +1,6 @@
 {
   "name": "@codenhub/styles",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": false,
   "description": "Build a consistent, themeable interface by writing class names on plain HTML, with one stylesheet of tokens, a reset, layout and type helpers, and component classes, and no JavaScript.",
   "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/styles",
@@ -9,6 +9,9 @@
     "type": "git",
     "url": "git+https://github.com/codenhub/codenhub.git",
     "directory": "packages/styles"
+  },
+  "bin": {
+    "codenhub-styles": "./dist/cli.js"
   },
   "files": [
     "dist",
@@ -222,10 +225,11 @@
     "debug": "pnpm build && pnpm --filter=@codenhub/styles-debug dev",
     "demo": "pnpm build && pnpm --filter=@codenhub/styles-demo dev",
     "generate": "node scripts/generate-palette.mjs",
-    "build": "pnpm clean && node scripts/build-styles.mjs && pnpm build:tw",
+    "build": "pnpm clean && node scripts/build-styles.mjs && pnpm build:tw && pnpm build:cli",
     "build:styles": "node scripts/build-styles.mjs --styles",
     "build:aesthetics": "node scripts/build-styles.mjs --aesthetics",
     "build:tw": "node scripts/build-tw.mjs",
+    "build:cli": "tsdown src/cli/cli.ts --format esm --no-clean --no-fixed-extension --no-dts",
     "prepublishOnly": "pnpm --filter=@codenhub/icons build && pnpm build && pnpm typecheck && pnpm test",
     "status:npm": "npm view @codenhub/styles version dist-tags time --json && npm dist-tag ls @codenhub/styles && npm access get status @codenhub/styles",
     "status:pack": "npm pack --dry-run --ignore-scripts",
@@ -242,16 +246,24 @@
     "@tailwindcss/cli": "catalog:",
     "@types/node": "catalog:",
     "tailwindcss": "catalog:",
+    "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {
+    "@tailwindcss/cli": ">=4.3.2 <5",
     "tailwindcss": ">=4.3.2 <5"
   },
   "peerDependenciesMeta": {
+    "@tailwindcss/cli": {
+      "optional": true
+    },
     "tailwindcss": {
       "optional": true
     }
+  },
+  "engines": {
+    "node": ">=24"
   },
   "codenhub": {
     "label": "StyleKit",

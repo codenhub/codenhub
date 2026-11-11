@@ -2,10 +2,13 @@
 @layer theme, base, components, utilities;
 
 @import "./theme.css";
-@reference "tailwindcss";
+/* Tailwind's utilities into `utilities`, as `components/index.css` does it
+   and for its reason. */
+@import "tailwindcss/utilities.css" layer(utilities);
 /* Everything that is not `src/` -- see the note in `index.css`. Without the
    docs and root-file excludes a utility used only in a documentation example
    compiles into `dist/native.css`. */
+@source not "./cli";
 @source not "../dist";
 @source not "../tests";
 @source not "../dev";
@@ -20,17 +23,18 @@
 @source not "../*.ts";
 @source not "../LICENSE";
 @source not "../NOTICE";
-@import "./typography.css";
-@import "./utilities/index.css";
-@import "./components/index.css";
-@import "./reset.css";
+/* No `typography.css` here: `components/rules.css` brings its rules, and a
+   second route to a `@utility` stacks its body. */
+@import "./utilities/rules.css";
+@import "./components/rules.css";
+@import "./reset.rules.css";
 
 @layer components {
   /* `intent.css`'s reset keys on class names; these bare elements need the same,
      or a `color-mix()` reading an undefined `--intent-*` drops silently. Zero
      specificity like the class reset, values matching it slot for slot -- a bare
      `<code>` and a `.code` chip are one component reached two ways. */
-  :where(table, kbd, code, pre, blockquote, hr, input, textarea, select, button) {
+  :where(table, kbd, code, pre, blockquote, hr, input, textarea, select, button, progress) {
     --intent-color: var(--color-text);
     --intent-contrast: var(--color-text-contrast);
     --intent-hover: var(--color-text-hover);
@@ -199,9 +203,108 @@
   input[type="reset"] {
     @apply btn;
   }
+
+  /* A dialog is the one surface with an element of its own, and it sits above
+     the page, so it is a floating card. `surface` carries the closed-dialog
+     hide and the centring. */
+  dialog {
+    @apply card floating;
+  }
+
+  /* The track is `.progress`'s. Its value is not: `.progress` draws the fill
+     as an `::after` sized by `--progress-value`, and a `<progress>` states its
+     value in an attribute and paints it in a pseudo-element of the engine's
+     own, so the fill is restated on each. One rule per engine: a selector
+     list with a pseudo-element an engine does not know drops the whole rule. */
+  progress {
+    @apply progress;
+
+    display: block;
+    appearance: none;
+  }
+
+  progress::-webkit-progress-bar {
+    background-color: transparent;
+  }
+
+  progress::-webkit-progress-value {
+    border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
+    background-color: var(--progress-color, var(--intent-color));
+  }
+
+  progress::-moz-progress-bar {
+    border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
+    background-color: var(--progress-color, var(--intent-color));
+  }
+
+  /* No `value` attribute is the indeterminate bar, `.progress.indeterminate`'s
+     sweep. Drawn on the track's own background: with no value an engine
+     paints its pseudo-element empty or full, and neither can be moved. */
+  progress:indeterminate {
+    background-image: linear-gradient(
+      var(--progress-color, var(--intent-color)),
+      var(--progress-color, var(--intent-color))
+    );
+    background-repeat: no-repeat;
+    background-size: 33% 100%;
+    animation: anim-progress-sweep 1.5s infinite ease-in-out;
+  }
+
+  /* The keyframes move a physical background position, so right-to-left text
+     runs them backwards: the sweep starts on the start side, as
+     `.progress.indeterminate`'s does. */
+  progress:indeterminate:dir(rtl) {
+    animation-direction: reverse;
+  }
+
+  progress:indeterminate::-webkit-progress-value {
+    background-color: transparent;
+  }
+
+  progress:indeterminate::-moz-progress-bar {
+    background-color: transparent;
+  }
+
+  /* The sweep rests at the start, as `.progress.indeterminate`'s does. */
+  @media (prefers-reduced-motion: reduce) {
+    progress:indeterminate {
+      animation: none;
+    }
+  }
+}
+
+/* The indeterminate `<progress>`'s sweep: a third of the track, from just off
+   one end to just off the other. */
+@keyframes anim-progress-sweep {
+  from {
+    background-position: -50% 0;
+  }
+
+  to {
+    background-position: 150% 0;
+  }
 }
 
 @media (forced-colors: active) {
+  /* The bar in system colours, as `.progress` is in `feedback.css`. */
+  progress {
+    forced-color-adjust: none;
+    background-color: Canvas;
+    border-color: CanvasText;
+  }
+
+  progress::-webkit-progress-value {
+    background-color: CanvasText;
+  }
+
+  progress::-moz-progress-bar {
+    background-color: CanvasText;
+  }
+
+  progress:indeterminate {
+    background-image: linear-gradient(CanvasText, CanvasText);
+  }
+
   input[type="checkbox"],
   input[type="radio"] {
     /* Keep these explicit system colors from being forced back to transparent. */

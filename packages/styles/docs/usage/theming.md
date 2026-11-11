@@ -41,6 +41,14 @@ Every component color comes from a token or from `currentColor`, so components f
 
 `light-dark()` works from Chrome 123, Safari 17.5, and Firefox 120. The package as a whole needs Firefox 128; see [Setup → Requirements](../setup.md#requirements).
 
+### Printing
+
+A page prints in the light theme, whatever theme it shows on screen. Under `@media print`, the root and every dark selector set `color-scheme: light`, so every token resolves to its light value, a forced-dark sidebar's included. Paper is light, and dark text on it costs less ink than a printed dark page.
+
+Filled components print their background. A browser drops backgrounds from a printed page by default, which leaves a solid button's contrast text on nothing, so every component sets `print-color-adjust: exact`. The property inherits, so the content inside a component keeps its colors too.
+
+One limit: a `dark:` utility still applies in print. It matches by selector, not by `color-scheme`, so `<html class="dark">` with `dark:bg-black` on an element prints that background black. Write a `print:` utility beside it if the printed page matters.
+
 ### The `dark:` variant
 
 With the Tailwind source entrypoints (`/tw`), the package replaces Tailwind's `dark:` variant so your own utilities follow the same theme as the tokens. A `dark:` utility applies under an explicit dark selector on the element or an ancestor, or under a dark system preference when no ancestor sets a theme:
@@ -92,6 +100,8 @@ The same pattern works for every family in [Color tokens](#color-tokens): `--col
 
 The values must be complete colors: hex, `rgb()`, `oklch()`, or a variable you declared yourself. Tailwind palette variables such as `--color-teal-700` exist in a `/tw` build, from your Tailwind theme, but the compiled CSS declares only the palette colors the package itself uses. With compiled CSS, a reference to any other palette variable is empty, and the color it feeds is lost.
 
+With `/tw`, you can drop the Tailwind hues your design does not use, so `bg-red-500` and its siblings stop being classes. Keep the ones the theme reads, `neutral`, `emerald`, `amber`, `rose`, `indigo`, and `white`: cleared, the colors built from them are lost without an error. [Tailwind CSS v4 → Drop Tailwind's palette](../integrating/tailwind.md#drop-tailwinds-palette) has the block to copy.
+
 ## Your own intent
 
 The package ships six intents: `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, and `.info`, and the default, `.neutral`. To add one, such as a "Beta" color for features in preview, write a class that sets the seven intent slots. Use complete colors, with `light-dark()` for anything that changes between themes:
@@ -122,6 +132,7 @@ The class works on everything that takes an intent: buttons, badges, fields and 
 - **The chip tint.** A `.beta` key cap or code block shows your `--intent-subtle` tint, but not the extra 12% of `--intent-color` a built-in intent adds over it.
 - **Solo classes.** A [solo class](./solo.md) such as `.neobrutalism-solo` takes an intent only from the six built-in classes, so `.neobrutalism-solo.beta` is drawn neutral.
 - **Hint text.** A [`.hint`](./forms.md#show-a-validation-error) prints in an intent's readable tone only for the six built-in classes, so `.hint.beta` stays secondary-colored.
+- **Table rows.** A body row recolors its text, line, and hover only for the built-in intent classes. `<tr class="beta">` looks like the rest of its table.
 
 If you need those, there are two ways:
 
@@ -244,7 +255,7 @@ The four `--elevation-*` shadows are for elements you style yourself. They are s
 | `--z-popover`              | `40`                                                   | Stacking order of tooltip bubbles. Use it for your own popovers so they stack the same way.                     |
 | `--breakpoint-xs`          | `30rem`                                                | The `xs:` responsive breakpoint. Only in a `/tw` build; the compiled entrypoints do not declare it.             |
 
-Each `--elevation-*` shadow is made of the listed parts, each in `--elevation-color`. The four shadows are composed once, on the root, so an `--elevation-color` you set on a container does not reach them: set it on `:root`, or set the `--elevation-*` token itself on the container. The elevation classes, such as `.card.raised`, read `--elevation-color` on the element and follow a container's value. The hover step that deepens a fill under the pointer is a presentation token, `--hover-step`; see [Customizing](./customizing.md#presentation-tokens).
+Each `--elevation-*` shadow is made of the listed parts, each in `--elevation-color`. The four shadows are composed once, on the root, so an `--elevation-color` you set on a container does not reach them: set it on `:root`, or set the `--elevation-*` token itself on the container. The elevation classes, such as `.card.raised`, read `--elevation-color` on the element and follow a container's value, with one exception: every aesthetic class sets its own `--elevation-color` on its region. A value set above a `.glass` or `.pixel` region does not reach inside it. Set it on the aesthetic's element itself, where your utility or unlayered CSS beats the class, or on an element inside the region. Under glass, a surface's shadow is built on the `.glass` element, so only a value set there changes it. Under `.neobrutalism` the shadow is drawn in the intent or the ink, and `.cyber` draws no depth, so neither reads the token. The hover step that deepens a fill under the pointer is a presentation token, `--hover-step`; see [Customizing](./customizing.md#presentation-tokens).
 
 ## Fonts
 

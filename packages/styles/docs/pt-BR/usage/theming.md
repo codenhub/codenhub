@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro e escuro, como trocar a paleta pelas cores da marca, como definir uma intenção própria, e cada token de cor, de intenção, fundamental e de fonte com o seu padrão.
 order: 5
-source: 7c3de72fa13d9456b240c5bf47035075bef3da81
+source: faefe01e9a435bd2630c846cc365f3c8783107df
 ---
 
 # Temas
@@ -41,6 +41,14 @@ Como isso é resolvido:
 Toda cor de componente vem de um token ou de `currentColor`, então os componentes seguem o tema sem regras próprias de modo escuro. As marcas que o pacote desenha, como o visto do checkbox e a seta do select, também usam `currentColor`. Ícones e imagens que você adiciona ficam por sua conta.
 
 `light-dark()` funciona a partir do Chrome 123, Safari 17.5 e Firefox 120. O pacote como um todo exige Firefox 128; veja [Configuração → Requisitos](../setup.md#requisitos).
+
+### Impressão
+
+Uma página é impressa no tema claro, seja qual for o tema que ela mostra na tela. Dentro de `@media print`, a raiz e todo seletor escuro definem `color-scheme: light`, então todo token é resolvido para o seu valor claro, inclusive o de uma barra lateral forçada para o escuro. O papel é claro, e texto escuro sobre ele gasta menos tinta do que uma página escura impressa.
+
+Componentes preenchidos imprimem o seu fundo. Por padrão, o navegador tira os fundos de uma página impressa, o que deixa o texto de contraste de um botão sólido sobre o nada, então todo componente define `print-color-adjust: exact`. A propriedade é herdada, de modo que o conteúdo de um componente também mantém as suas cores.
+
+Um limite: um utilitário `dark:` continua valendo na impressão. Ele casa pelo seletor, não pelo `color-scheme`, então com `<html class="dark">` e `dark:bg-black` num elemento, esse fundo sai preto no papel. Escreva um utilitário `print:` ao lado dele se a página impressa importar.
 
 ### A variante `dark:`
 
@@ -93,6 +101,8 @@ O mesmo padrão funciona para todas as famílias em [Tokens de cor](#tokens-de-c
 
 Os valores precisam ser cores completas: hex, `rgb()`, `oklch()` ou uma variável que você mesmo declarou. Variáveis da paleta do Tailwind, como `--color-teal-700`, existem num build `/tw`, vindas do seu tema do Tailwind, mas o CSS compilado declara só as cores da paleta que o próprio pacote usa. Com CSS compilado, uma referência a qualquer outra variável da paleta fica vazia, e a cor que ela alimenta se perde.
 
+Com `/tw`, você pode descartar os tons do Tailwind que o seu design não usa, para que `bg-red-500` e companhia deixem de ser classes. Mantenha os que o tema lê, `neutral`, `emerald`, `amber`, `rose`, `indigo` e `white`: apagados, as cores construídas a partir deles se perdem sem nenhum erro. [Tailwind CSS v4 → Descarte a paleta do Tailwind](../integrating/tailwind.md#descarte-a-paleta-do-tailwind) tem o bloco para copiar.
+
 ## Sua própria intenção
 
 O pacote entrega seis intenções, `.primary`, `.secondary`, `.success`, `.warning`, `.destructive` e `.info`, mais o padrão, `.neutral`. Para adicionar uma, como uma cor "Beta" para funcionalidades em prévia, escreva uma classe que define os sete slots de intenção. Use cores completas, com `light-dark()` para tudo o que muda entre os temas:
@@ -123,6 +133,7 @@ A classe funciona em tudo o que aceita intenção: botões, badges, campos e tog
 - **O tom dos chips.** Uma tecla `.kbd` ou um bloco de código `.beta` mostra o seu tom `--intent-subtle`, mas não os 12% extras de `--intent-color` que uma intenção embutida acrescenta por cima.
 - **Classes solo.** Uma [classe solo](./solo.md) como `.neobrutalism-solo` só aceita intenção das seis classes embutidas, então `.neobrutalism-solo.beta` é desenhado como neutro.
 - **O texto do hint.** Um [`.hint`](./forms.md#mostre-um-erro-de-validação) só aparece no tom legível de uma intenção com as seis classes embutidas, então `.hint.beta` continua na cor secundária.
+- **Linhas de tabela.** Uma linha do corpo muda a cor do texto, da linha divisória e do hover só com as classes de intenção embutidas. `<tr class="beta">` fica igual ao resto da sua tabela.
 
 Se você precisa disso, há dois caminhos:
 
@@ -245,7 +256,7 @@ As quatro sombras `--elevation-*` são para elementos que você mesmo estiliza. 
 | `--z-popover`              | `40`                                                           | Ordem de empilhamento dos balões de tooltip. Use nos seus próprios popovers para que eles empilhem do mesmo jeito.         |
 | `--breakpoint-xs`          | `30rem`                                                        | O breakpoint responsivo `xs:`. Só num build `/tw`; os entrypoints compilados não o declaram.                               |
 
-Cada sombra `--elevation-*` é composta das partes listadas, cada uma em `--elevation-color`. As quatro sombras são compostas uma única vez, na raiz, então um `--elevation-color` que você define num contêiner não chega até elas: defina-o em `:root`, ou defina o próprio token `--elevation-*` no contêiner. As classes de elevação, como `.card.raised`, leem `--elevation-color` no elemento e seguem o valor de um contêiner. O passo de hover que intensifica um preenchimento sob o ponteiro é um token de apresentação, `--hover-step`; veja [Personalização](./customizing.md#tokens-de-apresentação).
+Cada sombra `--elevation-*` é composta das partes listadas, cada uma em `--elevation-color`. As quatro sombras são compostas uma única vez, na raiz, então um `--elevation-color` que você define num contêiner não chega até elas: defina-o em `:root`, ou defina o próprio token `--elevation-*` no contêiner. As classes de elevação, como `.card.raised`, leem `--elevation-color` no elemento e seguem o valor de um contêiner, com uma exceção: toda classe de estética define o seu próprio `--elevation-color` na sua região. Um valor definido acima de uma região `.glass` ou `.pixel` não chega dentro dela. Defina-o no próprio elemento da estética, onde o seu utilitário ou CSS sem camada vence a classe, ou num elemento dentro da região. No glass, a sombra de uma superfície é montada no elemento `.glass`, então só um valor definido ali a muda. No `.neobrutalism` a sombra é desenhada na intenção ou na tinta, e o `.cyber` não desenha profundidade, então nenhum dos dois lê o token. O passo de hover que intensifica um preenchimento sob o ponteiro é um token de apresentação, `--hover-step`; veja [Personalização](./customizing.md#tokens-de-apresentação).
 
 ## Fontes
 

@@ -341,3 +341,194 @@ test("keeps a tooltip-icon button at its own size on every entry", async ({ page
   await page.addStyleTag({ url: "http://localhost:5184/shared/entry-components.css" });
   expect(await measure(), "under /components").toEqual({ height: 20, width: 20 });
 });
+
+/* Sketch's dashed accents named the component classes, so the bare elements
+   `/native` styles as those components drew solid lines beside them. */
+test("draws sketch's dashed accents on bare elements as on their classes", async ({ page }) => {
+  await page.setContent("<!doctype html><html><body></body></html>");
+  await page.addStyleTag({ url: "http://localhost:5184/native/entry-vanilla.css" });
+
+  const styles = await page.evaluate(() => {
+    const table = (attributes: string) =>
+      `<table ${attributes}><thead><tr><th>A</th></tr></thead><tbody><tr><td data-cell>1</td></tr><tr><td>2</td></tr></tbody></table>`;
+
+    document.body.innerHTML =
+      '<div class="sketch">' +
+      '<hr id="bare-rule" /><div class="divider" id="class-rule"></div>' +
+      '<input type="checkbox" id="bare-check" /><input type="checkbox" class="checkbox" id="class-check" />' +
+      '<input type="checkbox" class="switch" id="switch" />' +
+      table('id="bare-table" class="ruled"') +
+      table('id="class-table" class="data-table ruled"') +
+      "</div>";
+
+    const read = (selector: string, property: string) =>
+      getComputedStyle(document.querySelector(selector)!).getPropertyValue(property);
+
+    return {
+      bareRule: read("#bare-rule", "border-top-style"),
+      classRule: read("#class-rule", "border-top-style"),
+      bareCheck: read("#bare-check", "border-top-style"),
+      classCheck: read("#class-check", "border-top-style"),
+      switch: read("#switch", "border-top-style"),
+      bareCell: read("#bare-table [data-cell]", "border-bottom-style"),
+      classCell: read("#class-table [data-cell]", "border-bottom-style"),
+    };
+  });
+
+  expect(styles.classRule).toBe("dashed");
+  expect(styles.bareRule).toBe(styles.classRule);
+  expect(styles.classCheck).toBe("dashed");
+  expect(styles.bareCheck).toBe(styles.classCheck);
+  expect(styles.switch, "a switch keeps its solid line").toBe("solid");
+  expect(styles.classCell).toBe("dashed");
+  expect(styles.bareCell).toBe(styles.classCell);
+});
+
+/* `/native` styles elements without classes, and a `<progress>` and a
+   `<dialog>` were the two with a component and no mapping: each rendered as
+   the user agent draws it, a system-blue bar and a black-bordered box, beside
+   everything else in the package's look. */
+test("draws a bare progress element as the progress bar", async ({ page }) => {
+  await page.setContent(
+    '<!doctype html><html><body style="padding:16px">' +
+      '<progress id="bare" value="40" max="100" style="width:200px"></progress>' +
+      '<div class="progress" id="class" style="width:200px;--progress-value:40%;margin-top:16px"></div>' +
+      "</body></html>",
+  );
+  await page.addStyleTag({ url: "http://localhost:5184/native/entry-vanilla.css" });
+
+  const sample = async (selector: string) => {
+    const png = (await page.locator(selector).screenshot({ animations: "disabled" })).toString("base64");
+
+    return page.evaluate(async (source) => {
+      const image = new Image();
+      image.src = `data:image/png;base64,${source}`;
+      await image.decode();
+
+      const canvas = document.createElement("canvas");
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const context = canvas.getContext("2d")!;
+      context.drawImage(image, 0, 0);
+      const at = (fraction: number) => [
+        ...context.getImageData(Math.round(image.width * fraction), Math.round(image.height / 2), 1, 1).data,
+      ];
+
+      return { filled: at(0.2), empty: at(0.7), height: image.height };
+    }, png);
+  };
+
+  const bare = await sample("#bare");
+  const classed = await sample("#class");
+  const distance = (left: number[], right: number[]) =>
+    Math.max(...left.map((channel, index) => Math.abs(channel - right[index]!)));
+
+  expect(distance(classed.filled, classed.empty), "the classed bar shows its value").toBeGreaterThan(64);
+  expect(bare.height).toBe(classed.height);
+  expect(distance(bare.filled, classed.filled), "the value fill").toBeLessThanOrEqual(8);
+  expect(distance(bare.empty, classed.empty), "the track").toBeLessThanOrEqual(8);
+});
+
+test("draws a bare dialog as a floating card, and keeps it closed until opened", async ({ page }) => {
+  await page.setContent(
+    "<!doctype html><html><body>" +
+      '<dialog id="closed">Closed</dialog>' +
+      '<dialog id="bare" open>Open</dialog>' +
+      '<dialog class="card floating" id="class" open>Open</dialog>' +
+      "</body></html>",
+  );
+  await page.addStyleTag({ url: "http://localhost:5184/native/entry-vanilla.css" });
+
+  /* The sheet arrives after the first render, so every value transitions to
+     it; Firefox reads them part-way. */
+  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+
+  const read = (selector: string) =>
+    page.evaluate((target) => {
+      const styles = getComputedStyle(document.querySelector(target)!);
+
+      return [
+        "display",
+        "background-color",
+        "color",
+        "border-top-color",
+        "border-top-width",
+        "border-top-left-radius",
+        "padding-top",
+        "box-shadow",
+      ].map((property) => `${property}: ${styles.getPropertyValue(property)}`);
+    }, selector);
+
+  expect((await read("#closed"))[0]).toBe("display: none");
+  expect(await read("#bare")).toEqual(await read("#class"));
+});
+
+test("sweeps a bare progress element with no value, and rests it under reduced motion", async ({ page }) => {
+  const read = async () => {
+    await page.setContent('<!doctype html><html><body><progress id="bare"></progress></body></html>');
+    await page.addStyleTag({ url: "http://localhost:5184/native/entry-vanilla.css" });
+
+    return page.evaluate(() => {
+      const styles = getComputedStyle(document.getElementById("bare")!);
+
+      return { animation: styles.animationName, image: styles.backgroundImage, size: styles.backgroundSize };
+    });
+  };
+
+  const moving = await read();
+
+  expect(moving.animation).toBe("anim-progress-sweep");
+  expect(moving.image).toContain("linear-gradient");
+  expect(moving.size).toBe("33% 100%");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+
+  expect((await read()).animation).toBe("none");
+});
+
+test("sweeps a bare progress element from the start side under right-to-left text", async ({ page }) => {
+  await page.setContent(
+    '<!doctype html><html><body><progress id="ltr"></progress><div dir="rtl"><progress id="rtl"></progress></div></body></html>',
+  );
+  await page.addStyleTag({ url: "http://localhost:5184/native/entry-vanilla.css" });
+
+  const direction = (id: string) =>
+    page.evaluate((element) => getComputedStyle(document.getElementById(element)!).animationDirection, id);
+
+  expect(await direction("ltr")).toBe("normal");
+  expect(await direction("rtl")).toBe("reverse");
+});
+
+test("draws a bare progress element's track in system colours in forced colours", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active" });
+  await page.setContent(
+    '<!doctype html><html><body><progress id="bare" value="40" max="100"></progress></body></html>',
+  );
+  await page.addStyleTag({ url: "http://localhost:5184/native/entry-vanilla.css" });
+
+  const supported = await page.evaluate(
+    () => matchMedia("(forced-colors: active)").matches && CSS.supports("forced-color-adjust", "none"),
+  );
+
+  test.skip(!supported, "This engine does not emulate forced colours.");
+
+  const styles = await page.evaluate(() => {
+    const bar = getComputedStyle(document.getElementById("bare")!);
+    const probe = document.createElement("div");
+    probe.style.cssText = "background-color: Canvas; border: 1px solid CanvasText";
+    document.body.append(probe);
+    const system = getComputedStyle(probe);
+
+    return {
+      adjust: bar.getPropertyValue("forced-color-adjust"),
+      background: bar.backgroundColor,
+      border: bar.borderTopColor,
+      canvas: system.backgroundColor,
+      canvasText: system.borderTopColor,
+    };
+  });
+
+  expect(styles.adjust).toBe("none");
+  expect(styles.background).toBe(styles.canvas);
+  expect(styles.border).toBe(styles.canvasText);
+});

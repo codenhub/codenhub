@@ -79,6 +79,8 @@ A badge is a small pill for a status or a count:
 
 A badge is soft with no border by default, and takes the same intent and presentation classes as a button: `.badge.warning` for "Payment due", `.badge.info.solid` for a filled "New". Unlike an alert, a badge with no intent keeps its light tint, because it has no border, and without the tint it would disappear into the text around it.
 
+A neutral badge that is not `.solid`, such as a count inside a `.btn.primary`, prints in the text color of the filled component it sits in, so it stays readable on that fill. A badge with an intent keeps its own color.
+
 ## Show a placeholder while loading
 
 While the profile card waits for data, show gray blocks where the text will be:
@@ -132,6 +134,8 @@ When you do not know how far along the work is, such as while the export is bein
 ```
 
 `.active` adds a shimmer over the track of a determinate bar, to show that work is still happening between updates. Both animations stop when the user asks for reduced motion; an indeterminate bar then rests with its fill at the start.
+
+With the [classless stylesheet](../setup.md#classless-html), a plain `<progress>` element is drawn as `.progress`: filled to its `value`, or the indeterminate sweep when it has no `value`. It announces its value itself, so it needs no `aria-valuenow`.
 
 ### How progress bars look
 

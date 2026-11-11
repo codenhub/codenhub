@@ -2,7 +2,7 @@
 title: Botões
 description: Ações destrutivas e secundárias, botões de ícone, tamanhos, links com cara de botão, estados desabilitados e como carregar ícones.
 order: 1
-source: c160b409a0de01a02e1ea72ba0f2110d11353d6b
+source: 54f7c8a1eee5a0f696dc60b9f60f42026d49c5d5
 ---
 
 # Botões
@@ -41,6 +41,10 @@ Um botão aceita uma intenção, uma classe de preenchimento e uma classe de bor
 Um botão **neutro** nunca é preenchido por completo. A cor dele é a própria cor do texto da página, então um preenchimento total seria um bloco preto ou branco, o elemento que mais chama atenção na página justamente para a intenção que não significa nada em particular. Em vez disso, um botão neutro `.solid` para em 20% de preenchimento, um cinza discreto um tom mais escuro que o `.soft`. Toda intenção com nome preenche até 100%.
 
 No hover, o preenchimento de um botão aumenta em `--hover-step` (14%), então um botão `.ghost` ganha um tom e um `.solid` muda para a cor de hover da sua intenção. Ao ser pressionado, ele encolhe um pouco (`scale(0.97)`); uma [estética](./aesthetics.md) pode trocar isso pelo seu próprio efeito de clique, e, com a preferência do usuário por movimento reduzido, ele ainda acontece, de imediato.
+
+Um botão neutro `.soft` ou `.ghost` dentro de uma superfície preenchida, como um botão Cancelar num `.card.solid.primary` ou num `.alert.solid.destructive`, imprime o rótulo e a linha na cor de texto dessa superfície, então continua legível sobre o preenchimento. Um campo de texto faz o mesmo. Um botão com intenção mantém a própria cor, e um neutro `.solid` também, porque fica sobre um preenchimento próprio.
+
+Quando um botão preenchido tem o foco do teclado, uma linha de 2px da cor da página corre por dentro do anel de foco, então o anel continua visível sobre um botão preenchido da mesma cor, como `.solid.primary`.
 
 ## Tamanhos e formatos
 

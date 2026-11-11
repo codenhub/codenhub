@@ -289,12 +289,14 @@
       --ui-radius-pill: var(--_sketch-pass-radius-pill, var(--_sketch-on) 48% 52% 46% 54% / 53% 46% 54% 47%);
     }
 
-    /* The dashed accents, under `.sketch`; every other line stays solid. */
-    &.checkbox {
+    /* The dashed accents, under `.sketch`; every other line stays solid. The
+       bare elements `/native` styles as these components are named beside
+       them, in `:where()` so the selector's weight stays the class's. */
+    &:is(.checkbox, :where(input[type="checkbox"]:not(.switch, .radio))) {
       --ui-line-style: var(--_sketch-pass-line-style, var(--_sketch-pointed) dashed);
     }
 
-    &:is(.divider, .data-table) {
+    &:is(.divider, .data-table, :where(hr, table)) {
       --ui-rule-style: var(--_sketch-pass-rule-style, var(--_sketch-pointed) dashed);
     }
   }
