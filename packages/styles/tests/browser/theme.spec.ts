@@ -290,6 +290,7 @@ test("prints a dark page in the light theme, and a filled box with its plate", a
         adjust:
           style("button").getPropertyValue("print-color-adjust") ||
           style("button").getPropertyValue("-webkit-print-color-adjust"),
+        plate: style("button").backgroundColor,
         region: style("region").color,
         text: style("text").color,
       };
@@ -304,4 +305,6 @@ test("prints a dark page in the light theme, and a filled box with its plate", a
   expect(dark.text).toBe(light.text);
   expect(dark.region).toBe(light.text);
   expect(dark.adjust).toBe("exact");
+  expect(dark.plate, "the solid button keeps a plate").not.toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/);
+  expect(dark.plate, "the plate is the light theme's").toBe(light.plate);
 });

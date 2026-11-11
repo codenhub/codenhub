@@ -271,8 +271,12 @@ test("every stylesheet under tw/ is reachable from a /tw export", async () => {
 test("tw/ holds stylesheets and their declaration file, nothing else", async () => {
   const entries = await readdir(path.resolve(packageRoot, "tw"), { recursive: true, withFileTypes: true });
   const strays = entries
-    .filter((entry) => entry.isFile() && !entry.name.endsWith(".css") && entry.name !== "index.d.ts")
-    .map((entry) => entry.name);
+    .map((entry) => ({
+      entry,
+      relative: path.relative(path.resolve(packageRoot, "tw"), path.join(entry.parentPath, entry.name)),
+    }))
+    .filter(({ entry, relative }) => entry.isFile() && !entry.name.endsWith(".css") && relative !== "index.d.ts")
+    .map(({ relative }) => relative);
 
   expect(strays).toEqual([]);
 });
@@ -389,14 +393,48 @@ for (const [exportName, contract] of Object.entries(compiledExportContracts)) {
    wherever Tailwind puts it. */
 const LAYER_ORDER = ["theme", "base", "components", "utilities"];
 
-function firstLayerOrder(css: string): string[] {
-  const names = [...css.matchAll(/@layer\s+([a-z][a-z0-9.,\s-]*?)\s*[;{]/g)].flatMap((match) =>
-    match[1]!.split(",").map((name) => name.trim()),
-  );
+function firstLayerOrder(source: string): string[] {
+  const css = source.replace(/\/\*[\s\S]*?\*\//g, "");
+  const names: string[] = [];
+  /* The layer each open block sits in, so a nested `@layer families` is named
+     as the browser names it -- `utilities.families`, or `base.families` where
+     `/native` applies a component in `base` -- and a top-level `families` is
+     not mistaken for a sublayer. */
+  const stack: string[] = [];
+  let buffer = "";
+  let quote: string | null = null;
+  const enclosing = () => stack.findLast((entry) => entry !== "") ?? "";
+  const qualify = (name: string) => (enclosing() ? `${enclosing()}.${name}` : name);
 
-  /* `families` is the sublayer of `utilities` the class families sit in, written
-     nested or as `utilities.families`; it is not a fifth top-level layer. */
-  return [...new Set(names)].filter((name) => !["properties", "families", "utilities.families"].includes(name));
+  for (let index = 0; index < css.length; index++) {
+    const character = css[index]!;
+
+    if (quote) {
+      if (character === quote && css[index - 1] !== "\\") {
+        quote = null;
+      }
+    } else if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === "{" || character === ";") {
+      const layer = /^@layer\s+([a-z][a-z0-9.,\s-]*)$/.exec(buffer.trim());
+      const declared = layer ? layer[1]!.split(",").map((name) => qualify(name.trim())) : [];
+
+      names.push(...declared);
+      if (character === "{") {
+        stack.push(declared.length === 1 ? declared[0]! : "");
+      }
+      buffer = "";
+    } else if (character === "}") {
+      stack.pop();
+      buffer = "";
+    } else {
+      buffer += character;
+    }
+  }
+
+  /* Only the top-level order is the package's: a sublayer such as
+     `utilities.families` ranks inside its parent wherever it is first met. */
+  return [...new Set(names)].filter((name) => name !== "properties" && !name.includes("."));
 }
 
 /* Every style rule that sits in no `@layer`, with the at-rules around it. A
@@ -492,7 +530,7 @@ for (const target of compiledTargets) {
    own source tree defines against its output.
 
    `roots` is the entrypoint's import closure, not just its directory: the
-   `dist/components.css` index pulls `../box.css` and `../typography.css`
+   `dist/components.css` index pulls `../box.css` and `../typography.rules.css`
    alongside `./`, and a utility added to either belongs in that bundle. A
    functional `@utility name-*` keeps its trailing `*` so the match below can
    look for `.name-<value>` rather than a bare `.name`. */
@@ -523,8 +561,11 @@ async function definedUtilities(roots: string[]): Promise<string[]> {
 
 const compiledCompleteness: Record<string, string[]> = {
   "dist/index.css": ["src"],
-  "dist/components.css": ["src/components", "src/box.css", "src/typography.css", "src/theme.css"],
+  "dist/components.css": ["src/components", "src/box.css", "src/typography.rules.css", "src/theme.css"],
   "dist/native.css": ["src"],
+  /* Named by hand in `theme.compiled.css`'s `@source inline` list, which a new
+     family can be left out of. */
+  "dist/theme.css": ["src/intent.css", "src/presentation.css", "src/elevation.css", "src/corner.css", "src/size.css"],
 };
 
 for (const [target, roots] of Object.entries(compiledCompleteness)) {

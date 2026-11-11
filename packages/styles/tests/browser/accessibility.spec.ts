@@ -1,3 +1,7 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { expect, test } from "./fixtures";
 
 const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
@@ -707,6 +711,12 @@ test("separates the focus ring from a filled control with a line of the page col
       '<button id="before-slab">.</button><button class="btn primary" id="slab">Save</button></div></body></html>',
   );
   await page.addStyleTag({ url: COMPONENT_STYLES_URL });
+  await page.addStyleTag({
+    content: await readFile(
+      path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../dist/aesthetics/neobrutalism.css"),
+      "utf8",
+    ),
+  });
 
   const focusedShadow = async (id: string) => {
     /* A real keyboard move from the sibling before it: every engine gates
@@ -739,13 +749,17 @@ test("separates the focus ring from a filled control with a line of the page col
     }, id);
   };
 
+  const shadows: Record<string, string> = {};
+
   for (const id of ["filled", "slab"]) {
     // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
     const { focused, shadow, page: pageColor } = await focusedShadow(id);
 
     expect(focused, `#${id} is focus-visible`).toBe(true);
     expect(shadow, `#${id} separator`).toContain(`${pageColor} 0px 0px 0px 2px inset`);
+    shadows[id] = shadow;
   }
+  expect(shadows.slab, "neobrutalism draws its slab under the ring").not.toBe(shadows.filled);
 
   const ghost = await focusedShadow("ghost");
 
