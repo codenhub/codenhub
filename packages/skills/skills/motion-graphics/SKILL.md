@@ -95,14 +95,14 @@ Frames are rendered one at a time and then encoded, so an effect costs render ti
 
 ## Sound
 
-A piece has up to three layers of sound: narration, sound effects, and music. Decide in the brief which it carries, and assume none for a single element, such as a lower third or a loop, unless asked. Read [references/sound.md](references/sound.md) before writing narration, making or placing a sound, mixing, or adding captions; it has the commands.
+A piece has up to three layers of sound: narration, sound effects, and music. Decide in the brief which it carries, and assume none for a single element, such as a lower third or a loop, unless asked. Deliver a piece with sound in a format that carries it, such as MP4 or WebM; a GIF or an image sequence has no sound, so the mix goes beside it as a file. Read [references/sound.md](references/sound.md) before writing narration, making or placing a sound, mixing, or adding captions; it has the commands.
 
 - **Narration sets the timing.** Generate each line as its own file before animating, measure it, and set the beat's duration from the measurement. Animation built first never fits the voice.
 - **One source of time.** Keep beat starts, narration starts, and sound cues in one data file that both the animation and the mix read, so no time is typed twice.
 - **Sound follows the picture.** Give a sound effect only to a move that carries the beat, from one family of sounds chosen from the brand. Synthesize short effects; they need no license.
 - **Music is supplied, not generated.** Use the client's track or ask for one, and deliver with narration and effects only until there is one. Generate or source music only when the client names the tool or the source.
 - **The muted viewer comes first.** The message still arrives with the sound off, and every narrated piece has captions.
-- **Mix to a target.** The voice leads, music drops under speech, and the finished mix measures -14 LUFS, within 1 LU, with peaks at or under -1 dBFS, at 48 kHz stereo, unless the platform sets another target.
+- **Mix to a target.** The voice leads, music drops under speech, and the finished mix measures -14 LUFS, within 1 LU, with peaks at or under -1 dBFS, at 48 kHz stereo, unless the platform or the client sets another target.
 - **Record every source.** Note the tool, voice, track, and license of each sound in the delivery notes. Do not send an unreleased script to a speech service the client has not approved, and never imitate a real person's voice without their permission.
 
 ## Render Setup

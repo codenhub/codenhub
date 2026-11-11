@@ -51,12 +51,13 @@ Keep the timing in one data file that both the page and the mix read, so a sound
 
 Use, in this order: recordings the client supplied; the speech tool the environment or the client already has; a local open model, such as Piper; otherwise ask. Do not sign up for a service or send the script to one without being asked, since an unreleased product's script is confidential.
 
-A speech tool fits when it gives one file per line, a fixed voice that can be used again in a later revision, and a license that covers the client's use. Read the license of the tool and of the voice itself: several open voices are trained on data that forbids commercial use. Record the tool, the voice, and the license in the delivery notes. Never imitate a real person's voice without their written permission.
+A speech tool fits when it gives one file per line, a voice made for the script's language, a fixed voice that can be used again in a later revision, and a license that covers the client's use. Read the license of the tool and of the voice itself: several open voices are trained on data that forbids commercial use. Record the tool, the voice, and the license in the delivery notes. Never imitate a real person's voice without their written permission.
 
 - **Write for the ear.** Short sentences, one idea each, with the subject first. The narration says what the picture cannot show; it does not read the on-screen text aloud.
 - **Plan at 2.5 words per second,** then replace the estimate with the measured length. A beat lasts at least the line's start offset, plus its length, plus 0.3 seconds.
 - **Leave air.** Start a line 0.3 to 0.5 seconds into its beat, and keep at least 0.3 seconds between lines. Wall-to-wall speech reads as an advertisement being rushed.
 - **Fix pronunciation in the spoken script only.** Respell names, acronyms, versions, and numbers the way they are said, such as "Coden Hub" or "version two point one", and keep the written form for captions and on-screen text.
+- **Test foreign words first.** A voice made for one language garbles words from another, such as an English product name in a Portuguese script. Generate one line with every name and borrowed term before the rest, and transcribe it. When a respelling does not fix a word, write the line without it and leave the word to the picture.
 - **Keep one voice and one set of settings** for the whole piece. Generate each line once and keep the file; many tools give a different reading on every run, so a regenerated line no longer matches its neighbours.
 
 With Piper, after downloading a voice with `python -m piper.download_voices --download-dir VOICES en_US-lessac-medium`:
@@ -65,6 +66,8 @@ With Piper, after downloading a voice with `python -m piper.download_voices --do
 echo "Coden Hub ships three new packages today." | python -m piper -m en_US-lessac-medium --data-dir VOICES -f vo/01-intro.wav
 ffprobe -v error -show_entries format=duration -of csv=p=0 vo/01-intro.wav
 ```
+
+On Windows, set the environment variable `PYTHONUTF8=1` before piping text with accents to a Python tool such as Piper. Without it the text arrives in the system codepage, and the voice reads each accented letter as symbols.
 
 ## Sound Effects
 
@@ -128,7 +131,8 @@ ffmpeg -i music.wav -i vo/01-intro.wav -i vo/02-install.wav -i sfx/whoosh.wav -i
 
 - `normalize=0` on every `amix` keeps each layer at the level it was given; without it, the filter lowers every input as inputs are added.
 - `DURATION` is the captured frame count divided by the frame rate.
-- Without music, leave out its input and the `sidechaincompress` line, and mix the voice and the effects.
+- Without music, leave out its input and the line that builds `[music]`, lower every other input number by one, and end with `[voice][sfx]amix=inputs=2:normalize=0`.
+- The delays above are typed to show the shape of the command. For a real piece, write the command from the beat file with a short script, so a changed beat moves its sounds.
 - Write a stem for the effects and for the music in the same way when the client will remix or translate the piece.
 
 Then measure the mix, raise or lower it by the difference from the target, and limit the peaks:
