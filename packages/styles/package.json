@@ -244,6 +244,8 @@
     "@codenhub/tools": "workspace:*",
     "@playwright/test": "catalog:",
     "@tailwindcss/cli": "catalog:",
+    "@tailwindcss/node": "catalog:",
+    "@tailwindcss/oxide": "catalog:",
     "@types/node": "catalog:",
     "tailwindcss": "catalog:",
     "tsdown": "catalog:",
