@@ -113,7 +113,7 @@ A Laravel app runs Vite by default, so it has a bundler: import the package from
 
 The package carries a command, `codenhub-styles`, that compiles it for you. It reads your templates for class names and writes one minified stylesheet with only the StyleKit classes and Tailwind utilities they use. A page that uses one button gets a small fraction of the full stylesheet; the exact size depends on which classes you use, since each component brings the shared rules it relies on.
 
-The command does not need a page without a bundler. A project whose bundler does not run Tailwind, such as a plain Vite or webpack build, can write the stylesheet into its sources, `--output src/stylekit.css`, and import that file where it would import `@codenhub/styles`. A project that runs Tailwind CSS v4 gets the same trimming from the [source entrypoint](./tailwind.md) and does not need the command.
+The command works with a bundler too. A project whose bundler does not run Tailwind, such as a plain Vite or webpack build, can write the stylesheet into its sources, `--output src/stylekit.css`, and import that file where it would import `@codenhub/styles`. A project that runs Tailwind CSS v4 gets the same trimming from the [source entrypoint](./tailwind.md) and does not need the command.
 
 It needs Node.js 24 or newer on the machine that builds the CSS, whether that is your laptop, a CI job, or a deploy step. It compiles with Tailwind CSS, which the package does not install for you, so a project that only links the compiled stylesheet never downloads it. Install the three packages as development dependencies from your project root; npm creates a `package.json` if you have none, and you need no Tailwind configuration:
 

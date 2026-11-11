@@ -41,6 +41,12 @@ const COMPILED_CEILINGS: Record<string, number> = {
   "dist/theme.css": 12_200,
   "dist/palette.css": 26_800,
   "dist/aesthetics/index.css": 43_800,
+  "dist/aesthetics/chunky-tile.css": 4_700,
+  "dist/aesthetics/cyber.css": 4_500,
+  "dist/aesthetics/glass.css": 11_400,
+  "dist/aesthetics/neobrutalism.css": 4_350,
+  "dist/aesthetics/pixel.css": 4_950,
+  "dist/aesthetics/sketch.css": 14_250,
 };
 
 describe("compiled stylesheets", () => {
@@ -48,7 +54,7 @@ describe("compiled stylesheets", () => {
     test(`${file} stays under ${ceiling} bytes minified`, async () => {
       const css = await readFile(path.join(packageRoot, file), "utf8");
 
-      expect(css.length).toBeLessThanOrEqual(ceiling);
+      expect(Buffer.byteLength(css)).toBeLessThanOrEqual(ceiling);
     });
 
     /* Every supported browser has `color-mix()` and `@property` (Chrome 123,
@@ -86,7 +92,7 @@ const packageCost = async (imports: string[], candidates: string[]) => {
     consumerBuild([tailwindCss], candidates),
   ]);
 
-  return withPackage.length - tailwindAlone.length;
+  return Buffer.byteLength(withPackage) - Buffer.byteLength(tailwindAlone);
 };
 
 describe("a /tw consumer build", { timeout: 60_000 }, () => {

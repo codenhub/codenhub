@@ -44,7 +44,7 @@ A folha de estilos completa inclui o reset, os tokens, os utilitários de layout
 
 Escolha um:
 
-- **CSS compilado** (`@codenhub/styles`, mostrado acima). Use este, a menos que tenha um motivo para não usar. Qualquer bundler que resolva imports de CSS de pacotes funciona, como Vite, webpack ou a CLI do Tailwind. Ele traz todas as classes, as suas páginas usando ou não.
+- **CSS compilado** (`@codenhub/styles`, mostrado acima). Use este, a menos que tenha um motivo para não usar. Qualquer bundler que resolva imports de CSS de pacotes funciona, como Vite, webpack ou a CLI do Tailwind. Ele traz todas as classes, sejam usadas pelas suas páginas ou não.
 - **Código-fonte do Tailwind CSS v4** (`@codenhub/styles/tw`). Use quando o seu projeto já roda Tailwind v4. O seu build compila o pacote junto com os seus próprios utilitários, então você fica com uma única folha de estilos e a variante `dark:` do Tailwind acompanha o tema do pacote. Exige Tailwind 4.3.2 ou mais recente, abaixo da 5.
 - **Sem bundler.** Referencie o arquivo compilado a partir do `node_modules` ou de uma CDN com uma tag `<link>`; veja [Sem bundler](./integrating/without-a-bundler.md).
 

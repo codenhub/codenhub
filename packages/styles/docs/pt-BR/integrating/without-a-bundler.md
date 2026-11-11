@@ -2,7 +2,7 @@
 title: Sem bundler
 description: Como referenciar as folhas de estilos compiladas a partir de HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor, e o build por linha de comando.
 order: 6
-source: 77641fc3dccfc40d71dc03bb0e5584422b6f8dfa
+source: 6289ea781c99dcda5c027a72fede9e2f1cab8414
 ---
 
 # Sem bundler
@@ -114,7 +114,7 @@ Uma aplicação Laravel roda Vite por padrão, então ela tem um bundler: import
 
 O pacote traz um comando, `codenhub-styles`, que o compila para você. Ele lê os seus templates atrás de nomes de classe e escreve uma única folha de estilos minificada com só as classes do StyleKit e os utilitários do Tailwind que eles usam. Uma página que usa um botão recebe uma pequena fração da folha de estilos completa; o tamanho exato depende das classes que você usa, porque cada componente traz as regras compartilhadas de que depende.
 
-O comando não exige uma página sem bundler. Um projeto cujo bundler não roda o Tailwind, como um build simples com Vite ou webpack, pode escrever a folha de estilos entre os seus fontes, `--output src/stylekit.css`, e importar esse arquivo onde importaria `@codenhub/styles`. Um projeto que usa o Tailwind CSS v4 tem a mesma redução pelo [entrypoint de código-fonte](./tailwind.md) e não precisa do comando.
+O comando também serve com um bundler. Um projeto cujo bundler não roda o Tailwind, como um build simples com Vite ou webpack, pode escrever a folha de estilos entre os seus fontes, `--output src/stylekit.css`, e importar esse arquivo onde importaria `@codenhub/styles`. Um projeto que usa o Tailwind CSS v4 tem a mesma redução pelo [entrypoint de código-fonte](./tailwind.md) e não precisa do comando.
 
 Ele precisa do Node.js 24 ou mais recente na máquina que gera o CSS, seja o seu notebook, um job de CI ou uma etapa do deploy. Ele compila com o Tailwind CSS, que o pacote não instala por você, então um projeto que só linka a folha de estilos compilada nunca o baixa. Instale os três pacotes como dependências de desenvolvimento a partir da raiz do projeto; o npm cria um `package.json` se você não tiver um, e nenhuma configuração do Tailwind é necessária:
 
