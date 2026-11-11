@@ -1009,6 +1009,9 @@ importers:
       tailwindcss:
         specifier: 'catalog:'
         version: 4.3.4
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.23.5(@volar/typescript@2.4.28(typescript@6.0.3))(typescript@6.0.3)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3

@@ -37,7 +37,7 @@ The [testing specification](tests.md) defines the categories, where they live, a
 
 ## Coverage
 
-`pnpm test:coverage` runs each package's `test:coverage` in that package's directory, which writes a V8 coverage report to the package's own `coverage/`. `@codenhub/styles` is CSS only and runs its integration tests instead, as its [exception](packages-exceptions.md#codenhubstyles-coverage-report) records.
+`pnpm test:coverage` runs each package's `test:coverage` in that package's directory, which writes a V8 coverage report to the package's own `coverage/`. `@codenhub/styles` ships CSS and one build command and runs its integration tests instead, as its [exception](packages-exceptions.md#codenhubstyles-coverage-report) records.
 
 ## Commands
 
