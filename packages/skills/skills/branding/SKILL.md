@@ -73,7 +73,7 @@ Derive each element from the strategy and the competitor map, and be able to say
 - **Typography.** One or two families with distinct roles, chosen for the personality and with licenses covering every use the brand needs: web, app, print, video, and office documents. Name a free or system fallback for the documents people outside the design team will make.
 - **Imagery.** Define the photography or illustration style by its subject, light, color treatment, framing, and what it avoids, with examples. Choose one style of iconography with a consistent stroke and corner.
 - **Graphic elements.** One or two distinctive devices derived from the logo or the brand idea, such as a shape, a pattern, a crop, or a layout rule, that make materials recognizable without the logo.
-- **Motion and sound,** when the brand lives on screen: the easing character, pace, and a sonic logo if any, following the personality.
+- **Motion and sound,** when the brand lives on screen: the easing character and pace, and, when the brand speaks or plays sound, the narrator's voice (age, energy, accent, and pace), the character of its sound effects and music, and a sonic logo if any, all following the personality.
 
 ## Applications
 
