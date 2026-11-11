@@ -486,6 +486,19 @@ test("sweeps a bare progress element with no value, and rests it under reduced m
   expect((await read()).animation).toBe("none");
 });
 
+test("sweeps a bare progress element from the start side under right-to-left text", async ({ page }) => {
+  await page.setContent(
+    '<!doctype html><html><body><progress id="ltr"></progress><div dir="rtl"><progress id="rtl"></progress></div></body></html>',
+  );
+  await page.addStyleTag({ url: "http://localhost:5184/native/entry-vanilla.css" });
+
+  const direction = (id: string) =>
+    page.evaluate((element) => getComputedStyle(document.getElementById(element)!).animationDirection, id);
+
+  expect(await direction("ltr")).toBe("normal");
+  expect(await direction("rtl")).toBe("reverse");
+});
+
 test("draws a bare progress element's track in system colours in forced colours", async ({ page }) => {
   await page.emulateMedia({ forcedColors: "active" });
   await page.setContent(

@@ -250,6 +250,13 @@
     animation: anim-progress-sweep 1.5s infinite ease-in-out;
   }
 
+  /* The keyframes move a physical background position, so right-to-left text
+     runs them backwards: the sweep starts on the start side, as
+     `.progress.indeterminate`'s does. */
+  progress:indeterminate:dir(rtl) {
+    animation-direction: reverse;
+  }
+
   progress:indeterminate::-webkit-progress-value {
     background-color: transparent;
   }
