@@ -202,6 +202,17 @@
   font-family: var(--font-rounded, var(--font-default, ui-sans-serif, system-ui, sans-serif));
 }
 
+/* More contrast asked for: the controls' grey, as on `.chunky-tile`, for the
+   same 2.5:1. An element's intent still colours the line. */
+@media (prefers-contrast: more) {
+  .chunky-tile-solo {
+    --_solo-ink: var(
+      --_solo-intent-border,
+      light-dark(var(--color-neutral-600, oklch(43.9% 0 0)), var(--color-neutral-400, oklch(70.8% 0 0)))
+    );
+  }
+}
+
 /* An intent class on the element colours it, as on a component. Named rather
    than read from `--intent-*` alone: those slots inherit, so a `.success`
    container would colour a solo element where it leaves a component neutral. */

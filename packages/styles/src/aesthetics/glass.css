@@ -503,8 +503,7 @@
 
 /* The line on an opaque ground, as the aesthetic class draws it. */
 @media (prefers-contrast: more) {
-  .glass-solo,
-  .glass-solo.glass-liquid {
+  .glass-solo {
     --_solo-ink: var(--_solo-intent-border, var(--color-control-border, oklch(55.6% 0 0)));
   }
 }
@@ -563,5 +562,13 @@
 @media (prefers-reduced-transparency: reduce), (forced-colors: active), (prefers-contrast: more) {
   .glass-solo.glass-liquid {
     --_solo-ground: var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0)));
+  }
+}
+
+/* After the liquid pane's own ink, which it would otherwise override by source
+   order at the same specificity. */
+@media (prefers-contrast: more) {
+  .glass-solo.glass-liquid {
+    --_solo-ink: var(--_solo-intent-border, var(--color-control-border, oklch(55.6% 0 0)));
   }
 }

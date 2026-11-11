@@ -44,8 +44,14 @@ const pageColor = (page: Page) =>
 
 /* The ratio of an element's top border, as painted, against what it sits on:
    the element's own fill inside it and the page outside it. The lower of the
-   two is the one a reader has to make the line out against. */
+   two is the one a reader has to make the line out against. The side has to
+   be painted, so a line that is not drawn at all cannot pass on its colour. */
 const lineContrast = async (page: Page, testId: string, property = "border-top-color") => {
+  const side = property.replace(/-color$/, "");
+
+  expect(await style(page, testId, `${side}-style`), `${testId} ${side} style`).not.toMatch(/^(none|hidden)$/);
+  expect(Number.parseFloat(await style(page, testId, `${side}-width`)), `${testId} ${side} width`).toBeGreaterThan(0);
+
   const ground = await pageColor(page);
   const fill = flattenColor(await style(page, testId, "background-color"), ground);
   const line = flattenColor(await style(page, testId, property), fill);
@@ -107,6 +113,12 @@ for (const theme of THEMES) {
       }
     });
 
+    test("draws a neutral chunky-tile solo line at 3:1", async ({ page }) => {
+      await load(page, theme, `<div data-testid="solo" class="chunky-tile-solo">s</div>`);
+
+      expect(await lineContrast(page, "solo")).toBeGreaterThanOrEqual(MINIMUM);
+    });
+
     test("outlines a progress track at 3:1", async ({ page }) => {
       await load(page, theme, `<div data-testid="progress" class="progress" style="--progress-value: 40%"></div>`);
 
@@ -141,10 +153,11 @@ for (const theme of THEMES) {
         theme,
         `<div class="glass"><div data-testid="card" class="card">c</div></div>
          <div class="glass glass-liquid"><div data-testid="liquid" class="card">c</div></div>
-         <div data-testid="solo" class="glass-solo">s</div>`,
+         <div data-testid="solo" class="glass-solo">s</div>
+         <div data-testid="solo-liquid" class="glass-solo glass-liquid">s</div>`,
       );
 
-      for (const testId of ["card", "liquid", "solo"]) {
+      for (const testId of ["card", "liquid", "solo", "solo-liquid"]) {
         // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
         expect(readSrgb(await style(page, testId, "background-color")).alpha, `${testId} ground`).toBe(1);
         // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
