@@ -16,7 +16,7 @@ const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 
 const STYLES_JOBS = [
   { input: "./src/index.css", output: "./dist/index.css" },
-  { input: "./src/theme.css", output: "./dist/theme.css" },
+  { input: "./src/theme.compiled.css", output: "./dist/theme.css" },
   { input: "./src/palette.css", output: "./dist/palette.css" },
   { input: "./src/components/index.css", output: "./dist/components.css" },
   { input: "./src/native.css", output: "./dist/native.css" },

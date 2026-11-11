@@ -2,7 +2,7 @@
 title: Personalização
 description: Consulta sobre tokens de apresentação e de material, ajustes das estéticas, as seis variáveis públicas de componente, a paleta gerada e os helpers para criar os seus próprios componentes.
 order: 9
-source: ae10b826450c0c396611abe636734ae14a3d8961
+source: 790dec3b1fcf41af4b38aca7c5b8a93135827c1e
 ---
 
 # Personalização
@@ -198,7 +198,7 @@ Os ajustes de todas as estéticas alcançam os elementos da mesma forma: cada aj
 
 Ajustes e tokens de material alcançam os elementos em direções opostas. Um ajuste é lido uma vez, no elemento com a classe de estética, e o resultado é herdado. Então defina um ajuste nesse elemento ou num acima dele; definido num elemento dentro da estética, ele não muda nada, porque o valor já foi lido.
 
-`--ui-radius` e os outros tokens de material são lidos por cada componente no momento em que ele é desenhado. Eles funcionam no elemento em que são definidos e em tudo dentro dele, e é assim que você arredonda um card de forma diferente dos vizinhos sem mexer no ajuste.
+`--ui-radius`, `--ui-radius-surface` e os outros tokens de material são lidos por cada componente no momento em que ele é desenhado. Eles funcionam no elemento em que são definidos e em tudo dentro dele, e é assim que você arredonda um card de forma diferente dos vizinhos sem mexer no ajuste. Repare em qual token cada componente lê: uma superfície (`.card`, `.panel`, `.alert`) usa `--ui-radius-surface`, e um controle como `.btn` ou `.ipt` usa `--ui-radius`. `style="--ui-radius-surface: 0"` deixa um card quadrado; `--ui-radius` nesse card deixa quadrados os botões dentro dele, e o card continua arredondado.
 
 As estéticas entregues definem os tokens de material compartilhados acima. Toda estética entregue define `--ui-ink` para a sua linha neutra. Toda estética entregue também define `--ui-control-ink`: `.glass` e `.chunky-tile` com uma linha própria, mais pesada que a das suas superfícies, e as outras com `--color-control-border`, já que a tinta delas é quase preta ou quase branca e um checkbox em repouso contornado com ela pareceria marcado. `.glass` também define `--ui-rule-ink`, para que as linhas de uma tabela apareçam sobre a sua placa; as outras o limpam. As classes de intenção ainda substituem os slots de intenção de cada componente.
 
@@ -267,7 +267,7 @@ Os exemplos em contexto estão em [Feedback → Mostre o progresso](./feedback.m
 
 ## Helpers de composição
 
-Para criar um componente que o pacote não entrega, como um controle segmentado ou um chip de filtro, monte-o com as mesmas classes a partir das quais os componentes do pacote são construídos. Com o CSS compilado, escreva-as como classes; com o código-fonte do Tailwind, você também pode aplicá-las com `@apply`.
+Para criar um componente que o pacote não entrega, como um controle segmentado ou um chip de filtro, monte-o com as mesmas classes a partir das quais os componentes do pacote são construídos. Com o CSS compilado, escreva-as como classes; com o código-fonte do Tailwind, você também pode aplicá-las com `@apply`, junto com as classes de intenção, apresentação, elevação e canto, que no `/tw` também são utilitários: `@apply box box-hover neutral soft edgeless`. Para dar uma receita fixa a um componente do pacote, como um botão primário pequeno e suave, veja [Tailwind CSS v4 → Construa seus próprios componentes com `@apply`](../integrating/tailwind.md#construa-seus-próprios-componentes-com-apply).
 
 | Classe         | O que dá a um elemento                                                                                                                                                                                      |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

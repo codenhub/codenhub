@@ -1,9 +1,11 @@
 @import "../theme.css";
 @import "../typography.css";
-@import "./layout.css";
-@import "./content.css";
+@reference "../box.css";
 
-/* Safelists the utilities for the compiled build, which has no markup to scan.
-   `scripts/build-tw.mjs` strips it from the `tw/` copy -- see the note in
-   `components/index.css`. */
-@source inline("view vertical horizontal stack tight loose cluster between auto-grid section section-content narrow wide divider selection-contrast visually-hidden table-wrap data-table kbd quote quote-inline code pre");
+/* The focused entry: what the rules in `rules.css` need to compile on their
+   own, then the rules. An aggregate entry imports the rules file directly and
+   supplies those needs once -- Tailwind stacks a `@utility` each time a file
+   that defines it is imported or referenced, so a second route to `box.css`
+   doubles every `@apply box`. See docs/internal/model.md (One route to each
+   utility). */
+@import "./rules.css";

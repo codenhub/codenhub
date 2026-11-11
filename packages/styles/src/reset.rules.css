@@ -1,0 +1,142 @@
+@layer base {
+  /* The package's own components do not lean on this: `@utility box` sets
+     `box-sizing: border-box` on itself, so a sized control is right in every
+     entrypoint including the reset-less `/components` and granular `/tw/*`
+     ones. The universal rule covers the consumer's own markup -- a plain
+     `<div>` laid out beside our components -- as part of the opinionated
+     baseline. */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-primary) var(--color-background);
+  }
+
+  ::-webkit-scrollbar {
+    width: calc(var(--spacing) * 4);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-primary);
+    border: var(--spacing) solid var(--color-background);
+    border-radius: calc(var(--spacing) * 2);
+  }
+
+  html,
+  body {
+    @apply bg-background text-text font-default;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  figure,
+  blockquote,
+  dl,
+  dd,
+  ul,
+  ol {
+    margin: 0;
+  }
+
+  /* The whole font, not only the family: the user agent gives a button and a
+     field their own smaller size, so a `<button>`, a `.btn` link, and the
+     same `.btn` on another entrypoint each printed a different label size.
+     Tailwind's Preflight does the same on the entries that carry it. */
+  button,
+  input,
+  optgroup,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] {
+    @apply enabled:cursor-pointer;
+  }
+
+  ::selection {
+    background: var(--color-primary);
+    color: var(--color-primary-contrast);
+  }
+
+  /* Negative, so the ring is drawn over the edge rather than beside it: at a
+     positive offset the outline floats a gap away and reads as a second,
+     detached frame around the control. Pulled in by exactly the line width the
+     aesthetic draws, the ring lands on top of the line and a focused control
+     reads as its own edge thickening -- which is what a focus indicator is
+     meant to look like. Computed here, on the focused element, because that is
+     where an aesthetic's `--ui-border-width` resolves; `--focus-ring-offset`,
+     when a consumer sets it, still wins.
+
+     A component drawing no line at rest loses nothing: the outline moves inward
+     over its own fill by a hairline, which is not a visible change. */
+  :focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
+    outline-offset: var(--focus-ring-offset, calc(-1 * var(--ui-border-width, var(--border-width))));
+  }
+
+  /* Not on a control inside an `.input-group`, which draws the field's ring
+     for it: an important declaration in `base` beats any later one, so the
+     group could not suppress this one and a focused field drew two rings. */
+  @media (forced-colors: active) {
+    input:is(
+        [type="text"],
+        [type="email"],
+        [type="password"],
+        [type="url"],
+        [type="tel"],
+        [type="number"],
+        [type="search"],
+        [type="date"],
+        [type="datetime-local"],
+        [type="month"],
+        [type="week"],
+        [type="time"],
+        [type="checkbox"],
+        [type="radio"]
+      ):focus-visible:not(.input-group > *),
+    textarea:focus-visible:not(.input-group > *),
+    select:focus-visible:not(.input-group > *) {
+      outline: 2px solid Highlight !important;
+      outline-offset: 2px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Unlayered on purpose, matching the `forced-colors` blocks in `native.css` and
+   `form.css`. An accessibility override has to win over any layered rule
+   whatever the specificity, and a `@layer components` wrapper here would let the
+   component utilities that draw a border overrule it. */
+@media (forced-colors: active) {
+  .btn,
+  .ipt,
+  .textarea,
+  .select,
+  .alert,
+  .badge {
+    border-color: CanvasText;
+  }
+}

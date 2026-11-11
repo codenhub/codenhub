@@ -1,0 +1,127 @@
+/* The component modifiers: density, direction, width, padding, shape, and the
+   two progress states. Each is a utility in `utilities.families`, as the
+   classes in `presentation.css` are, so `@apply stack tight` and `md:tight`
+   work, and a consumer's component takes a modifier the way a shipped one
+   does.
+
+   A modifier cannot say what it changes, because each component answers it
+   with its own values -- `p-xs` is 0.5rem on a card and 0.25rem on a panel --
+   so it raises a flag and the component reads it, as `sm` and `lg` do in
+   `size.css`. The flag is a space toggle: unset it is guaranteed-invalid, so
+   `--_tight-gap: var(--_m-tight) 0.5rem` is invalid too and the
+   `var(--_tight-gap, ...)` that reads it takes its fallback; set, it is
+   empty, and the same line computes to `0.5rem`.
+
+   On an element that reads none of them a flag is a custom property nothing
+   uses, so a page's own `.active` or `.wide` class is not restyled by these.
+
+   The flags are not registered, unlike the size flags: a `@property` rule
+   ships in every build, used or not, and there are fifteen of these. They
+   inherit instead, and each component that reads one restates it `initial`
+   on itself at zero specificity -- see `--_m-` in the component files -- so a
+   `.card.p-xs` does not shrink the padding of a card inside it. See
+   docs/internal/model.md#modifiers. */
+@utility tight {
+  @layer families {
+    --_m-tight: ;
+  }
+}
+
+@utility loose {
+  @layer families {
+    --_m-loose: ;
+  }
+}
+
+@utility vertical {
+  @layer families {
+    --_m-vertical: ;
+  }
+}
+
+@utility horizontal {
+  @layer families {
+    --_m-horizontal: ;
+  }
+}
+
+@utility between {
+  @layer families {
+    --_m-between: ;
+  }
+}
+
+@utility narrow {
+  @layer families {
+    --_m-narrow: ;
+  }
+}
+
+@utility wide {
+  @layer families {
+    --_m-wide: ;
+  }
+}
+
+@utility p-xs {
+  @layer families {
+    --_m-p-xs: ;
+  }
+}
+
+@utility p-sm {
+  @layer families {
+    --_m-p-sm: ;
+  }
+}
+
+@utility p-lg {
+  @layer families {
+    --_m-p-lg: ;
+  }
+}
+
+@utility flush {
+  @layer families {
+    --_m-flush: ;
+  }
+}
+
+@utility icon {
+  @layer families {
+    --_m-icon: ;
+  }
+}
+
+@utility pill {
+  @layer families {
+    --_m-pill: ;
+  }
+}
+
+@utility active {
+  @layer families {
+    --_m-active: ;
+  }
+}
+
+@utility indeterminate {
+  @layer families {
+    --_m-indeterminate: ;
+  }
+}
+
+/* Rules between a table's body rows, and no lines at all. These two write the
+   public token directly, as `edged` writes `--ui-border`: `--ui-rule` already
+   cascades, so the class on a container rules every table inside it. */
+@utility ruled {
+  @layer families {
+    --ui-rule: 100%;
+  }
+}
+
+@utility ruleless {
+  @layer families {
+    --ui-rule: 0%;
+  }
+}

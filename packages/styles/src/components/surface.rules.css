@@ -1,0 +1,222 @@
+/* A ghost, edged container that takes one unit when depth is supplied. */
+@utility card {
+  @layer families {
+    :where(&:not(.p-xs)) {
+      --_m-p-xs: initial;
+    }
+
+    :where(&:not(.p-sm)) {
+      --_m-p-sm: initial;
+    }
+
+    :where(&:not(.p-lg)) {
+      --_m-p-lg: initial;
+    }
+
+    :where(&:not(.flush)) {
+      --_m-flush: initial;
+    }
+  }
+
+  /* The hover flag, raised by `interactive` and `hoverable` below. */
+  @layer families {
+    :where(&:not(.interactive, .hoverable)) {
+      --_m-hover: initial;
+    }
+  }
+
+  @apply surface;
+
+  /* After the `@apply`, not before: `surface` inlines its own resting geometry
+     at that point, so defaults written above it would be overridden by the very
+     utility they are meant to specialise. */
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+  --_d-elevation: 1;
+
+  /* The padding steps and `flush`. Each raises a flag (`modifiers.css`) and
+     the lines below compute only while theirs is up, so `@apply card p-xs`
+     carries the step. `--_scale-pad` is the step `box` scales the corner
+     and the depth by; `flush` leaves it alone. */
+  --_xs-pad: var(--_m-p-xs) 0.5rem;
+  --_sm-pad: var(--_m-p-sm) 0.75rem;
+  --_lg-pad: var(--_m-p-lg) 2rem;
+  --_flush-pad: var(--_m-flush) 0px;
+  --_xs-scale: var(--_m-p-xs) 0.5;
+  --_sm-scale: var(--_m-p-sm) 0.75;
+  --_lg-scale: var(--_m-p-lg) 1.25;
+  --_scale-pad: var(--_lg-scale, var(--_sm-scale, var(--_xs-scale)));
+
+  padding: var(--_flush-pad, var(--_lg-pad, var(--_sm-pad, var(--_xs-pad, 1.25rem))));
+
+  /* A quiet neutral tint -- `.soft`, on the card or on a container -- rests
+     untinted instead of mixing its 12%: 12% of `--color-text` onto any of
+     `--color-background`, `--color-foreground`, or `--color-surface` lands
+     within a few units of the others (a near-black ink dominates the result),
+     so swapping the ground token alone does not read as quieter. A resting
+     neutral `.card.soft` is `--color-foreground` with no ink mixed in -- a
+     plain step up from the page that marks a different container without
+     drawing attention to it.
+
+     A named intent keeps its ordinary 12% wash: 12% of an actual hue does not
+     read as a slab the way 12% of near-black ink does (`.card.soft.destructive`
+     is a gentle `249, 225, 225`), and untinting it would silence it rather than
+     quiet it. `.ghost` and `.solid` are not a tint and keep their own plates.
+
+     Which case applies is `surface`'s `--_quiet`, stepped from the resolved
+     fill and the intent's cap rather than keyed on classes on the card, so a
+     container's `.soft` renders the plate the card's own `.soft` does. Keyed
+     on the card's classes, `.soft > .card` drew the grey slab. `--_fill-cap`
+     (box.css's override slot, not `--ui-fill` directly -- see the comment
+     there) drops to 0% only when quiet, and the ground steps to the
+     foreground only then, through `--_d-surface-ground`, the default
+     `surface` reads beneath the public `--ui-surface-ground`, so a consumer's
+     override, or glass's ground, wins.
+
+     Composed with `box-hover`'s formula (`min(100%, resting + 14%)`), the
+     quiet rest reveals the intent on hover with no second fill declaration:
+     resting at 0% means hover lands at exactly the hover step, 14%, in
+     `--intent-hover`, and the ground steps to `--color-surface` at the same
+     moment. Scoped to `.interactive` and `.hoverable`, the two classes that
+     opt a card into `box-hover`. A named intent rests tinted, so the generic
+     formula deepens it on hover (12% to 26%). */
+  --_fill-cap: calc(100% - var(--_quiet));
+  --_d-surface-ground: color-mix(in oklab, var(--color-foreground) var(--_quiet), var(--color-background));
+
+  --_hover-ground: var(--_m-hover) color-mix(in oklab, var(--color-surface) var(--_quiet), var(--color-background));
+
+  &:hover {
+    --_d-surface-ground: var(
+      --_hover-ground,
+      color-mix(in oklab, var(--color-foreground) var(--_quiet), var(--color-background))
+    );
+  }
+
+  /* Opt-in, because a card is only sometimes a control. Applications still owe
+     it a real interactive element and an accessible name. Hover and press are
+     the derived ones every other pressable box gets; there is nothing
+     card-specific about either.
+
+     `.interactive` is the whole opt-in and stays that way; `.hoverable` and
+     `.pressable` are its halves, for a card that answers one gesture and not
+     the other. A card with its own nested controls takes `.hoverable` for the
+     hover warmth without the press-scale that reads as "you activated the
+     card" when the click really landed on a nested button. `.hoverable` alone
+     does not set the pointer cursor: that travels with being a click target,
+     i.e. with `.pressable` / `.interactive`. */
+}
+
+/* The opt-in itself: utilities, so `@apply card interactive` carries the
+   gestures. Each is `box-hover` or `box-active` under the name a card's
+   markup uses, and the hover half raises the flag the card's quiet ground
+   reads. The pointer is 0-1-0 here, below `box`'s disabled cursor, so a
+   disabled interactive card does not invite the click. */
+@utility hoverable {
+  @layer families {
+    --_m-hover: ;
+  }
+
+  @apply box-hover;
+}
+
+@utility pressable {
+  @apply box-active cursor-pointer;
+}
+
+@utility interactive {
+  @layer families {
+    --_m-hover: ;
+  }
+
+  @apply box-hover box-active cursor-pointer;
+}
+
+/* A panel is the flush, unelevated sibling: sidebars, toolbars, and wells that
+   sit flat against the layout rather than floating above it. Soft and edgeless
+   is what makes it read as a well without drawing a line to say so. */
+@utility panel {
+  @layer families {
+    :where(&:not(.p-xs)) {
+      --_m-p-xs: initial;
+    }
+
+    :where(&:not(.p-sm)) {
+      --_m-p-sm: initial;
+    }
+
+    :where(&:not(.p-lg)) {
+      --_m-p-lg: initial;
+    }
+
+    :where(&:not(.flush)) {
+      --_m-flush: initial;
+    }
+  }
+
+  @apply surface;
+
+  --_d-fill: 12%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 0%;
+  --_d-elevation: 0;
+
+  /* The padding steps and `flush`. Each raises a flag (`modifiers.css`) and
+     the lines below compute only while theirs is up, so `@apply card p-xs`
+     carries the step. `--_scale-pad` is the step `box` scales the corner
+     and the depth by; `flush` leaves it alone. */
+  --_xs-pad: var(--_m-p-xs) 0.25rem;
+  --_sm-pad: var(--_m-p-sm) 0.5rem;
+  --_lg-pad: var(--_m-p-lg) 1.5rem;
+  --_flush-pad: var(--_m-flush) 0px;
+  --_xs-scale: var(--_m-p-xs) 0.5;
+  --_sm-scale: var(--_m-p-sm) 0.75;
+  --_lg-scale: var(--_m-p-lg) 1.25;
+  --_scale-pad: var(--_lg-scale, var(--_sm-scale, var(--_xs-scale)));
+
+  padding: var(--_flush-pad, var(--_lg-pad, var(--_sm-pad, var(--_xs-pad, 1rem))));
+
+  /* Neutral panels are the common case -- layout wells, sidebars, toolbars with
+     no named intent -- and 12% of `--color-text` (near-black) mixed onto the
+     page is far more assertive than 12% of a hue (`217, 217, 217` against a
+     `250, 250, 250` page): the same "neutral ink reads louder" effect
+     `.card.soft` answers, and the reason `--intent-fill-max` stops neutral's
+     fill short everywhere else. So a quiet neutral tint rests untinted on
+     `--color-foreground`, through `--_d-surface-ground`, the default
+     `.card.soft` rests on, so a bare `.panel` rests at exactly the plate a
+     `.card.soft` does, and a consumer's `--ui-surface-ground` or glass's
+     translucent ground wins over it: a neutral panel under `.glass` is glass.
+
+     A named intent keeps its wash: a panel is edgeless by default, so the fill
+     is the only channel a `.primary` bulk-actions bar or a `.destructive`
+     danger-zone panel has to say what it is (a resting `.panel.destructive` is
+     a gentle `249, 225, 225` wash). `.ghost` and `.solid` keep their own
+     plates. Which case applies is `surface`'s `--_quiet`, stepped from the
+     resolved fill, so a container's `.ghost` or `.solid` renders the panel its
+     own would; keyed on the panel's classes, both landed on the quiet plate.
+     Permanent rather than hover-revealed: a panel has no interaction state to
+     reveal a tint into. */
+  --_fill-cap: calc(100% - var(--_quiet));
+  --_d-surface-ground: color-mix(in oklab, var(--color-foreground) var(--_quiet), var(--color-background));
+}
+
+/* A closed `<dialog>` is hidden, and an open one centred, by `surface` itself,
+   so every element that applies it -- these three, `.alert`, a consumer's
+   `@apply surface` -- gets both (see `surface.css`). That hide is in the
+   layer the surface is applied in. For the three containers a consumer
+   reaches for as a dialog, it is restated here unlayered: hiding a closed
+   dialog is behaviour, so it beats any layered rule whatever its specificity.
+   The centring stays a default in `utilities` at zero specificity, so a
+   consumer's own margin -- a utility, or unlayered CSS -- still places one.
+
+   Here rather than in the reset, so every entrypoint that ships `.card` ships
+   the fix, `/components` included. */
+dialog:is(.card, .panel, .surface):not([open]) {
+  display: none;
+}
+
+/* The popover counterpart, unlayered for the same reason. `.alert` joins the
+   list: a toast is the surface most often given `popover`. */
+:is(.card, .panel, .surface, .alert)[popover]:not(:popover-open) {
+  display: none;
+}

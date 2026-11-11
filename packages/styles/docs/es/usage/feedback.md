@@ -2,7 +2,7 @@
 title: Feedback
 description: Un botón que indica que está guardando, alertas, badges, placeholders de carga y barras de progreso, y lo que tu código debe mantener sincronizado con ellos.
 order: 3
-source: e2a4c2af517dd286e22e762e4ba1997ebdb3c8c6
+source: ce1defb7385bc009988d903fd895bcb7edb5ab3b
 ---
 
 # Feedback
@@ -80,6 +80,8 @@ Un badge es una pequeña píldora para un estado o un recuento:
 
 Un badge es soft y sin borde por defecto, y acepta las mismas clases de intención y presentación que un botón: `.badge.warning` para "Pago pendiente", `.badge.info.solid` para un "Nuevo" relleno. A diferencia de una alerta, un badge sin intención conserva su tinte claro, porque no tiene borde, y sin el tinte se perdería en el texto que lo rodea.
 
+Un badge neutro que no es `.solid`, como un contador dentro de un `.btn.primary`, imprime en el color de texto del componente con relleno en el que está, así que sigue siendo legible sobre ese relleno. Un badge con intención conserva su propio color.
+
 ## Mostrar un placeholder mientras carga
 
 Mientras la tarjeta de perfil espera los datos, muestra bloques grises donde irá el texto:
@@ -133,6 +135,8 @@ Cuando no sabes cuánto ha avanzado el trabajo, como mientras se prepara la expo
 ```
 
 `.active` añade un brillo sobre el carril de una barra determinada, para mostrar que el trabajo sigue en marcha entre actualizaciones. Las dos animaciones se detienen cuando el usuario pide movimiento reducido; una barra indeterminada queda entonces en reposo con su relleno al principio.
+
+Con la [hoja de estilos sin clases](../setup.md#html-sin-clases), un elemento `<progress>` simple se dibuja como `.progress`: lleno hasta su `value`, o con el barrido indeterminado cuando no tiene `value`. Anuncia su valor por sí mismo, así que no necesita `aria-valuenow`.
 
 ### Cómo se ven las barras de progreso
 

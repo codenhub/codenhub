@@ -2,17 +2,25 @@
    orders layers by the first time it meets each name, so a sheet that opened
    `components` first would rank it below `theme` and `base`; stating Tailwind's
    own order here, and at the top of every entrypoint, makes every load order
-   rank the same. The four class families -- intent, presentation, elevation,
-   and every aesthetic -- sit in `components`, below every utility, so a
-   consumer's own utility or unlayered CSS beats them. Components are
-   `@utility` rules in `utilities`. See docs/internal/model.md#cascade-layers. */
+   rank the same. Intent, presentation, elevation, corner, and size are
+   `@utility` rules whose bodies sit in `utilities.families`, a sublayer that
+   loses to every rule written straight into `utilities` -- a component's, or
+   a consumer's own utility -- so `@apply` and the variants reach them and an
+   override still beats them. The intent floor and resets, and every
+   aesthetic's token class, stay in `components`. Components are `@utility`
+   rules in `utilities`. See docs/internal/model.md#cascade-layers. */
 @layer theme, base, components, utilities;
 
 @import "tailwindcss/theme.css" layer(theme);
-@import "./intent.css" layer(components);
-@import "./presentation.css" layer(components);
-@import "./elevation.css" layer(components);
-@import "./corner.css" layer(components);
+/* Unlayered imports: a `@utility` has to be top-level, and each of these files
+   places its own rules -- the class families in `utilities.families`, the
+   intent floor and resets in `components`. */
+@import "./intent.css";
+@import "./presentation.css";
+@import "./elevation.css";
+@import "./corner.css";
+@import "./size.css";
+@import "./modifiers.css";
 /* Everything that is not `src/` -- see the note in `index.css`. Keeps a
    `--color-*` reference in a docs example from shipping as a real theme entry. */
 @source not "../dist";
@@ -282,6 +290,24 @@
   @media (prefers-color-scheme: dark) {
     &:not(:where(.light, .light *, .theme-light, .theme-light *, [data-theme="light"], [data-theme="light"] *)) {
       @slot;
+    }
+  }
+}
+
+/* Paper is the light ground. A browser leaves backgrounds off a printed page
+   unless told otherwise, so a dark page printed its near-white text on no
+   ground at all. Every token resolves through `light-dark()`, so printing in
+   the light scheme re-resolves all of them, a forced-dark region's included.
+   In `theme`, after the selectors above and at their specificity, so it beats
+   them and a consumer's utility still beats it. It does not reach a `dark:`
+   utility, which keys on the class and not on the scheme. */
+@layer theme {
+  @media print {
+    :root,
+    .dark,
+    .theme-dark,
+    [data-theme="dark"] {
+      color-scheme: light;
     }
   }
 }

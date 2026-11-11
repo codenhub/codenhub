@@ -103,6 +103,8 @@ Use one half for a card that answers only one gesture. A card that holds its own
 
 These classes only style. Put them on a real link or button and give it an accessible name; a `<div class="card interactive">` cannot be focused or used from a keyboard.
 
+A disabled `.interactive` or `.pressable` card shows the not-allowed cursor instead of the pointer, whether it is a `<button>` with `disabled`, or carries `.disabled`, `aria-disabled="true"`, or `data-disabled`.
+
 ## Tables
 
 The settings screen lists API keys in a table:
@@ -146,6 +148,8 @@ The settings screen lists API keys in a table:
 ### Row intent
 
 A table's rows take the table's intent, so `.data-table.success` colors its header and lines green. A row with its own intent class uses that instead, as the revoked key's `<tr class="destructive">` does. `<tr class="neutral">` sets a row back to neutral inside a colored table. On a `.solid` table, a row with its own intent keeps the table's text color so it stays readable on the table's fill, and shows its intent through its row line and hover. This is the one place an intent passes down, because rows are parts of the table, not separate components.
+
+Only the seven built-in intent classes recolor a body row. A row with an intent you defined yourself, such as `<tr class="beta">`, looks like the rest of the table: its text, line, and hover come from the table's intent. To mark such a row, write a built-in intent class on the row and retheme that intent's color family on the row, as [Theming → Your own intent](./theming.md#your-own-intent) describes, or paint the row with your own utilities.
 
 ### Table rules
 
@@ -211,4 +215,4 @@ A `.kbd`, `.code`, or `.pre` rests on its intent's subtle tone, `--color-surface
 
 ## Next
 
-[Accessibility](../accessibility.md) lists what the CSS does for your users and what your application still owes them.
+[Presets](./presets.md) shows how to set a look once instead of on every element. [Accessibility](../accessibility.md) lists what the CSS does for your users and what your application still owes them.

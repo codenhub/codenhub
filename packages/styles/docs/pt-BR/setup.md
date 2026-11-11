@@ -2,7 +2,7 @@
 title: Configuração
 description: Instale o pacote, escolha entre CSS compilado ou código-fonte do Tailwind e renderize a estrutura da página de configurações.
 order: 1
-source: d183b76ee3f7c5396fcc4e23647486fd99e7ee1d
+source: 05ddd7177a0fc61cb5f9aaee9709ecd8b9c8e725
 ---
 
 # Configuração
@@ -46,7 +46,7 @@ Escolha um:
 
 - **CSS compilado** (`@codenhub/styles`, mostrado acima). Use este, a menos que tenha um motivo para não usar. Qualquer bundler que resolva imports de CSS de pacotes funciona, como Vite, webpack ou a CLI do Tailwind.
 - **Código-fonte do Tailwind CSS v4** (`@codenhub/styles/tw`). Use quando o seu projeto já roda Tailwind v4. O seu build compila o pacote junto com os seus próprios utilitários, então você fica com uma única folha de estilos e a variante `dark:` do Tailwind acompanha o tema do pacote. Exige Tailwind 4.3.2 ou mais recente, abaixo da 5.
-- **Sem bundler.** Referencie o arquivo compilado a partir do `node_modules` ou de uma CDN com uma tag `<link>`.
+- **Sem bundler.** Referencie o arquivo compilado a partir do `node_modules` ou de uma CDN com uma tag `<link>`. O comando `build` do pacote pode, em vez disso, escrever uma folha de estilos com só as classes que os seus templates usam; veja [Sem bundler](./integrating/without-a-bundler.md#gere-só-as-classes-que-você-usa).
 
 O seu framework pode precisar de uma configuração própria, como onde fica a folha de estilos global no Next.js ou no Astro. Cada um destes guias cobre uma configuração e depois traz você de volta para cá:
 
@@ -71,14 +71,14 @@ A ordem dos dois imports não importa, porque todo entrypoint declara as [camada
 ## Requisitos
 
 - **Navegadores:** Chrome 123, Safari 17.5 ou Firefox 128 e mais recentes. As cores usam `light-dark()` e `color-scheme` (Firefox 120). O `.input-group` lê o estado inválido e desabilitado de um controle aninhado com `:has()` (Firefox 121). As classes de elevação registram uma propriedade sem herança com `@property` (Firefox 128); sem isso, uma classe de elevação também atingiria os elementos sem classe dentro dela.
-- **Ferramental:** um `@import` com nome de pacote precisa de uma ferramenta que resolva imports de CSS de pacotes. Sem ela, referencie o arquivo compilado pelo caminho ou a partir de uma CDN; veja [Sem bundler](./integrating/without-a-bundler.md).
-- **Tailwind:** 4.3.2 ou mais recente, abaixo da 5, só para os entrypoints de código-fonte `/tw`. É uma peer dependency opcional, então os entrypoints compilados não o instalam.
+- **Ferramental:** um `@import` com nome de pacote precisa de uma ferramenta que resolva imports de CSS de pacotes pelo mapa `exports` deles. Sem ela, referencie o arquivo compilado pelo caminho ou a partir de uma CDN; veja [Sem bundler](./integrating/without-a-bundler.md). Duas ferramentas comuns precisam de um ajuste, descrito em [Integração → Bundlers que precisam de um empurrão](./integrating/index.md#bundlers-que-precisam-de-um-empurrão): o Parcel e o PostCSS com `postcss-import`.
+- **Tailwind:** 4.3.2 ou mais recente, abaixo da 5, só para os entrypoints de código-fonte `/tw` e o comando `build`, que também precisa do `@tailwindcss/cli`. Os dois são peer dependencies opcionais, então os entrypoints compilados não os instalam.
 - **Sua aplicação:** o pacote não tem JavaScript. HTML semântico, ARIA, comportamento de teclado, gerenciamento de foco, validação e anúncios ficam com você; veja [Acessibilidade](./accessibility.md).
 
 ## Quando nada é estilizado
 
 - **O import está faltando ou não é carregado globalmente.** As classes não fazem nada até a folha de estilos estar na página. Importe-a uma vez numa folha de estilos que toda página carrega, não num componente que pode não ser renderizado.
-- **O nome do pacote não é resolvido.** Um `<link>` simples ou uma ferramenta sem resolução de pacotes CSS não consegue ler `@import "@codenhub/styles"`. Referencie `node_modules/@codenhub/styles/dist/index.css` ou siga [Sem bundler](./integrating/without-a-bundler.md).
+- **O nome do pacote não é resolvido.** Um `<link>` simples ou uma ferramenta sem resolução de pacotes CSS não consegue ler `@import "@codenhub/styles"`. Referencie `node_modules/@codenhub/styles/dist/index.css` ou siga [Sem bundler](./integrating/without-a-bundler.md). O Parcel e o `postcss-import` resolvem o nome com uma pequena mudança; veja [Integração → Bundlers que precisam de um empurrão](./integrating/index.md#bundlers-que-precisam-de-um-empurrão).
 - **Um caminho `/tw` é carregado sem Tailwind.** Os arquivos `/tw` são código-fonte do Tailwind: eles contêm `@theme`, `@utility` e `@apply`, que os navegadores não entendem. O seu build do Tailwind precisa compilá-los; veja [Tailwind CSS v4](./integrating/tailwind.md).
 - **Falta uma classe montada em tempo de execução (só com código-fonte do Tailwind).** O Tailwind só gera uma classe utilitária, incluindo os componentes do pacote como `.btn`, quando encontra o nome nos seus arquivos de código. Um nome montado a partir de strings, como `` `btn ${tone}` ``, é invisível para essa varredura. Escreva os nomes de classe completos, ou liste-os como descrito em [Tailwind CSS v4](./integrating/tailwind.md).
 
@@ -100,7 +100,7 @@ Cada caminho de import resolve para o mesmo arquivo nas condições de export `s
 | `@codenhub/styles/theme`         | Tokens compilados e as classes de intenção, apresentação, elevação e padrão de cantos. Define as propriedades do tema na raiz e os seletores de claro e escuro. Sem reset e sem componentes.                                                                                                                                       |
 | `@codenhub/styles/palette`       | Custom properties `--palette-*` geradas: a cor de preenchimento, de texto e de borda de cada combinação de intenção e apresentação como valor plano, mais as cores planas `border`, `surface` e `text`. Para código que não pode usar o pacote em si; veja [Personalização → Paleta gerada](./usage/customizing.md#paleta-gerada). |
 | `@codenhub/styles/components`    | Tokens compilados, utilitários de tipografia e todas as classes de componente. Cada componente traz a sua própria regra de movimento reduzido, e a correção do `<dialog>` fechado vem com o `.card`. Sem reset, sem utilitários de layout ou de conteúdo, sem mapeamentos sem classes.                                             |
-| `@codenhub/styles/native`        | A folha de estilos completa compilada mais os [mapeamentos sem classes](#html-sem-classes) para elementos HTML puros. Aplica o reset e seletores amplos de elementos.                                                                                                                                                              |
+| `@codenhub/styles/native`        | Tokens, tipografia, utilitários de layout e de conteúdo, componentes e o reset do pacote, compilados, mais os [mapeamentos sem classes](#html-sem-classes) para elementos HTML puros. Sem o Preflight do Tailwind. Aplica o reset e seletores amplos de elementos.                                                                 |
 | `@codenhub/styles/aesthetics`    | As seis estéticas compiladas, `.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile`, `.cyber` e `.sketch`, cada uma com a sua classe `-solo`. Sem tokens nem componentes próprios; importe em qualquer ordem.                                                                                                                        |
 | `@codenhub/styles/aesthetics/*`  | Uma estética compilada e a sua classe solo: `/neobrutalism`, `/glass`, `/pixel`, `/chunky-tile`, `/cyber` ou `/sketch`.                                                                                                                                                                                                            |
 | `@codenhub/styles/tw`            | Versão em código-fonte da folha de estilos completa. Importa o próprio Tailwind e depois o tema, a tipografia, os utilitários, os componentes e o reset. Mesmas regras globais.                                                                                                                                                    |
@@ -112,7 +112,7 @@ Cada caminho de import resolve para o mesmo arquivo nas condições de export `s
 | `@codenhub/styles/tw/feedback`   | Tema em código-fonte mais `.alert`, `.badge`, `.skeleton` e `.progress`, com as suas animações.                                                                                                                                                                                                                                    |
 | `@codenhub/styles/tw/tooltip`    | Tema em código-fonte mais as classes de tooltip.                                                                                                                                                                                                                                                                                   |
 | `@codenhub/styles/tw/reset`      | Tema, utilitários de tipografia e o reset global em código-fonte. Altera a raiz, o body e os elementos, e define regras de seleção, movimento, foco, barra de rolagem e cores forçadas.                                                                                                                                            |
-| `@codenhub/styles/tw/native`     | Versão em código-fonte da `/native`: tudo, mais o reset e os mapeamentos sem classes. O efeito global mais amplo.                                                                                                                                                                                                                  |
+| `@codenhub/styles/tw/native`     | Versão em código-fonte da `/native`: tudo menos o Preflight do Tailwind, mais o reset do pacote e os mapeamentos sem classes. O efeito global mais amplo.                                                                                                                                                                          |
 | `@codenhub/styles/tw/typography` | Tema em código-fonte mais os utilitários de tipografia. Define os seletores de tema; sem reset, sem mapeamentos sem classes.                                                                                                                                                                                                       |
 | `@codenhub/styles/tw/utilities`  | Tema e tipografia em código-fonte mais os utilitários de layout e de conteúdo.                                                                                                                                                                                                                                                     |
 | `@codenhub/styles/tw/aesthetics` | As seis estéticas em código-fonte. `/tw/aesthetics/neobrutalism`, `/glass`, `/pixel`, `/chunky-tile`, `/cyber` e `/sketch` publicam uma cada. CSS puro, sem efeitos colaterais de tema ou de reset.                                                                                                                                |
@@ -122,19 +122,21 @@ Não importe dois entrypoints que se sobrepõem, como `@codenhub/styles` e `@cod
 
 ## HTML sem classes
 
-`@codenhub/styles/native` estiliza elementos HTML puros sem nenhuma classe, para conteúdo em que você não consegue colocar classes, como a saída de um Markdown ou o corpo de um CMS. É a folha de estilos completa mais estes mapeamentos:
+`@codenhub/styles/native` estiliza elementos HTML puros sem nenhuma classe, para conteúdo em que você não consegue colocar classes, como a saída de um Markdown ou o corpo de um CMS. Ela traz tudo o que a folha de estilos completa traz, menos o Preflight do Tailwind, o reset dos padrões do navegador que o `@codenhub/styles` traz junto com o Tailwind. O reset do próprio pacote está nela: o box sizing, o fundo, a cor do texto e a fonte da raiz, o reset de margens de títulos, parágrafos e listas, as cores de seleção, os anéis de foco e a regra de movimento reduzido. Depois ela acrescenta estes mapeamentos:
 
-| Elemento                                                                                                                                       | Estilizado como                                                                    |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `h1`, `h2`, `h3`, `h4`, `h5` e `h6`                                                                                                            | `.text-title-lg`, `.text-title`, `.text-title-sm`, `.text-label-lg`, `.text-label` |
-| `body`                                                                                                                                         | `.text-body`, herdado por parágrafos, itens de lista e outros textos               |
-| `table`                                                                                                                                        | `.data-table`                                                                      |
-| `kbd`, `blockquote`, `q`, `code`, `pre`                                                                                                        | `.kbd`, `.quote`, `.quote-inline`, `.code`, `.pre`                                 |
-| `hr`                                                                                                                                           | `.divider`                                                                         |
-| `input` sem type, ou com type `text`, `number`, `email`, `password`, `url`, `tel`, `search`, `month`, `week`, `time`, `date`, `datetime-local` | `.ipt`                                                                             |
-| `textarea`, `select`                                                                                                                           | `.textarea`, `.select`                                                             |
-| `input type="checkbox"`, `input type="radio"`                                                                                                  | `.checkbox`, `.radio`                                                              |
-| `button`, `input type="button"`, `type="submit"`, `type="reset"`                                                                               | `.btn`                                                                             |
+| Elemento                                                                                                                                       | Estilizado como                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `h1`, `h2`, `h3`, `h4`, `h5` e `h6`                                                                                                            | `.text-title-lg`, `.text-title`, `.text-title-sm`, `.text-label-lg`, `.text-label`  |
+| `body`                                                                                                                                         | `.text-body`, herdado por parágrafos, itens de lista e outros textos                |
+| `table`                                                                                                                                        | `.data-table`                                                                       |
+| `kbd`, `blockquote`, `q`, `code`, `pre`                                                                                                        | `.kbd`, `.quote`, `.quote-inline`, `.code`, `.pre`                                  |
+| `hr`                                                                                                                                           | `.divider`                                                                          |
+| `input` sem type, ou com type `text`, `number`, `email`, `password`, `url`, `tel`, `search`, `month`, `week`, `time`, `date`, `datetime-local` | `.ipt`                                                                              |
+| `textarea`, `select`                                                                                                                           | `.textarea`, `.select`                                                              |
+| `input type="checkbox"`, `input type="radio"`                                                                                                  | `.checkbox`, `.radio`                                                               |
+| `button`, `input type="button"`, `type="submit"`, `type="reset"`                                                                               | `.btn`                                                                              |
+| `dialog`                                                                                                                                       | `.card.floating`: escondido até ser aberto, e então um card flutuante centralizado  |
+| `progress`                                                                                                                                     | `.progress`, preenchido até o seu `value`; sem `value`, é a varredura indeterminada |
 
 ```html
 <article>
@@ -153,6 +155,7 @@ O que ele não faz:
 - **Nada de switch.** Um checkbox com `role="switch"` continua pintado como checkbox; o mapeamento não lê roles. Uma página que precisa de switches fica mais bem servida pela folha de estilos baseada em classes.
 - **Links acompanham o texto ao redor.** Um link dentro de um título mantém o tamanho do título; um link nunca é estilizado como botão.
 - **O texto do corpo é definido uma vez.** `p` e `li` herdam a tipografia do elemento em que estão, então um contêiner que define o seu próprio tamanho, peso ou espaçamento entre letras o aplica ao Markdown dentro dele. Os controles mantêm o próprio espaçamento entre letras: um botão, um badge e um campo de texto ficam em `normal`, seja o que for que a página ou o contêiner definam.
+- **O comportamento nativo continua nativo.** Um `<dialog>` abre com `show()` ou `showModal()` como sempre; o mapeamento só o pinta. A varredura de um `<progress>` para com a preferência de movimento reduzido, e em cores forçadas a barra usa as cores do sistema.
 - **`pre code` não recebe estilo duplicado.** O código dentro de um `pre` perde o chip que desenharia sozinho: fundo, padding, borda, sombra, brilho e recorte.
 
 Os mapeamentos são globais: todo elemento correspondente na página é estilizado, inclusive elementos dentro de widgets de terceiros. Eles ficam na [camada de cascata](#camadas-de-cascata) `base`, então qualquer classe vence. Adicione uma classe de intenção ou de apresentação a um elemento mapeado, como `<button class="destructive">`, e ela funciona como funcionaria num `.btn`.
@@ -161,18 +164,19 @@ Os mapeamentos são globais: todo elemento correspondente na página é estiliza
 
 Todo entrypoint coloca o seu CSS nas quatro camadas de cascata (cascade layers) do Tailwind e declara a ordem delas antes de usar qualquer uma, então o resultado não depende de qual arquivo carrega primeiro:
 
-| Camada       | Contém                                                                                                                |
-| ------------ | --------------------------------------------------------------------------------------------------------------------- |
-| `theme`      | O tema do Tailwind, os tokens fundamentais, os seletores de tema e a `/palette`.                                      |
-| `base`       | O reset e os estilos de elemento sem classes.                                                                         |
-| `components` | As classes de intenção, apresentação, elevação e estética.                                                            |
-| `utilities`  | Todos os componentes (`.btn`, `.card`, `.ipt` e assim por diante), ao lado dos seus próprios utilitários do Tailwind. |
-| _sem camada_ | As sobrescritas de cores forçadas e de movimento reduzido, a correção do `<dialog>` fechado e as classes `-solo`.     |
+| Camada       | Contém                                                                                                                                                                                                                                                                                        |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `theme`      | O tema do Tailwind, os tokens fundamentais, os seletores de tema e a `/palette`.                                                                                                                                                                                                              |
+| `base`       | O reset e os estilos de elemento sem classes.                                                                                                                                                                                                                                                 |
+| `components` | As classes de estética e os valores de intenção neutros de que todo componente parte.                                                                                                                                                                                                         |
+| `utilities`  | Todos os componentes (`.btn`, `.card`, `.ipt` e assim por diante), ao lado dos seus próprios utilitários do Tailwind. As classes de intenção, apresentação, borda, elevação, canto e tamanho ficam em `utilities.families`, uma subcamada que perde para qualquer outra regra de `utilities`. |
+| _sem camada_ | As sobrescritas de cores forçadas e de movimento reduzido, a correção do `<dialog>` fechado e as classes `-solo`.                                                                                                                                                                             |
 
 O que isso significa quando você escreve o seu próprio CSS:
 
-- **O seu utilitário ou CSS sem camada vence uma classe de intenção, apresentação, elevação ou estética** no mesmo elemento. `[--ui-fill:50%]` num botão `.solid`, `font-serif` numa região `.pixel` ou `.my-card { --ui-radius: 0 }` na sua própria folha de estilos, todos se aplicam.
+- **O seu utilitário ou CSS sem camada vence uma classe de intenção, apresentação, elevação ou estética** no mesmo elemento. `[--ui-fill:50%]` num botão `.solid`, `font-serif` numa região `.pixel` ou `.my-card { --ui-radius-surface: 0 }` na sua própria folha de estilos, todos se aplicam.
 - **Um componente e o seu utilitário dividem a camada `utilities`.** A especificidade decide entre eles e depois a ordem no código, como entre dois utilitários quaisquer. O seu CSS sem camada sempre vence um componente.
+- **O seu utilitário vence os padrões internos de um componente.** `p-0 text-center` numa célula de tabela, `text-sm` numa `.label` ou `px-8` num `.btn.sm` se aplicam, porque o componente escreve esses padrões de modo que uma classe no elemento vença.
 - **O estado vence a sua intenção.** Um campo com `aria-invalid="true"` continua destrutivo mesmo com um utilitário de intenção aplicado.
 - **As classes `-solo` ficam fora das camadas de propósito**, para vencer os estilos em camadas ou de especificidade zero de um componente de terceiros. Uma regra sem camada mais específica, ou uma igualmente específica que carrega depois, ainda vence essas classes; veja [Classes solo](./usage/solo.md).
 

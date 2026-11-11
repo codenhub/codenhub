@@ -1909,3 +1909,43 @@ test.describe("forms", () => {
     }
   });
 });
+
+/* An input group's rules for "the control inside" matched any `<input>`, and
+   its rule for "anything else" outranked that thing's own colour. A checkbox in
+   a group lost its box and its line; a link button stretched like a field and
+   printed secondary text; a badge's own colour lost to the adornment grey. */
+test("an input group leaves what is not a text field alone", async ({ page }) => {
+  await page.setContent("<!doctype html><html><body></body></html>");
+  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-components.css" });
+
+  const read = () =>
+    page.evaluate(() =>
+      Object.fromEntries(
+        [...document.querySelectorAll("[id]")].map((element) => {
+          const styles = getComputedStyle(element);
+
+          return [
+            element.id,
+            [styles.borderTopWidth, styles.backgroundColor, styles.color, styles.flexGrow, styles.paddingLeft].join(
+              " | ",
+            ),
+          ];
+        }),
+      ),
+    );
+  const markup = (wrapper: string) =>
+    `<div class="${wrapper}">` +
+    '<input type="checkbox" class="checkbox" id="checkbox" />' +
+    '<input type="checkbox" class="switch" id="switch" />' +
+    '<input type="radio" class="radio" id="radio" checked />' +
+    '<a class="btn primary" href="#" id="link">Go</a>' +
+    '<span class="badge success" id="badge">New</span>' +
+    "</div>";
+
+  await page.evaluate((html) => (document.body.innerHTML = html), markup("cluster"));
+  const alone = await read();
+
+  await page.evaluate((html) => (document.body.innerHTML = html), markup("input-group"));
+
+  expect(await read()).toEqual(alone);
+});

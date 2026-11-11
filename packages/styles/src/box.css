@@ -34,6 +34,23 @@
      specificity, so restating it here is what keeps a nested box reading its
      own presentation instead of the container's reinterpretation of one. */
   --_fill-cap: 100%;
+  /* What a box rests as when nothing above `@apply box` says otherwise: no
+     fill, no line, the ordinary depth. Stated on the element, not left to
+     the `var()` fallbacks: `--_d-*` inherit like any custom property, so a
+     bare `box` inside a `.btn` rested as the button does -- a full fill and
+     the button's line. A component writes its own after `@apply box`, where
+     the later declaration wins. See docs/internal/model.md#resting-defaults. */
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 0%;
+  --_d-elevation: 1;
+  --_d-holds-ink: none;
+
+  /* Printed as drawn. A browser leaves backgrounds off paper by default, and
+     a filled box prints its label in the contrast colour: white on nothing.
+     Inherited, so everything inside keeps its paint too. */
+  print-color-adjust: exact;
+
   --_capped: min(var(--ui-fill, var(--_d-fill)), var(--_fill-cap, 100%), var(--intent-fill-max, 100%));
   /* Whether the intent's cap stopped the fill short, as 0% or 100%. A capped
      fill is a plate the presentation asked to be full, so it rests on the page
@@ -85,7 +102,26 @@
      `--intent-contrast` keeps its own meaning -- `--_on-fill` reconciles it with
      a capped intent -- rather than being bent so neutral's contrast is the ink,
      which renders a checked neutral checkbox black-on-black. */
-  --_fg: color-mix(in oklab, var(--intent-contrast) var(--_on-fill), var(--intent-strong));
+  --_fg-own: color-mix(in oklab, var(--intent-contrast) var(--_on-fill), var(--intent-strong));
+  /* The ink of the plate beneath. Intent does not cascade, so a component with
+     none prints the page's ink, and on a filled parent that ink sat on the
+     parent's fill: a badge in a primary button read at 1.11:1. A box whose
+     fill is a plate hands its own ink down; one with no plate declares these
+     invalid, which for a registered property means it inherits them, so the
+     ink passes through an input group to the field inside it. `--_through`
+     is 100% for a neutral box (its cap is below 100%) that was handed an ink
+     and holds none: an intent keeps its own ink, as it keeps its own colour.
+     A component that rests on a ground of its own restates all three after
+     `@apply box`. See docs/internal/model.md#the-ink-of-the-plate-beneath. */
+  --_held-ink: var(--_holds-ink, var(--_d-holds-ink)) var(--_fg-own);
+  --_held-on: var(--_holds-ink, var(--_d-holds-ink)) 100%;
+  --_own-hold: var(--_holds-ink, var(--_d-holds-ink)) 100%;
+  --_through: min(
+    var(--_held-on),
+    calc(100% - var(--_own-hold)),
+    clamp(0%, calc((100% - var(--intent-fill-max, 100%)) * 1000), 100%)
+  );
+  --_fg: color-mix(in oklab, var(--_held-ink) var(--_through), var(--_fg-own));
   /* P3: the line fades out as the fill fills in, so a filled box has a seamless
      edge. It fades toward `transparent`, not toward the plate: the plate
      already runs under the border (nothing clips the background to the padding
@@ -98,11 +134,29 @@
      `.edgeless` on the fill colour, which the border box paints as a second
      coat -- a ring around an element that asked for no edge. See
      docs/internal/model.md#presentation. */
-  --_line: color-mix(
-    in oklab,
-    transparent var(--ui-fill, var(--_d-fill)),
-    var(--intent-border, var(--ui-ink, var(--color-border)))
+  /* The neutral line of a box with no fill, where an aesthetic's line cannot
+     be seen without one: glass's hairline is a highlight on a plate, and on a
+     `.ghost.edged` button there is no plate (1.01:1 on a light page). A
+     component that wants the swap names the ink after `@apply box`; cleared
+     here so a box nested in one does not inherit it. `--_bare` is 100% for a
+     neutral intent (its cap is below 100%) resolving to no fill, stepped from
+     the resolved values as `surface`'s `--_quiet` is, so a container's
+     `.ghost` counts and an intent's own line is never swapped. */
+  --_bare-ink: initial;
+  --_bare: min(
+    clamp(0%, calc((100% - var(--intent-fill-max, 100%)) * 1000), 100%),
+    clamp(0%, calc(100% - var(--ui-fill, var(--_d-fill)) * 1000), 100%)
   );
+  --_line-ink: color-mix(
+    in oklab,
+    var(--_held-ink) var(--_through),
+    color-mix(
+      in oklab,
+      var(--_bare-ink, var(--intent-border, var(--ui-ink, var(--color-border)))) var(--_bare),
+      var(--intent-border, var(--ui-ink, var(--color-border)))
+    )
+  );
+  --_line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--_line-ink));
   /* How much line there is, as an input rather than a result. A component that
      must keep its line whatever the edge class says raises `--_edge-floor`
      instead of rewriting `--_edge`, and the composition above still runs.
@@ -138,10 +192,6 @@
      public override, undeclared by the package. See docs/internal/model.md#material-tokens. */
   --_scale-size: initial;
   --_scale-pad: initial;
-  /* The padding the same modifiers set on a `.card` or `.panel`, restated for
-     the same reason: a `.card.p-xs` or `.flush` would otherwise pad every
-     surface nested inside it to its own value. */
-  --surface-padding: initial;
   --_scale: var(--ui-scale, min(var(--_scale-size, var(--_scale-pad, 1)), var(--_scale-pad, var(--_scale-size, 1))));
   /* Depth follows the step down and not up: a 4px slab under a 20px button
      swallows it, while a press that travels the aesthetic's whole depth has to
@@ -213,6 +263,18 @@
     var(--_shadow),
     inset 0 0 0 var(--ui-focus-inset) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent)),
     inset 0 0 0 calc(var(--ui-focus-inset) + 2px) var(--color-background);
+  /* The same line of the page colour under the outline `reset.css` draws,
+     for the same reason: the outline sits over the box's own edge, and on a
+     box filled with the ring's colour that part of it was invisible. Under a
+     two-pixel line that left one pixel of ring, which neobrutalism's slab
+     covered on two sides. Stepped from the capped fill, so only a box filled
+     past half takes it: on an unfilled one the ring already reads against the
+     page, and a line of the page colour inside a soft field is a stray mark. */
+  --_focus-gap: color-mix(
+    in oklab,
+    var(--color-background) clamp(0%, calc((var(--_capped) - 50%) * 1000), 100%),
+    transparent
+  );
 
   /* Every box sizes itself as `min-height`/`min-width: var(--control-height)`
      plus its own padding and the border shorthand above, so its geometry is
@@ -283,7 +345,7 @@
      non-inherited property is `initial`, that is `none`. Every focused box would
      lose its shadow rather than keep it. */
   &:focus-visible {
-    box-shadow: var(--_focus-stack, var(--_shadow));
+    box-shadow: var(--_focus-stack, var(--_shadow), inset 0 0 0 2px var(--_focus-gap));
   }
 
   &:disabled,

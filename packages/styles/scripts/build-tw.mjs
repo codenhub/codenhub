@@ -31,6 +31,15 @@ const target = join(packageRoot, "tw");
 rmSync(target, { recursive: true, force: true });
 cpSync(source, target, { recursive: true });
 
+/* Sources no `/tw` export imports: `files` publishes all of `tw/`, so copied
+   they ship as bytes nobody can load. The palette reaches consumers as
+   `dist/palette.css`, and the build command in `cli/` as `dist/cli.js`. */
+const NOT_FOR_TW = ["palette.css", "theme.compiled.css", "cli"];
+
+for (const entry of NOT_FOR_TW) {
+  rmSync(join(target, entry), { recursive: true });
+}
+
 /* One directive per line, each terminated with `;`. The horizontal-whitespace
    classes keep the match from eating an adjacent line. */
 const SOURCE_NOT = /^[ \t]*@source[ \t]+not[ \t]+(?:"[^"]*"|'[^']*')[ \t]*;?[ \t]*\r?\n?/gm;

@@ -637,3 +637,162 @@ test("shows a progress bar's value and its track in forced colors", async ({ pag
     expect(Number.parseFloat(bar.edgeWidth), `${label}: a boundary that draws`).toBeGreaterThan(0);
   }
 });
+
+/* `hidden` is the reset's to honour, and only the complete stylesheet ships
+   Tailwind's Preflight, which carries the rule. A component sets its own
+   `display`, which beats the user agent's `[hidden]`, so on `/components` and
+   `/native` a hidden button, card, or layout stayed on the page and a script
+   toggling `element.hidden` did nothing. */
+for (const [entry, url] of [
+  ["/components", COMPONENT_STYLES_URL],
+  ["/native", NATIVE_STYLES_URL],
+] as const) {
+  test(`hides a hidden component on ${entry}`, async ({ page }) => {
+    await page.setContent("<!doctype html><html><body></body></html>");
+    await page.addStyleTag({ url });
+
+    const displays = await page.evaluate(() => {
+      document.body.innerHTML = [
+        '<button class="btn" hidden>Save</button>',
+        '<div class="card" hidden>Card</div>',
+        '<div class="alert" hidden>Alert</div>',
+        '<span class="badge" hidden>New</span>',
+        '<div class="card" hidden="until-found">Findable</div>',
+      ].join("");
+
+      return [...document.body.children].map((element) => getComputedStyle(element).display);
+    });
+
+    expect(displays.slice(0, 4)).toEqual(["none", "none", "none", "none"]);
+    expect(displays[4], "hidden until found keeps its box, as the platform draws it").not.toBe("none");
+  });
+}
+
+/* The user agent hides a closed popover at user-agent origin, which loses to a
+   surface's own `display` as a closed `<dialog>`'s did: a `.card.floating`
+   menu rendered on the page before it was ever opened. */
+test("keeps a popover surface closed until it is shown", async ({ page }) => {
+  await page.setContent("<!doctype html><html><body></body></html>");
+  await page.addStyleTag({ url: COMPONENT_STYLES_URL });
+  await page.addStyleTag({ content: "@layer utilities { .flex { display: flex; } }" });
+
+  const displays = await page.evaluate(() => {
+    document.body.innerHTML = [
+      '<div popover class="card floating" id="card">Menu</div>',
+      '<div popover class="panel flex" id="panel">Menu</div>',
+      '<div popover class="alert" id="alert">Notice</div>',
+      '<div popover class="surface" id="surface">Sheet</div>',
+      '<div popover class="card" id="shown">Shown</div>',
+    ].join("");
+    (document.getElementById("shown") as HTMLElement).showPopover();
+
+    return Object.fromEntries(
+      [...document.body.children].map((element) => [element.id, getComputedStyle(element).display]),
+    );
+  });
+
+  expect(displays).toEqual({ alert: "none", card: "none", panel: "none", shown: "block", surface: "none" });
+});
+
+/* The ring is the primary colour, drawn over the control's own edge. On a
+   button filled with that colour the part over the edge was invisible, and
+   under a two-pixel line one pixel of ring was left outside it -- which
+   neobrutalism's slab then covered on two sides. A line of the page colour
+   inside the ring separates it from the fill, as the inset ring a clipping
+   aesthetic draws already had. Only a filled box takes it. */
+test("separates the focus ring from a filled control with a line of the page colour", async ({ page }) => {
+  await page.setContent(
+    '<!doctype html><html><body><button id="before-filled">.</button><button class="btn primary" id="filled">Save</button>' +
+      '<button id="before-ghost">.</button><button class="btn ghost" id="ghost">Cancel</button><div class="neobrutalism">' +
+      '<button id="before-slab">.</button><button class="btn primary" id="slab">Save</button></div></body></html>',
+  );
+  await page.addStyleTag({ url: COMPONENT_STYLES_URL });
+
+  const focusedShadow = async (id: string) => {
+    /* A real keyboard move from the sibling before it: every engine gates
+       `:focus-visible` on its own heuristic, and all three agree on Tab. */
+    await page.locator(`#before-${id}`).focus();
+    await page.keyboard.press("Tab");
+    await page.evaluate(
+      (elementId) =>
+        Promise.all(
+          document
+            .getElementById(elementId)!
+            .getAnimations()
+            .map((animation) => animation.finished),
+        ),
+      id,
+    );
+
+    return page.evaluate((elementId) => {
+      const element = document.getElementById(elementId)!;
+      const probe = document.createElement("div");
+
+      probe.style.color = "color-mix(in oklab, var(--color-background) 100%, transparent)";
+      document.body.append(probe);
+
+      const page = getComputedStyle(probe).color;
+
+      probe.remove();
+
+      return { focused: element.matches(":focus-visible"), shadow: getComputedStyle(element).boxShadow, page };
+    }, id);
+  };
+
+  for (const id of ["filled", "slab"]) {
+    // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+    const { focused, shadow, page: pageColor } = await focusedShadow(id);
+
+    expect(focused, `#${id} is focus-visible`).toBe(true);
+    expect(shadow, `#${id} separator`).toContain(`${pageColor} 0px 0px 0px 2px inset`);
+  }
+
+  const ghost = await focusedShadow("ghost");
+
+  expect(ghost.focused).toBe(true);
+  expect(ghost.shadow, "an unfilled control takes no separator").not.toContain(`${ghost.page} 0px 0px 0px 2px inset`);
+});
+
+/* `.interactive` set the pointer at 0-2-0, above the 0-1-1 of `box`'s disabled
+   cursor, so a disabled interactive card still invited a click. */
+test("a disabled interactive card does not show the pointer", async ({ page }) => {
+  await page.setContent(
+    '<!doctype html><html><body><div class="card interactive" id="live">A</div>' +
+      '<div class="card interactive disabled" id="class">B</div>' +
+      '<div class="card pressable" aria-disabled="true" id="aria">C</div>' +
+      '<button class="card interactive" disabled id="native">D</button></body></html>',
+  );
+  await page.addStyleTag({ url: COMPONENT_STYLES_URL });
+
+  const cursor = (id: string) =>
+    page.evaluate((elementId) => getComputedStyle(document.getElementById(elementId)!).cursor, id);
+
+  expect(await cursor("live")).toBe("pointer");
+  expect(await cursor("class")).toBe("not-allowed");
+  expect(await cursor("aria")).toBe("not-allowed");
+  expect(await cursor("native")).toBe("not-allowed");
+});
+
+/* A skeleton is a gradient and nothing else, and forced colours remove
+   background images: the placeholder vanished, and with it the only sign
+   that content is on its way. */
+test("draws a skeleton's outline in forced colours", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active" });
+  await page.setContent('<!doctype html><html><body><div class="skeleton" id="skeleton"></div></body></html>');
+  test.skip(
+    !(await page.evaluate(
+      () => matchMedia("(forced-colors: active)").matches && CSS.supports("forced-color-adjust", "none"),
+    )),
+    "engine cannot emulate forced colors",
+  );
+  await page.addStyleTag({ url: COMPONENT_STYLES_URL });
+
+  const styles = await page.evaluate(() => {
+    const computed = getComputedStyle(document.getElementById("skeleton")!);
+
+    return { style: computed.borderTopStyle, width: computed.borderTopWidth };
+  });
+
+  expect(styles.style).toBe("solid");
+  expect(styles.width).toBe("1px");
+});

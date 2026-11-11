@@ -167,7 +167,7 @@ for (const [scenario, files] of Object.entries(SCENARIOS)) {
     test("keeps the component seams winning over their own component", async ({ page }) => {
       await load(page, files);
 
-      expect(await read(page, "soft-field", "--_fill-cap"), "`.ipt.soft` names its own cap").toBe("12%");
+      expect(await read(page, "soft-field", "--_own-fill"), "`.ipt.soft` names its own cap").toBe("12%");
       expect(await read(page, "invalid-field", "--intent-color"), "invalid beats `.success`").toBe(
         await read(page, "destructive-button", "--intent-color"),
       );

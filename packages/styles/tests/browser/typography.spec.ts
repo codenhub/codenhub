@@ -754,3 +754,71 @@ test("draws a table's rules under an aesthetic that caps its border", async ({ p
   expect(read.row).toBe("2px");
   expect(read.foot).toBe("2px");
 });
+
+/* Presentation cascades, so a fill class on a container and the same class on
+   the element are one request. The neutral carve-outs of the table and the
+   chips keyed on the class on the element, so a `.solid` container reached a
+   key cap's ink and line but left its plate capped, and reached a table's
+   head while the table kept the quiet plate. */
+test("renders a container's fill class on a table or a chip as the element's own", async ({ page }) => {
+  await page.setContent("<!doctype html><html><body></body></html>");
+  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+
+  const pairs = await page.evaluate(() => {
+    const read = (html: string) => {
+      const wrapper = document.createElement("div");
+
+      wrapper.innerHTML = html;
+      document.body.append(wrapper);
+
+      const values = [...wrapper.querySelectorAll("[data-read], [data-read] :is(th, td)")].map((element) => {
+        const styles = getComputedStyle(element);
+
+        return [
+          styles.backgroundColor,
+          styles.color,
+          styles.borderTopColor,
+          styles.borderTopWidth,
+          styles.borderBottomColor,
+          styles.borderBottomWidth,
+          styles.boxShadow,
+        ].join(" | ");
+      });
+
+      wrapper.remove();
+
+      return values;
+    };
+    const table = "<thead><tr><th>A</th></tr></thead><tbody><tr><td>1</td></tr><tr><td>2</td></tr></tbody>";
+    const elements: [string, string, string][] = [
+      ["kbd", "kbd", "K"],
+      ["code", "code", "x"],
+      ["pre", "pre", "x"],
+      ["span", "tooltip-icon", "?"],
+      ["table", "data-table", table],
+      ["table", "data-table edged", table],
+      ["table", "data-table ruled", table],
+    ];
+    const results = [];
+
+    for (const [tag, component, content] of elements) {
+      for (const fill of ["ghost", "soft", "solid"]) {
+        for (const intent of ["", "neutral", "success"]) {
+          const classes = `${component} ${intent}`.trim();
+
+          results.push({
+            label: `.${classes.replaceAll(" ", ".")} under .${fill}`,
+            own: read(`<${tag} class="${classes} ${fill}" data-read>${content}</${tag}>`),
+            cascaded: read(`<div class="${fill}"><${tag} class="${classes}" data-read>${content}</${tag}></div>`),
+          });
+        }
+      }
+    }
+
+    return results;
+  });
+
+  for (const { label, own, cascaded } of pairs) {
+    expect(cascaded, label).toEqual(own);
+  }
+});

@@ -9,7 +9,8 @@
    `transition`, `transform`, `container`) do not emit, verified against
    Tailwind 4.3.2; `tests/integration/exports.test.ts` guards it.
 
-   The `@source not` lines keep everything that is not `src/` out of the scan:
+   The `@source not` lines keep the build command's TypeScript in `src/cli/`, whose
+   prose once shipped as `.relative`, and everything that is not `src/` out of the scan:
    the sibling app and fixture directories, the `docs/` tree, the build scripts,
    and the root prose, data, config, and license files. Without them a class
    name or `--color-*` reference that appears only in a documentation example
@@ -18,6 +19,7 @@
    `exports.test.ts` guards it. `scripts/build-tw.mjs` strips these lines from
    the `tw/` copy, where they have no job: the `/tw` consumer scans their own
    tree. */
+@source not "./cli";
 @source not "../dist";
 @source not "../tests";
 @source not "../dev";
@@ -34,7 +36,8 @@
 @source not "../NOTICE";
 
 @import "./theme.css";
-@import "./typography.css";
-@import "./utilities/index.css";
-@import "./components/index.css";
-@import "./reset.css";
+/* No `typography.css` here: `components/rules.css` brings its rules, and a
+   second route to a `@utility` stacks its body. */
+@import "./utilities/rules.css";
+@import "./components/rules.css";
+@import "./reset.rules.css";

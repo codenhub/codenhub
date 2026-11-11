@@ -236,6 +236,35 @@ test.describe("aesthetics", () => {
        one in a neobrutalist region nested again inside that takes the slab back.
        A descendant-selector exclusion cannot tell the two apart -- the re-entered
        alert also sits below the other aesthetic -- so it once rested flat. */
+    /* An aesthetic class sits on a region or on one component, and a card with
+       the class on itself took its slab while an alert with it rested flat. */
+    test("rests an alert carrying the class itself on the slab", async ({ page }) => {
+      await page.goto(FEEDBACK_URL);
+
+      const shadows = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const read = (html: string) => {
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = html;
+          host.append(wrapper);
+          const shadow = getComputedStyle(wrapper.querySelector(".alert")!).boxShadow;
+          wrapper.remove();
+          return shadow;
+        };
+
+        return {
+          region: read('<div class="neobrutalism"><div class="alert">x</div></div>'),
+          own: read('<div class="alert neobrutalism">x</div>'),
+          ownFlat: read('<div class="alert neobrutalism flat">x</div>'),
+          regionFlat: read('<div class="neobrutalism"><div class="alert flat">x</div></div>'),
+        };
+      });
+
+      expect(shadows.region).toMatch(/ 4px 4px 0px /);
+      expect(shadows.own).toBe(shadows.region);
+      expect(shadows.ownFlat).toBe(shadows.regionFlat);
+    });
+
     test("rests an alert on the slab by the nearest aesthetic region", async ({ page }) => {
       await page.goto(FEEDBACK_URL);
 
@@ -816,6 +845,50 @@ test.describe("aesthetics", () => {
       );
 
       expectSameColor(neutral!["border-top-color"]!, none!["border-top-color"]!, "neutral checkbox line");
+    });
+
+    /* Buttons and badges keep the glass hairline, which is a highlight on a
+       plate. An unfilled one has no plate: white at 65% on a near-white page
+       measured 1.01:1, an edged ghost button with no visible edge. With no
+       fill, their neutral line is the control line the fields take. */
+    test("draws an unfilled button's neutral line in the control ink", async ({ page }) => {
+      await page.goto(BUTTONS_URL);
+
+      const lines = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const read = (html: string) => {
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = html;
+          host.append(wrapper);
+          const color = getComputedStyle(wrapper.querySelector("[data-read]")!).borderTopColor;
+          wrapper.remove();
+          return color;
+        };
+        const inGlass = (html: string) => read(`<div class="glass">${html}</div>`);
+        const probe = (token: string) =>
+          inGlass(
+            `<div data-read style="border: 1px solid color-mix(in oklab, var(${token}) 100%, transparent)"></div>`,
+          );
+
+        return {
+          control: probe("--ui-control-ink"),
+          hairline: probe("--ui-ink"),
+          ghostButton: inGlass('<button class="btn ghost edged" data-read>x</button>'),
+          neutralGhostButton: inGlass('<button class="btn neutral ghost edged" data-read>x</button>'),
+          ghostBadge: inGlass('<span class="badge ghost edged" data-read>x</span>'),
+          primaryGhostButton: inGlass('<button class="btn primary ghost edged" data-read>x</button>'),
+          primaryReference: read('<button class="btn primary ghost edged" data-read>x</button>'),
+          nested: inGlass('<div class="neobrutalism"><button class="btn ghost edged" data-read>x</button></div>'),
+          nestedReference: read('<div class="neobrutalism"><button class="btn ghost edged" data-read>x</button></div>'),
+        };
+      });
+
+      expect(lines.control).not.toBe(lines.hairline);
+      expectSameColor(lines.ghostButton, lines.control, "ghost edged button");
+      expectSameColor(lines.neutralGhostButton, lines.control, "neutral ghost edged button");
+      expectSameColor(lines.ghostBadge, lines.control, "ghost edged badge");
+      expectSameColor(lines.primaryGhostButton, lines.primaryReference, "an intent keeps its own line");
+      expectSameColor(lines.nested, lines.nestedReference, "another aesthetic nested inside keeps its own");
     });
 
     test("makes glass surfaces opaque under reduced transparency", async ({ page, browserName }) => {
@@ -1476,7 +1549,13 @@ test.describe("aesthetics", () => {
       const input = await readAll(page, ["ipt-default-none"], properties);
 
       for (const [testId, styles] of [["btn-default-none", button] as const, ...card, ...input]) {
-        expect(styles["clip-path"], `${testId} clip`).toContain("polygon(");
+        /* A surface holds other things -- a tooltip, a menu, a child's focus
+           ring and shadow -- and a clip cuts all of them, so it is square. */
+        if (testId.startsWith("card")) {
+          expect(styles["clip-path"], `${testId} clip`).toBe("none");
+        } else {
+          expect(styles["clip-path"], `${testId} clip`).toContain("polygon(");
+        }
         /* `clip-path` clips a border away, so the element must not draw one. */
         expect(styles["border-top-width"], `${testId} border`).toBe("0px");
         expect(styles["border-radius"], `${testId} radius`).toBe("0px");
@@ -1492,14 +1571,44 @@ test.describe("aesthetics", () => {
        one shape a low-resolution grid cannot draw: at any size it read as a bevel
        that had not quite committed rather than as a pixel. */
     test("cuts one square grid unit off each corner", async ({ page }) => {
-      await page.goto(withAesthetic(SURFACES_URL, "pixel"));
+      await page.goto(withAesthetic(BUTTONS_URL, "pixel"));
 
-      const structural = await readStyles(page, "card-default-none", ["clip-path"]);
+      const structural = await readStyles(page, "btn-default-none", ["clip-path"]);
 
       /* Left edge to the cut, across the corner square, then up to the top edge:
          two vertices where the staircase needed four. The unit is the ring's own
          depth, so the cut and what covers it agree by construction. */
-      expect(structural["clip-path"], "card clip").toContain("polygon(0px 4px, 4px 4px, 4px 0px");
+      expect(structural["clip-path"], "button clip").toContain("polygon(0px 4px, 4px 4px, 4px 0px");
+    });
+
+    /* A clip cuts everything inside the element, not only its own corners: a
+       tooltip in a card computed visible and was never painted, and a child's
+       shadow, a child's focus outline and a consumer's menu went with it. A
+       surface is the one box whose job is to hold other things, so it takes
+       no clip and is square with the ring, as a table is. */
+    test("leaves a surface unclipped so what it holds is not cut", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "pixel"));
+
+      const clips = await page.evaluate(() =>
+        ["card", "panel", "alert", "surface"].map((name) => {
+          const element = document.createElement("div");
+
+          element.className = name;
+          document.querySelector('[data-testid="preview-root"]')!.append(element);
+
+          const { clipPath, boxShadow } = getComputedStyle(element);
+
+          element.remove();
+
+          return { name, clipPath, boxShadow };
+        }),
+      );
+
+      for (const { name, clipPath } of clips) {
+        expect(clipPath, `.${name} clip`).toBe("none");
+      }
+
+      expect(clips[0]!.boxShadow, "the card keeps the ring").toMatch(/inset/);
     });
 
     /* The unit is read with a fallback rather than declared, which is what lets an
@@ -1517,7 +1626,7 @@ test.describe("aesthetics", () => {
           const card = document.createElement("div");
 
           host.className = "pixel";
-          card.className = "card";
+          card.className = "btn";
           (where === "ancestor" ? ancestor : host).style.setProperty("--pixel-unit", "6px");
           host.append(card);
           ancestor.append(host);

@@ -81,14 +81,15 @@
       "readers": ["badge", "box", "checkbox", "code", "kbd", "progress", "skeleton", "switch", "tooltip-icon"]
     },
     "--ui-corner-surface": { "readers": ["data-table", "surface"] },
-    "--ui-corner-tl": { "readers": ["box", "data-table", "skeleton", "surface", "tooltip-bubble"] },
-    "--ui-corner-tr": { "readers": ["box", "data-table", "skeleton", "surface", "tooltip-bubble"] },
-    "--ui-corner-br": { "readers": ["box", "data-table", "skeleton", "surface", "tooltip-bubble"] },
-    "--ui-corner-bl": { "readers": ["box", "data-table", "skeleton", "surface", "tooltip-bubble"] },
+    "--ui-corner-tl": { "readers": ["box", "btn", "data-table", "skeleton", "surface", "tooltip-bubble"] },
+    "--ui-corner-tr": { "readers": ["box", "btn", "data-table", "skeleton", "surface", "tooltip-bubble"] },
+    "--ui-corner-br": { "readers": ["box", "btn", "data-table", "skeleton", "surface", "tooltip-bubble"] },
+    "--ui-corner-bl": { "readers": ["box", "btn", "data-table", "skeleton", "surface", "tooltip-bubble"] },
     "--ui-radius": {
       "readers": [
         "badge",
         "box",
+        "btn",
         "checkbox",
         "code",
         "kbd",
@@ -497,7 +498,7 @@
         "edge": "edgeless",
         "elevation": 0
       },
-      "native": [],
+      "native": ["progress"],
       "composition": "none",
       "compositionReason": "The track is a box, but the value fill is a `::after` rather than the element's own background, so `box` cannot be applied whole. The cost is that the fill and edge blend are reimplemented here and must agree with `box`: the ordering that stops `.edgeless` painting a ring over its own fill has to be kept in `box`, `.quote`, and here.",
       "axes": ["fill", "edge"],

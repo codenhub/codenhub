@@ -144,7 +144,9 @@
     --_neo-alert-elevation: initial;
   }
 
-  .neobrutalism .alert {
+  /* The class on the alert itself counts as its region, as it does for every
+     token: `.card.neobrutalism` takes its slab, and the alert rested flat. */
+  :is(.neobrutalism .alert, .alert.neobrutalism) {
     --_d-elevation: var(--_neo-alert-elevation, 0);
   }
 }

@@ -1,0 +1,187 @@
+/* A filled, edgeless, raised box you can press. `box` paints it; everything
+   here is what makes it a button rather than some other box.
+
+   The resting values are the published default: a button with no presentation
+   class is solid and edgeless, and that is a decision written on three lines
+   rather than a `var()` fallback buried in an expression. */
+@utility btn {
+  /* The neutral reset, carried so `@apply btn` gets it: the reset in
+     `intent.css` names `.btn`, which a consumer's `.my-btn` is not, so an
+     applied one inside a `.card.success` took the card's intent. In
+     `families`, beside the intent classes, so one applied with it wins; never
+     on `.btn` itself, which keeps the reset in `components`. See
+     docs/internal/model.md#what-apply-carries. */
+  @layer families {
+    :where(&:not(.btn, .primary, .secondary, .success, .warning, .destructive, .info)) {
+      --intent-color: var(--color-text);
+      --intent-contrast: var(--color-text-contrast);
+      --intent-hover: var(--color-text-hover);
+      --intent-strong: var(--color-text-strong);
+      --intent-subtle: var(--color-surface);
+      --intent-border: var(--ui-ink, var(--color-border));
+      --intent-fill-max: 20%;
+    }
+  }
+
+  /* The modifier flags, restated so a container's do not reach this button:
+     a `.card.p-xs` would otherwise shrink every button inside it. At zero
+     specificity in `families`, beside the flag utilities, so one on the
+     element wins, applied or as a class. See `modifiers.css`. */
+  @layer families {
+    :where(&:not(.icon)) {
+      --_m-icon: initial;
+    }
+
+    :where(&:not(.pill)) {
+      --_m-pill: initial;
+    }
+
+    :where(&:not(.p-xs)) {
+      --_m-p-xs: initial;
+    }
+
+    :where(&:not(.p-sm)) {
+      --_m-p-sm: initial;
+    }
+
+    :where(&:not(.p-lg)) {
+      --_m-p-lg: initial;
+    }
+  }
+
+  @apply box box-hover box-active relative inline-flex w-fit cursor-pointer items-center justify-center gap-2 px-4 py-2 whitespace-nowrap no-underline select-none;
+
+  /* After `@apply box`: `box` states its own resting defaults, and the later
+     declaration wins. */
+  --_d-fill: 100%;
+  --_d-fg-on-fill: 100%;
+  --_d-border: 0%;
+  --_d-elevation: 1;
+  --_d-holds-ink: ;
+
+  /* With no fill, the neutral line is the region's unfilled ink when the
+     aesthetic names one -- glass does, for a `.ghost.edged` button. See `--_bare-ink` in
+     `box.css`. Unset, the reference is invalid and `box` keeps its line. */
+  --_bare-ink: var(--_unfilled-ink);
+
+  /* The default step's vertical padding gives back the line `box` draws, so a
+     default button is exactly `--control-height` tall like `.ipt` beside it,
+     under any aesthetic's line width; at the default 16px/1.5 text the label
+     and the padding fill it. The surrounding font, not the user agent's
+     smaller button one, on every entry: `/components` carries no reset to say
+     so, and a `.btn` link and a `.btn` button have to print the same label.
+     Both are the fallbacks of the size steps below. */
+  font-family: inherit;
+  /* The label is material, shared with `.badge`: weight, tracking, case, and a
+     text shadow, set by an aesthetic as tokens (`.chunky-tile`'s heavier,
+     tracked label), and a consumer's own `font-*`, `tracking-*`, `uppercase`, or
+     text-shadow utility still beats the aesthetic. Tracking, case, and shadow
+     fall back to `normal` and `none`, the label's own values, so none of them
+     inherits: body copy's wider tracking is set on `body`, and a button that
+     took it, or a container's, printed a tracked label nothing asked for. The
+     user agent already stops case and shadow inheriting into a button, and
+     `/native` maps `<button>` and the button inputs here. The shadow is written
+     without a colour, so it takes the label's own and cannot lower its
+     contrast. See docs/internal/model.md#cascade-layers. */
+  font-weight: var(--ui-label-weight, var(--font-weight-semibold));
+  letter-spacing: var(--ui-label-tracking, normal);
+  text-transform: var(--ui-label-case, none);
+  text-shadow: var(--ui-label-shadow, none);
+
+  /* The size steps. `sm` and `lg` raise a flag (`size.css`) and each line
+     below computes only while its flag is up, so the declarations that read
+     them fall back to the default step. Written in the component's own body,
+     not as `&.sm`, so `@apply btn sm` carries the step and a consumer's
+     `min-h-*` or `px-*` beats it as it beats the default. `--_scale-size`
+     is the step `box` scales the corner and the depth by. */
+  --_sm-h: var(--_size-sm) 2rem;
+  --_lg-h: var(--_size-lg) 3rem;
+  --_sm-px: var(--_size-sm) 0.75rem;
+  --_lg-px: var(--_size-lg) 1.25rem;
+  --_sm-py: var(--_size-sm) 0.25rem;
+  --_lg-py: var(--_size-lg) 0.625rem;
+  --_sm-text: var(--_size-sm) var(--text-sm);
+  --_lg-text: var(--_size-lg) 1.0625rem;
+  --_sm-leading: var(--_size-sm) var(--tw-leading, var(--text-sm--line-height));
+  --_sm-scale: var(--_size-sm) 0.75;
+  --_lg-scale: var(--_size-lg) 1.25;
+  --_scale-size: var(--_sm-scale, var(--_lg-scale));
+
+  /* The modifiers: `icon`, `pill`, and the padding steps. Each raises a flag
+     (`modifiers.css`) and the lines below compute only while theirs is up, as
+     the size steps above do, so `@apply btn icon` carries the shape. A line
+     that names two flags needs both.
+
+     Bare `sm`/`lg` are the size modifier's names, so the padding steps take
+     a `p-` prefix. `p-xs` is the tightest, below `p-sm`: a chip-sized
+     button in a toolbar or a table cell. */
+  --_icon-pad: var(--_m-icon) var(--_sm-icon-pad, 0.5rem);
+  --_sm-icon-pad: var(--_size-sm) calc(0.375rem - var(--_width));
+  --_xs-px: var(--_m-p-xs) --spacing(2);
+  --_xs-py: var(--_m-p-xs) --spacing(0.5);
+  --_psm-px: var(--_m-p-sm) --spacing(2.5);
+  --_psm-py: var(--_m-p-sm) --spacing(1);
+  --_plg-px: var(--_m-p-lg) --spacing(6);
+  --_plg-py: var(--_m-p-lg) --spacing(3);
+  /* An icon button's padding step is the same on every side. */
+  --_xs-icon-px: var(--_m-icon) var(--_xs-py);
+  --_psm-icon-px: var(--_m-icon) var(--_psm-py);
+  --_plg-icon-px: var(--_m-icon) var(--_plg-py);
+  --_xs-scale: var(--_m-p-xs) 0.5;
+  --_psm-scale: var(--_m-p-sm) 0.75;
+  --_plg-scale: var(--_m-p-lg) 1.25;
+  --_scale-pad: var(--_plg-scale, var(--_psm-scale, var(--_xs-scale)));
+
+  /* The size floor. `p-xs` is the one padding step that drops it for a
+     labeled button: at that tier the button is a chip in a toolbar or a table
+     cell, where `--control-height` is taller than the row it sits in; every
+     other size and padding class keeps the floor, so a plain button stays a
+     comfortable target.
+
+     An icon button drops both floors at every padding tier. It is already
+     square -- `aspect-ratio` ties its width to whatever height it lands on
+     -- so a surviving floor would keep the button bigger than its own glyph
+     however tight the padding asked to be. */
+  --_floor: var(--_sm-h, var(--_lg-h, var(--control-height)));
+  --_xs-floor: var(--_m-p-xs) 0px;
+  --_psm-icon-floor: var(--_m-icon) var(--_m-p-sm) 0px;
+  --_plg-icon-floor: var(--_m-icon) var(--_m-p-lg) 0px;
+  --_icon-floor: var(--_m-icon) var(--_xs-floor, var(--_psm-icon-floor, var(--_plg-icon-floor, var(--_floor))));
+
+  min-height: var(--_xs-floor, var(--_psm-icon-floor, var(--_plg-icon-floor, var(--_floor))));
+  /* Square at each size step. The width is named as well as the height,
+     because WebKit does not let `aspect-ratio` widen a box past its
+     `min-width`. */
+  min-width: var(--_icon-floor, auto);
+  --_icon-ratio: var(--_m-icon) 1 / 1;
+  aspect-ratio: var(--_icon-ratio, auto);
+  padding-inline: var(
+    --_plg-icon-px,
+    var(
+      --_psm-icon-px,
+      var(
+        --_xs-icon-px,
+        var(--_plg-px, var(--_psm-px, var(--_xs-px, var(--_icon-pad, var(--_sm-px, var(--_lg-px, 1rem))))))
+      )
+    )
+  );
+  padding-block: var(
+    --_plg-py,
+    var(--_psm-py, var(--_xs-py, var(--_icon-pad, var(--_sm-py, var(--_lg-py, calc(0.5rem - var(--_width)))))))
+  );
+  font-size: var(--_sm-text, var(--_lg-text, inherit));
+  line-height: var(--_sm-leading, inherit);
+
+  /* A pill takes the round material ahead of the box radius, which is
+     `box`'s own formula restated. Sketch gives the token the button's own box
+     outline; a bevel still cuts the full radius to points under cyber. */
+  --_pill-radius: var(--_m-pill) var(--ui-radius-pill, calc(infinity * 1px));
+  border-radius: var(
+    --_pill-radius,
+    var(
+      --ui-radius,
+      calc(var(--_corner) * var(--ui-corner-tl, 1)) calc(var(--_corner) * var(--ui-corner-tr, 1))
+        calc(var(--_corner) * var(--ui-corner-br, 1)) calc(var(--_corner) * var(--ui-corner-bl, 1))
+    )
+  );
+}

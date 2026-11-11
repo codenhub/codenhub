@@ -1,7 +1,7 @@
 ---
 title: Introdução
 description: Para que serve o @codenhub/styles, quanto ele custa e em que ordem ler esta documentação.
-source: 238cac2f0ca6132818c99d938219a6c537bc837a
+source: 32c428e21117cdc980f1689f61bf3efa2274fce8
 ---
 
 # @codenhub/styles
@@ -61,7 +61,7 @@ A [Configuração](./setup.md) ajuda você a escolher.
 Conheça estes custos antes de adotar o pacote:
 
 - **Os nomes de classe são curtos e sem prefixo.** `.primary`, `.success`, `.dark`, `.label`, `.field`, `.section`, `.stack`, `.flat` e `.ghost` são nomes globais. Outra folha de estilos na mesma página que use esses nomes colide com esta. O pacote fica em [camadas de cascata](./setup.md#camadas-de-cascata), então o seu próprio CSS fora de camadas vence uma colisão, mas as regras de uma biblioteca de terceiros para o mesmo nome continuam valendo junto com as do pacote.
-- **As folhas de estilos completas são grandes antes da compressão.** No momento em que este texto foi escrito, minificada, a folha de estilos completa tem cerca de 410 KB, a `/native` cerca de 575 KB e a `/components` cerca de 320 KB. Servidas com gzip, ficam em cerca de 19 KB, 25 KB e 15 KB. Os arquivos específicos são bem menores: `/theme` tem cerca de 10 KB (2 KB com gzip) e cada estética tem de 4 a 21 KB (1 a 2 KB com gzip). A maior parte do tamanho é composição que todo componente repete, e é por isso que a compressão elimina tanto. Importe o entrypoint mais restrito que cubra a página; veja [Configuração → Todos os entrypoints](./setup.md#todos-os-entrypoints).
+- **As folhas de estilos completas são grandes antes da compressão.** No momento em que este texto foi escrito, minificada, a folha de estilos completa tem cerca de 230 KB, a `/native` cerca de 355 KB e a `/components` cerca de 185 KB. Servidas com gzip, ficam em cerca de 18 KB, 25 KB e 14 KB. Os arquivos específicos são bem menores: `/theme` tem cerca de 12 KB (3 KB com gzip) e cada estética tem de 4 a 14 KB (1 a 2 KB com gzip). A maior parte do tamanho é composição que todo componente repete, e é por isso que a compressão elimina tanto. Importe o entrypoint mais restrito que cubra a página; veja [Configuração → Todos os entrypoints](./setup.md#todos-os-entrypoints).
 - **`--color-foreground` é um fundo, não uma cor de texto.** É o tom um passo distante da página, sobre o qual fica um card ou painel discreto. A cor do texto é `--color-text`.
 - **Quatro cores de hover são valores fixos.** `--color-success-hover`, `--color-warning-hover`, `--color-destructive-hover` e `--color-info-hover` são pré-calculadas, porque misturá-las em tempo real travava o WebKit. Se você sobrescrever só `--color-success`, o hover dela mantém o tom antigo, então substitua a família inteira; veja [Temas → Tokens de cor](./usage/theming.md#tokens-de-cor).
 - **Só navegadores modernos.** Chrome 123, Safari 17.5 ou Firefox 128 e mais recentes. Não há camada de fallback para navegadores mais antigos.
@@ -99,6 +99,7 @@ Na primeira vez, leia nesta ordem. Cada página acrescenta algo à tela de confi
    - [Estéticas](./usage/aesthetics.md): mude o estilo da tela inteira com uma classe.
    - [Classes solo](./usage/solo.md): aplique uma estética a um componente que este pacote não estiliza.
    - [Composição](./usage/composing.md), [Personalização](./usage/customizing.md) e [Conteúdo e layout](./usage/content-and-layout.md): páginas de consulta com cada regra de eixo, token, padrão e classe utilitária.
+   - [Predefinições](./usage/presets.md): defina um visual uma única vez, para uma região, um tema ou a sua própria classe de componente, em vez de repeti-lo em cada elemento.
 5. [Acessibilidade](./accessibility.md): o que o CSS resolve por você e o que a sua aplicação ainda precisa fazer.
 
 O [changelog](../changelog/index.md) lista todas as versões e o que mudou em cada uma.

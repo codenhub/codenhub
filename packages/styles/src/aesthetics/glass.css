@@ -39,6 +39,13 @@
        on a field's 60% resting line, in light. See
        docs/internal/model.md#presentation. */
     --ui-control-ink: light-dark(rgb(0 0 0 / 0.55), rgb(255 255 255 / 0.55));
+    /* Buttons and badges keep the hairline, which needs a plate to be seen
+       on. Unfilled they have none -- white at 65% on a light page is 1.01:1,
+       an edged ghost button with no edge -- so there the neutral line is the
+       control one. `box` reads it only for a neutral box resolving to no
+       fill; the other aesthetics clear it below, so the nearest region
+       decides. */
+    --_unfilled-ink: light-dark(rgb(0 0 0 / 0.55), rgb(255 255 255 / 0.55));
     /* Nor is a line drawn on a plate: the hairline vanishes on a table's light
        plate, and its default, `.ruled`, and `.ruleless` forms would render as
        one. A table's frame and rules take the theme's ink at a fifth,
@@ -130,6 +137,11 @@
        their face. `--font-default` is the token the reset applies to the page,
        as chunky tile reads it. */
     font-family: var(--font-default, ui-sans-serif, system-ui, sans-serif);
+  }
+
+  /* A region of another aesthetic nested in glass draws its own line. */
+  :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) {
+    --_unfilled-ink: initial;
   }
 
   /* Transparency is the whole aesthetic, so the honest degradation is an opaque

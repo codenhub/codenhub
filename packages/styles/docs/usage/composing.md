@@ -22,6 +22,9 @@ This is a lookup page. [Building a screen](../concepts.md) introduces intent, pr
 - **Aesthetics and [material tokens](./customizing.md#material-tokens) pass down** the same way.
 - **Intent does not pass down.** `.primary` and the other intent classes color only the element they are on. A container that silently recolored everything inside it would turn a red danger-zone card's neutral Cancel button red. `.neutral` names the default; use it where an element would otherwise take an intent, such as a table row inside a `.success` table. See [Theming → Intent tokens](./theming.md#intent-tokens).
 - **Elevation does not pass down.** `.raised` lifts only the element it is on; see [Elevation](#elevation).
+- **Size does not pass down.** `.sm` and `.lg` resize only the button or control they are on, so a `.sm` form does not shrink the fields inside it. See [Buttons → Sizes and shapes](./buttons.md#sizes-and-shapes) and [Forms → Sizes](./forms.md#sizes).
+
+With the Tailwind source entrypoints, every class above is also a Tailwind utility, so variants such as `md:lg` and `dark:solid` work and `@apply btn primary soft sm` gives one class of yours the whole combination. The modifiers documented with each component, such as `.tight` or `.interactive`, are utilities too, so `@apply stack tight` works. See [Tailwind CSS v4 → Build your own components with `@apply`](../integrating/tailwind.md#build-your-own-components-with-apply), and [Presets](./presets.md) for when to reach for it.
 
 ## Component defaults
 
@@ -139,7 +142,7 @@ Which classes change each component. "Material" is what an [aesthetic](./aesthet
 | `.progress`                                     | Track fill, border, and border width. The filled part is always the full intent color. |
 | `.skeleton`, `.divider`                         | Intent only.                                                                           |
 
-State and modifier classes such as `.interactive`, `.hoverable`, `.pressable`, `.p-sm`, and `.vertical` are documented with their component. An invalid control is marked with `aria-invalid="true"`, not a class; see [Forms](./forms.md#show-a-validation-error).
+State and modifier classes such as `.interactive`, `.hoverable`, `.pressable`, `.p-sm`, and `.vertical` are documented with their component. Each takes effect on the components that read it, and on `/tw` they are utilities, so `@apply card interactive` works. An invalid control is marked with `aria-invalid="true"`, not a class; see [Forms](./forms.md#show-a-validation-error).
 
 ## Elevation
 

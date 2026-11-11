@@ -3,12 +3,12 @@ title: Visión general
 description: Las guías que terminan la pantalla de ajustes y, después, las páginas de consulta con cada clase, token y valor por defecto.
 group: Uso
 order: 4
-source: cd4fa5f3fc9bc6e1ca74206616c5f58edfa6abf7
+source: ccdf1949cd4f7688574d6f4fae9ad2cf34465fb3
 ---
 
 # Uso
 
-Estas guías terminan la pantalla de ajustes que empezó en [Construir una pantalla](../concepts.md). Lee las siete primeras en orden: cada una añade una parte de la pantalla y da por hechas las anteriores. Las tres últimas son páginas de consulta; las guías te enviarán a ellas cuando necesiten la tabla completa, y puedes volver siempre que necesites un valor por defecto o una regla.
+Estas guías terminan la pantalla de ajustes que empezó en [Construir una pantalla](../concepts.md). Lee las siete primeras en orden: cada una añade una parte de la pantalla y da por hechas las anteriores. Las tres siguientes son páginas de consulta; las guías te enviarán a ellas cuando necesiten la tabla completa, y puedes volver siempre que necesites un valor por defecto o una regla. La última, Preajustes, es para cuando la pantalla ya funciona y te has cansado de escribir las mismas clases.
 
 Guías, en orden:
 
@@ -25,5 +25,9 @@ Páginas de consulta:
 - [Composición](./composing.md): las reglas completas para combinar intención, presentación y elevación, los valores por defecto de cada componente y qué ejes lee cada uno.
 - [Personalización](./customizing.md): tokens de presentación y de material, controles de las estéticas, las seis variables públicas de componente, la paleta generada y los helpers de composición para construir tus propios componentes.
 - [Contenido y layout](./content-and-layout.md): todos los helpers de layout, la escala tipográfica, tarjetas y paneles, tablas, citas, código y teclas.
+
+Cuando la pantalla funcione:
+
+- [Preajustes](./presets.md): define un aspecto una sola vez, con clases de eje en un contenedor, tokens de tema y de material, o tus propias clases de componente hechas con `@apply`.
 
 Cuando termines, [Accesibilidad](../accessibility.md) reúne lo que el CSS hace por ti y lo que tu aplicación todavía les debe a sus usuarios.

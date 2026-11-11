@@ -2,12 +2,12 @@
 title: Tailwind CSS v4
 description: Como usar os entrypoints de código-fonte /tw num projeto com Tailwind CSS v4.
 order: 1
-source: 20a38b6bc7002b5a2bb1ea61198620ba757106b2
+source: a86fe5fa121db14ab917b10fb69e839111ddbc47
 ---
 
 # Tailwind CSS v4
 
-Um projeto que já roda Tailwind CSS v4 pode compilar o código-fonte deste pacote em vez de carregar a saída compilada. Os utilitários da sua aplicação e as classes do pacote saem então de um único build, compartilham um único tema e usam uma única variante `dark:`. Esta página trata do import, das estéticas, dos entrypoints específicos e dos problemas de build que você provavelmente vai encontrar.
+Um projeto que já roda Tailwind CSS v4 pode compilar o código-fonte deste pacote em vez de carregar a saída compilada. Os utilitários da sua aplicação e as classes do pacote saem então de um único build, compartilham um único tema e usam uma única variante `dark:`. Esta página trata do import, das estéticas, dos entrypoints específicos, de como construir seus próprios componentes com `@apply`, de como descartar a paleta do Tailwind e dos problemas de build que você provavelmente vai encontrar.
 
 ## Por que código-fonte em vez de compilado
 
@@ -47,6 +47,70 @@ Diferente do `/tw`, os entrypoints específicos e o `/tw/native` não importam o
 @import "@codenhub/styles/tw/button";
 ```
 
+## Construa seus próprios componentes com `@apply`
+
+No `/tw`, todo componente, helper e classe de eixo é um utilitário do Tailwind. Isso inclui as intenções (`neutral`, `primary`, `secondary`, `success`, `warning`, `destructive`, `info`), a apresentação (`solid`, `soft`, `ghost`, `edged`, `edgeless`), a elevação (`flat`, `raised`, `floating`), os padrões de canto (`cut-diagonal`, `cut-diagonal-reverse`) e os tamanhos (`sm`, `lg`). Assim, uma classe sua pode carregar uma receita inteira:
+
+```css
+@import "@codenhub/styles/tw";
+
+@utility btn-save {
+  @apply btn primary soft sm;
+}
+
+@utility btn-danger {
+  @apply btn destructive md:lg dark:solid;
+}
+```
+
+```html
+<button class="btn-save" type="submit">Salvar</button>
+```
+
+- **Um componente aplicado se comporta como a classe.** `btn-save` reage ao hover, é pressionado, recebe foco e segue uma estética do mesmo jeito que `class="btn primary soft sm"`.
+- **Variantes funcionam.** `hover:primary`, `md:lg` e `dark:solid` aplicam uma classe de eixo sob essa condição, no seu markup ou dentro do `@apply`.
+- **Escreva a sua classe como `@utility`.** Assim ela fica na camada `utilities`, e os seus outros utilitários no mesmo elemento continuam vencendo. Uma regra simples `.btn-save { @apply … }` também funciona, mas fica sem camada, então o que ela aplica vence todos os utilitários do elemento; [Personalização → Helpers de composição](../usage/customizing.md#helpers-de-composição) tem os detalhes.
+- **Modificadores também se aplicam.** Os modificadores de um componente, como `.tight` no `.stack`, `.icon` no `.btn` ou `.interactive` no `.card`, também são utilitários, então `@apply stack tight`, `@apply btn icon pill` e `md:tight` funcionam. O estado desabilitado é a exceção: continua sendo um atributo ou a classe `.disabled` no markup.
+- **O seu utilitário vence os padrões internos de um componente.** `p-0 text-center` numa célula de `.data-table`, `text-sm` num `.label` e `px-8` num `.btn.sm` são todos aplicados.
+
+A página de [Predefinições](../usage/presets.md) compara isso com as outras formas de definir um visual uma única vez.
+
+## Descarte a paleta do Tailwind
+
+O `/tw` é construído sobre o tema padrão do Tailwind, então os utilitários da paleta do Tailwind, como `bg-red-500`, continuam disponíveis. Se o seu design usa só os tokens do pacote, limpe os tons que você não usa:
+
+```css
+@import "@codenhub/styles/tw";
+
+@theme {
+  --color-red-*: initial;
+  --color-orange-*: initial;
+  --color-yellow-*: initial;
+  --color-lime-*: initial;
+  --color-green-*: initial;
+  --color-teal-*: initial;
+  --color-cyan-*: initial;
+  --color-sky-*: initial;
+  --color-blue-*: initial;
+  --color-violet-*: initial;
+  --color-purple-*: initial;
+  --color-fuchsia-*: initial;
+  --color-pink-*: initial;
+  --color-slate-*: initial;
+  --color-gray-*: initial;
+  --color-zinc-*: initial;
+  --color-stone-*: initial;
+  --color-black: initial;
+}
+```
+
+As cores do próprio pacote não mudam, e você ainda pode acrescentar cores suas no mesmo bloco.
+
+O bloco deixa de fora `neutral`, `emerald`, `amber`, `rose`, `indigo` e `white` de propósito: o tema constrói as cores dele a partir deles.
+
+- **Não limpe o namespace inteiro.** `--color-*: initial` também remove as cores semânticas do pacote, e o build para com um erro como `Cannot apply unknown utility class`.
+- **Não limpe uma escala que o tema lê.** Limpar `--color-emerald-*` compila sem erro, mas as cores de sucesso feitas com ela se perdem.
+
 ## Solução de problemas
 
 **As classes não resultam em nenhum estilo**
@@ -64,13 +128,13 @@ Diferente do `/tw`, os entrypoints específicos e o `/tw/native` não importam o
 **Uma classe montada em tempo de execução fica sem estilo**
 
 - **O que aconteceu:** `<button class="btn primary">` é estilizado, mas um botão cuja classe vem de uma variável, como `"btn " + variant`, ou de conteúdo de um CMS, não é.
-- **Por quê:** o Tailwind emite só as classes que encontra escritas por extenso nos arquivos que varre. Isso vale também para as classes de componente do pacote: um build com `/tw` emite `.alert` só se `alert` aparecer em algum lugar que ele varre, o que mantém a folha de estilos restrita ao que as suas páginas usam. As classes de intenção, de apresentação e de elevação, como `.primary` e `.soft`, são CSS comum e sempre emitidas. Um nome montado em tempo de execução nunca aparece inteiro num arquivo, então a varredura não o encontra.
+- **Por quê:** o Tailwind emite só as classes que encontra escritas por extenso nos arquivos que varre. Isso vale também para as classes de componente do pacote: um build com `/tw` emite `.alert` só se `alert` aparecer em algum lugar que ele varre, o que mantém a folha de estilos restrita ao que as suas páginas usam. As classes de intenção, de apresentação, de elevação, de canto e de tamanho, como `.primary`, `.soft` e `.sm`, também são utilitários, então o mesmo vale para elas. As classes de estética, como `.glass`, são CSS comum e sempre emitidas. Um nome montado em tempo de execução nunca aparece inteiro num arquivo, então a varredura não o encontra.
 - **Como resolver:** escreva cada nome de classe completo em algum lugar que o Tailwind varre, por exemplo num objeto de consulta (`{ save: "btn primary", remove: "btn destructive" }`), ou liste na sua folha de estilos os nomes que o seu código ou o seu conteúdo podem produzir:
 
 ```css
 @import "@codenhub/styles/tw";
 
-@source inline("btn alert badge");
+@source inline("btn alert badge primary destructive soft");
 ```
 
 Todo entrypoint `/tw` exige Tailwind CSS 4.3.2 ou mais recente, abaixo da 5 (`>=4.3.2 <5`).

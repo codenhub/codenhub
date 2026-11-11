@@ -1,5 +1,7 @@
-/* Imported into the `components` layer by `theme.css`, below every utility, so
-   a consumer's own utility or unlayered CSS beats these classes. See
+/* Each class here is a `@utility` whose body sits in `utilities.families`: a
+   utility, so `@apply` and Tailwind's variants reach it, and in a sublayer, so
+   it still loses to every rule written straight into `utilities` -- a
+   component's, or a consumer's own utility. See
    docs/internal/model.md#cascade-layers.
 
    The corner pattern: which corners take the corner the aesthetic draws. `box`
@@ -10,17 +12,21 @@
    is taken as written and ignores the pattern. See docs/internal/model.md#material-tokens. */
 
 /* Top-left and bottom-right. */
-.cut-diagonal {
-  --ui-corner-tl: 1;
-  --ui-corner-tr: 0;
-  --ui-corner-br: 1;
-  --ui-corner-bl: 0;
+@utility cut-diagonal {
+  @layer families {
+    --ui-corner-tl: 1;
+    --ui-corner-tr: 0;
+    --ui-corner-br: 1;
+    --ui-corner-bl: 0;
+  }
 }
 
 /* Top-right and bottom-left. */
-.cut-diagonal-reverse {
-  --ui-corner-tl: 0;
-  --ui-corner-tr: 1;
-  --ui-corner-br: 0;
-  --ui-corner-bl: 1;
+@utility cut-diagonal-reverse {
+  @layer families {
+    --ui-corner-tl: 0;
+    --ui-corner-tr: 1;
+    --ui-corner-br: 0;
+    --ui-corner-bl: 1;
+  }
 }

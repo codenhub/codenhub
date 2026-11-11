@@ -41,6 +41,10 @@ A **neutral** button never fills completely. Its color is the page's own text co
 
 On hover, a button's fill deepens by `--hover-step` (14%), so a `.ghost` button picks up a tint and a `.solid` one changes to its intent's hover color. On press it scales down slightly (`scale(0.97)`); an [aesthetic](./aesthetics.md) can replace that with its own press, and under a user's reduced-motion preference it still happens, at once.
 
+A neutral `.soft` or `.ghost` button inside a filled surface, such as a Cancel button in a `.card.solid.primary` or an `.alert.solid.destructive`, prints its label and its line in that surface's text color, so it stays readable on the fill. A text field does the same. A button with an intent keeps its own color, and so does a neutral `.solid` one, which rests on a fill of its own.
+
+When a filled button has keyboard focus, a 2px line of the page color runs inside the focus ring, so the ring stays visible on a button filled with the same color, such as `.solid.primary`.
+
 ## Sizes and shapes
 
 | Class   | Effect                                                                                                                                       |

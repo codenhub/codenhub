@@ -2,7 +2,7 @@
 title: Contenido y layout
 description: Consulta de cada helper de layout con su espaciado, la escala tipográfica con sus tamaños, las tarjetas y los paneles con su relleno interior, las tablas, las citas, el código y las teclas.
 order: 10
-source: 4e28376992e3ddfdd7266f6bf74766ea9f0f82e1
+source: 58852762a8338e331fe4706cf30826b8a719aa2d
 ---
 
 # Contenido y layout
@@ -104,6 +104,8 @@ Usa una de las dos mitades para una tarjeta que responde solo a un gesto. Una ta
 
 Estas clases solo dan estilo. Ponlas en un enlace o un botón reales y dales un nombre accesible; un `<div class="card interactive">` no puede recibir el foco ni usarse con el teclado.
 
+Una tarjeta `.interactive` o `.pressable` deshabilitada muestra el cursor de no permitido en lugar del puntero, tanto si es un `<button>` con `disabled` como si lleva `.disabled`, `aria-disabled="true"` o `data-disabled`.
+
 ## Tablas
 
 La pantalla de ajustes enumera las claves de API en una tabla:
@@ -147,6 +149,8 @@ La pantalla de ajustes enumera las claves de API en una tabla:
 ### Intención de las filas
 
 Las filas de una tabla toman la intención de la tabla, así que `.data-table.success` colorea de verde su encabezado y sus líneas. Una fila con su propia clase de intención usa esa en su lugar, como hace el `<tr class="destructive">` de la clave revocada. `<tr class="neutral">` devuelve una fila a neutra dentro de una tabla de color. En una tabla `.solid`, una fila con su propia intención conserva el color de texto de la tabla para seguir siendo legible sobre el relleno de la tabla, y muestra su intención con su línea divisoria y su hover. Es el único lugar en el que una intención se hereda, porque las filas son partes de la tabla, no componentes separados.
+
+Solo las siete clases de intención incorporadas cambian el color de una fila del cuerpo. Una fila con una intención que definiste tú, como `<tr class="beta">`, se ve como el resto de la tabla: su texto, su línea y su hover vienen de la intención de la tabla. Para marcar esa fila, escribe en ella una clase de intención incorporada y cambia en la fila la familia de colores de esa intención, como describe [Temas → Tu propia intención](./theming.md#tu-propia-intención), o pinta la fila con tus propias utilidades.
 
 ### Líneas divisorias de las tablas
 
@@ -212,4 +216,4 @@ Un `.kbd`, un `.code` o un `.pre` reposa sobre el tono subtle de su intención, 
 
 ## Siguiente paso
 
-[Accesibilidad](../accessibility.md) enumera lo que el CSS hace por tus usuarios y lo que tu aplicación todavía les debe.
+[Preajustes](./presets.md) muestra cómo definir un aspecto una sola vez en lugar de en cada elemento. [Accesibilidad](../accessibility.md) enumera lo que el CSS hace por tus usuarios y lo que tu aplicación todavía les debe.

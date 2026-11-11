@@ -60,7 +60,7 @@ The package ships the same classes two ways:
 Know these costs before you adopt it:
 
 - **Class names are short and unprefixed.** `.primary`, `.success`, `.dark`, `.label`, `.field`, `.section`, `.stack`, `.flat`, and `.ghost` are global names. Another stylesheet on the same page that uses them collides with this one. The package sits in [cascade layers](./setup.md#cascade-layers), so your own unlayered CSS wins a collision, but a third-party library's rules for the same name still apply alongside the package's.
-- **The complete stylesheets are large before compression.** At the time of writing, minified, the complete stylesheet is about 410 KB, `/native` about 575 KB, and `/components` about 320 KB. Served with gzip they are about 19 KB, 25 KB, and 15 KB. Focused files are much smaller: `/theme` is about 10 KB (2 KB with gzip) and one aesthetic is 4 to 21 KB (1 to 2 KB with gzip). Most of the size is composition that every component repeats, which is why compression removes so much of it. Import the narrowest entrypoint that covers a page; see [Setup → All entrypoints](./setup.md#all-entrypoints).
+- **The complete stylesheets are large before compression.** At the time of writing, minified, the complete stylesheet is about 230 KB, `/native` about 355 KB, and `/components` about 185 KB. Served with gzip they are about 18 KB, 25 KB, and 14 KB. Focused files are much smaller: `/theme` is about 12 KB (3 KB with gzip) and one aesthetic is 4 to 14 KB (1 to 2 KB with gzip). Most of the size is composition that every component repeats, which is why compression removes so much of it. Import the narrowest entrypoint that covers a page; see [Setup → All entrypoints](./setup.md#all-entrypoints).
 - **`--color-foreground` is a background, not a text color.** It is the tone one step off the page that a quiet card or panel sits on. The text color is `--color-text`.
 - **Four hover colors are fixed values.** `--color-success-hover`, `--color-warning-hover`, `--color-destructive-hover`, and `--color-info-hover` are precomputed, because mixing them live crashed WebKit. If you override `--color-success` alone, its hover keeps the old hue, so replace the whole family; see [Theming → Color tokens](./usage/theming.md#color-tokens).
 - **Modern browsers only.** Chrome 123, Safari 17.5, or Firefox 128 and newer. There is no fallback layer for older browsers.
@@ -98,6 +98,7 @@ Read these in order the first time. Each page adds to the settings screen and en
    - [Aesthetics](./usage/aesthetics.md): restyle the whole screen with one class.
    - [Solo classes](./usage/solo.md): paint an aesthetic onto a component this package does not style.
    - [Composing](./usage/composing.md), [Customizing](./usage/customizing.md), and [Content and layout](./usage/content-and-layout.md): lookup pages with every axis rule, token, default, and helper class.
+   - [Presets](./usage/presets.md): set a look once, for a region, a theme, or your own component class, instead of repeating it on every element.
 5. [Accessibility](./accessibility.md): what the CSS handles for you and what your application must still do.
 
 The [changelog](./changelog/index.md) lists every release and what changed in it.
