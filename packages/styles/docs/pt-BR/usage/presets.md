@@ -2,7 +2,7 @@
 title: Predefinições
 description: Três formas de definir um visual uma única vez em vez de em cada elemento, e quando usar cada uma.
 order: 11
-source: 0d391b14289260acf66efcf0063dd36165665abb
+source: 308b21076223635a3323bcfecb70abe3a9e6d1c7
 ---
 
 # Predefinições

@@ -2,7 +2,7 @@
 title: Preajustes
 description: Tres formas de definir un aspecto una sola vez en lugar de en cada elemento, y cuándo recurrir a cada una.
 order: 11
-source: 0d391b14289260acf66efcf0063dd36165665abb
+source: 308b21076223635a3323bcfecb70abe3a9e6d1c7
 ---
 
 # Preajustes

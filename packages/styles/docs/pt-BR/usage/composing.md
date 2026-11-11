@@ -2,7 +2,7 @@
 title: Composição
 description: Consulta sobre como intenção, apresentação, estética e elevação se combinam, o visual padrão de cada componente e quais classes cada componente lê.
 order: 8
-source: bb2e87c1f6291bba99a0a55f95cdd1b9deeb8536
+source: 2493c7c14124565b565b1226e99d4b3de3b087b2
 ---
 
 # Composição

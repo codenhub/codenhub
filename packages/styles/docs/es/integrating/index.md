@@ -3,7 +3,7 @@ title: Visión general
 description: Cómo se carga la hoja de estilos en el build de un framework, y qué guía seguir.
 group: Integración
 order: 2
-source: e309cd6b61cd24bcb49fe54b2ed7041c88b0fc54
+source: df31bf142a4a12567b699232f77ea21d5ee52ebe
 ---
 
 # Integración
