@@ -2,7 +2,7 @@
 title: Sem bundler
 description: Como referenciar as folhas de estilos compiladas a partir de HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor, e o build por linha de comando.
 order: 6
-source: 8baa3ec25669243ba3492a3d4610c67ed3acb8b7
+source: 77641fc3dccfc40d71dc03bb0e5584422b6f8dfa
 ---
 
 # Sem bundler
@@ -131,7 +131,7 @@ npx codenhub-styles build --content "app/views/**/*.erb" --output public/styleki
 Quando dá certo, o comando imprime uma linha: o caminho absoluto que escreveu e o tamanho do arquivo em bytes:
 
 ```text
-/home/you/shop/public/stylekit.css 27102 bytes
+/home/you/shop/public/stylekit.css 25782 bytes
 ```
 
 Referencie esse arquivo no seu layout como qualquer folha de estilos estática.

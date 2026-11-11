@@ -1,14 +1,13 @@
-import { execFile } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 // A namespace, because `glob` is missing from Node.js releases older than the one this command supports, and a named import of a missing export fails before the version check below can say so.
 import * as fs from "node:fs/promises";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { parseArgs, promisify, stripVTControlCharacters } from "node:util";
+import { parseArgs } from "node:util";
 
 export interface CliIo {
   cwd: string;
-  tmpdir: string;
   /** The running Node.js version, as `process.versions.node` gives it. */
   nodeVersion: string;
   /** Resolves a module specifier from this package, as `require.resolve` does. */
@@ -38,8 +37,6 @@ Options:
   --help                 Show this help.
   --version              Show the version.`;
 
-const executeFile = promisify(execFile);
-
 interface Manifest {
   version: string;
   exports: Record<string, unknown>;
@@ -51,6 +48,26 @@ interface BuildOptions {
   aesthetics: string[];
   shouldMinify: boolean;
 }
+
+interface SourceEntry {
+  base: string;
+  pattern: string;
+  negated: boolean;
+}
+
+/* The parts of `@tailwindcss/node` and `@tailwindcss/oxide` this command
+   calls, the same in every release this package supports (`>=4.3.2 <5`). */
+interface Tailwind {
+  compile(
+    css: string,
+    options: { base: string; from: string; polyfills: number; onDependency(path: string): void },
+  ): Promise<{ sources: SourceEntry[]; build(candidates: string[]): string }>;
+  optimize(css: string, options: { minify: boolean }): { code: string };
+  Scanner: new (options: { sources: SourceEntry[] }) => { scan(): string[] };
+}
+
+// `Polyfills.None`, an ambient const enum in Tailwind's declarations, so its value is written out.
+const POLYFILLS_NONE = 0;
 
 export async function run(argv: readonly string[], io: CliIo): Promise<number> {
   try {
@@ -151,7 +168,7 @@ function parseFlags(argv: readonly string[]) {
 async function build(options: BuildOptions, io: CliIo): Promise<string> {
   assertNodeVersion(io.nodeVersion);
 
-  const tailwindCli = resolveTailwindCli(io);
+  const tailwind = loadTailwind(io);
 
   const validAesthetics = readAestheticNames();
   const unknown = options.aesthetics.find((name) => !validAesthetics.includes(name));
@@ -169,16 +186,15 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
     ...options.contentGlobs.map((pattern) => `@source ${cssString(toCssPath(path.resolve(io.cwd, pattern)))};`),
   ].join("\n");
 
-  await fs.mkdir(path.dirname(output), { recursive: true });
-
-  // An otherwise empty directory, so Tailwind's automatic source detection finds nothing but the `@source` globs.
-  const workDir = await fs.mkdtemp(path.join(io.tmpdir, "codenhub-styles-"));
-
   try {
-    await fs.writeFile(path.join(workDir, "input.css"), `${input}\n`);
-    await runTailwind({ tailwindCli, workDir, output, shouldMinify: options.shouldMinify });
-  } finally {
-    await fs.rm(workDir, { force: true, recursive: true });
+    const css = await compileStylesheet(tailwind, input, io.cwd, options.shouldMinify);
+
+    await fs.mkdir(path.dirname(output), { recursive: true });
+    await fs.writeFile(output, css);
+  } catch (error) {
+    throw new Error(
+      `Tailwind failed to build the stylesheet: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 
   return output;
@@ -194,35 +210,29 @@ async function assertMatches(pattern: string, cwd: string): Promise<void> {
   throw new Error(`--content "${pattern}" matches no file in ${cwd}; check the path, or run from the project root.`);
 }
 
-async function runTailwind(options: {
-  tailwindCli: string;
-  workDir: string;
-  output: string;
-  shouldMinify: boolean;
-}): Promise<void> {
-  const args = [options.tailwindCli, "-i", "input.css", "-o", options.output];
+/* Compiled as Tailwind's CLI compiles, with one difference: Tailwind's
+   polyfills are off. The CLI writes a fallback for browsers without
+   `color-mix()` or `@property` and has no flag to stop it, and every browser
+   StyleKit supports has both, so the fallbacks were bytes that never apply,
+   about a tenth of a typical build gzipped. Only the `@source` globs are
+   scanned: there is no automatic source detection, so nothing of the
+   consumer's other files, or of the generated input, adds a class. */
+async function compileStylesheet(
+  tailwind: Tailwind,
+  input: string,
+  cwd: string,
+  shouldMinify: boolean,
+): Promise<string> {
+  const compiler = await tailwind.compile(input, {
+    base: cwd,
+    from: path.join(cwd, "codenhub-styles.css"),
+    polyfills: POLYFILLS_NONE,
+    onDependency() {},
+  });
+  const scanner = new tailwind.Scanner({ sources: compiler.sources });
+  const css = compiler.build(scanner.scan());
 
-  if (options.shouldMinify) {
-    args.push("--minify");
-  }
-
-  try {
-    await executeFile(process.execPath, args, { cwd: options.workDir, env: { ...process.env, NO_COLOR: "1" } });
-  } catch (error) {
-    const reason = errorLine((error as { stderr?: string }).stderr ?? "");
-
-    throw new Error(
-      `Tailwind failed to build the stylesheet: ${reason ?? (error instanceof Error ? error.message : String(error))}`,
-    );
-  }
-}
-
-// Tailwind reports a handled error inside a box drawn around "Error: ...", and a crash as Node's stack trace; either way the line naming the error is the one worth keeping.
-function errorLine(stderr: string): string | undefined {
-  return stripVTControlCharacters(stderr)
-    .split(/\r?\n/)
-    .map((line) => line.replace(/^[\s│┌└]+/, "").trim())
-    .find((line) => /^\w*Error: \S/.test(line));
+  return shouldMinify ? tailwind.optimize(css, { minify: true }).code : css;
 }
 
 // Read from this package's own manifest, so the list follows its `exports` instead of drifting from them.
@@ -267,8 +277,8 @@ function assertNodeVersion(nodeVersion: string): void {
   }
 }
 
-/** Returns the script Tailwind's CLI package declares as its `bin`, after checking both Tailwind packages are installed. */
-function resolveTailwindCli(io: CliIo): string {
+/** Loads Tailwind's compiler from where `@tailwindcss/cli` is installed, after checking both Tailwind packages are. */
+function loadTailwind(io: CliIo): Tailwind {
   const manifests = TAILWIND_PACKAGES.map((name) => resolveManifest(name, io));
   const missing = TAILWIND_PACKAGES.filter((_, index) => manifests[index] === undefined);
 
@@ -278,10 +288,12 @@ function resolveTailwindCli(io: CliIo): string {
     );
   }
 
-  const manifestPath = manifests[0] as string;
-  const { bin } = JSON.parse(readFileSync(manifestPath, "utf8")) as { bin: string | Record<string, string> };
+  // `@tailwindcss/cli` depends on both at its own exact version, so they resolve from it under every package manager's layout.
+  const requireFromCli = createRequire(manifests[0] as string);
+  const { compile, optimize } = requireFromCli("@tailwindcss/node") as Pick<Tailwind, "compile" | "optimize">;
+  const { Scanner } = requireFromCli("@tailwindcss/oxide") as Pick<Tailwind, "Scanner">;
 
-  return path.resolve(path.dirname(manifestPath), typeof bin === "string" ? bin : bin.tailwindcss);
+  return { compile, optimize, Scanner };
 }
 
 // Only a package that cannot be found is absent; any other failure to resolve is passed on as it is.

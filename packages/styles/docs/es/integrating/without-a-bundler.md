@@ -2,7 +2,7 @@
 title: Sin bundler
 description: Enlazar las hojas de estilos compiladas desde HTML simple, Rails, Laravel, Django o cualquier aplicación renderizada en el servidor, y el build por línea de comandos.
 order: 6
-source: 8baa3ec25669243ba3492a3d4610c67ed3acb8b7
+source: 77641fc3dccfc40d71dc03bb0e5584422b6f8dfa
 ---
 
 # Sin bundler
@@ -131,7 +131,7 @@ npx codenhub-styles build --content "app/views/**/*.erb" --output public/styleki
 Si todo va bien, el comando imprime una línea: la ruta absoluta que escribió y el tamaño del archivo en bytes:
 
 ```text
-/home/you/shop/public/stylekit.css 27102 bytes
+/home/you/shop/public/stylekit.css 25782 bytes
 ```
 
 Enlaza ese archivo desde tu layout como cualquier hoja de estilos estática.

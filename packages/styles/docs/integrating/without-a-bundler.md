@@ -130,7 +130,7 @@ npx codenhub-styles build --content "app/views/**/*.erb" --output public/styleki
 On success the command prints one line, the absolute path it wrote and the file's size in bytes:
 
 ```text
-/home/you/shop/public/stylekit.css 27102 bytes
+/home/you/shop/public/stylekit.css 25782 bytes
 ```
 
 Link that file from your layout like any static stylesheet.
