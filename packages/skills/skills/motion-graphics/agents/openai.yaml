@@ -1,4 +1,4 @@
 interface:
   display_name: "Motion Graphics"
   short_description: "Storyboard, animate, and render video"
-  default_prompt: "Use $motion-graphics to make this video: set the format and duration, write beats and a timing table, fix key frames as stills, animate on a seekable timeline, render every frame, and check a contact sheet before delivering."
+  default_prompt: "Use $motion-graphics to make this video: set the format and duration, write beats and a timing table, fix key frames as stills, time narration before animating, animate on a seekable timeline, render every frame, mix sound to a measured level, and check a contact sheet before delivering."

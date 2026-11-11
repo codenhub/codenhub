@@ -1,6 +1,6 @@
 ---
 name: motion-graphics
-description: Creates motion graphics and animated videos built with web technology, such as explainers, product promos, animated social posts, kinetic typography, title cards, lower thirds, logo animations, and animated charts, rendered to MP4, WebM, GIF, or image sequences. Use when asked to make, storyboard, animate, time, render, or review a video or animation meant to be watched as video. Not for transitions or micro-interactions inside an app or website.
+description: Creates motion graphics and animated videos built with web technology, such as explainers, product promos, animated social posts, kinetic typography, title cards, lower thirds, logo animations, and animated charts, with or without narration, sound effects, and music, rendered to MP4, WebM, GIF, or image sequences. Use when asked to make, storyboard, animate, time, render, or review a video or animation meant to be watched as video, or to add a voiceover, sound effects, music, or captions to one. Not for transitions or micro-interactions inside an app or website.
 ---
 
 # Motion Graphics
@@ -11,14 +11,15 @@ Generated motion fails in predictable ways: a sequence of headline cards that is
 
 ## Procedure
 
-1. **Brief.** Establish the purpose, the platform, the aspect ratio and resolution, the duration, the frame rate, whether it plays with sound, and the brand assets. When the request leaves these open, infer them from the platform and state the assumptions. See Formats.
-2. **Script.** Write the message as beats: one idea per beat, in the order the viewer needs them.
+1. **Brief.** Establish the purpose, the platform, the aspect ratio and resolution, the duration, the frame rate, the sound it carries (narration, sound effects, music, or none), and the brand assets. When the request leaves these open, infer them from the platform and state the assumptions. See Formats.
+2. **Script.** Write the message as beats: one idea per beat, in the order the viewer needs them. For a narrated piece, write each beat's spoken line here.
 3. **Concept.** Choose the visual idea that carries the beats, as described in Concept.
 4. **Storyboard.** Write a timing table and render a still of each beat's key frame, as described in Storyboard. Fix composition and text on stills before animating; stills are far cheaper to change than animation.
-5. **Setup.** Use the project's existing animation and render setup when it meets the requirements in Render Setup. Otherwise use the default setup.
-6. **Animate.** Build beat by beat, applying Timing And Easing, Composition, and Depth And Camera.
-7. **Render.** Render every frame from the timeline, then encode.
-8. **Check.** Follow Verification below, and fix every failure before presenting.
+5. **Voice.** For a narrated piece, generate the narration and set each beat's duration from it before animating, as described in Sound.
+6. **Setup.** Use the project's existing animation and render setup when it meets the requirements in Render Setup. Otherwise use the default setup.
+7. **Animate.** Build beat by beat, applying Timing And Easing, Composition, and Depth And Camera.
+8. **Render.** Render every frame from the timeline, mix the sound when the piece has any, then encode.
+9. **Check.** Follow Verification below, and fix every failure before presenting.
 
 Fit the procedure to the request, and say which steps you skipped:
 
@@ -49,13 +50,14 @@ A motion piece shows things changing; a headline that slides in and is then repl
 
 ## Storyboard
 
-Write a table with one row per beat: start time, duration, on-screen text, what moves and how, and the sound cue. Then check it:
+Write a table with one row per beat: start time, duration, on-screen text, the narration line, what moves and how, and the sound cues. Then check it:
 
 - Every beat carries one idea. A beat that needs two sentences of text is two beats.
 - Every text gets time to be read: after it has fully arrived, hold it for the longer of 1 second plus about 0.3 seconds per word, or about 15 characters per second, so long words and identifiers get their time. Viewers read slower in motion than on a page.
 - Every text adds something the earlier beats did not say, so cut any headline that restates the previous beat. Write each as a plain sentence, unless the words are given, such as a quote or a title sequence's credits; generated scripts fall back on two-fragment slogans ("Seven days. Seven pings.") and "X, not Y" contrasts. Use each of those patterns at most once in the piece.
 - The first two seconds state what the video is about. On social platforms, most viewers decide within them whether to keep watching.
 - When the piece ends on a call to action or the logo, hold it for at least 2 seconds.
+- Every narration line fits inside its beat, and says something the on-screen text does not. Until the line is generated and measured, estimate its length at 2.5 words per second.
 
 ## Timing And Easing
 
@@ -67,7 +69,7 @@ Write a table with one row per beat: start time, duration, on-screen text, what 
 - **Think in frames.** At 30fps, small elements move in about 8 to 15 frames, larger movements in 15 to 30, and scene transitions in 10 to 20. Movements shorter than 6 frames read as cuts.
 - **Stagger with intent.** Offset items in a group by 2 to 4 frames, in reading order or from the point the motion originates.
 - **Motivate transitions.** Carry an element from one scene into the next, match a shape or direction across the cut, or cut on a beat. Use a crossfade only when nothing connects the scenes.
-- **Sync to sound.** When there is music, find its tempo and place major changes on beats: one beat lasts `60 / BPM × fps` frames.
+- **Sync to sound.** When there is music, find its tempo and place major changes on beats: one beat lasts `60 / BPM × fps` frames. Each sound effect lands on the frame of the move it marks.
 
 ## Composition
 
@@ -91,6 +93,18 @@ Frames are rendered one at a time and then encoded, so an effect costs render ti
 - **Give each effect a job in the concept:** depth, focus, a light source in the scene, or the speed of a move. An effect added because it is available is the decorative motion Composition rules out.
 - **Keep text sharp while it is read.** No blur, rotation in depth, or camera move on a text during its hold.
 
+## Sound
+
+A piece has up to three layers of sound: narration, sound effects, and music. Decide in the brief which it carries, and assume none for a single element, such as a lower third or a loop, unless asked. Read [references/sound.md](references/sound.md) before writing narration, making or placing a sound, mixing, or adding captions; it has the commands.
+
+- **Narration sets the timing.** Generate each line as its own file before animating, measure it, and set the beat's duration from the measurement. Animation built first never fits the voice.
+- **One source of time.** Keep beat starts, narration starts, and sound cues in one data file that both the animation and the mix read, so no time is typed twice.
+- **Sound follows the picture.** Give a sound effect only to a move that carries the beat, from one family of sounds chosen from the brand. Synthesize short effects; they need no license.
+- **Music is supplied, not generated.** Use the client's track or ask for one, and deliver with narration and effects only until there is one. Generate or source music only when the client names the tool or the source.
+- **The muted viewer comes first.** The message still arrives with the sound off, and every narrated piece has captions.
+- **Mix to a target.** The voice leads, music drops under speech, and the finished mix measures -14 LUFS, within 1 LU, with peaks at or under -1 dBFS, at 48 kHz stereo, unless the platform sets another target.
+- **Record every source.** Note the tool, voice, track, and license of each sound in the delivery notes. Do not send an unreleased script to a speech service the client has not approved, and never imitate a real person's voice without their permission.
+
 ## Render Setup
 
 Any setup works when it meets three requirements:
@@ -111,7 +125,7 @@ Use whichever encoder the environment has. The settings below are what matter; t
 - For a transparent background, as with an overlay or a lower third, deliver ProRes 4444 with alpha (`-c:v prores_ks -profile:v 4444 -pix_fmt yuva444p10le`) or WebM with VP9 and alpha (`-c:v libvpx-vp9 -pix_fmt yuva420p`), and capture the frames with a transparent background.
 - For motion blur, capture at four times the delivery rate and average each group of four frames into one: `ffmpeg -framerate 120 -i frames-XXXXXX/%05d.png -vf "tpad=stop_mode=clone:stop=3,tmix=frames=4,select='not(mod(n+1\,4))',setpts=N/30/TB" -r 30 -c:v libx264 -pix_fmt yuv420p -crf 18 -movflags +faststart out.mp4`. The mix is a rolling window, so the filter keeps only the frame that ends each group of four, and pads the end so a last partial group still gives a frame. The delivered frame count follows the delivery rate, as Verification describes. Averaging across a hard cut blends the two scenes for one frame; check each cut in the frames.
 - For a GIF, generate a palette from the frames first (in `ffmpeg`, the `palettegen` and `paletteuse` filters), keep it short, and reduce the frame rate and size; GIFs grow large fast.
-- Mix audio in the same encode, and fit it to the video's length: pad shorter audio with silence and cut longer audio at the captured frame count divided by the frame rate, so every frame stays. With `ffmpeg`: `ffmpeg -framerate 30 -i frames-XXXXXX/%05d.png -i audio.wav -map 0:v -map 1:a -c:v libx264 -pix_fmt yuv420p -crf 18 -c:a aac -b:a 192k -af apad -t DURATION -movflags +faststart out.mp4`, with `DURATION` set to that length. Fade music out before the cut when it would end mid-phrase.
+- Add the finished mix in the same encode, and fit it to the video's length: pad shorter audio with silence and cut longer audio at the captured frame count divided by the frame rate, so every frame stays. With `ffmpeg`: `ffmpeg -framerate 30 -i frames-XXXXXX/%05d.png -i mix.wav -map 0:v -map 1:a -c:v libx264 -pix_fmt yuv420p -crf 18 -c:a aac -b:a 192k -af apad -t DURATION -movflags +faststart out.mp4`, with `DURATION` set to that length. Fade music out before the cut when it would end mid-phrase.
 - When no encoder is available, deliver the numbered frame sequence, and the audio file when the piece has sound, with its frame rate, the video length as the frame count divided by the frame rate so the audio can be fit to it, and the encoder settings above, state that the video is not encoded, and run every check that the frames allow.
 
 ## Verification
@@ -130,10 +144,11 @@ Look at the output, not the code. Most timing and composition problems are invis
   - When delivery keeps the capture duration and rate, confirm the delivered count matches the planned capture count.
   - When delivery reduces the frame rate or trims, as for a GIF, motion blur, or another delivery format, calculate the expected delivered count from the planned delivery duration times the delivery rate, rounded up, or compare with the encoder's explicitly selected output frames. Do not scale the already-rounded capture count.
   - Matching the encoded file's own duration and frame rate alone does not catch an obsolete tail.
+- For a piece with sound, measure it, since you cannot hear it: the audio stream's length against the video's, the loudness and peak against the targets in Sound, each narration line's start against the plan, and a transcription of the narration against the script. Lay the mix's waveform under the contact sheet and confirm each effect sits under its move. Then confirm from the frames that the message arrives with the sound off. List what only a listener can judge, such as how a name is pronounced and whether the voice and music suit the brand, as not checked.
 - For each check, write in the delivery notes what you measured or saw, such as each key frame's content box against the safe area, and list every defect found, fixed or not. A check reported only as passed was not run.
 - Fix each failure, then render again. A failed check, such as a hold shorter than the minimum or a blank first frame, is not an open decision to hand to the client.
 - When the output cannot be rendered or inspected, say so and name what was not checked.
 
 ## Presenting
 
-Deliver the rendered file, the storyboard table, a poster frame as an image, the source project, and the delivery notes with the verification observations and defects. State the main decisions with one reason each: the easing character, the pacing, and how transitions connect the scenes.
+Deliver the rendered file, the storyboard table, a poster frame as an image, the source project, and the delivery notes with the verification observations and defects. For a piece with sound, add the mix, the stems, the narration script, the caption file when captions are not in the picture, and the source and license of every voice, track, and recorded sound. State the main decisions with one reason each: the easing character, the pacing, how transitions connect the scenes, and, with sound, the voice and the family of effects.
