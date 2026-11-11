@@ -43,7 +43,7 @@ Keep the timing in one data file that both the page and the mix read, so a sound
 }
 ```
 
-- The page places each scene at its beat's `start`, and each move that has a sound at the cue's time: `master.add(intro(beat), beat.start)`, and inside the scene `tl.from(card, { x: -400 }, cue.at)`.
+- The page places each scene at its beat's `start`: `master.add(intro(beat), beat.start)`. Inside the scene, it places each move against its cue by what the sound marks. A move a whoosh accompanies starts at the cue: `tl.from(card, { x: -400 }, cue.at)`. A move that lands on an impact or a tick ends at the cue: `tl.from(logo, { y: -150, duration: 0.4 }, cue.at - 0.4)`.
 - The mix places each file at `start + at`. Never type a time into both the page and the mix command.
 - Round every `start` and `duration` to a whole number of frames.
 
@@ -121,19 +121,23 @@ First build the mix without loudness correction. Delays are in milliseconds, eac
 ```sh
 ffmpeg -i music.wav -i vo/01-intro.wav -i vo/02-install.wav -i sfx/whoosh.wav -i sfx/impact.wav -filter_complex "
 [1]adelay=500:all=1[v1];[2]adelay=4000:all=1[v2];
-[v1][v2]amix=inputs=2:normalize=0,aresample=48000,asplit=3[voice][key][stem];
+[v1][v2]amix=inputs=2:normalize=0,aresample=48000,apad=whole_dur=DURATION,asplit=3[voice][key][vstem];
 [3]adelay=300:all=1,volume=-8dB[s1];[4]adelay=6800:all=1,volume=-6dB[s2];
-[s1][s2]amix=inputs=2:normalize=0[sfx];
+[s1][s2]amix=inputs=2:normalize=0,apad=whole_dur=DURATION,asplit=2[sfx][sstem];
 [0]volume=-6dB[m];[m][key]sidechaincompress=threshold=0.03:ratio=10:attack=15:release=350[music];
 [music][voice][sfx]amix=inputs=3:normalize=0,apad,atrim=duration=DURATION[out]" \
-  -map "[out]" -ac 2 premix.wav -map "[stem]" stems/voice.wav
+  -map "[out]" -ac 2 -c:a pcm_f32le premix.wav -map "[vstem]" stems/voice.wav -map "[sstem]" stems/sfx.wav
 ```
+
+- Pad the voice to the full length before it controls the music. The compressor stops when either of its inputs ends, so an unpadded voice cuts the music off after the last line.
+- Write the premix as floating point (`pcm_f32le`). Layers that sum above full scale would be clipped in a 16-bit file before the limiter in the next step can lower them.
 
 - `normalize=0` on every `amix` keeps each layer at the level it was given; without it, the filter lowers every input as inputs are added.
 - `DURATION` is the captured frame count divided by the frame rate.
-- Without music, leave out its input and the line that builds `[music]`, lower every other input number by one, and end with `[voice][sfx]amix=inputs=2:normalize=0`.
+- Without music, leave out its input and the line that builds `[music]`, lower every other input number by one, split the voice in two without `[key]` (`asplit=2[voice][vstem]`), and mix `[voice][sfx]` with `amix=inputs=2:normalize=0`.
 - The delays above are typed to show the shape of the command. For a real piece, write the command from the beat file with a short script, so a changed beat moves its sounds.
-- Write a stem for the effects and for the music in the same way when the client will remix or translate the piece.
+- Write a stem for the music in the same way when the client will remix or translate the piece.
+- When adding sound to a video that already has some, bring its audio into the mix as one more layer, unless asked to replace it. Mapping only the new mix into the encode would drop the speech or music it had.
 
 Then measure the mix, raise or lower it by the difference from the target, and limit the peaks:
 
@@ -181,7 +185,8 @@ You cannot hear the result. Measure what can be measured, and say what was not h
           print(f"{word.start:.2f}\t{word.end:.2f}\t{word.word.strip()}")
   ```
 
-- **Cues.** Draw the mix's waveform at the width of a contact sheet row and set it under the frames: `ffmpeg -i mix.wav -filter_complex "showwavespic=s=2880x160:colors=white" -frames:v 1 wave.png`. Each effect's spike should sit under the frame of its move, and the music should dip under each line.
+- **Cues.** Find where each sound starts in the effects stem, with the voice timing command and `noise=-60dB:d=0.1`, and compare each start with its `start + at` in the beat file. Then extract the frame at each cue's time and confirm the move is at the point the sound marks: starting for a whoosh, arrived for an impact or a tick.
+- **Music.** Draw the mix's waveform at 100 pixels per second, so a position reads as a time: `ffmpeg -i mix.wav -filter_complex "showwavespic=s=WIDTHx160:colors=white" -frames:v 1 wave.png`, with `WIDTH` the length in seconds times 100. The music should dip under each line, and run to its fade.
 - **Muted.** Watch the contact sheet with the narration covered: the message must still arrive through the picture, the on-screen text, and the captions.
 
 Whether the voice sounds natural, a name is said correctly, the music suits the brand, and the effects feel right cannot be measured. List these in the delivery notes as checks for a person to make by listening, with the timestamps of the names and the effects.
