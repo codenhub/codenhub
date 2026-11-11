@@ -151,10 +151,21 @@
      but keep its alpha -- measured in Chromium -- so the translucent ground
      stayed translucent over whatever was behind it, and a liquid card's text
      sat at about 2.5:1 over a busy page. An opaque ground is `Canvas` whole. */
-  @media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  @media (prefers-reduced-transparency: reduce), (forced-colors: active), (prefers-contrast: more) {
     .glass {
       --ui-backdrop: none;
       --ui-surface-ground: var(--color-background);
+    }
+  }
+
+  /* More contrast also takes the ground whole, above, and then the white
+     hairline has nothing to be seen against: 1.03:1 on an opaque light page.
+     The line becomes the theme's control grey, above 4:1 on both grounds.
+     Only under this preference: reduced transparency asks for no stronger
+     line. See docs/accessibility.md. */
+  @media (prefers-contrast: more) {
+    .glass {
+      --ui-ink: var(--color-control-border);
     }
   }
 
@@ -237,7 +248,7 @@
     --ui-backdrop: var(--_glass-liquid-blur);
   }
 
-  @media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  @media (prefers-reduced-transparency: reduce), (forced-colors: active), (prefers-contrast: more) {
     .glass.glass-liquid:not(.glass-solo),
     .glass .glass-liquid:not(.glass-solo) {
       --ui-surface-ground: var(--color-background);
@@ -247,6 +258,13 @@
       --_glass-liquid-blur: none;
       --_glass-liquid-lens: none;
       --_glass-liquid-lens-control: none;
+    }
+  }
+
+  @media (prefers-contrast: more) {
+    .glass.glass-liquid:not(.glass-solo),
+    .glass .glass-liquid:not(.glass-solo) {
+      --ui-ink: var(--color-control-border);
     }
   }
 
@@ -474,12 +492,20 @@
 }
 
 /* Forced colours with it, for the reason the aesthetic class gives. */
-@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+@media (prefers-reduced-transparency: reduce), (forced-colors: active), (prefers-contrast: more) {
   .glass-solo {
     --_solo-ground: var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0)));
 
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+}
+
+/* The line on an opaque ground, as the aesthetic class draws it. */
+@media (prefers-contrast: more) {
+  .glass-solo,
+  .glass-solo.glass-liquid {
+    --_solo-ink: var(--_solo-intent-border, var(--color-control-border, oklch(55.6% 0 0)));
   }
 }
 
@@ -534,7 +560,7 @@
   }
 }
 
-@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+@media (prefers-reduced-transparency: reduce), (forced-colors: active), (prefers-contrast: more) {
   .glass-solo.glass-liquid {
     --_solo-ground: var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0)));
   }

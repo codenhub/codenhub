@@ -144,6 +144,17 @@
     --ui-label-case: initial;
     --ui-label-shadow: initial;
   }
+
+  /* More contrast asked for: the tile takes the controls' grey, since its own
+     is about 2.5:1 against the page in both themes. The bar under a tile is
+     this ink too, and darkens with it. A rule of its own rather than nested
+     above: `registry.test.ts` reads that block's declarations flat. See
+     docs/accessibility.md. */
+  @media (prefers-contrast: more) {
+    .chunky-tile {
+      --ui-ink: light-dark(var(--color-neutral-600), var(--color-neutral-400));
+    }
+  }
 }
 
 /* Solo: the same look painted onto the one element carrying the class, for an

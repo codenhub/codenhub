@@ -63,6 +63,13 @@
      back to 100% -- its line is a silhouette rather than a field's edge, and
      there is nothing else marking an unchecked box. */
   --_line-rest: 60%;
+  /* Someone who asks for more contrast gets the line whole: above 4:1
+     against the page in both themes, where the quiet line is under 3:1. Hover
+     and focus then change nothing in the tone, which is the trade the
+     preference asks for. See docs/accessibility.md. */
+  @media (prefers-contrast: more) {
+    --_line-rest: 100%;
+  }
   /* Two seams rather than one composed result. `--_line-tone` is what colour
      the line is, and the states below move it; `--_line` folds in the fill,
      walking the line toward the intent colour by the fill amount, so a state

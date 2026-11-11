@@ -37,7 +37,6 @@ Aesthetics compose the foundation rather than justify new tokens. Exact appearan
 
 Each of these is a limit of what ships today, recorded so it is decided rather than rediscovered. None is committed to a version.
 
-- **`prefers-contrast: more` is not handled.** No stylesheet reads it: a user who asks for more contrast gets the same resting lines, washes, and translucent glass as everyone else. Forced colours and reduced transparency are handled; this preference is not. What it should change -- the resting field line that rests under 3:1 so hover and focus can move it, glass's ground, the neutral cap -- is decided with the work.
 - **`.tooltip-icon` is recorded as a helper, not a component.** It applies `box`, rests on a ground of its own, and reads the fill, edge, and intent a component reads, but `registry.json` lists it under `helpers`, so it carries no default, no `axes`, and no probe in `axes.spec.ts`. Whether it moves to `components` is decided with the per-component schema above, since both change what a registry entry records.
 - **The Propshaft setup in [Without a bundler](../integrating/without-a-bundler.md) is unverified.** It has not been run against a Rails application, so the asset path, the link tags, and the collision it warns about are untested.
 

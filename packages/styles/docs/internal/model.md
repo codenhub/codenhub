@@ -1026,6 +1026,22 @@ Uppercase actions are not part of it. Casing is how a label is worded, and silen
 
 Tier 1 reaches a bare `<button>` because tokens travel through the cascade, and because `native.css` maps the element to the same utility the class carries. `<dialog>` is a floating card (`@apply card floating`), the one surface with an element of its own. `<progress>` takes `.progress`'s track; its value is painted in the engine's own pseudo-element, so the fill is restated on `::-webkit-progress-value` and `::-moz-progress-bar`, one rule each, because a selector list naming a pseudo-element an engine does not know drops the whole rule. With no `value` it is indeterminate, and the sweep is drawn on the track's own background, because an engine paints that pseudo-element empty or full and neither can be moved; it rests under reduced motion and takes system colours under forced colours. An aesthetic staying in Tier 1 works everywhere. An aesthetic writing its own selector list works wherever it remembered to look, which is the cost of writing one and the reason to prefer a slot.
 
+## Increased contrast
+
+Several lines rest below 3:1 on purpose: a field's line at 60% so hover and focus have somewhere to go, the surface line at `--color-border`, a progress track with no edge, an intent's line faded by the soft fill under it, glass's white hairline. `prefers-contrast: more` is the reader saying that trade is the wrong one for them, so under it each of those lines is drawn at 3:1 or more against both its own fill and the page. `tests/browser/contrast.spec.ts` measures every one in both themes; [Accessibility](../accessibility.md#increased-contrast) is the consumer-facing list.
+
+- **A field rests at its whole line.** `--_line-rest` goes to 100% in a `@media` nested in the text control's body, so `@apply ipt` carries it. Hover and focus then move nothing in the tone; the focus ring is untouched.
+- **The neutral line is one slot.** `--color-border` is `var(--_contrast-border, …)`, and the slot is set only under the preference, to neutral-600 in light and neutral-400 in dark. The control grey, neutral-500, is not enough: `box` fades a line by the fill under it, and a neutral `.badge.soft.edged` landed at 2.9:1 against its own tint. A slot the token reads, rather than the token restated in a `@media`, so a consumer's own `--color-border` replaces both and is kept whatever order the sheets load in.
+- **An intent's line is its strong tone.** Each intent utility sets `--intent-border` to `--color-<intent>-strong` under the preference. With the resting tone, a `.soft.edged` warning drew at 2.4:1 in light and success at 2.9:1 in dark.
+- **A progress track draws its edge.** `--_d-border` goes to 100%; `--ui-border` is still read first, so `.edgeless` wins.
+- **Glass goes opaque,** by joining the reduced-transparency and forced-colours branch, and its hairline becomes the control grey: white on an opaque light page is 1.03:1. Chunky tile's tile grey, about 2.5:1 in both themes, takes its controls' grey.
+
+Left alone: text, solid fills, and focus rings, which meet their ratios without it; a border the consumer removed with `.edgeless`; a `.panel`, which draws no line by default and is a region, not a control; and `prefers-contrast: less`, which nothing reads.
+
+The nested `@media` blocks sit last in their rule, and chunky tile's is a rule of its own: `registry.test.ts` reads those blocks' declarations with patterns that stop at the first nested brace.
+
+Rejected: a `.high-contrast` class or a token the consumer sets. The preference is the reader's, stated to the browser, and a class would leave it to each application to wire up. Rejected too: raising the lines for everyone. The quiet resting line is a decision of the default look ([Presentation](#presentation)), and the preference is what lets both readers have theirs.
+
 ## Print
 
 Paper is the light ground. A browser leaves backgrounds off a printed page unless told otherwise, so a dark page printed its near-white text on no ground, and a filled box printed its contrast label, white, on nothing. Two declarations answer it:

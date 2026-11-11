@@ -68,6 +68,13 @@
     --intent-subtle: var(--color-primary-subtle);
     --intent-border: var(--color-primary);
     --intent-fill-max: 100%;
+    /* With more contrast asked for, an intent's line is its strong tone, in
+       this and every intent below. `box` fades a line by the fill under it, so
+       on a soft fill the resting tone drew at 2.4:1 for warning in light and
+       2.9:1 for success in dark. See docs/accessibility.md. */
+    @media (prefers-contrast: more) {
+      --intent-border: var(--color-primary-strong);
+    }
   }
 }
 
@@ -80,6 +87,9 @@
     --intent-subtle: var(--color-accent-subtle);
     --intent-border: var(--color-accent);
     --intent-fill-max: 100%;
+    @media (prefers-contrast: more) {
+      --intent-border: var(--color-accent-strong);
+    }
   }
 }
 
@@ -92,6 +102,9 @@
     --intent-subtle: var(--color-success-subtle);
     --intent-border: var(--color-success);
     --intent-fill-max: 100%;
+    @media (prefers-contrast: more) {
+      --intent-border: var(--color-success-strong);
+    }
   }
 }
 
@@ -104,6 +117,9 @@
     --intent-subtle: var(--color-warning-subtle);
     --intent-border: var(--color-warning);
     --intent-fill-max: 100%;
+    @media (prefers-contrast: more) {
+      --intent-border: var(--color-warning-strong);
+    }
   }
 }
 
@@ -116,6 +132,9 @@
     --intent-subtle: var(--color-destructive-subtle);
     --intent-border: var(--color-destructive);
     --intent-fill-max: 100%;
+    @media (prefers-contrast: more) {
+      --intent-border: var(--color-destructive-strong);
+    }
   }
 }
 
@@ -128,6 +147,9 @@
     --intent-subtle: var(--color-info-subtle);
     --intent-border: var(--color-info);
     --intent-fill-max: 100%;
+    @media (prefers-contrast: more) {
+      --intent-border: var(--color-info-strong);
+    }
   }
 }
 

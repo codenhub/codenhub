@@ -219,6 +219,12 @@
   --_d-fill: 12%;
   --_d-fg-on-fill: 0%;
   --_d-border: 0%;
+  /* The track is a 12% tint, 1.2:1 against the page. With more contrast asked
+     for it is outlined, so where the bar ends is not left to the tint. An edge
+     class still decides: `--ui-border` is read before this. */
+  @media (prefers-contrast: more) {
+    --_d-border: 100%;
+  }
   --_d-elevation: 0;
   /* `--progress-color`/`--progress-surface`/`--progress-edge` are the Tier 1
      override path an aesthetic or consumer reaches `.progress` through (see

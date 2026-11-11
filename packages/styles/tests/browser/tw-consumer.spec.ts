@@ -480,8 +480,20 @@ const CLEARED_PALETTE_PAGE = `
   <p class="text-brand" id="brand">Brand</p>
 </div>`;
 
+/* A consumer who restates the neutral line in `@theme`. Tailwind merges that
+   into the one theme rule, ahead of every rule this package layers after it. */
+const OWN_BORDER_CSS = (twEntry: string) => `@import "${twEntry}";
+
+@theme {
+  --color-border: rgb(200 30 30);
+}
+`;
+
+const OWN_BORDER_PAGE = `<div class="card" id="card">Card</div>`;
+
 let twCss = "";
 let clearedCss = "";
+let ownBorderCss = "";
 let distCss = "";
 
 test.beforeAll(async () => {
@@ -519,6 +531,19 @@ test.beforeAll(async () => {
       cwd: clearedRoot,
     });
     clearedCss = await readFile(path.join(clearedRoot, "output.css"), "utf8");
+
+    const ownBorderRoot = path.join(temporaryRoot, "own-border");
+
+    await mkdir(ownBorderRoot);
+    await writeFile(path.join(ownBorderRoot, "page.html"), OWN_BORDER_PAGE);
+    await writeFile(
+      path.join(ownBorderRoot, "input.css"),
+      OWN_BORDER_CSS(pathToFileURL(path.join(packageRoot, "tw", "index.css")).href),
+    );
+    await executeFile(process.execPath, [tailwindCliPath, "-i", "input.css", "-o", "output.css", "--minify"], {
+      cwd: ownBorderRoot,
+    });
+    ownBorderCss = await readFile(path.join(ownBorderRoot, "output.css"), "utf8");
   } finally {
     await rm(temporaryRoot, { force: true, recursive: true });
   }
@@ -820,6 +845,19 @@ test.describe("/tw consumer build", () => {
     /* The compiled sheet has `bg-red-500` for the first button, so the three
        it cannot repaint are the ones compared with it. */
     expect((await coloursFor(clearedCss)).slice(1)).toEqual((await coloursFor(distCss)).slice(1));
+  });
+
+  test("keeps a --color-border set in @theme when more contrast is asked for", async ({ page }) => {
+    await page.setContent(
+      `<!doctype html><html data-theme="light"><head><meta charset="utf-8" /><style>${ownBorderCss}</style></head><body>${OWN_BORDER_PAGE}</body></html>`,
+    );
+
+    const line = () => page.evaluate(() => getComputedStyle(document.getElementById("card")!).borderTopColor);
+    const resting = await line();
+
+    await page.emulateMedia({ contrast: "more" });
+
+    expect(await line()).toBe(resting);
   });
 
   test("@apply tooltip-bubble opens in a tooltip host, as the class does", async ({ page }) => {

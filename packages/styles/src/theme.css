@@ -68,8 +68,12 @@
   /* Neutral-400 in light: the heaviest grey that still leaves a field legible
      (2.48:1 against the page). A lighter line lands within a few RGB units of a
      `.card.soft.edged`'s own fill and reads as no boundary. Dark's neutral-700
-     already separates (27 units). */
-  --color-border: light-dark(var(--color-neutral-400), var(--color-neutral-700));
+     already separates (27 units).
+
+     `--_contrast-border` is set only under `prefers-contrast: more`, below.
+     Read here rather than restating the token there, so a consumer who sets
+     `--color-border` replaces both and keeps their colour. */
+  --color-border: var(--_contrast-border, light-dark(var(--color-neutral-400), var(--color-neutral-700)));
   /* Nothing in the package draws a border that darkens on hover; it is a
      public override point for a consumer's own. */
   --color-border-hover: light-dark(var(--color-neutral-600), var(--color-neutral-500));
@@ -308,6 +312,25 @@
     .theme-dark,
     [data-theme="dark"] {
       color-scheme: light;
+    }
+  }
+}
+
+/* More contrast, asked for by the reader. The quiet surface line is 2.48:1
+   against the light page and 1.91:1 against the dark one by choice; here it
+   takes a grey two steps heavier, neutral-600 in light and neutral-400 in
+   dark. The control grey between them is not enough: `box` fades a line by the
+   fill under it, and on a neutral `.badge.soft.edged` neutral-500 lands at
+   2.9:1 against its own tint. One token, so every neutral line that reads it
+   follows: surfaces, dividers, table rules, a neutral button's edge.
+   `--color-border` reads this slot first, so a consumer's own value for the
+   token replaces both and still wins.
+   See docs/accessibility.md. */
+@layer theme {
+  @media (prefers-contrast: more) {
+    :root,
+    :host {
+      --_contrast-border: light-dark(var(--color-neutral-600), var(--color-neutral-400));
     }
   }
 }
