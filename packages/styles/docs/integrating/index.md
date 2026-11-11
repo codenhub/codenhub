@@ -29,7 +29,7 @@ Importing from one place matters for two reasons. Some frameworks only _allow_ g
 | Astro                                                                         | [Astro](./astro.md)                         |
 | Plain HTML, Rails, Laravel, Django, or any app with no Node.js CSS build step | [Without a bundler](./without-a-bundler.md) |
 
-A project with no framework — a plain Vite, webpack, or Parcel build — imports the compiled stylesheet from the project's existing global CSS entry, as [Setup → Import the stylesheet](../setup.md#import-the-stylesheet) shows. Vite and webpack resolve the package name as it is; Parcel and PostCSS with `postcss-import` need the change below.
+A project with no framework — a plain Vite, webpack, or Parcel build — imports the compiled stylesheet from the project's existing global CSS entry, as [Setup → Import the stylesheet](../setup.md#import-the-stylesheet) shows. Vite and webpack resolve the package name as it is; Parcel and PostCSS with `postcss-import` need the change below. The compiled stylesheet holds every class; to ship only the ones your pages use without adopting Tailwind, write a trimmed stylesheet with the package's [`build` command](./without-a-bundler.md#build-only-the-classes-you-use) and import that instead.
 
 ### Bundlers that need a nudge
 

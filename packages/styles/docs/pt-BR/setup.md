@@ -2,7 +2,7 @@
 title: Configuração
 description: Instale o pacote, escolha entre CSS compilado ou código-fonte do Tailwind e renderize a estrutura da página de configurações.
 order: 1
-source: 05ddd7177a0fc61cb5f9aaee9709ecd8b9c8e725
+source: 23de7d85d2257d30e13330c7a2e185ca0c642010
 ---
 
 # Configuração
@@ -44,9 +44,11 @@ A folha de estilos completa inclui o reset, os tokens, os utilitários de layout
 
 Escolha um:
 
-- **CSS compilado** (`@codenhub/styles`, mostrado acima). Use este, a menos que tenha um motivo para não usar. Qualquer bundler que resolva imports de CSS de pacotes funciona, como Vite, webpack ou a CLI do Tailwind.
+- **CSS compilado** (`@codenhub/styles`, mostrado acima). Use este, a menos que tenha um motivo para não usar. Qualquer bundler que resolva imports de CSS de pacotes funciona, como Vite, webpack ou a CLI do Tailwind. Ele traz todas as classes, as suas páginas usando ou não.
 - **Código-fonte do Tailwind CSS v4** (`@codenhub/styles/tw`). Use quando o seu projeto já roda Tailwind v4. O seu build compila o pacote junto com os seus próprios utilitários, então você fica com uma única folha de estilos e a variante `dark:` do Tailwind acompanha o tema do pacote. Exige Tailwind 4.3.2 ou mais recente, abaixo da 5.
-- **Sem bundler.** Referencie o arquivo compilado a partir do `node_modules` ou de uma CDN com uma tag `<link>`. O comando `build` do pacote pode, em vez disso, escrever uma folha de estilos com só as classes que os seus templates usam; veja [Sem bundler](./integrating/without-a-bundler.md#gere-só-as-classes-que-você-usa).
+- **Sem bundler.** Referencie o arquivo compilado a partir do `node_modules` ou de uma CDN com uma tag `<link>`; veja [Sem bundler](./integrating/without-a-bundler.md).
+
+Para entregar só as classes que as suas páginas usam num projeto que não usa Tailwind, com bundler ou sem, o comando `build` do pacote lê os seus arquivos e escreve uma folha de estilos com só essas classes, que você importa ou referencia no lugar da compilada; veja [Gere só as classes que você usa](./integrating/without-a-bundler.md#gere-só-as-classes-que-você-usa).
 
 O seu framework pode precisar de uma configuração própria, como onde fica a folha de estilos global no Next.js ou no Astro. Cada um destes guias cobre uma configuração e depois traz você de volta para cá:
 
@@ -80,6 +82,7 @@ A ordem dos dois imports não importa, porque todo entrypoint declara as [camada
 - **O import está faltando ou não é carregado globalmente.** As classes não fazem nada até a folha de estilos estar na página. Importe-a uma vez numa folha de estilos que toda página carrega, não num componente que pode não ser renderizado.
 - **O nome do pacote não é resolvido.** Um `<link>` simples ou uma ferramenta sem resolução de pacotes CSS não consegue ler `@import "@codenhub/styles"`. Referencie `node_modules/@codenhub/styles/dist/index.css` ou siga [Sem bundler](./integrating/without-a-bundler.md). O Parcel e o `postcss-import` resolvem o nome com uma pequena mudança; veja [Integração → Bundlers que precisam de um empurrão](./integrating/index.md#bundlers-que-precisam-de-um-empurrão).
 - **Um caminho `/tw` é carregado sem Tailwind.** Os arquivos `/tw` são código-fonte do Tailwind: eles contêm `@theme`, `@utility` e `@apply`, que os navegadores não entendem. O seu build do Tailwind precisa compilá-los; veja [Tailwind CSS v4](./integrating/tailwind.md).
+- **Um entrypoint `/tw` específico é importado sem o Tailwind antes.** `@codenhub/styles/tw/button` e os outros arquivos de um componente específico não importam o Tailwind. Importados sozinhos, eles compilam sem erro, mas não produzem nenhuma regra de componente. Coloque `@import "tailwindcss";` antes; veja [Tailwind CSS v4 → Usando um entrypoint específico](./integrating/tailwind.md#usando-um-entrypoint-específico).
 - **Falta uma classe montada em tempo de execução (só com código-fonte do Tailwind).** O Tailwind só gera uma classe utilitária, incluindo os componentes do pacote como `.btn`, quando encontra o nome nos seus arquivos de código. Um nome montado a partir de strings, como `` `btn ${tone}` ``, é invisível para essa varredura. Escreva os nomes de classe completos, ou liste-os como descrito em [Tailwind CSS v4](./integrating/tailwind.md).
 
 ### CSS crítico inline
@@ -90,7 +93,7 @@ Isso não vale para os arquivos `/tw`. Eles são código-fonte do Tailwind, não
 
 ## Todos os entrypoints
 
-Os entrypoints compilados são CSS pronto. Os entrypoints `/tw` publicam o código-fonte não compilado de `tw/`, ao lado de `dist/`, que um build do Tailwind v4 precisa processar. Um entrypoint `/tw` de um componente específico inclui os tokens do tema, então as classes dele funcionam sozinhas.
+Os entrypoints compilados são CSS pronto. Os entrypoints `/tw` publicam o código-fonte não compilado de `tw/`, ao lado de `dist/`, que um build do Tailwind v4 precisa processar. Um entrypoint `/tw` de um componente específico inclui os tokens do tema, então as classes dele não precisam de mais nada do pacote, mas ele precisa de `@import "tailwindcss";` antes; veja [Tailwind CSS v4 → Usando um entrypoint específico](./integrating/tailwind.md#usando-um-entrypoint-específico).
 
 Cada caminho de import resolve para o mesmo arquivo nas condições de export `style`, `import` e `default`. Uma condição `types` vem primeiro e aponta para uma declaração vazia, para que o TypeScript aceite um import de efeito colateral como `import "@codenhub/styles";` com `noUncheckedSideEffectImports`, que o TypeScript 6 ativa por padrão. Um import de CSS é um efeito colateral, então garanta que o seu bundler não o descarte como não usado.
 

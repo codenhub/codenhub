@@ -8,7 +8,7 @@ scope: Design decisions, limits, and failure modes of the `codenhub-styles` buil
 
 ## Purpose
 
-`codenhub-styles build` lets a project without a JavaScript build get the tree-shaken stylesheet that a bundler's Tailwind plugin gives a JavaScript project, without wiring up Tailwind's CLI itself. It is deliberately thin: one `build` command over Tailwind's own CLI, improved as real consumers need more. The source is `src/cli/`, bundled to `dist/cli.js` by `pnpm build:cli`, the last step of `pnpm build`; the tests are `tests/integration/cli.test.ts`. Public usage is in [Without a bundler](../integrating/without-a-bundler.md#build-only-the-classes-you-use).
+`codenhub-styles build` lets a project that does not run Tailwind, with a JavaScript build or without one, get the tree-shaken stylesheet that a bundler's Tailwind plugin gives a Tailwind project, without wiring up Tailwind's CLI itself. It is the package's one route to a trimmed stylesheet outside Tailwind: the package publishes no compiled file per component family, since one family compiled alone still carries the theme and the shared base and is about 31 KB minified for the buttons, where the command writes about 28 KB for a page with one button and less as fewer classes are used. It is deliberately thin: one `build` command over Tailwind's own CLI, improved as real consumers need more. The source is `src/cli/`, bundled to `dist/cli.js` by `pnpm build:cli`, the last step of `pnpm build`; the tests are `tests/integration/cli.test.ts`. Public usage is in [Without a bundler](../integrating/without-a-bundler.md#build-only-the-classes-you-use).
 
 ## One package
 

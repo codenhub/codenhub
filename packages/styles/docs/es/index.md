@@ -1,7 +1,7 @@
 ---
 title: Introducción
 description: Para qué sirve @codenhub/styles, qué cuesta y en qué orden leer esta documentación.
-source: 32c428e21117cdc980f1689f61bf3efa2274fce8
+source: e544db5964b29baaa0fd33c6614ae9b8c344621d
 ---
 
 # @codenhub/styles
@@ -61,7 +61,7 @@ El paquete ofrece las mismas clases de dos formas:
 Conoce estos costes antes de adoptarlo:
 
 - **Los nombres de clase son cortos y no llevan prefijo.** `.primary`, `.success`, `.dark`, `.label`, `.field`, `.section`, `.stack`, `.flat` y `.ghost` son nombres globales. Otra hoja de estilos en la misma página que los use choca con esta. El paquete está en [capas de cascada](./setup.md#capas-de-cascada), así que tu propio CSS sin capa gana en caso de choque, pero las reglas de una librería de terceros para el mismo nombre se siguen aplicando junto a las del paquete.
-- **Las hojas de estilos completas son grandes antes de comprimir.** En el momento de escribir esto, minificada, la hoja de estilos completa ocupa unos 230 KB, `/native` unos 355 KB y `/components` unos 185 KB. Servidas con gzip ocupan unos 18 KB, 25 KB y 14 KB. Los archivos específicos son mucho más pequeños: `/theme` ocupa unos 12 KB (3 KB con gzip) y una estética, de 4 a 14 KB (de 1 a 2 KB con gzip). La mayor parte del tamaño es composición que cada componente repite, y por eso la compresión elimina tanto. Importa el punto de entrada más reducido que cubra una página; consulta [Configuración inicial → Todos los puntos de entrada](./setup.md#todos-los-puntos-de-entrada).
+- **Las hojas de estilos completas son grandes antes de comprimir.** En el momento de escribir esto, minificada, la hoja de estilos completa ocupa unos 198 KB, `/native` unos 295 KB y `/components` unos 159 KB. Servidas con gzip ocupan unos 17 KB, 22 KB y 13 KB. Los archivos específicos son mucho más pequeños: `/theme` ocupa unos 12 KB (3 KB con gzip) y una estética, de 4 a 14 KB (de 1 a 2 KB con gzip). La mayor parte del tamaño es composición que cada componente repite, y por eso la compresión elimina tanto. Un archivo compilado incluye todas las clases, las use una página o no. Para incluir solo las clases que usan tus páginas, compila el paquete en tu propio build: con [Tailwind CSS v4](./integrating/tailwind.md) cuando el proyecto lo usa, o con el [comando `build`](./integrating/without-a-bundler.md#generar-solo-las-clases-que-usas) del paquete en cualquier otro proyecto. Así, una página con un botón recibe unos 28 KB minificados, y unos 6 KB con gzip. Si no, importa el punto de entrada más reducido que cubra una página; consulta [Configuración inicial → Todos los puntos de entrada](./setup.md#todos-los-puntos-de-entrada).
 - **`--color-foreground` es un fondo, no un color de texto.** Es el tono un paso por encima de la página sobre el que se apoya una tarjeta o un panel discreto. El color de texto es `--color-text`.
 - **Cuatro colores de hover son valores fijos.** `--color-success-hover`, `--color-warning-hover`, `--color-destructive-hover` y `--color-info-hover` están precalculados, porque mezclarlos en vivo hacía fallar WebKit. Si sobrescribes solo `--color-success`, su hover conserva el tono anterior, así que reemplaza la familia completa; consulta [Temas → Tokens de color](./usage/theming.md#tokens-de-color).
 - **Solo navegadores modernos.** Chrome 123, Safari 17.5 o Firefox 128 y posteriores. No hay una capa de respaldo para navegadores antiguos.

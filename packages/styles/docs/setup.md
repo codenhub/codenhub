@@ -43,9 +43,11 @@ The complete stylesheet includes the reset, the tokens, the layout and type help
 
 Pick one:
 
-- **Compiled CSS** (`@codenhub/styles`, shown above). Use it unless you have a reason not to. Any bundler that resolves CSS imports from packages works, such as Vite, webpack, or the Tailwind CLI.
+- **Compiled CSS** (`@codenhub/styles`, shown above). Use it unless you have a reason not to. Any bundler that resolves CSS imports from packages works, such as Vite, webpack, or the Tailwind CLI. It ships every class, whether your pages use it or not.
 - **Tailwind CSS v4 source** (`@codenhub/styles/tw`). Use it when your project already runs Tailwind v4. Your build compiles the package with your own utilities, so you get one stylesheet and Tailwind's `dark:` variant matches the package's theme. It needs Tailwind 4.3.2 or newer, below 5.
-- **No bundler.** Link the compiled file from `node_modules` or a CDN with a `<link>` tag. The package's `build` command can instead write a stylesheet with only the classes your templates use; see [Without a bundler](./integrating/without-a-bundler.md#build-only-the-classes-you-use).
+- **No bundler.** Link the compiled file from `node_modules` or a CDN with a `<link>` tag; see [Without a bundler](./integrating/without-a-bundler.md).
+
+To ship only the classes your pages use in a project that does not run Tailwind, with a bundler or without one, the package's `build` command reads your files and writes a stylesheet with only those classes, which you import or link in place of the compiled one; see [Build only the classes you use](./integrating/without-a-bundler.md#build-only-the-classes-you-use).
 
 Your framework may need its own wiring, such as where the global stylesheet goes in Next.js or Astro. Each of these guides covers one setup and then sends you back here:
 
@@ -79,6 +81,7 @@ The order of the two imports does not matter, because every entrypoint declares 
 - **The import is missing or not loaded globally.** The classes do nothing until the stylesheet is on the page. Import it once in a stylesheet every page loads, not in a component that may not render.
 - **The package name does not resolve.** A plain `<link>` or a tool without CSS package resolution cannot read `@import "@codenhub/styles"`. Link `node_modules/@codenhub/styles/dist/index.css`, or follow [Without a bundler](./integrating/without-a-bundler.md). Parcel and `postcss-import` resolve it with a small change; see [Integrating → Bundlers that need a nudge](./integrating/index.md#bundlers-that-need-a-nudge).
 - **A `/tw` path is loaded without Tailwind.** The `/tw` files are Tailwind source: they contain `@theme`, `@utility`, and `@apply`, which browsers do not understand. Your Tailwind build has to compile them; see [Tailwind CSS v4](./integrating/tailwind.md).
+- **A focused `/tw` entrypoint is imported without Tailwind before it.** `@codenhub/styles/tw/button` and the other focused component files do not import Tailwind themselves. Imported alone, they compile without an error but produce no component rules. Put `@import "tailwindcss";` before them; see [Tailwind CSS v4 → Using a focused entrypoint](./integrating/tailwind.md#using-a-focused-entrypoint).
 - **A class built at runtime is missing (Tailwind source only).** Tailwind generates a utility class, the package's components such as `.btn` included, only when it finds the name in your source files. A name assembled from strings, such as `` `btn ${tone}` ``, is invisible to that scan. Write full class names, or list them as described in [Tailwind CSS v4](./integrating/tailwind.md).
 
 ### Inlining critical CSS
@@ -89,7 +92,7 @@ That does not apply to the `/tw` files. They are Tailwind source, not finished C
 
 ## All entrypoints
 
-Compiled entrypoints are finished CSS. `/tw` entrypoints publish the uncompiled source from `tw/`, beside `dist/`, which a Tailwind v4 build must process. A focused `/tw` component entrypoint includes the theme tokens, so its classes work on their own.
+Compiled entrypoints are finished CSS. `/tw` entrypoints publish the uncompiled source from `tw/`, beside `dist/`, which a Tailwind v4 build must process. A focused `/tw` component entrypoint includes the theme tokens, so its classes need nothing else from the package, but it needs `@import "tailwindcss";` before it; see [Tailwind CSS v4 → Using a focused entrypoint](./integrating/tailwind.md#using-a-focused-entrypoint).
 
 Each import path resolves the same file under the `style`, `import`, and `default` export conditions. A `types` condition comes first and names an empty declaration, so TypeScript accepts a side-effect import such as `import "@codenhub/styles";` with `noUncheckedSideEffectImports`, which TypeScript 6 turns on by default. A CSS import is a side effect, so make sure your bundler does not drop it as unused.
 
