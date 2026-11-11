@@ -53,7 +53,7 @@ Los tokens son propiedades personalizadas de CSS. Defínelo en `:root` y toda la
 }
 ```
 
-Cada control y cada superficie dentro de `.admin` toma las esquinas más cerradas y el borde más grueso, sin una clase en ninguno de ellos.
+Cada botón, campo, burbuja de tooltip y superficie dentro de `.admin` toma las esquinas más cerradas y el borde más grueso, sin una clase en ninguno de ellos. Las casillas de verificación, `.kbd` y `.code` mantienen su propia esquina más pequeña, `--radius-small`.
 
 Las tablas están donde se explican los tokens, así que esta página no las repite:
 

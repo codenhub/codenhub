@@ -168,7 +168,7 @@ npx codenhub-styles build --content "templates/**/*.html" --content "shop/templa
 <link rel="stylesheet" href="{% static 'stylekit.css' %}" />
 ```
 
-Write the output into a folder listed in `STATICFILES_DIRS`, here `static/`, so `collectstatic` picks it up.
+Write the output into a folder listed in `STATICFILES_DIRS`, here `static/`, so `collectstatic` picks it up. The settings above list only the package's folder, so add `BASE_DIR / "static"` to that list if your project does not have it yet.
 
 ### Options
 
@@ -185,7 +185,7 @@ The output always holds the theme, its design tokens as CSS custom properties, t
 
 The build does not run your templates. It reads each file your `--content` globs match as plain text, collects every word that could be a class name, and writes the rules for the words that are StyleKit classes or Tailwind utilities. This is how Tailwind CSS reads content too.
 
-A class has to appear in a file as one whole word. `class="btn primary"`, `class: "btn primary"`, and `classes = ["btn", "primary"]` all work. A word that only looks like a class also counts: a comment that says "card" brings in the card rules, which costs a few bytes and nothing else.
+A class has to appear in a file as one whole word. `class="btn primary"`, `class: "btn primary"`, and `classes = ["btn", "primary"]` all work. A word that only looks like a class also counts: a comment that says "card" adds the card's full rules to the stylesheet, which makes the file larger and changes nothing on the page.
 
 A class name your code assembles while rendering never appears whole in any file, so the build cannot find it. In `class="btn <%= @order.priority %>"`, `btn` is found, but the intent is whatever `priority` holds at render time; if that is `destructive`, the button renders without its red. Two ways out:
 
@@ -197,7 +197,7 @@ A class name your code assembles while rendering never appears whole in any file
 - **No watch mode.** It builds once and exits. Run it again after you change a template, from a script, or from a file watcher your framework or editor already has. A class the stylesheet does not have yet leaves its element unstyled until the next build.
 - **No configuration file and no custom CSS.** You cannot add your own `@theme` values, `@utility` definitions, or plugins. To change the look, override the custom properties in a stylesheet of your own loaded after this one, as [Customizing](../usage/customizing.md) describes. When you need Tailwind's own configuration, install Tailwind CSS and import the source entrypoint from your own Tailwind input, as [Tailwind CSS v4](./tailwind.md) shows.
 - **No other commands.** `build` is the only one; `--help` and `--version` are the only flags that run without it.
-- **No choice of Tailwind version.** Each StyleKit version builds with the Tailwind CSS version it was released with.
+- **No Tailwind version of its own.** Each build uses the `@tailwindcss/cli` and `tailwindcss` installed in your project, within the `>=4.3.2 <5` range StyleKit supports, so your lockfile pins them.
 
 ### In a deploy
 

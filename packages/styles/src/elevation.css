@@ -55,12 +55,11 @@
   }
 }
 
-/* The plain-step geometry both rungs multiply, declared once so the two cannot
-   drift. It is the fallback for a page with no aesthetic in scope; an aesthetic
+/* The plain-step geometry both rungs multiply. Each utility restates it so
+   `@apply raised` carries it, so the two copies must stay identical. It is the fallback for a page with no aesthetic in scope; an aesthetic
    that declares its own shadow parts overrides it, and the elevation multiplier
    scales whichever one lands. `.floating` takes its extra depth from the
-   multiplier, not from different parts; each utility states the parts so
-   `@apply raised` carries them. */
+   multiplier, not from different parts. */
 /* The aesthetic's depth as authored, said explicitly. */
 @utility raised {
   @layer families {

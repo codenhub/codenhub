@@ -30,7 +30,7 @@ Importar desde un solo lugar importa por dos motivos. Algunos frameworks solo _p
 | Astro                                                                                           | [Astro](./astro.md)                   |
 | HTML simple, Rails, Laravel, Django o cualquier aplicación sin paso de build de CSS con Node.js | [Sin bundler](./without-a-bundler.md) |
 
-Un proyecto sin framework, un build simple con Vite, webpack o Parcel, no necesita nada más allá de [Configuración inicial → Importar la hoja de estilos](../setup.md#importar-la-hoja-de-estilos): importa la hoja de estilos compilada desde la entrada CSS global que el proyecto ya tiene. Vite y webpack resuelven el nombre del paquete tal cual; Parcel y PostCSS con `postcss-import` necesitan el cambio de abajo.
+Un proyecto sin framework, un build simple con Vite, webpack o Parcel, importa la hoja de estilos compilada desde la entrada CSS global que el proyecto ya tiene, como muestra [Configuración inicial → Importar la hoja de estilos](../setup.md#importar-la-hoja-de-estilos). Vite y webpack resuelven el nombre del paquete tal cual; Parcel y PostCSS con `postcss-import` necesitan el cambio de abajo.
 
 ### Bundlers que necesitan un empujón
 

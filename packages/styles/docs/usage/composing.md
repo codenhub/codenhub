@@ -24,7 +24,7 @@ This is a lookup page. [Building a screen](../concepts.md) introduces intent, pr
 - **Elevation does not pass down.** `.raised` lifts only the element it is on; see [Elevation](#elevation).
 - **Size does not pass down.** `.sm` and `.lg` resize only the button or control they are on, so a `.sm` form does not shrink the fields inside it. See [Buttons → Sizes and shapes](./buttons.md#sizes-and-shapes) and [Forms → Sizes](./forms.md#sizes).
 
-With the Tailwind source entrypoints, every class above is also a Tailwind utility, so variants such as `md:lg` and `dark:solid` work and `@apply btn primary soft sm` gives one class of yours the whole combination. The modifiers documented with each component, such as `.tight` or `.interactive`, are utilities too, so `@apply stack tight` works. See [Tailwind CSS v4 → Build your own components with `@apply`](../integrating/tailwind.md#build-your-own-components-with-apply), and [Presets](./presets.md) for when to reach for it.
+With the Tailwind source entrypoints, every class above except the aesthetic classes is also a Tailwind utility, so variants such as `md:lg` and `dark:solid` work and `@apply btn primary soft sm` gives one class of yours the whole combination. The modifiers documented with each component, such as `.tight` or `.interactive`, are utilities too, so `@apply stack tight` works. The aesthetic classes, such as `.glass`, stay plain CSS, so `@apply glass` and `md:glass` do not work; write the class in the markup. See [Tailwind CSS v4 → Build your own components with `@apply`](../integrating/tailwind.md#build-your-own-components-with-apply), and [Presets](./presets.md) for when to reach for it.
 
 ## Component defaults
 

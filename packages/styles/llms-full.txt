@@ -370,7 +370,7 @@ Importing from one place matters for two reasons. Some frameworks only _allow_ g
 | Astro                                                                         | [Astro](docs/integrating/astro.md)                         |
 | Plain HTML, Rails, Laravel, Django, or any app with no Node.js CSS build step | [Without a bundler](docs/integrating/without-a-bundler.md) |
 
-A project with no framework — a plain Vite, webpack, or Parcel build — needs nothing beyond [Setup → Import the stylesheet](docs/setup.md#import-the-stylesheet): import the compiled stylesheet from the project's existing global CSS entry. Vite and webpack resolve the package name as it is; Parcel and PostCSS with `postcss-import` need the change below.
+A project with no framework — a plain Vite, webpack, or Parcel build — imports the compiled stylesheet from the project's existing global CSS entry, as [Setup → Import the stylesheet](docs/setup.md#import-the-stylesheet) shows. Vite and webpack resolve the package name as it is; Parcel and PostCSS with `postcss-import` need the change below.
 
 ### Bundlers that need a nudge
 
@@ -886,7 +886,7 @@ npx codenhub-styles build --content "templates/**/*.html" --content "shop/templa
 <link rel="stylesheet" href="{% static 'stylekit.css' %}" />
 ```
 
-Write the output into a folder listed in `STATICFILES_DIRS`, here `static/`, so `collectstatic` picks it up.
+Write the output into a folder listed in `STATICFILES_DIRS`, here `static/`, so `collectstatic` picks it up. The settings above list only the package's folder, so add `BASE_DIR / "static"` to that list if your project does not have it yet.
 
 ### Options
 
@@ -903,7 +903,7 @@ The output always holds the theme, its design tokens as CSS custom properties, t
 
 The build does not run your templates. It reads each file your `--content` globs match as plain text, collects every word that could be a class name, and writes the rules for the words that are StyleKit classes or Tailwind utilities. This is how Tailwind CSS reads content too.
 
-A class has to appear in a file as one whole word. `class="btn primary"`, `class: "btn primary"`, and `classes = ["btn", "primary"]` all work. A word that only looks like a class also counts: a comment that says "card" brings in the card rules, which costs a few bytes and nothing else.
+A class has to appear in a file as one whole word. `class="btn primary"`, `class: "btn primary"`, and `classes = ["btn", "primary"]` all work. A word that only looks like a class also counts: a comment that says "card" adds the card's full rules to the stylesheet, which makes the file larger and changes nothing on the page.
 
 A class name your code assembles while rendering never appears whole in any file, so the build cannot find it. In `class="btn <%= @order.priority %>"`, `btn` is found, but the intent is whatever `priority` holds at render time; if that is `destructive`, the button renders without its red. Two ways out:
 
@@ -915,7 +915,7 @@ A class name your code assembles while rendering never appears whole in any file
 - **No watch mode.** It builds once and exits. Run it again after you change a template, from a script, or from a file watcher your framework or editor already has. A class the stylesheet does not have yet leaves its element unstyled until the next build.
 - **No configuration file and no custom CSS.** You cannot add your own `@theme` values, `@utility` definitions, or plugins. To change the look, override the custom properties in a stylesheet of your own loaded after this one, as [Customizing](docs/usage/customizing.md) describes. When you need Tailwind's own configuration, install Tailwind CSS and import the source entrypoint from your own Tailwind input, as [Tailwind CSS v4](docs/integrating/tailwind.md) shows.
 - **No other commands.** `build` is the only one; `--help` and `--version` are the only flags that run without it.
-- **No choice of Tailwind version.** Each StyleKit version builds with the Tailwind CSS version it was released with.
+- **No Tailwind version of its own.** Each build uses the `@tailwindcss/cli` and `tailwindcss` installed in your project, within the `>=4.3.2 <5` range StyleKit supports, so your lockfile pins them.
 
 ### In a deploy
 
@@ -2534,7 +2534,7 @@ This is a lookup page. [Building a screen](docs/concepts.md) introduces intent, 
 - **Elevation does not pass down.** `.raised` lifts only the element it is on; see [Elevation](#elevation).
 - **Size does not pass down.** `.sm` and `.lg` resize only the button or control they are on, so a `.sm` form does not shrink the fields inside it. See [Buttons → Sizes and shapes](docs/usage/buttons.md#sizes-and-shapes) and [Forms → Sizes](docs/usage/forms.md#sizes).
 
-With the Tailwind source entrypoints, every class above is also a Tailwind utility, so variants such as `md:lg` and `dark:solid` work and `@apply btn primary soft sm` gives one class of yours the whole combination. The modifiers documented with each component, such as `.tight` or `.interactive`, are utilities too, so `@apply stack tight` works. See [Tailwind CSS v4 → Build your own components with `@apply`](docs/integrating/tailwind.md#build-your-own-components-with-apply), and [Presets](docs/usage/presets.md) for when to reach for it.
+With the Tailwind source entrypoints, every class above except the aesthetic classes is also a Tailwind utility, so variants such as `md:lg` and `dark:solid` work and `@apply btn primary soft sm` gives one class of yours the whole combination. The modifiers documented with each component, such as `.tight` or `.interactive`, are utilities too, so `@apply stack tight` works. The aesthetic classes, such as `.glass`, stay plain CSS, so `@apply glass` and `md:glass` do not work; write the class in the markup. See [Tailwind CSS v4 → Build your own components with `@apply`](docs/integrating/tailwind.md#build-your-own-components-with-apply), and [Presets](docs/usage/presets.md) for when to reach for it.
 
 ## Component defaults
 
@@ -3123,7 +3123,7 @@ The settings screen lists API keys in a table:
 
 A table's rows take the table's intent, so `.data-table.success` colors its header and lines green. A row with its own intent class uses that instead, as the revoked key's `<tr class="destructive">` does. `<tr class="neutral">` sets a row back to neutral inside a colored table. On a `.solid` table, a row with its own intent keeps the table's text color so it stays readable on the table's fill, and shows its intent through its row line and hover. This is the one place an intent passes down, because rows are parts of the table, not separate components.
 
-Only the seven built-in intent classes recolor a body row. A row with an intent you defined yourself, such as `<tr class="beta">`, looks like the rest of the table: its text, line, and hover come from the table's intent. To mark such a row, write a built-in intent class on the row and retheme that intent's color family on the row, as [Theming → Your own intent](docs/usage/theming.md#your-own-intent) describes, or paint the row with your own utilities.
+Only the six built-in intents and `.neutral` recolor a body row. A row with an intent you defined yourself, such as `<tr class="beta">`, looks like the rest of the table: its text, line, and hover come from the table's intent. To mark such a row, write a built-in intent class on the row and retheme that intent's color family on the row, as [Theming → Your own intent](docs/usage/theming.md#your-own-intent) describes, or paint the row with your own utilities.
 
 ### Table rules
 
@@ -3241,7 +3241,7 @@ Tokens are CSS custom properties. Set one on `:root` and the whole page follows;
 }
 ```
 
-Every control and surface inside `.admin` takes the tighter corners and the heavier border, with no class on any of them.
+Every button, field, tooltip bubble, and surface inside `.admin` takes the tighter corners and the heavier border, with no class on any of them. Checkboxes, `.kbd`, and `.code` keep their own smaller corner, `--radius-small`.
 
 The tables live where the tokens are explained, so this page does not repeat them:
 
@@ -3464,7 +3464,7 @@ On `/tw` every intent, presentation, elevation, corner, size, and modifier class
 
 ## Changed
 
-- **Breaking: the `/tw` source moved from `dist/tw/` to `tw/`.** Imports through the package's exports, such as `@import "@codenhub/styles/tw"`, are unchanged. A path that reaches into `node_modules/@codenhub/styles/dist/tw/` breaks; point it at `tw/`. `dist/` now holds only finished CSS, so Django's `ManifestStaticFilesStorage` no longer fails `collectstatic` on it.
+- **Breaking: the `/tw` source moved from `dist/tw/` to `tw/`.** Imports through the package's exports, such as `@import "@codenhub/styles/tw"`, are unchanged. A path that reaches into `node_modules/@codenhub/styles/dist/tw/` breaks; point it at `tw/`. `dist/` now holds only finished CSS, plus an empty `index.d.ts` for TypeScript, so Django's `ManifestStaticFilesStorage` no longer fails `collectstatic` on it.
 - **Breaking: a `/tw` build emits only the classes your files name.** The `/tw` copy no longer lists every package class for Tailwind to generate, so a page using one button compiles to about 28 KB minified where it compiled to the whole 416 KB stylesheet. The intent, presentation, elevation, corner, and size classes, and the modifiers, are now generated only when they are found too, where the intent, presentation, and elevation classes used to be emitted always. A class name built at runtime, such as `` `btn ${tone}` ``, or one that comes from a CMS, has no styling until you write it out where Tailwind scans or list it with `@source inline("btn primary destructive soft")`. See [Tailwind CSS v4 → Troubleshooting](docs/integrating/tailwind.md#troubleshooting). The aesthetic classes are still always emitted.
 - **Breaking: the class families moved to a sublayer of `utilities`.** The intent, presentation, edge, elevation, corner, and size classes sat in the `components` layer; they now sit in `utilities.families`, which loses to every other rule in `utilities`. Your utilities and unlayered CSS still beat them. A rule of yours in the `components` layer, or in a layer of your own declared before `utilities`, no longer does: `@layer components { .my-card { --ui-fill: 50%; } }` now loses to `.solid` on the same element. Move such a rule into a utility, into unlayered CSS, or into a layer declared after `utilities`. See [Setup → Cascade layers](docs/setup.md#cascade-layers).
 - **Your utility beats a modifier and a component's inner defaults.** A modifier or size used to be a 0-2-0 rule nested in its component, so it beat a utility on the same element. Now a modifier only raises a flag its component reads at the weight of its default, so `gap-2` on a `.stack.tight`, `px-8` on a `.btn.sm`, `text-sm` on a `.label`, and `p-0 text-center` on a `.data-table` cell all apply. If you wrote such a utility and relied on the modifier winning, remove the utility.

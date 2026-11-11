@@ -58,8 +58,8 @@ Each `--content` glob is checked with `fs.glob` before Tailwind runs and has to 
 
 - **Classes are found as words.** The build reads content as text, as Tailwind does, so a class assembled at render time, such as `class="btn <%= kind %>"`, is never found. The public page documents the two workarounds: write class names whole in a file the build reads, or list them in a safelist file passed as another `--content`.
 - **No watch mode, configuration file, custom CSS input, or other commands.** They are left out until a consumer needs them. A consumer who needs Tailwind configuration has outgrown the command and can import `@codenhub/styles/tw` from their own Tailwind input.
-- **No choice of Tailwind version.** Each StyleKit version builds with the Tailwind version its dependency range resolves to.
-- **Node.js 24 or newer.** The command imports `glob` from `node:fs/promises`. On a Node.js release without it, the bundle fails to load with Node's own `SyntaxError` about the missing export, before the command can print anything of its own. The package declares no `engines` field, because the requirement is the command's alone and the stylesheets have none.
+- **No Tailwind version of its own.** Each build uses the `@tailwindcss/cli` and `tailwindcss` the consumer installed, within the `>=4.3.2 <5` peer range; their lockfile pins them.
+- **Node.js 24 or newer.** The command uses `glob` from `node:fs/promises`, and checks the version itself before using it, as [Node.js version](#nodejs-version) describes. The package declares `engines.node` as `>=24`; the stylesheets themselves need no Node.js.
 
 ## Failure modes
 

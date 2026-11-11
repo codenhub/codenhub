@@ -53,7 +53,7 @@ Tokens são propriedades personalizadas de CSS. Defina um no `:root` e a página
 }
 ```
 
-Todo controle e toda superfície dentro de `.admin` recebe os cantos mais fechados e a borda mais grossa, sem classe em nenhum deles.
+Todo botão, campo, balão de tooltip e superfície dentro de `.admin` recebe os cantos mais fechados e a borda mais grossa, sem classe em nenhum deles. Checkboxes, `.kbd` e `.code` mantêm o próprio canto menor, `--radius-small`.
 
 As tabelas ficam onde os tokens são explicados, então esta página não as repete:
 

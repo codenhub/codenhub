@@ -169,7 +169,7 @@ npx codenhub-styles build --content "templates/**/*.html" --content "shop/templa
 <link rel="stylesheet" href="{% static 'stylekit.css' %}" />
 ```
 
-Escribe la salida en una carpeta incluida en `STATICFILES_DIRS`, aquí `static/`, para que `collectstatic` la recoja.
+Escribe la salida en una carpeta incluida en `STATICFILES_DIRS`, aquí `static/`, para que `collectstatic` la recoja. La configuración de arriba solo incluye la carpeta del paquete, así que añade `BASE_DIR / "static"` a esa lista si tu proyecto aún no la tiene.
 
 ### Opciones
 
@@ -186,7 +186,7 @@ La salida siempre contiene el tema, sus design tokens como propiedades personali
 
 El build no ejecuta tus plantillas. Lee como texto simple cada archivo que coincide con tus globs de `--content`, recoge cada palabra que podría ser un nombre de clase y escribe las reglas de las palabras que son clases de StyleKit o utilidades de Tailwind. Tailwind CSS también lee el contenido así.
 
-Una clase tiene que aparecer en un archivo como una palabra completa. `class="btn primary"`, `class: "btn primary"` y `classes = ["btn", "primary"]` funcionan. Una palabra que solo parece una clase también cuenta: un comentario que dice "card" trae las reglas de la tarjeta, lo que cuesta unos pocos bytes y nada más.
+Una clase tiene que aparecer en un archivo como una palabra completa. `class="btn primary"`, `class: "btn primary"` y `classes = ["btn", "primary"]` funcionan. Una palabra que solo parece una clase también cuenta: un comentario que dice "card" añade todas las reglas de la tarjeta a la hoja de estilos, lo que agranda el archivo y no cambia nada en la página.
 
 Un nombre de clase que tu código arma al renderizar nunca aparece completo en ningún archivo, así que el build no puede encontrarlo. En `class="btn <%= @order.priority %>"`, `btn` se encuentra, pero la intención es lo que contenga `priority` al renderizar; si es `destructive`, el botón se renderiza sin su rojo. Hay dos salidas:
 
@@ -198,7 +198,7 @@ Un nombre de clase que tu código arma al renderizar nunca aparece completo en n
 - **No tiene modo watch.** Genera una vez y termina. Vuelve a ejecutarlo después de cambiar una plantilla, desde un script o desde un observador de archivos que ya tengan tu framework o tu editor. Una clase que la hoja de estilos todavía no tiene deja su elemento sin estilo hasta el siguiente build.
 - **No tiene archivo de configuración ni CSS propio.** No puedes añadir tus propios valores de `@theme`, definiciones de `@utility` ni plugins. Para cambiar el aspecto, sobrescribe las propiedades personalizadas en una hoja de estilos tuya cargada después de esta, como describe [Personalización](../usage/customizing.md). Cuando necesites la configuración propia de Tailwind, instala Tailwind CSS e importa el punto de entrada de código fuente desde tu propia entrada de Tailwind, como muestra [Tailwind CSS v4](./tailwind.md).
 - **No tiene otros comandos.** `build` es el único; `--help` y `--version` son los únicos flags que funcionan sin él.
-- **No permite elegir la versión de Tailwind.** Cada versión de StyleKit genera con la versión de Tailwind CSS con la que se publicó.
+- **No trae una versión de Tailwind propia.** Cada build usa los `@tailwindcss/cli` y `tailwindcss` instalados en tu proyecto, dentro del rango `>=4.3.2 <5` que StyleKit admite, así que tu lockfile los fija.
 
 ### En un despliegue
 

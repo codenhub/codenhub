@@ -15,7 +15,9 @@
    `.solid.edged` and `.solid.edgeless` render one box without either class
    deciding the other's question.
 
-   Presentation declares only unitless numbers and percentages. A custom
+   Presentation declares only unitless numbers and percentages, and the
+   `--_holds-ink` toggle, whose values are a keyword and an empty value: neither
+   carries an intent either, so it inherits as safely. A custom
    property's value is resolved on the element that declares it, so anything
    referencing an intent token here would resolve against the container's intent
    and inherit down already-resolved. Numbers carry no intent, so they inherit

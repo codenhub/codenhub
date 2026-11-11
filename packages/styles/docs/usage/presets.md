@@ -52,7 +52,7 @@ Tokens are CSS custom properties. Set one on `:root` and the whole page follows;
 }
 ```
 
-Every control and surface inside `.admin` takes the tighter corners and the heavier border, with no class on any of them.
+Every button, field, tooltip bubble, and surface inside `.admin` takes the tighter corners and the heavier border, with no class on any of them. Checkboxes, `.kbd`, and `.code` keep their own smaller corner, `--radius-small`.
 
 The tables live where the tokens are explained, so this page does not repeat them:
 
