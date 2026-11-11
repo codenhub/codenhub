@@ -2,7 +2,7 @@
 title: Sin bundler
 description: Enlazar las hojas de estilos compiladas desde HTML simple, Rails, Laravel, Django o cualquier aplicación renderizada en el servidor, y el build por línea de comandos.
 order: 6
-source: baca7387847262f59509fb2038c3fab48e30aba9
+source: 6289ea781c99dcda5c027a72fede9e2f1cab8414
 ---
 
 # Sin bundler
@@ -114,6 +114,8 @@ Una aplicación Laravel usa Vite por defecto, así que tiene un bundler: importa
 
 El paquete trae un comando, `codenhub-styles`, que lo compila por ti. Lee tus plantillas en busca de nombres de clase y escribe una sola hoja de estilos minificada con solo las clases de StyleKit y las utilidades de Tailwind que usan. Una página que usa un botón recibe una pequeña fracción de la hoja de estilos completa; el tamaño exacto depende de las clases que uses, porque cada componente trae las reglas compartidas de las que depende.
 
+El comando también sirve con un bundler. Un proyecto cuyo bundler no ejecuta Tailwind, como un build simple con Vite o webpack, puede escribir la hoja de estilos entre sus fuentes, `--output src/stylekit.css`, e importar ese archivo donde importaría `@codenhub/styles`. Un proyecto que usa Tailwind CSS v4 obtiene la misma reducción con el [punto de entrada de código fuente](./tailwind.md) y no necesita el comando.
+
 Necesita Node.js 24 o posterior en la máquina que genera el CSS, sea tu portátil, un job de CI o un paso del despliegue. Compila con Tailwind CSS, que el paquete no instala por ti, así que un proyecto que solo enlaza la hoja de estilos compilada nunca lo descarga. Instala los tres paquetes como dependencias de desarrollo desde la raíz de tu proyecto; npm crea un `package.json` si no tienes uno, y no necesitas configuración de Tailwind:
 
 ```sh
@@ -129,7 +131,7 @@ npx codenhub-styles build --content "app/views/**/*.erb" --output public/styleki
 Si todo va bien, el comando imprime una línea: la ruta absoluta que escribió y el tamaño del archivo en bytes:
 
 ```text
-/home/you/shop/public/stylekit.css 27102 bytes
+/home/you/shop/public/stylekit.css 25782 bytes
 ```
 
 Enlaza ese archivo desde tu layout como cualquier hoja de estilos estática.

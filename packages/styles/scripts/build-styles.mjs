@@ -1,17 +1,14 @@
 /**
- * Compiles stylesheet entrypoints into `dist/` concurrently using the Tailwind CLI.
- *
- * Running each invocation sequentially in `package.json` spawned 12 individual CLI
- * processes in a chain, which added significant overhead. This script compiles all
- * targets (or the selected subset) concurrently with Promise.all.
+ * Compiles stylesheet entrypoints into `dist/` concurrently with Tailwind's
+ * compiler, in one process.
  */
-import { execFile } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
 
-const executeFile = promisify(execFile);
+import { compile, optimize, Polyfills } from "@tailwindcss/node";
+import { Scanner } from "@tailwindcss/oxide";
+
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 
 const STYLES_JOBS = [
@@ -47,19 +44,39 @@ mkdirSync(path.join(packageRoot, "dist", "aesthetics"), { recursive: true });
    declares nothing: the import is for its side effect alone. */
 writeFileSync(path.join(packageRoot, "dist", "index.d.ts"), "export {};\n");
 
-const binName = process.platform === "win32" ? "tailwindcss.CMD" : "tailwindcss";
-const binPath = path.join(packageRoot, "node_modules", ".bin", binName);
+/* Tailwind's polyfills are off. From 4.3.3 Tailwind follows every `color-mix()`
+   that reads a `var()` with a fallback for browsers without `color-mix()`, and
+   every registered property with a fallback for browsers without `@property`.
+   Every browser this package supports has both (Chrome 123, Safari 17.5,
+   Firefox 128), so the fallbacks never apply, and they were 290 `@supports`
+   blocks in `dist/index.css`: 17% of it minified, 16% gzipped. Tailwind's CLI
+   cannot turn them off, so this calls the compiler the CLI wraps, with the
+   CLI's own source detection and minification, and changes nothing else:
+   with `Polyfills.All` the output is byte-identical to the CLI's.
+   `tests/integration/size.test.ts` fails if a fallback comes back. */
+const POLYFILLS = Polyfills.None;
 
 async function compileJob({ input, output }) {
-  if (process.platform === "win32") {
-    const commandLine = `""${binPath}" -i ${input} -o ${output} --minify"`;
-    await executeFile(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", commandLine], {
-      cwd: packageRoot,
-      windowsVerbatimArguments: true,
-    });
-  } else {
-    await executeFile(binPath, ["-i", input, "-o", output, "--minify"], { cwd: packageRoot });
-  }
+  const inputPath = path.resolve(packageRoot, input);
+  const compiler = await compile(readFileSync(inputPath, "utf8"), {
+    base: path.dirname(inputPath),
+    from: inputPath,
+    polyfills: POLYFILLS,
+    onDependency() {},
+  });
+  const autoSource = { base: packageRoot, pattern: "**/*", negated: false };
+  const rootSources =
+    compiler.root === "none" ? [] : compiler.root === null ? [autoSource] : [{ ...compiler.root, negated: false }];
+  const scanner = new Scanner({
+    sources: [
+      ...rootSources,
+      ...compiler.sources,
+      { base: path.dirname(inputPath), pattern: path.basename(inputPath), negated: false },
+    ],
+  });
+  const { code } = optimize(compiler.build(scanner.scan()), { file: input, minify: true });
+
+  writeFileSync(path.resolve(packageRoot, output), code);
 }
 
 await Promise.all(jobs.map(compileJob));

@@ -3,7 +3,7 @@ title: Visão geral
 description: Como a folha de estilos é carregada no build de um framework e qual guia seguir.
 group: Integração
 order: 2
-source: df31bf142a4a12567b699232f77ea21d5ee52ebe
+source: 2028acef66a8ab3659cef35e08ecc0db1de7bdeb
 ---
 
 # Integração
@@ -30,7 +30,7 @@ Importar de um único lugar importa por dois motivos. Alguns frameworks só _per
 | Astro                                                                                         | [Astro](./astro.md)                   |
 | HTML puro, Rails, Laravel, Django ou qualquer aplicação sem etapa de build de CSS com Node.js | [Sem bundler](./without-a-bundler.md) |
 
-Um projeto sem framework — um build simples com Vite, webpack ou Parcel — importa a folha de estilos compilada a partir do arquivo CSS global que o projeto já tem, como mostra [Configuração → Importe a folha de estilos](../setup.md#importe-a-folha-de-estilos). Vite e webpack resolvem o nome do pacote como ele é; Parcel e PostCSS com `postcss-import` precisam da mudança abaixo.
+Um projeto sem framework — um build simples com Vite, webpack ou Parcel — importa a folha de estilos compilada a partir do arquivo CSS global que o projeto já tem, como mostra [Configuração → Importe a folha de estilos](../setup.md#importe-a-folha-de-estilos). Vite e webpack resolvem o nome do pacote como ele é; Parcel e PostCSS com `postcss-import` precisam da mudança abaixo. A folha de estilos compilada traz todas as classes; para entregar só as que as suas páginas usam sem adotar o Tailwind, escreva uma folha de estilos reduzida com o [comando `build`](./without-a-bundler.md#gere-só-as-classes-que-você-usa) do pacote e importe-a no lugar.
 
 ### Bundlers que precisam de um empurrão
 

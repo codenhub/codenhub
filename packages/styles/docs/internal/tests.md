@@ -64,8 +64,10 @@ packages/styles/
       theme.spec.ts
       typography.spec.ts
     integration/
+      cli.test.ts
       exports.test.ts
       registry.test.ts
+      size.test.ts
 ```
 
 ## `playground/`
@@ -112,6 +114,28 @@ Screenshots would add operating-system, font, antialiasing, and media-preference
 ## `tests/integration/`
 
 Node-based Vitest checks validate every published target. Every compiled export contains representative public output, and every Tailwind entrypoint is processed independently against representative public selectors. Registry tests validate its schema and internal consistency, hold component defaults and class claims against the stylesheets, and enforce material and intent invariants.
+
+`size.test.ts` holds what a consumer downloads under ceilings, in minified bytes, each about 3% above the measurement it was set from. Gzipped lengths are recorded here but never compared, because zlib output can differ between machines. A change that grows past a ceiling raises it in the same change and says why. Measured on 2026-11-11 with Tailwind 4.3.4:
+
+| Measured                                   | Minified | Gzip   | Ceiling |
+| ------------------------------------------ | -------- | ------ | ------- |
+| `dist/index.css`                           | 197,806  | 16,567 | 204,000 |
+| `dist/components.css`                      | 158,574  | 12,622 | 163,500 |
+| `dist/native.css`                          | 295,170  | 22,123 | 304,000 |
+| `dist/theme.css`                           | 11,828   | 2,471  | 12,200  |
+| `dist/palette.css`                         | 25,967   | 3,103  | 26,800  |
+| `dist/aesthetics/index.css`                | 42,463   | 4,993  | 43,800  |
+| `dist/aesthetics/chunky-tile.css`          | 4,511    | 1,206  | 4,700   |
+| `dist/aesthetics/cyber.css`                | 4,343    | 1,227  | 4,500   |
+| `dist/aesthetics/glass.css`                | 11,013   | 2,169  | 11,400  |
+| `dist/aesthetics/neobrutalism.css`         | 4,188    | 1,182  | 4,350   |
+| `dist/aesthetics/pixel.css`                | 4,794    | 1,134  | 4,950   |
+| `dist/aesthetics/sketch.css`               | 13,819   | 2,063  | 14,250  |
+| `/tw/button`, a page with `btn primary`    | 20,450   |        | 21,000  |
+| `/tw/button`, a page with no package class | 8,912    |        | 9,200   |
+| `/tw`, a page with `btn primary`           | 24,115   |        | 25,000  |
+
+The `/tw` rows are the package's cost over Tailwind alone on the same page, compiled with Tailwind's polyfills on as a consumer's CLI or Vite build compiles it, so a Tailwind release that changes Preflight moves no ceiling. The compiled files are also checked for Tailwind's fallbacks for browsers without `color-mix()` or `@property`, which `scripts/build-styles.mjs` turns off, and a page that names no package class is checked for having no component rule.
 
 ## Scripts
 

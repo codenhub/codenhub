@@ -12,9 +12,12 @@ async function readOutput(path: string): Promise<string> {
 }
 
 describe("documentation chrome", () => {
+  /* A full site build. It took 80 s alone on a Windows 11 workstation and over
+     120 s on a merge-queue runner while other packages' tests ran beside it
+     (#526), so the limit leaves room for a slower machine, not for a hang. */
   beforeAll(async () => {
     await build({ logLevel: "silent", root: docsRoot });
-  }, 120_000);
+  }, 300_000);
 
   it("includes the package label in package document browser titles", async () => {
     const html = await readOutput("error/index.html");

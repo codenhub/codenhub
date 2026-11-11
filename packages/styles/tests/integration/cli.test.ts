@@ -14,7 +14,6 @@ vi.setConfig({ testTimeout: 30_000 });
 
 let root: string;
 let project: string;
-let scratch: string;
 let stdout: string[];
 let stderr: string[];
 let missing: string[];
@@ -34,9 +33,7 @@ function resolvePackage(specifier: string): string {
 beforeEach(async () => {
   root = await mkdtemp(path.join(tmpdir(), "codenhub-styles-cli-test-"));
   project = path.join(root, "project");
-  scratch = path.join(root, "scratch");
   await mkdir(path.join(project, "app", "views"), { recursive: true });
-  await mkdir(scratch);
   await writeFile(path.join(project, "app", "views", "show.html.erb"), '<button class="btn primary">Save</button>\n');
   stdout = [];
   stderr = [];
@@ -51,7 +48,6 @@ afterEach(async () => {
 function build(...argv: string[]): Promise<number> {
   return run(argv, {
     cwd: project,
-    tmpdir: scratch,
     nodeVersion,
     resolvePackage,
     stdout: (line) => stdout.push(line),
@@ -130,6 +126,17 @@ describe("build", () => {
     expect(await readOutput()).not.toMatch(ruleFor("glass"));
   });
 
+  /* Every browser StyleKit supports has `color-mix()` and `@property`, so
+     Tailwind's fallbacks for older ones would be bytes that never apply. */
+  it("writes no fallback for a browser below the supported ones", async () => {
+    await build("build", "-c", "app/views/**/*.erb", "-o", "app.css");
+
+    const css = await readOutput();
+
+    expect(css).not.toContain("color-mix(in lab, red, red)");
+    expect(css).not.toContain("@layer properties");
+  });
+
   it("minifies by default", async () => {
     await build("build", "-c", "app/views/**/*.erb", "-o", "app.css");
 
@@ -146,12 +153,6 @@ describe("build", () => {
     expect(await build("build", "-c", "app/views/**/*.erb", "-o", "public/assets/app.css")).toBe(0);
 
     expect(await readOutput("public/assets/app.css")).toMatch(ruleFor("btn"));
-  });
-
-  it("removes its temporary directory after a build", async () => {
-    await build("build", "-c", "app/views/**/*.erb", "-o", "app.css");
-
-    expect(await readdir(scratch)).toEqual([]);
   });
 
   it("does not scan the directory it runs in beyond --content", async () => {
@@ -244,7 +245,6 @@ describe("failures", () => {
     await build("build", "-c", "app/views/**/*.erb", "-o", "out/app.css");
 
     expect(await readdir(project)).toEqual(["app"]);
-    expect(await readdir(scratch)).toEqual([]);
   });
 
   it("passes on a resolution failure that is not a missing package", async () => {
@@ -255,7 +255,6 @@ describe("failures", () => {
     expect(
       await run(["build", "-c", "app/views/**/*.erb", "-o", "app.css"], {
         cwd: project,
-        tmpdir: scratch,
         nodeVersion,
         resolvePackage: broken,
         stdout: (line) => stdout.push(line),
@@ -277,14 +276,6 @@ describe("failures", () => {
     await mkdir(path.join(project, "app.css"));
 
     expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(/Tailwind.*EISDIR/);
-  });
-
-  it("removes its temporary directory after Tailwind fails", async () => {
-    await mkdir(path.join(project, "app.css"));
-
-    await build("build", "-c", "app/views/**/*.erb", "-o", "app.css");
-
-    expect(await readdir(scratch)).toEqual([]);
   });
 });
 
