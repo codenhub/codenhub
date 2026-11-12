@@ -569,6 +569,14 @@
     padding-inline: 0.75rem;
     background-image: none;
   }
+
+  /* Forced colours, carried for an applied drop-down: the platform's arrow, for
+     the reason the unlayered copy at the foot of this file gives. */
+  @media (forced-colors: active) {
+    &:not([multiple], [size]:not([size="1"])) {
+      appearance: auto;
+    }
+  }
 }
 
 /* A wrapper that owns the field box so a control can carry adornments beside it

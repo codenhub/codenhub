@@ -264,6 +264,14 @@ const CONSUMER_CSS = (twEntry: string, glassEntry: string) => `@import "${twEntr
   @apply switch;
 }
 
+.my-progress {
+  @apply progress;
+}
+
+.my-select {
+  @apply select;
+}
+
 .my-group {
   @apply input-group;
 }
@@ -819,6 +827,51 @@ test.describe("/tw consumer build", () => {
     const compiled = await paintFor("dist");
 
     expect(compiled[0], "the compiled checkbox opts out of forced colours").toMatch(/^none /);
+    expect(await paintFor("tw")).toEqual(compiled);
+  });
+
+  /* `.progress` and `.select` kept their forced-colours rules outside the
+     utilities, so an applied bar's value was repainted as Canvas on a Canvas
+     track, and an applied drop-down lost its arrow with every gradient. */
+  test("draws an applied progress bar and drop-down as the classes do in forced colours", async ({ page }) => {
+    await page.emulateMedia({ forcedColors: "active" });
+    test.skip(
+      !(await page.evaluate(
+        () => matchMedia("(forced-colors: active)").matches && CSS.supports("forced-color-adjust", "none"),
+      )),
+      "engine cannot emulate forced colors",
+    );
+
+    const paintFor = async (side: Side) => {
+      const name = (component: string) => (side === "tw" ? `my-${component}` : component);
+
+      await page.setContent(
+        `<!doctype html><html><head><meta charset="utf-8" /><style>${side === "tw" ? twCss : distCss}</style></head><body>` +
+          `<div class="${name("progress")}" id="progress" style="--progress-value:40%"></div>` +
+          `<select class="${name("select")}" id="select"><option>One</option></select>` +
+          "</body></html>",
+      );
+
+      return page.evaluate(() => {
+        const progress = getComputedStyle(document.getElementById("progress")!);
+        const select = getComputedStyle(document.getElementById("select")!);
+
+        return {
+          progress: [
+            progress.forcedColorAdjust,
+            progress.backgroundColor,
+            progress.borderTopColor,
+            getComputedStyle(document.getElementById("progress")!, "::after").backgroundColor,
+          ].join(" | "),
+          select: select.appearance,
+        };
+      });
+    };
+
+    const compiled = await paintFor("dist");
+
+    expect(compiled.progress, "the compiled bar opts out of forced colours").toMatch(/^none /);
+    expect(compiled.select, "the compiled drop-down keeps the platform's arrow").toBe("auto");
     expect(await paintFor("tw")).toEqual(compiled);
   });
 

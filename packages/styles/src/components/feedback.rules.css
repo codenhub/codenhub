@@ -306,6 +306,23 @@
       animation: none;
     }
   }
+
+  /* Forced colours, carried for an applied bar, as the toggles carry theirs.
+     The class also keeps the unlayered copy below, which beats every layered
+     rule; see there for why each part is named. */
+  @media (forced-colors: active) {
+    forced-color-adjust: none;
+    background-color: Canvas;
+    border-color: CanvasText;
+
+    &::after {
+      background-color: CanvasText;
+    }
+
+    &::before {
+      display: none;
+    }
+  }
 }
 
 /* Forced colours repaint every background as Canvas, the value fill on a
