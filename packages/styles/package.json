@@ -225,10 +225,11 @@
     "debug": "pnpm build && pnpm --filter=@codenhub/styles-debug dev",
     "demo": "pnpm build && pnpm --filter=@codenhub/styles-demo dev",
     "generate": "node scripts/generate-palette.mjs",
-    "build": "pnpm clean && node scripts/build-styles.mjs && pnpm build:tw && pnpm build:cli",
+    "build": "pnpm clean && node scripts/build-styles.mjs && pnpm build:tw && pnpm build:purge && pnpm build:cli",
     "build:styles": "node scripts/build-styles.mjs --styles",
     "build:aesthetics": "node scripts/build-styles.mjs --aesthetics",
     "build:tw": "node scripts/build-tw.mjs",
+    "build:purge": "node scripts/build-purge.mjs",
     "build:cli": "tsdown src/cli/cli.ts --format esm --no-clean --no-fixed-extension --no-dts",
     "prepublishOnly": "pnpm --filter=@codenhub/icons build && pnpm build && pnpm typecheck && pnpm test",
     "status:npm": "npm view @codenhub/styles version dist-tags time --json && npm dist-tag ls @codenhub/styles && npm access get status @codenhub/styles",
@@ -253,13 +254,9 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@tailwindcss/cli": ">=4.3.2 <5",
     "tailwindcss": ">=4.3.2 <5"
   },
   "peerDependenciesMeta": {
-    "@tailwindcss/cli": {
-      "optional": true
-    },
     "tailwindcss": {
       "optional": true
     }
