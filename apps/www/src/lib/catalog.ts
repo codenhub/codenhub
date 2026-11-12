@@ -1,4 +1,4 @@
-import { packageDemoUrl, packageDocsUrl, packageNpmUrl } from "@codenhub/app-shell/package-links";
+import { packageDemoUrl, packageDocsUrl, packageGithubUrl, packageNpmUrl } from "@codenhub/app-shell/package-links";
 import {
   buildPackageDefinitions,
   buildPublicPackageSummaries,
@@ -111,29 +111,6 @@ function readString(manifest: Record<string, unknown>, key: string): string | un
   return typeof value === "string" ? value : undefined;
 }
 
-/**
- * The package's directory on GitHub, from its manifest `repository`, or
- * `undefined` when that is not a GitHub repository.
- */
-function repositoryUrl(manifest: Record<string, unknown>): string | undefined {
-  const repository = manifest.repository;
-  const fields =
-    typeof repository === "string"
-      ? { url: repository }
-      : typeof repository === "object" && repository !== null
-        ? (repository as { directory?: unknown; url?: unknown })
-        : {};
-  if (typeof fields.url !== "string") {
-    return undefined;
-  }
-  const match = /^(?:git\+)?https:\/\/github\.com\/([^/]+\/[^/]+?)(?:\.git)?\/?$/u.exec(fields.url);
-  if (match === null) {
-    return undefined;
-  }
-  const directory = typeof fields.directory === "string" ? fields.directory.replace(/^\/+|\/+$/gu, "") : "";
-  return directory === "" ? `https://github.com/${match[1]}` : `https://github.com/${match[1]}/tree/main/${directory}`;
-}
-
 /** A package's `README.<locale>.md` contents by locale, for each listed locale it has. */
 function readmeTranslations(root: string): Partial<Record<string, string>> {
   const prefix = `${root}/README.`;
@@ -191,7 +168,7 @@ function describePackage(summary: PublicPackageSummary): CatalogPackage {
           ? packageDemoUrl(siteConfig.demoUrl, slug)
           : undefined),
       docs,
-      github: repositoryUrl(manifest),
+      github: packageGithubUrl(manifest),
       llms:
         tag !== undefined && docs !== undefined && llmsPaths.includes(`${root}/llms.txt`)
           ? `${docs}llms.txt`
