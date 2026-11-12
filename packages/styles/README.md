@@ -43,13 +43,13 @@ The docs build one account settings screen from start to finish, in this order:
 
 ## Requirements
 
-| Requirement   | Details                                                                                                                                                                                                             |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CSS imports   | Consumer tooling must resolve package CSS imports.                                                                                                                                                                  |
-| Browsers      | Chrome 123, Safari 17.5, or Firefox 128 and newer (`light-dark()` theming; `:has()` for `.input-group` state; `@property` for non-inheriting elevation).                                                            |
-| Tailwind CSS  | 4.3.2 or newer, below 5, is required only for `/tw` source entrypoints and the `codenhub-styles build` command, which also needs `@tailwindcss/cli` in the same range. Install both yourself; the package does not. |
-| Node.js       | 24 or newer, only on the machine that runs the `codenhub-styles build` command. The stylesheets need none.                                                                                                          |
-| Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                                                                                                                     |
+| Requirement   | Details                                                                                                                                                  |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CSS imports   | Consumer tooling must resolve package CSS imports.                                                                                                       |
+| Browsers      | Chrome 123, Safari 17.5, or Firefox 128 and newer (`light-dark()` theming; `:has()` for `.input-group` state; `@property` for non-inheriting elevation). |
+| Tailwind CSS  | 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. Install it yourself; the package does not.                                               |
+| Node.js       | 24 or newer, only on the machine that runs the `chs build` command. The stylesheets need none.                                                           |
+| Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                                                          |
 
 ## Notes
 

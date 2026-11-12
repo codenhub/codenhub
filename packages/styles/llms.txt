@@ -17,7 +17,7 @@ is what the public docs describe and the demo at https://demo.codenhub.dev/style
   - [Vue](./docs/integrating/vue.md): Importing the stylesheet in a Vue or Vite app.
   - [Svelte](./docs/integrating/svelte.md): Importing the stylesheet in a Svelte or SvelteKit app.
   - [Astro](./docs/integrating/astro.md): Importing the stylesheet in an Astro app.
-  - [Without a bundler](./docs/integrating/without-a-bundler.md): Linking the compiled files from plain HTML, Rails, Django, or a CDN.
+  - [Without a bundler](./docs/integrating/without-a-bundler.md): Linking the compiled files from plain HTML, Rails, Django, or a CDN, and the `chs build` command that writes a stylesheet with only the classes your templates use.
 - [Building a screen](./docs/concepts.md): Layout, type, cards, and buttons, and the model behind them: intent, fill, edge, aesthetic, and what passes down to children.
 - [Usage overview](./docs/usage/index.md): The task guides in order, then the lookup pages.
   - [Buttons](./docs/usage/buttons.md): Destructive and secondary actions, icon buttons, sizes, link buttons, disabled states, and loading icons.
@@ -30,5 +30,6 @@ is what the public docs describe and the demo at https://demo.codenhub.dev/style
   - [Composing](./docs/usage/composing.md): Lookup for combining classes, every component's default look, presentation rules, the component axis matrix, and elevation.
   - [Customizing](./docs/usage/customizing.md): Lookup for presentation and material tokens, aesthetic knobs, the six public component variables, the generated palette, and composition helpers.
   - [Content and layout](./docs/usage/content-and-layout.md): Lookup for layout helpers, the type scale, cards and panels, tables, quotes, code, and keys.
+  - [Presets](./docs/usage/presets.md): Three ways to set a look once instead of on every element, and when to reach for each.
 - [Accessibility](./docs/accessibility.md): What the CSS provides for focus, states, motion, contrast, forced colors, and right-to-left text, and what the application must add.
 - [Changelog](./docs/changelog/index.md): Release history, including breaking changes.

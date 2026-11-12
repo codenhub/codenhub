@@ -47,7 +47,7 @@ Pick one:
 - **Tailwind CSS v4 source** (`@codenhub/styles/tw`). Use it when your project already runs Tailwind v4. Your build compiles the package with your own utilities, so you get one stylesheet and Tailwind's `dark:` variant matches the package's theme. It needs Tailwind 4.3.2 or newer, below 5.
 - **No bundler.** Link the compiled file from `node_modules` or a CDN with a `<link>` tag; see [Without a bundler](./integrating/without-a-bundler.md).
 
-To ship only the classes your pages use in a project that does not run Tailwind, with a bundler or without one, the package's `build` command reads your files and writes a stylesheet with only those classes, which you import or link in place of the compiled one; see [Build only the classes you use](./integrating/without-a-bundler.md#build-only-the-classes-you-use).
+To ship only the classes your pages use in a project that does not run Tailwind, with a bundler or without one, the package's `chs build` command reads your files and writes a stylesheet with only those classes, which you import or link in place of the compiled one; see [Build only the classes you use](./integrating/without-a-bundler.md#build-only-the-classes-you-use).
 
 Your framework may need its own wiring, such as where the global stylesheet goes in Next.js or Astro. Each of these guides covers one setup and then sends you back here:
 
@@ -73,7 +73,8 @@ The order of the two imports does not matter, because every entrypoint declares 
 
 - **Browsers:** Chrome 123, Safari 17.5, or Firefox 128 and newer. Colors use `light-dark()` and `color-scheme` (Firefox 120). `.input-group` reads a nested control's invalid and disabled state with `:has()` (Firefox 121). The elevation classes register a non-inheriting property with `@property` (Firefox 128); without it, an elevation class would also reach the unclassed elements inside it.
 - **Tooling:** an `@import` of a package name needs a tool that resolves CSS imports from packages through their `exports` map. Without one, link the compiled file by its path or from a CDN; see [Without a bundler](./integrating/without-a-bundler.md). Two common tools need a nudge, described in [Integrating → Bundlers that need a nudge](./integrating/index.md#bundlers-that-need-a-nudge): Parcel, and PostCSS with `postcss-import`.
-- **Tailwind:** 4.3.2 or newer, below 5, only for the `/tw` source entrypoints and the `build` command, which also needs `@tailwindcss/cli`. Both are optional peer dependencies, so the compiled entrypoints do not install them.
+- **Tailwind:** 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. It is an optional peer dependency, so the compiled entrypoints and the `chs build` command do not install it.
+- **Node.js:** 24 or newer, only on the machine that runs the `chs build` command. The stylesheets need none.
 - **Your application:** the package has no JavaScript. Semantic HTML, ARIA, keyboard behavior, focus management, validation, and announcements are yours; see [Accessibility](./accessibility.md).
 
 ## When nothing is styled
