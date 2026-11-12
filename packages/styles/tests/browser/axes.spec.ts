@@ -28,10 +28,23 @@ interface ComponentEntry {
   composition?: "frame" | "none";
   default: { fill?: string; edge?: string; elevation: number };
   unsupported?: { axis: "fill" | "edge"; class: string; reason: string }[];
+  modifiers?: string[];
+  intents?: string[];
+}
+
+interface CompositionHelperEntry {
+  class: string;
+  modifiers?: string[];
+  intents?: string[];
+  extends?: string;
 }
 
 const registry = JSON.parse(await readFile(path.join(packageRoot, "registry.json"), "utf8")) as {
   components: ComponentEntry[];
+  compositionHelpers?: CompositionHelperEntry[];
+  boxStates?: string[];
+  intents: Record<string, unknown>;
+  modifiers: Record<string, string[] | Record<string, unknown>>;
 };
 
 const SURFACES_URL = "http://localhost:5184/surfaces/?env=vanilla";
@@ -400,4 +413,179 @@ test.describe("axes", () => {
       expect(readSrgb(measured.own).alpha, `${control} own .edgeless removes its line`).toBeLessThan(0.1);
     });
   }
+});
+
+/* Which modifiers and intents each component accepts, asserted the way the axes
+   are: a class the registry lists must change what the component computes, and
+   a class it leaves off must not. "Computes" is every property of the element,
+   its descendants, and their `::before` and `::after`, except custom properties,
+   which carry wiring rather than paint, the transition list, and `cursor`.
+
+   `cursor` is left out because `interactive` and `pressable` set the pointer on
+   any element, and the four classes in `boxStates` work on every element `box`
+   paints; listed on every component, they would say nothing about any one of
+   them. `disabled` is asserted once, below, instead.
+
+   Some classes only show in a context: `glass-liquid` under glass, and the
+   aesthetics' corners under their region. A class counts when it changes the
+   component in any probed region. Elevation is one axis with a resting member,
+   so a component that rests flat is asked about `.flat` from `.raised` as well,
+   the way the axes are probed from their other end.
+
+   Intents are probed in a theme where every family has a hue of its own. In the
+   default theme primary is the text color, so `.primary` on a neutral badge
+   changed nothing a computed style can see, and the probe recorded the badge
+   as taking no primary. Every component resets to neutral, so `.neutral`
+   changes only what does not reset, inside a region of another intent.
+
+   The lists are measured in Chromium alone, because they record what the
+   stylesheet does and Chromium is the engine that renders all of it. A class
+   whose only effect is a property an engine lacks reads as inert there:
+   `glass-liquid` gives a radio a `corner-shape`, which Firefox does not parse,
+   so Firefox would have it that a radio takes no liquid glass. */
+const MODIFIER_REGIONS = ["", "neobrutalism", "glass", "sketch"];
+const INTENT_REGIONS = ["", "destructive"];
+const HUES: Record<string, number> = {
+  primary: 250,
+  accent: 320,
+  success: 145,
+  warning: 70,
+  destructive: 25,
+  info: 200,
+  text: 285,
+};
+const DISTINCT_THEME = `:root, [data-theme] { ${Object.entries(HUES)
+  .map(
+    ([family, hue]) =>
+      `--color-${family}: oklch(0.55 0.2 ${hue}); --color-${family}-contrast: oklch(0.98 0.03 ${hue}); ` +
+      `--color-${family}-hover: oklch(0.5 0.2 ${hue}); --color-${family}-strong: oklch(0.4 0.2 ${hue}); ` +
+      `--color-${family}-subtle: oklch(0.94 0.05 ${hue});`,
+  )
+  .join(" ")} }`;
+
+const boxStates = registry.boxStates ?? [];
+const elevation = Object.keys(registry.modifiers.elevation as Record<string, unknown>);
+const modifierCandidates = Object.values(registry.modifiers)
+  .flatMap((group) => (Array.isArray(group) ? group : Object.keys(group)))
+  .filter((name) => !boxStates.includes(name));
+const intentCandidates = Object.keys(registry.intents);
+const elevationBases = Object.fromEntries(elevation.map((name) => [name, elevation.filter((other) => other !== name)]));
+
+const PROBE_TAGS: Record<string, string> = { ...TAGS, "text-control": "input", "tooltip-icon": "button" };
+
+const openProbePage = async (page: Page) => {
+  await page.setContent('<!doctype html><html data-theme="light"><body><div id="region"></div></body></html>');
+  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+  await page.addStyleTag({ content: DISTINCT_THEME });
+};
+
+/* Which of `candidates` change the component in any of `regions`, each asked
+   against the bare component and against each class `bases` names for it. */
+const changingClasses = async (
+  page: Page,
+  className: string,
+  candidates: string[],
+  regions: string[],
+  bases: Record<string, string[]>,
+) =>
+  page.evaluate(
+    ({ bases: probeBases, candidates: probeCandidates, className: probeClass, regions: probeRegions, tag, type }) => {
+      const region = document.getElementById("region")!;
+      const snapshot = (classes: string) => {
+        const element = document.createElement(tag);
+
+        element.className = classes;
+        if (type) {
+          element.setAttribute("type", type);
+        }
+        if (tag === "table") {
+          element.innerHTML =
+            "<thead><tr><th>Head</th></tr></thead><tbody><tr><td>One</td></tr><tr><td>Two</td></tr></tbody>";
+        } else if (tag !== "input") {
+          element.append("Probe");
+        }
+        region.append(element);
+
+        const read = [element, ...element.querySelectorAll("*")]
+          .flatMap((node) =>
+            [null, "::before", "::after"].map((pseudo) => {
+              const styles = getComputedStyle(node, pseudo);
+
+              return [...styles]
+                .filter((name) => !name.startsWith("--") && !name.startsWith("transition") && name !== "cursor")
+                .map((name) => `${name}:${styles.getPropertyValue(name)}`)
+                .join(";");
+            }),
+          )
+          .join("|");
+
+        element.remove();
+
+        return read;
+      };
+
+      return probeCandidates.filter((candidate) =>
+        probeRegions.some((regionClass) => {
+          region.className = regionClass;
+
+          return ["", ...(probeBases[candidate] ?? [])].some((base) => {
+            const from = `${probeClass} ${base}`.trim();
+
+            return snapshot(from) !== snapshot(`${from} ${candidate}`);
+          });
+        }),
+      );
+    },
+    { bases, candidates, className, regions, tag: PROBE_TAGS[className] ?? "div", type: TYPES[className] },
+  );
+
+test.describe("modifiers and intents", () => {
+  const probed = [
+    ...registry.components,
+    ...(registry.compositionHelpers ?? []).filter((helper) => helper.extends === undefined),
+  ];
+
+  for (const component of probed) {
+    test(`${component.class} takes exactly the modifiers and intents the registry lists`, async ({
+      browserName,
+      page,
+    }) => {
+      test.skip(browserName !== "chromium", "measured where every property the package sets renders");
+      await openProbePage(page);
+
+      const modifiers = await changingClasses(
+        page,
+        component.class,
+        modifierCandidates,
+        MODIFIER_REGIONS,
+        elevationBases,
+      );
+      const intents = await changingClasses(page, component.class, intentCandidates, INTENT_REGIONS, {});
+
+      expect({ modifiers, intents }, component.class).toEqual({
+        modifiers: modifierCandidates.filter((name) => component.modifiers?.includes(name)),
+        intents: intentCandidates.filter((name) => component.intents?.includes(name)),
+      });
+    });
+  }
+
+  /* `disabled` dims what `box` paints, and nothing else: an element that draws
+     itself takes the attribute's semantics but no look from the class. The
+     other three states answer the pointer, which a resting style cannot show;
+     the button and surface specs hold them. */
+  test("disabled reaches every component box paints and no other", async ({ page }) => {
+    await openProbePage(page);
+
+    const reached = await Promise.all(
+      registry.components.map(async (component) => ({
+        class: component.class,
+        reached: (await changingClasses(page, component.class, ["disabled"], [""], {})).length > 0,
+      })),
+    );
+
+    expect(boxStates).toContain("disabled");
+    expect(reached).toEqual(
+      registry.components.map((component) => ({ class: component.class, reached: component.composition !== "none" })),
+    );
+  });
 });

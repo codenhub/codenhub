@@ -163,6 +163,8 @@ A table draws lines under its header and above its footer. `.ruled` and `.rulele
 
 `--ui-rule` is the token behind both classes, so a container can rule every table inside it: `style="--ui-rule: 100%"` acts like `.ruled`, and `0%` like `.ruleless`.
 
+Two variables and a token tune the rest, on the table or on any element around it. `--table-cell-padding` sets the padding of every cell, so `--table-cell-padding: 0.375rem 0.75rem` makes a dense table. `--table-hover` sets the color of a hovered body row, and `transparent` turns the hover off. `--ui-rule-ink` sets the color of a neutral table's lines; a table with an intent draws them in the intent's color. See [Customizing → Component variables](./customizing.md#component-variables) for the two variables and [Material tokens](./customizing.md#material-tokens) for `--ui-rule-ink`.
+
 The frame around the table is separate: a table has no border by default, and `.edged` adds one. The three choices do not affect each other, so `.data-table.ruleless.edged` is a framed table with no lines inside, and `.data-table.ruled` has every row separated and no frame.
 
 ### Presentation on tables

@@ -181,3 +181,76 @@ test("a neutral box with no plate prints in the ink of the plate it sits on", as
     );
   }
 });
+
+/* A touch screen has no pointer to rest on an element, yet a tap leaves the
+   element in `:hover` until something else is tapped, so a hover tint stuck
+   on whatever was last touched. Tailwind's `hover:` variant applies only under
+   `(hover: hover)` for this reason, and the hover responses follow it. A
+   context of its own, because touch emulation is set when one is created.
+
+   Whether a tap leaves its element in `:hover` is the engine's own choice:
+   Chromium does on Windows and did not in CI's Linux image. Where it does not,
+   the pointer is moved onto the element instead, which reaches `:hover` the
+   same way while the page still reports no hover-capable pointer. */
+test("leaves no hover tint on what a touch screen tapped", async ({ browser, browserName }) => {
+  const context = await browser.newContext({ hasTouch: true, isMobile: browserName !== "firefox" });
+  const page = await context.newPage();
+  const settle = () =>
+    page.evaluate(
+      () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+    );
+
+  await page.goto(BUTTONS_URL);
+  // The shared fixture's `goto` waits this out; a page of the test's own does not.
+  await settle();
+  expect(await page.evaluate(() => matchMedia("(hover: hover)").matches), "a touch page has no hover").toBe(false);
+  await page.evaluate(() => {
+    const host = document.createElement("div");
+
+    host.id = "touch-probe";
+    host.innerHTML = `
+      <button class="btn primary soft" data-pair="button">Tapped</button>
+      <button class="btn primary soft" data-pair="button">Untouched</button>
+      <div class="card interactive soft" data-pair="card">Tapped</div>
+      <div class="card interactive soft" data-pair="card">Untouched</div>
+      <table class="data-table"><tbody>
+        <tr><td data-pair="row">Tapped</td></tr>
+        <tr><td data-pair="row">Untouched</td></tr>
+      </tbody></table>
+      <input type="checkbox" class="checkbox" data-pair="checkbox" checked aria-label="Tapped" />
+      <input type="checkbox" class="checkbox" data-pair="checkbox" aria-label="Untouched" />`;
+    /* WebKit, as iOS does, puts a tapped element in `:hover` only when it
+       answers clicks, and an interactive card or row does. The tapped checkbox
+       starts checked, so the tap leaves both unchecked. */
+    for (const element of host.querySelectorAll<HTMLElement>("[data-pair]")) {
+      element.style.transition = "none";
+      element.addEventListener("click", () => {});
+    }
+    document.body.prepend(host);
+  });
+
+  const read = (element: Element) => {
+    const style = getComputedStyle(element);
+
+    return `${style.backgroundColor} ${style.borderColor}`;
+  };
+  const hovered = (element: Element) => element.matches(":hover");
+
+  /* oxlint-disable no-await-in-loop -- each tap moves `:hover`, so they run in order. */
+  for (const pair of ["button", "card", "row", "checkbox"]) {
+    const [tapped, untouched] = await page.locator(`#touch-probe [data-pair="${pair}"]`).all();
+
+    await tapped!.tap();
+    await settle();
+    if (!(await tapped!.evaluate(hovered))) {
+      await tapped!.hover();
+      await settle();
+    }
+
+    expect(await tapped!.evaluate(hovered), `${pair} is in :hover after a tap`).toBe(true);
+    expect(await tapped!.evaluate(read), pair).toBe(await untouched!.evaluate(read));
+  }
+  /* oxlint-enable no-await-in-loop */
+
+  await context.close();
+});

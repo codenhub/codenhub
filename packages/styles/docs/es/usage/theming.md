@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro y oscuro, reemplazar la paleta con los colores de marca, definir una intención propia, y cada token de color, intención, base y fuente con su valor por defecto.
 order: 5
-source: faefe01e9a435bd2630c846cc365f3c8783107df
+source: b54ac4e817f35fb4f5f32b7f7022061f9658147a
 ---
 
 # Temas
@@ -67,7 +67,7 @@ Con los puntos de entrada de código fuente de Tailwind (`/tw`), el paquete reem
 
 Se diferencia de los tokens en un caso: un tema explícito anidado dentro del opuesto. Un elemento `.light` dentro de uno `.dark` tiene tokens claros, porque gana el `color-scheme` más cercano. Pero `dark:` coincide por selector, y `.dark *` coincide con cada elemento dentro de `.dark`, así que una utilidad `dark:` dentro de ese elemento `.light` se sigue aplicando. Si una página usa a la vez tokens y utilidades `dark:`, no anides temas opuestos.
 
-Los puntos de entrada compilados no definen una variante `dark:`; no tienen un build de Tailwind en el que definirla.
+Los puntos de entrada compilados no definen una variante `dark:`; no tienen un build de Tailwind en el que definirla. El [comando `chs build`](../integrating/without-a-bundler.md#variantes) sí ofrece `dark:`, con los mismos selectores, solo en las clases de intención, presentación y modificador.
 
 ## Cambiar el color de marca
 

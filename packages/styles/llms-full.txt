@@ -45,13 +45,13 @@ The docs build one account settings screen from start to finish, in this order:
 
 ## Requirements
 
-| Requirement   | Details                                                                                                                                                                                                             |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CSS imports   | Consumer tooling must resolve package CSS imports.                                                                                                                                                                  |
-| Browsers      | Chrome 123, Safari 17.5, or Firefox 128 and newer (`light-dark()` theming; `:has()` for `.input-group` state; `@property` for non-inheriting elevation).                                                            |
-| Tailwind CSS  | 4.3.2 or newer, below 5, is required only for `/tw` source entrypoints and the `codenhub-styles build` command, which also needs `@tailwindcss/cli` in the same range. Install both yourself; the package does not. |
-| Node.js       | 24 or newer, only on the machine that runs the `codenhub-styles build` command. The stylesheets need none.                                                                                                          |
-| Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                                                                                                                     |
+| Requirement   | Details                                                                                                                                                                                                              |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CSS imports   | Consumer tooling must resolve package CSS imports.                                                                                                                                                                   |
+| Browsers      | Chrome 123, Safari 17.5, or Firefox 128 and newer (`light-dark()` theming; `:has()` for `.input-group` state; `@property` for non-inheriting elevation).                                                             |
+| Tailwind CSS  | 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. Install it yourself; the package does not.                                                                                                           |
+| Node.js       | 24 or newer on the machine that runs the `chs build` command. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm with `engine-strict`, refuse the install on an older Node.js. |
+| Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                                                                                                                      |
 
 ## Notes
 
@@ -59,7 +59,7 @@ This package has no JavaScript behavior. It ships no compatibility aliases: a re
 
 ## License
 
-Licensed under Apache-2.0. The embedded checkbox marks are derived from the [Lucide](https://lucide.dev) `check` and `minus` icons (ISC), which Lucide derives from [Feather](https://github.com/feathericons/feather) (MIT). See [NOTICE](NOTICE) for the required notices.
+This project is licensed under the [Apache-2.0](LICENSE) license. The embedded checkbox marks are derived from the [Lucide](https://lucide.dev) `check` and `minus` icons (ISC), which Lucide derives from [Feather](https://github.com/feathericons/feather) (MIT). See [NOTICE](NOTICE) for the required notices.
 
 <!-- Source: docs/index.md -->
 
@@ -138,7 +138,7 @@ The package is below 1.0 and follows the [semantic versioning rule for 0.x relea
 - A minor release, such as 0.7.0 to 0.8.0, may break. It can rename or remove a class or token, or change a default. Every break is listed under **Changed** or **Removed** on that version's [changelog](docs/changelog/index.md) page, with what to use instead.
 - A patch release, such as 0.7.0 to 0.7.1, never breaks.
 
-npm's default range for a new dependency, `^0.7.0`, already accepts patches only, because below 1.0 a caret range does not cross into the next minor version. Read the changelog before raising it. When you link a file from a CDN, put the exact version in the URL; see [Without a bundler](docs/integrating/without-a-bundler.md).
+npm's default range for a new dependency, `^0.9.0`, already accepts patches only, because below 1.0 a caret range does not cross into the next minor version. Read the changelog before raising it. When you link a file from a CDN, put the exact version in the URL; see [Without a bundler](docs/integrating/without-a-bundler.md).
 
 Breaks are not softened with aliases because the model is still settling, and keeping each old name beside its replacement would grow the surface every release. A rename or removal usually costs one find-and-replace when you upgrade; a changed default may need your own CSS retuned.
 
@@ -208,7 +208,7 @@ Pick one:
 - **Tailwind CSS v4 source** (`@codenhub/styles/tw`). Use it when your project already runs Tailwind v4. Your build compiles the package with your own utilities, so you get one stylesheet and Tailwind's `dark:` variant matches the package's theme. It needs Tailwind 4.3.2 or newer, below 5.
 - **No bundler.** Link the compiled file from `node_modules` or a CDN with a `<link>` tag; see [Without a bundler](docs/integrating/without-a-bundler.md).
 
-To ship only the classes your pages use in a project that does not run Tailwind, with a bundler or without one, the package's `build` command reads your files and writes a stylesheet with only those classes, which you import or link in place of the compiled one; see [Build only the classes you use](docs/integrating/without-a-bundler.md#build-only-the-classes-you-use).
+To ship only the classes your pages use in a project that does not run Tailwind, with a bundler or without one, the package's `chs build` command reads your files and writes a stylesheet with only those classes, which you import or link in place of the compiled one; see [Build only the classes you use](docs/integrating/without-a-bundler.md#build-only-the-classes-you-use).
 
 Your framework may need its own wiring, such as where the global stylesheet goes in Next.js or Astro. Each of these guides covers one setup and then sends you back here:
 
@@ -234,7 +234,8 @@ The order of the two imports does not matter, because every entrypoint declares 
 
 - **Browsers:** Chrome 123, Safari 17.5, or Firefox 128 and newer. Colors use `light-dark()` and `color-scheme` (Firefox 120). `.input-group` reads a nested control's invalid and disabled state with `:has()` (Firefox 121). The elevation classes register a non-inheriting property with `@property` (Firefox 128); without it, an elevation class would also reach the unclassed elements inside it.
 - **Tooling:** an `@import` of a package name needs a tool that resolves CSS imports from packages through their `exports` map. Without one, link the compiled file by its path or from a CDN; see [Without a bundler](docs/integrating/without-a-bundler.md). Two common tools need a nudge, described in [Integrating → Bundlers that need a nudge](docs/integrating/index.md#bundlers-that-need-a-nudge): Parcel, and PostCSS with `postcss-import`.
-- **Tailwind:** 4.3.2 or newer, below 5, only for the `/tw` source entrypoints and the `build` command, which also needs `@tailwindcss/cli`. Both are optional peer dependencies, so the compiled entrypoints do not install them.
+- **Tailwind:** 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. It is an optional peer dependency, so the compiled entrypoints and the `chs build` command do not install it.
+- **Node.js:** 24 or newer on the machine that runs the `chs build` command. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm with `engine-strict`, refuse the install on an older Node.js.
 - **Your application:** the package has no JavaScript. Semantic HTML, ARIA, keyboard behavior, focus management, validation, and announcements are yours; see [Accessibility](docs/accessibility.md).
 
 ## When nothing is styled
@@ -524,6 +525,7 @@ The block leaves out `neutral`, `emerald`, `amber`, `rose`, `indigo`, and `white
 
 - **Do not clear the whole namespace.** `--color-*: initial` also removes the package's semantic colors, and the build stops with an error such as `Cannot apply unknown utility class`.
 - **Do not clear a ramp the theme reads.** Clearing `--color-emerald-*` builds without an error, but the success colors made from it are lost.
+- **Do not clear the type, font, or spacing namespaces.** The components apply Tailwind's `text-*` and `font-*` utilities and its `--spacing()` function, so `--text-*: initial`, `--font-*: initial`, `--spacing: initial`, or `--*: initial` stops the build with `Cannot apply unknown utility class` or `The --spacing(…) function requires that the --spacing theme variable exists`. Override single values instead, such as `--text-sm`. Clearing `--radius-*` is safe.
 
 ## Troubleshooting
 
@@ -733,8 +735,8 @@ What needs a build tool is the import _name_. `@import "@codenhub/styles"` names
 
 The `/tw` entrypoints are Tailwind source and need a Tailwind build. `/tw/aesthetics` is the exception, plain CSS with nothing for Tailwind to process, but without a bundler link the compiled `dist/aesthetics/` files instead, as below. This page is for a page that has no Node.js CSS build: plain HTML, Rails, Laravel, Django, or any server-rendered app. There are two paths:
 
-1. **Link the compiled stylesheet.** Works today, with nothing but static files. You ship every class, whether your pages use it or not.
-2. **Build a stylesheet with the package's `build` command.** It scans your templates and writes a stylesheet with only the classes they use. See [Build only the classes you use](#build-only-the-classes-you-use).
+1. **Link the compiled stylesheet.** It needs nothing but static files. You ship every class, whether your pages use it or not.
+2. **Build a stylesheet with the package's `chs build` command.** It scans your templates and writes a stylesheet with only the classes they use. See [Build only the classes you use](#build-only-the-classes-you-use).
 
 ## Which file to link
 
@@ -806,7 +808,7 @@ Then link it from the layout, by its path below that folder:
 
 Point the path at `node_modules/@codenhub` rather than at `dist/` itself. Propshaft serves files by their path below each asset folder, so adding `dist/` directly would publish a bare `index.css` that collides with any `index.css` of your own.
 
-The files you link are in `dist/`, which holds only finished CSS, plus an empty `index.d.ts` for TypeScript. The Tailwind source lives in `tw/`, outside `dist/`, so a static pipeline that serves or fingerprints `dist/` meets no `@import` it cannot resolve.
+The files you link are in `dist/`, which holds finished CSS with no `@import` to resolve, plus an empty `index.d.ts` for TypeScript and the `chs build` command with the files it reads. The Tailwind source lives in `tw/`, outside `dist/`, so a static pipeline that serves or fingerprints `dist/` meets no `@import` it cannot resolve.
 
 ### Django
 
@@ -824,7 +826,7 @@ STATICFILES_DIRS = [
 <link rel="stylesheet" href="{% static 'codenhub-styles/index.css' %}" />
 ```
 
-Point the prefix at `dist`, not at the package folder. `dist/` holds only finished CSS, plus an empty `index.d.ts` for TypeScript that the storage copies as it is, so `collectstatic` also works with `ManifestStaticFilesStorage`, which fingerprints each file and rewrites the references inside it. The package folder also holds the Tailwind source in `tw/`, whose `@import "tailwindcss/..."` lines that storage cannot resolve.
+Point the prefix at `dist`, not at the package folder. `dist/` holds finished CSS with no `@import` to resolve, plus an empty `index.d.ts` for TypeScript and the `chs build` command with the files it reads, which the storage copies as they are, so `collectstatic` also works with `ManifestStaticFilesStorage`, which fingerprints each file and rewrites the references inside it. The package folder also holds the Tailwind source in `tw/`, whose `@import "tailwindcss/..."` lines that storage cannot resolve.
 
 ### Laravel
 
@@ -832,34 +834,52 @@ A Laravel app runs Vite by default, so it has a bundler: import the package from
 
 ## Build only the classes you use
 
-The package carries a command, `codenhub-styles`, that compiles it for you. It reads your templates for class names and writes one minified stylesheet with only the StyleKit classes and Tailwind utilities they use. A page that uses one button gets a small fraction of the full stylesheet; the exact size depends on which classes you use, since each component brings the shared rules it relies on.
+The package carries a command, `chs`, that reads your templates for class names and writes one minified stylesheet with only the StyleKit classes they use. A page that uses one button gets about an eighth of the full stylesheet; the exact size depends on which classes you use, since each component brings the shared rules it relies on.
 
 The command works with a bundler too. A project whose bundler does not run Tailwind, such as a plain Vite or webpack build, can write the stylesheet into its sources, `--output src/stylekit.css`, and import that file where it would import `@codenhub/styles`. A project that runs Tailwind CSS v4 gets the same trimming from the [source entrypoint](docs/integrating/tailwind.md) and does not need the command.
 
-It needs Node.js 24 or newer on the machine that builds the CSS, whether that is your laptop, a CI job, or a deploy step. It compiles with Tailwind CSS, which the package does not install for you, so a project that only links the compiled stylesheet never downloads it. Install the three packages as development dependencies from your project root; npm creates a `package.json` if you have none, and you need no Tailwind configuration:
+It needs Node.js 24 or newer on the machine that builds the CSS, whether that is your laptop, a CI job, or a deploy step, and nothing else: the package is the whole install, with no Tailwind and no configuration. Install it as a development dependency from your project root; npm creates a `package.json` if you have none:
 
 ```sh
-npm install --save-dev @codenhub/styles @tailwindcss/cli tailwindcss
+npm install --save-dev @codenhub/styles
 ```
 
-The stylesheet the command writes is plain CSS, so the servers that serve your site need neither Node.js nor any of these packages. Run it from your project root:
+The stylesheet the command writes is plain CSS, so the servers that serve your site need neither Node.js nor the package. Add the build to your `package.json` scripts, where the installed command is on the path by its name:
+
+```json
+{
+  "scripts": {
+    "build:css": "chs build --content \"app/views/**/*.erb\" --output public/stylekit.css"
+  }
+}
+```
+
+Then run it from your project root:
 
 ```sh
-npx codenhub-styles build --content "app/views/**/*.erb" --output public/stylekit.css
+npm run build:css
 ```
+
+To run it once without a script, call it through the package name:
+
+```sh
+npx @codenhub/styles build --content "app/views/**/*.erb" --output public/stylekit.css
+```
+
+Do not type `npx chs`. `chs` is the command's name inside this package, but npm also has an unrelated package called `chs`, and `npx chs` runs that one in any folder where this package is not installed.
 
 On success the command prints one line, the absolute path it wrote and the file's size in bytes:
 
 ```text
-/home/you/shop/public/stylekit.css 25782 bytes
+/home/you/shop/public/stylekit.css 24497 bytes
 ```
 
 Link that file from your layout like any static stylesheet.
 
 ### Rails views
 
-```sh
-npx codenhub-styles build --content "app/views/**/*.erb" --content "app/helpers/**/*.rb" --output public/stylekit.css
+```json
+"build:css": "chs build --content \"app/views/**/*.erb\" --content \"app/helpers/**/*.rb\" --output public/stylekit.css"
 ```
 
 ```erb
@@ -869,8 +889,8 @@ npx codenhub-styles build --content "app/views/**/*.erb" --content "app/helpers/
 
 ### Laravel Blade views
 
-```sh
-npx codenhub-styles build --content "resources/views/**/*.blade.php" --output public/css/stylekit.css
+```json
+"build:css": "chs build --content \"resources/views/**/*.blade.php\" --output public/css/stylekit.css"
 ```
 
 ```blade
@@ -882,8 +902,8 @@ npx codenhub-styles build --content "resources/views/**/*.blade.php" --output pu
 
 A Django project keeps templates in a project-level `templates/` folder, in each app's own `templates/` folder, or both. Give one `--content` for each place yours live, and leave out any place you do not use, since a glob that matches nothing fails the build:
 
-```sh
-npx codenhub-styles build --content "templates/**/*.html" --content "shop/templates/**/*.html" --output static/stylekit.css
+```json
+"build:css": "chs build --content \"templates/**/*.html\" --content \"shop/templates/**/*.html\" --output static/stylekit.css"
 ```
 
 ```django
@@ -896,41 +916,53 @@ Write the output into a folder listed in `STATICFILES_DIRS`, here `static/`, so 
 ### Options
 
 - `--content <glob>`, or `-c <glob>`, names the files to read for class names. It is required and repeatable: pass it once per glob, and the build reads every file any of them matches. A relative glob is resolved against the folder you run the command in, so run it from your project root; an absolute glob is used as given. `**` matches any number of folders, and `{rb,erb}` either extension. Any text file works, whatever its extension. Each glob has to match at least one file, or the build fails and names it, so a typo cannot ship an empty stylesheet. Files your `.gitignore` excludes are still read when a glob matches them, and nothing outside your globs is read.
-- Quote every glob. Without quotes, your shell may expand the glob into a list of files before the command sees it, and only the first file counts as the `--content` value. When that leaves extra file names behind, the build rejects them rather than silently reading less than you meant; when the glob matched a single file, the build reads just that file and nothing your templates add later.
+- Quote every glob, with `\"` inside a `package.json` script. Without quotes, your shell may expand the glob into a list of files before the command sees it, and only the first file counts as the `--content` value. When that leaves extra file names behind, the build rejects them rather than silently reading less than you meant; when the glob matched a single file, the build reads just that file and nothing your templates add later.
 - `--output <file>`, or `-o <file>`, is the stylesheet to write. It is required. A relative path is resolved against the folder you run the command in, missing parent folders are created, and an existing file is replaced.
-- `--aesthetic <name>` adds one of the [aesthetics](docs/usage/aesthetics.md): `neobrutalism`, `glass`, `pixel`, `chunky-tile`, `cyber`, or `sketch`. Repeat it for more than one; naming one twice includes it once. Aesthetics are opt-in because the build cannot tell from your templates which one you want, so each is written in full when you ask for it, and none is included when you do not.
+- `--aesthetic <name>` adds one of the [aesthetics](docs/usage/aesthetics.md): `neobrutalism`, `glass`, `pixel`, `chunky-tile`, `cyber`, or `sketch`. Repeat it for more than one; naming one twice includes it once. Aesthetics are opt-in because the build cannot tell from your templates which one you want: each is added when you ask for it, less its rules for classes your templates do not use, and none is included when you do not.
 - `--no-minify` writes readable, indented CSS instead. Useful for reading what the build produced; serve the minified file.
 - `--help` prints the usage, with the aesthetics this version ships. `--version` prints the package version. Both build nothing and exit with status 0.
 
-The output always holds the theme, its design tokens as CSS custom properties, the reset, and the base rules every component relies on. On top of that come each StyleKit class your templates use, with the variants you combine it with, such as `primary` or `soft`, and each Tailwind utility they use, such as `flex` or `mt-4`. The output is built from the complete stylesheet, not from `/native`, so it has no classless mappings.
+The output always holds the theme, its design tokens as CSS custom properties, the reset, the base rules every component relies on, and the classes a page gets at run time rather than from a template, such as `.theme-dark`. On top of that comes each StyleKit class your templates use. The output is built from the complete stylesheet, not from `/native`, so it has no classless mappings. A build whose templates name every class writes the complete stylesheet, byte for byte.
 
 ### How classes are found
 
-The build does not run your templates. It reads each file your `--content` globs match as plain text, collects every word that could be a class name, and writes the rules for the words that are StyleKit classes or Tailwind utilities. This is how Tailwind CSS reads content too.
+The build does not run your templates. It reads each file your `--content` globs match as plain text, collects every word that could be a class name, and writes the rules for the words that are StyleKit classes. This is how Tailwind CSS reads content too.
 
-A class has to appear in a file as one whole word. `class="btn primary"`, `class: "btn primary"`, and `classes = ["btn", "primary"]` all work. A word that only looks like a class also counts: a comment that says "card" adds the card's full rules to the stylesheet, which makes the file larger and changes nothing on the page.
+A class has to appear in a file as one whole word. `class="btn primary"`, `class: "btn primary"`, and `classes = ["btn", "primary"]` all work, and so does a class written before a colon or after one, as in Svelte's `class:primary={isPrimary}` or a Ruby hash's `btn: true`. A word that only looks like a class also counts: a comment that says "card" adds the card's full rules to the stylesheet, which makes the file larger and changes nothing on the page.
 
 A class name your code assembles while rendering never appears whole in any file, so the build cannot find it. In `class="btn <%= @order.priority %>"`, `btn` is found, but the intent is whatever `priority` holds at render time; if that is `destructive`, the button renders without its red. Two ways out:
 
 - **Write class names whole.** Map each value to a complete class name in a file the build reads, such as `{ "urgent" => "destructive", "normal" => "neutral" }.fetch(@order.priority)` in a helper.
 - **List them in a safelist file.** A plain text file with one class name per line, added with its own `--content`, such as `--content config/stylekit-classes.txt`. Keep it next to the code that builds the class names, so whoever changes one sees the other.
 
+### Variants
+
+An intent, presentation, or modifier class can take one of ten prefixes, written as in Tailwind: `sm:`, `md:`, `lg:`, `xl:`, and `2xl:` apply it from that breakpoint up, `hover:`, `focus:`, `focus-visible:`, and `active:` while the element is in that state, and `dark:` wherever the dark theme applies, as [Theming → The dark: variant](docs/usage/theming.md#the-dark-variant) describes. `md:lg` makes a button large from the `md` breakpoint, and `hover:primary` gives it the primary intent on hover:
+
+```html
+<button class="btn sm md:lg ghost hover:soft">Save</button>
+```
+
+That covers intents such as `primary` and `destructive`, the fill and edge classes such as `soft` and `edged`, and modifiers such as `sm`, `lg`, `raised`, `pill`, `tight`, and `ruled`. `disabled` takes none: it is a state the element is in, so write it as the attribute or the class. Component classes such as `btn` and `card`, and the text and layout helpers, take no prefix.
+
+Each prefix is a fixed copy of those classes, built into the package, so the list is the common ones rather than all of Tailwind's. The command does not stack prefixes, as in `md:hover:primary`, and offers no other ones, such as `print:` or `group-hover:`. Such a class is not styled, and the element renders without it.
+
 ### What it does not do
 
+- **No Tailwind utilities.** `flex`, `mt-4`, `text-red-500`, and the rest of Tailwind are not StyleKit classes, so the build leaves them out. For layout, StyleKit's own [layout helpers](docs/usage/content-and-layout.md) are in the build like any other class. A project that wants Tailwind's utilities, its other variants, or prefixes stacked runs Tailwind itself and imports the [source entrypoint](docs/integrating/tailwind.md), which gives all three.
 - **No watch mode.** It builds once and exits. Run it again after you change a template, from a script, or from a file watcher your framework or editor already has. A class the stylesheet does not have yet leaves its element unstyled until the next build.
-- **No configuration file and no custom CSS.** You cannot add your own `@theme` values, `@utility` definitions, or plugins. To change the look, override the custom properties in a stylesheet of your own loaded after this one, as [Customizing](docs/usage/customizing.md) describes. When you need Tailwind's own configuration, install Tailwind CSS and import the source entrypoint from your own Tailwind input, as [Tailwind CSS v4](docs/integrating/tailwind.md) shows.
+- **No configuration file and no custom CSS.** You cannot add your own `@theme` values, `@utility` definitions, or plugins. To change the look, override the custom properties in a stylesheet of your own loaded after this one, as [Customizing](docs/usage/customizing.md) describes.
 - **No other commands.** `build` is the only one; `--help` and `--version` are the only flags that run without it.
-- **No Tailwind version of its own.** Each build uses the `@tailwindcss/cli` and `tailwindcss` installed in your project, within the `>=4.3.2 <5` range StyleKit supports, so your lockfile pins them.
 
 ### In a deploy
 
 Build the stylesheet before whatever step collects or fingerprints your assets, such as `rails assets:precompile`, `php artisan optimize`, or `python manage.py collectstatic`. Either commit the output, so the servers need no Node.js at all at the cost of a generated file someone has to remember to rebuild, or build it on deploy, so the build machine needs Node.js 24 or newer.
 
-Pin the version. Below 1.0 a minor release may rename or remove a class, so the same command can write a different stylesheet with a newer version. Commit `package.json` and the lockfile npm writes, and install with `npm ci` on the build machine, so every build uses the versions you tested.
+Pin the version. Below 1.0 a minor release may rename or remove a class, so the same command can write a different stylesheet with a newer version. The output depends on nothing but the package's version and your templates, so commit `package.json` and the lockfile npm writes, and install with `npm ci` on the build machine, so every build uses the version you tested.
 
 ### When the build fails
 
-Every failure prints one line starting with `codenhub-styles:` to standard error and exits with status 1, without writing the output file, so a deploy script stops instead of shipping a stale or empty stylesheet. The line says what went wrong and what to do:
+Every failure prints one line starting with `chs:` to standard error and exits with status 1, without writing the output file, so a deploy script stops instead of shipping a stale or empty stylesheet. The line says what went wrong and what to do:
 
 - **`missing --content` or `missing --output`.** Add the one it names. An `--output` that is empty or only spaces counts as missing.
 - **`--content "<glob>" matches no file in <folder>`.** Usually a typo in the path, a command run from another folder than your project root, or a glob for a place your project does not use. Building from nothing would write a stylesheet with no component classes, and the site would quietly lose its styling.
@@ -938,10 +970,9 @@ Every failure prints one line starting with `codenhub-styles:` to standard error
 - **`unknown option "<flag>"`.** A typo, or an option from another tool, such as `--watch` or `--config`. `--help` lists the options.
 - **`option "<flag>" is missing its value or does not take one`.** A flag that takes a value was the last thing on the line, or `--no-minify` was given one, as in `--no-minify=true`.
 - **`unknown aesthetic "<name>"; choose from ...`.** Pick one of the names listed. They are lowercase and hyphenated, as in `chunky-tile`.
-- **`missing command` or `unknown command "<name>"`.** The first word after `codenhub-styles` has to be `build`.
-- **`this command needs @tailwindcss/cli and tailwindcss, which are not installed`.** The line names whichever of the two is missing and ends with the command that installs it. Run that from your project root.
+- **`missing command` or `unknown command "<name>"`.** The first word after `chs` has to be `build`.
 - **`this command needs Node.js 24 or newer`.** Update Node.js on the machine that builds the CSS.
-- **`Tailwind failed to build the stylesheet: <reason>`.** `<reason>` is Tailwind's own message. `EISDIR` means `--output` names an existing folder, so name a file inside it; `EACCES` or `EPERM` means you cannot write there. For any other reason, run the same command with `--no-minify` to rule out the minifier, and report the message with the version from `--version`.
+- **`cannot write the stylesheet: <reason>`.** `<reason>` is Node.js's own message. `EISDIR` means `--output` names an existing folder, so name a file inside it; `EACCES` or `EPERM` means you cannot write there.
 
 ## Verifying it worked
 
@@ -1184,7 +1215,7 @@ Guides, in order:
 Lookup pages:
 
 - [Composing](docs/usage/composing.md): the complete rules for combining intent, presentation, and elevation, every component's defaults, and which axes each component reads.
-- [Customizing](docs/usage/customizing.md): presentation and material tokens, aesthetic knobs, the six public component variables, the generated palette, and the composition helpers for building your own components.
+- [Customizing](docs/usage/customizing.md): presentation and material tokens, aesthetic knobs, the public component variables, the generated palette, and the composition helpers for building your own components.
 - [Content and layout](docs/usage/content-and-layout.md): every layout helper, the type scale, cards and panels, tables, quotes, code, and keyboard keys.
 
 Once the screen works:
@@ -1444,7 +1475,7 @@ The profile address always starts with the same host, so it is a fixed prefix:
 </div>
 ```
 
-The gap between the control and its adornment is `--input-group-gap`, 0.5rem by default. That suits an icon, but text meant to read as part of the value looks broken with a space after it, so the example sets it to `0`. Set it on the `.input-group` itself: the group declares its own default, so a value set on a parent element has no effect. It is one of six [public component variables](docs/usage/customizing.md#component-variables).
+The gap between the control and its adornment is `--input-group-gap`, 0.5rem by default. That suits an icon, but text meant to read as part of the value looks broken with a space after it, so the example sets it to `0`. Set it on the group, or once on a form for every group in it. It is one of the [public component variables](docs/usage/customizing.md#component-variables).
 
 A members search, with an icon at the start (the `ic-lucide-*` classes need `@codenhub/icons` loaded; see [Buttons → Loading icons](docs/usage/buttons.md#loading-icons)):
 
@@ -1802,7 +1833,7 @@ WCAG 1.4.13 asks three things of content that appears on hover or focus. The pac
 - **Persistent.** It stays open until the pointer and focus leave.
 - **Dismissible.** The user must be able to close it without moving the pointer or focus, usually with Escape. CSS cannot listen for a key, so this part is yours.
 
-To change the linger time, set `--tooltip-linger` on the `.tooltip` element, for example `style="--tooltip-linger: 500ms"`. The wrapper declares its own default, so a value set on a parent of `.tooltip` has no effect. Keep it long enough for the pointer to reach the bubble. It is one of six [public component variables](docs/usage/customizing.md#component-variables).
+To change the linger time, set `--tooltip-linger` on the `.tooltip` element or on any element around it, for example `style="--tooltip-linger: 500ms"`. Keep it long enough for the pointer to reach the bubble. `--tooltip-gap` sets the space between the trigger and the bubble the same way. Both are [public component variables](docs/usage/customizing.md#component-variables).
 
 For Escape, write `data-state="closed"` on `.tooltip`: it hides the bubble even while it is hovered or focused. Remove the attribute only when both the pointer and focus have left the tooltip, so the next hover or focus opens it again. Removing it earlier, while the trigger still has focus, makes the message reappear without the user doing anything.
 
@@ -1916,7 +1947,7 @@ With the Tailwind source entrypoints (`/tw`), the package replaces Tailwind's `d
 
 It differs from the tokens in one case: an explicit theme nested inside the opposite one. A `.light` element inside a `.dark` one has light tokens, because the nearest `color-scheme` wins. But `dark:` matches by selector, and `.dark *` matches every element inside `.dark`, so a `dark:` utility inside that `.light` element still applies. If a page uses both tokens and `dark:` utilities, do not nest opposite themes.
 
-The compiled entrypoints do not define a `dark:` variant; they have no Tailwind build to define it in.
+The compiled entrypoints do not define a `dark:` variant; they have no Tailwind build to define it in. The [`chs build` command](docs/integrating/without-a-bundler.md#variants) does offer `dark:`, with the same selectors, on the intent, presentation, and modifier classes only.
 
 ## Change the brand color
 
@@ -2396,7 +2427,7 @@ Hand-drawn outlines: controls take long, uneven elliptical corners, and cards, p
 
 The 1px ink line is solid; checkboxes, dividers, and table rules are dashed. `--ui-line-style: dashed` dashes any other component, and `--ui-rule-style: solid` puts a divider or table back to solid. The 2px hard shadow is a small neutral depth cue.
 
-`--sketch-radius`, `--sketch-radius-surface`, and `--sketch-radius-pill` replace the control, surface, and pill-button outlines. Set one and every position takes that one outline. To shape a single component instead, set `--ui-radius` (`--ui-radius-surface` on a surface) on it.
+`--sketch-radius`, `--sketch-radius-surface`, and `--sketch-radius-pill` replace the control, surface, and pill-button outlines. Set one on the region or on any element inside it, and every position below takes that one outline. To shape a single component instead, set `--ui-radius` (`--ui-radius-surface` on a surface) on it.
 
 ```html
 <section class="sketch" style='--font-sketch: "Comic Sans MS", cursive'>
@@ -2509,7 +2540,7 @@ With none of those classes, a solo class paints the material alone (edge, corner
 ## How it wins and when it moves
 
 - **It beats the other library's styles.** The rules are unlayered and one class deep, so they win over a component's layered rules, and over its zero-specificity ones, wherever the two load. An unlayered foreign rule that is more specific, or as specific and later in the page, still wins. The other side of this is that a Tailwind utility on the same element, such as `rounded-none`, loses to the solo class: tune it through its knobs instead.
-- **It presses only an action.** Neobrutalism, chunky tile, and cyber press a `button`, `a[href]`, `[role="button"]`, `summary`, or button-type `input` that is not disabled. Anything else stays put, so a toast does not sink when clicked. Chunky tile's heavier label follows the same rule.
+- **It presses only an action.** Neobrutalism, chunky tile, and cyber press a `button`, `a[href]`, `[role="button"]`, `summary`, or button-type `input` unless it carries the `disabled` attribute, `.disabled`, `aria-disabled="true"`, or `data-disabled`. Only the attribute disables a button; the press ignores the other three too, since a page uses them to mark one it handles as disabled. Anything else stays put, so a toast does not sink when clicked. Chunky tile's heavier label follows the same rule.
 - **It leaves a container's motion alone.** Only an action takes the press's `transition`, and the press moves the element through the `translate` and `scale` properties, not `transform`. A toast keeps its own transitions and its own `transform`. On an action, the press's `transition` replaces any the element had.
 - **Reduced motion keeps the press and drops its motion.** Under `prefers-reduced-motion: reduce`, neobrutalism, chunky tile, and cyber still press, but at once: the element lands in its shadow or bar, or shrinks, without travelling there.
 
@@ -2690,7 +2721,7 @@ This is a lookup page for changing the package beyond its classes. [Theming](doc
 - [Presentation tokens](#presentation-tokens): how much of an intent a component shows.
 - [Material tokens](#material-tokens): what a component is made of.
 - [Aesthetic tokens](#aesthetic-tokens): the knobs each aesthetic exposes.
-- [Component variables](#component-variables): the six variables a single component reads.
+- [Component variables](#component-variables): the public variables a single component reads.
 - [Generated palette](#generated-palette): fixed color values for code that cannot load the package.
 - [Composition helpers](#composition-helpers): the classes to build a component of your own from.
 
@@ -2874,7 +2905,7 @@ Every aesthetic's knobs reach the same way: each knob is _read_ with its default
 </html>
 ```
 
-Knobs and material tokens reach in opposite directions. A knob is read once, at the element with the aesthetic class, and the result passes down. So set a knob on that element or on one above it; set on an element inside the aesthetic, it changes nothing, because the value has already been read.
+Knobs and material tokens reach in opposite directions. A knob is read once, at the element with the aesthetic class, and the result passes down. So set a knob on that element or on one above it; set on an element inside the aesthetic, it changes nothing, because the value has already been read. The sketch outlines are the exception: `--sketch-radius` and its siblings are read again at each position, so they work on any element inside the region too, as [Aesthetics → Sketch](docs/usage/aesthetics.md#sketch) describes.
 
 `--ui-radius`, `--ui-radius-surface`, and the other material tokens are read by each component as it draws. They work on the element they are set on and everything inside it, which is how you round one card differently from its neighbors without touching the knob. Mind which one a component reads: a surface (`.card`, `.panel`, `.alert`) takes `--ui-radius-surface`, and a control such as `.btn` or `.ipt` takes `--ui-radius`. `style="--ui-radius-surface: 0"` squares one card; `--ui-radius` on that card squares the buttons inside it and leaves the card round.
 
@@ -2907,9 +2938,9 @@ Naming: `--palette-<intent>-<presentation>-<slot>`, where `<intent>` is one of t
 - A ground qualifier, `page` or `subtle`, before the slot. It appears only on the `bg` and `edge` of `.soft` and `.ghost`, because a `.solid` fill covers its ground and the text color never depends on it.
   - No qualifier is what `.badge` and `.btn` draw, on a transparent ground: `--palette-success-soft-bg`.
   - `page` is what `.alert` draws, on the page: `--palette-success-soft-page-bg`.
-  - `subtle` is what `.kbd`, `.code`, and `.pre` draw, on the intent's own subtle tone: `--palette-success-soft-subtle-bg`.
+  - `subtle` is what `.kbd`, `.code`, `.pre`, and `.tooltip-icon` draw, on the intent's own subtle tone: `--palette-success-soft-subtle-bg`.
 
-  Each value is read from the component itself, so it includes what the component does on its own. A neutral `.alert`, `.kbd`, `.code`, or `.pre` keeps a quieter fill than a neutral `.badge`, and its `neutral-soft-page` and `neutral-soft-subtle` values say so. `.tooltip-bubble` matches none of the three: with no intent it fills with its own tooltip tone, and its edge is solid rather than faded.
+  Each value is read from the component itself, so it includes what the component does on its own. A neutral `.alert`, `.kbd`, `.code`, or `.pre` keeps a quieter fill than a neutral `.badge`, and its `neutral-soft-page` and `neutral-soft-subtle` values say so. A neutral `.tooltip-icon.soft` keeps the badge's fill, so its plate stands further from the page than `neutral-soft-subtle` says. `.tooltip-bubble` matches none of the three: with no intent it fills with its own tooltip tone, and its edge is solid rather than faded.
 
 - A `-hover` suffix, on `bg` and `edge` only, because the text color does not change on hover: `--palette-success-soft-page-bg-hover`. `.alert`, `.kbd`, `.code`, and `.pre` have no hover of their own, so their hover values are what the component draws when you add `box-hover` to it.
 
@@ -2917,20 +2948,34 @@ Light values are set on `:root`. Dark values apply under `.dark`, `.theme-dark`,
 
 The file does not follow `prefers-color-scheme`. Code that uses the palette on its own already switches themes itself, so it sets one of those classes or attributes.
 
+Nor does it follow `prefers-contrast: more`. Under that setting the package draws each intent's border in its strong tone, so a `-edge` value is fainter than the border the component draws. Code that has to honor the setting picks a stronger color itself.
+
 Three more tokens have no intent, presentation, ground, or hover: `--palette-border`, `--palette-surface`, and `--palette-text`, fixed values of `--color-border`, `--color-surface`, and `--color-text`. They are for things that are not intent-colored, such as a container's border, a dialog's background, and its text.
 
 ## Component variables
 
-Six variables are read by a single component and are supported inputs. Every other variable a component declares, such as `--surface-padding`, `--field-gap`, `--switch-*`, `--table-*`, or `--quote-*`, is internal and may change in any release.
+Eighteen variables are read by a single component and are supported inputs. A component reads each one where it is drawn, so a value set on the component or on any element around it reaches it, and the nearest value wins: set `--switch-width` on a form and every switch in it takes it. Every other variable a component declares, such as `--surface-padding` or any name that starts with `--_`, is internal and may change in any release.
 
-| Variable             | Element        | Value                        | Default                                                                 | Effect                                                                                                | Where to set it                                                                               |
-| -------------------- | -------------- | ---------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `--progress-value`   | `.progress`    | A percentage, `0%` to `100%` | `0%`                                                                    | Width of the filled part. Not clamped; a value without `%` is invalid and shows empty.                | The bar, or any element around it.                                                            |
-| `--progress-color`   | `.progress`    | A color                      | The intent color                                                        | Color of the filled part and of the `.active` shimmer.                                                | The bar, or any element around it.                                                            |
-| `--progress-surface` | `.progress`    | A color                      | The intent color at the presentation's fill: 12% by default             | Color of the track.                                                                                   | The bar, or any element around it.                                                            |
-| `--progress-edge`    | `.progress`    | A color                      | The intent's border color at the presentation's border: none by default | Color of the track's border. It shows only where the track has a border width, such as with `.edged`. | The bar, or any element around it.                                                            |
-| `--input-group-gap`  | `.input-group` | A length                     | `0.5rem`                                                                | Space between the control and its icon or text.                                                       | The `.input-group` itself. The group declares the default, so a value on a parent is ignored. |
-| `--tooltip-linger`   | `.tooltip`     | A time                       | `300ms`                                                                 | How long the bubble stays after the pointer leaves the trigger.                                       | The `.tooltip` itself. The wrapper declares the default, so a value on a parent is ignored.   |
+| Variable               | Element        | Value                        | Default                                                                 | Effect                                                                                                |
+| ---------------------- | -------------- | ---------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `--progress-value`     | `.progress`    | A percentage, `0%` to `100%` | `0%`                                                                    | Width of the filled part. Not clamped; a value without `%` is invalid and shows empty.                |
+| `--progress-color`     | `.progress`    | A color                      | The intent color                                                        | Color of the filled part and of the `.active` shimmer.                                                |
+| `--progress-surface`   | `.progress`    | A color                      | The intent color at the presentation's fill: 12% by default             | Color of the track.                                                                                   |
+| `--progress-edge`      | `.progress`    | A color                      | The intent's border color at the presentation's border: none by default | Color of the track's border. It shows only where the track has a border width, such as with `.edged`. |
+| `--input-group-gap`    | `.input-group` | A length                     | `0.5rem`                                                                | Space between the control and its icon or text.                                                       |
+| `--input-group-pad`    | `.input-group` | A length                     | `0.75rem`; `0.625rem` with `.sm` and `1rem` with `.lg`                  | Space between the group's edge and its content, on both sides.                                        |
+| `--field-gap`          | `.field`       | A length                     | `0.35rem`                                                               | Space between a field's label, control, and hint.                                                     |
+| `--switch-width`       | `.switch`      | A length                     | `2.5rem`                                                                | Width of the track. The knob keeps its size and travels further.                                      |
+| `--switch-height`      | `.switch`      | A length                     | `1.25rem`                                                               | Height of the track. The knob grows with it.                                                          |
+| `--tooltip-gap`        | `.tooltip`     | A length                     | `0.5rem`                                                                | Space between the trigger and the bubble.                                                             |
+| `--tooltip-linger`     | `.tooltip`     | A time                       | `300ms`                                                                 | How long the bubble stays after the pointer leaves the trigger.                                       |
+| `--divider-color`      | `.divider`     | A color                      | The intent color                                                        | Color of the line. It wins over an intent class on the divider.                                       |
+| `--divider-width`      | `.divider`     | A length                     | The border width: `1px` by default                                      | Thickness of the line.                                                                                |
+| `--skeleton-base`      | `.skeleton`    | A color                      | A faint tint of the intent color                                        | Color the placeholder rests on.                                                                       |
+| `--skeleton-sheen`     | `.skeleton`    | A color                      | A stronger tint of the intent color                                     | Color of the highlight that sweeps across it.                                                         |
+| `--quote-width`        | `.quote`       | A length                     | Twice the border width plus `1px`: `3px` by default                     | Thickness of the bar on the quotation's starting edge.                                                |
+| `--table-cell-padding` | `.data-table`  | A `padding` value            | `0.75rem 1rem`                                                          | Padding of every header, body, and footer cell. A padding utility on a cell still wins.               |
+| `--table-hover`        | `.data-table`  | A color                      | A 12% step toward the intent's hover color                              | Background of a body row under the pointer. `transparent` turns it off.                               |
 
 ```html
 <div class="progress" role="meter" aria-label="Storage used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="92" style="--progress-value: 92%; --progress-color: var(--color-warning)"></div>
@@ -3141,6 +3186,8 @@ A table draws lines under its header and above its footer. `.ruled` and `.rulele
 | `.ruled`    | Yes                                   | Yes               |
 
 `--ui-rule` is the token behind both classes, so a container can rule every table inside it: `style="--ui-rule: 100%"` acts like `.ruled`, and `0%` like `.ruleless`.
+
+Two variables and a token tune the rest, on the table or on any element around it. `--table-cell-padding` sets the padding of every cell, so `--table-cell-padding: 0.375rem 0.75rem` makes a dense table. `--table-hover` sets the color of a hovered body row, and `transparent` turns the hover off. `--ui-rule-ink` sets the color of a neutral table's lines; a table with an intent draws them in the intent's color. See [Customizing → Component variables](docs/usage/customizing.md#component-variables) for the two variables and [Material tokens](docs/usage/customizing.md#material-tokens) for `--ui-rule-ink`.
 
 The frame around the table is separate: a table has no border by default, and `.edged` adds one. The three choices do not affect each other, so `.data-table.ruleless.edged` is a framed table with no lines inside, and `.data-table.ruled` has every row separated and no frame.
 
@@ -3448,6 +3495,43 @@ Use ARIA or data attributes where the element or your component library has no n
 ## Next
 
 That completes the reading path. The [Introduction](docs/index.md) links every page, and [Composing](docs/usage/composing.md), [Customizing](docs/usage/customizing.md), and [Content and layout](docs/usage/content-and-layout.md) are the lookup pages for later.
+
+<!-- Source: docs/changelog/0.9.0.md -->
+
+# 0.9.0
+
+The build command is renamed `chs` and no longer runs Tailwind: it trims a stylesheet the package ships, so the package is the whole install. Twelve component variables, such as `--field-gap` and `--table-cell-padding`, are public and take effect when set on any ancestor. The release also fixes printing, bare native controls, disabled solo actions, forced colors, and sketch knobs, and adds the licence notice of the checkbox marks to every compiled file that carries them.
+
+## Added
+
+- **Twelve component variables.** `--tooltip-gap`, `--field-gap`, `--input-group-pad`, `--switch-height`, `--switch-width`, `--divider-color`, `--divider-width`, `--skeleton-base`, `--skeleton-sheen`, `--quote-width`, `--table-cell-padding`, and `--table-hover` join `--input-group-gap` and `--tooltip-linger` as public variables. Each one works on the component or on any element around it, so `.settings { --field-gap: 0.5rem; }` spaces every field in the region. See [Customizing → Component variables](docs/usage/customizing.md#component-variables).
+
+## Changed
+
+- **Breaking: the build command is `chs`.** `codenhub-styles build` is gone, with no alias; run `chs build` from a `package.json` script, or `npx @codenhub/styles build` from a shell. Do not type `npx chs`: an unrelated package on npm has that name, and npx would download and run it. See [Without a bundler → Build only the classes you use](docs/integrating/without-a-bundler.md#build-only-the-classes-you-use).
+- **Breaking: the command builds without Tailwind.** It reads the classes your files name and keeps their rules from a complete stylesheet the package ships in `dist/purge/`, so it needs Node.js 24 or newer and nothing else installed, and its output no longer changes with your Tailwind version. Three things it did through Tailwind are gone. It emits no Tailwind utilities, so `flex` or `mt-4` in your templates adds nothing. Variants are a fixed set of ten: `sm:`, `md:`, `lg:`, `xl:`, `2xl:`, `hover:`, `focus:`, `focus-visible:`, `active:`, and `dark:`. Variants do not stack, so `md:hover:primary` is not found. A project that needs any of those runs Tailwind and imports `/tw`, which still gives all three. See [Without a bundler → What it does not do](docs/integrating/without-a-bundler.md#what-it-does-not-do).
+- **Breaking: `@codenhub/styles` no longer has a peer dependency on `@tailwindcss/cli`.** Only the command used it. Remove it from your dependencies if nothing else uses it. `tailwindcss` stays an optional peer for `/tw`.
+- **`--input-group-gap` and `--tooltip-linger` work from a parent.** They took effect only when set on the `.input-group` or the `.tooltip` itself. A value set on an ancestor now reaches them.
+- **Sketch knobs reach every position.** `--sketch-radius`, `--sketch-radius-rounded`, and `--sketch-radius-surface` set on a `.sketch` region, or on any element inside it, now shape every control and surface. They skipped one element in four. See [Aesthetics → Sketch](docs/usage/aesthetics.md#sketch).
+- **Small buttons and fields read the theme's line height.** `.btn.sm` and the small text fields took their leading from a variable private to Tailwind, which can change between Tailwind releases. They now read `--text-sm--line-height`. A `leading-*` utility on them still wins.
+- **Internal variables renamed.** The custom properties that switches, tooltips, quotes, tables, and elevation derive internally now start with `--_`, as the other internal ones do, such as `--_tooltip-top` and `--_table-rule`. They were documented as internal. CSS that set one of the old names, such as `--table-rule`, no longer does anything. Use a public variable or a utility instead.
+- **The homepage is the package's page on codenhub.dev.**
+
+## Fixed
+
+- **A tap leaves no hover tint.** On a touch screen a tapped button, interactive card, table row, checkbox, switch, select, or input group kept its hover color until something else was tapped. Hover now applies only where the pointer can hover, as Tailwind's `hover:` variant does.
+- **A bare `<progress>` takes the color it sits in.** Under `/native`, in a filled container, it drew the page's ink over the container's color.
+- **A bare quiet checkbox or radio keeps its checked plate.** Under `/native`, a checked `.ghost` or `.soft` checkbox or radio showed its resting plate, and a mixed one also kept the neutral 20% cap.
+- **A filled quotation prints with its plate.** A `.quote.solid` printed white text on white paper.
+- **A solid solo element prints with its plate.** The `-solo` classes left their fill off paper, as the quotation did.
+- **A solo action disabled by class or data attribute does not press.** The neobrutalism, chunky tile, and cyber solos guarded their press with `:disabled` and `aria-disabled` only. A link or `role="button"` marked `.disabled` or `data-disabled` still sank when clicked.
+- **`@apply progress` and `@apply select` keep their forced colors.** The applied bar's value was repainted as Canvas, and the applied drop-down drew no arrow.
+- **Compiled CSS carries the licence of the checkbox marks.** The marks come from Lucide (ISC, itself from Feather, MIT). Each compiled file that inlines them now carries their copyright and permission notices in a `/*!` comment after Tailwind's banner, and `chs build` keeps it in its output.
+
+## Documentation
+
+- [Customizing → Generated palette](docs/usage/customizing.md#generated-palette) says the palette's `-edge` values do not follow `prefers-contrast: more`.
+- [Tailwind CSS v4](docs/integrating/tailwind.md) warns against clearing the `--text-*`, `--font-*`, and `--spacing` themes, which the package reads.
 
 <!-- Source: docs/changelog/0.8.0.md -->
 

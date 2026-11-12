@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro e escuro, como trocar a paleta pelas cores da marca, como definir uma intenção própria, e cada token de cor, de intenção, fundamental e de fonte com o seu padrão.
 order: 5
-source: faefe01e9a435bd2630c846cc365f3c8783107df
+source: b54ac4e817f35fb4f5f32b7f7022061f9658147a
 ---
 
 # Temas
@@ -67,7 +67,7 @@ Com os entrypoints de código-fonte do Tailwind (`/tw`), o pacote substitui a va
 
 Ela difere dos tokens em um caso: um tema explícito aninhado dentro do tema oposto. Um elemento `.light` dentro de um `.dark` tem tokens claros, porque o `color-scheme` mais próximo vence. Mas `dark:` casa por seletor, e `.dark *` casa com todo elemento dentro de `.dark`, então um utilitário `dark:` dentro daquele elemento `.light` ainda se aplica. Se uma página usa tanto tokens quanto utilitários `dark:`, não aninhe temas opostos.
 
-Os entrypoints compilados não definem uma variante `dark:`; eles não têm um build do Tailwind em que defini-la.
+Os entrypoints compilados não definem uma variante `dark:`; eles não têm um build do Tailwind em que defini-la. O [comando `chs build`](../integrating/without-a-bundler.md#variantes) oferece `dark:`, sim, com os mesmos seletores, só nas classes de intenção, apresentação e modificador.
 
 ## Mude a cor da marca
 

@@ -2766,6 +2766,48 @@ test.describe("aesthetics", () => {
       expect(measured.btn).toBe("4px");
     });
 
+    /* The first position took the region's outline by inheritance, so a knob
+       set on a container inside the region reached every position but the
+       first child's. */
+    test("takes a knob set inside the region at every position", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "sketch"));
+
+      const measured = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const read = (variant: string) => {
+          const region = document.createElement("section");
+          region.className = variant;
+          region.innerHTML =
+            '<div style="--sketch-radius: 4px; --sketch-radius-surface: 16px; --sketch-radius-rounded: 6px; --sketch-radius-surface-rounded: 20px">' +
+            '<div class="card"><button class="btn">1</button><button class="btn">2</button>' +
+            '<button class="btn">3</button><button class="btn">4</button></div>' +
+            '<div class="card"></div><div class="card"></div><div class="card"></div></div>';
+          host.append(region);
+
+          const radii = [...region.querySelectorAll(".card, .btn")].map(
+            (element) => `${element.className} ${getComputedStyle(element).borderRadius}`,
+          );
+
+          region.remove();
+          return radii;
+        };
+
+        return { pointed: read("sketch"), rounded: read("sketch sketch-rounded") };
+      });
+
+      // Four of each, one at every position of the rotation.
+      expect(measured.pointed).toEqual([
+        "card 16px",
+        ...Array<string>(4).fill("btn 4px"),
+        ...Array<string>(3).fill("card 16px"),
+      ]);
+      expect(measured.rounded).toEqual([
+        "card 20px",
+        ...Array<string>(4).fill("btn 6px"),
+        ...Array<string>(3).fill("card 20px"),
+      ]);
+    });
+
     test("keeps sketch chips irregular and clears material from nested aesthetics", async ({ page }) => {
       await page.goto(withAesthetic(FORMS_URL, "sketch"));
 

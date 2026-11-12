@@ -2,7 +2,7 @@
 title: Formularios
 description: Campos con etiqueta, pistas y errores, iconos y prefijos fijos, selects y toggles de checkbox, radio y switch.
 order: 2
-source: 00e6a57cfd62f524fde5a550af721786edd7a5dd
+source: 6f92be07a240da16dfa5dc835b36a6981985bea9
 ---
 
 # Formularios
@@ -123,7 +123,7 @@ La dirección del perfil siempre empieza con el mismo host, así que es un prefi
 </div>
 ```
 
-La separación entre el control y su adorno es `--input-group-gap`, 0.5rem por defecto. Eso le va bien a un icono, pero un texto que debe leerse como parte del valor parece roto con un espacio detrás, así que el ejemplo la pone a `0`. Defínela en el propio `.input-group`: el grupo declara su propio valor por defecto, así que un valor definido en un elemento padre no tiene efecto. Es una de las seis [variables públicas de componente](./customizing.md#variables-de-componente).
+La separación entre el control y su adorno es `--input-group-gap`, 0.5rem por defecto. Eso le va bien a un icono, pero un texto que debe leerse como parte del valor parece roto con un espacio detrás, así que el ejemplo la pone a `0`. Defínela en el grupo, o una sola vez en un formulario para todos los grupos que contiene. Es una de las [variables públicas de componente](./customizing.md#variables-de-componente).
 
 Una búsqueda de miembros, con un icono al principio (las clases `ic-lucide-*` necesitan `@codenhub/icons` cargado; consulta [Botones → Cargar los iconos](./buttons.md#cargar-los-iconos)):
 

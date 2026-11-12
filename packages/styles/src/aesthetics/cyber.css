@@ -179,6 +179,9 @@
   );
   --_solo-edge: color-mix(in oklab, var(--_solo-ink) var(--ui-border, 100%), var(--_solo-fill));
 
+  /* Printed as drawn; see `.glass-solo`. */
+  print-color-adjust: exact;
+
   border: 1px solid var(--_solo-edge);
   /* The surface shape: the element this exists for is usually a pane. An action
      takes the control shape below. */
@@ -275,6 +278,6 @@
     input[type="button"],
     input[type="submit"],
     input[type="reset"]
-  ):active:not(:disabled, [aria-disabled="true"]) {
+  ):active:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
   scale: 0.97;
 }

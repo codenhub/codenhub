@@ -1,8 +1,8 @@
 ---
 title: Personalização
-description: Consulta sobre tokens de apresentação e de material, ajustes das estéticas, as seis variáveis públicas de componente, a paleta gerada e os helpers para criar os seus próprios componentes.
+description: Consulta sobre tokens de apresentação e de material, ajustes das estéticas, as variáveis públicas de componente, a paleta gerada e os helpers para criar os seus próprios componentes.
 order: 9
-source: 790dec3b1fcf41af4b38aca7c5b8a93135827c1e
+source: 84c0d37049f274b623d9784bde5853b19f7a3ebe
 ---
 
 # Personalização
@@ -12,7 +12,7 @@ Esta é uma página de consulta para mudar o pacote além das suas classes. [Tem
 - [Tokens de apresentação](#tokens-de-apresentação): quanto de uma intenção um componente mostra.
 - [Tokens de material](#tokens-de-material): do que um componente é feito.
 - [Tokens de estética](#tokens-de-estética): os ajustes que cada estética expõe.
-- [Variáveis de componente](#variáveis-de-componente): as seis variáveis que um único componente lê.
+- [Variáveis de componente](#variáveis-de-componente): as variáveis públicas que um único componente lê.
 - [Paleta gerada](#paleta-gerada): valores de cor fixos para código que não pode carregar o pacote.
 - [Helpers de composição](#helpers-de-composição): as classes a partir das quais você monta um componente seu.
 
@@ -196,7 +196,7 @@ Os ajustes de todas as estéticas alcançam os elementos da mesma forma: cada aj
 </html>
 ```
 
-Ajustes e tokens de material alcançam os elementos em direções opostas. Um ajuste é lido uma vez, no elemento com a classe de estética, e o resultado é herdado. Então defina um ajuste nesse elemento ou num acima dele; definido num elemento dentro da estética, ele não muda nada, porque o valor já foi lido.
+Ajustes e tokens de material alcançam os elementos em direções opostas. Um ajuste é lido uma vez, no elemento com a classe de estética, e o resultado é herdado. Então defina um ajuste nesse elemento ou num acima dele; definido num elemento dentro da estética, ele não muda nada, porque o valor já foi lido. Os contornos do sketch são a exceção: `--sketch-radius` e os seus irmãos são lidos de novo em cada posição, então funcionam também em qualquer elemento dentro da região, como [Estéticas → Sketch](./aesthetics.md#sketch) descreve.
 
 `--ui-radius`, `--ui-radius-surface` e os outros tokens de material são lidos por cada componente no momento em que ele é desenhado. Eles funcionam no elemento em que são definidos e em tudo dentro dele, e é assim que você arredonda um card de forma diferente dos vizinhos sem mexer no ajuste. Repare em qual token cada componente lê: uma superfície (`.card`, `.panel`, `.alert`) usa `--ui-radius-surface`, e um controle como `.btn` ou `.ipt` usa `--ui-radius`. `style="--ui-radius-surface: 0"` deixa um card quadrado; `--ui-radius` nesse card deixa quadrados os botões dentro dele, e o card continua arredondado.
 
@@ -229,9 +229,9 @@ Nomenclatura: `--palette-<intent>-<presentation>-<slot>`, em que `<intent>` é u
 - Um qualificador de chão, `page` ou `subtle`, antes do slot. Ele só aparece no `bg` e no `edge` de `.soft` e `.ghost`, porque um preenchimento `.solid` cobre o seu chão e a cor do texto nunca depende dele.
   - Sem qualificador é o que `.badge` e `.btn` desenham, sobre um chão transparente: `--palette-success-soft-bg`.
   - `page` é o que `.alert` desenha, sobre a página: `--palette-success-soft-page-bg`.
-  - `subtle` é o que `.kbd`, `.code` e `.pre` desenham, sobre o tom subtle da própria intenção: `--palette-success-soft-subtle-bg`.
+  - `subtle` é o que `.kbd`, `.code`, `.pre` e `.tooltip-icon` desenham, sobre o tom subtle da própria intenção: `--palette-success-soft-subtle-bg`.
 
-  Cada valor é lido do próprio componente, então inclui o que o componente faz por conta própria. Um `.alert`, `.kbd`, `.code` ou `.pre` neutro mantém um preenchimento mais discreto que um `.badge` neutro, e os seus valores `neutral-soft-page` e `neutral-soft-subtle` refletem isso. `.tooltip-bubble` não corresponde a nenhum dos três: sem intenção, ele é preenchido com o seu próprio tom de tooltip, e a sua borda é sólida em vez de esmaecida.
+  Cada valor é lido do próprio componente, então inclui o que o componente faz por conta própria. Um `.alert`, `.kbd`, `.code` ou `.pre` neutro mantém um preenchimento mais discreto que um `.badge` neutro, e os seus valores `neutral-soft-page` e `neutral-soft-subtle` refletem isso. Um `.tooltip-icon.soft` neutro mantém o preenchimento do badge, então a sua placa se afasta mais da página do que `neutral-soft-subtle` indica. `.tooltip-bubble` não corresponde a nenhum dos três: sem intenção, ele é preenchido com o seu próprio tom de tooltip, e a sua borda é sólida em vez de esmaecida.
 
 - Um sufixo `-hover`, só em `bg` e `edge`, porque a cor do texto não muda no hover: `--palette-success-soft-page-bg-hover`. `.alert`, `.kbd`, `.code` e `.pre` não têm hover próprio, então os seus valores de hover são o que o componente desenha quando você adiciona `box-hover` a ele.
 
@@ -239,20 +239,34 @@ Os valores claros são definidos em `:root`. Os valores escuros se aplicam sob `
 
 O arquivo não segue `prefers-color-scheme`. Código que usa a paleta sozinha já troca de tema por conta própria, então ele define uma dessas classes ou atributos.
 
+Ele também não segue `prefers-contrast: more`. Com essa preferência, o pacote desenha a borda de cada intenção no seu tom forte, então um valor `-edge` fica mais fraco que a borda que o componente desenha. Código que precisa respeitar a preferência escolhe uma cor mais forte por conta própria.
+
 Mais três tokens não têm intenção, apresentação, chão nem hover: `--palette-border`, `--palette-surface` e `--palette-text`, valores fixos de `--color-border`, `--color-surface` e `--color-text`. Eles servem para o que não é colorido por intenção, como a borda de um contêiner, o fundo de um dialog e o seu texto.
 
 ## Variáveis de componente
 
-Seis variáveis são lidas por um único componente e são entradas suportadas. Todas as outras variáveis que um componente declara, como `--surface-padding`, `--field-gap`, `--switch-*`, `--table-*` ou `--quote-*`, são internas e podem mudar em qualquer versão.
+Dezoito variáveis são lidas por um único componente e são entradas suportadas. Um componente lê cada uma onde é desenhado, então um valor definido no componente ou em qualquer elemento em volta dele chega até ele, e o valor mais próximo vence: defina `--switch-width` num formulário e todos os switches dentro dele o recebem. Todas as outras variáveis que um componente declara, como `--surface-padding` ou qualquer nome que comece com `--_`, são internas e podem mudar em qualquer versão.
 
-| Variável             | Elemento       | Valor                             | Padrão                                                                  | Efeito                                                                                          | Onde definir                                                                                     |
-| -------------------- | -------------- | --------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `--progress-value`   | `.progress`    | Uma porcentagem, de `0%` a `100%` | `0%`                                                                    | Largura da parte preenchida. Não é limitada; um valor sem `%` é inválido e aparece vazio.       | Na barra ou em qualquer elemento em volta dela.                                                  |
-| `--progress-color`   | `.progress`    | Uma cor                           | A cor da intenção                                                       | Cor da parte preenchida e do brilho de `.active`.                                               | Na barra ou em qualquer elemento em volta dela.                                                  |
-| `--progress-surface` | `.progress`    | Uma cor                           | A cor da intenção no preenchimento da apresentação: 12% por padrão      | Cor do trilho.                                                                                  | Na barra ou em qualquer elemento em volta dela.                                                  |
-| `--progress-edge`    | `.progress`    | Uma cor                           | A cor de borda da intenção na borda da apresentação: nenhuma por padrão | Cor da borda do trilho. Ela só aparece onde o trilho tem espessura de borda, como com `.edged`. | Na barra ou em qualquer elemento em volta dela.                                                  |
-| `--input-group-gap`  | `.input-group` | Um comprimento                    | `0.5rem`                                                                | Espaço entre o controle e o seu ícone ou texto.                                                 | No próprio `.input-group`. O grupo declara o padrão, então um valor num elemento pai é ignorado. |
-| `--tooltip-linger`   | `.tooltip`     | Um tempo                          | `300ms`                                                                 | Quanto tempo o balão fica depois que o ponteiro sai do gatilho.                                 | No próprio `.tooltip`. O wrapper declara o padrão, então um valor num elemento pai é ignorado.   |
+| Variável               | Elemento       | Valor                             | Padrão                                                                  | Efeito                                                                                                       |
+| ---------------------- | -------------- | --------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `--progress-value`     | `.progress`    | Uma porcentagem, de `0%` a `100%` | `0%`                                                                    | Largura da parte preenchida. Não é limitada; um valor sem `%` é inválido e aparece vazio.                    |
+| `--progress-color`     | `.progress`    | Uma cor                           | A cor da intenção                                                       | Cor da parte preenchida e do brilho de `.active`.                                                            |
+| `--progress-surface`   | `.progress`    | Uma cor                           | A cor da intenção no preenchimento da apresentação: 12% por padrão      | Cor do trilho.                                                                                               |
+| `--progress-edge`      | `.progress`    | Uma cor                           | A cor de borda da intenção na borda da apresentação: nenhuma por padrão | Cor da borda do trilho. Ela só aparece onde o trilho tem espessura de borda, como com `.edged`.              |
+| `--input-group-gap`    | `.input-group` | Um comprimento                    | `0.5rem`                                                                | Espaço entre o controle e o seu ícone ou texto.                                                              |
+| `--input-group-pad`    | `.input-group` | Um comprimento                    | `0.75rem`; `0.625rem` com `.sm` e `1rem` com `.lg`                      | Espaço entre a borda do grupo e o seu conteúdo, dos dois lados.                                              |
+| `--field-gap`          | `.field`       | Um comprimento                    | `0.35rem`                                                               | Espaço entre o rótulo, o controle e a dica de um campo.                                                      |
+| `--switch-width`       | `.switch`      | Um comprimento                    | `2.5rem`                                                                | Largura do trilho. O botão mantém o seu tamanho e percorre uma distância maior.                              |
+| `--switch-height`      | `.switch`      | Um comprimento                    | `1.25rem`                                                               | Altura do trilho. O botão cresce junto com ele.                                                              |
+| `--tooltip-gap`        | `.tooltip`     | Um comprimento                    | `0.5rem`                                                                | Espaço entre o gatilho e o balão.                                                                            |
+| `--tooltip-linger`     | `.tooltip`     | Um tempo                          | `300ms`                                                                 | Quanto tempo o balão fica depois que o ponteiro sai do gatilho.                                              |
+| `--divider-color`      | `.divider`     | Uma cor                           | A cor da intenção                                                       | Cor da linha. Ela prevalece sobre uma classe de intenção no divisor.                                         |
+| `--divider-width`      | `.divider`     | Um comprimento                    | A espessura de borda: `1px` por padrão                                  | Espessura da linha.                                                                                          |
+| `--skeleton-base`      | `.skeleton`    | Uma cor                           | Um tom suave da cor da intenção                                         | Cor sobre a qual o placeholder repousa.                                                                      |
+| `--skeleton-sheen`     | `.skeleton`    | Uma cor                           | Um tom mais forte da cor da intenção                                    | Cor do brilho que passa por cima dele.                                                                       |
+| `--quote-width`        | `.quote`       | Um comprimento                    | O dobro da espessura de borda mais `1px`: `3px` por padrão              | Espessura da barra na borda inicial da citação.                                                              |
+| `--table-cell-padding` | `.data-table`  | Um valor de `padding`             | `0.75rem 1rem`                                                          | Padding de cada célula do cabeçalho, do corpo e do rodapé. Um utilitário de padding numa célula ainda vence. |
+| `--table-hover`        | `.data-table`  | Uma cor                           | Um passo de 12% em direção à cor de hover da intenção                   | Fundo de uma linha do corpo sob o ponteiro. `transparent` o desliga.                                         |
 
 ```html
 <div class="progress" role="meter" aria-label="Storage used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="92" style="--progress-value: 92%; --progress-color: var(--color-warning)"></div>

@@ -1,7 +1,7 @@
 ---
 title: Introdução
 description: Para que serve o @codenhub/styles, quanto ele custa e em que ordem ler esta documentação.
-source: 5f82b6a4d492bdb5ea73406f256d307f775fa1ea
+source: 4226ac998f12fb17bed33172417919586cb6c930
 ---
 
 # @codenhub/styles
@@ -79,7 +79,7 @@ O pacote está abaixo da 1.0 e segue a [regra do versionamento semântico para v
 - Uma versão minor, como da 0.7.0 para a 0.8.0, pode quebrar compatibilidade. Ela pode renomear ou remover uma classe ou token, ou mudar um padrão. Toda quebra é listada em **Changed** ou **Removed** na página do [changelog](../changelog/index.md) daquela versão, com o que usar no lugar.
 - Uma versão patch, como da 0.7.0 para a 0.7.1, nunca quebra.
 
-O range padrão do npm para uma dependência nova, `^0.7.0`, já aceita apenas patches, porque abaixo da 1.0 um range com circunflexo não avança para a próxima versão minor. Leia o changelog antes de subir esse range. Ao referenciar um arquivo de uma CDN, coloque a versão exata na URL; veja [Sem bundler](./integrating/without-a-bundler.md).
+O range padrão do npm para uma dependência nova, `^0.9.0`, já aceita apenas patches, porque abaixo da 1.0 um range com circunflexo não avança para a próxima versão minor. Leia o changelog antes de subir esse range. Ao referenciar um arquivo de uma CDN, coloque a versão exata na URL; veja [Sem bundler](./integrating/without-a-bundler.md).
 
 As quebras não são amenizadas com aliases porque o modelo ainda está se assentando, e manter cada nome antigo ao lado do substituto aumentaria a superfície a cada versão. Uma renomeação ou remoção costuma custar um localizar-e-substituir quando você atualiza; um padrão alterado pode exigir que você reajuste o seu próprio CSS.
 

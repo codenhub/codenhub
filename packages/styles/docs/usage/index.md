@@ -22,7 +22,7 @@ Guides, in order:
 Lookup pages:
 
 - [Composing](./composing.md): the complete rules for combining intent, presentation, and elevation, every component's defaults, and which axes each component reads.
-- [Customizing](./customizing.md): presentation and material tokens, aesthetic knobs, the six public component variables, the generated palette, and the composition helpers for building your own components.
+- [Customizing](./customizing.md): presentation and material tokens, aesthetic knobs, the public component variables, the generated palette, and the composition helpers for building your own components.
 - [Content and layout](./content-and-layout.md): every layout helper, the type scale, cards and panels, tables, quotes, code, and keyboard keys.
 
 Once the screen works:

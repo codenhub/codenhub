@@ -122,7 +122,7 @@ The profile address always starts with the same host, so it is a fixed prefix:
 </div>
 ```
 
-The gap between the control and its adornment is `--input-group-gap`, 0.5rem by default. That suits an icon, but text meant to read as part of the value looks broken with a space after it, so the example sets it to `0`. Set it on the `.input-group` itself: the group declares its own default, so a value set on a parent element has no effect. It is one of six [public component variables](./customizing.md#component-variables).
+The gap between the control and its adornment is `--input-group-gap`, 0.5rem by default. That suits an icon, but text meant to read as part of the value looks broken with a space after it, so the example sets it to `0`. Set it on the group, or once on a form for every group in it. It is one of the [public component variables](./customizing.md#component-variables).
 
 A members search, with an icon at the start (the `ic-lucide-*` classes need `@codenhub/icons` loaded; see [Buttons → Loading icons](./buttons.md#loading-icons)):
 

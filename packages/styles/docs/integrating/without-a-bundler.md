@@ -12,8 +12,8 @@ What needs a build tool is the import _name_. `@import "@codenhub/styles"` names
 
 The `/tw` entrypoints are Tailwind source and need a Tailwind build. `/tw/aesthetics` is the exception, plain CSS with nothing for Tailwind to process, but without a bundler link the compiled `dist/aesthetics/` files instead, as below. This page is for a page that has no Node.js CSS build: plain HTML, Rails, Laravel, Django, or any server-rendered app. There are two paths:
 
-1. **Link the compiled stylesheet.** Works today, with nothing but static files. You ship every class, whether your pages use it or not.
-2. **Build a stylesheet with the package's `build` command.** It scans your templates and writes a stylesheet with only the classes they use. See [Build only the classes you use](#build-only-the-classes-you-use).
+1. **Link the compiled stylesheet.** It needs nothing but static files. You ship every class, whether your pages use it or not.
+2. **Build a stylesheet with the package's `chs build` command.** It scans your templates and writes a stylesheet with only the classes they use. See [Build only the classes you use](#build-only-the-classes-you-use).
 
 ## Which file to link
 
@@ -85,7 +85,7 @@ Then link it from the layout, by its path below that folder:
 
 Point the path at `node_modules/@codenhub` rather than at `dist/` itself. Propshaft serves files by their path below each asset folder, so adding `dist/` directly would publish a bare `index.css` that collides with any `index.css` of your own.
 
-The files you link are in `dist/`, which holds only finished CSS, plus an empty `index.d.ts` for TypeScript. The Tailwind source lives in `tw/`, outside `dist/`, so a static pipeline that serves or fingerprints `dist/` meets no `@import` it cannot resolve.
+The files you link are in `dist/`, which holds finished CSS with no `@import` to resolve, plus an empty `index.d.ts` for TypeScript and the `chs build` command with the files it reads. The Tailwind source lives in `tw/`, outside `dist/`, so a static pipeline that serves or fingerprints `dist/` meets no `@import` it cannot resolve.
 
 ### Django
 
@@ -103,7 +103,7 @@ STATICFILES_DIRS = [
 <link rel="stylesheet" href="{% static 'codenhub-styles/index.css' %}" />
 ```
 
-Point the prefix at `dist`, not at the package folder. `dist/` holds only finished CSS, plus an empty `index.d.ts` for TypeScript that the storage copies as it is, so `collectstatic` also works with `ManifestStaticFilesStorage`, which fingerprints each file and rewrites the references inside it. The package folder also holds the Tailwind source in `tw/`, whose `@import "tailwindcss/..."` lines that storage cannot resolve.
+Point the prefix at `dist`, not at the package folder. `dist/` holds finished CSS with no `@import` to resolve, plus an empty `index.d.ts` for TypeScript and the `chs build` command with the files it reads, which the storage copies as they are, so `collectstatic` also works with `ManifestStaticFilesStorage`, which fingerprints each file and rewrites the references inside it. The package folder also holds the Tailwind source in `tw/`, whose `@import "tailwindcss/..."` lines that storage cannot resolve.
 
 ### Laravel
 
@@ -111,34 +111,52 @@ A Laravel app runs Vite by default, so it has a bundler: import the package from
 
 ## Build only the classes you use
 
-The package carries a command, `codenhub-styles`, that compiles it for you. It reads your templates for class names and writes one minified stylesheet with only the StyleKit classes and Tailwind utilities they use. A page that uses one button gets a small fraction of the full stylesheet; the exact size depends on which classes you use, since each component brings the shared rules it relies on.
+The package carries a command, `chs`, that reads your templates for class names and writes one minified stylesheet with only the StyleKit classes they use. A page that uses one button gets about an eighth of the full stylesheet; the exact size depends on which classes you use, since each component brings the shared rules it relies on.
 
 The command works with a bundler too. A project whose bundler does not run Tailwind, such as a plain Vite or webpack build, can write the stylesheet into its sources, `--output src/stylekit.css`, and import that file where it would import `@codenhub/styles`. A project that runs Tailwind CSS v4 gets the same trimming from the [source entrypoint](./tailwind.md) and does not need the command.
 
-It needs Node.js 24 or newer on the machine that builds the CSS, whether that is your laptop, a CI job, or a deploy step. It compiles with Tailwind CSS, which the package does not install for you, so a project that only links the compiled stylesheet never downloads it. Install the three packages as development dependencies from your project root; npm creates a `package.json` if you have none, and you need no Tailwind configuration:
+It needs Node.js 24 or newer on the machine that builds the CSS, whether that is your laptop, a CI job, or a deploy step, and nothing else: the package is the whole install, with no Tailwind and no configuration. Install it as a development dependency from your project root; npm creates a `package.json` if you have none:
 
 ```sh
-npm install --save-dev @codenhub/styles @tailwindcss/cli tailwindcss
+npm install --save-dev @codenhub/styles
 ```
 
-The stylesheet the command writes is plain CSS, so the servers that serve your site need neither Node.js nor any of these packages. Run it from your project root:
+The stylesheet the command writes is plain CSS, so the servers that serve your site need neither Node.js nor the package. Add the build to your `package.json` scripts, where the installed command is on the path by its name:
+
+```json
+{
+  "scripts": {
+    "build:css": "chs build --content \"app/views/**/*.erb\" --output public/stylekit.css"
+  }
+}
+```
+
+Then run it from your project root:
 
 ```sh
-npx codenhub-styles build --content "app/views/**/*.erb" --output public/stylekit.css
+npm run build:css
 ```
+
+To run it once without a script, call it through the package name:
+
+```sh
+npx @codenhub/styles build --content "app/views/**/*.erb" --output public/stylekit.css
+```
+
+Do not type `npx chs`. `chs` is the command's name inside this package, but npm also has an unrelated package called `chs`, and `npx chs` runs that one in any folder where this package is not installed.
 
 On success the command prints one line, the absolute path it wrote and the file's size in bytes:
 
 ```text
-/home/you/shop/public/stylekit.css 25782 bytes
+/home/you/shop/public/stylekit.css 24497 bytes
 ```
 
 Link that file from your layout like any static stylesheet.
 
 ### Rails views
 
-```sh
-npx codenhub-styles build --content "app/views/**/*.erb" --content "app/helpers/**/*.rb" --output public/stylekit.css
+```json
+"build:css": "chs build --content \"app/views/**/*.erb\" --content \"app/helpers/**/*.rb\" --output public/stylekit.css"
 ```
 
 ```erb
@@ -148,8 +166,8 @@ npx codenhub-styles build --content "app/views/**/*.erb" --content "app/helpers/
 
 ### Laravel Blade views
 
-```sh
-npx codenhub-styles build --content "resources/views/**/*.blade.php" --output public/css/stylekit.css
+```json
+"build:css": "chs build --content \"resources/views/**/*.blade.php\" --output public/css/stylekit.css"
 ```
 
 ```blade
@@ -161,8 +179,8 @@ npx codenhub-styles build --content "resources/views/**/*.blade.php" --output pu
 
 A Django project keeps templates in a project-level `templates/` folder, in each app's own `templates/` folder, or both. Give one `--content` for each place yours live, and leave out any place you do not use, since a glob that matches nothing fails the build:
 
-```sh
-npx codenhub-styles build --content "templates/**/*.html" --content "shop/templates/**/*.html" --output static/stylekit.css
+```json
+"build:css": "chs build --content \"templates/**/*.html\" --content \"shop/templates/**/*.html\" --output static/stylekit.css"
 ```
 
 ```django
@@ -175,41 +193,53 @@ Write the output into a folder listed in `STATICFILES_DIRS`, here `static/`, so 
 ### Options
 
 - `--content <glob>`, or `-c <glob>`, names the files to read for class names. It is required and repeatable: pass it once per glob, and the build reads every file any of them matches. A relative glob is resolved against the folder you run the command in, so run it from your project root; an absolute glob is used as given. `**` matches any number of folders, and `{rb,erb}` either extension. Any text file works, whatever its extension. Each glob has to match at least one file, or the build fails and names it, so a typo cannot ship an empty stylesheet. Files your `.gitignore` excludes are still read when a glob matches them, and nothing outside your globs is read.
-- Quote every glob. Without quotes, your shell may expand the glob into a list of files before the command sees it, and only the first file counts as the `--content` value. When that leaves extra file names behind, the build rejects them rather than silently reading less than you meant; when the glob matched a single file, the build reads just that file and nothing your templates add later.
+- Quote every glob, with `\"` inside a `package.json` script. Without quotes, your shell may expand the glob into a list of files before the command sees it, and only the first file counts as the `--content` value. When that leaves extra file names behind, the build rejects them rather than silently reading less than you meant; when the glob matched a single file, the build reads just that file and nothing your templates add later.
 - `--output <file>`, or `-o <file>`, is the stylesheet to write. It is required. A relative path is resolved against the folder you run the command in, missing parent folders are created, and an existing file is replaced.
-- `--aesthetic <name>` adds one of the [aesthetics](../usage/aesthetics.md): `neobrutalism`, `glass`, `pixel`, `chunky-tile`, `cyber`, or `sketch`. Repeat it for more than one; naming one twice includes it once. Aesthetics are opt-in because the build cannot tell from your templates which one you want, so each is written in full when you ask for it, and none is included when you do not.
+- `--aesthetic <name>` adds one of the [aesthetics](../usage/aesthetics.md): `neobrutalism`, `glass`, `pixel`, `chunky-tile`, `cyber`, or `sketch`. Repeat it for more than one; naming one twice includes it once. Aesthetics are opt-in because the build cannot tell from your templates which one you want: each is added when you ask for it, less its rules for classes your templates do not use, and none is included when you do not.
 - `--no-minify` writes readable, indented CSS instead. Useful for reading what the build produced; serve the minified file.
 - `--help` prints the usage, with the aesthetics this version ships. `--version` prints the package version. Both build nothing and exit with status 0.
 
-The output always holds the theme, its design tokens as CSS custom properties, the reset, and the base rules every component relies on. On top of that come each StyleKit class your templates use, with the variants you combine it with, such as `primary` or `soft`, and each Tailwind utility they use, such as `flex` or `mt-4`. The output is built from the complete stylesheet, not from `/native`, so it has no classless mappings.
+The output always holds the theme, its design tokens as CSS custom properties, the reset, the base rules every component relies on, and the classes a page gets at run time rather than from a template, such as `.theme-dark`. On top of that comes each StyleKit class your templates use. The output is built from the complete stylesheet, not from `/native`, so it has no classless mappings. A build whose templates name every class writes the complete stylesheet, byte for byte.
 
 ### How classes are found
 
-The build does not run your templates. It reads each file your `--content` globs match as plain text, collects every word that could be a class name, and writes the rules for the words that are StyleKit classes or Tailwind utilities. This is how Tailwind CSS reads content too.
+The build does not run your templates. It reads each file your `--content` globs match as plain text, collects every word that could be a class name, and writes the rules for the words that are StyleKit classes. This is how Tailwind CSS reads content too.
 
-A class has to appear in a file as one whole word. `class="btn primary"`, `class: "btn primary"`, and `classes = ["btn", "primary"]` all work. A word that only looks like a class also counts: a comment that says "card" adds the card's full rules to the stylesheet, which makes the file larger and changes nothing on the page.
+A class has to appear in a file as one whole word. `class="btn primary"`, `class: "btn primary"`, and `classes = ["btn", "primary"]` all work, and so does a class written before a colon or after one, as in Svelte's `class:primary={isPrimary}` or a Ruby hash's `btn: true`. A word that only looks like a class also counts: a comment that says "card" adds the card's full rules to the stylesheet, which makes the file larger and changes nothing on the page.
 
 A class name your code assembles while rendering never appears whole in any file, so the build cannot find it. In `class="btn <%= @order.priority %>"`, `btn` is found, but the intent is whatever `priority` holds at render time; if that is `destructive`, the button renders without its red. Two ways out:
 
 - **Write class names whole.** Map each value to a complete class name in a file the build reads, such as `{ "urgent" => "destructive", "normal" => "neutral" }.fetch(@order.priority)` in a helper.
 - **List them in a safelist file.** A plain text file with one class name per line, added with its own `--content`, such as `--content config/stylekit-classes.txt`. Keep it next to the code that builds the class names, so whoever changes one sees the other.
 
+### Variants
+
+An intent, presentation, or modifier class can take one of ten prefixes, written as in Tailwind: `sm:`, `md:`, `lg:`, `xl:`, and `2xl:` apply it from that breakpoint up, `hover:`, `focus:`, `focus-visible:`, and `active:` while the element is in that state, and `dark:` wherever the dark theme applies, as [Theming → The dark: variant](../usage/theming.md#the-dark-variant) describes. `md:lg` makes a button large from the `md` breakpoint, and `hover:primary` gives it the primary intent on hover:
+
+```html
+<button class="btn sm md:lg ghost hover:soft">Save</button>
+```
+
+That covers intents such as `primary` and `destructive`, the fill and edge classes such as `soft` and `edged`, and modifiers such as `sm`, `lg`, `raised`, `pill`, `tight`, and `ruled`. `disabled` takes none: it is a state the element is in, so write it as the attribute or the class. Component classes such as `btn` and `card`, and the text and layout helpers, take no prefix.
+
+Each prefix is a fixed copy of those classes, built into the package, so the list is the common ones rather than all of Tailwind's. The command does not stack prefixes, as in `md:hover:primary`, and offers no other ones, such as `print:` or `group-hover:`. Such a class is not styled, and the element renders without it.
+
 ### What it does not do
 
+- **No Tailwind utilities.** `flex`, `mt-4`, `text-red-500`, and the rest of Tailwind are not StyleKit classes, so the build leaves them out. For layout, StyleKit's own [layout helpers](../usage/content-and-layout.md) are in the build like any other class. A project that wants Tailwind's utilities, its other variants, or prefixes stacked runs Tailwind itself and imports the [source entrypoint](./tailwind.md), which gives all three.
 - **No watch mode.** It builds once and exits. Run it again after you change a template, from a script, or from a file watcher your framework or editor already has. A class the stylesheet does not have yet leaves its element unstyled until the next build.
-- **No configuration file and no custom CSS.** You cannot add your own `@theme` values, `@utility` definitions, or plugins. To change the look, override the custom properties in a stylesheet of your own loaded after this one, as [Customizing](../usage/customizing.md) describes. When you need Tailwind's own configuration, install Tailwind CSS and import the source entrypoint from your own Tailwind input, as [Tailwind CSS v4](./tailwind.md) shows.
+- **No configuration file and no custom CSS.** You cannot add your own `@theme` values, `@utility` definitions, or plugins. To change the look, override the custom properties in a stylesheet of your own loaded after this one, as [Customizing](../usage/customizing.md) describes.
 - **No other commands.** `build` is the only one; `--help` and `--version` are the only flags that run without it.
-- **No Tailwind version of its own.** Each build uses the `@tailwindcss/cli` and `tailwindcss` installed in your project, within the `>=4.3.2 <5` range StyleKit supports, so your lockfile pins them.
 
 ### In a deploy
 
 Build the stylesheet before whatever step collects or fingerprints your assets, such as `rails assets:precompile`, `php artisan optimize`, or `python manage.py collectstatic`. Either commit the output, so the servers need no Node.js at all at the cost of a generated file someone has to remember to rebuild, or build it on deploy, so the build machine needs Node.js 24 or newer.
 
-Pin the version. Below 1.0 a minor release may rename or remove a class, so the same command can write a different stylesheet with a newer version. Commit `package.json` and the lockfile npm writes, and install with `npm ci` on the build machine, so every build uses the versions you tested.
+Pin the version. Below 1.0 a minor release may rename or remove a class, so the same command can write a different stylesheet with a newer version. The output depends on nothing but the package's version and your templates, so commit `package.json` and the lockfile npm writes, and install with `npm ci` on the build machine, so every build uses the version you tested.
 
 ### When the build fails
 
-Every failure prints one line starting with `codenhub-styles:` to standard error and exits with status 1, without writing the output file, so a deploy script stops instead of shipping a stale or empty stylesheet. The line says what went wrong and what to do:
+Every failure prints one line starting with `chs:` to standard error and exits with status 1, without writing the output file, so a deploy script stops instead of shipping a stale or empty stylesheet. The line says what went wrong and what to do:
 
 - **`missing --content` or `missing --output`.** Add the one it names. An `--output` that is empty or only spaces counts as missing.
 - **`--content "<glob>" matches no file in <folder>`.** Usually a typo in the path, a command run from another folder than your project root, or a glob for a place your project does not use. Building from nothing would write a stylesheet with no component classes, and the site would quietly lose its styling.
@@ -217,10 +247,9 @@ Every failure prints one line starting with `codenhub-styles:` to standard error
 - **`unknown option "<flag>"`.** A typo, or an option from another tool, such as `--watch` or `--config`. `--help` lists the options.
 - **`option "<flag>" is missing its value or does not take one`.** A flag that takes a value was the last thing on the line, or `--no-minify` was given one, as in `--no-minify=true`.
 - **`unknown aesthetic "<name>"; choose from ...`.** Pick one of the names listed. They are lowercase and hyphenated, as in `chunky-tile`.
-- **`missing command` or `unknown command "<name>"`.** The first word after `codenhub-styles` has to be `build`.
-- **`this command needs @tailwindcss/cli and tailwindcss, which are not installed`.** The line names whichever of the two is missing and ends with the command that installs it. Run that from your project root.
+- **`missing command` or `unknown command "<name>"`.** The first word after `chs` has to be `build`.
 - **`this command needs Node.js 24 or newer`.** Update Node.js on the machine that builds the CSS.
-- **`Tailwind failed to build the stylesheet: <reason>`.** `<reason>` is Tailwind's own message. `EISDIR` means `--output` names an existing folder, so name a file inside it; `EACCES` or `EPERM` means you cannot write there. For any other reason, run the same command with `--no-minify` to rule out the minifier, and report the message with the version from `--version`.
+- **`cannot write the stylesheet: <reason>`.** `<reason>` is Node.js's own message. `EISDIR` means `--output` names an existing folder, so name a file inside it; `EACCES` or `EPERM` means you cannot write there.
 
 ## Verifying it worked
 

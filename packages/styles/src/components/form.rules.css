@@ -116,16 +116,20 @@
   /* The last exclusion is `.input-group`'s: a group whose control is disabled
      dims as a disabled field does (see `input-group`), so it does not answer
      the pointer either. The list is the group's own, so a `<select>` with a
-     disabled `<option>` is not caught by it. */
-  &:hover:not(
-      :disabled,
-      .disabled,
-      [aria-disabled="true"],
-      [data-disabled],
-      :focus-visible,
-      :has(> :is(.ipt, .textarea, .select, .text-control, input, textarea, select):disabled)
-    ) {
-    --_line-tone: var(--intent-hover);
+     disabled `<option>` is not caught by it. Under `(hover: hover)` as the
+     other hover responses are: a tapped checkbox, select, or group stays in
+     `:hover` without matching `:focus-visible`, and kept the hover line. */
+  @media (hover: hover) {
+    &:hover:not(
+        :disabled,
+        .disabled,
+        [aria-disabled="true"],
+        [data-disabled],
+        :focus-visible,
+        :has(> :is(.ipt, .textarea, .select, .text-control, input, textarea, select):disabled)
+      ) {
+      --_line-tone: var(--intent-hover);
+    }
   }
 
   /* The line moves to the intent on top of the `reset.css` `:focus-visible`
@@ -324,6 +328,22 @@
     --intent-fill-max: 100%;
   }
 
+  /* A bare toggle's "on" plate. `/native` reaches the toggles through `@apply`
+     in `base`, where their `:checked` and `:indeterminate` pins lose to
+     `.ghost` and `.soft` in `utilities`, so a checked quiet checkbox kept its
+     resting plate. The class route already wins on specificity in this layer;
+     this repeats its values for the bare element, with the neutral cap
+     `native.css`'s reset puts back, which the arm above lifts only when
+     checked. Not `radio:indeterminate`, which every radio of a group with
+     nothing chosen matches. */
+  input:is([type="checkbox"], [type="radio"]):checked,
+  input[type="checkbox"]:indeterminate {
+    --intent-fill-max: 100%;
+    --ui-fill: 100%;
+    --ui-fg-on-fill: 100%;
+    --_fill-cap: 100%;
+  }
+
   /* The three toggles read their own component cap (`--_fill-cap`, below) as the
      ceiling regardless of intent, checked or not -- not just at `:checked`, the
      way the arm above still works for a hypothetical checked text-control. A
@@ -389,7 +409,7 @@
   --_lg-py: var(--_size-lg) 0.625rem;
   --_sm-text: var(--_size-sm) var(--text-sm);
   --_lg-text: var(--_size-lg) 1.0625rem;
-  --_sm-leading: var(--_size-sm) var(--tw-leading, var(--text-sm--line-height));
+  --_sm-leading: var(--_size-sm) var(--text-sm--line-height);
   --_sm-scale: var(--_size-sm) 0.75;
   --_lg-scale: var(--_size-lg) 1.25;
   --_scale-size: var(--_sm-scale, var(--_lg-scale));
@@ -403,9 +423,10 @@
 }
 
 @utility field {
-  --field-gap: 0.35rem;
+  @apply flex w-full flex-col;
 
-  @apply flex w-full flex-col gap-(--field-gap);
+  /* Public, read with its default, so a value on a form reaches every field. */
+  gap: var(--field-gap, 0.35rem);
 }
 
 @utility label {
@@ -465,7 +486,7 @@
   --_lg-py: var(--_size-lg) 0.625rem;
   --_sm-text: var(--_size-sm) var(--text-sm);
   --_lg-text: var(--_size-lg) 1.0625rem;
-  --_sm-leading: var(--_size-sm) var(--tw-leading, var(--text-sm--line-height));
+  --_sm-leading: var(--_size-sm) var(--text-sm--line-height);
   --_sm-scale: var(--_size-sm) 0.75;
   --_lg-scale: var(--_size-lg) 1.25;
   --_scale-size: var(--_sm-scale, var(--_lg-scale));
@@ -513,7 +534,7 @@
   --_lg-py: var(--_size-lg) 0.625rem;
   --_sm-text: var(--_size-sm) var(--text-sm);
   --_lg-text: var(--_size-lg) 1.0625rem;
-  --_sm-leading: var(--_size-sm) var(--tw-leading, var(--text-sm--line-height));
+  --_sm-leading: var(--_size-sm) var(--text-sm--line-height);
   --_sm-scale: var(--_size-sm) 0.75;
   --_lg-scale: var(--_size-lg) 1.25;
   --_scale-size: var(--_sm-scale, var(--_lg-scale));
@@ -553,6 +574,14 @@
     padding-inline: 0.75rem;
     background-image: none;
   }
+
+  /* Forced colours, carried for an applied drop-down: the platform's arrow, for
+     the reason the unlayered copy at the foot of this file gives. */
+  @media (forced-colors: active) {
+    &:not([multiple], [size]:not([size="1"])) {
+      appearance: auto;
+    }
+  }
 }
 
 /* A wrapper that owns the field box so a control can carry adornments beside it
@@ -573,7 +602,7 @@
    breathing room a distinct glyph needs, but a text affix meant to glue onto the
    value -- a URL host, a currency symbol, a unit -- reads the same gap as a
    stray space breaking the two apart. A consumer sets `--input-group-gap: 0` on
-   their own `.input-group` for a flush affix; the default stays the icon-tuned
+   the group or an ancestor for a flush affix; the default stays the icon-tuned
    0.5rem so every existing icon composition is unchanged. */
 @utility input-group {
   @apply text-control flex w-full items-center;
@@ -597,17 +626,16 @@
   --_lg-px: var(--_size-lg) 1rem;
   --_sm-text: var(--_size-sm) var(--text-sm);
   --_lg-text: var(--_size-lg) 1.0625rem;
-  --_sm-leading: var(--_size-sm) var(--tw-leading, var(--text-sm--line-height));
+  --_sm-leading: var(--_size-sm) var(--text-sm--line-height);
   --_sm-scale: var(--_size-sm) 0.75;
   --_lg-scale: var(--_size-lg) 1.25;
   --_scale-size: var(--_sm-scale, var(--_lg-scale));
 
-  --input-group-gap: 0.5rem;
-  --input-group-pad: var(--_sm-px, var(--_lg-px, 0.75rem));
-
   min-height: var(--_sm-h, var(--_lg-h, var(--control-height)));
-  gap: var(--input-group-gap);
-  padding-inline: var(--input-group-pad);
+  /* Public, read with their defaults, so a value set on any ancestor reaches
+     the group. */
+  gap: var(--input-group-gap, 0.5rem);
+  padding-inline: var(--input-group-pad, var(--_sm-px, var(--_lg-px, 0.75rem)));
   font-size: var(--_sm-text, var(--_lg-text, inherit));
   line-height: var(--_sm-leading, inherit);
 
@@ -1053,22 +1081,24 @@
      a badge or a card stays under. */
   --_fill-cap: 40%;
 
-  --switch-height: 1.25rem;
-  --switch-width: 2.5rem;
-  --switch-gap: 1px;
+  /* The track's size is public, read with its default, so a value set on any
+     ancestor reaches the switch; the knob is derived from it. */
+  --_switch-height: var(--switch-height, 1.25rem);
+  --_switch-width: var(--switch-width, 2.5rem);
+  --_switch-gap: 1px;
   /* The edge an aesthetic draws as an inset ring rather than as a border
      (`.pixel`), present only while `--ui-shadow-edge` is declared -- the idiom
      `box` uses. That ring paints under the knob, so a knob sized from the
      border alone covered it: under pixel the border is zero, the knob met the
      edge, and an unchecked and a checked switch both read as two halves. */
   --_switch-ring: var(--ui-shadow-edge) var(--_ss);
-  --_switch-offset: calc(var(--_switch-ring, 0px) + var(--switch-gap));
-  --switch-inset: calc(var(--_width) + var(--_switch-offset));
-  --switch-knob: calc(var(--switch-height) - var(--switch-inset) * 2);
-  --switch-travel: calc(var(--switch-width) - var(--switch-inset) * 2 - var(--switch-knob));
+  --_switch-offset: calc(var(--_switch-ring, 0px) + var(--_switch-gap));
+  --_switch-inset: calc(var(--_width) + var(--_switch-offset));
+  --_switch-knob: calc(var(--_switch-height) - var(--_switch-inset) * 2);
+  --_switch-travel: calc(var(--_switch-width) - var(--_switch-inset) * 2 - var(--_switch-knob));
 
-  height: var(--switch-height);
-  width: var(--switch-width);
+  height: var(--_switch-height);
+  width: var(--_switch-width);
   /* Pill by default; a squaring aesthetic reaches the track and the knob
      together, and an aesthetic with a pill corner of its own reaches both
      through that first. */
@@ -1100,8 +1130,8 @@
        itself, so the two stay the same shape. */
     corner-shape: var(--ui-corner-shape, round);
     content: "";
-    height: var(--switch-knob);
-    width: var(--switch-knob);
+    height: var(--_switch-knob);
+    width: var(--_switch-knob);
     top: var(--_switch-offset);
     inset-inline-start: var(--_switch-offset);
   }
@@ -1111,14 +1141,14 @@
     /* translate has no logical form, so the checked travel is named as a
        physical x offset and mirrored under :dir(rtl) to travel toward the
        opposite edge, matching the inset-inline-start resting position. */
-    translate: var(--switch-travel);
+    translate: var(--_switch-travel);
   }
 
   /* Direction sits on the control, ahead of the pseudo-element: nested as
      `:dir(rtl) &` inside `&:checked::after`, `&` carries `::after`, which
      cannot appear inside `:is()`, and the emitted rule matched nothing. */
   &:checked:dir(rtl)::after {
-    translate: calc(-1 * var(--switch-travel));
+    translate: calc(-1 * var(--_switch-travel));
   }
 
   /* The mark appears without moving under reduced motion, for the entries

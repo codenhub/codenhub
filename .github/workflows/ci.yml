@@ -75,6 +75,61 @@ jobs:
           fi
         shell: bash
 
+  # `@codenhub/styles/tw` is compiled by the consumer's Tailwind, anywhere in
+  # the peer range, while the workspace builds and tests with the one version
+  # its catalog pins. This job runs the package's integration suite, which
+  # compiles `/tw` as a consumer does, against the floor of that range and the
+  # newest 4.x. Only the consumer's two packages move: the package's own build
+  # keeps the catalog's `@tailwindcss/node`, as a published `dist/` does.
+  tailwind:
+    name: Tailwind ${{ matrix.tailwind }} consumer
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        tailwind: [floor, latest]
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up the workspace
+        uses: ./.github/actions/setup
+
+      # A pull request that leaves the package and CI alone has nothing for this
+      # job to check; the merge queue always runs it.
+      - name: Decide whether the package changed
+        id: changed
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Captured first, so a failing diff fails the step rather than skipping the suite.
+          changed="$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")"
+          if printf '%s\n' "$changed" | grep -qE '^(packages/styles/|\.github/)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The floor is read from the peer range, so raising it moves this job too.
+      - name: Install the consumer's Tailwind
+        if: steps.changed.outputs.run == 'true'
+        working-directory: packages/styles
+        run: |
+          if [ "${{ matrix.tailwind }}" = floor ]; then
+            version="$(node -p "require('./package.json').peerDependencies.tailwindcss.match(/>=\s*([\d.]+)/)[1]")"
+          else
+            version=4
+          fi
+          pnpm add --save-dev "tailwindcss@$version" "@tailwindcss/cli@$version"
+          node -p "'tailwindcss ' + require('tailwindcss/package.json').version"
+
+      - name: Run the integration suite
+        if: steps.changed.outputs.run == 'true'
+        run: pnpm test styles
+
   # The browser jobs run in Playwright's own image, which carries the system
   # libraries and the browsers of one Playwright version. Installing them on a
   # bare runner meant about 130 MB from the runner's Ubuntu package mirror on

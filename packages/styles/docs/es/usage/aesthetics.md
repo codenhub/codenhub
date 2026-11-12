@@ -2,7 +2,7 @@
 title: Estéticas
 description: Los seis aspectos opcionales, lo que cada uno cambia en un componente, sus controles y sus límites.
 order: 6
-source: adc344b555d4477cdc37adb6abb4cc07620c6486
+source: f5743a0c576ce5cdb4f75073fbac958901ffdbb0
 ---
 
 # Estéticas
@@ -242,7 +242,7 @@ Contornos dibujados a mano: los controles toman esquinas elípticas largas e irr
 
 La línea de tinta de 1px es continua; los checkboxes, los divisores y las líneas divisorias de las tablas son discontinuos. `--ui-line-style: dashed` hace discontinuo cualquier otro componente, y `--ui-rule-style: solid` devuelve un divisor o una tabla a continuo. La sombra dura de 2px es una pequeña señal neutra de profundidad.
 
-`--sketch-radius`, `--sketch-radius-surface` y `--sketch-radius-pill` reemplazan los contornos de control, de superficie y de botón pill. Define uno y todas las posiciones toman ese único contorno. Para dar forma a un solo componente, define en él `--ui-radius` (`--ui-radius-surface` en una superficie).
+`--sketch-radius`, `--sketch-radius-surface` y `--sketch-radius-pill` reemplazan los contornos de control, de superficie y de botón pill. Define uno en la región o en cualquier elemento dentro de ella, y todas las posiciones por debajo toman ese único contorno. Para dar forma a un solo componente, define en él `--ui-radius` (`--ui-radius-surface` en una superficie).
 
 ```html
 <section class="sketch" style='--font-sketch: "Comic Sans MS", cursive'>

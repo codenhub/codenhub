@@ -3,7 +3,7 @@ title: Visão geral
 description: Os guias que terminam a tela de configurações e, depois, as páginas de consulta com cada classe, token e padrão.
 group: Uso
 order: 4
-source: ccdf1949cd4f7688574d6f4fae9ad2cf34465fb3
+source: 07b651854dab2e401235175521adae9360b33df2
 ---
 
 # Uso
@@ -23,7 +23,7 @@ Guias, em ordem:
 Páginas de consulta:
 
 - [Composição](./composing.md): as regras completas para combinar intenção, apresentação e elevação, os padrões de cada componente e quais eixos cada componente lê.
-- [Personalização](./customizing.md): tokens de apresentação e de material, ajustes de estética, as seis variáveis públicas de componente, a paleta gerada e os helpers de composição para montar os seus próprios componentes.
+- [Personalização](./customizing.md): tokens de apresentação e de material, ajustes de estética, as variáveis públicas de componente, a paleta gerada e os helpers de composição para montar os seus próprios componentes.
 - [Conteúdo e layout](./content-and-layout.md): todos os utilitários de layout, a escala tipográfica, cards e painéis, tabelas, citações, código e teclas de teclado.
 
 Quando a tela estiver funcionando:

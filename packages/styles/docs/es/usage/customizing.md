@@ -1,8 +1,8 @@
 ---
 title: Personalización
-description: Consulta de los tokens de presentación y de material, los controles de las estéticas, las seis variables públicas de componente, la paleta generada y los helpers para construir tus propios componentes.
+description: Consulta de los tokens de presentación y de material, los controles de las estéticas, las variables públicas de componente, la paleta generada y los helpers para construir tus propios componentes.
 order: 9
-source: 790dec3b1fcf41af4b38aca7c5b8a93135827c1e
+source: 84c0d37049f274b623d9784bde5853b19f7a3ebe
 ---
 
 # Personalización
@@ -12,7 +12,7 @@ Esta es una página de consulta para cambiar el paquete más allá de sus clases
 - [Tokens de presentación](#tokens-de-presentación): cuánto de una intención muestra un componente.
 - [Tokens de material](#tokens-de-material): de qué está hecho un componente.
 - [Tokens de estética](#tokens-de-estética): los controles que expone cada estética.
-- [Variables de componente](#variables-de-componente): las seis variables que lee un único componente.
+- [Variables de componente](#variables-de-componente): las variables públicas que lee un único componente.
 - [Paleta generada](#paleta-generada): valores de color fijos para el código que no puede cargar el paquete.
 - [Helpers de composición](#helpers-de-composición): las clases con las que construir un componente propio.
 
@@ -196,7 +196,7 @@ Los controles de todas las estéticas llegan de la misma forma: cada control se 
 </html>
 ```
 
-Los controles y los tokens de material llegan en direcciones opuestas. Un control se lee una vez, en el elemento con la clase de estética, y el resultado se hereda. Así que define un control en ese elemento o en uno por encima; definido en un elemento dentro de la estética, no cambia nada, porque el valor ya se ha leído.
+Los controles y los tokens de material llegan en direcciones opuestas. Un control se lee una vez, en el elemento con la clase de estética, y el resultado se hereda. Así que define un control en ese elemento o en uno por encima; definido en un elemento dentro de la estética, no cambia nada, porque el valor ya se ha leído. Los contornos de sketch son la excepción: `--sketch-radius` y sus hermanos se leen de nuevo en cada posición, así que funcionan también en cualquier elemento dentro de la región, como describe [Estéticas → Sketch](./aesthetics.md#sketch).
 
 Cada componente lee `--ui-radius`, `--ui-radius-surface` y los demás tokens de material al dibujarse. Funcionan en el elemento en el que se definen y en todo lo que contiene, que es como redondeas una tarjeta de forma distinta a sus vecinas sin tocar el control. Fíjate en cuál lee cada componente: una superficie (`.card`, `.panel`, `.alert`) toma `--ui-radius-surface`, y un control como `.btn` o `.ipt` toma `--ui-radius`. `style="--ui-radius-surface: 0"` deja cuadrada una tarjeta; `--ui-radius` en esa tarjeta deja cuadrados los botones que contiene y la tarjeta sigue redondeada.
 
@@ -229,9 +229,9 @@ Nombres: `--palette-<intent>-<presentation>-<slot>`, donde `<intent>` es una de 
 - Un calificador de fondo, `page` o `subtle`, antes del hueco. Solo aparece en el `bg` y el `edge` de `.soft` y `.ghost`, porque un relleno `.solid` cubre su fondo y el color del texto nunca depende de él.
   - Sin calificador es lo que dibujan `.badge` y `.btn`, sobre un fondo transparente: `--palette-success-soft-bg`.
   - `page` es lo que dibuja `.alert`, sobre la página: `--palette-success-soft-page-bg`.
-  - `subtle` es lo que dibujan `.kbd`, `.code` y `.pre`, sobre el propio tono sutil de la intención: `--palette-success-soft-subtle-bg`.
+  - `subtle` es lo que dibujan `.kbd`, `.code`, `.pre` y `.tooltip-icon`, sobre el propio tono sutil de la intención: `--palette-success-soft-subtle-bg`.
 
-  Cada valor se lee del propio componente, así que incluye lo que el componente hace por su cuenta. Un `.alert`, `.kbd`, `.code` o `.pre` neutral conserva un relleno más discreto que un `.badge` neutral, y sus valores `neutral-soft-page` y `neutral-soft-subtle` lo reflejan. `.tooltip-bubble` no coincide con ninguno de los tres: sin intención se rellena con su propio tono de tooltip, y su borde es sólido en vez de atenuado.
+  Cada valor se lee del propio componente, así que incluye lo que el componente hace por su cuenta. Un `.alert`, `.kbd`, `.code` o `.pre` neutral conserva un relleno más discreto que un `.badge` neutral, y sus valores `neutral-soft-page` y `neutral-soft-subtle` lo reflejan. Un `.tooltip-icon.soft` neutral conserva el relleno del badge, así que su placa se aleja más de la página de lo que indica `neutral-soft-subtle`. `.tooltip-bubble` no coincide con ninguno de los tres: sin intención se rellena con su propio tono de tooltip, y su borde es sólido en vez de atenuado.
 
 - Un sufijo `-hover`, solo en `bg` y `edge`, porque el color del texto no cambia con hover: `--palette-success-soft-page-bg-hover`. `.alert`, `.kbd`, `.code` y `.pre` no tienen hover propio, así que sus valores de hover son lo que dibuja el componente cuando le añades `box-hover`.
 
@@ -239,20 +239,34 @@ Los valores claros se definen en `:root`. Los oscuros se aplican bajo `.dark`, `
 
 El archivo no sigue `prefers-color-scheme`. El código que usa la paleta por sí sola ya cambia de tema por su cuenta, así que define una de esas clases o atributos.
 
+Tampoco sigue `prefers-contrast: more`. Con esa preferencia, el paquete dibuja el borde de cada intención en su tono fuerte, así que un valor `-edge` es más tenue que el borde que dibuja el componente. El código que tiene que respetar la preferencia elige un color más fuerte por su cuenta.
+
 Otros tres tokens no tienen intención, presentación, fondo ni hover: `--palette-border`, `--palette-surface` y `--palette-text`, valores fijos de `--color-border`, `--color-surface` y `--color-text`. Son para lo que no tiene color de intención, como el borde de un contenedor, el fondo de un diálogo y su texto.
 
 ## Variables de componente
 
-Seis variables las lee un único componente y son entradas soportadas. Cualquier otra variable que declare un componente, como `--surface-padding`, `--field-gap`, `--switch-*`, `--table-*` o `--quote-*`, es interna y puede cambiar en cualquier versión.
+Dieciocho variables las lee un único componente y son entradas soportadas. Un componente lee cada una donde se dibuja, así que un valor definido en el componente o en cualquier elemento que lo rodee le llega, y gana el valor más cercano: define `--switch-width` en un formulario y todos los switches que contiene lo toman. Cualquier otra variable que declare un componente, como `--surface-padding` o cualquier nombre que empiece por `--_`, es interna y puede cambiar en cualquier versión.
 
-| Variable             | Elemento       | Valor                           | Valor por defecto                                                                      | Efecto                                                                                           | Dónde definirla                                                                                              |
-| -------------------- | -------------- | ------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| `--progress-value`   | `.progress`    | Un porcentaje, de `0%` a `100%` | `0%`                                                                                   | Ancho de la parte rellena. No se limita; un valor sin `%` no es válido y se muestra vacío.       | En la barra o en cualquier elemento que la rodee.                                                            |
-| `--progress-color`   | `.progress`    | Un color                        | El color de la intención                                                               | Color de la parte rellena y del brillo de `.active`.                                             | En la barra o en cualquier elemento que la rodee.                                                            |
-| `--progress-surface` | `.progress`    | Un color                        | El color de la intención con el relleno de la presentación: 12% por defecto            | Color del carril.                                                                                | En la barra o en cualquier elemento que la rodee.                                                            |
-| `--progress-edge`    | `.progress`    | Un color                        | El color de borde de la intención con el borde de la presentación: ninguno por defecto | Color del borde del carril. Solo se ve donde el carril tiene grosor de borde, como con `.edged`. | En la barra o en cualquier elemento que la rodee.                                                            |
-| `--input-group-gap`  | `.input-group` | Una longitud                    | `0.5rem`                                                                               | Espacio entre el control y su icono o texto.                                                     | En el propio `.input-group`. El grupo declara el valor por defecto, así que un valor en un padre se ignora.  |
-| `--tooltip-linger`   | `.tooltip`     | Un tiempo                       | `300ms`                                                                                | Cuánto tiempo se queda la burbuja después de que el puntero sale del disparador.                 | En el propio `.tooltip`. El contenedor declara el valor por defecto, así que un valor en un padre se ignora. |
+| Variable               | Elemento       | Valor                           | Valor por defecto                                                                      | Efecto                                                                                                        |
+| ---------------------- | -------------- | ------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `--progress-value`     | `.progress`    | Un porcentaje, de `0%` a `100%` | `0%`                                                                                   | Ancho de la parte rellena. No se limita; un valor sin `%` no es válido y se muestra vacío.                    |
+| `--progress-color`     | `.progress`    | Un color                        | El color de la intención                                                               | Color de la parte rellena y del brillo de `.active`.                                                          |
+| `--progress-surface`   | `.progress`    | Un color                        | El color de la intención con el relleno de la presentación: 12% por defecto            | Color del carril.                                                                                             |
+| `--progress-edge`      | `.progress`    | Un color                        | El color de borde de la intención con el borde de la presentación: ninguno por defecto | Color del borde del carril. Solo se ve donde el carril tiene grosor de borde, como con `.edged`.              |
+| `--input-group-gap`    | `.input-group` | Una longitud                    | `0.5rem`                                                                               | Espacio entre el control y su icono o texto.                                                                  |
+| `--input-group-pad`    | `.input-group` | Una longitud                    | `0.75rem`; `0.625rem` con `.sm` y `1rem` con `.lg`                                     | Espacio entre el borde del grupo y su contenido, a ambos lados.                                               |
+| `--field-gap`          | `.field`       | Una longitud                    | `0.35rem`                                                                              | Espacio entre la etiqueta, el control y la pista de un campo.                                                 |
+| `--switch-width`       | `.switch`      | Una longitud                    | `2.5rem`                                                                               | Ancho del carril. La perilla conserva su tamaño y recorre más distancia.                                      |
+| `--switch-height`      | `.switch`      | Una longitud                    | `1.25rem`                                                                              | Alto del carril. La perilla crece con él.                                                                     |
+| `--tooltip-gap`        | `.tooltip`     | Una longitud                    | `0.5rem`                                                                               | Espacio entre el disparador y la burbuja.                                                                     |
+| `--tooltip-linger`     | `.tooltip`     | Un tiempo                       | `300ms`                                                                                | Cuánto tiempo se queda la burbuja después de que el puntero sale del disparador.                              |
+| `--divider-color`      | `.divider`     | Un color                        | El color de la intención                                                               | Color de la línea. Gana sobre una clase de intención en el divisor.                                           |
+| `--divider-width`      | `.divider`     | Una longitud                    | El grosor de borde: `1px` por defecto                                                  | Grosor de la línea.                                                                                           |
+| `--skeleton-base`      | `.skeleton`    | Un color                        | Un tinte tenue del color de la intención                                               | Color sobre el que descansa el placeholder.                                                                   |
+| `--skeleton-sheen`     | `.skeleton`    | Un color                        | Un tinte más intenso del color de la intención                                         | Color del brillo que lo recorre.                                                                              |
+| `--quote-width`        | `.quote`       | Una longitud                    | El doble del grosor de borde más `1px`: `3px` por defecto                              | Grosor de la barra en el borde inicial de la cita.                                                            |
+| `--table-cell-padding` | `.data-table`  | Un valor de `padding`           | `0.75rem 1rem`                                                                         | Padding de cada celda de la cabecera, el cuerpo y el pie. Una utilidad de padding en una celda sigue ganando. |
+| `--table-hover`        | `.data-table`  | Un color                        | Un paso del 12% hacia el color de hover de la intención                                | Fondo de una fila del cuerpo bajo el puntero. `transparent` lo desactiva.                                     |
 
 ```html
 <div class="progress" role="meter" aria-label="Storage used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="92" style="--progress-value: 92%; --progress-color: var(--color-warning)"></div>

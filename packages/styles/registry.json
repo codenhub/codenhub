@@ -118,6 +118,7 @@
     "--ui-label-case": { "readers": ["badge", "btn"] },
     "--ui-label-shadow": { "readers": ["badge", "btn"] }
   },
+  "boxStates": ["disabled", "interactive", "hoverable", "pressable"],
   "components": [
     {
       "class": "btn",
@@ -127,7 +128,24 @@
         "elevation": 1
       },
       "native": ["button", "input[type=\"submit\"]", "input[type=\"reset\"]", "input[type=\"button\"]"],
-      "axes": ["fill", "edge"]
+      "axes": ["fill", "edge"],
+      "modifiers": [
+        "flat",
+        "raised",
+        "floating",
+        "sm",
+        "lg",
+        "p-xs",
+        "p-sm",
+        "p-lg",
+        "pill",
+        "icon",
+        "cut-diagonal",
+        "cut-diagonal-reverse",
+        "sketch-rounded",
+        "glass-liquid"
+      ],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"]
     },
     {
       "class": "ipt",
@@ -140,6 +158,18 @@
         "input:not([type=\"checkbox\"], [type=\"radio\"], [type=\"submit\"], [type=\"reset\"], [type=\"button\"])"
       ],
       "axes": ["fill", "edge"],
+      "modifiers": [
+        "flat",
+        "raised",
+        "floating",
+        "sm",
+        "lg",
+        "cut-diagonal",
+        "cut-diagonal-reverse",
+        "sketch-rounded",
+        "glass-liquid"
+      ],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"],
       "bounds": [
         {
           "token": "--ui-fill",
@@ -165,7 +195,21 @@
         "elevation": 1
       },
       "native": [],
-      "axes": ["fill", "edge"]
+      "axes": ["fill", "edge"],
+      "modifiers": [
+        "flat",
+        "raised",
+        "floating",
+        "p-xs",
+        "p-sm",
+        "p-lg",
+        "flush",
+        "cut-diagonal",
+        "cut-diagonal-reverse",
+        "sketch-rounded",
+        "glass-liquid"
+      ],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"]
     },
     {
       "class": "badge",
@@ -175,7 +219,9 @@
         "elevation": 0
       },
       "native": [],
-      "axes": ["fill", "edge"]
+      "axes": ["fill", "edge"],
+      "modifiers": ["flat", "raised", "floating", "sketch-rounded", "glass-liquid"],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"]
     },
     {
       "class": "textarea",
@@ -186,6 +232,18 @@
       },
       "native": ["textarea"],
       "axes": ["fill", "edge"],
+      "modifiers": [
+        "flat",
+        "raised",
+        "floating",
+        "sm",
+        "lg",
+        "cut-diagonal",
+        "cut-diagonal-reverse",
+        "sketch-rounded",
+        "glass-liquid"
+      ],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"],
       "bounds": [
         {
           "token": "--ui-fill",
@@ -212,6 +270,18 @@
       },
       "native": ["select"],
       "axes": ["fill", "edge"],
+      "modifiers": [
+        "flat",
+        "raised",
+        "floating",
+        "sm",
+        "lg",
+        "cut-diagonal",
+        "cut-diagonal-reverse",
+        "sketch-rounded",
+        "glass-liquid"
+      ],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"],
       "bounds": [
         {
           "token": "--ui-fill",
@@ -238,6 +308,18 @@
       },
       "native": [],
       "axes": ["fill", "edge"],
+      "modifiers": [
+        "flat",
+        "raised",
+        "floating",
+        "sm",
+        "lg",
+        "cut-diagonal",
+        "cut-diagonal-reverse",
+        "sketch-rounded",
+        "glass-liquid"
+      ],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"],
       "bounds": [
         {
           "token": "--ui-fill",
@@ -264,6 +346,8 @@
       },
       "native": ["input[type=\"checkbox\"]"],
       "axes": ["fill"],
+      "modifiers": ["flat", "raised", "floating", "sketch-rounded", "glass-liquid"],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"],
       "bounds": [
         {
           "token": "--ui-fill",
@@ -297,6 +381,8 @@
       },
       "native": ["input[type=\"radio\"]"],
       "axes": ["fill"],
+      "modifiers": ["flat", "raised", "floating", "sketch-rounded", "glass-liquid"],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"],
       "bounds": [
         {
           "token": "--ui-fill",
@@ -337,6 +423,8 @@
       },
       "native": [],
       "axes": ["fill", "edge"],
+      "modifiers": ["flat", "raised", "floating", "sketch-rounded", "glass-liquid"],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"],
       "bounds": [
         {
           "token": "--ui-fill",
@@ -369,7 +457,21 @@
         "elevation": 0
       },
       "native": [],
-      "axes": ["fill", "edge"]
+      "axes": ["fill", "edge"],
+      "modifiers": [
+        "flat",
+        "raised",
+        "floating",
+        "p-xs",
+        "p-sm",
+        "p-lg",
+        "flush",
+        "cut-diagonal",
+        "cut-diagonal-reverse",
+        "sketch-rounded",
+        "glass-liquid"
+      ],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"]
     },
     {
       "class": "alert",
@@ -379,7 +481,17 @@
         "elevation": 0
       },
       "native": [],
-      "axes": ["fill", "edge"]
+      "axes": ["fill", "edge"],
+      "modifiers": [
+        "flat",
+        "raised",
+        "floating",
+        "cut-diagonal",
+        "cut-diagonal-reverse",
+        "sketch-rounded",
+        "glass-liquid"
+      ],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"]
     },
     {
       "class": "data-table",
@@ -393,7 +505,19 @@
       "renameReason": "`.table` is a Tailwind static utility for `display: table`; the package's version replaced it for every consumer.",
       "composition": "frame",
       "compositionReason": "Takes its border and plate from `box` and a surface's corner, since it is a pane of content, and paints its head, cell rules and row hover from private tokens, which have no equivalent on the three axes. Nothing clips it: Chromium and WebKit lay a caption out inside the table's own box, so a clip, a `clip-path`, or an `overflow` rounded the caption rather than the rows. The corner cells take the corners instead, and a pixel table is square.",
-      "axes": ["fill", "edge"]
+      "axes": ["fill", "edge"],
+      "modifiers": [
+        "flat",
+        "raised",
+        "floating",
+        "cut-diagonal",
+        "cut-diagonal-reverse",
+        "sketch-rounded",
+        "glass-liquid",
+        "ruled",
+        "ruleless"
+      ],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"]
     },
     {
       "class": "pre",
@@ -405,6 +529,16 @@
       },
       "native": ["pre"],
       "axes": ["fill", "edge"],
+      "modifiers": [
+        "flat",
+        "raised",
+        "floating",
+        "cut-diagonal",
+        "cut-diagonal-reverse",
+        "sketch-rounded",
+        "glass-liquid"
+      ],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"],
       "unsupported": [
         {
           "axis": "fill",
@@ -423,7 +557,9 @@
       "native": ["blockquote"],
       "composition": "none",
       "compositionReason": "Typography rather than a painted box. `box` draws a border on four sides and a quotation wants one, and its radius, clip and shadow are inert on a left bar. The cost is that the fill and the edge blend are reimplemented here and must agree with `box`: the ordering fix that stopped `.edgeless` painting a ring over its own fill had to be made in both places. An edge change has two homes, not one.",
-      "axes": ["fill", "edge"]
+      "axes": ["fill", "edge"],
+      "modifiers": ["glass-liquid"],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"]
     },
     {
       "class": "tooltip-bubble",
@@ -435,6 +571,16 @@
       },
       "native": [],
       "axes": ["fill", "edge"],
+      "modifiers": [
+        "flat",
+        "raised",
+        "floating",
+        "cut-diagonal",
+        "cut-diagonal-reverse",
+        "sketch-rounded",
+        "glass-liquid"
+      ],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"],
       "bounds": [
         {
           "token": "--ui-border",
@@ -455,6 +601,8 @@
       },
       "native": ["kbd"],
       "axes": ["fill", "edge"],
+      "modifiers": ["flat", "raised", "floating", "sketch-rounded", "glass-liquid"],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"],
       "unsupported": [
         {
           "axis": "fill",
@@ -473,6 +621,8 @@
       },
       "native": ["code"],
       "axes": ["fill", "edge"],
+      "modifiers": ["flat", "raised", "floating", "sketch-rounded", "glass-liquid"],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"],
       "unsupported": [
         {
           "axis": "fill",
@@ -489,7 +639,9 @@
       "native": [],
       "composition": "none",
       "compositionReason": "An indicator paints its own animated fill and has no box presentation.",
-      "axes": []
+      "axes": [],
+      "modifiers": ["cut-diagonal", "cut-diagonal-reverse", "sketch-rounded", "glass-liquid"],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"]
     },
     {
       "class": "progress",
@@ -502,6 +654,8 @@
       "composition": "none",
       "compositionReason": "The track is a box, but the value fill is a `::after` rather than the element's own background, so `box` cannot be applied whole. The cost is that the fill and edge blend are reimplemented here and must agree with `box`: the ordering that stops `.edgeless` painting a ring over its own fill has to be kept in `box`, `.quote`, and here.",
       "axes": ["fill", "edge"],
+      "modifiers": ["sketch-rounded", "glass-liquid", "active", "indeterminate"],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"],
       "unsupported": [
         {
           "axis": "fill",
@@ -518,7 +672,65 @@
       "native": ["hr"],
       "composition": "none",
       "compositionReason": "An indicator paints a single rule and has no box presentation.",
-      "axes": []
+      "axes": [],
+      "modifiers": ["vertical"],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"]
+    },
+    {
+      "class": "tooltip-icon",
+      "default": {
+        "fill": "ghost",
+        "edge": "edged",
+        "ground": "--intent-subtle",
+        "elevation": 0
+      },
+      "native": [],
+      "axes": ["fill", "edge"],
+      "modifiers": ["flat", "raised", "floating", "sketch-rounded", "glass-liquid"],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"]
+    }
+  ],
+  "compositionHelpers": [
+    {
+      "class": "box",
+      "modifiers": [
+        "flat",
+        "raised",
+        "floating",
+        "cut-diagonal",
+        "cut-diagonal-reverse",
+        "sketch-rounded",
+        "glass-liquid"
+      ],
+      "intents": ["neutral", "primary", "secondary", "success", "warning", "destructive", "info"]
+    },
+    { "class": "box-hover", "extends": "box" },
+    { "class": "box-active", "extends": "box" },
+    {
+      "class": "surface",
+      "modifiers": [
+        "flat",
+        "raised",
+        "floating",
+        "cut-diagonal",
+        "cut-diagonal-reverse",
+        "sketch-rounded",
+        "glass-liquid"
+      ],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"]
+    },
+    {
+      "class": "text-control",
+      "modifiers": [
+        "flat",
+        "raised",
+        "floating",
+        "cut-diagonal",
+        "cut-diagonal-reverse",
+        "sketch-rounded",
+        "glass-liquid"
+      ],
+      "intents": ["primary", "secondary", "success", "warning", "destructive", "info"]
     }
   ],
   "helpers": [
@@ -530,7 +742,6 @@
     "quote-inline",
     "alert-icon",
     "tooltip",
-    "tooltip-icon",
     "view",
     "stack",
     "cluster",
@@ -601,9 +812,10 @@
         "select",
         "switch",
         "textarea",
-        "tooltip-bubble"
+        "tooltip-bubble",
+        "tooltip-icon"
       ],
-      "selectorReason": "The CSS-only variation rotates complete radii by sibling and container position on inked components; material tokens on the region alone would give every element the same outline. Pill shapes are eliminated: pill buttons read their rotated box radius, while badges, progress bars, and switches take chip-sized box outlines; radios alone keep the round circle token. Checkbox and rule accents need component-local tokens to keep every other edge solid. Other nested aesthetics are excluded so they keep their own material."
+      "selectorReason": "The CSS-only variation rotates complete radii by sibling and container position on inked components; material tokens on the region alone would give every element the same outline. A pill button rotates its own rounded pill outline, read from --sketch-radius-pill; badges, progress bars, and switches take their chip outline where they would be fully round; radios and the tooltip icon stay slightly uneven circles. Checkbox and rule accents need component-local tokens to keep every other edge solid. Other nested aesthetics are excluded so they keep their own material."
     }
   ]
 }

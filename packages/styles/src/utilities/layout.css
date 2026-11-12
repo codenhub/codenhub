@@ -157,8 +157,10 @@
     }
   }
 
-  --divider-color: var(--intent-color);
-  --divider-width: var(--ui-border-width, var(--border-width));
+  /* Public, read with their defaults, so a value set on any ancestor reaches
+     the line. The colour stands in front of the intent. */
+  --_divider-color: var(--divider-color, var(--intent-color));
+  --_divider-width: var(--divider-width, var(--ui-border-width, var(--border-width)));
 
   @apply m-0 border-0;
 
@@ -166,13 +168,13 @@
      and stretches it down its row. */
   --_vertical-width: var(--_m-vertical) 0px;
   --_vertical-self: var(--_m-vertical) stretch;
-  --_vertical-line: var(--_m-vertical) var(--divider-width);
+  --_vertical-line: var(--_m-vertical) var(--_divider-width);
 
   width: var(--_vertical-width, 100%);
   align-self: var(--_vertical-self, auto);
-  border-color: var(--divider-color);
+  border-color: var(--_divider-color);
   border-style: var(--ui-rule-style, var(--ui-line-style, solid));
-  border-top-width: var(--_vertical-width, var(--divider-width));
+  border-top-width: var(--_vertical-width, var(--_divider-width));
   border-inline-start-width: var(--_vertical-line, 0px);
 }
 

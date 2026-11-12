@@ -1,6 +1,6 @@
 ---
 title: Customizing
-description: Lookup for presentation and material tokens, aesthetic knobs, the six public component variables, the generated palette, and the helpers for building your own components.
+description: Lookup for presentation and material tokens, aesthetic knobs, the public component variables, the generated palette, and the helpers for building your own components.
 order: 9
 ---
 
@@ -11,7 +11,7 @@ This is a lookup page for changing the package beyond its classes. [Theming](./t
 - [Presentation tokens](#presentation-tokens): how much of an intent a component shows.
 - [Material tokens](#material-tokens): what a component is made of.
 - [Aesthetic tokens](#aesthetic-tokens): the knobs each aesthetic exposes.
-- [Component variables](#component-variables): the six variables a single component reads.
+- [Component variables](#component-variables): the public variables a single component reads.
 - [Generated palette](#generated-palette): fixed color values for code that cannot load the package.
 - [Composition helpers](#composition-helpers): the classes to build a component of your own from.
 
@@ -195,7 +195,7 @@ Every aesthetic's knobs reach the same way: each knob is _read_ with its default
 </html>
 ```
 
-Knobs and material tokens reach in opposite directions. A knob is read once, at the element with the aesthetic class, and the result passes down. So set a knob on that element or on one above it; set on an element inside the aesthetic, it changes nothing, because the value has already been read.
+Knobs and material tokens reach in opposite directions. A knob is read once, at the element with the aesthetic class, and the result passes down. So set a knob on that element or on one above it; set on an element inside the aesthetic, it changes nothing, because the value has already been read. The sketch outlines are the exception: `--sketch-radius` and its siblings are read again at each position, so they work on any element inside the region too, as [Aesthetics → Sketch](./aesthetics.md#sketch) describes.
 
 `--ui-radius`, `--ui-radius-surface`, and the other material tokens are read by each component as it draws. They work on the element they are set on and everything inside it, which is how you round one card differently from its neighbors without touching the knob. Mind which one a component reads: a surface (`.card`, `.panel`, `.alert`) takes `--ui-radius-surface`, and a control such as `.btn` or `.ipt` takes `--ui-radius`. `style="--ui-radius-surface: 0"` squares one card; `--ui-radius` on that card squares the buttons inside it and leaves the card round.
 
@@ -228,9 +228,9 @@ Naming: `--palette-<intent>-<presentation>-<slot>`, where `<intent>` is one of t
 - A ground qualifier, `page` or `subtle`, before the slot. It appears only on the `bg` and `edge` of `.soft` and `.ghost`, because a `.solid` fill covers its ground and the text color never depends on it.
   - No qualifier is what `.badge` and `.btn` draw, on a transparent ground: `--palette-success-soft-bg`.
   - `page` is what `.alert` draws, on the page: `--palette-success-soft-page-bg`.
-  - `subtle` is what `.kbd`, `.code`, and `.pre` draw, on the intent's own subtle tone: `--palette-success-soft-subtle-bg`.
+  - `subtle` is what `.kbd`, `.code`, `.pre`, and `.tooltip-icon` draw, on the intent's own subtle tone: `--palette-success-soft-subtle-bg`.
 
-  Each value is read from the component itself, so it includes what the component does on its own. A neutral `.alert`, `.kbd`, `.code`, or `.pre` keeps a quieter fill than a neutral `.badge`, and its `neutral-soft-page` and `neutral-soft-subtle` values say so. `.tooltip-bubble` matches none of the three: with no intent it fills with its own tooltip tone, and its edge is solid rather than faded.
+  Each value is read from the component itself, so it includes what the component does on its own. A neutral `.alert`, `.kbd`, `.code`, or `.pre` keeps a quieter fill than a neutral `.badge`, and its `neutral-soft-page` and `neutral-soft-subtle` values say so. A neutral `.tooltip-icon.soft` keeps the badge's fill, so its plate stands further from the page than `neutral-soft-subtle` says. `.tooltip-bubble` matches none of the three: with no intent it fills with its own tooltip tone, and its edge is solid rather than faded.
 
 - A `-hover` suffix, on `bg` and `edge` only, because the text color does not change on hover: `--palette-success-soft-page-bg-hover`. `.alert`, `.kbd`, `.code`, and `.pre` have no hover of their own, so their hover values are what the component draws when you add `box-hover` to it.
 
@@ -238,20 +238,34 @@ Light values are set on `:root`. Dark values apply under `.dark`, `.theme-dark`,
 
 The file does not follow `prefers-color-scheme`. Code that uses the palette on its own already switches themes itself, so it sets one of those classes or attributes.
 
+Nor does it follow `prefers-contrast: more`. Under that setting the package draws each intent's border in its strong tone, so a `-edge` value is fainter than the border the component draws. Code that has to honor the setting picks a stronger color itself.
+
 Three more tokens have no intent, presentation, ground, or hover: `--palette-border`, `--palette-surface`, and `--palette-text`, fixed values of `--color-border`, `--color-surface`, and `--color-text`. They are for things that are not intent-colored, such as a container's border, a dialog's background, and its text.
 
 ## Component variables
 
-Six variables are read by a single component and are supported inputs. Every other variable a component declares, such as `--surface-padding`, `--field-gap`, `--switch-*`, `--table-*`, or `--quote-*`, is internal and may change in any release.
+Eighteen variables are read by a single component and are supported inputs. A component reads each one where it is drawn, so a value set on the component or on any element around it reaches it, and the nearest value wins: set `--switch-width` on a form and every switch in it takes it. Every other variable a component declares, such as `--surface-padding` or any name that starts with `--_`, is internal and may change in any release.
 
-| Variable             | Element        | Value                        | Default                                                                 | Effect                                                                                                | Where to set it                                                                               |
-| -------------------- | -------------- | ---------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `--progress-value`   | `.progress`    | A percentage, `0%` to `100%` | `0%`                                                                    | Width of the filled part. Not clamped; a value without `%` is invalid and shows empty.                | The bar, or any element around it.                                                            |
-| `--progress-color`   | `.progress`    | A color                      | The intent color                                                        | Color of the filled part and of the `.active` shimmer.                                                | The bar, or any element around it.                                                            |
-| `--progress-surface` | `.progress`    | A color                      | The intent color at the presentation's fill: 12% by default             | Color of the track.                                                                                   | The bar, or any element around it.                                                            |
-| `--progress-edge`    | `.progress`    | A color                      | The intent's border color at the presentation's border: none by default | Color of the track's border. It shows only where the track has a border width, such as with `.edged`. | The bar, or any element around it.                                                            |
-| `--input-group-gap`  | `.input-group` | A length                     | `0.5rem`                                                                | Space between the control and its icon or text.                                                       | The `.input-group` itself. The group declares the default, so a value on a parent is ignored. |
-| `--tooltip-linger`   | `.tooltip`     | A time                       | `300ms`                                                                 | How long the bubble stays after the pointer leaves the trigger.                                       | The `.tooltip` itself. The wrapper declares the default, so a value on a parent is ignored.   |
+| Variable               | Element        | Value                        | Default                                                                 | Effect                                                                                                |
+| ---------------------- | -------------- | ---------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `--progress-value`     | `.progress`    | A percentage, `0%` to `100%` | `0%`                                                                    | Width of the filled part. Not clamped; a value without `%` is invalid and shows empty.                |
+| `--progress-color`     | `.progress`    | A color                      | The intent color                                                        | Color of the filled part and of the `.active` shimmer.                                                |
+| `--progress-surface`   | `.progress`    | A color                      | The intent color at the presentation's fill: 12% by default             | Color of the track.                                                                                   |
+| `--progress-edge`      | `.progress`    | A color                      | The intent's border color at the presentation's border: none by default | Color of the track's border. It shows only where the track has a border width, such as with `.edged`. |
+| `--input-group-gap`    | `.input-group` | A length                     | `0.5rem`                                                                | Space between the control and its icon or text.                                                       |
+| `--input-group-pad`    | `.input-group` | A length                     | `0.75rem`; `0.625rem` with `.sm` and `1rem` with `.lg`                  | Space between the group's edge and its content, on both sides.                                        |
+| `--field-gap`          | `.field`       | A length                     | `0.35rem`                                                               | Space between a field's label, control, and hint.                                                     |
+| `--switch-width`       | `.switch`      | A length                     | `2.5rem`                                                                | Width of the track. The knob keeps its size and travels further.                                      |
+| `--switch-height`      | `.switch`      | A length                     | `1.25rem`                                                               | Height of the track. The knob grows with it.                                                          |
+| `--tooltip-gap`        | `.tooltip`     | A length                     | `0.5rem`                                                                | Space between the trigger and the bubble.                                                             |
+| `--tooltip-linger`     | `.tooltip`     | A time                       | `300ms`                                                                 | How long the bubble stays after the pointer leaves the trigger.                                       |
+| `--divider-color`      | `.divider`     | A color                      | The intent color                                                        | Color of the line. It wins over an intent class on the divider.                                       |
+| `--divider-width`      | `.divider`     | A length                     | The border width: `1px` by default                                      | Thickness of the line.                                                                                |
+| `--skeleton-base`      | `.skeleton`    | A color                      | A faint tint of the intent color                                        | Color the placeholder rests on.                                                                       |
+| `--skeleton-sheen`     | `.skeleton`    | A color                      | A stronger tint of the intent color                                     | Color of the highlight that sweeps across it.                                                         |
+| `--quote-width`        | `.quote`       | A length                     | Twice the border width plus `1px`: `3px` by default                     | Thickness of the bar on the quotation's starting edge.                                                |
+| `--table-cell-padding` | `.data-table`  | A `padding` value            | `0.75rem 1rem`                                                          | Padding of every header, body, and footer cell. A padding utility on a cell still wins.               |
+| `--table-hover`        | `.data-table`  | A color                      | A 12% step toward the intent's hover color                              | Background of a body row under the pointer. `transparent` turns it off.                               |
 
 ```html
 <div class="progress" role="meter" aria-label="Storage used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="92" style="--progress-value: 92%; --progress-color: var(--color-warning)"></div>

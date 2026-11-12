@@ -2,7 +2,7 @@
 title: Configuración inicial
 description: Instala el paquete, elige entre CSS compilado o código fuente de Tailwind y renderiza la estructura base de la página de ajustes.
 order: 1
-source: 23de7d85d2257d30e13330c7a2e185ca0c642010
+source: 01adaabea85fb4d04139c86d9ad693e23c321d04
 ---
 
 # Configuración inicial
@@ -48,7 +48,7 @@ Elige uno:
 - **Código fuente de Tailwind CSS v4** (`@codenhub/styles/tw`). Úsalo cuando tu proyecto ya usa Tailwind v4. Tu build compila el paquete junto con tus propias utilidades, así que obtienes una sola hoja de estilos y la variante `dark:` de Tailwind coincide con el tema del paquete. Necesita Tailwind 4.3.2 o posterior, por debajo de 5.
 - **Sin bundler.** Enlaza el archivo compilado desde `node_modules` o desde un CDN con una etiqueta `<link>`; consulta [Sin bundler](./integrating/without-a-bundler.md).
 
-Para incluir solo las clases que usan tus páginas en un proyecto que no usa Tailwind, con bundler o sin él, el comando `build` del paquete lee tus archivos y escribe una hoja de estilos con solo esas clases, que importas o enlazas en lugar de la compilada; consulta [Generar solo las clases que usas](./integrating/without-a-bundler.md#generar-solo-las-clases-que-usas).
+Para incluir solo las clases que usan tus páginas en un proyecto que no usa Tailwind, con bundler o sin él, el comando `chs build` del paquete lee tus archivos y escribe una hoja de estilos con solo esas clases, que importas o enlazas en lugar de la compilada; consulta [Generar solo las clases que usas](./integrating/without-a-bundler.md#generar-solo-las-clases-que-usas).
 
 Tu framework puede necesitar su propia configuración, como dónde va la hoja de estilos global en Next.js o en Astro. Cada una de estas guías cubre una configuración y después te devuelve aquí:
 
@@ -74,7 +74,8 @@ El orden de los dos imports no importa, porque cada punto de entrada declara las
 
 - **Navegadores:** Chrome 123, Safari 17.5 o Firefox 128 y posteriores. Los colores usan `light-dark()` y `color-scheme` (Firefox 120). `.input-group` lee el estado inválido y deshabilitado de un control anidado con `:has()` (Firefox 121). Las clases de elevación registran una propiedad que no se hereda con `@property` (Firefox 128); sin ella, una clase de elevación también llegaría a los elementos sin clase que contiene.
 - **Herramientas:** un `@import` con un nombre de paquete necesita una herramienta que resuelva imports de CSS desde paquetes a través de su mapa `exports`. Si no tienes una, enlaza el archivo compilado por su ruta o desde un CDN; consulta [Sin bundler](./integrating/without-a-bundler.md). Dos herramientas habituales necesitan un pequeño ajuste, descrito en [Integración → Bundlers que necesitan un empujón](./integrating/index.md#bundlers-que-necesitan-un-empujón): Parcel, y PostCSS con `postcss-import`.
-- **Tailwind:** 4.3.2 o posterior, por debajo de 5, solo para los puntos de entrada de código fuente `/tw` y el comando `build`, que además necesita `@tailwindcss/cli`. Ambos son peer dependencies opcionales, así que los puntos de entrada compilados no los instalan.
+- **Tailwind:** 4.3.2 o posterior, por debajo de 5, solo para los puntos de entrada de código fuente `/tw`. Es una peer dependency opcional, así que ni los puntos de entrada compilados ni el comando `chs build` la instalan.
+- **Node.js:** 24 o posterior en la máquina que ejecuta el comando `chs build`. Las hojas de estilos no lo necesitan, pero el paquete lo declara como su engine, así que Yarn 1, y npm con `engine-strict`, rechazan la instalación en un Node.js anterior.
 - **Tu aplicación:** el paquete no tiene JavaScript. El HTML semántico, ARIA, el comportamiento de teclado, la gestión del foco, la validación y los anuncios son cosa tuya; consulta [Accesibilidad](./accessibility.md).
 
 ## Cuando nada tiene estilo

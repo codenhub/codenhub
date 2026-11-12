@@ -102,7 +102,7 @@
   --_lg-py: var(--_size-lg) 0.625rem;
   --_sm-text: var(--_size-sm) var(--text-sm);
   --_lg-text: var(--_size-lg) 1.0625rem;
-  --_sm-leading: var(--_size-sm) var(--tw-leading, var(--text-sm--line-height));
+  --_sm-leading: var(--_size-sm) var(--text-sm--line-height);
   --_sm-scale: var(--_size-sm) 0.75;
   --_lg-scale: var(--_size-lg) 1.25;
   --_scale-size: var(--_sm-scale, var(--_lg-scale));

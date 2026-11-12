@@ -165,6 +165,8 @@ const OVERRIDES = `
 <label class="label text-sm" id="label">Label</label>
 <button class="btn sm px-8" id="button-padding">Wide</button>
 <button class="btn lg text-xs" id="button-text">Small type</button>
+<button class="btn sm leading-loose" id="button-leading">Tall</button>
+<input class="ipt sm leading-loose" id="field-leading" />
 <div class="view horizontal flex-col" id="view-direction"><p>a</p></div>
 <button class="btn icon p-4" id="icon-padding">x</button>
 <div class="card p-xs p-8" id="card-padding">Card</div>`;
@@ -262,6 +264,14 @@ const CONSUMER_CSS = (twEntry: string, glassEntry: string) => `@import "${twEntr
 
 .my-switch {
   @apply switch;
+}
+
+.my-progress {
+  @apply progress;
+}
+
+.my-select {
+  @apply select;
 }
 
 .my-group {
@@ -822,6 +832,51 @@ test.describe("/tw consumer build", () => {
     expect(await paintFor("tw")).toEqual(compiled);
   });
 
+  /* `.progress` and `.select` kept their forced-colours rules outside the
+     utilities, so an applied bar's value was repainted as Canvas on a Canvas
+     track, and an applied drop-down lost its arrow with every gradient. */
+  test("draws an applied progress bar and drop-down as the classes do in forced colours", async ({ page }) => {
+    await page.emulateMedia({ forcedColors: "active" });
+    test.skip(
+      !(await page.evaluate(
+        () => matchMedia("(forced-colors: active)").matches && CSS.supports("forced-color-adjust", "none"),
+      )),
+      "engine cannot emulate forced colors",
+    );
+
+    const paintFor = async (side: Side) => {
+      const name = (component: string) => (side === "tw" ? `my-${component}` : component);
+
+      await page.setContent(
+        `<!doctype html><html><head><meta charset="utf-8" /><style>${side === "tw" ? twCss : distCss}</style></head><body>` +
+          `<div class="${name("progress")}" id="progress" style="--progress-value:40%"></div>` +
+          `<select class="${name("select")}" id="select"><option>One</option></select>` +
+          "</body></html>",
+      );
+
+      return page.evaluate(() => {
+        const progress = getComputedStyle(document.getElementById("progress")!);
+        const select = getComputedStyle(document.getElementById("select")!);
+
+        return {
+          progress: [
+            progress.forcedColorAdjust,
+            progress.backgroundColor,
+            progress.borderTopColor,
+            getComputedStyle(document.getElementById("progress")!, "::after").backgroundColor,
+          ].join(" | "),
+          select: select.appearance,
+        };
+      });
+    };
+
+    const compiled = await paintFor("dist");
+
+    expect(compiled.progress, "the compiled bar opts out of forced colours").toMatch(/^none /);
+    expect(compiled.select, "the compiled drop-down keeps the platform's arrow").toBe("auto");
+    expect(await paintFor("tw")).toEqual(compiled);
+  });
+
   /* A component's inner rules are defaults. Written at 0-1-1 and 0-2-0 they
      outranked every Tailwind utility on the element: a cell kept its padding
      under `p-0`, and a small button its padding under `px-8`. */
@@ -891,6 +946,10 @@ test.describe("/tw consumer build", () => {
     expect(await read("label", "font-size")).toBe("14px");
     expect(await read("button-padding", "padding-left")).toBe("32px");
     expect(await read("button-text", "font-size")).toBe("12px");
+    // A small control's leading is Tailwind's `text-sm` pair, and `leading-*`
+    // still replaces it: 14px type at a leading of 2.
+    expect(await read("button-leading", "line-height")).toBe("28px");
+    expect(await read("field-leading", "line-height")).toBe("28px");
     expect(await read("view-direction", "flex-direction")).toBe("column");
     expect(await read("icon-padding", "padding-left")).toBe("16px");
     expect(await read("card-padding", "padding-left")).toBe("32px");

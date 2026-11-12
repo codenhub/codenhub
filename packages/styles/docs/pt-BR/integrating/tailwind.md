@@ -2,7 +2,7 @@
 title: Tailwind CSS v4
 description: Como usar os entrypoints de código-fonte /tw num projeto com Tailwind CSS v4.
 order: 1
-source: a86fe5fa121db14ab917b10fb69e839111ddbc47
+source: 4866b77d4cfb1655499f633fff8bf61dde2aa4bb
 ---
 
 # Tailwind CSS v4
@@ -110,6 +110,7 @@ O bloco deixa de fora `neutral`, `emerald`, `amber`, `rose`, `indigo` e `white` 
 
 - **Não limpe o namespace inteiro.** `--color-*: initial` também remove as cores semânticas do pacote, e o build para com um erro como `Cannot apply unknown utility class`.
 - **Não limpe uma escala que o tema lê.** Limpar `--color-emerald-*` compila sem erro, mas as cores de sucesso feitas com ela se perdem.
+- **Não limpe os namespaces de tipo, fonte ou espaçamento.** Os componentes aplicam os utilitários `text-*` e `font-*` do Tailwind e a função `--spacing()` dele, então `--text-*: initial`, `--font-*: initial`, `--spacing: initial` ou `--*: initial` interrompe a compilação com `Cannot apply unknown utility class` ou `The --spacing(…) function requires that the --spacing theme variable exists`. Sobrescreva valores isolados, como `--text-sm`. Limpar `--radius-*` é seguro.
 
 ## Solução de problemas
 

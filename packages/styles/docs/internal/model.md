@@ -268,7 +268,7 @@ Offset and blur are scaled; **spread is not**. An aesthetic that draws its edge 
 
 The division of labor is the point. **The aesthetic decides what depth looks like** -- a hard bottom slab, a soft ambient blur, a stepped ring -- and **elevation decides how much part-based geometry this element gets**. Neither needs to know the other. `.flat` on a chunky-tile card removes a 4px slab, but it does not reach glass's complete `--ui-surface-shadow`; under no aesthetic at all it removes nothing, because there was nothing.
 
-`--ui-elevation` and the plain-page fallback geometry it multiplies (`--elevation-y`, `--elevation-blur`) are registered non-inheriting (`@property`, `inherits: false`, no `initial-value`), so a class sets them on the element it is written on and nothing else picks them up. Depth is not the same kind of thing as color or material: a button inside a raised card is not itself more raised, it is resting normally inside an already-raised surface, and an inherited multiplier would double the shadow of every unclassed button in a `.floating` dialog. There is no way to lift a whole unclassed subtree at once; each element that wants depth takes its own elevation class. `--ui-shadow-*`, what an aesthetic supplies, is a separate mechanism and cascades normally -- an aesthetic reaches every nested component.
+`--ui-elevation` and the plain-page fallback geometry it multiplies (`--_elevation-y`, `--_elevation-blur`) are registered non-inheriting (`@property`, `inherits: false`, no `initial-value`), so a class sets them on the element it is written on and nothing else picks them up. Depth is not the same kind of thing as color or material: a button inside a raised card is not itself more raised, it is resting normally inside an already-raised surface, and an inherited multiplier would double the shadow of every unclassed button in a `.floating` dialog. There is no way to lift a whole unclassed subtree at once; each element that wants depth takes its own elevation class. `--ui-shadow-*`, what an aesthetic supplies, is a separate mechanism and cascades normally -- an aesthetic reaches every nested component.
 
 Zero lengths are written `0px` rather than `0` in the fallbacks, because `calc(0 * 1)` produces a number and a shadow position requires a length.
 
@@ -332,6 +332,8 @@ A modifier cannot say what it changes: `p-xs` is 0.5rem on a card and 0.25rem on
 **`ruled` and `ruleless` raise no flag.** They write `--ui-rule`, a public token that already cascades, as `edged` writes `--ui-border`. On a container they rule every table inside it; before, they reached only the `.data-table` carrying them.
 
 **`interactive`, `hoverable`, and `pressable` are aliases.** `interactive` applies `box-hover`, `box-active`, and the pointer cursor; the other two are its halves. They are no longer nested in `.card`, so they answer on anything painted by `box`. The hover half raises `--_m-hover`, which `.card` reads for its quiet hover ground.
+
+**Hover answers only `(hover: hover)`.** `box-hover`, the card's quiet hover ground, a table's row hover, and a form control's hover line sit inside that query, as Tailwind's `hover:` variant does. A touch screen leaves a tapped element in `:hover` until something else is tapped, so before 0.9.0 a tapped button, card, or row kept its hover tint. The form control needs the guard too: its hover line gives way only to `:focus-visible`, which a tapped checkbox, switch, select, or input group does not match. A tooltip still opens on `:hover`, because a tap is how a touch reader opens one.
 
 **`disabled` is not a utility.** It is a state, written beside `:disabled`, `[aria-disabled="true"]`, and `[data-disabled]` in the selectors that read it, and those rules have to match the attributes whether or not a class exists. A utility could only add a fifth way to say it.
 
@@ -692,15 +694,17 @@ Both carry the reason in `registry.json` next to the decision, so a further exce
 
 `registry.json` at the package root is the source of truth for what the package supports, with `registry.schema.json` beside it. It exists as data rather than prose because four separate things have to agree about the same facts, and prose lets them drift.
 
-It carries the closed sets first -- the fill and edge classes with the tokens each declares, the hover step, the intents and their color families, the modifiers -- then every component, helper, and aesthetic.
+It carries the closed sets first -- the fill and edge classes with the tokens each declares, the hover step, the intents and their color families, the modifiers, and the box states (`disabled` and the three hover and press classes) -- then every component, composition helper, helper, and aesthetic. A composition helper is one a consumer builds a component from (`box`, `surface`, `text-control`, and `box-hover` and `box-active`, which extend `box`), so it lists what it accepts as a component does.
 
-Per component: class name, default fill/edge/elevation, the axes it reads, the ground it rests on where it has one, native element selectors, and -- where one applies -- a rename, a partial composition, or a bound, each with its reason.
+Per component: class name, default fill/edge/elevation, the axes it reads, the modifiers and intents it accepts, the ground it rests on where it has one, native element selectors, and -- where one applies -- a rename, a partial composition, or a bound, each with its reason.
 
 ```json
 {
   "class": "btn",
   "default": { "fill": "solid", "edge": "edgeless", "elevation": 1 },
   "axes": ["fill", "edge"],
+  "modifiers": ["flat", "raised", "floating", "sm", "lg", "..."],
+  "intents": ["primary", "secondary", "success", "warning", "destructive", "info"],
   "native": ["button", "input[type=\"submit\"]", "input[type=\"reset\"]"]
 }
 ```
@@ -742,10 +746,10 @@ These checks fail the build:
 4. A rename carries its reason.
 5. Every component appears in one of the two hand-maintained intent resets. A component missing from one reads an undefined `--intent-*`, which makes every `color-mix()` referencing it invalid and drops the declaration -- so it renders as nothing rather than as an error.
 6. Every implemented component declares the resting values the registry publishes for it.
-7. Every component declares the axes it reads, and every bound it places on one carries the composition of ours that earns it and what lifts it.
+7. Every component declares the axes it reads and the modifiers and intents it accepts, each one the registry defines, and every bound it places on one carries the composition of ours that earns it and what lifts it.
 8. Every `--ui-shadow-spread` or `--ui-border-width` bound in the registry has a matching `min()` seam in the component's own block, and every such seam in the stylesheet has a bound -- so a chip geometry cap cannot be added to the CSS without being published, and cannot be published without existing.
 
-Check 7's axis half is enforced in the browser rather than against the stylesheet text, in `tests/browser/axes.spec.ts`, because it is the only one whose answer is a computed value. It asserts both directions: an axis the registry calls live must change what the component computes, and an axis it leaves off must not. Check 8 is a text check in `registry.test.ts`, because a `min()` seam is a stylesheet fact rather than a computed one.
+Check 7's axis half is enforced in the browser rather than against the stylesheet text, in `tests/browser/axes.spec.ts`, because it is the only one whose answer is a computed value. It asserts both directions: an axis the registry calls live must change what the component computes, and an axis it leaves off must not. The modifiers and intents are held the same way, in Chromium only, since an engine without a property a modifier sets (Firefox has no `corner-shape`) would report it dead; `disabled` is probed in every engine. `.neutral` is listed only on `box`, which takes the nearest intent: every component already rests neutral, so the class changes nothing on one. Check 8 is a text check in `registry.test.ts`, because a `min()` seam is a stylesheet fact rather than a computed one.
 
 ### Names that avoid a collision
 
@@ -783,11 +787,15 @@ Not carried, because it names the applied element from somewhere else: `.input-g
 
 ### Public component variables
 
-Six component-scoped custom properties are supported consumer inputs, documented in one table in `docs/usage/customizing.md`: `--progress-value`, `--progress-color`, `--progress-surface`, `--progress-edge`, `--input-group-gap`, and `--tooltip-linger`. Every other variable a component declares or reads -- `--field-gap`, `--switch-*`, `--table-*`, `--quote-*`, the tooltip positioning intermediates, `--elevation-y`, `--elevation-blur`, and every `--_*` private -- is internal wiring that may change in any release.
+Eighteen component-scoped custom properties are supported consumer inputs, documented in one table in `docs/usage/customizing.md`: `--progress-value`, `--progress-color`, `--progress-surface`, `--progress-edge`, `--input-group-gap`, `--input-group-pad`, `--field-gap`, `--switch-width`, `--switch-height`, `--tooltip-gap`, `--tooltip-linger`, `--divider-color`, `--divider-width`, `--skeleton-base`, `--skeleton-sheen`, `--quote-width`, `--table-cell-padding`, and `--table-hover`. Every other variable a component declares or reads, such as `--surface-padding` and every `--_*` private, is internal wiring that may change in any release.
 
-The six are public for different reasons. `--input-group-gap` and `--tooltip-linger` have been taught in the published docs since 0.2.0 and 0.6.0, so consumers may rely on them, and each meets a need nothing else does: `--input-group-gap: 0` glues a text affix to its value, and `--tooltip-linger` is the hover timing WCAG 1.4.13 asks for. The progress trio is the override path [Pseudo-element budget](#pseudo-element-budget) already gives an aesthetic or a consumer into `.progress`, and `--progress-value` is the bar's only input.
+A component never declares a public variable. It reads it with its default, `var(--switch-width, 2.5rem)`, or resolves it into a private, `--_switch-width: var(--switch-width, 2.5rem)`, so a value set on any ancestor reaches it and the nearest one wins. Declared on the component, the default hid every value set above it, and the docs had to tell consumers that a value on a parent is ignored.
+
+The first six are public for different reasons. `--input-group-gap` and `--tooltip-linger` have been taught in the published docs since 0.2.0 and 0.6.0, so consumers may rely on them, and each meets a need nothing else does: `--input-group-gap: 0` glues a text affix to its value, and `--tooltip-linger` is the hover timing WCAG 1.4.13 asks for. The progress trio is the override path [Pseudo-element budget](#pseudo-element-budget) already gives an aesthetic or a consumer into `.progress`, and `--progress-value` is the bar's only input.
 
 Rejected: keeping only `--progress-value` public, as the customizing page once said. It would have silently withdrawn two inputs published docs teach, breaking those consumers without a release note, and left the progress override path without a contract. No new token was added by this decision.
+
+0.9.0 publishes the other twelve. Each is a size or a colour a consumer sets once for a page, a form, or a table, and each was already a single named input in its component, so publishing it adds no mechanism. What those components derive from them became `--_*` privates in the same release: the switch's knob geometry, the tooltip's position set, and the quotation's fill and edge chain, as did the plain-page elevation geometry and the rest of the table's palette.
 
 `box` declares `box-sizing: border-box` on itself. A box sizes itself as `min-height`/`min-width: var(--control-height)` plus its own padding and the composed `border` shorthand, so its geometry only resolves correctly under `border-box`. `reset.css` sets that on `*`, but the reset ships only with `.`, `/native`, and `/tw/reset`; `/components` and the granular `/tw/*` component entrypoints carry neither it nor Preflight. A component's own geometry is not an external reset's responsibility; the universal rule in `reset.css` covers only the consumer's own markup.
 

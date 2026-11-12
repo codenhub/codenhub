@@ -1,43 +1,29 @@
-import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { classesOf, parse } from "../../src/cli/purge";
 import { findPackageRoot, run } from "../../src/cli/run";
 
 const { version } = createRequire(import.meta.url)("../../package.json") as { version: string };
-
-// Each build test runs Tailwind's real CLI over this package's real `tw/` sources, which takes seconds, not milliseconds.
-vi.setConfig({ testTimeout: 30_000 });
+const packageRoot = path.resolve(import.meta.dirname, "../..");
 
 let root: string;
 let project: string;
 let stdout: string[];
 let stderr: string[];
-let missing: string[];
 let nodeVersion: string;
 
-const resolveFromHere = createRequire(import.meta.url).resolve;
-
-/* Resolves as Node does, except for the packages a test says are not installed. */
-function resolvePackage(specifier: string): string {
-  if (missing.some((name) => specifier.startsWith(`${name}/`))) {
-    throw Object.assign(new Error(`Cannot find module '${specifier}'`), { code: "MODULE_NOT_FOUND" });
-  }
-
-  return resolveFromHere(specifier);
-}
-
 beforeEach(async () => {
-  root = await mkdtemp(path.join(tmpdir(), "codenhub-styles-cli-test-"));
+  root = await mkdtemp(path.join(tmpdir(), "chs-cli-test-"));
   project = path.join(root, "project");
   await mkdir(path.join(project, "app", "views"), { recursive: true });
   await writeFile(path.join(project, "app", "views", "show.html.erb"), '<button class="btn primary">Save</button>\n');
   stdout = [];
   stderr = [];
-  missing = [];
   nodeVersion = process.versions.node;
 });
 
@@ -49,7 +35,6 @@ function build(...argv: string[]): Promise<number> {
   return run(argv, {
     cwd: project,
     nodeVersion,
-    resolvePackage,
     stdout: (line) => stdout.push(line),
     stderr: (line) => stderr.push(line),
   });
@@ -99,12 +84,66 @@ describe("build", () => {
     expect(css).toMatch(ruleFor("data-table"));
   });
 
-  it("builds the Tailwind utilities the templates use", async () => {
-    await writeFile(path.join(project, "app", "views", "list.html.erb"), '<ul class="flex mt-4"></ul>\n');
+  it("keeps a variant of a class the templates use", async () => {
+    await writeFile(
+      path.join(project, "app", "views", "list.html.erb"),
+      '<button class="btn md:lg hover:primary">Save</button>\n',
+    );
 
     await build("build", "-c", "app/views/**/*.erb", "-o", "app.css");
 
-    expect(await readOutput()).toMatch(ruleFor("flex"));
+    const css = await readOutput();
+
+    expect(css).toContain(String.raw`.md\:lg{`);
+    expect(css).toContain(String.raw`.hover\:primary:hover{`);
+    expect(css).not.toContain(String.raw`.md\:sm{`);
+    expect(css).not.toContain(String.raw`.focus\:primary`);
+  });
+
+  it("finds a class written as a framework's class directive", async () => {
+    await writeFile(path.join(project, "app", "views", "list.html.erb"), "<div class:soft={isQuiet}></div>\n");
+
+    await build("build", "-c", "app/views/**/*.erb", "-o", "app.css");
+
+    expect(await readOutput()).toMatch(ruleFor("soft"));
+  });
+
+  it("keeps the licence notice of the checkbox marks", async () => {
+    await writeFile(
+      path.join(project, "app", "views", "form.html.erb"),
+      '<input type="checkbox" class="checkbox" />\n',
+    );
+
+    await build("build", "-c", "app/views/**/*.erb", "-o", "app.css");
+
+    expect(await readOutput()).toMatch(/\/\*![^*]*Lucide[^*]*\*\//);
+  });
+
+  /* `.theme-dark` is written by a script at run time, so no template names it. */
+  it("keeps the classes a page gets at run time", async () => {
+    await build("build", "-c", "app/views/**/*.erb", "-o", "app.css");
+
+    expect(await readOutput()).toContain(".theme-dark");
+  });
+
+  it("writes the complete stylesheet when the templates name every class", async () => {
+    const complete = await readFile(path.join(packageRoot, "dist", "index.css"), "utf8");
+    // Read with the command's own parser, so an escaped name such as `md\:lg` is named whole.
+    const names = classesOf(parse(complete));
+
+    await writeFile(path.join(project, "app", "views", "all.html.erb"), [...names].join(" "));
+    await build("build", "-c", "app/views/**/*.erb", "-o", "app.css");
+
+    expect(await readOutput()).toBe(complete);
+  });
+
+  it("builds without Tailwind installed, importing only Node.js built-ins", async () => {
+    const bundle = await readFile(path.join(packageRoot, "dist", "cli.js"), "utf8");
+    const imports = bundle.split("\n").filter((line) => line.startsWith("import "));
+
+    expect(imports.length).toBeGreaterThan(0);
+    expect(imports.filter((line) => !/ from "node:[\w/]+";$/.test(line))).toEqual([]);
+    expect(bundle).not.toMatch(/\b(?:require|import)\(/);
   });
 
   it("adds a requested aesthetic", async () => {
@@ -215,74 +254,38 @@ describe("failures", () => {
     expect(await failureOf("watch", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(/"watch"/);
   });
 
-  it("names both Tailwind packages and their install command when neither is installed", async () => {
-    missing = ["@tailwindcss/cli", "tailwindcss"];
-
-    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(
-      "codenhub-styles: this command needs @tailwindcss/cli and tailwindcss, which are not installed. Run: npm install --save-dev @tailwindcss/cli tailwindcss",
-    );
-  });
-
-  it("names only @tailwindcss/cli when tailwindcss is installed", async () => {
-    missing = ["@tailwindcss/cli"];
-
-    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(
-      "codenhub-styles: this command needs @tailwindcss/cli, which is not installed. Run: npm install --save-dev @tailwindcss/cli",
-    );
-  });
-
-  it("names only tailwindcss when @tailwindcss/cli is installed", async () => {
-    missing = ["tailwindcss"];
-
-    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(
-      "codenhub-styles: this command needs tailwindcss, which is not installed. Run: npm install --save-dev tailwindcss",
-    );
-  });
-
-  it("writes no output when a Tailwind package is missing", async () => {
-    missing = ["@tailwindcss/cli"];
-
-    await build("build", "-c", "app/views/**/*.erb", "-o", "out/app.css");
-
-    expect(await readdir(project)).toEqual(["app"]);
-  });
-
-  it("passes on a resolution failure that is not a missing package", async () => {
-    const broken = vi.fn(() => {
-      throw Object.assign(new Error("permission denied, open 'package.json'"), { code: "EACCES" });
-    });
-
-    expect(
-      await run(["build", "-c", "app/views/**/*.erb", "-o", "app.css"], {
-        cwd: project,
-        nodeVersion,
-        resolvePackage: broken,
-        stdout: (line) => stdout.push(line),
-        stderr: (line) => stderr.push(line),
-      }),
-    ).toBe(1);
-    expect(stderr).toEqual(["codenhub-styles: permission denied, open 'package.json'"]);
-  });
-
   it("rejects a Node.js older than it supports, naming both versions", async () => {
     nodeVersion = "22.11.0";
 
     expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(
-      "codenhub-styles: this command needs Node.js 24 or newer; this is Node.js 22.11.0.",
+      "chs: this command needs Node.js 24 or newer; this is Node.js 22.11.0.",
     );
   });
 
-  it("passes Tailwind's own failure through", async () => {
+  it("passes on Node.js's own failure to write the output", async () => {
     await mkdir(path.join(project, "app.css"));
 
-    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(/Tailwind.*EISDIR/);
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(
+      /^chs: cannot write the stylesheet: .*(EISDIR|EPERM)/,
+    );
+  });
+
+  // The temporary file is the one write that can fail partway; a directory in its place makes it fail.
+  it("leaves the previous stylesheet whole when the write fails", async () => {
+    await writeFile(path.join(project, "app.css"), "/* previous */");
+    await mkdir(path.join(project, `app.css.${process.pid}.tmp`));
+
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(
+      /^chs: cannot write the stylesheet: /,
+    );
+    expect(await readFile(path.join(project, "app.css"), "utf8")).toBe("/* previous */");
   });
 });
 
 describe("help and version", () => {
   it("prints usage with --help and exits 0", async () => {
     expect(await build("--help")).toBe(0);
-    expect(stdout.join("\n")).toMatch(/codenhub-styles build --content <glob>/);
+    expect(stdout.join("\n")).toMatch(/chs build --content <glob>/);
     expect(stdout.join("\n")).toMatch(/--aesthetic <name> .*chunky-tile, cyber, glass, neobrutalism, pixel, sketch/);
     expect(stderr).toEqual([]);
   });

@@ -2,7 +2,7 @@
 title: Formulários
 description: Campos com rótulo, dicas e erros, ícones e prefixos fixos, selects e toggles de checkbox, radio e switch.
 order: 2
-source: 00e6a57cfd62f524fde5a550af721786edd7a5dd
+source: 6f92be07a240da16dfa5dc835b36a6981985bea9
 ---
 
 # Formulários
@@ -123,7 +123,7 @@ O endereço do perfil sempre começa com o mesmo host, então ele é um prefixo 
 </div>
 ```
 
-O espaçamento entre o controle e o adorno é `--input-group-gap`, 0.5rem por padrão. Isso funciona bem para um ícone, mas um texto que deve parecer parte do valor fica estranho com um espaço depois dele, então o exemplo define o valor como `0`. Defina-o no próprio `.input-group`: o grupo declara o seu próprio padrão, então um valor definido num elemento pai não tem efeito. Ela é uma das seis [variáveis públicas de componente](./customizing.md#variáveis-de-componente).
+O espaçamento entre o controle e o adorno é `--input-group-gap`, 0.5rem por padrão. Isso funciona bem para um ícone, mas um texto que deve parecer parte do valor fica estranho com um espaço depois dele, então o exemplo define o valor como `0`. Defina-o no grupo, ou uma única vez num formulário para todos os grupos dentro dele. Ela é uma das [variáveis públicas de componente](./customizing.md#variáveis-de-componente).
 
 Uma busca de membros, com um ícone no início (as classes `ic-lucide-*` precisam do `@codenhub/icons` carregado; veja [Botões → Carregando ícones](./buttons.md#carregando-ícones)):
 

@@ -43,13 +43,13 @@ The docs build one account settings screen from start to finish, in this order:
 
 ## Requirements
 
-| Requirement   | Details                                                                                                                                                                                                             |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CSS imports   | Consumer tooling must resolve package CSS imports.                                                                                                                                                                  |
-| Browsers      | Chrome 123, Safari 17.5, or Firefox 128 and newer (`light-dark()` theming; `:has()` for `.input-group` state; `@property` for non-inheriting elevation).                                                            |
-| Tailwind CSS  | 4.3.2 or newer, below 5, is required only for `/tw` source entrypoints and the `codenhub-styles build` command, which also needs `@tailwindcss/cli` in the same range. Install both yourself; the package does not. |
-| Node.js       | 24 or newer, only on the machine that runs the `codenhub-styles build` command. The stylesheets need none.                                                                                                          |
-| Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                                                                                                                     |
+| Requirement   | Details                                                                                                                                                                                                              |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CSS imports   | Consumer tooling must resolve package CSS imports.                                                                                                                                                                   |
+| Browsers      | Chrome 123, Safari 17.5, or Firefox 128 and newer (`light-dark()` theming; `:has()` for `.input-group` state; `@property` for non-inheriting elevation).                                                             |
+| Tailwind CSS  | 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. Install it yourself; the package does not.                                                                                                           |
+| Node.js       | 24 or newer on the machine that runs the `chs build` command. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm with `engine-strict`, refuse the install on an older Node.js. |
+| Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                                                                                                                      |
 
 ## Notes
 
@@ -57,4 +57,4 @@ This package has no JavaScript behavior. It ships no compatibility aliases: a re
 
 ## License
 
-Licensed under Apache-2.0. The embedded checkbox marks are derived from the [Lucide](https://lucide.dev) `check` and `minus` icons (ISC), which Lucide derives from [Feather](https://github.com/feathericons/feather) (MIT). See [NOTICE](NOTICE) for the required notices.
+This project is licensed under the [Apache-2.0](LICENSE) license. The embedded checkbox marks are derived from the [Lucide](https://lucide.dev) `check` and `minus` icons (ISC), which Lucide derives from [Feather](https://github.com/feathericons/feather) (MIT). See [NOTICE](NOTICE) for the required notices.
