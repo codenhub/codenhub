@@ -33,7 +33,7 @@ const packageRoot = fileURLToPath(new URL("../..", import.meta.url));
 const tailwindCss = pathToFileURL(fileURLToPath(import.meta.resolve("tailwindcss/index.css"))).href;
 const twEntry = (file: string) => pathToFileURL(path.join(packageRoot, "tw", file)).href;
 
-// Minified bytes; each compiled file measured on 2026-11-11 with Tailwind 4.3.4.
+// Minified bytes, measured with Tailwind 4.3.4 on the dates `docs/internal/tests.md` records.
 const COMPILED_CEILINGS: Record<string, number> = {
   "dist/index.css": 204_000,
   "dist/components.css": 163_500,

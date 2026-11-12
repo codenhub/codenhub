@@ -115,13 +115,13 @@ Screenshots would add operating-system, font, antialiasing, and media-preference
 
 Node-based Vitest checks validate every published target. Every compiled export contains representative public output, and every Tailwind entrypoint is processed independently against representative public selectors. Registry tests validate its schema and internal consistency, hold component defaults and class claims against the stylesheets, and enforce material and intent invariants.
 
-`size.test.ts` holds what a consumer downloads under ceilings, in minified bytes, each about 3% above the measurement it was set from. Gzipped lengths are recorded here but never compared, because zlib output can differ between machines. A change that grows past a ceiling raises it in the same change and says why. Measured on 2026-11-11 with Tailwind 4.3.4:
+`size.test.ts` holds what a consumer downloads under ceilings, in minified bytes, each about 3% above the measurement it was set from. Gzipped lengths are recorded here but never compared, because zlib output can differ between machines. A change that grows past a ceiling raises it in the same change and says why. Measured on 2026-11-11 with Tailwind 4.3.4; the two aesthetic rows that moved and the `dist/purge/` rows on 2026-11-12, and the files that carry the checkbox marks again on 2026-11-12, after their licence comment took the full notices:
 
 | Measured                                   | Minified | Gzip   | Ceiling |
 | ------------------------------------------ | -------- | ------ | ------- |
-| `dist/index.css`                           | 197,806  | 16,567 | 204,000 |
-| `dist/components.css`                      | 158,574  | 12,622 | 163,500 |
-| `dist/native.css`                          | 295,170  | 22,123 | 304,000 |
+| `dist/index.css`                           | 201,292  | 17,856 | 204,000 |
+| `dist/components.css`                      | 161,808  | 13,884 | 163,500 |
+| `dist/native.css`                          | 299,295  | 23,323 | 304,000 |
 | `dist/theme.css`                           | 11,828   | 2,471  | 12,200  |
 | `dist/palette.css`                         | 25,967   | 3,103  | 26,800  |
 | `dist/aesthetics/index.css`                | 43,917   | 4,961  | 45,200  |
@@ -131,7 +131,7 @@ Node-based Vitest checks validate every published target. Every compiled export 
 | `dist/aesthetics/neobrutalism.css`         | 4,188    | 1,182  | 4,350   |
 | `dist/aesthetics/pixel.css`                | 4,794    | 1,134  | 4,950   |
 | `dist/aesthetics/sketch.css`               | 14,905   | 2,094  | 15,350  |
-| `dist/purge/index.css`                     | 273,566  | 22,157 | 282,000 |
+| `dist/purge/index.css`                     | 276,578  | 23,545 | 282,000 |
 | `dist/purge/classes.json`                  | 6,855    | 1,626  | 7,100   |
 | `/tw/button`, a page with `btn primary`    | 20,450   |        | 21,000  |
 | `/tw/button`, a page with no package class | 8,912    |        | 9,200   |
@@ -150,7 +150,7 @@ Default package checks:
   "test": "vitest run",
   "test:browser": "playwright test",
   "test:browser:watch": "playwright test --ui",
-  "test:coverage": "pnpm test",
+  "test:coverage": "vitest run --coverage",
   "test:watch": "vitest --watch",
   "dev": "pnpm --filter=@codenhub/styles-dev dev",
   "debug": "pnpm build && pnpm --filter=@codenhub/styles-debug dev",
@@ -170,4 +170,4 @@ pnpm test:browser:watch styles
 
 Vitest likewise reads the output built by root tooling. Its configuration must not invoke `pnpm build` through setup hooks; direct package-script runs that skip root prerequisites require an existing `dist` tree.
 
-Because this package has no instrumentable JavaScript or TypeScript, `test:coverage` runs the real integration suite without producing a coverage report. This permanent package exception is recorded in `docs/specs/packages-exceptions.md`.
+`test:coverage` runs the same integration suite and writes a V8 coverage report over `src/cli/`, the `chs` build command, which is the package's only code. The CSS it ships is held by the browser suite instead, since V8 cannot instrument a stylesheet; `vitest.config.ts` limits the report to `src/cli/` so the figure says something about the code it measures.
