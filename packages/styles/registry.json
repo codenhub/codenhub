@@ -603,7 +603,7 @@
         "textarea",
         "tooltip-bubble"
       ],
-      "selectorReason": "The CSS-only variation rotates complete radii by sibling and container position on inked components; material tokens on the region alone would give every element the same outline. Pill shapes are eliminated: pill buttons read their rotated box radius, while badges, progress bars, and switches take chip-sized box outlines; radios alone keep the round circle token. Checkbox and rule accents need component-local tokens to keep every other edge solid. Other nested aesthetics are excluded so they keep their own material."
+      "selectorReason": "The CSS-only variation rotates complete radii by sibling and container position on inked components; material tokens on the region alone would give every element the same outline. A pill button rotates its own rounded pill outline, read from --sketch-radius-pill; badges, progress bars, and switches take their chip outline where they would be fully round; radios and the tooltip icon stay slightly uneven circles. Checkbox and rule accents need component-local tokens to keep every other edge solid. Other nested aesthetics are excluded so they keep their own material."
     }
   ]
 }

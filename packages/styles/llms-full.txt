@@ -138,7 +138,7 @@ The package is below 1.0 and follows the [semantic versioning rule for 0.x relea
 - A minor release, such as 0.7.0 to 0.8.0, may break. It can rename or remove a class or token, or change a default. Every break is listed under **Changed** or **Removed** on that version's [changelog](docs/changelog/index.md) page, with what to use instead.
 - A patch release, such as 0.7.0 to 0.7.1, never breaks.
 
-npm's default range for a new dependency, `^0.7.0`, already accepts patches only, because below 1.0 a caret range does not cross into the next minor version. Read the changelog before raising it. When you link a file from a CDN, put the exact version in the URL; see [Without a bundler](docs/integrating/without-a-bundler.md).
+npm's default range for a new dependency, `^0.9.0`, already accepts patches only, because below 1.0 a caret range does not cross into the next minor version. Read the changelog before raising it. When you link a file from a CDN, put the exact version in the URL; see [Without a bundler](docs/integrating/without-a-bundler.md).
 
 Breaks are not softened with aliases because the model is still settling, and keeping each old name beside its replacement would grow the surface every release. A rename or removal usually costs one find-and-replace when you upgrade; a changed default may need your own CSS retuned.
 
