@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { classesOf, parse } from "../../src/cli/purge";
 import { findPackageRoot, run } from "../../src/cli/run";
 
 const { version } = createRequire(import.meta.url)("../../package.json") as { version: string };
@@ -127,9 +128,10 @@ describe("build", () => {
 
   it("writes the complete stylesheet when the templates name every class", async () => {
     const complete = await readFile(path.join(packageRoot, "dist", "index.css"), "utf8");
-    const names = [...complete.matchAll(/\.([a-z][\w-]*)/g)].map(([, name]) => name);
+    // Read with the command's own parser, so an escaped name such as `md\:lg` is named whole.
+    const names = classesOf(parse(complete));
 
-    await writeFile(path.join(project, "app", "views", "all.html.erb"), [...new Set(names)].join(" "));
+    await writeFile(path.join(project, "app", "views", "all.html.erb"), [...names].join(" "));
     await build("build", "-c", "app/views/**/*.erb", "-o", "app.css");
 
     expect(await readOutput()).toBe(complete);
@@ -264,8 +266,19 @@ describe("failures", () => {
     await mkdir(path.join(project, "app.css"));
 
     expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(
-      /^chs: cannot write the stylesheet: .*EISDIR/,
+      /^chs: cannot write the stylesheet: .*(EISDIR|EPERM)/,
     );
+  });
+
+  // The temporary file is the one write that can fail partway; a directory in its place makes it fail.
+  it("leaves the previous stylesheet whole when the write fails", async () => {
+    await writeFile(path.join(project, "app.css"), "/* previous */");
+    await mkdir(path.join(project, `app.css.${process.pid}.tmp`));
+
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(
+      /^chs: cannot write the stylesheet: /,
+    );
+    expect(await readFile(path.join(project, "app.css"), "utf8")).toBe("/* previous */");
   });
 });
 

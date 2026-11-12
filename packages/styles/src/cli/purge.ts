@@ -97,9 +97,18 @@ export function parse(css: string, start = 0, end = css.length): Node[] {
   let index = start;
 
   while (index < end) {
-    // A comment between rules, such as Tailwind's licence banner, is kept as it is rather than read as part of the next prelude.
-    if (css.startsWith("/*", index)) {
-      const after = skipInert(css, index);
+    /* A comment between rules, such as Tailwind's licence banner, is kept as it
+       is rather than read as part of the next prelude, together with the
+       whitespace before it: the package's own notice follows the banner on a
+       new line, and read into the prelude it hid the at-rule after it. */
+    let comment = index;
+
+    while (comment < end && /\s/.test(css[comment]!)) {
+      comment++;
+    }
+
+    if (css.startsWith("/*", comment)) {
+      const after = skipInert(css, comment);
 
       nodes.push({ kind: "statement", text: css.slice(index, after) });
       index = after;
@@ -171,9 +180,16 @@ export function format(nodes: readonly Node[], indent = ""): string {
 }
 
 function unescapeIdent(raw: string): string {
-  return raw.replace(/\\([0-9a-fA-F]{1,6})\s?|\\(.)/g, (_, hex: string | undefined, char: string) =>
-    hex === undefined ? char : String.fromCodePoint(Number.parseInt(hex, 16)),
-  );
+  return raw.replace(/\\([0-9a-fA-F]{1,6})\s?|\\(.)/g, (_, hex: string | undefined, char: string) => {
+    if (hex === undefined) {
+      return char;
+    }
+
+    const code = Number.parseInt(hex, 16);
+
+    // CSS Syntax 4.3.7: zero, a surrogate, or a code point past Unicode reads as U+FFFD.
+    return code === 0 || (code >= 0xd800 && code <= 0xdfff) || code > 0x10ffff ? "�" : String.fromCodePoint(code);
+  });
 }
 
 /**

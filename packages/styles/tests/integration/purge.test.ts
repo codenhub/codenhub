@@ -69,6 +69,19 @@ describe("purge", () => {
 
     expect(purged(css, "btn")).toBe(css.slice(0, css.indexOf(".card{color")));
   });
+
+  // The package's licence notice follows Tailwind's banner on a line of its own.
+  it("reads a comment after a newline as a comment, not as the next prelude", () => {
+    const css = "/*! banner */\n/*! notice */@layer theme{.card{color:red}}@layer components{.btn{color:blue}}";
+
+    expect(parse(css).map((node) => node.kind)).toEqual(["statement", "statement", "group", "group"]);
+    expect(purged(css, "btn")).toBe("/*! banner */\n/*! notice */@layer theme{}@layer components{.btn{color:blue}}");
+  });
+
+  it("reads an escape outside Unicode as U+FFFD rather than throwing", () => {
+    expect(canMatch(String.raw`.\FFFFFF`, new Set(["�"]))).toBe(true);
+    expect(canMatch(String.raw`.\0 x`, new Set(["�x"]))).toBe(true);
+  });
 });
 
 describe("the stylesheets the command reads", () => {
@@ -84,6 +97,14 @@ describe("the stylesheets the command reads", () => {
     const css = await read(file);
 
     expect(serialize(parse(css))).toBe(css);
+  });
+
+  it.each(["dist/purge/index.css", "dist/index.css"])("%s parses no at-rule as a style rule", async (file) => {
+    const misread = parse(await read(file)).filter(
+      (node) => node.kind === "block" && node.isRule && node.prelude.includes("@"),
+    );
+
+    expect(misread.map((node) => (node.kind === "block" ? node.prelude.slice(-40) : ""))).toEqual([]);
   });
 
   it("the source purged to the complete stylesheet's classes is the complete stylesheet", async () => {
