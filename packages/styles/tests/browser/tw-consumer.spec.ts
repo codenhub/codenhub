@@ -165,6 +165,8 @@ const OVERRIDES = `
 <label class="label text-sm" id="label">Label</label>
 <button class="btn sm px-8" id="button-padding">Wide</button>
 <button class="btn lg text-xs" id="button-text">Small type</button>
+<button class="btn sm leading-loose" id="button-leading">Tall</button>
+<input class="ipt sm leading-loose" id="field-leading" />
 <div class="view horizontal flex-col" id="view-direction"><p>a</p></div>
 <button class="btn icon p-4" id="icon-padding">x</button>
 <div class="card p-xs p-8" id="card-padding">Card</div>`;
@@ -944,6 +946,10 @@ test.describe("/tw consumer build", () => {
     expect(await read("label", "font-size")).toBe("14px");
     expect(await read("button-padding", "padding-left")).toBe("32px");
     expect(await read("button-text", "font-size")).toBe("12px");
+    // A small control's leading is Tailwind's `text-sm` pair, and `leading-*`
+    // still replaces it: 14px type at a leading of 2.
+    expect(await read("button-leading", "line-height")).toBe("28px");
+    expect(await read("field-leading", "line-height")).toBe("28px");
     expect(await read("view-direction", "flex-direction")).toBe("column");
     expect(await read("icon-padding", "padding-left")).toBe("16px");
     expect(await read("card-padding", "padding-left")).toBe("32px");

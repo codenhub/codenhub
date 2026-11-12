@@ -256,6 +256,22 @@ test("every compiled stylesheet that carries the checkbox marks names their lice
 /* `files` publishes all of `tw/`, so a source no `/tw` export imports ships as
    bytes nobody can load: `tw/palette.css`, a copy of the generated palette,
    reached consumers only through `dist/palette.css`. */
+/* A `--tw-*` variable is Tailwind's own, set by its utilities and renamed or
+   dropped in any release, so a `/tw` consumer on another 4.x would lose what
+   read it. The package reads only the tokens Tailwind documents. */
+test("no source stylesheet reads a variable private to Tailwind", async () => {
+  const reads: string[] = [];
+
+  for (const file of await shippedStylesheets("tw")) {
+    // oxlint-disable-next-line no-await-in-loop -- few files, read in turn.
+    const css = await readFile(path.resolve(packageRoot, file), "utf8");
+
+    reads.push(...[...css.matchAll(/var\(\s*(--tw-[\w-]+)/g)].map(([, name]) => `${file}: ${name}`));
+  }
+
+  expect(reads).toEqual([]);
+});
+
 test("every stylesheet under tw/ is reachable from a /tw export", async () => {
   const targets = Object.entries(manifest.exports)
     .filter(([exportName]) => exportName.startsWith("./tw"))
