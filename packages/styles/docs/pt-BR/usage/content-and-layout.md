@@ -2,7 +2,7 @@
 title: Conteúdo e layout
 description: Consulta de todos os helpers de layout com os seus espaçamentos, a escala tipográfica com os seus tamanhos, cards e painéis com o seu padding, tabelas, citações, código e teclas.
 order: 10
-source: 19c4b12f34054533e56cbc1edbefff908c48a1e7
+source: 17b73c1d05cdd954d6ffa020b3a6602182060643
 ---
 
 # Conteúdo e layout
@@ -163,6 +163,8 @@ Uma tabela desenha linhas embaixo do cabeçalho e em cima do rodapé. `.ruled` e
 | `.ruled`    | Sim                                      | Sim                      |
 
 `--ui-rule` é o token por trás das duas classes, então um contêiner pode adicionar linhas divisórias a todas as tabelas dentro dele: `style="--ui-rule: 100%"` funciona como `.ruled`, e `0%` como `.ruleless`.
+
+Três variáveis ajustam o resto, na tabela ou em qualquer elemento em volta dela. `--table-cell-padding` define o padding de cada célula, então `--table-cell-padding: 0.375rem 0.75rem` deixa a tabela densa. `--table-hover` define a cor de uma linha do corpo sob o ponteiro, e `transparent` desliga o hover. `--ui-rule-ink` define a cor das linhas de uma tabela neutra; uma tabela com intenção as desenha na cor da intenção. Veja [Personalização → Variáveis de componente](./customizing.md#variáveis-de-componente).
 
 A moldura em volta da tabela é separada: uma tabela não tem borda por padrão, e `.edged` adiciona uma. As três escolhas não afetam umas às outras, então `.data-table.ruleless.edged` é uma tabela com moldura e sem linhas dentro, e `.data-table.ruled` tem todas as linhas separadas e nenhuma moldura.
 

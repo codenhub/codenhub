@@ -209,3 +209,30 @@ test("takes each public component token from an ancestor", async ({ page }) => {
     "--quote-width": "7px",
   });
 });
+
+/* A table's density and its row hover are the two things a consumer tunes on
+   it that no axis reaches. Its line color is `--ui-rule-ink`, a material
+   token. Set on an ancestor, as every component variable is, and on a row of
+   its own intent too, since such a row resolves its hover again. */
+test("takes the table's padding and row hover from an ancestor", async ({ page }) => {
+  await page.setContent(
+    '<!doctype html><html data-theme="light"><body><div style="--table-cell-padding: 2px 5px; --table-hover: rgb(0, 128, 0)">' +
+      '<table class="data-table"><tbody>' +
+      '<tr><td id="cell">Plain</td></tr><tr class="success"><td id="intent-cell">Success</td></tr>' +
+      "</tbody></table></div></body></html>",
+  );
+  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+  await page.addStyleTag({ content: "td { transition: none !important; }" });
+
+  const hoverColor = async (id: string) => {
+    await page.hover(`#${id}`);
+    return page.locator(`#${id}`).evaluate((element) => getComputedStyle(element).backgroundColor);
+  };
+  const padding = await page
+    .locator("#cell")
+    .evaluate((element) => [getComputedStyle(element).paddingTop, getComputedStyle(element).paddingLeft]);
+
+  expect(padding).toEqual(["2px", "5px"]);
+  expect(await hoverColor("cell")).toBe("rgb(0, 128, 0)");
+  expect(await hoverColor("intent-cell")).toBe("rgb(0, 128, 0)");
+});

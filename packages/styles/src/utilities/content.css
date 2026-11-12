@@ -218,7 +218,9 @@
      Both ends are leaves, and the step lands on `transparent` rather than on
      `--_bg`, for the reason `--_table-rule-plated` above gives. */
   --_table-hover-tone: color-mix(in oklab, currentColor var(--ui-fill, var(--_d-fill)), var(--intent-hover));
-  --_table-row-hover: color-mix(in oklab, var(--_table-hover-tone) 12%, transparent);
+  /* `--table-hover` is public and read, not declared, so a value on any
+     ancestor reaches the rows; `transparent` turns the hover off. */
+  --_table-row-hover: var(--table-hover, color-mix(in oklab, var(--_table-hover-tone) 12%, transparent));
 
   border-spacing: 0;
 
@@ -309,9 +311,13 @@
      initial value, which counts as naming none. */
   --_table-rule-width: var(--ui-border-width, var(--border-width));
   /* In `:where()`: these are the cells' defaults, and at the 0-1-1 the plain
-     selector carried, `p-0` or `text-center` on a cell lost to them. */
+     selector carried, `p-0` or `text-center` on a cell lost to them.
+     `--table-cell-padding` is public and read with the default, `py-3 px-4`,
+     as its fallback. */
   :where(& :is(th, td)) {
-    @apply px-4 py-3 text-start align-top;
+    @apply text-start align-top;
+
+    padding: var(--table-cell-padding, calc(var(--spacing) * 3) calc(var(--spacing) * 4));
 
     border-bottom-style: var(--ui-rule-style, var(--ui-line-style, solid));
     border-bottom-width: var(--_table-rule-width);
@@ -363,7 +369,7 @@
     );
     --_table-rule: color-mix(in oklab, var(--_table-rule-tone) var(--_table-rule-amount), transparent);
     --_table-hover-tone: color-mix(in oklab, currentColor var(--ui-fill, var(--_d-fill)), var(--intent-hover));
-    --_table-row-hover: color-mix(in oklab, var(--_table-hover-tone) 12%, transparent);
+    --_table-row-hover: var(--table-hover, color-mix(in oklab, var(--_table-hover-tone) 12%, transparent));
 
     /* A neutral solid table caps its fill at 20%, so its plate is a light grey
        and the ramp keeps `--_on-fill` low: the row's ink is then mostly the

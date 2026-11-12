@@ -2954,26 +2954,28 @@ Three more tokens have no intent, presentation, ground, or hover: `--palette-bor
 
 ## Component variables
 
-Sixteen variables are read by a single component and are supported inputs. A component reads each one where it is drawn, so a value set on the component or on any element around it reaches it, and the nearest value wins: set `--switch-width` on a form and every switch in it takes it. Every other variable a component declares, such as `--surface-padding` or any name that starts with `--_`, is internal and may change in any release.
+Eighteen variables are read by a single component and are supported inputs. A component reads each one where it is drawn, so a value set on the component or on any element around it reaches it, and the nearest value wins: set `--switch-width` on a form and every switch in it takes it. Every other variable a component declares, such as `--surface-padding` or any name that starts with `--_`, is internal and may change in any release.
 
-| Variable             | Element        | Value                        | Default                                                                 | Effect                                                                                                |
-| -------------------- | -------------- | ---------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `--progress-value`   | `.progress`    | A percentage, `0%` to `100%` | `0%`                                                                    | Width of the filled part. Not clamped; a value without `%` is invalid and shows empty.                |
-| `--progress-color`   | `.progress`    | A color                      | The intent color                                                        | Color of the filled part and of the `.active` shimmer.                                                |
-| `--progress-surface` | `.progress`    | A color                      | The intent color at the presentation's fill: 12% by default             | Color of the track.                                                                                   |
-| `--progress-edge`    | `.progress`    | A color                      | The intent's border color at the presentation's border: none by default | Color of the track's border. It shows only where the track has a border width, such as with `.edged`. |
-| `--input-group-gap`  | `.input-group` | A length                     | `0.5rem`                                                                | Space between the control and its icon or text.                                                       |
-| `--input-group-pad`  | `.input-group` | A length                     | `0.75rem`; `0.625rem` with `.sm` and `1rem` with `.lg`                  | Space between the group's edge and its content, on both sides.                                        |
-| `--field-gap`        | `.field`       | A length                     | `0.35rem`                                                               | Space between a field's label, control, and hint.                                                     |
-| `--switch-width`     | `.switch`      | A length                     | `2.5rem`                                                                | Width of the track. The knob keeps its size and travels further.                                      |
-| `--switch-height`    | `.switch`      | A length                     | `1.25rem`                                                               | Height of the track. The knob grows with it.                                                          |
-| `--tooltip-gap`      | `.tooltip`     | A length                     | `0.5rem`                                                                | Space between the trigger and the bubble.                                                             |
-| `--tooltip-linger`   | `.tooltip`     | A time                       | `300ms`                                                                 | How long the bubble stays after the pointer leaves the trigger.                                       |
-| `--divider-color`    | `.divider`     | A color                      | The intent color                                                        | Color of the line. It wins over an intent class on the divider.                                       |
-| `--divider-width`    | `.divider`     | A length                     | The border width: `1px` by default                                      | Thickness of the line.                                                                                |
-| `--skeleton-base`    | `.skeleton`    | A color                      | A faint tint of the intent color                                        | Color the placeholder rests on.                                                                       |
-| `--skeleton-sheen`   | `.skeleton`    | A color                      | A stronger tint of the intent color                                     | Color of the highlight that sweeps across it.                                                         |
-| `--quote-width`      | `.quote`       | A length                     | Twice the border width plus `1px`: `3px` by default                     | Thickness of the bar on the quotation's starting edge.                                                |
+| Variable               | Element        | Value                        | Default                                                                 | Effect                                                                                                |
+| ---------------------- | -------------- | ---------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `--progress-value`     | `.progress`    | A percentage, `0%` to `100%` | `0%`                                                                    | Width of the filled part. Not clamped; a value without `%` is invalid and shows empty.                |
+| `--progress-color`     | `.progress`    | A color                      | The intent color                                                        | Color of the filled part and of the `.active` shimmer.                                                |
+| `--progress-surface`   | `.progress`    | A color                      | The intent color at the presentation's fill: 12% by default             | Color of the track.                                                                                   |
+| `--progress-edge`      | `.progress`    | A color                      | The intent's border color at the presentation's border: none by default | Color of the track's border. It shows only where the track has a border width, such as with `.edged`. |
+| `--input-group-gap`    | `.input-group` | A length                     | `0.5rem`                                                                | Space between the control and its icon or text.                                                       |
+| `--input-group-pad`    | `.input-group` | A length                     | `0.75rem`; `0.625rem` with `.sm` and `1rem` with `.lg`                  | Space between the group's edge and its content, on both sides.                                        |
+| `--field-gap`          | `.field`       | A length                     | `0.35rem`                                                               | Space between a field's label, control, and hint.                                                     |
+| `--switch-width`       | `.switch`      | A length                     | `2.5rem`                                                                | Width of the track. The knob keeps its size and travels further.                                      |
+| `--switch-height`      | `.switch`      | A length                     | `1.25rem`                                                               | Height of the track. The knob grows with it.                                                          |
+| `--tooltip-gap`        | `.tooltip`     | A length                     | `0.5rem`                                                                | Space between the trigger and the bubble.                                                             |
+| `--tooltip-linger`     | `.tooltip`     | A time                       | `300ms`                                                                 | How long the bubble stays after the pointer leaves the trigger.                                       |
+| `--divider-color`      | `.divider`     | A color                      | The intent color                                                        | Color of the line. It wins over an intent class on the divider.                                       |
+| `--divider-width`      | `.divider`     | A length                     | The border width: `1px` by default                                      | Thickness of the line.                                                                                |
+| `--skeleton-base`      | `.skeleton`    | A color                      | A faint tint of the intent color                                        | Color the placeholder rests on.                                                                       |
+| `--skeleton-sheen`     | `.skeleton`    | A color                      | A stronger tint of the intent color                                     | Color of the highlight that sweeps across it.                                                         |
+| `--quote-width`        | `.quote`       | A length                     | Twice the border width plus `1px`: `3px` by default                     | Thickness of the bar on the quotation's starting edge.                                                |
+| `--table-cell-padding` | `.data-table`  | A `padding` value            | `0.75rem 1rem`                                                          | Padding of every header, body, and footer cell. A padding utility on a cell still wins.               |
+| `--table-hover`        | `.data-table`  | A color                      | A 12% step toward the intent's hover color                              | Background of a body row under the pointer. `transparent` turns it off.                               |
 
 ```html
 <div class="progress" role="meter" aria-label="Storage used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="92" style="--progress-value: 92%; --progress-color: var(--color-warning)"></div>
@@ -3184,6 +3186,8 @@ A table draws lines under its header and above its footer. `.ruled` and `.rulele
 | `.ruled`    | Yes                                   | Yes               |
 
 `--ui-rule` is the token behind both classes, so a container can rule every table inside it: `style="--ui-rule: 100%"` acts like `.ruled`, and `0%` like `.ruleless`.
+
+Three variables tune the rest, on the table or on any element around it. `--table-cell-padding` sets the padding of every cell, so `--table-cell-padding: 0.375rem 0.75rem` makes a dense table. `--table-hover` sets the color of a hovered body row, and `transparent` turns the hover off. `--ui-rule-ink` sets the color of a neutral table's lines; a table with an intent draws them in the intent's color. See [Customizing → Component variables](docs/usage/customizing.md#component-variables).
 
 The frame around the table is separate: a table has no border by default, and `.edged` adds one. The three choices do not affect each other, so `.data-table.ruleless.edged` is a framed table with no lines inside, and `.data-table.ruled` has every row separated and no frame.
 
@@ -3496,11 +3500,11 @@ That completes the reading path. The [Introduction](docs/index.md) links every p
 
 # 0.9.0
 
-The build command is renamed `chs` and no longer runs Tailwind: it trims a stylesheet the package ships, so the package is the whole install. Ten component variables, such as `--field-gap` and `--tooltip-gap`, are public and take effect when set on any ancestor. The release also fixes printing, bare native controls, disabled solo actions, forced colors, and sketch knobs, and adds the licence notice of the checkbox marks to every compiled file that carries them.
+The build command is renamed `chs` and no longer runs Tailwind: it trims a stylesheet the package ships, so the package is the whole install. Twelve component variables, such as `--field-gap` and `--table-cell-padding`, are public and take effect when set on any ancestor. The release also fixes printing, bare native controls, disabled solo actions, forced colors, and sketch knobs, and adds the licence notice of the checkbox marks to every compiled file that carries them.
 
 ## Added
 
-- **Ten component variables.** `--tooltip-gap`, `--field-gap`, `--input-group-pad`, `--switch-height`, `--switch-width`, `--divider-color`, `--divider-width`, `--skeleton-base`, `--skeleton-sheen`, and `--quote-width` join `--input-group-gap` and `--tooltip-linger` as public variables. Each one works on the component or on any element around it, so `.settings { --field-gap: 0.5rem; }` spaces every field in the region. See [Customizing → Component variables](docs/usage/customizing.md#component-variables).
+- **Twelve component variables.** `--tooltip-gap`, `--field-gap`, `--input-group-pad`, `--switch-height`, `--switch-width`, `--divider-color`, `--divider-width`, `--skeleton-base`, `--skeleton-sheen`, `--quote-width`, `--table-cell-padding`, and `--table-hover` join `--input-group-gap` and `--tooltip-linger` as public variables. Each one works on the component or on any element around it, so `.settings { --field-gap: 0.5rem; }` spaces every field in the region. See [Customizing → Component variables](docs/usage/customizing.md#component-variables).
 
 ## Changed
 

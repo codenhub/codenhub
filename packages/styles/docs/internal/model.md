@@ -785,7 +785,7 @@ Not carried, because it names the applied element from somewhere else: `.input-g
 
 ### Public component variables
 
-Sixteen component-scoped custom properties are supported consumer inputs, documented in one table in `docs/usage/customizing.md`: `--progress-value`, `--progress-color`, `--progress-surface`, `--progress-edge`, `--input-group-gap`, `--input-group-pad`, `--field-gap`, `--switch-width`, `--switch-height`, `--tooltip-gap`, `--tooltip-linger`, `--divider-color`, `--divider-width`, `--skeleton-base`, `--skeleton-sheen`, and `--quote-width`. Every other variable a component declares or reads, such as `--surface-padding` and every `--_*` private, is internal wiring that may change in any release.
+Eighteen component-scoped custom properties are supported consumer inputs, documented in one table in `docs/usage/customizing.md`: `--progress-value`, `--progress-color`, `--progress-surface`, `--progress-edge`, `--input-group-gap`, `--input-group-pad`, `--field-gap`, `--switch-width`, `--switch-height`, `--tooltip-gap`, `--tooltip-linger`, `--divider-color`, `--divider-width`, `--skeleton-base`, `--skeleton-sheen`, `--quote-width`, `--table-cell-padding`, and `--table-hover`. Every other variable a component declares or reads, such as `--surface-padding` and every `--_*` private, is internal wiring that may change in any release.
 
 A component never declares a public variable. It reads it with its default, `var(--switch-width, 2.5rem)`, or resolves it into a private, `--_switch-width: var(--switch-width, 2.5rem)`, so a value set on any ancestor reaches it and the nearest one wins. Declared on the component, the default hid every value set above it, and the docs had to tell consumers that a value on a parent is ignored.
 
