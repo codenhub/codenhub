@@ -159,6 +159,14 @@
        with the token, so a position never reads a value inherited from an
        ancestor's. */
     &:is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble) {
+      /* The first position draws the region's own outline, declared here too
+         so a knob set between the region and the element reaches it. */
+      &:nth-child(4n + 1) {
+        --_sketch-p: var(--_sketch-pointed) var(--sketch-radius, 255px 15px 225px 15px / 15px 225px 15px 255px);
+        --_sketch-r: var(--_sketch-rounded) var(--sketch-radius-rounded, 26px 10px 24px 11px / 12px 23px 11px 20px);
+        --ui-radius: var(--_sketch-pass-radius, var(--_sketch-r, var(--_sketch-p)));
+      }
+
       &:nth-child(4n + 2) {
         --_sketch-p: var(--_sketch-pointed) var(--sketch-radius, 18px 240px 15px 255px / 240px 15px 255px 18px);
         --_sketch-r: var(--_sketch-rounded) var(--sketch-radius-rounded, 11px 25px 12px 24px / 23px 11px 22px 12px);
@@ -205,6 +213,13 @@
     }
 
     &:is(.card, .panel, .alert, .data-table) {
+      &:nth-child(4n + 1) {
+        --_sketch-p: var(--_sketch-pointed) var(--sketch-radius-surface, 80px 4px 75px 5px / 3px 70px 4px 80px);
+        --_sketch-r: var(--_sketch-rounded)
+          var(--sketch-radius-surface-rounded, 38px 16px 36px 17px / 16px 34px 17px 32px);
+        --ui-radius-surface: var(--_sketch-pass-radius-surface, var(--_sketch-r, var(--_sketch-p)));
+      }
+
       &:nth-child(4n + 2) {
         --_sketch-p: var(--_sketch-pointed) var(--sketch-radius-surface, 4px 75px 5px 80px / 75px 3px 80px 4px);
         --_sketch-r: var(--_sketch-rounded)

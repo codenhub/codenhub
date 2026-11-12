@@ -40,13 +40,13 @@ const COMPILED_CEILINGS: Record<string, number> = {
   "dist/native.css": 304_000,
   "dist/theme.css": 12_200,
   "dist/palette.css": 26_800,
-  "dist/aesthetics/index.css": 43_800,
+  "dist/aesthetics/index.css": 45_200,
   "dist/aesthetics/chunky-tile.css": 4_700,
   "dist/aesthetics/cyber.css": 4_500,
   "dist/aesthetics/glass.css": 11_400,
   "dist/aesthetics/neobrutalism.css": 4_350,
   "dist/aesthetics/pixel.css": 4_950,
-  "dist/aesthetics/sketch.css": 14_250,
+  "dist/aesthetics/sketch.css": 15_350,
 };
 
 describe("compiled stylesheets", () => {

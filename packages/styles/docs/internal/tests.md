@@ -124,16 +124,18 @@ Node-based Vitest checks validate every published target. Every compiled export 
 | `dist/native.css`                          | 295,170  | 22,123 | 304,000 |
 | `dist/theme.css`                           | 11,828   | 2,471  | 12,200  |
 | `dist/palette.css`                         | 25,967   | 3,103  | 26,800  |
-| `dist/aesthetics/index.css`                | 42,463   | 4,993  | 43,800  |
+| `dist/aesthetics/index.css`                | 43,917   | 4,961  | 45,200  |
 | `dist/aesthetics/chunky-tile.css`          | 4,511    | 1,206  | 4,700   |
 | `dist/aesthetics/cyber.css`                | 4,343    | 1,227  | 4,500   |
 | `dist/aesthetics/glass.css`                | 11,013   | 2,169  | 11,400  |
 | `dist/aesthetics/neobrutalism.css`         | 4,188    | 1,182  | 4,350   |
 | `dist/aesthetics/pixel.css`                | 4,794    | 1,134  | 4,950   |
-| `dist/aesthetics/sketch.css`               | 13,819   | 2,063  | 14,250  |
+| `dist/aesthetics/sketch.css`               | 14,905   | 2,094  | 15,350  |
 | `/tw/button`, a page with `btn primary`    | 20,450   |        | 21,000  |
 | `/tw/button`, a page with no package class | 8,912    |        | 9,200   |
 | `/tw`, a page with `btn primary`           | 24,115   |        | 25,000  |
+
+The two sketch rows were measured again on 2026-11-12, when the first position of sketch's rotation declared its outline so a knob set inside a region reaches it.
 
 The `/tw` rows are the package's cost over Tailwind alone on the same page, compiled with Tailwind's polyfills on as a consumer's CLI or Vite build compiles it, so a Tailwind release that changes Preflight moves no ceiling. The compiled files are also checked for Tailwind's fallbacks for browsers without `color-mix()` or `@property`, which `scripts/build-styles.mjs` turns off, and a page that names no package class is checked for having no component rule.
 
