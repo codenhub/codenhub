@@ -270,7 +270,11 @@
   "codenhub": {
     "label": "StyleKit",
     "status": "active",
-    "docs": {},
+    "docs": {
+      "versions": [
+        "^0.8.0"
+      ]
+    },
     "tools": {
       "timeout": 1800
     }
