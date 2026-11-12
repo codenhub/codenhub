@@ -75,7 +75,10 @@
     --intent-border: var(--ui-rule-ink, var(--ui-ink, var(--color-border)));
   }
 
-  :where(hr) {
+  /* A bare rule and progress bar take the color they sit in, as `.divider`
+     and `.progress` do in `intent.css`; a bar in a filled container drew the
+     page's text color over the container's own. */
+  :where(hr, progress) {
     --intent-color: currentColor;
     --intent-border: currentColor;
   }
