@@ -525,6 +525,7 @@ The block leaves out `neutral`, `emerald`, `amber`, `rose`, `indigo`, and `white
 
 - **Do not clear the whole namespace.** `--color-*: initial` also removes the package's semantic colors, and the build stops with an error such as `Cannot apply unknown utility class`.
 - **Do not clear a ramp the theme reads.** Clearing `--color-emerald-*` builds without an error, but the success colors made from it are lost.
+- **Do not clear the type, font, or spacing namespaces.** The components apply Tailwind's `text-*` and `font-*` utilities and its `--spacing()` function, so `--text-*: initial`, `--font-*: initial`, `--spacing: initial`, or `--*: initial` stops the build with `Cannot apply unknown utility class` or `The --spacing(…) function requires that the --spacing theme variable exists`. Override single values instead, such as `--text-sm`. Clearing `--radius-*` is safe.
 
 ## Troubleshooting
 
