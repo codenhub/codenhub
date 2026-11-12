@@ -3492,6 +3492,42 @@ Use ARIA or data attributes where the element or your component library has no n
 
 That completes the reading path. The [Introduction](docs/index.md) links every page, and [Composing](docs/usage/composing.md), [Customizing](docs/usage/customizing.md), and [Content and layout](docs/usage/content-and-layout.md) are the lookup pages for later.
 
+<!-- Source: docs/changelog/0.9.0.md -->
+
+# 0.9.0
+
+The build command is renamed `chs` and no longer runs Tailwind: it trims a stylesheet the package ships, so the package is the whole install. Ten component variables, such as `--field-gap` and `--tooltip-gap`, are public and take effect when set on any ancestor. The release also fixes printing, bare native controls, disabled solo actions, forced colors, and sketch knobs, and adds the licence notice of the checkbox marks to every compiled file that carries them.
+
+## Added
+
+- **Ten component variables.** `--tooltip-gap`, `--field-gap`, `--input-group-pad`, `--switch-height`, `--switch-width`, `--divider-color`, `--divider-width`, `--skeleton-base`, `--skeleton-sheen`, and `--quote-width` join `--input-group-gap` and `--tooltip-linger` as public variables. Each one works on the component or on any element around it, so `.settings { --field-gap: 0.5rem; }` spaces every field in the region. See [Customizing → Component variables](docs/usage/customizing.md#component-variables).
+
+## Changed
+
+- **Breaking: the build command is `chs`.** `codenhub-styles build` is gone, with no alias; run `chs build` from a `package.json` script, or `npx @codenhub/styles build` from a shell. Do not type `npx chs`: an unrelated package on npm has that name, and npx would download and run it. See [Without a bundler → Build only the classes you use](docs/integrating/without-a-bundler.md#build-only-the-classes-you-use).
+- **Breaking: the command builds without Tailwind.** It reads the classes your files name and keeps their rules from a complete stylesheet the package ships in `dist/purge/`, so it needs Node.js 24 or newer and nothing else installed, and its output no longer changes with your Tailwind version. Three things it did through Tailwind are gone. It emits no Tailwind utilities, so `flex` or `mt-4` in your templates adds nothing. Variants are a fixed set of ten: `sm:`, `md:`, `lg:`, `xl:`, `2xl:`, `hover:`, `focus:`, `focus-visible:`, `active:`, and `dark:`. Variants do not stack, so `md:hover:primary` is not found. A project that needs any of those runs Tailwind and imports `/tw`, which still gives all three. See [Without a bundler → What it does not do](docs/integrating/without-a-bundler.md#what-it-does-not-do).
+- **Breaking: `@codenhub/styles` no longer has a peer dependency on `@tailwindcss/cli`.** Only the command used it. Remove it from your dependencies if nothing else uses it. `tailwindcss` stays an optional peer for `/tw`.
+- **`--input-group-gap` and `--tooltip-linger` work from a parent.** They took effect only when set on the `.input-group` or the `.tooltip` itself. A value set on an ancestor now reaches them.
+- **Sketch knobs reach every position.** `--sketch-radius`, `--sketch-radius-rounded`, and `--sketch-radius-surface` set on a `.sketch` region, or on any element inside it, now shape every control and surface. They skipped one element in four. See [Aesthetics → Sketch](docs/usage/aesthetics.md#sketch).
+- **Small buttons and fields read the theme's line height.** `.btn.sm` and the small text fields took their leading from a variable private to Tailwind, which can change between Tailwind releases. They now read `--text-sm--line-height`. A `leading-*` utility on them still wins.
+- **Internal variables renamed.** The custom properties that switches, tooltips, quotes, tables, and elevation derive internally now start with `--_`, as the other internal ones do, such as `--_tooltip-top` and `--_table-rule`. They were documented as internal. CSS that set one of the old names, such as `--table-rule`, no longer does anything. Use a public variable or a utility instead.
+- **The homepage is the package's page on codenhub.dev.**
+
+## Fixed
+
+- **A bare `<progress>` takes the color it sits in.** Under `/native`, in a filled container, it drew the page's ink over the container's color.
+- **A bare quiet checkbox or radio keeps its checked plate.** Under `/native`, a checked `.ghost` or `.soft` checkbox or radio showed its resting plate, and a mixed one also kept the neutral 20% cap.
+- **A filled quotation prints with its plate.** A `.quote.solid` printed white text on white paper.
+- **A solid solo element prints with its plate.** The `-solo` classes left their fill off paper, as the quotation did.
+- **A solo action disabled by class or data attribute does not press.** The neobrutalism, chunky tile, and cyber solos guarded their press with `:disabled` and `aria-disabled` only. A link or `role="button"` marked `.disabled` or `data-disabled` still sank when clicked.
+- **`@apply progress` and `@apply select` keep their forced colors.** The applied bar's value was repainted as Canvas, and the applied drop-down drew no arrow.
+- **Compiled CSS carries the licence of the checkbox marks.** The marks come from Lucide (ISC, itself from Feather, MIT). Each compiled file that inlines them now opens with a `/*!` notice, and `chs build` keeps it in its output.
+
+## Documentation
+
+- [Customizing → Generated palette](docs/usage/customizing.md#generated-palette) says the palette's `-edge` values do not follow `prefers-contrast: more`.
+- [Tailwind CSS v4](docs/integrating/tailwind.md) warns against clearing the `--text-*`, `--font-*`, and `--spacing` themes, which the package reads.
+
 <!-- Source: docs/changelog/0.8.0.md -->
 
 # 0.8.0
