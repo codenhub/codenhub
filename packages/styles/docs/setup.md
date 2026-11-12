@@ -74,7 +74,7 @@ The order of the two imports does not matter, because every entrypoint declares 
 - **Browsers:** Chrome 123, Safari 17.5, or Firefox 128 and newer. Colors use `light-dark()` and `color-scheme` (Firefox 120). `.input-group` reads a nested control's invalid and disabled state with `:has()` (Firefox 121). The elevation classes register a non-inheriting property with `@property` (Firefox 128); without it, an elevation class would also reach the unclassed elements inside it.
 - **Tooling:** an `@import` of a package name needs a tool that resolves CSS imports from packages through their `exports` map. Without one, link the compiled file by its path or from a CDN; see [Without a bundler](./integrating/without-a-bundler.md). Two common tools need a nudge, described in [Integrating → Bundlers that need a nudge](./integrating/index.md#bundlers-that-need-a-nudge): Parcel, and PostCSS with `postcss-import`.
 - **Tailwind:** 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. It is an optional peer dependency, so the compiled entrypoints and the `chs build` command do not install it.
-- **Node.js:** 24 or newer, only on the machine that runs the `chs build` command. The stylesheets need none.
+- **Node.js:** 24 or newer on the machine that runs the `chs build` command. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm with `engine-strict`, refuse the install on an older Node.js.
 - **Your application:** the package has no JavaScript. Semantic HTML, ARIA, keyboard behavior, focus management, validation, and announcements are yours; see [Accessibility](./accessibility.md).
 
 ## When nothing is styled

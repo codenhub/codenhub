@@ -2,7 +2,7 @@
 title: Tooltips
 description: Ajuda de campo que abre no hover e no foco, como ligá-la a leitores de tela e à tecla Escape, e onde um tooltip é cortado.
 order: 4
-source: fa1e7c1b308fe614ce17147239f713720178d9c7
+source: ac236b423d466ebd014b7738dd076ace2cfc50a3
 ---
 
 # Tooltips

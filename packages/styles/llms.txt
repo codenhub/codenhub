@@ -28,7 +28,7 @@ is what the public docs describe and the demo at https://demo.codenhub.dev/style
   - [Aesthetics](./docs/usage/aesthetics.md): The six optional looks, what each changes, its knobs, and its limits.
   - [Solo classes](./docs/usage/solo.md): Painting an aesthetic onto one element from another library, and what a solo class reads and ignores.
   - [Composing](./docs/usage/composing.md): Lookup for combining classes, every component's default look, presentation rules, the component axis matrix, and elevation.
-  - [Customizing](./docs/usage/customizing.md): Lookup for presentation and material tokens, aesthetic knobs, the six public component variables, the generated palette, and composition helpers.
+  - [Customizing](./docs/usage/customizing.md): Lookup for presentation and material tokens, aesthetic knobs, the public component variables, the generated palette, and composition helpers.
   - [Content and layout](./docs/usage/content-and-layout.md): Lookup for layout helpers, the type scale, cards and panels, tables, quotes, code, and keys.
   - [Presets](./docs/usage/presets.md): Three ways to set a look once instead of on every element, and when to reach for each.
 - [Accessibility](./docs/accessibility.md): What the CSS provides for focus, states, motion, contrast, forced colors, and right-to-left text, and what the application must add.

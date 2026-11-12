@@ -2,7 +2,7 @@
 title: Personalização
 description: Consulta sobre tokens de apresentação e de material, ajustes das estéticas, as variáveis públicas de componente, a paleta gerada e os helpers para criar os seus próprios componentes.
 order: 9
-source: 948c4dd824de03df54b5b5e0e505779d310b6500
+source: 84c0d37049f274b623d9784bde5853b19f7a3ebe
 ---
 
 # Personalização
@@ -12,7 +12,7 @@ Esta é uma página de consulta para mudar o pacote além das suas classes. [Tem
 - [Tokens de apresentação](#tokens-de-apresentação): quanto de uma intenção um componente mostra.
 - [Tokens de material](#tokens-de-material): do que um componente é feito.
 - [Tokens de estética](#tokens-de-estética): os ajustes que cada estética expõe.
-- [Variáveis de componente](#variáveis-de-componente): as seis variáveis que um único componente lê.
+- [Variáveis de componente](#variáveis-de-componente): as variáveis públicas que um único componente lê.
 - [Paleta gerada](#paleta-gerada): valores de cor fixos para código que não pode carregar o pacote.
 - [Helpers de composição](#helpers-de-composição): as classes a partir das quais você monta um componente seu.
 
@@ -196,7 +196,7 @@ Os ajustes de todas as estéticas alcançam os elementos da mesma forma: cada aj
 </html>
 ```
 
-Ajustes e tokens de material alcançam os elementos em direções opostas. Um ajuste é lido uma vez, no elemento com a classe de estética, e o resultado é herdado. Então defina um ajuste nesse elemento ou num acima dele; definido num elemento dentro da estética, ele não muda nada, porque o valor já foi lido.
+Ajustes e tokens de material alcançam os elementos em direções opostas. Um ajuste é lido uma vez, no elemento com a classe de estética, e o resultado é herdado. Então defina um ajuste nesse elemento ou num acima dele; definido num elemento dentro da estética, ele não muda nada, porque o valor já foi lido. Os contornos do sketch são a exceção: `--sketch-radius` e os seus irmãos são lidos de novo em cada posição, então funcionam também em qualquer elemento dentro da região, como [Estéticas → Sketch](./aesthetics.md#sketch) descreve.
 
 `--ui-radius`, `--ui-radius-surface` e os outros tokens de material são lidos por cada componente no momento em que ele é desenhado. Eles funcionam no elemento em que são definidos e em tudo dentro dele, e é assim que você arredonda um card de forma diferente dos vizinhos sem mexer no ajuste. Repare em qual token cada componente lê: uma superfície (`.card`, `.panel`, `.alert`) usa `--ui-radius-surface`, e um controle como `.btn` ou `.ipt` usa `--ui-radius`. `style="--ui-radius-surface: 0"` deixa um card quadrado; `--ui-radius` nesse card deixa quadrados os botões dentro dele, e o card continua arredondado.
 

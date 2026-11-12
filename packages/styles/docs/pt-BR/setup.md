@@ -2,7 +2,7 @@
 title: Configuração
 description: Instale o pacote, escolha entre CSS compilado ou código-fonte do Tailwind e renderize a estrutura da página de configurações.
 order: 1
-source: 464e22d4b8d6615cd68e3f9368f203b9a4fe2860
+source: 01adaabea85fb4d04139c86d9ad693e23c321d04
 ---
 
 # Configuração
@@ -75,7 +75,7 @@ A ordem dos dois imports não importa, porque todo entrypoint declara as [camada
 - **Navegadores:** Chrome 123, Safari 17.5 ou Firefox 128 e mais recentes. As cores usam `light-dark()` e `color-scheme` (Firefox 120). O `.input-group` lê o estado inválido e desabilitado de um controle aninhado com `:has()` (Firefox 121). As classes de elevação registram uma propriedade sem herança com `@property` (Firefox 128); sem isso, uma classe de elevação também atingiria os elementos sem classe dentro dela.
 - **Ferramental:** um `@import` com nome de pacote precisa de uma ferramenta que resolva imports de CSS de pacotes pelo mapa `exports` deles. Sem ela, referencie o arquivo compilado pelo caminho ou a partir de uma CDN; veja [Sem bundler](./integrating/without-a-bundler.md). Duas ferramentas comuns precisam de um ajuste, descrito em [Integração → Bundlers que precisam de um empurrão](./integrating/index.md#bundlers-que-precisam-de-um-empurrão): o Parcel e o PostCSS com `postcss-import`.
 - **Tailwind:** 4.3.2 ou mais recente, abaixo da 5, só para os entrypoints de código-fonte `/tw`. É uma peer dependency opcional, então os entrypoints compilados e o comando `chs build` não o instalam.
-- **Node.js:** 24 ou mais recente, só na máquina que roda o comando `chs build`. As folhas de estilos não precisam dele.
+- **Node.js:** 24 ou mais recente na máquina que roda o comando `chs build`. As folhas de estilos não precisam dele, mas o pacote o declara como sua engine, então o Yarn 1, e o npm com `engine-strict`, recusam a instalação num Node.js mais antigo.
 - **Sua aplicação:** o pacote não tem JavaScript. HTML semântico, ARIA, comportamento de teclado, gerenciamento de foco, validação e anúncios ficam com você; veja [Acessibilidade](./accessibility.md).
 
 ## Quando nada é estilizado

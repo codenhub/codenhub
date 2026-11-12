@@ -313,7 +313,9 @@
   /* In `:where()`: these are the cells' defaults, and at the 0-1-1 the plain
      selector carried, `p-0` or `text-center` on a cell lost to them.
      `--table-cell-padding` is public and read with the default, `py-3 px-4`,
-     as its fallback. */
+     as its fallback. A physical `padding`, because one variable has to carry
+     both axes: in a vertical writing mode its two values stay top-bottom and
+     left-right rather than following the block and inline axes. */
   :where(& :is(th, td)) {
     @apply text-start align-top;
 

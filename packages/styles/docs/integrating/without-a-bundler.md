@@ -85,7 +85,7 @@ Then link it from the layout, by its path below that folder:
 
 Point the path at `node_modules/@codenhub` rather than at `dist/` itself. Propshaft serves files by their path below each asset folder, so adding `dist/` directly would publish a bare `index.css` that collides with any `index.css` of your own.
 
-The files you link are in `dist/`, which holds only finished CSS, plus an empty `index.d.ts` for TypeScript. The Tailwind source lives in `tw/`, outside `dist/`, so a static pipeline that serves or fingerprints `dist/` meets no `@import` it cannot resolve.
+The files you link are in `dist/`, which holds finished CSS with no `@import` to resolve, plus an empty `index.d.ts` for TypeScript and the `chs build` command with the files it reads. The Tailwind source lives in `tw/`, outside `dist/`, so a static pipeline that serves or fingerprints `dist/` meets no `@import` it cannot resolve.
 
 ### Django
 
@@ -103,7 +103,7 @@ STATICFILES_DIRS = [
 <link rel="stylesheet" href="{% static 'codenhub-styles/index.css' %}" />
 ```
 
-Point the prefix at `dist`, not at the package folder. `dist/` holds only finished CSS, plus an empty `index.d.ts` for TypeScript that the storage copies as it is, so `collectstatic` also works with `ManifestStaticFilesStorage`, which fingerprints each file and rewrites the references inside it. The package folder also holds the Tailwind source in `tw/`, whose `@import "tailwindcss/..."` lines that storage cannot resolve.
+Point the prefix at `dist`, not at the package folder. `dist/` holds finished CSS with no `@import` to resolve, plus an empty `index.d.ts` for TypeScript and the `chs build` command with the files it reads, which the storage copies as they are, so `collectstatic` also works with `ManifestStaticFilesStorage`, which fingerprints each file and rewrites the references inside it. The package folder also holds the Tailwind source in `tw/`, whose `@import "tailwindcss/..."` lines that storage cannot resolve.
 
 ### Laravel
 
@@ -220,9 +220,9 @@ An intent, presentation, or modifier class can take one of ten prefixes, written
 <button class="btn sm md:lg ghost hover:soft">Save</button>
 ```
 
-That covers intents such as `primary` and `destructive`, the fill and edge classes such as `soft` and `ruled`, and modifiers such as `sm`, `lg`, `raised`, `pill`, and `tight`. `disabled` takes none: it is a state the element is in, so write it as the attribute or the class. Component classes such as `btn` and `card`, and the text and layout helpers, take no prefix.
+That covers intents such as `primary` and `destructive`, the fill and edge classes such as `soft` and `edged`, and modifiers such as `sm`, `lg`, `raised`, `pill`, `tight`, and `ruled`. `disabled` takes none: it is a state the element is in, so write it as the attribute or the class. Component classes such as `btn` and `card`, and the text and layout helpers, take no prefix.
 
-Each prefix is a fixed copy of those classes, built into the package, so the list is the common ones rather than all of Tailwind's. The command does not stack prefixes, as in `md:hover:primary`, and offers no other ones, such as `print:` or `group-hover:`. Such a class is not found, and the element renders without it.
+Each prefix is a fixed copy of those classes, built into the package, so the list is the common ones rather than all of Tailwind's. The command does not stack prefixes, as in `md:hover:primary`, and offers no other ones, such as `print:` or `group-hover:`. Such a class is not styled, and the element renders without it.
 
 ### What it does not do
 

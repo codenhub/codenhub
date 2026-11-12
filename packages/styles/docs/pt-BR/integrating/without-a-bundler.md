@@ -2,7 +2,7 @@
 title: Sem bundler
 description: Como referenciar as folhas de estilos compiladas a partir de HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor, e o build por linha de comando.
 order: 6
-source: 6997acbc1cb469bba0a396865f368c252b74f71b
+source: f8185a9e08d9d7dea6b339de2eca2bf83dab87b0
 ---
 
 # Sem bundler
@@ -86,7 +86,7 @@ Depois referencie o arquivo no layout, pelo caminho dele dentro dessa pasta:
 
 Aponte o caminho para `node_modules/@codenhub`, e não para o próprio `dist/`. O Propshaft serve os arquivos pelo caminho dentro de cada pasta de assets, então adicionar `dist/` diretamente publicaria um `index.css` solto, que colide com qualquer `index.css` seu.
 
-Os arquivos que você referencia ficam em `dist/`, que guarda só CSS pronto, mais um `index.d.ts` vazio para o TypeScript. O código-fonte do Tailwind fica em `tw/`, fora de `dist/`, então um pipeline estático que serve `dist/` ou aplica fingerprint aos arquivos dele não encontra nenhum `@import` que não consiga resolver.
+Os arquivos que você referencia ficam em `dist/`, que guarda CSS pronto sem `@import` a resolver, mais um `index.d.ts` vazio para o TypeScript e o comando `chs build` com os arquivos que ele lê. O código-fonte do Tailwind fica em `tw/`, fora de `dist/`, então um pipeline estático que serve `dist/` ou aplica fingerprint aos arquivos dele não encontra nenhum `@import` que não consiga resolver.
 
 ### Django
 
@@ -104,7 +104,7 @@ STATICFILES_DIRS = [
 <link rel="stylesheet" href="{% static 'codenhub-styles/index.css' %}" />
 ```
 
-Aponte o prefixo para `dist`, não para a pasta do pacote. `dist/` contém só CSS pronto, mais um `index.d.ts` vazio para o TypeScript que o storage copia como está, então o `collectstatic` também funciona com `ManifestStaticFilesStorage`, que coloca uma impressão digital (hash) no nome de cada arquivo e reescreve as referências dentro dele. A pasta do pacote também contém o código-fonte do Tailwind em `tw/`, com linhas `@import "tailwindcss/..."` que esse storage não consegue resolver.
+Aponte o prefixo para `dist`, não para a pasta do pacote. `dist/` contém CSS pronto sem `@import` a resolver, mais um `index.d.ts` vazio para o TypeScript e o comando `chs build` com os arquivos que ele lê, que o storage copia como estão, então o `collectstatic` também funciona com `ManifestStaticFilesStorage`, que coloca uma impressão digital (hash) no nome de cada arquivo e reescreve as referências dentro dele. A pasta do pacote também contém o código-fonte do Tailwind em `tw/`, com linhas `@import "tailwindcss/..."` que esse storage não consegue resolver.
 
 ### Laravel
 
@@ -221,9 +221,9 @@ Uma classe de intenção, apresentação ou modificador pode receber um de dez p
 <button class="btn sm md:lg ghost hover:soft">Save</button>
 ```
 
-Isso cobre intenções como `primary` e `destructive`, as classes de preenchimento e borda como `soft` e `ruled`, e modificadores como `sm`, `lg`, `raised`, `pill` e `tight`. `disabled` não recebe nenhum: é um estado em que o elemento está, então escreva-o como atributo ou como classe. Classes de componente como `btn` e `card`, e os helpers de texto e de layout, não recebem prefixo.
+Isso cobre intenções como `primary` e `destructive`, as classes de preenchimento e borda como `soft` e `edged`, e modificadores como `sm`, `lg`, `raised`, `pill`, `tight` e `ruled`. `disabled` não recebe nenhum: é um estado em que o elemento está, então escreva-o como atributo ou como classe. Classes de componente como `btn` e `card`, e os helpers de texto e de layout, não recebem prefixo.
 
-Cada prefixo é uma cópia fixa dessas classes, embutida no pacote, então a lista traz os comuns, e não todos os do Tailwind. O comando não empilha prefixos, como em `md:hover:primary`, e não oferece outros, como `print:` ou `group-hover:`. Uma classe assim não é encontrada, e o elemento aparece sem ela.
+Cada prefixo é uma cópia fixa dessas classes, embutida no pacote, então a lista traz os comuns, e não todos os do Tailwind. O comando não empilha prefixos, como em `md:hover:primary`, e não oferece outros, como `print:` ou `group-hover:`. Uma classe assim não recebe estilo, e o elemento aparece sem ela.
 
 ### O que ele não faz
 

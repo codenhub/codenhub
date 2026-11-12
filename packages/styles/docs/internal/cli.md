@@ -76,7 +76,7 @@ Each `--content` glob is checked with `fs.glob` and has to match at least one fi
 - **Classes are found as words.** A class assembled at render time, such as `class="btn <%= kind %>"`, is never found. The public page documents the two workarounds: write class names whole in a file the build reads, or list them in a safelist file passed as another `--content`.
 - **No Tailwind utilities, no other variants, no stacked variants.** As [No Tailwind utilities, ten variants](#no-tailwind-utilities-ten-variants) records. A consumer who needs them has outgrown the command and imports `@codenhub/styles/tw` from their own Tailwind input.
 - **No watch mode or other commands.** They are left out until a consumer needs them.
-- **No configuration file or custom CSS input.** A project changes the look with tokens, container classes, and the `@utility` presets of `/tw`, and resizes controls with `--ui-scale`; [Roadmap → Not Planned](./roadmap.md#not-planned) records why a configuration file was dropped.
+- **No configuration file or custom CSS input.** A project changes the look with tokens and container classes, and resizes controls with `--ui-scale`; [Roadmap → Not Planned](./roadmap.md#not-planned) records why a configuration file was dropped.
 - **Node.js 24 or newer.** The command uses `glob` from `node:fs/promises`, and checks the version itself before using it, as [Node.js version](#nodejs-version) describes. The stylesheets themselves need no Node.js.
 
 ## Failure modes

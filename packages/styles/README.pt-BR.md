@@ -1,4 +1,4 @@
-<!-- source: 7f4751ecdbf5734bf09a32b6583ae27b0c471146 -->
+<!-- source: 8fd7326cd26db0cee61e031e0d9d0419365ead51 -->
 
 # @codenhub/styles
 
@@ -45,13 +45,13 @@ A documentação monta uma tela de configurações de conta do início ao fim, n
 
 ## Requisitos
 
-| Requisito      | Detalhes                                                                                                                                                             |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Imports de CSS | O ferramental do projeto precisa resolver imports de CSS de pacotes.                                                                                                 |
-| Navegadores    | Chrome 123, Safari 17.5 ou Firefox 128 e mais recentes (`light-dark()` para temas; `:has()` para o estado de `.input-group`; `@property` para elevação sem herança). |
-| Tailwind CSS   | 4.3.2 ou mais recente, abaixo da 5, apenas para os entrypoints de código-fonte `/tw`. Instale-o você mesmo; o pacote não o instala.                                  |
-| Node.js        | 24 ou mais recente, só na máquina que roda o comando `chs build`. As folhas de estilos não precisam dele.                                                            |
-| Acessibilidade | Quem usa o pacote fornece HTML semântico, ARIA, comportamento de teclado e gerenciamento de foco.                                                                    |
+| Requisito      | Detalhes                                                                                                                                                                                                                                 |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Imports de CSS | O ferramental do projeto precisa resolver imports de CSS de pacotes.                                                                                                                                                                     |
+| Navegadores    | Chrome 123, Safari 17.5 ou Firefox 128 e mais recentes (`light-dark()` para temas; `:has()` para o estado de `.input-group`; `@property` para elevação sem herança).                                                                     |
+| Tailwind CSS   | 4.3.2 ou mais recente, abaixo da 5, apenas para os entrypoints de código-fonte `/tw`. Instale-o você mesmo; o pacote não o instala.                                                                                                      |
+| Node.js        | 24 ou mais recente na máquina que roda o comando `chs build`. As folhas de estilos não precisam dele, mas o pacote o declara como sua engine, então o Yarn 1, e o npm com `engine-strict`, recusam a instalação num Node.js mais antigo. |
+| Acessibilidade | Quem usa o pacote fornece HTML semântico, ARIA, comportamento de teclado e gerenciamento de foco.                                                                                                                                        |
 
 ## Observações
 

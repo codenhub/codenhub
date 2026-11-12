@@ -2,7 +2,7 @@
 title: Sin bundler
 description: Enlazar las hojas de estilos compiladas desde HTML simple, Rails, Laravel, Django o cualquier aplicación renderizada en el servidor, y el build por línea de comandos.
 order: 6
-source: 6997acbc1cb469bba0a396865f368c252b74f71b
+source: f8185a9e08d9d7dea6b339de2eca2bf83dab87b0
 ---
 
 # Sin bundler
@@ -86,7 +86,7 @@ Después enlázala desde el layout, por su ruta dentro de esa carpeta:
 
 Apunta la ruta a `node_modules/@codenhub` y no directamente a `dist/`. Propshaft sirve los archivos por su ruta dentro de cada carpeta de assets, así que añadir `dist/` directamente publicaría un `index.css` suelto que choca con cualquier `index.css` tuyo.
 
-Los archivos que enlazas están en `dist/`, que contiene solo CSS terminado, más un `index.d.ts` vacío para TypeScript. El código fuente de Tailwind vive en `tw/`, fuera de `dist/`, así que un pipeline estático que sirve `dist/` o le añade huellas no encuentra ningún `@import` que no pueda resolver.
+Los archivos que enlazas están en `dist/`, que contiene CSS terminado sin `@import` que resolver, más un `index.d.ts` vacío para TypeScript y el comando `chs build` con los archivos que lee. El código fuente de Tailwind vive en `tw/`, fuera de `dist/`, así que un pipeline estático que sirve `dist/` o le añade huellas no encuentra ningún `@import` que no pueda resolver.
 
 ### Django
 
@@ -104,7 +104,7 @@ STATICFILES_DIRS = [
 <link rel="stylesheet" href="{% static 'codenhub-styles/index.css' %}" />
 ```
 
-Apunta el prefijo a `dist`, no a la carpeta del paquete. `dist/` contiene solo CSS terminado, más un `index.d.ts` vacío para TypeScript que el almacenamiento copia tal cual, así que `collectstatic` también funciona con `ManifestStaticFilesStorage`, que añade una huella a cada archivo y reescribe las referencias que contiene. La carpeta del paquete también contiene el código fuente de Tailwind en `tw/`, cuyas líneas `@import "tailwindcss/..."` ese almacenamiento no puede resolver.
+Apunta el prefijo a `dist`, no a la carpeta del paquete. `dist/` contiene CSS terminado sin `@import` que resolver, más un `index.d.ts` vacío para TypeScript y el comando `chs build` con los archivos que lee, que el almacenamiento copia tal cual, así que `collectstatic` también funciona con `ManifestStaticFilesStorage`, que añade una huella a cada archivo y reescribe las referencias que contiene. La carpeta del paquete también contiene el código fuente de Tailwind en `tw/`, cuyas líneas `@import "tailwindcss/..."` ese almacenamiento no puede resolver.
 
 ### Laravel
 
@@ -221,9 +221,9 @@ Una clase de intención, presentación o modificador puede llevar uno de diez pr
 <button class="btn sm md:lg ghost hover:soft">Save</button>
 ```
 
-Eso abarca las intenciones como `primary` y `destructive`, las clases de relleno y de borde como `soft` y `ruled`, y los modificadores como `sm`, `lg`, `raised`, `pill` y `tight`. `disabled` no lleva ninguno: es un estado en el que está el elemento, así que escríbelo como atributo o como clase. Las clases de componente como `btn` y `card`, y los helpers de texto y de layout, no llevan prefijo.
+Eso abarca las intenciones como `primary` y `destructive`, las clases de relleno y de borde como `soft` y `edged`, y los modificadores como `sm`, `lg`, `raised`, `pill`, `tight` y `ruled`. `disabled` no lleva ninguno: es un estado en el que está el elemento, así que escríbelo como atributo o como clase. Las clases de componente como `btn` y `card`, y los helpers de texto y de layout, no llevan prefijo.
 
-Cada prefijo es una copia fija de esas clases, incluida en el paquete, así que la lista recoge los más comunes y no todos los de Tailwind. El comando no apila prefijos, como en `md:hover:primary`, ni ofrece otros, como `print:` o `group-hover:`. Una clase así no se encuentra, y el elemento se renderiza sin ella.
+Cada prefijo es una copia fija de esas clases, incluida en el paquete, así que la lista recoge los más comunes y no todos los de Tailwind. El comando no apila prefijos, como en `md:hover:primary`, ni ofrece otros, como `print:` o `group-hover:`. Una clase así no recibe estilo, y el elemento se renderiza sin ella.
 
 ### Lo que no hace
 

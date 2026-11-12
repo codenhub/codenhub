@@ -2,7 +2,7 @@
 title: Configuración inicial
 description: Instala el paquete, elige entre CSS compilado o código fuente de Tailwind y renderiza la estructura base de la página de ajustes.
 order: 1
-source: 464e22d4b8d6615cd68e3f9368f203b9a4fe2860
+source: 01adaabea85fb4d04139c86d9ad693e23c321d04
 ---
 
 # Configuración inicial
@@ -75,7 +75,7 @@ El orden de los dos imports no importa, porque cada punto de entrada declara las
 - **Navegadores:** Chrome 123, Safari 17.5 o Firefox 128 y posteriores. Los colores usan `light-dark()` y `color-scheme` (Firefox 120). `.input-group` lee el estado inválido y deshabilitado de un control anidado con `:has()` (Firefox 121). Las clases de elevación registran una propiedad que no se hereda con `@property` (Firefox 128); sin ella, una clase de elevación también llegaría a los elementos sin clase que contiene.
 - **Herramientas:** un `@import` con un nombre de paquete necesita una herramienta que resuelva imports de CSS desde paquetes a través de su mapa `exports`. Si no tienes una, enlaza el archivo compilado por su ruta o desde un CDN; consulta [Sin bundler](./integrating/without-a-bundler.md). Dos herramientas habituales necesitan un pequeño ajuste, descrito en [Integración → Bundlers que necesitan un empujón](./integrating/index.md#bundlers-que-necesitan-un-empujón): Parcel, y PostCSS con `postcss-import`.
 - **Tailwind:** 4.3.2 o posterior, por debajo de 5, solo para los puntos de entrada de código fuente `/tw`. Es una peer dependency opcional, así que ni los puntos de entrada compilados ni el comando `chs build` la instalan.
-- **Node.js:** 24 o posterior, solo en la máquina que ejecuta el comando `chs build`. Las hojas de estilos no lo necesitan.
+- **Node.js:** 24 o posterior en la máquina que ejecuta el comando `chs build`. Las hojas de estilos no lo necesitan, pero el paquete lo declara como su engine, así que Yarn 1, y npm con `engine-strict`, rechazan la instalación en un Node.js anterior.
 - **Tu aplicación:** el paquete no tiene JavaScript. El HTML semántico, ARIA, el comportamiento de teclado, la gestión del foco, la validación y los anuncios son cosa tuya; consulta [Accesibilidad](./accessibility.md).
 
 ## Cuando nada tiene estilo

@@ -2,7 +2,7 @@
 title: Contenido y layout
 description: Consulta de cada helper de layout con su espaciado, la escala tipográfica con sus tamaños, las tarjetas y los paneles con su relleno interior, las tablas, las citas, el código y las teclas.
 order: 10
-source: 17b73c1d05cdd954d6ffa020b3a6602182060643
+source: 160ae54be3321154eca2f1ce22b843aa6b87314c
 ---
 
 # Contenido y layout
@@ -164,7 +164,7 @@ Una tabla dibuja líneas debajo de su encabezado y encima de su pie. `.ruled` y 
 
 `--ui-rule` es el token detrás de las dos clases, así que un contenedor puede poner líneas en todas las tablas que contiene: `style="--ui-rule: 100%"` actúa como `.ruled`, y `0%` como `.ruleless`.
 
-Tres variables ajustan el resto, en la tabla o en cualquier elemento que la rodee. `--table-cell-padding` define el padding de cada celda, así que `--table-cell-padding: 0.375rem 0.75rem` hace una tabla densa. `--table-hover` define el color de una fila del cuerpo bajo el puntero, y `transparent` desactiva el hover. `--ui-rule-ink` define el color de las líneas de una tabla neutra; una tabla con intención las dibuja en el color de la intención. Consulta [Personalización → Variables de componente](./customizing.md#variables-de-componente).
+Dos variables y un token ajustan el resto, en la tabla o en cualquier elemento que la rodee. `--table-cell-padding` define el padding de cada celda, así que `--table-cell-padding: 0.375rem 0.75rem` hace una tabla densa. `--table-hover` define el color de una fila del cuerpo bajo el puntero, y `transparent` desactiva el hover. `--ui-rule-ink` define el color de las líneas de una tabla neutra; una tabla con intención las dibuja en el color de la intención. Consulta [Personalización → Variables de componente](./customizing.md#variables-de-componente) para las dos variables y [Tokens de material](./customizing.md#tokens-de-material) para `--ui-rule-ink`.
 
 El marco alrededor de la tabla es aparte: una tabla no tiene borde por defecto, y `.edged` le añade uno. Las tres elecciones no se afectan entre sí, así que `.data-table.ruleless.edged` es una tabla con marco y sin líneas dentro, y `.data-table.ruled` tiene todas las filas separadas y ningún marco.
 

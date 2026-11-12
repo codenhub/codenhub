@@ -45,13 +45,13 @@ The docs build one account settings screen from start to finish, in this order:
 
 ## Requirements
 
-| Requirement   | Details                                                                                                                                                  |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CSS imports   | Consumer tooling must resolve package CSS imports.                                                                                                       |
-| Browsers      | Chrome 123, Safari 17.5, or Firefox 128 and newer (`light-dark()` theming; `:has()` for `.input-group` state; `@property` for non-inheriting elevation). |
-| Tailwind CSS  | 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. Install it yourself; the package does not.                                               |
-| Node.js       | 24 or newer, only on the machine that runs the `chs build` command. The stylesheets need none.                                                           |
-| Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                                                          |
+| Requirement   | Details                                                                                                                                                                                                              |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CSS imports   | Consumer tooling must resolve package CSS imports.                                                                                                                                                                   |
+| Browsers      | Chrome 123, Safari 17.5, or Firefox 128 and newer (`light-dark()` theming; `:has()` for `.input-group` state; `@property` for non-inheriting elevation).                                                             |
+| Tailwind CSS  | 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. Install it yourself; the package does not.                                                                                                           |
+| Node.js       | 24 or newer on the machine that runs the `chs build` command. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm with `engine-strict`, refuse the install on an older Node.js. |
+| Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                                                                                                                      |
 
 ## Notes
 
@@ -235,7 +235,7 @@ The order of the two imports does not matter, because every entrypoint declares 
 - **Browsers:** Chrome 123, Safari 17.5, or Firefox 128 and newer. Colors use `light-dark()` and `color-scheme` (Firefox 120). `.input-group` reads a nested control's invalid and disabled state with `:has()` (Firefox 121). The elevation classes register a non-inheriting property with `@property` (Firefox 128); without it, an elevation class would also reach the unclassed elements inside it.
 - **Tooling:** an `@import` of a package name needs a tool that resolves CSS imports from packages through their `exports` map. Without one, link the compiled file by its path or from a CDN; see [Without a bundler](docs/integrating/without-a-bundler.md). Two common tools need a nudge, described in [Integrating → Bundlers that need a nudge](docs/integrating/index.md#bundlers-that-need-a-nudge): Parcel, and PostCSS with `postcss-import`.
 - **Tailwind:** 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. It is an optional peer dependency, so the compiled entrypoints and the `chs build` command do not install it.
-- **Node.js:** 24 or newer, only on the machine that runs the `chs build` command. The stylesheets need none.
+- **Node.js:** 24 or newer on the machine that runs the `chs build` command. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm with `engine-strict`, refuse the install on an older Node.js.
 - **Your application:** the package has no JavaScript. Semantic HTML, ARIA, keyboard behavior, focus management, validation, and announcements are yours; see [Accessibility](docs/accessibility.md).
 
 ## When nothing is styled
@@ -808,7 +808,7 @@ Then link it from the layout, by its path below that folder:
 
 Point the path at `node_modules/@codenhub` rather than at `dist/` itself. Propshaft serves files by their path below each asset folder, so adding `dist/` directly would publish a bare `index.css` that collides with any `index.css` of your own.
 
-The files you link are in `dist/`, which holds only finished CSS, plus an empty `index.d.ts` for TypeScript. The Tailwind source lives in `tw/`, outside `dist/`, so a static pipeline that serves or fingerprints `dist/` meets no `@import` it cannot resolve.
+The files you link are in `dist/`, which holds finished CSS with no `@import` to resolve, plus an empty `index.d.ts` for TypeScript and the `chs build` command with the files it reads. The Tailwind source lives in `tw/`, outside `dist/`, so a static pipeline that serves or fingerprints `dist/` meets no `@import` it cannot resolve.
 
 ### Django
 
@@ -826,7 +826,7 @@ STATICFILES_DIRS = [
 <link rel="stylesheet" href="{% static 'codenhub-styles/index.css' %}" />
 ```
 
-Point the prefix at `dist`, not at the package folder. `dist/` holds only finished CSS, plus an empty `index.d.ts` for TypeScript that the storage copies as it is, so `collectstatic` also works with `ManifestStaticFilesStorage`, which fingerprints each file and rewrites the references inside it. The package folder also holds the Tailwind source in `tw/`, whose `@import "tailwindcss/..."` lines that storage cannot resolve.
+Point the prefix at `dist`, not at the package folder. `dist/` holds finished CSS with no `@import` to resolve, plus an empty `index.d.ts` for TypeScript and the `chs build` command with the files it reads, which the storage copies as they are, so `collectstatic` also works with `ManifestStaticFilesStorage`, which fingerprints each file and rewrites the references inside it. The package folder also holds the Tailwind source in `tw/`, whose `@import "tailwindcss/..."` lines that storage cannot resolve.
 
 ### Laravel
 
@@ -943,9 +943,9 @@ An intent, presentation, or modifier class can take one of ten prefixes, written
 <button class="btn sm md:lg ghost hover:soft">Save</button>
 ```
 
-That covers intents such as `primary` and `destructive`, the fill and edge classes such as `soft` and `ruled`, and modifiers such as `sm`, `lg`, `raised`, `pill`, and `tight`. `disabled` takes none: it is a state the element is in, so write it as the attribute or the class. Component classes such as `btn` and `card`, and the text and layout helpers, take no prefix.
+That covers intents such as `primary` and `destructive`, the fill and edge classes such as `soft` and `edged`, and modifiers such as `sm`, `lg`, `raised`, `pill`, `tight`, and `ruled`. `disabled` takes none: it is a state the element is in, so write it as the attribute or the class. Component classes such as `btn` and `card`, and the text and layout helpers, take no prefix.
 
-Each prefix is a fixed copy of those classes, built into the package, so the list is the common ones rather than all of Tailwind's. The command does not stack prefixes, as in `md:hover:primary`, and offers no other ones, such as `print:` or `group-hover:`. Such a class is not found, and the element renders without it.
+Each prefix is a fixed copy of those classes, built into the package, so the list is the common ones rather than all of Tailwind's. The command does not stack prefixes, as in `md:hover:primary`, and offers no other ones, such as `print:` or `group-hover:`. Such a class is not styled, and the element renders without it.
 
 ### What it does not do
 
@@ -1833,7 +1833,7 @@ WCAG 1.4.13 asks three things of content that appears on hover or focus. The pac
 - **Persistent.** It stays open until the pointer and focus leave.
 - **Dismissible.** The user must be able to close it without moving the pointer or focus, usually with Escape. CSS cannot listen for a key, so this part is yours.
 
-To change the linger time, set `--tooltip-linger` on the `.tooltip` element or on any element around it, for example `style="--tooltip-linger: 500ms"`. Keep it long enough for the pointer to reach the bubble. `--tooltip-gap` sets the space between the trigger the same way. Both are [public component variables](docs/usage/customizing.md#component-variables).
+To change the linger time, set `--tooltip-linger` on the `.tooltip` element or on any element around it, for example `style="--tooltip-linger: 500ms"`. Keep it long enough for the pointer to reach the bubble. `--tooltip-gap` sets the space between the trigger and the bubble the same way. Both are [public component variables](docs/usage/customizing.md#component-variables).
 
 For Escape, write `data-state="closed"` on `.tooltip`: it hides the bubble even while it is hovered or focused. Remove the attribute only when both the pointer and focus have left the tooltip, so the next hover or focus opens it again. Removing it earlier, while the trigger still has focus, makes the message reappear without the user doing anything.
 
@@ -2540,7 +2540,7 @@ With none of those classes, a solo class paints the material alone (edge, corner
 ## How it wins and when it moves
 
 - **It beats the other library's styles.** The rules are unlayered and one class deep, so they win over a component's layered rules, and over its zero-specificity ones, wherever the two load. An unlayered foreign rule that is more specific, or as specific and later in the page, still wins. The other side of this is that a Tailwind utility on the same element, such as `rounded-none`, loses to the solo class: tune it through its knobs instead.
-- **It presses only an action.** Neobrutalism, chunky tile, and cyber press a `button`, `a[href]`, `[role="button"]`, `summary`, or button-type `input` that is not disabled by the `disabled` attribute, `.disabled`, `aria-disabled="true"`, or `data-disabled`, the four ways a button is disabled. Anything else stays put, so a toast does not sink when clicked. Chunky tile's heavier label follows the same rule.
+- **It presses only an action.** Neobrutalism, chunky tile, and cyber press a `button`, `a[href]`, `[role="button"]`, `summary`, or button-type `input` unless it carries the `disabled` attribute, `.disabled`, `aria-disabled="true"`, or `data-disabled`. Only the attribute disables a button; the press ignores the other three too, since a page uses them to mark one it handles as disabled. Anything else stays put, so a toast does not sink when clicked. Chunky tile's heavier label follows the same rule.
 - **It leaves a container's motion alone.** Only an action takes the press's `transition`, and the press moves the element through the `translate` and `scale` properties, not `transform`. A toast keeps its own transitions and its own `transform`. On an action, the press's `transition` replaces any the element had.
 - **Reduced motion keeps the press and drops its motion.** Under `prefers-reduced-motion: reduce`, neobrutalism, chunky tile, and cyber still press, but at once: the element lands in its shadow or bar, or shrinks, without travelling there.
 
@@ -2721,7 +2721,7 @@ This is a lookup page for changing the package beyond its classes. [Theming](doc
 - [Presentation tokens](#presentation-tokens): how much of an intent a component shows.
 - [Material tokens](#material-tokens): what a component is made of.
 - [Aesthetic tokens](#aesthetic-tokens): the knobs each aesthetic exposes.
-- [Component variables](#component-variables): the six variables a single component reads.
+- [Component variables](#component-variables): the public variables a single component reads.
 - [Generated palette](#generated-palette): fixed color values for code that cannot load the package.
 - [Composition helpers](#composition-helpers): the classes to build a component of your own from.
 
@@ -2905,7 +2905,7 @@ Every aesthetic's knobs reach the same way: each knob is _read_ with its default
 </html>
 ```
 
-Knobs and material tokens reach in opposite directions. A knob is read once, at the element with the aesthetic class, and the result passes down. So set a knob on that element or on one above it; set on an element inside the aesthetic, it changes nothing, because the value has already been read.
+Knobs and material tokens reach in opposite directions. A knob is read once, at the element with the aesthetic class, and the result passes down. So set a knob on that element or on one above it; set on an element inside the aesthetic, it changes nothing, because the value has already been read. The sketch outlines are the exception: `--sketch-radius` and its siblings are read again at each position, so they work on any element inside the region too, as [Aesthetics → Sketch](docs/usage/aesthetics.md#sketch) describes.
 
 `--ui-radius`, `--ui-radius-surface`, and the other material tokens are read by each component as it draws. They work on the element they are set on and everything inside it, which is how you round one card differently from its neighbors without touching the knob. Mind which one a component reads: a surface (`.card`, `.panel`, `.alert`) takes `--ui-radius-surface`, and a control such as `.btn` or `.ipt` takes `--ui-radius`. `style="--ui-radius-surface: 0"` squares one card; `--ui-radius` on that card squares the buttons inside it and leaves the card round.
 
@@ -3187,7 +3187,7 @@ A table draws lines under its header and above its footer. `.ruled` and `.rulele
 
 `--ui-rule` is the token behind both classes, so a container can rule every table inside it: `style="--ui-rule: 100%"` acts like `.ruled`, and `0%` like `.ruleless`.
 
-Three variables tune the rest, on the table or on any element around it. `--table-cell-padding` sets the padding of every cell, so `--table-cell-padding: 0.375rem 0.75rem` makes a dense table. `--table-hover` sets the color of a hovered body row, and `transparent` turns the hover off. `--ui-rule-ink` sets the color of a neutral table's lines; a table with an intent draws them in the intent's color. See [Customizing → Component variables](docs/usage/customizing.md#component-variables).
+Two variables and a token tune the rest, on the table or on any element around it. `--table-cell-padding` sets the padding of every cell, so `--table-cell-padding: 0.375rem 0.75rem` makes a dense table. `--table-hover` sets the color of a hovered body row, and `transparent` turns the hover off. `--ui-rule-ink` sets the color of a neutral table's lines; a table with an intent draws them in the intent's color. See [Customizing → Component variables](docs/usage/customizing.md#component-variables) for the two variables and [Material tokens](docs/usage/customizing.md#material-tokens) for `--ui-rule-ink`.
 
 The frame around the table is separate: a table has no border by default, and `.edged` adds one. The three choices do not affect each other, so `.data-table.ruleless.edged` is a framed table with no lines inside, and `.data-table.ruled` has every row separated and no frame.
 
@@ -3519,14 +3519,14 @@ The build command is renamed `chs` and no longer runs Tailwind: it trims a style
 
 ## Fixed
 
-- **A tap leaves no hover tint.** On a touch screen a tapped button, interactive card, or table row kept its hover color until something else was tapped. Hover now applies only where the pointer can hover, as Tailwind's `hover:` variant does.
+- **A tap leaves no hover tint.** On a touch screen a tapped button, interactive card, table row, checkbox, switch, select, or input group kept its hover color until something else was tapped. Hover now applies only where the pointer can hover, as Tailwind's `hover:` variant does.
 - **A bare `<progress>` takes the color it sits in.** Under `/native`, in a filled container, it drew the page's ink over the container's color.
 - **A bare quiet checkbox or radio keeps its checked plate.** Under `/native`, a checked `.ghost` or `.soft` checkbox or radio showed its resting plate, and a mixed one also kept the neutral 20% cap.
 - **A filled quotation prints with its plate.** A `.quote.solid` printed white text on white paper.
 - **A solid solo element prints with its plate.** The `-solo` classes left their fill off paper, as the quotation did.
 - **A solo action disabled by class or data attribute does not press.** The neobrutalism, chunky tile, and cyber solos guarded their press with `:disabled` and `aria-disabled` only. A link or `role="button"` marked `.disabled` or `data-disabled` still sank when clicked.
 - **`@apply progress` and `@apply select` keep their forced colors.** The applied bar's value was repainted as Canvas, and the applied drop-down drew no arrow.
-- **Compiled CSS carries the licence of the checkbox marks.** The marks come from Lucide (ISC, itself from Feather, MIT). Each compiled file that inlines them now opens with a `/*!` notice, and `chs build` keeps it in its output.
+- **Compiled CSS carries the licence of the checkbox marks.** The marks come from Lucide (ISC, itself from Feather, MIT). Each compiled file that inlines them now carries their copyright and permission notices in a `/*!` comment after Tailwind's banner, and `chs build` keeps it in its output.
 
 ## Documentation
 

@@ -2,7 +2,7 @@
 title: Classes solo
 description: Como aplicar uma estética a um único elemento de outra biblioteca, como um toast ou um dialog, e o que uma classe solo lê e ignora.
 order: 7
-source: 477e9240aa06d0ec5a95d02e220907557cce2c38
+source: ed6b271ec9d3eb83dfc5f098f587d8fc0d5e2ad3
 ---
 
 # Classes solo
@@ -77,7 +77,7 @@ Sem nenhuma dessas classes, uma classe solo desenha só o material (borda, canto
 ## Como ela vence e quando ela se move
 
 - **Ela vence os estilos da outra biblioteca.** As regras são sem camada e têm uma classe de profundidade, então vencem as regras com camada de um componente, e as de especificidade zero, onde quer que as duas carreguem. Uma regra externa sem camada que seja mais específica, ou igualmente específica e posterior na página, ainda vence. O outro lado disso é que um utilitário do Tailwind no mesmo elemento, como `rounded-none`, perde para a classe solo: use os ajustes dela em vez disso.
-- **Ela só faz clicar uma ação.** Neobrutalism, chunky tile e cyber afundam ao clicar um `button`, um `a[href]`, um `[role="button"]`, um `summary` ou um `input` do tipo botão que não esteja desabilitado pelo atributo `disabled`, por `.disabled`, por `aria-disabled="true"` ou por `data-disabled`, as quatro formas de desabilitar um botão. Todo o resto fica parado, então um toast não afunda ao ser clicado. O rótulo mais pesado do chunky tile segue a mesma regra.
+- **Ela só faz clicar uma ação.** Neobrutalism, chunky tile e cyber afundam ao clicar um `button`, um `a[href]`, um `[role="button"]`, um `summary` ou um `input` do tipo botão a menos que tenha o atributo `disabled`, `.disabled`, `aria-disabled="true"` ou `data-disabled`. Só o atributo desabilita um botão; o clique ignora os outros três também, já que uma página os usa para marcar um botão que ela trata como desabilitado. Todo o resto fica parado, então um toast não afunda ao ser clicado. O rótulo mais pesado do chunky tile segue a mesma regra.
 - **Ela não mexe no movimento de um contêiner.** Só uma ação recebe a `transition` do clique, e o clique move o elemento pelas propriedades `translate` e `scale`, não por `transform`. Um toast mantém as suas próprias transições e o seu próprio `transform`. Numa ação, a `transition` do clique substitui qualquer uma que o elemento tivesse.
 - **O movimento reduzido mantém o clique e tira o movimento dele.** Com `prefers-reduced-motion: reduce`, neobrutalism, chunky tile e cyber ainda respondem ao clique, mas de imediato: o elemento pousa na sua sombra ou barra, ou encolhe, sem se deslocar até lá.
 

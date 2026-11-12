@@ -11,7 +11,7 @@ This is a lookup page for changing the package beyond its classes. [Theming](./t
 - [Presentation tokens](#presentation-tokens): how much of an intent a component shows.
 - [Material tokens](#material-tokens): what a component is made of.
 - [Aesthetic tokens](#aesthetic-tokens): the knobs each aesthetic exposes.
-- [Component variables](#component-variables): the six variables a single component reads.
+- [Component variables](#component-variables): the public variables a single component reads.
 - [Generated palette](#generated-palette): fixed color values for code that cannot load the package.
 - [Composition helpers](#composition-helpers): the classes to build a component of your own from.
 
@@ -195,7 +195,7 @@ Every aesthetic's knobs reach the same way: each knob is _read_ with its default
 </html>
 ```
 
-Knobs and material tokens reach in opposite directions. A knob is read once, at the element with the aesthetic class, and the result passes down. So set a knob on that element or on one above it; set on an element inside the aesthetic, it changes nothing, because the value has already been read.
+Knobs and material tokens reach in opposite directions. A knob is read once, at the element with the aesthetic class, and the result passes down. So set a knob on that element or on one above it; set on an element inside the aesthetic, it changes nothing, because the value has already been read. The sketch outlines are the exception: `--sketch-radius` and its siblings are read again at each position, so they work on any element inside the region too, as [Aesthetics → Sketch](./aesthetics.md#sketch) describes.
 
 `--ui-radius`, `--ui-radius-surface`, and the other material tokens are read by each component as it draws. They work on the element they are set on and everything inside it, which is how you round one card differently from its neighbors without touching the knob. Mind which one a component reads: a surface (`.card`, `.panel`, `.alert`) takes `--ui-radius-surface`, and a control such as `.btn` or `.ipt` takes `--ui-radius`. `style="--ui-radius-surface: 0"` squares one card; `--ui-radius` on that card squares the buttons inside it and leaves the card round.
 

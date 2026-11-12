@@ -2,7 +2,7 @@
 title: Clases solo
 description: Cómo pintar una estética sobre un elemento de otra librería, como un toast o un diálogo, y qué lee e ignora una clase solo.
 order: 7
-source: 477e9240aa06d0ec5a95d02e220907557cce2c38
+source: ed6b271ec9d3eb83dfc5f098f587d8fc0d5e2ad3
 ---
 
 # Clases solo
@@ -77,7 +77,7 @@ Sin ninguna de esas clases, una clase solo pinta solo el material (borde, esquin
 ## Cómo gana y cuándo se mueve
 
 - **Gana a los estilos de la otra librería.** Las reglas no tienen capa y tienen un solo nivel de clase, así que ganan a las reglas con capa de un componente, y a las de especificidad cero, se carguen donde se carguen. Una regla ajena sin capa que sea más específica, o igual de específica y posterior en la página, sigue ganando. La otra cara es que una utilidad de Tailwind en el mismo elemento, como `rounded-none`, pierde frente a la clase solo: ajústalo mediante sus controles.
-- **Solo pulsa una acción.** Neobrutalism, chunky tile y cyber pulsan un `button`, un `a[href]`, un `[role="button"]`, un `summary` o un `input` de tipo botón que no esté deshabilitado por el atributo `disabled`, por `.disabled`, por `aria-disabled="true"` o por `data-disabled`, las cuatro formas de deshabilitar un botón. Todo lo demás se queda quieto, así que un toast no se hunde al hacer clic. La etiqueta más gruesa de chunky tile sigue la misma regla.
+- **Solo pulsa una acción.** Neobrutalism, chunky tile y cyber pulsan un `button`, un `a[href]`, un `[role="button"]`, un `summary` o un `input` de tipo botón salvo que lleve el atributo `disabled`, `.disabled`, `aria-disabled="true"` o `data-disabled`. Solo el atributo deshabilita un botón; la pulsación ignora también los otros tres, ya que una página los usa para marcar uno que trata como deshabilitado. Todo lo demás se queda quieto, así que un toast no se hunde al hacer clic. La etiqueta más gruesa de chunky tile sigue la misma regla.
 - **No toca el movimiento de un contenedor.** Solo una acción toma la `transition` de la pulsación, y la pulsación mueve el elemento mediante las propiedades `translate` y `scale`, no `transform`. Un toast conserva sus propias transiciones y su propio `transform`. En una acción, la `transition` de la pulsación reemplaza la que tuviera el elemento.
 - **El movimiento reducido conserva la pulsación y quita su movimiento.** Con `prefers-reduced-motion: reduce`, neobrutalism, chunky tile y cyber siguen pulsando, pero al instante: el elemento cae en su sombra o su barra, o se encoge, sin recorrer la distancia.
 
