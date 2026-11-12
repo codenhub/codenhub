@@ -2,7 +2,7 @@
 title: Sem bundler
 description: Como referenciar as folhas de estilos compiladas a partir de HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor, e o build por linha de comando.
 order: 6
-source: 6289ea781c99dcda5c027a72fede9e2f1cab8414
+source: 6997acbc1cb469bba0a396865f368c252b74f71b
 ---
 
 # Sem bundler
@@ -13,8 +13,8 @@ O que precisa de uma ferramenta de build é o _nome_ do import. `@import "@coden
 
 Os entrypoints `/tw` são código-fonte do Tailwind e precisam de um build do Tailwind. O `/tw/aesthetics` é a exceção, CSS puro sem nada para o Tailwind processar, mas sem bundler referencie os arquivos compilados de `dist/aesthetics/`, como abaixo. Esta página é para uma página que não tem um build de CSS com Node.js: HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor. Há dois caminhos:
 
-1. **Referencie a folha de estilos compilada.** Funciona hoje, só com arquivos estáticos. Você entrega todas as classes, usadas ou não pelas suas páginas.
-2. **Gere uma folha de estilos com o comando `build` do pacote.** Ela varre os seus templates e escreve uma folha de estilos com só as classes que eles usam. Veja [Gere só as classes que você usa](#gere-só-as-classes-que-você-usa).
+1. **Referencie a folha de estilos compilada.** Não precisa de nada além de arquivos estáticos. Você entrega todas as classes, usadas ou não pelas suas páginas.
+2. **Gere uma folha de estilos com o comando `chs build` do pacote.** Ela varre os seus templates e escreve uma folha de estilos com só as classes que eles usam. Veja [Gere só as classes que você usa](#gere-só-as-classes-que-você-usa).
 
 ## Qual arquivo referenciar
 
@@ -112,34 +112,52 @@ Uma aplicação Laravel roda Vite por padrão, então ela tem um bundler: import
 
 ## Gere só as classes que você usa
 
-O pacote traz um comando, `codenhub-styles`, que o compila para você. Ele lê os seus templates atrás de nomes de classe e escreve uma única folha de estilos minificada com só as classes do StyleKit e os utilitários do Tailwind que eles usam. Uma página que usa um botão recebe uma pequena fração da folha de estilos completa; o tamanho exato depende das classes que você usa, porque cada componente traz as regras compartilhadas de que depende.
+O pacote traz um comando, `chs`, que lê os seus templates atrás de nomes de classe e escreve uma única folha de estilos minificada com só as classes do StyleKit que eles usam. Uma página que usa um botão recebe cerca de um oitavo da folha de estilos completa; o tamanho exato depende das classes que você usa, porque cada componente traz as regras compartilhadas de que depende.
 
 O comando também serve com um bundler. Um projeto cujo bundler não roda o Tailwind, como um build simples com Vite ou webpack, pode escrever a folha de estilos entre os seus fontes, `--output src/stylekit.css`, e importar esse arquivo onde importaria `@codenhub/styles`. Um projeto que usa o Tailwind CSS v4 tem a mesma redução pelo [entrypoint de código-fonte](./tailwind.md) e não precisa do comando.
 
-Ele precisa do Node.js 24 ou mais recente na máquina que gera o CSS, seja o seu notebook, um job de CI ou uma etapa do deploy. Ele compila com o Tailwind CSS, que o pacote não instala por você, então um projeto que só linka a folha de estilos compilada nunca o baixa. Instale os três pacotes como dependências de desenvolvimento a partir da raiz do projeto; o npm cria um `package.json` se você não tiver um, e nenhuma configuração do Tailwind é necessária:
+Ele precisa do Node.js 24 ou mais recente na máquina que gera o CSS, seja o seu notebook, um job de CI ou uma etapa do deploy, e de nada mais: o pacote é toda a instalação, sem Tailwind e sem configuração. Instale-o como dependência de desenvolvimento a partir da raiz do projeto; o npm cria um `package.json` se você não tiver um:
 
 ```sh
-npm install --save-dev @codenhub/styles @tailwindcss/cli tailwindcss
+npm install --save-dev @codenhub/styles
 ```
 
-A folha de estilos que o comando escreve é CSS puro, então os servidores que servem o seu site não precisam nem do Node.js nem de nenhum desses pacotes. Rode a partir da raiz do projeto:
+A folha de estilos que o comando escreve é CSS puro, então os servidores que servem o seu site não precisam nem do Node.js nem do pacote. Acrescente o build aos scripts do seu `package.json`, onde o comando instalado está no path pelo nome dele:
+
+```json
+{
+  "scripts": {
+    "build:css": "chs build --content \"app/views/**/*.erb\" --output public/stylekit.css"
+  }
+}
+```
+
+Depois rode a partir da raiz do projeto:
 
 ```sh
-npx codenhub-styles build --content "app/views/**/*.erb" --output public/stylekit.css
+npm run build:css
 ```
+
+Para rodá-lo uma vez sem script, chame-o pelo nome do pacote:
+
+```sh
+npx @codenhub/styles build --content "app/views/**/*.erb" --output public/stylekit.css
+```
+
+Não digite `npx chs`. `chs` é o nome do comando dentro deste pacote, mas o npm também tem um pacote sem relação chamado `chs`, e `npx chs` roda esse outro em qualquer pasta onde este pacote não esteja instalado.
 
 Quando dá certo, o comando imprime uma linha: o caminho absoluto que escreveu e o tamanho do arquivo em bytes:
 
 ```text
-/home/you/shop/public/stylekit.css 25782 bytes
+/home/you/shop/public/stylekit.css 24497 bytes
 ```
 
 Referencie esse arquivo no seu layout como qualquer folha de estilos estática.
 
 ### Views do Rails
 
-```sh
-npx codenhub-styles build --content "app/views/**/*.erb" --content "app/helpers/**/*.rb" --output public/stylekit.css
+```json
+"build:css": "chs build --content \"app/views/**/*.erb\" --content \"app/helpers/**/*.rb\" --output public/stylekit.css"
 ```
 
 ```erb
@@ -149,8 +167,8 @@ npx codenhub-styles build --content "app/views/**/*.erb" --content "app/helpers/
 
 ### Views Blade do Laravel
 
-```sh
-npx codenhub-styles build --content "resources/views/**/*.blade.php" --output public/css/stylekit.css
+```json
+"build:css": "chs build --content \"resources/views/**/*.blade.php\" --output public/css/stylekit.css"
 ```
 
 ```blade
@@ -162,8 +180,8 @@ npx codenhub-styles build --content "resources/views/**/*.blade.php" --output pu
 
 Um projeto Django guarda os templates numa pasta `templates/` do projeto, na pasta `templates/` de cada app, ou nas duas. Passe um `--content` para cada lugar onde ficam os seus, e deixe de fora os que você não usa, porque um glob que não casa com nada faz o build falhar:
 
-```sh
-npx codenhub-styles build --content "templates/**/*.html" --content "shop/templates/**/*.html" --output static/stylekit.css
+```json
+"build:css": "chs build --content \"templates/**/*.html\" --content \"shop/templates/**/*.html\" --output static/stylekit.css"
 ```
 
 ```django
@@ -176,41 +194,53 @@ Escreva a saída numa pasta listada em `STATICFILES_DIRS`, aqui `static/`, para 
 ### Opções
 
 - `--content <glob>`, ou `-c <glob>`, indica os arquivos onde procurar nomes de classe. É obrigatório e pode ser repetido: passe uma vez por glob, e o build lê todo arquivo que casar com algum deles. Um glob relativo é resolvido em relação à pasta de onde você roda o comando, então rode a partir da raiz do projeto; um glob absoluto é usado como está. `**` casa com qualquer número de pastas, e `{rb,erb}` com qualquer uma das duas extensões. Qualquer arquivo de texto serve, seja qual for a extensão. Cada glob precisa casar com pelo menos um arquivo, senão o build falha e o nomeia, então um erro de digitação não consegue publicar uma folha de estilos vazia. Arquivos que o seu `.gitignore` exclui são lidos mesmo assim quando um glob casa com eles, e nada fora dos seus globs é lido.
-- Coloque cada glob entre aspas. Sem aspas, o seu shell pode expandir o glob numa lista de arquivos antes de o comando vê-lo, e só o primeiro arquivo conta como valor do `--content`. Quando isso deixa nomes de arquivo sobrando, o build os rejeita em vez de ler em silêncio menos do que você queria; quando o glob casou com um único arquivo, o build lê só esse arquivo e nada que os seus templates ganharem depois.
+- Coloque cada glob entre aspas, com `\"` dentro de um script do `package.json`. Sem aspas, o seu shell pode expandir o glob numa lista de arquivos antes de o comando vê-lo, e só o primeiro arquivo conta como valor do `--content`. Quando isso deixa nomes de arquivo sobrando, o build os rejeita em vez de ler em silêncio menos do que você queria; quando o glob casou com um único arquivo, o build lê só esse arquivo e nada que os seus templates ganharem depois.
 - `--output <file>`, ou `-o <file>`, é a folha de estilos a escrever. É obrigatório. Um caminho relativo é resolvido em relação à pasta de onde você roda o comando, pastas-pai que faltam são criadas, e um arquivo existente é substituído.
-- `--aesthetic <name>` acrescenta uma das [estéticas](../usage/aesthetics.md): `neobrutalism`, `glass`, `pixel`, `chunky-tile`, `cyber` ou `sketch`. Repita para mais de uma; nomear uma duas vezes a inclui uma vez só. As estéticas precisam ser pedidas porque o build não tem como saber pelos seus templates qual você quer, então cada uma é escrita inteira quando você a pede, e nenhuma entra quando você não pede.
+- `--aesthetic <name>` acrescenta uma das [estéticas](../usage/aesthetics.md): `neobrutalism`, `glass`, `pixel`, `chunky-tile`, `cyber` ou `sketch`. Repita para mais de uma; nomear uma duas vezes a inclui uma vez só. As estéticas precisam ser pedidas porque o build não tem como saber pelos seus templates qual você quer: cada uma entra quando você a pede, menos as regras dela para classes que os seus templates não usam, e nenhuma entra quando você não pede.
 - `--no-minify` escreve CSS legível e indentado no lugar. Útil para ler o que o build gerou; em produção, sirva o arquivo minificado.
 - `--help` imprime o uso, com as estéticas que esta versão traz. `--version` imprime a versão do pacote. Nenhum dos dois gera nada, e os dois terminam com status 0.
 
-A saída sempre traz o tema, os design tokens dele como propriedades personalizadas de CSS, o reset e as regras base de que todo componente depende. Por cima vêm cada classe do StyleKit que os seus templates usam, com as variantes com que você a combina, como `primary` ou `soft`, e cada utilitário do Tailwind que eles usam, como `flex` ou `mt-4`. A saída é gerada a partir da folha de estilos completa, não da `/native`, então não inclui os mapeamentos sem classes.
+A saída sempre traz o tema, os design tokens dele como propriedades personalizadas de CSS, o reset, as regras base de que todo componente depende e as classes que uma página recebe em tempo de execução, e não de um template, como `.theme-dark`. Por cima vem cada classe do StyleKit que os seus templates usam. A saída é gerada a partir da folha de estilos completa, não da `/native`, então não inclui os mapeamentos sem classes. Um build cujos templates nomeiam todas as classes escreve a folha de estilos completa, byte por byte.
 
 ### Como as classes são encontradas
 
-O build não executa os seus templates. Ele lê como texto puro cada arquivo que casa com os seus globs de `--content`, recolhe cada palavra que poderia ser um nome de classe e escreve as regras das palavras que são classes do StyleKit ou utilitários do Tailwind. É assim que o Tailwind CSS também lê o conteúdo.
+O build não executa os seus templates. Ele lê como texto puro cada arquivo que casa com os seus globs de `--content`, recolhe cada palavra que poderia ser um nome de classe e escreve as regras das palavras que são classes do StyleKit. É assim que o Tailwind CSS também lê o conteúdo.
 
-Uma classe precisa aparecer num arquivo como uma palavra inteira. `class="btn primary"`, `class: "btn primary"` e `classes = ["btn", "primary"]` funcionam. Uma palavra que só parece uma classe também conta: um comentário que diz "card" adiciona todas as regras do card à folha de estilos, o que aumenta o arquivo e não muda nada na página.
+Uma classe precisa aparecer num arquivo como uma palavra inteira. `class="btn primary"`, `class: "btn primary"` e `classes = ["btn", "primary"]` funcionam, assim como uma classe escrita antes ou depois de dois-pontos, como no `class:primary={isPrimary}` do Svelte ou no `btn: true` de um hash Ruby. Uma palavra que só parece uma classe também conta: um comentário que diz "card" adiciona todas as regras do card à folha de estilos, o que aumenta o arquivo e não muda nada na página.
 
 Um nome de classe que o seu código monta na renderização nunca aparece inteiro em nenhum arquivo, então o build não consegue encontrá-lo. Em `class="btn <%= @order.priority %>"`, o `btn` é encontrado, mas a intenção é o que `priority` tiver na hora de renderizar; se for `destructive`, o botão aparece sem o vermelho dele. Há duas saídas:
 
 - **Escreva os nomes de classe inteiros.** Associe cada valor a um nome de classe completo num arquivo que o build leia, como `{ "urgent" => "destructive", "normal" => "neutral" }.fetch(@order.priority)` num helper.
 - **Liste-os num arquivo de safelist.** Um arquivo de texto puro com um nome de classe por linha, adicionado com o seu próprio `--content`, como `--content config/stylekit-classes.txt`. Guarde-o perto do código que monta os nomes de classe, para que quem mudar um veja o outro.
 
+### Variantes
+
+Uma classe de intenção, apresentação ou modificador pode receber um de dez prefixos, escritos como no Tailwind: `sm:`, `md:`, `lg:`, `xl:` e `2xl:` a aplicam a partir daquele breakpoint, `hover:`, `focus:`, `focus-visible:` e `active:` enquanto o elemento está naquele estado, e `dark:` onde quer que o tema escuro se aplique, como [Temas → A variante `dark:`](../usage/theming.md#a-variante-dark) descreve. `md:lg` deixa um botão grande a partir do breakpoint `md`, e `hover:primary` dá a ele a intenção primary no hover:
+
+```html
+<button class="btn sm md:lg ghost hover:soft">Save</button>
+```
+
+Isso cobre intenções como `primary` e `destructive`, as classes de preenchimento e borda como `soft` e `ruled`, e modificadores como `sm`, `lg`, `raised`, `pill` e `tight`. `disabled` não recebe nenhum: é um estado em que o elemento está, então escreva-o como atributo ou como classe. Classes de componente como `btn` e `card`, e os helpers de texto e de layout, não recebem prefixo.
+
+Cada prefixo é uma cópia fixa dessas classes, embutida no pacote, então a lista traz os comuns, e não todos os do Tailwind. O comando não empilha prefixos, como em `md:hover:primary`, e não oferece outros, como `print:` ou `group-hover:`. Uma classe assim não é encontrada, e o elemento aparece sem ela.
+
 ### O que ele não faz
 
+- **Não tem utilitários do Tailwind.** `flex`, `mt-4`, `text-red-500` e o resto do Tailwind não são classes do StyleKit, então o build os deixa de fora. Para layout, os [helpers de layout](../usage/content-and-layout.md) do próprio StyleKit entram no build como qualquer outra classe. Um projeto que quer os utilitários do Tailwind, as outras variantes dele ou prefixos empilhados roda o próprio Tailwind e importa o [entrypoint de código-fonte](./tailwind.md), que dá os três.
 - **Não tem modo watch.** Ele gera uma vez e termina. Rode de novo depois de mudar um template, a partir de um script ou de um observador de arquivos que o seu framework ou editor já tenha. Uma classe que a folha de estilos ainda não tem deixa o elemento sem estilo até o próximo build.
-- **Não tem arquivo de configuração nem CSS próprio.** Você não consegue acrescentar os seus próprios valores de `@theme`, definições de `@utility` nem plugins. Para mudar o visual, sobrescreva as propriedades personalizadas numa folha de estilos sua carregada depois desta, como [Personalização](../usage/customizing.md) descreve. Quando você precisar da configuração do próprio Tailwind, instale o Tailwind CSS e importe o entrypoint de código-fonte a partir da sua própria entrada do Tailwind, como [Tailwind CSS v4](./tailwind.md) mostra.
+- **Não tem arquivo de configuração nem CSS próprio.** Você não consegue acrescentar os seus próprios valores de `@theme`, definições de `@utility` nem plugins. Para mudar o visual, sobrescreva as propriedades personalizadas numa folha de estilos sua carregada depois desta, como [Personalização](../usage/customizing.md) descreve.
 - **Não tem outros comandos.** `build` é o único; `--help` e `--version` são as únicas flags que funcionam sem ele.
-- **Não traz uma versão do Tailwind própria.** Cada build usa os `@tailwindcss/cli` e `tailwindcss` instalados no seu projeto, dentro da faixa `>=4.3.2 <5` que o StyleKit suporta, então o seu lockfile os fixa.
 
 ### Num deploy
 
 Gere a folha de estilos antes da etapa que recolhe ou aplica fingerprint aos seus assets, como `rails assets:precompile`, `php artisan optimize` ou `python manage.py collectstatic`. Você pode fazer commit da saída, e aí os servidores não precisam de Node.js nenhum, ao custo de um arquivo gerado que alguém precisa lembrar de regenerar; ou gerá-la no deploy, e aí a máquina de build precisa do Node.js 24 ou mais recente.
 
-Fixe a versão. Abaixo da 1.0 uma versão minor pode renomear ou remover uma classe, então o mesmo comando pode escrever outra folha de estilos com uma versão mais nova. Faça commit do `package.json` e do lockfile que o npm escreve, e instale com `npm ci` na máquina de build, para que cada build use as versões que você testou.
+Fixe a versão. Abaixo da 1.0 uma versão minor pode renomear ou remover uma classe, então o mesmo comando pode escrever outra folha de estilos com uma versão mais nova. A saída não depende de nada além da versão do pacote e dos seus templates, então faça commit do `package.json` e do lockfile que o npm escreve, e instale com `npm ci` na máquina de build, para que cada build use a versão que você testou.
 
 ### Quando o build falha
 
-Toda falha imprime uma linha começando com `codenhub-styles:` na saída de erro padrão e termina com status 1, sem escrever o arquivo de saída, então um script de deploy para em vez de publicar uma folha de estilos desatualizada ou vazia. A linha diz o que deu errado e o que fazer:
+Toda falha imprime uma linha começando com `chs:` na saída de erro padrão e termina com status 1, sem escrever o arquivo de saída, então um script de deploy para em vez de publicar uma folha de estilos desatualizada ou vazia. A linha diz o que deu errado e o que fazer:
 
 - **`missing --content` ou `missing --output`.** Acrescente a que ela nomeia. Um `--output` vazio ou só com espaços conta como ausente.
 - **`--content "<glob>" matches no file in <folder>`.** Em geral é um erro de digitação no caminho, um comando rodado de outra pasta que não a raiz do projeto, ou um glob de um lugar que o seu projeto não usa. Gerar a partir de nada escreveria uma folha de estilos sem classes de componente, e o site perderia o estilo sem aviso.
@@ -218,10 +248,9 @@ Toda falha imprime uma linha começando com `codenhub-styles:` na saída de erro
 - **`unknown option "<flag>"`.** Um erro de digitação, ou uma opção de outra ferramenta, como `--watch` ou `--config`. `--help` lista as opções.
 - **`option "<flag>" is missing its value or does not take one`.** Uma flag que leva valor foi a última coisa da linha, ou o `--no-minify` recebeu um valor, como em `--no-minify=true`.
 - **`unknown aesthetic "<name>"; choose from ...`.** Escolha um dos nomes listados. Eles são em minúsculas e com hífen, como `chunky-tile`.
-- **`missing command` ou `unknown command "<name>"`.** A primeira palavra depois de `codenhub-styles` precisa ser `build`.
-- **`this command needs @tailwindcss/cli and tailwindcss, which are not installed`.** A linha nomeia o que estiver faltando dos dois e termina com o comando que o instala. Rode esse comando a partir da raiz do projeto.
+- **`missing command` ou `unknown command "<name>"`.** A primeira palavra depois de `chs` precisa ser `build`.
 - **`this command needs Node.js 24 or newer`.** Atualize o Node.js na máquina que gera o CSS.
-- **`Tailwind failed to build the stylesheet: <reason>`.** `<reason>` é a própria mensagem do Tailwind. `EISDIR` quer dizer que o `--output` nomeia uma pasta existente, então nomeie um arquivo dentro dela; `EACCES` ou `EPERM` quer dizer que você não pode escrever ali. Para qualquer outro motivo, rode o mesmo comando com `--no-minify` para descartar o minificador, e informe a mensagem junto com a versão que o `--version` imprime.
+- **`cannot write the stylesheet: <reason>`.** `<reason>` é a própria mensagem do Node.js. `EISDIR` quer dizer que o `--output` nomeia uma pasta existente, então nomeie um arquivo dentro dela; `EACCES` ou `EPERM` quer dizer que você não pode escrever ali.
 
 ## Conferindo se funcionou
 
