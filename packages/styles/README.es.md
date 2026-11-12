@@ -59,4 +59,4 @@ Este paquete no tiene comportamiento en JavaScript. No incluye alias de compatib
 
 ## Licencia
 
-Distribuido bajo la licencia Apache-2.0. Las marcas de checkbox incrustadas derivan de los iconos `check` y `minus` de [Lucide](https://lucide.dev) (ISC), que Lucide deriva de [Feather](https://github.com/feathericons/feather) (MIT). Consulta [NOTICE](NOTICE) para los avisos obligatorios.
+Este proyecto tiene licencia [Apache-2.0](LICENSE). Las marcas de checkbox incrustadas derivan de los iconos `check` y `minus` de [Lucide](https://lucide.dev) (ISC), que Lucide deriva de [Feather](https://github.com/feathericons/feather) (MIT). Consulta [NOTICE](NOTICE) para los avisos obligatorios.
