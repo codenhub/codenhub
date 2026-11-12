@@ -472,6 +472,51 @@ test("draws a bare progress element in the colour it sits in, as the class does"
   ).toBeLessThanOrEqual(8);
 });
 
+/* A checked toggle has one "on" plate whatever its presentation. `/native`
+   reaches the toggle through `@apply` in `base`, so the presentation classes,
+   in `utilities`, beat its `:checked` pin: a checked `.ghost` or `.soft`
+   checkbox kept the quiet plate it has unchecked, and its mark sat on almost
+   nothing. */
+test("keeps the checked plate on a bare toggle with a quiet presentation", async ({ page }) => {
+  await page.setContent(
+    "<!doctype html><html><body>" +
+      '<input type="checkbox" id="plain" checked />' +
+      '<input type="checkbox" class="ghost" id="ghost" checked />' +
+      '<input type="checkbox" class="soft" id="soft" checked />' +
+      '<input type="checkbox" class="ghost" id="mixed" />' +
+      '<input type="radio" id="plain-radio" checked />' +
+      '<input type="radio" class="ghost" id="ghost-radio" checked />' +
+      '<input type="radio" class="soft" id="soft-radio" checked />' +
+      "</body></html>",
+  );
+  await page.addStyleTag({ url: "http://localhost:5184/native/entry-vanilla.css" });
+  // Read once after the change, so WebKit starts the plate's transition
+  // before the wait collects the running animations.
+  await page.evaluate(() => {
+    const mixed = document.getElementById("mixed") as HTMLInputElement;
+
+    mixed.indeterminate = true;
+    void getComputedStyle(mixed).backgroundColor;
+
+    return Promise.all(document.getAnimations().map((animation) => animation.finished));
+  });
+
+  const plates = await page.evaluate(() =>
+    Object.fromEntries(
+      ["plain", "ghost", "soft", "mixed", "plain-radio", "ghost-radio", "soft-radio"].map((id) => [
+        id,
+        getComputedStyle(document.getElementById(id)!).backgroundColor,
+      ]),
+    ),
+  );
+
+  expect(plates.ghost, "checked .ghost").toBe(plates.plain);
+  expect(plates.soft, "checked .soft").toBe(plates.plain);
+  expect(plates.mixed, "mixed .ghost").toBe(plates.plain);
+  expect(plates["ghost-radio"], "checked .ghost radio").toBe(plates["plain-radio"]);
+  expect(plates["soft-radio"], "checked .soft radio").toBe(plates["plain-radio"]);
+});
+
 test("draws a bare dialog as a floating card, and keeps it closed until opened", async ({ page }) => {
   await page.setContent(
     "<!doctype html><html><body>" +

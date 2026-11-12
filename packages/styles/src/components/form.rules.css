@@ -324,6 +324,22 @@
     --intent-fill-max: 100%;
   }
 
+  /* A bare toggle's "on" plate. `/native` reaches the toggles through `@apply`
+     in `base`, where their `:checked` and `:indeterminate` pins lose to
+     `.ghost` and `.soft` in `utilities`, so a checked quiet checkbox kept its
+     resting plate. The class route already wins on specificity in this layer;
+     this repeats its values for the bare element, with the neutral cap
+     `native.css`'s reset puts back, which the arm above lifts only when
+     checked. Not `radio:indeterminate`, which every radio of a group with
+     nothing chosen matches. */
+  input:is([type="checkbox"], [type="radio"]):checked,
+  input[type="checkbox"]:indeterminate {
+    --intent-fill-max: 100%;
+    --ui-fill: 100%;
+    --ui-fg-on-fill: 100%;
+    --_fill-cap: 100%;
+  }
+
   /* The three toggles read their own component cap (`--_fill-cap`, below) as the
      ceiling regardless of intent, checked or not -- not just at `:checked`, the
      way the arm above still works for a hypothetical checked text-control. A
