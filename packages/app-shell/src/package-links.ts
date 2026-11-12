@@ -67,6 +67,6 @@ export function packageGithubUrl(manifest: unknown): string | undefined {
   if (match === null) {
     return undefined;
   }
-  const directory = typeof fields.directory === "string" ? fields.directory.replace(/^\/+|\/+$/gu, "") : "";
+  const directory = typeof fields.directory === "string" ? fields.directory.split("/").filter(Boolean).join("/") : "";
   return directory === "" ? `https://github.com/${match[1]}` : `https://github.com/${match[1]}/tree/main/${directory}`;
 }
