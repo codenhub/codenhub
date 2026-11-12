@@ -15,7 +15,7 @@ export interface CliIo {
   stderr(line: string): void;
 }
 
-const BIN = "codenhub-styles";
+const BIN = "chs";
 const MIN_NODE_MAJOR = 24;
 const AESTHETIC_EXPORT = /^\.\/aesthetics\/([^/]+)$/;
 /* What `scripts/build-purge.mjs` writes: the complete stylesheet with the

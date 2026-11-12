@@ -17,7 +17,7 @@ let stderr: string[];
 let nodeVersion: string;
 
 beforeEach(async () => {
-  root = await mkdtemp(path.join(tmpdir(), "codenhub-styles-cli-test-"));
+  root = await mkdtemp(path.join(tmpdir(), "chs-cli-test-"));
   project = path.join(root, "project");
   await mkdir(path.join(project, "app", "views"), { recursive: true });
   await writeFile(path.join(project, "app", "views", "show.html.erb"), '<button class="btn primary">Save</button>\n');
@@ -245,7 +245,7 @@ describe("failures", () => {
     nodeVersion = "22.11.0";
 
     expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(
-      "codenhub-styles: this command needs Node.js 24 or newer; this is Node.js 22.11.0.",
+      "chs: this command needs Node.js 24 or newer; this is Node.js 22.11.0.",
     );
   });
 
@@ -253,7 +253,7 @@ describe("failures", () => {
     await mkdir(path.join(project, "app.css"));
 
     expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(
-      /^codenhub-styles: cannot write the stylesheet: .*EISDIR/,
+      /^chs: cannot write the stylesheet: .*EISDIR/,
     );
   });
 });
@@ -261,7 +261,7 @@ describe("failures", () => {
 describe("help and version", () => {
   it("prints usage with --help and exits 0", async () => {
     expect(await build("--help")).toBe(0);
-    expect(stdout.join("\n")).toMatch(/codenhub-styles build --content <glob>/);
+    expect(stdout.join("\n")).toMatch(/chs build --content <glob>/);
     expect(stdout.join("\n")).toMatch(/--aesthetic <name> .*chunky-tile, cyber, glass, neobrutalism, pixel, sketch/);
     expect(stderr).toEqual([]);
   });

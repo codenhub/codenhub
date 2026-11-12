@@ -11,7 +11,7 @@
     "directory": "packages/styles"
   },
   "bin": {
-    "codenhub-styles": "./dist/cli.js"
+    "chs": "./dist/cli.js"
   },
   "files": [
     "dist",
