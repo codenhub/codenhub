@@ -86,11 +86,14 @@
 
   --_hover-ground: var(--_m-hover) color-mix(in oklab, var(--color-surface) var(--_quiet), var(--color-background));
 
-  &:hover {
-    --_d-surface-ground: var(
-      --_hover-ground,
-      color-mix(in oklab, var(--color-foreground) var(--_quiet), var(--color-background))
-    );
+  /* Behind the query `box-hover` is, so a tapped card keeps its ground. */
+  @media (hover: hover) {
+    &:hover {
+      --_d-surface-ground: var(
+        --_hover-ground,
+        color-mix(in oklab, var(--color-foreground) var(--_quiet), var(--color-background))
+      );
+    }
   }
 
   /* Opt-in, because a card is only sometimes a control. Applications still owe

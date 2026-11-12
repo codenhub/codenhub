@@ -363,20 +363,26 @@
    full and darkens because the colour changed.
 
    Separate from `box` because tinting on hover is right for something you press
-   and wrong for something you type into, so a component opts in. */
-@utility box-hover {
-  &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
-    --_bg: color-mix(in oklab, var(--intent-hover) var(--_hover-fill), var(--_ground));
-    /* P3 again, against the hover tone: the line still fades as the fill fills
-       in, but toward the hover ink. Without this the edge keeps the resting ink
-       -- a ring of the colour the box just left. */
-    --_line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--intent-hover));
-    --_sx: calc(var(--ui-hover-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_depth));
-    --_sy: calc(
-      var(--ui-hover-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, var(--_elevation-y, 0px)))) * var(--_depth)
-    );
+   and wrong for something you type into, so a component opts in.
 
-    transform: var(--ui-hover-transform, none);
+   Only where the primary pointer can hover, as Tailwind's `hover:` variant:
+   a touch screen leaves a tapped element in `:hover` until something else is
+   tapped, so without the query a button kept its hover tint after the tap. */
+@utility box-hover {
+  @media (hover: hover) {
+    &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
+      --_bg: color-mix(in oklab, var(--intent-hover) var(--_hover-fill), var(--_ground));
+      /* P3 again, against the hover tone: the line still fades as the fill fills
+         in, but toward the hover ink. Without this the edge keeps the resting ink
+         -- a ring of the colour the box just left. */
+      --_line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--intent-hover));
+      --_sx: calc(var(--ui-hover-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_depth));
+      --_sy: calc(
+        var(--ui-hover-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, var(--_elevation-y, 0px)))) * var(--_depth)
+      );
+
+      transform: var(--ui-hover-transform, none);
+    }
   }
 }
 

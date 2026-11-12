@@ -387,9 +387,12 @@
   }
 
   /* On the cells, for the reason the head's plate is: a hovered last row keeps
-     the table's bottom corners. */
-  & tbody tr:hover > * {
-    background-color: var(--_table-row-hover);
+     the table's bottom corners. Behind the query `box-hover` is, so a tapped
+     row does not stay tinted. */
+  @media (hover: hover) {
+    & tbody tr:hover > * {
+      background-color: var(--_table-row-hover);
+    }
   }
 
   /* The rule comes off the row that is visually last, which is not always the

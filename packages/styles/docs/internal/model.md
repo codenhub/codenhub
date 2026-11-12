@@ -333,6 +333,8 @@ A modifier cannot say what it changes: `p-xs` is 0.5rem on a card and 0.25rem on
 
 **`interactive`, `hoverable`, and `pressable` are aliases.** `interactive` applies `box-hover`, `box-active`, and the pointer cursor; the other two are its halves. They are no longer nested in `.card`, so they answer on anything painted by `box`. The hover half raises `--_m-hover`, which `.card` reads for its quiet hover ground.
 
+**Hover answers only `(hover: hover)`.** `box-hover`, the card's quiet hover ground, and a table's row hover sit inside that query, as Tailwind's `hover:` variant does. A touch screen leaves a tapped element in `:hover` until something else is tapped, so before 0.9.0 a tapped button, card, or row kept its hover tint. A tooltip still opens on `:hover`, because a tap is how a touch reader opens one. A text field's hover line is not guarded: a tap focuses the field, and a focused field drops its hover line.
+
 **`disabled` is not a utility.** It is a state, written beside `:disabled`, `[aria-disabled="true"]`, and `[data-disabled]` in the selectors that read it, and those rules have to match the attributes whether or not a class exists. A utility could only add a fifth way to say it.
 
 **`.sketch-rounded` and `.glass-liquid` are not utilities** either: they modify an aesthetic, and aesthetics are plain CSS, emitted always.

@@ -181,3 +181,52 @@ test("a neutral box with no plate prints in the ink of the plate it sits on", as
     );
   }
 });
+
+/* A touch screen has no pointer to rest on an element, yet a tap leaves the
+   element in `:hover` until something else is tapped, so a hover tint stuck
+   on whatever was last touched. Tailwind's `hover:` variant applies only under
+   `(hover: hover)` for this reason, and the hover responses follow it. A
+   context of its own, because touch emulation is set when one is created. */
+test("leaves no hover tint on what a touch screen tapped", async ({ browser, browserName }) => {
+  const context = await browser.newContext({ hasTouch: true, isMobile: browserName !== "firefox" });
+  const page = await context.newPage();
+
+  await page.goto(BUTTONS_URL);
+  await page.evaluate(() => {
+    const host = document.createElement("div");
+
+    host.id = "touch-probe";
+    host.innerHTML = `
+      <button class="btn primary soft" data-pair="button">Tapped</button>
+      <button class="btn primary soft" data-pair="button">Untouched</button>
+      <div class="card interactive soft" data-pair="card">Tapped</div>
+      <div class="card interactive soft" data-pair="card">Untouched</div>
+      <table class="data-table"><tbody>
+        <tr><td data-pair="row">Tapped</td></tr>
+        <tr><td data-pair="row">Untouched</td></tr>
+      </tbody></table>`;
+    /* WebKit, as iOS does, puts a tapped element in `:hover` only when it
+       answers clicks, and an interactive card or row does. */
+    for (const element of host.querySelectorAll<HTMLElement>("[data-pair]")) {
+      element.style.transition = "none";
+      element.addEventListener("click", () => {});
+    }
+    document.body.prepend(host);
+  });
+
+  /* oxlint-disable no-await-in-loop -- each tap moves `:hover`, so they run in order. */
+  for (const pair of ["button", "card", "row"]) {
+    const [tapped, untouched] = await page.locator(`#touch-probe [data-pair="${pair}"]`).all();
+
+    await tapped!.tap();
+    const read = (element: Element) => getComputedStyle(element).backgroundColor;
+
+    expect(await tapped!.evaluate((element) => element.matches(":hover")), `${pair} is in :hover after a tap`).toBe(
+      true,
+    );
+    expect(await tapped!.evaluate(read), pair).toBe(await untouched!.evaluate(read));
+  }
+  /* oxlint-enable no-await-in-loop */
+
+  await context.close();
+});
