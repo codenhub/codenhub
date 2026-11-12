@@ -75,7 +75,7 @@ WCAG 1.4.13 asks three things of content that appears on hover or focus. The pac
 - **Persistent.** It stays open until the pointer and focus leave.
 - **Dismissible.** The user must be able to close it without moving the pointer or focus, usually with Escape. CSS cannot listen for a key, so this part is yours.
 
-To change the linger time, set `--tooltip-linger` on the `.tooltip` element, for example `style="--tooltip-linger: 500ms"`. The wrapper declares its own default, so a value set on a parent of `.tooltip` has no effect. Keep it long enough for the pointer to reach the bubble. It is one of six [public component variables](./customizing.md#component-variables).
+To change the linger time, set `--tooltip-linger` on the `.tooltip` element or on any element around it, for example `style="--tooltip-linger: 500ms"`. Keep it long enough for the pointer to reach the bubble. `--tooltip-gap` sets the space between the trigger the same way. Both are [public component variables](./customizing.md#component-variables).
 
 For Escape, write `data-state="closed"` on `.tooltip`: it hides the bubble even while it is hovered or focused. Remove the attribute only when both the pointer and focus have left the tooltip, so the next hover or focus opens it again. Removing it earlier, while the trigger still has focus, makes the message reappear without the user doing anything.
 

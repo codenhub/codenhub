@@ -1,6 +1,6 @@
 ---
 title: Customizing
-description: Lookup for presentation and material tokens, aesthetic knobs, the six public component variables, the generated palette, and the helpers for building your own components.
+description: Lookup for presentation and material tokens, aesthetic knobs, the public component variables, the generated palette, and the helpers for building your own components.
 order: 9
 ---
 
@@ -244,16 +244,26 @@ Three more tokens have no intent, presentation, ground, or hover: `--palette-bor
 
 ## Component variables
 
-Six variables are read by a single component and are supported inputs. Every other variable a component declares, such as `--surface-padding`, `--field-gap`, `--switch-*`, `--table-*`, or `--quote-*`, is internal and may change in any release.
+Sixteen variables are read by a single component and are supported inputs. A component reads each one where it is drawn, so a value set on the component or on any element around it reaches it, and the nearest value wins: set `--switch-width` on a form and every switch in it takes it. Every other variable a component declares, such as `--surface-padding` or any name that starts with `--_`, is internal and may change in any release.
 
-| Variable             | Element        | Value                        | Default                                                                 | Effect                                                                                                | Where to set it                                                                               |
-| -------------------- | -------------- | ---------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `--progress-value`   | `.progress`    | A percentage, `0%` to `100%` | `0%`                                                                    | Width of the filled part. Not clamped; a value without `%` is invalid and shows empty.                | The bar, or any element around it.                                                            |
-| `--progress-color`   | `.progress`    | A color                      | The intent color                                                        | Color of the filled part and of the `.active` shimmer.                                                | The bar, or any element around it.                                                            |
-| `--progress-surface` | `.progress`    | A color                      | The intent color at the presentation's fill: 12% by default             | Color of the track.                                                                                   | The bar, or any element around it.                                                            |
-| `--progress-edge`    | `.progress`    | A color                      | The intent's border color at the presentation's border: none by default | Color of the track's border. It shows only where the track has a border width, such as with `.edged`. | The bar, or any element around it.                                                            |
-| `--input-group-gap`  | `.input-group` | A length                     | `0.5rem`                                                                | Space between the control and its icon or text.                                                       | The `.input-group` itself. The group declares the default, so a value on a parent is ignored. |
-| `--tooltip-linger`   | `.tooltip`     | A time                       | `300ms`                                                                 | How long the bubble stays after the pointer leaves the trigger.                                       | The `.tooltip` itself. The wrapper declares the default, so a value on a parent is ignored.   |
+| Variable             | Element        | Value                        | Default                                                                 | Effect                                                                                                |
+| -------------------- | -------------- | ---------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `--progress-value`   | `.progress`    | A percentage, `0%` to `100%` | `0%`                                                                    | Width of the filled part. Not clamped; a value without `%` is invalid and shows empty.                |
+| `--progress-color`   | `.progress`    | A color                      | The intent color                                                        | Color of the filled part and of the `.active` shimmer.                                                |
+| `--progress-surface` | `.progress`    | A color                      | The intent color at the presentation's fill: 12% by default             | Color of the track.                                                                                   |
+| `--progress-edge`    | `.progress`    | A color                      | The intent's border color at the presentation's border: none by default | Color of the track's border. It shows only where the track has a border width, such as with `.edged`. |
+| `--input-group-gap`  | `.input-group` | A length                     | `0.5rem`                                                                | Space between the control and its icon or text.                                                       |
+| `--input-group-pad`  | `.input-group` | A length                     | `0.75rem`; `0.625rem` with `.sm` and `1rem` with `.lg`                  | Space between the group's edge and its content, on both sides.                                        |
+| `--field-gap`        | `.field`       | A length                     | `0.35rem`                                                               | Space between a field's label, control, and hint.                                                     |
+| `--switch-width`     | `.switch`      | A length                     | `2.5rem`                                                                | Width of the track. The knob keeps its size and travels further.                                      |
+| `--switch-height`    | `.switch`      | A length                     | `1.25rem`                                                               | Height of the track. The knob grows with it.                                                          |
+| `--tooltip-gap`      | `.tooltip`     | A length                     | `0.5rem`                                                                | Space between the trigger and the bubble.                                                             |
+| `--tooltip-linger`   | `.tooltip`     | A time                       | `300ms`                                                                 | How long the bubble stays after the pointer leaves the trigger.                                       |
+| `--divider-color`    | `.divider`     | A color                      | The intent color                                                        | Color of the line. It wins over an intent class on the divider.                                       |
+| `--divider-width`    | `.divider`     | A length                     | The border width: `1px` by default                                      | Thickness of the line.                                                                                |
+| `--skeleton-base`    | `.skeleton`    | A color                      | A faint tint of the intent color                                        | Color the placeholder rests on.                                                                       |
+| `--skeleton-sheen`   | `.skeleton`    | A color                      | A stronger tint of the intent color                                     | Color of the highlight that sweeps across it.                                                         |
+| `--quote-width`      | `.quote`       | A length                     | Twice the border width plus `1px`: `3px` by default                     | Thickness of the bar on the quotation's starting edge.                                                |
 
 ```html
 <div class="progress" role="meter" aria-label="Storage used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="92" style="--progress-value: 92%; --progress-color: var(--color-warning)"></div>

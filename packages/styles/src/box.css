@@ -203,8 +203,8 @@
      with no aesthetic. The order lets a raised card under `.neobrutalism` keep
      the slab. Nothing declares the last slot until something asks for depth, so
      a plain unmodified page has no shadow anywhere. */
-  --_sy: calc(var(--ui-shadow-y, var(--_d-shadow-y, var(--elevation-y, 0px))) * var(--_depth));
-  --_sb: calc(var(--ui-shadow-blur, var(--_d-shadow-blur, var(--elevation-blur, 0px))) * var(--_depth));
+  --_sy: calc(var(--ui-shadow-y, var(--_d-shadow-y, var(--_elevation-y, 0px))) * var(--_depth));
+  --_sb: calc(var(--ui-shadow-blur, var(--_d-shadow-blur, var(--_elevation-blur, 0px))) * var(--_depth));
   /* Spread is deliberately not scaled. An aesthetic that draws its edge as an
      inset ring spends spread on it, and scaling that by elevation would erase
      the edge of every component the registry rests at zero. Elevation is depth:
@@ -373,7 +373,7 @@
     --_line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--intent-hover));
     --_sx: calc(var(--ui-hover-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_depth));
     --_sy: calc(
-      var(--ui-hover-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, var(--elevation-y, 0px)))) * var(--_depth)
+      var(--ui-hover-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, var(--_elevation-y, 0px)))) * var(--_depth)
     );
 
     transform: var(--ui-hover-transform, none);
@@ -407,7 +407,7 @@
     /* The same three slots as the resting offset, `.raised`'s plain step last,
        so with no aesthetic a pressed button keeps the depth it rests on. */
     --_sy: calc(
-      var(--ui-active-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, var(--elevation-y, 0px)))) * var(--_depth)
+      var(--ui-active-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, var(--_elevation-y, 0px)))) * var(--_depth)
     );
 
     --_press: calc(var(--ui-active-translate-x, 0px) * var(--_depth))

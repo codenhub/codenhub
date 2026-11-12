@@ -442,14 +442,14 @@ test("steps a hovered table row from its own table rather than the page", async 
       const clone = table.cloneNode(true) as HTMLElement;
       clone.className = `data-table solid ${intent}`;
       host.append(clone);
-      /* `--table-row-hover` is a `color-mix()` over `var()`s, so reading the
+      /* `--_table-row-hover` is a `color-mix()` over `var()`s, so reading the
          property gives back its text rather than a colour. It resolves on the
          table, so a probe inside one reports the value the row actually gets --
          and it goes in a cell, because a stray span in a `<table>` is hoisted
          out of it. The probe also has to inherit the table's ink, because the
          step is drawn in `currentColor` wherever the plate is filled. */
       const probe = document.createElement("span");
-      probe.style.color = "var(--table-row-hover)";
+      probe.style.color = "var(--_table-row-hover)";
       clone.querySelector("td")!.append(probe);
 
       const values = {

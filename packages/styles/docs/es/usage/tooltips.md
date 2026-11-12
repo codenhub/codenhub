@@ -2,7 +2,7 @@
 title: Tooltips
 description: Ayuda de campo que se abre con hover y con foco, cómo conectarla para los lectores de pantalla y la tecla Escape, y dónde queda recortado un tooltip.
 order: 4
-source: ea0dd81935063e3e02f0b4d84e51fafab0511cc3
+source: fa1e7c1b308fe614ce17147239f713720178d9c7
 ---
 
 # Tooltips
@@ -76,7 +76,7 @@ WCAG 1.4.13 pide tres cosas al contenido que aparece con hover o con foco. El pa
 - **Persistente.** Sigue abierta hasta que el puntero y el foco se van.
 - **Descartable.** El usuario tiene que poder cerrarla sin mover el puntero ni el foco, normalmente con Escape. El CSS no puede escuchar una tecla, así que esta parte es tuya.
 
-Para cambiar el tiempo de permanencia, define `--tooltip-linger` en el elemento `.tooltip`, por ejemplo `style="--tooltip-linger: 500ms"`. El contenedor declara su propio valor por defecto, así que un valor definido en un padre de `.tooltip` no tiene efecto. Mantenlo lo bastante largo para que el puntero llegue a la burbuja. Es una de las seis [variables públicas de componente](./customizing.md#variables-de-componente).
+Para cambiar el tiempo de permanencia, define `--tooltip-linger` en el elemento `.tooltip` o en cualquier elemento que lo rodee, por ejemplo `style="--tooltip-linger: 500ms"`. Mantenlo lo bastante largo para que el puntero llegue a la burbuja. `--tooltip-gap` define de la misma forma el espacio entre el disparador y la burbuja. Ambas son [variables públicas de componente](./customizing.md#variables-de-componente).
 
 Para Escape, escribe `data-state="closed"` en `.tooltip`: oculta la burbuja aunque tenga hover o foco. Quita el atributo solo cuando tanto el puntero como el foco hayan salido del tooltip, para que el siguiente hover o foco lo vuelva a abrir. Si lo quitas antes, mientras el disparador todavía tiene el foco, el mensaje vuelve a aparecer sin que el usuario haga nada.
 

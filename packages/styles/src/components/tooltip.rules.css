@@ -12,40 +12,43 @@
    trigger's own `aria-describedby`; wiring that association is the consumer's,
    this package only styles the bubble. See docs/usage/tooltips.md. */
 @utility tooltip {
-  --tooltip-gap: 0.5rem;
-  /* How long the bubble stays after the pointer leaves the trigger: long
-     enough to cross `--tooltip-gap` onto the bubble, which keeps it open
-     (WCAG 1.4.13). */
-  --tooltip-linger: 300ms;
-  --tooltip-top: calc(var(--tooltip-gap) * -1);
-  --tooltip-right: auto;
-  --tooltip-bottom: auto;
-  --tooltip-left: 50%;
-  --tooltip-origin: bottom;
-  --tooltip-transform: translate(-50%, -100%);
+  /* `--tooltip-gap` and `--tooltip-linger` are public, read with their
+     defaults rather than declared, so a value set on any ancestor reaches the
+     tooltip. The linger is how long the bubble stays after the pointer leaves
+     the trigger: long enough to cross the gap onto the bubble, which keeps it
+     open (WCAG 1.4.13). Resolved here, so a bubble outside a tooltip keeps no
+     delay. */
+  --_tooltip-gap: var(--tooltip-gap, 0.5rem);
+  --_tooltip-linger: var(--tooltip-linger, 300ms);
+  --_tooltip-top: calc(var(--_tooltip-gap) * -1);
+  --_tooltip-right: auto;
+  --_tooltip-bottom: auto;
+  --_tooltip-left: 50%;
+  --_tooltip-origin: bottom;
+  --_tooltip-transform: translate(-50%, -100%);
 
   @apply relative inline-block;
 
   &[data-tooltip-position="bottom"] {
-    --tooltip-top: auto;
-    --tooltip-bottom: calc(var(--tooltip-gap) * -1);
-    --tooltip-origin: top;
-    --tooltip-transform: translate(-50%, 100%);
+    --_tooltip-top: auto;
+    --_tooltip-bottom: calc(var(--_tooltip-gap) * -1);
+    --_tooltip-origin: top;
+    --_tooltip-transform: translate(-50%, 100%);
   }
 
   &[data-tooltip-position="left"] {
-    --tooltip-top: 50%;
-    --tooltip-left: calc(var(--tooltip-gap) * -1);
-    --tooltip-origin: right;
-    --tooltip-transform: translate(-100%, -50%);
+    --_tooltip-top: 50%;
+    --_tooltip-left: calc(var(--_tooltip-gap) * -1);
+    --_tooltip-origin: right;
+    --_tooltip-transform: translate(-100%, -50%);
   }
 
   &[data-tooltip-position="right"] {
-    --tooltip-top: 50%;
-    --tooltip-left: auto;
-    --tooltip-right: calc(var(--tooltip-gap) * -1);
-    --tooltip-origin: left;
-    --tooltip-transform: translate(100%, -50%);
+    --_tooltip-top: 50%;
+    --_tooltip-left: auto;
+    --_tooltip-right: calc(var(--_tooltip-gap) * -1);
+    --_tooltip-origin: left;
+    --_tooltip-transform: translate(100%, -50%);
   }
 }
 
@@ -59,13 +62,13 @@
   /* Hidden rather than merely transparent, so a closed bubble is nothing
      under the pointer, and it lingers before it goes: the host stays hovered
      once the pointer is over the bubble, so crossing the gap in
-     `--tooltip-linger` keeps it open. Visibility switches at the end of the
+     `--_tooltip-linger` keeps it open. Visibility switches at the end of the
      fade, so the bubble is there to land on for the whole of it. */
   visibility: hidden;
   transition-property: opacity, transform, visibility;
   transition-duration: var(--motion-duration-normal);
   transition-timing-function: var(--motion-ease);
-  transition-delay: var(--tooltip-linger, 0s);
+  transition-delay: var(--_tooltip-linger, 0s);
 
   /* Filled, over a ground of its own. An intent floods the fill
      (`.tooltip-bubble.primary` is the primary colour); with no intent
@@ -104,12 +107,12 @@
     calc(var(--_corner) * var(--ui-corner-tl, 1)) calc(var(--_corner) * var(--ui-corner-tr, 1))
       calc(var(--_corner) * var(--ui-corner-br, 1)) calc(var(--_corner) * var(--ui-corner-bl, 1))
   );
-  left: var(--tooltip-left);
-  right: var(--tooltip-right);
-  top: var(--tooltip-top);
-  bottom: var(--tooltip-bottom);
-  transform: var(--tooltip-transform) scale(0);
-  transform-origin: var(--tooltip-origin);
+  left: var(--_tooltip-left);
+  right: var(--_tooltip-right);
+  top: var(--_tooltip-top);
+  bottom: var(--_tooltip-bottom);
+  transform: var(--_tooltip-transform) scale(0);
+  transform-origin: var(--_tooltip-origin);
 
   /* The bubble appears without growing under reduced motion, for the entries
      without the reset; see `box.css`. */
@@ -149,7 +152,7 @@
   .tooltip:focus-within &,
   .tooltip[data-state="open"] & {
     opacity: 1;
-    transform: var(--tooltip-transform) scale(1);
+    transform: var(--_tooltip-transform) scale(1);
     visibility: visible;
     transition-delay: 0s;
   }
@@ -161,7 +164,7 @@
      focus alike. */
   .tooltip[data-state="closed"] & {
     opacity: 0;
-    transform: var(--tooltip-transform) scale(0);
+    transform: var(--_tooltip-transform) scale(0);
     visibility: hidden;
     transition-delay: 0s;
   }

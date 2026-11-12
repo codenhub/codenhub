@@ -3,7 +3,7 @@ title: Visión general
 description: Las guías que terminan la pantalla de ajustes y, después, las páginas de consulta con cada clase, token y valor por defecto.
 group: Uso
 order: 4
-source: ccdf1949cd4f7688574d6f4fae9ad2cf34465fb3
+source: 07b651854dab2e401235175521adae9360b33df2
 ---
 
 # Uso
@@ -23,7 +23,7 @@ Guías, en orden:
 Páginas de consulta:
 
 - [Composición](./composing.md): las reglas completas para combinar intención, presentación y elevación, los valores por defecto de cada componente y qué ejes lee cada uno.
-- [Personalización](./customizing.md): tokens de presentación y de material, controles de las estéticas, las seis variables públicas de componente, la paleta generada y los helpers de composición para construir tus propios componentes.
+- [Personalización](./customizing.md): tokens de presentación y de material, controles de las estéticas, las variables públicas de componente, la paleta generada y los helpers de composición para construir tus propios componentes.
 - [Contenido y layout](./content-and-layout.md): todos los helpers de layout, la escala tipográfica, tarjetas y paneles, tablas, citas, código y teclas.
 
 Cuando la pantalla funcione:

@@ -153,3 +153,59 @@ test("gives the removed destructive aliases no intent", async ({ page }) => {
   expect(error).toBe(plain);
   expect(destructive).not.toBe(plain);
 });
+
+/* The public component tokens are inputs a page sets once, on a form or a
+   section, for every component below it. A component that declared its own
+   default for one ignored any value set above it. */
+test("takes each public component token from an ancestor", async ({ page }) => {
+  await page.setContent(
+    '<!doctype html><html data-theme="light"><body><div style="' +
+      "--switch-width: 3rem; --switch-height: 2rem; --field-gap: 1rem; --tooltip-gap: 1rem; " +
+      "--tooltip-linger: 700ms; --input-group-gap: 3px; --input-group-pad: 2rem; " +
+      "--divider-color: rgb(255, 0, 0); --divider-width: 5px; --skeleton-base: rgb(255, 0, 0); " +
+      '--skeleton-sheen: rgb(0, 0, 255); --quote-width: 7px">' +
+      '<input type="checkbox" class="switch" id="switch">' +
+      '<div class="field" id="field"><label>Name</label><input class="ipt"></div>' +
+      '<span class="tooltip"><button>Trigger</button><span class="tooltip-bubble" id="bubble">Tip</span></span>' +
+      '<div class="input-group" id="group"><span>@</span><input></div>' +
+      '<div class="divider" id="divider"></div>' +
+      '<div class="skeleton" id="skeleton"></div>' +
+      '<blockquote class="quote" id="quote">Quoted</blockquote>' +
+      "</div></body></html>",
+  );
+  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+
+  const read = await page.evaluate(() => {
+    const style = (id: string) => getComputedStyle(document.getElementById(id)!);
+
+    return {
+      "--switch-width": style("switch").width,
+      "--switch-height": style("switch").height,
+      "--field-gap": style("field").rowGap,
+      "--tooltip-gap": style("bubble").top,
+      "--tooltip-linger": style("bubble").transitionDelay.split(",")[0],
+      "--input-group-gap": style("group").columnGap,
+      "--input-group-pad": style("group").paddingLeft,
+      "--divider-color": style("divider").borderTopColor,
+      "--divider-width": style("divider").borderTopWidth,
+      "--skeleton-base": style("skeleton").backgroundImage.includes("rgb(255, 0, 0)"),
+      "--skeleton-sheen": style("skeleton").backgroundImage.includes("rgb(0, 0, 255)"),
+      "--quote-width": style("quote").borderLeftWidth,
+    };
+  });
+
+  expect(read).toEqual({
+    "--switch-width": "48px",
+    "--switch-height": "32px",
+    "--field-gap": "16px",
+    "--tooltip-gap": "-16px",
+    "--tooltip-linger": "0.7s",
+    "--input-group-gap": "3px",
+    "--input-group-pad": "32px",
+    "--divider-color": "rgb(255, 0, 0)",
+    "--divider-width": "5px",
+    "--skeleton-base": true,
+    "--skeleton-sheen": true,
+    "--quote-width": "7px",
+  });
+});

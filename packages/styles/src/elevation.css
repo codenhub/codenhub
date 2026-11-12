@@ -10,8 +10,8 @@
    `.flat` removes a part-based slab or blur without a conditional (complete
    surface shadows like glass remain). See model.md#elevation.
 
-   `--ui-elevation`, and the plain-page fallback geometry (`--elevation-y`,
-   `--elevation-blur`) below, are registered non-inheriting: a class sets them
+   `--ui-elevation`, and the plain-page fallback geometry (`--_elevation-y`,
+   `--_elevation-blur`) below, are registered non-inheriting: a class sets them
    on the element it is written on and nothing else picks them up. Inherited, a
    `.floating` dialog's ambient x2 would reach its own unclassed buttons and
    double their shadow with nothing in the markup asking for it. Depth is not
@@ -37,12 +37,12 @@
   inherits: false;
 }
 
-@property --elevation-y {
+@property --_elevation-y {
   syntax: "*";
   inherits: false;
 }
 
-@property --elevation-blur {
+@property --_elevation-blur {
   syntax: "*";
   inherits: false;
 }
@@ -63,8 +63,8 @@
 /* The aesthetic's depth as authored, said explicitly. */
 @utility raised {
   @layer families {
-    --elevation-y: 1px;
-    --elevation-blur: 3px;
+    --_elevation-y: 1px;
+    --_elevation-blur: 3px;
     --ui-elevation: 1;
   }
 }
@@ -72,8 +72,8 @@
 /* Twice it, for menus and popovers. */
 @utility floating {
   @layer families {
-    --elevation-y: 1px;
-    --elevation-blur: 3px;
+    --_elevation-y: 1px;
+    --_elevation-blur: 3px;
     --ui-elevation: 2;
   }
 }

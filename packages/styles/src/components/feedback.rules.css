@@ -137,13 +137,15 @@
     }
   }
 
-  --skeleton-base: color-mix(in oklab, var(--intent-color) 6%, var(--intent-subtle));
-  --skeleton-sheen: color-mix(in oklab, var(--intent-color) 10%, var(--color-foreground));
+  /* Public, read with their defaults, so a value set on any ancestor reaches
+     the placeholder. */
+  --_skeleton-base: var(--skeleton-base, color-mix(in oklab, var(--intent-color) 6%, var(--intent-subtle)));
+  --_skeleton-sheen: var(--skeleton-sheen, color-mix(in oklab, var(--intent-color) 10%, var(--color-foreground)));
 
   @apply min-h-4 w-full;
 
   animation: anim-skeleton calc(var(--motion-duration-slow) * 4) linear infinite;
-  background: linear-gradient(90deg, var(--skeleton-base), var(--skeleton-sheen), var(--skeleton-base));
+  background: linear-gradient(90deg, var(--_skeleton-base), var(--_skeleton-sheen), var(--_skeleton-base));
   background-size: 200% 100%;
   /* Not a box, so it draws the control corner and its pattern itself, the way
      `box` does at scale 1, and reads the corner shape beside it. */

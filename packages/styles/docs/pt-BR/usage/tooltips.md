@@ -2,7 +2,7 @@
 title: Tooltips
 description: Ajuda de campo que abre no hover e no foco, como ligá-la a leitores de tela e à tecla Escape, e onde um tooltip é cortado.
 order: 4
-source: ea0dd81935063e3e02f0b4d84e51fafab0511cc3
+source: fa1e7c1b308fe614ce17147239f713720178d9c7
 ---
 
 # Tooltips
@@ -76,7 +76,7 @@ O WCAG 1.4.13 pede três coisas de um conteúdo que aparece no hover ou no foco.
 - **Persistente.** Ele continua aberto até o ponteiro e o foco saírem.
 - **Dispensável.** O usuário precisa conseguir fechá-lo sem mover o ponteiro nem o foco, normalmente com Escape. O CSS não consegue escutar uma tecla, então essa parte é sua.
 
-Para mudar o tempo de permanência, defina `--tooltip-linger` no elemento `.tooltip`, por exemplo `style="--tooltip-linger: 500ms"`. O wrapper declara o seu próprio padrão, então um valor definido num elemento pai do `.tooltip` não tem efeito. Deixe o tempo longo o bastante para o ponteiro alcançar o balão. Ela é uma das seis [variáveis públicas de componente](./customizing.md#variáveis-de-componente).
+Para mudar o tempo de permanência, defina `--tooltip-linger` no elemento `.tooltip` ou em qualquer elemento em volta dele, por exemplo `style="--tooltip-linger: 500ms"`. Deixe o tempo longo o bastante para o ponteiro alcançar o balão. `--tooltip-gap` define o espaço entre o gatilho e o balão da mesma forma. As duas são [variáveis públicas de componente](./customizing.md#variáveis-de-componente).
 
 Para o Escape, escreva `data-state="closed"` no `.tooltip`: isso esconde o balão mesmo enquanto ele está com hover ou com foco. Remova o atributo só quando o ponteiro e o foco tiverem saído do tooltip, para que o próximo hover ou foco o abra de novo. Removê-lo antes, enquanto o gatilho ainda tem foco, faz a mensagem reaparecer sem que o usuário faça nada.
 
