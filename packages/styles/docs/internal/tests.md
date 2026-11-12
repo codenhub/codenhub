@@ -131,11 +131,13 @@ Node-based Vitest checks validate every published target. Every compiled export 
 | `dist/aesthetics/neobrutalism.css`         | 4,188    | 1,182  | 4,350   |
 | `dist/aesthetics/pixel.css`                | 4,794    | 1,134  | 4,950   |
 | `dist/aesthetics/sketch.css`               | 14,905   | 2,094  | 15,350  |
+| `dist/purge/index.css`                     | 273,566  | 22,157 | 282,000 |
+| `dist/purge/classes.json`                  | 6,855    | 1,626  | 7,100   |
 | `/tw/button`, a page with `btn primary`    | 20,450   |        | 21,000  |
 | `/tw/button`, a page with no package class | 8,912    |        | 9,200   |
 | `/tw`, a page with `btn primary`           | 24,115   |        | 25,000  |
 
-The two sketch rows were measured again on 2026-11-12, when the first position of sketch's rotation declared its outline so a knob set inside a region reaches it.
+The two sketch rows were measured again on 2026-11-12, when the first position of sketch's rotation declared its outline so a knob set inside a region reaches it. The `dist/purge/` rows were set the same day, with Tailwind 4.3.4: `chs build` reads those files and no page serves them, but every consumer installs them, as [Build command](./cli.md) accepts.
 
 The `/tw` rows are the package's cost over Tailwind alone on the same page, compiled with Tailwind's polyfills on as a consumer's CLI or Vite build compiles it, so a Tailwind release that changes Preflight moves no ceiling. The compiled files are also checked for Tailwind's fallbacks for browsers without `color-mix()` or `@property`, which `scripts/build-styles.mjs` turns off, and a page that names no package class is checked for having no component rule.
 

@@ -47,6 +47,9 @@ const COMPILED_CEILINGS: Record<string, number> = {
   "dist/aesthetics/neobrutalism.css": 4_350,
   "dist/aesthetics/pixel.css": 4_950,
   "dist/aesthetics/sketch.css": 15_350,
+  /* Read by `chs build`, never served, but every consumer installs it. */
+  "dist/purge/index.css": 282_000,
+  "dist/purge/classes.json": 7_100,
 };
 
 describe("compiled stylesheets", () => {
