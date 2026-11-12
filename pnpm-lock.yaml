@@ -1018,6 +1018,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.6
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.12(vitest@4.1.12)
       tailwindcss:
         specifier: 'catalog:'
         version: 4.3.4

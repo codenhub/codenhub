@@ -237,7 +237,7 @@
     "test": "vitest run",
     "test:browser": "playwright test",
     "test:browser:watch": "playwright test --ui",
-    "test:coverage": "pnpm test",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest --watch",
     "typecheck": "tsc -b"
   },
@@ -248,6 +248,7 @@
     "@tailwindcss/node": "catalog:",
     "@tailwindcss/oxide": "catalog:",
     "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "tailwindcss": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",

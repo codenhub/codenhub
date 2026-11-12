@@ -27,14 +27,6 @@ An exception to a rule that `hub check` enforces MUST also declare a `Checks byp
 - **Why acceptable:** The package ships stylesheets and one build command, `chs`, declared as its `bin`; it exposes no JavaScript API to import, so `main` and `module` would point at no usable runtime entrypoint. It does declare `types`: an empty `dist/index.d.ts`, the file the `dist/` exports' `types` conditions name (the `/tw` exports name the same empty `tw/index.d.ts`), so a TypeScript project that checks side-effect imports resolves them; `tests/integration/exports.test.ts` compiles such imports.
 - **Temporary or permanent:** Permanent while the package exposes no library API.
 
-## `@codenhub/styles`: Coverage report
-
-- **Rules bypassed:** `docs/specs/stack-tests.md` (`test:coverage` writes a coverage report).
-- **Where it applies:** The `test:coverage` script in `packages/styles/package.json`.
-- **Why acceptable:** What the package ships is CSS, which JavaScript or TypeScript instrumentation cannot measure, so a report would describe almost none of it. Its only TypeScript is the `chs` build command in `src/cli/`: `tests/integration/cli.test.ts` drives `run.ts` through its `run()` function, each failure path included, `tests/integration/purge.test.ts` tests the tree-shaker in `purge.ts`, and `cli.ts`, which only passes the process's arguments and streams to `run()`, has no test; that code is tested but its coverage is not measured. The script runs the package's real integration tests instead of reporting a false success, and its cross-browser computed-style tests run under `pnpm test:browser`.
-- **Temporary or permanent:** Permanent while the package's only TypeScript is the build command.
-- **Reevaluate when:** `src/cli/` grows beyond a thin wrapper over Tailwind's CLI, or the package gains any other TypeScript or JavaScript. A report over that code then says something, and `test:coverage` should write one.
-
 ## `@codenhub/styles`: no visual regression baselines
 
 - **Rules bypassed:** `docs/specs/tests.md` (use visual regression testing for style sheets and components to capture visual changes before merge).
