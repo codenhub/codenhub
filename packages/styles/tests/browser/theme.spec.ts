@@ -308,3 +308,28 @@ test("prints a dark page in the light theme, and a filled box with its plate", a
   expect(dark.plate, "the solid button keeps a plate").not.toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/);
   expect(dark.plate, "the plate is the light theme's").toBe(light.plate);
 });
+
+/* `.quote` hand-composes `box`'s formula rather than applying it, so it did not
+   carry `box`'s exact print: a solid quotation printed its contrast text, white
+   in the light theme, on paper with no plate behind it. */
+test("prints a filled quotation with its plate", async ({ page }) => {
+  await page.setContent(
+    '<!doctype html><html data-theme="light"><body>' +
+      '<blockquote class="quote solid primary" id="quote">Quoted</blockquote></body></html>',
+  );
+  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+  await page.emulateMedia({ media: "print" });
+  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+
+  const quote = await page.evaluate(() => {
+    const style = getComputedStyle(document.getElementById("quote")!);
+
+    return {
+      adjust: style.getPropertyValue("print-color-adjust") || style.getPropertyValue("-webkit-print-color-adjust"),
+      plate: style.backgroundColor,
+    };
+  });
+
+  expect(quote.plate, "the solid quotation has a plate").not.toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/);
+  expect(quote.adjust).toBe("exact");
+});

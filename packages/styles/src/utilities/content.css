@@ -607,6 +607,12 @@
   --_d-fg-on-fill: 0%;
   --_d-border: 100%;
   --_d-elevation: 0;
+
+  /* Printed as drawn, as `box` is. A browser leaves backgrounds off paper by
+     default, and a filled quotation prints its text in the contrast colour:
+     white on nothing. */
+  print-color-adjust: exact;
+
   /* Presentation capped by the intent, the same `--_capped` `box` composes, kept
      separate from `--quote-fill` because the ink ramp below reads it before
      `--ui-bg-alpha` thins it. */
