@@ -14,7 +14,7 @@ This document contains no drop-in code: the source and the generator own the imp
 
 `box.css`'s composition only exists as a Tailwind `@utility`, built by `intent.css`, `presentation.css`, and `box.css` cascading together inside `@codenhub/styles`' own build. A package that takes `@codenhub/styles` as an _optional_ peer -- `@codenhub/toaster` is the concrete case (`peerDependenciesMeta.@codenhub/styles.optional: true`) -- cannot depend on that build existing. Without a published artifact stating what `.alert.success` renders as, its only option is to retype `box`'s formula under its own variable names, which loses terms silently: a hand-copied edge blend that mixes toward the plate double-paints a translucent fill, and a hand-picked fallback hue drifts from the theme it imitates.
 
-`./palette` is that artifact. It is computed by the real composition once, at generation time, so a consumer references a flat value instead of reimplementing `color-mix()` math, and the value is identical to what the package renders. See [Model](./model.md#fill-how-much-of-the-intent-color-fills-the-box) for the composition it follows.
+`./palette` is that artifact. It is computed by the real composition once, at generation time, so a consumer references a flat value instead of reimplementing `color-mix()` math, and the value is what the package renders by default. Under `prefers-contrast: more` the package draws each intent's line in its strong tone and the palette's `-edge` values do not follow; the file has no such block, since a consumer that uses it on its own decides its own contrast. See [Model](./model.md#fill-how-much-of-the-intent-color-fills-the-box) for the composition it follows.
 
 ## What is generated
 
@@ -57,7 +57,7 @@ Light values are the unscoped default, declared on `:root` and on the explicit l
 
 ## Public surface
 
-`./palette` is a documented, published export, mapped through `style`/`import`/`default` conditions to `dist/palette.css` (and `types` to the shared empty declaration), and versioned under the same semver as the rest of the package. It has `exports` coverage, public docs coverage in [Customizing](../usage/customizing.md#generated-palette) and [Setup](../setup.md#import-paths), and a `compiledExportContracts` entry in `tests/integration/exports.test.ts`.
+`./palette` is a documented, published export, mapped through `style`/`import`/`default` conditions to `dist/palette.css` (and `types` to the shared empty declaration), and versioned under the same semver as the rest of the package. It has `exports` coverage, public docs coverage in [Customizing](../usage/customizing.md#generated-palette) and [Setup](../setup.md#all-entrypoints), and a `compiledExportContracts` entry in `tests/integration/exports.test.ts`.
 
 A JSON sidecar for non-CSS consumers is not shipped. The package stays CSS-only by design, and adding one waits for a concrete non-CSS consumer.
 

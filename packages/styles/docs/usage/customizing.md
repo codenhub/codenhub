@@ -238,6 +238,8 @@ Light values are set on `:root`. Dark values apply under `.dark`, `.theme-dark`,
 
 The file does not follow `prefers-color-scheme`. Code that uses the palette on its own already switches themes itself, so it sets one of those classes or attributes.
 
+Nor does it follow `prefers-contrast: more`. Under that setting the package draws each intent's border in its strong tone, so a `-edge` value is fainter than the border the component draws. Code that has to honor the setting picks a stronger color itself.
+
 Three more tokens have no intent, presentation, ground, or hover: `--palette-border`, `--palette-surface`, and `--palette-text`, fixed values of `--color-border`, `--color-surface`, and `--color-text`. They are for things that are not intent-colored, such as a container's border, a dialog's background, and its text.
 
 ## Component variables
