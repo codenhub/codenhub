@@ -155,7 +155,14 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   }
 
   const files = new Set((await Promise.all(options.contentGlobs.map((pattern) => findFiles(pattern, io.cwd)))).flat());
-  const contents = await Promise.all([...files].map((file) => fs.readFile(file, "utf8")));
+  /* One at a time: a glob can match thousands of files, and opening them all at
+     once can exceed the open-file limit, 256 by default on macOS. */
+  const contents: string[] = [];
+
+  for (const file of files) {
+    // oxlint-disable-next-line no-await-in-loop -- bounded by the open-file limit, as above.
+    contents.push(await fs.readFile(file, "utf8"));
+  }
 
   const droppable = new Set(JSON.parse(await readPackageFile(PURGE_CLASSES)) as string[]);
   const found = new Set(contents.flatMap((content) => findClasses(content, droppable)));
@@ -169,10 +176,18 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   const css = stylesheets.map((stylesheet) => write(purge(parse(stylesheet), used))).join("");
   const output = path.resolve(io.cwd, options.output);
 
+  /* Written beside the output and renamed over it, so a write that fails
+     partway, on a full disk say, leaves the previous stylesheet whole rather
+     than a truncated one a deploy would ship. */
+  const temporary = `${output}.${process.pid}.tmp`;
+
   try {
     await fs.mkdir(path.dirname(output), { recursive: true });
-    await fs.writeFile(output, css);
+    await fs.writeFile(temporary, css);
+    await fs.rename(temporary, output);
   } catch (error) {
+    // Best effort: the error worth reporting is the one above.
+    await fs.rm(temporary, { force: true }).catch(() => undefined);
     throw new Error(`cannot write the stylesheet: ${error instanceof Error ? error.message : String(error)}`);
   }
 
