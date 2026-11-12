@@ -270,6 +270,46 @@ test.describe("solo utilities", () => {
     expect(await pressed("#disabled"), "disabled action").toBe(false);
   });
 
+  /* `.disabled` and `[data-disabled]` are the documented ways to disable what
+     has no `disabled` attribute, such as a link or a `role="button"` element,
+     and `box` honours both. The solo presses checked only the attribute and
+     `aria-disabled`, so an action marked disabled either way still sank when
+     clicked. Transitions are off, so the press reads at once; inline-block,
+     since WebKit reports no `translate` or `scale` for an inline box. */
+  for (const aesthetic of ["neobrutalism", "chunky-tile", "cyber"]) {
+    test(`${aesthetic}: press no action disabled by class or data attribute`, async ({ page }) => {
+      const solo = `${aesthetic}-solo`;
+
+      await load(
+        page,
+        [`aesthetics/${aesthetic}.css`],
+        `<span role="button" tabindex="0" id="action" class="${solo}" style="display: inline-block; margin: 40px; transition: none">Go</span>
+         <span role="button" tabindex="0" id="class" class="${solo} disabled" style="display: inline-block; margin: 40px; transition: none">Off</span>
+         <span role="button" tabindex="0" id="data" class="${solo}" data-disabled style="display: inline-block; margin: 40px; transition: none">Off</span>`,
+      );
+
+      // Neobrutalism and chunky tile press by `translate`, cyber by `scale`.
+      const motionWhileHeld = async (selector: string) => {
+        const target = page.locator(selector);
+
+        await target.hover();
+        await page.mouse.down();
+
+        try {
+          return await target.evaluate(
+            (node) => `${getComputedStyle(node).translate} | ${getComputedStyle(node).scale}`,
+          );
+        } finally {
+          await page.mouse.up();
+        }
+      };
+
+      expect(await motionWhileHeld("#action"), "an enabled action presses").not.toBe("none | none");
+      expect(await motionWhileHeld("#class"), ".disabled").toBe("none | none");
+      expect(await motionWhileHeld("#data"), "[data-disabled]").toBe("none | none");
+    });
+  }
+
   /* A toast library animates its own element -- a fade, a slide, a height --
      and a solo class on it wrote `transition` whole, which replaced that list
      with the press's, so the toast stopped animating. Only an action, which

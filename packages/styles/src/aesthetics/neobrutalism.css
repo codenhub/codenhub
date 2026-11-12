@@ -260,7 +260,7 @@
     input[type="button"],
     input[type="submit"],
     input[type="reset"]
-  ):active:not(:disabled, [aria-disabled="true"]) {
+  ):active:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
   box-shadow:
     0 0 0 0 var(--_solo-ink),
     inset 0 0 0 100vmax var(--_solo-fill);

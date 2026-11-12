@@ -275,6 +275,6 @@
     input[type="button"],
     input[type="submit"],
     input[type="reset"]
-  ):active:not(:disabled, [aria-disabled="true"]) {
+  ):active:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
   scale: 0.97;
 }
