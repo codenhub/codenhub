@@ -436,12 +436,12 @@ function rootDeclarations(block: string): string {
 
 /* Shared composition rather than components: they are `@utility` so `@apply` can
    reach them, which also makes them class names a consumer could type. The
-   registry does not list them, because they publish no per-component default for
-   it to hold. Two of them -- `text-control` and `surface` -- are documented all
-   the same, as the low-level boxes a consumer builds on when the package ships
-   no component for what they are making; the other three are internal. Both
-   documented ones are in the intent reset, which is what a typeable class needs
-   to paint at all. */
+   registry lists them under `compositionHelpers` rather than `components`, since
+   each is a part components are built from; add or audit one there. Two of them
+   -- `text-control` and `surface` -- are documented as the low-level boxes a
+   consumer builds on when the package ships no component for what they are
+   making; the other three are internal. Both documented ones are in the intent
+   reset, which is what a typeable class needs to paint at all. */
 const composition = new Set((registry.compositionHelpers ?? []).map((helper) => helper.class));
 
 /* The class families that are utilities, so `@apply` and Tailwind's variants
@@ -1322,12 +1322,16 @@ test("every aesthetic's complete-shadow flag matches its stylesheet", async () =
    here that the registry does not define would be a class nothing ships, and a
    state in `boxStates` is left off every list because it applies to all. */
 test("every listed modifier and intent is one the registry defines", () => {
+  /* An alias is a class the registry ships as surely as the name it stands
+     for, so a component may list either. */
+  const withAliases = (group: Record<string, unknown>) =>
+    Object.entries(group).flatMap(([name, entry]) => [name, ...((entry as { aliases?: string[] }).aliases ?? [])]);
   const modifiers = new Set(
     Object.values(registry.modifiers).flatMap((group) =>
-      Array.isArray(group) ? (group as string[]) : Object.keys(group as Record<string, unknown>),
+      Array.isArray(group) ? (group as string[]) : withAliases(group as Record<string, unknown>),
     ),
   );
-  const intents = new Set(Object.keys(registry.intents));
+  const intents = new Set(withAliases(registry.intents as Record<string, unknown>));
   const states = new Set(registry.boxStates ?? []);
   const entries = [
     ...registry.components,
