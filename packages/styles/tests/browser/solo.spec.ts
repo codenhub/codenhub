@@ -340,6 +340,22 @@ test.describe("solo utilities", () => {
   /* Reduced motion removes a press's motion, never the press: the slab still
      collapses, the element still lands where it was, and cyber's still gives
      under the pointer, at once. */
+  /* A browser leaves backgrounds off paper and moves text towards the paper's
+     colour unless told the colours are the design. `box` says so for every
+     component; a solo class composes its own plate, so it has to say it too, or
+     a solid solo element prints its contrast label greyed, on no plate. */
+  test("print each solid element as drawn", async ({ page }) => {
+    await load(page, ["aesthetics/index.css"], ALL_SOLO.replaceAll('-solo"', '-solo solid primary"'));
+    await page.emulateMedia({ media: "print" });
+
+    for (const id of ["glass", "neobrutalism", "pixel", "chunky-tile", "cyber", "sketch"]) {
+      // oxlint-disable-next-line no-await-in-loop -- one read per element, named in the failure.
+      const style = await read(page, `#${id}`, ["print-color-adjust", "-webkit-print-color-adjust"]);
+
+      expect(style["print-color-adjust"] || style["-webkit-print-color-adjust"], id).toBe("exact");
+    }
+  });
+
   test("press at once under reduced motion", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await load(

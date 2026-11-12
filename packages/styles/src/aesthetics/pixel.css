@@ -182,6 +182,9 @@
 
   /* The clip removes a border at the straight sides, so the ring draws the
      edge and the element's own border goes. */
+  /* Printed as drawn; see `.glass-solo`. */
+  print-color-adjust: exact;
+
   border: 0;
   border-radius: 0;
   box-shadow:

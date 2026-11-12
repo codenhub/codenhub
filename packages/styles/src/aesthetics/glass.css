@@ -445,6 +445,11 @@
      does, rather than to the fill. */
   --_solo-edge: color-mix(in oklab, var(--_solo-ink) var(--ui-border, 100%), transparent);
 
+  /* Printed as drawn, as `box` is: a browser leaves backgrounds off paper
+     and greys a contrast label, so a solid element printed its label on
+     no plate. Inherited, so what it holds keeps its paint too. */
+  print-color-adjust: exact;
+
   background-color: color-mix(in oklab, var(--_solo-color) var(--_solo-capped), var(--_solo-ground));
   border: 1px solid var(--_solo-edge);
   /* The surface corner: the element this exists for is a pane. */

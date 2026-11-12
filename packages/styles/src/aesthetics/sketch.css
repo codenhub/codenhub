@@ -335,6 +335,9 @@
   --_solo-edge: color-mix(in oklab, var(--_solo-ink) var(--ui-border, 100%), var(--_solo-fill));
   --_solo-depth: calc(2px * var(--ui-elevation, 1));
 
+  /* Printed as drawn; see `.glass-solo`. */
+  print-color-adjust: exact;
+
   border: 1px solid var(--_solo-edge);
   /* The surface shape: the element this exists for is usually a pane. An action
      takes the control shape below. */

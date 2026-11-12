@@ -194,6 +194,9 @@
   --_tile-bar: color-mix(in oklab, var(--_solo-ink) 72%, rgb(0 0 0));
   --_solo-depth: calc(var(--_tile-lift) * var(--ui-elevation, 1));
 
+  /* Printed as drawn; see `.glass-solo`. */
+  print-color-adjust: exact;
+
   border: 2px solid var(--_solo-edge);
   border-radius: var(--tile-radius, 0.75rem);
   box-shadow:

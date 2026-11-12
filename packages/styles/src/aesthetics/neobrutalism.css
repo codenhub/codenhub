@@ -187,6 +187,9 @@
      and `.floating` doubles it, and the press travels the same distance. */
   --_solo-depth: calc(var(--_neo-offset) * var(--ui-elevation, 1));
 
+  /* Printed as drawn; see `.glass-solo`. */
+  print-color-adjust: exact;
+
   border: 2px solid var(--_solo-edge);
   border-radius: 0;
   box-shadow:
