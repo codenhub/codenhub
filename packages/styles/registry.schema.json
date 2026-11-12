@@ -138,11 +138,20 @@
         }
       }
     },
+    "boxStates": {
+      "type": "array",
+      "uniqueItems": true,
+      "description": "State classes that work on every element `box` paints, so no component lists them: `disabled` dims it, and `interactive`, `hoverable`, and `pressable` answer the pointer.",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      }
+    },
     "components": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["class", "default", "native", "axes"],
+        "required": ["class", "default", "native", "axes", "modifiers", "intents"],
         "additionalProperties": false,
         "properties": {
           "class": {
@@ -199,6 +208,24 @@
               "enum": ["fill", "edge"]
             },
             "description": "Axes this component actually reads. An axis listed here must change the component's computed values when its class is applied; an axis left off must not. Asserted by the browser suite."
+          },
+          "modifiers": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "description": "The modifier classes that change what this component renders, in any region an aesthetic sets. The `boxStates` are not listed. Asserted in both directions by the browser suite: a listed class changes the component, and an unlisted modifier does not."
+          },
+          "intents": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "description": "The intent classes that change what this component renders, asserted with the modifiers in a theme where every intent has a hue of its own. Every component resets to neutral, so `neutral` is listed only where it changes something."
           },
           "bounds": {
             "type": "array",
@@ -278,6 +305,42 @@
             "default": {
               "required": ["fill", "edge", "elevation"]
             }
+          }
+        }
+      }
+    },
+    "compositionHelpers": {
+      "type": "array",
+      "description": "The utilities components are composed from, for `@apply`. Each lists the modifiers and intents it takes, asserted as a component's are, or names with `extends` the helper it adds a state to.",
+      "items": {
+        "type": "object",
+        "required": ["class"],
+        "additionalProperties": false,
+        "properties": {
+          "class": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "modifiers": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            }
+          },
+          "intents": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            }
+          },
+          "extends": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "description": "The helper this one adds a state to. It takes what that helper takes."
           }
         }
       }

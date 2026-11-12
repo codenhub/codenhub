@@ -38,6 +38,8 @@ interface ComponentEntry {
   composition?: "frame" | "none";
   compositionReason?: string;
   bounds?: Bound[];
+  modifiers: string[];
+  intents: string[];
 }
 
 interface AestheticEntry {
@@ -59,6 +61,8 @@ interface Registry {
   modifiers: Record<string, unknown>;
   material?: Record<string, { readers: string[] }>;
   components: ComponentEntry[];
+  compositionHelpers?: { class: string; extends?: string; intents?: string[]; modifiers?: string[] }[];
+  boxStates?: string[];
   helpers?: string[];
   aesthetics?: AestheticEntry[];
 }
@@ -438,7 +442,7 @@ function rootDeclarations(block: string): string {
    no component for what they are making; the other three are internal. Both
    documented ones are in the intent reset, which is what a typeable class needs
    to paint at all. */
-const composition = new Set(["box", "box-hover", "box-active", "surface", "text-control"]);
+const composition = new Set((registry.compositionHelpers ?? []).map((helper) => helper.class));
 
 /* The class families that are utilities, so `@apply` and Tailwind's variants
    reach them: every intent, both halves of presentation, elevation, size, the
@@ -1311,4 +1315,43 @@ test("every aesthetic's complete-shadow flag matches its stylesheet", async () =
     );
 
   expect(problems).toEqual([]);
+});
+
+/* A component's `modifiers` and `intents` name classes the registry defines
+   once, package-wide; the browser suite measures which of them apply. A name
+   here that the registry does not define would be a class nothing ships, and a
+   state in `boxStates` is left off every list because it applies to all. */
+test("every listed modifier and intent is one the registry defines", () => {
+  const modifiers = new Set(
+    Object.values(registry.modifiers).flatMap((group) =>
+      Array.isArray(group) ? (group as string[]) : Object.keys(group as Record<string, unknown>),
+    ),
+  );
+  const intents = new Set(Object.keys(registry.intents));
+  const states = new Set(registry.boxStates ?? []);
+  const entries = [
+    ...registry.components,
+    ...(registry.compositionHelpers ?? []).filter((helper) => helper.extends === undefined),
+  ];
+  const problems = entries.flatMap((entry) => [
+    ...(entry.modifiers ?? [])
+      .filter((name) => !modifiers.has(name) || states.has(name))
+      .map((name) => `${entry.class}: modifier ${name}`),
+    ...(entry.intents ?? []).filter((name) => !intents.has(name)).map((name) => `${entry.class}: intent ${name}`),
+  ]);
+
+  expect([...states].filter((name) => !modifiers.has(name))).toEqual([]);
+  expect(problems).toEqual([]);
+});
+
+test("every composition helper that extends another names a listed one", () => {
+  const listed = new Set(
+    (registry.compositionHelpers ?? []).filter((h) => h.extends === undefined).map((h) => h.class),
+  );
+
+  expect(
+    (registry.compositionHelpers ?? [])
+      .filter((helper) => helper.extends !== undefined && !listed.has(helper.extends))
+      .map((helper) => helper.class),
+  ).toEqual([]);
 });

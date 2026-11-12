@@ -2,7 +2,7 @@
 title: Personalización
 description: Consulta de los tokens de presentación y de material, los controles de las estéticas, las variables públicas de componente, la paleta generada y los helpers para construir tus propios componentes.
 order: 9
-source: f4949b1ee12bcd5e89ae629da5b10ae890e0990b
+source: 948c4dd824de03df54b5b5e0e505779d310b6500
 ---
 
 # Personalización
@@ -229,9 +229,9 @@ Nombres: `--palette-<intent>-<presentation>-<slot>`, donde `<intent>` es una de 
 - Un calificador de fondo, `page` o `subtle`, antes del hueco. Solo aparece en el `bg` y el `edge` de `.soft` y `.ghost`, porque un relleno `.solid` cubre su fondo y el color del texto nunca depende de él.
   - Sin calificador es lo que dibujan `.badge` y `.btn`, sobre un fondo transparente: `--palette-success-soft-bg`.
   - `page` es lo que dibuja `.alert`, sobre la página: `--palette-success-soft-page-bg`.
-  - `subtle` es lo que dibujan `.kbd`, `.code` y `.pre`, sobre el propio tono sutil de la intención: `--palette-success-soft-subtle-bg`.
+  - `subtle` es lo que dibujan `.kbd`, `.code`, `.pre` y `.tooltip-icon`, sobre el propio tono sutil de la intención: `--palette-success-soft-subtle-bg`.
 
-  Cada valor se lee del propio componente, así que incluye lo que el componente hace por su cuenta. Un `.alert`, `.kbd`, `.code` o `.pre` neutral conserva un relleno más discreto que un `.badge` neutral, y sus valores `neutral-soft-page` y `neutral-soft-subtle` lo reflejan. `.tooltip-bubble` no coincide con ninguno de los tres: sin intención se rellena con su propio tono de tooltip, y su borde es sólido en vez de atenuado.
+  Cada valor se lee del propio componente, así que incluye lo que el componente hace por su cuenta. Un `.alert`, `.kbd`, `.code` o `.pre` neutral conserva un relleno más discreto que un `.badge` neutral, y sus valores `neutral-soft-page` y `neutral-soft-subtle` lo reflejan. Un `.tooltip-icon.soft` neutral conserva el relleno del badge, así que su placa se aleja más de la página de lo que indica `neutral-soft-subtle`. `.tooltip-bubble` no coincide con ninguno de los tres: sin intención se rellena con su propio tono de tooltip, y su borde es sólido en vez de atenuado.
 
 - Un sufijo `-hover`, solo en `bg` y `edge`, porque el color del texto no cambia con hover: `--palette-success-soft-page-bg-hover`. `.alert`, `.kbd`, `.code` y `.pre` no tienen hover propio, así que sus valores de hover son lo que dibuja el componente cuando le añades `box-hover`.
 

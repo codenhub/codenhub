@@ -31,9 +31,16 @@ const INTENTS = Object.keys(registry.intents);
 const GROUNDS = [
   { suffix: "", components: ["badge", "btn"] },
   { suffix: "page", components: ["alert"] },
-  { suffix: "subtle", components: ["kbd", "code", "pre"] },
+  { suffix: "subtle", components: ["kbd", "code", "pre", "tooltip-icon"] },
 ] as const;
 const ALL_COMPONENTS = GROUNDS.flatMap((ground) => ground.components);
+
+/* The plates a neutral `.soft` draws that the palette does not describe.
+   `.kbd`, `.code`, and `.pre` drop the neutral 12% wash so their resting plate
+   stays quiet, and the generator probes `.kbd`; `.tooltip-icon` rests at
+   `.ghost` and keeps the wash when `.soft` asks for it. Its edge and every
+   other cell match, and `docs/usage/customizing.md` says which one does not. */
+const UNDESCRIBED = new Set(["tooltip-icon:neutral-soft-subtle bg", "tooltip-icon:neutral-soft-subtle bg-hover"]);
 
 const SURFACES_URL = "http://localhost:5184/surfaces/?env=vanilla";
 
@@ -257,7 +264,7 @@ test.describe("generated palette", () => {
           checks.push([`${probe.key} fg`, live.fg, expected.fg]);
         }
 
-        for (const [label, actual, wanted] of checks) {
+        for (const [label, actual, wanted] of checks.filter(([label]) => !UNDESCRIBED.has(label))) {
           if (actual === undefined || wanted === undefined || getColorDistance(actual, wanted) > 2) {
             mismatches.push(`${label}: live ${actual} vs generated ${wanted}`);
           }

@@ -34,13 +34,13 @@ Aesthetics compose the foundation rather than justify new tokens. Exact appearan
 
 Ideas kept for later, not planned: no release is prepared toward them, so they are not deferred features in the sense of `docs/specs/packages-lifecycle.md`. Each moves to Planned only by a decision that names the need it meets.
 
-- **Per-component `modifiers` and `intents` in `registry.json`.** The registry lists every modifier and intent once, package-wide, and records which axes each component reads, but not which modifiers or intents each component accepts, so a component that takes `.sm` and `.lg` (`.btn`, the text controls, `.input-group`) looks the same there as one that does not. Each entry would gain the two fields, and `tests/browser/axes.spec.ts` a probe that a listed modifier or intent changes what the component computes and an unlisted one does not, as it does for axes. It waited on the configuration file, which would have defined what each component accepts; that file is Not Planned, so the fields record what the stylesheet does. `registry.json` is not published, so consumers do not depend on its shape.
+None at present.
 
 ## Known gaps
 
 Each of these is a limit of what ships today, recorded so it is decided rather than rediscovered. None is committed to a version.
 
-- **`.tooltip-icon` is recorded as a helper, not a component.** It applies `box`, rests on a ground of its own, and reads the fill, edge, and intent a component reads, but `registry.json` lists it under `helpers`, so it carries no default, no `axes`, and no probe in `axes.spec.ts`. Whether it moves to `components` is decided with the per-component fields under Possible, since both change what a registry entry records. Consumers do not see the difference: `registry.json` is not published.
+None at present.
 
 ## Notes
 

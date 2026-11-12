@@ -694,15 +694,17 @@ Both carry the reason in `registry.json` next to the decision, so a further exce
 
 `registry.json` at the package root is the source of truth for what the package supports, with `registry.schema.json` beside it. It exists as data rather than prose because four separate things have to agree about the same facts, and prose lets them drift.
 
-It carries the closed sets first -- the fill and edge classes with the tokens each declares, the hover step, the intents and their color families, the modifiers -- then every component, helper, and aesthetic.
+It carries the closed sets first -- the fill and edge classes with the tokens each declares, the hover step, the intents and their color families, the modifiers, and the box states (`disabled` and the three hover and press classes) -- then every component, composition helper, helper, and aesthetic. A composition helper is one a consumer builds a component from (`box`, `surface`, `text-control`, and `box-hover` and `box-active`, which extend `box`), so it lists what it accepts as a component does.
 
-Per component: class name, default fill/edge/elevation, the axes it reads, the ground it rests on where it has one, native element selectors, and -- where one applies -- a rename, a partial composition, or a bound, each with its reason.
+Per component: class name, default fill/edge/elevation, the axes it reads, the modifiers and intents it accepts, the ground it rests on where it has one, native element selectors, and -- where one applies -- a rename, a partial composition, or a bound, each with its reason.
 
 ```json
 {
   "class": "btn",
   "default": { "fill": "solid", "edge": "edgeless", "elevation": 1 },
   "axes": ["fill", "edge"],
+  "modifiers": ["flat", "raised", "floating", "sm", "lg", "..."],
+  "intents": ["primary", "secondary", "success", "warning", "destructive", "info"],
   "native": ["button", "input[type=\"submit\"]", "input[type=\"reset\"]"]
 }
 ```
@@ -744,10 +746,10 @@ These checks fail the build:
 4. A rename carries its reason.
 5. Every component appears in one of the two hand-maintained intent resets. A component missing from one reads an undefined `--intent-*`, which makes every `color-mix()` referencing it invalid and drops the declaration -- so it renders as nothing rather than as an error.
 6. Every implemented component declares the resting values the registry publishes for it.
-7. Every component declares the axes it reads, and every bound it places on one carries the composition of ours that earns it and what lifts it.
+7. Every component declares the axes it reads and the modifiers and intents it accepts, each one the registry defines, and every bound it places on one carries the composition of ours that earns it and what lifts it.
 8. Every `--ui-shadow-spread` or `--ui-border-width` bound in the registry has a matching `min()` seam in the component's own block, and every such seam in the stylesheet has a bound -- so a chip geometry cap cannot be added to the CSS without being published, and cannot be published without existing.
 
-Check 7's axis half is enforced in the browser rather than against the stylesheet text, in `tests/browser/axes.spec.ts`, because it is the only one whose answer is a computed value. It asserts both directions: an axis the registry calls live must change what the component computes, and an axis it leaves off must not. Check 8 is a text check in `registry.test.ts`, because a `min()` seam is a stylesheet fact rather than a computed one.
+Check 7's axis half is enforced in the browser rather than against the stylesheet text, in `tests/browser/axes.spec.ts`, because it is the only one whose answer is a computed value. It asserts both directions: an axis the registry calls live must change what the component computes, and an axis it leaves off must not. The modifiers and intents are held the same way, in Chromium only, since an engine without a property a modifier sets (Firefox has no `corner-shape`) would report it dead; `disabled` is probed in every engine. `.neutral` is listed only on `box`, which takes the nearest intent: every component already rests neutral, so the class changes nothing on one. Check 8 is a text check in `registry.test.ts`, because a `min()` seam is a stylesheet fact rather than a computed one.
 
 ### Names that avoid a collision
 
