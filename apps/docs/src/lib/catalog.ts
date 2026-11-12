@@ -1,7 +1,7 @@
 import { pathToFileURL } from "node:url";
 
 import { fillMessage } from "@codenhub/app-shell/messages";
-import { packageDemoUrl, packageNpmUrl } from "@codenhub/app-shell/package-links";
+import { packageDemoUrl, packageGithubUrl, packageNpmUrl } from "@codenhub/app-shell/package-links";
 import {
   assertSingleH1,
   buildPackageDefinitions,
@@ -142,7 +142,7 @@ export interface PublicPackage {
   documents: PublicDocument[];
   /** Scoped `demo.codenhub.dev` URL, only when this package publishes a `demo/`. */
   demoUrl?: string;
-  /** GitHub URL from the package's manifest `homepage`, when it points there. */
+  /** The package's directory on GitHub, from its manifest `repository`, when it is on GitHub. */
   githubUrl?: string;
   /** Accessible label for the GitHub action when {@link githubUrl} is set. */
   githubLabel?: string;
@@ -515,8 +515,7 @@ async function loadCatalog(): Promise<PublicPackage[]> {
 
       const manifest = manifestModules[packageDefinition.manifestPath];
       const name = readManifestString(manifest, "name");
-      const homepage = readManifestString(manifest, "homepage");
-      const githubUrl = homepage?.startsWith("https://github.com/") === true ? homepage : undefined;
+      const githubUrl = packageGithubUrl(manifest);
       const npmUrl = name === undefined ? undefined : packageNpmUrl(name);
 
       return {

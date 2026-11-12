@@ -2,11 +2,6 @@
  * URL builders for a page scoped to one package -- a docs page or a package's
  * own demo -- to link "Documentation", "Demo", npm, and GitHub at that package
  * instead of at the site root a `SiteConfig` otherwise points to.
- *
- * There is no `packageGithubUrl`: every public package's `package.json`
- * `homepage` already is that package's scoped GitHub URL (see
- * `packages/tools/src/scaffold/package-template.ts`), so a caller reads it
- * directly rather than reconstructing it here.
  */
 
 /**
@@ -44,4 +39,34 @@ export function packageDemoUrl(demoUrl: string, slug: string): string {
  */
 export function packageNpmUrl(packageName: string): string {
   return `https://www.npmjs.com/package/${packageName}`;
+}
+
+/**
+ * The package's directory on GitHub, from its manifest `repository`.
+ *
+ * Reads `repository` rather than `homepage`, which may point at the package's
+ * page on the main site instead of at GitHub.
+ * @param manifest The package's parsed `package.json`.
+ * @returns The package's GitHub directory URL, the repository root when
+ *   `repository` has no `directory`, or `undefined` when `repository` is
+ *   missing or not a GitHub repository.
+ */
+export function packageGithubUrl(manifest: unknown): string | undefined {
+  const repository =
+    typeof manifest === "object" && manifest !== null ? (manifest as { repository?: unknown }).repository : undefined;
+  const fields =
+    typeof repository === "string"
+      ? { url: repository }
+      : typeof repository === "object" && repository !== null
+        ? (repository as { directory?: unknown; url?: unknown })
+        : {};
+  if (typeof fields.url !== "string") {
+    return undefined;
+  }
+  const match = /^(?:git\+)?https:\/\/github\.com\/([^/]+\/[^/]+?)(?:\.git)?\/?$/u.exec(fields.url);
+  if (match === null) {
+    return undefined;
+  }
+  const directory = typeof fields.directory === "string" ? fields.directory.split("/").filter(Boolean).join("/") : "";
+  return directory === "" ? `https://github.com/${match[1]}` : `https://github.com/${match[1]}/tree/main/${directory}`;
 }
