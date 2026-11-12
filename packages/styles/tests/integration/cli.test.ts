@@ -107,6 +107,17 @@ describe("build", () => {
     expect(await readOutput()).toMatch(ruleFor("soft"));
   });
 
+  it("keeps the licence notice of the checkbox marks", async () => {
+    await writeFile(
+      path.join(project, "app", "views", "form.html.erb"),
+      '<input type="checkbox" class="checkbox" />\n',
+    );
+
+    await build("build", "-c", "app/views/**/*.erb", "-o", "app.css");
+
+    expect(await readOutput()).toMatch(/\/\*![^*]*Lucide[^*]*\*\//);
+  });
+
   /* `.theme-dark` is written by a script at run time, so no template names it. */
   it("keeps the classes a page gets at run time", async () => {
     await build("build", "-c", "app/views/**/*.erb", "-o", "app.css");

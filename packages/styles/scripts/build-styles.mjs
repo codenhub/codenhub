@@ -9,6 +9,8 @@ import { fileURLToPath } from "node:url";
 import { compile, optimize, Polyfills } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";
 
+import { withNotice } from "./notice.mjs";
+
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 
 const STYLES_JOBS = [
@@ -76,7 +78,7 @@ async function compileJob({ input, output }) {
   });
   const { code } = optimize(compiler.build(scanner.scan()), { file: input, minify: true });
 
-  writeFileSync(path.resolve(packageRoot, output), code);
+  writeFileSync(path.resolve(packageRoot, output), withNotice(code));
 }
 
 await Promise.all(jobs.map(compileJob));

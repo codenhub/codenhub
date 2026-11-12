@@ -233,6 +233,26 @@ test("no shipped stylesheet contains a sequence that ends an inline style elemen
   expect(unsafe).toEqual([]);
 });
 
+/* The checkbox's check and dash are drawn from Lucide's `check` and `minus`,
+   under ISC, which Lucide derives from Feather, under MIT. Both licences ask
+   for their notice in every copy, and a compiled stylesheet is copied on its
+   own: served from a CDN, or committed into a project's assets, apart from the
+   package's NOTICE. So a compiled file that carries the marks names them. */
+test("every compiled stylesheet that carries the checkbox marks names their licence", async () => {
+  const stylesheets = await shippedStylesheets("dist");
+  const outputs = await Promise.all(stylesheets.map((file) => readFile(path.resolve(packageRoot, file), "utf8")));
+  const marked = stylesheets.filter((_, index) => outputs[index]!.includes("20 6 9 17 4 12"));
+  const unnoticed = marked.filter((file) => {
+    const notice = /\/\*![^*]*Lucide[^*]*\*\//.exec(outputs[stylesheets.indexOf(file)]!)?.[0] ?? "";
+
+    return !(notice.includes("ISC") && notice.includes("Feather") && notice.includes("MIT"));
+  });
+
+  expect(marked).toContain("dist/index.css");
+  expect(marked).toContain("dist/purge/index.css");
+  expect(unnoticed).toEqual([]);
+});
+
 /* `files` publishes all of `tw/`, so a source no `/tw` export imports ships as
    bytes nobody can load: `tw/palette.css`, a copy of the generated palette,
    reached consumers only through `dist/palette.css`. */

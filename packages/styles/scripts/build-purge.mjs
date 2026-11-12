@@ -19,6 +19,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { compile, optimize, Polyfills } from "@tailwindcss/node";
 
 import { classesOf, parse } from "../src/cli/purge.ts";
+import { withNotice } from "./notice.mjs";
 
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 const registry = JSON.parse(readFileSync(path.join(packageRoot, "registry.json"), "utf8"));
@@ -71,7 +72,7 @@ const variantClasses = [
 const variants = VARIANTS.flatMap((variant) => variantClasses.map((name) => `${variant}:${name}`));
 
 const compiler = await createCompiler();
-const css = optimize(compiler.build([...base, ...variants]), { minify: true }).code;
+const css = withNotice(optimize(compiler.build([...base, ...variants]), { minify: true }).code);
 const droppable = [...base, ...variants].sort();
 
 mkdirSync(path.join(packageRoot, "dist/purge"), { recursive: true });
