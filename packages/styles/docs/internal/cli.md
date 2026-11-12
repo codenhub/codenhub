@@ -55,7 +55,7 @@ A class may be dropped when it is a Tailwind candidate: naming it adds CSS to th
 
 ## Node.js version
 
-The command supports Node.js 24 and newer, the version this repository builds and tests with; it uses `glob` from `node:fs/promises`, which older releases lack or mark experimental. The package declares `engines.node` as `>=24`, as `docs/specs/packages-lifecycle.md` requires of a package with a CLI, so a consumer on an older Node.js sees an engine warning on install even when they only link the CSS. The command also checks the version itself when `build` runs and names both versions. `node:fs/promises` is imported as a namespace so that an older Node.js reaches that check: a named import of a missing export fails at load, before any code runs.
+The command supports Node.js 24 and newer, the version this repository builds and tests with; it uses `glob` from `node:fs/promises`, which older releases lack or mark experimental. The package declares `engines.node` as `>=24`, as `docs/specs/packages-lifecycle.md` requires of a package with a CLI, so a consumer on an older Node.js is warned on install by npm, stopped by Yarn 1 and by npm with `engine-strict`, and told nothing by pnpm 11, even when they only link the CSS; on Node.js 22, `yarn add` fails with "The engine \"node\" is incompatible with this module". The floor stays the pinned major regardless, because a lower one would name a line CI does not test. The command also checks the version itself when `build` runs and names both versions. `node:fs/promises` is imported as a namespace so that an older Node.js reaches that check: a named import of a missing export fails at load, before any code runs.
 
 ## Finding the package root
 
