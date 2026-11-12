@@ -3,7 +3,7 @@
   "version": "0.8.0",
   "private": false,
   "description": "Build a consistent, themeable interface by writing class names on plain HTML, with one stylesheet of tokens, a reset, layout and type helpers, and component classes, and no JavaScript.",
-  "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/styles",
+  "homepage": "https://codenhub.dev/packages/styles/",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
