@@ -26,7 +26,7 @@ Nothing the SSO application plans needs a change here. Its needs found so far la
 ## Later / Possible
 
 - **JWE**, if encrypted ID tokens turn out to be needed (scope.md section 2).
-- **More algorithms**, such as `ES384`, `ES512` or `RS512`, if an issuer `oidc` must support, or a client authenticating to the SSO application with `private_key_jwt`, requires one. Each is one row in the algorithm table plus vectors.
+- **More algorithms**, such as `ES384`, `ES512` or `RS512`, if `@codenhub/oidc` must verify tokens from an issuer that signs with one, or the SSO application must accept `private_key_jwt` assertions from a client that signs with one. Each is one row in the algorithm table plus vectors.
 
 ## Not Planned
 
