@@ -61,6 +61,8 @@
   "codenhub": {
     "label": "JwtKit",
     "status": "experimental",
-    "docs": {}
+    "docs": {
+      "reference": {}
+    }
   }
 }

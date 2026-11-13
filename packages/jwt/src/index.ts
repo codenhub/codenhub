@@ -1,3 +1,8 @@
+/**
+ * Sign and verify JSON Web Tokens with Web Crypto, and manage the keys they need: generate, import, export and select them, including from a remote JWKS.
+ *
+ * @packageDocumentation
+ */
 export type {
   AsymmetricAlgorithm,
   JwsAlgorithm,
