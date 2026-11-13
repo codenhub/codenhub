@@ -400,6 +400,7 @@ export type ProviderDiagnosticReason =
   | "refresh_token_expired"
   | "refresh_token_client_mismatch"
   | "scope_not_granted"
+  | "refresh_refused"
   // Userinfo
   | "access_token_missing"
   | "access_token_malformed"
@@ -492,6 +493,34 @@ export interface ProviderOptions {
    * `handle` reject with its error, as a synchronous throw does.
    */
   readonly onDiagnostic?: (diagnostic: ProviderDiagnostic) => void;
+  /**
+   * Asked before each refresh issues tokens, so the app can end a family whose user is no longer entitled to it: a
+   * user who is disabled, loses a role, or revokes consent otherwise keeps refreshing until the family expires
+   * (`ttl.refreshToken`, 30 days by default). It also covers the app's session revocation, since the grant's
+   * `sessionId` is passed.
+   *
+   * It runs after the refresh token is consumed and every check on it passes, just before tokens are issued.
+   * `true` issues as it would without this option. `false` answers `invalid_grant`, revokes the whole family with
+   * `store.revokeGrant`, and is reported to {@link ProviderOptions.onDiagnostic} as `refresh_refused`. Anything else
+   * than a boolean makes `handle` reject with `TypeError`, and, as with the store and the `claims` callback, an
+   * exception it throws or a promise it rejects makes `handle` reject with that error and revokes nothing.
+   *
+   * It is not called for a code exchange, which is the sign-in itself.
+   */
+  readonly onRefresh?: (request: RefreshCheck) => boolean | Promise<boolean>;
+}
+
+/** What {@link ProviderOptions.onRefresh} is asked about: the refresh that is about to issue tokens. */
+export interface RefreshCheck {
+  /** The user the family was issued to. */
+  readonly subject: string;
+  readonly clientId: string;
+  /** The scopes this refresh will issue: the request's `scope`, or the family's when it sent none. */
+  readonly scopes: readonly string[];
+  /** The grant the family belongs to; the provider revokes it when the answer is `false`. */
+  readonly grantId: string;
+  /** The app's session the grant was issued during, when `completeAuthorization` was given one. */
+  readonly sessionId?: string;
 }
 
 /**

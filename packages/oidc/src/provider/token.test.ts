@@ -6,10 +6,11 @@ import { MAX_BODY_BYTES } from "../shared/limits";
 import { computeCodeChallenge } from "../shared/pkce";
 import { computeTokenHash } from "../shared/token-hash";
 import { type MemoryStore, createMemoryStore } from "../testing/memory-store";
+import { reportRefusal } from "./diagnostics";
 import { type ResolvedOptions, resolveOptions } from "./options";
 import { hashClientSecret } from "./secrets";
 import { handleToken } from "./token";
-import type { ClientRecord, CodeRecord } from "./types";
+import type { ClientRecord, CodeRecord, ProviderDiagnostic, ProviderOptions } from "./types";
 
 const ISSUER = "https://op.example";
 const TOKEN_ENDPOINT = `${ISSUER}/token`;
@@ -61,7 +62,11 @@ const CLIENTS: readonly ClientRecord[] = [
 
 /** Options over a memory store, with a clock the test moves forward by setting `setClock`. */
 async function setup(
-  extra: { readonly keys?: readonly KeyPair[]; readonly clients?: readonly ClientRecord[] } = {},
+  extra: {
+    readonly keys?: readonly KeyPair[];
+    readonly clients?: readonly ClientRecord[];
+    readonly onRefresh?: ProviderOptions["onRefresh"];
+  } = {},
 ): Promise<{ options: ResolvedOptions; store: MemoryStore; setClock: (ms: number) => void }> {
   let clock = NOW_MS;
   const store = createMemoryStore({ clients: extra.clients ?? CLIENTS });
@@ -72,6 +77,7 @@ async function setup(
     store,
     claims: () => ({}),
     now: () => clock,
+    ...(extra.onRefresh === undefined ? {} : { onRefresh: extra.onRefresh }),
   });
   return { options, store, setClock: (ms) => (clock = ms) };
 }
@@ -648,6 +654,150 @@ describe("handleToken: refresh_token grant", () => {
     const response = await handleToken(options, tokenRequest("grant_type=refresh_token&client_id=public"));
 
     expect(await errorOf(response)).toEqual({ status: 400, body: JSON.stringify({ error: "invalid_request" }) });
+  });
+});
+
+describe("handleToken: the onRefresh re-check", () => {
+  it("issues as without the option on true, telling it what the refresh will issue", async () => {
+    const seen: unknown[] = [];
+    const { options, store } = await setup({
+      onRefresh: (request) => {
+        seen.push(request);
+        return true;
+      },
+    });
+    const issued = await redeemCode(options, store, { sessionId: "session-9" });
+
+    const response = await handleToken(
+      options,
+      tokenRequest(refreshBody(issued.refresh_token ?? "", { scope: "openid profile" })),
+    );
+
+    expect(response.status).toBe(200);
+    expect(seen).toEqual([
+      {
+        subject: "user-1",
+        clientId: "public",
+        scopes: ["openid", "profile"],
+        grantId: "grant-1",
+        sessionId: "session-9",
+      },
+    ]);
+    expect(((await response.json()) as TokenBody).refresh_token).toEqual(expect.any(String));
+  });
+
+  it("names the family's scopes when the request narrows nothing, and has no sessionId without one", async () => {
+    const seen: unknown[] = [];
+    const { options, store } = await setup({
+      onRefresh: (request) => {
+        seen.push(request);
+        return true;
+      },
+    });
+    const issued = await redeemCode(options, store);
+
+    await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")));
+
+    expect(seen).toEqual([
+      { subject: "user-1", clientId: "public", scopes: ["openid", "profile", "offline_access"], grantId: "grant-1" },
+    ]);
+  });
+
+  it("answers invalid_grant on false and ends the whole family", async () => {
+    let allow = true;
+    const { options, store } = await setup({ onRefresh: () => allow });
+    const issued = await redeemCode(options, store);
+    const rotated = (await (
+      await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")))
+    ).json()) as TokenBody;
+    allow = false;
+
+    const refused = await handleToken(options, tokenRequest(refreshBody(rotated.refresh_token ?? "")));
+
+    expect(await errorOf(refused)).toEqual({ status: 400, body: JSON.stringify({ error: "invalid_grant" }) });
+    expect(await store.findAccessToken(await digestKey(issued.access_token))).toBeUndefined();
+    expect(await store.findAccessToken(await digestKey(rotated.access_token))).toBeUndefined();
+    // Even a check that now answers true finds nothing to refresh: the token was consumed and the family is revoked.
+    allow = true;
+    const retry = await handleToken(options, tokenRequest(refreshBody(rotated.refresh_token ?? "")));
+    expect(retry.status).toBe(400);
+  });
+
+  it("reports refresh_refused with the client", async () => {
+    const seen: ProviderDiagnostic[] = [];
+    const { options, store } = await setup({ onRefresh: () => false });
+    const issued = await redeemCode(options, store);
+
+    const response = await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")));
+    await reportRefusal((diagnostic) => void seen.push(diagnostic), "token", response);
+
+    expect(seen).toEqual([{ endpoint: "token", status: 400, reason: "refresh_refused", clientId: "public" }]);
+  });
+
+  it("awaits an async check that answers true or false", async () => {
+    let allow = true;
+    const { options, store } = await setup({
+      onRefresh: async () => {
+        await Promise.resolve();
+        return allow;
+      },
+    });
+    const issued = await redeemCode(options, store);
+    const accepted = await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")));
+    const next = ((await accepted.json()) as TokenBody).refresh_token ?? "";
+    allow = false;
+
+    const refused = await handleToken(options, tokenRequest(refreshBody(next)));
+
+    expect(accepted.status).toBe(200);
+    expect(refused.status).toBe(400);
+  });
+
+  it("is not called when an earlier check refuses the request", async () => {
+    let calls = 0;
+    const { options, store } = await setup({
+      onRefresh: () => {
+        calls += 1;
+        return true;
+      },
+    });
+    const issued = await redeemCode(options, store);
+    const narrower = await saveCode(store, { scopes: ["openid", "offline_access"] });
+    const family = (await (await handleToken(options, tokenRequest(codeBody(narrower)))).json()) as TokenBody;
+
+    await handleToken(options, tokenRequest(refreshBody(randomToken())));
+    await handleToken(options, tokenRequest(refreshBody(family.refresh_token ?? "", { scope: "openid profile" })));
+    await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "", { client_id: "other" })));
+    await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "", { scope: "profile" })));
+
+    expect(calls).toBe(0);
+  });
+
+  it.each([undefined, null, "yes", 1, {}])("throws TypeError when the check answers %j", async (answer) => {
+    const { options, store } = await setup({ onRefresh: (() => answer) as unknown as () => boolean });
+    const issued = await redeemCode(options, store);
+
+    await expect(handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")))).rejects.toThrow(
+      TypeError,
+    );
+  });
+
+  it.each([
+    [
+      "throw",
+      (): boolean => {
+        throw new Error("directory down");
+      },
+    ],
+    ["rejection", (): Promise<boolean> => Promise.reject(new Error("directory down"))],
+  ])("propagates a %s of the check without revoking the family", async (_name, onRefresh) => {
+    const { options, store } = await setup({ onRefresh });
+    const issued = await redeemCode(options, store);
+
+    await expect(handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")))).rejects.toThrow(
+      "directory down",
+    );
+    expect(await store.findAccessToken(await digestKey(issued.access_token))).toBeDefined();
   });
 });
 

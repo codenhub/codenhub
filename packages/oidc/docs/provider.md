@@ -47,6 +47,7 @@ export async function createSsoProvider() {
 | `accessToken`  | How access tokens are issued: opaque, the default, or a signed JWT. See [JWT access tokens](#jwt-access-tokens).                                                       | `{ format: "opaque" }`      |
 | `endpoints`    | The URLs of the authorization, end-session, token, userinfo, JWKS and revocation endpoints. See [Endpoints](#endpoints).                                               | Paths under the issuer      |
 | `onDiagnostic` | Called with the reason each token, userinfo or revocation request is refused with an OAuth error response. See [Diagnostics](#diagnostics).                            | None                        |
+| `onRefresh`    | Asked before each refresh issues tokens, so the app can end a family whose user is no longer entitled to it. See [Re-checking a refresh](#re-checking-a-refresh).      | Every refresh is issued     |
 | `now`          | The current time in milliseconds since the Unix epoch. For tests.                                                                                                      | `Date.now`                  |
 
 `createProvider` throws `TypeError` when:
@@ -54,7 +55,7 @@ export async function createSsoProvider() {
 - The issuer is not an `https` URL of visible ASCII with no query, fragment or credentials.
 - `signingKeys` is empty, is not an array of `{ privateKey, publicKey }` pairs, pairs a private and a public key of different algorithms, gives a pair's two keys different `kid`s, or repeats a `kid`.
 - `store` is not an object, or one of its methods is not a function. The message names the first missing method, such as `store.findClient`.
-- `claims` is not a function, or `now` or `onDiagnostic` is given and is not a function.
+- `claims` is not a function, or `now`, `onDiagnostic` or `onRefresh` is given and is not a function.
 - `accessToken` is not `{ format: "opaque" }` or `{ format: "jwt", audience }`, or its `audience` is missing, empty or not well-formed Unicode. The message names `accessToken.format` or `accessToken.audience`.
 - A lifetime is outside its range, an endpoint is not an `https` URL, two endpoints share an origin and path, or `scopes` breaks the rules under [Scopes](#scopes).
 
@@ -553,9 +554,43 @@ A request for `refresh_token` must carry `refresh_token`, or it is `invalid_requ
 3. A token that was already spent is a **reuse**. The provider revokes the family, so the access tokens and refresh tokens issued from that sign-in stop working, and returns `invalid_grant`.
 4. Otherwise the token is spent, and it must be unexpired and issued to this client. Otherwise `invalid_grant`.
 5. The `scope` parameter, when given, must be a subset of the family's scopes. Otherwise `invalid_scope`. When it is omitted, the access token has every scope the family holds.
-6. A new access token is issued, and a new refresh token that replaces the spent one. The new refresh token keeps the family's original scopes and its original expiry, so rotation neither widens the family nor extends it. An ID token is issued too, without a nonce, and with the `sid` the family carries.
+6. When the app set [`onRefresh`](#re-checking-a-refresh), it is asked. A `false` answer is `invalid_grant`, and it revokes the family.
+7. A new access token is issued, and a new refresh token that replaces the spent one. The new refresh token keeps the family's original scopes and its original expiry, so rotation neither widens the family nor extends it. An ID token is issued too, without a nonce, and with the `sid` the family carries.
 
 The response has the same shape as the code exchange, with `scope` set to the scopes of the new access token.
+
+### Re-checking a refresh
+
+A refresh token stays valid until its family expires, 30 days by default, so a user who is disabled, loses a role, or revokes consent keeps refreshing until then. The `onRefresh` option closes that gap. The provider calls it on every refresh, after the token is spent and every check on its record passes, just before it issues tokens:
+
+```ts
+import { createProvider, type ProviderOptions } from "@codenhub/oidc/provider";
+
+declare const options: ProviderOptions; // the options shown above
+declare function isEntitled(subject: string, clientId: string, scopes: readonly string[]): Promise<boolean>;
+declare function isSessionLive(sessionId: string): Promise<boolean>;
+
+export const provider = createProvider({
+  ...options,
+  onRefresh: async ({ subject, clientId, scopes, sessionId }) => (await isEntitled(subject, clientId, scopes)) && (sessionId === undefined || (await isSessionLive(sessionId))),
+});
+```
+
+The argument is a frozen `RefreshCheck`:
+
+- `subject` and `clientId`: the user the family was issued to, and the client that is refreshing.
+- `scopes`: what this refresh will issue, the request's `scope` or the family's scopes when it sent none.
+- `grantId`: the family's grant.
+- `sessionId`: the app's session the grant was issued during, absent when `completeAuthorization` was given none. Checking it also covers the app's session revocation.
+
+The answer decides what happens:
+
+- `true` issues tokens as it would without the option.
+- `false` answers `invalid_grant`, calls `store.revokeGrant(grantId)` so the whole family ends, and reports `refresh_refused` to [`onDiagnostic`](#diagnostics). The client signs the user in again.
+- Anything other than a boolean makes `handle` reject with `TypeError`.
+- An exception, or a rejected promise, makes `handle` reject with that error, as a store failure does, and revokes nothing. The refresh token was already spent, so the client's next attempt with it is a reuse and revokes the family anyway: keep the check from failing on a transient outage, or answer `false` on purpose.
+
+The callback is not called for a code exchange, which is the sign-in itself, nor for a request refused before this step. An access token already issued stays usable until it expires when it is a JWT, as [JWT access tokens](#jwt-access-tokens) says.
 
 A refresh token that is spent by a request for a scope its family does not hold is gone: the provider does not issue a new one, and the client must sign the user in again. The same is true of a refresh token that a different client presents, which is refused after it has been spent. Both checks need the token's record, and the store reads it only by spending it. A scope the provider or the client does not know is refused before the token is spent.
 
@@ -737,13 +772,13 @@ Each diagnostic is a frozen object with these members:
 
 The reasons, grouped as in the provider's types:
 
-| Group                                   | Reasons                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The request, before the client is known | `content_type`, `body`, `parameters`                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| Client authentication                   | `client_credentials_missing`, `client_credentials_ambiguous`, `client_credentials_malformed`, `client_unknown`, `client_method_mismatch`, `client_credentials_wrong`                                                                                                                                                                                                                                                                                          |
-| The token request                       | `grant_type_missing`, `grant_type_unsupported`, `grant_type_unauthorized`, `parameter_missing`, `code_verifier_malformed`, `code_verifier_missing`, `code_verifier_unexpected`, `code_unknown`, `code_replayed`, `code_expired`, `code_client_mismatch`, `redirect_uri_mismatch`, `code_verifier_mismatch`, `scope_invalid`, `refresh_token_unknown`, `refresh_token_replayed`, `refresh_token_expired`, `refresh_token_client_mismatch`, `scope_not_granted` |
-| Userinfo                                | `access_token_missing`, `access_token_malformed`, `access_token_unknown`, `access_token_expired`, `access_token_without_openid`                                                                                                                                                                                                                                                                                                                               |
-| Revocation                              | `token_missing`, `token_of_another_client`                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Group                                   | Reasons                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The request, before the client is known | `content_type`, `body`, `parameters`                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Client authentication                   | `client_credentials_missing`, `client_credentials_ambiguous`, `client_credentials_malformed`, `client_unknown`, `client_method_mismatch`, `client_credentials_wrong`                                                                                                                                                                                                                                                                                                             |
+| The token request                       | `grant_type_missing`, `grant_type_unsupported`, `grant_type_unauthorized`, `parameter_missing`, `code_verifier_malformed`, `code_verifier_missing`, `code_verifier_unexpected`, `code_unknown`, `code_replayed`, `code_expired`, `code_client_mismatch`, `redirect_uri_mismatch`, `code_verifier_mismatch`, `scope_invalid`, `refresh_token_unknown`, `refresh_token_replayed`, `refresh_token_expired`, `refresh_token_client_mismatch`, `scope_not_granted`, `refresh_refused` |
+| Userinfo                                | `access_token_missing`, `access_token_malformed`, `access_token_unknown`, `access_token_expired`, `access_token_without_openid`                                                                                                                                                                                                                                                                                                                                                  |
+| Revocation                              | `token_missing`, `token_of_another_client`                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 The callback is called once for each refusal that is answered with an OAuth error response, after the response is built and before `handle` resolves. A `405` for a method the endpoint does not accept, and an `OPTIONS` preflight, are not reported. Authorization failures are not reported either, since `beginAuthorization` and `completeAuthorization` return their issues. The diagnostic never holds a value the request carried: no token, code, verifier, secret or redirect URI.
 

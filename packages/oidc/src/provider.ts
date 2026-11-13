@@ -29,6 +29,7 @@ export type {
   ProviderEndpoints,
   ProviderOptions,
   ProviderTtl,
+  RefreshCheck,
   RefreshTokenRecord,
 } from "./provider/types";
 export type {

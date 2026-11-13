@@ -1485,6 +1485,7 @@ export interface ProviderOptions {
     readonly endpoints?: ProviderEndpoints;
     readonly now?: () => number;
     readonly onDiagnostic?: (diagnostic: ProviderDiagnostic) => void;
+    readonly onRefresh?: (request: RefreshCheck) => boolean | Promise<boolean>;
 }
 ```
 
@@ -1543,6 +1544,18 @@ readonly onDiagnostic?: (diagnostic: ProviderDiagnostic) => void;
 Called with the reason each time the token, userinfo, or revocation endpoint refuses a request, after the response is built and before `handle` resolves. The client only ever sees the OAuth error code, so this is how an operator tells an expired code from a wrong verifier. Like the store and the `claims` callback, an exception it throws makes `handle` reject. Authorization failures are not reported here, since `beginAuthorization` and `completeAuthorization` already return their issues.
 
 A returned promise is awaited before the response is returned, so an async callback that rejects makes `handle` reject with its error, as a synchronous throw does.
+
+#### ProviderOptions › onRefresh
+
+```ts
+readonly onRefresh?: (request: RefreshCheck) => boolean | Promise<boolean>;
+```
+
+Asked before each refresh issues tokens, so the app can end a family whose user is no longer entitled to it: a user who is disabled, loses a role, or revokes consent otherwise keeps refreshing until the family expires (`ttl.refreshToken`, 30 days by default). It also covers the app's session revocation, since the grant's `sessionId` is passed.
+
+It runs after the refresh token is consumed and every check on it passes, just before tokens are issued. `true` issues as it would without this option. `false` answers `invalid_grant`, revokes the whole family with `store.revokeGrant`, and is reported to `ProviderOptions.onDiagnostic` as `refresh_refused`. Anything else than a boolean makes `handle` reject with `TypeError`, and, as with the store and the `claims` callback, an exception it throws or a promise it rejects makes `handle` reject with that error and revokes nothing.
+
+It is not called for a code exchange, which is the sign-in itself.
 
 #### ProviderOptions › scopes
 
@@ -1641,6 +1654,58 @@ readonly refreshToken?: number;
 A refresh token family, counted from the code exchange; rotation does not extend it. An integer from 60 through 31536000.
 
 **Default** — 2592000 (30 days)
+
+### RefreshCheck
+
+```ts
+export interface RefreshCheck {
+    readonly subject: string;
+    readonly clientId: string;
+    readonly scopes: readonly string[];
+    readonly grantId: string;
+    readonly sessionId?: string;
+}
+```
+
+What `ProviderOptions.onRefresh` is asked about: the refresh that is about to issue tokens.
+
+#### RefreshCheck › clientId
+
+```ts
+readonly clientId: string;
+```
+
+#### RefreshCheck › grantId
+
+```ts
+readonly grantId: string;
+```
+
+The grant the family belongs to; the provider revokes it when the answer is `false`.
+
+#### RefreshCheck › scopes
+
+```ts
+readonly scopes: readonly string[];
+```
+
+The scopes this refresh will issue: the request's `scope`, or the family's when it sent none.
+
+#### RefreshCheck › sessionId
+
+```ts
+readonly sessionId?: string;
+```
+
+The app's session the grant was issued during, when `completeAuthorization` was given one.
+
+#### RefreshCheck › subject
+
+```ts
+readonly subject: string;
+```
+
+The user the family was issued to.
 
 ### RefreshTokenRecord
 
@@ -1850,7 +1915,7 @@ A `prompt` value (OpenID Connect Core §3.1.2.1).
 ### ProviderDiagnosticReason
 
 ```ts
-export type ProviderDiagnosticReason = "content_type" | "body" | "parameters" | "client_credentials_missing" | "client_credentials_ambiguous" | "client_credentials_malformed" | "client_unknown" | "client_method_mismatch" | "client_credentials_wrong" | "grant_type_missing" | "grant_type_unsupported" | "grant_type_unauthorized" | "parameter_missing" | "code_verifier_malformed" | "code_verifier_missing" | "code_verifier_unexpected" | "code_unknown" | "code_replayed" | "code_expired" | "code_client_mismatch" | "redirect_uri_mismatch" | "code_verifier_mismatch" | "scope_invalid" | "refresh_token_unknown" | "refresh_token_replayed" | "refresh_token_expired" | "refresh_token_client_mismatch" | "scope_not_granted" | "access_token_missing" | "access_token_malformed" | "access_token_unknown" | "access_token_expired" | "access_token_without_openid" | "token_missing" | "token_of_another_client";
+export type ProviderDiagnosticReason = "content_type" | "body" | "parameters" | "client_credentials_missing" | "client_credentials_ambiguous" | "client_credentials_malformed" | "client_unknown" | "client_method_mismatch" | "client_credentials_wrong" | "grant_type_missing" | "grant_type_unsupported" | "grant_type_unauthorized" | "parameter_missing" | "code_verifier_malformed" | "code_verifier_missing" | "code_verifier_unexpected" | "code_unknown" | "code_replayed" | "code_expired" | "code_client_mismatch" | "redirect_uri_mismatch" | "code_verifier_mismatch" | "scope_invalid" | "refresh_token_unknown" | "refresh_token_replayed" | "refresh_token_expired" | "refresh_token_client_mismatch" | "scope_not_granted" | "refresh_refused" | "access_token_missing" | "access_token_malformed" | "access_token_unknown" | "access_token_expired" | "access_token_without_openid" | "token_missing" | "token_of_another_client";
 ```
 
 Why the provider refused a request at the token, userinfo, or revocation endpoint. The client is sent only the OAuth error code, so this is what an operator debugs with.

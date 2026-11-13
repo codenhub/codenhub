@@ -251,6 +251,12 @@ async function refreshTokens(
   if (!scopes.every((scope) => record.scopes.includes(scope))) {
     return refused("invalid_scope", "scope_not_granted");
   }
+  if (options.onRefresh !== undefined && !(await isRefreshAllowed(options.onRefresh, record, scopes))) {
+    // The family ends with this refusal, not only this request: a user who lost the entitlement must not
+    // keep a token that could be refreshed again once the check passes.
+    await options.store.revokeGrant(record.grantId);
+    return refused("invalid_grant", "refresh_refused");
+  }
   const now = options.now();
   const ttl = lifetimesOf(options.ttl, client);
   const grant: Grant = { ...grantRecord(record) };
@@ -264,6 +270,31 @@ async function refreshTokens(
   });
   const idToken = await issueIdToken(options, client, ttl, grant, accessToken, now, {});
   return tokenResponse(ttl, { accessToken, scopes, idToken, refreshToken: nextRefreshToken });
+}
+
+/**
+ * Asks the app's `onRefresh` whether the family may still refresh, for the scopes this refresh will issue.
+ *
+ * @throws {TypeError} When the callback answers something that is not a boolean.
+ */
+async function isRefreshAllowed(
+  onRefresh: NonNullable<ResolvedOptions["onRefresh"]>,
+  record: RefreshTokenRecord,
+  scopes: readonly string[],
+): Promise<boolean> {
+  const allowed = await onRefresh(
+    Object.freeze({
+      subject: record.subject,
+      clientId: record.clientId,
+      scopes: Object.freeze([...scopes]),
+      grantId: record.grantId,
+      ...optionalSessionId(record),
+    }),
+  );
+  if (typeof allowed !== "boolean") {
+    throw new TypeError("onRefresh must return a boolean or a promise of one");
+  }
+  return allowed;
 }
 
 /**

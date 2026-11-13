@@ -80,6 +80,7 @@ export interface SetUpOverrides {
   readonly scopes?: ProviderOptions["scopes"];
   readonly ttl?: ProviderOptions["ttl"];
   readonly onDiagnostic?: ProviderOptions["onDiagnostic"];
+  readonly onRefresh?: ProviderOptions["onRefresh"];
   /** Wraps the memory store before the provider receives it, for example to record its calls. */
   readonly wrapStore?: (store: MemoryStore) => OidcStore;
 }
@@ -139,6 +140,7 @@ export async function setUpProvider(overrides: SetUpOverrides = {}): Promise<Pro
     scopes: overrides.scopes,
     ttl: overrides.ttl,
     onDiagnostic: overrides.onDiagnostic,
+    onRefresh: overrides.onRefresh,
     now: () => now.ms,
   });
   return {

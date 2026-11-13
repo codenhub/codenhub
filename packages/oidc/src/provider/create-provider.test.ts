@@ -60,6 +60,18 @@ describe("createProvider", () => {
     expect(() => createProvider(options)).toThrow(TypeError);
   });
 
+  it("shouldThrowTypeErrorWhenOnRefreshIsNotAFunction", async () => {
+    const options = await optionsWith({ onRefresh: true as unknown as ProviderOptions["onRefresh"] });
+
+    expect(() => createProvider(options)).toThrow(TypeError);
+  });
+
+  it("shouldAcceptAnOnRefreshFunction", async () => {
+    const options = await optionsWith({ onRefresh: () => true });
+
+    expect(() => createProvider(options)).not.toThrow();
+  });
+
   it("shouldThrowTypeErrorWhenAnEndpointIsExplicitlyNull", async () => {
     const options = await optionsWith({ endpoints: { token: null } as unknown as ProviderOptions["endpoints"] });
 
