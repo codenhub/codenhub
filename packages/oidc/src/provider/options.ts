@@ -37,7 +37,7 @@ const STANDARD_SCOPE_CLAIMS: Readonly<Record<string, readonly string[]>> = {
 export const PROTOCOL_SCOPES: readonly string[] = ["openid", "offline_access"];
 
 /** A scope token (RFC 6749 §3.3): printable ASCII except space, `"` and `\`. */
-const SCOPE_TOKEN = /^[\x21\x23-\x5B\x5D-\x7E]+$/;
+export const SCOPE_TOKEN = /^[\x21\x23-\x5B\x5D-\x7E]+$/;
 
 const SECONDS_PER_DAY = 86_400;
 

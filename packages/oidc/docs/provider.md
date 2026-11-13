@@ -61,7 +61,7 @@ export async function createSsoProvider() {
 
 ### Signing keys
 
-Every public key in the list is published at the JWKS endpoint, so a key that is no longer used to sign stays verifiable while tokens it signed are still in circulation. To rotate, put the new pair before the old pair of the same algorithm, and keep the old pair after it until the ID tokens it signed have expired, which is `ttl.idToken` seconds after they were issued. Both keys of a pair carry the same `kid`, and the `kid` appears in each ID token's header, so a relying party can find the right key.
+Every public key in the list is published at the JWKS endpoint, so a key that is no longer used to sign stays verifiable while tokens it signed are still in circulation. To rotate, put the new pair before the old pair of the same algorithm, and keep the old pair after it until the ID tokens it signed have expired, which is `ttl.idToken` seconds after they were issued. Both keys of a pair carry the same `kid`, and the `kid` appears in each ID token's header, so a relying party can find the right key. [Changing configuration](#changing-configuration) has the order of the rebuilds and how long to keep the old pair.
 
 Which pair signs a client's ID tokens depends on the client:
 
@@ -144,7 +144,7 @@ The standard scopes release these claims, and a client may request them when its
 
 `openid` and `offline_access` are protocol scopes. They release no claims and cannot be given claims of their own. `openid` is required for every sign-in, and `offline_access` is what makes the provider issue a refresh token.
 
-The `scopes` option adds scopes, each mapped to the claim names it releases. A scope with the same name as a standard one replaces it. Each key must be a scope token, and not `openid` or `offline_access`, and each claim name must be a non-empty string other than `sub`. A request for a scope the provider does not define, or one the client's record does not list, is refused. See [Authorization](#the-authorization-step).
+The `scopes` option adds scopes, each mapped to the claim names it releases. A scope with the same name as a standard one replaces it. Each key must be a scope token, and not `openid` or `offline_access`, and each claim name must be a non-empty string other than `sub`. What a client may request is what its record lists: a scope that the record lists and this option does not define is accepted and releases no claims, so an app-defined scope such as `data:<namespace>:read` can live only in the database, with no change to the provider's options and no rebuild. It still must be a scope token (RFC 6749 §3.3), and `openid` is still required for a sign-in. A request for a scope the client's record does not list is refused. This holds at authorization, for a refresh `scope`, and for `client_credentials`. Discovery's `scopes_supported` lists only the scopes this option and the standard ones define, so a scope that only a client record holds is not advertised. See [Authorization](#the-authorization-step).
 
 ### Lifetimes
 
@@ -179,7 +179,7 @@ Each value is an absolute `https` URL of visible ASCII (no spaces, control or no
 
 `provider.metadata` is the discovery document, frozen. Every value comes from the options, so it cannot drift from what the endpoints enforce:
 
-- `issuer`, the endpoint URLs (`end_session_endpoint` among them), and `scopes_supported`, which lists every scope the provider knows.
+- `issuer`, the endpoint URLs (`end_session_endpoint` among them), and `scopes_supported`, which lists the scopes the provider defines: the standard ones and those of the `scopes` option, not a scope that only a client record lists.
 - `response_types_supported`: `["code"]`. `response_modes_supported`: `["query"]`.
 - `grant_types_supported`: `["authorization_code", "refresh_token", "client_credentials"]`. `subject_types_supported`: `["public"]`.
 - `id_token_signing_alg_values_supported`: the algorithms of every published key.
@@ -188,6 +188,25 @@ Each value is an absolute `https` URL of visible ASCII (no spaces, control or no
 - `code_challenge_methods_supported`: `["S256"]`. `authorization_response_iss_parameter_supported`: `true`.
 - `backchannel_logout_supported` and `backchannel_logout_session_supported`: `true`. See [Back-channel logout](#back-channel-logout).
 - `claims_parameter_supported`, `request_parameter_supported` and `request_uri_parameter_supported`: `false`, because the package does not implement them.
+
+### Changing configuration
+
+A provider's options are fixed when it is created. To change one, such as adding a signing key, a scope, a lifetime or `onRefresh`, create a new provider with the new options and route requests to it. Rebuilding is cheap and safe:
+
+- `createProvider` is synchronous. It validates the options and does no I/O: it makes no store call, no `fetch`, and does not call `claims`. Keys are exported to JWK on the first JWKS request, not at creation.
+- The provider keeps no state of its own. Codes, interactions, access tokens, refresh tokens and revocations all live in the store, and the signing keys and issuer come from the options. A provider built anew over the same store and keys accepts the codes, refresh tokens and access tokens the previous instance issued, completes an interaction it began, and still sees a code that instance spent as a replay.
+
+So a long-running server can rebuild when its configuration changes and swap the new provider in, and a Cloudflare Workers app can build one per request from its bindings. Each Worker isolate holds its own instance, so a change is visible only once every isolate has rebuilt: until then, requests may be answered by a provider with the old options. Plan a rotation, below, with that gap in mind. Options that are read from the client's record, rather than from the options, take effect at once with no rebuild: a client's `scopes`, `ttl`, `idTokenClaims` and `grantTypes` among them. That includes an app-defined scope that appears in no `scopes` option, as [Scopes](#scopes) explains.
+
+#### Rotating a signing key
+
+The order of `signingKeys` is the rotation. Do it in three rebuilds, each live in every instance before the next starts:
+
+1. Add the new pair second: `[old, new]`. The JWKS now publishes both, and `old` still signs. Relying parties and resource servers that cache the JWKS can learn the new key before any token carries it. Wait at least as long as they may cache it: the provider's JWKS response allows five minutes, and a library may keep it longer, but it also refetches on an unknown `kid`.
+2. Put the new pair first: `[new, old]`. New tokens are signed with `new`, and a token that `old` signed still verifies, since `old` is still published.
+3. Drop the old pair: `[new]`, once nothing signed by `old` can still be in use.
+
+Keep the retired key until the longest-lived token it signed has expired. That is the longest ID token lifetime and, with `accessToken: { format: "jwt" }`, the longest JWT access token lifetime, counted from step 2. Read the longest from the provider's `ttl.idToken` and `ttl.accessToken` and from the `ttl` of every client record, since a client's own lifetime may exceed the provider's. A relying party that verifies an ID token on arrival needs less, but one that keeps it and verifies it later, or a logout `id_token_hint` (which accepts an expired token signed by a published key), needs the key for as long as it holds the token. Removing the key early makes those tokens fail verification.
 
 ## Routing requests with handle
 
@@ -275,7 +294,7 @@ The checks run in this order, and the first failure is the one reported. Failure
 | No `request`, `request_uri` or `registration` parameter is present.                                                                                    | `request_not_supported`, `request_uri_not_supported` or `registration_not_supported`           | Redirect   |
 | `response_type` is present and is `code`.                                                                                                              | `invalid_request` with path `["response_type"]` when missing, else `unsupported_response_type` | Redirect   |
 | `response_mode`, when present, is `query`.                                                                                                             | `invalid_request`, path `["response_mode"]`                                                    | Redirect   |
-| `scope` contains `openid`, and every scope is one the provider defines and the client may request.                                                     | `invalid_scope`                                                                                | Redirect   |
+| `scope` contains `openid`, and every scope is a scope token that the client's record lists.                                                            | `invalid_scope`                                                                                | Redirect   |
 | `code_challenge` is present and has the shape of an S256 challenge. A client with [`requirePkce: false`](#clients-that-send-no-pkce) may leave it out. | `invalid_request`, path `["code_challenge"]`                                                   | Redirect   |
 | `code_challenge_method` is `S256`. `plain` is refused.                                                                                                 | `invalid_request`, path `["code_challenge_method"]`                                            | Redirect   |
 | A client with `requirePkce: false` that sent no `code_challenge` sent a non-empty `nonce`.                                                             | `invalid_request`, path `["nonce"]`                                                            | Redirect   |
@@ -571,7 +590,7 @@ On success the provider starts a grant, and issues:
 
 A request for `refresh_token` must carry `refresh_token`, or it is `invalid_request`. Each refresh token is single-use, and rotation replaces it:
 
-1. The `scope` parameter, when given, must name only scopes the provider defines and the client may request, and it must include `openid`. Otherwise `invalid_scope`, and the token is not spent.
+1. The `scope` parameter, when given, must name only scopes the client's record lists, and it must include `openid`. Otherwise `invalid_scope`, and the token is not spent.
 2. The token is spent atomically with `consumeRefreshToken`. An unknown or revoked token is `invalid_grant`, and it is not spent.
 3. A token that was already spent is a **reuse**. The provider revokes the family, so the access tokens and refresh tokens issued from that sign-in stop working, and returns `invalid_grant`.
 4. Otherwise the token is spent, and it must be unexpired and issued to this client. Otherwise `invalid_grant`.
@@ -622,8 +641,10 @@ A client may ask for a token for itself with `grant_type=client_credentials` (RF
 
 The client authenticates as at any token request, and its `scope` parameter is read as follows:
 
-- Absent: every scope in the client's record that the provider defines, except `openid` and `offline_access`.
-- Present: each scope must be defined by the provider and listed in the client's record, and must not be `openid` or `offline_access`.
+- Absent: every scope in the client's record, except `openid` and `offline_access`.
+- Present: each scope must be listed in the client's record, and must not be `openid` or `offline_access`.
+
+Whether the provider's [`scopes`](#scopes) option defines a scope does not matter here: a scope that only the record lists is issued, and it releases no claims.
 
 A scope that breaks these rules, or an empty result, is `invalid_scope` with status `400`.
 

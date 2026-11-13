@@ -570,7 +570,47 @@ describe("handleToken: refresh_token grant", () => {
     expect(widened.scope).toBe("openid profile offline_access");
   });
 
-  it("keeps the refresh token usable after a scope the provider does not know", async () => {
+  it("narrows to a scope only the client's record allows, which releases no claims", async () => {
+    const { options, store } = await setup({
+      clients: [
+        {
+          clientId: "public",
+          redirectUris: [REDIRECT_URI],
+          scopes: ["openid", "offline_access", "data:ns:read"],
+          auth: { method: "none" },
+          idTokenClaims: true,
+        },
+      ],
+      claims: () => ({ name: "Ada Lovelace" }),
+    });
+    const issued = await redeemCode(options, store, { scopes: ["openid", "offline_access", "data:ns:read"] });
+
+    const response = await handleToken(
+      options,
+      tokenRequest(refreshBody(issued.refresh_token ?? "", { scope: "openid data:ns:read" })),
+    );
+    const body = (await response.json()) as TokenBody;
+
+    expect(response.status).toBe(200);
+    expect(body.scope).toBe("openid data:ns:read");
+    expect(payloadOf(body.id_token)).not.toHaveProperty("name");
+  });
+
+  it("refuses a refresh scope that is not a scope token before spending the token", async () => {
+    const { options, store } = await setup();
+    const issued = await redeemCode(options, store);
+
+    const refused = await handleToken(
+      options,
+      tokenRequest(refreshBody(issued.refresh_token ?? "", { scope: 'openid say"hi' })),
+    );
+    const retried = await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")));
+
+    expect(await errorOf(refused)).toEqual({ status: 400, body: JSON.stringify({ error: "invalid_scope" }) });
+    expect(retried.status).toBe(200);
+  });
+
+  it("keeps the refresh token usable after a scope the client does not have", async () => {
     const { options, store } = await setup();
     const issued = await redeemCode(options, store);
 

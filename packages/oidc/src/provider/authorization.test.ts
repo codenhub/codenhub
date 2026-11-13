@@ -196,6 +196,37 @@ describe("beginAuthorization", () => {
       expect("loginHint" in interaction).toBe(false);
     });
 
+    it("shouldAcceptAScopeOnlyTheClientRecordAllows", async () => {
+      // `data:ns:read` is in no `scopes` option: it lives only in the client's record.
+      store.addClient({ ...client, clientId: "db-app", scopes: [...client.scopes, "data:ns:read"] });
+
+      const interaction = await beginOk(query({ client_id: "db-app", scope: "openid data:ns:read" }));
+
+      expect(interaction.scopes).toEqual(["openid", "data:ns:read"]);
+    });
+
+    it("shouldStillRefuseAScopeTheClientRecordDoesNotAllow", async () => {
+      const failure = failureOf(await beginAuthorization(options, getRequest(query({ scope: "openid data:ns:read" }))));
+
+      expectErrorRedirect(failure.redirect, "invalid_scope");
+      expect(failure.issues[0]?.code).toBe("invalid_scope");
+    });
+
+    it("shouldRefuseAScopeThatIsNotAScopeTokenEvenWhenTheClientRecordListsIt", async () => {
+      store.addClient({ ...client, clientId: "odd-app", scopes: ["openid", 'say"hi', "café"] });
+
+      const quote = failureOf(
+        await beginAuthorization(options, getRequest(query({ client_id: "odd-app", scope: 'openid say"hi' }))),
+      );
+      const accent = failureOf(
+        await beginAuthorization(options, getRequest(query({ client_id: "odd-app", scope: "openid café" }))),
+      );
+
+      expectErrorRedirect(quote.redirect, "invalid_scope");
+      expectErrorRedirect(accent.redirect, "invalid_scope");
+      expect([quote.issues[0]?.code, accent.issues[0]?.code]).toEqual(["invalid_scope", "invalid_scope"]);
+    });
+
     it("shouldDeduplicateScopesKeepingFirstSeenOrder", async () => {
       const interaction = await beginOk(query({ scope: "profile openid profile" }));
       expect(interaction.scopes).toEqual(["profile", "openid"]);

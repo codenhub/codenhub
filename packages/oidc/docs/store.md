@@ -130,7 +130,7 @@ import type { ClientAuthentication, ClientTtl, GrantType } from "@codenhub/oidc/
 interface ClientRecord {
   clientId: string;
   redirectUris: readonly string[]; // each an absolute URL, compared byte for byte; may be empty without authorization_code
-  scopes: readonly string[]; // must include "openid" with authorization_code
+  scopes: readonly string[]; // must include "openid" with authorization_code; the provider's scopes option need not define them
   grantTypes?: readonly GrantType[]; // "authorization_code" (the default) or "client_credentials"
   postLogoutRedirectUris?: readonly string[]; // each compared byte for byte at logout
   ttl?: ClientTtl; // this client's own code, access token, ID token and refresh token lifetimes

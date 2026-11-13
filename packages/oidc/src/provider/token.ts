@@ -9,7 +9,7 @@ import { computeCodeChallenge, isCodeVerifier } from "../shared/pkce";
 import { computeTokenHash } from "../shared/token-hash";
 import type { OAuthErrorCode } from "../shared/types";
 import { authenticateClient } from "./client-auth";
-import { type CheckedClient, lifetimesOf } from "./client-record";
+import { type CheckedClient, isScopeOfClient, lifetimesOf } from "./client-record";
 import { refuse } from "./diagnostics";
 import { PROTOCOL_SCOPES, type ResolvedOptions, type ResolvedTtl, selectIdTokenKey } from "./options";
 import { jsonResponse, methodNotAllowed, preflightResponse, tokenErrorResponse } from "./responses";
@@ -248,7 +248,7 @@ async function refreshTokens(
   }
   // Checked before consumption, so a malformed or unknown scope does not burn the client's token. Only the
   // subset check below needs the record, and the store offers no read that does not consume.
-  const requested = readRequestedScopes(parameters.get("scope"), options, client);
+  const requested = readRequestedScopes(parameters.get("scope"), client);
   if (requested === "invalid") {
     return refused("invalid_scope", "scope_invalid");
   }
@@ -318,22 +318,22 @@ async function isRefreshAllowed(
 }
 
 /**
- * Reads a refresh request's `scope`: `undefined` when absent, `invalid` when empty, malformed, unknown to the
- * provider, not allowed for the client, or without `openid`. Every token this provider issues is an OpenID
- * Connect token, so a refresh may narrow the scope but never drop `openid`.
+ * Reads a refresh request's `scope`: `undefined` when absent, `invalid` when empty, malformed, not allowed for the
+ * client, or without `openid`. A scope the client's record lists is allowed whether or not the provider's `scopes`
+ * option defines it. Every token this provider issues is an OpenID Connect token, so a refresh may narrow the scope
+ * but never drop `openid`.
  */
 function readRequestedScopes(
   requested: string | undefined,
-  options: ResolvedOptions,
   client: ClientRecord,
 ): readonly string[] | undefined | "invalid" {
   if (requested === undefined) {
     return undefined;
   }
   const asked = requested.split(" ");
-  const isKnown = (scope: string): boolean =>
-    scope !== "" && options.scopeClaims.has(scope) && client.scopes.includes(scope);
-  return asked.every(isKnown) && asked.includes("openid") ? [...new Set(asked)] : "invalid";
+  return asked.every((scope) => isScopeOfClient(client, scope)) && asked.includes("openid")
+    ? [...new Set(asked)]
+    : "invalid";
 }
 
 /**
@@ -346,7 +346,7 @@ async function issueForClient(
   client: ClientRecord,
   parameters: ReadonlyMap<string, string>,
 ): Promise<Response> {
-  const scopes = readClientScopes(parameters.get("scope"), options, client);
+  const scopes = readClientScopes(parameters.get("scope"), client);
   if (scopes === "invalid") {
     return refuse(tokenErrorResponse("invalid_scope"), "scope_invalid", client.clientId);
   }
@@ -372,16 +372,12 @@ async function issueForClient(
 
 /**
  * Reads a client credentials request's `scope`: when absent, every scope the client may request other than the
- * protocol ones; when present, scopes the provider and the client both have, none of them a protocol scope.
- * `invalid` when that leaves no scope, or the request names one it may not have.
+ * protocol ones; when present, scopes the client's record lists, none of them a protocol scope. A scope the
+ * provider's `scopes` option does not define is allowed. `invalid` when that leaves no scope, or the request names
+ * one it may not have.
  */
-function readClientScopes(
-  requested: string | undefined,
-  options: ResolvedOptions,
-  client: ClientRecord,
-): readonly string[] | "invalid" {
-  const isAllowed = (scope: string): boolean =>
-    scope !== "" && !PROTOCOL_SCOPES.includes(scope) && options.scopeClaims.has(scope) && client.scopes.includes(scope);
+function readClientScopes(requested: string | undefined, client: ClientRecord): readonly string[] | "invalid" {
+  const isAllowed = (scope: string): boolean => !PROTOCOL_SCOPES.includes(scope) && isScopeOfClient(client, scope);
   const scopes = requested === undefined ? client.scopes.filter(isAllowed) : requested.split(" ");
   return scopes.length > 0 && scopes.every(isAllowed) ? [...new Set(scopes)] : "invalid";
 }

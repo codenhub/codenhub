@@ -485,6 +485,8 @@ readonly scopes: readonly string[];
 
 Scopes this client may request. Must include `openid` when the client may use `authorization_code`. A `client_credentials` token never carries `openid` or `offline_access`, since no user is involved.
 
+A scope listed here need not be defined in `ProviderOptions.scopes`: one that is not is accepted at authorization, in a refresh `scope` and by `client_credentials`, and releases no claims.
+
 #### ClientRecord › ttl
 
 ```ts
@@ -1494,7 +1496,7 @@ It is not called for a code exchange, which is the sign-in itself.
 readonly scopes?: Readonly<Record<string, readonly string[]>>;
 ```
 
-Extra scopes and the claim names each releases, merged over the standard `profile`, `email`, `address`, and `phone` scopes. Every scope a client requests must be here, standard, `openid`, or `offline_access`.
+Extra scopes and the claim names each releases, merged over the standard `profile`, `email`, `address`, and `phone` scopes. What a client may request is what its `ClientRecord.scopes` lists: a scope the record lists and this option does not define is accepted, and releases no claims, so an app-defined scope such as `data:<namespace>:read` can live only in the database. A scope must still be a scope token (RFC 6749 §3.3). Discovery's `scopes_supported` lists only the scopes this option and the standard ones define.
 
 #### ProviderOptions › signingKeys
 

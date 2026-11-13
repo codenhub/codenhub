@@ -118,7 +118,7 @@ describe("client_credentials", () => {
     ["openid", "openid orders:read"],
     ["offline_access", "orders:read offline_access"],
     ["a scope the client may not request", "orders:read orders:write"],
-    ["a scope the provider does not define", "orders:delete"],
+    ["a scope the client does not list", "orders:delete"],
     ["an empty scope from a double space", "orders:read  orders:write"],
   ])("refuses %s with invalid_scope", async (_name, scope) => {
     const { op, secret } = await setup();
@@ -127,6 +127,41 @@ describe("client_credentials", () => {
 
     expect(response.status).toBe(400);
     expect(await response.text()).toBe(JSON.stringify({ error: "invalid_scope" }));
+  });
+
+  it("issues a scope only the client's record has, with no claims, by default and when asked", async () => {
+    const { op, store, secret } = await setup();
+    // `data:ns:read` is in no `scopes` option of the provider: it lives only in this record.
+    store.addClient({
+      clientId: "db-machine",
+      redirectUris: [],
+      scopes: ["data:ns:read", "orders:read"],
+      auth: { method: "client_secret_basic", secretHashes: [await hashClientSecret(secret)] },
+      grantTypes: ["client_credentials"],
+    });
+
+    const byDefault = await handled(op, tokenRequest("db-machine", secret, {}));
+    const asked = await handled(op, tokenRequest("db-machine", secret, { scope: "data:ns:read" }));
+
+    expect(await byDefault.json()).toMatchObject({ scope: "data:ns:read orders:read" });
+    expect(await asked.json()).toMatchObject({ scope: "data:ns:read" });
+  });
+
+  it("refuses a scope that is not a scope token even when the client's record lists it", async () => {
+    const { op, store, secret } = await setup();
+    store.addClient({
+      clientId: "odd-machine",
+      redirectUris: [],
+      scopes: ['say"hi'],
+      auth: { method: "client_secret_basic", secretHashes: [await hashClientSecret(secret)] },
+      grantTypes: ["client_credentials"],
+    });
+
+    const asked = await handled(op, tokenRequest("odd-machine", secret, { scope: 'say"hi' }));
+    const byDefault = await handled(op, tokenRequest("odd-machine", secret, {}));
+
+    expect(await asked.text()).toBe(JSON.stringify({ error: "invalid_scope" }));
+    expect(await byDefault.text()).toBe(JSON.stringify({ error: "invalid_scope" }));
   });
 
   it("gives a token the client's own access token lifetime, and the provider's when it sets none", async () => {
