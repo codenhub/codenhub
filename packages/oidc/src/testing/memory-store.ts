@@ -163,9 +163,20 @@ function copyClient(client: ClientRecord): ClientRecord {
     ...(client.postLogoutRedirectUris === undefined
       ? {}
       : { postLogoutRedirectUris: copyList(client.postLogoutRedirectUris) }),
-    ...(client.ttl === undefined ? {} : { ttl: { ...client.ttl } }),
-    auth: typeof client.auth === "object" && client.auth !== null ? { ...client.auth } : client.auth,
+    ...(client.ttl === undefined ? {} : { ttl: copyObject(client.ttl) }),
+    auth: copyAuth(client.auth),
   };
+}
+
+/** Copies a plain object; any other value, such as a malformed `null` or array, is returned for the provider to refuse. */
+function copyObject<T>(value: T): T {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? { ...value } : value;
+}
+
+/** Copies a client's authentication, and its list of secret digests, which the caller may otherwise mutate. */
+function copyAuth(auth: ClientRecord["auth"]): ClientRecord["auth"] {
+  const copy = copyObject(auth);
+  return copy !== auth && "secretHashes" in copy ? { ...copy, secretHashes: copyList(copy.secretHashes) } : copy;
 }
 
 /** Copies an array; any other value is returned unchanged. */

@@ -97,6 +97,27 @@ describe("findClient", () => {
     expect((await store.findClient("client-a"))?.ttl).toEqual({ accessToken: 120 });
   });
 
+  it("should not change the stored client when the caller mutates the registered secretHashes", async () => {
+    const client = makeClient({ auth: { method: "client_secret_basic", secretHashes: ["hash-a"] } });
+    const store = createMemoryStore({ clients: [client] });
+
+    (client.auth as unknown as { secretHashes: string[] }).secretHashes.push("hash-b");
+
+    expect((await store.findClient("client-a"))?.auth).toEqual({
+      method: "client_secret_basic",
+      secretHashes: ["hash-a"],
+    });
+  });
+
+  it.each([
+    ["null", null],
+    ["an array", [120]],
+  ])("should return a malformed ttl (%s) as it was registered, for the provider to refuse", async (_name, ttl) => {
+    const store = createMemoryStore({ clients: [makeClient({ ttl } as unknown as Partial<ClientRecord>)] });
+
+    expect((await store.findClient("client-a"))?.ttl).toEqual(ttl);
+  });
+
   it("should replace a client when addClient is called with the same id", async () => {
     const store = createMemoryStore({ clients: [makeClient()] });
 
