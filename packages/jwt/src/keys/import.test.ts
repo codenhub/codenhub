@@ -1,8 +1,11 @@
+import { runInNewContext } from "node:vm";
+
 import { describe, expect, it } from "vitest";
 
 import type { AsymmetricAlgorithm } from "../core/types";
 import { decodeBase64Url, encodeBase64Url } from "../encoding";
-import { exportSecretJwk } from "./export";
+import { exportPrivateJwk, exportSecretJwk } from "./export";
+import { generateKeyPair } from "./generate";
 import { importPrivateKey, importPublicKey, importSecretKey } from "./import";
 import { getKeyEntry } from "./registry";
 import {
@@ -498,5 +501,176 @@ describe("imported key issues", () => {
         Object.isFrozen,
       ),
     ).toBe(true);
+  });
+});
+
+describe("cross-realm inputs", () => {
+  it("should import a Uint8Array from another realm as raw bytes", async () => {
+    const foreign = runInNewContext("new Uint8Array(40).fill(7)") as Uint8Array;
+    expect(foreign instanceof Uint8Array).toBe(false);
+    const result = await importSecretKey(foreign, { alg: "HS256", extractable: true });
+    expect(encodeBase64Url(new Uint8Array(40).fill(7))).toBe((await exportSecretJwk(valueOf(result))).k);
+  });
+
+  it("should report weak_key for a short Uint8Array from another realm", async () => {
+    const foreign = runInNewContext("new Uint8Array(31)");
+    expect(issuesOf(await importSecretKey(foreign, { alg: "HS256" }))).toEqual([
+      { code: "weak_key", params: { minimum: 32 } },
+    ]);
+  });
+
+  it("should never run the traps of a Proxy around a Uint8Array", async () => {
+    const touched: string[] = [];
+    const proxy = new Proxy(new Uint8Array(32).fill(1), {
+      get(target, property) {
+        touched.push(String(property));
+        return Reflect.get(target, property) as unknown;
+      },
+    });
+    const result = await importSecretKey(proxy, { alg: "HS256" });
+    expect([issuesOf(result), touched]).toEqual([[{ code: "invalid_key" }], []]);
+  });
+
+  it("should import a plain JWK object from another realm", async () => {
+    const foreign = runInNewContext(`({ kty: "oct", kid: "f1", k: "${HMAC_SECRET_JWK.k}" })`);
+    expect(await importSecretKey(foreign, { alg: "HS256" })).toEqual({
+      ok: true,
+      value: { kind: "secret", alg: "HS256", kid: "f1", extractable: false },
+    });
+  });
+
+  it("should import a public JWK object from another realm", async () => {
+    const foreign = runInNewContext(`(${JSON.stringify(EC_P256_PUBLIC_JWK)})`);
+    expect((await importPublicKey(foreign, { alg: "ES256" })).ok).toBe(true);
+  });
+
+  it.each([
+    ["a class instance", `new (class A { constructor() { this.kty = "oct"; this.k = "${HMAC_SECRET_JWK.k}"; } })()`],
+    ["an array", "[]"],
+    ["a Map", "new Map()"],
+    ["an object whose prototype has a prototype", `Object.create({ kty: "oct", k: "${HMAC_SECRET_JWK.k}" })`],
+  ])("should report invalid_key for %s from another realm", async (_name, source) => {
+    expect(issuesOf(await importSecretKey(runInNewContext(source), { alg: "HS256" }))).toEqual([
+      { code: "invalid_key" },
+    ]);
+  });
+
+  it("should report invalid_key for a class instance of this realm", async () => {
+    class Jwk {
+      kty = "oct";
+      k = HMAC_SECRET_JWK.k;
+    }
+    expect(issuesOf(await importSecretKey(new Jwk(), { alg: "HS256" }))).toEqual([{ code: "invalid_key" }]);
+  });
+});
+
+describe("options read from the object itself", () => {
+  const pollute = async (members: Record<string, unknown>, run: () => Promise<void>): Promise<void> => {
+    try {
+      Object.assign(Object.prototype, members);
+      await run();
+    } finally {
+      for (const name of Object.keys(members)) {
+        delete (Object.prototype as Record<string, unknown>)[name];
+      }
+    }
+  };
+
+  it("should not make a generated private key extractable through Object.prototype", async () => {
+    await pollute({ extractable: true }, async () => {
+      const { privateKey } = await generateKeyPair({ alg: "ES256" });
+      expect(privateKey.extractable).toBe(false);
+    });
+  });
+
+  it("should not make an imported private key extractable through Object.prototype", async () => {
+    await pollute({ extractable: true }, async () => {
+      const key = valueOf(await importPrivateKey(EC_P256_PRIVATE_JWK, { alg: "ES256" }));
+      expect(key.extractable).toBe(false);
+    });
+  });
+
+  it("should not take alg from Object.prototype", async () => {
+    await pollute({ alg: "ES256" }, async () => {
+      await expect(importPublicKey(EC_P256_PUBLIC_JWK, {} as never)).rejects.toThrow(TypeError);
+    });
+  });
+
+  it("should not take kid from Object.prototype", async () => {
+    await pollute({ kid: "polluted" }, async () => {
+      const result = await importSecretKey(new Uint8Array(32), { alg: "HS256" });
+      expect(Object.hasOwn(valueOf(result), "kid")).toBe(false);
+    });
+  });
+});
+
+describe("importPublicKey for an RSA modulus at the minimum", () => {
+  it("should report weak_key for a 2047-bit modulus in 256 bytes", async () => {
+    const modulus = new Uint8Array(256).fill(0xff);
+    modulus[0] = 0x7f;
+    const jwk = { ...RSA_2048_PUBLIC_JWK, n: encodeBase64Url(modulus) };
+    expect(issuesOf(await importPublicKey(jwk, { alg: "RS256" }))).toEqual([
+      { code: "weak_key", path: ["n"], params: { minimum: 2048 } },
+    ]);
+  });
+
+  it("should accept a modulus of exactly 2048 bits", async () => {
+    const modulus = decodeBase64Url(RSA_2048_PUBLIC_JWK.n) ?? new Uint8Array();
+    expect([modulus.length, (modulus[0] ?? 0) >= 0x80]).toEqual([256, true]);
+    expect((await importPublicKey(RSA_2048_PUBLIC_JWK, { alg: "RS256" })).ok).toBe(true);
+  });
+
+  it("should accept a 2048-bit modulus padded with several zero octets", async () => {
+    const modulus = decodeBase64Url(RSA_2048_PUBLIC_JWK.n) ?? new Uint8Array();
+    const padded = new Uint8Array([0, 0, 0, 0, ...modulus]);
+    const key = valueOf(
+      await importPublicKey({ ...RSA_2048_PUBLIC_JWK, n: encodeBase64Url(padded) }, { alg: "RS256" }),
+    );
+    expect(getKeyEntry(key).signatureLength).toBe(256);
+  });
+});
+
+describe("importSecretKey option and JWK interplay", () => {
+  it("should let a secret imported with key_ops verify still sign", async () => {
+    const key = valueOf(await importSecretKey({ ...HMAC_SECRET_JWK, key_ops: ["verify"] }, { alg: "HS256" }));
+    const signature = await crypto.subtle.sign("HMAC", getKeyEntry(key).cryptoKey, new Uint8Array(4));
+    expect(signature.byteLength).toBe(32);
+  });
+
+  it("should ignore the kid option for a JWK without a kid", async () => {
+    const result = await importSecretKey(HMAC_SECRET_JWK, { alg: "HS256", kid: "ignored" });
+    expect(valueOf(result).kid).toBeUndefined();
+  });
+
+  it("should accept an empty-string kid from the option and from a JWK", async () => {
+    const fromOption = valueOf(await importSecretKey(new Uint8Array(32), { alg: "HS256", kid: "" }));
+    const fromJwk = valueOf(await importSecretKey({ ...HMAC_SECRET_JWK, kid: "" }, { alg: "HS256" }));
+    expect([fromOption.kid, fromJwk.kid]).toEqual(["", ""]);
+  });
+});
+
+describe("importPrivateKey with a mismatched d", () => {
+  it.each([
+    ["ES256", EC_P256_PRIVATE_JWK],
+    ["Ed25519", ED25519_PRIVATE_JWK],
+  ] as const)("should report invalid_key for %s when d belongs to another key", async (alg, jwk) => {
+    const other = await generateKeyPair({ alg, extractable: true });
+    const { d } = await exportPrivateJwk(other.privateKey);
+    expect(d).not.toBe(jwk.d);
+    expect(issuesOf(await importPrivateKey({ ...jwk, d }, { alg }))).toEqual([{ code: "invalid_key" }]);
+  });
+});
+
+describe("importPrivateKey ext and unknown members", () => {
+  it("should ignore ext false and unknown members, leaving extractable to decide", async () => {
+    const jwk = { ...EC_P256_PRIVATE_JWK, ext: false, "x-unknown": { nested: true } };
+    const key = valueOf(await importPrivateKey(jwk, { alg: "ES256", extractable: true }));
+    expect(key.extractable).toBe(true);
+    expect((await exportPrivateJwk(key)).d).toBe(EC_P256_PRIVATE_JWK.d);
+  });
+
+  it("should not make a key extractable because the JWK says ext true", async () => {
+    const key = valueOf(await importPrivateKey({ ...EC_P256_PRIVATE_JWK, ext: true }, { alg: "ES256" }));
+    expect(key.extractable).toBe(false);
   });
 });

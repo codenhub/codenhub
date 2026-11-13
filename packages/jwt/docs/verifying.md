@@ -132,7 +132,7 @@ if (result.ok) {
 
 The schema checks; it does not transform. The payload you get back is the token's own frozen payload, with every claim it carried, even ones the schema does not list, and never a value the schema produced. That is why the payload is typed by what the schema accepts, its input type.
 
-Each issue the schema reports becomes one `invalid_claims` issue whose path is `["payload", ...]` followed by the schema's path. The schema's messages are dropped, since a message such as "expected a number, received 'hunter2'" can quote the token. A schema that throws or rejects is not caught: the verifier's promise rejects with that error.
+Each issue the schema reports becomes one `invalid_claims` issue whose path is `["payload", ...]` followed by the schema's path. The schema's messages are dropped, since a message such as "expected a number, received 'hunter2'" can quote the token. The paths are kept, though, and can name keys the payload chose, so do not show them to users unescaped. A schema that throws or rejects is not caught: the verifier's promise rejects with that error.
 
 ## Reading the header before verifying
 

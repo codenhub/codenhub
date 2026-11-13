@@ -10,7 +10,7 @@ export function requireOptions(options: unknown, functionName: string): Record<s
 }
 
 export function requireAsymmetricAlg(options: Record<string, unknown>, functionName: string): AsymmetricAlgorithm {
-  const { alg } = options;
+  const alg = ownMember(options, "alg");
   if (!isAsymmetricAlgorithm(alg)) {
     throw new TypeError(`${functionName}: options.alg must be one of ES256, EdDSA, Ed25519, RS256, PS256.`);
   }
@@ -18,7 +18,7 @@ export function requireAsymmetricAlg(options: Record<string, unknown>, functionN
 }
 
 export function requireSymmetricAlg(options: Record<string, unknown>, functionName: string): SymmetricAlgorithm {
-  const { alg } = options;
+  const alg = ownMember(options, "alg");
   if (alg !== "HS256") {
     throw new TypeError(`${functionName}: options.alg must be HS256.`);
   }
@@ -26,7 +26,7 @@ export function requireSymmetricAlg(options: Record<string, unknown>, functionNa
 }
 
 export function readExtractable(options: Record<string, unknown>, functionName: string): boolean {
-  const { extractable } = options;
+  const extractable = ownMember(options, "extractable");
   if (extractable !== undefined && typeof extractable !== "boolean") {
     throw new TypeError(`${functionName}: options.extractable must be a boolean.`);
   }
@@ -34,9 +34,14 @@ export function readExtractable(options: Record<string, unknown>, functionName: 
 }
 
 export function readKid(options: Record<string, unknown>, functionName: string): string | undefined {
-  const { kid } = options;
+  const kid = ownMember(options, "kid");
   if (kid !== undefined && typeof kid !== "string") {
     throw new TypeError(`${functionName}: options.kid must be a string.`);
   }
   return kid;
+}
+
+/** An option's own value: a member inherited from `Object.prototype` or a class never counts as set. */
+export function ownMember(options: Record<string, unknown>, name: string): unknown {
+  return Object.hasOwn(options, name) ? options[name] : undefined;
 }

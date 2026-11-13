@@ -181,11 +181,29 @@ describe("sign TypeError", () => {
     ["a bigint", { n: 1n }, "sign: input.payload must hold only JSON values, not bigint."],
     ["NaN", { n: Number.NaN }, "sign: input.payload must not hold a non-finite number."],
     ["Infinity", { n: Number.POSITIVE_INFINITY }, "sign: input.payload must not hold a non-finite number."],
+    ["negative zero", { n: -0 }, "sign: input.payload must not hold negative zero."],
+    ["negative zero in an array", { list: [-0] }, "sign: input.payload must not hold negative zero."],
     ["a nested Date", { d: new Date(0) }, "sign: input.payload must hold only plain objects and arrays."],
+    [
+      "an Array subclass",
+      { aud: new (class extends Array {})() },
+      "sign: input.payload must hold only plain objects and arrays.",
+    ],
+    [
+      "an array with an inherited toJSON",
+      { aud: Object.setPrototypeOf(["a"], { toJSON: () => 5 }) },
+      "sign: input.payload must hold only plain objects and arrays.",
+    ],
     ["an array hole", { list: holey() }, "sign: input.payload must not hold array holes."],
     ["undefined in an array", { list: [undefined] }, "sign: input.payload must hold only JSON values, not undefined."],
   ])("should throw when the payload holds %s", async (_, payload, message) => {
     await expect(sign({ payload, key: secretKey })).rejects.toThrow(message);
+  });
+
+  it("should throw when the header holds negative zero", async () => {
+    await expect(sign({ payload: {}, key: secretKey, header: { extra: -0 } as SignHeader })).rejects.toThrow(
+      "sign: input.header must not hold negative zero.",
+    );
   });
 
   it("should throw when the payload has a symbol key", async () => {

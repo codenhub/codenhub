@@ -122,8 +122,19 @@ async function selectKey(keys: KeySet, header: JwtHeader): Promise<JwtResult<Ver
       return isRegisteredKey(value) && value.kind !== "private" ? ok(value) : KEY_SET_ERROR;
     }
     const issues = isOk === false ? error?.issues : undefined;
-    return Array.isArray(issues) && issues.length > 0 ? fail(...(issues as [JwtIssue, ...JwtIssue[]])) : KEY_SET_ERROR;
+    return Array.isArray(issues) && issues.length > 0 && issues.every(hasStringCode)
+      ? fail(...(issues as [JwtIssue, ...JwtIssue[]]))
+      : KEY_SET_ERROR;
   } catch {
     return KEY_SET_ERROR;
   }
+}
+
+/** Whether `issue` is an object with an own data property `code` holding a string; a getter does not count. */
+function hasStringCode(issue: unknown): boolean {
+  if (typeof issue !== "object" || issue === null) {
+    return false;
+  }
+  const descriptor = Object.getOwnPropertyDescriptor(issue, "code");
+  return descriptor !== undefined && typeof descriptor.value === "string";
 }

@@ -22,10 +22,17 @@ export interface ResolvedOptions {
 
 const MEDIA_TYPE_PREFIX = "application/";
 
-/** RFC 7515 §4.1.9: `typ` compares case-insensitively, and `application/` may be omitted. */
+/**
+ * RFC 7515 §4.1.9: `typ` compares case-insensitively, and `application/` may be omitted when the rest
+ * holds no `/`. Only ASCII letters fold: `toLowerCase` would turn U+212A KELVIN SIGN into `k`.
+ */
 export function normalizeType(type: string): string {
-  const lower = type.toLowerCase();
-  return lower.startsWith(MEDIA_TYPE_PREFIX) ? lower.slice(MEDIA_TYPE_PREFIX.length) : lower;
+  const lower = type.replace(/[A-Z]/g, (letter) => letter.toLowerCase());
+  if (!lower.startsWith(MEDIA_TYPE_PREFIX)) {
+    return lower;
+  }
+  const rest = lower.slice(MEDIA_TYPE_PREFIX.length);
+  return rest.includes("/") ? lower : rest;
 }
 
 function throwInvalid(message: string): never {

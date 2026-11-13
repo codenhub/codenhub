@@ -121,3 +121,24 @@ describe("selectKey without a kid", () => {
     });
   });
 });
+
+describe("selectKey with an empty or odd kid", () => {
+  it("should select only the key whose kid is the empty string for a header with an empty kid", async () => {
+    const empty = (await generateKeyPair({ alg: "ES256", kid: "" })).publicKey;
+    expect(selectKey([ecNoKid, empty, ecA], header({ alg: "ES256", kid: "" }))).toEqual({ ok: true, value: empty });
+  });
+
+  it("should not match a key without a kid for a header with an empty kid", () => {
+    expect(selectKey([ecNoKid], header({ alg: "ES256", kid: "" }))).toEqual({
+      ok: false,
+      error: { issues: [{ code: "unknown_kid", path: ["header", "kid"] }] },
+    });
+  });
+
+  it.each([1, null, true, {}, ["a"]])("should report unknown_kid for a header kid of %j", (kid) => {
+    expect(selectKey([ecA, ecNoKid], { alg: "ES256", kid } as never)).toEqual({
+      ok: false,
+      error: { issues: [{ code: "unknown_kid", path: ["header", "kid"] }] },
+    });
+  });
+});

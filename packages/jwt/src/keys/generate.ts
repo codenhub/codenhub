@@ -1,7 +1,14 @@
 import type { AsymmetricAlgorithm, PrivateKey, PublicKey, SecretKey, SymmetricAlgorithm } from "../core/types";
 import { ALGORITHM_PARAMS } from "./algorithms";
 import { CURVE_SIGNATURE_BYTES, HS256_SIGNATURE_BYTES, MIN_HMAC_KEY_BYTES } from "./jwk";
-import { readExtractable, readKid, requireAsymmetricAlg, requireOptions, requireSymmetricAlg } from "./options";
+import {
+  ownMember,
+  readExtractable,
+  readKid,
+  requireAsymmetricAlg,
+  requireOptions,
+  requireSymmetricAlg,
+} from "./options";
 import { kidMember, registerKey } from "./registry";
 
 /** RSA modulus lengths {@link generateKeyPair} accepts, in bits. */
@@ -127,7 +134,7 @@ export async function generateSecretKey(options: GenerateSecretKeyOptions): Prom
 }
 
 function readModulusLength(options: Record<string, unknown>, alg: AsymmetricAlgorithm): number {
-  const { modulusLength } = options;
+  const modulusLength = ownMember(options, "modulusLength");
   if (modulusLength === undefined) {
     return DEFAULT_RSA_MODULUS_LENGTH;
   }

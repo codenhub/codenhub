@@ -75,6 +75,30 @@ describe("createVerifier round trip", () => {
   });
 });
 
+describe("createVerifier payload and clock", () => {
+  it("should keep __proto__ as an own payload key from sign to verify", async () => {
+    const payload = JSON.parse('{"__proto__":{"admin":true},"sub":"u"}') as Record<string, unknown>;
+    const result = await verifierFor(keySetOf(secretKey))(await sign({ payload, key: secretKey }));
+
+    const verified = valueOf(result).payload;
+    expect([Object.hasOwn(verified, "__proto__"), Object.getPrototypeOf(verified) === Object.prototype]).toEqual([
+      true,
+      true,
+    ]);
+    expect(Object.getOwnPropertyDescriptor(verified, "__proto__")?.value).toEqual({ admin: true });
+  });
+
+  it("should use the real time when now is not given", async () => {
+    const seconds = Math.floor(Date.now() / 1000);
+    const verify = createVerifier({ keys: keySetOf(secretKey) });
+    const [fresh, stale] = await Promise.all(
+      [seconds + 3600, seconds - 3600].map((exp) => sign({ payload: { exp }, key: secretKey })),
+    );
+
+    expect([(await verify(fresh as string)).ok, (await verify(stale as string)).ok]).toEqual([true, false]);
+  });
+});
+
 describe("createVerifier structure", () => {
   it.each([
     ["a number", 42],
@@ -245,6 +269,47 @@ describe("createVerifier key set", () => {
     ["rejects", async () => Promise.reject(new Error("boom"))],
     ["returns undefined", async () => undefined],
     ["returns a failure without issues", async () => ({ ok: false, error: { issues: [] } })],
+    ["returns a failure whose issue is a string", async () => ({ ok: false, error: { issues: ["unknown_kid"] } })],
+    ["returns a failure whose issue is null", async () => ({ ok: false, error: { issues: [null] } })],
+    ["returns a failure whose issue has no code", async () => ({ ok: false, error: { issues: [{ path: [] }] } })],
+    ["returns a failure whose issue code is a number", async () => ({ ok: false, error: { issues: [{ code: 1 }] } })],
+    [
+      "returns a failure with one good and one malformed issue",
+      async () => ({ ok: false, error: { issues: [{ code: "unknown_kid" }, {}] } }),
+    ],
+    [
+      "returns a failure whose issue code getter throws",
+      async () => ({
+        ok: false,
+        error: {
+          issues: [
+            {
+              get code() {
+                throw new Error("boom");
+              },
+            },
+          ],
+        },
+      }),
+    ],
+    [
+      "returns a failure whose issue is a throwing Proxy",
+      async () => ({
+        ok: false,
+        error: {
+          issues: [
+            new Proxy(
+              {},
+              {
+                getOwnPropertyDescriptor() {
+                  throw new Error("boom");
+                },
+              },
+            ),
+          ],
+        },
+      }),
+    ],
     [
       "returns a result whose ok getter throws",
       async () => ({
@@ -263,6 +328,15 @@ describe("createVerifier key set", () => {
     expect(await verifierFor({ select } as unknown as KeySet)(token)).toEqual(
       failure({ code: "key_fetch_failed", params: { reason: "key_set_error" } }),
     );
+  });
+
+  it("should pass through a failure whose issues all have a string code", async () => {
+    const keys = {
+      select: async () => ({ ok: false, error: { issues: [{ code: "unknown_kid" }, { code: "no_matching_key" }] } }),
+    } as unknown as KeySet;
+    const token = await sign({ payload: {}, key: secretKey });
+
+    expect(await verifierFor(keys)(token)).toEqual(failure({ code: "unknown_kid" }, { code: "no_matching_key" }));
   });
 
   it("should report key_fetch_failed when select returns a private key", async () => {

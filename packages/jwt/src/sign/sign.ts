@@ -201,6 +201,10 @@ function childrenOf(container: unknown, label: string): readonly unknown[] {
     throw new TypeError(`sign: ${label} must not hold toJSON methods.`);
   }
   if (Array.isArray(container)) {
+    // An inherited `toJSON` (an Array subclass, or a swapped prototype) is run by `JSON.stringify` too.
+    if (Object.getPrototypeOf(container) !== Array.prototype) {
+      throw new TypeError(`sign: ${label} must hold only plain objects and arrays.`);
+    }
     return Array.from({ length: container.length }, (_, index) => ownDataValue(container, String(index), label));
   }
   if (!isPlainObject(container)) {
@@ -230,6 +234,10 @@ function assertJsonPrimitive(value: unknown, label: string): void {
   if (typeof value === "number") {
     if (!Number.isFinite(value)) {
       throw new TypeError(`sign: ${label} must not hold a non-finite number.`);
+    }
+    if (Object.is(value, -0)) {
+      // `JSON.stringify` writes -0 as 0, so the token would not carry the value that was given.
+      throw new TypeError(`sign: ${label} must not hold negative zero.`);
     }
     return;
   }

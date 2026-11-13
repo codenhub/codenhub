@@ -89,7 +89,8 @@ interface RemoteConfig {
 /** The last JWKS fetched successfully. */
 interface CachedKeys {
   readonly keys: readonly VerificationKey[];
-  readonly expiresAt: number;
+  /** When the fetch that produced `keys` completed, from `now()`. */
+  readonly fetchedAt: number;
 }
 
 /**
@@ -141,8 +142,24 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
   let lastFetchStartedAt: number | undefined;
   let inFlight: Promise<JwtResult<readonly VerificationKey[]>> | undefined;
 
-  const isCoolingDown = (): boolean =>
-    lastFetchStartedAt !== undefined && config.now() - lastFetchStartedAt < config.cooldownMs;
+  // A clock that steps back makes an elapsed time negative. That never keeps a cooldown running or a cache
+  // alive: the cooldown is over, and keys fetched "in the future" are expired, so the bounds of decision 5 hold.
+  const isCoolingDown = (): boolean => {
+    if (lastFetchStartedAt === undefined) {
+      return false;
+    }
+    const elapsed = config.now() - lastFetchStartedAt;
+    return elapsed >= 0 && elapsed < config.cooldownMs;
+  };
+
+  /** Whether the cache is younger than `limitMs`; a cache older than the clock says is never young. */
+  const isCachedWithin = (limitMs: number): boolean => {
+    if (cached === undefined) {
+      return false;
+    }
+    const age = config.now() - cached.fetchedAt;
+    return age >= 0 && age < limitMs;
+  };
 
   const runFetch = async (): Promise<JwtResult<readonly VerificationKey[]>> => {
     let outcome: JwtResult<readonly VerificationKey[]>;
@@ -154,7 +171,7 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
     }
     inFlight = undefined;
     if (outcome.ok) {
-      cached = { keys: outcome.value, expiresAt: config.now() + config.cacheTtlMs };
+      cached = { keys: outcome.value, fetchedAt: config.now() };
       lastFailure = undefined;
     } else {
       lastFailure = outcome;
@@ -173,7 +190,7 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
 
   /** The keys to select from now, or why there are none. */
   const usableKeys = (): JwtResult<readonly VerificationKey[]> => {
-    if (cached !== undefined && config.now() < cached.expiresAt + config.maxStaleMs) {
+    if (cached !== undefined && isCachedWithin(config.cacheTtlMs + config.maxStaleMs)) {
       return ok(cached.keys);
     }
     return lastFailure ?? fetchFailure("network");
@@ -183,7 +200,7 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
     let hasFetched = false;
     if (inFlight !== undefined) {
       // A fresh cache that holds the key needs no wait for the fetch that is running.
-      if (cached !== undefined && config.now() < cached.expiresAt) {
+      if (cached !== undefined && isCachedWithin(config.cacheTtlMs)) {
         const selected = selectKey(cached.keys, header);
         if (!isUnknownKid(selected)) {
           return selected;
@@ -191,7 +208,7 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
       }
       await inFlight;
       hasFetched = true;
-    } else if (cached === undefined || config.now() >= cached.expiresAt) {
+    } else if (!isCachedWithin(config.cacheTtlMs)) {
       if (!isCoolingDown()) {
         await refetch();
         hasFetched = true;

@@ -87,6 +87,8 @@ The JWK is untrusted input, so the import never throws for it, whatever it is: a
 
 Issue paths name the JWK member at fault, such as `["kty"]` or `["n"]`.
 
+Import ignores a JWK's `ext` and any member it does not know. Only the `extractable` option decides whether the imported key can be exported again, so a JWK that says `ext: true` still gives a non-extractable key unless you pass `extractable: true`.
+
 ## Importing a private key
 
 `importPrivateKey` takes the same arguments and runs the same checks, except that the private members are required: `d` for `EC` and `OKP` keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for `RSA` keys. Multi-prime RSA keys, with `oth`, are `unsupported_key`. Pass `extractable: true` if the key must be exportable again.
