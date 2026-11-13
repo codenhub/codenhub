@@ -126,7 +126,9 @@ export async function importPrivateKey(jwk: unknown, options: ImportPrivateKeyOp
  * `sign` or `verify`) are checked as in {@link importPublicKey}, and the JWK's own `kid` is used.
  * `key_ops` does not restrict the key: a secret imported with `key_ops: ["verify"]` can still sign.
  *
- * @param input - The secret's bytes, or an `oct` JWK. Any value is accepted.
+ * @param input - The secret's bytes, or an `oct` JWK (untrusted, so any object is accepted). A string is a
+ * compile error, because a string secret is ambiguous; at runtime any other value, a string included, still
+ * returns `invalid_key`.
  * @param options - The algorithm, the `kid` for raw bytes, and whether the secret may be exported again.
  * @returns The frozen key, or a failure with one issue: `weak_key` with `{ minimum: 32 }` for a short
  * secret, `invalid_key` for an input that is neither bytes nor a well-formed JWK, and the JWK issues
@@ -135,7 +137,7 @@ export async function importPrivateKey(jwk: unknown, options: ImportPrivateKeyOp
  * a string, or `options.extractable` is not a boolean.
  */
 export async function importSecretKey(
-  input: Uint8Array | unknown,
+  input: Uint8Array | object,
   options: ImportSecretKeyOptions,
 ): Promise<JwtResult<SecretKey>> {
   const checked = requireOptions(options, "importSecretKey");

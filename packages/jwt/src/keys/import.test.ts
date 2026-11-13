@@ -474,6 +474,7 @@ describe("importSecretKey", () => {
   });
 
   it("should report invalid_key for input that is neither bytes nor an object", async () => {
+    // @ts-expect-error A string secret is a compile error (decision 24); the runtime still answers invalid_key.
     expect(issuesOf(await importSecretKey("a secret string of more than 32 chars", { alg: "HS256" }))).toEqual([
       { code: "invalid_key" },
     ]);

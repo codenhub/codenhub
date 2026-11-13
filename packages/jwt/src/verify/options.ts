@@ -1,4 +1,5 @@
 import { DEFAULT_MAX_TOKEN_LENGTH, MAX_TOKEN_LENGTH_LIMIT } from "../core/limits";
+import { rejectUnknownOptions } from "../core/options";
 import type { KeySet, VerifierOptions } from "../core/types";
 import type { StandardSchemaV1 } from "../interop/standard-schema";
 
@@ -19,6 +20,20 @@ export interface ResolvedOptions {
   readonly claims?: StandardSchemaV1;
   readonly now: () => number;
 }
+
+/** Every documented verifier option; typed so adding one to `VerifierOptions` fails to compile until listed. */
+const KNOWN_OPTIONS: Readonly<Record<keyof VerifierOptions, true>> = {
+  keys: true,
+  issuer: true,
+  audience: true,
+  type: true,
+  clockTolerance: true,
+  maxAge: true,
+  maxLength: true,
+  requiredClaims: true,
+  claims: true,
+  now: true,
+};
 
 const MEDIA_TYPE_PREFIX = "application/";
 
@@ -47,12 +62,13 @@ const isIntegerInRange = (value: unknown, minimum: number, maximum: number): val
 /**
  * Validates every verifier option and applies defaults.
  *
- * @throws TypeError naming the first invalid option and its constraint, never its value.
+ * @throws TypeError naming the first invalid or unknown option and its constraint, never its value.
  */
 export function resolveOptions(options: VerifierOptions<StandardSchemaV1 | undefined>): ResolvedOptions {
   if (typeof options !== "object" || options === null) {
     throwInvalid("options must be an object.");
   }
+  rejectUnknownOptions(options, KNOWN_OPTIONS, "createVerifier");
   const { keys, issuer, audience, type, clockTolerance, maxAge, maxLength, requiredClaims, claims, now } = options;
   if (typeof keys !== "object" || keys === null || typeof keys.select !== "function") {
     throwInvalid("options.keys must be a key set (an object with a select function).");

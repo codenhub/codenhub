@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { JwtHeader, JwtResult, KeySet, VerificationKey } from "../core/types";
+import { generateKeyPair } from "../keys/generate";
 import { EC_P256_PUBLIC_JWK, ED25519_PUBLIC_JWK } from "../keys/test-fixtures";
+import { sign } from "../sign/sign";
+import { createVerifier } from "../verify/create-verifier";
 import { createRemoteKeySet, type RemoteKeySetOptions } from "./remote";
 
 const URL_STRING = "https://issuer.example/jwks.json";
@@ -94,6 +97,57 @@ describe("createRemoteKeySet options", () => {
     ["algorithms with HS256", { algorithms: ["HS256"] }],
   ])("should throw TypeError for %s", (_name, options) => {
     expect(() => createSet(options as Partial<RemoteKeySetOptions>)).toThrow(TypeError);
+  });
+
+  it.each([
+    ["unknown option audiance", { audiance: "api" }],
+    ["unknown option cachettl", { cachettl: 5 }],
+    ["unknown option set to undefined", { timout: undefined }],
+  ])("should throw TypeError for %s", (_name, options) => {
+    const name = Object.keys(options)[0];
+    expect(() => createSet(options as Partial<RemoteKeySetOptions>)).toThrow(
+      new TypeError(`createRemoteKeySet: options.${name} is not an option.`),
+    );
+  });
+
+  it("should truncate a very long unknown option name in the message", () => {
+    expect(() => createSet({ ["x".repeat(500)]: 1 } as never)).toThrow(
+      new TypeError(`createRemoteKeySet: options.${"x".repeat(64)}... is not an option.`),
+    );
+  });
+
+  it("should ignore symbol keys in options", () => {
+    expect(() => createSet({ [Symbol("note")]: 1 } as never)).not.toThrow();
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, undefined, "0"])(
+    "should reject select with TypeError when now returns %s, without fetching",
+    async (time) => {
+      const fetch = fetchSequence(() => jwksResponse(EC_JWK));
+      const keys = createSet({ fetch, now: () => time as number });
+
+      await expect(keys.select(EC_HEADER)).rejects.toThrow(
+        new TypeError("createRemoteKeySet: options.now must return a finite number of milliseconds."),
+      );
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it("should reject select with TypeError when the clock breaks after a fetch", async () => {
+    let broken = false;
+    const keys = createSet({ fetch: fetchSequence(() => jwksResponse(EC_JWK)), now: () => (broken ? Number.NaN : 0) });
+    await keys.select(EC_HEADER);
+    broken = true;
+
+    await expect(keys.select(EC_HEADER)).rejects.toThrow(TypeError);
+  });
+
+  it("should make a verifier fail closed with key_set_error when the remote clock is broken", async () => {
+    const keys = createSet({ fetch: fetchSequence(() => jwksResponse(EC_JWK)), now: () => Number.NaN });
+    const pair = await generateKeyPair({ alg: "ES256", kid: "ec" });
+    const token = await sign({ payload: { sub: "u" }, key: pair.privateKey });
+
+    expect(await createVerifier({ keys })(token)).toEqual(failure({ reason: "key_set_error" }));
   });
 
   it("should default cooldown to cacheTtl when cacheTtl is under 30 seconds", async () => {

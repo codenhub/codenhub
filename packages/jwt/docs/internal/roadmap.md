@@ -1,6 +1,6 @@
 ---
 status: DRAFT
-last_updated: 2026-11-12
+last_updated: 2026-11-13
 scope: What `@codenhub/jwt` needs before its 0.1.0 release.
 ---
 
@@ -14,7 +14,7 @@ This records what stands between the implemented 0.0.1 and a 0.1.0 that `@codenh
 
 0.1.0 is released when:
 
-- **An audit has found no blocker.** A review of the package against scope.md section 3, with the hostile-input, leak, vector, interop, browser and workerd suites passing, and any finding that breaks an invariant fixed. No such audit is recorded yet.
+- **An audit has found no blocker.** A review of the package against scope.md section 3, with the hostile-input, leak, vector, interop, browser and workerd suites passing, and any finding that breaks an invariant fixed. Met on 2026-11-13: the audit's one blocker, unknown verifier options that silently turned a check off, is closed by decision 22, and its other defects are fixed with tests. What it left open is under "Later / Possible".
 
 Nothing the SSO application plans needs a change here. Its needs found so far land in `@codenhub/oidc` ([oidc's roadmap](../../../oidc/docs/internal/roadmap.md)). Should one of those designs need a primitive this package lacks, the change is proposed here rather than worked around there (oidc scope.md section 1).
 
@@ -27,6 +27,7 @@ Nothing the SSO application plans needs a change here. Its needs found so far la
 
 - **JWE**, if encrypted ID tokens turn out to be needed (scope.md section 2).
 - **More algorithms**, such as `ES384`, `ES512` or `RS512`, if `@codenhub/oidc` must verify tokens from an issuer that signs with one, or the SSO application must accept `private_key_jwt` assertions from a client that signs with one. Each is one row in the algorithm table plus vectors.
+- **Serving stale keys while a refetch is in flight**: today, requests that arrive while a refetch hangs wait up to `timeout` even when stale keys within `maxStale` are usable, once per cooldown window; the maintainer chose to keep this for 0.1 (2026-11-13).
 
 ## Not Planned
 

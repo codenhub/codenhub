@@ -265,7 +265,9 @@ export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = 
    */
   readonly claims?: TSchema;
   /**
-   * Current time in milliseconds since the Unix epoch, for tests.
+   * Current time in milliseconds since the Unix epoch, for tests. It must return a finite number: any
+   * other result is a bug in the clock, so the verifier's promise rejects with a `TypeError` instead of
+   * skipping the time checks.
    *
    * @defaultValue `Date.now`
    */

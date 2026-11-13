@@ -101,7 +101,7 @@ const result = await importPrivateKey(jwk, { alg: "PS256", extractable: false })
 
 ## Importing a secret
 
-`importSecretKey` takes either the secret's raw bytes or an `oct` JWK:
+`importSecretKey` takes either the secret's raw bytes or an `oct` JWK. A string is a compile error, since it could be text, base64 or hex; encode it to bytes first. A string that reaches it anyway, from untyped code, returns `invalid_key`:
 
 ```ts
 import { importSecretKey } from "@codenhub/jwt";

@@ -84,7 +84,7 @@ Nothing is fetched until the first token needs a key. Create the key set once an
 
 ### Options
 
-Durations are in seconds. Every option is checked when the key set is created, and an invalid one throws a `TypeError`.
+Durations are in seconds. Every option is checked when the key set is created, and an invalid one throws a `TypeError`, as does a name that is not an option below (`createRemoteKeySet: options.cachettl is not an option.`).
 
 | Option             | Default                        | What it does                                                                                                                                          |
 | ------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -120,7 +120,7 @@ A failure the stale keys cannot cover is `key_fetch_failed`, whose `params.reaso
 | `too_large`        | The `Content-Length` header or the body exceeded `maxResponseBytes`.                        |
 | `invalid_response` | The body was not a strict JSON object, was not a JWKS, or listed more than 100 keys.        |
 
-The issue holds nothing from the response. `select` never throws and never rejects, whatever the server sends.
+The issue holds nothing from the response. `select` never throws and never rejects, whatever the server sends. The one exception is a bug in your own `now` option: when it returns something other than a finite number, `select` rejects with a `TypeError`, because a `NaN` clock would keep the cache from ever expiring. A verifier that calls such a key set turns the rejection into `key_fetch_failed` with `{ reason: "key_set_error" }`, so it fails closed.
 
 ## Your own key set
 

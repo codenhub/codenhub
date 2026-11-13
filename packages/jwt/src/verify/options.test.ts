@@ -63,6 +63,30 @@ describe("createVerifier options", () => {
     expect(() => createVerifier({ keys, [name]: value } as never)).toThrow(new TypeError(message));
   });
 
+  it.each(["audiance", "issuers", "algorithms", "Keys", "__proto__x", ""])(
+    "should throw for the unknown option %j, even when its value is undefined",
+    (name) => {
+      for (const value of [undefined, "https://a.example"]) {
+        expect(() => createVerifier({ keys, [name]: value } as never)).toThrow(
+          new TypeError(`createVerifier: options.${name} is not an option.`),
+        );
+      }
+    },
+  );
+
+  it("should truncate a very long unknown option name in the message", () => {
+    const name = "x".repeat(500);
+    expect(() => createVerifier({ keys, [name]: 1 } as never)).toThrow(
+      new TypeError(`createVerifier: options.${"x".repeat(64)}... is not an option.`),
+    );
+  });
+
+  it("should ignore symbol keys and non-enumerable members", () => {
+    const options = { keys, [Symbol("note")]: 1 };
+    Object.defineProperty(options, "hidden", { value: 1, enumerable: false });
+    expect(typeof createVerifier(options as never)).toBe("function");
+  });
+
   it("should accept every option at its limits", () => {
     expect(
       typeof createVerifier({

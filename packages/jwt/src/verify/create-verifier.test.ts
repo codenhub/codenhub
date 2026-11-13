@@ -97,6 +97,32 @@ describe("createVerifier payload and clock", () => {
 
     expect([(await verify(fresh as string)).ok, (await verify(stale as string)).ok]).toEqual([true, false]);
   });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, undefined, null, "1800000000000", 1n])(
+    "should reject with TypeError when now returns %s, instead of skipping every time check",
+    async (time) => {
+      const verify = createVerifier({ keys: keySetOf(secretKey), now: () => time as number });
+      const token = await sign({ payload: { exp: 1 }, key: secretKey });
+
+      await expect(verify(token)).rejects.toThrow(
+        new TypeError("createVerifier: options.now must return a finite number of milliseconds."),
+      );
+    },
+  );
+
+  it("should read the clock once per verification", async () => {
+    let reads = 0;
+    const verify = createVerifier({
+      keys: keySetOf(secretKey),
+      now: () => {
+        reads += 1;
+        return clockAt()();
+      },
+    });
+    await verify(await sign({ payload: PAYLOAD, key: secretKey }));
+
+    expect(reads).toBe(1);
+  });
 });
 
 describe("createVerifier structure", () => {

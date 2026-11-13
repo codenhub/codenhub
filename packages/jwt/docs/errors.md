@@ -101,10 +101,10 @@ There are no messages: a code is the whole answer. Map codes to text yourself if
 
 A `TypeError` means a mistake in the calling code, not in the input, and is thrown as early as possible:
 
-- **Options.** Every option of `createVerifier`, `createRemoteKeySet`, `importKeySet`, `readHeader` and the key functions is checked when the function is called, and an invalid one throws, naming the option and its constraint. Create verifiers and key sets at startup and a misconfiguration fails the deploy, not the first request.
+- **Options.** Every option of `createVerifier`, `createRemoteKeySet`, `importKeySet`, `readHeader` and the key functions is checked when the function is called, and an invalid one throws, naming the option and its constraint. `createVerifier` and `createRemoteKeySet` also throw for a name that is not one of their options, so a typo such as `audiance` cannot silently disable a check. Create verifiers and key sets at startup and a misconfiguration fails the deploy, not the first request.
 - **Key objects.** Passing an object this package did not create where a key is expected, a key of the wrong kind (such as a public key to `sign`), or exporting a key created without `extractable: true`.
 - **What you sign.** A payload or header `sign` cannot write exactly as JSON, or one that breaks the rules in [Signing tokens](signing.md).
 
 A `TypeError` message names the option or member and the rule it broke, never its value.
 
-Two things propagate rather than becoming a result: an exception thrown by your own `claims` schema, and a failure of Web Crypto itself while signing or generating a key, which means the runtime lacks the algorithm.
+Three things propagate rather than becoming a result: an exception thrown by your own `claims` schema, a `now` option that returns something other than a finite number (the verifier's promise, or a remote key set's `select`, rejects with a `TypeError`; a verifier reports a remote key set's rejection as `key_fetch_failed` with `{ reason: "key_set_error" }`), and a failure of Web Crypto itself while signing or generating a key, which means the runtime lacks the algorithm.

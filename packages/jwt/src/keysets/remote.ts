@@ -1,4 +1,5 @@
 import { fail, ok } from "../core";
+import { rejectUnknownOptions } from "../core/options";
 import type { AsymmetricAlgorithm, JwtHeader, JwtIssue, JwtResult, KeySet, VerificationKey } from "../core/types";
 import { parseJsonObject } from "../encoding";
 import { importKeys, readAlgorithms } from "./local";
@@ -54,12 +55,26 @@ export interface RemoteKeySetOptions {
    */
   readonly maxResponseBytes?: number;
   /**
-   * Current time in milliseconds since the Unix epoch, for tests.
+   * Current time in milliseconds since the Unix epoch, for tests. It must return a finite number: any
+   * other result is a bug in the clock, so `select` rejects with a `TypeError`.
    *
    * @defaultValue `Date.now`
    */
   readonly now?: () => number;
 }
+
+/** Every documented option; typed so adding one to `RemoteKeySetOptions` fails to compile until listed. */
+const KNOWN_OPTIONS: Readonly<Record<keyof RemoteKeySetOptions, true>> = {
+  url: true,
+  fetch: true,
+  algorithms: true,
+  cacheTtl: true,
+  cooldown: true,
+  maxStale: true,
+  timeout: true,
+  maxResponseBytes: true,
+  now: true,
+};
 
 const MS_PER_SECOND = 1000;
 const DEFAULT_CACHE_TTL = 600;
@@ -127,11 +142,14 @@ interface CachedKeys {
  * ```
  *
  * @param options - Where to fetch the JWKS from, and how to cache it.
- * @returns A frozen key set. Its `select` never throws: a failed fetch gives `key_fetch_failed` with
+ * @returns A frozen key set. Its `select` never rejects for a fetch problem or a token: a failed fetch gives `key_fetch_failed` with
  * `params.reason` of `timeout`, `network` (the fetch rejected), `status` (with `params.status`, also
  * for a redirect), `too_large` (`Content-Length` or body over `maxResponseBytes`) or `invalid_response`
- * (not a strict JSON object, or not a JWKS). Issues never contain anything from the response.
- * @throws TypeError when `options` is not an object; `url` is not an absolute `https:` URL or carries
+ * (not a strict JSON object, or not a JWKS). Issues never contain anything from the response. `select`
+ * rejects with a `TypeError` only when `options.now` returns something other than a finite number, which
+ * is a bug in the caller's clock; a verifier that calls such a key set reports `key_fetch_failed` with
+ * `{ reason: "key_set_error" }` instead.
+ * @throws TypeError when `options` is not an object; `options` has a member that is not an option; `url` is not an absolute `https:` URL or carries
  * credentials; `fetch` or `now` is not a function; `algorithms` is not a non-empty array of asymmetric
  * algorithms; or `cacheTtl`, `cooldown`, `maxStale`, `timeout` or `maxResponseBytes` is out of range.
  */
@@ -361,6 +379,7 @@ function readRemoteOptions(options: unknown): RemoteConfig {
   if (typeof options !== "object" || options === null) {
     throw new TypeError("createRemoteKeySet: options must be an object.");
   }
+  rejectUnknownOptions(options, KNOWN_OPTIONS, "createRemoteKeySet");
   const source = options as Record<string, unknown>;
   const cacheTtl = readInteger(source, { name: "cacheTtl", fallback: DEFAULT_CACHE_TTL, minimum: 1 });
   const cooldown = readInteger(source, {
@@ -383,7 +402,22 @@ function readRemoteOptions(options: unknown): RemoteConfig {
       minimum: 1,
       maximum: MAX_RESPONSE_BYTES_LIMIT,
     }),
-    now: (readFunction(source, "now") as (() => number) | undefined) ?? Date.now,
+    now: checkedClock((readFunction(source, "now") as (() => number) | undefined) ?? Date.now),
+  };
+}
+
+/**
+ * Wraps the clock so a result that is not a finite number throws instead of being used: NaN would make
+ * every cooldown and expiry comparison false, so the cache would never expire. The clock is caller code,
+ * so the rejection propagates from `select` (decisions 10 and 23).
+ */
+function checkedClock(now: () => number): () => number {
+  return () => {
+    const time: unknown = now();
+    if (typeof time !== "number" || !Number.isFinite(time)) {
+      throw new TypeError("createRemoteKeySet: options.now must return a finite number of milliseconds.");
+    }
+    return time;
   };
 }
 
