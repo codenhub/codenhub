@@ -278,11 +278,14 @@ await provider.completeAuthorization(id, {
   scopes: ["openid", "profile"], // a subset of the requested scopes, including openid
   amr: ["pwd"], // optional: authentication methods, such as ["pwd", "otp"]
   acr: "urn:example:loa:2", // optional: an authentication context class
+  sessionId: "9f2c41d0a7", // optional: the app's identifier for this session, which becomes `sid`
 });
 
 // The user refused, or cannot be given the access the client asked for.
 await provider.completeAuthorization(id, { error: "access_denied" });
 ```
+
+`sessionId` identifies the app's own session for the sign-in. It is a non-empty string of visible ASCII, with no space, control character or non-ASCII character, and the provider never interprets it. The provider saves it with the code and with every access and refresh token of the grant, and every ID token of that grant, from the code exchange and from each refresh, carries it as the `sid` claim. That lets the app find the grants that belong to one session, such as to revoke them when the session ends, and it lets back-channel logout name the session it ends. Use a random identifier that is stable for the session, and not the session cookie itself, since the client receives it in the ID token. A grant without a `sessionId` has no `sid`, and a session id is never added later: a refresh carries the one the code exchange started with.
 
 A denial's `error` is one of `access_denied`, `login_required`, `consent_required`, `interaction_required` or `account_selection_required`, and it is the only other member the object may hold.
 
@@ -292,7 +295,7 @@ A code lasts `ttl.code` seconds, 60 by default, and the client can redeem it onc
 
 The method throws `TypeError` in two cases, and they are different:
 
-- **The outcome is the wrong shape**, such as a non-empty `subject` missing, an `authTime` that is not a non-negative integer, or a denial with extra members. This is checked before the interaction is taken, so the interaction is still usable and the app can fix the call and retry.
+- **The outcome is the wrong shape**, such as a non-empty `subject` missing, an `authTime` that is not a non-negative integer, a `sessionId` that is empty or not visible ASCII, or a denial with extra members. This is checked before the interaction is taken, so the interaction is still usable and the app can fix the call and retry.
 - **The outcome contradicts the request**: scopes the client did not request or no `openid`, an `authTime` in the future, an `authTime` before the interaction under `prompt=login`, or an `authTime` more than the requested `max_age` seconds before the request. The interaction has already been taken at this point, so it is gone. The app must restart the sign-in. These are bugs in the login flow, and the package refuses them rather than issue a code that would skip the step the client asked for.
 
 ## Ending sessions
@@ -385,7 +388,7 @@ On success the provider starts a grant, and issues:
 
 - An access token: by default an opaque random value that only its digest is stored under, or a JWT under [`accessToken`](#jwt-access-tokens). It lasts `ttl.accessToken` seconds.
 - A refresh token, only when the granted scopes include `offline_access`. Its family lasts `ttl.refreshToken` seconds from this exchange.
-- An ID token, signed with the first signing key. Its claims are `iss`, `sub`, `aud` (the client identifier), `iat`, `exp` (`ttl.idToken` after `iat`), `auth_time`, and `amr` and `acr` when the grant had them, `nonce` when the authorization request had one, and `at_hash` for the access token. Its header is `typ: JWT` and the key's `alg` and `kid`. An ID token carries no scope claims, which are released at userinfo.
+- An ID token, signed with the first signing key. Its claims are `iss`, `sub`, `aud` (the client identifier), `iat`, `exp` (`ttl.idToken` after `iat`), `auth_time`, and `amr` and `acr` when the grant had them, `nonce` when the authorization request had one, and `at_hash` for the access token. It also carries `sid` when the grant has a `sessionId`, and refreshes repeat it. Its header is `typ: JWT` and the key's `alg` and `kid`. An ID token carries no scope claims, which are released at userinfo.
 
 ### Refresh tokens
 
@@ -396,7 +399,7 @@ A request for `refresh_token` must carry `refresh_token`, or it is `invalid_requ
 3. A token that was already spent is a **reuse**. The provider revokes the family, so the access tokens and refresh tokens issued from that sign-in stop working, and returns `invalid_grant`.
 4. Otherwise the token is spent, and it must be unexpired and issued to this client. Otherwise `invalid_grant`.
 5. The `scope` parameter, when given, must be a subset of the family's scopes. Otherwise `invalid_scope`. When it is omitted, the access token has every scope the family holds.
-6. A new access token is issued, and a new refresh token that replaces the spent one. The new refresh token keeps the family's original scopes and its original expiry, so rotation neither widens the family nor extends it. An ID token is issued too, without a nonce.
+6. A new access token is issued, and a new refresh token that replaces the spent one. The new refresh token keeps the family's original scopes and its original expiry, so rotation neither widens the family nor extends it. An ID token is issued too, without a nonce, and with the `sid` the family carries.
 
 The response has the same shape as the code exchange, with `scope` set to the scopes of the new access token.
 

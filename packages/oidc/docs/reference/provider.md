@@ -88,6 +88,7 @@ export interface AccessTokenRecord {
     readonly clientId: string;
     readonly subject: string;
     readonly scopes: readonly string[];
+    readonly sessionId?: string;
     readonly expiresAt: number;
 }
 ```
@@ -119,6 +120,14 @@ readonly grantId: string;
 ```ts
 readonly scopes: readonly string[];
 ```
+
+#### AccessTokenRecord › sessionId
+
+```ts
+readonly sessionId?: string;
+```
+
+The app's session identifier from the grant.
 
 #### AccessTokenRecord › subject
 
@@ -173,6 +182,7 @@ export interface AuthorizationGrant {
     readonly scopes: readonly string[];
     readonly amr?: readonly string[];
     readonly acr?: string;
+    readonly sessionId?: string;
 }
 ```
 
@@ -209,6 +219,14 @@ readonly scopes: readonly string[];
 ```
 
 Granted scopes: a subset of the requested ones, including `openid`.
+
+#### AuthorizationGrant › sessionId
+
+```ts
+readonly sessionId?: string;
+```
+
+The app's identifier for the session this sign-in belongs to: a non-empty string of visible ASCII (no space, control character or non-ASCII character), opaque to the provider, which never interprets it. It is saved with the code and every access and refresh token of the grant, and each ID token of the grant carries it as the `sid` claim (OpenID Connect Front-Channel Logout 1.0 §3). The app can then tell which of its sessions a grant belongs to, such as to revoke the grants of one session, and back-channel logout can name the session. Use a value that is stable for the session and not guessable from outside, such as a random identifier, and not the session cookie itself, since an ID token is handed to the client. Absent, the grant has no `sid`.
 
 #### AuthorizationGrant › subject
 
@@ -414,6 +432,7 @@ export interface CodeRecord {
     readonly authTime: number;
     readonly amr?: readonly string[];
     readonly acr?: string;
+    readonly sessionId?: string;
     readonly maxAgeRequested: boolean;
     readonly expiresAt: number;
 }
@@ -496,6 +515,14 @@ readonly scopes: readonly string[];
 ```
 
 Granted scopes.
+
+#### CodeRecord › sessionId
+
+```ts
+readonly sessionId?: string;
+```
+
+The app's session identifier from the grant, carried to every token of the grant.
 
 #### CodeRecord › subject
 
@@ -1412,6 +1439,7 @@ export interface RefreshTokenRecord {
     readonly authTime: number;
     readonly amr?: readonly string[];
     readonly acr?: string;
+    readonly sessionId?: string;
     readonly expiresAt: number;
 }
 ```
@@ -1461,6 +1489,14 @@ readonly grantId: string;
 ```ts
 readonly scopes: readonly string[];
 ```
+
+#### RefreshTokenRecord › sessionId
+
+```ts
+readonly sessionId?: string;
+```
+
+The app's session identifier from the grant. Rotation keeps it.
 
 #### RefreshTokenRecord › subject
 

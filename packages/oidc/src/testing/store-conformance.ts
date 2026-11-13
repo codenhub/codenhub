@@ -123,6 +123,7 @@ function codeFixture(grantId: string): CodeRecord {
     scopes: ["openid", "profile"],
     subject: "conformance-user",
     authTime: now,
+    sessionId: "conformance-session",
     maxAgeRequested: false,
     expiresAt: now + LIFETIME_SECONDS,
   };
@@ -134,6 +135,7 @@ function accessTokenFixture(grantId: string): AccessTokenRecord {
     clientId: "conformance-client",
     subject: "conformance-user",
     scopes: ["openid", "profile"],
+    sessionId: "conformance-session",
     expiresAt: nowSeconds() + LIFETIME_SECONDS,
   };
 }
@@ -146,6 +148,7 @@ function refreshTokenFixture(grantId: string): RefreshTokenRecord {
     subject: "conformance-user",
     scopes: ["openid", "profile"],
     authTime: now,
+    sessionId: "conformance-session",
     expiresAt: now + LIFETIME_SECONDS,
   };
 }

@@ -61,6 +61,8 @@ interface RequestContext {
 }
 
 const MAX_AGE_PATTERN = /^\d{1,9}$/;
+/** A non-empty run of visible ASCII: no space, control character or non-ASCII character. */
+const VISIBLE_ASCII = /^[!-~]+$/;
 const PROMPTS: readonly Prompt[] = ["none", "login", "consent", "select_account"];
 /** The OAuth codes a validation failure redirects with, which are also its issue codes. */
 type RedirectErrorCode = Extract<OAuthErrorCode, OidcIssueCode>;
@@ -414,6 +416,12 @@ function assertOutcomeShape(outcome: unknown): asserts outcome is AuthorizationG
   if (outcome.acr !== undefined && typeof outcome.acr !== "string") {
     throw new TypeError("completeAuthorization: outcome.acr must be a string");
   }
+  if (
+    outcome.sessionId !== undefined &&
+    (typeof outcome.sessionId !== "string" || !VISIBLE_ASCII.test(outcome.sessionId))
+  ) {
+    throw new TypeError("completeAuthorization: outcome.sessionId must be a non-empty string of visible ASCII");
+  }
 }
 
 /**
@@ -475,6 +483,7 @@ async function issueCode(
     authTime: grant.authTime,
     ...optionalMember("amr", grant.amr),
     ...optionalMember("acr", grant.acr),
+    ...optionalMember("sessionId", grant.sessionId),
     maxAgeRequested: interaction.maxAge !== undefined,
     expiresAt: options.now() + options.ttl.code,
   };

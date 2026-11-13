@@ -288,6 +288,27 @@ describe("handleToken: authorization_code grant", () => {
     });
   });
 
+  it("carries the session id of the code into the ID token as sid and into the stored records", async () => {
+    const { options, store } = await setup();
+
+    const body = await redeemCode(options, store, { sessionId: "session-42" });
+
+    expect(payloadOf(body.id_token).sid).toBe("session-42");
+    expect(await store.findAccessToken(await digestKey(body.access_token))).toMatchObject({ sessionId: "session-42" });
+    expect(await store.consumeRefreshToken(await digestKey(body.refresh_token ?? ""))).toMatchObject({
+      record: { sessionId: "session-42" },
+    });
+  });
+
+  it("omits sid and sessionId when the code has no session id", async () => {
+    const { options, store } = await setup();
+
+    const body = await redeemCode(options, store);
+
+    expect(payloadOf(body.id_token)).not.toHaveProperty("sid");
+    expect(await store.findAccessToken(await digestKey(body.access_token))).not.toHaveProperty("sessionId");
+  });
+
   it("binds the ID token to the access token with at_hash", async () => {
     const { options, store } = await setup();
 
@@ -439,6 +460,35 @@ describe("handleToken: refresh_token grant", () => {
 
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(payloadOf(body.id_token)).not.toHaveProperty("nonce");
+  });
+
+  it("carries the session id through rotation into every ID token and record", async () => {
+    const { options, store } = await setup();
+    const issued = await redeemCode(options, store, { sessionId: "session-42" });
+
+    const first = (await (
+      await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")))
+    ).json()) as TokenBody;
+    const second = (await (
+      await handleToken(options, tokenRequest(refreshBody(first.refresh_token ?? "")))
+    ).json()) as TokenBody;
+
+    expect(payloadOf(first.id_token).sid).toBe("session-42");
+    expect(payloadOf(second.id_token).sid).toBe("session-42");
+    expect(await store.findAccessToken(await digestKey(second.access_token))).toMatchObject({
+      sessionId: "session-42",
+    });
+  });
+
+  it("keeps sid out of the ID token of a refresh when the family has no session id", async () => {
+    const { options, store } = await setup();
+    const issued = await redeemCode(options, store);
+
+    const refreshed = (await (
+      await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")))
+    ).json()) as TokenBody;
+
+    expect(payloadOf(refreshed.id_token)).not.toHaveProperty("sid");
   });
 
   it("revokes the whole family when a rotated refresh token is reused", async () => {

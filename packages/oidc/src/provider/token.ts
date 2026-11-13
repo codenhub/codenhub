@@ -23,6 +23,7 @@ interface Grant {
   readonly authTime: number;
   readonly amr?: readonly string[];
   readonly acr?: string;
+  readonly sessionId?: string;
 }
 
 /**
@@ -175,6 +176,7 @@ async function issueFromCode(options: ResolvedOptions, client: ClientRecord, rec
     subject: record.subject,
     authTime: record.authTime,
     ...optionalAuthContext(record),
+    ...optionalSessionId(record),
   };
   const accessToken = await issueAccessToken(options, grant, record.scopes, now);
   let refreshToken: string | undefined;
@@ -323,7 +325,7 @@ function readClientScopes(
  * a client credentials token has none.
  */
 type AccessTokenGrant = Pick<Grant, "grantId" | "clientId" | "subject"> &
-  Partial<Pick<Grant, "authTime" | "amr" | "acr">>;
+  Partial<Pick<Grant, "authTime" | "amr" | "acr" | "sessionId">>;
 
 /**
  * Saves a new access token for a grant and returns the token value; only its digest is stored, whatever its
@@ -344,6 +346,7 @@ async function issueAccessToken(
     clientId: grant.clientId,
     subject: grant.subject,
     scopes,
+    ...optionalSessionId(grant),
     expiresAt: now + options.ttl.accessToken,
   });
   return accessToken;
@@ -399,6 +402,7 @@ async function issueIdToken(
       exp: now + options.ttl.idToken,
       auth_time: grant.authTime,
       ...optionalAuthContext(grant),
+      ...(grant.sessionId !== undefined ? { sid: grant.sessionId } : {}),
       ...(extra.nonce !== undefined ? { nonce: extra.nonce } : {}),
       ...(atHash !== undefined ? { at_hash: atHash } : {}),
     },
@@ -444,6 +448,11 @@ function optionalAuthContext(source: { readonly amr?: readonly string[]; readonl
   };
 }
 
+/** The session identifier a record or grant carries, omitting it when absent. */
+function optionalSessionId(source: { readonly sessionId?: string }): { readonly sessionId?: string } {
+  return source.sessionId !== undefined ? { sessionId: source.sessionId } : {};
+}
+
 /** The part of a refresh record that identifies its grant, without its scopes or lifetime. */
 function grantRecord(source: Grant): Omit<RefreshTokenRecord, "scopes" | "expiresAt"> {
   return {
@@ -452,5 +461,6 @@ function grantRecord(source: Grant): Omit<RefreshTokenRecord, "scopes" | "expire
     subject: source.subject,
     authTime: source.authTime,
     ...optionalAuthContext(source),
+    ...optionalSessionId(source),
   };
 }

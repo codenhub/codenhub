@@ -97,6 +97,8 @@ export interface CodeRecord {
   readonly authTime: number;
   readonly amr?: readonly string[];
   readonly acr?: string;
+  /** The app's session identifier from the grant, carried to every token of the grant. */
+  readonly sessionId?: string;
   /** Whether the request carried `max_age`, which makes `auth_time` required in the ID token. */
   readonly maxAgeRequested: boolean;
   /** In seconds since the Unix epoch. */
@@ -109,6 +111,8 @@ export interface AccessTokenRecord {
   readonly clientId: string;
   readonly subject: string;
   readonly scopes: readonly string[];
+  /** The app's session identifier from the grant. */
+  readonly sessionId?: string;
   /** In seconds since the Unix epoch. */
   readonly expiresAt: number;
 }
@@ -122,6 +126,8 @@ export interface RefreshTokenRecord {
   readonly authTime: number;
   readonly amr?: readonly string[];
   readonly acr?: string;
+  /** The app's session identifier from the grant. Rotation keeps it. */
+  readonly sessionId?: string;
   /** When the whole token family expires, in seconds since the Unix epoch. Rotation keeps it. */
   readonly expiresAt: number;
 }
@@ -442,6 +448,16 @@ export interface AuthorizationGrant {
   readonly amr?: readonly string[];
   /** Authentication context class. */
   readonly acr?: string;
+  /**
+   * The app's identifier for the session this sign-in belongs to: a non-empty string of visible ASCII (no space,
+   * control character or non-ASCII character), opaque to the provider, which never interprets it. It is saved with
+   * the code and every access and refresh token of the grant, and each ID token of the grant carries it as the
+   * `sid` claim (OpenID Connect Front-Channel Logout 1.0 §3). The app can then tell which of its sessions a
+   * grant belongs to, such as to revoke the grants of one session, and back-channel logout can name the session.
+   * Use a value that is stable for the session and not guessable from outside, such as a random identifier, and not
+   * the session cookie itself, since an ID token is handed to the client. Absent, the grant has no `sid`.
+   */
+  readonly sessionId?: string;
 }
 
 /** Why the app is not granting the request. Sent to the client as the OAuth error. */

@@ -447,6 +447,35 @@ describe("completeAuthorization", () => {
     expect("nonce" in record).toBe(false);
   });
 
+  it("shouldCarrySessionIdIntoCodeRecord", async () => {
+    const saveSpy = vi.spyOn(store, "saveCode");
+    const interaction = await beginOk();
+    await completeAuthorization(options, interaction.id, { ...GRANT, sessionId: "session-42" });
+    expect(saveSpy.mock.calls[0]?.[1]).toMatchObject({ sessionId: "session-42" });
+  });
+
+  it("shouldOmitSessionIdFromCodeRecordWhenGrantOmitsIt", async () => {
+    const saveSpy = vi.spyOn(store, "saveCode");
+    const interaction = await beginOk();
+    await completeAuthorization(options, interaction.id, GRANT);
+    expect("sessionId" in (saveSpy.mock.calls[0]?.[1] ?? {})).toBe(false);
+  });
+
+  it.each([
+    ["an empty string", ""],
+    ["a number", 42],
+    ["a string with a space", "session 42"],
+    ["a string with a control character", `session${String.fromCharCode(7)}x`],
+    ["a string with a non-ASCII character", "sessão"],
+  ])("shouldThrowTypeErrorAndKeepInteractionForSessionIdThatIs%s", async (_name, sessionId) => {
+    const interaction = await beginOk();
+    const attempt = completeAuthorization(options, interaction.id, { ...GRANT, sessionId } as AuthorizationGrant);
+    await expect(attempt).rejects.toThrow(TypeError);
+    await expect(attempt).rejects.toThrow("outcome.sessionId");
+    const retry = await completeAuthorization(options, interaction.id, GRANT);
+    expect(retry.ok).toBe(true);
+  });
+
   it("shouldSetMaxAgeRequestedWhenMaxAgeWasSent", async () => {
     const saveSpy = vi.spyOn(store, "saveCode");
     const interaction = await beginOk(query({ max_age: "300" }));
