@@ -33,9 +33,7 @@ Grouped by the step of the SSO application's roadmap that first needs them.
 - **A re-check before a refresh.** The refresh grant never consults the app. A user who is disabled, loses the role an app requires, or revokes consent keeps refreshing until the family expires, 30 days by default, unless the app revokes every matching grant itself. Proposal: an optional callback the provider calls before it issues tokens from a refresh, which can refuse with `invalid_grant`, given the subject, the client and the scopes. The alternative is a rule in the SSO application that every action ending access revokes the matching grants; the hook is preferred because one forgotten code path there leaves access open.
 - **Configuration that changes at runtime.** `signingKeys`, `scopes` and `ttl` are fixed when the provider is created, while the SSO application edits keys, apps and scopes from its dashboard. `createProvider` keeps no state between requests, so rebuilding it when the configuration changes works, and key rotation already works by key order: a new key is published second, then moved first once relying parties have fetched it. Proposal: document and test that rebuilding the provider is cheap and safe, since rotation on Node.js and across Worker isolates depends on it; and accept a scope a client's record allows that is missing from `scopes` as releasing no claims, so an app-defined scope such as `data:<namespace>:read` lives only in the database and adding one does not need a rebuild.
 
-**For 0.1:**
-
-- **Back-channel logout** (OpenID Connect Back-Channel Logout 1.0; record shape). The SSO application's scope strongly prefers it for usable single sign-out. Decision 38 left it not planned until a consumer needs it, and the SSO application is that consumer. It needs the session identifier above. Proposal: a helper that signs a logout token for a client and session with the provider's keys, and the client record fields it needs (`backchannelLogoutUri`, whether `sid` is required), which are settled with the other record shapes even though the feature comes later; the app makes the calls, so the provider still makes no outbound requests. Reverses part of decision 38. Front-channel logout and session management stay not planned.
+**For 0.1:** back-channel logout is done (scope.md decision 53).
 
 ### The OpenID conformance suite
 
@@ -61,13 +59,13 @@ None of these breaks an existing contract, so each can wait for its consumer.
 - Implicit and hybrid flows, the password grant, and PKCE `plain` (scope.md section 2, "Never supported").
 - Tracking client assertion `jti` values (scope.md decision 23).
 - A non-consuming refresh token lookup, unless a real client needs it (scope.md decision 20).
-- Loopback redirect URIs with variable ports, PAR, front-channel logout and session management. Each waits for a consumer and its case (scope.md decision 38). Back-channel logout and pairwise subjects moved above.
+- Loopback redirect URIs with variable ports, PAR, front-channel logout and session management. Each waits for a consumer and its case (scope.md decision 38). Back-channel logout shipped (decision 53), and pairwise subjects moved to Later.
 - Device flow, CIBA, DPoP, mTLS, dynamic client registration, request objects, JWE-encrypted tokens and token introspection (scope.md section 2).
 
 ## Notes
 
 - **Userinfo reads the token only from the `Authorization` header**, and the Basic OP plan has `oidcc-userinfo-post-body`. RFC 6750 §2.2 makes the body method optional, and the module is believed to tolerate a refusal; confirm it in the first conformance run.
-- **The SSO application's docs are behind this package.** Its scope says 0.0.1 has no logout support, and the first step of its roadmap is logout here. RP-initiated logout shipped in 0.0.1 (decision 37); what remains is back-channel logout, above.
+- **The SSO application's docs are behind this package.** Its scope says 0.0.1 has no logout support, and the first step of its roadmap is logout here. RP-initiated logout shipped in 0.0.1 (decision 37), and back-channel logout followed (decision 53).
 
 ## References
 
