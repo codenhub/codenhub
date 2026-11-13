@@ -32,6 +32,9 @@ const PROTOCOL_CLAIMS: ReadonlySet<string> = new Set([
   "c_hash",
   "sid",
   "jti",
+  "nbf",
+  "events",
+  "cnf",
 ]);
 
 /** A token grant's identity and what it carries: enough to issue tokens for it again. */
@@ -281,6 +284,9 @@ async function refreshTokens(
   const ttl = lifetimesOf(options.ttl, client);
   const grant: Grant = { ...grantRecord(record) };
   const accessToken = await issueAccessToken(options, ttl, grant, scopes, now);
+  // Signed before the next refresh token is saved: the claims callback may fail, and a failure after the save
+  // would leave a token the client never receives. The spent token's retry is still a reuse (decision 55).
+  const idToken = await issueIdToken(options, client, ttl, grant, accessToken, scopes, now, {});
   const nextRefreshToken = randomToken();
   await options.store.saveRefreshToken(await digestKey(nextRefreshToken), {
     ...grantRecord(record),
@@ -288,7 +294,6 @@ async function refreshTokens(
     scopes: record.scopes,
     expiresAt: record.expiresAt,
   });
-  const idToken = await issueIdToken(options, client, ttl, grant, accessToken, scopes, now, {});
   return tokenResponse(ttl, { accessToken, scopes, idToken, refreshToken: nextRefreshToken });
 }
 

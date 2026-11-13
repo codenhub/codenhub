@@ -129,7 +129,7 @@ export interface ClientRecord {
    * `client_credentials` grant issues no ID token.
    *
    * A claim named `iss`, `sub`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `acr`, `amr`, `azp`, `at_hash`, `c_hash`,
-   * `sid` or `jti` is dropped from what the callback returns, so the protocol claims are always the provider's.
+   * `sid`, `jti`, `nbf`, `events` or `cnf` is dropped from what the callback returns, so the protocol claims are always the provider's.
    * The provider checks the value when it reads the record, and throws `TypeError` if it is not a boolean.
    *
    * Turning it on puts personal data in a token that the client may log, store in a cookie, or pass to other

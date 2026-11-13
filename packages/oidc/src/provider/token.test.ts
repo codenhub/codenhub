@@ -960,6 +960,9 @@ describe("handleToken: scope claims in the ID token", () => {
       c_hash: "forged",
       sid: "forged",
       jti: "forged",
+      nbf: 1,
+      events: { forged: {} },
+      cnf: { jkt: "forged" },
       name: "Ada Lovelace",
     };
     // A scope that names every one of them, so only the protocol rule can be what drops them.
@@ -988,7 +991,7 @@ describe("handleToken: scope claims in the ID token", () => {
       expect(payload.amr).toEqual(["pwd"]);
       expect(payload.acr).toBe("urn:loa:1");
       expect(payload.at_hash).toBe(atHashes[index]);
-      for (const name of ["nonce", "azp", "c_hash", "sid", "jti"]) {
+      for (const name of ["nonce", "azp", "c_hash", "sid", "jti", "nbf", "events", "cnf"]) {
         expect(payload).not.toHaveProperty(name);
       }
     }
