@@ -635,7 +635,7 @@
   /* Public, read with their defaults, so a value set on any ancestor reaches
      the group. */
   gap: var(--input-group-gap, 0.5rem);
-  padding-inline: var(--input-group-pad, var(--_sm-px, var(--_lg-px, 0.75rem)));
+  padding-inline: var(--input-group-padding, var(--_sm-px, var(--_lg-px, 0.75rem)));
   font-size: var(--_sm-text, var(--_lg-text, inherit));
   line-height: var(--_sm-leading, inherit);
 
