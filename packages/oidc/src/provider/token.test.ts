@@ -7,6 +7,7 @@ import { computeCodeChallenge } from "../shared/pkce";
 import { computeTokenHash } from "../shared/token-hash";
 import { type MemoryStore, createMemoryStore } from "../testing/memory-store";
 import { type ResolvedOptions, resolveOptions } from "./options";
+import { hashClientSecret } from "./secrets";
 import { handleToken } from "./token";
 import type { ClientRecord, CodeRecord } from "./types";
 
@@ -93,6 +94,10 @@ async function saveCode(store: MemoryStore, overrides: Partial<CodeRecord> = {})
     expiresAt: NOW_SECONDS + 60,
     ...overrides,
   };
+  if ("codeChallenge" in overrides && overrides.codeChallenge === undefined) {
+    // A code issued without a challenge has no such member, rather than an undefined one.
+    delete (record as { codeChallenge?: string }).codeChallenge;
+  }
   await store.saveCode(await digestKey(code), record);
   return code;
 }
@@ -792,5 +797,105 @@ describe("handleToken: the ID token's signing key", () => {
     const { options } = await setup({ keys, clients: withClient({ idTokenSigningAlg: "RS256" }) });
 
     await expect(handleToken(options, tokenRequest(codeBody("any-code")))).rejects.toThrow(TypeError);
+  });
+});
+
+describe("handleToken: PKCE for a client with requirePkce off", () => {
+  const SECRET = "s".repeat(43);
+  const INVALID_GRANT = { status: 400, body: JSON.stringify({ error: "invalid_grant" }) };
+  const INVALID_REQUEST = { status: 400, body: JSON.stringify({ error: "invalid_request" }) };
+
+  /** A confidential client that skips PKCE, and one that keeps the default. */
+  async function confidentialClients(): Promise<readonly ClientRecord[]> {
+    const base = {
+      redirectUris: [REDIRECT_URI],
+      scopes: ["openid", "profile", "offline_access"],
+      auth: { method: "client_secret_post", secretHashes: [await hashClientSecret(SECRET)] },
+    } as const;
+    return [
+      { clientId: "legacy", ...base, requirePkce: false },
+      { clientId: "strict", ...base },
+    ];
+  }
+
+  const form = (code: string, overrides: Record<string, string> = {}): string =>
+    codeBody(code, { client_id: "legacy", client_secret: SECRET, ...overrides });
+  const withoutVerifier = (code: string, clientId = "legacy"): string =>
+    new URLSearchParams({
+      grant_type: "authorization_code",
+      client_id: clientId,
+      client_secret: SECRET,
+      code,
+      redirect_uri: REDIRECT_URI,
+    }).toString();
+
+  it("redeems a code issued without a challenge when no verifier is sent", async () => {
+    const { options, store } = await setup({ clients: await confidentialClients() });
+    const code = await saveCode(store, { clientId: "legacy", codeChallenge: undefined });
+
+    const response = await handleToken(options, tokenRequest(withoutVerifier(code)));
+
+    expect(response.status).toBe(200);
+    expect(payloadOf(((await response.json()) as TokenBody).id_token).nonce).toBe("nonce-1");
+  });
+
+  it("refuses a verifier on a code issued without a challenge, and burns the code", async () => {
+    const { options, store } = await setup({ clients: await confidentialClients() });
+    const code = await saveCode(store, { clientId: "legacy", codeChallenge: undefined });
+
+    const downgrade = await handleToken(options, tokenRequest(form(code)));
+    const retry = await handleToken(options, tokenRequest(withoutVerifier(code)));
+
+    expect(await errorOf(downgrade)).toEqual(INVALID_GRANT);
+    // Consumed before the check that needs its record, so even the honest request now finds a replay.
+    expect(await errorOf(retry)).toEqual(INVALID_GRANT);
+  });
+
+  it("still requires the matching verifier for a code issued with a challenge", async () => {
+    const { options, store } = await setup({ clients: await confidentialClients() });
+    const right = await saveCode(store, { clientId: "legacy" });
+    const wrong = await saveCode(store, { clientId: "legacy" });
+    const missing = await saveCode(store, { clientId: "legacy" });
+
+    const responses = await Promise.all([
+      handleToken(options, tokenRequest(form(right))),
+      handleToken(options, tokenRequest(form(wrong, { code_verifier: "w".repeat(43) }))),
+      handleToken(options, tokenRequest(withoutVerifier(missing))),
+    ]);
+
+    expect(responses[0]?.status).toBe(200);
+    expect(await errorOf(responses[1] as Response)).toEqual(INVALID_GRANT);
+    expect(await errorOf(responses[2] as Response)).toEqual(INVALID_GRANT);
+  });
+
+  it("refuses a malformed verifier before consuming the code", async () => {
+    const { options, store } = await setup({ clients: await confidentialClients() });
+    const code = await saveCode(store, { clientId: "legacy", codeChallenge: undefined });
+
+    const malformed = await handleToken(options, tokenRequest(form(code, { code_verifier: "short" })));
+    const honest = await handleToken(options, tokenRequest(withoutVerifier(code)));
+
+    expect(await errorOf(malformed)).toEqual(INVALID_GRANT);
+    expect(honest.status).toBe(200);
+  });
+
+  it("keeps requiring a verifier from a client with the default, before consuming the code", async () => {
+    const { options, store } = await setup({ clients: await confidentialClients() });
+    const code = await saveCode(store, { clientId: "strict" });
+
+    const missing = await handleToken(options, tokenRequest(withoutVerifier(code, "strict")));
+    const redeemed = await handleToken(options, tokenRequest(form(code, { client_id: "strict" })));
+
+    expect(await errorOf(missing)).toEqual(INVALID_REQUEST);
+    expect(redeemed.status).toBe(200);
+  });
+
+  it("refuses a verifier on a code without a challenge even for a client with the default", async () => {
+    const { options, store } = await setup({ clients: await confidentialClients() });
+    const code = await saveCode(store, { clientId: "strict", codeChallenge: undefined });
+
+    const response = await handleToken(options, tokenRequest(form(code, { client_id: "strict" })));
+
+    expect(await errorOf(response)).toEqual(INVALID_GRANT);
   });
 });

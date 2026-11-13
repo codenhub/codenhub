@@ -111,7 +111,7 @@ export async function readClientRequest(options: ResolvedOptions, request: Reque
  */
 async function exchangeCode(
   options: ResolvedOptions,
-  client: ClientRecord,
+  client: CheckedClient,
   parameters: ReadonlyMap<string, string>,
 ): Promise<Response> {
   const code = parameters.get("code");
@@ -119,10 +119,12 @@ async function exchangeCode(
   const verifier = parameters.get("code_verifier");
   const refused = (error: OAuthErrorCode, reason: ProviderDiagnosticReason): Response =>
     refuse(tokenErrorResponse(error), reason, client.clientId);
-  if (code === undefined || redirectUri === undefined || verifier === undefined) {
+  // A client that may skip PKCE can hold a code issued without a challenge, and only the record says which, so for
+  // it the verifier's presence is checked after consumption, against the record.
+  if (code === undefined || redirectUri === undefined || (verifier === undefined && client.requirePkce)) {
     return refused("invalid_request", "parameter_missing");
   }
-  if (!isCodeVerifier(verifier)) {
+  if (verifier !== undefined && !isCodeVerifier(verifier)) {
     return refused("invalid_grant", "code_verifier_malformed");
   }
   const consumption = await options.store.consumeCode(await digestKey(code));
@@ -151,7 +153,7 @@ async function whyUnredeemable(
   client: ClientRecord,
   record: CodeRecord,
   redirectUri: string,
-  verifier: string,
+  verifier: string | undefined,
 ): Promise<ProviderDiagnosticReason | undefined> {
   if (record.expiresAt <= options.now()) {
     return "code_expired";
@@ -161,6 +163,13 @@ async function whyUnredeemable(
   }
   if (record.redirectUri !== redirectUri) {
     return "redirect_uri_mismatch";
+  }
+  if (record.codeChallenge === undefined) {
+    // Issued without a challenge, so no verifier can be right: one is a downgrade attempt (RFC 9700 §2.1.1).
+    return verifier === undefined ? undefined : "code_verifier_unexpected";
+  }
+  if (verifier === undefined) {
+    return "code_verifier_missing";
   }
   return timingSafeEqual(await computeCodeChallenge(verifier), record.codeChallenge)
     ? undefined

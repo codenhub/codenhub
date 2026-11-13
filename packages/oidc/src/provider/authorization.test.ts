@@ -717,3 +717,102 @@ describe("completeAuthorization", () => {
     expect((error as Error).message).not.toContain("leak-me-authtime");
   });
 });
+
+describe("requirePkce", () => {
+  const NONCE = "nonce-0S6_WzA2Mj";
+  // The S256 challenge of RFC 7636 Appendix B, valid in shape and fixed at collection time.
+  const RFC_CHALLENGE = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM";
+  const confidential = (requirePkce?: boolean): ClientRecord => ({
+    clientId: "confidential",
+    redirectUris: [REDIRECT_URI],
+    scopes: ["openid", "profile"],
+    auth: { method: "client_secret_basic", secretHashes: ["hash"] },
+    ...(requirePkce === undefined ? {} : { requirePkce }),
+  });
+  const withoutPkce = (overrides: Readonly<Record<string, string | null>> = {}): string =>
+    query({ client_id: "confidential", code_challenge: null, code_challenge_method: null, nonce: NONCE, ...overrides });
+
+  beforeEach(() => {
+    store = createMemoryStore({ clients: [client, confidential(false), { ...confidential(), clientId: "strict" }] });
+    options = resolveOptions({
+      issuer: ISSUER,
+      signingKeys: [keyPair],
+      store,
+      claims: () => ({}),
+      now: () => clockMs,
+    });
+  });
+
+  it("shouldAcceptARequestWithNoChallengeButANonceFromAClientThatTurnedPkceOff", async () => {
+    const saveSpy = vi.spyOn(store, "saveInteraction");
+
+    const interaction = await beginOk(withoutPkce());
+
+    const [, record] = saveSpy.mock.calls[0] ?? [];
+    expect(interaction.clientId).toBe("confidential");
+    expect(record).toMatchObject({ nonce: NONCE });
+    expect("codeChallenge" in (record ?? {})).toBe(false);
+  });
+
+  it("shouldCarryNoChallengeIntoTheCodeRecord", async () => {
+    const saveSpy = vi.spyOn(store, "saveCode");
+    const interaction = await beginOk(withoutPkce());
+
+    await completeAuthorization(options, interaction.id, GRANT);
+
+    const record = saveSpy.mock.calls[0]?.[1];
+    expect(record).toMatchObject({ clientId: "confidential", nonce: NONCE });
+    expect("codeChallenge" in (record ?? {})).toBe(false);
+  });
+
+  it.each([
+    ["no nonce", { nonce: null }],
+    ["an empty nonce", { nonce: "" }],
+  ])("shouldRedirectInvalidRequestForNoChallengeAnd%s", async (_name, overrides) => {
+    const failure = failureOf(await beginAuthorization(options, getRequest(withoutPkce(overrides))));
+
+    expect(failure.issues).toEqual([{ code: "invalid_request", path: ["nonce"] }]);
+    expectErrorRedirect(failure.redirect, "invalid_request");
+  });
+
+  it("shouldRefuseAChallengeMethodWithoutAChallenge", async () => {
+    const failure = failureOf(
+      await beginAuthorization(options, getRequest(withoutPkce({ code_challenge_method: "S256" }))),
+    );
+
+    expect(failure.issues).toEqual([{ code: "invalid_request", path: ["code_challenge"] }]);
+    expectErrorRedirect(failure.redirect, "invalid_request");
+  });
+
+  it.each([
+    ["a malformed challenge", { code_challenge: "too-short" }, "code_challenge"],
+    ["plain PKCE", { code_challenge: RFC_CHALLENGE, code_challenge_method: "plain" }, "code_challenge_method"],
+    [
+      "a challenge with no method",
+      { code_challenge: RFC_CHALLENGE, code_challenge_method: null },
+      "code_challenge_method",
+    ],
+  ])("shouldStillEnforceAChallengeThatIsSentWith%s", async (_name, overrides, path) => {
+    const failure = failureOf(await beginAuthorization(options, getRequest(withoutPkce(overrides))));
+
+    expect(failure.issues).toEqual([{ code: "invalid_request", path: [path] }]);
+  });
+
+  it("shouldAcceptAValidChallengeFromAClientThatTurnedPkceOffAndKeepIt", async () => {
+    const saveSpy = vi.spyOn(store, "saveInteraction");
+
+    await beginOk(withoutPkce({ code_challenge: RFC_CHALLENGE, code_challenge_method: "S256", nonce: null }));
+
+    expect(saveSpy.mock.calls[0]?.[1]).toMatchObject({ codeChallenge: RFC_CHALLENGE });
+  });
+
+  it.each([
+    ["a confidential client that left the default", "strict"],
+    ["a public client", CLIENT_ID],
+  ])("shouldStillRequireAChallengeFor%s", async (_name, clientId) => {
+    const failure = failureOf(await beginAuthorization(options, getRequest(withoutPkce({ client_id: clientId }))));
+
+    expect(failure.issues).toEqual([{ code: "invalid_request", path: ["code_challenge"] }]);
+    expectErrorRedirect(failure.redirect, "invalid_request");
+  });
+});

@@ -135,6 +135,7 @@ interface ClientRecord {
   postLogoutRedirectUris?: readonly string[]; // each compared byte for byte at logout
   ttl?: ClientTtl; // this client's own code, access token, ID token and refresh token lifetimes
   idTokenSigningAlg?: AsymmetricAlgorithm; // the algorithm of the signing key for this client's ID tokens
+  requirePkce?: boolean; // true (the default) requires a PKCE challenge; false only for a confidential client
   auth: ClientAuthentication;
 }
 ```
@@ -153,6 +154,8 @@ A record that breaks these rules is a bug in the store, and the provider throws 
 `postLogoutRedirectUris` lists where [logout](provider.md#ending-sessions) may send the browser. Each entry is held to the redirect URI rules: an absolute URL of visible ASCII, without fragment or credentials, and not `javascript:`, `data:`, `vbscript:` or `file:`. Absent or empty, no logout of that client redirects.
 
 `ttl` sets this client's token lifetimes, in seconds. It may hold `code`, `accessToken`, `idToken` and `refreshToken`, each held to the range of the [provider option](provider.md#lifetimes) of the same name, and a lifetime it leaves out is the provider's. `interaction` is not one of them, since an interaction exists before the app completes it and stays provider-wide. The provider checks the values when it reads the record, and throws `TypeError` for a value out of range, a value that is not an integer, or a `ttl` that is not an object. A lifetime applies to every token issued to that client from then on, including `expires_in`, the `exp` of a JWT access token and of an ID token, and the `client_credentials` grant, and a record read at the next request is the one that counts. The code's lifetime is read when the app completes the interaction, so `completeAuthorization` reads the client's record, and answers `interaction_not_found` when the client was removed in the meantime. A refresh token family keeps the expiry it got at the code exchange, whatever the record says later.
+
+`requirePkce` defaults to `true`: the authorization request must carry an S256 challenge. A confidential client may set it to `false` to leave the challenge out, as long as it sends a `nonce` and checks it in the ID token; a record that sets it to `false` for `auth.method` `none` is a bug in the store, and the provider throws `TypeError` for it. A challenge that is sent is always enforced. [Clients that send no PKCE](provider.md#clients-that-send-no-pkce) has the rules, and what it means for the interaction and code records, whose `codeChallenge` is then absent. A store must keep a record without `codeChallenge` as one without it, and not return `null` or an empty string for it, which the conformance cases check.
 
 `idTokenSigningAlg` picks which of the provider's signing keys signs this client's ID tokens: the first one with that algorithm. Without it, the provider uses the first `RS256` key when it has one, and otherwise its first key; [Signing keys](provider.md#signing-keys) gives the reason. A record that names an algorithm no signing key has is a bug, and the provider throws `TypeError` for it.
 

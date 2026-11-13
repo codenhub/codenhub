@@ -24,8 +24,8 @@ const AUTH_METHODS = new Set([
 const GRANT_TYPES: ReadonlySet<unknown> = new Set<GrantType>(["authorization_code", "client_credentials"]);
 const DEFAULT_GRANT_TYPES: readonly GrantType[] = Object.freeze(["authorization_code"]);
 
-/** A client record that passed {@link checkClientRecord}, with its grants resolved. */
-export type CheckedClient = ClientRecord & { readonly grantTypes: readonly GrantType[] };
+/** A client record that passed {@link checkClientRecord}, with its grants and PKCE requirement resolved. */
+export type CheckedClient = ClientRecord & { readonly grantTypes: readonly GrantType[]; readonly requirePkce: boolean };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 
@@ -102,8 +102,15 @@ export function checkClientRecord(
   ) {
     return invalid("must name, as idTokenSigningAlg, the algorithm of one of the provider's signing keys");
   }
-  // Resolved here, so every endpoint reads the list without repeating the default.
-  return { ...(record as unknown as ClientRecord), grantTypes };
+  const { requirePkce } = record;
+  if (requirePkce !== undefined && typeof requirePkce !== "boolean") {
+    return invalid("must give requirePkce, when present, as a boolean");
+  }
+  if (requirePkce === false && auth.method === "none") {
+    return invalid("must not turn requirePkce off for a client whose auth.method is none");
+  }
+  // Resolved here, so every endpoint reads the list and the flag without repeating the default.
+  return { ...(record as unknown as ClientRecord), grantTypes, requirePkce: requirePkce ?? true };
 }
 
 /**

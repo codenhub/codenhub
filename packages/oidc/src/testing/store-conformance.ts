@@ -227,6 +227,29 @@ const cases: StoreConformanceCase[] = [
     },
   ),
 
+  defineCase("a record saved without a codeChallenge comes back without one", async (createStore) => {
+    const store = await createStore(NO_CLIENTS);
+    const interactionKey = newKey();
+    const codeKey = newKey();
+    // A client with requirePkce: false sends none, so both records carry no challenge. A column that comes back
+    // as null, or as an empty string, is not the same record.
+    const withoutChallenge = <T extends object>(record: T): T =>
+      Object.fromEntries(Object.entries(record).filter(([name]) => name !== "codeChallenge")) as T;
+    const interaction = withoutChallenge(interactionFixture());
+    const code = withoutChallenge(codeFixture(newKey()));
+    await store.saveInteraction(interactionKey, interaction);
+    await store.saveCode(codeKey, code);
+    assert(
+      sameRecord(await store.consumeInteraction(interactionKey), interaction),
+      "consumeInteraction must return a record saved without codeChallenge as it was, with no codeChallenge",
+    );
+    const consumed = await store.consumeCode(codeKey);
+    assert(
+      consumed !== undefined && consumed.status === "consumed" && sameRecord(consumed.record, code),
+      "consumeCode must return a record saved without codeChallenge as it was, with no codeChallenge",
+    );
+  }),
+
   defineCase(
     "consumeCode reports consumed with the saved record once, then replayed with its grant",
     async (createStore) => {

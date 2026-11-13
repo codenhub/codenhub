@@ -17,7 +17,11 @@ describe("checkClientRecord", () => {
   it("shouldAcceptAValidRecord", () => {
     const record = valid() as unknown as ClientRecord;
 
-    expect(checkClientRecord(record, "client-a", KEYS)).toEqual({ ...record, grantTypes: ["authorization_code"] });
+    expect(checkClientRecord(record, "client-a", KEYS)).toEqual({
+      ...record,
+      grantTypes: ["authorization_code"],
+      requirePkce: true,
+    });
   });
 
   it("shouldRejectARecordWithAnotherClientId", () => {
@@ -120,6 +124,36 @@ describe("checkClientRecord", () => {
       ["a non-array", "client_credentials"],
     ])("shouldRejectGrantTypesWith%s", (_name, grantTypes) => {
       expect(() => checkClientRecord(machine({ grantTypes }), "client-a", KEYS)).toThrow("grantTypes");
+    });
+  });
+
+  describe("requirePkce", () => {
+    const confidential = { method: "client_secret_basic", secretHashes: ["hash"] };
+
+    it.each([
+      ["a public client by default", {}, true],
+      ["a confidential client by default", { auth: confidential }, true],
+      ["a public client that asks for it", { requirePkce: true }, true],
+      ["a confidential client that turns it off", { auth: confidential, requirePkce: false }, false],
+    ])("shouldResolve%s", (_name, overrides, expected) => {
+      expect(checkClientRecord(valid(overrides), "client-a", KEYS).requirePkce).toBe(expected);
+    });
+
+    it("shouldRejectTurningItOffForAPublicClient", () => {
+      const attempt = () => checkClientRecord(valid({ requirePkce: false }), "client-a", KEYS);
+
+      expect(attempt).toThrow(TypeError);
+      expect(attempt).toThrow("requirePkce");
+    });
+
+    it.each([
+      ["a string", "false"],
+      ["a number", 0],
+      ["null", null],
+    ])("shouldRejectRequirePkceAs%s", (_name, requirePkce) => {
+      expect(() => checkClientRecord(valid({ auth: confidential, requirePkce }), "client-a", KEYS)).toThrow(
+        "requirePkce",
+      );
     });
   });
 

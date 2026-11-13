@@ -45,7 +45,7 @@ interface ValidatedRequest {
   readonly clientId: string;
   readonly target: RedirectTarget;
   readonly scopes: readonly string[];
-  readonly codeChallenge: string;
+  readonly codeChallenge: string | undefined;
   readonly prompt: readonly Prompt[];
   readonly maxAge: number | undefined;
   readonly nonce: string | undefined;
@@ -325,9 +325,24 @@ function readScopes({ options, client, parameters, target }: RequestContext): Ch
 /**
  * The PKCE challenge, which must be S256. `plain` is refused because RFC 7636 makes it the default when the
  * method is missing, and an attacker who can read the challenge could then replay it.
+ *
+ * A challenge that is sent is checked for every client. One that is absent is accepted only from a client with
+ * `requirePkce: false`, which must then send a `nonce`: without PKCE, the ID token's `nonce` is what ties the
+ * response to the request (OAuth 2.1 §7.5.1.1, RFC 9700 §2.1.1). A method alone is still a malformed request.
  */
-function readCodeChallenge({ parameters, target }: RequestContext): Checked<string> {
+function readCodeChallenge({ client, parameters, target }: RequestContext): Checked<string | undefined> {
   const challenge = parameters.get("code_challenge");
+  if (challenge === undefined) {
+    if (client.requirePkce) {
+      return redirectFailure(target, "invalid_request", ["code_challenge"]);
+    }
+    if (parameters.has("code_challenge_method")) {
+      return redirectFailure(target, "invalid_request", ["code_challenge"]);
+    }
+    return (parameters.get("nonce") ?? "") === ""
+      ? redirectFailure(target, "invalid_request", ["nonce"])
+      : { ok: true, value: undefined };
+  }
   if (!isCodeChallenge(challenge)) {
     return redirectFailure(target, "invalid_request", ["code_challenge"]);
   }
@@ -395,10 +410,10 @@ async function saveInteraction(
     clientId: request.clientId,
     redirectUri: request.target.uri,
     scopes: request.scopes,
-    codeChallenge: request.codeChallenge,
     prompt: request.prompt,
     createdAt,
     expiresAt: createdAt + options.ttl.interaction,
+    ...optionalMember("codeChallenge", request.codeChallenge),
     ...optionalMember("state", request.target.state),
     ...optionalMember("nonce", request.nonce),
     ...optionalMember("maxAge", request.maxAge),
@@ -514,7 +529,7 @@ async function issueCode(
     grantId: randomToken(),
     clientId: interaction.clientId,
     redirectUri: interaction.redirectUri,
-    codeChallenge: interaction.codeChallenge,
+    ...optionalMember("codeChallenge", interaction.codeChallenge),
     ...optionalMember("nonce", interaction.nonce),
     scopes: [...new Set(grant.scopes)],
     subject: grant.subject,

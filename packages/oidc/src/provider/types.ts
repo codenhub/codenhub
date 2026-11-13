@@ -82,6 +82,21 @@ export interface ClientRecord {
    * key whatever this says.
    */
   readonly idTokenSigningAlg?: AsymmetricAlgorithm;
+  /**
+   * Whether an authorization request from this client must carry a PKCE `S256` challenge (RFC 7636). A challenge
+   * that is sent is always checked, whatever this says: only `S256` is accepted, and the token request must carry
+   * the matching `code_verifier`.
+   *
+   * `false` is for a confidential client of a relying-party library that sends no PKCE, and asserts that the client
+   * checks the `nonce` of the ID token (OAuth 2.1 §7.5.1.1, RFC 9700 §2.1.1). Such a client may leave the challenge
+   * out, but then must send a `nonce`, or the request fails with `invalid_request`. A code issued without a
+   * challenge refuses a token request that carries a `code_verifier`, so an attacker cannot downgrade a code that
+   * was bound to a challenge. A public client, whose `auth.method` is `none`, cannot turn this off: the record
+   * throws `TypeError` when read.
+   *
+   * @defaultValue `true`
+   */
+  readonly requirePkce?: boolean;
 }
 
 /** How the client asks the app to show its pages (OpenID Connect Core §3.1.2.1). */
@@ -94,8 +109,8 @@ export interface InteractionRecord {
   readonly scopes: readonly string[];
   readonly state?: string;
   readonly nonce?: string;
-  /** The PKCE `S256` challenge. */
-  readonly codeChallenge: string;
+  /** The PKCE `S256` challenge; absent only when the client has `requirePkce: false` and sent none. */
+  readonly codeChallenge?: string;
   readonly prompt: readonly Prompt[];
   /** Requested `max_age`, in seconds. */
   readonly maxAge?: number;
@@ -117,7 +132,8 @@ export interface CodeRecord {
   readonly grantId: string;
   readonly clientId: string;
   readonly redirectUri: string;
-  readonly codeChallenge: string;
+  /** The PKCE `S256` challenge the code is bound to; absent when the request sent none. */
+  readonly codeChallenge?: string;
   readonly nonce?: string;
   /** Granted scopes. */
   readonly scopes: readonly string[];
@@ -350,6 +366,8 @@ export type ProviderDiagnosticReason =
   | "grant_type_unauthorized"
   | "parameter_missing"
   | "code_verifier_malformed"
+  | "code_verifier_missing"
+  | "code_verifier_unexpected"
   | "code_unknown"
   | "code_replayed"
   | "code_expired"

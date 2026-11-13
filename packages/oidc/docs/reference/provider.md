@@ -348,6 +348,7 @@ export interface ClientRecord {
     readonly auth: ClientAuthentication;
     readonly postLogoutRedirectUris?: readonly string[];
     readonly idTokenSigningAlg?: AsymmetricAlgorithm;
+    readonly requirePkce?: boolean;
 }
 ```
 
@@ -403,6 +404,18 @@ readonly redirectUris: readonly string[];
 
 Redirect URIs, each compared to the requested one byte for byte. The list must be non-empty when the client may use `authorization_code`, and may be empty otherwise. The provider checks each entry when it reads the record and throws `TypeError` if one fails: it must be a non-empty string, an absolute URL, made of visible ASCII only (no space, control character or backslash), without a fragment (`#`) or credentials, and with a scheme other than `javascript:`, `data:`, `vbscript:` or `file:`.
 
+#### ClientRecord › requirePkce
+
+```ts
+readonly requirePkce?: boolean;
+```
+
+Whether an authorization request from this client must carry a PKCE `S256` challenge (RFC 7636). A challenge that is sent is always checked, whatever this says: only `S256` is accepted, and the token request must carry the matching `code_verifier`.
+
+`false` is for a confidential client of a relying-party library that sends no PKCE, and asserts that the client checks the `nonce` of the ID token (OAuth 2.1 §7.5.1.1, RFC 9700 §2.1.1). Such a client may leave the challenge out, but then must send a `nonce`, or the request fails with `invalid_request`. A code issued without a challenge refuses a token request that carries a `code_verifier`, so an attacker cannot downgrade a code that was bound to a challenge. A public client, whose `auth.method` is `none`, cannot turn this off: the record throws `TypeError` when read.
+
+**Default** — `true`
+
 #### ClientRecord › scopes
 
 ```ts
@@ -418,7 +431,7 @@ export interface CodeRecord {
     readonly grantId: string;
     readonly clientId: string;
     readonly redirectUri: string;
-    readonly codeChallenge: string;
+    readonly codeChallenge?: string;
     readonly nonce?: string;
     readonly scopes: readonly string[];
     readonly subject: string;
@@ -461,8 +474,10 @@ readonly clientId: string;
 #### CodeRecord › codeChallenge
 
 ```ts
-readonly codeChallenge: string;
+readonly codeChallenge?: string;
 ```
+
+The PKCE `S256` challenge the code is bound to; absent when the request sent none.
 
 #### CodeRecord › expiresAt
 
@@ -577,7 +592,7 @@ export interface InteractionRecord {
     readonly scopes: readonly string[];
     readonly state?: string;
     readonly nonce?: string;
-    readonly codeChallenge: string;
+    readonly codeChallenge?: string;
     readonly prompt: readonly Prompt[];
     readonly maxAge?: number;
     readonly loginHint?: string;
@@ -598,10 +613,10 @@ readonly clientId: string;
 #### InteractionRecord › codeChallenge
 
 ```ts
-readonly codeChallenge: string;
+readonly codeChallenge?: string;
 ```
 
-The PKCE `S256` challenge.
+The PKCE `S256` challenge; absent only when the client has `requirePkce: false` and sent none.
 
 #### InteractionRecord › createdAt
 
@@ -1603,7 +1618,7 @@ A `prompt` value (OpenID Connect Core §3.1.2.1).
 ### ProviderDiagnosticReason
 
 ```ts
-export type ProviderDiagnosticReason = "content_type" | "body" | "parameters" | "client_credentials_missing" | "client_credentials_ambiguous" | "client_credentials_malformed" | "client_unknown" | "client_method_mismatch" | "client_credentials_wrong" | "grant_type_missing" | "grant_type_unsupported" | "grant_type_unauthorized" | "parameter_missing" | "code_verifier_malformed" | "code_unknown" | "code_replayed" | "code_expired" | "code_client_mismatch" | "redirect_uri_mismatch" | "code_verifier_mismatch" | "scope_invalid" | "refresh_token_unknown" | "refresh_token_replayed" | "refresh_token_expired" | "refresh_token_client_mismatch" | "scope_not_granted" | "access_token_missing" | "access_token_malformed" | "access_token_unknown" | "access_token_expired" | "access_token_without_openid" | "token_missing" | "token_of_another_client";
+export type ProviderDiagnosticReason = "content_type" | "body" | "parameters" | "client_credentials_missing" | "client_credentials_ambiguous" | "client_credentials_malformed" | "client_unknown" | "client_method_mismatch" | "client_credentials_wrong" | "grant_type_missing" | "grant_type_unsupported" | "grant_type_unauthorized" | "parameter_missing" | "code_verifier_malformed" | "code_verifier_missing" | "code_verifier_unexpected" | "code_unknown" | "code_replayed" | "code_expired" | "code_client_mismatch" | "redirect_uri_mismatch" | "code_verifier_mismatch" | "scope_invalid" | "refresh_token_unknown" | "refresh_token_replayed" | "refresh_token_expired" | "refresh_token_client_mismatch" | "scope_not_granted" | "access_token_missing" | "access_token_malformed" | "access_token_unknown" | "access_token_expired" | "access_token_without_openid" | "token_missing" | "token_of_another_client";
 ```
 
 Why the provider refused a request at the token, userinfo, or revocation endpoint. The client is sent only the OAuth error code, so this is what an operator debugs with.

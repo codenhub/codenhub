@@ -239,23 +239,24 @@ declare function showLogin(interaction: AuthorizationInteraction): Response; // 
 
 The checks run in this order, and the first failure is the one reported. Failures before the client and its redirect URI are verified render an error; failures after are redirected to the client's registered redirect URI with `error`, `state` and `iss`, so the client can see why.
 
-| Check                                                                                                                                             | Failure                                                                                        | `redirect` |
-| ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------- |
-| The URL is at most 8192 characters.                                                                                                               | `invalid_request`                                                                              | `null`     |
-| The method is `GET`, or `POST` with a form body. The body is at most 16384 bytes.                                                                 | `invalid_request`                                                                              | `null`     |
-| The parameters parse: no duplicate, at most 32, none longer than 4096 characters, and no percent-escape that is not valid UTF-8.                  | `invalid_request`, with `params.reason` of `duplicate`, `too_many`, `too_long` or `malformed`  | `null`     |
-| `client_id` is present.                                                                                                                           | `invalid_request`, path `["client_id"]`                                                        | `null`     |
-| The client is registered.                                                                                                                         | `unknown_client`                                                                               | `null`     |
-| `redirect_uri` is present and is one of the client's registered URIs, byte for byte.                                                              | `invalid_redirect_uri`                                                                         | `null`     |
-| The client is registered with `authorization_code` in its `grantTypes`. A client registered only for `client_credentials` signs no users in.      | `unauthorized_client`                                                                          | Redirect   |
-| No `request`, `request_uri` or `registration` parameter is present.                                                                               | `request_not_supported`, `request_uri_not_supported` or `registration_not_supported`           | Redirect   |
-| `response_type` is present and is `code`.                                                                                                         | `invalid_request` with path `["response_type"]` when missing, else `unsupported_response_type` | Redirect   |
-| `response_mode`, when present, is `query`.                                                                                                        | `invalid_request`, path `["response_mode"]`                                                    | Redirect   |
-| `scope` contains `openid`, and every scope is one the provider defines and the client may request.                                                | `invalid_scope`                                                                                | Redirect   |
-| `code_challenge` has the shape of an S256 challenge.                                                                                              | `invalid_request`, path `["code_challenge"]`                                                   | Redirect   |
-| `code_challenge_method` is `S256`. `plain` is refused.                                                                                            | `invalid_request`, path `["code_challenge_method"]`                                            | Redirect   |
-| `prompt`, when present, is one or more of `none`, `login`, `consent` and `select_account`, and `none` stands alone. A repeated value counts once. | `invalid_request`, path `["prompt"]`                                                           | Redirect   |
-| `max_age`, when present, is at most nine digits.                                                                                                  | `invalid_request`, path `["max_age"]`                                                          | Redirect   |
+| Check                                                                                                                                                  | Failure                                                                                        | `redirect` |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- | ---------- |
+| The URL is at most 8192 characters.                                                                                                                    | `invalid_request`                                                                              | `null`     |
+| The method is `GET`, or `POST` with a form body. The body is at most 16384 bytes.                                                                      | `invalid_request`                                                                              | `null`     |
+| The parameters parse: no duplicate, at most 32, none longer than 4096 characters, and no percent-escape that is not valid UTF-8.                       | `invalid_request`, with `params.reason` of `duplicate`, `too_many`, `too_long` or `malformed`  | `null`     |
+| `client_id` is present.                                                                                                                                | `invalid_request`, path `["client_id"]`                                                        | `null`     |
+| The client is registered.                                                                                                                              | `unknown_client`                                                                               | `null`     |
+| `redirect_uri` is present and is one of the client's registered URIs, byte for byte.                                                                   | `invalid_redirect_uri`                                                                         | `null`     |
+| The client is registered with `authorization_code` in its `grantTypes`. A client registered only for `client_credentials` signs no users in.           | `unauthorized_client`                                                                          | Redirect   |
+| No `request`, `request_uri` or `registration` parameter is present.                                                                                    | `request_not_supported`, `request_uri_not_supported` or `registration_not_supported`           | Redirect   |
+| `response_type` is present and is `code`.                                                                                                              | `invalid_request` with path `["response_type"]` when missing, else `unsupported_response_type` | Redirect   |
+| `response_mode`, when present, is `query`.                                                                                                             | `invalid_request`, path `["response_mode"]`                                                    | Redirect   |
+| `scope` contains `openid`, and every scope is one the provider defines and the client may request.                                                     | `invalid_scope`                                                                                | Redirect   |
+| `code_challenge` is present and has the shape of an S256 challenge. A client with [`requirePkce: false`](#clients-that-send-no-pkce) may leave it out. | `invalid_request`, path `["code_challenge"]`                                                   | Redirect   |
+| `code_challenge_method` is `S256`. `plain` is refused.                                                                                                 | `invalid_request`, path `["code_challenge_method"]`                                            | Redirect   |
+| A client with `requirePkce: false` that sent no `code_challenge` sent a non-empty `nonce`.                                                             | `invalid_request`, path `["nonce"]`                                                            | Redirect   |
+| `prompt`, when present, is one or more of `none`, `login`, `consent` and `select_account`, and `none` stands alone. A repeated value counts once.      | `invalid_request`, path `["prompt"]`                                                           | Redirect   |
+| `max_age`, when present, is at most nine digits.                                                                                                       | `invalid_request`, path `["max_age"]`                                                          | Redirect   |
 
 On success the result carries the interaction:
 
@@ -276,6 +277,34 @@ Three more parameters reach the app so it can shape its pages and its login. Non
 - `display`, as `display`: one of `page`, `popup`, `touch` or `wap`, which asks the app to show its pages as a full page, a popup window, for a touch device or for a small-screen device. A value the provider does not know is ignored, as Core allows, so the interaction has no `display`, and the request is not refused.
 
 A list is absent when it has no entries, as for `uiLocales`. Each parameter is within the usual limits, at most 4096 characters, and every list is a frozen array of strings on the interaction, saved in the store with the rest of the request. The `claims` parameter, which would ask for individual claims, remains unsupported: the provider ignores it, and claims are released by scope.
+
+### Clients that send no PKCE
+
+Every client must send a PKCE `S256` challenge by default. A confidential client can be registered with `requirePkce: false` in its record, which lets its authorization request leave the challenge out:
+
+```ts
+import type { ClientRecord } from "@codenhub/oidc/provider";
+
+declare const secretHash: string; // from hashClientSecret
+
+export const client: ClientRecord = {
+  clientId: "legacy-app",
+  redirectUris: ["https://legacy.example/callback"],
+  scopes: ["openid", "profile"],
+  auth: { method: "client_secret_basic", secretHashes: [secretHash] },
+  requirePkce: false,
+};
+```
+
+Turning it off is for a confidential client of a relying-party library that sends no PKCE, and for the OpenID conformance plans, which do not send it. It is a statement by the operator that the client checks the `nonce` of the ID token, because without PKCE the `nonce` is what ties the response to the request (OAuth 2.1 §7.5.1.1, RFC 9700 §2.1.1). Do not turn it off for a client that you do not know checks it. A public client cannot turn it off: a record with `requirePkce: false` and `auth.method` of `none` makes the provider throw `TypeError` when it reads the record, since such a client has nothing but PKCE to prove it is the one that started the request.
+
+The rules for a client with `requirePkce: false`:
+
+- A `code_challenge` that is sent is always checked, and enforced as for any client: only `S256`, and the token request must carry the matching `code_verifier`. Sending a challenge is never worse than leaving it out.
+- A request with no `code_challenge` must carry a `nonce`. Without one it is redirected to the client with `invalid_request`, path `["nonce"]`, like any other missing parameter. A `code_challenge_method` without a `code_challenge` is `invalid_request` for every client.
+- The interaction and the code then hold no `codeChallenge`. At the token endpoint, a code issued with a challenge needs its verifier, as for every client. A code issued without one refuses any request that carries a `code_verifier`, with `invalid_grant` and the diagnostic reason `code_verifier_unexpected`. That is the defense against a downgrade (RFC 9700 §2.1.1): an attacker who holds a code that was bound to nothing cannot pretend it was bound to a verifier of their own.
+
+A client with the default `true` behaves as described elsewhere on this page: a missing challenge is `invalid_request`, and a missing verifier at the token endpoint is `invalid_request` before the code is spent.
 
 ### Prompt and max_age
 
@@ -398,12 +427,12 @@ A client assertion is a JWT that the provider verifies with the client's key fro
 
 ### Authorization code
 
-A request for `authorization_code` must carry `code`, `redirect_uri` and `code_verifier`. A missing one is `invalid_request`. The checks that follow, in order:
+A request for `authorization_code` must carry `code`, `redirect_uri` and `code_verifier`. A missing one is `invalid_request`. The exception is a client with [`requirePkce: false`](#clients-that-send-no-pkce), which may omit `code_verifier` when its code was issued without a challenge. The checks that follow, in order:
 
-1. The verifier has the shape RFC 7636 defines, 43 to 128 unreserved characters. Otherwise `invalid_grant`, and the code is **not** spent.
+1. The verifier, when there is one, has the shape RFC 7636 defines, 43 to 128 unreserved characters. Otherwise `invalid_grant`, and the code is **not** spent.
 2. The code is redeemed atomically with `consumeCode`. An unknown or purged code is `invalid_grant`.
 3. A code that was already redeemed is a **replay**. The provider revokes the grant the code belongs to, so every access token and refresh token issued from it stops working, and returns `invalid_grant`.
-4. Otherwise the code is spent, and each of these checks returns `invalid_grant`: it has expired, it was issued to another client, its `redirect_uri` is not the one in the request, or the verifier's S256 digest is not its challenge. A failure here still burns the code, so a wrong verifier cannot be retried against the same code.
+4. Otherwise the code is spent, and each of these checks returns `invalid_grant`: it has expired, it was issued to another client, its `redirect_uri` is not the one in the request, or the verifier does not fit the code. For a code with a challenge that means the verifier is missing or its S256 digest is not the challenge, which only a client with `requirePkce: false` can send, since another client's missing verifier was refused before step 2. For a code issued without a challenge, any verifier is a downgrade attempt and is refused. A failure here still burns the code, so a wrong verifier cannot be retried against the same code.
 
 On success the provider starts a grant, and issues:
 
@@ -604,13 +633,13 @@ Each diagnostic is a frozen object with these members:
 
 The reasons, grouped as in the provider's types:
 
-| Group                                   | Reasons                                                                                                                                                                                                                                                                                                                                                                                                  |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The request, before the client is known | `content_type`, `body`, `parameters`                                                                                                                                                                                                                                                                                                                                                                     |
-| Client authentication                   | `client_credentials_missing`, `client_credentials_ambiguous`, `client_credentials_malformed`, `client_unknown`, `client_method_mismatch`, `client_credentials_wrong`                                                                                                                                                                                                                                     |
-| The token request                       | `grant_type_missing`, `grant_type_unsupported`, `grant_type_unauthorized`, `parameter_missing`, `code_verifier_malformed`, `code_unknown`, `code_replayed`, `code_expired`, `code_client_mismatch`, `redirect_uri_mismatch`, `code_verifier_mismatch`, `scope_invalid`, `refresh_token_unknown`, `refresh_token_replayed`, `refresh_token_expired`, `refresh_token_client_mismatch`, `scope_not_granted` |
-| Userinfo                                | `access_token_missing`, `access_token_malformed`, `access_token_unknown`, `access_token_expired`, `access_token_without_openid`                                                                                                                                                                                                                                                                          |
-| Revocation                              | `token_missing`, `token_of_another_client`                                                                                                                                                                                                                                                                                                                                                               |
+| Group                                   | Reasons                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The request, before the client is known | `content_type`, `body`, `parameters`                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Client authentication                   | `client_credentials_missing`, `client_credentials_ambiguous`, `client_credentials_malformed`, `client_unknown`, `client_method_mismatch`, `client_credentials_wrong`                                                                                                                                                                                                                                                                                          |
+| The token request                       | `grant_type_missing`, `grant_type_unsupported`, `grant_type_unauthorized`, `parameter_missing`, `code_verifier_malformed`, `code_verifier_missing`, `code_verifier_unexpected`, `code_unknown`, `code_replayed`, `code_expired`, `code_client_mismatch`, `redirect_uri_mismatch`, `code_verifier_mismatch`, `scope_invalid`, `refresh_token_unknown`, `refresh_token_replayed`, `refresh_token_expired`, `refresh_token_client_mismatch`, `scope_not_granted` |
+| Userinfo                                | `access_token_missing`, `access_token_malformed`, `access_token_unknown`, `access_token_expired`, `access_token_without_openid`                                                                                                                                                                                                                                                                                                                               |
+| Revocation                              | `token_missing`, `token_of_another_client`                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
 The callback is called once for each refusal that is answered with an OAuth error response, after the response is built and before `handle` resolves. A `405` for a method the endpoint does not accept, and an `OPTIONS` preflight, are not reported. Authorization failures are not reported either, since `beginAuthorization` and `completeAuthorization` return their issues. The diagnostic never holds a value the request carried: no token, code, verifier, secret or redirect URI.
 

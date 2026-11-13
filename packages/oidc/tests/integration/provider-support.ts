@@ -18,6 +18,8 @@ export const ISSUER = "https://op.example";
 export const REDIRECT_URI = "https://app.example/cb";
 export const PUBLIC_CLIENT = "spa";
 export const CONFIDENTIAL_CLIENT = "app";
+/** A confidential client with `requirePkce: false`, which shares the secret of {@link CONFIDENTIAL_CLIENT}. */
+export const LEGACY_CLIENT = "legacy";
 export const SUBJECT = "user-1";
 export const VERIFIER = "v".repeat(43);
 export const STATE = "state-0123456789abcdef";
@@ -97,8 +99,9 @@ export interface ProviderSetup {
 const defaultClaims = (): Record<string, unknown> => ({ name: "Ada Lovelace", email: "ada@example.com" });
 
 /**
- * Creates a provider over the in-memory store, with a public client `spa` (no authentication) and a
- * confidential client `app` (`client_secret_basic`). Both redirect to {@link REDIRECT_URI}.
+ * Creates a provider over the in-memory store, with a public client `spa` (no authentication), a
+ * confidential client `app` (`client_secret_basic`), and `legacy`, which is `app` with PKCE not required.
+ * All redirect to {@link REDIRECT_URI}.
  */
 export async function setUpProvider(overrides: SetUpOverrides = {}): Promise<ProviderSetup> {
   const now: Clock = { ms: START_MS };
@@ -117,6 +120,13 @@ export async function setUpProvider(overrides: SetUpOverrides = {}): Promise<Pro
         redirectUris: [REDIRECT_URI],
         scopes: CLIENT_SCOPES,
         auth: { method: "client_secret_basic", secretHashes: [await hashClientSecret(secret)] },
+      },
+      {
+        clientId: LEGACY_CLIENT,
+        redirectUris: [REDIRECT_URI],
+        scopes: CLIENT_SCOPES,
+        auth: { method: "client_secret_basic", secretHashes: [await hashClientSecret(secret)] },
+        requirePkce: false,
       },
     ],
   });
