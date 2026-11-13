@@ -126,7 +126,9 @@ export async function importPrivateKey(jwk: unknown, options: ImportPrivateKeyOp
  * `sign` or `verify`) are checked as in {@link importPublicKey}, and the JWK's own `kid` is used.
  * `key_ops` does not restrict the key: a secret imported with `key_ops: ["verify"]` can still sign.
  *
- * @param input - The secret's bytes, or an `oct` JWK. Any value is accepted.
+ * @param input - The secret's bytes, or an `oct` JWK (untrusted, so any object is accepted). A string is a
+ * compile error, because a string secret is ambiguous; at runtime any other value, a string included, still
+ * returns `invalid_key`.
  * @param options - The algorithm, the `kid` for raw bytes, and whether the secret may be exported again.
  * @returns The frozen key, or a failure with one issue: `weak_key` with `{ minimum: 32 }` for a short
  * secret, `invalid_key` for an input that is neither bytes nor a well-formed JWK, and the JWK issues
@@ -135,7 +137,7 @@ export async function importPrivateKey(jwk: unknown, options: ImportPrivateKeyOp
  * a string, or `options.extractable` is not a boolean.
  */
 export async function importSecretKey(
-  input: Uint8Array | unknown,
+  input: Uint8Array | object,
   options: ImportSecretKeyOptions,
 ): Promise<JwtResult<SecretKey>> {
   const checked = requireOptions(options, "importSecretKey");
@@ -151,11 +153,11 @@ export async function importSecretKey(
   let bytes: Uint8Array<ArrayBuffer> | undefined;
   try {
     // Copied from the typed array's own bytes: a subclass's iterator or `length` getter is never run.
-    if (input instanceof Uint8Array) {
+    if (isUint8Array(input)) {
       bytes = new Uint8Array(input);
     }
   } catch {
-    // A revoked Proxy throws on `instanceof`; a detached buffer throws on the copy.
+    // A detached buffer throws on the copy.
     return fail({ code: "invalid_key" });
   }
   if (bytes === undefined) {
@@ -172,6 +174,24 @@ export async function importSecretKey(
     USAGES.secret,
   );
   return ok(registerKey(buildKey(optionKid), { cryptoKey, signatureLength: HS256_SIGNATURE_BYTES }));
+}
+
+const typedArrayTag = Object.getOwnPropertyDescriptor(
+  Object.getPrototypeOf(Uint8Array.prototype) as object,
+  Symbol.toStringTag,
+)?.get as ((this: unknown) => unknown) | undefined;
+
+/**
+ * Whether `value` is a real `Uint8Array`, from any realm. The tag getter reads an internal slot, so a
+ * Proxy around a typed array, a look-alike and a subclass that overrides `Symbol.toStringTag` give no
+ * false answer, and no trap or getter of `value` runs. A subclass of `Uint8Array` is one too.
+ */
+function isUint8Array(value: unknown): value is Uint8Array {
+  try {
+    return typedArrayTag?.call(value) === "Uint8Array";
+  } catch {
+    return false;
+  }
 }
 
 interface ImportPlan {

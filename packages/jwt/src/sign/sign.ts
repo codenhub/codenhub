@@ -84,7 +84,7 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
  * or secret key this package created; `input.header` is not a plain object, names an `alg` other than the
  * key's, holds `crit`, `b64`, `jwk`, `jku`, `x5u` or `x5c`, or a `kid`, `typ` or `cty` that is not a
  * string; `input.payload` is not a plain object; the header or payload holds a value JSON cannot carry
- * exactly (`undefined`, a function, a symbol, a bigint, a non-finite number, a non-plain object, an
+ * exactly (`undefined`, a function, a symbol, a bigint, a non-finite number or `-0`, a non-plain object, an
  * accessor) or nests deeper than 32 levels; or a registered claim has the wrong type (`exp`, `nbf`, `iat`
  * not finite numbers; `iss`, `sub`, `jti` not strings; `aud` neither a string nor an array of strings).
  */
@@ -196,20 +196,25 @@ function assertJsonObject(object: Record<string, unknown>, label: string): void 
 
 /** Lists the member values of a JSON container, throwing for anything else. */
 function childrenOf(container: unknown, label: string): readonly unknown[] {
-  // `JSON.stringify` runs an own `toJSON`, enumerable or not, so it would write a value never checked here.
-  if (typeof container === "object" && container !== null && Object.hasOwn(container, "toJSON")) {
-    throw new TypeError(`sign: ${label} must not hold toJSON methods.`);
-  }
-  if (Array.isArray(container)) {
-    return Array.from({ length: container.length }, (_, index) => ownDataValue(container, String(index), label));
-  }
-  if (!isPlainObject(container)) {
+  const isArray = Array.isArray(container);
+  // An Array subclass or a swapped prototype can carry a `toJSON` of its own.
+  if (isArray ? Object.getPrototypeOf(container) !== Array.prototype : !isPlainObject(container)) {
     throw new TypeError(`sign: ${label} must hold only plain objects and arrays.`);
   }
-  if (Object.getOwnPropertySymbols(container).length > 0) {
+  // `JSON.stringify` runs a `toJSON` it finds anywhere on the chain, own or inherited from a polluted
+  // `Object.prototype` or `Array.prototype`, so it would write a value never checked here.
+  if ("toJSON" in (container as object)) {
+    throw new TypeError(`sign: ${label} must not hold toJSON methods.`);
+  }
+  if (isArray) {
+    const array = container as readonly unknown[];
+    return Array.from({ length: array.length }, (_, index) => ownDataValue(array, String(index), label));
+  }
+  const object = container as object;
+  if (Object.getOwnPropertySymbols(object).length > 0) {
     throw new TypeError(`sign: ${label} must not have symbol keys.`);
   }
-  return Object.keys(container).map((name) => ownDataValue(container, name, label));
+  return Object.keys(object).map((name) => ownDataValue(object, name, label));
 }
 
 function ownDataValue(container: object, name: string, label: string): unknown {
@@ -230,6 +235,10 @@ function assertJsonPrimitive(value: unknown, label: string): void {
   if (typeof value === "number") {
     if (!Number.isFinite(value)) {
       throw new TypeError(`sign: ${label} must not hold a non-finite number.`);
+    }
+    if (Object.is(value, -0)) {
+      // `JSON.stringify` writes -0 as 0, so the token would not carry the value that was given.
+      throw new TypeError(`sign: ${label} must not hold negative zero.`);
     }
     return;
   }

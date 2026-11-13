@@ -276,24 +276,24 @@ export async function authenticate(authorization: string | null) {
 }
 ```
 
-The verifier accepts any value, including `undefined` or a number, and reports a value that is not a token as `malformed` rather than throwing. It never throws for a token, whatever the token holds; the one exception is a [`claims` schema](#checking-your-own-claims) of your own that throws or rejects.
+The verifier accepts any value, including `undefined` or a number, and reports a value that is not a token as `malformed` rather than throwing. It never throws for a token, whatever the token holds; the exceptions are code of your own: a [`claims` schema](#checking-your-own-claims) that throws or rejects, and a `now` that returns something other than a finite number, such as `NaN` from `Date.parse` of an unset variable. The schema's own error propagates unchanged. A non-finite `now` makes the promise reject with a `TypeError` when the verifier reads the clock, which it does only for a token whose signature checked out, because a `NaN` clock would make every time comparison false and accept expired tokens.
 
 ## Options
 
-Every option is checked when `createVerifier` runs, and an invalid one throws a `TypeError` naming the option and its constraint. Durations are in seconds.
+Every option is checked when `createVerifier` runs, and an invalid one throws a `TypeError` naming the option and its constraint. So does a name that is not an option below, such as `audiance` or `issuers` (`createVerifier: options.audiance is not an option.`), even when its value is `undefined`: a misspelled option would otherwise silently turn its check off. Durations are in seconds.
 
-| Option           | Default    | What it does                                                                                                       |
-| ---------------- | ---------- | ------------------------------------------------------------------------------------------------------------------ |
-| `keys`           | required   | The [key set](docs/key-sets.md) that selects the verification key for each token.                                       |
-| `issuer`         | none       | A string or a non-empty array of strings. When set, `iss` is required and must equal one of them exactly.          |
-| `audience`       | none       | A string or a non-empty array of strings. When set, `aud` is required and must contain at least one of them.       |
-| `type`           | none       | The required `typ` header, such as `JWT` or `at+jwt`. When set, `typ` is required.                                 |
-| `clockTolerance` | `0`        | Seconds of clock skew allowed on `exp`, `nbf`, `iat` and `maxAge`. An integer from 0 through 300.                  |
-| `maxAge`         | none       | Most seconds since `iat`. When set, `iat` is required. A positive integer.                                         |
-| `maxLength`      | `8192`     | Longest token accepted, in characters, checked before anything is decoded. An integer from 1 through 65536.        |
-| `requiredClaims` | `[]`       | Claims that must be present, whatever their value.                                                                 |
-| `claims`         | none       | A [Standard Schema](#checking-your-own-claims) run on the payload after every other check passed.                  |
-| `now`            | `Date.now` | The current time in **milliseconds** since the Unix epoch, as `Date.now` returns it. Pass your own clock in tests. |
+| Option           | Default    | What it does                                                                                                                                                  |
+| ---------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keys`           | required   | The [key set](docs/key-sets.md) that selects the verification key for each token.                                                                                  |
+| `issuer`         | none       | A string or a non-empty array of strings. When set, `iss` is required and must equal one of them exactly.                                                     |
+| `audience`       | none       | A string or a non-empty array of strings. When set, `aud` is required and must contain at least one of them.                                                  |
+| `type`           | none       | The required `typ` header, such as `JWT` or `at+jwt`. When set, `typ` is required.                                                                            |
+| `clockTolerance` | `0`        | Seconds of clock skew allowed on `exp`, `nbf`, `iat` and `maxAge`. An integer from 0 through 300.                                                             |
+| `maxAge`         | none       | Most seconds since `iat`. When set, `iat` is required. A positive integer.                                                                                    |
+| `maxLength`      | `8192`     | Longest token accepted, in characters, checked before anything is decoded. An integer from 1 through 65536.                                                   |
+| `requiredClaims` | `[]`       | Claims that must be present, whatever their value.                                                                                                            |
+| `claims`         | none       | A [Standard Schema](#checking-your-own-claims) run on the payload after every other check passed.                                                             |
+| `now`            | `Date.now` | The current time in **milliseconds** since the Unix epoch, as `Date.now` returns it. Pass your own clock in tests. It must return a finite number; see below. |
 
 Without `issuer`, `audience`, `type`, `maxAge` and `requiredClaims`, a verifier checks only the signature, the types of the registered claims (`iss`, `sub`, `aud`, `jti`, `exp`, `nbf`, `iat`) and the times the token itself states. A token without `exp` never expires: if your tokens must expire, list `exp` in `requiredClaims`.
 
@@ -383,7 +383,7 @@ if (result.ok) {
 
 The schema checks; it does not transform. The payload you get back is the token's own frozen payload, with every claim it carried, even ones the schema does not list, and never a value the schema produced. That is why the payload is typed by what the schema accepts, its input type.
 
-Each issue the schema reports becomes one `invalid_claims` issue whose path is `["payload", ...]` followed by the schema's path. The schema's messages are dropped, since a message such as "expected a number, received 'hunter2'" can quote the token. A schema that throws or rejects is not caught: the verifier's promise rejects with that error.
+Each issue the schema reports becomes one `invalid_claims` issue whose path is `["payload", ...]` followed by the schema's path. The schema's messages are dropped, since a message such as "expected a number, received 'hunter2'" can quote the token. The paths are kept, though, and can name keys the payload chose, so do not show them to users unescaped. A schema that throws or rejects is not caught: the verifier's promise rejects with that error.
 
 ## Reading the header before verifying
 
@@ -426,7 +426,7 @@ The payload, key and header are your own data, not input from outside, so a mist
 
 `sign` adds no claim. It does not set `iat`, `exp` or `jti`, and does not check that `exp` is in the future. Every claim the token should carry is one you write, which keeps what a token says visible at the call that signs it. Write times as whole seconds since the Unix epoch, `Math.floor(Date.now() / 1000)`, since that is what verifiers, this one included, read them as.
 
-The payload must be a plain object whose values JSON represents exactly: strings, finite numbers, booleans, `null`, arrays and plain objects, nested at most 32 levels deep. `undefined`, functions, symbols, bigints, `NaN` and `Infinity`, `Date`s and other class instances, getters, sparse arrays and cycles all throw. `JSON.stringify` would drop or rewrite most of these silently, so the token would not say what your code meant.
+The payload must be a plain object whose values JSON represents exactly: strings, finite numbers, booleans, `null`, arrays and plain objects, nested at most 32 levels deep. `undefined`, functions, symbols, bigints, `NaN`, `Infinity` and `-0`, `Date`s and other class instances, getters, sparse arrays and cycles all throw. `JSON.stringify` would drop or rewrite most of these silently, so the token would not say what your code meant.
 
 The registered claims are checked for the types RFC 7519 gives them: `exp`, `nbf` and `iat` must be finite numbers, `iss`, `sub` and `jti` strings, and `aud` a string or an array of strings. A token this package signs therefore never fails a verifier's `invalid_claim` check.
 
@@ -551,6 +551,8 @@ The JWK is untrusted input, so the import never throws for it, whatever it is: a
 
 Issue paths name the JWK member at fault, such as `["kty"]` or `["n"]`.
 
+Import ignores a JWK's `ext` and any member it does not know. A public key is always exportable. For a private or secret key, only the `extractable` option decides whether it can be exported again, so a JWK that says `ext: true` still gives a non-extractable key unless you pass `extractable: true`.
+
 ## Importing a private key
 
 `importPrivateKey` takes the same arguments and runs the same checks, except that the private members are required: `d` for `EC` and `OKP` keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for `RSA` keys. Multi-prime RSA keys, with `oth`, are `unsupported_key`. Pass `extractable: true` if the key must be exportable again.
@@ -563,7 +565,7 @@ const result = await importPrivateKey(jwk, { alg: "PS256", extractable: false })
 
 ## Importing a secret
 
-`importSecretKey` takes either the secret's raw bytes or an `oct` JWK:
+`importSecretKey` takes either the secret's raw bytes or an `oct` JWK. A string is a compile error, since it could be text, base64 or hex; encode it to bytes first. A string that reaches it anyway, from untyped code, returns `invalid_key`:
 
 ```ts
 import { importSecretKey } from "@codenhub/jwt";
@@ -690,7 +692,7 @@ Nothing is fetched until the first token needs a key. Create the key set once an
 
 ### Options
 
-Durations are in seconds. Every option is checked when the key set is created, and an invalid one throws a `TypeError`.
+Durations are in seconds. Every option is checked when the key set is created, and an invalid one throws a `TypeError`, as does a name that is not an option below (`createRemoteKeySet: options.cachettl is not an option.`).
 
 | Option             | Default                        | What it does                                                                                                                                          |
 | ------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -726,7 +728,7 @@ A failure the stale keys cannot cover is `key_fetch_failed`, whose `params.reaso
 | `too_large`        | The `Content-Length` header or the body exceeded `maxResponseBytes`.                        |
 | `invalid_response` | The body was not a strict JSON object, was not a JWKS, or listed more than 100 keys.        |
 
-The issue holds nothing from the response. `select` never throws and never rejects, whatever the server sends.
+The issue holds nothing from the response. `select` never throws and never rejects, whatever the server sends. The one exception is a bug in your own `now` option: when it returns something other than a finite number, `select` rejects with a `TypeError`, because a `NaN` clock would keep the cache from ever expiring. A verifier that calls such a key set turns the rejection into `key_fetch_failed` with `{ reason: "key_set_error" }`, so it fails closed.
 
 ## Your own key set
 
@@ -851,10 +853,10 @@ There are no messages: a code is the whole answer. Map codes to text yourself if
 
 A `TypeError` means a mistake in the calling code, not in the input, and is thrown as early as possible:
 
-- **Options.** Every option of `createVerifier`, `createRemoteKeySet`, `importKeySet`, `readHeader` and the key functions is checked when the function is called, and an invalid one throws, naming the option and its constraint. Create verifiers and key sets at startup and a misconfiguration fails the deploy, not the first request.
+- **Options.** Every option of `createVerifier`, `createRemoteKeySet`, `importKeySet`, `readHeader` and the key functions is checked when the function is called, and an invalid one throws, naming the option and its constraint. `createVerifier` and `createRemoteKeySet` also throw for a name that is not one of their options, so a typo such as `audiance` cannot silently disable a check. Create verifiers and key sets at startup and a misconfiguration fails the deploy, not the first request.
 - **Key objects.** Passing an object this package did not create where a key is expected, a key of the wrong kind (such as a public key to `sign`), or exporting a key created without `extractable: true`.
 - **What you sign.** A payload or header `sign` cannot write exactly as JSON, or one that breaks the rules in [Signing tokens](docs/signing.md).
 
 A `TypeError` message names the option or member and the rule it broke, never its value.
 
-Two things propagate rather than becoming a result: an exception thrown by your own `claims` schema, and a failure of Web Crypto itself while signing or generating a key, which means the runtime lacks the algorithm.
+Three things propagate rather than becoming a result: an exception thrown by your own `claims` schema, a `now` option that returns something other than a finite number, and a failure of Web Crypto itself while signing or generating a key, which means the runtime lacks the algorithm. A verifier's `now` makes its promise reject with a `TypeError`, for a token whose signature checked out. A remote key set's `now` makes its `select` reject with a `TypeError`; a verifier using that key set catches the rejection like any other key-set error and reports `key_fetch_failed` with `{ reason: "key_set_error" }`.

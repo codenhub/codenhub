@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-16
+last_updated: 2026-11-13
 scope: What `@codenhub/jwt` 0.1 covers, the invariants it keeps, and the decisions taken while building it.
 ---
 
@@ -74,7 +74,7 @@ These are the commitments that should hold.
 3. **No unverified payload access.** There is no `decode()` that returns claims. The only unverified read is the header, for key selection.
 4. **Untrusted input never throws.** Verification and import of untrusted data return results. Programmer errors, such as invalid options or signing with a verify-only key, throw `TypeError`, ideally when the verifier or key is created rather than when it's used. Exceptions from the caller's own code, such as a `claims` schema that throws or rejects, propagate rather than becoming results (decision 10).
 5. **Bounded cost.** Token length is capped before any decoding happens. JSON depth and size are bounded. Remote JWKS responses are size-capped and time-bounded. Failing input must be cheap.
-6. **Issues never contain input values.** No token content, claim values, or key material appears in issues, error messages, or logs. Issues can name _which_ check failed (`wrong_audience`); they don't echo what the token said.
+6. **Issues never contain input values.** No token content, claim values, or key material appears in issues, error messages, or logs. Issues can name _which_ check failed (`wrong_audience`); they don't echo what the token said. The one exception the package makes is a `claims` schema's issue paths, which are kept (decision 11) and may name keys chosen by the signed payload. A custom key set's failure issues are passed through as the caller's key set wrote them (decision 16).
 7. **Strict parsing.**
    - Base64url only: no padding, no `+`/`/`, no non-canonical trailing bits.
    - Exactly three segments.
@@ -224,3 +224,9 @@ These were asked explicitly and approved. They bind work while they stand; rever
 19. **Units.** Durations in options are seconds, matching the claims they are compared with; `now` returns milliseconds, matching `Date.now`, so `now: Date.now` and test clocks need no wrapper. Rejected: one unit for both, which forces a wrapper on either the clock or every duration.
 20. **`sign` input.** `sign` takes one `{ payload, key, header }` object rather than positional arguments; it rejects `undefined` values and every other value JSON cannot carry exactly, and checks registered claim types. On verification, an ill-typed registered claim is one `invalid_claim` issue and the later checks of that claim are skipped. Dropping a value silently, as `JSON.stringify` does, can sign a different token than the caller wrote: `{ aud: undefined }` becomes a token with no audience. Rejected: `JSON.stringify` semantics, for that case; positional arguments, which make `header` an easy argument to misplace.
 21. **Result type.** A package-local `JwtResult` mirrors `@codenhub/validation`'s shape, with no runtime dependency on `@codenhub/error` or `@codenhub/validation`, per the error-propagation pattern in `docs/specs/errors.md` and invariant 11.
+
+### Approved by the maintainer (2026-11-13)
+
+22. **Unknown options throw.** `createVerifier` and `createRemoteKeySet` throw a `TypeError` for an own enumerable string key that is not a documented option, such as `audiance` or `issuers`, naming the member (the caller's own option name, cut at 64 characters) and even when its value is `undefined`; symbol keys are ignored, and other functions' option handling is unchanged. A typo silently turned off the audience or issuer check, and TypeScript catches it only for inline object literals. Rejected: ignoring unknown options, as most libraries do, which lets a typo turn off a check.
+23. **A non-finite `now()` rejects.** When `options.now` returns anything but a finite number, the verifier's promise rejects with a `TypeError`, checked once per verification when it reads the time, and a remote key set's `select` rejects the same way. A verifier that calls such a key set reports `key_fetch_failed` with `{ reason: "key_set_error" }` by decision 16, which fails closed. `now: () => NaN`, such as `Date.parse` of an unset variable, otherwise disabled every time check and kept a remote cache from ever expiring. The clock is caller code, so it propagates as a throwing `claims` schema does (decision 10). Rejected: failing the token with an issue, which hides a caller bug as a token failure, as decision 10 reasoned; leaving it, which fails open.
+24. **`importSecretKey` takes `Uint8Array | object`.** A string is a compile error, while runtime behavior is unchanged: untrusted input still never throws (invariant 4), and a string at runtime still returns `invalid_key`. Rejected: `unknown`, which hides a string secret until runtime.

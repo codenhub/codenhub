@@ -289,12 +289,19 @@ describe("programmer errors carry no values", () => {
     ["a marker clockTolerance", { clockTolerance: MARKER }],
     ["a marker maxAge", { maxAge: MARKER }],
     ["a marker maxLength", { maxLength: MARKER }],
-    ["a marker type that is empty after its prefix", { type: 1, [MARKER]: MARKER }],
+    ["an invalid type beside a marker issuer", { type: 1, issuer: MARKER }],
+    ["a marker value under an unknown option name", { audiance: MARKER }],
     ["marker requiredClaims that are not text", { requiredClaims: [MARKER, 1] }],
     ["a marker claims schema", { claims: { "~standard": MARKER } }],
     ["a marker now", { now: MARKER }],
   ])("should throw a TypeError without the marker from createVerifier for %s", (_, options) => {
     expect(leakedByThrow(() => createVerifier({ keys: createKeySet([secretKey]), ...options } as never))).toEqual([]);
+  });
+
+  it("should name an unknown option in the TypeError, since the name is the caller's own, but never its value", () => {
+    expect(() => createVerifier({ keys: createKeySet([secretKey]), [MARKER]: 1 } as never)).toThrow(
+      `createVerifier: options.${MARKER} is not an option.`,
+    );
   });
 
   it("should throw a TypeError without the marker from createVerifier for a marker key set", () => {

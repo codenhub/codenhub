@@ -1,4 +1,5 @@
 import { DEFAULT_MAX_TOKEN_LENGTH, MAX_TOKEN_LENGTH_LIMIT } from "../core/limits";
+import { rejectUnknownOptions } from "../core/options";
 import type { KeySet, VerifierOptions } from "../core/types";
 import type { StandardSchemaV1 } from "../interop/standard-schema";
 
@@ -20,12 +21,33 @@ export interface ResolvedOptions {
   readonly now: () => number;
 }
 
+/** Every documented verifier option; typed so adding one to `VerifierOptions` fails to compile until listed. */
+const KNOWN_OPTIONS: Readonly<Record<keyof VerifierOptions, true>> = {
+  keys: true,
+  issuer: true,
+  audience: true,
+  type: true,
+  clockTolerance: true,
+  maxAge: true,
+  maxLength: true,
+  requiredClaims: true,
+  claims: true,
+  now: true,
+};
+
 const MEDIA_TYPE_PREFIX = "application/";
 
-/** RFC 7515 §4.1.9: `typ` compares case-insensitively, and `application/` may be omitted. */
+/**
+ * RFC 7515 §4.1.9: `typ` compares case-insensitively, and `application/` may be omitted when the rest
+ * holds no `/`. Only ASCII letters fold: `toLowerCase` would turn U+212A KELVIN SIGN into `k`.
+ */
 export function normalizeType(type: string): string {
-  const lower = type.toLowerCase();
-  return lower.startsWith(MEDIA_TYPE_PREFIX) ? lower.slice(MEDIA_TYPE_PREFIX.length) : lower;
+  const lower = type.replace(/[A-Z]/g, (letter) => letter.toLowerCase());
+  if (!lower.startsWith(MEDIA_TYPE_PREFIX)) {
+    return lower;
+  }
+  const rest = lower.slice(MEDIA_TYPE_PREFIX.length);
+  return rest.includes("/") ? lower : rest;
 }
 
 function throwInvalid(message: string): never {
@@ -40,12 +62,13 @@ const isIntegerInRange = (value: unknown, minimum: number, maximum: number): val
 /**
  * Validates every verifier option and applies defaults.
  *
- * @throws TypeError naming the first invalid option and its constraint, never its value.
+ * @throws TypeError naming the first invalid or unknown option and its constraint, never its value.
  */
 export function resolveOptions(options: VerifierOptions<StandardSchemaV1 | undefined>): ResolvedOptions {
   if (typeof options !== "object" || options === null) {
     throwInvalid("options must be an object.");
   }
+  rejectUnknownOptions(options, KNOWN_OPTIONS, "createVerifier");
   const { keys, issuer, audience, type, clockTolerance, maxAge, maxLength, requiredClaims, claims, now } = options;
   if (typeof keys !== "object" || keys === null || typeof keys.select !== "function") {
     throwInvalid("options.keys must be a key set (an object with a select function).");

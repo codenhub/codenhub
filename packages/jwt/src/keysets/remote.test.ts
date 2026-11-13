@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { JwtHeader, JwtResult, KeySet, VerificationKey } from "../core/types";
+import { generateKeyPair } from "../keys/generate";
 import { EC_P256_PUBLIC_JWK, ED25519_PUBLIC_JWK } from "../keys/test-fixtures";
+import { sign } from "../sign/sign";
+import { createVerifier } from "../verify/create-verifier";
 import { createRemoteKeySet, type RemoteKeySetOptions } from "./remote";
 
 const URL_STRING = "https://issuer.example/jwks.json";
@@ -94,6 +97,57 @@ describe("createRemoteKeySet options", () => {
     ["algorithms with HS256", { algorithms: ["HS256"] }],
   ])("should throw TypeError for %s", (_name, options) => {
     expect(() => createSet(options as Partial<RemoteKeySetOptions>)).toThrow(TypeError);
+  });
+
+  it.each([
+    ["unknown option audiance", { audiance: "api" }],
+    ["unknown option cachettl", { cachettl: 5 }],
+    ["unknown option set to undefined", { timout: undefined }],
+  ])("should throw TypeError for %s", (_name, options) => {
+    const name = Object.keys(options)[0];
+    expect(() => createSet(options as Partial<RemoteKeySetOptions>)).toThrow(
+      new TypeError(`createRemoteKeySet: options.${name} is not an option.`),
+    );
+  });
+
+  it("should truncate a very long unknown option name in the message", () => {
+    expect(() => createSet({ ["x".repeat(500)]: 1 } as never)).toThrow(
+      new TypeError(`createRemoteKeySet: options.${"x".repeat(64)}... is not an option.`),
+    );
+  });
+
+  it("should ignore symbol keys in options", () => {
+    expect(() => createSet({ [Symbol("note")]: 1 } as never)).not.toThrow();
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, undefined, "0"])(
+    "should reject select with TypeError when now returns %s, without fetching",
+    async (time) => {
+      const fetch = fetchSequence(() => jwksResponse(EC_JWK));
+      const keys = createSet({ fetch, now: () => time as number });
+
+      await expect(keys.select(EC_HEADER)).rejects.toThrow(
+        new TypeError("createRemoteKeySet: options.now must return a finite number of milliseconds."),
+      );
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it("should reject select with TypeError when the clock breaks after a fetch", async () => {
+    let broken = false;
+    const keys = createSet({ fetch: fetchSequence(() => jwksResponse(EC_JWK)), now: () => (broken ? Number.NaN : 0) });
+    await keys.select(EC_HEADER);
+    broken = true;
+
+    await expect(keys.select(EC_HEADER)).rejects.toThrow(TypeError);
+  });
+
+  it("should make a verifier fail closed with key_set_error when the remote clock is broken", async () => {
+    const keys = createSet({ fetch: fetchSequence(() => jwksResponse(EC_JWK)), now: () => Number.NaN });
+    const pair = await generateKeyPair({ alg: "ES256", kid: "ec" });
+    const token = await sign({ payload: { sub: "u" }, key: pair.privateKey });
+
+    expect(await createVerifier({ keys })(token)).toEqual(failure({ reason: "key_set_error" }));
   });
 
   it("should default cooldown to cacheTtl when cacheTtl is under 30 seconds", async () => {
@@ -457,5 +511,142 @@ describe("createRemoteKeySet stale keys", () => {
       failure({ reason: "status", status: 503 }),
       1,
     ]);
+  });
+});
+
+describe("createRemoteKeySet when the clock steps back", () => {
+  it("should treat the cooldown as over when the clock is earlier than the last fetch start", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () => new Response(null, { status: 503 }),
+    );
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, cooldown: 30 });
+    await keys.select(EC_HEADER);
+    clock.set(700);
+    await keys.select(EC_HEADER);
+    clock.set(650);
+    await keys.select(EC_HEADER);
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("should refetch an unknown kid when the clock is earlier than the last fetch start", async () => {
+    const clock = createClock();
+    clock.set(1000);
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () => jwksResponse(EC_JWK, ED_JWK),
+    );
+    const keys = createSet({ fetch, now: clock.now, cooldown: 30 });
+    await keys.select(EC_HEADER);
+    clock.set(500);
+    expect(describeSelection(await keys.select(ED_HEADER))).toEqual({ alg: "EdDSA", kid: "ed" });
+  });
+
+  it("should treat the cache as expired when the clock is earlier than the fetch", async () => {
+    const clock = createClock();
+    clock.set(1000);
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () => jwksResponse(ED_JWK),
+    );
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600 });
+    await keys.select(EC_HEADER);
+    clock.set(0);
+    expect(describeSelection(await keys.select(ED_HEADER))).toEqual({ alg: "EdDSA", kid: "ed" });
+  });
+
+  it("should not serve the cached JWKS as stale when the clock is earlier than the fetch", async () => {
+    const clock = createClock();
+    clock.set(1000);
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () => new Response(null, { status: 503 }),
+    );
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, maxStale: 3600 });
+    await keys.select(EC_HEADER);
+    clock.set(0);
+    expect(await keys.select(EC_HEADER)).toEqual(failure({ reason: "status", status: 503 }));
+  });
+});
+
+describe("createRemoteKeySet response handling", () => {
+  it("should report invalid_response for more than 100 keys", async () => {
+    const many = Array.from({ length: 101 }, (_, index) => ({ ...EC_JWK, kid: `k${index}` }));
+    const keys = createSet({ fetch: fetchSequence(() => jwksResponse(...many)) });
+    expect(await keys.select(EC_HEADER)).toEqual(failure({ reason: "invalid_response" }));
+  });
+
+  it("should accept exactly 100 keys", async () => {
+    const many = Array.from({ length: 100 }, (_, index) => ({ ...EC_JWK, kid: `k${index}` }));
+    const keys = createSet({ fetch: fetchSequence(() => jwksResponse(...many)) });
+    expect(describeSelection(await keys.select({ alg: "ES256", kid: "k99" }))).toEqual({ alg: "ES256", kid: "k99" });
+  });
+
+  it.each([undefined, null, {}])("should report key_fetch_failed, not throw, when fetch returns %j", async (value) => {
+    const fetch = vi.fn(async (): Promise<Response> => value as never);
+    const result = await createSet({ fetch }).select(EC_HEADER);
+    expect(result.ok ? [] : result.error.issues.map((issue) => issue.code)).toEqual(["key_fetch_failed"]);
+  });
+
+  it("should read a 200 response whose body is null through arrayBuffer", async () => {
+    const response = jwksResponse(EC_JWK);
+    Object.defineProperty(response, "body", { value: null });
+    const keys = createSet({ fetch: fetchSequence(() => response) });
+    expect(describeSelection(await keys.select(EC_HEADER))).toEqual({ alg: "ES256", kid: "ec" });
+  });
+
+  it("should throw TypeError for a URL object carrying credentials", () => {
+    expect(() => createRemoteKeySet({ url: new URL("https://user:pass@issuer.example/jwks.json") })).toThrow(
+      new TypeError("createRemoteKeySet: options.url must be an absolute https: URL without credentials."),
+    );
+  });
+
+  it("should count the TTL from when the fetch completes", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(() => {
+      clock.set(100);
+      return jwksResponse(EC_JWK);
+    });
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600 });
+    await keys.select(EC_HEADER);
+    clock.set(699);
+    await keys.select(EC_HEADER);
+    const callsBeforeExpiry = fetch.mock.calls.length;
+    clock.set(700);
+    await keys.select(EC_HEADER);
+    expect([callsBeforeExpiry, fetch.mock.calls.length]).toEqual([1, 2]);
+  });
+});
+
+describe("createRemoteKeySet stale keys after other failures", () => {
+  it("should serve the expired JWKS when the refetch times out", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () => new Promise<Response>(() => undefined) as never,
+    );
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, timeout: 2 });
+    await keys.select(EC_HEADER);
+    clock.set(600);
+    vi.useFakeTimers();
+    const pending = keys.select(EC_HEADER);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(describeSelection(await pending)).toEqual({ alg: "ES256", kid: "ec" });
+  });
+
+  it("should serve the expired JWKS when the refetch fails with a network error", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () => {
+        throw new TypeError("connect failed");
+      },
+    );
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600 });
+    await keys.select(EC_HEADER);
+    clock.set(600);
+    expect(describeSelection(await keys.select(EC_HEADER))).toEqual({ alg: "ES256", kid: "ec" });
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 });

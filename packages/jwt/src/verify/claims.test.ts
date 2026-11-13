@@ -132,6 +132,27 @@ describe("maxAge", () => {
   });
 });
 
+describe("maxAge with unusual iat", () => {
+  const verifyRaw = async (payload: string, options: ClaimOptions) =>
+    createVerifier({ keys: keySetOf(key), now: clockAt(), ...options })(await signRaw(key, '{"alg":"HS256"}', payload));
+
+  it("should report an ill-typed iat once, without missing_claim or too_old", async () => {
+    expect(await verifyRaw('{"iat":"yesterday"}', { maxAge: 60 })).toEqual(
+      failure({ code: "invalid_claim", path: ["payload", "iat"] }),
+    );
+  });
+
+  it("should reject an iat of -1e308 as too_old", async () => {
+    expect(await verify({ iat: -1e308 }, { maxAge: 60 })).toEqual(
+      failure({ code: "too_old", path: ["payload", "iat"], params: { maxAge: 60 } }),
+    );
+  });
+
+  it("should accept an exp of 1e308", async () => {
+    expect(await verify({ exp: 1e308 })).toEqual(passed({ exp: 1e308 }));
+  });
+});
+
 describe("issuer", () => {
   it("should accept an issuer equal to the configured one", async () => {
     expect(await verify({ iss: "https://a.example" }, { issuer: "https://a.example" })).toEqual(
@@ -228,6 +249,30 @@ describe("type", () => {
 
   it("should reject typ at+jwt when JWT is required", async () => {
     expect(await verify({}, { type: "JWT" }, { typ: "at+jwt" })).toEqual(
+      failure({ code: "wrong_type", path: ["header", "typ"] }),
+    );
+  });
+
+  it("should reject typ application/foo/bar when foo/bar is required", async () => {
+    expect(await verify({}, { type: "foo/bar" }, { typ: "application/foo/bar" })).toEqual(
+      failure({ code: "wrong_type", path: ["header", "typ"] }),
+    );
+  });
+
+  it("should accept typ foo/bar when foo/bar is required", async () => {
+    expect(await verify({}, { type: "foo/bar" }, { typ: "FOO/bar" })).toEqual(
+      passed({}, { alg: "HS256", typ: "FOO/bar" }),
+    );
+  });
+
+  it("should not fold a non-ASCII letter: typ JWK is not jwk", async () => {
+    expect(await verify({}, { type: "jwk" }, { typ: "JWK" })).toEqual(
+      failure({ code: "wrong_type", path: ["header", "typ"] }),
+    );
+  });
+
+  it("should reject typ with media type parameters", async () => {
+    expect(await verify({}, { type: "JWT" }, { typ: "JWT; charset=x" })).toEqual(
       failure({ code: "wrong_type", path: ["header", "typ"] }),
     );
   });
@@ -385,6 +430,35 @@ describe("claims schema", () => {
     await verify({ exp: NOW_SECONDS }, { claims: schemaOf(validate) });
 
     expect(validate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      "throws",
+      () => {
+        throw new Error("boom");
+      },
+    ],
+    ["rejects", async () => Promise.reject(new Error("boom"))],
+  ])("should reject the verifier's promise with the schema's error when the schema %s", async (_, validate) => {
+    const claims = schemaOf(validate as never);
+
+    await expect(verify({ role: "admin" }, { claims })).rejects.toThrow("boom");
+  });
+
+  it.each([
+    ["returns undefined", () => undefined],
+    ["returns a result with non-array issues", () => ({ issues: "x" })],
+  ])("should reject the verifier's promise when the schema %s", async (_, validate) => {
+    const claims = schemaOf(validate as never);
+
+    await expect(verify({ role: "admin" }, { claims })).rejects.toBeInstanceOf(TypeError);
+  });
+
+  it("should keep a path naming a payload key", async () => {
+    const claims = schemaOf(() => ({ issues: [{ message: "m", path: ["PAYLOAD-KEY"] }] }));
+
+    expect(await verify({}, { claims })).toEqual(failure({ code: "invalid_claims", path: ["payload", "PAYLOAD-KEY"] }));
   });
 
   it("should accept a callable schema", async () => {

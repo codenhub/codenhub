@@ -25,24 +25,24 @@ export async function authenticate(authorization: string | null) {
 }
 ```
 
-The verifier accepts any value, including `undefined` or a number, and reports a value that is not a token as `malformed` rather than throwing. It never throws for a token, whatever the token holds; the one exception is a [`claims` schema](#checking-your-own-claims) of your own that throws or rejects.
+The verifier accepts any value, including `undefined` or a number, and reports a value that is not a token as `malformed` rather than throwing. It never throws for a token, whatever the token holds; the exceptions are code of your own: a [`claims` schema](#checking-your-own-claims) that throws or rejects, and a `now` that returns something other than a finite number, such as `NaN` from `Date.parse` of an unset variable. The schema's own error propagates unchanged. A non-finite `now` makes the promise reject with a `TypeError` when the verifier reads the clock, which it does only for a token whose signature checked out, because a `NaN` clock would make every time comparison false and accept expired tokens.
 
 ## Options
 
-Every option is checked when `createVerifier` runs, and an invalid one throws a `TypeError` naming the option and its constraint. Durations are in seconds.
+Every option is checked when `createVerifier` runs, and an invalid one throws a `TypeError` naming the option and its constraint. So does a name that is not an option below, such as `audiance` or `issuers` (`createVerifier: options.audiance is not an option.`), even when its value is `undefined`: a misspelled option would otherwise silently turn its check off. Durations are in seconds.
 
-| Option           | Default    | What it does                                                                                                       |
-| ---------------- | ---------- | ------------------------------------------------------------------------------------------------------------------ |
-| `keys`           | required   | The [key set](key-sets.md) that selects the verification key for each token.                                       |
-| `issuer`         | none       | A string or a non-empty array of strings. When set, `iss` is required and must equal one of them exactly.          |
-| `audience`       | none       | A string or a non-empty array of strings. When set, `aud` is required and must contain at least one of them.       |
-| `type`           | none       | The required `typ` header, such as `JWT` or `at+jwt`. When set, `typ` is required.                                 |
-| `clockTolerance` | `0`        | Seconds of clock skew allowed on `exp`, `nbf`, `iat` and `maxAge`. An integer from 0 through 300.                  |
-| `maxAge`         | none       | Most seconds since `iat`. When set, `iat` is required. A positive integer.                                         |
-| `maxLength`      | `8192`     | Longest token accepted, in characters, checked before anything is decoded. An integer from 1 through 65536.        |
-| `requiredClaims` | `[]`       | Claims that must be present, whatever their value.                                                                 |
-| `claims`         | none       | A [Standard Schema](#checking-your-own-claims) run on the payload after every other check passed.                  |
-| `now`            | `Date.now` | The current time in **milliseconds** since the Unix epoch, as `Date.now` returns it. Pass your own clock in tests. |
+| Option           | Default    | What it does                                                                                                                                                  |
+| ---------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keys`           | required   | The [key set](key-sets.md) that selects the verification key for each token.                                                                                  |
+| `issuer`         | none       | A string or a non-empty array of strings. When set, `iss` is required and must equal one of them exactly.                                                     |
+| `audience`       | none       | A string or a non-empty array of strings. When set, `aud` is required and must contain at least one of them.                                                  |
+| `type`           | none       | The required `typ` header, such as `JWT` or `at+jwt`. When set, `typ` is required.                                                                            |
+| `clockTolerance` | `0`        | Seconds of clock skew allowed on `exp`, `nbf`, `iat` and `maxAge`. An integer from 0 through 300.                                                             |
+| `maxAge`         | none       | Most seconds since `iat`. When set, `iat` is required. A positive integer.                                                                                    |
+| `maxLength`      | `8192`     | Longest token accepted, in characters, checked before anything is decoded. An integer from 1 through 65536.                                                   |
+| `requiredClaims` | `[]`       | Claims that must be present, whatever their value.                                                                                                            |
+| `claims`         | none       | A [Standard Schema](#checking-your-own-claims) run on the payload after every other check passed.                                                             |
+| `now`            | `Date.now` | The current time in **milliseconds** since the Unix epoch, as `Date.now` returns it. Pass your own clock in tests. It must return a finite number; see below. |
 
 Without `issuer`, `audience`, `type`, `maxAge` and `requiredClaims`, a verifier checks only the signature, the types of the registered claims (`iss`, `sub`, `aud`, `jti`, `exp`, `nbf`, `iat`) and the times the token itself states. A token without `exp` never expires: if your tokens must expire, list `exp` in `requiredClaims`.
 
@@ -132,7 +132,7 @@ if (result.ok) {
 
 The schema checks; it does not transform. The payload you get back is the token's own frozen payload, with every claim it carried, even ones the schema does not list, and never a value the schema produced. That is why the payload is typed by what the schema accepts, its input type.
 
-Each issue the schema reports becomes one `invalid_claims` issue whose path is `["payload", ...]` followed by the schema's path. The schema's messages are dropped, since a message such as "expected a number, received 'hunter2'" can quote the token. A schema that throws or rejects is not caught: the verifier's promise rejects with that error.
+Each issue the schema reports becomes one `invalid_claims` issue whose path is `["payload", ...]` followed by the schema's path. The schema's messages are dropped, since a message such as "expected a number, received 'hunter2'" can quote the token. The paths are kept, though, and can name keys the payload chose, so do not show them to users unescaped. A schema that throws or rejects is not caught: the verifier's promise rejects with that error.
 
 ## Reading the header before verifying
 

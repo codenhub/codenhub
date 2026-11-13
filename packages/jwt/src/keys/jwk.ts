@@ -83,8 +83,7 @@ function readMembers(jwk: unknown): Members | undefined {
     if (typeof jwk !== "object" || jwk === null || Array.isArray(jwk)) {
       return undefined;
     }
-    const prototype = Object.getPrototypeOf(jwk);
-    if (prototype !== Object.prototype && prototype !== null) {
+    if (!isPlainObject(jwk)) {
       return undefined;
     }
     const members: Members = {};
@@ -103,6 +102,23 @@ function readMembers(jwk: unknown): Members | undefined {
     // A hostile Proxy can throw from any trap.
     return undefined;
   }
+}
+
+/**
+ * Whether `value` is a plain object of this realm or another one, such as a Jest or jsdom sandbox's: its
+ * prototype is null, or is an `Object.prototype` whose own prototype is null. A class instance, whose
+ * prototype has `Object.prototype` above it, is not.
+ */
+function isPlainObject(value: object): boolean {
+  const prototype: unknown = Object.getPrototypeOf(value);
+  if (prototype === null || prototype === Object.prototype) {
+    return true;
+  }
+  if (typeof prototype !== "object" || Object.getPrototypeOf(prototype) !== null) {
+    return false;
+  }
+  const constructor = Object.getOwnPropertyDescriptor(prototype, "constructor")?.value as unknown;
+  return typeof constructor === "function" && constructor.name === "Object" && constructor.prototype === prototype;
 }
 
 function copyArray(value: unknown): unknown {

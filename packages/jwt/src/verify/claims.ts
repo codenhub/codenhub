@@ -42,7 +42,7 @@ export function checkClaims(header: JwtHeader, payload: JwtPayload, options: Res
     present: (name) => Object.hasOwn(payload, name),
     valid: (name) => (Object.hasOwn(payload, name) && !invalid.has(name) ? payload[name] : undefined),
   };
-  const now = options.now() / MILLISECONDS_PER_SECOND;
+  const now = readClock(options) / MILLISECONDS_PER_SECOND;
   issues.push(...timeIssues(claims, now, options), ...identityIssues(claims, options));
   if (options.type !== undefined && (header.typ === undefined || normalizeType(header.typ) !== options.type)) {
     issues.push({ code: "wrong_type", path: ["header", "typ"] });
@@ -55,6 +55,19 @@ export function checkClaims(header: JwtHeader, payload: JwtPayload, options: Res
     }
   }
   return issues;
+}
+
+/**
+ * Reads `options.now`, which is caller code: a result that is not a finite number is a bug in it, so it
+ * throws instead of failing the token, as a throwing `claims` schema does (decision 10). Left alone, NaN
+ * would turn every time comparison false and pass expired tokens.
+ */
+function readClock(options: ResolvedOptions): number {
+  const time: unknown = options.now();
+  if (typeof time !== "number" || !Number.isFinite(time)) {
+    throw new TypeError("createVerifier: options.now must return a finite number of milliseconds.");
+  }
+  return time;
 }
 
 function timeIssues(claims: Claims, now: number, options: ResolvedOptions): JwtIssue[] {

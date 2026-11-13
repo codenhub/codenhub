@@ -1,4 +1,5 @@
 import { fail, ok } from "../core";
+import { rejectUnknownOptions } from "../core/options";
 import type { AsymmetricAlgorithm, JwtHeader, JwtIssue, JwtResult, KeySet, VerificationKey } from "../core/types";
 import { parseJsonObject } from "../encoding";
 import { importKeys, readAlgorithms } from "./local";
@@ -54,12 +55,26 @@ export interface RemoteKeySetOptions {
    */
   readonly maxResponseBytes?: number;
   /**
-   * Current time in milliseconds since the Unix epoch, for tests.
+   * Current time in milliseconds since the Unix epoch, for tests. It must return a finite number: any
+   * other result is a bug in the clock, so `select` rejects with a `TypeError`.
    *
    * @defaultValue `Date.now`
    */
   readonly now?: () => number;
 }
+
+/** Every documented option; typed so adding one to `RemoteKeySetOptions` fails to compile until listed. */
+const KNOWN_OPTIONS: Readonly<Record<keyof RemoteKeySetOptions, true>> = {
+  url: true,
+  fetch: true,
+  algorithms: true,
+  cacheTtl: true,
+  cooldown: true,
+  maxStale: true,
+  timeout: true,
+  maxResponseBytes: true,
+  now: true,
+};
 
 const MS_PER_SECOND = 1000;
 const DEFAULT_CACHE_TTL = 600;
@@ -89,7 +104,8 @@ interface RemoteConfig {
 /** The last JWKS fetched successfully. */
 interface CachedKeys {
   readonly keys: readonly VerificationKey[];
-  readonly expiresAt: number;
+  /** When the fetch that produced `keys` completed, from `now()`. */
+  readonly fetchedAt: number;
 }
 
 /**
@@ -108,7 +124,8 @@ interface CachedKeys {
  * - **Cooldown.** A refetch for an unknown `kid`, or a retry after a failed fetch, starts only when
  *   `cooldown` seconds have passed since the last fetch started. Inside that window an unknown `kid`
  *   fails with `unknown_kid` at once, so a flood of tokens with invented `kid`s causes at most one
- *   fetch per window.
+ *   fetch per window. `cooldown: 0` gives up that limit: each such `select` may start a fetch, though
+ *   never while another is running.
  * - **Stale keys.** When fetching fails, or a retry waits for the cooldown, after `cacheTtl` ran out,
  *   the last fetched JWKS is still used for up to `maxStale` more seconds; past that, `select` fails
  *   with `key_fetch_failed`. Using stale keys does not extend them: every `select` after the cooldown
@@ -126,11 +143,14 @@ interface CachedKeys {
  * ```
  *
  * @param options - Where to fetch the JWKS from, and how to cache it.
- * @returns A frozen key set. Its `select` never throws: a failed fetch gives `key_fetch_failed` with
+ * @returns A frozen key set. Its `select` never rejects for a fetch problem or a token: a failed fetch gives `key_fetch_failed` with
  * `params.reason` of `timeout`, `network` (the fetch rejected), `status` (with `params.status`, also
  * for a redirect), `too_large` (`Content-Length` or body over `maxResponseBytes`) or `invalid_response`
- * (not a strict JSON object, or not a JWKS). Issues never contain anything from the response.
- * @throws TypeError when `options` is not an object; `url` is not an absolute `https:` URL or carries
+ * (not a strict JSON object, or not a JWKS). Issues never contain anything from the response. `select`
+ * rejects with a `TypeError` only when `options.now` returns something other than a finite number, which
+ * is a bug in the caller's clock; a verifier that calls such a key set reports `key_fetch_failed` with
+ * `{ reason: "key_set_error" }` instead.
+ * @throws TypeError when `options` is not an object; `options` has a member that is not an option; `url` is not an absolute `https:` URL or carries
  * credentials; `fetch` or `now` is not a function; `algorithms` is not a non-empty array of asymmetric
  * algorithms; or `cacheTtl`, `cooldown`, `maxStale`, `timeout` or `maxResponseBytes` is out of range.
  */
@@ -141,8 +161,24 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
   let lastFetchStartedAt: number | undefined;
   let inFlight: Promise<JwtResult<readonly VerificationKey[]>> | undefined;
 
-  const isCoolingDown = (): boolean =>
-    lastFetchStartedAt !== undefined && config.now() - lastFetchStartedAt < config.cooldownMs;
+  // A clock that steps back makes an elapsed time negative. That never keeps a cooldown running or a cache
+  // alive: the cooldown is over, and keys fetched "in the future" are expired, so the bounds of decision 5 hold.
+  const isCoolingDown = (): boolean => {
+    if (lastFetchStartedAt === undefined) {
+      return false;
+    }
+    const elapsed = config.now() - lastFetchStartedAt;
+    return elapsed >= 0 && elapsed < config.cooldownMs;
+  };
+
+  /** Whether the cache is younger than `limitMs`; a cache older than the clock says is never young. */
+  const isCachedWithin = (limitMs: number): boolean => {
+    if (cached === undefined) {
+      return false;
+    }
+    const age = config.now() - cached.fetchedAt;
+    return age >= 0 && age < limitMs;
+  };
 
   const runFetch = async (): Promise<JwtResult<readonly VerificationKey[]>> => {
     let outcome: JwtResult<readonly VerificationKey[]>;
@@ -154,7 +190,7 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
     }
     inFlight = undefined;
     if (outcome.ok) {
-      cached = { keys: outcome.value, expiresAt: config.now() + config.cacheTtlMs };
+      cached = { keys: outcome.value, fetchedAt: config.now() };
       lastFailure = undefined;
     } else {
       lastFailure = outcome;
@@ -173,7 +209,7 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
 
   /** The keys to select from now, or why there are none. */
   const usableKeys = (): JwtResult<readonly VerificationKey[]> => {
-    if (cached !== undefined && config.now() < cached.expiresAt + config.maxStaleMs) {
+    if (cached !== undefined && isCachedWithin(config.cacheTtlMs + config.maxStaleMs)) {
       return ok(cached.keys);
     }
     return lastFailure ?? fetchFailure("network");
@@ -183,7 +219,7 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
     let hasFetched = false;
     if (inFlight !== undefined) {
       // A fresh cache that holds the key needs no wait for the fetch that is running.
-      if (cached !== undefined && config.now() < cached.expiresAt) {
+      if (cached !== undefined && isCachedWithin(config.cacheTtlMs)) {
         const selected = selectKey(cached.keys, header);
         if (!isUnknownKid(selected)) {
           return selected;
@@ -191,7 +227,7 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
       }
       await inFlight;
       hasFetched = true;
-    } else if (cached === undefined || config.now() >= cached.expiresAt) {
+    } else if (!isCachedWithin(config.cacheTtlMs)) {
       if (!isCoolingDown()) {
         await refetch();
         hasFetched = true;
@@ -344,6 +380,7 @@ function readRemoteOptions(options: unknown): RemoteConfig {
   if (typeof options !== "object" || options === null) {
     throw new TypeError("createRemoteKeySet: options must be an object.");
   }
+  rejectUnknownOptions(options, KNOWN_OPTIONS, "createRemoteKeySet");
   const source = options as Record<string, unknown>;
   const cacheTtl = readInteger(source, { name: "cacheTtl", fallback: DEFAULT_CACHE_TTL, minimum: 1 });
   const cooldown = readInteger(source, {
@@ -366,7 +403,22 @@ function readRemoteOptions(options: unknown): RemoteConfig {
       minimum: 1,
       maximum: MAX_RESPONSE_BYTES_LIMIT,
     }),
-    now: (readFunction(source, "now") as (() => number) | undefined) ?? Date.now,
+    now: checkedClock((readFunction(source, "now") as (() => number) | undefined) ?? Date.now),
+  };
+}
+
+/**
+ * Wraps the clock so a result that is not a finite number throws instead of being used: NaN would make
+ * every cooldown and expiry comparison false, so the cache would never expire. The clock is caller code,
+ * so the rejection propagates from `select` (decisions 10 and 23).
+ */
+function checkedClock(now: () => number): () => number {
+  return () => {
+    const time: unknown = now();
+    if (typeof time !== "number" || !Number.isFinite(time)) {
+      throw new TypeError("createRemoteKeySet: options.now must return a finite number of milliseconds.");
+    }
+    return time;
   };
 }
 
