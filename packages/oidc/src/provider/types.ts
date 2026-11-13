@@ -632,6 +632,35 @@ export interface Provider {
    * the store returns a malformed client record or a `POST`'s body was already read.
    */
   endSession(request: Request): Promise<OidcResult<EndSession>>;
+  /**
+   * Builds the back-channel logout request (OpenID Connect Back-Channel Logout 1.0) that tells one client its user
+   * signed out, for the app to send with `fetch`. The provider keeps no sessions and makes no outbound request: the
+   * app ends its own session, knows which clients it signed the user into during it (the `sessionId` it gave
+   * {@link Provider.completeAuthorization}, which became `sid`), and calls this for each of them.
+   *
+   * @remarks
+   * The request is a `POST` to the client's {@link ClientRecord.backchannelLogout} `uri`, with the form body
+   * `logout_token=<token>`. The token is a JWT signed like the client's ID tokens, with `typ: "logout+jwt"`, the
+   * claims `iss`, `aud` (the client), `iat`, `exp` (120 seconds after `iat`), a random `jti`, `events`, and the
+   * `sub` and `sid` given here, and never a `nonce`.
+   *
+   * The app owns the delivery. The client answers `200` on success, or `400` with an error (§2.8), so treat any
+   * `2xx` as success and anything else as a failure. Use a short timeout, since a slow client must not hold the
+   * user's sign-out, and decide whether to retry. Redirects are not followed unless the app asks for it: pass
+   * `redirect: "manual"` to `fetch` to keep the token from being forwarded.
+   *
+   * @param request - The client, and who or what ended. At least one of `subject` and `sessionId` is required.
+   * @returns The request to send, or `null` when the client is unknown or has no `backchannelLogout`, so there
+   * is nothing to send. Rejects when the store does, or with a `TypeError` when it returns a malformed client record.
+   * @throws {TypeError} When `clientId` is not a non-empty string, when neither `subject` nor `sessionId` is given,
+   * when either is given and is not a non-empty string, or when the client's `sessionRequired` is `true` and
+   * `sessionId` is absent. The check of the arguments comes before the store is read.
+   */
+  backchannelLogout(request: {
+    readonly clientId: string;
+    readonly subject?: string;
+    readonly sessionId?: string;
+  }): Promise<Request | null>;
 }
 
 /**

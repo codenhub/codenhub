@@ -257,6 +257,19 @@ describe("checkMetadata", () => {
     expect(valueOf(result).service_documentation).toBe("docs");
   });
 
+  it("accepts and keeps the back-channel logout flags a provider advertises", () => {
+    const document = {
+      ...validDocument(),
+      backchannel_logout_supported: true,
+      backchannel_logout_session_supported: true,
+    };
+
+    expect(valueOf(checkMetadata(document, ISSUER))).toMatchObject({
+      backchannel_logout_supported: true,
+      backchannel_logout_session_supported: true,
+    });
+  });
+
   it("keeps a __proto__ member as data, not as the prototype", () => {
     const document = JSON.parse(`{"__proto__": {"polluted": true}, ${JSON.stringify(validDocument()).slice(1)}`);
     const copy = valueOf(checkMetadata(document, ISSUER));

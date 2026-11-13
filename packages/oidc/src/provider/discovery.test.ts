@@ -91,6 +91,8 @@ describe("buildMetadata", () => {
       ],
       revocation_endpoint_auth_signing_alg_values_supported: ["ES256", "EdDSA", "Ed25519", "RS256", "PS256", "HS256"],
       authorization_response_iss_parameter_supported: true,
+      backchannel_logout_supported: true,
+      backchannel_logout_session_supported: true,
       claims_parameter_supported: false,
       request_parameter_supported: false,
       request_uri_parameter_supported: false,
