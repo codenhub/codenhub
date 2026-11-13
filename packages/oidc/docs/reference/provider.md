@@ -88,6 +88,7 @@ export interface AccessTokenRecord {
     readonly clientId: string;
     readonly subject: string;
     readonly scopes: readonly string[];
+    readonly sessionId?: string;
     readonly expiresAt: number;
 }
 ```
@@ -119,6 +120,14 @@ readonly grantId: string;
 ```ts
 readonly scopes: readonly string[];
 ```
+
+#### AccessTokenRecord › sessionId
+
+```ts
+readonly sessionId?: string;
+```
+
+The app's session identifier from the grant.
 
 #### AccessTokenRecord › subject
 
@@ -173,6 +182,7 @@ export interface AuthorizationGrant {
     readonly scopes: readonly string[];
     readonly amr?: readonly string[];
     readonly acr?: string;
+    readonly sessionId?: string;
 }
 ```
 
@@ -210,6 +220,14 @@ readonly scopes: readonly string[];
 
 Granted scopes: a subset of the requested ones, including `openid`.
 
+#### AuthorizationGrant › sessionId
+
+```ts
+readonly sessionId?: string;
+```
+
+The app's identifier for the session this sign-in belongs to: a non-empty string of visible ASCII (no space, control character or non-ASCII character), opaque to the provider, which never interprets it. It is saved with the code and every access and refresh token of the grant, and each ID token of the grant carries it as the `sid` claim (OpenID Connect Front-Channel Logout 1.0 §3). The app can then tell which of its sessions a grant belongs to, such as to revoke the grants of one session, and back-channel logout can name the session. Use a value that is stable for the session and not guessable from outside, such as a random identifier, and not the session cookie itself, since an ID token is handed to the client. Absent, the grant has no `sid`.
+
 #### AuthorizationGrant › subject
 
 ```ts
@@ -228,11 +246,30 @@ export interface AuthorizationInteraction {
     readonly maxAge?: number;
     readonly loginHint?: string;
     readonly uiLocales?: readonly string[];
+    readonly acrValues?: readonly string[];
+    readonly claimsLocales?: readonly string[];
+    readonly display?: Display;
     readonly createdAt: number;
 }
 ```
 
 An authorization request the app now handles: who the client is, and what it asked for. Frozen and JSON-serializable. Keep the whole value for the login and consent pages; the provider has no lookup by `id`.
+
+#### AuthorizationInteraction › acrValues
+
+```ts
+readonly acrValues?: readonly string[];
+```
+
+The `acr_values` the client asked for, as authentication context class references in its order of preference, with empty entries dropped. A voluntary request (OpenID Connect Core §3.1.2.1): the provider does not check the login against it. The app chooses whether to satisfy one of them, and reports the class it actually used as the `acr` of its [`AuthorizationGrant`](#authorizationgrant), which may be none of these.
+
+#### AuthorizationInteraction › claimsLocales
+
+```ts
+readonly claimsLocales?: readonly string[];
+```
+
+The `claims_locales` the client asked for: BCP 47 tags in order of preference, with empty entries dropped, for the language of the claims the app returns from the `claims` callback. The provider does not use it itself. The `claims` request parameter is still not supported, and is ignored.
 
 #### AuthorizationInteraction › clientId
 
@@ -247,6 +284,14 @@ readonly createdAt: number;
 ```
 
 When the request was validated, in seconds since the Unix epoch. A `prompt=login` login must happen at or after it.
+
+#### AuthorizationInteraction › display
+
+```ts
+readonly display?: Display;
+```
+
+How the client asks the app to show its pages. A hint: a `display` other than `page`, `popup`, `touch` or `wap` is ignored, so it is absent here, and the app may ignore this one as well.
 
 #### AuthorizationInteraction › id
 
@@ -347,6 +392,7 @@ export interface ClientRecord {
     readonly grantTypes?: readonly GrantType[];
     readonly auth: ClientAuthentication;
     readonly postLogoutRedirectUris?: readonly string[];
+    readonly ttl?: ClientTtl;
     readonly idTokenSigningAlg?: AsymmetricAlgorithm;
     readonly requirePkce?: boolean;
 }
@@ -424,6 +470,59 @@ readonly scopes: readonly string[];
 
 Scopes this client may request. Must include `openid` when the client may use `authorization_code`. A `client_credentials` token never carries `openid` or `offline_access`, since no user is involved.
 
+#### ClientRecord › ttl
+
+```ts
+readonly ttl?: ClientTtl;
+```
+
+Token lifetimes for this client, each replacing the provider's `ProviderOptions.ttl` of the same name for the tokens issued to it. A lifetime left out is the provider's. The provider checks each value when it reads the record, by the bounds of the option it replaces, and throws `TypeError` if one fails.
+
+### ClientTtl
+
+```ts
+export interface ClientTtl {
+    readonly code?: number;
+    readonly accessToken?: number;
+    readonly idToken?: number;
+    readonly refreshToken?: number;
+}
+```
+
+The token lifetimes a client's record may set for itself, in seconds. Each has the type, range and meaning of the [`ProviderTtl`](#providerttl) member of the same name, and a lifetime left out falls back to the provider's. The `interaction` lifetime is not here: an interaction exists before the app completes it, and stays provider-wide.
+
+#### ClientTtl › accessToken
+
+```ts
+readonly accessToken?: number;
+```
+
+Access tokens issued to the client, and the `expires_in` it is told. An integer from 60 through 86400.
+
+#### ClientTtl › code
+
+```ts
+readonly code?: number;
+```
+
+Authorization codes issued to the client. An integer from 1 through 600.
+
+#### ClientTtl › idToken
+
+```ts
+readonly idToken?: number;
+```
+
+ID tokens issued to the client. An integer from 60 through 86400.
+
+#### ClientTtl › refreshToken
+
+```ts
+readonly refreshToken?: number;
+```
+
+A refresh token family of the client, counted from the code exchange; rotation does not extend it. An integer from 60 through 31536000.
+
 ### CodeRecord
 
 ```ts
@@ -438,6 +537,7 @@ export interface CodeRecord {
     readonly authTime: number;
     readonly amr?: readonly string[];
     readonly acr?: string;
+    readonly sessionId?: string;
     readonly maxAgeRequested: boolean;
     readonly expiresAt: number;
 }
@@ -523,6 +623,14 @@ readonly scopes: readonly string[];
 
 Granted scopes.
 
+#### CodeRecord › sessionId
+
+```ts
+readonly sessionId?: string;
+```
+
+The app's session identifier from the grant, carried to every token of the grant.
+
 #### CodeRecord › subject
 
 ```ts
@@ -597,12 +705,29 @@ export interface InteractionRecord {
     readonly maxAge?: number;
     readonly loginHint?: string;
     readonly uiLocales?: readonly string[];
+    readonly acrValues?: readonly string[];
+    readonly claimsLocales?: readonly string[];
+    readonly display?: Display;
     readonly createdAt: number;
     readonly expiresAt: number;
 }
 ```
 
 A validated authorization request, saved between `Provider.beginAuthorization` and its completion.
+
+#### InteractionRecord › acrValues
+
+```ts
+readonly acrValues?: readonly string[];
+```
+
+Requested `acr_values`, in the order the client preferred them.
+
+#### InteractionRecord › claimsLocales
+
+```ts
+readonly claimsLocales?: readonly string[];
+```
 
 #### InteractionRecord › clientId
 
@@ -625,6 +750,12 @@ readonly createdAt: number;
 ```
 
 When the request was validated, in seconds since the Unix epoch.
+
+#### InteractionRecord › display
+
+```ts
+readonly display?: Display;
+```
 
 #### InteractionRecord › expiresAt
 
@@ -815,7 +946,7 @@ The `consume*` methods must be atomic: two concurrent calls for one key must nev
 
 Each `save*` method must reject when its key already exists, and must never reset a used entry, which would make a spent code or refresh token consumable again. The provider's keys are random digests, so this happens only through an adapter bug.
 
-Expiry is the provider's to check: a method returns a record whatever its `expiresAt`. No method purges, so the adapter deletes expired rows itself, such as with a scheduled job, keeping a used code or refresh token at least until its `expiresAt`, so a replay is still recognized, and a revoked grant's marker until the last token of that grant expires: `ttl.refreshToken` after the code exchange plus one `ttl.accessToken`, since an access token issued by the last refresh outlives its family.
+Expiry is the provider's to check: a method returns a record whatever its `expiresAt`. No method purges, so the adapter deletes expired rows itself, such as with a scheduled job, keeping a used code or refresh token at least until its `expiresAt`, so a replay is still recognized, and a revoked grant's marker until the last token of that grant expires: a refresh token lifetime after the code exchange plus one access token lifetime, since an access token issued by the last refresh outlives its family. Lifetimes can differ by client (`ClientRecord.ttl`), so keep the marker for the longest refresh token lifetime of any client plus the longest access token lifetime of any client, the provider's own `ttl` counting for a client that sets none.
 
 #### OidcStore › consumeCode
 
@@ -937,7 +1068,7 @@ completeAuthorization(interactionId: string, outcome: AuthorizationGrant | Autho
 
 Finishes an interaction: issues a code, or sends the denial, as a `302` to the client's redirect URI.
 
-**Returns** — The response, or `interaction_not_found` when the interaction does not exist, was already completed, or expired.
+**Returns** — The response, or `interaction_not_found` when the interaction does not exist, was already completed, or expired, or, for a grant, when its client is no longer in the store: the code's lifetime can be the client's own (`ClientRecord.ttl`), so a grant reads the client's record. Rejects when the store does, or with a `TypeError` when it returns a malformed client record.
 
 **Throws** — `TypeError` — When `outcome` is malformed, such as an empty `subject`, `scopes` that is not an array of strings, or a denial with other members; the interaction is left in place, so a corrected retry works. Also when a well-formed grant does not fit the request: scopes outside the request or without `openid`, an `authTime` before the interaction under `prompt=login`, an `authTime` in the future, or more than the requested `max_age` before the request. The interaction is consumed before these checks, so after one of these a retry gets `interaction_not_found` and the user must start over.
 
@@ -1438,6 +1569,7 @@ export interface RefreshTokenRecord {
     readonly authTime: number;
     readonly amr?: readonly string[];
     readonly acr?: string;
+    readonly sessionId?: string;
     readonly expiresAt: number;
 }
 ```
@@ -1487,6 +1619,14 @@ readonly grantId: string;
 ```ts
 readonly scopes: readonly string[];
 ```
+
+#### RefreshTokenRecord › sessionId
+
+```ts
+readonly sessionId?: string;
+```
+
+The app's session identifier from the grant. Rotation keeps it.
 
 #### RefreshTokenRecord › subject
 
@@ -1564,6 +1704,14 @@ export type Consumption<TRecord> =
 ```
 
 The outcome of consuming a single-use value.
+
+### Display
+
+```ts
+export type Display = "page" | "popup" | "touch" | "wap";
+```
+
+How the client asks the app to show its pages (OpenID Connect Core §3.1.2.1).
 
 ### GrantType
 
