@@ -48,7 +48,7 @@ Nothing is fetched until the first `select`. Then:
 - **TTL.** A fetched JWKS is used for `cacheTtl` seconds, then the next `select` fetches it again.
 - **One fetch at a time.** Every `select` that needs keys while a fetch is running waits for that fetch, unless the cache is fresh and holds the key; concurrent callers never start a second one.
 - **Unknown `kid`.** When a token's `kid` is not in the cached JWKS, the JWKS is fetched again once, and the selection is repeated on the result. A failing refetch gives `key_fetch_failed`. A header without a `kid` never causes a refetch.
-- **Cooldown.** A refetch for an unknown `kid`, or a retry after a failed fetch, starts only when `cooldown` seconds have passed since the last fetch started. Inside that window an unknown `kid` fails with `unknown_kid` at once, so a flood of tokens with invented `kid`s causes at most one fetch per window.
+- **Cooldown.** A refetch for an unknown `kid`, or a retry after a failed fetch, starts only when `cooldown` seconds have passed since the last fetch started. Inside that window an unknown `kid` fails with `unknown_kid` at once, so a flood of tokens with invented `kid`s causes at most one fetch per window. `cooldown: 0` gives up that limit: each such `select` may start a fetch, though never while another is running.
 - **Stale keys.** When fetching fails, or a retry waits for the cooldown, after `cacheTtl` ran out, the last fetched JWKS is still used for up to `maxStale` more seconds; past that, `select` fails with `key_fetch_failed`. Using stale keys does not extend them: every `select` after the cooldown tries to fetch again.
 
 Fetches are `GET` requests with `accept: application/json` that do not follow redirects; only status 200 is accepted. The body is capped at `maxResponseBytes`, and the whole fetch at `timeout` seconds. The JWKS is imported as [`importKeySet`](#importkeyset) does; a JWKS that is not one, including one with more than 100 keys, is an `invalid_response`.
@@ -88,7 +88,7 @@ Times compare in fractional seconds, `options.now() / 1000`, against the numeric
 
 - `TSchema` — The Standard Schema given as `options.claims`, which types the verified payload.
 
-**Returns** — A [`Verifier`](#verifier). It resolves to the frozen `{ header, payload, key }`, or to a failure and never throws for any token. A key set whose `select` throws or rejects, or returns something other than a result holding a public or secret key this package created, makes the verifier fail with `key_fetch_failed` and `{ reason: "key_set_error" }`. Caller code is not caught: a rejection from `options.claims` propagates, and so does a `TypeError` when `options.now` returns something other than a finite number, checked once per verification when the claims are checked, after the signature.
+**Returns** — A [`Verifier`](#verifier). It resolves to the frozen `{ header, payload, key }`, or to a failure and never throws for any token. A key set whose `select` throws or rejects, or returns something other than a result holding a public or secret key this package created, makes the verifier fail with `key_fetch_failed` and `{ reason: "key_set_error" }`, except that a failed result whose issues each have a string `code` is passed through. Caller code is not caught: a rejection from `options.claims` propagates, and so does a `TypeError` when `options.now` returns something other than a finite number, checked once per verification when the claims are checked, after the signature.
 
 **Throws** — TypeError when `options` is not an object; `options` has a member that is not an option, such as a misspelled `audiance`; `keys` has no `select` function; `issuer` or `audience` is neither a non-empty string nor a non-empty array of them; `type` is not a non-empty string; `clockTolerance` is not an integer from 0 through 300; `maxAge` is not a positive integer; `maxLength` is not an integer from 1 through 65536; `requiredClaims` is not an array of non-empty strings; `claims` is not a version 1 Standard Schema; or `now` is not a function.
 
@@ -328,7 +328,7 @@ The header's `alg` always comes from the key, so a key can never sign under anot
 
 **Returns** — The compact token, `<header>.<payload>.<signature>` in base64url.
 
-**Throws** — TypeError, as a rejected promise, when `input` is not an object; `input.key` is not a private or secret key this package created; `input.header` is not a plain object, names an `alg` other than the key's, holds `crit`, `b64`, `jwk`, `jku`, `x5u` or `x5c`, or a `kid`, `typ` or `cty` that is not a string; `input.payload` is not a plain object; the header or payload holds a value JSON cannot carry exactly (`undefined`, a function, a symbol, a bigint, a non-finite number, a non-plain object, an accessor) or nests deeper than 32 levels; or a registered claim has the wrong type (`exp`, `nbf`, `iat` not finite numbers; `iss`, `sub`, `jti` not strings; `aud` neither a string nor an array of strings).
+**Throws** — TypeError, as a rejected promise, when `input` is not an object; `input.key` is not a private or secret key this package created; `input.header` is not a plain object, names an `alg` other than the key's, holds `crit`, `b64`, `jwk`, `jku`, `x5u` or `x5c`, or a `kid`, `typ` or `cty` that is not a string; `input.payload` is not a plain object; the header or payload holds a value JSON cannot carry exactly (`undefined`, a function, a symbol, a bigint, a non-finite number or `-0`, a non-plain object, an accessor) or nests deeper than 32 levels; or a registered claim has the wrong type (`exp`, `nbf`, `iat` not finite numbers; `iss`, `sub`, `jti` not strings; `aud` neither a string nor an array of strings).
 
 **Example**
 
@@ -1663,7 +1663,7 @@ Maximum token length in characters, checked before any decoding. An integer from
 readonly now?: () => number;
 ```
 
-Current time in milliseconds since the Unix epoch, for tests. It must return a finite number: any other result is a bug in the clock, so the verifier's promise rejects with a `TypeError` instead of skipping the time checks.
+Current time in milliseconds since the Unix epoch, for tests. It must return a finite number: any other result is a bug in the clock, so the verifier's promise rejects with a `TypeError` instead of skipping the time checks. The clock is read only for a token whose signature checked out, so a token that fails earlier still gets its failure result.
 
 **Default** — `Date.now`
 
@@ -1773,4 +1773,4 @@ The payload type a verifier with the given schema returns.
 export type Verifier<TPayload extends JwtPayload = JwtPayload> = (token: unknown) => Promise<JwtResult<VerifiedJwt<TPayload>>>;
 ```
 
-A configured verifier. Call it with any value; it never throws for a token, whatever its content. Only a `claims` schema that throws or rejects makes its promise reject.
+A configured verifier. Call it with any value; it never throws for a token, whatever its content. Only caller code makes its promise reject: a `claims` schema that throws or rejects, or an `options.now` that returns something other than a finite number.
